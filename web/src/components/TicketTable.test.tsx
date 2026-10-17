@@ -1,0 +1,216 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { TicketTable } from './TicketTable';
+import type { TicketComparisonRow } from '../domain/types';
+
+describe('TicketTable Component', () => {
+  const sampleRows: readonly TicketComparisonRow[] = [
+    {
+      ticket_id: 'AL-10',
+      ticket_title: 'Zeta feature optimization',
+      updated_at: '2026-10-15T14:32:00Z',
+      sdlc_iterations: 5,
+      active_duration_seconds: 3600,
+      active_duration_formatted: '1h 0m',
+      cost_usd: 12.5,
+      cache_hit_rate_pct: 80.0,
+      test_to_code_ratio: '1.5:1',
+      lines_added: 500,
+      lines_deleted: 100,
+      files_changed: 8,
+      tool_success_rate_pct: 95.0,
+      context_health_status: 'HEALTHY',
+      orchestrator_saturation_pct: 40.0,
+      peak_context_tokens: 80000,
+      started_at: '2026-10-15T10:00:00Z',
+      completed_at: '2026-10-15T11:00:00Z',
+      lead_duration_seconds: 3600,
+      lead_duration_formatted: '1h 0m',
+    },
+    {
+      ticket_id: 'AL-2',
+      ticket_title: 'Alpha backend refactor',
+      updated_at: '2026-10-16T16:15:00Z',
+      sdlc_iterations: 1,
+      active_duration_seconds: 1200,
+      active_duration_formatted: '20m 0s',
+      cost_usd: 2.2,
+      cache_hit_rate_pct: 90.0,
+      test_to_code_ratio: '2.0:1',
+      lines_added: 200,
+      lines_deleted: 50,
+      files_changed: 3,
+      tool_success_rate_pct: 100.0,
+      context_health_status: 'CRITICAL',
+      orchestrator_saturation_pct: 220.0,
+      peak_context_tokens: 440000,
+      started_at: '2026-10-16T12:00:00Z',
+      completed_at: '2026-10-16T13:00:00Z',
+      lead_duration_seconds: 3600,
+      lead_duration_formatted: '1h 0m',
+    },
+    {
+      ticket_id: 'GEN-9',
+      ticket_title: 'Beta regex special char [.*+?^${}()|[]\\] test',
+      updated_at: '2026-10-17T10:00:00Z',
+      sdlc_iterations: 2,
+      active_duration_seconds: 2400,
+      active_duration_formatted: '40m 0s',
+      cost_usd: 8.0,
+      cache_hit_rate_pct: 50.0,
+      test_to_code_ratio: '0.8:1',
+      lines_added: 300,
+      lines_deleted: 30,
+      files_changed: 4,
+      tool_success_rate_pct: 88.0,
+      context_health_status: 'BLOATED',
+      orchestrator_saturation_pct: 120.0,
+      peak_context_tokens: 240000,
+      started_at: '2026-10-17T08:00:00Z',
+      completed_at: '2026-10-17T09:00:00Z',
+      lead_duration_seconds: 3600,
+      lead_duration_formatted: '1h 0m',
+    },
+  ];
+
+  it('renders all rows and columns with correct health status classes', () => {
+    render(<TicketTable rows={sampleRows} />);
+
+    expect(screen.getByText('AL-10')).toBeInTheDocument();
+    expect(screen.getByText('AL-2')).toBeInTheDocument();
+    expect(screen.getByText('GEN-9')).toBeInTheDocument();
+
+    const healthyBadge = screen.getByText('HEALTHY');
+    expect(healthyBadge).toHaveClass('health-badge', 'HEALTHY');
+
+    const criticalBadge = screen.getByText('CRITICAL');
+    expect(criticalBadge).toHaveClass('health-badge', 'CRITICAL');
+
+    const bloatedBadge = screen.getByText('BLOATED');
+    expect(bloatedBadge).toHaveClass('health-badge', 'BLOATED');
+  });
+
+  it('handles empty rows defensively', () => {
+    render(<TicketTable rows={[]} />);
+    expect(screen.getByText('No Workspaces Match Filter')).toBeInTheDocument();
+    expect(
+      screen.getByText('No ticket workspaces are currently registered in this session.')
+    ).toBeInTheDocument();
+  });
+
+  describe('Adversarial Search Filtering', () => {
+    it('filters rows with regex special characters without crashing', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      const searchInput = screen.getByLabelText(/filter tickets/i);
+      fireEvent.change(searchInput, { target: { value: '.*+?' } });
+
+      expect(screen.getByText('GEN-9')).toBeInTheDocument();
+      expect(screen.queryByText('AL-10')).not.toBeInTheDocument();
+      expect(screen.queryByText('AL-2')).not.toBeInTheDocument();
+    });
+
+    it('shows custom empty state when search matches no tickets', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      const searchInput = screen.getByLabelText(/filter tickets/i);
+      fireEvent.change(searchInput, { target: { value: 'NONEXISTENT_XYZ' } });
+
+      expect(screen.getByText('No Workspaces Match Filter')).toBeInTheDocument();
+      expect(
+        screen.getByText(/No ticket records match query "NONEXISTENT_XYZ"/i)
+      ).toBeInTheDocument();
+    });
+
+    it('handles whitespace-only searches as empty queries', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      const searchInput = screen.getByLabelText(/filter tickets/i);
+      fireEvent.change(searchInput, { target: { value: '   ' } });
+
+      expect(screen.getByText('AL-10')).toBeInTheDocument();
+      expect(screen.getByText('AL-2')).toBeInTheDocument();
+      expect(screen.getByText('GEN-9')).toBeInTheDocument();
+    });
+  });
+
+  describe('Sorting Invariants', () => {
+    it('sorts by cost ascending and descending upon header clicks', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      const costHeader = screen.getByText(/cost \(usd\)/i);
+
+      // Default sort is ticket_id asc: AL-10, AL-2, GEN-9
+      // Click Cost Header -> cost asc: AL-2 ($2.20), GEN-9 ($8.00), AL-10 ($12.50)
+      fireEvent.click(costHeader);
+
+      let cells = screen.getAllByRole('row');
+      // header row is index 0
+      expect(cells[1]).toHaveTextContent('AL-2');
+      expect(cells[2]).toHaveTextContent('GEN-9');
+      expect(cells[3]).toHaveTextContent('AL-10');
+
+      // Click Cost Header again -> cost desc: AL-10 ($12.50), GEN-9 ($8.00), AL-2 ($2.20)
+      fireEvent.click(costHeader);
+
+      cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('AL-10');
+      expect(cells[2]).toHaveTextContent('GEN-9');
+      expect(cells[3]).toHaveTextContent('AL-2');
+    });
+
+    it('sorts by active duration ascending and descending', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      const durationHeader = screen.getByText(/active duration/i);
+
+      // Click Duration -> asc: AL-2 (1200), GEN-9 (2400), AL-10 (3600)
+      fireEvent.click(durationHeader);
+
+      let cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('AL-2');
+      expect(cells[2]).toHaveTextContent('GEN-9');
+      expect(cells[3]).toHaveTextContent('AL-10');
+
+      // Click Duration again -> desc: AL-10 (3600), GEN-9 (2400), AL-2 (1200)
+      fireEvent.click(durationHeader);
+
+      cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('AL-10');
+      expect(cells[2]).toHaveTextContent('GEN-9');
+      expect(cells[3]).toHaveTextContent('AL-2');
+    });
+
+    it('sorts by sdlc iterations ascending and descending', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      const iterationsHeader = screen.getByText(/sdlc iterations/i);
+
+      // Click Iterations -> asc: AL-2 (1), GEN-9 (2), AL-10 (5)
+      fireEvent.click(iterationsHeader);
+
+      let cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('AL-2');
+      expect(cells[2]).toHaveTextContent('GEN-9');
+      expect(cells[3]).toHaveTextContent('AL-10');
+
+      // Click Iterations again -> desc: AL-10 (5), GEN-9 (2), AL-2 (1)
+      fireEvent.click(iterationsHeader);
+
+      cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('AL-10');
+      expect(cells[2]).toHaveTextContent('GEN-9');
+      expect(cells[3]).toHaveTextContent('AL-2');
+    });
+  });
+
+  describe('Row Interactivity', () => {
+    it('calls onSelectTicket with ticket_id when row is clicked', () => {
+      const onSelect = vi.fn();
+      render(<TicketTable rows={sampleRows} onSelectTicket={onSelect} />);
+
+      fireEvent.click(screen.getByText('AL-2'));
+      expect(onSelect).toHaveBeenCalledWith('AL-2');
+    });
+  });
+});

@@ -3,7 +3,7 @@
 Individual ticket definitions are located in `workspaces/plan/done/` and `workspaces/plan/to-do/`:
 - `workspaces/plan/done/AL-1 go domain aggregations scanner cli.md`
 - `workspaces/plan/done/AL-2 go embedded http server and api.md`
-- `workspaces/plan/to-do/AL-3 typescript spa shell and fleet overview.md`
+- `workspaces/plan/done/AL-3 typescript spa shell and fleet overview.md`
 - `workspaces/plan/to-do/AL-4 typescript ticket deep dive and progression.md`
 - `workspaces/plan/to-do/AL-5 single binary integration parity and deprecation.md`
 - `workspaces/plan/to-do/AL-6 versioned schema migration and chronological event extraction.md`
@@ -35,10 +35,10 @@ Individual ticket definitions are located in `workspaces/plan/done/` and `worksp
 
 - **AL-3**: Build TypeScript SPA Shell and Fleet Overview Dashboard
   - **Subsystem**: Presentation / Web
-  - **Status**: Ready (Decoupled with mock fixture harness)
+  - **Status**: Done
   - **Blocked by**: None
   - **Blocks**: AL-4
-  - **File**: `workspaces/plan/to-do/AL-3 typescript spa shell and fleet overview.md`
+  - **File**: `workspaces/plan/done/AL-3 typescript spa shell and fleet overview.md`
 
 - **AL-10**: Fix Git Metrics Calculation in Python Extractor and Backfill Existing Workspace Ledgers
   - **Subsystem**: Scripts / Python / Workspaces / Telemetry
@@ -50,8 +50,8 @@ Individual ticket definitions are located in `workspaces/plan/done/` and `worksp
 ### Tier 2 (Telemetry Modernization & Presentation)
 - **AL-4**: Implement Ticket Deep Dive, Progression Charts, and Comparisons
   - **Subsystem**: Presentation / Web
-  - **Status**: Pending
-  - **Blocked by**: AL-2, AL-3
+  - **Status**: Ready
+  - **Blocked by**: None (AL-2 and AL-3 Done)
   - **Blocks**: AL-5
   - **File**: `workspaces/plan/to-do/AL-4 typescript ticket deep dive and progression.md`
 

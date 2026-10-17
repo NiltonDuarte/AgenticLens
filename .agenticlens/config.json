@@ -1,5 +1,6 @@
 {
   "project_name": "AgenticLens",
   "ticket_prefix": "AL",
-  "workspaces_dir": "workspaces"
+  "workspaces_dir": "workspaces",
+  "src_folders": ["web", "cmd", "internal"]
 }
