@@ -57,7 +57,7 @@ Run `coder` -> `tester` -> `reviewer` on `workspaces/<TICKET_ID>/iterations/<NN>
    task(
        subagent_type="coder",
        description="Implement iteration <NN>",
-       prompt="Context: workspaces/<TICKET_ID>/CONTRACT.md, iterations/<NN>/PLAN.md (and REVIEW.md if rework). Implement domain models, aggregations, adapters, or presentation views adhering to FCIS, static typing, zero Any, and zero emojis. Return STATUS: BLOCKED if conflicting constraints arise.",
+       prompt="Context: workspaces/<TICKET_ID>/CONTRACT.md, iterations/<NN>/PLAN.md (and REVIEW.md if rework), TECHNICAL_GUIDELINES.md. Implement domain models, aggregations, adapters, or presentation views adhering to FCIS, static typing, zero Any, and zero emojis. Return STATUS: BLOCKED if conflicting constraints arise.",
    )
    ```
 2. **Test (`tester`)**:
@@ -65,7 +65,7 @@ Run `coder` -> `tester` -> `reviewer` on `workspaces/<TICKET_ID>/iterations/<NN>
    task(
        subagent_type="tester",
        description="Test iteration <NN>",
-       prompt="Context: workspaces/<TICKET_ID>/CONTRACT.md, iterations/<NN>/PLAN.md, git diff. Execute pure domain tests (zero mocks), boundary schema tests, and repository tests with uv run pytest. Assert edge cases (zero tokens, division by zero, empty ledgers). Zero silent skips allowed.",
+       prompt="Context: workspaces/<TICKET_ID>/CONTRACT.md, iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Execute pure domain tests (zero mocks), boundary schema tests, and repository tests with uv run pytest. Assert edge cases (zero tokens, division by zero, empty ledgers). Zero silent skips allowed.",
    )
    ```
 3. **Audit (`reviewer`)**:
@@ -73,7 +73,7 @@ Run `coder` -> `tester` -> `reviewer` on `workspaces/<TICKET_ID>/iterations/<NN>
    task(
        subagent_type="reviewer",
        description="Audit iteration <NN>",
-       prompt="Context: workspaces/<TICKET_ID>/CONTRACT.md, iterations/<NN>/PLAN.md, git diff. Audit along Axis 1 (Spec & Contract Alignment) and Axis 2 (Engineering Standards: FCIS isolation, zero Any, zero emojis, Streamlit width='stretch'). Save verdict to workspaces/<TICKET_ID>/iterations/<NN>/REVIEW.md.",
+       prompt="Context: workspaces/<TICKET_ID>/CONTRACT.md, iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Audit along Axis 1 (Spec & Contract Alignment) and Axis 2 (Engineering Standards in TECHNICAL_GUIDELINES.md: FCIS isolation, zero Any, zero emojis, Streamlit width='stretch'). Save verdict to workspaces/<TICKET_ID>/iterations/<NN>/REVIEW.md.",
    )
    ```
 

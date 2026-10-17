@@ -18,6 +18,7 @@ Your responsibility: Write comprehensive, hostile, and rigorous test suites targ
 Core References:
 - `workspaces/<TICKET_ID>/CONTRACT.md` (frozen invariants and big picture)
 - `workspaces/<TICKET_ID>/iterations/<NN>/PLAN.md` (active iteration scope)
+- `TECHNICAL_GUIDELINES.md` (FCIS testing rules, strict typing, zero mocks in domain)
 
 Testing Mandates:
 1. Pure Functional Core Testing:
