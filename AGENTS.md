@@ -10,9 +10,9 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
 
 ### Rules
 1. **Existing Ticket or Immediate Creation**:
-   - Before executing changes or dispatching subagents, verify whether the task has an existing ticket ID (e.g. `AL-00101` or `GEN-00101`).
+   - Before executing changes or dispatching subagents, verify whether the task has an existing ticket ID (e.g. `AL-101` or `GEN-101`).
    - If no ticket ID is provided by the user, you must create one immediately before touching code or planning an iteration.
-   - Use the configured ticket prefix from `.agenticlens/config.json` (fallback: `AL` or `GEN`). Formats: `<PREFIX>-<ID>` (e.g. `AL-00042`).
+   - Use the configured ticket prefix from `.agenticlens/config.json` (fallback: `AL` or `GEN`). Formats: `<PREFIX>-<ID>` (e.g. `AL-42`).
 2. **Dedicated Workspace Allocation**:
    - Every ticket must have its isolated workspace under `workspaces/<TICKET_ID>/`.
    - Never mix artifacts across tickets or leave untracked changes in the working directory.

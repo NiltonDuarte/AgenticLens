@@ -17,7 +17,7 @@ At startup, inspect `.agenticlens/config.json` in the project root to load param
 
 Throughout this workflow:
 - `<WORKSPACES_DIR>` refers to the configured `workspaces_dir` (e.g. `workspaces`).
-- `<TICKET_ID>` uses the configured `ticket_prefix` (e.g. `AL-00042` or `GEN-00042`).
+- `<TICKET_ID>` uses the configured `ticket_prefix` (e.g. `AL-42` or `GEN-42`).
 
 ## Core Invariants
 - **Orchestrator Coordinates Only**: Never write application code, edit manifests/schemas/views, or execute manual fixes directly.
@@ -26,10 +26,10 @@ Throughout this workflow:
 - **Self-Reflexive Telemetry via AgenticLens**: Use the configured telemetry command (`python3 scripts/extract_agentic_metrics.py ...`) to ingest the extracted fact ledger, validate schemas, calculate domain aggregations, update `SUMMARY.md`, and render development metrics.
 
 ## Setup & Workspace Structure
-1. Require `<TICKET_ID>` (prefixed with configured `ticket_prefix`, e.g. `AL-XXXXX` or `GEN-XXXXX`).
+1. Require `<TICKET_ID>` (prefixed with configured `ticket_prefix`, e.g. `AL-#` or `GEN-#`). Pick up specification from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` and update ticket status to `In Progress` in `<WORKSPACES_DIR>/plan/TICKETS.md`.
 2. Checkout ticket branch: `git checkout -b <type>/<TICKET_ID>-<slug>`.
 3. Workspace layout under `<WORKSPACES_DIR>/<TICKET_ID>/`:
-   - `CONTRACT.md`: Immutable baseline (problem statement, FCIS architectural invariants, Go/TS scope boundaries).
+   - `CONTRACT.md`: Immutable baseline authored by the developer (problem statement, FCIS architectural invariants, Go/TS scope boundaries).
    - `SUMMARY.md` & `agentic_metrics.json`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus AgenticLens-rendered metrics table.
    - `PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` & `SUMMARY.md`, summary of changes; no test evidence).
    - `iterations/<NN>/`: `PLAN.md` and `REVIEW.md` per iteration.

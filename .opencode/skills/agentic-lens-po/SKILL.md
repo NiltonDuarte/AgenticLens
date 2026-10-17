@@ -19,7 +19,9 @@ At startup, inspect `.agenticlens/config.json` in the project root to load proje
 Throughout this workflow:
 - `<WORKSPACES_DIR>` refers to the configured `workspaces_dir` (e.g. `workspaces`).
 - `<PREFIX>` refers to the configured `ticket_prefix` (e.g. `AL` or `GEN`).
-- `<TICKET_ID>` uses the configured prefix (e.g. `AL-00101` or `GEN-00101`).
+- `<TICKET_ID>` uses the configured prefix with sequential integer numbering (e.g. `AL-1`, `AL-2`).
+- PO workspaces are isolated under `<WORKSPACES_DIR>/PO-#/` (e.g. `workspaces/PO-1/`).
+- `<WORKSPACES_DIR>/<PREFIX>-#` is strictly reserved for tickets being actively worked on by developers. `CONTRACT.md` is authored by developers, not the PO.
 
 ---
 
@@ -51,7 +53,6 @@ Draft a concise, structured specification based on `templates/SPEC_TEMPLATE.md`:
 2. **User Stories**: Follow the format `As a <persona>, I want <capability>, so that <benefit>`.
 3. **Functional Scope**: Layer-by-layer expectations across Go domain, Go adapters/CLI, and TypeScript frontend.
 4. **Acceptance Constraints**: Strict typing, no emojis, testing with zero domain mocks in Go and pure test suites in TS.
-5. **Specification Artifact**: Save the finalized specification to `<WORKSPACES_DIR>/specs/<FEATURE_SLUG>.md` (e.g. `workspaces/specs/token-saturation-heatmap.md`).
 
 ### Step 3: Decompose into Vertical Tracer Bullets
 Break down large features or epics into individual development tickets:
@@ -60,35 +61,49 @@ Break down large features or epics into individual development tickets:
 - **Dependency Graph**: Explicitly declare `Blocked by: <Ticket>` edges so tickets can be sequenced or executed in parallel where unblocked.
 - **Wide Refactor Protocol**: If modifying foundational trace schemas or data structures, use the Expand-Contract pattern (Expand schema -> Migrate extractors/callers in batches -> Contract legacy format).
 
-### Step 4: Generate & Land Development Tickets
-For each ticket in the breakdown:
-1. Initialize the ticket workspace: `mkdir -p <WORKSPACES_DIR>/<TICKET_ID>`.
-2. Format the ticket content using `templates/TICKET_TEMPLATE.txt`:
-   - `h3. Title: <PREFIX>-XXXXX: <Action-oriented title>` (e.g. `AL-00101: ...` or `GEN-00101: ...`)
-   - `*TARGET*: AgenticLens (<Subsystem>)`
-   - `*CONTEXT*`, `*GOAL*`, `*VERTICAL SLICE SCOPE*`, `*ACCEPTANCE CRITERIA*`, and `*DEFINITION OF DONE*`.
-3. Save the ticket markup to `<WORKSPACES_DIR>/<TICKET_ID>/TICKET.txt` so it is immediately available when development starts under `agentic-lens-dev`.
-4. Present the tickets in the conversation for review and approval.
+### Step 4: Generate Jira / Development Tickets
+Output tickets to `<WORKSPACES_DIR>/plan/to-do/<PREFIX>-# <slug>.md` using `templates/TICKET_TEMPLATE.txt`:
+- Sequential numbering: `<PREFIX>-1`, `<PREFIX>-2`, etc.
+- `h3. Title: <PREFIX>-#: <Action-oriented title>` (e.g. `AL-1: ...`)
+- `*TARGET*: AgenticLens (<Subsystem>)`
+- `*CONTEXT*`, `*GOAL*`, `*VERTICAL SLICE SCOPE*`, `*ACCEPTANCE CRITERIA*`, and `*DEFINITION OF DONE*`.
+
+Shared planning registry lives under `<WORKSPACES_DIR>/plan/`:
+- `TICKETS.md`: Shared roadmap index and dependency graph structured using **Execution Tiers with Adjacency Lists** (e.g. `Tier 1 (Ready)`, with explicit `Blocked by: ...` and `Blocks: ...` links for unambiguous agent parsing). Updated across PO sessions as tickets are created, and by developers as ticket statuses advance (`Ready` -> `In Progress` -> `Done`).
+- `to-do/<PREFIX>-# <slug>.md`: Planned ticket definitions.
+
+PO session-specific deliverables live under `<WORKSPACES_DIR>/PO-#/`:
+- `SPEC.md`: Structured feature specification.
+- `SUMMARY.md`: Session execution log with appended AgenticLens metrics table.
+- `PULL_REQUEST.md`: Conventional PR draft describing the specification.
+- `agentic_metrics.json`: Extracted session fact ledger.
 
 ---
 
 ## 3. Handoff to Development (`agentic-lens-dev`)
 
-Once a specification or ticket is approved:
+Once tickets are created in `<WORKSPACES_DIR>/plan/to-do/`:
 1. Provide the ticket ID and target scope to the developer or run the development workflow:
    ```bash
    # Kick off multi-agent iteration under agentic-lens-dev
-   /agentic-lens-dev <PREFIX>-XXXXX
+   /agentic-lens-dev <PREFIX>-#
    ```
-2. Ensure the resulting implementation satisfies the PO acceptance criteria and records telemetry via:
+2. The developer skill (`agentic-lens-dev`) will allocate the working workspace `<WORKSPACES_DIR>/<PREFIX>-#/`, author `CONTRACT.md`, and execute the implementation loop (`planner` -> `coder` -> `tester` -> `reviewer`).
+3. Ensure the resulting implementation satisfies the PO acceptance criteria and records telemetry via:
    ```bash
+<<<<<<< HEAD
    NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
    python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json
+=======
+   go run ./cmd/agentic-lens --ticket-id <PREFIX>-# --append <WORKSPACES_DIR>/<PREFIX>-#/SUMMARY.md
+>>>>>>> 1f54525 (feat(plan): add product specification and execution tiers for go rewrite (PO-1))
    ```
 
 ---
 
 ## 4. Key Rules for the Project Owner
 - **Zero Hallucinated Metrics**: Every metric must be derivable from real agent trace logs or explicit session inputs.
+- **No Premature Workspaces or Contracts**: `workspaces/<PREFIX>-#` directories are strictly for active developer work, and `CONTRACT.md` is authored by developers during `agentic-lens-dev`, never by the PO. PO writes ticket files to `workspaces/plan/to-do/<PREFIX>-# <slug>.md`.
+- **Maintain PO Workspace Isolation**: The PO records its own session facts, summary, and PR draft under `workspaces/PO-#/`.
 - **No Implementation Over-Prescription**: Define WHAT the user needs, WHICH layers must be touched, and WHAT acceptance criteria prove success. Do not write concrete Go/TS implementation snippets inside Jira tickets unless specifying an exact interface contract.
 - **Maintain Architectural Rigor**: Reject feature designs that break FCIS, leak UI logic into domain aggregations, or introduce mutable shared state.
