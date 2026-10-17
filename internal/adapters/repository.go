@@ -196,3 +196,137 @@ func ReadTicketArtifacts(ticketID string, basePath string) domain.TicketArtifact
 		SummaryContent:  summaryContent,
 	}
 }
+
+// ExistingLedgerFacts encapsulates raw facts extracted from an existing on-disk ledger.
+type ExistingLedgerFacts struct {
+	TicketID      *string
+	TicketTitle   *string
+	TicketType    *string
+	StartedAt     *string
+	CompletedAt   *string
+	RootThreadIDs []string
+	Code          *domain.CodeFacts
+	Invocations   []domain.InvocationFact
+	Tools         []domain.ToolFact
+}
+
+type legacyThreadItem struct {
+	SessionID string `json:"session_id"`
+}
+
+type legacyCodeDelivered struct {
+	LinesAdded   int64 `json:"lines_added"`
+	LinesDeleted int64 `json:"lines_deleted"`
+	FilesChanged int64 `json:"files_changed"`
+}
+
+type legacyTestToProdRatio struct {
+	TestLinesAdded int64 `json:"test_lines_added"`
+	ProdLinesAdded int64 `json:"prod_lines_added"`
+}
+
+type legacyWorkflowEfficiency struct {
+	SDLCIterations        int64                 `json:"sdlc_iterations"`
+	CodeDelivered         legacyCodeDelivered   `json:"code_delivered"`
+	TestToProductionRatio legacyTestToProdRatio `json:"test_to_production_ratio"`
+}
+
+type rawExistingLedger struct {
+	TicketID           *string                   `json:"ticket_id"`
+	TicketTitle        *string                   `json:"ticket_title"`
+	TicketType         *string                   `json:"ticket_type"`
+	StartedAt          *string                   `json:"started_at"`
+	CompletedAt        *string                   `json:"completed_at"`
+	Code               *CodeFactsDTO             `json:"code"`
+	Invocations        []InvocationFactDTO       `json:"invocations"`
+	Tools              []ToolFactDTO             `json:"tools"`
+	Threads            []legacyThreadItem        `json:"threads"`
+	WorkflowEfficiency *legacyWorkflowEfficiency `json:"workflow_efficiency"`
+}
+
+// LoadExistingFactLedger loads raw facts from an existing agentic_metrics.json ledger on disk.
+func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
+	if strings.TrimSpace(path) == "" {
+		return nil, nil
+	}
+
+	fi, err := os.Stat(path)
+	if err != nil || fi.IsDir() {
+		return nil, nil
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading existing ledger at %s: %w", path, err)
+	}
+
+	var raw rawExistingLedger
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("decoding existing ledger at %s: %w", path, err)
+	}
+
+	result := &ExistingLedgerFacts{
+		TicketID:    raw.TicketID,
+		TicketTitle: raw.TicketTitle,
+		TicketType:  raw.TicketType,
+		StartedAt:   raw.StartedAt,
+		CompletedAt: raw.CompletedAt,
+	}
+
+	// Schema 1: Direct atomic fact schema
+	if len(raw.Invocations) > 0 {
+		var invs []domain.InvocationFact
+		var rootIDs []string
+		for _, dto := range raw.Invocations {
+			domInv := dto.ToDomain()
+			invs = append(invs, domInv)
+			if domInv.ParentID == nil {
+				rootIDs = append(rootIDs, domInv.ID)
+			}
+		}
+		result.Invocations = invs
+		result.RootThreadIDs = rootIDs
+
+		var tools []domain.ToolFact
+		for _, dto := range raw.Tools {
+			tools = append(tools, dto.ToDomain())
+		}
+		result.Tools = tools
+
+		if raw.Code != nil {
+			c := raw.Code.ToDomain()
+			result.Code = &c
+		}
+
+		return result, nil
+	}
+
+	// Schema 2: Legacy schema with threads and workflow_efficiency
+	var rootIDs []string
+	for _, t := range raw.Threads {
+		if strings.TrimSpace(t.SessionID) != "" {
+			rootIDs = append(rootIDs, strings.TrimSpace(t.SessionID))
+		}
+	}
+	result.RootThreadIDs = rootIDs
+
+	if raw.WorkflowEfficiency != nil {
+		we := raw.WorkflowEfficiency
+		sdlc := we.SDLCIterations
+		if sdlc <= 0 {
+			sdlc = 1
+		}
+		result.Code = &domain.CodeFacts{
+			LinesAdded:       we.CodeDelivered.LinesAdded,
+			LinesDeleted:     we.CodeDelivered.LinesDeleted,
+			TestLinesAdded:   we.TestToProductionRatio.TestLinesAdded,
+			TestLinesDeleted: 0,
+			ProdLinesAdded:   we.TestToProductionRatio.ProdLinesAdded,
+			ProdLinesDeleted: 0,
+			FilesChanged:     we.CodeDelivered.FilesChanged,
+			SDLCIterations:   sdlc,
+		}
+	}
+
+	return result, nil
+}

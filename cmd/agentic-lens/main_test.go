@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	_ "modernc.org/sqlite"
 )
 
 var cliBinaryPath string
@@ -351,6 +353,269 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 		err := cmd.Run()
 		if err == nil {
 			t.Fatalf("expected exit error for invalid port format")
+		}
+	})
+}
+
+func TestCLIGenerateCommand(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "test_opencode.db")
+
+	// Set up SQLite fixture database
+	schema := `
+		CREATE TABLE session (
+			id TEXT PRIMARY KEY,
+			parent_id TEXT,
+			agent TEXT,
+			model TEXT,
+			title TEXT,
+			time_created INTEGER,
+			time_updated INTEGER
+		);
+		CREATE TABLE message (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		CREATE TABLE part (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			message_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_root_gen', NULL, 'build', 'gemini-3.8-flash', 'Task AL-999 New Generator', 1760000000000, 1760000050000),
+		('ses_child_gen', 'ses_root_gen', 'coder', 'gemini-3.8-flash', NULL, 1760000010000, 1760000045000);
+
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_nonce', 'ses_child_gen', 'msg_1', 1760000015000, 1760000015000, '{"type":"tool","tool":"bash","state":{"input":"nonce_test_999"}}'),
+		('p_comp', 'ses_root_gen', 'msg_1', 1760000020000, 1760000020000, '{"type":"compaction"}');
+
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('msg_root', 'ses_root_gen', 1760000005000, 1760000025000, '{"role":"assistant","modelID":"gemini-3.8-flash","time":{"created":1760000005000,"completed":1760000025000},"tokens":{"input":1500,"output":300,"cache":{"read":4500},"reasoning":50},"cost":0.02}'),
+		('msg_child', 'ses_child_gen', 1760000015000, 1760000040000, '{"role":"assistant","modelID":"gemini-3.8-flash","time":{"created":1760000015000,"completed":1760000040000},"tokens":{"input":2500,"output":500,"cache":{"read":7500},"reasoning":100},"cost":0.08}');
+	`
+
+	// Use pure Go sqlite driver to create fixture
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening sqlite fixture db: %v", err)
+	}
+	if _, err := db.Exec(schema); err != nil {
+		db.Close()
+		t.Fatalf("failed creating schema in fixture db: %v", err)
+	}
+	db.Close()
+
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+	summaryMD := filepath.Join(tempDir, "SUMMARY.md")
+	if err := os.WriteFile(summaryMD, []byte("# Initial Summary\n\nSome introductory remarks.\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", dbPath,
+		"--ticket-id", "AL-999",
+		"--nonce", "nonce_test_999",
+		"--json-output", outJSON,
+		"--append", summaryMD,
+	)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate failed: %v, stderr: %s, stdout: %s", err, stderr.String(), stdout.String())
+	}
+
+	// Verify JSON output
+	data, err := os.ReadFile(outJSON)
+	if err != nil {
+		t.Fatalf("failed reading output JSON: %v", err)
+	}
+
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed parsing output JSON: %v", err)
+	}
+
+	if parsed.TicketID == nil || *parsed.TicketID != "AL-999" {
+		t.Errorf("expected ticket_id AL-999, got %v", parsed.TicketID)
+	}
+	if len(parsed.Invocations) != 2 {
+		t.Fatalf("expected 2 invocations, got %d", len(parsed.Invocations))
+	}
+
+	// Verify summary markdown
+	mdData, err := os.ReadFile(summaryMD)
+	if err != nil {
+		t.Fatalf("failed reading updated summary: %v", err)
+	}
+	mdStr := string(mdData)
+	if !strings.Contains(mdStr, "### Workflow Efficiency") {
+		t.Errorf("expected Workflow Efficiency in updated summary")
+	}
+	if !strings.Contains(mdStr, "### Agentic Execution Metrics") {
+		t.Errorf("expected Agentic Execution Metrics in updated summary")
+	}
+	if !strings.Contains(mdStr, "| **orchestrator** |") || !strings.Contains(mdStr, "| **coder** |") {
+		t.Errorf("expected orchestrator and coder rows in markdown table")
+	}
+
+	// Verify idempotency
+	cmd2 := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", dbPath,
+		"--ticket-id", "AL-999",
+		"--nonce", "nonce_test_999",
+		"--json-output", outJSON,
+		"--append", summaryMD,
+	)
+	if out, err := cmd2.CombinedOutput(); err != nil {
+		t.Fatalf("second generate invocation failed: %v, out: %s", err, string(out))
+	}
+
+	mdData2, err := os.ReadFile(summaryMD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(mdData2), "### Workflow Efficiency") != 1 {
+		t.Errorf("expected exactly 1 Workflow Efficiency header after second run, found %d", strings.Count(string(mdData2), "### Workflow Efficiency"))
+	}
+}
+
+func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
+	t.Run("generate with non-existent database falls back gracefully without crash", func(t *testing.T) {
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "fallback.json")
+		nonExistentDB := filepath.Join(tempDir, "missing.db")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", nonExistentDB,
+			"--ticket-id", "AL-FALLBACK",
+			"--json-output", outJSON,
+		)
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected command to complete gracefully without crash, err: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("invalid json generated: %v", err)
+		}
+		if parsed.TicketID == nil || *parsed.TicketID != "AL-FALLBACK" {
+			t.Errorf("expected AL-FALLBACK ticket ID, got %v", parsed.TicketID)
+		}
+		if len(parsed.Invocations) != 0 {
+			t.Errorf("expected 0 invocations for missing DB, got %d", len(parsed.Invocations))
+		}
+	})
+
+	t.Run("generate with corrupted existing JSON output preserves execution and safely recovers", func(t *testing.T) {
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "corrupted_existing.json")
+		if err := os.WriteFile(outJSON, []byte("{broken json content!"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", filepath.Join(tempDir, "none.db"),
+			"--ticket-id", "AL-RECOVER",
+			"--json-output", outJSON,
+		)
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected recovery and overwrite on corrupt existing json, err: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("recovered file must be valid JSON: %v", err)
+		}
+		if parsed.TicketID == nil || *parsed.TicketID != "AL-RECOVER" {
+			t.Errorf("expected AL-RECOVER, got %v", parsed.TicketID)
+		}
+	})
+
+	t.Run("generate with zero tokens and zero duration produces valid markdown", func(t *testing.T) {
+		tempDir := t.TempDir()
+		dbPath := filepath.Join(tempDir, "zero.db")
+
+		db, err := sql.Open("sqlite", dbPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			INSERT INTO session VALUES ('ses_zero', NULL, 'build', 'default_model', 'Zero Ticket', 1000, 1000);
+			INSERT INTO message VALUES ('msg_zero', 'ses_zero', 1000, 1000, '{"role":"assistant","tokens":{"input":0,"output":0},"cost":0.0}');
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		summaryMD := filepath.Join(tempDir, "SUMMARY.md")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", dbPath,
+			"--ticket-id", "AL-ZERO",
+			"--session-id", "ses_zero",
+			"--append", summaryMD,
+		)
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed on zero tokens: %v, stderr: %s", err, stderr.String())
+		}
+
+		mdData, err := os.ReadFile(summaryMD)
+		if err != nil {
+			t.Fatal(err)
+		}
+		mdStr := string(mdData)
+		if !strings.Contains(mdStr, "HEALTHY") {
+			t.Errorf("expected HEALTHY health status on zero tokens, got:\n%s", mdStr)
+		}
+		if !strings.Contains(mdStr, "0.0%") {
+			t.Errorf("expected 0.0%% cache hit rate / reasoning ratio on zero tokens")
 		}
 	})
 }

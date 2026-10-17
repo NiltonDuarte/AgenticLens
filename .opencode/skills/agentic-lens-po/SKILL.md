@@ -91,12 +91,8 @@ Once tickets are created in `<WORKSPACES_DIR>/plan/to-do/`:
 2. The developer skill (`agentic-lens-dev`) will allocate the working workspace `<WORKSPACES_DIR>/<PREFIX>-#/`, author `CONTRACT.md`, and execute the implementation loop (`planner` -> `coder` -> `tester` -> `reviewer`).
 3. Ensure the resulting implementation satisfies the PO acceptance criteria and records telemetry via:
    ```bash
-<<<<<<< HEAD
-   NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-   python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json
-=======
-   go run ./cmd/agentic-lens --ticket-id <PREFIX>-# --append <WORKSPACES_DIR>/<PREFIX>-#/SUMMARY.md
->>>>>>> 1f54525 (feat(plan): add product specification and execution tiers for go rewrite (PO-1))
+   NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
+   ./bin/agentic-lens generate --nonce $NONCE --ticket-id <PREFIX>-# --json-output <WORKSPACES_DIR>/<PREFIX>-#/agentic_metrics.json --append <WORKSPACES_DIR>/<PREFIX>-#/SUMMARY.md
    ```
 
 ---

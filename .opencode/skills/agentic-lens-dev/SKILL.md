@@ -24,7 +24,7 @@ Throughout this workflow:
 - **Orchestrator Coordinates Only**: Never write application code, edit manifests/schemas/views, or execute manual fixes directly.
 - **Mandatory User Gate**: STOP after planning. Present `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md` and `iterations/<NN>/PLAN.md` to the user via the `question` tool. NEVER dispatch `coder` without explicit user confirmation.
 - **Context Pointers Over Bloat**: Pass file pointers to subagents (`CONTRACT.md`, `iterations/<NN>/PLAN.md`, `git diff`), not long duplicated prompt instructions.
-- **Self-Reflexive Telemetry via AgenticLens**: Use the configured telemetry command (`python3 scripts/extract_agentic_metrics.py ...`) to ingest the extracted fact ledger, validate schemas, calculate domain aggregations, update `SUMMARY.md`, and render development metrics.
+- **Self-Reflexive Telemetry via AgenticLens**: Use the native AgenticLens CLI command (`./bin/agentic-lens generate ...`) to ingest the extracted fact ledger, validate schemas, calculate domain aggregations, update `SUMMARY.md`, and render development metrics.
 
 ## Setup & Workspace Structure
 1. Require `<TICKET_ID>` (prefixed with configured `ticket_prefix`, e.g. `AL-#` or `GEN-#`). Pick up specification from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` and update ticket status to `In Progress` in `<WORKSPACES_DIR>/plan/TICKETS.md`.
@@ -101,16 +101,11 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
    # or run individually: make check && make test && make build
    ```
 2. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus verification status.
-3. Extract raw session facts ledger:
+3. **Extract Telemetry & Render Metrics via AgenticLens**:
+   Run AgenticLens Go CLI to query OpenCode SQLite and Git, construct the fact ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs:
    ```bash
-   NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-   python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json
+   NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
+   ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
    ```
-4. **Provide Metrics via AgenticLens Application**:
-   Run AgenticLens Go CLI to parse the ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs:
-   ```bash
-   NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-   python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json
-   ```
-5. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
-6. Print concise handoff summary to user (active duration, cost, cache hits, test status, context window health).
+4. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
+5. Print concise handoff summary to user (active duration, cost, cache hits, test status, context window health).

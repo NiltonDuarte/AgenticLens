@@ -27,7 +27,7 @@ vet:
 	go vet ./...
 
 lint: vet
-	@if [ -d "$(WEB_DIR)" ]; then \
+	@if [ -d "$(WEB_DIR)/node_modules" ]; then \
 		echo "Linting frontend..."; \
 		(cd $(WEB_DIR) && npm run typecheck && npm run lint); \
 	fi
@@ -38,13 +38,13 @@ test-backend:
 	go test -race ./...
 
 test-frontend:
-	@if [ -d "$(WEB_DIR)" ]; then \
+	@if [ -d "$(WEB_DIR)/node_modules" ]; then \
 		echo "Testing frontend..."; \
 		(cd $(WEB_DIR) && npm test); \
 	fi
 
 build:
-	@if [ -d "$(WEB_DIR)" ]; then \
+	@if [ -d "$(WEB_DIR)/node_modules" ]; then \
 		echo "Building frontend bundle..."; \
 		(cd $(WEB_DIR) && npm run build); \
 	fi

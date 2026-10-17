@@ -291,6 +291,25 @@ def get_ticket_numstat(ticket_id: str | None) -> list[tuple[int, int, str]]:
         if parsed:
             return parsed
 
+        res_diff_wt = subprocess.run(
+            [
+                "git",
+                "diff",
+                "--numstat",
+                "origin/main",
+                "--",
+                ":(exclude)*.md",
+                ":(exclude)*.json",
+                ":(exclude)*.lock",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        parsed_wt = parse_numstat_output(res_diff_wt.stdout)
+        if parsed_wt:
+            return parsed_wt
+
     # 2. Check merged commits on origin/main where ticket appears in subject line
     res_log = subprocess.run(
         [
@@ -360,7 +379,7 @@ def get_ticket_numstat(ticket_id: str | None) -> list[tuple[int, int, str]]:
             )
             parsed = parse_numstat_output(res.stdout)
             if any(
-                r[2].startswith(("src/", "tests/", "infra/", "cli/"))
+                r[2].startswith(("src/", "tests/", "infra/", "cli/", "internal/", "cmd/", "web/"))
                 for r in parsed
             ):
                 return parsed
@@ -396,7 +415,7 @@ def get_ticket_numstat(ticket_id: str | None) -> list[tuple[int, int, str]]:
             )
             parsed = parse_numstat_output(res_diff.stdout)
             if any(
-                r[2].startswith(("src/", "tests/", "infra/", "cli/"))
+                r[2].startswith(("src/", "tests/", "infra/", "cli/", "internal/", "cmd/", "web/"))
                 for r in parsed
             ):
                 return parsed
@@ -579,6 +598,66 @@ def infer_ticket_title(ticket_id: str | None) -> str | None:
     return None
 
 
+def classify_file(raw_path: str) -> str:
+    """Classify repository file path into ignored, test, prod, or other."""
+    clean_path = raw_path.strip().replace("\\", "/")
+    base_name = clean_path.split("/")[-1]
+    ext = "." + clean_path.split(".")[-1].lower() if "." in clean_path else ""
+
+    if clean_path.startswith("workspaces/") or "/workspaces/" in clean_path:
+        return "ignored"
+    if ext in (".md", ".json", ".lock") or base_name in (
+        "go.sum",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+    ):
+        return "ignored"
+    if base_name.startswith("."):
+        return "ignored"
+
+    is_test_dir = clean_path.startswith(
+        ("test/", "tests/", "__tests__/")
+    ) or any(p in clean_path for p in ("/test/", "/tests/", "/__tests__/"))
+    is_test_file = (
+        base_name.endswith(
+            (
+                "_test.go",
+                ".test.ts",
+                ".test.tsx",
+                ".spec.ts",
+                ".spec.tsx",
+                ".test.js",
+                ".test.jsx",
+                ".spec.js",
+                ".spec.jsx",
+                "_test.py",
+            )
+        )
+        or (base_name.startswith("test_") and ext == ".py")
+    )
+
+    if is_test_dir or is_test_file:
+        return "test"
+
+    if base_name == "Makefile" or ext in (
+        ".go",
+        ".ts",
+        ".tsx",
+        ".py",
+        ".js",
+        ".jsx",
+        ".html",
+        ".css",
+        ".scss",
+        ".sql",
+        ".sh",
+    ):
+        return "prod"
+
+    return "other"
+
+
 def compute_code_facts(
     ticket_id: str | None,
     fallback: CodeFacts | None = None,
@@ -588,13 +667,28 @@ def compute_code_facts(
     if not numstat and fallback is not None:
         return fallback
 
-    added = sum(r[0] for r in numstat)
-    deleted = sum(r[1] for r in numstat)
-    files = len(numstat)
-    test_added = sum(r[0] for r in numstat if r[2].startswith("tests/"))
-    test_deleted = sum(r[1] for r in numstat if r[2].startswith("tests/"))
-    prod_added = sum(r[0] for r in numstat if r[2].startswith("src/"))
-    prod_deleted = sum(r[1] for r in numstat if r[2].startswith("src/"))
+    added = 0
+    deleted = 0
+    test_added = 0
+    test_deleted = 0
+    prod_added = 0
+    prod_deleted = 0
+    files = 0
+
+    for r in numstat:
+        cat = classify_file(r[2])
+        if cat == "ignored":
+            continue
+        added += r[0]
+        deleted += r[1]
+        files += 1
+        if cat == "test":
+            test_added += r[0]
+            test_deleted += r[1]
+        elif cat == "prod":
+            prod_added += r[0]
+            prod_deleted += r[1]
+
     sdlc_iters = compute_sdlc_iterations(ticket_id)
 
     return CodeFacts(

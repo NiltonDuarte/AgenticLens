@@ -28,8 +28,8 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
 6. **Telemetry Ingestion**:
    - Every iteration must extract telemetry facts and append metrics using the AgenticLens CLI:
      ```bash
-     NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-     python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json
+     NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
+     ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json --append workspaces/<TICKET_ID>/SUMMARY.md
      ```
 
 ---

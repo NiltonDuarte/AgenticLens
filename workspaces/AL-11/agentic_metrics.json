@@ -1,0 +1,192 @@
+{
+  "ticket_id": "AL-11",
+  "ticket_title": "Native Go Telemetry Extractor and Active Session Metric Generation",
+  "ticket_type": "feature",
+  "started_at": "2026-10-17T20:09:40.088000+00:00",
+  "completed_at": "2026-10-17T20:59:50.873000+00:00",
+  "updated_at": "2026-10-17T21:00:05.990118+00:00",
+  "code": {
+    "lines_added": 2717,
+    "lines_deleted": 13,
+    "test_lines_added": 895,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 1808,
+    "prod_lines_deleted": 12,
+    "files_changed": 14,
+    "sdlc_iterations": 1
+  },
+  "invocations": [
+    {
+      "id": "ses_eb4840007ffeHd4Ly84B1mC2YT",
+      "parent_id": null,
+      "role": "orchestrator",
+      "model": "gemini-3.8-flash",
+      "user": "nilton.guedes_duarte@digits.schwarz",
+      "started_at": "2026-10-17T20:09:40.564000+00:00",
+      "completed_at": "2026-10-17T20:59:50.873000+00:00",
+      "active_duration_seconds": 2252,
+      "turns": 140,
+      "tokens": {
+        "input": 829771,
+        "output": 22662,
+        "cache_read": 9738073,
+        "reasoning": 15744,
+        "peak_context": 140069
+      },
+      "cost_usd": 1.496706,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eb4836ebcffeCYc3UlJ3SXrGSh",
+      "parent_id": "ses_eb4840007ffeHd4Ly84B1mC2YT",
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "nilton.guedes_duarte@digits.schwarz",
+      "started_at": "2026-10-17T20:10:17.295000+00:00",
+      "completed_at": "2026-10-17T20:14:23.896000+00:00",
+      "active_duration_seconds": 222,
+      "turns": 47,
+      "tokens": {
+        "input": 285326,
+        "output": 13480,
+        "cache_read": 2140414,
+        "reasoning": 9212,
+        "peak_context": 94178
+      },
+      "cost_usd": 0.459621,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eb47897aaffexjJ9ih9HHPNdBE",
+      "parent_id": "ses_eb4840007ffeHd4Ly84B1mC2YT",
+      "role": "coder",
+      "model": "gemini-3.8-flash",
+      "user": "nilton.guedes_duarte@digits.schwarz",
+      "started_at": "2026-10-17T20:22:07.711000+00:00",
+      "completed_at": "2026-10-17T20:32:05.409000+00:00",
+      "active_duration_seconds": 597,
+      "turns": 106,
+      "tokens": {
+        "input": 596900,
+        "output": 32495,
+        "cache_read": 10180411,
+        "reasoning": 27364,
+        "peak_context": 179717
+      },
+      "cost_usd": 1.435677,
+      "compactions": 1
+    },
+    {
+      "id": "ses_eb46f665affe2nKZ0azxTfxrnz",
+      "parent_id": "ses_eb4840007ffeHd4Ly84B1mC2YT",
+      "role": "tester",
+      "model": "gemini-3.8-flash",
+      "user": "nilton.guedes_duarte@digits.schwarz",
+      "started_at": "2026-10-17T20:32:10.162000+00:00",
+      "completed_at": "2026-10-17T20:36:19.583000+00:00",
+      "active_duration_seconds": 249,
+      "turns": 71,
+      "tokens": {
+        "input": 466359,
+        "output": 10369,
+        "cache_read": 5589207,
+        "reasoning": 0,
+        "peak_context": 138499
+      },
+      "cost_usd": 0.807844,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eb46b870bffe0Wjrbrh3WNxIUu",
+      "parent_id": "ses_eb4840007ffeHd4Ly84B1mC2YT",
+      "role": "reviewer",
+      "model": "gemini-3.8-flash",
+      "user": "nilton.guedes_duarte@digits.schwarz",
+      "started_at": "2026-10-17T20:36:23.933000+00:00",
+      "completed_at": "2026-10-17T20:37:59.557000+00:00",
+      "active_duration_seconds": 96,
+      "turns": 27,
+      "tokens": {
+        "input": 140413,
+        "output": 2810,
+        "cache_read": 1167058,
+        "reasoning": 4638,
+        "peak_context": 75376
+      },
+      "cost_usd": 0.220769,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "calls": 156,
+      "errors": 5
+    },
+    {
+      "name": "bash",
+      "calls": 131,
+      "errors": 1
+    },
+    {
+      "name": "edit",
+      "calls": 35,
+      "errors": 0
+    },
+    {
+      "name": "glob",
+      "calls": 24,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 17,
+      "errors": 0
+    },
+    {
+      "name": "write",
+      "calls": 14,
+      "errors": 0
+    },
+    {
+      "name": "task",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "todowrite",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_mcp-find",
+      "calls": 4,
+      "errors": 0
+    },
+    {
+      "name": "skill",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "list_mcp_resource_templates",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "list_mcp_resources",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_code-mode",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "question",
+      "calls": 1,
+      "errors": 0
+    }
+  ]
+}

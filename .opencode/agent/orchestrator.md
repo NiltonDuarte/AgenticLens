@@ -59,13 +59,10 @@ Workflow Execution Loop:
    - Quality check: verify compilation, testing, and linting:
      `make` (or `make check && make test && make build`)
    - Update `<workspaces_dir>/<TICKET_ID>/SUMMARY.md`: Unified summary of changes grouped by layer (`domain`, `adapters`, `presentation`).
-   - Extract raw facts ledger:
-     `NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')`
-     `python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output <workspaces_dir>/<TICKET_ID>/agentic_metrics.json`
-   - **Render Telemetry via AgenticLens Application**:
+   - Extract raw facts ledger and render telemetry via AgenticLens:
      ```bash
-     NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-     python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json
+     NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
+     ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --json-output <workspaces_dir>/<TICKET_ID>/agentic_metrics.json --append <workspaces_dir>/<TICKET_ID>/SUMMARY.md
      ```
    - Update `<workspaces_dir>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to CONTRACT.md and SUMMARY.md, summary of changes; no test evidence).
    - Print concise handoff summary to user (cost, cache hits, test status, context saturation).

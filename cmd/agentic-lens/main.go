@@ -15,10 +15,228 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/git"
 	adaptershttp "agenticlens/internal/adapters/http"
+	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/adapters/web"
 	"agenticlens/internal/domain"
 )
+
+func runGenerate(args []string) {
+	genFlags := flag.NewFlagSet("generate", flag.ExitOnError)
+	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
+	nonceFlag := genFlags.String("nonce", "", "Unique random execution nonce to lock session resolution to")
+	sessionIDFlag := genFlags.String("session-id", "", "Explicit root session ID")
+	ticketTitleFlag := genFlags.String("ticket-title", "", "Human-readable ticket title or descriptive name")
+	ticketTypeFlag := genFlags.String("ticket-type", "", "Ticket type classification (e.g., feature, bug, chore, refactor)")
+	startedAtFlag := genFlags.String("started-at", "", "Explicit start timestamp ISO format")
+	completedAtFlag := genFlags.String("completed-at", "", "Explicit completion timestamp ISO format")
+	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update structured JSON ledger")
+	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
+	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
+
+	if err := genFlags.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing generate flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	var cachedFacts *adapters.ExistingLedgerFacts
+	if *jsonOutputFlag != "" {
+		loaded, err := adapters.LoadExistingFactLedger(*jsonOutputFlag)
+		if err == nil && loaded != nil {
+			cachedFacts = loaded
+		}
+	}
+
+	activeTicketID := strings.TrimSpace(*ticketIDFlag)
+	if activeTicketID == "" && cachedFacts != nil && cachedFacts.TicketID != nil {
+		activeTicketID = strings.TrimSpace(*cachedFacts.TicketID)
+	}
+
+	var activeTicketTitle *string
+	if strings.TrimSpace(*ticketTitleFlag) != "" {
+		clean := strings.TrimSpace(*ticketTitleFlag)
+		activeTicketTitle = &clean
+	} else if cachedFacts != nil && cachedFacts.TicketTitle != nil {
+		activeTicketTitle = cachedFacts.TicketTitle
+	} else {
+		activeTicketTitle = git.InferTicketTitle(activeTicketID)
+	}
+
+	var activeTicketType *string
+	if strings.TrimSpace(*ticketTypeFlag) != "" {
+		clean := strings.TrimSpace(*ticketTypeFlag)
+		activeTicketType = &clean
+	} else if cachedFacts != nil && cachedFacts.TicketType != nil {
+		activeTicketType = cachedFacts.TicketType
+	} else {
+		activeTicketType = git.InferTicketType(activeTicketID)
+	}
+
+	currentUser := git.GetGitUser()
+
+	var activeStartedAt *string
+	if strings.TrimSpace(*startedAtFlag) != "" {
+		clean := strings.TrimSpace(*startedAtFlag)
+		activeStartedAt = &clean
+	} else if cachedFacts != nil && cachedFacts.StartedAt != nil {
+		activeStartedAt = cachedFacts.StartedAt
+	}
+
+	var activeCompletedAt *string
+	if strings.TrimSpace(*completedAtFlag) != "" {
+		clean := strings.TrimSpace(*completedAtFlag)
+		activeCompletedAt = &clean
+	} else if cachedFacts != nil && cachedFacts.CompletedAt != nil {
+		activeCompletedAt = cachedFacts.CompletedAt
+	}
+
+	var knownThreadIDs []string
+	userBySessionID := make(map[string]string)
+	var invocations []domain.InvocationFact
+	var tools []domain.ToolFact
+	var fallbackCode *domain.CodeFacts
+
+	if cachedFacts != nil {
+		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
+		for _, inv := range cachedFacts.Invocations {
+			userBySessionID[inv.ID] = inv.User
+		}
+		invocations = append(invocations, cachedFacts.Invocations...)
+		tools = append(tools, cachedFacts.Tools...)
+		fallbackCode = cachedFacts.Code
+	}
+
+	dbClient, err := opencode.OpenDB(*dbPathFlag)
+	if err == nil {
+		defer dbClient.Close()
+
+		rootID, err := opencode.ResolveActiveRootSession(
+			dbClient.DB(),
+			*nonceFlag,
+			activeTicketID,
+			*sessionIDFlag,
+		)
+		if err == nil && rootID != nil && *rootID != "" {
+			alreadyKnown := false
+			for _, id := range knownThreadIDs {
+				if id == *rootID {
+					alreadyKnown = true
+					break
+				}
+			}
+			if !alreadyKnown {
+				knownThreadIDs = append(knownThreadIDs, *rootID)
+			}
+		}
+
+		if len(knownThreadIDs) > 0 {
+			dbInvs, dbTools, dbStarted, dbCompleted, err := opencode.ExtractFacts(
+				dbClient.DB(),
+				knownThreadIDs,
+				currentUser,
+				userBySessionID,
+			)
+			if err == nil && len(dbInvs) > 0 {
+				invocations = dbInvs
+				tools = dbTools
+				if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
+					activeStartedAt = dbStarted
+				}
+				if strings.TrimSpace(*completedAtFlag) == "" && dbCompleted != nil {
+					activeCompletedAt = dbCompleted
+				}
+			}
+		}
+	}
+
+	if len(invocations) > 0 && strings.TrimSpace(*startedAtFlag) == "" {
+		var minStarted *string
+		for _, inv := range invocations {
+			if inv.StartedAt != nil && *inv.StartedAt != "" {
+				if minStarted == nil || *inv.StartedAt < *minStarted {
+					minStarted = inv.StartedAt
+				}
+			}
+		}
+		if minStarted != nil {
+			if activeStartedAt == nil || *minStarted < *activeStartedAt {
+				activeStartedAt = minStarted
+			}
+		}
+	}
+
+	if len(invocations) > 0 && strings.TrimSpace(*completedAtFlag) == "" {
+		var maxCompleted *string
+		for _, inv := range invocations {
+			if inv.CompletedAt != nil && *inv.CompletedAt != "" {
+				if maxCompleted == nil || *inv.CompletedAt > *maxCompleted {
+					maxCompleted = inv.CompletedAt
+				}
+			}
+		}
+		if maxCompleted != nil {
+			if activeCompletedAt == nil || *maxCompleted > *activeCompletedAt {
+				activeCompletedAt = maxCompleted
+			}
+		}
+	}
+
+	cfg, _ := git.LoadConfig("")
+	codeFacts := git.ComputeCodeFacts(activeTicketID, cfg, fallbackCode)
+
+	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
+
+	var ticketIDPtr *string
+	if activeTicketID != "" {
+		ticketIDPtr = &activeTicketID
+	}
+
+	factLedger := domain.AgenticFactLedger{
+		TicketID:    ticketIDPtr,
+		TicketTitle: activeTicketTitle,
+		TicketType:  activeTicketType,
+		StartedAt:   activeStartedAt,
+		CompletedAt: activeCompletedAt,
+		UpdatedAt:   updatedAtISO,
+		Code:        codeFacts,
+		Invocations: invocations,
+		Tools:       tools,
+	}
+
+	metricsLedger := domain.DeriveMetricsLedger(factLedger)
+	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger)
+
+	if *jsonOutputFlag != "" {
+		parentDir := filepath.Dir(*jsonOutputFlag)
+		if err := os.MkdirAll(parentDir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating output directories for %s: %v\n", *jsonOutputFlag, err)
+			os.Exit(1)
+		}
+
+		data, err := json.MarshalIndent(factLedger, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error marshaling JSON: %v\n", err)
+			os.Exit(1)
+		}
+		data = append(data, '\n')
+		if err := os.WriteFile(*jsonOutputFlag, data, 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Structured metrics ledger written to %s\n", *jsonOutputFlag)
+	}
+
+	if *appendFlag != "" {
+		if err := adapters.UpdateSummaryFile(*appendFlag, tableMD); err != nil {
+			fmt.Fprintf(os.Stderr, "Error updating summary file %s: %v\n", *appendFlag, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Metrics table successfully updated in %s\n", *appendFlag)
+	} else if *jsonOutputFlag == "" {
+		fmt.Println(tableMD)
+	}
+}
 
 func runServer(args []string) {
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
@@ -66,6 +284,11 @@ func runServer(args []string) {
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "server" {
 		runServer(os.Args[2:])
+		return
+	}
+
+	if len(os.Args) > 1 && os.Args[1] == "generate" {
+		runGenerate(os.Args[2:])
 		return
 	}
 
