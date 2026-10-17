@@ -12,21 +12,21 @@ h3. Title: <PREFIX>-XXXXX: <Short, action-oriented title>
 
 *VERTICAL SLICE SCOPE*
  
-* Domain Core: <Pure model/rollup changes in agentic_lens/domain/>
-* Boundary Adapter: <Parsing/schema/filesystem changes in agentic_lens/adapters/>
-* Presentation: <UI/CLI integration in agentic_lens/presentation/>
-* Quality: <Unit tests in tests/ with zero mocks in domain logic>
+* Domain Core: <Pure model/rollup changes in internal/domain/>
+* Boundary Adapter: <Parsing/schema/filesystem changes in internal/adapters/>
+* Presentation: <UI integration in web/ or CLI in cmd/agentic-lens/>
+* Quality: <Go table-driven tests and TypeScript unit tests with zero mocks in domain logic>
 
 *ACCEPTANCE CRITERIA*
  
 * <Specific functional behavior 1>
 * <Specific functional behavior 2>
-* <CLI or Streamlit presentation verification>
-* <Typecheck and lint passes with zero errors>
+* <CLI or Web dashboard presentation verification>
+* <Go vet/test and TypeScript typecheck passes with zero errors>
 
 *DEFINITION OF DONE*
  
 * Code and tests merged to target branch.
-* Quality gates passing (`uv run ruff check` and `uv run pytest`).
-* Python 3.14+ type checking clean with zero Any.
-* Telemetry tested with `agentic-lens` CLI or Streamlit preview.
+* Quality gates passing (`go vet ./...`, `go test -race ./...`, `npm run typecheck`, `npm run lint`).
+* Go and TypeScript type checking clean with zero any.
+* Telemetry tested with `agentic-lens` CLI.

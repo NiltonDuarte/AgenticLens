@@ -13,14 +13,14 @@
 3. As a <user persona>, I want <capability>, so that <benefit>.
 
 ## Functional Requirements
-- **Data Ingestion & Extraction**: <What metrics/traces need parsing or adapting>
-- **Domain Aggregations**: <What rollup calculations or KPIs must be derived pure-functionally>
-- **Visual Presentation**: <Streamlit layout, Altair charts, KPI cards, table formatting, or CLI flags>
+- **Data Ingestion & Extraction**: <What metrics/traces need parsing in Go internal/adapters>
+- **Domain Aggregations**: <What rollup calculations or KPIs must be derived pure-functionally in Go internal/domain>
+- **Visual Presentation**: <TypeScript dashboard layout, charts, KPI cards, table formatting, or Go CLI commands>
 
 ## Non-Functional & Architectural Invariants
-- **Layer Flow**: Domain remains pure; adapters isolate filesystem/schemas; presentation handles UI/CLI.
-- **Python Version**: Python 3.14+ syntax, strict typing, zero Any.
-- **Performance**: Zero redundant recomputation, memory-efficient dataframes/aggregates.
+- **Layer Flow**: Go domain remains pure; Go adapters isolate filesystem/schemas; TypeScript/CLI handles presentation.
+- **Language Standards**: Go 1.23+ value semantics, TypeScript 5.x+ strict mode, zero any across both.
+- **Performance**: Zero redundant recomputation, memory-efficient data structures.
 
 ## Decomposition & Delivery Roadmap
 - [ ] Ticket 1: <Tracer-bullet title> (Unblocked)

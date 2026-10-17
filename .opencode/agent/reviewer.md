@@ -1,13 +1,14 @@
 ---
-description: Audits diffs and code modifications in AgenticLens for FCIS compliance, typing, and UI invariants.
+description: Audits diffs and code modifications in AgenticLens for Go/TypeScript FCIS compliance, typing, and UI invariants.
 mode: subagent
 permission:
   edit: deny
   bash:
     "git diff*": allow
     "git status*": allow
-    "python3 -m *": allow
-    "uv run *": allow
+    "go *": allow
+    "npm *": allow
+    "npx *": allow
     "*": deny
 ---
 
@@ -24,26 +25,23 @@ Two-Axis Review Checklist:
    - Ensure zero scope creep: reject features or refactors not requested by the active plan.
 2. Error Coverage & Resilience:
    - Verify tests cover zero-division boundaries, empty ledgers, and malformed files.
-   - Verify zero silent skips in test runs.
+   - Verify zero silent skips in test runs (`go test ./...` and frontend test suites).
 
 ### Axis 2: Engineering Standards & Architecture
 1. Functional Core, Imperative Shell (FCIS):
-   - Does `agentic_lens/domain/` import any outer layer (`adapters`, `presentation`) or external library (`streamlit`, `pydantic`, `pandas`, `altair`)? Reject immediately if violated.
+   - Does `internal/domain/` import any outer layer (`internal/adapters`, `cmd/`) or external I/O libraries (`os`, `net/http`)? Reject immediately if violated.
    - Are domain functions pure and deterministic?
-   - Are domain entities immutable (`@dataclass(frozen=True, slots=True)`)? Reject mutable dataclasses or classes.
-   - Are dictionaries banned across internal domain boundaries? Reject.
-2. Boundary Discipline (Pydantic vs Dataclasses):
-   - Is external JSON input validated via Pydantic schemas in `adapters/`?
-   - Are Pydantic models mapped to frozen dataclasses before passing to domain or presentation?
+   - Are domain entities value-semantic structs?
+2. Boundary Discipline:
+   - Is external JSON input validated in `internal/adapters/`?
+   - Are errors wrapped with domain context using `%w`? Zero unhandled errors.
 3. Strict Typing & Zero Any:
-   - Python 3.14+ syntax used cleanly.
-   - Zero occurrences of `Any` across domain, adapter, and presentation layers.
-4. Streamlit Standards:
-   - Zero occurrences of deprecated APIs such as `use_container_width`.
-   - Uses `width="stretch"` or `width="large"`.
-5. Zero Emojis Mandate:
-   - Zero emojis permitted in code, docstrings, UI titles, tab labels, metric cards, tables, or output.
+   - Zero `any` or `interface{}` in Go and TypeScript.
+   - TypeScript strict mode enforced.
+4. UI & Presentation:
+   - Zero emojis across all code, UI components, chart labels, metric cards, and logs.
+   - Graceful empty states in UI without uncaught runtime errors.
 
 Verdict Format:
-- Save audit report to `workspaces/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
+- Save audit report to `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
 - Conclude with explicit status: `APPROVED` or `CHANGES_REQUESTED`.

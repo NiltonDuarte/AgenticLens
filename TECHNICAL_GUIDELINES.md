@@ -1,105 +1,104 @@
 # AgenticLens Technical Guidelines
 
-Mandatory technical guidelines for developing AgenticLens. All code must adhere to these rules.
+Mandatory technical guidelines for developing AgenticLens using **Go** (backend, domain engine, CLI, and HTTP services) and **TypeScript** (frontend dashboard and UI presentation). All code must strictly adhere to these rules.
 
 ---
 
 ## 1. Architectural Boundaries and Layer Separation
 
-Dependencies flow strictly inward across three distinct layers:
-1. **Presentation Layer** (`agentic_lens/presentation/`): Streamlit dashboard (`app.py`), modular view components (`views/`), formatters, and CLI (`cli.py`).
-2. **Adapter Layer** (`agentic_lens/adapters/`): External boundary schemas with Pydantic validation (`schemas.py`) and filesystem repository scanner (`repository.py`).
-3. **Domain Layer / Functional Core** (`agentic_lens/domain/`): Pure calculation functions (`aggregations.py`), frozen dataclasses (`models.py`), constants (`constants.py`), and enums (`enums.py`).
+Dependencies flow strictly inward across layers:
 
-### Rules
-- The functional core (`agentic_lens.domain`) must never import outer layers (`adapters`, `presentation`) or external framework libraries (`streamlit`, `pydantic`, `pandas`, `altair`).
-- Adapters depend on Domain and external boundary libraries (Pydantic).
-- Presentation depends on Adapters, Domain, and UI libraries (Streamlit, Altair, Pandas).
-- **Zero-Bypass Policy**: Never introduce circular imports or leak framework types into inner layers.
+### Backend (Go)
+1. **CLI / Service Layer (`cmd/agentic-lens/`)**:
+   - Application entrypoint, CLI commands (`scan`, `metrics`, `summary-append`, `server`), HTTP/gRPC server wiring.
+2. **Adapter Layer (`internal/adapters/`)**:
+   - External boundary serialization (JSON encoding/decoding), filesystem repository scanner (`workspaces/` traversal), HTTP handlers, API clients.
+3. **Domain Layer / Functional Core (`internal/domain/`)**:
+   - Pure domain models, value objects, aggregation algorithms, health score derivations, constants, and typed errors.
+   - **Zero External Dependencies**: Must NOT import outer layers (`internal/adapters`, `cmd/`) or network/disk libraries (`net/http`, `os`, `database/sql`).
+
+### Frontend (TypeScript)
+1. **Views & Components (`web/src/components/`, `web/src/views/`)**:
+   - Interactive analytics dashboard, KPI widgets, comparative charts, filtering bars.
+2. **API & Boundary Layer (`web/src/api/`, `web/src/adapters/`)**:
+   - Network clients, JSON boundary validation (via Zod or strict type guards).
+3. **Domain Types & Pure Formatters (`web/src/domain/`, `web/src/types/`)**:
+   - Strictly typed data contracts mirroring the Go domain model, pure mathematical or date formatting utilities.
 
 ---
 
 ## 2. Functional Core, Imperative Shell (FCIS)
 
-Split operations into two clear parts:
-1. **Functional Core (`agentic_lens.domain`):** Deterministic, pure functions. No disk, no network, no database calls, no clocks, no random generators. Takes immutable data in, returns computed metrics or typed domain models out. Tested entirely without mocks.
-2. **Imperative Shell (`adapters` & `presentation`):** Scans the filesystem, validates external JSON ledgers, passes domain models to core functions, and renders visualizations.
+### Go Functional Core
+- All mathematical rollups, context window health evaluations (HEALTHY, ELEVATED, BLOATED, CRITICAL), token formatting, turn velocity, and financial cost derivations must be pure functions in `internal/domain`.
+- Pure functions receive immutable structs/slices and return computed models or explicit errors.
+- No disk I/O, no network calls, no clocks (`time.Now()`), and no random number generators in the domain core. Inject timestamps or random seeds as function arguments.
+- Defensively guard against division by zero (e.g. empty workspaces, zero turns, zero duration, zero tokens).
 
-### Aggregations & Calculations in the Core
-- All mathematical rollups, context health categorizations, token formatting, turn velocity, and cost aggregations must be pure functions in `agentic_lens.domain.aggregations`.
-- Defensively guard against division by zero (empty workspaces, zero tokens, zero cost, zero duration).
-
----
-
-## 3. Stateless Classes, Inheritance Restrictions, and Protocols
-
-The goal is preventing shared mutable state and fragile coupling.
-
-### Rules
-1. **Stateless Operations**:
-   - Classes and repository helpers must remain strictly stateless. Methods take inputs and return outputs without mutating internal instance variables or accumulating run state.
-2. **Inheritance is Strongly Discouraged**:
-   - No inheritance in business logic or domain models.
-   - Permitted solely at framework boundaries where library types mandate it (e.g. `pydantic.BaseModel` in `adapters/schemas.py` or `enum.StrEnum`).
-3. **Avoid Abstract Base Classes (`abc.ABC`) — Use `typing.Protocol`**:
-   - Use `typing.Protocol` or pure `Callable` type aliases for structural subtyping.
-4. **Class Archetypes**:
-   - **Data Containers:** `@dataclass(frozen=True, slots=True)` with zero business logic methods for all immutable domain data models.
-   - **Boundary Models:** Pydantic `BaseModel` models in `adapters/schemas.py` for input validation and JSON deserialization.
+### Imperative Shell (Go & TypeScript)
+- The shell handles filesystem traversal, directory scanning, JSON deserialization, HTTP routing, and UI rendering.
+- Errors from the shell must be caught, wrapped with descriptive context (`fmt.Errorf("...: %w", err)`), and handled gracefully.
 
 ---
 
-## 4. Boundary Validation with Pydantic vs. Internal Dataclasses
+## 3. Go Design & Idioms
 
-Python dataclasses perform zero runtime type verification. They are fast and memory-efficient. Conversely, Pydantic provides runtime schema validation. We pay the validation cost **only at the boundaries**.
+### Strong Typing & Value Semantics
+- Target Go 1.23+.
+- Use value semantics and immutable struct patterns for domain data entities.
+- Zero `any` or `interface{}` across domain and adapters. Use concrete structs, generics, or type-safe sum types / interfaces.
+- Define interfaces where they are consumed, keeping interfaces small (1-2 methods).
+- Use typed constants / string enums (`type TimeWindow string`) rather than untyped raw string primitives.
 
-### Rules
-1. **External Boundaries (Pydantic Required)**:
-   - External JSON input (`agentic_metrics.json`) is parsed and validated exclusively via Pydantic models (`adapters/schemas.py`).
-   - Pydantic models live exclusively in `adapters/` and must never leak into the domain core.
-2. **Internal System (Dataclasses Mandate)**:
-   - Data strictly internal to the system (domain entities, rollups, aggregations, scan reports) must be immutable dataclasses: `@dataclass(frozen=True, slots=True)`.
-   - Once external data is validated at the boundary by Pydantic, the adapter immediately maps it into an immutable dataclass via `.to_domain()`.
-3. **Dictionaries Strictly Banned**:
-   - Raw dictionaries are permitted only at the immediate serialization boundary before Pydantic ingestion. Raw dictionaries must never be passed across internal layer boundaries.
-
----
-
-## 5. Typing as the Primary Communication Layer
-
-Docstrings rot. Types are verified on every check.
-
-### Rules
-- Target Python 3.14+ syntax and typing standards.
-- Use Python PEP 695 `type` aliases (e.g. `type TicketId = str`).
-- The `Any` type is banned across domain, adapter, and presentation layers.
-- Model business states and outcomes as Discriminated Unions (Sum Types) using frozen slotted dataclasses.
-- Enforce `enum.StrEnum` for all domain categorizations (e.g. `TimeGranularity`, `TimeWindowPreset`). Raw string primitives are banned for domain categories.
+### Error Handling & Validation
+- Never discard errors (`_ = ...` is forbidden for I/O, parsing, or domain execution).
+- Wrap errors with domain-relevant context: `fmt.Errorf("parsing fact ledger for ticket %s: %w", ticketID, err)`.
+- Differentiate between non-fatal scan warnings (e.g. corrupted single JSON file) and fatal execution errors.
 
 ---
 
-## 6. Presentation Layer & UI Invariants
+## 4. TypeScript Design & Idioms
 
-AgenticLens uses Streamlit and Altair for data visualization.
+### Strict Typing & No Any
+- Target TypeScript 5.x+ in strict mode (`"strict": true`, `"noImplicitAny": true`, `"exactOptionalPropertyTypes": true`).
+- The `any` type is strictly forbidden across all TypeScript code. Use `unknown` with runtime type narrowing or Zod schemas at boundaries.
+- Discriminated unions for multi-state UI representation (Loading, Success, Empty, Error).
 
-### Rules
-1. **Modern Streamlit Syntax**:
-   - Streamlit >= 1.42.0: Avoid deprecated parameters such as `use_container_width`. Use `width="stretch"` or `width="large"`.
-2. **Zero Emojis Mandate**:
-   - Zero emojis permitted in code, docstrings, UI titles, tab labels, metric cards, tables, logs, or terminal output.
-3. **Defensive Presentation**:
-   - Views must handle missing or empty datasets gracefully with `st.info()` or empty state placeholders without raising uncaught exceptions.
+### UI Presentation Rules
+- Pure presentation components separated from network fetching.
+- Declarative state management and reactive chart updates.
+- Zero emojis permitted in UI titles, tab labels, metric cards, tables, charts, tooltips, or console logs.
+- Defensive presentation: handle missing or empty datasets gracefully with empty-state messages without uncaught runtime errors.
 
 ---
 
-## 7. Quality Checks & Verification
+## 5. Quality Checks & Verification
 
-Before submitting changes, all checks must pass:
-1. **Compilation**: `python3 -m py_compile agentic_lens/**/*.py scripts/*.py tests/*.py`
-2. **Linting**: `uv run ruff check agentic_lens/`
-3. **Testing**: `uv run pytest tests/` (zero silent skips)
-4. **Deprecations**: `grep -rn "use_container_width" agentic_lens/` (must return zero matches)
-5. **Emoji Audit**: Verify zero emojis in code and UI strings.
+Before submitting any iteration or PR, all quality gates must pass:
+
+### Go Checks
+```bash
+# Verify compilation and format
+go vet ./...
+# Run test suite with race detector
+go test -race ./...
+# Build CLI binary
+go build -o bin/agentic-lens ./cmd/agentic-lens
+```
+
+### TypeScript Checks
+```bash
+# Typecheck
+npm run typecheck  # or npx tsc --noEmit
+# Linting
+npm run lint
+# Unit tests
+npm test
+```
+
+### Invariant Checks
+- Verify zero `any` in Go and TypeScript.
+- Verify zero emojis in code, UI, docstrings, and log messages.
 
 ---
 
@@ -107,9 +106,9 @@ Before submitting changes, all checks must pass:
 
 | Topic | Decision | Rule |
 |---|---|---|
-| **Architecture** | Inward dependencies | `domain/` has zero external imports. `adapters/` handles validation. `presentation/` handles UI. |
-| **Separation** | FCIS | Pure deterministic logic in domain; filesystem I/O and Pydantic in shell. |
-| **Data Models** | Pydantic at Boundaries, Dataclasses Internally | Pydantic for ingress validation; `@dataclass(frozen=True, slots=True)` internally. Dictionaries banned. |
-| **Typing** | Strict Python 3.14+ | PEP 695 type aliases, `StrEnum`, zero `Any`. |
-| **UI & Styling** | Modern Streamlit | `width="stretch"`, zero emojis. |
-| **Testing** | Deterministic Pure Core | Zero mocks for domain tests. Robust boundary tests for malformed JSON and path traversal. |
+| **Backend Architecture** | Inward Dependencies | `internal/domain` has zero I/O imports. `internal/adapters` handles JSON and disk. `cmd/` handles CLI/server. |
+| **Separation** | FCIS | Pure deterministic logic in domain; filesystem I/O and HTTP in shell. |
+| **Go Standards** | Go 1.23+, Value Semantics | No `any`/`interface{}`, wrap errors with `%w`, zero unhandled errors. |
+| **Frontend Architecture** | TypeScript Strict | `"strict": true`, zero `any`, Zod/type guards at boundaries. |
+| **UI & Styling** | Modern Web / Zero Emojis | Pure components, graceful empty states, zero emojis. |
+| **Testing** | Deterministic Pure Core | Table-driven tests in Go with zero mocks for domain. Vitest/Jest for TypeScript. |
