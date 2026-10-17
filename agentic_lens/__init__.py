@@ -1,0 +1,1 @@
+"""AgenticLens metrics visualization application."""
