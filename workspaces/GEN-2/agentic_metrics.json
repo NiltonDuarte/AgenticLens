@@ -1,0 +1,77 @@
+{
+  "ticket_id": "GEN-2",
+  "ticket_title": "Agent Single-Ticket Exclusivity & Steering Mandate",
+  "ticket_type": "chore",
+  "started_at": "2026-10-17T16:15:51.795000+00:00",
+  "completed_at": "2026-10-17T16:17:16+00:00",
+  "updated_at": "2026-10-17T16:17:20.591804+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 1
+  },
+  "invocations": [
+    {
+      "id": "ses_eb55a0e0cffe31ieoLkBnwIe35",
+      "parent_id": null,
+      "role": "orchestrator",
+      "model": "gemini-3.8-flash",
+      "user": "nilton.guedes_duarte@digits.schwarz",
+      "started_at": "2026-10-17T16:15:52.264000+00:00",
+      "completed_at": "2026-10-17T16:17:16+00:00",
+      "active_duration_seconds": 84,
+      "turns": 25,
+      "tokens": {
+        "input": 102887,
+        "output": 2324,
+        "cache_read": 346227,
+        "reasoning": 4421,
+        "peak_context": 25837
+      },
+      "cost_usd": 0.128426,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    {
+      "name": "glob",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "bash",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "read",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "todowrite",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "edit",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "write",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 1,
+      "errors": 0
+    }
+  ]
+}

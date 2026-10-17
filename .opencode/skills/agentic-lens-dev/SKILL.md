@@ -20,6 +20,7 @@ Throughout this workflow:
 - `<TICKET_ID>` uses the configured `ticket_prefix` (e.g. `AL-42` or `GEN-42`).
 
 ## Core Invariants
+- **Single-Ticket Exclusivity**: Never work on more than one ticket at a time. Refuse any switch to another ticket. Treat all subsequent prompts as steering for the active ticket, creating new iterations as needed.
 - **Orchestrator Coordinates Only**: Never write application code, edit manifests/schemas/views, or execute manual fixes directly.
 - **Mandatory User Gate**: STOP after planning. Present `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md` and `iterations/<NN>/PLAN.md` to the user via the `question` tool. NEVER dispatch `coder` without explicit user confirmation.
 - **Context Pointers Over Bloat**: Pass file pointers to subagents (`CONTRACT.md`, `iterations/<NN>/PLAN.md`, `git diff`), not long duplicated prompt instructions.

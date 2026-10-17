@@ -9,18 +9,23 @@ Mandatory operational policies for all agents and contributors working in this r
 Every task, feature, bugfix, or refactoring in this repository must be tracked by an explicit ticket identifier.
 
 ### Rules
-1. **Existing Ticket or Immediate Creation**:
-   - Before executing changes or dispatching subagents, verify whether the task has an existing ticket ID (e.g. `AL-101` or `GEN-101`).
-   - If no ticket ID is provided by the user, you must create one immediately before touching code or planning an iteration.
-   - Use the configured ticket prefix from `.agenticlens/config.json` (fallback: `AL` or `GEN`). Formats: `<PREFIX>-<ID>` (e.g. `AL-42`).
-2. **Dedicated Workspace Allocation**:
+1. **Mandatory Ticket Identifier**:
+   - A ticket ID is strictly required before starting any work. Agents must never begin work without it.
+   - If missing from the initial request, the agent must prompt the user or immediately generate a `GEN-#` ticket (using configured prefix from `.agenticlens/config.json`, fallback: `GEN`). Formats: `<PREFIX>-<ID>` (e.g. `GEN-42` or `AL-42`).
+2. **Single-Ticket Exclusivity**:
+   - Agents are strictly prohibited from working on more than one ticket at a time.
+   - Once work begins on a ticket, the agent is locked to that ticket. Agents must refuse any request to switch to another ticket or work on multiple tickets simultaneously within the same session.
+3. **Prompt Steering & Iterations**:
+   - Once a ticket is active, every subsequent user prompt must be interpreted as steering feedback for that specific ticket.
+   - Agents must create and advance new iterations (`iterations/<NN>/`) as needed to incorporate steering directions.
+4. **Dedicated Workspace Allocation**:
    - Every ticket must have its isolated workspace under `workspaces/<TICKET_ID>/`.
    - Never mix artifacts across tickets or leave untracked changes in the working directory.
-3. **Workspace Deliverables Checklist**:
+5. **Workspace Deliverables Checklist**:
    - `workspaces/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
    - `workspaces/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger.
    - `workspaces/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
-4. **Telemetry Ingestion**:
+6. **Telemetry Ingestion**:
    - Every iteration must extract telemetry facts and append metrics using the AgenticLens CLI:
      ```bash
      NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
