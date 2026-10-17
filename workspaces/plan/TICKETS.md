@@ -1,6 +1,6 @@
 # Decomposed Jira Tickets for AgenticLens
 
-Individual ticket definitions are located in `workspaces/plan/done/` and `workspaces/plan/to-do/`:
+Individual ticket definitions are located in `workspaces/plan/done/`, `workspaces/plan/to-do/`, and `workspaces/plan/discarded/`:
 - `workspaces/plan/done/AL-1 go domain aggregations scanner cli.md`
 - `workspaces/plan/done/AL-2 go embedded http server and api.md`
 - `workspaces/plan/done/AL-3 typescript spa shell and fleet overview.md`
@@ -10,7 +10,7 @@ Individual ticket definitions are located in `workspaces/plan/done/` and `worksp
 - `workspaces/plan/to-do/AL-7 domain anomaly detection and rule engine.md`
 - `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
-- `workspaces/plan/to-do/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
+- `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/to-do/AL-11 implement native go telemetry extractor and session generation.md`
 - `workspaces/plan/to-do/AL-12 implement go telemetry backfill engine and schema migration.md`
 
@@ -42,10 +42,10 @@ Individual ticket definitions are located in `workspaces/plan/done/` and `worksp
 
 - **AL-10**: Fix Git Metrics Calculation in Python Extractor and Backfill Existing Workspace Ledgers
   - **Subsystem**: Scripts / Python / Workspaces / Telemetry
-  - **Status**: Ready (Unblocked immediate fix)
+  - **Status**: Discarded (Superseded by AL-11)
   - **Blocked by**: None
-  - **Blocks**: AL-11
-  - **File**: `workspaces/plan/to-do/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
+  - **Blocks**: None
+  - **File**: `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 
 ### Tier 2 (Telemetry Modernization & Presentation)
 - **AL-4**: Implement Ticket Deep Dive, Progression Charts, and Comparisons
@@ -57,8 +57,8 @@ Individual ticket definitions are located in `workspaces/plan/done/` and `worksp
 
 - **AL-11**: Implement Native Go Telemetry Extractor and Active Session Metric Generation
   - **Subsystem**: Adapters / Domain / CLI
-  - **Status**: Ready (Pending AL-10)
-  - **Blocked by**: AL-10, AL-2 (Done)
+  - **Status**: Ready
+  - **Blocked by**: AL-2 (Done)
   - **Blocks**: AL-12, AL-5
   - **File**: `workspaces/plan/to-do/AL-11 implement native go telemetry extractor and session generation.md`
 

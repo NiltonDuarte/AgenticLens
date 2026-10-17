@@ -1,5 +1,11 @@
 h3. Title: AL-10: Fix Git Metrics Calculation in Python Extractor and Backfill Existing Workspace Ledgers
 
+*STATUS*: Discarded (Superseded by AL-11)
+
+*DISCARD REASONING*
+
+This ticket was discarded in favor of implementing the native Go telemetry extractor directly in AL-11 (`agentic-lens generate`). Rather than applying temporary maintenance to the legacy Python script (`scripts/extract_agentic_metrics.py`) only to immediately replace and deprecate it with the native Go implementation, all identified fixes (multi-language git numstat parsing, hybrid pattern classification, robust git branch/merge-base resolution, and backfilling) are incorporated directly into the scope and acceptance criteria of AL-11.
+
 *TARGET*: AgenticLens (scripts | python | workspaces | telemetry)
 
 *CONTEXT*
