@@ -21,17 +21,32 @@ We need to fix the git calculation across Python and Go, provide a dedicated Go 
 
 ## Functional Requirements
 
-### 1. Git Metrics Calculation Engine (Multi-Language Parity)
-- **Path Classification**:
-  - Test files: Match `*_test.go`, `*.test.ts`, `*.test.tsx`, `*.spec.ts`, `*.spec.tsx`, `test/**`, `tests/**`.
+### 1. Git Metrics Calculation Engine (Hybrid Model: Defaults + Config Overrides)
+- **Convention-Over-Configuration Philosophy**:
+  - Out of the box with zero configuration, the engine accurately classifies code files across Go, TypeScript, Python, and other common languages.
+  - If `.agenticlens/config.json` defines a `code_metrics` object, explicit include, exclude, test, and production patterns override or supplement the defaults.
+- **Default Multi-Language Path Classification**:
+  - Test files: Match `*_test.go`, `*.test.ts`, `*.test.tsx`, `*.spec.ts`, `*.spec.tsx`, `test_*.py`, `*_test.py`, `test/**`, `tests/**`, `__tests__/**`.
   - Production code: Match `.go`, `.ts`, `.tsx`, `.py`, `.js`, `.jsx`, `.html`, `.css`, and `Makefile` (excluding test files).
   - Excluded paths: Ignore `workspaces/**`, `.opencode/**`, `docs/**`, `*.md`, `*.json`, `*.lock`, `go.sum`, `package-lock.json`, and dotfiles.
+- **Configurable Overrides via `.agenticlens/config.json`**:
+  - Support optional `code_metrics` schema in `.agenticlens/config.json`:
+    ```json
+    {
+      "code_metrics": {
+        "include": ["cmd/**", "internal/**", "web/**", "scripts/**"],
+        "exclude": ["workspaces/**", "web/dist/**", "*.md", "*.json", "go.sum"],
+        "test_patterns": ["**/*_test.go", "**/*.test.ts", "**/*.spec.ts", "**/tests/**"],
+        "prod_patterns": ["internal/**/*.go", "cmd/**/*.go", "web/src/**/*.{ts,tsx}", "scripts/**/*.py"]
+      }
+    }
+    ```
 - **Git Revision Resolution**:
   - Active feature branch: Diff against merge base with `main` or `origin/main`, plus any uncommitted staged/unstaged modifications.
   - Merged ticket commits: Scan git log across `--all` for `[clean_ticket]` or `(<ticket_id>)` and aggregate numstat across matching commits.
   - Standalone local commits: Fallback to local commit ranges matching ticket identifier in subject or body.
 - **Immediate Python Fix**:
-  - Patch `scripts/extract_agentic_metrics.py` with multi-language classification and flexible branch/commit range detection.
+  - Patch `scripts/extract_agentic_metrics.py` to read `.agenticlens/config.json` when present, fall back to universal defaults, and remove the hardcoded `src/`/`tests/` checks.
   - Run backfill across all existing ticket workspaces (`workspaces/AL-1`, `workspaces/AL-2`, `workspaces/GEN-1`, `workspaces/GEN-2`, `workspaces/PO-1`, `workspaces/PO-2`) to restore code metrics.
 
 ### 2. Native Go Session Generation Command (`agentic-lens generate`)

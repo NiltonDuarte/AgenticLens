@@ -14,10 +14,13 @@ Refactor `scripts/extract_agentic_metrics.py` to support multi-language git metr
 
 * Python Script Refactoring:
   - Remove hardcoded path filters (`src/`, `tests/`, `infra/`, `cli/`) in `get_ticket_numstat`.
-  - Update file classification in `compute_code_facts`:
-    - Test files: `*_test.go`, `*.test.ts`, `*.test.tsx`, `*.spec.ts`, `*.spec.tsx`, `test/**`, `tests/**`.
-    - Production files: `.go`, `.ts`, `.tsx`, `.py`, `.js`, `.jsx`, `.html`, `.css`, `Makefile` (excluding test files).
-    - Ignore documentation (`*.md`), metadata (`*.json`, `*.lock`, `go.sum`, `package-lock.json`), and `workspaces/**`.
+  - Add optional configuration loader from `.agenticlens/config.json` for `code_metrics` (`include`, `exclude`, `test_patterns`, `prod_patterns`).
+  - Update file classification in `compute_code_facts` (convention-over-configuration):
+    - When `code_metrics` is specified in `.agenticlens/config.json`, respect custom glob patterns.
+    - When omitted, apply universal multi-language defaults:
+      - Test files: `*_test.go`, `*.test.ts`, `*.test.tsx`, `*.spec.ts`, `*.spec.tsx`, `test_*.py`, `*_test.py`, `test/**`, `tests/**`, `__tests__/**`.
+      - Production files: `.go`, `.ts`, `.tsx`, `.py`, `.js`, `.jsx`, `.html`, `.css`, `Makefile` (excluding test files).
+      - Ignore documentation (`*.md`), metadata (`*.json`, `*.lock`, `go.sum`, `package-lock.json`), and `workspaces/**`.
   - Fix git revision range resolution: check active branch diff against merge-base with main/origin/main, check local/remote branches matching ticket, and scan `git log --all --grep=<ticket_id>` across local commits.
 * Workspace Backfill:
   - Run backfill across all historical workspaces (`AL-1`, `AL-2`, `GEN-1`, `GEN-2`, `PO-1`, `PO-2`).

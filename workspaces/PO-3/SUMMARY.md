@@ -6,7 +6,7 @@
   - Identified hardcoded prefix checks (`src/`, `tests/`, `infra/`, `cli/`) in `get_ticket_numstat` causing full rejection of Go and TypeScript file diffs.
   - Identified hardcoded `src/` and `tests/` prefix checks in `compute_code_facts` failing to categorize `*_test.go` and `*.test.ts` test lines.
   - Identified `origin/main` git log dependency failing for local commits not yet pushed upstream.
-- Designed multi-language path categorization heuristics supporting Go (`cmd/`, `internal/`, `*_test.go`), TypeScript (`web/src/`, `*.test.ts`, `*.spec.ts`), and Python.
+- Designed hybrid code path classification engine: universal multi-language defaults (Go `*_test.go`, TypeScript `*.test.ts`, Python `tests/`) combined with optional directory/glob overrides via `.agenticlens/config.json` under `code_metrics`.
 - Designed native Go session generation command (`agentic-lens generate`) querying OpenCode SQLite DB and git directly.
 - Designed native Go historical backfill command (`agentic-lens backfill`) for batch recomputing git metrics and running schema version migrations idempotently.
 - Authored Product Specification (`workspaces/PO-3/SPEC.md`).

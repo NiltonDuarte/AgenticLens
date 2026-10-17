@@ -17,6 +17,7 @@ New tickets created under `workspaces/plan/to-do/`:
 
 ## Architectural Invariants
 - FCIS compliance: pure file categorization heuristics in `internal/domain`, imperative git and SQLite execution in `internal/adapters`.
+- Hybrid path classification: robust multi-language defaults (`*_test.go`, `*.test.ts`, etc.) coupled with optional config overrides in `.agenticlens/config.json`.
 - Pure Go SQLite driver (`modernc.org/sqlite`) preserves zero-CGO single-binary compilation.
 - Zero emojis across all code, logs, tables, and documentation.
 - Zero `any` or empty `interface{}` across Go.

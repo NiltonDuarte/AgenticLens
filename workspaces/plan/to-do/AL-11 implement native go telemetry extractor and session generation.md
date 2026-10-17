@@ -14,7 +14,7 @@ Implement a native Go extraction engine in `internal/adapters` and expose the `a
 
 * Domain Core: Ensure domain models in `internal/domain/models.go` support extraction input facts and code metrics.
 * SQLite Adapter: Create `internal/adapters/opencode/` using pure Go SQLite driver (`modernc.org/sqlite`) to query `session`, `part`, and `message` tables from `~/.local/share/opencode/opencode.db`. Extract invocations, roles, tokens, costs, durations, and tool executions.
-* Git Adapter: Create `internal/adapters/git/` to compute lines added/deleted, test/prod breakdown, and files changed with multi-language path heuristics.
+* Git Adapter: Create `internal/adapters/git/` to compute lines added/deleted, test/prod breakdown, and files changed with hybrid classification: load optional `code_metrics` patterns from `.agenticlens/config.json`, falling back to multi-language file extension and directory defaults.
 * CLI Engine: Add `generate` subcommand to `cmd/agentic-lens/main.go` accepting `--ticket-id`, `--nonce`, `--session-id`, `--json-output`, and `--append`.
 * Quality: Table-driven tests for OpenCode DB extraction using a test SQLite fixture and git parser tests. Zero CGO dependencies.
 
