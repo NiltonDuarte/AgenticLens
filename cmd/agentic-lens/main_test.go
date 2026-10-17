@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"agenticlens/internal/adapters"
 )
@@ -192,6 +194,40 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 			t.Errorf("expected ticket not found error, got: %s", stderr.String())
 		}
 	})
+
+	t.Run("server subcommand starts and responds", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "server", "--port", "19090", "--workspaces", wsDir)
+		if err := cmd.Start(); err != nil {
+			t.Fatalf("failed starting server subcommand: %v", err)
+		}
+		defer func() {
+			if killErr := cmd.Process.Kill(); killErr != nil {
+				// Process might have already terminated
+			}
+			if waitErr := cmd.Wait(); waitErr != nil {
+				// Process termination error expected after kill
+			}
+		}()
+
+		// Wait briefly for server startup
+		var resp *http.Response
+		var err error
+		for i := 0; i < 20; i++ {
+			time.Sleep(100 * time.Millisecond)
+			resp, err = http.Get("http://localhost:19090/api/fleet")
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			t.Fatalf("failed querying server: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 from /api/fleet, got %d", resp.StatusCode)
+		}
+	})
 }
 
 func TestCLIJsonOutput(t *testing.T) {
@@ -295,4 +331,26 @@ func TestCLINoValidLedgersExit(t *testing.T) {
 	if !strings.Contains(stderr.String(), "No valid agentic_metrics.json ledgers found") {
 		t.Errorf("expected 'No valid agentic_metrics.json ledgers found' error, got: %s", stderr.String())
 	}
+}
+
+func TestCLIServerSubcommandEdgeCases(t *testing.T) {
+	t.Run("server with invalid flag returns exit code non-zero", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "server", "--unrecognized-flag-xyz")
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected exit error for invalid flag")
+		}
+	})
+
+	t.Run("server with invalid port format returns exit code non-zero", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "server", "--port", "not-a-port")
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected exit error for invalid port format")
+		}
+	})
 }

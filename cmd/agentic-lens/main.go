@@ -1,18 +1,74 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
 
 	"agenticlens/internal/adapters"
+	adaptershttp "agenticlens/internal/adapters/http"
+	"agenticlens/internal/adapters/web"
 	"agenticlens/internal/domain"
 )
 
+func runServer(args []string) {
+	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
+	portFlag := serverFlags.Int("port", 8080, "Port to listen on")
+	workspacesFlag := serverFlags.String("workspaces", "", "Path to workspaces directory")
+
+	if err := serverFlags.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing server flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
+
+	staticFS, err := web.GetFS()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing embedded web filesystem: %v\n", err)
+		os.Exit(1)
+	}
+
+	srv := adaptershttp.NewServer(workspacesDir, staticFS)
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		fmt.Printf("Starting AgenticLens server on http://localhost:%d (workspaces: %s)\n", *portFlag, workspacesDir)
+		if err := srv.ListenAndServe(*portFlag); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			fmt.Fprintf(os.Stderr, "Server failed: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-stop
+	fmt.Println("\nShutting down AgenticLens server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "Server graceful shutdown failed: %v\n", err)
+	}
+	fmt.Println("AgenticLens server stopped.")
+}
+
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "server" {
+		runServer(os.Args[2:])
+		return
+	}
+
 	ticketIDFlag := flag.String("ticket-id", "", "Target ticket identifier to filter and report on")
 	workspacesFlag := flag.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
 	appendFlag := flag.String("append", "", "Path to markdown summary file to idempotently update with metrics table")

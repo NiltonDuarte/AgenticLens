@@ -298,3 +298,126 @@ func TestSerializationDTO(t *testing.T) {
 		t.Errorf("expected ticket_id in json, got %s", string(data))
 	}
 }
+
+func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
+	t.Run("malformed and edge JSON unmarshaling", func(t *testing.T) {
+		hostileJSONs := []struct {
+			name        string
+			payload     string
+			expectError bool
+		}{
+			{"empty string", "", true},
+			{"truncated json", `{"ticket_id": "T-1", "code": {`, true},
+			{"json array root", `[{"ticket_id": "T-1"}]`, true},
+			{"bad type for number", `{"ticket_id": "T-1", "code": {"lines_added": "not_a_number"}}`, true},
+			{"bad type for invocations", `{"invocations": "should_be_array"}`, true},
+			{"empty json object", `{}`, false},
+			{"negative token counts", `{"updated_at": "2026-10-17T12:00:00Z", "invocations": [{"tokens": {"input": -50}}]}`, false},
+		}
+
+		for _, tc := range hostileJSONs {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				var dto adapters.AgenticFactLedgerDTO
+				err := json.Unmarshal([]byte(tc.payload), &dto)
+				if tc.expectError && err == nil {
+					t.Errorf("expected error for payload %q, got nil", tc.payload)
+				}
+				if !tc.expectError && err != nil {
+					t.Errorf("expected no error for payload %q, got: %v", tc.payload, err)
+				}
+			})
+		}
+	})
+
+	t.Run("scan workspaces with mixed valid, empty, non-metric, and zero-byte files", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// 1. Valid workspace
+		validDir := filepath.Join(tempDir, "VALID-1")
+		if err := os.MkdirAll(validDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(`{"ticket_id": "VALID-1", "updated_at": "2026-10-17T10:00:00Z"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// 2. Empty directory (no files at all)
+		emptyDir := filepath.Join(tempDir, "EMPTY-DIR")
+		if err := os.MkdirAll(emptyDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		// 3. Directory with only non-metric files
+		unrelatedDir := filepath.Join(tempDir, "UNRELATED")
+		if err := os.MkdirAll(unrelatedDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(unrelatedDir, "notes.txt"), []byte("some notes"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// 4. Zero-byte metric file
+		zeroByteDir := filepath.Join(tempDir, "ZERO-BYTE")
+		if err := os.MkdirAll(zeroByteDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(zeroByteDir, "agentic_metrics.json"), []byte(""), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// 5. Corrupted JSON file
+		corruptDir := filepath.Join(tempDir, "CORRUPT-JSON")
+		if err := os.MkdirAll(corruptDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(corruptDir, "agentic_metrics.json"), []byte("{not json!"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		report := adapters.ScanWorkspaces(tempDir)
+
+		// Only VALID-1 should be parsed as a valid ledger
+		if len(report.Ledgers) != 1 {
+			t.Fatalf("expected 1 valid ledger, got %d", len(report.Ledgers))
+		}
+		if *report.Ledgers[0].TicketID != "VALID-1" {
+			t.Errorf("expected VALID-1, got %s", *report.Ledgers[0].TicketID)
+		}
+
+		// Should have 2 scan errors: one for ZERO-BYTE and one for CORRUPT-JSON
+		if len(report.Errors) != 2 {
+			t.Errorf("expected 2 scan errors for defective files, got %d: %v", len(report.Errors), report.Errors)
+		}
+	})
+
+	t.Run("hostile path traversal attempts on ReadTicketArtifacts", func(t *testing.T) {
+		tempDir := t.TempDir()
+		safeTicketDir := filepath.Join(tempDir, "AL-SAFE")
+		if err := os.MkdirAll(safeTicketDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(safeTicketDir, "CONTRACT.md"), []byte("# Safe Contract"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		traversalPayloads := []string{
+			"../../../../../../etc/passwd",
+			"..",
+			".",
+			"",
+			"/root",
+			"AL-SAFE/../AL-SAFE/../../",
+			"../../../",
+			"./../AL-SAFE",
+			"AL-SAFE/../../",
+		}
+
+		for _, payload := range traversalPayloads {
+			art := adapters.ReadTicketArtifacts(payload, tempDir)
+			if art.ContractContent != nil || art.SummaryContent != nil {
+				t.Errorf("path traversal payload %q succeeded in reading artifacts: %+v", payload, art)
+			}
+		}
+	})
+}

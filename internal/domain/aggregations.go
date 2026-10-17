@@ -867,6 +867,98 @@ func FilterLedgersByDateRange(ledgers []AgenticMetricsLedger, startDate, endDate
 	return filtered
 }
 
+// FilterLedgersByTimeWindow filters ledgers based on a TimeWindow relative to refDate.
+// For TimeWindowAll or empty windows, it returns a clone of all ledgers.
+func FilterLedgersByTimeWindow(ledgers []AgenticMetricsLedger, window TimeWindow, refDate time.Time) []AgenticMetricsLedger {
+	if window == TimeWindowAll || len(ledgers) == 0 {
+		result := make([]AgenticMetricsLedger, len(ledgers))
+		copy(result, ledgers)
+		return result
+	}
+
+	var days int
+	switch window {
+	case TimeWindow7D:
+		days = 7
+	case TimeWindow30D:
+		days = 30
+	case TimeWindow90D:
+		days = 90
+	default:
+		result := make([]AgenticMetricsLedger, len(ledgers))
+		copy(result, ledgers)
+		return result
+	}
+
+	ref := time.Date(refDate.Year(), refDate.Month(), refDate.Day(), 23, 59, 59, 999999999, time.UTC)
+	start := time.Date(refDate.Year(), refDate.Month(), refDate.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -days)
+
+	var filtered []AgenticMetricsLedger
+	for _, ledger := range ledgers {
+		t, ok := GetTicketEffectiveDate(ledger.CompletedAt, ledger.StartedAt, ledger.UpdatedAt)
+		if !ok {
+			continue
+		}
+		if !t.Before(start) && !t.After(ref) {
+			filtered = append(filtered, ledger)
+		}
+	}
+
+	if filtered == nil {
+		return []AgenticMetricsLedger{}
+	}
+	return filtered
+}
+
+// SortLedgers deterministically sorts a slice of AgenticMetricsLedger according to field and order.
+// It returns a newly allocated sorted slice without mutating the original input slice.
+func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascending bool) []AgenticMetricsLedger {
+	result := make([]AgenticMetricsLedger, len(ledgers))
+	copy(result, ledgers)
+
+	if len(result) <= 1 {
+		return result
+	}
+
+	sort.SliceStable(result, func(i, j int) bool {
+		a := result[i]
+		b := result[j]
+
+		var less bool
+		switch field {
+		case SortFieldCost:
+			if a.Totals.CostUSD == b.Totals.CostUSD {
+				less = a.UpdatedAt < b.UpdatedAt
+			} else {
+				less = a.Totals.CostUSD < b.Totals.CostUSD
+			}
+		case SortFieldDuration:
+			if a.WorkflowEfficiency.ActiveDurationSeconds == b.WorkflowEfficiency.ActiveDurationSeconds {
+				less = a.UpdatedAt < b.UpdatedAt
+			} else {
+				less = a.WorkflowEfficiency.ActiveDurationSeconds < b.WorkflowEfficiency.ActiveDurationSeconds
+			}
+		case SortFieldInvocations:
+			if a.Totals.Invocations == b.Totals.Invocations {
+				less = a.UpdatedAt < b.UpdatedAt
+			} else {
+				less = a.Totals.Invocations < b.Totals.Invocations
+			}
+		case SortFieldUpdatedAt:
+			fallthrough
+		default:
+			less = a.UpdatedAt < b.UpdatedAt
+		}
+
+		if ascending {
+			return less
+		}
+		return !less
+	})
+
+	return result
+}
+
 type bucketAccumulator struct {
 	invocations           int64
 	costUSD               float64

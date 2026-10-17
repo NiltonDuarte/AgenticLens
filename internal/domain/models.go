@@ -261,3 +261,9 @@ type TicketArtifacts struct {
 	ContractContent *string `json:"contract_content"`
 	SummaryContent  *string `json:"summary_content"`
 }
+
+// WorkspaceDetail combines an AgenticMetricsLedger with its associated TicketArtifacts.
+type WorkspaceDetail struct {
+	Ledger    AgenticMetricsLedger `json:"ledger"`
+	Artifacts TicketArtifacts      `json:"artifacts"`
+}
