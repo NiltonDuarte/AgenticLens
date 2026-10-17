@@ -4,6 +4,7 @@ mode: subagent
 permission:
   edit: allow
   bash:
+    "make *": allow
     "go *": allow
     "npm *": allow
     "npx *": allow
@@ -39,4 +40,4 @@ Testing Mandates:
 5. TypeScript Frontend Testing:
    - Test pure formatters, chart transforms, and state transitions with Vitest/Jest.
 6. Zero Silent Skips:
-   - Zero tests may be skipped silently. All tests must execute and pass. Run `go test -race ./...`.
+   - Zero tests may be skipped silently. All tests must execute and pass. Run `make test` (or `go test -race ./...`).

@@ -4,6 +4,7 @@ mode: subagent
 permission:
   edit: allow
   bash:
+    "make *": allow
     "go *": allow
     "npm *": allow
     "npx *": allow

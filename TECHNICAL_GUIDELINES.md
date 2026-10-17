@@ -94,7 +94,18 @@ AgenticLens deploys as a single, self-contained executable with the TypeScript w
 
 Before submitting any iteration or PR, all quality gates must pass:
 
-### Go Checks
+### Automated Verification (Makefile)
+```bash
+# Run all quality checks, tests, and build
+make
+
+# Or run specific stages:
+make check          # Static analysis: go vet, frontend lint/typecheck, git diff check
+make test           # Unit and race-detected test suites (backend and frontend)
+make build          # Single binary build (including frontend bundle if present)
+```
+
+### Manual Go Checks
 ```bash
 # Verify compilation and format
 go vet ./...

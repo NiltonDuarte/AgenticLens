@@ -1,0 +1,67 @@
+{
+  "ticket_id": "GEN-1",
+  "ticket_title": "Session Sandbox Network Policy for Go & TypeScript Toolchains",
+  "ticket_type": "feature",
+  "started_at": "2026-10-17T15:31:01.795000+00:00",
+  "completed_at": "2026-10-17T15:39:05.134000+00:00",
+  "updated_at": "2026-10-17T15:39:18.974069+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 1
+  },
+  "invocations": [
+    {
+      "id": "ses_eb58319dcffebJ83wNO5KvVhy6",
+      "parent_id": null,
+      "role": "orchestrator",
+      "model": "gemini-3.8-flash",
+      "user": "nilton.guedes_duarte@digits.schwarz",
+      "started_at": "2026-10-17T15:31:02.159000+00:00",
+      "completed_at": "2026-10-17T15:39:05.134000+00:00",
+      "active_duration_seconds": 144,
+      "turns": 30,
+      "tokens": {
+        "input": 162269,
+        "output": 3114,
+        "cache_read": 267157,
+        "reasoning": 4831,
+        "peak_context": 24020
+      },
+      "cost_usd": 0.171532,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "calls": 9,
+      "errors": 0
+    },
+    {
+      "name": "bash",
+      "calls": 8,
+      "errors": 0
+    },
+    {
+      "name": "glob",
+      "calls": 3,
+      "errors": 0
+    },
+    {
+      "name": "write",
+      "calls": 3,
+      "errors": 0
+    },
+    {
+      "name": "edit",
+      "calls": 1,
+      "errors": 0
+    }
+  ]
+}

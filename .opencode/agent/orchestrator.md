@@ -9,6 +9,7 @@ permission:
     "git status*": allow
     "git diff*": allow
     "mkdir *": allow
+    "make *": allow
     "go *": allow
     "npm *": allow
     "npx *": allow
@@ -55,8 +56,8 @@ Workflow Execution Loop:
      - `CHANGES_REQUESTED`: Feed findings back to `coder`/`tester`.
      - `BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
 6. Phase 3 (Delivery Sync & Self-Reflexive Telemetry via AgenticLens):
-   - Quality check: verify compilation and linting:
-     `go vet ./... && go test -race ./... && (test -d web && (cd web && npm run typecheck && npm run lint && npm run build) || true) && go build -o bin/agentic-lens ./cmd/agentic-lens && git diff --check`
+   - Quality check: verify compilation, testing, and linting:
+     `make` (or `make check && make test && make build`)
    - Update `<workspaces_dir>/<TICKET_ID>/SUMMARY.md`: Unified summary of changes grouped by layer (`domain`, `adapters`, `presentation`).
    - Extract raw facts ledger:
      `NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')`

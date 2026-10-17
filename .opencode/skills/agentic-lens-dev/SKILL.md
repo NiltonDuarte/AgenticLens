@@ -75,7 +75,7 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
    task(
        subagent_type="tester",
        description="Test iteration <NN>",
-       prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Execute pure Go domain tests (zero mocks) with go test -race ./..., boundary schema tests, and TypeScript test suites. Assert edge cases (zero tokens, division by zero, empty ledgers). Zero silent skips allowed.",
+        prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Execute pure Go domain tests (zero mocks) with make test (or go test -race ./...), boundary schema tests, and TypeScript test suites. Assert edge cases (zero tokens, division by zero, empty ledgers). Zero silent skips allowed.",
    )
    ```
 3. **Audit (`reviewer`)**:
@@ -95,11 +95,9 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
 ### Phase 3: Delivery Sync (Every Iteration)
 1. Verify code quality:
    ```bash
-   # TypeScript verification and build (if frontend modified)
-   test -d web && (cd web && npm run typecheck && npm run lint && npm run build) || true
-   # Go verification and single binary build
-   go vet ./... && go test -race ./... && go build -o bin/agentic-lens ./cmd/agentic-lens
-   git diff --check
+   # Run automated checks, tests, and build via Makefile
+   make
+   # or run individually: make check && make test && make build
    ```
 2. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus verification status.
 3. Extract raw session facts ledger:

@@ -27,6 +27,6 @@ h3. Title: <PREFIX>-XXXXX: <Short, action-oriented title>
 *DEFINITION OF DONE*
  
 * Code and tests merged to target branch.
-* Quality gates passing (`go vet ./...`, `go test -race ./...`, `npm run typecheck`, `npm run lint`).
+* Quality gates passing (`make check`, `make test`, or `make`).
 * Go and TypeScript type checking clean with zero any.
 * Telemetry tested with `agentic-lens` CLI.

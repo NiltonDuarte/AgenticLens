@@ -6,6 +6,7 @@ permission:
   bash:
     "git diff*": allow
     "git status*": allow
+    "make *": allow
     "go *": allow
     "npm *": allow
     "npx *": allow
