@@ -232,3 +232,47 @@ export interface WorkspaceDetail {
   readonly ledger: AgenticMetricsLedger;
   readonly artifacts: TicketArtifacts;
 }
+
+export type TimeGranularity = 'daily' | 'weekly' | 'cumulative';
+
+export type TimeWindowPreset = 'all' | '7d' | '30d' | '90d' | 'custom';
+
+export type ActiveTab = 'landing' | 'overview' | 'deep-dive' | 'progression' | 'comparisons';
+
+export type ComparisonSortField =
+  | 'completed_at'
+  | 'started_at'
+  | 'ticket_id'
+  | 'cost_usd'
+  | 'active_duration_seconds'
+  | 'sdlc_iterations'
+  | 'cache_hit_rate_pct'
+  | 'tool_success_rate_pct'
+  | 'lines_added'
+  | 'orchestrator_saturation_pct';
+
+export type ComparisonSortOrder = 'asc' | 'desc';
+
+export interface TimeBucketMetric {
+  readonly bucket_key: string;
+  readonly bucket_date: string;
+  readonly invocations: number;
+  readonly cost_usd: number;
+  readonly input_tokens: number;
+  readonly output_tokens: number;
+  readonly cache_read_tokens: number;
+  readonly reasoning_tokens: number;
+  readonly cache_hit_rate_pct: number;
+  readonly lines_added: number;
+  readonly lines_deleted: number;
+  readonly files_changed: number;
+  readonly net_lines_added: number;
+  readonly peak_context_tokens: number;
+  readonly active_duration_seconds: number;
+  readonly cumulative_cost_usd: number;
+  readonly cumulative_input_tokens: number;
+  readonly cumulative_output_tokens: number;
+  readonly cumulative_lines_added: number;
+  readonly cumulative_lines_deleted: number;
+  readonly cumulative_invocations: number;
+}

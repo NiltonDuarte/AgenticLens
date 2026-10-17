@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -353,6 +355,281 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 		err := cmd.Run()
 		if err == nil {
 			t.Fatalf("expected exit error for invalid port format")
+		}
+	})
+
+	t.Run("server default port is 8085 in help text", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "server", "--help")
+		var env []string
+		for _, e := range os.Environ() {
+			if !strings.HasPrefix(e, "PORT=") {
+				env = append(env, e)
+			}
+		}
+		cmd.Env = env
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		_ = cmd.Run()
+		if !strings.Contains(stderr.String(), "default 8085") {
+			t.Errorf("expected default 8085 in server help text, got: %s", stderr.String())
+		}
+	})
+}
+
+func TestCLIServerPortEnvironment(t *testing.T) {
+	wsDir := setupTestWorkspace(t)
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to find free port: %v", err)
+	}
+	port := ln.Addr().(*net.TCPAddr).Port
+	ln.Close()
+
+	cmd := exec.Command(cliBinaryPath, "server", "--workspaces", wsDir)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", port))
+
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("failed starting server subcommand with PORT env: %v", err)
+	}
+	defer func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}()
+
+	var resp *http.Response
+	for i := 0; i < 20; i++ {
+		time.Sleep(100 * time.Millisecond)
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", port))
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		t.Fatalf("failed querying server on PORT env port %d: %v", port, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 from /api/fleet on port %d, got %d", port, resp.StatusCode)
+	}
+}
+
+func TestCLIServerPortFlagPrecedence(t *testing.T) {
+	wsDir := setupTestWorkspace(t)
+
+	t.Run("valid flag overrides valid PORT env", func(t *testing.T) {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("failed to find free port: %v", err)
+		}
+		flagPort := ln.Addr().(*net.TCPAddr).Port
+		ln.Close()
+
+		envPort := flagPort + 1
+		if envPort > 65530 {
+			envPort = flagPort - 1
+		}
+
+		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(flagPort), "--workspaces", wsDir)
+		cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", envPort))
+
+		if err := cmd.Start(); err != nil {
+			t.Fatalf("failed starting server subcommand: %v", err)
+		}
+		defer func() {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}()
+
+		var resp *http.Response
+		for i := 0; i < 20; i++ {
+			time.Sleep(100 * time.Millisecond)
+			resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", flagPort))
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			t.Fatalf("failed querying server on flag port %d: %v", flagPort, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 from /api/fleet on flag port %d, got %d", flagPort, resp.StatusCode)
+		}
+	})
+
+	t.Run("valid flag overrides invalid PORT env", func(t *testing.T) {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("failed to find free port: %v", err)
+		}
+		flagPort := ln.Addr().(*net.TCPAddr).Port
+		ln.Close()
+
+		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(flagPort), "--workspaces", wsDir)
+		cmd.Env = append(os.Environ(), "PORT=not-a-valid-port")
+
+		if err := cmd.Start(); err != nil {
+			t.Fatalf("failed starting server subcommand: %v", err)
+		}
+		defer func() {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}()
+
+		var resp *http.Response
+		for i := 0; i < 20; i++ {
+			time.Sleep(100 * time.Millisecond)
+			resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", flagPort))
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			t.Fatalf("failed querying server on flag port %d overriding invalid PORT env: %v", flagPort, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 from /api/fleet on flag port %d, got %d", flagPort, resp.StatusCode)
+		}
+	})
+}
+
+func TestCLIServerInvalidPortRange(t *testing.T) {
+	wsDir := setupTestWorkspace(t)
+
+	testCases := []struct {
+		name string
+		args []string
+		env  []string
+	}{
+		{
+			name: "port 0 via flag",
+			args: []string{"server", "--port", "0", "--workspaces", wsDir},
+		},
+		{
+			name: "port 70000 via flag",
+			args: []string{"server", "--port", "70000", "--workspaces", wsDir},
+		},
+		{
+			name: "port 65536 via flag",
+			args: []string{"server", "--port", "65536", "--workspaces", wsDir},
+		},
+		{
+			name: "negative port via flag",
+			args: []string{"server", "--port", "-5", "--workspaces", wsDir},
+		},
+		{
+			name: "non-number port via flag",
+			args: []string{"server", "--port", "not-a-number", "--workspaces", wsDir},
+		},
+		{
+			name: "port 0 via PORT env",
+			args: []string{"server", "--workspaces", wsDir},
+			env:  []string{"PORT=0"},
+		},
+		{
+			name: "port 70000 via PORT env",
+			args: []string{"server", "--workspaces", wsDir},
+			env:  []string{"PORT=70000"},
+		},
+		{
+			name: "port 65536 via PORT env",
+			args: []string{"server", "--workspaces", wsDir},
+			env:  []string{"PORT=65536"},
+		},
+		{
+			name: "negative port via PORT env",
+			args: []string{"server", "--workspaces", wsDir},
+			env:  []string{"PORT=-10"},
+		},
+		{
+			name: "non-number port via PORT env",
+			args: []string{"server", "--workspaces", wsDir},
+			env:  []string{"PORT=not-a-number"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := exec.Command(cliBinaryPath, tc.args...)
+			if len(tc.env) > 0 {
+				cmd.Env = append(os.Environ(), tc.env...)
+			}
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected error for %s, got success", tc.name)
+			}
+			errOutput := stderr.String()
+			if !strings.Contains(errOutput, "invalid port") &&
+				!strings.Contains(errOutput, "out of valid range") &&
+				!strings.Contains(errOutput, "parse error") {
+				t.Errorf("expected invalid port diagnostic message, got: %s", errOutput)
+			}
+		})
+	}
+}
+
+func TestCLIServerAddressAlreadyInUse(t *testing.T) {
+	wsDir := setupTestWorkspace(t)
+
+	t.Run("conflict diagnostic via --port flag", func(t *testing.T) {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("failed to listen on test port: %v", err)
+		}
+		defer ln.Close()
+
+		port := ln.Addr().(*net.TCPAddr).Port
+
+		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port), "--workspaces", wsDir)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		err = cmd.Run()
+		if err == nil {
+			t.Fatalf("expected error when binding to already occupied port %d, got success", port)
+		}
+
+		out := stderr.String()
+		if !strings.Contains(out, "already in use") {
+			t.Errorf("expected 'already in use' in stderr, got: %s", out)
+		}
+		if !strings.Contains(out, "--port or the PORT environment variable") {
+			t.Errorf("expected suggestion to use --port or PORT in stderr, got: %s", out)
+		}
+	})
+
+	t.Run("conflict diagnostic via PORT environment variable", func(t *testing.T) {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("failed to listen on test port: %v", err)
+		}
+		defer ln.Close()
+
+		port := ln.Addr().(*net.TCPAddr).Port
+
+		cmd := exec.Command(cliBinaryPath, "server", "--workspaces", wsDir)
+		cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", port))
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		err = cmd.Run()
+		if err == nil {
+			t.Fatalf("expected error when binding to already occupied port %d via PORT env, got success", port)
+		}
+
+		out := stderr.String()
+		if !strings.Contains(out, "already in use") {
+			t.Errorf("expected 'already in use' in stderr, got: %s", out)
+		}
+		if !strings.Contains(out, "--port or the PORT environment variable") {
+			t.Errorf("expected suggestion to use --port or PORT in stderr, got: %s", out)
 		}
 	})
 }

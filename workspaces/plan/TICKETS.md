@@ -4,27 +4,19 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-1 go domain aggregations scanner cli.md`
 - `workspaces/plan/done/AL-2 go embedded http server and api.md`
 - `workspaces/plan/done/AL-3 typescript spa shell and fleet overview.md`
+- `workspaces/plan/done/AL-4 typescript ticket deep dive and progression.md`
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
-- `workspaces/plan/to-do/AL-4 typescript ticket deep dive and progression.md`
 - `workspaces/plan/to-do/AL-5 single binary integration parity and deprecation.md`
 - `workspaces/plan/to-do/AL-6 versioned schema migration and chronological event extraction.md`
 - `workspaces/plan/to-do/AL-7 domain anomaly detection and rule engine.md`
 - `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
-- `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/to-do/AL-12 implement go telemetry backfill engine and schema migration.md`
+- `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 
 ---
 
 ## Ready
-
-- **AL-4**: Implement Ticket Deep Dive, Progression Charts, and Comparisons
-  - **Subsystem**: Presentation / Web
-  - **Phase**: Phase 1
-  - **Status**: Ready
-  - **Blocked by**: None (AL-2 and AL-3 Done)
-  - **Blocks**: AL-5
-  - **File**: `workspaces/plan/to-do/AL-4 typescript ticket deep dive and progression.md`
 
 - **AL-12**: Implement Go Telemetry Backfill Engine and Schema Migration Command
   - **Subsystem**: Adapters / Domain / CLI
@@ -42,7 +34,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Build / Packaging / Tests
   - **Phase**: Phase 1
   - **Status**: Pending
-  - **Blocked by**: AL-4, AL-11 (Done), AL-12
+  - **Blocked by**: AL-4 (Done), AL-11 (Done), AL-12
   - **Blocks**: AL-6
   - **File**: `workspaces/plan/to-do/AL-5 single binary integration parity and deprecation.md`
 
@@ -105,6 +97,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: AL-4
   - **File**: `workspaces/plan/done/AL-3 typescript spa shell and fleet overview.md`
+
+- **AL-4**: Implement Ticket Deep Dive, Progression Charts, and Comparisons
+  - **Subsystem**: Presentation / Web
+  - **Phase**: Phase 1
+  - **Status**: Done
+  - **Blocked by**: None (AL-2 and AL-3 Done)
+  - **Blocks**: AL-5
+  - **File**: `workspaces/plan/done/AL-4 typescript ticket deep dive and progression.md`
 
 - **AL-11**: Implement Native Go Telemetry Extractor and Active Session Metric Generation
   - **Subsystem**: Adapters / Domain / CLI

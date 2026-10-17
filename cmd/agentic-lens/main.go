@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -239,12 +240,26 @@ func runGenerate(args []string) {
 }
 
 func runServer(args []string) {
+	defaultPort := 8085
+	if envPort := strings.TrimSpace(os.Getenv("PORT")); envPort != "" {
+		if p, err := strconv.Atoi(envPort); err == nil {
+			defaultPort = p
+		} else {
+			defaultPort = -1
+		}
+	}
+
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
-	portFlag := serverFlags.Int("port", 8080, "Port to listen on")
+	portFlag := serverFlags.Int("port", defaultPort, "Port to listen on")
 	workspacesFlag := serverFlags.String("workspaces", "", "Path to workspaces directory")
 
 	if err := serverFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing server flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	if *portFlag < 1 || *portFlag > 65535 {
+		fmt.Fprintf(os.Stderr, "Error: invalid port %d: must be between 1 and 65535\n", *portFlag)
 		os.Exit(1)
 	}
 
@@ -264,7 +279,11 @@ func runServer(args []string) {
 	go func() {
 		fmt.Printf("Starting AgenticLens server on http://localhost:%d (workspaces: %s)\n", *portFlag, workspacesDir)
 		if err := srv.ListenAndServe(*portFlag); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			fmt.Fprintf(os.Stderr, "Server failed: %v\n", err)
+			if errors.Is(err, syscall.EADDRINUSE) || strings.Contains(strings.ToLower(err.Error()), "address already in use") {
+				fmt.Fprintf(os.Stderr, "Server failed: port %d is already in use. Specify an alternate port via --port or the PORT environment variable.\n", *portFlag)
+			} else {
+				fmt.Fprintf(os.Stderr, "Server failed: %v\n", err)
+			}
 			os.Exit(1)
 		}
 	}()

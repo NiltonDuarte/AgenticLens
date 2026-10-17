@@ -7,7 +7,10 @@ import {
   formatLeadTime,
   computeLeadTimeSeconds,
   deriveTicketComparisonRows,
+  formatIsoDateOnly,
+  formatIsoDateTimeShort,
 } from './formatters';
+import { mockAgenticMetricsLedgers } from '../api/mockData';
 
 describe('Domain Pure Formatters', () => {
   describe('formatTokensK', () => {
@@ -246,6 +249,71 @@ describe('Domain Pure Formatters', () => {
       expect(rows[0]?.ticket_id).toBe('unknown');
       expect(rows[0]?.ticket_title).toBe('N/A');
       expect(rows[0]?.lead_duration_formatted).toBe('In Progress');
+    });
+
+    it('sorts rows dynamically by comparison sort fields and order', () => {
+      const ledgers = Object.values(mockAgenticMetricsLedgers);
+      expect(ledgers.length).toBeGreaterThan(1);
+
+      // Sort by cost ascending
+      const byCostAsc = deriveTicketComparisonRows(ledgers, 'cost_usd', 'asc');
+      for (let i = 0; i < byCostAsc.length - 1; i++) {
+        expect(byCostAsc[i]!.cost_usd).toBeLessThanOrEqual(byCostAsc[i + 1]!.cost_usd);
+      }
+
+      // Sort by cost descending
+      const byCostDesc = deriveTicketComparisonRows(ledgers, 'cost_usd', 'desc');
+      for (let i = 0; i < byCostDesc.length - 1; i++) {
+        expect(byCostDesc[i]!.cost_usd).toBeGreaterThanOrEqual(byCostDesc[i + 1]!.cost_usd);
+      }
+
+      // Sort by active duration ascending
+      const byDurAsc = deriveTicketComparisonRows(ledgers, 'active_duration_seconds', 'asc');
+      for (let i = 0; i < byDurAsc.length - 1; i++) {
+        expect(byDurAsc[i]!.active_duration_seconds).toBeLessThanOrEqual(
+          byDurAsc[i + 1]!.active_duration_seconds
+        );
+      }
+
+      // Sort by iterations descending
+      const byIterDesc = deriveTicketComparisonRows(ledgers, 'sdlc_iterations', 'desc');
+      for (let i = 0; i < byIterDesc.length - 1; i++) {
+        expect(byIterDesc[i]!.sdlc_iterations).toBeGreaterThanOrEqual(
+          byIterDesc[i + 1]!.sdlc_iterations
+        );
+      }
+
+      // Sort by lines added descending
+      const byLinesDesc = deriveTicketComparisonRows(ledgers, 'lines_added', 'desc');
+      for (let i = 0; i < byLinesDesc.length - 1; i++) {
+        expect(byLinesDesc[i]!.lines_added).toBeGreaterThanOrEqual(
+          byLinesDesc[i + 1]!.lines_added
+        );
+      }
+
+      // Sort by ticket_id ascending
+      const byIdAsc = deriveTicketComparisonRows(ledgers, 'ticket_id', 'asc');
+      for (let i = 0; i < byIdAsc.length - 1; i++) {
+        expect(byIdAsc[i]!.ticket_id.localeCompare(byIdAsc[i + 1]!.ticket_id)).toBeLessThanOrEqual(0);
+      }
+    });
+  });
+
+  describe('formatIsoDateOnly and formatIsoDateTimeShort', () => {
+    it('formats date only correctly', () => {
+      expect(formatIsoDateOnly('2026-10-15T14:30:00Z')).toBe('2026-10-15');
+      expect(formatIsoDateOnly('2026-10-15')).toBe('2026-10-15');
+      expect(formatIsoDateOnly(null)).toBe('N/A');
+      expect(formatIsoDateOnly(undefined)).toBe('N/A');
+      expect(formatIsoDateOnly('short')).toBe('N/A');
+    });
+
+    it('formats short datetime correctly without emojis', () => {
+      expect(formatIsoDateTimeShort('2026-10-15T14:30:00Z')).toBe('2026-10-15 14:30');
+      expect(formatIsoDateTimeShort('2026-10-15')).toBe('2026-10-15');
+      expect(formatIsoDateTimeShort(null)).toBe('N/A');
+      expect(formatIsoDateTimeShort(undefined)).toBe('N/A');
+      expect(formatIsoDateTimeShort('short')).toBe('N/A');
     });
   });
 });

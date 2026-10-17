@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchFleetSummary, fetchWorkspaces, fetchWorkspaceById } from './client';
+import {
+  fetchFleetSummary,
+  fetchWorkspaces,
+  fetchWorkspaceById,
+  fetchWorkspaceLedgers,
+} from './client';
 import {
   mockFleetSummary,
   mockTicketComparisonRows,
@@ -267,6 +272,55 @@ describe('Boundary API Client', () => {
       await expect(fetchWorkspaceById('UNKNOWN-TICKET')).rejects.toThrow(
         'Failed to fetch'
       );
+    });
+  });
+
+  describe('fetchWorkspaceLedgers', () => {
+    it('returns raw ledgers on successful HTTP 200 response', async () => {
+      const dummyLedgers = [mockAgenticMetricsLedgers['AL-1']!];
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => dummyLedgers,
+      }));
+
+      const res = await fetchWorkspaceLedgers();
+      expect(res.isMock).toBe(false);
+      expect(res.data).toHaveLength(1);
+      expect(res.data[0]?.ticket_id).toBe('AL-1');
+    });
+
+    it('falls back to mockAgenticMetricsLedgers on network error', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')));
+
+      const res = await fetchWorkspaceLedgers();
+      expect(res.isMock).toBe(true);
+      expect(res.data.length).toBeGreaterThan(0);
+      expect(res.data.some((l) => l.ticket_id === 'AL-1')).toBe(true);
+    });
+
+    it('falls back to mockAgenticMetricsLedgers on 500 error response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Server Error',
+      }));
+
+      const res = await fetchWorkspaceLedgers();
+      expect(res.isMock).toBe(true);
+      expect(res.data.length).toBeGreaterThan(0);
+    });
+
+    it('falls back to mockAgenticMetricsLedgers on invalid JSON response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error('Malformed JSON');
+        },
+      }));
+
+      const res = await fetchWorkspaceLedgers();
+      expect(res.isMock).toBe(true);
+      expect(res.data.length).toBeGreaterThan(0);
     });
   });
 });

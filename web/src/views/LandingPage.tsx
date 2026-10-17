@@ -1,0 +1,268 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import type { ActiveTab, FleetSummary, TicketComparisonRow } from '../domain/types';
+import { formatCurrencyUSD, formatPercentage } from '../domain/formatters';
+import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
+import { EmptyState } from '../components/EmptyState';
+
+export interface LandingPageProps {
+  readonly onNavigate: (tab: ActiveTab) => void;
+  readonly onSelectTicket: (ticketId: string) => void;
+  readonly onMockChange?: (isMock: boolean) => void;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({
+  onNavigate,
+  onSelectTicket,
+  onMockChange,
+}) => {
+  const [summary, setSummary] = useState<FleetSummary | null>(null);
+  const [workspaces, setWorkspaces] = useState<readonly TicketComparisonRow[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const [fleetRes, workspacesRes] = await Promise.all([
+        fetchFleetSummary(),
+        fetchWorkspaces(),
+      ]);
+      setSummary(fleetRes.data);
+      setWorkspaces(workspacesRes.data);
+      const isAnyMock = fleetRes.isMock || workspacesRes.isMock;
+      onMockChange?.(isAnyMock);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to retrieve telemetry data';
+      setErrorMessage(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [onMockChange]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <span>Loading observability portal...</span>
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="landing-container">
+        <div className="error-banner">
+          <span>{errorMessage}</span>
+          <button type="button" className="btn-primary" onClick={loadData}>
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalWorkspaces = summary?.total_tickets ?? workspaces.length;
+  const totalSpend = summary ? formatCurrencyUSD(summary.total_cost_usd) : '$0.00';
+  const totalIterations = workspaces.reduce(
+    (acc, w) => acc + (Number.isFinite(w.sdlc_iterations) ? w.sdlc_iterations : 0),
+    0
+  );
+  const cacheHitEfficiency = summary
+    ? formatPercentage(summary.overall_cache_hit_rate_pct)
+    : '0.0%';
+
+  return (
+    <div className="landing-container">
+      {/* Hero Section */}
+      <section className="landing-hero" aria-label="Observability Platform Overview">
+        <div className="hero-badge">Autonomous Multi-Agent Telemetry</div>
+        <h1 className="hero-title">AgenticLens Observability</h1>
+        <p className="hero-subtitle">
+          Real-time telemetry, context health tracking, and unit economics for autonomous multi-agent software engineering fleets.
+        </p>
+        <p className="hero-lead">
+          Built upon the Functional Core, Imperative Shell (FCIS) architecture, AgenticLens delivers granular operational intelligence for AI-driven development. Monitor context window saturation against model ceilings, evaluate subagent turn velocity, audit token unit economics, and inspect SDLC execution threads across every ticket workspace.
+        </p>
+        <div className="hero-tags">
+          <span className="hero-tag">Functional Core, Imperative Shell</span>
+          <span className="hero-tag">Context Window Saturation</span>
+          <span className="hero-tag">Token Unit Economics</span>
+          <span className="hero-tag">Multi-Agent Verification</span>
+        </div>
+      </section>
+
+      {/* Pulse Metrics Bar */}
+      <section className="pulse-metrics-grid" aria-label="Pulse Metrics">
+        <div className="pulse-card">
+          <span className="pulse-label">Total Ticket Workspaces</span>
+          <span className="pulse-value mono-number">{totalWorkspaces}</span>
+          <span className="pulse-subtext">Registered SDLC workspaces</span>
+        </div>
+        <div className="pulse-card">
+          <span className="pulse-label">Cumulative Fleet Spend</span>
+          <span className="pulse-value mono-number">{totalSpend}</span>
+          <span className="pulse-subtext">Total model inference costs</span>
+        </div>
+        <div className="pulse-card">
+          <span className="pulse-label">Total Iterations</span>
+          <span className="pulse-value mono-number">{totalIterations}</span>
+          <span className="pulse-subtext">Completed SDLC cycles</span>
+        </div>
+        <div className="pulse-card">
+          <span className="pulse-label">Cache Hit Efficiency</span>
+          <span className="pulse-value mono-number">{cacheHitEfficiency}</span>
+          <span className="pulse-subtext">Prompt cache read ratio</span>
+        </div>
+      </section>
+
+      {/* Feature Navigation Cards */}
+      <section className="feature-cards-grid" aria-label="Analytical Perspectives">
+        <div className="feature-nav-card">
+          <div className="feature-card-header">
+            <span className="feature-card-badge">Macro Fleet</span>
+            <h2 className="feature-card-title">Fleet Overview</h2>
+          </div>
+          <p className="feature-card-desc">
+            Macro-level spend, total invocations, token throughput, and role/model distributions across all active tickets.
+          </p>
+          <button
+            type="button"
+            className="feature-card-btn"
+            onClick={() => onNavigate('overview')}
+          >
+            Open Fleet Overview
+          </button>
+        </div>
+
+        <div className="feature-nav-card">
+          <div className="feature-card-header">
+            <span className="feature-card-badge">Single Ticket</span>
+            <h2 className="feature-card-title">Ticket Deep Dive</h2>
+          </div>
+          <p className="feature-card-desc">
+            Single-ticket autopsy, context ceiling saturation, subagent turn velocity, and workspace artifact reader.
+          </p>
+          <button
+            type="button"
+            className="feature-card-btn"
+            onClick={() => onNavigate('deep-dive')}
+          >
+            Explore Deep Dive
+          </button>
+        </div>
+
+        <div className="feature-nav-card">
+          <div className="feature-card-header">
+            <span className="feature-card-badge">Temporal Trends</span>
+            <h2 className="feature-card-title">Metric Progression</h2>
+          </div>
+          <p className="feature-card-desc">
+            Longitudinal temporal velocity analysis tracking period spend, invocations, token throughput, and code churn.
+          </p>
+          <button
+            type="button"
+            className="feature-card-btn"
+            onClick={() => onNavigate('progression')}
+          >
+            View Progression
+          </button>
+        </div>
+
+        <div className="feature-nav-card">
+          <div className="feature-card-header">
+            <span className="feature-card-badge">Benchmarking</span>
+            <h2 className="feature-card-title">Ticket Comparisons</h2>
+          </div>
+          <p className="feature-card-desc">
+            Cross-ticket benchmarking matrix comparing turnaround lead time, active compute, test-to-prod ratios, and context saturation.
+          </p>
+          <button
+            type="button"
+            className="feature-card-btn"
+            onClick={() => onNavigate('comparisons')}
+          >
+            Compare Tickets
+          </button>
+        </div>
+      </section>
+
+      {/* Quick-Launch Workspace Directory */}
+      <section className="quick-launch-section" aria-label="Registered Workspaces">
+        <div className="section-header-bar">
+          <h2 className="section-title">Quick-Launch Workspaces</h2>
+          <span className="section-subtitle">Direct access to ticket deep-dive autopsies</span>
+        </div>
+
+        {workspaces.length === 0 ? (
+          <EmptyState
+            title="Zero Workspaces Discovered"
+            message="No ticket workspaces with recorded telemetry were discovered. Ensure tickets contain valid agentic_metrics.json ledgers."
+          />
+        ) : (
+          <div className="quick-launch-table-wrapper">
+            <table className="quick-launch-table">
+              <thead>
+                <tr>
+                  <th>Ticket ID</th>
+                  <th>Title</th>
+                  <th>Status</th>
+                  <th>Iterations</th>
+                  <th>Active Duration</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workspaces.map((w) => {
+                  const statusClass = ['HEALTHY', 'ELEVATED', 'BLOATED', 'CRITICAL'].includes(
+                    w.context_health_status
+                  )
+                    ? w.context_health_status
+                    : 'HEALTHY';
+
+                  return (
+                    <tr
+                      key={w.ticket_id}
+                      className="quick-launch-row"
+                      onClick={() => onSelectTicket(w.ticket_id)}
+                    >
+                      <td className="mono-number" style={{ fontWeight: 600 }}>
+                        {w.ticket_id}
+                      </td>
+                      <td className="ticket-title-cell">{w.ticket_title}</td>
+                      <td>
+                        <span className={`health-badge ${statusClass}`}>
+                          {w.context_health_status}
+                        </span>
+                      </td>
+                      <td className="mono-number">
+                        {Number.isFinite(w.sdlc_iterations) ? w.sdlc_iterations : 0}
+                      </td>
+                      <td className="mono-number">{w.active_duration_formatted}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="quick-launch-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectTicket(w.ticket_id);
+                          }}
+                          aria-label={`Open deep dive for ${w.ticket_id}`}
+                        >
+                          Inspect Ticket
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};

@@ -3,8 +3,10 @@
 BIN_DIR := bin
 BINARY := $(BIN_DIR)/agentic-lens
 WEB_DIR := web
+PORT ?= 8085
+WORKSPACES ?= workspaces
 
-.PHONY: all check test test-backend test-frontend lint vet build clean help
+.PHONY: all check test test-backend test-frontend lint vet build clean help server serve
 
 all: check test build
 
@@ -18,6 +20,8 @@ help:
 	@echo "  vet            - Run go vet on all Go packages"
 	@echo "  lint           - Run Go vet and frontend linting"
 	@echo "  build          - Build backend executable (and web bundle if present)"
+	@echo "  server         - Build and run HTTP server (PORT=$(PORT) WORKSPACES=$(WORKSPACES))"
+	@echo "  serve          - Alias for server target"
 	@echo "  clean          - Remove build artifacts"
 
 check: vet lint
@@ -50,6 +54,11 @@ build:
 	fi
 	@mkdir -p $(BIN_DIR)
 	go build -o $(BINARY) ./cmd/agentic-lens
+
+server: build
+	./$(BINARY) server --port $(PORT) --workspaces $(WORKSPACES)
+
+serve: server
 
 clean:
 	rm -rf $(BIN_DIR)

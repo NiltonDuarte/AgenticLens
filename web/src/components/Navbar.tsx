@@ -1,9 +1,10 @@
 import React from 'react';
+import type { ActiveTab } from '../domain/types';
 
 export interface NavbarProps {
   readonly isMock: boolean;
-  readonly activeTab: 'overview' | 'detail';
-  readonly onSelectTab?: (tab: 'overview' | 'detail') => void;
+  readonly activeTab: ActiveTab;
+  readonly onSelectTab?: (tab: ActiveTab) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -11,9 +12,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onSelectTab,
 }) => {
+  const handleBrandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelectTab?.('landing');
+    }
+  };
+
   return (
     <header className="navbar">
-      <div className="navbar-brand">
+      <div
+        className="navbar-brand"
+        role="button"
+        tabIndex={0}
+        aria-label="AgenticLens Home"
+        onClick={() => onSelectTab?.('landing')}
+        onKeyDown={handleBrandKeyDown}
+      >
         <svg
           className="brand-icon"
           viewBox="0 0 24 24"
@@ -43,12 +58,24 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
         <button
           type="button"
-          className={`nav-tab ${activeTab === 'detail' ? 'active' : ''}`}
-          onClick={() => onSelectTab?.('detail')}
-          disabled
-          title="Ticket Deep Dive will be available in AL-4"
+          className={`nav-tab ${activeTab === 'deep-dive' ? 'active' : ''}`}
+          onClick={() => onSelectTab?.('deep-dive')}
         >
           Ticket Deep Dive
+        </button>
+        <button
+          type="button"
+          className={`nav-tab ${activeTab === 'progression' ? 'active' : ''}`}
+          onClick={() => onSelectTab?.('progression')}
+        >
+          Metric Progression
+        </button>
+        <button
+          type="button"
+          className={`nav-tab ${activeTab === 'comparisons' ? 'active' : ''}`}
+          onClick={() => onSelectTab?.('comparisons')}
+        >
+          Comparisons
         </button>
       </nav>
 

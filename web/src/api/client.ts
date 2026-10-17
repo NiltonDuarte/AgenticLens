@@ -33,6 +33,22 @@ export async function fetchFleetSummary(
   }
 }
 
+export async function fetchWorkspaceLedgers(
+  windowParam: string = 'all'
+): Promise<ApiResponse<readonly AgenticMetricsLedger[]>> {
+  try {
+    const query = windowParam !== 'all' ? `?window=${encodeURIComponent(windowParam)}` : '';
+    const res = await fetch(`/api/workspaces${query}`);
+    if (!res.ok) {
+      return { data: Object.values(mockAgenticMetricsLedgers), isMock: true };
+    }
+    const ledgers = (await res.json()) as AgenticMetricsLedger[];
+    return { data: ledgers, isMock: false };
+  } catch {
+    return { data: Object.values(mockAgenticMetricsLedgers), isMock: true };
+  }
+}
+
 export async function fetchWorkspaces(
   windowParam: string = 'all',
   sortParam: string = '',

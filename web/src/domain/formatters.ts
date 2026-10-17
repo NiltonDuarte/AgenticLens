@@ -1,4 +1,9 @@
-import type { AgenticMetricsLedger, TicketComparisonRow } from './types';
+import type {
+  AgenticMetricsLedger,
+  ComparisonSortField,
+  ComparisonSortOrder,
+  TicketComparisonRow,
+} from './types';
 
 export const HEALTHY_CEILING_TOKENS = 200_000;
 
@@ -96,8 +101,29 @@ export function formatLeadTime(seconds: number | null): string {
   return `${mins}m ${remSecs}s`;
 }
 
+export function formatIsoDateOnly(isoString: string | null | undefined): string {
+  if (!isoString || isoString.length < 10) {
+    return 'N/A';
+  }
+  return isoString.slice(0, 10);
+}
+
+export function formatIsoDateTimeShort(isoString: string | null | undefined): string {
+  if (!isoString || isoString.length < 10) {
+    return 'N/A';
+  }
+  const datePart = isoString.slice(0, 10);
+  if (isoString.length >= 16) {
+    const timePart = isoString.slice(11, 16);
+    return `${datePart} ${timePart}`;
+  }
+  return datePart;
+}
+
 export function deriveTicketComparisonRows(
-  ledgers: readonly AgenticMetricsLedger[]
+  ledgers: readonly AgenticMetricsLedger[],
+  sortField?: ComparisonSortField,
+  sortOrder: ComparisonSortOrder = 'desc'
 ): TicketComparisonRow[] {
   const rows: TicketComparisonRow[] = ledgers.map((ledger) => {
     const tid = ledger.ticket_id && ledger.ticket_id.length > 0 ? ledger.ticket_id : 'unknown';
@@ -131,24 +157,89 @@ export function deriveTicketComparisonRows(
     };
   });
 
+  if (!sortField) {
+    return rows.sort((a, b) => {
+      const compAHasVal = a.completed_at !== null;
+      const compBHasVal = b.completed_at !== null;
+      if (compAHasVal !== compBHasVal) {
+        return compAHasVal ? -1 : 1;
+      }
+      const compAStr = a.completed_at ?? '';
+      const compBStr = b.completed_at ?? '';
+      if (compAStr !== compBStr) {
+        return compBStr.localeCompare(compAStr);
+      }
+
+      const startAStr = a.started_at ?? '';
+      const startBStr = b.started_at ?? '';
+      if (startAStr !== startBStr) {
+        return startBStr.localeCompare(startAStr);
+      }
+
+      return b.ticket_id.localeCompare(a.ticket_id);
+    });
+  }
+
   return rows.sort((a, b) => {
-    const compAHasVal = a.completed_at !== null;
-    const compBHasVal = b.completed_at !== null;
-    if (compAHasVal !== compBHasVal) {
-      return compAHasVal ? -1 : 1;
-    }
-    const compAStr = a.completed_at ?? '';
-    const compBStr = b.completed_at ?? '';
-    if (compAStr !== compBStr) {
-      return compBStr.localeCompare(compAStr);
+    let cmp = 0;
+    switch (sortField) {
+      case 'completed_at': {
+        const valA = a.completed_at ?? '';
+        const valB = b.completed_at ?? '';
+        if (a.completed_at === null && b.completed_at === null) {
+          cmp = 0;
+        } else if (a.completed_at === null) {
+          cmp = 1;
+        } else if (b.completed_at === null) {
+          cmp = -1;
+        } else {
+          cmp = valA.localeCompare(valB);
+        }
+        break;
+      }
+      case 'started_at': {
+        const valA = a.started_at ?? '';
+        const valB = b.started_at ?? '';
+        if (a.started_at === null && b.started_at === null) {
+          cmp = 0;
+        } else if (a.started_at === null) {
+          cmp = 1;
+        } else if (b.started_at === null) {
+          cmp = -1;
+        } else {
+          cmp = valA.localeCompare(valB);
+        }
+        break;
+      }
+      case 'ticket_id':
+        cmp = a.ticket_id.localeCompare(b.ticket_id);
+        break;
+      case 'cost_usd':
+        cmp = a.cost_usd - b.cost_usd;
+        break;
+      case 'active_duration_seconds':
+        cmp = a.active_duration_seconds - b.active_duration_seconds;
+        break;
+      case 'sdlc_iterations':
+        cmp = a.sdlc_iterations - b.sdlc_iterations;
+        break;
+      case 'cache_hit_rate_pct':
+        cmp = a.cache_hit_rate_pct - b.cache_hit_rate_pct;
+        break;
+      case 'tool_success_rate_pct':
+        cmp = a.tool_success_rate_pct - b.tool_success_rate_pct;
+        break;
+      case 'lines_added':
+        cmp = a.lines_added - b.lines_added;
+        break;
+      case 'orchestrator_saturation_pct':
+        cmp = a.orchestrator_saturation_pct - b.orchestrator_saturation_pct;
+        break;
     }
 
-    const startAStr = a.started_at ?? '';
-    const startBStr = b.started_at ?? '';
-    if (startAStr !== startBStr) {
-      return startBStr.localeCompare(startAStr);
+    if (cmp !== 0) {
+      return sortOrder === 'asc' ? cmp : -cmp;
     }
-
-    return b.ticket_id.localeCompare(a.ticket_id);
+    return a.ticket_id.localeCompare(b.ticket_id);
   });
 }
