@@ -14,7 +14,7 @@ Individual ticket definitions are located in `workspaces/plan/to-do/`:
 ### Tier 1 (Ready to Execute)
 - **AL-1**: Implement Go Domain Aggregations, Workspace Scanner, and CLI Engine
   - **Subsystem**: Domain / Adapters / CLI
-  - **Status**: In Progress
+  - **Status**: Done
   - **Blocked by**: None
   - **Blocks**: AL-2
   - **File**: `workspaces/plan/to-do/AL-1 go domain aggregations scanner cli.md`
