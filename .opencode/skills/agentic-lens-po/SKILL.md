@@ -51,6 +51,7 @@ Draft a concise, structured specification based on `templates/SPEC_TEMPLATE.md`:
 2. **User Stories**: Follow the format `As a <persona>, I want <capability>, so that <benefit>`.
 3. **Functional Scope**: Layer-by-layer expectations across Go domain, Go adapters/CLI, and TypeScript frontend.
 4. **Acceptance Constraints**: Strict typing, no emojis, testing with zero domain mocks in Go and pure test suites in TS.
+5. **Specification Artifact**: Save the finalized specification to `<WORKSPACES_DIR>/specs/<FEATURE_SLUG>.md` (e.g. `workspaces/specs/token-saturation-heatmap.md`).
 
 ### Step 3: Decompose into Vertical Tracer Bullets
 Break down large features or epics into individual development tickets:
@@ -59,11 +60,15 @@ Break down large features or epics into individual development tickets:
 - **Dependency Graph**: Explicitly declare `Blocked by: <Ticket>` edges so tickets can be sequenced or executed in parallel where unblocked.
 - **Wide Refactor Protocol**: If modifying foundational trace schemas or data structures, use the Expand-Contract pattern (Expand schema -> Migrate extractors/callers in batches -> Contract legacy format).
 
-### Step 4: Generate Jira / Development Tickets
-Output tickets using `templates/TICKET_TEMPLATE.txt` with:
-- `h3. Title: <PREFIX>-XXXXX: <Action-oriented title>` (e.g. `AL-00101: ...`)
-- `*TARGET*: AgenticLens (<Subsystem>)`
-- `*CONTEXT*`, `*GOAL*`, `*VERTICAL SLICE SCOPE*`, `*ACCEPTANCE CRITERIA*`, and `*DEFINITION OF DONE*`.
+### Step 4: Generate & Land Development Tickets
+For each ticket in the breakdown:
+1. Initialize the ticket workspace: `mkdir -p <WORKSPACES_DIR>/<TICKET_ID>`.
+2. Format the ticket content using `templates/TICKET_TEMPLATE.txt`:
+   - `h3. Title: <PREFIX>-XXXXX: <Action-oriented title>` (e.g. `AL-00101: ...` or `GEN-00101: ...`)
+   - `*TARGET*: AgenticLens (<Subsystem>)`
+   - `*CONTEXT*`, `*GOAL*`, `*VERTICAL SLICE SCOPE*`, `*ACCEPTANCE CRITERIA*`, and `*DEFINITION OF DONE*`.
+3. Save the ticket markup to `<WORKSPACES_DIR>/<TICKET_ID>/TICKET.txt` so it is immediately available when development starts under `agentic-lens-dev`.
+4. Present the tickets in the conversation for review and approval.
 
 ---
 
@@ -77,7 +82,8 @@ Once a specification or ticket is approved:
    ```
 2. Ensure the resulting implementation satisfies the PO acceptance criteria and records telemetry via:
    ```bash
-   go run ./cmd/agentic-lens --ticket-id <PREFIX>-XXXXX --append <WORKSPACES_DIR>/<PREFIX>-XXXXX/SUMMARY.md
+   NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
+   python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json
    ```
 
 ---
