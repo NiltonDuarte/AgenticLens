@@ -1,0 +1,7 @@
+{
+  "project_name": "AgenticLens",
+  "ticket_prefix": "AL",
+  "workspaces_dir": "workspaces",
+  "guidelines_file": "TECHNICAL_GUIDELINES.md",
+  "telemetry_command": "uv run python -m agentic_lens"
+}

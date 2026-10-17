@@ -30,16 +30,17 @@ Subagent Delegation Roster:
 - `reviewer` (`subagent_type="reviewer"`): Read-only auditor that inspects git diffs against CONTRACT.md, FCIS rules, typing, zero emojis, and Streamlit modern syntax.
 
 Workflow Execution Loop:
-1. Kickoff:
-   - Identify or prompt for ticket ID (`<TICKET_ID>`).
-   - Check if `workspaces/<TICKET_ID>/CONTRACT.md` exists. If so, this is a resumed ticket: skip kickoff, detect highest iteration, and start `iterations/<NN+1>/`.
+1. Kickoff & Parametrization:
+   - Inspect `.agenticlens/config.json` (fallback: `ticket_prefix="AL"`, `workspaces_dir="workspaces"`, `guidelines_file="TECHNICAL_GUIDELINES.md"`, `telemetry_command="uv run python -m agentic_lens"`).
+   - Identify or prompt for ticket ID (`<TICKET_ID>`), ensuring prefix matches configured `ticket_prefix` (e.g. `AL-XXXXX`).
+   - Check if `<workspaces_dir>/<TICKET_ID>/CONTRACT.md` exists. If so, this is a resumed ticket: skip kickoff, detect highest iteration, and start `iterations/<NN+1>/`.
    - Create and switch to ticket branch: `git checkout -b <type>/<TICKET_ID>-<slug>` derived from the user request.
-   - Setup directory: `mkdir -p workspaces/<TICKET_ID>/iterations/01`.
+   - Setup directory: `mkdir -p <workspaces_dir>/<TICKET_ID>/iterations/01`.
 2. Phase 0 (Upstream Sync):
    - At the start of every iteration, ensure branch is in sync: `git fetch origin main && git merge origin/main --no-edit || true`.
 3. Phase 1 (Planning / Steering):
-   - Iteration 01: Dispatch `planner` to write `workspaces/<TICKET_ID>/CONTRACT.md` and `workspaces/<TICKET_ID>/iterations/01/PLAN.md`.
-   - Subsequent iterations: Dispatch `planner` with context pointers (`CONTRACT.md` and prior iterations) to write delta in `workspaces/<TICKET_ID>/iterations/<NN>/PLAN.md`.
+   - Iteration 01: Dispatch `planner` to write `<workspaces_dir>/<TICKET_ID>/CONTRACT.md` and `<workspaces_dir>/<TICKET_ID>/iterations/01/PLAN.md`.
+   - Subsequent iterations: Dispatch `planner` with context pointers (`CONTRACT.md` and prior iterations) to write delta in `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/PLAN.md`.
 4. Mandatory User Confirmation Gate (HARD STOP):
    - Present `CONTRACT.md` and `iterations/<NN>/PLAN.md` to the user.
    - STOP and request explicit approval via `question` tool.
@@ -47,20 +48,20 @@ Workflow Execution Loop:
 5. Phase 2 (Implementation, Testing & Review Loop):
    - Dispatch `coder` with pointers to `CONTRACT.md`, `iterations/<NN>/PLAN.md` (and `REVIEW.md` if rework).
    - Dispatch `tester` to execute tests with zero silent skips.
-   - Dispatch `reviewer` to audit diffs and save verdict in `workspaces/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
+   - Dispatch `reviewer` to audit diffs and save verdict in `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
    - Loop control:
      - `APPROVED`: Proceed to Phase 3.
      - `CHANGES_REQUESTED`: Feed findings back to `coder`/`tester`.
      - `BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
 6. Phase 3 (Delivery Sync & Self-Reflexive Telemetry via AgenticLens):
    - Quality check: verify compilation and linting:
-     `python3 -m py_compile agentic_lens/**/*.py && uv run ruff check agentic_lens/ && git diff --check`
-   - Update `workspaces/<TICKET_ID>/SUMMARY.md`: Unified summary of changes grouped by layer (`domain`, `adapters`, `presentation`).
+     `python3 -m py_compile agentic_lens/**/*.py && uv run ruff check agentic_lens/ tests/ && git diff --check`
+   - Update `<workspaces_dir>/<TICKET_ID>/SUMMARY.md`: Unified summary of changes grouped by layer (`domain`, `adapters`, `presentation`).
    - Extract raw facts ledger:
      `NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])")`
-     `python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json`
+     `python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output <workspaces_dir>/<TICKET_ID>/agentic_metrics.json`
    - **Render Telemetry via AgenticLens Application**:
-     `uv run python -m agentic_lens --ticket-id <TICKET_ID> --append workspaces/<TICKET_ID>/SUMMARY.md`
+     `uv run python -m agentic_lens --ticket-id <TICKET_ID> --append <workspaces_dir>/<TICKET_ID>/SUMMARY.md`
      (AgenticLens parses `agentic_metrics.json`, validates schemas, calculates domain rollups, updates `SUMMARY.md`, and outputs KPI summaries to the console).
-   - Update `workspaces/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to CONTRACT.md and SUMMARY.md, summary of changes; no test evidence).
+   - Update `<workspaces_dir>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to CONTRACT.md and SUMMARY.md, summary of changes; no test evidence).
    - Print concise handoff summary to user (cost, cache hits, test status, context saturation) and offer to launch the live dashboard (`uv run streamlit run agentic_lens/presentation/app.py`).

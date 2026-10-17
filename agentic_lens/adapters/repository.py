@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_workspaces_dir(override_path: Path | str | None = None) -> Path:
-    """Resolve workspaces directory from argument, environment, or parent lookup."""
+    """Resolve workspaces directory from argument, environment, config, or parent lookup."""
     if override_path is not None:
         return Path(override_path)
 
@@ -27,12 +28,26 @@ def resolve_workspaces_dir(override_path: Path | str | None = None) -> Path:
     if container_dir.is_dir():
         return container_dir
 
-    # 2. Current working directory
+    # 2. Configured workspace dir in .agenticlens/config.json
+    for directory in [Path.cwd(), *Path.cwd().parents]:
+        config_file = directory / ".agenticlens" / "config.json"
+        if config_file.is_file():
+            try:
+                data = json.loads(config_file.read_text(encoding="utf-8"))
+                ws_dir = data.get("workspaces_dir")
+                if ws_dir:
+                    candidate = directory / ws_dir
+                    if candidate.is_dir():
+                        return candidate
+            except (json.JSONDecodeError, OSError) as err:
+                logger.debug("Failed reading .agenticlens/config.json at %s: %s", config_file, err)
+
+    # 3. Current working directory
     cwd_dir = Path.cwd() / "workspaces"
     if cwd_dir.is_dir():
         return cwd_dir
 
-    # 3. Parent traversal (e.g. running from apps/agentic-lens)
+    # 4. Parent traversal (e.g. running from apps/agentic-lens)
     for parent in Path.cwd().parents:
         candidate = parent / "workspaces"
         if candidate.is_dir():

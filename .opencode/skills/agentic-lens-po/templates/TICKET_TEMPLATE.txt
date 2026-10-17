@@ -1,0 +1,32 @@
+h3. Title: <PREFIX>-XXXXX: <Short, action-oriented title>
+
+*TARGET*: AgenticLens (<Component: domain | adapters | presentation | cli | tests>)
+
+*CONTEXT*
+ 
+<Clear, brief problem statement or telemetry capability needed in AgenticLens. Why is this slice needed?>
+
+*GOAL*
+ 
+<Single concise paragraph defining what this vertical slice delivers end-to-end.>
+
+*VERTICAL SLICE SCOPE*
+ 
+* Domain Core: <Pure model/rollup changes in agentic_lens/domain/>
+* Boundary Adapter: <Parsing/schema/filesystem changes in agentic_lens/adapters/>
+* Presentation: <UI/CLI integration in agentic_lens/presentation/>
+* Quality: <Unit tests in tests/ with zero mocks in domain logic>
+
+*ACCEPTANCE CRITERIA*
+ 
+* <Specific functional behavior 1>
+* <Specific functional behavior 2>
+* <CLI or Streamlit presentation verification>
+* <Typecheck and lint passes with zero errors>
+
+*DEFINITION OF DONE*
+ 
+* Code and tests merged to target branch.
+* Quality gates passing (`uv run ruff check` and `uv run pytest`).
+* Python 3.14+ type checking clean with zero Any.
+* Telemetry tested with `agentic-lens` CLI or Streamlit preview.
