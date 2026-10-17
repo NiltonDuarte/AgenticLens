@@ -8,23 +8,24 @@ The Python Streamlit app provides a Fleet Overview showing KPI metric cards and 
 
 *GOAL*
 
-Scaffold the `web/` application using Vite, TypeScript, and a modern component architecture, providing API boundary types, network client, and the Fleet Overview dashboard.
+Scaffold the `web/` application using Vite, TypeScript, and a modern component architecture, providing API boundary types, a dual-mode network client (live `/api/*` with mock fixture fallback), and the Fleet Overview dashboard. Fully decoupled from Go server completion.
 
 *VERTICAL SLICE SCOPE*
 
 * Domain Types: `web/src/domain/`: strictly typed interfaces matching Go contracts (`AgenticMetricsLedger`, `FleetSummary`, `GroupedMetric`, `RoleMetric`, `ModelMetric`), zero any.
-* Boundary Adapter: `web/src/api/client.ts`: type-safe HTTP client for `/api/*` with error narrowing.
+* Boundary Adapter & Mock Harness: `web/src/api/client.ts`: type-safe HTTP client for `/api/*` with error narrowing and mock fixture harness (`web/src/api/mockData.ts`) allowing standalone development and testing without running Go backend.
 * Presentation: Top-level navigation bar, theme, and Fleet Overview view:
   - KPI cards: Total Cost, Invocations, Total Tokens, Cache Hit Rate %, Active Duration.
   - Role and Model distribution cards/charts.
   - Ticket directory table with search, sorting, and links to deep dive.
-* Quality: TypeScript unit tests for pure formatting functions; Vitest component tests; zero typecheck errors.
+* Quality: TypeScript unit tests for pure formatting functions; Vitest component tests against mock fixtures; zero typecheck errors.
 
 *ACCEPTANCE CRITERIA*
 
 * `npm run build` generates static assets in `web/dist/`.
 * `npm run typecheck` passes with zero errors under strict mode.
-* Fleet Overview displays correct aggregated figures retrieved from `/api/fleet`.
+* App runs stand-alone in Vite dev mode using mock fixtures when backend is absent.
+* Fleet Overview displays correct aggregated figures retrieved from `/api/fleet` when live backend is connected.
 * Empty dataset handles gracefully without runtime exceptions.
 * Zero emojis anywhere in UI text, labels, or tooltips.
 
