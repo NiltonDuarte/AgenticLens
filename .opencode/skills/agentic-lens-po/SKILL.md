@@ -15,7 +15,6 @@ At startup, inspect `.agenticlens/config.json` in the project root to load proje
 - `ticket_prefix`: Prefix for ticket identifiers (fallback default: `"GEN"`).
 - `workspaces_dir`: Directory for workspace artifacts (default: `"workspaces"`).
 - `project_name`: Project name (default: `"AgenticLens"`).
-- `telemetry_command`: Command to invoke AgenticLens telemetry CLI (default: `"go run ./cmd/agentic-lens"`).
 
 Throughout this workflow:
 - `<WORKSPACES_DIR>` refers to the configured `workspaces_dir` (e.g. `workspaces`).
@@ -86,11 +85,4 @@ Once a specification or ticket is approved:
 ## 4. Key Rules for the Project Owner
 - **Zero Hallucinated Metrics**: Every metric must be derivable from real agent trace logs or explicit session inputs.
 - **No Implementation Over-Prescription**: Define WHAT the user needs, WHICH layers must be touched, and WHAT acceptance criteria prove success. Do not write concrete Go/TS implementation snippets inside Jira tickets unless specifying an exact interface contract.
-- **Maintain Architectural Rigor**: Reject feature designs that break FCIS, leak UI logic into domain aggregations, or introduce mutable shared state.
-
----
-
-## 4. Key Rules for the Project Owner
-- **Zero Hallucinated Metrics**: Every metric must be derivable from real agent trace logs or explicit session inputs.
-- **No Implementation Over-Prescription**: Define WHAT the user needs, WHICH layers must be touched, and WHAT acceptance criteria prove success. Do not write concrete Python implementation snippets inside Jira tickets unless specifying an exact interface contract.
 - **Maintain Architectural Rigor**: Reject feature designs that break FCIS, leak UI logic into domain aggregations, or introduce mutable shared state.

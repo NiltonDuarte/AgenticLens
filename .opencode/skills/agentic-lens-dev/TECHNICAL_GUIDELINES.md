@@ -72,7 +72,25 @@ Dependencies flow strictly inward across layers:
 
 ---
 
-## 5. Quality Checks & Verification
+## 5. Single Binary Distribution & Static Asset Bundling
+
+AgenticLens deploys as a single, self-contained executable with the TypeScript web application bundled directly into the Go binary.
+
+### Rules
+1. **Embedding Mandate (`embed.FS`)**:
+   - The compiled static frontend output (`web/dist/`) must be bundled into Go via `embed.FS` (e.g. `//go:embed all:dist` in `internal/adapters/web/` or `cmd/agentic-lens/`).
+   - The Go HTTP server (`cmd/agentic-lens server`) serves the SPA static files alongside the JSON/SSE API endpoints.
+   - Zero Node.js runtime dependency in production or container deployments.
+2. **Dual-Mode Serving**:
+   - Production / Standalone: Serves embedded static assets from `embed.FS` with client-side fallback routing for SPA navigation.
+   - Local Development: Vite dev server runs with HMR and proxies API requests (`/api/*`) to the Go backend.
+3. **Build Sequence**:
+   - Production binary build sequence: `cd web && npm run build` followed by `go build ./cmd/agentic-lens`.
+   - CI and container builds must compile the frontend first before invoking Go build.
+
+---
+
+## 6. Quality Checks & Verification
 
 Before submitting any iteration or PR, all quality gates must pass:
 
@@ -86,7 +104,7 @@ go test -race ./...
 go build -o bin/agentic-lens ./cmd/agentic-lens
 ```
 
-### TypeScript Checks
+### TypeScript Checks & Frontend Build
 ```bash
 # Typecheck
 npm run typecheck  # or npx tsc --noEmit
@@ -94,11 +112,14 @@ npm run typecheck  # or npx tsc --noEmit
 npm run lint
 # Unit tests
 npm test
+# Production frontend build
+npm run build      # Produces web/dist/ for Go embedding
 ```
 
 ### Invariant Checks
 - Verify zero `any` in Go and TypeScript.
 - Verify zero emojis in code, UI, docstrings, and log messages.
+- Verify single binary self-contained execution without Node runtime dependency.
 
 ---
 
@@ -110,5 +131,6 @@ npm test
 | **Separation** | FCIS | Pure deterministic logic in domain; filesystem I/O and HTTP in shell. |
 | **Go Standards** | Go 1.23+, Value Semantics | No `any`/`interface{}`, wrap errors with `%w`, zero unhandled errors. |
 | **Frontend Architecture** | TypeScript Strict | `"strict": true`, zero `any`, Zod/type guards at boundaries. |
+| **Asset Bundling** | Single Binary via `embed.FS` | `web/dist` embedded into Go executable; zero Node.js in production. |
 | **UI & Styling** | Modern Web / Zero Emojis | Pure components, graceful empty states, zero emojis. |
 | **Testing** | Deterministic Pure Core | Table-driven tests in Go with zero mocks for domain. Vitest/Jest for TypeScript. |

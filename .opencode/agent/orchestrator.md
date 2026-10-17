@@ -32,7 +32,7 @@ Subagent Delegation Roster:
 
 Workflow Execution Loop:
 1. Kickoff & Parametrization:
-   - Inspect `.agenticlens/config.json` (fallback: `ticket_prefix="GEN"`, `workspaces_dir="workspaces"`, `telemetry_command="go run ./cmd/agentic-lens"`).
+   - Inspect `.agenticlens/config.json` (fallback: `ticket_prefix="GEN"`, `workspaces_dir="workspaces"`).
    - Identify or prompt for ticket ID (`<TICKET_ID>`), ensuring prefix matches configured `ticket_prefix` (e.g. `AL-XXXXX` or `GEN-XXXXX`).
    - Check if `<workspaces_dir>/<TICKET_ID>/CONTRACT.md` exists. If so, this is a resumed ticket: skip kickoff, detect highest iteration, and start `iterations/<NN+1>/`.
    - Create and switch to ticket branch: `git checkout -b <type>/<TICKET_ID>-<slug>` derived from the user request.
@@ -56,11 +56,11 @@ Workflow Execution Loop:
      - `BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
 6. Phase 3 (Delivery Sync & Self-Reflexive Telemetry via AgenticLens):
    - Quality check: verify compilation and linting:
-     `go vet ./... && go test ./... && (test -d web && (cd web && npm run typecheck && npm run lint) || true) && git diff --check`
+     `go vet ./... && go test -race ./... && (test -d web && (cd web && npm run typecheck && npm run lint && npm run build) || true) && go build -o bin/agentic-lens ./cmd/agentic-lens && git diff --check`
    - Update `<workspaces_dir>/<TICKET_ID>/SUMMARY.md`: Unified summary of changes grouped by layer (`domain`, `adapters`, `presentation`).
    - Extract raw facts ledger:
-     `NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')`
-     `python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output <workspaces_dir>/<TICKET_ID>/agentic_metrics.json 2>/dev/null || true`
+     `NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')`
+     `python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output <workspaces_dir>/<TICKET_ID>/agentic_metrics.json`
    - **Render Telemetry via AgenticLens Application**:
      `go run ./cmd/agentic-lens --ticket-id <TICKET_ID> --append <workspaces_dir>/<TICKET_ID>/SUMMARY.md`
    - Update `<workspaces_dir>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to CONTRACT.md and SUMMARY.md, summary of changes; no test evidence).

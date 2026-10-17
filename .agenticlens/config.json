@@ -1,6 +1,5 @@
 {
   "project_name": "AgenticLens",
   "ticket_prefix": "AL",
-  "workspaces_dir": "workspaces",
-  "telemetry_command": "go run ./cmd/agentic-lens"
+  "workspaces_dir": "workspaces"
 }

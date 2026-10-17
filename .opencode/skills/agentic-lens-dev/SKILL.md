@@ -5,7 +5,7 @@ description: Use when building features, fixing bugs, or refactoring the standal
 
 # AgenticLens Multi-Agent Development Workflow
 
-Coordinates autonomous development in the standalone **AgenticLens** project (`/Users/guedesduarte/workspace/projects/SinkLayer/AgenticLens`) across specialized subagents (`planner`, `coder`, `tester`, `reviewer`). Architecture is built in **Go** (core aggregations, boundary adapters, CLI, server) and **TypeScript** (modern web dashboard). Persona instructions and layer boundaries live in `.opencode/agent/`.
+Coordinates autonomous development in the standalone **AgenticLens** project (`/Users/guedesduarte/workspace/projects/SinkLayer/AgenticLens`) across specialized subagents (`planner`, `coder`, `tester`, `reviewer`). Architecture is built in **Go** (core aggregations, boundary adapters, CLI, server) and **TypeScript** (modern web dashboard embedded into the Go binary via `embed.FS`). Persona instructions and layer boundaries live in `.opencode/agent/`.
 
 The skill itself uses the AgenticLens CLI application to parse, validate, and render developer telemetry and lifecycle metrics for every development iteration.
 
@@ -14,7 +14,6 @@ At startup, inspect `.agenticlens/config.json` in the project root to load param
 - `ticket_prefix`: Prefix for ticket identifiers (fallback default: `"GEN"`). If a numeric ID is passed (e.g. `42`), format as `<ticket_prefix>-<ID>` (e.g. `GEN-42` or `AL-42`).
 - `workspaces_dir`: Directory for workspace artifacts (default: `"workspaces"`).
 - `project_name`: Project name (default: `"AgenticLens"`).
-- `telemetry_command`: Command to invoke AgenticLens telemetry CLI (default: `"go run ./cmd/agentic-lens"`).
 
 Throughout this workflow:
 - `<WORKSPACES_DIR>` refers to the configured `workspaces_dir` (e.g. `workspaces`).
@@ -96,17 +95,17 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
 ### Phase 3: Delivery Sync (Every Iteration)
 1. Verify code quality:
    ```bash
-   # Go verification
-   go vet ./... && go test ./...
-   # TypeScript verification (if frontend modified)
-   test -d web && (cd web && npm run typecheck && npm run lint) || true
+   # TypeScript verification and build (if frontend modified)
+   test -d web && (cd web && npm run typecheck && npm run lint && npm run build) || true
+   # Go verification and single binary build
+   go vet ./... && go test -race ./... && go build -o bin/agentic-lens ./cmd/agentic-lens
    git diff --check
    ```
 2. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus verification status.
 3. Extract raw session facts ledger:
    ```bash
-   NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" 2>/dev/null || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-   python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json 2>/dev/null || true
+   NONCE=$(python3 -c "import uuid; print(uuid.uuid4().hex[:8])" || od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
+   python3 scripts/extract_agentic_metrics.py --nonce $NONCE --ticket-id <TICKET_ID> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json
    ```
 4. **Provide Metrics via AgenticLens Application**:
    Run AgenticLens Go CLI to parse the ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs:
