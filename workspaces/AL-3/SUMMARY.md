@@ -48,14 +48,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 1h 4m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 122.8k tokens (61% of 200k healthy ceiling, 0 compactions) | Subagents peak 84.5k (Reviewer)
+- **Active Agent Duration:** 1h 10m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 147.2k tokens (74% of 200k healthy ceiling, 0 compactions) | Subagents peak 84.5k (Reviewer)
 - **Role Effort Distribution (Subagents):** Planner 13.5%, Coder 39.8%, Tester 26.4%, Reviewer 20.2%
 - **Subagent Turn Velocity & Thrashing:** 33.0 avg turns/run (peak: 65 turns) | Planner 18.0, Coder 36.3, Tester 33.5, Reviewer 52.0
-- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +1,813 / -0 lines across 17 code files (excluding docs)
-- **Reasoning Effort:** 33,271 reasoning tokens (27.2% of generated output)
-- **Tool Health & Self-Correction:** 377 tool calls (6 self-corrections, 98.4% success rate)
+- **Test-to-Production Code Ratio:** 0.6:1 (+1,112 test lines / +1,868 prod lines)
+- **Code Delivered:** +2,980 / -7 lines across 26 code files (excluding docs)
+- **Reasoning Effort:** 36,787 reasoning tokens (28.2% of generated output)
+- **Tool Health & Self-Correction:** 425 tool calls (6 self-corrections, 98.6% success rate)
 
 ### Agentic Execution Metrics
 
@@ -64,15 +64,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 1,134,451 | 26,533 | 6,105,951 | 84.3% | 122.8k | ELEVATED | $1.46 |
+| **orchestrator** | 1 | 1,582,012 | 31,509 | 12,509,641 | 88.8% | 147.2k | ELEVATED | $2.31 |
 | **planner** | 2 | 167,479 | 14,191 | 796,269 | 82.6% | 55.6k | HEALTHY | $0.29 |
 | **coder** | 3 | 598,844 | 25,154 | 3,848,229 | 86.5% | 79.6k | HEALTHY | $0.84 |
 | **tester** | 2 | 350,901 | 19,401 | 2,974,596 | 89.4% | 73.4k | HEALTHY | $0.56 |
 | **reviewer** | 1 | 300,720 | 3,614 | 2,299,870 | 88.4% | 84.5k | HEALTHY | $0.43 |
-| **Total** | **9** | **2,552,395** | **88,893** | **16,024,915** | **86.3%** | **122.8k** | **ELEVATED** | **$3.57** |
+| **Total** | **9** | **2,999,956** | **93,869** | **22,428,605** | **88.2%** | **147.2k** | **ELEVATED** | **$4.42** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 9 | 2,552,395 | 88,893 | 16,024,915 | 86.3% | $3.57 |
-| **Total** | **9** | **2,552,395** | **88,893** | **16,024,915** | **86.3%** | **$3.57** |
+| **gemini-3.8-flash** | 9 | 2,999,956 | 93,869 | 22,428,605 | 88.2% | $4.42 |
+| **Total** | **9** | **2,999,956** | **93,869** | **22,428,605** | **88.2%** | **$4.42** |

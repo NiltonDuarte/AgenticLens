@@ -28,14 +28,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 2m 24s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Orchestrator peak 24.0k tokens (12% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (N/A)
+- **Active Agent Duration:** 2m 49s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Orchestrator peak 26.3k tokens (13% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 4,831 reasoning tokens (60.8% of generated output)
-- **Tool Health & Self-Correction:** 24 tool calls (0 self-corrections, 100.0% success rate)
+- **Reasoning Effort:** 5,700 reasoning tokens (58.8% of generated output)
+- **Tool Health & Self-Correction:** 25 tool calls (0 self-corrections, 100.0% success rate)
 
 ### Agentic Execution Metrics
 
@@ -44,11 +44,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 162,269 | 3,114 | 267,157 | 62.2% | 24.0k | HEALTHY | $0.17 |
-| **Total** | **1** | **162,269** | **3,114** | **267,157** | **62.2%** | **24.0k** | **HEALTHY** | **$0.17** |
+| **orchestrator** | 1 | 172,617 | 3,999 | 333,076 | 65.9% | 26.3k | HEALTHY | $0.19 |
+| **Total** | **1** | **172,617** | **3,999** | **333,076** | **65.9%** | **26.3k** | **HEALTHY** | **$0.19** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 162,269 | 3,114 | 267,157 | 62.2% | $0.17 |
-| **Total** | **1** | **162,269** | **3,114** | **267,157** | **62.2%** | **$0.17** |
+| **gemini-3.8-flash** | 1 | 172,617 | 3,999 | 333,076 | 65.9% | $0.19 |
+| **Total** | **1** | **172,617** | **3,999** | **333,076** | **65.9%** | **$0.19** |

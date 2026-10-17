@@ -1,17 +1,18 @@
 {
+  "schema_version": 2,
   "ticket_id": "AL-4",
   "ticket_title": "TypeScript Ticket Deep Dive, Progression Charts, and Comparisons",
   "ticket_type": "feature",
   "started_at": "2026-10-17T19:39:19.185000+00:00",
-  "completed_at": "2026-10-17T22:20:29.683000+00:00",
-  "updated_at": "2026-10-17T22:20:34.318815+00:00",
+  "completed_at": "2026-10-17T22:23:18.525000+00:00",
+  "updated_at": "2026-10-17T23:02:24.392122179Z",
   "code": {
-    "lines_added": 8350,
+    "lines_added": 8367,
     "lines_deleted": 86,
-    "test_lines_added": 0,
-    "test_lines_deleted": 0,
-    "prod_lines_added": 0,
-    "prod_lines_deleted": 0,
+    "test_lines_added": 3170,
+    "test_lines_deleted": 1,
+    "prod_lines_added": 5197,
+    "prod_lines_deleted": 85,
     "files_changed": 34,
     "sdlc_iterations": 2
   },
@@ -23,18 +24,18 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-17T19:39:19.654000+00:00",
-      "completed_at": "2026-10-17T22:20:29.683000+00:00",
-      "active_duration_seconds": 8003,
-      "turns": 235,
+      "completed_at": "2026-10-17T22:23:18.525000+00:00",
+      "active_duration_seconds": 8171,
+      "turns": 267,
       "tokens": {
-        "input": 2727987,
-        "output": 39878,
-        "cache_read": 17337361,
-        "reasoning": 40367,
-        "peak_context": 167003
+        "input": 3094506,
+        "output": 44162,
+        "cache_read": 20157886,
+        "reasoning": 45453,
+        "peak_context": 172386
       },
-      "cost_usd": 3.647211,
-      "compactions": 1
+      "cost_usd": 4.168777,
+      "compactions": 2
     },
     {
       "id": "ses_eb49d852bffeBa75BAsTH5ksrT",
@@ -220,12 +221,12 @@
   "tools": [
     {
       "name": "read",
-      "calls": 336,
+      "calls": 337,
       "errors": 5
     },
     {
       "name": "bash",
-      "calls": 235,
+      "calls": 261,
       "errors": 0
     },
     {
@@ -245,7 +246,7 @@
     },
     {
       "name": "write",
-      "calls": 30,
+      "calls": 31,
       "errors": 0
     },
     {
@@ -264,14 +265,14 @@
       "errors": 3
     },
     {
-      "name": "t3-code_preview_snapshot",
-      "calls": 7,
-      "errors": 0
-    },
-    {
       "name": "t3-code_preview_evaluate",
       "calls": 7,
       "errors": 2
+    },
+    {
+      "name": "t3-code_preview_snapshot",
+      "calls": 7,
+      "errors": 0
     },
     {
       "name": "mcp-gateway_mcp-find",
@@ -289,6 +290,11 @@
       "errors": 1
     },
     {
+      "name": "list_mcp_resources",
+      "calls": 2,
+      "errors": 0
+    },
+    {
       "name": "question",
       "calls": 2,
       "errors": 0
@@ -299,8 +305,8 @@
       "errors": 0
     },
     {
-      "name": "list_mcp_resources",
-      "calls": 2,
+      "name": "list_mcp_resource_templates",
+      "calls": 1,
       "errors": 0
     },
     {
@@ -312,11 +318,6 @@
       "name": "mcp-gateway_mcp-exec",
       "calls": 1,
       "errors": 1
-    },
-    {
-      "name": "list_mcp_resource_templates",
-      "calls": 1,
-      "errors": 0
     }
   ]
 }

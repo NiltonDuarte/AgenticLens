@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "ticket_id": "PO-1",
   "ticket_title": "Rewrite Python Application in Go + TypeScript",
   "ticket_type": "feature",
   "started_at": "2026-10-17T14:39:15.644000+00:00",
-  "completed_at": "2026-10-17T15:07:02.563000+00:00",
-  "updated_at": "2026-10-17T15:07:05.883090+00:00",
+  "completed_at": "2026-10-17T15:12:34.057000+00:00",
+  "updated_at": "2026-10-17T23:02:24.392122179Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -23,30 +24,30 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-17T14:39:16.049000+00:00",
-      "completed_at": "2026-10-17T15:07:02.563000+00:00",
-      "active_duration_seconds": 1000,
-      "turns": 111,
+      "completed_at": "2026-10-17T15:12:34.057000+00:00",
+      "active_duration_seconds": 1234,
+      "turns": 141,
       "tokens": {
-        "input": 903501,
-        "output": 25677,
-        "cache_read": 4760162,
-        "reasoning": 17453,
-        "peak_context": 89337
+        "input": 1139501,
+        "output": 28249,
+        "cache_read": 7633800,
+        "reasoning": 20118,
+        "peak_context": 113824
       },
-      "cost_usd": 1.196375,
+      "cost_usd": 1.608537,
       "compactions": 0
     }
   ],
   "tools": [
     {
-      "name": "read",
-      "calls": 29,
-      "errors": 0
+      "name": "bash",
+      "calls": 47,
+      "errors": 1
     },
     {
-      "name": "bash",
-      "calls": 23,
-      "errors": 1
+      "name": "read",
+      "calls": 31,
+      "errors": 0
     },
     {
       "name": "write",
@@ -60,7 +61,7 @@
     },
     {
       "name": "edit",
-      "calls": 7,
+      "calls": 8,
       "errors": 0
     },
     {

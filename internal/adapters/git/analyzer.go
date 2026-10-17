@@ -237,3 +237,46 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 		SDLCIterations:   sdlcIters,
 	}
 }
+
+// GetWorkspaceCommitTimeRange returns the minimum and maximum commit timestamps (in Unix seconds) for commits touching workspaceDir.
+func GetWorkspaceCommitTimeRange(workspaceDir string) (minUnixSec int64, maxUnixSec int64, found bool) {
+	cleanDir := strings.TrimSpace(workspaceDir)
+	if cleanDir == "" {
+		return 0, 0, false
+	}
+	cleanDir = strings.TrimPrefix(cleanDir, "./")
+	cleanDir = strings.TrimPrefix(cleanDir, "/")
+	output, err := runGitCommand("log", "--format=%ct", "--", ":(top)"+cleanDir)
+	if err != nil {
+		return 0, 0, false
+	}
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	var minTs, maxTs int64
+	count := 0
+	for _, l := range lines {
+		trimmed := strings.TrimSpace(l)
+		if trimmed == "" {
+			continue
+		}
+		ts, err := strconv.ParseInt(trimmed, 10, 64)
+		if err != nil || ts <= 0 {
+			continue
+		}
+		if count == 0 {
+			minTs = ts
+			maxTs = ts
+		} else {
+			if ts < minTs {
+				minTs = ts
+			}
+			if ts > maxTs {
+				maxTs = ts
+			}
+		}
+		count++
+	}
+	if count == 0 {
+		return 0, 0, false
+	}
+	return minTs, maxTs, true
+}

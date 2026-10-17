@@ -1,18 +1,19 @@
 {
+  "schema_version": 2,
   "ticket_id": "AL-3",
   "ticket_title": "TypeScript SPA Shell, Fleet Overview Dashboard, and Single-Binary Integration",
   "ticket_type": "feature",
   "started_at": "2026-10-17T18:06:22.994000+00:00",
-  "completed_at": "2026-10-17T19:18:53.645000+00:00",
-  "updated_at": "2026-10-17T19:18:58.710722+00:00",
+  "completed_at": "2026-10-17T19:28:25.075000+00:00",
+  "updated_at": "2026-10-17T23:02:24.392122179Z",
   "code": {
-    "lines_added": 1813,
-    "lines_deleted": 0,
-    "test_lines_added": 0,
-    "test_lines_deleted": 0,
-    "prod_lines_added": 0,
-    "prod_lines_deleted": 0,
-    "files_changed": 17,
+    "lines_added": 2980,
+    "lines_deleted": 7,
+    "test_lines_added": 1112,
+    "test_lines_deleted": 2,
+    "prod_lines_added": 1868,
+    "prod_lines_deleted": 5,
+    "files_changed": 26,
     "sdlc_iterations": 1
   },
   "invocations": [
@@ -23,17 +24,17 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-17T18:06:23.357000+00:00",
-      "completed_at": "2026-10-17T19:18:53.645000+00:00",
-      "active_duration_seconds": 2064,
-      "turns": 109,
+      "completed_at": "2026-10-17T19:28:25.075000+00:00",
+      "active_duration_seconds": 2440,
+      "turns": 160,
       "tokens": {
-        "input": 1134451,
-        "output": 26533,
-        "cache_read": 6105951,
-        "reasoning": 13101,
-        "peak_context": 122774
+        "input": 1582012,
+        "output": 31509,
+        "cache_read": 12509641,
+        "reasoning": 16617,
+        "peak_context": 147223
       },
-      "cost_usd": 1.457412,
+      "cost_usd": 2.305205,
       "compactions": 0
     },
     {
@@ -153,7 +154,7 @@
         "reasoning": 0,
         "peak_context": 0
       },
-      "cost_usd": 0.0,
+      "cost_usd": 0,
       "compactions": 0
     },
     {
@@ -200,12 +201,12 @@
   "tools": [
     {
       "name": "read",
-      "calls": 151,
+      "calls": 154,
       "errors": 2
     },
     {
       "name": "bash",
-      "calls": 85,
+      "calls": 127,
       "errors": 0
     },
     {
@@ -215,7 +216,7 @@
     },
     {
       "name": "write",
-      "calls": 35,
+      "calls": 38,
       "errors": 0
     },
     {
@@ -244,17 +245,17 @@
       "errors": 0
     },
     {
-      "name": "skill",
-      "calls": 3,
-      "errors": 0
-    },
-    {
       "name": "list_mcp_resources",
       "calls": 3,
       "errors": 0
     },
     {
       "name": "mcp-gateway_code-mode",
+      "calls": 3,
+      "errors": 0
+    },
+    {
+      "name": "skill",
       "calls": 3,
       "errors": 0
     },

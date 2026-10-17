@@ -109,3 +109,12 @@ var SubagentRoleOrder = []string{
 	string(RoleTester),
 	string(RoleReviewer),
 }
+
+// MigrationStatus defines the schema and metric migration progress state.
+type MigrationStatus string
+
+const (
+	MigrationStatusPending   MigrationStatus = "pending"
+	MigrationStatusPartial   MigrationStatus = "partial"
+	MigrationStatusCompleted MigrationStatus = "completed"
+)

@@ -44,17 +44,30 @@ type CodeFacts struct {
 	SDLCIterations  int64 `json:"sdlc_iterations"`
 }
 
+// MigrationInfo captures migration state, completed steps, pending requirements, and audit metadata.
+type MigrationInfo struct {
+	SchemaVersion  int             `json:"schema_version"`
+	Status         MigrationStatus `json:"status"`
+	StepsCompleted []string        `json:"steps_completed"`
+	StepsPending   []string        `json:"steps_pending"`
+	LastMigratedAt string          `json:"last_migrated_at"`
+	LastMigratedBy string          `json:"last_migrated_by"`
+	Notes          string          `json:"notes,omitempty"`
+}
+
 // AgenticFactLedger is the root raw session facts ledger extracted for a ticket workspace.
 type AgenticFactLedger struct {
-	TicketID    *string          `json:"ticket_id"`
-	TicketTitle *string          `json:"ticket_title"`
-	TicketType  *string          `json:"ticket_type"`
-	StartedAt   *string          `json:"started_at"`
-	CompletedAt *string          `json:"completed_at"`
-	UpdatedAt   string           `json:"updated_at"`
-	Code        CodeFacts        `json:"code"`
-	Invocations []InvocationFact `json:"invocations"`
-	Tools       []ToolFact       `json:"tools"`
+	SchemaVersion *int             `json:"schema_version,omitempty"`
+	Migration     *MigrationInfo   `json:"migration,omitempty"`
+	TicketID      *string          `json:"ticket_id"`
+	TicketTitle   *string          `json:"ticket_title"`
+	TicketType    *string          `json:"ticket_type"`
+	StartedAt     *string          `json:"started_at"`
+	CompletedAt   *string          `json:"completed_at"`
+	UpdatedAt     string           `json:"updated_at"`
+	Code          CodeFacts        `json:"code"`
+	Invocations   []InvocationFact `json:"invocations"`
+	Tools         []ToolFact       `json:"tools"`
 }
 
 // GroupedMetric aggregates metrics across invocations.

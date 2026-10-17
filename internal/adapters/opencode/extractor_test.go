@@ -126,6 +126,58 @@ func TestResolveActiveRootSession(t *testing.T) {
 	})
 }
 
+func TestResolveSessionByWorkspacePath(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_root_target', NULL, 'orchestrator', 'gpt-4o', 'Feature work', 10000, 11000),
+		('ses_root_other', NULL, 'orchestrator', 'gpt-4o', 'Other work', 20000, 21000);
+
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_target', 'ses_root_target', 'm1', 10500, 10500, '{"path":"workspaces/PO-3/agentic_metrics.json"}'),
+		('p_other', 'ses_root_other', 'm2', 20500, 20500, '{"path":"workspaces/PO-3/agentic_metrics.json"}');
+	`)
+	if err != nil {
+		t.Fatalf("seeding failed: %v", err)
+	}
+
+	t.Run("nil DB error", func(t *testing.T) {
+		_, err := opencode.ResolveSessionByWorkspacePath(nil, "PO-3", 9000, 12000)
+		if err == nil {
+			t.Fatal("expected error for nil DB")
+		}
+	})
+
+	t.Run("empty ticket returns nil", func(t *testing.T) {
+		res, err := opencode.ResolveSessionByWorkspacePath(db, "", 9000, 12000)
+		if err != nil || res != nil {
+			t.Fatalf("expected nil result, got %v, err=%v", res, err)
+		}
+	})
+
+	t.Run("resolves root session within timestamp window", func(t *testing.T) {
+		res, err := opencode.ResolveSessionByWorkspacePath(db, "PO-3", 9000, 12000)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res == nil || *res != "ses_root_target" {
+			t.Fatalf("expected ses_root_target, got %v", res)
+		}
+	})
+
+	t.Run("filters out session outside timestamp window", func(t *testing.T) {
+		res, err := opencode.ResolveSessionByWorkspacePath(db, "PO-3", 30000, 40000)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res != nil {
+			t.Fatalf("expected nil for out of window range, got %v", res)
+		}
+	})
+}
+
 func TestExtractFacts(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

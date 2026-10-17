@@ -116,17 +116,70 @@ func (dto CodeFactsDTO) ToDomain() domain.CodeFacts {
 	}
 }
 
+// MigrationInfoDTO represents migration metadata in JSON boundary serialization.
+type MigrationInfoDTO struct {
+	SchemaVersion  int      `json:"schema_version"`
+	Status         string   `json:"status"`
+	StepsCompleted []string `json:"steps_completed"`
+	StepsPending   []string `json:"steps_pending"`
+	LastMigratedAt string   `json:"last_migrated_at"`
+	LastMigratedBy string   `json:"last_migrated_by"`
+	Notes          string   `json:"notes,omitempty"`
+}
+
+func (dto MigrationInfoDTO) ToDomain() domain.MigrationInfo {
+	status := domain.MigrationStatus(dto.Status)
+	if status == "" {
+		status = domain.MigrationStatusCompleted
+	}
+	stepsCompleted := dto.StepsCompleted
+	if stepsCompleted == nil {
+		stepsCompleted = []string{}
+	}
+	stepsPending := dto.StepsPending
+	if stepsPending == nil {
+		stepsPending = []string{}
+	}
+	return domain.MigrationInfo{
+		SchemaVersion:  dto.SchemaVersion,
+		Status:         status,
+		StepsCompleted: stepsCompleted,
+		StepsPending:   stepsPending,
+		LastMigratedAt: dto.LastMigratedAt,
+		LastMigratedBy: dto.LastMigratedBy,
+		Notes:          dto.Notes,
+	}
+}
+
+// MigrationInfoDTOFromDomain converts domain.MigrationInfo to MigrationInfoDTO.
+func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
+	if info == nil {
+		return nil
+	}
+	return &MigrationInfoDTO{
+		SchemaVersion:  info.SchemaVersion,
+		Status:         string(info.Status),
+		StepsCompleted: info.StepsCompleted,
+		StepsPending:   info.StepsPending,
+		LastMigratedAt: info.LastMigratedAt,
+		LastMigratedBy: info.LastMigratedBy,
+		Notes:          info.Notes,
+	}
+}
+
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
-	TicketID    *string             `json:"ticket_id"`
-	TicketTitle *string             `json:"ticket_title"`
-	TicketType  *string             `json:"ticket_type"`
-	StartedAt   *string             `json:"started_at"`
-	CompletedAt *string             `json:"completed_at"`
-	UpdatedAt   string              `json:"updated_at"`
-	Code        CodeFactsDTO        `json:"code"`
-	Invocations []InvocationFactDTO `json:"invocations"`
-	Tools       []ToolFactDTO       `json:"tools"`
+	SchemaVersion *int                `json:"schema_version,omitempty"`
+	Migration     *MigrationInfoDTO   `json:"migration,omitempty"`
+	TicketID      *string             `json:"ticket_id"`
+	TicketTitle   *string             `json:"ticket_title"`
+	TicketType    *string             `json:"ticket_type"`
+	StartedAt     *string             `json:"started_at"`
+	CompletedAt   *string             `json:"completed_at"`
+	UpdatedAt     string              `json:"updated_at"`
+	Code          CodeFactsDTO        `json:"code"`
+	Invocations   []InvocationFactDTO `json:"invocations"`
+	Tools         []ToolFactDTO       `json:"tools"`
 }
 
 func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
@@ -139,14 +192,81 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		tools[i] = t.ToDomain()
 	}
 
+	var mig *domain.MigrationInfo
+	if dto.Migration != nil {
+		domMig := dto.Migration.ToDomain()
+		mig = &domMig
+	}
+
 	return domain.AgenticFactLedger{
-		TicketID:    dto.TicketID,
-		TicketTitle: dto.TicketTitle,
-		TicketType:  dto.TicketType,
-		StartedAt:   dto.StartedAt,
-		CompletedAt: dto.CompletedAt,
-		UpdatedAt:   dto.UpdatedAt,
-		Code:        dto.Code.ToDomain(),
+		SchemaVersion: dto.SchemaVersion,
+		Migration:     mig,
+		TicketID:      dto.TicketID,
+		TicketTitle:   dto.TicketTitle,
+		TicketType:    dto.TicketType,
+		StartedAt:     dto.StartedAt,
+		CompletedAt:   dto.CompletedAt,
+		UpdatedAt:     dto.UpdatedAt,
+		Code:          dto.Code.ToDomain(),
+		Invocations:   invs,
+		Tools:         tools,
+	}
+}
+
+// AgenticFactLedgerDTOFromDomain converts a domain AgenticFactLedger to its DTO for serialization.
+func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
+	invs := make([]InvocationFactDTO, len(ledger.Invocations))
+	for i, inv := range ledger.Invocations {
+		invs[i] = InvocationFactDTO{
+			ID:                    inv.ID,
+			ParentID:              inv.ParentID,
+			Role:                  inv.Role,
+			Model:                 inv.Model,
+			User:                  inv.User,
+			StartedAt:             inv.StartedAt,
+			CompletedAt:           inv.CompletedAt,
+			ActiveDurationSeconds: inv.ActiveDurationSeconds,
+			Turns:                 inv.Turns,
+			Tokens: InvocationTokensDTO{
+				Input:       inv.Tokens.Input,
+				Output:      inv.Tokens.Output,
+				CacheRead:   inv.Tokens.CacheRead,
+				Reasoning:   inv.Tokens.Reasoning,
+				PeakContext: inv.Tokens.PeakContext,
+			},
+			CostUSD:     inv.CostUSD,
+			Compactions: inv.Compactions,
+		}
+	}
+
+	tools := make([]ToolFactDTO, len(ledger.Tools))
+	for i, t := range ledger.Tools {
+		tools[i] = ToolFactDTO{
+			Name:   t.Name,
+			Calls:  t.Calls,
+			Errors: t.Errors,
+		}
+	}
+
+	return AgenticFactLedgerDTO{
+		SchemaVersion: ledger.SchemaVersion,
+		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
+		TicketID:      ledger.TicketID,
+		TicketTitle:   ledger.TicketTitle,
+		TicketType:    ledger.TicketType,
+		StartedAt:     ledger.StartedAt,
+		CompletedAt:   ledger.CompletedAt,
+		UpdatedAt:     ledger.UpdatedAt,
+		Code: CodeFactsDTO{
+			LinesAdded:       ledger.Code.LinesAdded,
+			LinesDeleted:     ledger.Code.LinesDeleted,
+			TestLinesAdded:   ledger.Code.TestLinesAdded,
+			TestLinesDeleted: ledger.Code.TestLinesDeleted,
+			ProdLinesAdded:   ledger.Code.ProdLinesAdded,
+			ProdLinesDeleted: ledger.Code.ProdLinesDeleted,
+			FilesChanged:     ledger.Code.FilesChanged,
+			SDLCIterations:   ledger.Code.SDLCIterations,
+		},
 		Invocations: invs,
 		Tools:       tools,
 	}

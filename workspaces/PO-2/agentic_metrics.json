@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "ticket_id": "PO-2",
   "ticket_title": "Session Schema Expansion v2, Anomaly Engine, and Visual Waterfall",
   "ticket_type": "feature",
   "started_at": "2026-10-17T16:27:43.244000+00:00",
-  "completed_at": "2026-10-17T22:38:40.982000+00:00",
-  "updated_at": "2026-10-17T22:38:44.358836+00:00",
+  "completed_at": "2026-10-17T22:40:08.126000+00:00",
+  "updated_at": "2026-10-17T23:02:24.392122179Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -23,29 +24,29 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-17T16:27:43.704000+00:00",
-      "completed_at": "2026-10-17T22:38:40.982000+00:00",
-      "active_duration_seconds": 1154,
-      "turns": 105,
+      "completed_at": "2026-10-17T22:40:08.126000+00:00",
+      "active_duration_seconds": 1241,
+      "turns": 126,
       "tokens": {
-        "input": 613444,
-        "output": 16405,
-        "cache_read": 4365626,
-        "reasoning": 15864,
-        "peak_context": 79280
+        "input": 757331,
+        "output": 17281,
+        "cache_read": 6092711,
+        "reasoning": 17265,
+        "peak_context": 88541
       },
-      "cost_usd": 0.908514,
+      "cost_usd": 1.154499,
       "compactions": 0
     }
   ],
   "tools": [
     {
       "name": "bash",
-      "calls": 39,
+      "calls": 58,
       "errors": 0
     },
     {
       "name": "read",
-      "calls": 26,
+      "calls": 27,
       "errors": 1
     },
     {
@@ -64,12 +65,12 @@
       "errors": 0
     },
     {
-      "name": "question",
+      "name": "grep",
       "calls": 3,
       "errors": 0
     },
     {
-      "name": "grep",
+      "name": "question",
       "calls": 3,
       "errors": 0
     },

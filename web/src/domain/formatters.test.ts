@@ -251,6 +251,104 @@ describe('Domain Pure Formatters', () => {
       expect(rows[0]?.lead_duration_formatted).toBe('In Progress');
     });
 
+    it('handles migrated and partially migrated ledger objects cleanly', () => {
+      const migratedLedger = {
+        ticket_id: 'AL-12',
+        ticket_title: 'Telemetry Backfill Engine',
+        ticket_type: 'feature',
+        started_at: '2026-10-17T10:00:00Z',
+        completed_at: '2026-10-17T11:00:00Z',
+        updated_at: '2026-10-17T11:00:00Z',
+        facts: {
+          schema_version: 2,
+          migration: {
+            schema_version: 2,
+            status: 'partial' as const,
+            steps_completed: ['git_code_facts'],
+            steps_pending: ['opencode_db'],
+            last_migrated_at: '2026-10-17T11:00:00Z',
+            last_migrated_by: 'author-1',
+          },
+          ticket_id: 'AL-12',
+          ticket_title: 'Telemetry Backfill Engine',
+          ticket_type: 'feature',
+          started_at: '2026-10-17T10:00:00Z',
+          completed_at: '2026-10-17T11:00:00Z',
+          updated_at: '2026-10-17T11:00:00Z',
+          code: {
+            lines_added: 120,
+            lines_deleted: 10,
+            test_lines_added: 60,
+            test_lines_deleted: 5,
+            prod_lines_added: 60,
+            prod_lines_deleted: 5,
+            files_changed: 3,
+            sdlc_iterations: 1,
+          },
+          invocations: [],
+          tools: [],
+        },
+        workflow_efficiency: {
+          sdlc_iterations: 1,
+          active_duration_seconds: 60,
+          active_duration_formatted: '1m 0s',
+          role_effort_distribution_pct: {},
+          subagent_turn_velocity: {
+            avg_turns_per_invocation: 0,
+            peak_turns: 0,
+            by_role: {},
+          },
+          test_to_production_ratio: {
+            ratio: '1.0:1',
+            test_lines_added: 60,
+            prod_lines_added: 60,
+          },
+          reasoning_tokens: 0,
+          reasoning_ratio_pct: 0,
+          code_delivered: {
+            lines_added: 120,
+            lines_deleted: 10,
+            files_changed: 3,
+          },
+          tool_execution: {
+            total_calls: 0,
+            errors_and_corrections: 0,
+            success_rate_pct: 100,
+          },
+          context_window_health: {
+            healthy_ceiling_tokens: 200000,
+            status: 'HEALTHY',
+            orchestrator_peak_tokens: 0,
+            orchestrator_saturation_pct: 0,
+            subagents_peak_tokens: 0,
+            subagents_peak_role: 'none',
+            compactions: 0,
+            peak_by_role: {},
+          },
+        },
+        threads: [],
+        totals: {
+          invocations: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          cache_read_tokens: 0,
+          cache_hit_rate_pct: 0,
+          cost_usd: 0,
+          peak_context_tokens: 0,
+          context_health: 'HEALTHY',
+        },
+        roles: [],
+        models: [],
+      };
+
+      const rows = deriveTicketComparisonRows([migratedLedger]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.ticket_id).toBe('AL-12');
+      expect(rows[0]?.lead_duration_formatted).toBe('1h 0m');
+      expect(migratedLedger.facts.migration?.status).toBe('partial');
+      expect(migratedLedger.facts.migration?.steps_pending).toEqual(['opencode_db']);
+    });
+
     it('sorts rows dynamically by comparison sort fields and order', () => {
       const ledgers = Object.values(mockAgenticMetricsLedgers);
       expect(ledgers.length).toBeGreaterThan(1);

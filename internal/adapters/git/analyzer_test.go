@@ -209,5 +209,17 @@ not_a_number	not_a_number	file.go
 			t.Errorf("expected negative.go, got %s", parsed[0].Path)
 		}
 	})
+
+	t.Run("GetWorkspaceCommitTimeRange", func(t *testing.T) {
+		minTs, maxTs, found := git.GetWorkspaceCommitTimeRange("")
+		if found || minTs != 0 || maxTs != 0 {
+			t.Errorf("expected not found for empty workspace, got found=%v", found)
+		}
+
+		minTs, maxTs, found = git.GetWorkspaceCommitTimeRange("workspaces/PO-3")
+		if !found || minTs <= 0 || maxTs < minTs {
+			t.Errorf("expected valid range for workspaces/PO-3, got min=%d max=%d found=%v", minTs, maxTs, found)
+		}
+	})
 }
 

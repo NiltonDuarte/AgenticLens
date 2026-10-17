@@ -5,6 +5,15 @@ import (
 	"math"
 )
 
+// CurrentSchemaVersion defines the active telemetry schema version.
+const CurrentSchemaVersion int = 2
+
+// Migration step identifiers.
+const (
+	MigrationStepGitCodeFacts = "git_code_facts"
+	MigrationStepOpenCodeDB   = "opencode_db"
+)
+
 // HealthyCeilingTokens is the threshold constant for a healthy context window (200,000 tokens).
 const HealthyCeilingTokens int64 = 200_000
 

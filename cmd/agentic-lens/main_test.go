@@ -896,3 +896,69 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 }
+
+func TestCLIBackfillCommand(t *testing.T) {
+	wsDir := setupTestWorkspace(t)
+
+	t.Run("dry-run backfill outputs preview without error", func(t *testing.T) {
+		cmd := exec.Command(
+			cliBinaryPath,
+			"backfill",
+			"--workspaces", wsDir,
+			"--dry-run",
+			"--recompute-git",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("backfill dry-run failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "TELEMETRY BACKFILL & SCHEMA MIGRATION [DRY-RUN PREVIEW]") {
+			t.Errorf("expected dry-run header, got: %s", out)
+		}
+		if !strings.Contains(out, "TICKET-1") || !strings.Contains(out, "TICKET-2") {
+			t.Errorf("expected ticket results in output, got: %s", out)
+		}
+		if !strings.Contains(out, "Summary: Scanned: 2") {
+			t.Errorf("expected 2 scanned tickets in summary, got: %s", out)
+		}
+	})
+
+	t.Run("backfill with ticket-id filter executes and writes migration info", func(t *testing.T) {
+		cmd := exec.Command(
+			cliBinaryPath,
+			"backfill",
+			"--workspaces", wsDir,
+			"--ticket-id", "TICKET-1",
+			"--recompute-git",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("backfill failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
+		if err != nil {
+			t.Fatalf("failed reading updated file: %v", err)
+		}
+
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("failed parsing updated JSON: %v", err)
+		}
+
+		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 2 {
+			t.Errorf("expected schema_version 2, got %v", parsed.SchemaVersion)
+		}
+		if parsed.Migration != nil {
+			t.Errorf("expected migration object to be omitted on completed status, got %v", parsed.Migration)
+		}
+	})
+}

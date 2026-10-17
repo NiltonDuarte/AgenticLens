@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "ticket_id": "AL-11",
   "ticket_title": "Native Go Telemetry Extractor and Active Session Metric Generation",
   "ticket_type": "feature",
   "started_at": "2026-10-17T20:09:40.088000+00:00",
-  "completed_at": "2026-10-17T20:59:50.873000+00:00",
-  "updated_at": "2026-10-17T21:00:05.990118+00:00",
+  "completed_at": "2026-10-17T21:00:34.775000+00:00",
+  "updated_at": "2026-10-17T23:02:24.392122179Z",
   "code": {
     "lines_added": 2717,
     "lines_deleted": 13,
@@ -23,17 +24,17 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-17T20:09:40.564000+00:00",
-      "completed_at": "2026-10-17T20:59:50.873000+00:00",
-      "active_duration_seconds": 2252,
-      "turns": 140,
+      "completed_at": "2026-10-17T21:00:34.775000+00:00",
+      "active_duration_seconds": 2296,
+      "turns": 146,
       "tokens": {
-        "input": 829771,
-        "output": 22662,
-        "cache_read": 9738073,
-        "reasoning": 15744,
-        "peak_context": 140069
+        "input": 860479,
+        "output": 23543,
+        "cache_read": 10700322,
+        "reasoning": 16371,
+        "peak_context": 142662
       },
-      "cost_usd": 1.496706,
+      "cost_usd": 1.597561,
       "compactions": 0
     },
     {
@@ -125,7 +126,7 @@
     },
     {
       "name": "bash",
-      "calls": 131,
+      "calls": 136,
       "errors": 1
     },
     {

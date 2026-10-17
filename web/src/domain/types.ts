@@ -2,6 +2,18 @@ export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL
 
 export type AgentRole = 'orchestrator' | 'planner' | 'coder' | 'tester' | 'reviewer';
 
+export type MigrationStatus = 'pending' | 'partial' | 'completed';
+
+export interface MigrationInfo {
+  readonly schema_version: number;
+  readonly status: MigrationStatus;
+  readonly steps_completed: readonly string[];
+  readonly steps_pending: readonly string[];
+  readonly last_migrated_at: string;
+  readonly last_migrated_by: string;
+  readonly notes?: string;
+}
+
 export const CANONICAL_ROLE_ORDER: readonly string[] = [
   'orchestrator',
   'planner',
@@ -58,6 +70,8 @@ export interface CodeFacts {
 }
 
 export interface AgenticFactLedger {
+  readonly schema_version?: number;
+  readonly migration?: MigrationInfo;
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
   readonly ticket_type: string | null;

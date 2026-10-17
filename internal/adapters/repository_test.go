@@ -276,6 +276,66 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 			t.Errorf("expected default tool name unknown, got %s", dom.Tools[0].Name)
 		}
 	})
+
+	t.Run("migration metadata round-trip DTO serialization and unmarshaling", func(t *testing.T) {
+		raw := `{
+			"schema_version": 2,
+			"ticket_id": "AL-SCHEMA-TEST",
+			"updated_at": "2026-10-17T12:00:00Z",
+			"migration": {
+				"schema_version": 2,
+				"status": "partial",
+				"steps_completed": ["git_code_facts"],
+				"steps_pending": ["opencode_db"],
+				"last_migrated_at": "2026-10-17T12:00:00Z",
+				"last_migrated_by": "engineer-1",
+				"notes": "Testing boundary serialization"
+			},
+			"code": {
+				"lines_added": 10,
+				"sdlc_iterations": 1
+			}
+		}`
+
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(raw), &dto); err != nil {
+			t.Fatalf("unmarshal error: %v", err)
+		}
+		if dto.SchemaVersion == nil || *dto.SchemaVersion != 2 {
+			t.Fatalf("expected SchemaVersion 2, got %v", dto.SchemaVersion)
+		}
+		if dto.Migration == nil || dto.Migration.Status != "partial" {
+			t.Fatalf("expected migration status partial, got %v", dto.Migration)
+		}
+
+		dom := dto.ToDomain()
+		if dom.Migration == nil {
+			t.Fatal("expected domain migration to not be nil")
+		}
+		if dom.Migration.Status != domain.MigrationStatusPartial {
+			t.Errorf("expected domain status partial, got %s", dom.Migration.Status)
+		}
+		if len(dom.Migration.StepsPending) != 1 || dom.Migration.StepsPending[0] != "opencode_db" {
+			t.Errorf("expected pending opencode_db, got %v", dom.Migration.StepsPending)
+		}
+
+		// Round-trip back to DTO
+		roundDTO := adapters.AgenticFactLedgerDTOFromDomain(dom)
+		data, err := json.Marshal(roundDTO)
+		if err != nil {
+			t.Fatalf("marshal error: %v", err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("re-unmarshal error: %v", err)
+		}
+		if parsed.Migration == nil || parsed.Migration.Status != "partial" {
+			t.Errorf("expected round-trip migration status partial, got %v", parsed.Migration)
+		}
+		if parsed.Migration.LastMigratedBy != "engineer-1" {
+			t.Errorf("expected engineer-1, got %s", parsed.Migration.LastMigratedBy)
+		}
+	})
 }
 
 

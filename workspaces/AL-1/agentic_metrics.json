@@ -1,18 +1,19 @@
 {
+  "schema_version": 2,
   "ticket_id": "AL-1",
   "ticket_title": "Go Domain Aggregations, Workspace Scanner, and CLI Engine",
   "ticket_type": "feature",
   "started_at": "2026-10-17T15:15:15.397000+00:00",
-  "completed_at": "2026-10-17T16:03:58.733000+00:00",
-  "updated_at": "2026-10-17T16:04:12.449164+00:00",
+  "completed_at": "2026-10-17T16:05:30.761000+00:00",
+  "updated_at": "2026-10-17T23:02:24.392122179Z",
   "code": {
-    "lines_added": 0,
-    "lines_deleted": 0,
-    "test_lines_added": 0,
+    "lines_added": 1599,
+    "lines_deleted": 30,
+    "test_lines_added": 803,
     "test_lines_deleted": 0,
-    "prod_lines_added": 0,
-    "prod_lines_deleted": 0,
-    "files_changed": 0,
+    "prod_lines_added": 796,
+    "prod_lines_deleted": 30,
+    "files_changed": 16,
     "sdlc_iterations": 1
   },
   "invocations": [
@@ -23,17 +24,17 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-17T15:15:15.731000+00:00",
-      "completed_at": "2026-10-17T16:03:58.733000+00:00",
-      "active_duration_seconds": 2075,
-      "turns": 126,
+      "completed_at": "2026-10-17T16:05:30.761000+00:00",
+      "active_duration_seconds": 2167,
+      "turns": 148,
       "tokens": {
-        "input": 894334,
-        "output": 21523,
-        "cache_read": 8702146,
-        "reasoning": 13799,
-        "peak_context": 116761
+        "input": 1106126,
+        "output": 22509,
+        "cache_read": 11258082,
+        "reasoning": 14835,
+        "peak_context": 123350
       },
-      "cost_usd": 1.455869,
+      "cost_usd": 1.813991,
       "compactions": 0
     },
     {
@@ -160,17 +161,17 @@
   "tools": [
     {
       "name": "read",
-      "calls": 118,
+      "calls": 120,
       "errors": 0
     },
     {
       "name": "bash",
-      "calls": 61,
+      "calls": 78,
       "errors": 2
     },
     {
       "name": "edit",
-      "calls": 25,
+      "calls": 27,
       "errors": 0
     },
     {
@@ -209,12 +210,12 @@
       "errors": 0
     },
     {
-      "name": "question",
+      "name": "list_mcp_resources",
       "calls": 1,
       "errors": 0
     },
     {
-      "name": "list_mcp_resources",
+      "name": "question",
       "calls": 1,
       "errors": 0
     }

@@ -6,37 +6,29 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-3 typescript spa shell and fleet overview.md`
 - `workspaces/plan/done/AL-4 typescript ticket deep dive and progression.md`
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
+- `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
 - `workspaces/plan/to-do/AL-5 single binary integration parity and deprecation.md`
 - `workspaces/plan/to-do/AL-6 versioned schema migration and chronological event extraction.md`
 - `workspaces/plan/to-do/AL-7 domain anomaly detection and rule engine.md`
 - `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
-- `workspaces/plan/to-do/AL-12 implement go telemetry backfill engine and schema migration.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 
 ---
 
 ## Ready
 
-- **AL-12**: Implement Go Telemetry Backfill Engine and Schema Migration Command
-  - **Subsystem**: Adapters / Domain / CLI
+- **AL-5**: Integrate Single Binary Build, Verify Parity, and Deprecate Python App
+  - **Subsystem**: Build / Packaging / Tests
   - **Phase**: Phase 1
   - **Status**: Ready
-  - **Blocked by**: None (AL-11 Done)
-  - **Blocks**: AL-5, AL-6
-  - **File**: `workspaces/plan/to-do/AL-12 implement go telemetry backfill engine and schema migration.md`
+  - **Blocked by**: None (AL-4, AL-11, AL-12 Done)
+  - **Blocks**: AL-6
+  - **File**: `workspaces/plan/to-do/AL-5 single binary integration parity and deprecation.md`
 
 ---
 
 ## Pending
-
-- **AL-5**: Integrate Single Binary Build, Verify Parity, and Deprecate Python App
-  - **Subsystem**: Build / Packaging / Tests
-  - **Phase**: Phase 1
-  - **Status**: Pending
-  - **Blocked by**: AL-4 (Done), AL-11 (Done), AL-12
-  - **Blocks**: AL-6
-  - **File**: `workspaces/plan/to-do/AL-5 single binary integration parity and deprecation.md`
 
 - **AL-6**: Versioned Schema Migration and Chronological Event Extraction
   - **Subsystem**: Adapters / Domain / Scripts / Tests
@@ -113,6 +105,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: AL-2 (Done)
   - **Blocks**: AL-12, AL-5
   - **File**: `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
+
+- **AL-12**: Implement Go Telemetry Backfill Engine and Schema Migration Command
+  - **Subsystem**: Adapters / Domain / CLI
+  - **Phase**: Phase 1
+  - **Status**: Done
+  - **Blocked by**: AL-11 (Done)
+  - **Blocks**: AL-5, AL-6
+  - **File**: `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
 
 - **AL-10**: Fix Git Metrics Calculation in Python Extractor and Backfill Existing Workspace Ledgers
   - **Subsystem**: Scripts / Python / Workspaces / Telemetry

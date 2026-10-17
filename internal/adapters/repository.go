@@ -199,6 +199,8 @@ func ReadTicketArtifacts(ticketID string, basePath string) domain.TicketArtifact
 
 // ExistingLedgerFacts encapsulates raw facts extracted from an existing on-disk ledger.
 type ExistingLedgerFacts struct {
+	SchemaVersion *int
+	Migration     *domain.MigrationInfo
 	TicketID      *string
 	TicketTitle   *string
 	TicketType    *string
@@ -232,6 +234,8 @@ type legacyWorkflowEfficiency struct {
 }
 
 type rawExistingLedger struct {
+	SchemaVersion      *int                      `json:"schema_version,omitempty"`
+	Migration          *MigrationInfoDTO         `json:"migration,omitempty"`
 	TicketID           *string                   `json:"ticket_id"`
 	TicketTitle        *string                   `json:"ticket_title"`
 	TicketType         *string                   `json:"ticket_type"`
@@ -265,12 +269,20 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		return nil, fmt.Errorf("decoding existing ledger at %s: %w", path, err)
 	}
 
+	var mig *domain.MigrationInfo
+	if raw.Migration != nil {
+		domMig := raw.Migration.ToDomain()
+		mig = &domMig
+	}
+
 	result := &ExistingLedgerFacts{
-		TicketID:    raw.TicketID,
-		TicketTitle: raw.TicketTitle,
-		TicketType:  raw.TicketType,
-		StartedAt:   raw.StartedAt,
-		CompletedAt: raw.CompletedAt,
+		SchemaVersion: raw.SchemaVersion,
+		Migration:     mig,
+		TicketID:      raw.TicketID,
+		TicketTitle:   raw.TicketTitle,
+		TicketType:    raw.TicketType,
+		StartedAt:     raw.StartedAt,
+		CompletedAt:   raw.CompletedAt,
 	}
 
 	// Schema 1: Direct atomic fact schema

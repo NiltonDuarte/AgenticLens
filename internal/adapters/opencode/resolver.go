@@ -88,3 +88,44 @@ func ResolveActiveRootSession(db *sql.DB, nonce string, ticketID string, explici
 
 	return nil, nil
 }
+
+// ResolveSessionByWorkspacePath searches for root sessions whose parts reference the workspace directory,
+// constrained by an optional timestamp window (minTimeMs, maxTimeMs) to prevent matching conversations outside the commit range.
+func ResolveSessionByWorkspacePath(db *sql.DB, ticketID string, minTimeMs int64, maxTimeMs int64) (*string, error) {
+	if db == nil {
+		return nil, errors.New("database connection is nil")
+	}
+	cleanTicket := strings.TrimSpace(ticketID)
+	if cleanTicket == "" {
+		return nil, nil
+	}
+
+	pattern1 := "%workspaces/" + cleanTicket + "/%"
+	pattern2 := "%workspaces/" + cleanTicket + "\"%"
+
+	query := `
+		SELECT DISTINCT s.id
+		FROM part p
+		JOIN session s ON (p.session_id = s.id OR s.id = (SELECT parent_id FROM session WHERE id = p.session_id))
+		WHERE s.parent_id IS NULL
+		  AND (p.data LIKE ? OR p.data LIKE ?)
+	`
+	args := []any{pattern1, pattern2}
+
+	if minTimeMs > 0 && maxTimeMs > 0 {
+		query += " AND s.time_created >= ? AND s.time_created <= ?"
+		args = append(args, minTimeMs, maxTimeMs)
+	}
+
+	query += " ORDER BY p.time_created ASC LIMIT 1"
+
+	var sessionID string
+	err := db.QueryRow(query, args...).Scan(&sessionID)
+	if err == nil {
+		return &sessionID, nil
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return nil, fmt.Errorf("resolving session by workspace path: %w", err)
+}

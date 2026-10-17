@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "ticket_id": "AL-10",
   "ticket_title": null,
   "ticket_type": "chore",
   "started_at": "2026-10-17T19:39:51.149000+00:00",
-  "completed_at": "2026-10-17T20:06:04.464000+00:00",
-  "updated_at": "2026-10-17T20:06:09.648391+00:00",
+  "completed_at": "2026-10-17T20:07:53.377000+00:00",
+  "updated_at": "2026-10-17T23:02:24.392122179Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -23,17 +24,17 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-17T19:39:51.480000+00:00",
-      "completed_at": "2026-10-17T20:06:04.464000+00:00",
-      "active_duration_seconds": 1431,
-      "turns": 58,
+      "completed_at": "2026-10-17T20:07:53.377000+00:00",
+      "active_duration_seconds": 1540,
+      "turns": 86,
       "tokens": {
-        "input": 468523,
-        "output": 17628,
-        "cache_read": 1682649,
-        "reasoning": 9967,
-        "peak_context": 66891
+        "input": 596513,
+        "output": 19700,
+        "cache_read": 3704428,
+        "reasoning": 12431,
+        "peak_context": 77899
       },
-      "cost_usd": 0.581072,
+      "cost_usd": 0.845708,
       "compactions": 0
     },
     {
@@ -100,12 +101,12 @@
   "tools": [
     {
       "name": "read",
-      "calls": 63,
+      "calls": 64,
       "errors": 4
     },
     {
       "name": "bash",
-      "calls": 34,
+      "calls": 57,
       "errors": 0
     },
     {
@@ -125,12 +126,12 @@
     },
     {
       "name": "todowrite",
-      "calls": 5,
+      "calls": 6,
       "errors": 0
     },
     {
       "name": "write",
-      "calls": 4,
+      "calls": 6,
       "errors": 0
     },
     {
@@ -139,14 +140,14 @@
       "errors": 0
     },
     {
-      "name": "task",
-      "calls": 3,
-      "errors": 1
-    },
-    {
       "name": "mcp-gateway_mcp-exec",
       "calls": 3,
       "errors": 3
+    },
+    {
+      "name": "task",
+      "calls": 3,
+      "errors": 1
     },
     {
       "name": "question",
@@ -154,12 +155,12 @@
       "errors": 0
     },
     {
-      "name": "skill",
+      "name": "list_mcp_resources",
       "calls": 1,
       "errors": 0
     },
     {
-      "name": "list_mcp_resources",
+      "name": "skill",
       "calls": 1,
       "errors": 0
     }

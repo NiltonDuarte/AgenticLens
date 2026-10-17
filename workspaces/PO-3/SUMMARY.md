@@ -32,4 +32,29 @@
 - Verified metrics ledger generation and schema compliance with Go domain scanner.
 - All workspace files created with zero emojis and adherence to repository guidelines.
 
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 1
+- **Active Agent Duration:** 9m 52s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Orchestrator peak 86.1k tokens (43% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** N/A
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 21,515 reasoning tokens (59.2% of generated output)
+- **Tool Health & Self-Correction:** 71 tool calls (0 self-corrections, 100.0% success rate)
 
+### Agentic Execution Metrics
+
+**Contributors:** nilton.guedes_duarte@digits.schwarz
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **orchestrator** | 1 | 490,913 | 14,833 | 3,248,322 | 86.9% | 86.1k | HEALTHY | $0.75 |
+| **Total** | **1** | **490,913** | **14,833** | **3,248,322** | **86.9%** | **86.1k** | **HEALTHY** | **$0.75** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gemini-3.8-flash** | 1 | 490,913 | 14,833 | 3,248,322 | 86.9% | $0.75 |
+| **Total** | **1** | **490,913** | **14,833** | **3,248,322** | **86.9%** | **$0.75** |

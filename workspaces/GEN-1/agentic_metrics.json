@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "ticket_id": "GEN-1",
-  "ticket_title": "Session Sandbox Network Policy for Go & TypeScript Toolchains",
+  "ticket_title": "Session Sandbox Network Policy for Go \u0026 TypeScript Toolchains",
   "ticket_type": "feature",
   "started_at": "2026-10-17T15:31:01.795000+00:00",
-  "completed_at": "2026-10-17T15:39:05.134000+00:00",
-  "updated_at": "2026-10-17T15:39:18.974069+00:00",
+  "completed_at": "2026-10-17T15:39:30.399000+00:00",
+  "updated_at": "2026-10-17T23:02:24.392122179Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -23,24 +24,24 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-17T15:31:02.159000+00:00",
-      "completed_at": "2026-10-17T15:39:05.134000+00:00",
-      "active_duration_seconds": 144,
-      "turns": 30,
+      "completed_at": "2026-10-17T15:39:30.399000+00:00",
+      "active_duration_seconds": 169,
+      "turns": 32,
       "tokens": {
-        "input": 162269,
-        "output": 3114,
-        "cache_read": 267157,
-        "reasoning": 4831,
-        "peak_context": 24020
+        "input": 172617,
+        "output": 3999,
+        "cache_read": 333076,
+        "reasoning": 5700,
+        "peak_context": 26252
       },
-      "cost_usd": 0.171532,
+      "cost_usd": 0.190815,
       "compactions": 0
     }
   ],
   "tools": [
     {
       "name": "read",
-      "calls": 9,
+      "calls": 10,
       "errors": 0
     },
     {

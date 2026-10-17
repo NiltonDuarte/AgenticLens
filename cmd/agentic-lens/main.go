@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/backfill"
 	"agenticlens/internal/adapters/git"
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/adapters/opencode"
@@ -193,16 +194,18 @@ func runGenerate(args []string) {
 		ticketIDPtr = &activeTicketID
 	}
 
+	schemaVer := domain.CurrentSchemaVersion
 	factLedger := domain.AgenticFactLedger{
-		TicketID:    ticketIDPtr,
-		TicketTitle: activeTicketTitle,
-		TicketType:  activeTicketType,
-		StartedAt:   activeStartedAt,
-		CompletedAt: activeCompletedAt,
-		UpdatedAt:   updatedAtISO,
-		Code:        codeFacts,
-		Invocations: invocations,
-		Tools:       tools,
+		SchemaVersion: &schemaVer,
+		TicketID:      ticketIDPtr,
+		TicketTitle:   activeTicketTitle,
+		TicketType:    activeTicketType,
+		StartedAt:     activeStartedAt,
+		CompletedAt:   activeCompletedAt,
+		UpdatedAt:     updatedAtISO,
+		Code:          codeFacts,
+		Invocations:   invocations,
+		Tools:         tools,
 	}
 
 	metricsLedger := domain.DeriveMetricsLedger(factLedger)
@@ -300,6 +303,117 @@ func runServer(args []string) {
 	fmt.Println("AgenticLens server stopped.")
 }
 
+func runBackfill(args []string) {
+	backfillFlags := flag.NewFlagSet("backfill", flag.ExitOnError)
+	workspacesFlag := backfillFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
+	recomputeGitFlag := backfillFlags.Bool("recompute-git", false, "Recompute Git code facts and SDLC iterations from repository history")
+	recomputeDBFlag := backfillFlags.Bool("recompute-db", false, "Recompute OpenCode invocations and tool facts from local SQLite DB")
+	dryRunFlag := backfillFlags.Bool("dry-run", false, "Preview planned migrations without writing changes to disk")
+	updateSummariesFlag := backfillFlags.Bool("update-summaries", false, "Idempotently update SUMMARY.md markdown metrics tables")
+	dbPathFlag := backfillFlags.String("db-path", "", "Explicit path to OpenCode SQLite database file")
+	forceFlag := backfillFlags.Bool("force", false, "Force migration and recompute even if ledger is already completed")
+
+	if err := backfillFlags.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing backfill flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	opts := backfill.BackfillOptions{
+		WorkspacesDir:   *workspacesFlag,
+		TicketID:        *ticketIDFlag,
+		RecomputeGit:    *recomputeGitFlag,
+		RecomputeDB:     *recomputeDBFlag,
+		DryRun:          *dryRunFlag,
+		UpdateSummaries: *updateSummariesFlag,
+		DBPath:          *dbPathFlag,
+		Force:           *forceFlag,
+	}
+
+	engine := backfill.NewEngine()
+	report, err := engine.Execute(opts)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Backfill failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	modeStr := "EXECUTION"
+	if opts.DryRun {
+		modeStr = "DRY-RUN PREVIEW"
+	}
+
+	fmt.Println("================================================================================")
+	fmt.Printf("AGENTIC LENS - TELEMETRY BACKFILL & SCHEMA MIGRATION [%s]\n", modeStr)
+	fmt.Println("================================================================================")
+	fmt.Printf("Target Workspaces Directory: %s\n", targetDir)
+	if opts.TicketID != "" {
+		fmt.Printf("Filter Ticket ID:            %s\n", opts.TicketID)
+	}
+	fmt.Printf("Recompute Git Facts:         %t\n", opts.RecomputeGit)
+	fmt.Printf("Recompute OpenCode DB:       %t\n", opts.RecomputeDB)
+	fmt.Printf("Update Markdown Summaries:   %t\n", opts.UpdateSummaries)
+	fmt.Printf("Force Migration:             %t\n", opts.Force)
+	fmt.Println("--------------------------------------------------------------------------------")
+
+	if len(report.Results) == 0 {
+		fmt.Println("No matching ticket ledgers found to backfill.")
+		return
+	}
+
+	header := fmt.Sprintf("%-15s %-14s %-12s %-8s %-8s %-8s %s", "Ticket ID", "Prev Status", "New Status", "Git", "DB", "Skipped", "Notes")
+	fmt.Println(header)
+	fmt.Println(strings.Repeat("-", len(header)))
+
+	for _, res := range report.Results {
+		gitStr := "no"
+		if res.GitUpdated {
+			gitStr = "yes"
+		}
+		dbStr := "no"
+		if res.DBUpdated {
+			dbStr = "updated"
+		} else if res.DBFound {
+			dbStr = "found"
+		} else if opts.RecomputeDB {
+			dbStr = "missing"
+		}
+		skipStr := "no"
+		if res.Skipped {
+			skipStr = "yes"
+		}
+		notes := res.Notes
+		if len(res.PendingSteps) > 0 {
+			notes = fmt.Sprintf("pending: [%s]", strings.Join(res.PendingSteps, ", "))
+		}
+		if res.Error != nil {
+			notes = fmt.Sprintf("error: %v", res.Error)
+		}
+
+		fmt.Printf("%-15s %-14s %-12s %-8s %-8s %-8s %s\n",
+			res.TicketID,
+			res.PreviousStatus,
+			res.NewStatus,
+			gitStr,
+			dbStr,
+			skipStr,
+			notes,
+		)
+	}
+
+	fmt.Println("--------------------------------------------------------------------------------")
+	fmt.Printf("Summary: Scanned: %d | Updated: %d | Skipped: %d | Completed: %d | Partial: %d\n",
+		report.Scanned, report.Updated, report.Skipped, report.Completed, report.Partial)
+
+	if len(report.Warnings) > 0 {
+		fmt.Printf("\nWarnings / Non-fatal Errors (%d):\n", len(report.Warnings))
+		for _, w := range report.Warnings {
+			fmt.Printf("- %s\n", w)
+		}
+	}
+	fmt.Println("================================================================================")
+}
+
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "server" {
 		runServer(os.Args[2:])
@@ -308,6 +422,11 @@ func main() {
 
 	if len(os.Args) > 1 && os.Args[1] == "generate" {
 		runGenerate(os.Args[2:])
+		return
+	}
+
+	if len(os.Args) > 1 && os.Args[1] == "backfill" {
+		runBackfill(os.Args[2:])
 		return
 	}
 
