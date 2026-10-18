@@ -20,4 +20,5 @@ Updates `workspaces/plan/TICKETS.md` and ticket specification files for complete
 - Optimized `.github/workflows/ci.yml` with concurrency cancellation on branches/PRs while preserving `main` runs, and restricted triggers strictly to `main` pushes and pull requests.
 - Added cross-platform compilation to `Makefile` producing `bin/agentic-lens-linux-amd64`, `bin/agentic-lens-linux-arm64`, `bin/agentic-lens-darwin-arm64`, and `bin/agentic-lens-darwin-amd64`.
 - Added architecture dispatcher wrapper script at `scripts/agentic-lens-wrapper.sh`, deployed to `bin/agentic-lens` during `make build` to seamlessly route executions on both host macOS and Linux containers.
+- Enhanced release distribution across `Makefile`, `release-candidate.yml`, and `release-stable.yml` to publish uncompressed standalone binary files (`dist/bin/agentic-lens-*`) directly alongside archives, with full SHA256 checksum verification.
 - Allocated ticket workspace under `workspaces/GEN-4/`.

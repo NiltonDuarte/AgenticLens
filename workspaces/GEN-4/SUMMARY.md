@@ -24,6 +24,9 @@
   - Updated `Makefile` `build` target to compile `agentic-lens-linux-amd64`, `agentic-lens-linux-arm64`, `agentic-lens-darwin-arm64`, and `agentic-lens-darwin-amd64`.
   - Added `scripts/agentic-lens-wrapper.sh` POSIX shell dispatcher that dynamically detects host OS/architecture and executes the corresponding native binary.
   - Deployed wrapper to `bin/agentic-lens` during build.
+- Configured uncompressed standalone binary release assets:
+  - Updated `Makefile` `release-package` to calculate SHA256 checksums for standalone binaries in `dist/bin/`.
+  - Updated `.github/workflows/release-candidate.yml` and `.github/workflows/release-stable.yml` to publish `dist/bin/agentic-lens-*` directly alongside tarballs and zip archives.
 - Allocated isolated workspace under `workspaces/GEN-4/`.
 
 ## Verification
@@ -36,14 +39,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 27m 36s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 146.4k tokens (73% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 30m 48s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 0 tokens (0% of 200k healthy ceiling, 0 compactions) | Subagents peak 158.5k (General)
+- **Role Effort Distribution (Subagents):** General 100.0%
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
-- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +4 / -2 lines across 1 code files (excluding docs)
-- **Reasoning Effort:** 35,657 reasoning tokens (55.1% of generated output)
-- **Tool Health & Self-Correction:** 223 tool calls (2 self-corrections, 99.1% success rate)
+- **Test-to-Production Code Ratio:** 0.0:1 (+0 test lines / +36 prod lines)
+- **Code Delivered:** +36 / -1 lines across 2 code files (excluding docs)
+- **Reasoning Effort:** 38,407 reasoning tokens (54.4% of generated output)
+- **Tool Health & Self-Correction:** 249 tool calls (2 self-corrections, 99.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 1 execution anomaly detected (1 CRITICAL).
@@ -56,11 +59,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 1,388,255 | 29,088 | 20,867,433 | 93.8% | 146.4k | ELEVATED | $2.85 |
-| **Total** | **1** | **1,388,255** | **29,088** | **20,867,433** | **93.8%** | **146.4k** | **ELEVATED** | **$2.85** |
+| **general** | 1 | 1,946,058 | 32,236 | 24,740,246 | 92.7% | 158.5k | ELEVATED | $3.58 |
+| **Total** | **1** | **1,946,058** | **32,236** | **24,740,246** | **92.7%** | **158.5k** | **ELEVATED** | **$3.58** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 1,388,255 | 29,088 | 20,867,433 | 93.8% | $2.85 |
-| **Total** | **1** | **1,388,255** | **29,088** | **20,867,433** | **93.8%** | **$2.85** |
+| **gemini-3.8-flash** | 1 | 1,946,058 | 32,236 | 24,740,246 | 92.7% | $3.58 |
+| **Total** | **1** | **1,946,058** | **32,236** | **24,740,246** | **92.7%** | **$3.58** |

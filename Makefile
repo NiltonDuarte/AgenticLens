@@ -140,7 +140,7 @@ release-package:
 		fi; \
 	done
 	@echo "Generating SHA256SUMS..."
-	@(cd $(RELEASE_DIR) && sha256sum agentic-lens-$(VERSION)-*.tar.gz agentic-lens-$(VERSION)-*.zip | sort -k2 > SHA256SUMS)
+	@(cd $(RELEASE_DIR) && sha256sum agentic-lens-$(VERSION)-*.tar.gz agentic-lens-$(VERSION)-*.zip bin/agentic-lens-* | sort -k2 > SHA256SUMS)
 
 release-verify:
 	@if [ ! -f "$(RELEASE_DIR)/SHA256SUMS" ]; then \
