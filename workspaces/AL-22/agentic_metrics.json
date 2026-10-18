@@ -4,8 +4,8 @@
   "ticket_title": "Session Render Rich Markdown for Workspace and Contract Artifacts",
   "ticket_type": "feature",
   "started_at": "2026-10-18T13:34:33.307000+00:00",
-  "completed_at": "2026-10-18T14:21:50.175000+00:00",
-  "updated_at": "2026-10-18T14:21:54.013459+00:00",
+  "completed_at": "2026-10-18T14:31:57.456000+00:00",
+  "updated_at": "2026-10-18T14:32:05.089585+00:00",
   "code": {
     "lines_added": 2777,
     "lines_deleted": 145,
@@ -24,17 +24,17 @@
       "model": "gemini-3.8-flash",
       "user": "nilton.guedes_duarte@digits.schwarz",
       "started_at": "2026-10-18T13:34:33.721000+00:00",
-      "completed_at": "2026-10-18T14:21:50.175000+00:00",
-      "active_duration_seconds": 2439,
-      "turns": 92,
+      "completed_at": "2026-10-18T14:31:57.456000+00:00",
+      "active_duration_seconds": 2567,
+      "turns": 113,
       "tokens": {
-        "input": 393049,
-        "output": 22427,
-        "cache_read": 6122477,
-        "reasoning": 12051,
-        "peak_context": 116174
+        "input": 474673,
+        "output": 23488,
+        "cache_read": 8447570,
+        "reasoning": 13115,
+        "peak_context": 123426
       },
-      "cost_usd": 0.883265,
+      "cost_usd": 1.126834,
       "compactions": 0
     },
     {
@@ -160,14 +160,14 @@
   ],
   "tools": [
     {
+      "name": "bash",
+      "calls": 117,
+      "errors": 0
+    },
+    {
       "name": "read",
       "calls": 102,
       "errors": 3
-    },
-    {
-      "name": "bash",
-      "calls": 98,
-      "errors": 0
     },
     {
       "name": "grep",
@@ -6811,8 +6811,8 @@
       "role": "orchestrator",
       "event_type": "turn_message",
       "status": "completed",
-      "duration_ms": 1,
-      "context_tokens": 0
+      "duration_ms": 4056,
+      "context_tokens": 117098
     },
     {
       "timestamp": "2026-10-18T14:21:53.590000+00:00",
@@ -6822,7 +6822,416 @@
       "event_type": "tool_call",
       "tool_name": "bash",
       "status": "completed",
-      "duration_ms": 6,
+      "duration_ms": 430,
+      "context_tokens": 117098
+    },
+    {
+      "timestamp": "2026-10-18T14:21:54.251000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 91,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3321,
+      "context_tokens": 117258
+    },
+    {
+      "timestamp": "2026-10-18T14:21:57.134000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 91,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 16,
+      "context_tokens": 117258
+    },
+    {
+      "timestamp": "2026-10-18T14:21:57.584000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 92,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 6141,
+      "context_tokens": 117400
+    },
+    {
+      "timestamp": "2026-10-18T14:22:03.308000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 92,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 35,
+      "context_tokens": 117400
+    },
+    {
+      "timestamp": "2026-10-18T14:22:03.740000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 93,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 7032,
+      "context_tokens": 117521
+    },
+    {
+      "timestamp": "2026-10-18T14:22:10.446000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 93,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 18,
+      "context_tokens": 117521
+    },
+    {
+      "timestamp": "2026-10-18T14:22:10.784000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 94,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 5694,
+      "context_tokens": 117692
+    },
+    {
+      "timestamp": "2026-10-18T14:22:16.112000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 94,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 17,
+      "context_tokens": 117692
+    },
+    {
+      "timestamp": "2026-10-18T14:22:16.489000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 95,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4130,
+      "context_tokens": 117967
+    },
+    {
+      "timestamp": "2026-10-18T14:22:20.221000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 95,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 66,
+      "context_tokens": 117967
+    },
+    {
+      "timestamp": "2026-10-18T14:22:20.640000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 96,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 8378,
+      "context_tokens": 118749
+    },
+    {
+      "timestamp": "2026-10-18T14:22:28.500000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 96,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 30,
+      "context_tokens": 118749
+    },
+    {
+      "timestamp": "2026-10-18T14:22:29.028000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 97,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4084,
+      "context_tokens": 119254
+    },
+    {
+      "timestamp": "2026-10-18T14:22:32.606000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 97,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 38,
+      "context_tokens": 119254
+    },
+    {
+      "timestamp": "2026-10-18T14:22:33.122000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 98,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 5771,
+      "context_tokens": 119714
+    },
+    {
+      "timestamp": "2026-10-18T14:22:37.246000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 98,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 1598,
+      "context_tokens": 119714
+    },
+    {
+      "timestamp": "2026-10-18T14:22:38.932000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 99,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 8488,
+      "context_tokens": 120710
+    },
+    {
+      "timestamp": "2026-10-18T14:22:45.362000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 99,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 2034,
+      "context_tokens": 120710
+    },
+    {
+      "timestamp": "2026-10-18T14:22:47.433000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 100,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3583,
+      "context_tokens": 120916
+    },
+    {
+      "timestamp": "2026-10-18T14:22:50.553000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 100,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 21,
+      "context_tokens": 120916
+    },
+    {
+      "timestamp": "2026-10-18T14:22:51.026000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 101,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 18185,
+      "context_tokens": 121091
+    },
+    {
+      "timestamp": "2026-10-18T14:22:55.768000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 101,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 13403,
+      "context_tokens": 121091
+    },
+    {
+      "timestamp": "2026-10-18T14:23:09.238000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 102,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3812,
+      "context_tokens": 122088
+    },
+    {
+      "timestamp": "2026-10-18T14:23:12.548000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 102,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 16,
+      "context_tokens": 122088
+    },
+    {
+      "timestamp": "2026-10-18T14:23:13.062000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 103,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4833,
+      "context_tokens": 122263
+    },
+    {
+      "timestamp": "2026-10-18T14:23:17.478000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 103,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 35,
+      "context_tokens": 122263
+    },
+    {
+      "timestamp": "2026-10-18T14:23:17.907000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 104,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4533,
+      "context_tokens": 122388
+    },
+    {
+      "timestamp": "2026-10-18T14:23:22.051000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 104,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 13,
+      "context_tokens": 122388
+    },
+    {
+      "timestamp": "2026-10-18T14:23:22.454000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 105,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4783,
+      "context_tokens": 122584
+    },
+    {
+      "timestamp": "2026-10-18T14:23:26.863000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 105,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 72,
+      "context_tokens": 122584
+    },
+    {
+      "timestamp": "2026-10-18T14:23:27.265000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 106,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4211,
+      "context_tokens": 122673
+    },
+    {
+      "timestamp": "2026-10-18T14:23:31.164000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 106,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 17,
+      "context_tokens": 122673
+    },
+    {
+      "timestamp": "2026-10-18T14:23:31.484000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 107,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4946,
+      "context_tokens": 122750
+    },
+    {
+      "timestamp": "2026-10-18T14:23:36.176000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 107,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 11,
+      "context_tokens": 122750
+    },
+    {
+      "timestamp": "2026-10-18T14:23:36.439000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 108,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 14524,
+      "context_tokens": 123175
+    },
+    {
+      "timestamp": "2026-10-18T14:31:50.595000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 109,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 6849,
+      "context_tokens": 123426
+    },
+    {
+      "timestamp": "2026-10-18T14:31:57.018000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 109,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 15,
+      "context_tokens": 123426
+    },
+    {
+      "timestamp": "2026-10-18T14:31:57.456000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 110,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 0,
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-18T14:32:02.702000+00:00",
+      "session_id": "ses_eb0c760a4ffeXN0gzDPXzOzSuT",
+      "turn": 110,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 5,
       "context_tokens": 0
     }
   ]
