@@ -1,6 +1,16 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { THEME_COLORS, STATUS_COLORS, CHART_COLORS, getHealthStatusColor } from './theme';
+import {
+  THEME_COLORS,
+  STATUS_COLORS,
+  CHART_COLORS,
+  CANONICAL_ROLE_COLORS,
+  DYNAMIC_PALETTE,
+  getHealthStatusColor,
+  getRoleColor,
+  getModelColor,
+  hashStringToColor,
+} from './theme';
 
 describe('Theme and Design Tokens', () => {
   it('defines valid hex colors across all theme tokens', () => {
@@ -16,6 +26,14 @@ describe('Theme and Design Tokens', () => {
 
     for (const [key, color] of Object.entries(CHART_COLORS)) {
       expect(color, `CHART_COLORS.${key}`).toMatch(hexRegex);
+    }
+
+    for (const [key, color] of Object.entries(CANONICAL_ROLE_COLORS)) {
+      expect(color, `CANONICAL_ROLE_COLORS.${key}`).toMatch(hexRegex);
+    }
+
+    for (const color of DYNAMIC_PALETTE) {
+      expect(color, 'DYNAMIC_PALETTE item').toMatch(hexRegex);
     }
   });
 
@@ -35,6 +53,70 @@ describe('Theme and Design Tokens', () => {
       expect(getHealthStatusColor('unknown')).toBe(STATUS_COLORS.UNKNOWN);
       expect(getHealthStatusColor('')).toBe(STATUS_COLORS.UNKNOWN);
       expect(getHealthStatusColor('INVALID_STATUS')).toBe(STATUS_COLORS.UNKNOWN);
+    });
+  });
+
+  describe('Dynamic Role and Model Color Hashing', () => {
+    it('returns canonical theme tokens for canonical roles', () => {
+      expect(getRoleColor('orchestrator')).toBe(THEME_COLORS.purple);
+      expect(getRoleColor('planner')).toBe(THEME_COLORS.cyan);
+      expect(getRoleColor('coder')).toBe(THEME_COLORS.green);
+      expect(getRoleColor('tester')).toBe(THEME_COLORS.yellow);
+      expect(getRoleColor('reviewer')).toBe(THEME_COLORS.blue);
+    });
+
+    it('handles canonical roles case-insensitively with whitespace trimming', () => {
+      expect(getRoleColor('  ORCHESTRATOR  ')).toBe(THEME_COLORS.purple);
+      expect(getRoleColor('Coder')).toBe(THEME_COLORS.green);
+    });
+
+    it('returns deterministic hex colors for custom roles', () => {
+      const hexRegex = /^#[0-9a-fA-F]{6}$/;
+      const color1 = getRoleColor('advisor');
+      const color2 = getRoleColor('advisor');
+      expect(color1).toMatch(hexRegex);
+      expect(color1).toBe(color2);
+
+      const poColor = getRoleColor('po');
+      expect(poColor).toMatch(hexRegex);
+    });
+
+    it('returns deterministic hex colors for models via getModelColor', () => {
+      const hexRegex = /^#[0-9a-fA-F]{6}$/;
+      const modelColor = getModelColor('claude-3-7-sonnet');
+      expect(modelColor).toMatch(hexRegex);
+      expect(getModelColor('claude-3-7-sonnet')).toBe(modelColor);
+    });
+
+    it('falls back to slate for empty or whitespace strings', () => {
+      expect(hashStringToColor('')).toBe(THEME_COLORS.slate);
+      expect(hashStringToColor('   ')).toBe(THEME_COLORS.slate);
+    });
+
+    it('handles special characters and complex model tags deterministically', () => {
+      const hexRegex = /^#[0-9a-fA-F]{6}$/;
+      const complexStrings = [
+        'security/auditor_v2',
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'deepseek-ai/deepseek-r1-distill-qwen-32b',
+        'po-analyst@workspace-1',
+        'custom:::model$$$',
+      ];
+
+      for (const s of complexStrings) {
+        const color = getModelColor(s);
+        expect(color).toMatch(hexRegex);
+        expect(getModelColor(s)).toBe(color);
+        expect(DYNAMIC_PALETTE).toContain(color);
+      }
+    });
+
+    it('is strictly deterministic across 50 repetitions', () => {
+      const testRole = 'researcher-lead';
+      const initial = getRoleColor(testRole);
+      for (let i = 0; i < 50; i++) {
+        expect(getRoleColor(testRole)).toBe(initial);
+      }
     });
   });
 });

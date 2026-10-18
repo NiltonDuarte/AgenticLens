@@ -16,6 +16,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/backfill"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/adapters/opencode"
@@ -227,7 +228,8 @@ func runGenerate(args []string) {
 		Events:        events,
 	}
 
-	metricsLedger := domain.DeriveMetricsLedger(factLedger)
+	projCfg, _ := adaptersconfig.Load("")
+	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg.RoleMappings)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger)
 
 	if *jsonOutputFlag != "" {

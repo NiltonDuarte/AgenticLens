@@ -1,6 +1,6 @@
 export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL';
 
-export type AgentRole = 'orchestrator' | 'planner' | 'coder' | 'tester' | 'reviewer';
+export type AgentRole = string;
 
 export type MigrationStatus = 'pending' | 'partial' | 'completed';
 
@@ -28,6 +28,10 @@ export const SUBAGENT_ROLE_ORDER: readonly string[] = [
   'tester',
   'reviewer',
 ];
+
+export function isCanonicalRole(role: string): boolean {
+  return CANONICAL_ROLE_ORDER.includes(role.toLowerCase().trim());
+}
 
 export interface InvocationTokens {
   readonly input: number;

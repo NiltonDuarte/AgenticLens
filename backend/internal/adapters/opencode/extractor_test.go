@@ -319,10 +319,10 @@ func TestExtractFacts(t *testing.T) {
 		t.Fatalf("expected 2 invocations, got %d", len(invocations))
 	}
 
-	// Invocations: ses_root (orchestrator) and ses_child (coder)
+	// Invocations: ses_root (build) and ses_child (coder)
 	rootInv := invocations[0]
-	if rootInv.ID != "ses_root" || rootInv.Role != "orchestrator" {
-		t.Errorf("expected root invocation role orchestrator, got ID=%s Role=%s", rootInv.ID, rootInv.Role)
+	if rootInv.ID != "ses_root" || rootInv.Role != "build" {
+		t.Errorf("expected root invocation role build, got ID=%s Role=%s", rootInv.ID, rootInv.Role)
 	}
 	if rootInv.User != "default_user@test.com" {
 		t.Errorf("expected user default_user@test.com, got %s", rootInv.User)
@@ -396,7 +396,7 @@ func TestExtractFacts(t *testing.T) {
 
 	// Verify specific event properties
 	ev0 := events[0] // m1 turn message
-	if ev0.EventType != domain.EventTypeTurnMessage || ev0.Turn != 1 || ev0.ContextTokens != 6000 || ev0.Role != "orchestrator" {
+	if ev0.EventType != domain.EventTypeTurnMessage || ev0.Turn != 1 || ev0.ContextTokens != 6000 || ev0.Role != "build" {
 		t.Errorf("unexpected event 0: %+v", ev0)
 	}
 
@@ -406,7 +406,7 @@ func TestExtractFacts(t *testing.T) {
 	}
 
 	ev2 := events[2] // m2 turn message
-	if ev2.EventType != domain.EventTypeTurnMessage || ev2.Turn != 2 || ev2.ContextTokens != 8000 || ev2.Role != "orchestrator" {
+	if ev2.EventType != domain.EventTypeTurnMessage || ev2.Turn != 2 || ev2.ContextTokens != 8000 || ev2.Role != "build" {
 		t.Errorf("unexpected event 2: %+v", ev2)
 	}
 
@@ -1050,6 +1050,225 @@ func TestExtractFacts_CompactionEvents(t *testing.T) {
 	}
 	if unlinkedComp.ContextTokens != 0 {
 		t.Errorf("expected unlinked compaction default context tokens 0, got %d", unlinkedComp.ContextTokens)
+	}
+}
+
+func TestExtractFacts_RawPersonaPreservation(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_root_build', NULL, 'build', 'default_model', 'AL-24 Root Build', 1000, 2000),
+		('ses_child_sec', 'ses_root_build', 'security-scanner', 'default_model', 'AL-24 Child Security', 1100, 1900),
+		('ses_root_empty', NULL, '', 'default_model', 'AL-24 Root Empty', 3000, 4000),
+		('ses_child_empty', 'ses_root_empty', '   ', 'default_model', 'AL-24 Child Empty', 3100, 3900);
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting test sessions: %v", err)
+	}
+
+	_, err = db.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m_build', 'ses_root_build', 1050, 1060, '{"role":"assistant","tokens":{"input":100,"output":20}}'),
+		('m_sec', 'ses_child_sec', 1150, 1160, '{"role":"assistant","tokens":{"input":200,"output":40}}'),
+		('m_rt_empty', 'ses_root_empty', 3050, 3060, '{"role":"assistant","tokens":{"input":50,"output":10}}'),
+		('m_ch_empty', 'ses_child_empty', 3150, 3160, '{"role":"assistant","tokens":{"input":60,"output":12}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting test messages: %v", err)
+	}
+
+	_, err = db.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_tool_sec', 'ses_child_sec', 'm_sec', 1155, 1155, '{"type":"tool","tool":"trivy","state":{"status":"completed","output":"no vulnerabilities"}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting test parts: %v", err)
+	}
+
+	t.Run("preserves raw personas for build and security-scanner", func(t *testing.T) {
+		invocations, tools, events, _, _, err := opencode.ExtractFacts(
+			db,
+			[]string{"ses_root_build"},
+			"test-user",
+			nil,
+		)
+		if err != nil {
+			t.Fatalf("ExtractFacts failed: %v", err)
+		}
+
+		if len(invocations) != 2 {
+			t.Fatalf("expected 2 invocations, got %d", len(invocations))
+		}
+
+		var rootInv, childInv *domain.InvocationFact
+		for i := range invocations {
+			if invocations[i].ID == "ses_root_build" {
+				rootInv = &invocations[i]
+			} else if invocations[i].ID == "ses_child_sec" {
+				childInv = &invocations[i]
+			}
+		}
+
+		if rootInv == nil || rootInv.Role != "build" {
+			t.Fatalf("expected root invocation role 'build', got: %+v", rootInv)
+		}
+		if childInv == nil || childInv.Role != "security-scanner" {
+			t.Fatalf("expected child invocation role 'security-scanner', got: %+v", childInv)
+		}
+
+		if len(tools) != 1 || tools[0].Name != "trivy" {
+			t.Fatalf("expected 1 trivy tool fact, got: %+v", tools)
+		}
+
+		var foundBuildEvent, foundSecEvent, foundToolEvent bool
+		for _, ev := range events {
+			if ev.SessionID == "ses_root_build" && ev.Role == "build" && ev.EventType == domain.EventTypeTurnMessage {
+				foundBuildEvent = true
+			}
+			if ev.SessionID == "ses_child_sec" && ev.Role == "security-scanner" && ev.EventType == domain.EventTypeTurnMessage {
+				foundSecEvent = true
+			}
+			if ev.SessionID == "ses_child_sec" && ev.Role == "security-scanner" && ev.EventType == domain.EventTypeToolCall {
+				foundToolEvent = true
+			}
+		}
+
+		if !foundBuildEvent {
+			t.Errorf("missing turn event with role 'build'")
+		}
+		if !foundSecEvent {
+			t.Errorf("missing turn event with role 'security-scanner'")
+		}
+		if !foundToolEvent {
+			t.Errorf("missing tool call event with role 'security-scanner'")
+		}
+	})
+
+	t.Run("empty agent fallback for root and child", func(t *testing.T) {
+		invocations, _, events, _, _, err := opencode.ExtractFacts(
+			db,
+			[]string{"ses_root_empty"},
+			"test-user",
+			nil,
+		)
+		if err != nil {
+			t.Fatalf("ExtractFacts failed: %v", err)
+		}
+
+		if len(invocations) != 2 {
+			t.Fatalf("expected 2 invocations, got %d", len(invocations))
+		}
+
+		var rootInv, childInv *domain.InvocationFact
+		for i := range invocations {
+			if invocations[i].ID == "ses_root_empty" {
+				rootInv = &invocations[i]
+			} else if invocations[i].ID == "ses_child_empty" {
+				childInv = &invocations[i]
+			}
+		}
+
+		if rootInv == nil || rootInv.Role != "orchestrator" {
+			t.Fatalf("expected root invocation fallback role 'orchestrator', got: %+v", rootInv)
+		}
+		if childInv == nil || childInv.Role != "unassigned" {
+			t.Fatalf("expected child invocation fallback role 'unassigned', got: %+v", childInv)
+		}
+
+		for _, ev := range events {
+			if ev.SessionID == "ses_root_empty" && ev.Role != "orchestrator" {
+				t.Errorf("expected root event role 'orchestrator', got: %s", ev.Role)
+			}
+			if ev.SessionID == "ses_child_empty" && ev.Role != "unassigned" {
+				t.Errorf("expected child event role 'unassigned', got: %s", ev.Role)
+			}
+		}
+	})
+}
+
+func TestExtractFacts_AdversarialPersonaPreservationAndWhitespace(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Seed sessions with whitespace-padded agent personas and complex identifiers
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_root_ws', NULL, '   build   ', 'default_model', 'AL-24 Whitespace Build', 1000, 2000),
+		('ses_child_ws', 'ses_root_ws', '   sec-ops/v1-alpha   ', 'default_model', 'AL-24 Security Ops', 1100, 1900),
+		('ses_child_deep', 'ses_root_ws', '   deep.researcher+tools   ', 'default_model', 'AL-24 Deep Researcher', 1200, 1800);
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting sessions: %v", err)
+	}
+
+	// Seed assistant messages
+	_, err = db.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m_ws_1', 'ses_root_ws', 1010, 1050, '{"role":"assistant","tokens":{"input":100,"output":20}}'),
+		('m_ws_2', 'ses_child_ws', 1110, 1150, '{"role":"assistant","tokens":{"input":200,"output":40}}'),
+		('m_ws_3', 'ses_child_deep', 1210, 1250, '{"role":"assistant","tokens":{"input":300,"output":60}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting messages: %v", err)
+	}
+
+	// Seed tool parts
+	_, err = db.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_ws_1', 'ses_child_ws', 'm_ws_2', 1120, 1120, '{"type":"tool","tool":"scanner","state":{"status":"completed","output":"clean"}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting tool part: %v", err)
+	}
+
+	invocations, _, events, _, _, err := opencode.ExtractFacts(
+		db,
+		[]string{"ses_root_ws"},
+		"test-user",
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("ExtractFacts failed: %v", err)
+	}
+
+	if len(invocations) != 3 {
+		t.Fatalf("expected 3 invocations, got %d", len(invocations))
+	}
+
+	invMap := make(map[string]domain.InvocationFact)
+	for _, inv := range invocations {
+		invMap[inv.ID] = inv
+	}
+
+	// Assert whitespace was trimmed and raw personas preserved without coercion
+	if inv, ok := invMap["ses_root_ws"]; !ok || inv.Role != "build" {
+		t.Errorf("expected trimmed role 'build' for root session, got: %+v", inv)
+	}
+	if inv, ok := invMap["ses_child_ws"]; !ok || inv.Role != "sec-ops/v1-alpha" {
+		t.Errorf("expected trimmed role 'sec-ops/v1-alpha', got: %+v", inv)
+	}
+	if inv, ok := invMap["ses_child_deep"]; !ok || inv.Role != "deep.researcher+tools" {
+		t.Errorf("expected trimmed role 'deep.researcher+tools', got: %+v", inv)
+	}
+
+	// Verify events inherited the trimmed raw persona
+	for _, ev := range events {
+		switch ev.SessionID {
+		case "ses_root_ws":
+			if ev.Role != "build" {
+				t.Errorf("expected event role 'build', got %q", ev.Role)
+			}
+		case "ses_child_ws":
+			if ev.Role != "sec-ops/v1-alpha" {
+				t.Errorf("expected event role 'sec-ops/v1-alpha', got %q", ev.Role)
+			}
+		case "ses_child_deep":
+			if ev.Role != "deep.researcher+tools" {
+				t.Errorf("expected event role 'deep.researcher+tools', got %q", ev.Role)
+			}
+		}
 	}
 }
 

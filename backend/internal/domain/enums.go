@@ -1,5 +1,10 @@
 package domain
 
+import (
+	"sort"
+	"strings"
+)
+
 // TimeWindow defines standard date filtering query parameters.
 type TimeWindow string
 
@@ -111,6 +116,73 @@ var SubagentRoleOrder = []string{
 	string(RoleCoder),
 	string(RoleTester),
 	string(RoleReviewer),
+}
+
+// IsSubagentRole returns true if the trimmed and lowercase-normalized role is non-empty
+// and not equal to RoleOrchestrator.
+func IsSubagentRole(role string) bool {
+	trimmed := strings.ToLower(strings.TrimSpace(role))
+	return trimmed != "" && trimmed != string(RoleOrchestrator)
+}
+
+// OrderRoles deduplicates and orders roles by CanonicalRoleOrder first,
+// followed by remaining custom roles sorted in alphabetical order.
+func OrderRoles(roles []string) []string {
+	present := make(map[string]struct{})
+	for _, r := range roles {
+		trimmed := strings.TrimSpace(r)
+		if trimmed != "" {
+			present[trimmed] = struct{}{}
+		}
+	}
+	canonicalSet := make(map[string]struct{}, len(CanonicalRoleOrder))
+	for _, r := range CanonicalRoleOrder {
+		canonicalSet[r] = struct{}{}
+	}
+	var ordered []string
+	for _, r := range CanonicalRoleOrder {
+		if _, exists := present[r]; exists {
+			ordered = append(ordered, r)
+		}
+	}
+	var custom []string
+	for r := range present {
+		if _, isCanonical := canonicalSet[r]; !isCanonical {
+			custom = append(custom, r)
+		}
+	}
+	sort.Strings(custom)
+	return append(ordered, custom...)
+}
+
+// OrderSubagentRoles deduplicates and orders subagent roles by SubagentRoleOrder first,
+// followed by remaining custom subagent roles sorted in alphabetical order.
+func OrderSubagentRoles(roles []string) []string {
+	present := make(map[string]struct{})
+	for _, r := range roles {
+		trimmed := strings.TrimSpace(r)
+		if IsSubagentRole(trimmed) {
+			present[trimmed] = struct{}{}
+		}
+	}
+	canonicalSet := make(map[string]struct{}, len(SubagentRoleOrder))
+	for _, r := range SubagentRoleOrder {
+		canonicalSet[r] = struct{}{}
+	}
+	var ordered []string
+	for _, r := range SubagentRoleOrder {
+		if _, exists := present[r]; exists {
+			ordered = append(ordered, r)
+		}
+	}
+	var custom []string
+	for r := range present {
+		if _, isCanonical := canonicalSet[r]; !isCanonical {
+			custom = append(custom, r)
+		}
+	}
+	sort.Strings(custom)
+	return append(ordered, custom...)
 }
 
 // MigrationStatus defines the schema and metric migration progress state.

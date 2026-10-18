@@ -1402,3 +1402,202 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 }
+
+func TestWorkspaceLoad_ConfiguredRoleMappings(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// 1. Create .agenticlens/config.yaml with custom role mappings
+	cfgDir := filepath.Join(tempDir, ".agenticlens")
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	cfgContent := `
+workspaces:
+  dir: workspaces
+role_mappings:
+  build: orchestrator
+  qa-bot: tester
+`
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Create workspace with agentic_metrics.json containing raw roles 'build' and 'qa-bot'
+	wsDir := filepath.Join(tempDir, "workspaces", "AL-24")
+	if err := os.MkdirAll(wsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	factJSON := `{
+		"ticket_id": "AL-24",
+		"ticket_title": "Role Mapping Test",
+		"updated_at": "2026-10-18T12:00:00Z",
+		"invocations": [
+			{
+				"id": "ses-build",
+				"role": "build",
+				"model": "claude-3-sonnet",
+				"cost_usd": 1.50,
+				"turns": 3
+			},
+			{
+				"id": "ses-qa",
+				"parent_id": "ses-build",
+				"role": "qa-bot",
+				"model": "claude-3-haiku",
+				"cost_usd": 0.50,
+				"turns": 2
+			}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	workspacesRoot := filepath.Join(tempDir, "workspaces")
+
+	t.Run("LoadTicketWorkspace applies role mappings while preserving raw facts", func(t *testing.T) {
+		ledger, err := adapters.LoadTicketWorkspace("AL-24", workspacesRoot)
+		if err != nil {
+			t.Fatalf("LoadTicketWorkspace failed: %v", err)
+		}
+
+		// Roles should be mapped: orchestrator and tester
+		if len(ledger.Roles) != 2 {
+			t.Fatalf("expected 2 roles, got %d: %+v", len(ledger.Roles), ledger.Roles)
+		}
+		if ledger.Roles[0].Role != "orchestrator" {
+			t.Errorf("expected role 'orchestrator', got %s", ledger.Roles[0].Role)
+		}
+		if ledger.Roles[1].Role != "tester" {
+			t.Errorf("expected role 'tester', got %s", ledger.Roles[1].Role)
+		}
+
+		// Facts should retain raw roles 'build' and 'qa-bot'
+		if len(ledger.Facts.Invocations) != 2 {
+			t.Fatalf("expected 2 raw invocations, got %d", len(ledger.Facts.Invocations))
+		}
+		if ledger.Facts.Invocations[0].Role != "build" {
+			t.Errorf("expected raw invocation 0 role 'build', got %s", ledger.Facts.Invocations[0].Role)
+		}
+		if ledger.Facts.Invocations[1].Role != "qa-bot" {
+			t.Errorf("expected raw invocation 1 role 'qa-bot', got %s", ledger.Facts.Invocations[1].Role)
+		}
+
+		// Subagents effort distribution should reflect tester with 100%
+		eff := ledger.WorkflowEfficiency.RoleEffortDistributionPct
+		if eff["tester"] != 100.0 {
+			t.Errorf("expected tester effort 100%%, got: %+v", eff)
+		}
+	})
+
+	t.Run("ScanWorkspaces applies role mappings across all workspaces", func(t *testing.T) {
+		report := adapters.ScanWorkspaces(workspacesRoot)
+		if len(report.Errors) > 0 {
+			t.Fatalf("unexpected scan errors: %v", report.Errors)
+		}
+		if len(report.Ledgers) != 1 {
+			t.Fatalf("expected 1 ledger, got %d", len(report.Ledgers))
+		}
+
+		scanned := report.Ledgers[0]
+		if len(scanned.Roles) != 2 {
+			t.Fatalf("expected 2 roles, got %d", len(scanned.Roles))
+		}
+		if scanned.Roles[0].Role != "orchestrator" || scanned.Roles[1].Role != "tester" {
+			t.Errorf("expected orchestrator and tester, got %+v", scanned.Roles)
+		}
+		if scanned.Facts.Invocations[0].Role != "build" {
+			t.Errorf("expected raw role build in Facts, got %s", scanned.Facts.Invocations[0].Role)
+		}
+	})
+}
+
+func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
+	tempDir := t.TempDir()
+	wsDir := filepath.Join(tempDir, "workspaces")
+	if err := os.MkdirAll(wsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("blocks path traversal attempts strictly", func(t *testing.T) {
+		traversalPayloads := []string{
+			"../../../../../../etc/passwd",
+			"/etc/passwd",
+			"..",
+			".",
+			"",
+			"   ",
+			"AL-24/../../",
+			"../AL-24",
+			"../../",
+			"AL-24/../..",
+			"..\\..\\win.ini",
+		}
+
+		for _, payload := range traversalPayloads {
+			ledger, err := adapters.LoadTicketWorkspace(payload, tempDir)
+			if err == nil {
+				t.Errorf("expected error for traversal payload %q, got nil (ledger=%v)", payload, ledger)
+			}
+			if ledger != nil {
+				t.Errorf("expected nil ledger for traversal payload %q, got %+v", payload, ledger)
+			}
+		}
+	})
+
+	t.Run("missing workspace returns descriptive wrapped error", func(t *testing.T) {
+		ledger, err := adapters.LoadTicketWorkspace("NON-EXISTENT-TICKET", wsDir)
+		if err == nil {
+			t.Fatalf("expected error for non-existent ticket, got nil")
+		}
+		if ledger != nil {
+			t.Fatalf("expected nil ledger for non-existent ticket")
+		}
+		if !strings.Contains(err.Error(), "reading metrics file") {
+			t.Errorf("expected 'reading metrics file' in error, got %v", err)
+		}
+	})
+
+	t.Run("zero-byte metrics file returns descriptive unmarshaling error", func(t *testing.T) {
+		zeroDir := filepath.Join(wsDir, "AL-ZERO")
+		if err := os.MkdirAll(zeroDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(zeroDir, "agentic_metrics.json"), []byte(""), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		ledger, err := adapters.LoadTicketWorkspace("AL-ZERO", wsDir)
+		if err == nil {
+			t.Fatalf("expected error for zero-byte metrics file, got nil")
+		}
+		if ledger != nil {
+			t.Fatalf("expected nil ledger, got %+v", ledger)
+		}
+		if !strings.Contains(err.Error(), "unmarshaling metrics") {
+			t.Errorf("expected 'unmarshaling metrics' in error, got: %v", err)
+		}
+	})
+
+	t.Run("corrupted JSON metrics file returns descriptive error", func(t *testing.T) {
+		corruptDir := filepath.Join(wsDir, "AL-CORRUPT")
+		if err := os.MkdirAll(corruptDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(corruptDir, "agentic_metrics.json"), []byte("{corrupt json"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		ledger, err := adapters.LoadTicketWorkspace("AL-CORRUPT", wsDir)
+		if err == nil {
+			t.Fatalf("expected error for corrupt JSON metrics file, got nil")
+		}
+		if ledger != nil {
+			t.Fatalf("expected nil ledger, got %+v", ledger)
+		}
+		if !strings.Contains(err.Error(), "unmarshaling metrics") {
+			t.Errorf("expected 'unmarshaling metrics' in error, got: %v", err)
+		}
+	})
+}

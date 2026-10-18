@@ -137,6 +137,65 @@ describe('Presentation Components Boundary Tests', () => {
       expect(items[2]).toHaveTextContent('cheap-model');
     });
 
+    it('renders custom roles with color indicators and correct percentage breakdown', () => {
+      render(
+        <DistributionCard
+          title="Role Cost Distribution"
+          items={{ advisor: 2.5, po: 5.0, researcher: 2.5 }}
+          totalCostUSD={10.0}
+        />
+      );
+
+      expect(screen.getByText('po')).toBeInTheDocument();
+      expect(screen.getByText('advisor')).toBeInTheDocument();
+      expect(screen.getByText('researcher')).toBeInTheDocument();
+      expect(screen.getByText('(50.0%)')).toBeInTheDocument();
+      const twentyFives = screen.getAllByText('(25.0%)');
+      expect(twentyFives.length).toBe(2);
+    });
+
+    it('renders arbitrary models with correct labels and percentages', () => {
+      render(
+        <DistributionCard
+          title="Model Cost Distribution"
+          items={{ 'claude-3-7-sonnet': 7.5, 'gemini-2.5-pro': 2.5 }}
+          totalCostUSD={10.0}
+        />
+      );
+
+      expect(screen.getByText('claude-3-7-sonnet')).toBeInTheDocument();
+      expect(screen.getByText('gemini-2.5-pro')).toBeInTheDocument();
+      expect(screen.getByText('(75.0%)')).toBeInTheDocument();
+      expect(screen.getByText('(25.0%)')).toBeInTheDocument();
+    });
+
+    it('handles zero total cost without NaN or division by zero', () => {
+      render(
+        <DistributionCard
+          title="Role Cost Distribution"
+          items={{ advisor: 0, po: 0 }}
+          totalCostUSD={0}
+        />
+      );
+
+      expect(screen.getByText('advisor')).toBeInTheDocument();
+      expect(screen.getByText('po')).toBeInTheDocument();
+      const zeroPcts = screen.getAllByText('(0.0%)');
+      expect(zeroPcts.length).toBe(2);
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+
+    it('renders empty notice when items dictionary is empty', () => {
+      render(
+        <DistributionCard
+          title="Role Cost Distribution"
+          items={{}}
+          totalCostUSD={0}
+        />
+      );
+
+      expect(screen.getByText('No distribution data recorded')).toBeInTheDocument();
+    });
     it('renders InfoTooltip when tooltip prop is provided', () => {
       render(
         <DistributionCard
@@ -559,6 +618,36 @@ describe('Presentation Components Boundary Tests', () => {
       );
     });
 
+    it('renders dynamic subagent peak role and custom roles in peak breakdown', () => {
+      render(
+        <SaturationBar
+          contextHealth={{
+            healthy_ceiling_tokens: 200000,
+            status: 'HEALTHY',
+            orchestrator_peak_tokens: 50000,
+            orchestrator_saturation_pct: 25.0,
+            subagents_peak_tokens: 180000,
+            subagents_peak_role: 'advisor',
+            compactions: 0,
+            peak_by_role: {
+              orchestrator: 50000,
+              advisor: 180000,
+              po: 90000,
+              researcher: 60000,
+            },
+          }}
+          healthyCeilingTokens={200000}
+        />
+      );
+
+      expect(screen.getByText('advisor (180k)')).toBeInTheDocument();
+      expect(screen.getByText('advisor')).toBeInTheDocument();
+      expect(screen.getByText('po')).toBeInTheDocument();
+      expect(screen.getByText('researcher')).toBeInTheDocument();
+      expect(screen.getByText('180k')).toBeInTheDocument();
+      expect(screen.getByText('90k')).toBeInTheDocument();
+    });
+
     it('renders critical saturation badge when status is CRITICAL', () => {
       render(
         <SaturationBar
@@ -597,8 +686,11 @@ describe('Presentation Components Boundary Tests', () => {
         />
       );
 
+      expect(screen.getByText('None')).toBeInTheDocument();
+      expect(screen.getByText('HEALTHY')).toBeInTheDocument();
       expect(screen.getByText('Ceiling: 200k tokens')).toBeInTheDocument();
       expect(screen.getByText('(0.0% of ceiling)')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: 'Information about Context Window Saturation' })
       ).toBeInTheDocument();

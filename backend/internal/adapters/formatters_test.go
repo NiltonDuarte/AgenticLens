@@ -259,6 +259,120 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 	})
 }
 
+func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {
+	t.Parallel()
+	tid := "AL-24"
+	parentID := "ses-orch"
+	ledger := domain.AgenticMetricsLedger{
+		TicketID: &tid,
+		Facts: domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:      "ses-orch",
+					Role:    "orchestrator",
+					Model:   "model-a",
+					User:    "developer",
+					CostUSD: 1.0,
+				},
+				{
+					ID:       "ses-adv",
+					ParentID: &parentID,
+					Role:     "advisor",
+					Model:    "model-a",
+					User:     "developer",
+					CostUSD:  1.0,
+					Turns:    4,
+				},
+				{
+					ID:       "ses-po",
+					ParentID: &parentID,
+					Role:     "po",
+					Model:    "model-b",
+					User:     "developer",
+					CostUSD:  1.0,
+					Turns:    8,
+				},
+			},
+		},
+		WorkflowEfficiency: domain.WorkflowEfficiency{
+			RoleEffortDistributionPct: map[string]float64{
+				"advisor": 50.0,
+				"po":      50.0,
+			},
+			SubagentTurnVelocity: domain.SubagentTurnVelocity{
+				AvgTurnsPerInvocation: 6.0,
+				PeakTurns:             8,
+				ByRole: map[string]float64{
+					"advisor": 4.0,
+					"po":      8.0,
+				},
+			},
+			ContextWindowHealth: domain.ContextWindowHealth{
+				Status:              "HEALTHY",
+				SubagentsPeakRole:   "advisor",
+				SubagentsPeakTokens: 50000,
+			},
+		},
+	}
+
+	tableMD := adapters.FormatMarkdownMetricsTable(ledger)
+
+	// Check that custom roles Advisor and Po appear in Role Effort Distribution (Subagents)
+	if !strings.Contains(tableMD, "- **Role Effort Distribution (Subagents):** Advisor 50.0%, Po 50.0%") {
+		t.Errorf("expected custom subagents in role effort distribution, got:\n%s", tableMD)
+	}
+
+	// Check that custom roles Advisor and Po appear in Subagent Turn Velocity
+	if !strings.Contains(tableMD, "- **Subagent Turn Velocity & Thrashing:** 6.0 avg turns/run (peak: 8 turns) | Advisor 4.0, Po 8.0") {
+		t.Errorf("expected custom subagents in turn velocity, got:\n%s", tableMD)
+	}
+}
+
+func TestFormatMarkdownMetricsTable_MixedCanonicalAndCustomSubagentsPrecedence(t *testing.T) {
+	t.Parallel()
+	tid := "AL-24-PRECEDENCE"
+	ledger := domain.AgenticMetricsLedger{
+		TicketID: &tid,
+		WorkflowEfficiency: domain.WorkflowEfficiency{
+			RoleEffortDistributionPct: map[string]float64{
+				"po":      10.0,
+				"coder":   40.0,
+				"advisor": 20.0,
+				"planner": 30.0,
+			},
+			SubagentTurnVelocity: domain.SubagentTurnVelocity{
+				AvgTurnsPerInvocation: 4.2,
+				PeakTurns:             8,
+				ByRole: map[string]float64{
+					"po":      5.0,
+					"coder":   6.0,
+					"advisor": 4.0,
+					"planner": 2.0,
+				},
+			},
+			ContextWindowHealth: domain.ContextWindowHealth{
+				Status:              "HEALTHY",
+				SubagentsPeakRole:   "planner",
+				SubagentsPeakTokens: 50000,
+			},
+		},
+	}
+
+	tableMD := adapters.FormatMarkdownMetricsTable(ledger)
+
+	// Canonical subagents (Planner, Coder) must appear first in canonical order,
+	// followed by custom subagents (Advisor, Po) in alphabetical order.
+	expectedDist := "- **Role Effort Distribution (Subagents):** Planner 30.0%, Coder 40.0%, Advisor 20.0%, Po 10.0%"
+	if !strings.Contains(tableMD, expectedDist) {
+		t.Errorf("expected canonical precedence in role distribution:\nwant: %s\ngot:\n%s", expectedDist, tableMD)
+	}
+
+	expectedVel := "- **Subagent Turn Velocity & Thrashing:** 4.2 avg turns/run (peak: 8 turns) | Planner 2.0, Coder 6.0, Advisor 4.0, Po 5.0"
+	if !strings.Contains(tableMD, expectedVel) {
+		t.Errorf("expected canonical precedence in turn velocity:\nwant: %s\ngot:\n%s", expectedVel, tableMD)
+	}
+}
+
 func TestFormatMarkdownMetricsTable_EmptyAndZeroValues(t *testing.T) {
 	t.Parallel()
 	emptyLedger := domain.AgenticMetricsLedger{}

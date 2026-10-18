@@ -25,6 +25,7 @@ import { TicketSelector } from '../components/TicketSelector';
 import { SaturationBar } from '../components/SaturationBar';
 import { ThreadViewer } from '../components/ThreadViewer';
 import { ArtifactViewer } from '../components/ArtifactViewer';
+import { getRoleColor, getModelColor } from '../utils/theme';
 import { TraceWaterfall } from '../components/TraceWaterfall';
 import { AnomalyDrawer } from '../components/AnomalyDrawer';
 import { AnomalyBadge } from '../components/AnomalyBadge';
@@ -229,7 +230,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           title="SDLC Iterations"
           value={eff.sdlc_iterations.toString()}
           secondary="Feedback iterations"
-          tooltip="Total planner/coder/tester/reviewer iterations"
+          tooltip="Total SDLC feedback iterations across all participating agent roles"
         />
         <KPICard
           title="Turnaround Lead Time"
@@ -346,20 +347,38 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         </div>
         {turnEntries.length > 0 ? (
           <div className="turns-by-role-list">
-            {turnEntries.map(([role, turns]) => (
-              <div key={role} className="turn-role-row">
-                <span className="turn-role-label">{role}</span>
-                <div className="turn-track">
-                  <div
-                    className="turn-fill"
-                    style={{
-                      width: `${Math.min(100, (turns / Math.max(1, subTurns.peak_turns)) * 100)}%`,
-                    }}
-                  />
+            {turnEntries.map(([role, turns]) => {
+              const roleColor = getRoleColor(role);
+              return (
+                <div key={role} className="turn-role-row">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '100px' }}>
+                    <span
+                      className="turn-role-dot"
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: roleColor,
+                        display: 'inline-block',
+                        flexShrink: 0,
+                      }}
+                      aria-hidden="true"
+                    />
+                    <span className="turn-role-label">{role}</span>
+                  </div>
+                  <div className="turn-track">
+                    <div
+                      className="turn-fill"
+                      style={{
+                        width: `${Math.min(100, (turns / Math.max(1, subTurns.peak_turns)) * 100)}%`,
+                        backgroundColor: roleColor,
+                      }}
+                    />
+                  </div>
+                  <span className="turn-role-val">{turns.toFixed(1)} turns/inv</span>
                 </div>
-                <span className="turn-role-val">{turns.toFixed(1)} turns/inv</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="empty-turns-note">No subagent turn records available.</div>
@@ -434,15 +453,34 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {ledger.roles.map((r) => (
-                  <tr key={r.role}>
-                    <td className="role-col">{r.role}</td>
-                    <td className="num-col">{r.invocations}</td>
-                    <td className="num-col">{formatTokensK(r.input_tokens + r.output_tokens)}</td>
-                    <td className="num-col">{formatPercentage(r.cache_hit_rate_pct)}</td>
-                    <td className="num-col">{formatCurrencyUSD(r.cost_usd)}</td>
-                  </tr>
-                ))}
+                {ledger.roles.map((r) => {
+                  const roleColor = getRoleColor(r.role);
+                  return (
+                    <tr key={r.role}>
+                      <td className="role-col">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span
+                            className="role-color-dot"
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: roleColor,
+                              display: 'inline-block',
+                              flexShrink: 0,
+                            }}
+                            aria-hidden="true"
+                          />
+                          <span>{r.role}</span>
+                        </div>
+                      </td>
+                      <td className="num-col">{r.invocations}</td>
+                      <td className="num-col">{formatTokensK(r.input_tokens + r.output_tokens)}</td>
+                      <td className="num-col">{formatPercentage(r.cache_hit_rate_pct)}</td>
+                      <td className="num-col">{formatCurrencyUSD(r.cost_usd)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -514,15 +552,34 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {ledger.models.map((m) => (
-                  <tr key={m.model}>
-                    <td className="model-col">{m.model}</td>
-                    <td className="num-col">{m.invocations}</td>
-                    <td className="num-col">{formatTokensK(m.input_tokens + m.output_tokens)}</td>
-                    <td className="num-col">{formatPercentage(m.cache_hit_rate_pct)}</td>
-                    <td className="num-col">{formatCurrencyUSD(m.cost_usd)}</td>
-                  </tr>
-                ))}
+                {ledger.models.map((m) => {
+                  const modelColor = getModelColor(m.model);
+                  return (
+                    <tr key={m.model}>
+                      <td className="model-col">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span
+                            className="model-color-dot"
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: modelColor,
+                              display: 'inline-block',
+                              flexShrink: 0,
+                            }}
+                            aria-hidden="true"
+                          />
+                          <span>{m.model}</span>
+                        </div>
+                      </td>
+                      <td className="num-col">{m.invocations}</td>
+                      <td className="num-col">{formatTokensK(m.input_tokens + m.output_tokens)}</td>
+                      <td className="num-col">{formatPercentage(m.cache_hit_rate_pct)}</td>
+                      <td className="num-col">{formatCurrencyUSD(m.cost_usd)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ContextWindowHealth } from '../domain/types';
 import { formatTokensK, HEALTHY_CEILING_TOKENS } from '../domain/formatters';
-import { getHealthStatusColor, THEME_COLORS } from '../utils/theme';
+import { getHealthStatusColor, getRoleColor, THEME_COLORS } from '../utils/theme';
 import { InfoTooltip } from './InfoTooltip';
 
 export interface SaturationBarProps {
@@ -94,10 +94,25 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
           <div className="roles-grid">
             {roleEntries.map(([role, tokens]) => {
               const rolePct = ceiling > 0 ? (tokens / ceiling) * 100 : 0;
+              const roleColor = getRoleColor(role);
               return (
                 <div key={role} className="role-token-item">
                   <div className="role-token-header">
-                    <span className="role-name">{role}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        className="role-color-dot"
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: roleColor,
+                          display: 'inline-block',
+                          flexShrink: 0,
+                        }}
+                        aria-hidden="true"
+                      />
+                      <span className="role-name">{role}</span>
+                    </div>
                     <span className="role-tokens">{formatTokensK(tokens)}</span>
                   </div>
                   <div className="role-mini-track">
@@ -105,7 +120,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
                       className="role-mini-fill"
                       style={{
                         width: `${Math.min(100, rolePct)}%`,
-                        backgroundColor: tokens > ceiling ? THEME_COLORS.red : THEME_COLORS.blue,
+                        backgroundColor: tokens > ceiling ? THEME_COLORS.red : roleColor,
                       }}
                     />
                   </div>

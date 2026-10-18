@@ -244,11 +244,14 @@ func ExtractFacts(
 
 	// 3. Process messages per session
 	for _, s := range sessions {
-		role := "orchestrator"
-		if s.parentID != nil && s.agent != "build" && s.agent != "orchestrator" {
-			if strings.TrimSpace(s.agent) != "" {
-				role = strings.TrimSpace(s.agent)
-			}
+		cleanAgent := strings.TrimSpace(s.agent)
+		var role string
+		if cleanAgent != "" {
+			role = cleanAgent
+		} else if s.parentID == nil {
+			role = "orchestrator"
+		} else {
+			role = "unassigned"
 		}
 		sessionRoleMap[s.id] = role
 

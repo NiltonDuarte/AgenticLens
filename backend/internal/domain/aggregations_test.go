@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -1235,6 +1236,40 @@ func TestCompareTicketIDs(t *testing.T) {
 	}
 }
 
+func TestIsSubagentRole(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		role     string
+		expected bool
+	}{
+		{name: "empty role", role: "", expected: false},
+		{name: "whitespace role", role: "   ", expected: false},
+		{name: "orchestrator lowercase", role: "orchestrator", expected: false},
+		{name: "orchestrator mixed case", role: "Orchestrator", expected: false},
+		{name: "orchestrator with whitespace", role: "  orchestrator  ", expected: false},
+		{name: "canonical subagent planner", role: "planner", expected: true},
+		{name: "canonical subagent coder", role: "coder", expected: true},
+		{name: "canonical subagent tester", role: "tester", expected: true},
+		{name: "canonical subagent reviewer", role: "reviewer", expected: true},
+		{name: "custom role advisor", role: "advisor", expected: true},
+		{name: "custom role po", role: "po", expected: true},
+		{name: "custom role researcher", role: "researcher", expected: true},
+		{name: "custom role security-auditor", role: "security-auditor", expected: true},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := domain.IsSubagentRole(tc.role)
+			if got != tc.expected {
+				t.Errorf("IsSubagentRole(%q) = %v, expected %v", tc.role, got, tc.expected)
+			}
+		})
+	}
+}
+
 func TestSortLedgers_TicketID(t *testing.T) {
 	t.Parallel()
 
@@ -1348,4 +1383,1245 @@ func TestParseLedgerSortField_TicketID(t *testing.T) {
 	if domain.ParseLedgerSortField("ticket_id") != domain.SortFieldTicketID {
 		t.Errorf("expected SortFieldTicketID, got %v", domain.ParseLedgerSortField("ticket_id"))
 	}
+}
+
+func TestOrderRoles(t *testing.T) {
+	t.Parallel()
+	input := []string{"advisor", "tester", "researcher", "orchestrator", "coder", "advisor"}
+	expected := []string{"orchestrator", "coder", "tester", "advisor", "researcher"}
+
+	got := domain.OrderRoles(input)
+	if len(got) != len(expected) {
+		t.Fatalf("expected len %d, got %d: %v", len(expected), len(got), got)
+	}
+	for i := range expected {
+		if got[i] != expected[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expected[i], got[i])
+		}
+	}
+}
+
+func TestOrderSubagentRoles(t *testing.T) {
+	t.Parallel()
+	input := []string{"advisor", "reviewer", "orchestrator", "po", "planner", "advisor"}
+	expected := []string{"planner", "reviewer", "advisor", "po"}
+
+	got := domain.OrderSubagentRoles(input)
+	if len(got) != len(expected) {
+		t.Fatalf("expected len %d, got %d: %v", len(expected), len(got), got)
+	}
+	for i := range expected {
+		if got[i] != expected[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expected[i], got[i])
+		}
+	}
+}
+
+func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
+	t.Parallel()
+
+	t.Run("dynamic subagent effort distribution", func(t *testing.T) {
+		t.Parallel()
+		parentID := "ses-orch"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "ses-orch", Role: "orchestrator", CostUSD: 1.0},
+				{ID: "ses-coder", ParentID: &parentID, Role: "coder", CostUSD: 2.0},
+				{ID: "ses-adv", ParentID: &parentID, Role: "advisor", CostUSD: 1.0},
+				{ID: "ses-po", ParentID: &parentID, Role: "po", CostUSD: 1.0},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		dist := eff.RoleEffortDistributionPct
+
+		if _, hasOrch := dist["orchestrator"]; hasOrch {
+			t.Errorf("orchestrator should not be present in role effort distribution")
+		}
+		if dist["coder"] != 50.0 {
+			t.Errorf("expected coder at 50.0%%, got %f", dist["coder"])
+		}
+		if dist["advisor"] != 25.0 {
+			t.Errorf("expected advisor at 25.0%%, got %f", dist["advisor"])
+		}
+		if dist["po"] != 25.0 {
+			t.Errorf("expected po at 25.0%%, got %f", dist["po"])
+		}
+	})
+
+	t.Run("dynamic subagent turn velocity", func(t *testing.T) {
+		t.Parallel()
+		parentID := "ses-orch"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "ses-adv", ParentID: &parentID, Role: "advisor", Turns: 4},
+				{ID: "ses-po", ParentID: &parentID, Role: "po", Turns: 8},
+				{ID: "ses-coder", ParentID: &parentID, Role: "coder", Turns: 6},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		vel := eff.SubagentTurnVelocity
+
+		if vel.AvgTurnsPerInvocation != 6.0 {
+			t.Errorf("expected 6.0 avg turns, got %f", vel.AvgTurnsPerInvocation)
+		}
+		if vel.PeakTurns != 8 {
+			t.Errorf("expected 8 peak turns, got %d", vel.PeakTurns)
+		}
+		if vel.ByRole["advisor"] != 4.0 {
+			t.Errorf("expected advisor 4.0 turns, got %f", vel.ByRole["advisor"])
+		}
+		if vel.ByRole["po"] != 8.0 {
+			t.Errorf("expected po 8.0 turns, got %f", vel.ByRole["po"])
+		}
+		if vel.ByRole["coder"] != 6.0 {
+			t.Errorf("expected coder 6.0 turns, got %f", vel.ByRole["coder"])
+		}
+	})
+
+	t.Run("subagent peak context tracking with custom role", func(t *testing.T) {
+		t.Parallel()
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:   "ses-orch",
+					Role: "orchestrator",
+					Tokens: domain.InvocationTokens{PeakContext: 50000},
+				},
+				{
+					ID:   "ses-coder",
+					Role: "coder",
+					Tokens: domain.InvocationTokens{PeakContext: 120000},
+				},
+				{
+					ID:   "ses-adv",
+					Role: "advisor",
+					Tokens: domain.InvocationTokens{PeakContext: 180000},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		cwh := eff.ContextWindowHealth
+
+		if cwh.SubagentsPeakTokens != 180000 {
+			t.Errorf("expected 180000 peak subagent tokens, got %d", cwh.SubagentsPeakTokens)
+		}
+		if cwh.SubagentsPeakRole != "advisor" {
+			t.Errorf("expected advisor as peak subagent role, got %s", cwh.SubagentsPeakRole)
+		}
+	})
+
+	t.Run("peak context tie-breaking precedence", func(t *testing.T) {
+		t.Parallel()
+		// Canonical vs Custom tie-break: canonical (coder) takes precedence
+		ledgerCanonicalVsCustom := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:   "ses-coder",
+					Role: "coder",
+					Tokens: domain.InvocationTokens{PeakContext: 100000},
+				},
+				{
+					ID:   "ses-adv",
+					Role: "advisor",
+					Tokens: domain.InvocationTokens{PeakContext: 100000},
+				},
+			},
+		}
+
+		eff1 := domain.ComputeWorkflowEfficiency(ledgerCanonicalVsCustom)
+		if eff1.ContextWindowHealth.SubagentsPeakRole != "coder" {
+			t.Errorf("expected canonical role 'coder' to win tie-breaker, got %s", eff1.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom vs Custom tie-break: alphabetical (advisor before po)
+		ledgerCustomVsCustom := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:   "ses-po",
+					Role: "po",
+					Tokens: domain.InvocationTokens{PeakContext: 100000},
+				},
+				{
+					ID:   "ses-adv",
+					Role: "advisor",
+					Tokens: domain.InvocationTokens{PeakContext: 100000},
+				},
+			},
+		}
+
+		eff2 := domain.ComputeWorkflowEfficiency(ledgerCustomVsCustom)
+		if eff2.ContextWindowHealth.SubagentsPeakRole != "advisor" {
+			t.Errorf("expected alphabetical role 'advisor' to win tie-breaker, got %s", eff2.ContextWindowHealth.SubagentsPeakRole)
+		}
+	})
+
+	t.Run("orchestrator-only session", func(t *testing.T) {
+		t.Parallel()
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:      "ses-orch",
+					Role:    "orchestrator",
+					Turns:   10,
+					CostUSD: 2.5,
+					Tokens:  domain.InvocationTokens{PeakContext: 75000},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected 0 subagent peak tokens, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected 'none' subagents peak role, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		if len(eff.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty effort distribution, got %+v", eff.RoleEffortDistributionPct)
+		}
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+			t.Errorf("expected 0.0 avg turns, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+	})
+}
+
+func TestComputeModelMetrics_DeterministicTieBreaking(t *testing.T) {
+	t.Parallel()
+	invs := []domain.InvocationFact{
+		{ID: "1", Model: "model-z", CostUSD: 1.0},
+		{ID: "2", Model: "model-a", CostUSD: 1.0},
+		{ID: "3", Model: "model-top", CostUSD: 5.0},
+	}
+
+	models := domain.ComputeModelMetrics(invs)
+	if len(models) != 3 {
+		t.Fatalf("expected 3 models, got %d", len(models))
+	}
+	if models[0].Model != "model-top" || models[0].CostUSD != 5.0 {
+		t.Errorf("expected model-top first, got %+v", models[0])
+	}
+	if models[1].Model != "model-a" || models[1].CostUSD != 1.0 {
+		t.Errorf("expected model-a second (alphabetical tie-breaker), got %+v", models[1])
+	}
+	if models[2].Model != "model-z" || models[2].CostUSD != 1.0 {
+		t.Errorf("expected model-z third (alphabetical tie-breaker), got %+v", models[2])
+	}
+}
+
+func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
+	t.Parallel()
+	invs := []domain.InvocationFact{
+		{ID: "1", Role: "advisor", CostUSD: 1.0},
+		{ID: "2", Role: "reviewer", CostUSD: 2.0},
+		{ID: "3", Role: "planner", CostUSD: 3.0},
+		{ID: "4", Role: "architect", CostUSD: 4.0},
+		{ID: "5", Role: "orchestrator", CostUSD: 5.0},
+	}
+
+	metrics := domain.ComputeRoleMetrics(invs)
+	if len(metrics) != 5 {
+		t.Fatalf("expected 5 roles, got %d", len(metrics))
+	}
+
+	expectedRoles := []string{"orchestrator", "planner", "reviewer", "advisor", "architect"}
+	for i, exp := range expectedRoles {
+		if metrics[i].Role != exp {
+			t.Errorf("at index %d: expected %s, got %s", i, exp, metrics[i].Role)
+		}
+	}
+}
+
+func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
+	t.Parallel()
+	rootID := "ses-root"
+	invs := []domain.InvocationFact{
+		{
+			ID:      "ses-root",
+			Role:    "orchestrator",
+			Model:   "m-top",
+			CostUSD: 5.0,
+		},
+		{
+			ID:       "ses-child-1",
+			ParentID: &rootID,
+			Role:     "advisor",
+			Model:    "model-z",
+			CostUSD:  1.0,
+		},
+		{
+			ID:       "ses-child-2",
+			ParentID: &rootID,
+			Role:     "advisor",
+			Model:    "model-a",
+			CostUSD:  1.0,
+		},
+		{
+			ID:       "ses-child-3",
+			ParentID: &rootID,
+			Role:     "coder",
+			Model:    "m-coder",
+			CostUSD:  2.0,
+		},
+	}
+
+	records := domain.ComputeThreadSummaries(invs)
+	if len(records) != 1 {
+		t.Fatalf("expected 1 thread record, got %d", len(records))
+	}
+
+	rec := records[0]
+	expectedRoles := []string{"orchestrator", "coder", "advisor"}
+	if len(rec.Roles) != len(expectedRoles) {
+		t.Fatalf("expected %d roles, got %d", len(expectedRoles), len(rec.Roles))
+	}
+	for i, exp := range expectedRoles {
+		if rec.Roles[i].Role != exp {
+			t.Errorf("at index %d: expected role %s, got %s", i, exp, rec.Roles[i].Role)
+		}
+	}
+
+	advisorRole := rec.Roles[2]
+	if len(advisorRole.Models) != 2 {
+		t.Fatalf("expected 2 models for advisor, got %d", len(advisorRole.Models))
+	}
+	if advisorRole.Models[0].Model != "model-a" {
+		t.Errorf("expected model-a first, got %s", advisorRole.Models[0].Model)
+	}
+	if advisorRole.Models[1].Model != "model-z" {
+		t.Errorf("expected model-z second, got %s", advisorRole.Models[1].Model)
+	}
+}
+
+func TestOrderRoles_And_OrderSubagentRoles_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty and whitespace inputs", func(t *testing.T) {
+		t.Parallel()
+		if len(domain.OrderRoles(nil)) != 0 {
+			t.Errorf("expected empty slice for nil roles")
+		}
+		if len(domain.OrderRoles([]string{})) != 0 {
+			t.Errorf("expected empty slice for empty roles")
+		}
+		if len(domain.OrderRoles([]string{"", "   ", "\t", "\n"})) != 0 {
+			t.Errorf("expected empty slice for whitespace-only roles")
+		}
+
+		if len(domain.OrderSubagentRoles(nil)) != 0 {
+			t.Errorf("expected empty slice for nil subagent roles")
+		}
+		if len(domain.OrderSubagentRoles([]string{})) != 0 {
+			t.Errorf("expected empty slice for empty subagent roles")
+		}
+		if len(domain.OrderSubagentRoles([]string{"", "   ", "\t", "\n"})) != 0 {
+			t.Errorf("expected empty slice for whitespace-only subagent roles")
+		}
+	})
+
+	t.Run("only custom roles sorted alphabetically", func(t *testing.T) {
+		t.Parallel()
+		input := []string{"zeta", "beta", "alpha", "gamma", "beta"}
+		expected := []string{"alpha", "beta", "gamma", "zeta"}
+
+		gotRoles := domain.OrderRoles(input)
+		if len(gotRoles) != len(expected) {
+			t.Fatalf("OrderRoles: expected len %d, got %d", len(expected), len(gotRoles))
+		}
+		for i := range expected {
+			if gotRoles[i] != expected[i] {
+				t.Errorf("OrderRoles at %d: expected %s, got %s", i, expected[i], gotRoles[i])
+			}
+		}
+
+		gotSub := domain.OrderSubagentRoles(input)
+		if len(gotSub) != len(expected) {
+			t.Fatalf("OrderSubagentRoles: expected len %d, got %d", len(expected), len(gotSub))
+		}
+		for i := range expected {
+			if gotSub[i] != expected[i] {
+				t.Errorf("OrderSubagentRoles at %d: expected %s, got %s", i, expected[i], gotSub[i])
+			}
+		}
+	})
+
+	t.Run("canonical roles order preservation", func(t *testing.T) {
+		t.Parallel()
+		// Reversed canonical roles
+		input := []string{"reviewer", "tester", "coder", "planner", "orchestrator"}
+		expected := []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
+
+		got := domain.OrderRoles(input)
+		for i := range expected {
+			if got[i] != expected[i] {
+				t.Errorf("at %d: expected %s, got %s", i, expected[i], got[i])
+			}
+		}
+
+		// Subagents: orchestrator must be excluded
+		subExpected := []string{"planner", "coder", "tester", "reviewer"}
+		gotSub := domain.OrderSubagentRoles(input)
+		if len(gotSub) != len(subExpected) {
+			t.Fatalf("expected len %d, got %d: %v", len(subExpected), len(gotSub), gotSub)
+		}
+		for i := range subExpected {
+			if gotSub[i] != subExpected[i] {
+				t.Errorf("subagent at %d: expected %s, got %s", i, subExpected[i], gotSub[i])
+			}
+		}
+	})
+}
+
+func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("completely empty fact ledger zero division defenses", func(t *testing.T) {
+		t.Parallel()
+		ledger := domain.AgenticFactLedger{}
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected 0 subagent peak tokens, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected 'none', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		if len(eff.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty effort distribution, got %+v", eff.RoleEffortDistributionPct)
+		}
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+			t.Errorf("expected 0.0 avg turns, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 0 {
+			t.Errorf("expected 0 peak turns, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+	})
+
+	t.Run("zero cost subagent invocations do not divide by zero or enter distribution", func(t *testing.T) {
+		t.Parallel()
+		parentID := "ses-orch"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "1", Role: "orchestrator", CostUSD: 0.0},
+				{ID: "2", ParentID: &parentID, Role: "advisor", CostUSD: 0.0, Turns: 5},
+				{ID: "3", ParentID: &parentID, Role: "po", CostUSD: 0.0, Turns: 3},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if len(eff.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty effort distribution when total subagent cost is 0, got %+v", eff.RoleEffortDistributionPct)
+		}
+		// Turns should still be aggregated even if cost is 0
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 4.0 {
+			t.Errorf("expected 4.0 avg turns, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 5 {
+			t.Errorf("expected 5 peak turns, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+	})
+
+	t.Run("subagent invocations with zero turns", func(t *testing.T) {
+		t.Parallel()
+		parentID := "ses-orch"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "1", ParentID: &parentID, Role: "advisor", Turns: 0, CostUSD: 1.0},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+			t.Errorf("expected 0.0 avg turns, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 0 {
+			t.Errorf("expected 0 peak turns, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+		if eff.SubagentTurnVelocity.ByRole["advisor"] != 0.0 {
+			t.Errorf("expected 0.0 turns for advisor, got %f", eff.SubagentTurnVelocity.ByRole["advisor"])
+		}
+	})
+
+	t.Run("multi-way peak context tie-breaking across canonical and custom roles", func(t *testing.T) {
+		t.Parallel()
+
+		// Case A: 4 canonical subagents all tied at 120k tokens. Precedence: planner > coder > tester > reviewer
+		canonicalTiedLedger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "1", Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "2", Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "3", Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "4", Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			},
+		}
+		effA := domain.ComputeWorkflowEfficiency(canonicalTiedLedger)
+		if effA.ContextWindowHealth.SubagentsPeakRole != "planner" {
+			t.Errorf("expected 'planner' to win 4-way canonical tie-breaker, got %s", effA.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Case B: 4 custom subagents all tied at 120k tokens. Precedence: alphabetical (advisor > po > researcher > security-auditor)
+		customTiedLedger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "1", Role: "security-auditor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "2", Role: "researcher", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "3", Role: "po", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "4", Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			},
+		}
+		effB := domain.ComputeWorkflowEfficiency(customTiedLedger)
+		if effB.ContextWindowHealth.SubagentsPeakRole != "advisor" {
+			t.Errorf("expected 'advisor' to win 4-way custom tie-breaker, got %s", effB.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Case C: Lowest-precedence canonical (reviewer) vs highest-precedence custom (advisor) tied at 120k.
+		// Canonical must win over custom.
+		mixedTiedLedger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "1", Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "2", Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			},
+		}
+		effC := domain.ComputeWorkflowEfficiency(mixedTiedLedger)
+		if effC.ContextWindowHealth.SubagentsPeakRole != "reviewer" {
+			t.Errorf("expected canonical 'reviewer' to beat custom 'advisor' on tie-break, got %s", effC.ContextWindowHealth.SubagentsPeakRole)
+		}
+	})
+
+	t.Run("subagent invocations without parent ID excluded from turn velocity but included in cost", func(t *testing.T) {
+		t.Parallel()
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "1", Role: "advisor", ParentID: nil, CostUSD: 2.0, Turns: 10},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		// Cost included:
+		if eff.RoleEffortDistributionPct["advisor"] != 100.0 {
+			t.Errorf("expected 100%% effort for advisor, got %f", eff.RoleEffortDistributionPct["advisor"])
+		}
+		// Turns excluded because ParentID is nil:
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+			t.Errorf("expected 0.0 avg turns because ParentID is nil, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+	})
+}
+
+func TestComputeModelMetrics_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty invocations returns empty slice", func(t *testing.T) {
+		t.Parallel()
+		models := domain.ComputeModelMetrics(nil)
+		if len(models) != 0 {
+			t.Errorf("expected 0 models for nil invocations, got %d", len(models))
+		}
+		models = domain.ComputeModelMetrics([]domain.InvocationFact{})
+		if len(models) != 0 {
+			t.Errorf("expected 0 models for empty invocations, got %d", len(models))
+		}
+	})
+
+	t.Run("empty model string preserved and sorted", func(t *testing.T) {
+		t.Parallel()
+		invs := []domain.InvocationFact{
+			{ID: "1", Model: "", CostUSD: 1.0},
+			{ID: "2", Model: "known-model", CostUSD: 2.0},
+		}
+
+		models := domain.ComputeModelMetrics(invs)
+		if len(models) != 2 {
+			t.Fatalf("expected 2 models, got %d", len(models))
+		}
+		if models[0].Model != "known-model" {
+			t.Errorf("expected known-model first, got %s", models[0].Model)
+		}
+		if models[1].Model != "" {
+			t.Errorf("expected empty string model second, got %q", models[1].Model)
+		}
+	})
+
+	t.Run("multiple models with zero cost sort strictly alphabetically", func(t *testing.T) {
+		t.Parallel()
+		invs := []domain.InvocationFact{
+			{ID: "1", Model: "model-z", CostUSD: 0.0},
+			{ID: "2", Model: "model-m", CostUSD: 0.0},
+			{ID: "3", Model: "model-a", CostUSD: 0.0},
+			{ID: "4", Model: "model-b", CostUSD: 0.0},
+		}
+
+		models := domain.ComputeModelMetrics(invs)
+		expected := []string{"model-a", "model-b", "model-m", "model-z"}
+		for i, exp := range expected {
+			if models[i].Model != exp {
+				t.Errorf("at index %d: expected %s, got %s", i, exp, models[i].Model)
+			}
+		}
+	})
+}
+
+func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty invocations returns empty slice", func(t *testing.T) {
+		t.Parallel()
+		metrics := domain.ComputeRoleMetrics(nil)
+		if len(metrics) != 0 {
+			t.Errorf("expected 0 metrics, got %d", len(metrics))
+		}
+	})
+
+	t.Run("multiple custom and canonical roles with zero costs", func(t *testing.T) {
+		t.Parallel()
+		invs := []domain.InvocationFact{
+			{ID: "1", Role: "security-auditor", CostUSD: 0.0},
+			{ID: "2", Role: "reviewer", CostUSD: 0.0},
+			{ID: "3", Role: "advisor", CostUSD: 0.0},
+			{ID: "4", Role: "coder", CostUSD: 0.0},
+		}
+
+		metrics := domain.ComputeRoleMetrics(invs)
+		expected := []string{"coder", "reviewer", "advisor", "security-auditor"}
+		if len(metrics) != len(expected) {
+			t.Fatalf("expected %d metrics, got %d", len(expected), len(metrics))
+		}
+		for i, exp := range expected {
+			if metrics[i].Role != exp {
+				t.Errorf("at index %d: expected %s, got %s", i, exp, metrics[i].Role)
+			}
+		}
+	})
+}
+
+func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
+	t.Parallel()
+
+	t.Run("mapping execution invariance: rolls up build under orchestrator while preserving raw facts", func(t *testing.T) {
+		t.Parallel()
+
+		factLedger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:      "ses-build",
+					Role:    "build",
+					Model:   "claude-3-sonnet",
+					CostUSD: 2.00,
+					Turns:   4,
+					Tokens: domain.InvocationTokens{
+						Input:       1000,
+						Output:      500,
+						PeakContext: 10000,
+					},
+				},
+				{
+					ID:      "ses-orch",
+					Role:    "orchestrator",
+					Model:   "claude-3-sonnet",
+					CostUSD: 1.00,
+					Turns:   2,
+					Tokens: domain.InvocationTokens{
+						Input:       500,
+						Output:      200,
+						PeakContext: 5000,
+					},
+				},
+			},
+		}
+
+		customMappings := domain.RoleMappings{
+			"build":        "orchestrator",
+			"orchestrator": "orchestrator",
+		}
+
+		metrics := domain.DeriveMetricsLedger(factLedger, customMappings)
+
+		// 1. Roles contains exactly one entry for orchestrator
+		if len(metrics.Roles) != 1 {
+			t.Fatalf("expected 1 role, got %d: %+v", len(metrics.Roles), metrics.Roles)
+		}
+		if metrics.Roles[0].Role != "orchestrator" {
+			t.Errorf("expected role orchestrator, got %s", metrics.Roles[0].Role)
+		}
+		if metrics.Roles[0].Invocations != 2 {
+			t.Errorf("expected 2 invocations, got %d", metrics.Roles[0].Invocations)
+		}
+		if math.Abs(metrics.Roles[0].CostUSD-3.00) > 1e-4 {
+			t.Errorf("expected total cost 3.00, got %f", metrics.Roles[0].CostUSD)
+		}
+
+		// 2. Facts retains unmutated raw roles
+		if len(metrics.Facts.Invocations) != 2 {
+			t.Fatalf("expected 2 raw invocations in Facts, got %d", len(metrics.Facts.Invocations))
+		}
+		if metrics.Facts.Invocations[0].Role != "build" {
+			t.Errorf("expected Facts.Invocations[0].Role 'build', got %s", metrics.Facts.Invocations[0].Role)
+		}
+		if metrics.Facts.Invocations[1].Role != "orchestrator" {
+			t.Errorf("expected Facts.Invocations[1].Role 'orchestrator', got %s", metrics.Facts.Invocations[1].Role)
+		}
+
+		// 3. Orchestrator is excluded from subagent velocity and effort distribution
+		if len(metrics.WorkflowEfficiency.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty RoleEffortDistributionPct for orchestrator-only runs, got: %+v",
+				metrics.WorkflowEfficiency.RoleEffortDistributionPct)
+		}
+		if metrics.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation != 0 {
+			t.Errorf("expected 0 avg subagent turns, got %f",
+				metrics.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+	})
+
+	t.Run("maps custom roles into canonical roles and custom subagent roles", func(t *testing.T) {
+		t.Parallel()
+
+		pid := "ses-orch"
+		factLedger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:      "ses-orch",
+					Role:    "build",
+					Model:   "claude-3-sonnet",
+					CostUSD: 1.00,
+				},
+				{
+					ID:       "ses-worker-1",
+					ParentID: &pid,
+					Role:     "coder",
+					Model:    "claude-3-opus",
+					CostUSD:  2.00,
+					Turns:    5,
+				},
+				{
+					ID:       "ses-worker-2",
+					ParentID: &pid,
+					Role:     "custom-qa",
+					Model:    "claude-3-sonnet",
+					CostUSD:  2.00,
+					Turns:    3,
+				},
+			},
+		}
+
+		customMappings := domain.RoleMappings{
+			"build":     "orchestrator",
+			"custom-qa": "tester",
+		}
+
+		metrics := domain.DeriveMetricsLedger(factLedger, customMappings)
+
+		// Derived roles should be orchestrator, coder, tester
+		roleNames := make([]string, len(metrics.Roles))
+		for i, r := range metrics.Roles {
+			roleNames[i] = r.Role
+		}
+		expectedRoles := []string{"orchestrator", "coder", "tester"}
+		if len(roleNames) != len(expectedRoles) {
+			t.Fatalf("expected roles %+v, got %+v", expectedRoles, roleNames)
+		}
+		for i, exp := range expectedRoles {
+			if roleNames[i] != exp {
+				t.Errorf("at index %d: expected %s, got %s", i, exp, roleNames[i])
+			}
+		}
+
+		// Raw facts must still have build, coder, custom-qa
+		if metrics.Facts.Invocations[0].Role != "build" {
+			t.Errorf("expected raw fact build, got %s", metrics.Facts.Invocations[0].Role)
+		}
+		if metrics.Facts.Invocations[2].Role != "custom-qa" {
+			t.Errorf("expected raw fact custom-qa, got %s", metrics.Facts.Invocations[2].Role)
+		}
+
+		// Subagents effort: coder=50%, tester=50%
+		eff := metrics.WorkflowEfficiency.RoleEffortDistributionPct
+		if eff["coder"] != 50.0 || eff["tester"] != 50.0 {
+			t.Errorf("expected coder=50.0, tester=50.0, got: %+v", eff)
+		}
+
+		// Subagent turn velocity: coder=5.0, tester=3.0, avg=4.0
+		vel := metrics.WorkflowEfficiency.SubagentTurnVelocity
+		if vel.AvgTurnsPerInvocation != 4.0 {
+			t.Errorf("expected avg turns 4.0, got %f", vel.AvgTurnsPerInvocation)
+		}
+		if vel.ByRole["coder"] != 5.0 || vel.ByRole["tester"] != 3.0 {
+			t.Errorf("expected coder=5.0, tester=3.0 in velocity, got: %+v", vel.ByRole)
+		}
+	})
+}
+
+func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T) {
+	t.Parallel()
+
+	pid := "ses-orch"
+	baseLedger := domain.AgenticFactLedger{
+		Invocations: []domain.InvocationFact{
+			{
+				ID:      "ses-orch",
+				Role:    "orchestrator",
+				Model:   "claude-3-sonnet",
+				CostUSD: 1.00,
+			},
+			{
+				ID:       "ses-custom",
+				ParentID: &pid,
+				Role:     "custom-bot",
+				Model:    "claude-3-sonnet",
+				CostUSD:  1.50,
+				Turns:    4,
+			},
+		},
+	}
+
+	t.Run("Scenario A: custom-bot mapped to orchestrator is excluded from subagent metrics", func(t *testing.T) {
+		t.Parallel()
+		mappings := domain.RoleMappings{
+			"custom-bot": "orchestrator",
+		}
+		metrics := domain.DeriveMetricsLedger(baseLedger, mappings)
+
+		if len(metrics.WorkflowEfficiency.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty RoleEffortDistributionPct, got: %+v",
+				metrics.WorkflowEfficiency.RoleEffortDistributionPct)
+		}
+		if metrics.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation != 0 {
+			t.Errorf("expected 0 avg turns, got %f",
+				metrics.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+	})
+
+	t.Run("Scenario B: custom-bot mapped to coder is included in subagent metrics with 100% effort", func(t *testing.T) {
+		t.Parallel()
+		mappings := domain.RoleMappings{
+			"custom-bot": "coder",
+		}
+		metrics := domain.DeriveMetricsLedger(baseLedger, mappings)
+
+		eff := metrics.WorkflowEfficiency.RoleEffortDistributionPct
+		if eff["coder"] != 100.0 {
+			t.Errorf("expected coder=100.0%% effort, got: %+v", eff)
+		}
+		if _, ok := eff["custom-bot"]; ok {
+			t.Errorf("custom-bot should not appear under unmapped name in RoleEffortDistributionPct")
+		}
+		vel := metrics.WorkflowEfficiency.SubagentTurnVelocity
+		if vel.AvgTurnsPerInvocation != 4.0 || vel.ByRole["coder"] != 4.0 {
+			t.Errorf("expected coder velocity 4.0, got: %+v", vel)
+		}
+	})
+
+	t.Run("Scenario C: custom-bot unmapped is treated as dynamic subagent and included in subagent metrics", func(t *testing.T) {
+		t.Parallel()
+		mappings := domain.RoleMappings{
+			"orchestrator": "orchestrator",
+			"build":        "orchestrator",
+		}
+		metrics := domain.DeriveMetricsLedger(baseLedger, mappings)
+
+		eff := metrics.WorkflowEfficiency.RoleEffortDistributionPct
+		if eff["custom-bot"] != 100.0 {
+			t.Errorf("expected custom-bot=100.0%% effort, got: %+v", eff)
+		}
+		vel := metrics.WorkflowEfficiency.SubagentTurnVelocity
+		if vel.AvgTurnsPerInvocation != 4.0 || vel.ByRole["custom-bot"] != 4.0 {
+			t.Errorf("expected custom-bot velocity 4.0, got: %+v", vel)
+		}
+	})
+}
+
+func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("strict immutability of input FactLedger and raw persona preservation in Facts", func(t *testing.T) {
+		t.Parallel()
+		parentID := "ses-orch-raw"
+		origInvs := []domain.InvocationFact{
+			{
+				ID:      "ses-orch-raw",
+				Role:    "build",
+				Model:   "claude-3-sonnet",
+				User:    "alice",
+				CostUSD: 1.50,
+				Turns:   2,
+				Tokens: domain.InvocationTokens{
+					Input: 2000, Output: 400, PeakContext: 12000,
+				},
+			},
+			{
+				ID:       "ses-sub-qa",
+				ParentID: &parentID,
+				Role:     "custom-qa",
+				Model:    "claude-3-opus",
+				User:     "bob",
+				CostUSD:  2.50,
+				Turns:    6,
+				Tokens: domain.InvocationTokens{
+					Input: 5000, Output: 1000, PeakContext: 30000,
+				},
+			},
+			{
+				ID:       "ses-sub-dyn",
+				ParentID: &parentID,
+				Role:     "security-auditor",
+				Model:    "gemini-2.5-pro",
+				User:     "charlie",
+				CostUSD:  1.00,
+				Turns:    4,
+				Tokens: domain.InvocationTokens{
+					Input: 3000, Output: 500, PeakContext: 25000,
+				},
+			},
+		}
+
+		origEvents := []domain.EventFact{
+			{
+				Timestamp: "2026-10-18T10:00:00Z",
+				SessionID: "ses-orch-raw",
+				Turn:      1,
+				Role:      "build",
+				EventType: domain.EventTypeTurnMessage,
+				Status:    "completed",
+			},
+			{
+				Timestamp: "2026-10-18T10:00:05Z",
+				SessionID: "ses-sub-qa",
+				Turn:      1,
+				Role:      "custom-qa",
+				EventType: domain.EventTypeTurnMessage,
+				Status:    "completed",
+			},
+			{
+				Timestamp: "2026-10-18T10:00:10Z",
+				SessionID: "ses-sub-dyn",
+				Turn:      1,
+				Role:      "security-auditor",
+				EventType: domain.EventTypeToolCall,
+				Status:    "completed",
+			},
+		}
+
+		tid := "AL-IMMUTABILITY"
+		factLedger := domain.AgenticFactLedger{
+			TicketID:    &tid,
+			Invocations: origInvs,
+			Events:      origEvents,
+		}
+
+		// Snapshot before derivation
+		invBefore0Role := factLedger.Invocations[0].Role
+		invBefore1Role := factLedger.Invocations[1].Role
+		invBefore2Role := factLedger.Invocations[2].Role
+		evBefore0Role := factLedger.Events[0].Role
+		evBefore1Role := factLedger.Events[1].Role
+		evBefore2Role := factLedger.Events[2].Role
+
+		mappings := domain.RoleMappings{
+			"build":     "orchestrator",
+			"custom-qa": "tester",
+		}
+
+		derived := domain.DeriveMetricsLedger(factLedger, mappings)
+
+		// 1. Assert input factLedger was not mutated in place
+		if factLedger.Invocations[0].Role != invBefore0Role || invBefore0Role != "build" {
+			t.Errorf("input factLedger.Invocations[0].Role mutated: got %q, want 'build'", factLedger.Invocations[0].Role)
+		}
+		if factLedger.Invocations[1].Role != invBefore1Role || invBefore1Role != "custom-qa" {
+			t.Errorf("input factLedger.Invocations[1].Role mutated: got %q, want 'custom-qa'", factLedger.Invocations[1].Role)
+		}
+		if factLedger.Invocations[2].Role != invBefore2Role || invBefore2Role != "security-auditor" {
+			t.Errorf("input factLedger.Invocations[2].Role mutated: got %q, want 'security-auditor'", factLedger.Invocations[2].Role)
+		}
+		if factLedger.Events[0].Role != evBefore0Role || evBefore0Role != "build" {
+			t.Errorf("input factLedger.Events[0].Role mutated: got %q, want 'build'", factLedger.Events[0].Role)
+		}
+		if factLedger.Events[1].Role != evBefore1Role || evBefore1Role != "custom-qa" {
+			t.Errorf("input factLedger.Events[1].Role mutated: got %q, want 'custom-qa'", factLedger.Events[1].Role)
+		}
+		if factLedger.Events[2].Role != evBefore2Role || evBefore2Role != "security-auditor" {
+			t.Errorf("input factLedger.Events[2].Role mutated: got %q, want 'security-auditor'", factLedger.Events[2].Role)
+		}
+
+		// 2. Assert derived.Facts retains the exact raw persona strings
+		if derived.Facts.Invocations[0].Role != "build" {
+			t.Errorf("derived.Facts.Invocations[0].Role is not raw 'build', got %q", derived.Facts.Invocations[0].Role)
+		}
+		if derived.Facts.Invocations[1].Role != "custom-qa" {
+			t.Errorf("derived.Facts.Invocations[1].Role is not raw 'custom-qa', got %q", derived.Facts.Invocations[1].Role)
+		}
+		if derived.Facts.Invocations[2].Role != "security-auditor" {
+			t.Errorf("derived.Facts.Invocations[2].Role is not raw 'security-auditor', got %q", derived.Facts.Invocations[2].Role)
+		}
+		if derived.Facts.Events[0].Role != "build" {
+			t.Errorf("derived.Facts.Events[0].Role is not raw 'build', got %q", derived.Facts.Events[0].Role)
+		}
+		if derived.Facts.Events[1].Role != "custom-qa" {
+			t.Errorf("derived.Facts.Events[1].Role is not raw 'custom-qa', got %q", derived.Facts.Events[1].Role)
+		}
+		if derived.Facts.Events[2].Role != "security-auditor" {
+			t.Errorf("derived.Facts.Events[2].Role is not raw 'security-auditor', got %q", derived.Facts.Events[2].Role)
+		}
+
+		// 3. Assert derived aggregates use mapped roles (orchestrator, tester) and dynamic subagent (security-auditor)
+		roleMap := make(map[string]domain.RoleMetric)
+		for _, r := range derived.Roles {
+			roleMap[r.Role] = r
+		}
+		if _, ok := roleMap["build"]; ok {
+			t.Errorf("unmapped raw role 'build' leaked into derived.Roles: %+v", derived.Roles)
+		}
+		if _, ok := roleMap["custom-qa"]; ok {
+			t.Errorf("unmapped raw role 'custom-qa' leaked into derived.Roles: %+v", derived.Roles)
+		}
+		if orch, ok := roleMap["orchestrator"]; !ok || orch.Invocations != 1 || orch.CostUSD != 1.50 {
+			t.Errorf("expected mapped orchestrator with 1 inv and $1.50 cost, got: %+v", orch)
+		}
+		if tester, ok := roleMap["tester"]; !ok || tester.Invocations != 1 || tester.CostUSD != 2.50 {
+			t.Errorf("expected mapped tester with 1 inv and $2.50 cost, got: %+v", tester)
+		}
+		if sec, ok := roleMap["security-auditor"]; !ok || sec.Invocations != 1 || sec.CostUSD != 1.00 {
+			t.Errorf("expected dynamic subagent security-auditor with 1 inv and $1.00 cost, got: %+v", sec)
+		}
+
+		// 4. Assert subagent effort distribution excludes orchestrator, includes tester and security-auditor
+		effDist := derived.WorkflowEfficiency.RoleEffortDistributionPct
+		if _, ok := effDist["orchestrator"]; ok {
+			t.Errorf("orchestrator must be excluded from subagent effort distribution: %+v", effDist)
+		}
+		if _, ok := effDist["build"]; ok {
+			t.Errorf("raw build must not appear in effort distribution: %+v", effDist)
+		}
+		// total subagent cost = 2.50 + 1.00 = 3.50
+		// tester = 2.50/3.50 = 71.4%
+		// security-auditor = 1.00/3.50 = 28.6%
+		if math.Abs(effDist["tester"]-71.4) > 0.1 {
+			t.Errorf("expected tester effort ~71.4%%, got %f", effDist["tester"])
+		}
+		if math.Abs(effDist["security-auditor"]-28.6) > 0.1 {
+			t.Errorf("expected security-auditor effort ~28.6%%, got %f", effDist["security-auditor"])
+		}
+	})
+
+	t.Run("zero tokens, zero cost, zero duration, empty ledgers resilience", func(t *testing.T) {
+		t.Parallel()
+
+		// Case A: completely empty fact ledger
+		emptyLedger := domain.AgenticFactLedger{}
+		derivedEmpty := domain.DeriveMetricsLedger(emptyLedger)
+
+		if derivedEmpty.Totals.Invocations != 0 {
+			t.Errorf("expected 0 invocations, got %d", derivedEmpty.Totals.Invocations)
+		}
+		if derivedEmpty.Totals.CostUSD != 0.0 {
+			t.Errorf("expected 0.0 cost, got %f", derivedEmpty.Totals.CostUSD)
+		}
+		if derivedEmpty.Totals.ContextHealth != string(domain.ContextHealthHealthy) {
+			t.Errorf("expected HEALTHY context health for empty ledger, got %s", derivedEmpty.Totals.ContextHealth)
+		}
+		if derivedEmpty.WorkflowEfficiency.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected 'none' subagents peak role, got %s", derivedEmpty.WorkflowEfficiency.ContextWindowHealth.SubagentsPeakRole)
+		}
+		if derivedEmpty.WorkflowEfficiency.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected 0 subagents peak tokens, got %d", derivedEmpty.WorkflowEfficiency.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if len(derivedEmpty.Roles) != 0 || len(derivedEmpty.Models) != 0 || len(derivedEmpty.Threads) != 0 {
+			t.Errorf("expected empty slices for empty ledger, got roles=%d models=%d threads=%d",
+				len(derivedEmpty.Roles), len(derivedEmpty.Models), len(derivedEmpty.Threads))
+		}
+
+		// Case B: Invocations with all zeroes across metrics
+		zeroInvLedger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:                    "ses-zero-1",
+					Role:                  "build",
+					Model:                 "zero-model",
+					ActiveDurationSeconds: 0,
+					CostUSD:               0.0,
+					Turns:                 0,
+					Tokens: domain.InvocationTokens{
+						Input:       0,
+						Output:      0,
+						CacheRead:   0,
+						Reasoning:   0,
+						PeakContext: 0,
+					},
+				},
+				{
+					ID:                    "ses-zero-2",
+					Role:                  "coder",
+					ActiveDurationSeconds: 0,
+					CostUSD:               0.0,
+					Turns:                 0,
+					Tokens: domain.InvocationTokens{
+						Input:       0,
+						Output:      0,
+						CacheRead:   0,
+						Reasoning:   0,
+						PeakContext: 0,
+					},
+				},
+			},
+		}
+
+		mappings := domain.RoleMappings{"build": "orchestrator"}
+		derivedZero := domain.DeriveMetricsLedger(zeroInvLedger, mappings)
+
+		if derivedZero.Totals.Invocations != 2 {
+			t.Errorf("expected 2 invocations, got %d", derivedZero.Totals.Invocations)
+		}
+		if derivedZero.Totals.CostUSD != 0.0 {
+			t.Errorf("expected 0.0 cost, got %f", derivedZero.Totals.CostUSD)
+		}
+		if derivedZero.Totals.CacheHitRatePct != 0.0 {
+			t.Errorf("expected 0.0 cache hit rate, got %f", derivedZero.Totals.CacheHitRatePct)
+		}
+		if derivedZero.Totals.ContextHealth != string(domain.ContextHealthHealthy) {
+			t.Errorf("expected HEALTHY context health, got %s", derivedZero.Totals.ContextHealth)
+		}
+		if len(derivedZero.WorkflowEfficiency.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty effort distribution on zero cost, got %+v", derivedZero.WorkflowEfficiency.RoleEffortDistributionPct)
+		}
+		if derivedZero.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+			t.Errorf("expected 0.0 avg turns, got %f", derivedZero.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+	})
+
+	t.Run("variadic role mappings handling: nil, empty, and omitted mappings", func(t *testing.T) {
+		t.Parallel()
+		parentID := "ses-root"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "ses-root", Role: "build", CostUSD: 1.0},
+				{ID: "ses-child", ParentID: &parentID, Role: "coder", CostUSD: 2.0, Turns: 3},
+			},
+		}
+
+		// Omitted variadic: uses DefaultProjectConfig().RoleMappings where build -> orchestrator
+		derivedDefault := domain.DeriveMetricsLedger(ledger)
+		if len(derivedDefault.Roles) != 2 || derivedDefault.Roles[0].Role != "orchestrator" {
+			t.Errorf("expected default mapping to map build to orchestrator, got: %+v", derivedDefault.Roles)
+		}
+
+		// Nil mapping: also falls back to DefaultProjectConfig().RoleMappings
+		derivedNil := domain.DeriveMetricsLedger(ledger, nil)
+		if len(derivedNil.Roles) != 2 || derivedNil.Roles[0].Role != "orchestrator" {
+			t.Errorf("expected nil mapping to fallback to default, got: %+v", derivedNil.Roles)
+		}
+
+		// Custom mapping overriding default build: maps build to custom-builder
+		derivedOverride := domain.DeriveMetricsLedger(ledger, domain.RoleMappings{"build": "custom-builder"})
+		if len(derivedOverride.Roles) != 2 || derivedOverride.Roles[1].Role != "custom-builder" {
+			t.Errorf("expected custom mapping to override build to 'custom-builder', got: %+v", derivedOverride.Roles)
+		}
+
+		// Empty mapping: build resolves via domain default to orchestrator, while unmapped custom role retains raw name
+		ledgerWithCustom := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "ses-custom", Role: "specialist-agent", CostUSD: 3.0},
+			},
+		}
+		derivedEmptyMap := domain.DeriveMetricsLedger(ledgerWithCustom, domain.RoleMappings{})
+		if len(derivedEmptyMap.Roles) != 1 || derivedEmptyMap.Roles[0].Role != "specialist-agent" {
+			t.Errorf("expected empty mapping to preserve unmapped custom role 'specialist-agent', got: %+v", derivedEmptyMap.Roles)
+		}
+	})
+
+	t.Run("subagent classification matrix under role mappings", func(t *testing.T) {
+		t.Parallel()
+		parentID := "ses-orch"
+		cases := []struct {
+			name               string
+			rawRole            string
+			parentID           *string
+			targetRole         domain.AgentRole
+			expectSubagentCost bool
+			expectTurnCounted  bool
+		}{
+			{
+				name:               "root session with raw build mapped to orchestrator",
+				rawRole:            "build",
+				parentID:           nil,
+				targetRole:         domain.RoleOrchestrator,
+				expectSubagentCost: false,
+				expectTurnCounted:  false,
+			},
+			{
+				name:               "child session with raw build mapped to orchestrator",
+				rawRole:            "build",
+				parentID:           &parentID,
+				targetRole:         domain.RoleOrchestrator,
+				expectSubagentCost: false,
+				expectTurnCounted:  false,
+			},
+			{
+				name:               "child session with custom-worker mapped to coder",
+				rawRole:            "custom-worker",
+				parentID:           &parentID,
+				targetRole:         domain.RoleCoder,
+				expectSubagentCost: true,
+				expectTurnCounted:  true,
+			},
+			{
+				name:               "child session with unmapped custom role treated as dynamic subagent",
+				rawRole:            "security-auditor",
+				parentID:           &parentID,
+				targetRole:         "security-auditor",
+				expectSubagentCost: true,
+				expectTurnCounted:  true,
+			},
+			{
+				name:               "root session with unmapped custom subagent role: cost counted, turns excluded",
+				rawRole:            "independent-agent",
+				parentID:           nil,
+				targetRole:         "independent-agent",
+				expectSubagentCost: true,
+				expectTurnCounted:  false,
+			},
+		}
+
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				factLedger := domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							ID:       "ses-test",
+							ParentID: tc.parentID,
+							Role:     tc.rawRole,
+							CostUSD:  1.50,
+							Turns:    5,
+							Tokens: domain.InvocationTokens{
+								Input: 1000, Output: 200, PeakContext: 10000,
+							},
+						},
+					},
+				}
+
+				mappings := domain.RoleMappings{
+					tc.rawRole: string(tc.targetRole),
+				}
+				metrics := domain.DeriveMetricsLedger(factLedger, mappings)
+
+				targetStr := string(tc.targetRole)
+				_, hasSubCost := metrics.WorkflowEfficiency.RoleEffortDistributionPct[targetStr]
+				if hasSubCost != tc.expectSubagentCost {
+					t.Errorf("RoleEffortDistributionPct[%q] presence = %v, want %v", targetStr, hasSubCost, tc.expectSubagentCost)
+				}
+
+				turns, hasTurns := metrics.WorkflowEfficiency.SubagentTurnVelocity.ByRole[targetStr]
+				if tc.expectTurnCounted {
+					if !hasTurns || turns != 5.0 {
+						t.Errorf("expected 5.0 turns for %s, got: %+v", targetStr, metrics.WorkflowEfficiency.SubagentTurnVelocity)
+					}
+				} else {
+					if hasTurns {
+						t.Errorf("expected no turns recorded for %s, got %f", targetStr, turns)
+					}
+				}
+			})
+		}
+	})
 }

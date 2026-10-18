@@ -787,6 +787,124 @@ describe('TicketDeepDive View Component', () => {
     expect(emojiRegex.test(renderedText)).toBe(false);
   });
 
+  it('renders custom agent roles and arbitrary models in autopsy tables and velocity', async () => {
+    const customRoleLedger = {
+      ...mockAgenticMetricsLedgers['AL-1']!,
+      ticket_id: 'AL-CUSTOM',
+      workflow_efficiency: {
+        ...mockAgenticMetricsLedgers['AL-1']!.workflow_efficiency,
+        subagent_turn_velocity: {
+          avg_turns_per_invocation: 5.5,
+          peak_turns: 8,
+          by_role: {
+            advisor: 4.0,
+            po: 7.0,
+          },
+        },
+        context_window_health: {
+          healthy_ceiling_tokens: 200000,
+          status: 'HEALTHY' as const,
+          orchestrator_peak_tokens: 60000,
+          orchestrator_saturation_pct: 30.0,
+          subagents_peak_tokens: 150000,
+          subagents_peak_role: 'advisor',
+          compactions: 0,
+          peak_by_role: {
+            orchestrator: 60000,
+            advisor: 150000,
+            po: 80000,
+          },
+        },
+      },
+      roles: [
+        {
+          role: 'orchestrator',
+          invocations: 1,
+          input_tokens: 10000,
+          output_tokens: 2000,
+          cache_read_tokens: 5000,
+          cache_hit_rate_pct: 33.3,
+          cost_usd: 1.0,
+          peak_context_tokens: 60000,
+          context_health: 'HEALTHY',
+        },
+        {
+          role: 'advisor',
+          invocations: 2,
+          input_tokens: 20000,
+          output_tokens: 4000,
+          cache_read_tokens: 10000,
+          cache_hit_rate_pct: 33.3,
+          cost_usd: 2.0,
+          peak_context_tokens: 150000,
+          context_health: 'HEALTHY',
+        },
+        {
+          role: 'po',
+          invocations: 1,
+          input_tokens: 8000,
+          output_tokens: 1000,
+          cache_read_tokens: 4000,
+          cache_hit_rate_pct: 33.3,
+          cost_usd: 0.8,
+          peak_context_tokens: 80000,
+          context_health: 'HEALTHY',
+        },
+      ],
+      models: [
+        {
+          model: 'claude-3-7-sonnet',
+          invocations: 2,
+          input_tokens: 20000,
+          output_tokens: 4000,
+          cache_read_tokens: 10000,
+          cache_hit_rate_pct: 33.3,
+          cost_usd: 2.0,
+          peak_context_tokens: 150000,
+          context_health: 'HEALTHY',
+        },
+        {
+          model: 'gemini-2.5-pro',
+          invocations: 2,
+          input_tokens: 18000,
+          output_tokens: 3000,
+          cache_read_tokens: 9000,
+          cache_hit_rate_pct: 33.3,
+          cost_usd: 1.8,
+          peak_context_tokens: 80000,
+          context_health: 'HEALTHY',
+        },
+      ],
+    };
+
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: [customRoleLedger],
+      isMock: true,
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+      data: {
+        ledger: customRoleLedger,
+        artifacts: { ticket_id: 'AL-CUSTOM', contract_content: null, summary_content: null },
+        anomalies: [],
+      },
+      isMock: true,
+    });
+
+    render(<TicketDeepDive selectedTicketId="AL-CUSTOM" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('SDLC Iterations')).toBeInTheDocument();
+    });
+
+    // Custom roles rendered in turn velocity and role breakdown
+    expect(screen.getAllByText('advisor').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('po').length).toBeGreaterThanOrEqual(2);
+
+    // Arbitrary models rendered in model breakdown table
+    expect(screen.getByText('claude-3-7-sonnet')).toBeInTheDocument();
+    expect(screen.getByText('gemini-2.5-pro')).toBeInTheDocument();
+  });
+
   describe('Waterfall, Legacy Fallback, and AnomalyDrawer Integration', () => {
     it('renders legacy v1 fallback banner when viewing a ticket whose events array is empty', async () => {
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({

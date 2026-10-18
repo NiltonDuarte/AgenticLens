@@ -456,3 +456,183 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 		}
 	})
 }
+
+func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
+	t.Parallel()
+
+	t.Run("arbitrary custom roles and model names preserved without mutation", func(t *testing.T) {
+		t.Parallel()
+		customCases := []struct {
+			role  string
+			model string
+		}{
+			{role: "advisor", model: "claude-3-7-sonnet"},
+			{role: "po", model: "gemini-2.5-pro"},
+			{role: "researcher", model: "deepseek-r1"},
+			{role: "security-auditor", model: "gpt-4o-custom"},
+			{role: "domain-expert", model: "meta-llama-3.3-70b"},
+		}
+
+		for _, tc := range customCases {
+			dto := adapters.InvocationFactDTO{
+				ID:    "inv-1",
+				Role:  tc.role,
+				Model: tc.model,
+				User:  "test-user",
+			}
+
+			dom := dto.ToDomain()
+			if dom.Role != tc.role {
+				t.Errorf("expected role %q preserved, got %q", tc.role, dom.Role)
+			}
+			if dom.Model != tc.model {
+				t.Errorf("expected model %q preserved, got %q", tc.model, dom.Model)
+			}
+		}
+	})
+
+	t.Run("empty role model and user fall back to domain defaults", func(t *testing.T) {
+		t.Parallel()
+		dto := adapters.InvocationFactDTO{
+			ID:    "inv-empty",
+			Role:  "",
+			Model: "",
+			User:  "",
+		}
+
+		dom := dto.ToDomain()
+		if dom.Role != "orchestrator" {
+			t.Errorf("expected empty role fallback to 'orchestrator', got %q", dom.Role)
+		}
+		if dom.Model != "default" {
+			t.Errorf("expected empty model fallback to 'default', got %q", dom.Model)
+		}
+		if dom.User != "unknown" {
+			t.Errorf("expected empty user fallback to 'unknown', got %q", dom.User)
+		}
+	})
+
+	t.Run("json unmarshaling with arbitrary roles and models", func(t *testing.T) {
+		t.Parallel()
+		jsonBlob := `{
+			"id": "ses-dyn-1",
+			"role": "security-auditor",
+			"model": "claude-3-7-sonnet-custom",
+			"user": "alice",
+			"cost_usd": 1.75,
+			"turns": 6,
+			"tokens": {
+				"input": 15000,
+				"output": 3000,
+				"cache_read": 8000,
+				"reasoning": 1000,
+				"peak_context": 115000
+			}
+		}`
+
+		var dto adapters.InvocationFactDTO
+		if err := json.Unmarshal([]byte(jsonBlob), &dto); err != nil {
+			t.Fatalf("unmarshal error: %v", err)
+		}
+
+		dom := dto.ToDomain()
+		if dom.Role != "security-auditor" {
+			t.Errorf("expected role 'security-auditor', got %q", dom.Role)
+		}
+		if dom.Model != "claude-3-7-sonnet-custom" {
+			t.Errorf("expected model 'claude-3-7-sonnet-custom', got %q", dom.Model)
+		}
+		if dom.CostUSD != 1.75 {
+			t.Errorf("expected cost 1.75, got %f", dom.CostUSD)
+		}
+		if dom.Tokens.PeakContext != 115000 {
+			t.Errorf("expected peak context 115000, got %d", dom.Tokens.PeakContext)
+		}
+	})
+}
+
+func TestEventFactDTO_DynamicRoles(t *testing.T) {
+	t.Parallel()
+
+	t.Run("custom roles preserved in event stream", func(t *testing.T) {
+		t.Parallel()
+		dto := adapters.EventFactDTO{
+			Timestamp: "2026-10-18T12:00:00Z",
+			SessionID: "s-1",
+			Turn:      1,
+			Role:      "security-auditor",
+			EventType: "tool_call",
+			Status:    "completed",
+		}
+
+		dom := dto.ToDomain()
+		if dom.Role != "security-auditor" {
+			t.Errorf("expected role 'security-auditor', got %q", dom.Role)
+		}
+	})
+
+	t.Run("empty role and status default safely", func(t *testing.T) {
+		t.Parallel()
+		dto := adapters.EventFactDTO{
+			Timestamp: "2026-10-18T12:00:00Z",
+			SessionID: "s-1",
+			Turn:      1,
+			Role:      "",
+			EventType: "turn_start",
+			Status:    "",
+		}
+
+		dom := dto.ToDomain()
+		if dom.Role != "orchestrator" {
+			t.Errorf("expected default 'orchestrator', got %q", dom.Role)
+		}
+		if dom.Status != "completed" {
+			t.Errorf("expected default 'completed', got %q", dom.Status)
+		}
+	})
+}
+
+func TestAgenticMetricsLedgerDTO_DynamicRolesAndModelsSerialization(t *testing.T) {
+	t.Parallel()
+	tid := "AL-DYN-SERIAL"
+	ledger := domain.AgenticMetricsLedger{
+		TicketID:  &tid,
+		UpdatedAt: "2026-10-18T12:00:00Z",
+		Roles: []domain.RoleMetric{
+			{Role: "orchestrator", CostUSD: 1.0},
+			{Role: "coder", CostUSD: 2.0},
+			{Role: "advisor", CostUSD: 1.5},
+			{Role: "po", CostUSD: 0.5},
+		},
+		Models: []domain.ModelMetric{
+			{Model: "claude-3-7-sonnet", CostUSD: 3.5},
+			{Model: "gemini-2.5-pro", CostUSD: 1.5},
+		},
+	}
+
+	dto := adapters.SerializeLedger(ledger)
+	data, err := json.Marshal(dto)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	var parsed adapters.AgenticMetricsLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	roundDom := parsed.ToDomain()
+	if len(roundDom.Roles) != 4 {
+		t.Fatalf("expected 4 roles, got %d", len(roundDom.Roles))
+	}
+	if roundDom.Roles[2].Role != "advisor" || roundDom.Roles[3].Role != "po" {
+		t.Errorf("custom roles corrupted during serialization: %+v", roundDom.Roles)
+	}
+
+	if len(roundDom.Models) != 2 {
+		t.Fatalf("expected 2 models, got %d", len(roundDom.Models))
+	}
+	if roundDom.Models[0].Model != "claude-3-7-sonnet" || roundDom.Models[1].Model != "gemini-2.5-pro" {
+		t.Errorf("custom models corrupted during serialization: %+v", roundDom.Models)
+	}
+}

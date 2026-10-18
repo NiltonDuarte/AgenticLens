@@ -2408,3 +2408,75 @@ func TestCLIHelpCommand(t *testing.T) {
 		}
 	})
 }
+
+func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// 1. Setup SQLite database with session agent 'build'
+	dbPath := filepath.Join(tempDir, "test.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(`
+		CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+		CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		INSERT INTO session VALUES ('ses_root_raw', NULL, 'build', 'claude-3-sonnet', 'Task AL-24 Feature', 1000, 2000);
+		INSERT INTO message VALUES ('msg_1', 'ses_root_raw', 1100, 1900, '{"role":"assistant","tokens":{"input":1000,"output":200},"cost":0.05}');
+	`)
+	if err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	db.Close()
+
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+	summaryMD := filepath.Join(tempDir, "SUMMARY.md")
+
+	cmd := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", dbPath,
+		"--ticket-id", "AL-24",
+		"--json-output", outJSON,
+		"--append", summaryMD,
+	)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+	}
+
+	// 2. Parse generated JSON: raw invocation role must be 'build'
+	jsonData, err := os.ReadFile(outJSON)
+	if err != nil {
+		t.Fatalf("reading JSON output failed: %v", err)
+	}
+	var rawLedger domain.AgenticFactLedger
+	if err := json.Unmarshal(jsonData, &rawLedger); err != nil {
+		t.Fatalf("unmarshaling JSON failed: %v", err)
+	}
+	if len(rawLedger.Invocations) != 1 {
+		t.Fatalf("expected 1 invocation in raw facts, got %d", len(rawLedger.Invocations))
+	}
+	if rawLedger.Invocations[0].Role != "build" {
+		t.Errorf("expected raw invocation role 'build', got %q", rawLedger.Invocations[0].Role)
+	}
+
+	// 3. Read summary markdown: table must contain orchestrator and NO row for build
+	mdData, err := os.ReadFile(summaryMD)
+	if err != nil {
+		t.Fatalf("reading summary markdown failed: %v", err)
+	}
+	mdContent := string(mdData)
+
+	if !strings.Contains(mdContent, "| **orchestrator** |") {
+		t.Errorf("expected summary markdown to contain '| **orchestrator** |', got:\n%s", mdContent)
+	}
+	if strings.Contains(mdContent, "| **build** |") {
+		t.Errorf("expected summary markdown NOT to contain '| **build** |', got:\n%s", mdContent)
+	}
+}

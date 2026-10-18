@@ -171,7 +171,7 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 		if inv.Tokens.PeakContext > rolePeaks[inv.Role] {
 			rolePeaks[inv.Role] = inv.Tokens.PeakContext
 		}
-		if inv.ParentID != nil {
+		if inv.ParentID != nil && IsSubagentRole(inv.Role) {
 			roleTurns[inv.Role] = append(roleTurns[inv.Role], inv.Turns)
 		}
 		totReasoning += inv.Tokens.Reasoning
@@ -193,22 +193,28 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 
 	subCosts := make(map[string]float64)
 	var totSubCost float64
-	for _, r := range SubagentRoleOrder {
-		if c, ok := roleCosts[r]; ok {
+	for r, c := range roleCosts {
+		if IsSubagentRole(r) {
 			subCosts[r] = c
 			totSubCost += c
 		}
 	}
 
 	roleEffortDistributionPct := make(map[string]float64)
-	for _, r := range SubagentRoleOrder {
-		if c, ok := subCosts[r]; ok && totSubCost > 0 {
-			roleEffortDistributionPct[r] = math.Round(c/totSubCost*1000.0) / 10.0
+	if totSubCost > 0 {
+		for r, c := range subCosts {
+			if c > 0 {
+				roleEffortDistributionPct[r] = math.Round(c/totSubCost*1000.0) / 10.0
+			}
 		}
 	}
 
 	var allSubTurns []int64
-	for _, r := range SubagentRoleOrder {
+	var subTurnRoles []string
+	for r := range roleTurns {
+		subTurnRoles = append(subTurnRoles, r)
+	}
+	for _, r := range OrderSubagentRoles(subTurnRoles) {
 		if turns, ok := roleTurns[r]; ok {
 			allSubTurns = append(allSubTurns, turns...)
 		}
@@ -228,8 +234,8 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 	}
 
 	velByRole := make(map[string]float64)
-	for _, r := range SubagentRoleOrder {
-		if turns, ok := roleTurns[r]; ok && len(turns) > 0 {
+	for r, turns := range roleTurns {
+		if len(turns) > 0 {
 			var rSum int64
 			for _, t := range turns {
 				rSum += t
@@ -295,7 +301,13 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 	var subPeak int64
 	subRoleStr := "none"
 	var foundSubRole bool
-	for _, r := range SubagentRoleOrder {
+	var candidateSubRoles []string
+	for r := range rolePeaks {
+		if IsSubagentRole(r) {
+			candidateSubRoles = append(candidateSubRoles, r)
+		}
+	}
+	for _, r := range OrderSubagentRoles(candidateSubRoles) {
 		if peak, ok := rolePeaks[r]; ok {
 			if !foundSubRole || peak > subPeak {
 				subPeak = peak
@@ -344,26 +356,11 @@ func ComputeRoleMetrics(invocations []InvocationFact) []RoleMetric {
 		byRole[inv.Role] = append(byRole[inv.Role], inv)
 	}
 
-	canonicalSet := make(map[string]struct{})
-	for _, r := range CanonicalRoleOrder {
-		canonicalSet[r] = struct{}{}
-	}
-
-	var orderedRoles []string
-	for _, r := range CanonicalRoleOrder {
-		if _, ok := byRole[r]; ok {
-			orderedRoles = append(orderedRoles, r)
-		}
-	}
-
-	var customRoles []string
+	var roles []string
 	for r := range byRole {
-		if _, ok := canonicalSet[r]; !ok {
-			customRoles = append(customRoles, r)
-		}
+		roles = append(roles, r)
 	}
-	sort.Strings(customRoles)
-	orderedRoles = append(orderedRoles, customRoles...)
+	orderedRoles := OrderRoles(roles)
 
 	var metrics []RoleMetric
 	for _, role := range orderedRoles {
@@ -386,7 +383,8 @@ func ComputeRoleMetrics(invocations []InvocationFact) []RoleMetric {
 	return metrics
 }
 
-// ComputeModelMetrics calculates aggregated metrics grouped by model, sorted by cost descending.
+// ComputeModelMetrics calculates aggregated metrics grouped by model, sorted by cost descending
+// with secondary tie-breaking on model name ascending.
 func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
 	byModel := make(map[string][]InvocationFact)
 	for _, inv := range invocations {
@@ -412,7 +410,10 @@ func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
 	}
 
 	sort.Slice(metrics, func(i, j int) bool {
-		return metrics[i].CostUSD > metrics[j].CostUSD
+		if metrics[i].CostUSD != metrics[j].CostUSD {
+			return metrics[i].CostUSD > metrics[j].CostUSD
+		}
+		return metrics[i].Model < metrics[j].Model
 	})
 
 	return metrics
@@ -459,11 +460,6 @@ func ComputeThreadSummaries(invocations []InvocationFact) []ThreadExecutionRecor
 		threadGroups[rootID] = append(threadGroups[rootID], inv)
 	}
 
-	canonicalSet := make(map[string]struct{})
-	for _, r := range CanonicalRoleOrder {
-		canonicalSet[r] = struct{}{}
-	}
-
 	var records []ThreadExecutionRecord
 	for rootID, threadInvs := range threadGroups {
 		threadUser, ok := idToUser[rootID]
@@ -482,21 +478,11 @@ func ComputeThreadSummaries(invocations []InvocationFact) []ThreadExecutionRecor
 			byRole[inv.Role] = append(byRole[inv.Role], inv)
 		}
 
-		var orderedRoles []string
-		for _, r := range CanonicalRoleOrder {
-			if _, exists := byRole[r]; exists {
-				orderedRoles = append(orderedRoles, r)
-			}
-		}
-
-		var customRoles []string
+		var threadRoles []string
 		for r := range byRole {
-			if _, exists := canonicalSet[r]; !exists {
-				customRoles = append(customRoles, r)
-			}
+			threadRoles = append(threadRoles, r)
 		}
-		sort.Strings(customRoles)
-		orderedRoles = append(orderedRoles, customRoles...)
+		orderedRoles := OrderRoles(threadRoles)
 
 		var roleMetrics []ThreadRoleMetric
 		for _, role := range orderedRoles {
@@ -545,7 +531,10 @@ func ComputeThreadSummaries(invocations []InvocationFact) []ThreadExecutionRecor
 			}
 
 			sort.Slice(modelMetrics, func(i, j int) bool {
-				return modelMetrics[i].CostUSD > modelMetrics[j].CostUSD
+				if modelMetrics[i].CostUSD != modelMetrics[j].CostUSD {
+					return modelMetrics[i].CostUSD > modelMetrics[j].CostUSD
+				}
+				return modelMetrics[i].Model < modelMetrics[j].Model
 			})
 
 			roleMetrics = append(roleMetrics, ThreadRoleMetric{
@@ -570,13 +559,37 @@ func ComputeThreadSummaries(invocations []InvocationFact) []ThreadExecutionRecor
 }
 
 // DeriveMetricsLedger projects all aggregations from an atomic fact ledger.
-func DeriveMetricsLedger(factLedger AgenticFactLedger) AgenticMetricsLedger {
-	totals := ComputeTotals(factLedger.Invocations)
-	eff := ComputeWorkflowEfficiency(factLedger)
-	roles := ComputeRoleMetrics(factLedger.Invocations)
-	models := ComputeModelMetrics(factLedger.Invocations)
-	threads := ComputeThreadSummaries(factLedger.Invocations)
-	anomalies := DetectAnomalies(factLedger)
+func DeriveMetricsLedger(factLedger AgenticFactLedger, roleMappings ...RoleMappings) AgenticMetricsLedger {
+	mappings := DefaultProjectConfig().RoleMappings
+	if len(roleMappings) > 0 && roleMappings[0] != nil {
+		mappings = roleMappings[0]
+	}
+
+	mappedInvocations := make([]InvocationFact, len(factLedger.Invocations))
+	for i, inv := range factLedger.Invocations {
+		mappedInvocations[i] = inv
+		mappedInvocations[i].Role = string(mappings.ResolveRole(inv.Role))
+	}
+
+	var mappedEvents []EventFact
+	if factLedger.Events != nil {
+		mappedEvents = make([]EventFact, len(factLedger.Events))
+		for i, ev := range factLedger.Events {
+			mappedEvents[i] = ev
+			mappedEvents[i].Role = string(mappings.ResolveRole(ev.Role))
+		}
+	}
+
+	mappedFactLedger := factLedger
+	mappedFactLedger.Invocations = mappedInvocations
+	mappedFactLedger.Events = mappedEvents
+
+	totals := ComputeTotals(mappedInvocations)
+	eff := ComputeWorkflowEfficiency(mappedFactLedger)
+	roles := ComputeRoleMetrics(mappedInvocations)
+	models := ComputeModelMetrics(mappedInvocations)
+	threads := ComputeThreadSummaries(mappedInvocations)
+	anomalies := DetectAnomalies(mappedFactLedger)
 
 	return AgenticMetricsLedger{
 		TicketID:           factLedger.TicketID,

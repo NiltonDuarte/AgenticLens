@@ -52,3 +52,52 @@ export function getHealthStatusColor(status: string): string {
       return STATUS_COLORS.UNKNOWN;
   }
 }
+
+export const CANONICAL_ROLE_COLORS: Readonly<Record<string, string>> = {
+  orchestrator: THEME_COLORS.purple,
+  planner: THEME_COLORS.cyan,
+  coder: THEME_COLORS.green,
+  tester: THEME_COLORS.yellow,
+  reviewer: THEME_COLORS.blue,
+} as const;
+
+export const DYNAMIC_PALETTE: readonly string[] = [
+  '#ec4899',
+  '#14b8a6',
+  '#f43f5e',
+  '#84cc16',
+  '#a855f7',
+  '#0ea5e9',
+  '#eab308',
+  '#6366f1',
+  '#d946ef',
+  '#10b981',
+  '#f97316',
+  '#06b6d4',
+] as const;
+
+export function hashStringToColor(str: string): string {
+  const normalized = str.trim().toLowerCase();
+  if (normalized === '') {
+    return THEME_COLORS.slate;
+  }
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i++) {
+    hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % DYNAMIC_PALETTE.length;
+  return DYNAMIC_PALETTE[index] ?? THEME_COLORS.slate;
+}
+
+export function getRoleColor(role: string): string {
+  const normalized = role.trim().toLowerCase();
+  if (normalized in CANONICAL_ROLE_COLORS) {
+    return CANONICAL_ROLE_COLORS[normalized]!;
+  }
+  return hashStringToColor(normalized);
+}
+
+export function getModelColor(model: string): string {
+  return hashStringToColor(model);
+}

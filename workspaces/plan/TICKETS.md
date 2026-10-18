@@ -19,12 +19,12 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
 - `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 - `workspaces/plan/done/AL-23 natural ticket identifier ordering and sortable tables.md`
+- `workspaces/plan/done/AL-24 dynamic role and model aggregations and presentation.md`
 - `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
 - `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 - `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-- `workspaces/plan/to-do/AL-24 dynamic role and model aggregations and presentation.md`
 - `workspaces/plan/to-do/AL-25 contextual hover information icons for cards and tables.md`
 - `workspaces/plan/to-do/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
 - `workspaces/plan/to-do/AL-27 metric progression custom window one-day range and hourly granularity.md`
@@ -35,14 +35,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Ready
-
-- **AL-24**: Dynamic Role and Model Aggregations and Presentation
-  - **Subsystem**: Domain / Presentation / Adapters / Tests
-  - **Phase**: Phase 5
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-24 dynamic role and model aggregations and presentation.md`
 
 - **AL-25**: Contextual Hover Information Icons for Cards and Tables
   - **Subsystem**: Presentation / Components / Tests
@@ -123,6 +115,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-24**: Dynamic Role and Model Aggregations and Presentation
+  - **Subsystem**: Domain / Presentation / Adapters / Tests
+  - **Phase**: Phase 5
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-24 dynamic role and model aggregations and presentation.md`
 
 - **AL-9**: Visual Trace Waterfall and Anomaly Inspector
   - **Subsystem**: Presentation / Web / Tests

@@ -99,6 +99,8 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 
 	sort.Strings(metricFiles)
 
+	cfg, _ := config.Load(basePath)
+
 	var ledgers []domain.AgenticMetricsLedger
 	var scanErrors []string
 
@@ -126,7 +128,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			}
 		}
 
-		ledger := domain.DeriveMetricsLedger(factLedger)
+		ledger := domain.DeriveMetricsLedger(factLedger, cfg.RoleMappings)
 		ledgers = append(ledgers, ledger)
 	}
 
@@ -229,7 +231,8 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 		factLedger.TicketID = &cleanID
 	}
 
-	ledger := domain.DeriveMetricsLedger(factLedger)
+	cfg, _ := config.Load(basePath)
+	ledger := domain.DeriveMetricsLedger(factLedger, cfg.RoleMappings)
 	return &ledger, nil
 }
 

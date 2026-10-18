@@ -181,9 +181,16 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger) string {
 	}
 	sort.Strings(contributors)
 
+	var distRoles []string
+	for role := range we.RoleEffortDistributionPct {
+		distRoles = append(distRoles, role)
+	}
+	orderedDistRoles := domain.OrderSubagentRoles(distRoles)
+
 	var roleDistParts []string
-	for _, role := range domain.SubagentRoleOrder {
-		if pct, ok := we.RoleEffortDistributionPct[role]; ok && role != string(domain.RoleOrchestrator) && pct > 0 {
+	for _, role := range orderedDistRoles {
+		pct := we.RoleEffortDistributionPct[role]
+		if role != string(domain.RoleOrchestrator) && pct > 0 {
 			roleDistParts = append(roleDistParts, fmt.Sprintf("%s %.1f%%", titleCase(role), pct))
 		}
 	}
@@ -192,9 +199,16 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger) string {
 		roleDistStr = strings.Join(roleDistParts, ", ")
 	}
 
+	var velRoles []string
+	for role := range we.SubagentTurnVelocity.ByRole {
+		velRoles = append(velRoles, role)
+	}
+	orderedVelRoles := domain.OrderSubagentRoles(velRoles)
+
 	var velParts []string
-	for _, role := range domain.SubagentRoleOrder {
-		if turns, ok := we.SubagentTurnVelocity.ByRole[role]; ok && turns > 0 {
+	for _, role := range orderedVelRoles {
+		turns := we.SubagentTurnVelocity.ByRole[role]
+		if turns > 0 {
 			velParts = append(velParts, fmt.Sprintf("%s %.1f", titleCase(role), turns))
 		}
 	}
