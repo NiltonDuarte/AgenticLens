@@ -1,0 +1,82 @@
+name: Release Candidate
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-candidate
+  cancel-in-progress: false
+
+jobs:
+  release-candidate:
+    name: Build and Publish Release Candidate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Static Analysis
+        run: make check
+
+      - name: Run Test Suite
+        run: make test
+
+      - name: Compute Release Candidate Metadata
+        run: |
+          BASE_TAG=$(git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "v0.1.0")
+          BASE_TAG=$(echo "$BASE_TAG" | sed -E 's/(-|\+).*//')
+          if [[ ! "$BASE_TAG" =~ ^v ]]; then
+            BASE_TAG="v${BASE_TAG}"
+          fi
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          RC_VERSION="${BASE_TAG}-rc.${{ github.run_number }}+${SHORT_SHA}"
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "VERSION=${RC_VERSION}" >> $GITHUB_ENV
+          echo "GIT_COMMIT=${SHORT_SHA}" >> $GITHUB_ENV
+          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_ENV
+          echo "Release candidate version: ${RC_VERSION}"
+
+      - name: Cross-Compile Release Binaries
+        run: make release-build VERSION="${VERSION}" GIT_COMMIT="${GIT_COMMIT}" BUILD_DATE="${BUILD_DATE}"
+
+      - name: Package Release Archives
+        run: make release-package VERSION="${VERSION}"
+
+      - name: Verify Release Artifacts
+        run: make release-verify
+
+      - name: Publish GitHub Pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            dist/agentic-lens-*.tar.gz
+            dist/agentic-lens-*.zip
+            dist/SHA256SUMS

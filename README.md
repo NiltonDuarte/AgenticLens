@@ -148,3 +148,61 @@ To build and deploy AgenticLens container into the local Kubernetes cluster (`si
 ```bash
 docker build -t agentic-lens:latest .
 ```
+
+## Releases and Distribution
+
+AgenticLens artifacts are built as self-contained standalone executables embedding all web dashboard assets, requiring zero external Node.js runtime.
+
+### Release Tiers
+
+- **Release Candidates (Pre-release)**:
+  Triggered automatically on every merge to the `main` branch. Artifacts are published as pre-releases on GitHub with version pattern `vMAJOR.MINOR.PATCH-rc.RUN_NUMBER+SHORT_SHA` (for example, `v0.1.0-rc.42+a1b2c3d`).
+- **Stable Releases**:
+  Triggered when a semantic version tag matching `vMAJOR.MINOR.PATCH` (for example, `v0.1.0`) is pushed to the repository. Non-conforming tags fail the release pipeline validation gate.
+- **Floating Latest Tag**:
+  The git tag `latest` and the GitHub Release marked as `latest` are automatically synchronized to point to the most recent stable release.
+
+### Target Platform Matrix
+
+| Platform | OS / Architecture | Archive Format | Artifact Name |
+|---|---|---|---|
+| Linux x86_64 | `linux/amd64` | `.tar.gz` | `agentic-lens-<version>-linux-amd64.tar.gz` |
+| Linux ARM64 | `linux/arm64` | `.tar.gz` | `agentic-lens-<version>-linux-arm64.tar.gz` |
+| macOS Intel | `darwin/amd64` | `.tar.gz` | `agentic-lens-<version>-darwin-amd64.tar.gz` |
+| macOS Apple Silicon | `darwin/arm64` | `.tar.gz` | `agentic-lens-<version>-darwin-arm64.tar.gz` |
+| Windows x86_64 | `windows/amd64` | `.zip` | `agentic-lens-<version>-windows-amd64.zip` |
+
+### Verification and Installation
+
+Download the archive corresponding to your platform and the accompanying `SHA256SUMS` file from the GitHub Releases page:
+
+```bash
+# Verify archive integrity
+sha256sum -c SHA256SUMS --ignore-missing
+
+# Extract tarball (Linux / macOS)
+tar -xzf agentic-lens-v0.1.0-linux-amd64.tar.gz
+
+# Inspect version information
+./agentic-lens-linux-amd64 version
+./agentic-lens-linux-amd64 version --short
+./agentic-lens-linux-amd64 version --json
+```
+
+### Build and Packaging Targets
+
+The build system provides Makefile targets for local cross-compilation, packaging, and validation:
+
+```bash
+# Cross-compile binaries for all supported platforms
+make release-build
+
+# Package platform archives and generate SHA256SUMS in dist/
+make release-package
+
+# Verify checksums and validate execution of the host platform binary
+make release-verify
+
+# Clean distribution artifacts
+make release-clean
+```
