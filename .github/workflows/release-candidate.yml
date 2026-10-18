@@ -86,3 +86,18 @@ jobs:
             dist/agentic-lens-*.tar.gz
             dist/agentic-lens-*.zip
             dist/SHA256SUMS
+
+      - name: Prune Older Release Candidates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          KEEP=3
+          RCS=$(gh release list --limit 100 --exclude-drafts --json tagName,isPrerelease --jq '.[] | select(.isPrerelease == true and (.tagName | test("-rc\\."))) | .tagName')
+          COUNT=0
+          for tag in $RCS; do
+            COUNT=$((COUNT + 1))
+            if [ "$COUNT" -gt "$KEEP" ]; then
+              echo "Pruning older release candidate: $tag"
+              gh release delete "$tag" --yes --cleanup-tag || true
+            fi
+          done

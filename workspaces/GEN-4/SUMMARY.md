@@ -14,29 +14,33 @@
 - Optimized `.github/workflows/release-candidate.yml`:
   - Added path filtering (`backend/**`, `web/**`, `Makefile`, `go.work*`) to prevent pre-release builds on docs, tickets, and telemetry changes.
   - Added skip check for `chore(main): release` and `chore: release` commits to prevent duplicate candidate releases on release PR merges.
+  - Added sliding window pruning step to retain only the newest 3 candidate releases and delete older releases and tags via `gh release delete`.
+- Enhanced `.github/workflows/release-stable.yml`:
+  - Added automated sweep step to purge all remaining pre-release candidates upon publishing a stable release.
 - Allocated isolated workspace under `workspaces/GEN-4/`.
 
 ## Verification
 - Verified git status reflects tracked renames and clean diff on `workspaces/plan/TICKETS.md`.
 - Verified no broken links or inconsistent file paths in `workspaces/plan/TICKETS.md`.
 - Verified JSON syntax for `.release-please-config.json` and `.release-please-manifest.json`.
-- Verified YAML syntax for `.github/workflows/release-please.yml` and `.github/workflows/release-candidate.yml`.
+- Verified YAML syntax for `.github/workflows/release-please.yml`, `.github/workflows/release-candidate.yml`, and `.github/workflows/release-stable.yml`.
 - Verified `make check` and `make test-backend` pass cleanly.
 - Verified zero emojis across all modified files and workspace deliverables.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 11m 7s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Orchestrator peak 95.3k tokens (48% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Active Agent Duration:** 17m 23s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 105.6k tokens (53% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +22 / -0 lines across 1 code files (excluding docs)
-- **Reasoning Effort:** 21,329 reasoning tokens (57.9% of generated output)
-- **Tool Health & Self-Correction:** 115 tool calls (2 self-corrections, 98.3% success rate)
+- **Code Delivered:** +6 / -0 lines across 1 code files (excluding docs)
+- **Reasoning Effort:** 23,960 reasoning tokens (55.2% of generated output)
+- **Tool Health & Self-Correction:** 141 tool calls (2 self-corrections, 98.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 1 execution anomaly detected (1 CRITICAL).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+98.5k tokens) — Context tokens surged by 98.5k tokens in turn 137 (session: ses_eaf6f58bfffeEB0IMofMHpmGUF, total: 98.5k tokens, threshold: 80000)
 
 ### Agentic Execution Metrics
 
@@ -45,11 +49,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 602,713 | 15,528 | 7,437,822 | 92.5% | 95.3k | HEALTHY | $1.15 |
-| **Total** | **1** | **602,713** | **15,528** | **7,437,822** | **92.5%** | **95.3k** | **HEALTHY** | **$1.15** |
+| **orchestrator** | 1 | 717,917 | 19,477 | 10,230,678 | 93.4% | 105.6k | ELEVATED | $1.47 |
+| **Total** | **1** | **717,917** | **19,477** | **10,230,678** | **93.4%** | **105.6k** | **ELEVATED** | **$1.47** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 602,713 | 15,528 | 7,437,822 | 92.5% | $1.15 |
-| **Total** | **1** | **602,713** | **15,528** | **7,437,822** | **92.5%** | **$1.15** |
+| **gemini-3.8-flash** | 1 | 717,917 | 19,477 | 10,230,678 | 93.4% | $1.47 |
+| **Total** | **1** | **717,917** | **19,477** | **10,230,678** | **93.4%** | **$1.47** |

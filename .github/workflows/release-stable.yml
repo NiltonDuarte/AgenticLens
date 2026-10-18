@@ -87,3 +87,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -fa latest -m "Release ${{ github.ref_name }}"
           git push -f origin latest
+
+      - name: Sweep All Stale Release Candidates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RCS=$(gh release list --limit 100 --exclude-drafts --json tagName,isPrerelease --jq '.[] | select(.isPrerelease == true and (.tagName | test("-rc\\."))) | .tagName')
+          for tag in $RCS; do
+            echo "Purging candidate: $tag"
+            gh release delete "$tag" --yes --cleanup-tag || true
+          done
