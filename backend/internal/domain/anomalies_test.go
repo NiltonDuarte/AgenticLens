@@ -20,6 +20,7 @@ func float64Ptr(f float64) *float64 {
 
 // 1. Clean Runs & Zero Anomalies (Zero Mocks)
 func TestDetectAnomalies_CleanSessions(t *testing.T) {
+	t.Parallel()
 	tid := "AL-CLEAN"
 	toolRead := "read_file"
 	toolBash := "bash"
@@ -113,6 +114,7 @@ func TestDetectAnomalies_CleanSessions(t *testing.T) {
 
 // 2. TOOL_RETRY_STREAK Rule Tests
 func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
+	t.Parallel()
 	toolBash := "bash"
 	toolGit := "git"
 
@@ -334,6 +336,7 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 
 // 3. TOOL_HIGH_FAILURE_RATE Rule Tests
 func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
+	t.Parallel()
 	toolGit := "git"
 
 	t.Run(">20% error rate with >=5 calls triggers WARNING in v2 events", func(t *testing.T) {
@@ -555,6 +558,7 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 
 // 4. CONTEXT_SATURATION_SPIKE Rule Tests
 func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
+	t.Parallel()
 	t.Run("single-turn jump >40k tokens triggers WARNING", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			Events: []domain.EventFact{
@@ -740,6 +744,7 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 
 // 5. SUBAGENT_REWORK_LOOP Rule Tests
 func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
+	t.Parallel()
 	t.Run("coder <-> tester 3 cycles triggers WARNING", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			Events: []domain.EventFact{
@@ -923,6 +928,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 
 // 6. Boundary Cases & Division by Zero Guards
 func TestDetectAnomalies_BoundaryCases(t *testing.T) {
+	t.Parallel()
 	t.Run("empty ledger returns non-nil slice", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{}
 		anomalies := domain.DetectAnomalies(ledger)
@@ -1025,6 +1031,7 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 
 // 7. Deterministic Sorting Order Across All 4 Rules Simultaneously
 func TestDetectAnomalies_DeterministicSortingAllRules(t *testing.T) {
+	t.Parallel()
 	toolA := "tool_a"
 	toolB := "tool_b"
 	toolC := "tool_c"
@@ -1139,6 +1146,7 @@ func TestDetectAnomalies_DeterministicSortingAllRules(t *testing.T) {
 }
 
 func TestDetectAnomalies_SortingTieBreakers(t *testing.T) {
+	t.Parallel()
 	// Construct a scenario with identical RuleID and Severity, but differing Turn / ToolName / Title
 	toolX := "tool_x"
 	toolY := "tool_y"
@@ -1216,6 +1224,7 @@ func TestDetectAnomalies_SortingTieBreakers(t *testing.T) {
 
 // 8. DeriveMetricsLedger Integration
 func TestDeriveMetricsLedger_IntegratesAnomalies(t *testing.T) {
+	t.Parallel()
 	toolBash := "bash"
 	factLedger := domain.AgenticFactLedger{
 		Events: []domain.EventFact{
@@ -1237,6 +1246,7 @@ func TestDeriveMetricsLedger_IntegratesAnomalies(t *testing.T) {
 
 // 9. ComputeFleetAnomalies Pure Domain Tests
 func TestComputeFleetAnomalies_EmptyInput(t *testing.T) {
+	t.Parallel()
 	t.Run("nil slice returns initialized zero-value structure", func(t *testing.T) {
 		summary := domain.ComputeFleetAnomalies(nil)
 		if summary.TotalAnomalies != 0 {
@@ -1283,6 +1293,7 @@ func TestComputeFleetAnomalies_EmptyInput(t *testing.T) {
 }
 
 func TestComputeFleetAnomalies_CleanLedgers(t *testing.T) {
+	t.Parallel()
 	toolRead := "read_file"
 	toolWrite := "write_file"
 	tid1 := "AL-1"
@@ -1323,6 +1334,7 @@ func TestComputeFleetAnomalies_CleanLedgers(t *testing.T) {
 }
 
 func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
+	t.Parallel()
 	toolBash := "bash"
 	toolGit := "git"
 	toolPython := "python"
@@ -1441,6 +1453,7 @@ func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
 }
 
 func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
+	t.Parallel()
 	// Test tie-breaking across all 4 sorting criteria:
 	// 1. AnomalyCount descending
 	// 2. ErrorCount descending
@@ -1566,6 +1579,7 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 }
 
 func TestComputeFleetAnomalies_LegacyV1Fallback(t *testing.T) {
+	t.Parallel()
 	// Legacy v1 workspaces lack Events but provide Tools and Invocations
 	tidV1 := "AL-V1"
 	ledgers := []domain.AgenticFactLedger{
@@ -1606,6 +1620,7 @@ func TestComputeFleetAnomalies_LegacyV1Fallback(t *testing.T) {
 }
 
 func TestCalculateFleetSummary_IncludesAnomalySummary(t *testing.T) {
+	t.Parallel()
 	toolBash := "bash"
 	tid := "AL-FS"
 	ledgers := []domain.AgenticMetricsLedger{

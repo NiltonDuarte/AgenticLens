@@ -29,7 +29,7 @@ Testing Mandates:
    - Assert all edge cases: zero tokens, zero cost, zero duration, empty ledgers, and zero-division cases.
    - Assert health evaluations (HEALTHY, ELEVATED, BLOATED, CRITICAL) match token thresholds.
 2. Boundary Schema & Parsing Proving:
-   - Test JSON unmarshaling in `internal/adapters/` with valid, partial, legacy, and corrupted JSON.
+   - Test JSON unmarshaling in `backend/internal/adapters/` with valid, partial, legacy, and corrupted JSON.
    - Assert malformed JSON returns descriptive wrapped errors or gets recorded as a scan warning without panicking.
 3. Repository Resilience:
    - Test `ScanWorkspaces()` against missing folders, empty workspaces, and malformed files.

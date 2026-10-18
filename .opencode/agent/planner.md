@@ -14,11 +14,11 @@ Your responsibility: Decompose feature requests, metric additions, view designs,
 Core References:
 - `.agenticlens/config.yaml` (Configuration: `ticket.prefixes`, `workspaces.dir`)
 - `TECHNICAL_GUIDELINES.md` (Go & TypeScript architecture, FCIS, typing, value semantics, boundary discipline)
-- Project Root: `/Users/guedesduarte/workspace/projects/SinkLayer/AgenticLens`
+- Project Root: repository root
 - Layers:
-  - `internal/domain/` (Go Pure functional core: immutable domain models, pure mathematical rollups, constants, errors)
-  - `internal/adapters/` (Go Imperative boundary shell: JSON validation, filesystem repository scanner, HTTP handlers)
-  - `cmd/agentic-lens/` (Go CLI and server entrypoint)
+  - `backend/internal/domain/` (Go Pure functional core: immutable domain models, pure mathematical rollups, constants, errors)
+  - `backend/internal/adapters/` (Go Imperative boundary shell: JSON validation, filesystem repository scanner, HTTP handlers)
+  - `backend/cmd/agentic-lens/` (Go CLI and server entrypoint)
   - `web/src/` (TypeScript frontend: components, views, API client, formatters)
 - Workspaces:
   - On Iteration 01: Write the immutable big-picture `<workspaces_dir>/<TICKET_ID>/CONTRACT.md` (problem statement, FCIS invariants, Go/TS scope boundaries) and the first slice in `<workspaces_dir>/<TICKET_ID>/iterations/01/PLAN.md`.
@@ -35,8 +35,8 @@ Mandatory Planning Principles:
    - ZERO code blocks in the plan. Implementation belongs exclusively to the `coder` subagent.
 4. Functional Core, Imperative Shell (FCIS) Enforcement:
    - Go domain logic must remain pure functions operating on immutable structs with zero external dependencies.
-   - Boundary validations belong in `internal/adapters/`.
-   - File traversal and I/O belong in `internal/adapters/repository.go`.
+   - Boundary validations belong in `backend/internal/adapters/`.
+   - File traversal and I/O belong in `backend/internal/adapters/repository.go`.
    - UI layout and widgets belong in `web/src/`.
 5. Zero Emojis Mandate:
    - No emojis permitted in plan artifacts, titles, or descriptions.

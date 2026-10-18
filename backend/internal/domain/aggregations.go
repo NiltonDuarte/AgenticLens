@@ -8,6 +8,49 @@ import (
 	"time"
 )
 
+type invocationAccumulator struct {
+	invocations       int64
+	inputTokens       int64
+	outputTokens      int64
+	cacheReadTokens   int64
+	cacheHitRatePct   float64
+	costUSD           float64
+	peakContextTokens int64
+}
+
+func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
+	sids := make(map[string]struct{})
+	var inp, out, cache, peak int64
+	var cost float64
+
+	for _, inv := range invs {
+		sids[inv.ID] = struct{}{}
+		inp += inv.Tokens.Input
+		out += inv.Tokens.Output
+		cache += inv.Tokens.CacheRead
+		cost += inv.CostUSD
+		if inv.Tokens.PeakContext > peak {
+			peak = inv.Tokens.PeakContext
+		}
+	}
+
+	totTok := inp + cache
+	var hitPct float64
+	if totTok > 0 {
+		hitPct = math.Round(float64(cache)/float64(totTok)*1000.0) / 10.0
+	}
+
+	return invocationAccumulator{
+		invocations:       int64(len(sids)),
+		inputTokens:       inp,
+		outputTokens:      out,
+		cacheReadTokens:   cache,
+		cacheHitRatePct:   hitPct,
+		costUSD:           math.Round(cost*10000.0) / 10000.0,
+		peakContextTokens: peak,
+	}
+}
+
 // ComputeTotals calculates aggregate invocation metrics from a slice of invocation facts.
 func ComputeTotals(invocations []InvocationFact) GroupedMetric {
 	if len(invocations) == 0 {
@@ -23,47 +66,27 @@ func ComputeTotals(invocations []InvocationFact) GroupedMetric {
 		}
 	}
 
-	byRoleSessions := make(map[string]map[string]struct{})
-	var totalInput, totalOutput, totalCache int64
-	var totalCost float64
-	var totalPeak int64
-
+	byRole := make(map[string][]InvocationFact)
 	for _, inv := range invocations {
-		if _, ok := byRoleSessions[inv.Role]; !ok {
-			byRoleSessions[inv.Role] = make(map[string]struct{})
-		}
-		byRoleSessions[inv.Role][inv.ID] = struct{}{}
-
-		totalInput += inv.Tokens.Input
-		totalOutput += inv.Tokens.Output
-		totalCache += inv.Tokens.CacheRead
-		totalCost += inv.CostUSD
-		if inv.Tokens.PeakContext > totalPeak {
-			totalPeak = inv.Tokens.PeakContext
-		}
+		byRole[inv.Role] = append(byRole[inv.Role], inv)
 	}
 
 	var totalInvocations int64
-	for _, sids := range byRoleSessions {
-		totalInvocations += int64(len(sids))
+	for _, rInvs := range byRole {
+		totalInvocations += accumulateInvocations(rInvs).invocations
 	}
 
-	totalCachedOrInput := totalInput + totalCache
-	var cacheHitRatePct float64
-	if totalCachedOrInput > 0 {
-		cacheHitRatePct = math.Round(float64(totalCache)/float64(totalCachedOrInput)*1000.0) / 10.0
-	}
-
-	healthStatus := GetBaseHealthStatus(totalPeak, HealthyCeilingTokens)
+	acc := accumulateInvocations(invocations)
+	healthStatus := GetBaseHealthStatus(acc.peakContextTokens, HealthyCeilingTokens)
 
 	return GroupedMetric{
 		Invocations:       totalInvocations,
-		InputTokens:       totalInput,
-		OutputTokens:      totalOutput,
-		CacheReadTokens:   totalCache,
-		CacheHitRatePct:   cacheHitRatePct,
-		CostUSD:           math.Round(totalCost*10000.0) / 10000.0,
-		PeakContextTokens: totalPeak,
+		InputTokens:       acc.inputTokens,
+		OutputTokens:      acc.outputTokens,
+		CacheReadTokens:   acc.cacheReadTokens,
+		CacheHitRatePct:   acc.cacheHitRatePct,
+		CostUSD:           acc.costUSD,
+		PeakContextTokens: acc.peakContextTokens,
 		ContextHealth:     string(healthStatus),
 	}
 }
@@ -282,39 +305,18 @@ func ComputeRoleMetrics(invocations []InvocationFact) []RoleMetric {
 
 	var metrics []RoleMetric
 	for _, role := range orderedRoles {
-		rInvs := byRole[role]
-		sids := make(map[string]struct{})
-		var inp, out, cache int64
-		var cost float64
-		var peak int64
-
-		for _, inv := range rInvs {
-			sids[inv.ID] = struct{}{}
-			inp += inv.Tokens.Input
-			out += inv.Tokens.Output
-			cache += inv.Tokens.CacheRead
-			cost += inv.CostUSD
-			if inv.Tokens.PeakContext > peak {
-				peak = inv.Tokens.PeakContext
-			}
-		}
-
-		totTok := inp + cache
-		var hitPct float64
-		if totTok > 0 {
-			hitPct = math.Round(float64(cache)/float64(totTok)*1000.0) / 10.0
-		}
-		health := GetHealthLabel(peak, HealthyCeilingTokens)
+		acc := accumulateInvocations(byRole[role])
+		health := GetHealthLabel(acc.peakContextTokens, HealthyCeilingTokens)
 
 		metrics = append(metrics, RoleMetric{
 			Role:              role,
-			Invocations:       int64(len(sids)),
-			InputTokens:       inp,
-			OutputTokens:      out,
-			CacheReadTokens:   cache,
-			CacheHitRatePct:   hitPct,
-			CostUSD:           math.Round(cost*10000.0) / 10000.0,
-			PeakContextTokens: peak,
+			Invocations:       acc.invocations,
+			InputTokens:       acc.inputTokens,
+			OutputTokens:      acc.outputTokens,
+			CacheReadTokens:   acc.cacheReadTokens,
+			CacheHitRatePct:   acc.cacheHitRatePct,
+			CostUSD:           acc.costUSD,
+			PeakContextTokens: acc.peakContextTokens,
 			ContextHealth:     health,
 		})
 	}
@@ -331,38 +333,18 @@ func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
 
 	var metrics []ModelMetric
 	for model, mInvs := range byModel {
-		sids := make(map[string]struct{})
-		var inp, out, cache int64
-		var cost float64
-		var peak int64
-
-		for _, inv := range mInvs {
-			sids[inv.ID] = struct{}{}
-			inp += inv.Tokens.Input
-			out += inv.Tokens.Output
-			cache += inv.Tokens.CacheRead
-			cost += inv.CostUSD
-			if inv.Tokens.PeakContext > peak {
-				peak = inv.Tokens.PeakContext
-			}
-		}
-
-		totTok := inp + cache
-		var hitPct float64
-		if totTok > 0 {
-			hitPct = math.Round(float64(cache)/float64(totTok)*1000.0) / 10.0
-		}
-		health := GetHealthLabel(peak, HealthyCeilingTokens)
+		acc := accumulateInvocations(mInvs)
+		health := GetHealthLabel(acc.peakContextTokens, HealthyCeilingTokens)
 
 		metrics = append(metrics, ModelMetric{
 			Model:             model,
-			Invocations:       int64(len(sids)),
-			InputTokens:       inp,
-			OutputTokens:      out,
-			CacheReadTokens:   cache,
-			CacheHitRatePct:   hitPct,
-			CostUSD:           math.Round(cost*10000.0) / 10000.0,
-			PeakContextTokens: peak,
+			Invocations:       acc.invocations,
+			InputTokens:       acc.inputTokens,
+			OutputTokens:      acc.outputTokens,
+			CacheReadTokens:   acc.cacheReadTokens,
+			CacheHitRatePct:   acc.cacheHitRatePct,
+			CostUSD:           acc.costUSD,
+			PeakContextTokens: acc.peakContextTokens,
 			ContextHealth:     health,
 		})
 	}

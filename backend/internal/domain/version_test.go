@@ -75,6 +75,7 @@ func TestGetBuildInfo_CustomVariables(t *testing.T) {
 }
 
 func TestFormatBuildInfo_TableDriven(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    domain.BuildInfo
@@ -129,6 +130,7 @@ func TestFormatBuildInfo_TableDriven(t *testing.T) {
 }
 
 func TestFormatShortVersion_TableDriven(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    domain.BuildInfo
@@ -284,6 +286,7 @@ func TestGetBuildInfo_ImmutabilityValueSemantics(t *testing.T) {
 }
 
 func TestBuildInfo_JSONSerializationAndBoundaryResilience(t *testing.T) {
+	t.Parallel()
 	t.Run("marshal standard build info produces expected keys", func(t *testing.T) {
 		info := domain.BuildInfo{
 			Version:   "v1.2.3",

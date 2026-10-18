@@ -13,11 +13,11 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
 - `workspaces/plan/done/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
 - `workspaces/plan/done/AL-14 implement automated github release workflows for release candidates and stable versions.md`
+- `workspaces/plan/done/AL-16 execute codebase and skills refactoring with provided review skill.md`
 - `workspaces/plan/done/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
 - `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 - `workspaces/plan/to-do/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`
-- `workspaces/plan/to-do/AL-16 execute codebase and skills refactoring with provided review skill.md`
 - `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 - `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
@@ -51,14 +51,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None (AL-12 Done)
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`
-
-- **AL-16**: Execute Codebase and Skills Refactoring with Provided Review Skill
-  - **Subsystem**: Domain / Adapters / Presentation / Tests
-  - **Phase**: Phase 3
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-16 execute codebase and skills refactoring with provided review skill.md`
 
 - **AL-23**: Natural Ticket Identifier Ordering and Sortable Tables
   - **Subsystem**: Domain / Presentation / Adapters / Tests
@@ -163,6 +155,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-16**: Execute Codebase and Skills Refactoring with Provided Review Skill
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 3
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-16 execute codebase and skills refactoring with provided review skill.md`
 
 - **AL-13**: Implement Semantic Versioning and Automated CI for Pull Requests and Main Merges
   - **Subsystem**: Domain / Adapters / Presentation / CLI / Tests

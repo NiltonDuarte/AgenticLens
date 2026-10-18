@@ -10,6 +10,7 @@ import (
 )
 
 func TestParseNumstatOutput(t *testing.T) {
+	t.Parallel()
 	raw := `
 12	4	internal/adapters/git/analyzer.go
 100	0	internal/adapters/git/analyzer_test.go
@@ -33,6 +34,7 @@ func TestParseNumstatOutput(t *testing.T) {
 }
 
 func TestClassifyFile(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		path     string
 		cfg      *git.ClassificationConfig
@@ -226,6 +228,7 @@ not_a_number	not_a_number	file.go
 }
 
 func TestLoadConfig_CentralizedIntegration(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 	cfgDir := filepath.Join(tempDir, ".agenticlens")
 	if err := os.MkdirAll(cfgDir, 0755); err != nil {

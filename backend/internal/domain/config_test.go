@@ -7,6 +7,7 @@ import (
 )
 
 func TestDefaultProjectConfig(t *testing.T) {
+	t.Parallel()
 	cfg := domain.DefaultProjectConfig()
 
 	if cfg.ProjectName != "AgenticLens" {
@@ -83,6 +84,7 @@ func TestDefaultProjectConfig(t *testing.T) {
 }
 
 func TestNormalizeTicketID_ExactMatches(t *testing.T) {
+	t.Parallel()
 	cfg := domain.DefaultProjectConfig().Ticket
 
 	tests := []struct {
@@ -107,6 +109,7 @@ func TestNormalizeTicketID_ExactMatches(t *testing.T) {
 }
 
 func TestNormalizeTicketID_CaseInsensitivity(t *testing.T) {
+	t.Parallel()
 	cfg := domain.DefaultProjectConfig().Ticket
 
 	tests := []struct {
@@ -134,6 +137,7 @@ func TestNormalizeTicketID_CaseInsensitivity(t *testing.T) {
 }
 
 func TestNormalizeTicketID_BranchAndTokenPatterns(t *testing.T) {
+	t.Parallel()
 	cfg := domain.DefaultProjectConfig().Ticket
 
 	tests := []struct {
@@ -161,6 +165,7 @@ func TestNormalizeTicketID_BranchAndTokenPatterns(t *testing.T) {
 }
 
 func TestNormalizeTicketID_CaseSensitiveMode(t *testing.T) {
+	t.Parallel()
 	cfg := domain.TicketConfig{
 		Prefixes: []domain.TicketPrefix{
 			{Prefix: "AL"},
@@ -192,6 +197,7 @@ func TestNormalizeTicketID_CaseSensitiveMode(t *testing.T) {
 }
 
 func TestNormalizeTicketID_NegativeCases(t *testing.T) {
+	t.Parallel()
 	cfg := domain.DefaultProjectConfig().Ticket
 
 	tests := []string{
@@ -214,6 +220,7 @@ func TestNormalizeTicketID_NegativeCases(t *testing.T) {
 }
 
 func TestNormalizeTicketID_CustomPatterns(t *testing.T) {
+	t.Parallel()
 	cfg := domain.TicketConfig{
 		Prefixes: []domain.TicketPrefix{
 			{Prefix: "AL"},
@@ -231,6 +238,7 @@ func TestNormalizeTicketID_CustomPatterns(t *testing.T) {
 }
 
 func TestNormalizeTicketID_EmptyPrefixFallback(t *testing.T) {
+	t.Parallel()
 	cfg := domain.TicketConfig{
 		Prefixes:        []domain.TicketPrefix{},
 		CaseInsensitive: true,
@@ -253,6 +261,7 @@ func TestNormalizeTicketID_EmptyPrefixFallback(t *testing.T) {
 }
 
 func TestRoleMappings_ResolveRole(t *testing.T) {
+	t.Parallel()
 	mappings := domain.DefaultProjectConfig().RoleMappings
 
 	// Default role mappings
@@ -311,6 +320,7 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 }
 
 func TestNormalizeTicketID_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
 	t.Run("mixed casing and leading zeros", func(t *testing.T) {
 		cfg := domain.DefaultProjectConfig().Ticket
 		cases := []struct {
@@ -585,6 +595,7 @@ func TestNormalizeTicketID_AdversarialEdgeCases(t *testing.T) {
 }
 
 func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
 	t.Run("casing and whitespace variations", func(t *testing.T) {
 		mappings := domain.DefaultProjectConfig().RoleMappings
 

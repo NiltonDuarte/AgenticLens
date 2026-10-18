@@ -29,9 +29,9 @@ Engineering Rules:
    - Stay strictly inside assigned `<workspaces_dir>/<TICKET_ID>/`.
    - Store intermediate artifacts, scratchpads, and logs inside `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/`.
 2. Functional Core, Imperative Shell (FCIS):
-   - `internal/domain/`: Pure Go structs with value semantics, pure functions for aggregations and health scoring. Zero I/O, zero network or database imports.
-   - `internal/adapters/`: JSON boundary validation, filesystem repository scanner, HTTP handlers. Errors wrapped with `%w`.
-   - `cmd/agentic-lens/`: CLI flags, command execution, server startup.
+   - `backend/internal/domain/`: Pure Go structs with value semantics, pure functions for aggregations and health scoring. Zero I/O, zero network or database imports.
+   - `backend/internal/adapters/`: JSON boundary validation, filesystem repository scanner, HTTP handlers. Errors wrapped with `%w`.
+   - `backend/cmd/agentic-lens/`: CLI flags, command execution, server startup.
    - `web/src/`: Strict TypeScript dashboard components, typed API clients, pure formatters.
 3. Static Typing & No Any:
    - Zero `any` or `interface{}` in Go and TypeScript. Use concrete types, generics, or Discriminated Unions.

@@ -2,7 +2,6 @@ package http
 
 import (
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
@@ -49,18 +48,8 @@ func WorkspaceDetailHandler(workspacesDir string) http.HandlerFunc {
 			return
 		}
 
-		report := adapters.ScanWorkspaces(workspacesDir)
-
-		var targetLedger *domain.AgenticMetricsLedger
-		for i := range report.Ledgers {
-			l := &report.Ledgers[i]
-			if l.TicketID != nil && *l.TicketID == ticketID {
-				targetLedger = l
-				break
-			}
-		}
-
-		if targetLedger == nil {
+		targetLedger, err := adapters.LoadTicketWorkspace(ticketID, workspacesDir)
+		if err != nil || targetLedger == nil {
 			WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")
 			return
 		}
@@ -91,37 +80,13 @@ func WorkspaceEventsHandler(workspacesDir string) http.HandlerFunc {
 			return
 		}
 
-		report := adapters.ScanWorkspaces(workspacesDir)
-
-		var targetLedger *domain.AgenticMetricsLedger
-		for i := range report.Ledgers {
-			l := &report.Ledgers[i]
-			if l.TicketID != nil && *l.TicketID == ticketID {
-				targetLedger = l
-				break
-			}
-		}
-
-		if targetLedger == nil {
+		targetLedger, err := adapters.LoadTicketWorkspace(ticketID, workspacesDir)
+		if err != nil || targetLedger == nil {
 			WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")
 			return
 		}
 
-		events := targetLedger.Facts.Events
-		if len(events) == 0 {
-			WriteEventsResponse(w, []domain.EventFact{})
-			return
-		}
-
-		sortedEvents := make([]domain.EventFact, len(events))
-		copy(sortedEvents, events)
-		sort.SliceStable(sortedEvents, func(i, j int) bool {
-			if sortedEvents[i].Timestamp != sortedEvents[j].Timestamp {
-				return sortedEvents[i].Timestamp < sortedEvents[j].Timestamp
-			}
-			return sortedEvents[i].Turn < sortedEvents[j].Turn
-		})
-
+		sortedEvents := domain.SortEvents(targetLedger.Facts.Events)
 		WriteEventsResponse(w, sortedEvents)
 	}
 }

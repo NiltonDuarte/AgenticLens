@@ -186,6 +186,106 @@ func ReadTicketArtifacts(ticketID string, basePath string) domain.TicketArtifact
 	}
 }
 
+// LoadTicketWorkspace loads a single ticket's agentic_metrics.json, converts it to domain, and derives the metrics ledger.
+func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedger, error) {
+	cleanID := strings.TrimSpace(ticketID)
+	if cleanID == "" || strings.Contains(cleanID, "..") || strings.Contains(cleanID, "/") || strings.Contains(cleanID, "\\") {
+		return nil, fmt.Errorf("invalid ticket ID: %q", ticketID)
+	}
+
+	targetDir := ResolveWorkspacesDir(basePath)
+	absTargetDir, err := filepath.Abs(targetDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
+	}
+
+	ticketDir := filepath.Join(absTargetDir, cleanID)
+	absTicketDir, err := filepath.Abs(ticketDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving ticket directory: %w", err)
+	}
+
+	// Verify path containment to prevent directory traversal
+	rel, err := filepath.Rel(absTargetDir, absTicketDir)
+	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
+		return nil, fmt.Errorf("invalid ticket path containment: %q", ticketID)
+	}
+
+	metricFile := filepath.Join(absTicketDir, "agentic_metrics.json")
+	content, err := os.ReadFile(metricFile)
+	if err != nil {
+		return nil, fmt.Errorf("reading metrics file for ticket %s: %w", cleanID, err)
+	}
+
+	var dto AgenticFactLedgerDTO
+	if err := json.Unmarshal(content, &dto); err != nil {
+		return nil, fmt.Errorf("unmarshaling metrics for ticket %s: %w", cleanID, err)
+	}
+
+	factLedger := dto.ToDomain()
+	if factLedger.TicketID == nil || *factLedger.TicketID == "" {
+		factLedger.TicketID = &cleanID
+	}
+
+	ledger := domain.DeriveMetricsLedger(factLedger)
+	return &ledger, nil
+}
+
+// UpdateSummaryFile idempotently updates or appends the metrics table inside the summary file.
+func UpdateSummaryFile(destPath string, tableMD string) error {
+	parentDir := filepath.Dir(destPath)
+	if err := os.MkdirAll(parentDir, 0755); err != nil {
+		return fmt.Errorf("creating parent directories for %s: %w", destPath, err)
+	}
+
+	header := "### Workflow Efficiency"
+	legacyHeader := "### Agentic Execution Metrics"
+
+	if data, err := os.ReadFile(destPath); err == nil {
+		content := string(data)
+		targetIdx := -1
+		if idx := strings.Index(content, header); idx != -1 {
+			targetIdx = idx
+		} else if idx := strings.Index(content, legacyHeader); idx != -1 {
+			targetIdx = idx
+		}
+
+		if targetIdx != -1 {
+			nextHeading := strings.Index(content[targetIdx+len(header):], "\n## ")
+			var newContent string
+			if nextHeading != -1 {
+				absNextHeading := targetIdx + len(header) + nextHeading
+				newContent = strings.TrimRight(content[:targetIdx], " \t\r\n") +
+					"\n\n" +
+					strings.TrimSpace(tableMD) +
+					"\n\n" +
+					strings.TrimLeft(content[absNextHeading:], " \t\r\n")
+			} else {
+				newContent = strings.TrimRight(content[:targetIdx], " \t\r\n") +
+					"\n\n" +
+					strings.TrimSpace(tableMD) +
+					"\n"
+			}
+			if err := os.WriteFile(destPath, []byte(newContent), 0644); err != nil {
+				return fmt.Errorf("writing updated summary to %s: %w", destPath, err)
+			}
+			return nil
+		}
+	}
+
+	f, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return fmt.Errorf("opening %s for appending: %w", destPath, err)
+	}
+	defer f.Close()
+
+	tableContent := "\n" + strings.TrimSpace(tableMD) + "\n"
+	if _, err := f.WriteString(tableContent); err != nil {
+		return fmt.Errorf("writing metrics table to %s: %w", destPath, err)
+	}
+	return nil
+}
+
 // ExistingLedgerFacts encapsulates raw facts extracted from an existing on-disk ledger.
 type ExistingLedgerFacts struct {
 	SchemaVersion *int
@@ -341,4 +441,44 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 	}
 
 	return result, nil
+}
+
+// SaveFactLedger writes an AgenticFactLedger to the specified file path, creating parent directories if needed.
+func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
+	parentDir := filepath.Dir(path)
+	if err := os.MkdirAll(parentDir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
+	}
+
+	data, err := json.MarshalIndent(ledger, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal fact ledger: %w", err)
+	}
+	data = append(data, '\n')
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write fact ledger to %s: %w", path, err)
+	}
+	return nil
+}
+
+// SaveMetricsLedger writes an AgenticMetricsLedger to the specified file path after serializing to external DTO format,
+// creating parent directories if needed.
+func SaveMetricsLedger(path string, ledger domain.AgenticMetricsLedger) error {
+	parentDir := filepath.Dir(path)
+	if err := os.MkdirAll(parentDir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
+	}
+
+	serialized := SerializeLedger(ledger)
+	data, err := json.MarshalIndent(serialized, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal metrics ledger: %w", err)
+	}
+	data = append(data, '\n')
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write metrics ledger to %s: %w", path, err)
+	}
+	return nil
 }

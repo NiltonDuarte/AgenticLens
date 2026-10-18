@@ -136,6 +136,7 @@ func setupTestWorkspace(t *testing.T) string {
 }
 
 func TestCLIListCommand(t *testing.T) {
+	t.Parallel()
 	wsDir := setupTestWorkspace(t)
 
 	cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--list")
@@ -164,6 +165,7 @@ func TestCLIListCommand(t *testing.T) {
 }
 
 func TestCLIAnomaliesCommand(t *testing.T) {
+	t.Parallel()
 	wsDir := setupTestWorkspace(t)
 
 	// Add a ticket with an anomaly
@@ -189,6 +191,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	}
 
 	t.Run("clean ticket shows no anomalies message", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-1", "--anomalies")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -205,6 +208,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	})
 
 	t.Run("ticket with anomalies formats table", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-ANOMALY", "--anomalies")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -227,6 +231,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	})
 
 	t.Run("list output shows anomaly counts", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--list")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -249,6 +254,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	})
 
 	t.Run("generate subcommand with --anomalies flag on ticket with anomalies", func(t *testing.T) {
+		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "anom_gen.json")
 		// Seed an existing JSON ledger with high failure rate
@@ -288,6 +294,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	})
 
 	t.Run("generate subcommand with --anomalies flag on clean ticket", func(t *testing.T) {
+		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "clean_gen.json")
 
@@ -315,6 +322,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 }
 
 func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
+	t.Parallel()
 	wsDir := setupTestWorkspace(t)
 
 	t.Run("specific ticket id outputs markdown", func(t *testing.T) {
@@ -374,12 +382,12 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 		// Wait briefly for server startup
 		var resp *http.Response
 		var err error
-		for i := 0; i < 20; i++ {
-			time.Sleep(100 * time.Millisecond)
+		for i := 0; i < 100; i++ {
 			resp, err = http.Get("http://localhost:19090/api/fleet")
 			if err == nil {
 				break
 			}
+			time.Sleep(10 * time.Millisecond)
 		}
 		if err != nil {
 			t.Fatalf("failed querying server: %v", err)
@@ -393,6 +401,7 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 }
 
 func TestCLIJsonOutput(t *testing.T) {
+	t.Parallel()
 	wsDir := setupTestWorkspace(t)
 	outJSONPath := filepath.Join(t.TempDir(), "nested", "computed.json")
 
@@ -427,6 +436,7 @@ func TestCLIJsonOutput(t *testing.T) {
 }
 
 func TestCLIAppendIdempotency(t *testing.T) {
+	t.Parallel()
 	wsDir := setupTestWorkspace(t)
 	summaryFile := filepath.Join(t.TempDir(), "SUMMARY.md")
 
@@ -479,6 +489,7 @@ func TestCLIAppendIdempotency(t *testing.T) {
 }
 
 func TestCLINoValidLedgersExit(t *testing.T) {
+	t.Parallel()
 	emptyDir := t.TempDir()
 
 	cmd := exec.Command(cliBinaryPath, "--workspaces", emptyDir)
@@ -496,7 +507,10 @@ func TestCLINoValidLedgersExit(t *testing.T) {
 }
 
 func TestCLIServerSubcommandEdgeCases(t *testing.T) {
+	t.Parallel()
+
 	t.Run("server with invalid flag returns exit code non-zero", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "server", "--unrecognized-flag-xyz")
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -507,6 +521,7 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 	})
 
 	t.Run("server with invalid port format returns exit code non-zero", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "server", "--port", "not-a-port")
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -517,6 +532,7 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 	})
 
 	t.Run("server default port is 8085 in help text", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "server", "--help")
 		var env []string
 		for _, e := range os.Environ() {
@@ -556,12 +572,12 @@ func TestCLIServerPortEnvironment(t *testing.T) {
 	}()
 
 	var resp *http.Response
-	for i := 0; i < 20; i++ {
-		time.Sleep(100 * time.Millisecond)
+	for i := 0; i < 100; i++ {
 		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", port))
 		if err == nil {
 			break
 		}
+		time.Sleep(10 * time.Millisecond)
 	}
 	if err != nil {
 		t.Fatalf("failed querying server on PORT env port %d: %v", port, err)
@@ -601,12 +617,12 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 		}()
 
 		var resp *http.Response
-		for i := 0; i < 20; i++ {
-			time.Sleep(100 * time.Millisecond)
+		for i := 0; i < 100; i++ {
 			resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", flagPort))
 			if err == nil {
 				break
 			}
+			time.Sleep(10 * time.Millisecond)
 		}
 		if err != nil {
 			t.Fatalf("failed querying server on flag port %d: %v", flagPort, err)
@@ -638,12 +654,12 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 		}()
 
 		var resp *http.Response
-		for i := 0; i < 20; i++ {
-			time.Sleep(100 * time.Millisecond)
+		for i := 0; i < 100; i++ {
 			resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", flagPort))
 			if err == nil {
 				break
 			}
+			time.Sleep(10 * time.Millisecond)
 		}
 		if err != nil {
 			t.Fatalf("failed querying server on flag port %d overriding invalid PORT env: %v", flagPort, err)
@@ -657,6 +673,7 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 }
 
 func TestCLIServerInvalidPortRange(t *testing.T) {
+	t.Parallel()
 	wsDir := setupTestWorkspace(t)
 
 	testCases := []struct {
@@ -712,7 +729,9 @@ func TestCLIServerInvalidPortRange(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			cmd := exec.Command(cliBinaryPath, tc.args...)
 			if len(tc.env) > 0 {
 				cmd.Env = append(os.Environ(), tc.env...)
@@ -793,6 +812,7 @@ func TestCLIServerAddressAlreadyInUse(t *testing.T) {
 }
 
 func TestCLIGenerateCommand(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test_opencode.db")
 
@@ -926,9 +946,11 @@ func TestCLIGenerateCommand(t *testing.T) {
 		t.Errorf("expected exactly 1 Workflow Efficiency header after second run, found %d", strings.Count(string(mdData2), "### Workflow Efficiency"))
 	}
 }
-
 func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
 	t.Run("generate with non-existent database falls back gracefully without crash", func(t *testing.T) {
+		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "fallback.json")
 		nonExistentDB := filepath.Join(tempDir, "missing.db")
@@ -958,6 +980,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		if err := json.Unmarshal(data, &parsed); err != nil {
 			t.Fatalf("invalid json generated: %v", err)
 		}
+
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-FALLBACK" {
 			t.Errorf("expected AL-FALLBACK ticket ID, got %v", parsed.TicketID)
 		}
@@ -967,6 +990,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 	})
 
 	t.Run("generate with corrupted existing JSON output preserves execution and safely recovers", func(t *testing.T) {
+		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "corrupted_existing.json")
 		if err := os.WriteFile(outJSON, []byte("{broken json content!"), 0644); err != nil {
@@ -1003,6 +1027,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 	})
 
 	t.Run("generate with zero tokens and zero duration produces valid markdown", func(t *testing.T) {
+		t.Parallel()
 		tempDir := t.TempDir()
 		dbPath := filepath.Join(tempDir, "zero.db")
 
@@ -1056,6 +1081,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 }
 
 func TestCLIBackfillCommand(t *testing.T) {
+	t.Parallel()
 	wsDir := setupTestWorkspace(t)
 
 	t.Run("dry-run backfill outputs preview without error", func(t *testing.T) {
@@ -1123,7 +1149,10 @@ func TestCLIBackfillCommand(t *testing.T) {
 
 
 func TestCLIVersionCommand(t *testing.T) {
+	t.Parallel()
+
 	t.Run("version subcommand outputs formatted string", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "version")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1143,6 +1172,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("-v flag outputs formatted string", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "-v")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1159,6 +1189,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("--version flag outputs formatted string", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "--version")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1175,6 +1206,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("version --short outputs raw version string", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "version", "--short")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1194,6 +1226,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("version --json outputs valid JSON payload", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "version", "--json")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1233,6 +1266,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("version -short single-dash flag", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "version", "-short")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1249,6 +1283,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("version -json single-dash flag", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "version", "-json")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1268,6 +1303,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("version with both --json and --short flags prefers JSON", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "version", "--json", "--short")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1284,6 +1320,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("version with unrecognized flag returns non-zero exit code", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "version", "--bogus-flag-123")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1296,6 +1333,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("-version standard Go flag style", func(t *testing.T) {
+		t.Parallel()
 		cmd := exec.Command(cliBinaryPath, "-version")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1312,6 +1350,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("root flags: -v after --workspaces outputs version and exits cleanly", func(t *testing.T) {
+		t.Parallel()
 		wsDir := t.TempDir()
 		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "-v")
 		var stdout, stderr bytes.Buffer
@@ -1329,6 +1368,7 @@ func TestCLIVersionCommand(t *testing.T) {
 	})
 
 	t.Run("root flags: --version after --workspaces outputs version and exits cleanly", func(t *testing.T) {
+		t.Parallel()
 		wsDir := t.TempDir()
 		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--version")
 		var stdout, stderr bytes.Buffer

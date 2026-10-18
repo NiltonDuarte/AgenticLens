@@ -11,6 +11,7 @@ import {
 import { KPICard } from '../components/KPICard';
 import { TrendChart } from '../components/TrendChart';
 import { EmptyState } from '../components/EmptyState';
+import { CHART_COLORS } from '../utils/theme';
 
 export interface MetricProgressionProps {
   readonly onMockChange?: (isMock: boolean) => void;
@@ -282,7 +283,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
                     {
                       key: 'cumulative_cost_usd',
                       label: 'Cumulative Spend',
-                      color: '#10b981',
+                      color: CHART_COLORS.spendCumulative,
                       type: 'area',
                     },
                   ]
@@ -290,13 +291,13 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
                     {
                       key: 'cost_usd',
                       label: 'Period Spend',
-                      color: '#3b82f6',
+                      color: CHART_COLORS.spendPeriod,
                       type: 'bar',
                     },
                     {
                       key: 'cumulative_cost_usd',
                       label: 'Cumulative Spend',
-                      color: '#10b981',
+                      color: CHART_COLORS.spendCumulative,
                       type: 'line',
                     },
                   ]
@@ -313,19 +314,19 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               {
                 key: 'cache_read_tokens',
                 label: 'Cache Read Tokens',
-                color: '#10b981',
+                color: CHART_COLORS.cacheRead,
                 type: 'bar',
               },
               {
                 key: 'input_tokens',
                 label: 'Input Tokens',
-                color: '#3b82f6',
+                color: CHART_COLORS.inputTokens,
                 type: 'bar',
               },
               {
                 key: 'output_tokens',
                 label: 'Output Tokens',
-                color: '#8b5cf6',
+                color: CHART_COLORS.outputTokens,
                 type: 'bar',
               },
             ]}
@@ -342,13 +343,13 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               {
                 value: 50,
                 label: 'Baseline 50%',
-                color: '#f59e0b',
+                color: CHART_COLORS.cacheBaseline,
                 strokeDasharray: '4 4',
               },
               {
                 value: 80,
                 label: 'Target 80%',
-                color: '#10b981',
+                color: CHART_COLORS.cacheTarget,
                 strokeDasharray: '4 4',
               },
             ]}
@@ -356,7 +357,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               {
                 key: 'cache_hit_rate_pct',
                 label: 'Cache Hit Rate %',
-                color: '#06b6d4',
+                color: CHART_COLORS.cacheHitRate,
                 type: 'line',
               },
             ]}
@@ -372,19 +373,19 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               {
                 key: 'lines_added',
                 label: 'Lines Added (+)',
-                color: '#10b981',
+                color: CHART_COLORS.linesAdded,
                 type: 'bar',
               },
               {
                 key: 'lines_deleted',
                 label: 'Lines Deleted (-)',
-                color: '#ef4444',
+                color: CHART_COLORS.linesDeleted,
                 type: 'bar',
               },
               {
                 key: 'net_lines_added',
                 label: 'Net Lines Growth',
-                color: '#3b82f6',
+                color: CHART_COLORS.linesNet,
                 type: 'line',
               },
             ]}
@@ -400,7 +401,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               {
                 value: HEALTHY_CEILING_TOKENS,
                 label: '200k Ceiling',
-                color: '#ef4444',
+                color: CHART_COLORS.ceilingMarker,
                 strokeDasharray: '5 5',
               },
             ]}
@@ -408,7 +409,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               {
                 key: 'peak_context_tokens',
                 label: 'Peak Context Tokens',
-                color: '#f97316',
+                color: CHART_COLORS.peakContext,
                 type: 'line',
               },
             ]}

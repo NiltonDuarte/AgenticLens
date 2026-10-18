@@ -6,9 +6,9 @@ AgenticLens is a developer telemetry and observability dashboard for multi-agent
 
 AgenticLens is implemented in **Go** and **TypeScript** following the Functional Core, Imperative Shell (FCIS) pattern, distributed as a **single, self-contained Go executable**:
 
-- **Domain Layer (`internal/domain`)**: Pure Go functional core. Value semantics, immutable structs, zero I/O, pure aggregations, context health scoring, cost calculations, and stepwise schema migration framework (`internal/domain/migration`).
-- **Adapter Layer (`internal/adapters`)**: Imperative boundary shell. Workspace filesystem traversal, JSON schema validation, stepwise migration runners and backfill engines (`internal/adapters/backfill`), HTTP routing, and embedded asset serving (`internal/adapters/web`).
-- **CLI & Server (`cmd/agentic-lens`)**: Entrypoint for CLI execution and observation subcommands (`server`, `generate`, `backfill`, `migrate`) as well as root workspace inspection commands.
+- **Domain Layer (`backend/internal/domain`)**: Pure Go functional core. Value semantics, immutable structs, zero I/O, pure aggregations, context health scoring, cost calculations, and stepwise schema migration framework (`backend/internal/domain/migration`).
+- **Adapter Layer (`backend/internal/adapters`)**: Imperative boundary shell. Workspace filesystem traversal, JSON schema validation, stepwise migration runners and backfill engines (`backend/internal/adapters/backfill`), HTTP routing, and embedded asset serving (`backend/internal/adapters/web`).
+- **CLI & Server (`backend/cmd/agentic-lens`)**: Entrypoint for CLI execution and observation subcommands (`server`, `generate`, `backfill`, `migrate`) as well as root workspace inspection commands.
 - **Web Dashboard (`web/`)**: Strict TypeScript dashboard (SPA). Compiled static assets (`web/dist/`) are embedded into the Go executable at build time via `embed.FS`. Zero Node.js runtime required in production.
 
 ## Running Locally
@@ -19,7 +19,7 @@ Run the Go server and Vite dev server with hot reload:
 
 ```bash
 # Terminal 1: Run Go API / telemetry engine
-go run ./cmd/agentic-lens server --port 8080
+cd backend && go run ./cmd/agentic-lens server --port 8085
 
 # Terminal 2: Run TypeScript UI with API proxy
 cd web && npm run dev
@@ -32,7 +32,7 @@ Build and run the self-contained binary:
 ```bash
 # Build frontend assets and Go binary
 cd web && npm run build && cd ..
-go build -o bin/agentic-lens ./cmd/agentic-lens
+cd backend && go build -o bin/agentic-lens ./cmd/agentic-lens
 
 # Run dashboard (serves embedded UI and API)
 ./bin/agentic-lens server --port 8501
@@ -42,7 +42,7 @@ Visit `http://localhost:8501`.
 
 ## Execution Anomaly Detection
 
-AgenticLens features a deterministic, pure-functional anomaly detection engine running inside the domain core (`internal/domain`). During telemetry ingestion and metric projection, the engine scans tool execution logs, context growth curves, and subagent invocation transitions to identify operational hazards:
+AgenticLens features a deterministic, pure-functional anomaly detection engine running inside the domain core (`backend/internal/domain`). During telemetry ingestion and metric projection, the engine scans tool execution logs, context growth curves, and subagent invocation transitions to identify operational hazards:
 
 ### Detection Rules
 
@@ -139,14 +139,6 @@ The universal schema migration engine provides stepwise multi-version schema upg
 
 # Migrate single ticket workspace with backup creation and summary table regeneration
 ./bin/agentic-lens migrate --workspaces workspaces --ticket-id AL-15 --backup --update-summaries
-```
-
-## Local Cluster Deployment
-
-To build and deploy AgenticLens container into the local Kubernetes cluster (`sinklayer-local`):
-
-```bash
-docker build -t agentic-lens:latest .
 ```
 
 ## Releases and Distribution

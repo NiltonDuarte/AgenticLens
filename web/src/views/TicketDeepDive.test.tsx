@@ -294,6 +294,43 @@ describe('TicketDeepDive View Component', () => {
     });
   });
 
+  it('does not re-fetch fleet ledgers when switching tickets after initial catalog load', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    const fetchLedgersSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: ledgers,
+      isMock: true,
+    });
+    const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation(async (id) => {
+      const detail = mockWorkspaceDetails[id] ?? {
+        ledger: mockAgenticMetricsLedgers[id]!,
+        artifacts: { ticket_id: id, contract_content: null, summary_content: null },
+      };
+      return { data: detail, isMock: true };
+    });
+
+    const onSelectTicket = vi.fn();
+
+    render(<TicketDeepDive selectedTicketId="AL-1" onSelectTicket={onSelectTicket} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+
+    expect(fetchLedgersSpy).toHaveBeenCalledTimes(1);
+    expect(fetchByIdSpy).toHaveBeenCalledWith('AL-1');
+
+    const select = screen.getByLabelText(/workspace autopsy/i);
+    fireEvent.change(select, { target: { value: 'AL-2' } });
+
+    expect(onSelectTicket).toHaveBeenCalledWith('AL-2');
+    await waitFor(() => {
+      expect(fetchByIdSpy).toHaveBeenCalledWith('AL-2');
+    });
+
+    // Verify fleet ledgers was NOT called again on ticket switch
+    expect(fetchLedgersSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('renders empty state when no workspaces are returned', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],

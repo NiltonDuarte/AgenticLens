@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -222,19 +221,7 @@ func runGenerate(args []string) {
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger)
 
 	if *jsonOutputFlag != "" {
-		parentDir := filepath.Dir(*jsonOutputFlag)
-		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating output directories for %s: %v\n", *jsonOutputFlag, err)
-			os.Exit(1)
-		}
-
-		data, err := json.MarshalIndent(factLedger, "", "  ")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error marshaling JSON: %v\n", err)
-			os.Exit(1)
-		}
-		data = append(data, '\n')
-		if err := os.WriteFile(*jsonOutputFlag, data, 0644); err != nil {
+		if err := adapters.SaveFactLedger(*jsonOutputFlag, factLedger); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
 		}
@@ -817,20 +804,7 @@ func main() {
 	}
 
 	if *jsonOutputFlag != "" {
-		parentDir := filepath.Dir(*jsonOutputFlag)
-		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating output directories for %s: %v\n", *jsonOutputFlag, err)
-			os.Exit(1)
-		}
-
-		serialized := adapters.SerializeLedger(*targetLedger)
-		data, err := json.MarshalIndent(serialized, "", "  ")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error marshaling JSON: %v\n", err)
-			os.Exit(1)
-		}
-		data = append(data, '\n')
-		if err := os.WriteFile(*jsonOutputFlag, data, 0644); err != nil {
+		if err := adapters.SaveMetricsLedger(*jsonOutputFlag, *targetLedger); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
 		}

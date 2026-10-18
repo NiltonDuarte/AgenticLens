@@ -1,8 +1,6 @@
 package adapters_test
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -256,80 +254,6 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 		}
 		if !strings.Contains(tableMD, "- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165k tokens) — Context tokens reached 165k, breaching 160k critical ceiling") {
 			t.Errorf("expected formatted bullet, got:\n%s", tableMD)
-		}
-	})
-}
-
-func TestUpdateSummaryFile(t *testing.T) {
-	tempDir := t.TempDir()
-	summaryFile := filepath.Join(tempDir, "SUMMARY.md")
-
-	tableMD := "### Workflow Efficiency\n- **Iterations:** 1\n\n### Anomalies & Health Flags\n- **Status:** No execution anomalies detected (clean session).\n"
-
-	t.Run("append to new file", func(t *testing.T) {
-		err := adapters.UpdateSummaryFile(summaryFile, tableMD)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		content, _ := os.ReadFile(summaryFile)
-		if !strings.Contains(string(content), tableMD) {
-			t.Errorf("expected table in new file, got %s", string(content))
-		}
-	})
-
-	t.Run("idempotent replacement in existing file with other sections", func(t *testing.T) {
-		initial := "# Title\n\n### Workflow Efficiency\n- Old Content\n\n### Anomalies & Health Flags\n- Old Anomaly\n\n## Next Section\nSomething else\n"
-		if err := os.WriteFile(summaryFile, []byte(initial), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		newTable := "### Workflow Efficiency\n- New Content\n\n### Anomalies & Health Flags\n- **Status:** 1 execution anomaly detected (1 CRITICAL).\n"
-		err := adapters.UpdateSummaryFile(summaryFile, newTable)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		updated, _ := os.ReadFile(summaryFile)
-		updatedStr := string(updated)
-		if strings.Contains(updatedStr, "Old Content") || strings.Contains(updatedStr, "Old Anomaly") {
-			t.Errorf("expected Old Content and Old Anomaly to be replaced")
-		}
-		if !strings.Contains(updatedStr, "New Content") {
-			t.Errorf("expected New Content to be present")
-		}
-		if !strings.Contains(updatedStr, "1 execution anomaly detected") {
-			t.Errorf("expected new anomaly status to be present")
-		}
-		if !strings.Contains(updatedStr, "## Next Section") {
-			t.Errorf("expected Next Section to be preserved")
-		}
-		if strings.Count(updatedStr, "### Workflow Efficiency") != 1 {
-			t.Errorf("expected exactly 1 Workflow Efficiency header, got %d", strings.Count(updatedStr, "### Workflow Efficiency"))
-		}
-	})
-
-	t.Run("replaces legacy header cleanly", func(t *testing.T) {
-		legacyFile := filepath.Join(tempDir, "LEGACY_SUMMARY.md")
-		initialLegacy := "# Summary\n\n### Agentic Execution Metrics\n- Old metrics\n\n## Results\nDone\n"
-		if err := os.WriteFile(legacyFile, []byte(initialLegacy), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		err := adapters.UpdateSummaryFile(legacyFile, tableMD)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		content, _ := os.ReadFile(legacyFile)
-		contentStr := string(content)
-		if strings.Contains(contentStr, "Old metrics") {
-			t.Errorf("expected legacy metrics to be replaced")
-		}
-		if !strings.Contains(contentStr, "### Workflow Efficiency") {
-			t.Errorf("expected new Workflow Efficiency header")
-		}
-		if !strings.Contains(contentStr, "## Results") {
-			t.Errorf("expected subsequent section to be preserved")
 		}
 	})
 }

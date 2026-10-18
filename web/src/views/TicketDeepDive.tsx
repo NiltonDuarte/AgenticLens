@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import type { AgenticMetricsLedger, WorkspaceDetail } from '../domain/types';
 import { fetchWorkspaceById, fetchWorkspaceLedgers } from '../api/client';
 import {
@@ -34,6 +34,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const ledgersRef = useRef<readonly AgenticMetricsLedger[]>([]);
+  const isMockFleetRef = useRef(false);
+
   // Sync activeTicketId when parent prop changes
   useEffect(() => {
     if (selectedTicketId && selectedTicketId !== activeTicketId) {
@@ -41,27 +44,36 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     }
   }, [selectedTicketId, activeTicketId]);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceReloadFleet = false) => {
     setLoading(true);
     setError(null);
     try {
-      const ledgersRes = await fetchWorkspaceLedgers('all');
-      const loadedLedgers = ledgersRes.data;
-      setLedgers(loadedLedgers);
+      let currentLedgers = ledgersRef.current;
+      let isMockFleet = isMockFleetRef.current;
+
+      // Only fetch fleet catalog if in-memory cache is empty or explicitly forced
+      if (forceReloadFleet || currentLedgers.length === 0) {
+        const ledgersRes = await fetchWorkspaceLedgers('all');
+        currentLedgers = ledgersRes.data;
+        isMockFleet = ledgersRes.isMock;
+        ledgersRef.current = currentLedgers;
+        isMockFleetRef.current = isMockFleet;
+        setLedgers(currentLedgers);
+      }
 
       let targetId = activeTicketId;
-      if (!targetId && loadedLedgers.length > 0 && loadedLedgers[0]?.ticket_id) {
-        targetId = loadedLedgers[0].ticket_id;
+      if (!targetId && currentLedgers.length > 0 && currentLedgers[0]?.ticket_id) {
+        targetId = currentLedgers[0].ticket_id;
         setActiveTicketId(targetId);
       }
 
       if (targetId) {
         const detailRes = await fetchWorkspaceById(targetId);
         setDetail(detailRes.data);
-        onMockChange?.(ledgersRes.isMock || detailRes.isMock);
+        onMockChange?.(isMockFleet || detailRes.isMock);
       } else {
         setDetail(null);
-        onMockChange?.(ledgersRes.isMock);
+        onMockChange?.(isMockFleet);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to load ticket details';
@@ -72,7 +84,11 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   }, [activeTicketId, onMockChange]);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
+  }, [loadData]);
+
+  const handleRefresh = useCallback(() => {
+    loadData(true);
   }, [loadData]);
 
   const handleSelectTicket = (ticketId: string) => {
@@ -93,7 +109,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     return (
       <div className="error-banner">
         <span className="error-text">{error}</span>
-        <button type="button" className="btn-secondary" onClick={loadData}>
+        <button type="button" className="btn-secondary" onClick={handleRefresh}>
           Retry Connection
         </button>
       </div>
@@ -106,7 +122,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         title="Zero Telemetry Workspaces Available"
         message="No workspace autopsy records found. Ensure telemetry ledgers are present in the workspaces directory."
         actionLabel="Refresh Data"
-        onAction={loadData}
+        onAction={handleRefresh}
       />
     );
   }

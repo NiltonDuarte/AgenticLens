@@ -8,7 +8,9 @@ import (
 )
 
 func TestComputeTotals(t *testing.T) {
+	t.Parallel()
 	t.Run("empty invocations", func(t *testing.T) {
+		t.Parallel()
 		res := domain.ComputeTotals(nil)
 		if res.Invocations != 0 {
 			t.Errorf("expected 0 invocations, got %d", res.Invocations)
@@ -85,7 +87,9 @@ func TestComputeTotals(t *testing.T) {
 }
 
 func TestComputeWorkflowEfficiency(t *testing.T) {
+	t.Parallel()
 	t.Run("zero division defenses", func(t *testing.T) {
+		t.Parallel()
 		ledger := domain.AgenticFactLedger{
 			Code:        domain.CodeFacts{},
 			Invocations: []domain.InvocationFact{},
@@ -191,6 +195,7 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 }
 
 func TestComputeRoleAndModelMetrics(t *testing.T) {
+	t.Parallel()
 	invs := []domain.InvocationFact{
 		{
 			ID:    "1",
@@ -244,6 +249,7 @@ func TestComputeRoleAndModelMetrics(t *testing.T) {
 }
 
 func TestComputeThreadSummaries(t *testing.T) {
+	t.Parallel()
 	invs := []domain.InvocationFact{
 		{
 			ID:       "child-1",
@@ -281,6 +287,7 @@ func TestComputeThreadSummaries(t *testing.T) {
 }
 
 func TestCalculateFleetSummary(t *testing.T) {
+	t.Parallel()
 	ledgers := []domain.AgenticMetricsLedger{
 		{
 			Totals: domain.GroupedMetric{
@@ -328,6 +335,7 @@ func ptr(s string) *string {
 }
 
 func TestFilterLedgersByTimeWindow(t *testing.T) {
+	t.Parallel()
 	ref := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
 
 	dateIn7D := "2026-10-15T10:00:00Z"
@@ -394,6 +402,7 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 }
 
 func TestSortLedgers(t *testing.T) {
+	t.Parallel()
 	ledgers := []domain.AgenticMetricsLedger{
 		{
 			TicketID:  ptr("T-1"),
@@ -499,6 +508,7 @@ func TestSortLedgers(t *testing.T) {
 }
 
 func TestEnumsParsing(t *testing.T) {
+	t.Parallel()
 	if domain.ParseTimeWindow("7d") != domain.TimeWindow7D {
 		t.Errorf("expected TimeWindow7D")
 	}
@@ -515,6 +525,7 @@ func TestEnumsParsing(t *testing.T) {
 }
 
 func TestBuildComparisonRows(t *testing.T) {
+	t.Parallel()
 	time1 := "2026-10-17T14:00:00Z"
 	time2 := "2026-10-17T15:00:00Z"
 
@@ -552,6 +563,7 @@ func TestBuildComparisonRows(t *testing.T) {
 }
 
 func TestDateFiltersAndAggregations(t *testing.T) {
+	t.Parallel()
 	ref := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
 	start, end := domain.ResolveDatePreset(string(domain.TimeWindowLast7Days), ref)
 	if start == nil || end == nil {
@@ -563,6 +575,7 @@ func TestDateFiltersAndAggregations(t *testing.T) {
 }
 
 func TestFleetSummaryAndComparisonEdgeCases(t *testing.T) {
+	t.Parallel()
 	t.Run("empty fleet summary", func(t *testing.T) {
 		fleet := domain.CalculateFleetSummary(nil)
 		if fleet.TotalTickets != 0 {
@@ -612,6 +625,7 @@ func TestFleetSummaryAndComparisonEdgeCases(t *testing.T) {
 }
 
 func TestLeadTimeEdgeCases(t *testing.T) {
+	t.Parallel()
 	t.Run("nil started_at or completed_at", func(t *testing.T) {
 		if res := domain.ComputeLeadTimeSeconds(nil, nil); res != nil {
 			t.Errorf("expected nil lead time, got %v", res)
@@ -658,6 +672,7 @@ func TestLeadTimeEdgeCases(t *testing.T) {
 }
 
 func TestAdversarialDomainAggregations(t *testing.T) {
+	t.Parallel()
 	t.Run("context health thresholds evaluation", func(t *testing.T) {
 		cases := []struct {
 			name           string
@@ -930,6 +945,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 }
 
 func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
+	t.Parallel()
 	tid := "AL-6"
 	title := "Chronological Event Extraction"
 	ttype := "feature"

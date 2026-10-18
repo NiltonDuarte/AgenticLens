@@ -994,6 +994,26 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Workspace 3: with unsorted events
+	w3Dir := filepath.Join(wsDir, "AL-UNSORTED")
+	if err := os.MkdirAll(w3Dir, 0755); err != nil {
+		t.Fatalf("failed creating dir: %v", err)
+	}
+	w3JSON := `{
+		"ticket_id": "AL-UNSORTED",
+		"ticket_title": "Unsorted Events Ticket",
+		"ticket_type": "feature",
+		"started_at": "2026-10-18T10:00:00Z",
+		"events": [
+			{"session_id": "ses-late", "timestamp": "2026-10-18T12:00:00Z", "turn": 2, "role": "coder", "event_type": "tool_call", "status": "success"},
+			{"session_id": "ses-early-t2", "timestamp": "2026-10-18T10:00:00Z", "turn": 2, "role": "coder", "event_type": "tool_call", "status": "success"},
+			{"session_id": "ses-early-t1", "timestamp": "2026-10-18T10:00:00Z", "turn": 1, "role": "orchestrator", "event_type": "turn_start", "status": "success"}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(w3Dir, "agentic_metrics.json"), []byte(w3JSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	mockFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{
 			Data: []byte("<!DOCTYPE html><html><head><title>AgenticLens</title></head><body>Root</body></html>"),
@@ -1063,6 +1083,33 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		}
 		if errResp.Error != "not_found" {
 			t.Errorf("expected not_found, got %s", errResp.Error)
+		}
+		if errResp.Message != "Ticket workspace not found" {
+			t.Errorf("expected 'Ticket workspace not found', got %q", errResp.Message)
+		}
+	})
+
+	t.Run("GET /api/workspaces/AL-UNSORTED/events returns events sorted by timestamp and turn", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/AL-UNSORTED/events")
+		if err != nil {
+			t.Fatalf("HTTP get failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+
+		var events []domain.EventFact
+		if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
+			t.Fatalf("failed decoding events: %v", err)
+		}
+		if len(events) != 3 {
+			t.Fatalf("expected 3 events, got %d", len(events))
+		}
+		if events[0].SessionID != "ses-early-t1" || events[1].SessionID != "ses-early-t2" || events[2].SessionID != "ses-late" {
+			t.Errorf("expected sorted events [ses-early-t1, ses-early-t2, ses-late], got [%s, %s, %s]",
+				events[0].SessionID, events[1].SessionID, events[2].SessionID)
 		}
 	})
 
@@ -1150,6 +1197,164 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusNotFound {
 			t.Errorf("expected 400 or 404 for traversal, got %d", resp.StatusCode)
+		}
+	})
+}
+
+func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	wsDir := filepath.Join(tempDir, "workspaces")
+	if err := os.MkdirAll(wsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup 1: Workspace with zero-byte metrics file
+	zeroByteDir := filepath.Join(wsDir, "AL-ZERO-BYTE")
+	if err := os.MkdirAll(zeroByteDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(zeroByteDir, "agentic_metrics.json"), []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup 2: Workspace with corrupted/truncated JSON
+	corruptedDir := filepath.Join(wsDir, "AL-CORRUPTED")
+	if err := os.MkdirAll(corruptedDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(corruptedDir, "agentic_metrics.json"), []byte(`{"ticket_id": "AL-CORRUPTED", "events": [{"turn":`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup 3: Workspace with empty events field
+	emptyEventsDir := filepath.Join(wsDir, "AL-NO-EVENTS")
+	if err := os.MkdirAll(emptyEventsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(emptyEventsDir, "agentic_metrics.json"), []byte(`{"ticket_id": "AL-NO-EVENTS", "updated_at": "2026-10-18T10:00:00Z"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup 4: Valid ticket workspace alongside corrupted sibling
+	validDir := filepath.Join(wsDir, "AL-TARGETED-VALID")
+	if err := os.MkdirAll(validDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	validJSON := `{
+		"ticket_id": "AL-TARGETED-VALID",
+		"updated_at": "2026-10-18T10:00:00Z",
+		"events": [
+			{"session_id": "ses-2", "timestamp": "2026-10-18T10:00:10Z", "turn": 2},
+			{"session_id": "ses-1", "timestamp": "2026-10-18T10:00:05Z", "turn": 1}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(validJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := adaptershttp.WorkspaceEventsHandler(wsDir)
+
+	t.Run("empty ticketId parameter returns 400 Bad Request", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces//events", nil)
+		req.SetPathValue("ticketId", "")
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request for empty ticketId, got %d", rec.Code)
+		}
+	})
+
+	t.Run("path traversal attempts in ticketId return 400 Bad Request", func(t *testing.T) {
+		t.Parallel()
+		hostileIDs := []string{
+			"..",
+			"../AL-1",
+			"..\\AL-1",
+			"sub/ticket",
+			"ticket/../other",
+		}
+		for _, hid := range hostileIDs {
+			req := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+hid+"/events", nil)
+			req.SetPathValue("ticketId", hid)
+			rec := httptest.NewRecorder()
+
+			handler.ServeHTTP(rec, req)
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("expected 400 Bad Request for hostile ticketId %q, got %d", hid, rec.Code)
+			}
+		}
+	})
+
+	t.Run("zero-byte metrics file returns 404 without panicking", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-ZERO-BYTE/events", nil)
+		req.SetPathValue("ticketId", "AL-ZERO-BYTE")
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("expected 404 Not Found for zero-byte metrics file, got %d", rec.Code)
+		}
+	})
+
+	t.Run("corrupted JSON metrics file returns 404 without panicking", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-CORRUPTED/events", nil)
+		req.SetPathValue("ticketId", "AL-CORRUPTED")
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("expected 404 Not Found for corrupted JSON metrics file, got %d", rec.Code)
+		}
+	})
+
+	t.Run("workspace with missing events array returns 200 with empty array JSON", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-NO-EVENTS/events", nil)
+		req.SetPathValue("ticketId", "AL-NO-EVENTS")
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", rec.Code)
+		}
+
+		contentType := rec.Header().Get("Content-Type")
+		if !strings.Contains(contentType, "application/json") {
+			t.Errorf("expected application/json content type, got %s", contentType)
+		}
+
+		body := strings.TrimSpace(rec.Body.String())
+		if body != "[]" {
+			t.Errorf("expected empty array '[]', got %q", body)
+		}
+	})
+
+	t.Run("corrupted sibling workspace does not interfere with targeted ticket load", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-TARGETED-VALID/events", nil)
+		req.SetPathValue("ticketId", "AL-TARGETED-VALID")
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK for valid ticket despite corrupted sibling, got %d (body: %s)", rec.Code, rec.Body.String())
+		}
+
+		var events []domain.EventFact
+		if err := json.Unmarshal(rec.Body.Bytes(), &events); err != nil {
+			t.Fatalf("failed unmarshaling events: %v", err)
+		}
+		if len(events) != 2 {
+			t.Fatalf("expected 2 events, got %d", len(events))
+		}
+		if events[0].SessionID != "ses-1" || events[1].SessionID != "ses-2" {
+			t.Errorf("expected events stably sorted: %+v", events)
 		}
 	})
 }

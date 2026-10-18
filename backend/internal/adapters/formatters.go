@@ -3,8 +3,6 @@ package adapters
 import (
 	"fmt"
 	"math"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -373,59 +371,4 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger) string {
 	)
 
 	return strings.Join(lines, "\n")
-}
-
-// UpdateSummaryFile idempotently updates or appends the metrics table inside the summary file.
-func UpdateSummaryFile(destPath string, tableMD string) error {
-	parentDir := filepath.Dir(destPath)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
-		return fmt.Errorf("creating parent directories for %s: %w", destPath, err)
-	}
-
-	header := "### Workflow Efficiency"
-	legacyHeader := "### Agentic Execution Metrics"
-
-	if data, err := os.ReadFile(destPath); err == nil {
-		content := string(data)
-		targetIdx := -1
-		if idx := strings.Index(content, header); idx != -1 {
-			targetIdx = idx
-		} else if idx := strings.Index(content, legacyHeader); idx != -1 {
-			targetIdx = idx
-		}
-
-		if targetIdx != -1 {
-			nextHeading := strings.Index(content[targetIdx+len(header):], "\n## ")
-			var newContent string
-			if nextHeading != -1 {
-				absNextHeading := targetIdx + len(header) + nextHeading
-				newContent = strings.TrimRight(content[:targetIdx], " \t\r\n") +
-					"\n\n" +
-					strings.TrimSpace(tableMD) +
-					"\n\n" +
-					strings.TrimLeft(content[absNextHeading:], " \t\r\n")
-			} else {
-				newContent = strings.TrimRight(content[:targetIdx], " \t\r\n") +
-					"\n\n" +
-					strings.TrimSpace(tableMD) +
-					"\n"
-			}
-			if err := os.WriteFile(destPath, []byte(newContent), 0644); err != nil {
-				return fmt.Errorf("writing updated summary to %s: %w", destPath, err)
-			}
-			return nil
-		}
-	}
-
-	f, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return fmt.Errorf("opening %s for appending: %w", destPath, err)
-	}
-	defer f.Close()
-
-	tableContent := "\n" + strings.TrimSpace(tableMD) + "\n"
-	if _, err := f.WriteString(tableContent); err != nil {
-		return fmt.Errorf("writing metrics table to %s: %w", destPath, err)
-	}
-	return nil
 }

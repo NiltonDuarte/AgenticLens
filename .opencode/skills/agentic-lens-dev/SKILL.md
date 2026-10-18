@@ -1,11 +1,11 @@
 ---
 name: agentic-lens-dev
-description: Use when building features, fixing bugs, or refactoring the standalone AgenticLens application (/Users/guedesduarte/workspace/projects/SinkLayer/AgenticLens) in Go (backend/CLI/engine) and TypeScript (frontend dashboard) with multi-agent orchestration (planner, coder, tester, reviewer). Requires a Jira ticket or task identifier.
+description: Use when building features, fixing bugs, or refactoring the standalone AgenticLens application in Go (backend/CLI/engine) and TypeScript (frontend dashboard) with multi-agent orchestration (planner, coder, tester, reviewer). Requires a Jira ticket or task identifier.
 ---
 
 # AgenticLens Multi-Agent Development Workflow
 
-Coordinates autonomous development in the standalone **AgenticLens** project (`/Users/guedesduarte/workspace/projects/SinkLayer/AgenticLens`) across specialized subagents (`planner`, `coder`, `tester`, `reviewer`). Architecture is built in **Go** (core aggregations, boundary adapters, CLI, server) and **TypeScript** (modern web dashboard embedded into the Go binary via `embed.FS`). Persona instructions and layer boundaries live in `.opencode/agent/`.
+Coordinates autonomous development in the standalone **AgenticLens** project across specialized subagents (`planner`, `coder`, `tester`, `reviewer`). Architecture is built in **Go** (core aggregations, boundary adapters, CLI, server) and **TypeScript** (modern web dashboard embedded into the Go binary via `embed.FS`). Persona instructions and layer boundaries live in `.opencode/agent/`.
 
 The skill itself uses the AgenticLens CLI application to parse, validate, and render developer telemetry and lifecycle metrics for every development iteration.
 
@@ -45,7 +45,7 @@ Throughout this workflow:
   task(
       subagent_type="planner",
       description="Ground, contract & plan iteration 01",
-      prompt="Ticket: <TICKET_ID>. Request: <USER_REQUEST>. Config: .agenticlens/config.yaml. Ground against existing AgenticLens layers (Go backend in internal/domain, internal/adapters, cmd/ and TypeScript frontend in web/) and TECHNICAL_GUIDELINES.md. Write <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md and <WORKSPACES_DIR>/<TICKET_ID>/iterations/01/PLAN.md. Zero code blocks.",
+      prompt="Ticket: <TICKET_ID>. Request: <USER_REQUEST>. Config: .agenticlens/config.yaml. Ground against existing AgenticLens layers (Go backend in backend/internal/domain, backend/internal/adapters, backend/cmd/ and TypeScript frontend in web/) and TECHNICAL_GUIDELINES.md. Write <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md and <WORKSPACES_DIR>/<TICKET_ID>/iterations/01/PLAN.md. Zero code blocks.",
   )
   ```
 - **Iteration > 01**:

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ContextWindowHealth } from '../domain/types';
 import { formatTokensK, HEALTHY_CEILING_TOKENS } from '../domain/formatters';
+import { getHealthStatusColor, THEME_COLORS } from '../utils/theme';
 
 export interface SaturationBarProps {
   readonly contextHealth: ContextWindowHealth;
@@ -20,22 +21,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
   const fillPct = maxScaleTokens > 0 ? Math.min(100, (orchTokens / maxScaleTokens) * 100) : 0;
   const ceilingMarkerPct = maxScaleTokens > 0 ? (ceiling / maxScaleTokens) * 100 : 100;
 
-  const getStatusColor = (s: string): string => {
-    switch (s.toUpperCase()) {
-      case 'HEALTHY':
-        return '#10b981';
-      case 'ELEVATED':
-        return '#f59e0b';
-      case 'BLOATED':
-        return '#f97316';
-      case 'CRITICAL':
-        return '#ef4444';
-      default:
-        return '#64748b';
-    }
-  };
-
-  const statusColor = getStatusColor(status);
+  const statusColor = getHealthStatusColor(status);
 
   const rolePeaks = contextHealth.peak_by_role ?? {};
   const roleEntries = Object.entries(rolePeaks).sort((a, b) => b[1] - a[1]);
@@ -109,7 +95,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
                       className="role-mini-fill"
                       style={{
                         width: `${Math.min(100, rolePct)}%`,
-                        backgroundColor: tokens > ceiling ? '#ef4444' : '#3b82f6',
+                        backgroundColor: tokens > ceiling ? THEME_COLORS.red : THEME_COLORS.blue,
                       }}
                     />
                   </div>

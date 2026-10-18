@@ -752,3 +752,516 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 		}
 	})
 }
+
+func TestLoadTicketWorkspace(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketDir := filepath.Join(tempDir, "AL-TARGET")
+	if err := os.MkdirAll(ticketDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	factJSON := `{
+		"ticket_id": "AL-TARGET",
+		"ticket_title": "Target Feature",
+		"updated_at": "2026-10-18T12:00:00Z",
+		"code": {
+			"lines_added": 40,
+			"lines_deleted": 5,
+			"files_changed": 3,
+			"sdlc_iterations": 2
+		},
+		"invocations": [
+			{
+				"id": "ses-1",
+				"role": "orchestrator",
+				"model": "model-1",
+				"user": "test-dev",
+				"active_duration_seconds": 90,
+				"turns": 3,
+				"tokens": {
+					"input": 2000,
+					"output": 300,
+					"cache_read": 1000,
+					"peak_context": 25000
+				},
+				"cost_usd": 0.08,
+				"compactions": 0
+			}
+		],
+		"tools": [
+			{
+				"name": "edit",
+				"calls": 4,
+				"errors": 0
+			}
+		]
+	}`
+
+	if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("successful load and derivation", func(t *testing.T) {
+		ledger, err := adapters.LoadTicketWorkspace("AL-TARGET", tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error loading workspace: %v", err)
+		}
+		if ledger == nil {
+			t.Fatal("expected non-nil ledger")
+		}
+		if ledger.TicketID == nil || *ledger.TicketID != "AL-TARGET" {
+			t.Errorf("expected ticket ID AL-TARGET, got %v", ledger.TicketID)
+		}
+		if ledger.Totals.Invocations != 1 {
+			t.Errorf("expected 1 invocation, got %d", ledger.Totals.Invocations)
+		}
+		if ledger.WorkflowEfficiency.CodeDelivered.LinesAdded != 40 {
+			t.Errorf("expected 40 lines added, got %d", ledger.WorkflowEfficiency.CodeDelivered.LinesAdded)
+		}
+	})
+
+	t.Run("fallback to parameter ticket ID when omitted in json", func(t *testing.T) {
+		noIDDir := filepath.Join(tempDir, "AL-OMITTED")
+		if err := os.MkdirAll(noIDDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(noIDDir, "agentic_metrics.json"), []byte(`{"updated_at": "2026-10-18T12:00:00Z"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		ledger, err := adapters.LoadTicketWorkspace("AL-OMITTED", tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ledger == nil || ledger.TicketID == nil || *ledger.TicketID != "AL-OMITTED" {
+			t.Errorf("expected fallback ticket ID AL-OMITTED, got %v", ledger)
+		}
+	})
+
+	t.Run("non-existent workspace returns error", func(t *testing.T) {
+		ledger, err := adapters.LoadTicketWorkspace("NON-EXISTENT", tempDir)
+		if err == nil {
+			t.Fatal("expected error for non-existent ticket workspace, got nil")
+		}
+		if ledger != nil {
+			t.Errorf("expected nil ledger, got %+v", ledger)
+		}
+	})
+
+	t.Run("corrupted metrics JSON returns error", func(t *testing.T) {
+		corruptDir := filepath.Join(tempDir, "AL-CORRUPT")
+		if err := os.MkdirAll(corruptDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(corruptDir, "agentic_metrics.json"), []byte("{bad json"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		ledger, err := adapters.LoadTicketWorkspace("AL-CORRUPT", tempDir)
+		if err == nil {
+			t.Fatal("expected error for corrupted JSON, got nil")
+		}
+		if ledger != nil {
+			t.Errorf("expected nil ledger, got %+v", ledger)
+		}
+	})
+
+	t.Run("rejects path traversal attempts", func(t *testing.T) {
+		hostileIDs := []string{
+			"",
+			"   ",
+			"..",
+			"../AL-TARGET",
+			"../../etc/passwd",
+			"/etc/passwd",
+			"\\windows\\win.ini",
+			"AL-TARGET/../../",
+			"AL-TARGET/nested",
+			"AL-TARGET\\nested",
+		}
+
+		for _, hid := range hostileIDs {
+			ledger, err := adapters.LoadTicketWorkspace(hid, tempDir)
+			if err == nil {
+				t.Errorf("expected error for hostile ticket ID %q, got nil", hid)
+			}
+			if ledger != nil {
+				t.Errorf("expected nil ledger for hostile ticket ID %q, got %+v", hid, ledger)
+			}
+		}
+	})
+}
+
+func TestUpdateSummaryFile(t *testing.T) {
+	tempDir := t.TempDir()
+	summaryFile := filepath.Join(tempDir, "SUMMARY.md")
+
+	tableMD := "### Workflow Efficiency\n- **Iterations:** 1\n\n### Anomalies & Health Flags\n- **Status:** No execution anomalies detected (clean session).\n"
+
+	t.Run("append to new file", func(t *testing.T) {
+		err := adapters.UpdateSummaryFile(summaryFile, tableMD)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		content, _ := os.ReadFile(summaryFile)
+		if !strings.Contains(string(content), tableMD) {
+			t.Errorf("expected table in new file, got %s", string(content))
+		}
+	})
+
+	t.Run("idempotent replacement in existing file with other sections", func(t *testing.T) {
+		initial := "# Title\n\n### Workflow Efficiency\n- Old Content\n\n### Anomalies & Health Flags\n- Old Anomaly\n\n## Next Section\nSomething else\n"
+		if err := os.WriteFile(summaryFile, []byte(initial), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		newTable := "### Workflow Efficiency\n- New Content\n\n### Anomalies & Health Flags\n- **Status:** 1 execution anomaly detected (1 CRITICAL).\n"
+		err := adapters.UpdateSummaryFile(summaryFile, newTable)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		updated, _ := os.ReadFile(summaryFile)
+		updatedStr := string(updated)
+		if strings.Contains(updatedStr, "Old Content") || strings.Contains(updatedStr, "Old Anomaly") {
+			t.Errorf("expected Old Content and Old Anomaly to be replaced")
+		}
+		if !strings.Contains(updatedStr, "New Content") {
+			t.Errorf("expected New Content to be present")
+		}
+		if !strings.Contains(updatedStr, "1 execution anomaly detected") {
+			t.Errorf("expected new anomaly status to be present")
+		}
+		if !strings.Contains(updatedStr, "## Next Section") {
+			t.Errorf("expected Next Section to be preserved")
+		}
+		if strings.Count(updatedStr, "### Workflow Efficiency") != 1 {
+			t.Errorf("expected exactly 1 Workflow Efficiency header, got %d", strings.Count(updatedStr, "### Workflow Efficiency"))
+		}
+	})
+
+	t.Run("replaces legacy header cleanly", func(t *testing.T) {
+		legacyFile := filepath.Join(tempDir, "LEGACY_SUMMARY.md")
+		initialLegacy := "# Summary\n\n### Agentic Execution Metrics\n- Old metrics\n\n## Results\nDone\n"
+		if err := os.WriteFile(legacyFile, []byte(initialLegacy), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		err := adapters.UpdateSummaryFile(legacyFile, tableMD)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		content, _ := os.ReadFile(legacyFile)
+		contentStr := string(content)
+		if strings.Contains(contentStr, "Old metrics") {
+			t.Errorf("expected legacy metrics to be replaced")
+		}
+		if !strings.Contains(contentStr, "### Workflow Efficiency") {
+			t.Errorf("expected new Workflow Efficiency header")
+		}
+		if !strings.Contains(contentStr, "## Results") {
+			t.Errorf("expected subsequent section to be preserved")
+		}
+	})
+}
+
+func TestSaveFactLedger(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creates nested directories, writes indented JSON with trailing newline", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outPath := filepath.Join(tempDir, "sub", "dir", "facts.json")
+
+		tid := "AL-PERSIST-1"
+		title := "Test Persistence"
+		schemaVer := 2
+		ledger := domain.AgenticFactLedger{
+			SchemaVersion: &schemaVer,
+			TicketID:      &tid,
+			TicketTitle:   &title,
+			Invocations: []domain.InvocationFact{
+				{
+					ID:      "inv-1",
+					Role:    "coder",
+					Model:   "gemini-3.8-flash",
+					CostUSD: 0.05,
+				},
+			},
+		}
+
+		err := adapters.SaveFactLedger(outPath, ledger)
+		if err != nil {
+			t.Fatalf("unexpected error saving fact ledger: %v", err)
+		}
+
+		data, err := os.ReadFile(outPath)
+		if err != nil {
+			t.Fatalf("failed reading saved file: %v", err)
+		}
+
+		// Trailing newline check
+		if len(data) == 0 || data[len(data)-1] != '\n' {
+			t.Errorf("expected trailing newline in output")
+		}
+
+		// Two-space indentation check
+		content := string(data)
+		if !strings.Contains(content, "  \"ticket_id\": \"AL-PERSIST-1\"") {
+			t.Errorf("expected 2-space indented JSON, got:\n%s", content)
+		}
+
+		// Unmarshal round-trip check
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling saved fact ledger: %v", err)
+		}
+		if parsed.TicketID == nil || *parsed.TicketID != "AL-PERSIST-1" {
+			t.Errorf("expected ticket_id AL-PERSIST-1, got %v", parsed.TicketID)
+		}
+		if len(parsed.Invocations) != 1 || parsed.Invocations[0].ID != "inv-1" {
+			t.Errorf("expected 1 invocation with ID inv-1, got %+v", parsed.Invocations)
+		}
+	})
+
+	t.Run("returns wrapped error when directory cannot be created", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		blockingFile := filepath.Join(tempDir, "blocker")
+		if err := os.WriteFile(blockingFile, []byte("file"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Attempting to create directory inside a regular file will fail
+		invalidPath := filepath.Join(blockingFile, "sub", "facts.json")
+		err := adapters.SaveFactLedger(invalidPath, domain.AgenticFactLedger{})
+		if err == nil {
+			t.Fatal("expected error when parent directory cannot be created, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to create directory") {
+			t.Errorf("expected 'failed to create directory' in error message, got: %v", err)
+		}
+	})
+}
+
+func TestSaveMetricsLedger(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creates nested directories, serializes DTO and writes formatted JSON", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outPath := filepath.Join(tempDir, "metrics", "computed.json")
+
+		tid := "AL-METRICS-1"
+		title := "Test Metrics Persistence"
+		ledger := domain.AgenticMetricsLedger{
+			TicketID:    &tid,
+			TicketTitle: &title,
+			Totals: domain.GroupedMetric{
+				Invocations: 3,
+				InputTokens: 5000,
+				CostUSD:     0.1234,
+			},
+		}
+
+		err := adapters.SaveMetricsLedger(outPath, ledger)
+		if err != nil {
+			t.Fatalf("unexpected error saving metrics ledger: %v", err)
+		}
+
+		data, err := os.ReadFile(outPath)
+		if err != nil {
+			t.Fatalf("failed reading saved file: %v", err)
+		}
+
+		// Trailing newline check
+		if len(data) == 0 || data[len(data)-1] != '\n' {
+			t.Errorf("expected trailing newline in output")
+		}
+
+		// Two-space indentation check
+		content := string(data)
+		if !strings.Contains(content, "  \"ticket_id\": \"AL-METRICS-1\"") {
+			t.Errorf("expected 2-space indented JSON, got:\n%s", content)
+		}
+
+		// DTO deserialization check
+		var parsed adapters.SerializedLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling saved metrics ledger: %v", err)
+		}
+		if parsed.TicketID == nil || *parsed.TicketID != "AL-METRICS-1" {
+			t.Errorf("expected ticket_id AL-METRICS-1, got %v", parsed.TicketID)
+		}
+		if parsed.Totals.Invocations != 3 {
+			t.Errorf("expected 3 invocations, got %d", parsed.Totals.Invocations)
+		}
+	})
+
+	t.Run("returns wrapped error when directory cannot be created", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		blockingFile := filepath.Join(tempDir, "blocker")
+		if err := os.WriteFile(blockingFile, []byte("file"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		invalidPath := filepath.Join(blockingFile, "nested", "metrics.json")
+		err := adapters.SaveMetricsLedger(invalidPath, domain.AgenticMetricsLedger{})
+		if err == nil {
+			t.Fatal("expected error when parent directory cannot be created, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to create directory") {
+			t.Errorf("expected 'failed to create directory' in error message, got: %v", err)
+		}
+	})
+}
+
+func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("SaveFactLedger fails when destination path is an existing directory", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		dirAsFile := filepath.Join(tempDir, "existing_dir")
+		if err := os.MkdirAll(dirAsFile, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		err := adapters.SaveFactLedger(dirAsFile, domain.AgenticFactLedger{})
+		if err == nil {
+			t.Fatal("expected error writing fact ledger to existing directory, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to write fact ledger") {
+			t.Errorf("expected 'failed to write fact ledger' in error, got: %v", err)
+		}
+	})
+
+	t.Run("SaveMetricsLedger fails when destination path is an existing directory", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		dirAsFile := filepath.Join(tempDir, "existing_metrics_dir")
+		if err := os.MkdirAll(dirAsFile, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		err := adapters.SaveMetricsLedger(dirAsFile, domain.AgenticMetricsLedger{})
+		if err == nil {
+			t.Fatal("expected error writing metrics ledger to existing directory, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to write metrics ledger") {
+			t.Errorf("expected 'failed to write metrics ledger' in error, got: %v", err)
+		}
+	})
+
+	t.Run("SaveFactLedger overwrites existing file cleanly without appending or corrupting", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		filePath := filepath.Join(tempDir, "overwrite_test", "agentic_metrics.json")
+
+		// First write: large payload
+		longTitle := strings.Repeat("Initial Large Payload Content ", 10)
+		firstLedger := domain.AgenticFactLedger{
+			TicketTitle: &longTitle,
+		}
+		if err := adapters.SaveFactLedger(filePath, firstLedger); err != nil {
+			t.Fatalf("first write failed: %v", err)
+		}
+
+		// Second write: tiny payload
+		shortTitle := "Short"
+		secondLedger := domain.AgenticFactLedger{
+			TicketTitle: &shortTitle,
+		}
+		if err := adapters.SaveFactLedger(filePath, secondLedger); err != nil {
+			t.Fatalf("second write failed: %v", err)
+		}
+
+		// Read back and unmarshal to prove file is valid JSON and not corrupt trailing bytes
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			t.Fatalf("reading file failed: %v", err)
+		}
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("unmarshaling overwritten file failed: %v, content:\n%s", err, string(data))
+		}
+		if parsed.TicketTitle == nil || *parsed.TicketTitle != "Short" {
+			t.Errorf("expected overwritten title 'Short', got: %v", parsed.TicketTitle)
+		}
+	})
+
+	t.Run("SaveMetricsLedger overwrites existing file cleanly without appending or corrupting", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		filePath := filepath.Join(tempDir, "overwrite_metrics_test", "metrics.json")
+
+		tid1 := "AL-INITIAL-LONG-TICKET-ID-12345"
+		firstLedger := domain.AgenticMetricsLedger{
+			TicketID: &tid1,
+			Totals: domain.GroupedMetric{
+				Invocations: 999999,
+				InputTokens: 888888,
+			},
+		}
+		if err := adapters.SaveMetricsLedger(filePath, firstLedger); err != nil {
+			t.Fatalf("first write failed: %v", err)
+		}
+
+		tid2 := "AL-2"
+		secondLedger := domain.AgenticMetricsLedger{
+			TicketID: &tid2,
+			Totals: domain.GroupedMetric{
+				Invocations: 1,
+			},
+		}
+		if err := adapters.SaveMetricsLedger(filePath, secondLedger); err != nil {
+			t.Fatalf("second write failed: %v", err)
+		}
+
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			t.Fatalf("reading file failed: %v", err)
+		}
+		var parsed adapters.SerializedLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("unmarshaling overwritten file failed: %v, content:\n%s", err, string(data))
+		}
+		if parsed.TicketID == nil || *parsed.TicketID != "AL-2" {
+			t.Errorf("expected ticket_id AL-2, got %v", parsed.TicketID)
+		}
+		if parsed.Totals.Invocations != 1 {
+			t.Errorf("expected 1 invocation, got %d", parsed.Totals.Invocations)
+		}
+	})
+
+	t.Run("zero-value ledgers marshal to valid JSON with trailing newline", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		factPath := filepath.Join(tempDir, "zero_facts.json")
+		if err := adapters.SaveFactLedger(factPath, domain.AgenticFactLedger{}); err != nil {
+			t.Fatalf("saving zero fact ledger failed: %v", err)
+		}
+		factData, err := os.ReadFile(factPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(factData) == 0 || factData[len(factData)-1] != '\n' {
+			t.Errorf("expected trailing newline in zero fact ledger")
+		}
+
+		metricsPath := filepath.Join(tempDir, "zero_metrics.json")
+		if err := adapters.SaveMetricsLedger(metricsPath, domain.AgenticMetricsLedger{}); err != nil {
+			t.Fatalf("saving zero metrics ledger failed: %v", err)
+		}
+		metricsData, err := os.ReadFile(metricsPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(metricsData) == 0 || metricsData[len(metricsData)-1] != '\n' {
+			t.Errorf("expected trailing newline in zero metrics ledger")
+		}
+	})
+}
