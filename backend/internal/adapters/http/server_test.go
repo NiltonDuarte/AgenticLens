@@ -2,6 +2,7 @@ package http_test
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -565,7 +566,8 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 		}
 
 		// 2. Direct handler invocation with hostile path values
-		handler := adaptershttp.WorkspaceDetailHandler(wsDir)
+		detailHandler := adaptershttp.WorkspaceDetailHandler(wsDir)
+		eventsHandler := adaptershttp.WorkspaceEventsHandler(wsDir)
 		hostileIDs := []string{
 			"../../etc/passwd",
 			"..",
@@ -574,13 +576,24 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 			`..\..\windows\win.ini`,
 		}
 		for _, hid := range hostileIDs {
-			req := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+hid, nil)
-			req.SetPathValue("ticketId", hid)
-			rec := httptest.NewRecorder()
-			handler.ServeHTTP(rec, req)
+			// Detail handler
+			reqDetail := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+hid, nil)
+			reqDetail.SetPathValue("ticketId", hid)
+			recDetail := httptest.NewRecorder()
+			detailHandler.ServeHTTP(recDetail, reqDetail)
 
-			if rec.Code != http.StatusBadRequest {
-				t.Errorf("expected 400 Bad Request for hostile ticketId %q, got %d", hid, rec.Code)
+			if recDetail.Code != http.StatusBadRequest {
+				t.Errorf("WorkspaceDetailHandler: expected 400 Bad Request for hostile ticketId %q, got %d", hid, recDetail.Code)
+			}
+
+			// Events handler
+			reqEvents := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+hid+"/events", nil)
+			reqEvents.SetPathValue("ticketId", hid)
+			recEvents := httptest.NewRecorder()
+			eventsHandler.ServeHTTP(recEvents, reqEvents)
+
+			if recEvents.Code != http.StatusBadRequest {
+				t.Errorf("WorkspaceEventsHandler: expected 400 Bad Request for hostile ticketId %q, got %d", hid, recEvents.Code)
 			}
 		}
 	})
@@ -686,6 +699,279 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		}
 		if errResp.Error != "invalid_input" || errResp.Message != "invalid query" || errResp.StatusCode != 400 {
 			t.Errorf("unexpected error response: %+v", errResp)
+		}
+	})
+
+	t.Run("WriteEventsResponse writes valid JSON", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		events := []domain.EventFact{
+			{
+				SessionID: "ses-1",
+				Timestamp: "2026-10-18T10:00:00Z",
+				Turn:      1,
+				Role:      "coder",
+				EventType: domain.EventTypeToolCall,
+				Status:    "success",
+			},
+		}
+		adaptershttp.WriteEventsResponse(rec, events)
+		if rec.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", rec.Code)
+		}
+		var parsed []domain.EventFact
+		if err := json.NewDecoder(rec.Body).Decode(&parsed); err != nil {
+			t.Fatalf("failed decoding events response: %v", err)
+		}
+		if len(parsed) != 1 || parsed[0].SessionID != "ses-1" {
+			t.Errorf("unexpected events parsed: %+v", parsed)
+		}
+	})
+}
+
+func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
+	root := t.TempDir()
+	wsDir := filepath.Join(root, "workspaces")
+	if err := os.MkdirAll(wsDir, 0755); err != nil {
+		t.Fatalf("failed creating workspaces dir: %v", err)
+	}
+
+	// Workspace 1: with events and anomalies
+	w1Dir := filepath.Join(wsDir, "AL-EVENT-1")
+	if err := os.MkdirAll(w1Dir, 0755); err != nil {
+		t.Fatalf("failed creating dir: %v", err)
+	}
+	w1JSON := `{
+		"ticket_id": "AL-EVENT-1",
+		"ticket_title": "Event Ticket",
+		"ticket_type": "feature",
+		"started_at": "2026-10-18T10:00:00Z",
+		"completed_at": "2026-10-18T11:00:00Z",
+		"updated_at": "2026-10-18T11:00:00Z",
+		"code": {"lines_added": 10, "lines_deleted": 0, "test_lines_added": 5, "test_lines_deleted": 0, "prod_lines_added": 5, "prod_lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
+		"invocations": [
+			{
+				"id": "ses-1",
+				"role": "orchestrator",
+				"model": "gpt-4",
+				"user": "dev",
+				"active_duration_seconds": 60,
+				"turns": 5,
+				"tokens": {"input": 1000, "output": 200, "cache_read": 500, "reasoning": 0, "peak_context": 50000},
+				"cost_usd": 0.10,
+				"compactions": 0
+			}
+		],
+		"tools": [],
+		"events": [
+			{
+				"session_id": "ses-1",
+				"timestamp": "2026-10-18T10:00:00Z",
+				"turn": 1,
+				"role": "coder",
+				"event_type": "tool_call",
+				"tool_name": "bash",
+				"status": "error"
+			},
+			{
+				"session_id": "ses-1",
+				"timestamp": "2026-10-18T10:00:05Z",
+				"turn": 1,
+				"role": "coder",
+				"event_type": "tool_call",
+				"tool_name": "bash",
+				"status": "error"
+			},
+			{
+				"session_id": "ses-1",
+				"timestamp": "2026-10-18T10:00:10Z",
+				"turn": 1,
+				"role": "coder",
+				"event_type": "tool_call",
+				"tool_name": "bash",
+				"status": "error"
+			}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(w1Dir, "agentic_metrics.json"), []byte(w1JSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Workspace 2: legacy v1 with no events and no anomalies
+	w2Dir := filepath.Join(wsDir, "AL-LEGACY")
+	if err := os.MkdirAll(w2Dir, 0755); err != nil {
+		t.Fatalf("failed creating dir: %v", err)
+	}
+	w2JSON := `{
+		"ticket_id": "AL-LEGACY",
+		"ticket_title": "Legacy Ticket",
+		"ticket_type": "chore",
+		"started_at": "2026-10-17T10:00:00Z",
+		"completed_at": "2026-10-17T10:30:00Z",
+		"updated_at": "2026-10-17T10:30:00Z",
+		"code": {"lines_added": 5, "lines_deleted": 0, "test_lines_added": 0, "test_lines_deleted": 0, "prod_lines_added": 5, "prod_lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
+		"invocations": [],
+		"tools": []
+	}`
+	if err := os.WriteFile(filepath.Join(w2Dir, "agentic_metrics.json"), []byte(w2JSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	mockFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{
+			Data: []byte("<!DOCTYPE html><html><head><title>AgenticLens</title></head><body>Root</body></html>"),
+		},
+	}
+	server := adaptershttp.NewServer(wsDir, mockFS)
+	ts := httptest.NewServer(server.Handler())
+	t.Cleanup(func() { ts.Close() })
+
+	t.Run("GET /api/workspaces/AL-EVENT-1/events returns events array", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/AL-EVENT-1/events")
+		if err != nil {
+			t.Fatalf("HTTP get failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+
+		var events []domain.EventFact
+		if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
+			t.Fatalf("failed decoding events: %v", err)
+		}
+		if len(events) != 3 {
+			t.Fatalf("expected 3 events, got %d", len(events))
+		}
+		if events[0].Timestamp != "2026-10-18T10:00:00Z" || events[1].Timestamp != "2026-10-18T10:00:05Z" || events[2].Timestamp != "2026-10-18T10:00:10Z" {
+			t.Errorf("unexpected events order or content: %+v", events)
+		}
+	})
+
+	t.Run("GET /api/workspaces/AL-LEGACY/events returns empty array", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/AL-LEGACY/events")
+		if err != nil {
+			t.Fatalf("HTTP get failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed reading body: %v", err)
+		}
+		if strings.TrimSpace(string(body)) != "[]" {
+			t.Fatalf("expected empty JSON array [], got: %s", string(body))
+		}
+	})
+
+	t.Run("GET /api/workspaces/NON-EXISTENT/events returns 404", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/NON-EXISTENT/events")
+		if err != nil {
+			t.Fatalf("HTTP get failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", resp.StatusCode)
+		}
+
+		var errResp adaptershttp.ErrorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
+			t.Fatalf("failed decoding error response: %v", err)
+		}
+		if errResp.Error != "not_found" {
+			t.Errorf("expected not_found, got %s", errResp.Error)
+		}
+	})
+
+	t.Run("GET /api/workspaces/AL-EVENT-1 includes non-empty anomalies", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/AL-EVENT-1")
+		if err != nil {
+			t.Fatalf("HTTP get failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+
+		var detail adaptershttp.WorkspaceDetailResponse
+		if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+			t.Fatalf("failed decoding workspace detail: %v", err)
+		}
+		if len(detail.Anomalies) == 0 {
+			t.Fatalf("expected detected anomalies in AL-EVENT-1, got empty slice")
+		}
+		if detail.Anomalies[0].RuleID != domain.RuleToolRetryStreak {
+			t.Errorf("expected TOOL_RETRY_STREAK rule, got %s", detail.Anomalies[0].RuleID)
+		}
+	})
+
+	t.Run("GET /api/workspaces/AL-LEGACY includes empty array for anomalies (never null)", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/AL-LEGACY")
+		if err != nil {
+			t.Fatalf("HTTP get failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed reading body: %v", err)
+		}
+
+		var rawMap map[string]json.RawMessage
+		if err := json.Unmarshal(body, &rawMap); err != nil {
+			t.Fatalf("failed parsing raw JSON: %v", err)
+		}
+
+		anomaliesJSON, exists := rawMap["anomalies"]
+		if !exists {
+			t.Fatal("anomalies key must exist in workspace detail JSON")
+		}
+		if string(anomaliesJSON) != "[]" {
+			t.Fatalf("expected anomalies to be [], got %s", string(anomaliesJSON))
+		}
+	})
+
+	t.Run("GET /api/fleet includes anomaly_summary", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/fleet")
+		if err != nil {
+			t.Fatalf("HTTP get failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+
+		var fleet domain.FleetSummary
+		if err := json.NewDecoder(resp.Body).Decode(&fleet); err != nil {
+			t.Fatalf("failed decoding fleet: %v", err)
+		}
+		if fleet.AnomalySummary.TotalAnomalies == 0 {
+			t.Errorf("expected fleet anomaly summary to reflect AL-EVENT-1 anomaly, got 0")
+		}
+		if fleet.AnomalySummary.TicketsWithAnomalies != 1 {
+			t.Errorf("expected 1 ticket with anomalies, got %d", fleet.AnomalySummary.TicketsWithAnomalies)
+		}
+	})
+
+	t.Run("path traversal on /events is rejected", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/..%2F..%2Fetc%2Fpasswd/events")
+		if err != nil {
+			t.Fatalf("request failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusNotFound {
+			t.Errorf("expected 400 or 404 for traversal, got %d", resp.StatusCode)
 		}
 	})
 }

@@ -572,6 +572,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 			OverallReasoningRatioPct: 0.0,
 			RoleCosts:                make(map[string]float64),
 			ModelCosts:               make(map[string]float64),
+			AnomalySummary:           ComputeFleetAnomalies(nil),
 		}
 	}
 
@@ -582,7 +583,10 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	roleCosts := make(map[string]float64)
 	modelCosts := make(map[string]float64)
 
-	for _, ledger := range ledgers {
+	factLedgers := make([]AgenticFactLedger, len(ledgers))
+
+	for i, ledger := range ledgers {
+		factLedgers[i] = ledger.Facts
 		totalCostUSD += ledger.Totals.CostUSD
 		totalInvocations += ledger.Totals.Invocations
 		totalInputTokens += ledger.Totals.InputTokens
@@ -601,6 +605,8 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 			modelCosts[m.Model] = math.Round((modelCosts[m.Model]+m.CostUSD)*10000.0) / 10000.0
 		}
 	}
+
+	anomalySummary := ComputeFleetAnomalies(factLedgers)
 
 	totalCachedOrInput := totalInputTokens + totalCacheReadTokens
 	var overallCacheHitRatePct float64
@@ -643,6 +649,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		OverallReasoningRatioPct: overallReasoningRatioPct,
 		RoleCosts:                roleCosts,
 		ModelCosts:               modelCosts,
+		AnomalySummary:           anomalySummary,
 	}
 }
 

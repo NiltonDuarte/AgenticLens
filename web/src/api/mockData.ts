@@ -32,6 +32,33 @@ export const mockFleetSummary: FleetSummary = {
     'gpt-4o': 3.821,
     'o1-mini': 1.76,
   },
+  anomaly_summary: {
+    total_anomalies: 2,
+    warning_count: 1,
+    critical_count: 1,
+    severity_counts: {
+      WARNING: 1,
+      CRITICAL: 1,
+    },
+    rule_counts: {
+      TOOL_RETRY_STREAK: 1,
+      TOOL_HIGH_FAILURE_RATE: 0,
+      CONTEXT_SATURATION_SPIKE: 1,
+      SUBAGENT_REWORK_LOOP: 0,
+    },
+    total_tickets: 4,
+    tickets_with_anomalies: 2,
+    anomaly_rate_per_ticket: 0.5,
+    brittle_tools: [
+      {
+        tool_name: 'bash',
+        anomaly_count: 1,
+        total_calls: 32,
+        error_count: 5,
+        failure_rate_pct: 15.6,
+      },
+    ],
+  },
 };
 
 export const mockTicketComparisonRows: readonly TicketComparisonRow[] = [
@@ -1328,6 +1355,7 @@ Build the foundational Go domain model for AgenticLens representing atomic telem
 - Implemented ComputeTotals, ComputeWorkflowEfficiency, and CalculateFleetSummary in internal/domain/aggregations.go.
 - 100% test coverage achieved across domain rollups.`,
     },
+    anomalies: [],
   },
   'AL-2': {
     ledger: mockAgenticMetricsLedgers['AL-2']!,
@@ -1348,6 +1376,21 @@ Expose telemetry datasets via high-performance Go HTTP REST endpoints (/api/flee
 - Verified path traversal protection for workspace directory scans.
 - All endpoints tested under race detector.`,
     },
+    anomalies: [
+      {
+        rule_id: 'TOOL_RETRY_STREAK',
+        severity: 'WARNING',
+        title: 'Tool retry streak: bash (3 consecutive errors)',
+        description: "Tool 'bash' encountered 3 consecutive execution failures (session: ses-orch, turn: 4)",
+        context: {
+          tool_name: 'bash',
+          count: 3,
+          session_id: 'ses-orch',
+          turn: 4,
+          threshold: '3',
+        },
+      },
+    ],
   },
   'AL-3': {
     ledger: mockAgenticMetricsLedgers['AL-3']!,
@@ -1368,6 +1411,7 @@ Scaffold the TypeScript React web frontend with Vite and provide the initial Fle
 - Fleet Overview renders top-level KPIs, role cost distribution, and ticket table.
 - Embedded Go binary compiles and serves the SPA bundle seamlessly.`,
     },
+    anomalies: [],
   },
   'PO-1': {
     ledger: mockAgenticMetricsLedgers['PO-1']!,
@@ -1386,6 +1430,7 @@ Define product specifications, tracer-bullet roadmap, and functional architectur
 - Structured roadmap decomposition into vertical tracer-bullet tickets.
 - Established telemetry schema and KPI calculation guidelines.`,
     },
+    anomalies: [],
   },
   'GEN-1': {
     ledger: mockAgenticMetricsLedgers['GEN-1']!,
@@ -1404,5 +1449,6 @@ Provide a lightweight Python telemetry extractor to harvest session metrics, tok
 - Initial extractor script written and tested against live session logs.
 - Fine-tuning git diff line churn extraction across subagent commits.`,
     },
+    anomalies: [],
   },
 };

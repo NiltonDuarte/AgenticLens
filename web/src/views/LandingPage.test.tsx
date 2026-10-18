@@ -169,6 +169,17 @@ describe('LandingPage View Component', () => {
         overall_reasoning_ratio_pct: 0,
         role_costs: {},
         model_costs: {},
+        anomaly_summary: {
+          total_anomalies: 0,
+          warning_count: 0,
+          critical_count: 0,
+          severity_counts: { WARNING: 0, CRITICAL: 0 },
+          rule_counts: {},
+          total_tickets: 0,
+          tickets_with_anomalies: 0,
+          anomaly_rate_per_ticket: 0,
+          brittle_tools: [],
+        },
       },
       isMock: false,
     });

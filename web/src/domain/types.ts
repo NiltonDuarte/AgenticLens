@@ -225,6 +225,26 @@ export interface Anomaly {
   readonly context: AnomalyContext;
 }
 
+export interface BrittleToolSummary {
+  readonly tool_name: string;
+  readonly anomaly_count: number;
+  readonly total_calls: number;
+  readonly error_count: number;
+  readonly failure_rate_pct: number;
+}
+
+export interface FleetAnomalySummary {
+  readonly total_anomalies: number;
+  readonly warning_count: number;
+  readonly critical_count: number;
+  readonly severity_counts: Readonly<Record<string, number>>;
+  readonly rule_counts: Readonly<Record<string, number>>;
+  readonly total_tickets: number;
+  readonly tickets_with_anomalies: number;
+  readonly anomaly_rate_per_ticket: number;
+  readonly brittle_tools: readonly BrittleToolSummary[];
+}
+
 export interface AgenticMetricsLedger {
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
@@ -258,6 +278,7 @@ export interface FleetSummary {
   readonly overall_reasoning_ratio_pct: number;
   readonly role_costs: Readonly<Record<string, number>>;
   readonly model_costs: Readonly<Record<string, number>>;
+  readonly anomaly_summary: FleetAnomalySummary;
 }
 
 export interface TicketComparisonRow {
@@ -292,6 +313,7 @@ export interface TicketArtifacts {
 export interface WorkspaceDetail {
   readonly ledger: AgenticMetricsLedger;
   readonly artifacts: TicketArtifacts;
+  readonly anomalies: readonly Anomaly[];
 }
 
 export type TimeGranularity = 'daily' | 'weekly' | 'cumulative';

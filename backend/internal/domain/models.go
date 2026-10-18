@@ -234,24 +234,47 @@ type TimeBucketMetric struct {
 	CumulativeInvocations   int64   `json:"cumulative_invocations"`
 }
 
+// BrittleToolSummary represents aggregated failure and anomaly metrics for a tool across the fleet.
+type BrittleToolSummary struct {
+	ToolName       string  `json:"tool_name"`
+	AnomalyCount   int64   `json:"anomaly_count"`
+	TotalCalls     int64   `json:"total_calls"`
+	ErrorCount     int64   `json:"error_count"`
+	FailureRatePct float64 `json:"failure_rate_pct"`
+}
+
+// FleetAnomalySummary aggregates anomaly patterns, severity counts, and brittle tools across the fleet.
+type FleetAnomalySummary struct {
+	TotalAnomalies       int64                `json:"total_anomalies"`
+	WarningCount         int64                `json:"warning_count"`
+	CriticalCount        int64                `json:"critical_count"`
+	SeverityCounts       map[string]int64     `json:"severity_counts"`
+	RuleCounts           map[string]int64     `json:"rule_counts"`
+	TotalTickets         int64                `json:"total_tickets"`
+	TicketsWithAnomalies int64                `json:"tickets_with_anomalies"`
+	AnomalyRatePerTicket float64              `json:"anomaly_rate_per_ticket"`
+	BrittleTools         []BrittleToolSummary `json:"brittle_tools"`
+}
+
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
-	TotalTickets             int64              `json:"total_tickets"`
-	TotalCostUSD             float64            `json:"total_cost_usd"`
-	TotalInvocations         int64              `json:"total_invocations"`
-	TotalInputTokens         int64              `json:"total_input_tokens"`
-	TotalOutputTokens        int64              `json:"total_output_tokens"`
-	TotalCacheReadTokens     int64              `json:"total_cache_read_tokens"`
-	OverallCacheHitRatePct   float64            `json:"overall_cache_hit_rate_pct"`
-	TotalDurationSeconds     int64              `json:"total_duration_seconds"`
-	FormattedTotalDuration   string             `json:"formatted_total_duration"`
-	TotalLinesAdded          int64              `json:"total_lines_added"`
-	TotalLinesDeleted        int64              `json:"total_lines_deleted"`
-	TotalFilesChanged        int64              `json:"total_files_changed"`
-	TotalReasoningTokens     int64              `json:"total_reasoning_tokens"`
-	OverallReasoningRatioPct float64            `json:"overall_reasoning_ratio_pct"`
-	RoleCosts                map[string]float64 `json:"role_costs"`
-	ModelCosts               map[string]float64 `json:"model_costs"`
+	TotalTickets             int64               `json:"total_tickets"`
+	TotalCostUSD             float64             `json:"total_cost_usd"`
+	TotalInvocations         int64               `json:"total_invocations"`
+	TotalInputTokens         int64               `json:"total_input_tokens"`
+	TotalOutputTokens        int64               `json:"total_output_tokens"`
+	TotalCacheReadTokens     int64               `json:"total_cache_read_tokens"`
+	OverallCacheHitRatePct   float64             `json:"overall_cache_hit_rate_pct"`
+	TotalDurationSeconds     int64               `json:"total_duration_seconds"`
+	FormattedTotalDuration   string              `json:"formatted_total_duration"`
+	TotalLinesAdded          int64               `json:"total_lines_added"`
+	TotalLinesDeleted        int64               `json:"total_lines_deleted"`
+	TotalFilesChanged        int64               `json:"total_files_changed"`
+	TotalReasoningTokens     int64               `json:"total_reasoning_tokens"`
+	OverallReasoningRatioPct float64             `json:"overall_reasoning_ratio_pct"`
+	RoleCosts                map[string]float64  `json:"role_costs"`
+	ModelCosts               map[string]float64  `json:"model_costs"`
+	AnomalySummary           FleetAnomalySummary `json:"anomaly_summary"`
 }
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.

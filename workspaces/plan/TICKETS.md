@@ -8,9 +8,9 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-5 single binary integration parity and deprecation.md`
 - `workspaces/plan/done/AL-6 versioned schema migration and chronological event extraction.md`
 - `workspaces/plan/done/AL-7 domain anomaly detection and rule engine.md`
+- `workspaces/plan/done/AL-8 anomaly api endpoints and fleet health aggregation.md`
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
-- `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 - `workspaces/plan/to-do/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
 - `workspaces/plan/to-do/AL-14 implement automated github release workflows for release candidates and stable versions.md`
@@ -28,13 +28,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Ready
 
-- **AL-8**: Anomaly API Endpoints and Fleet Health Aggregation
-  - **Subsystem**: Adapters / HTTP / Server / Tests
+- **AL-9**: Visual Trace Waterfall and Anomaly Inspector
+  - **Subsystem**: Presentation / Web / Tests
   - **Phase**: Phase 2
   - **Status**: Ready
-  - **Blocked by**: None (AL-7 Done)
-  - **Blocks**: AL-9
-  - **File**: `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
+  - **Blocked by**: None (AL-8 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 
 - **AL-13**: Implement Semantic Versioning and Automated CI for Pull Requests and Main Merges
   - **Subsystem**: Domain / Adapters / Presentation / CLI / Tests
@@ -80,14 +80,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Pending
 
-- **AL-9**: Visual Trace Waterfall and Anomaly Inspector
-  - **Subsystem**: Presentation / Web / Tests
-  - **Phase**: Phase 2
-  - **Status**: Pending
-  - **Blocked by**: AL-8
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
-
 - **AL-14**: Implement Automated GitHub Release Workflows for Release Candidates and Stable Versions
   - **Subsystem**: CLI / Adapters / Build / Tests
   - **Phase**: Phase 3
@@ -131,6 +123,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-8**: Anomaly API Endpoints and Fleet Health Aggregation
+  - **Subsystem**: Adapters / HTTP / Server / Tests
+  - **Phase**: Phase 2
+  - **Status**: Done
+  - **Blocked by**: None (AL-7 Done)
+  - **Blocks**: AL-9
+  - **File**: `workspaces/plan/done/AL-8 anomaly api endpoints and fleet health aggregation.md`
 
 - **AL-7**: Domain Anomaly Detection and Rule Engine
   - **Subsystem**: Domain / CLI / Tests

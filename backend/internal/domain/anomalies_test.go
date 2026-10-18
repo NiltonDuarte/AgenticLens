@@ -1234,3 +1234,406 @@ func TestDeriveMetricsLedger_IntegratesAnomalies(t *testing.T) {
 		t.Errorf("expected RuleToolRetryStreak, got %s", metrics.Anomalies[0].RuleID)
 	}
 }
+
+// 9. ComputeFleetAnomalies Pure Domain Tests
+func TestComputeFleetAnomalies_EmptyInput(t *testing.T) {
+	t.Run("nil slice returns initialized zero-value structure", func(t *testing.T) {
+		summary := domain.ComputeFleetAnomalies(nil)
+		if summary.TotalAnomalies != 0 {
+			t.Errorf("expected 0 total anomalies, got %d", summary.TotalAnomalies)
+		}
+		if summary.WarningCount != 0 || summary.CriticalCount != 0 {
+			t.Errorf("expected 0 warning/critical, got %d/%d", summary.WarningCount, summary.CriticalCount)
+		}
+		if summary.TotalTickets != 0 || summary.TicketsWithAnomalies != 0 {
+			t.Errorf("expected 0 total tickets, got %d", summary.TotalTickets)
+		}
+		if summary.AnomalyRatePerTicket != 0.0 {
+			t.Errorf("expected 0.0 anomaly rate, got %f", summary.AnomalyRatePerTicket)
+		}
+		if summary.SeverityCounts == nil {
+			t.Fatal("expected non-nil SeverityCounts map")
+		}
+		if summary.SeverityCounts[string(domain.SeverityWarning)] != 0 || summary.SeverityCounts[string(domain.SeverityCritical)] != 0 {
+			t.Errorf("expected 0 in severity counts, got %+v", summary.SeverityCounts)
+		}
+		if summary.RuleCounts == nil {
+			t.Fatal("expected non-nil RuleCounts map")
+		}
+		if summary.RuleCounts[string(domain.RuleToolRetryStreak)] != 0 || summary.RuleCounts[string(domain.RuleContextSaturationSpike)] != 0 {
+			t.Errorf("expected 0 in rule counts, got %+v", summary.RuleCounts)
+		}
+		if summary.BrittleTools == nil {
+			t.Fatal("expected non-nil BrittleTools slice")
+		}
+		if len(summary.BrittleTools) != 0 {
+			t.Errorf("expected empty BrittleTools, got %d", len(summary.BrittleTools))
+		}
+	})
+
+	t.Run("empty slice returns initialized zero-value structure", func(t *testing.T) {
+		summary := domain.ComputeFleetAnomalies([]domain.AgenticFactLedger{})
+		if summary.TotalTickets != 0 {
+			t.Errorf("expected 0 total tickets, got %d", summary.TotalTickets)
+		}
+		if summary.BrittleTools == nil || len(summary.BrittleTools) != 0 {
+			t.Errorf("expected empty non-nil BrittleTools slice")
+		}
+	})
+}
+
+func TestComputeFleetAnomalies_CleanLedgers(t *testing.T) {
+	toolRead := "read_file"
+	toolWrite := "write_file"
+	tid1 := "AL-1"
+	tid2 := "AL-2"
+
+	ledgers := []domain.AgenticFactLedger{
+		{
+			TicketID: &tid1,
+			Events: []domain.EventFact{
+				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolRead, Status: "completed", ContextTokens: 5000},
+				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolWrite, Status: "completed", ContextTokens: 10000},
+			},
+		},
+		{
+			TicketID: &tid2,
+			Events: []domain.EventFact{
+				{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolRead, Status: "completed", ContextTokens: 8000},
+			},
+		},
+	}
+
+	summary := domain.ComputeFleetAnomalies(ledgers)
+	if summary.TotalTickets != 2 {
+		t.Errorf("expected 2 total tickets, got %d", summary.TotalTickets)
+	}
+	if summary.TotalAnomalies != 0 {
+		t.Errorf("expected 0 total anomalies, got %d", summary.TotalAnomalies)
+	}
+	if summary.TicketsWithAnomalies != 0 {
+		t.Errorf("expected 0 tickets with anomalies, got %d", summary.TicketsWithAnomalies)
+	}
+	if summary.AnomalyRatePerTicket != 0.0 {
+		t.Errorf("expected 0.0 rate, got %f", summary.AnomalyRatePerTicket)
+	}
+	if len(summary.BrittleTools) != 0 {
+		t.Errorf("expected 0 brittle tools on clean runs, got %d", len(summary.BrittleTools))
+	}
+}
+
+func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
+	toolBash := "bash"
+	toolGit := "git"
+	toolPython := "python"
+	tid1 := "AL-1"
+	tid2 := "AL-2"
+	tid3 := "AL-3"
+
+	ledgers := []domain.AgenticFactLedger{
+		// Ticket 1: Tool retry streak (WARNING) on bash (3 errors)
+		{
+			TicketID: &tid1,
+			Events: []domain.EventFact{
+				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 10000},
+				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 12000},
+				{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 14000},
+				{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed", ContextTokens: 16000},
+			},
+		},
+		// Ticket 2: Context ceiling breach (CRITICAL >= 160k) + High failure rate on git (5 calls, 2 errors = 40.0% -> WARNING, non-consecutive so no retry streak)
+		{
+			TicketID: &tid2,
+			Events: []domain.EventFact{
+				{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 100000},
+				{SessionID: "s2", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 120000},
+				{SessionID: "s2", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 135000},
+				{SessionID: "s2", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 150000},
+				{SessionID: "s2", Turn: 5, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 162000}, // Ceiling breach, delta 12k
+			},
+		},
+		// Ticket 3: Clean ticket with python tool (2 calls, 1 error, 0 anomalies, error > 0 makes it brittle)
+		{
+			TicketID: &tid3,
+			Events: []domain.EventFact{
+				{SessionID: "s3", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolPython, Status: "error", ContextTokens: 5000},
+				{SessionID: "s3", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolPython, Status: "completed", ContextTokens: 7000},
+			},
+		},
+	}
+
+	summary := domain.ComputeFleetAnomalies(ledgers)
+
+	if summary.TotalTickets != 3 {
+		t.Fatalf("expected 3 total tickets, got %d", summary.TotalTickets)
+	}
+	if summary.TicketsWithAnomalies != 2 {
+		t.Fatalf("expected 2 tickets with anomalies, got %d", summary.TicketsWithAnomalies)
+	}
+
+	// Ticket 1 has 1 anomaly (RuleToolRetryStreak WARNING)
+	// Ticket 2 has 2 anomalies (RuleToolHighFailureRate WARNING, RuleContextSaturationSpike CRITICAL ceiling breach)
+	// Total: 3 anomalies (2 WARNING, 1 CRITICAL)
+	if summary.TotalAnomalies != 3 {
+		t.Fatalf("expected 3 total anomalies, got %d", summary.TotalAnomalies)
+	}
+	if summary.WarningCount != 2 {
+		t.Errorf("expected 2 warning, got %d", summary.WarningCount)
+	}
+	if summary.CriticalCount != 1 {
+		t.Errorf("expected 1 critical, got %d", summary.CriticalCount)
+	}
+	if summary.SeverityCounts[string(domain.SeverityWarning)] != 2 {
+		t.Errorf("expected 2 in SeverityCounts[WARNING], got %d", summary.SeverityCounts[string(domain.SeverityWarning)])
+	}
+	if summary.SeverityCounts[string(domain.SeverityCritical)] != 1 {
+		t.Errorf("expected 1 in SeverityCounts[CRITICAL], got %d", summary.SeverityCounts[string(domain.SeverityCritical)])
+	}
+
+	// Rule counts
+	if summary.RuleCounts[string(domain.RuleToolRetryStreak)] != 1 {
+		t.Errorf("expected 1 RuleToolRetryStreak, got %d", summary.RuleCounts[string(domain.RuleToolRetryStreak)])
+	}
+	if summary.RuleCounts[string(domain.RuleToolHighFailureRate)] != 1 {
+		t.Errorf("expected 1 RuleToolHighFailureRate, got %d", summary.RuleCounts[string(domain.RuleToolHighFailureRate)])
+	}
+	if summary.RuleCounts[string(domain.RuleContextSaturationSpike)] != 1 {
+		t.Errorf("expected 1 RuleContextSaturationSpike, got %d", summary.RuleCounts[string(domain.RuleContextSaturationSpike)])
+	}
+	if summary.RuleCounts[string(domain.RuleSubagentReworkLoop)] != 0 {
+		t.Errorf("expected 0 RuleSubagentReworkLoop, got %d", summary.RuleCounts[string(domain.RuleSubagentReworkLoop)])
+	}
+
+	// Anomaly rate per ticket: 3 anomalies / 3 tickets = 1.00
+	if summary.AnomalyRatePerTicket != 1.0 {
+		t.Errorf("expected 1.0 anomaly rate, got %f", summary.AnomalyRatePerTicket)
+	}
+
+	// Brittle tools:
+	// bash: 4 calls, 3 errors, 1 anomaly -> failure rate = 75.0%
+	// git: 5 calls, 2 errors, 1 anomaly -> failure rate = 40.0%
+	// python: 2 calls, 1 error, 0 anomalies -> failure rate = 50.0%
+	//
+	// Sorting order:
+	// 1. AnomalyCount descending (bash and git have 1, python has 0)
+	// 2. ErrorCount descending (bash has 3, git has 2)
+	// 3. FailureRatePct descending
+	// 4. ToolName ascending
+	// Therefore order must be: bash (1), git (1), python (0)
+	if len(summary.BrittleTools) != 3 {
+		t.Fatalf("expected 3 brittle tools, got %d", len(summary.BrittleTools))
+	}
+
+	bt0 := summary.BrittleTools[0]
+	if bt0.ToolName != "bash" || bt0.AnomalyCount != 1 || bt0.ErrorCount != 3 || bt0.TotalCalls != 4 || bt0.FailureRatePct != 75.0 {
+		t.Errorf("unexpected first brittle tool: %+v", bt0)
+	}
+
+	bt1 := summary.BrittleTools[1]
+	if bt1.ToolName != "git" || bt1.AnomalyCount != 1 || bt1.ErrorCount != 2 || bt1.TotalCalls != 5 || bt1.FailureRatePct != 40.0 {
+		t.Errorf("unexpected second brittle tool: %+v", bt1)
+	}
+
+	bt2 := summary.BrittleTools[2]
+	if bt2.ToolName != "python" || bt2.AnomalyCount != 0 || bt2.ErrorCount != 1 || bt2.TotalCalls != 2 || bt2.FailureRatePct != 50.0 {
+		t.Errorf("unexpected third brittle tool: %+v", bt2)
+	}
+}
+
+func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
+	// Test tie-breaking across all 4 sorting criteria:
+	// 1. AnomalyCount descending
+	// 2. ErrorCount descending
+	// 3. FailureRatePct descending
+	// 4. ToolName ascending (alphabetical tie-breaker)
+
+	t.Run("tier 2: tie breaks by ErrorCount when AnomalyCount is equal", func(t *testing.T) {
+		toolA := "tool_two_errors"
+		toolB := "tool_one_error"
+		tid := "T-ERR"
+
+		// Both have 0 anomalies (<5 calls, <3 consecutive errors)
+		// toolA: 3 calls, 2 errors (66.7%)
+		// toolB: 1 call, 1 error (100.0%)
+		// ErrorCount 2 > 1, so toolA must come before toolB despite lower failure rate
+		ledgers := []domain.AgenticFactLedger{
+			{
+				TicketID: &tid,
+				Events: []domain.EventFact{
+					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
+					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "completed"},
+					{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
+					{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolB, Status: "error"},
+				},
+			},
+		}
+
+		summary := domain.ComputeFleetAnomalies(ledgers)
+		if len(summary.BrittleTools) != 2 {
+			t.Fatalf("expected 2 brittle tools, got %d", len(summary.BrittleTools))
+		}
+		if summary.BrittleTools[0].ToolName != "tool_two_errors" {
+			t.Errorf("expected tool_two_errors first by error count (2 > 1), got %s", summary.BrittleTools[0].ToolName)
+		}
+		if summary.BrittleTools[1].ToolName != "tool_one_error" {
+			t.Errorf("expected tool_one_error second, got %s", summary.BrittleTools[1].ToolName)
+		}
+	})
+
+	t.Run("tier 3: tie breaks by FailureRatePct when AnomalyCount and ErrorCount are equal", func(t *testing.T) {
+		toolHighRate := "high_rate_tool"
+		toolLowRate := "low_rate_tool"
+		tid := "T-RATE"
+
+		// Both have 0 anomalies and exactly 2 errors:
+		// toolHighRate: 2 calls, 2 errors -> 100.0% failure rate
+		// toolLowRate: 4 calls, 2 errors (interleaved) -> 50.0% failure rate
+		// Same anomaly count (0), same error count (2), but high_rate_tool (100%) > low_rate_tool (50%)
+		ledgers := []domain.AgenticFactLedger{
+			{
+				TicketID: &tid,
+				Events: []domain.EventFact{
+					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolHighRate, Status: "error"},
+					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolHighRate, Status: "error"},
+
+					{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "error"},
+					{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "completed"},
+					{SessionID: "s1", Turn: 5, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "error"},
+					{SessionID: "s1", Turn: 6, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "completed"},
+				},
+			},
+		}
+
+		summary := domain.ComputeFleetAnomalies(ledgers)
+		if len(summary.BrittleTools) != 2 {
+			t.Fatalf("expected 2 brittle tools, got %d", len(summary.BrittleTools))
+		}
+		if summary.BrittleTools[0].ToolName != "high_rate_tool" {
+			t.Errorf("expected high_rate_tool first by failure rate (100%% > 50%%), got %s", summary.BrittleTools[0].ToolName)
+		}
+		if summary.BrittleTools[1].ToolName != "low_rate_tool" {
+			t.Errorf("expected low_rate_tool second, got %s", summary.BrittleTools[1].ToolName)
+		}
+	})
+
+	t.Run("tier 4: tie breaks alphabetically by tool name", func(t *testing.T) {
+		toolZ := "z_tool"
+		toolA := "a_tool"
+		tid := "T1"
+
+		ledgers := []domain.AgenticFactLedger{
+			{
+				TicketID: &tid,
+				Events: []domain.EventFact{
+					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolZ, Status: "error"},
+					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
+				},
+			},
+		}
+
+		summary := domain.ComputeFleetAnomalies(ledgers)
+		if len(summary.BrittleTools) != 2 {
+			t.Fatalf("expected 2 brittle tools, got %d", len(summary.BrittleTools))
+		}
+		if summary.BrittleTools[0].ToolName != "a_tool" {
+			t.Errorf("expected a_tool first by alphabetical order, got %s", summary.BrittleTools[0].ToolName)
+		}
+		if summary.BrittleTools[1].ToolName != "z_tool" {
+			t.Errorf("expected z_tool second by alphabetical order, got %s", summary.BrittleTools[1].ToolName)
+		}
+	})
+
+	t.Run("zero calls with errors does not panic and reports 0.0 failure rate", func(t *testing.T) {
+		tid := "T-ZERO-CALLS"
+		ledgers := []domain.AgenticFactLedger{
+			{
+				TicketID: &tid,
+				Tools: []domain.ToolFact{
+					{Name: "zero_call_tool", Calls: 0, Errors: 1},
+				},
+			},
+		}
+
+		summary := domain.ComputeFleetAnomalies(ledgers)
+		if len(summary.BrittleTools) != 1 {
+			t.Fatalf("expected 1 brittle tool, got %d", len(summary.BrittleTools))
+		}
+		bt := summary.BrittleTools[0]
+		if bt.ToolName != "zero_call_tool" || bt.TotalCalls != 0 || bt.ErrorCount != 1 || bt.FailureRatePct != 0.0 {
+			t.Errorf("unexpected zero-call brittle tool result: %+v", bt)
+		}
+	})
+}
+
+func TestComputeFleetAnomalies_LegacyV1Fallback(t *testing.T) {
+	// Legacy v1 workspaces lack Events but provide Tools and Invocations
+	tidV1 := "AL-V1"
+	ledgers := []domain.AgenticFactLedger{
+		{
+			TicketID: &tidV1,
+			Tools: []domain.ToolFact{
+				{Name: "bash", Calls: 10, Errors: 4}, // 40% failure rate > 20% -> WARNING anomaly
+				{Name: "clean_tool", Calls: 5, Errors: 0},
+			},
+			Invocations: []domain.InvocationFact{
+				{
+					ID:   "inv-1",
+					Role: "orchestrator",
+					Tokens: domain.InvocationTokens{
+						PeakContext: 170000, // CRITICAL ceiling breach in v1
+					},
+				},
+			},
+		},
+	}
+
+	summary := domain.ComputeFleetAnomalies(ledgers)
+	if summary.TotalTickets != 1 {
+		t.Fatalf("expected 1 ticket, got %d", summary.TotalTickets)
+	}
+	if summary.TicketsWithAnomalies != 1 {
+		t.Errorf("expected 1 ticket with anomalies, got %d", summary.TicketsWithAnomalies)
+	}
+	if summary.TotalAnomalies != 2 {
+		t.Fatalf("expected 2 anomalies (high failure rate + context ceiling), got %d", summary.TotalAnomalies)
+	}
+	if len(summary.BrittleTools) != 1 {
+		t.Fatalf("expected 1 brittle tool (bash), got %d", len(summary.BrittleTools))
+	}
+	if summary.BrittleTools[0].ToolName != "bash" || summary.BrittleTools[0].FailureRatePct != 40.0 {
+		t.Errorf("unexpected brittle tool: %+v", summary.BrittleTools[0])
+	}
+}
+
+func TestCalculateFleetSummary_IncludesAnomalySummary(t *testing.T) {
+	toolBash := "bash"
+	tid := "AL-FS"
+	ledgers := []domain.AgenticMetricsLedger{
+		{
+			TicketID: &tid,
+			Facts: domain.AgenticFactLedger{
+				TicketID: &tid,
+				Events: []domain.EventFact{
+					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+					{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				},
+			},
+			Totals: domain.GroupedMetric{
+				Invocations: 1,
+				CostUSD:     0.1,
+			},
+		},
+	}
+
+	summary := domain.CalculateFleetSummary(ledgers)
+	if summary.AnomalySummary.TotalAnomalies != 1 {
+		t.Fatalf("expected 1 anomaly in AnomalySummary, got %d", summary.AnomalySummary.TotalAnomalies)
+	}
+	if summary.AnomalySummary.TotalTickets != 1 {
+		t.Errorf("expected 1 total ticket in AnomalySummary, got %d", summary.AnomalySummary.TotalTickets)
+	}
+	if len(summary.AnomalySummary.BrittleTools) != 1 {
+		t.Errorf("expected 1 brittle tool, got %d", len(summary.AnomalySummary.BrittleTools))
+	}
+}

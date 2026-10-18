@@ -101,6 +101,7 @@ describe('TicketDeepDive View Component', () => {
       data: {
         ledger: elevatedLedger,
         artifacts: { ticket_id: 'AL-1', contract_content: null, summary_content: null },
+        anomalies: [],
       },
       isMock: true,
     });
@@ -144,6 +145,7 @@ describe('TicketDeepDive View Component', () => {
       data: {
         ledger: criticalLedger,
         artifacts: { ticket_id: 'AL-CRIT', contract_content: null, summary_content: null },
+        anomalies: [],
       },
       isMock: true,
     });
@@ -166,6 +168,7 @@ describe('TicketDeepDive View Component', () => {
       data: {
         ledger: null as unknown as typeof mockAgenticMetricsLedgers['AL-1'],
         artifacts: { ticket_id: 'MISSING', contract_content: null, summary_content: null },
+        anomalies: [],
       },
       isMock: true,
     });
@@ -225,6 +228,7 @@ describe('TicketDeepDive View Component', () => {
       data: {
         ledger: noTurnsLedger,
         artifacts: { ticket_id: 'AL-1', contract_content: null, summary_content: null },
+        anomalies: [],
       },
       isMock: true,
     });

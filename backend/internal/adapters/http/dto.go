@@ -18,11 +18,12 @@ type ErrorResponse struct {
 type WorkspaceDetailResponse struct {
 	Ledger    domain.AgenticMetricsLedger `json:"ledger"`
 	Artifacts domain.TicketArtifacts      `json:"artifacts"`
+	Anomalies []domain.Anomaly            `json:"anomalies"`
 }
 
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
@@ -68,4 +69,12 @@ func WriteWorkspaceDetailResponse(w http.ResponseWriter, detail WorkspaceDetailR
 // WriteFleetResponse writes a domain.FleetSummary as JSON.
 func WriteFleetResponse(w http.ResponseWriter, summary domain.FleetSummary) {
 	WriteJSON(w, http.StatusOK, summary)
+}
+
+// WriteEventsResponse writes a slice of EventFact as JSON.
+func WriteEventsResponse(w http.ResponseWriter, events []domain.EventFact) {
+	if events == nil {
+		events = []domain.EventFact{}
+	}
+	WriteJSON(w, http.StatusOK, events)
 }

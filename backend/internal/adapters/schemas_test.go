@@ -235,3 +235,132 @@ func TestAgenticMetricsLedgerDTO_AnomaliesSerialization(t *testing.T) {
 		}
 	})
 }
+
+func TestBrittleToolSummaryDTO_BidirectionalMapping(t *testing.T) {
+	t.Run("fully populated brittle tool maps bidirectionally", func(t *testing.T) {
+		dom := domain.BrittleToolSummary{
+			ToolName:       "bash",
+			AnomalyCount:   2,
+			TotalCalls:     25,
+			ErrorCount:     6,
+			FailureRatePct: 24.0,
+		}
+
+		dto := adapters.BrittleToolSummaryDTOFromDomain(dom)
+		if dto.ToolName != "bash" || dto.AnomalyCount != 2 || dto.TotalCalls != 25 ||
+			dto.ErrorCount != 6 || dto.FailureRatePct != 24.0 {
+			t.Fatalf("DTO mapping mismatch: %+v", dto)
+		}
+
+		roundDom := dto.ToDomain()
+		if roundDom.ToolName != dom.ToolName || roundDom.AnomalyCount != dom.AnomalyCount ||
+			roundDom.TotalCalls != dom.TotalCalls || roundDom.ErrorCount != dom.ErrorCount ||
+			roundDom.FailureRatePct != dom.FailureRatePct {
+			t.Fatalf("round-trip domain mismatch: %+v", roundDom)
+		}
+	})
+
+	t.Run("json serialization round-trip", func(t *testing.T) {
+		dto := adapters.BrittleToolSummaryDTO{
+			ToolName:       "git",
+			AnomalyCount:   1,
+			TotalCalls:     10,
+			ErrorCount:     3,
+			FailureRatePct: 30.0,
+		}
+
+		data, err := json.Marshal(dto)
+		if err != nil {
+			t.Fatalf("marshal error: %v", err)
+		}
+
+		var decoded adapters.BrittleToolSummaryDTO
+		if err := json.Unmarshal(data, &decoded); err != nil {
+			t.Fatalf("unmarshal error: %v", err)
+		}
+
+		if decoded != dto {
+			t.Fatalf("expected decoded %+v, got %+v", dto, decoded)
+		}
+	})
+}
+
+func TestFleetAnomalySummaryDTO_BidirectionalMapping(t *testing.T) {
+	t.Run("fully populated fleet anomaly summary maps bidirectionally", func(t *testing.T) {
+		dom := domain.FleetAnomalySummary{
+			TotalAnomalies:       4,
+			WarningCount:         3,
+			CriticalCount:        1,
+			SeverityCounts:       map[string]int64{"WARNING": 3, "CRITICAL": 1},
+			RuleCounts:           map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0},
+			TotalTickets:         5,
+			TicketsWithAnomalies: 2,
+			AnomalyRatePerTicket: 0.8,
+			BrittleTools: []domain.BrittleToolSummary{
+				{
+					ToolName:       "bash",
+					AnomalyCount:   2,
+					TotalCalls:     20,
+					ErrorCount:     5,
+					FailureRatePct: 25.0,
+				},
+			},
+		}
+
+		dto := adapters.FleetAnomalySummaryDTOFromDomain(dom)
+		if dto.TotalAnomalies != 4 || dto.WarningCount != 3 || dto.CriticalCount != 1 ||
+			dto.TotalTickets != 5 || dto.TicketsWithAnomalies != 2 || dto.AnomalyRatePerTicket != 0.8 {
+			t.Fatalf("DTO fields mismatch: %+v", dto)
+		}
+		if len(dto.BrittleTools) != 1 || dto.BrittleTools[0].ToolName != "bash" {
+			t.Fatalf("DTO brittle tools mismatch: %+v", dto.BrittleTools)
+		}
+
+		roundDom := dto.ToDomain()
+		if roundDom.TotalAnomalies != dom.TotalAnomalies ||
+			roundDom.WarningCount != dom.WarningCount ||
+			roundDom.CriticalCount != dom.CriticalCount ||
+			roundDom.TotalTickets != dom.TotalTickets ||
+			roundDom.TicketsWithAnomalies != dom.TicketsWithAnomalies ||
+			roundDom.AnomalyRatePerTicket != dom.AnomalyRatePerTicket {
+			t.Fatalf("round-trip domain mismatch: %+v", roundDom)
+		}
+		if len(roundDom.BrittleTools) != 1 || roundDom.BrittleTools[0].ToolName != "bash" {
+			t.Fatalf("round-trip brittle tools mismatch: %+v", roundDom.BrittleTools)
+		}
+		if roundDom.SeverityCounts["WARNING"] != 3 || roundDom.SeverityCounts["CRITICAL"] != 1 {
+			t.Fatalf("round-trip severity counts mismatch: %+v", roundDom.SeverityCounts)
+		}
+		if roundDom.RuleCounts["TOOL_RETRY_STREAK"] != 2 {
+			t.Fatalf("round-trip rule counts mismatch: %+v", roundDom.RuleCounts)
+		}
+	})
+
+	t.Run("json serialization round-trip", func(t *testing.T) {
+		dto := adapters.FleetAnomalySummaryDTO{
+			TotalAnomalies:       0,
+			WarningCount:         0,
+			CriticalCount:        0,
+			SeverityCounts:       map[string]int64{"WARNING": 0, "CRITICAL": 0},
+			RuleCounts:           map[string]int64{"TOOL_RETRY_STREAK": 0},
+			TotalTickets:         0,
+			TicketsWithAnomalies: 0,
+			AnomalyRatePerTicket: 0.0,
+			BrittleTools:         []adapters.BrittleToolSummaryDTO{},
+		}
+
+		data, err := json.Marshal(dto)
+		if err != nil {
+			t.Fatalf("marshal error: %v", err)
+		}
+
+		var decoded adapters.FleetAnomalySummaryDTO
+		if err := json.Unmarshal(data, &decoded); err != nil {
+			t.Fatalf("unmarshal error: %v", err)
+		}
+
+		if decoded.TotalAnomalies != 0 || len(decoded.BrittleTools) != 0 {
+			t.Fatalf("expected empty decoded summary, got: %+v", decoded)
+		}
+	})
+}

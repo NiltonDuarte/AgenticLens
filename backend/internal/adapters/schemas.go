@@ -422,6 +422,102 @@ func AnomalyDTOFromDomain(anomaly domain.Anomaly) AnomalyDTO {
 	}
 }
 
+// BrittleToolSummaryDTO represents brittle tool aggregates in JSON boundary serialization.
+type BrittleToolSummaryDTO struct {
+	ToolName       string  `json:"tool_name"`
+	AnomalyCount   int64   `json:"anomaly_count"`
+	TotalCalls     int64   `json:"total_calls"`
+	ErrorCount     int64   `json:"error_count"`
+	FailureRatePct float64 `json:"failure_rate_pct"`
+}
+
+func (dto BrittleToolSummaryDTO) ToDomain() domain.BrittleToolSummary {
+	return domain.BrittleToolSummary{
+		ToolName:       dto.ToolName,
+		AnomalyCount:   dto.AnomalyCount,
+		TotalCalls:     dto.TotalCalls,
+		ErrorCount:     dto.ErrorCount,
+		FailureRatePct: dto.FailureRatePct,
+	}
+}
+
+// BrittleToolSummaryDTOFromDomain converts domain.BrittleToolSummary to BrittleToolSummaryDTO.
+func BrittleToolSummaryDTOFromDomain(summary domain.BrittleToolSummary) BrittleToolSummaryDTO {
+	return BrittleToolSummaryDTO{
+		ToolName:       summary.ToolName,
+		AnomalyCount:   summary.AnomalyCount,
+		TotalCalls:     summary.TotalCalls,
+		ErrorCount:     summary.ErrorCount,
+		FailureRatePct: summary.FailureRatePct,
+	}
+}
+
+// FleetAnomalySummaryDTO represents the fleet anomaly rollup in JSON boundary serialization.
+type FleetAnomalySummaryDTO struct {
+	TotalAnomalies       int64                   `json:"total_anomalies"`
+	WarningCount         int64                   `json:"warning_count"`
+	CriticalCount        int64                   `json:"critical_count"`
+	SeverityCounts       map[string]int64        `json:"severity_counts"`
+	RuleCounts           map[string]int64        `json:"rule_counts"`
+	TotalTickets         int64                   `json:"total_tickets"`
+	TicketsWithAnomalies int64                   `json:"tickets_with_anomalies"`
+	AnomalyRatePerTicket float64                 `json:"anomaly_rate_per_ticket"`
+	BrittleTools         []BrittleToolSummaryDTO `json:"brittle_tools"`
+}
+
+func (dto FleetAnomalySummaryDTO) ToDomain() domain.FleetAnomalySummary {
+	severityCounts := make(map[string]int64)
+	for k, v := range dto.SeverityCounts {
+		severityCounts[k] = v
+	}
+	ruleCounts := make(map[string]int64)
+	for k, v := range dto.RuleCounts {
+		ruleCounts[k] = v
+	}
+	brittleTools := make([]domain.BrittleToolSummary, len(dto.BrittleTools))
+	for i, bt := range dto.BrittleTools {
+		brittleTools[i] = bt.ToDomain()
+	}
+	return domain.FleetAnomalySummary{
+		TotalAnomalies:       dto.TotalAnomalies,
+		WarningCount:         dto.WarningCount,
+		CriticalCount:        dto.CriticalCount,
+		SeverityCounts:       severityCounts,
+		RuleCounts:           ruleCounts,
+		TotalTickets:         dto.TotalTickets,
+		TicketsWithAnomalies: dto.TicketsWithAnomalies,
+		AnomalyRatePerTicket: dto.AnomalyRatePerTicket,
+		BrittleTools:         brittleTools,
+	}
+}
+
+// FleetAnomalySummaryDTOFromDomain converts domain.FleetAnomalySummary to FleetAnomalySummaryDTO.
+func FleetAnomalySummaryDTOFromDomain(summary domain.FleetAnomalySummary) FleetAnomalySummaryDTO {
+	severityCounts := make(map[string]int64)
+	for k, v := range summary.SeverityCounts {
+		severityCounts[k] = v
+	}
+	ruleCounts := make(map[string]int64)
+	for k, v := range summary.RuleCounts {
+		ruleCounts[k] = v
+	}
+	brittleTools := make([]BrittleToolSummaryDTO, len(summary.BrittleTools))
+	for i, bt := range summary.BrittleTools {
+		brittleTools[i] = BrittleToolSummaryDTOFromDomain(bt)
+	}
+	return FleetAnomalySummaryDTO{
+		TotalAnomalies:       summary.TotalAnomalies,
+		WarningCount:         summary.WarningCount,
+		CriticalCount:        summary.CriticalCount,
+		SeverityCounts:       severityCounts,
+		RuleCounts:           ruleCounts,
+		TotalTickets:         summary.TotalTickets,
+		TicketsWithAnomalies: summary.TicketsWithAnomalies,
+		AnomalyRatePerTicket: summary.AnomalyRatePerTicket,
+		BrittleTools:         brittleTools,
+	}
+}
+
 // AgenticMetricsLedgerDTO represents the computed metrics ledger format in JSON.
 type AgenticMetricsLedgerDTO struct {
 	TicketID           *string                   `json:"ticket_id"`

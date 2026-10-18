@@ -430,3 +430,137 @@ func DetectAnomalies(ledger AgenticFactLedger) []Anomaly {
 
 	return anomalies
 }
+
+// ComputeFleetAnomalies aggregates operational anomalies, severity counts, and brittle tools across all ledgers.
+func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
+	severityCounts := map[string]int64{
+		string(SeverityWarning):  0,
+		string(SeverityCritical): 0,
+	}
+	ruleCounts := map[string]int64{
+		string(RuleToolRetryStreak):        0,
+		string(RuleToolHighFailureRate):    0,
+		string(RuleContextSaturationSpike): 0,
+		string(RuleSubagentReworkLoop):     0,
+	}
+
+	if len(ledgers) == 0 {
+		return FleetAnomalySummary{
+			TotalAnomalies:       0,
+			WarningCount:         0,
+			CriticalCount:        0,
+			SeverityCounts:       severityCounts,
+			RuleCounts:           ruleCounts,
+			TotalTickets:         0,
+			TicketsWithAnomalies: 0,
+			AnomalyRatePerTicket: 0.0,
+			BrittleTools:         []BrittleToolSummary{},
+		}
+	}
+
+	type toolMetrics struct {
+		calls     int64
+		errors    int64
+		anomalies int64
+	}
+	toolStats := make(map[string]*toolMetrics)
+	getTool := func(name string) *toolMetrics {
+		st, ok := toolStats[name]
+		if !ok {
+			st = &toolMetrics{}
+			toolStats[name] = st
+		}
+		return st
+	}
+
+	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies int64
+
+	for _, ledger := range ledgers {
+		ticketAnomalies := DetectAnomalies(ledger)
+		if len(ticketAnomalies) > 0 {
+			ticketsWithAnomalies++
+		}
+		for _, a := range ticketAnomalies {
+			totalAnomalies++
+			if a.Severity == SeverityWarning {
+				warningCount++
+				severityCounts[string(SeverityWarning)]++
+			} else if a.Severity == SeverityCritical {
+				criticalCount++
+				severityCounts[string(SeverityCritical)]++
+			}
+			ruleCounts[string(a.RuleID)]++
+			if a.Context.ToolName != nil && *a.Context.ToolName != "" {
+				getTool(*a.Context.ToolName).anomalies++
+			}
+		}
+
+		if len(ledger.Events) > 0 {
+			for _, e := range ledger.Events {
+				if e.EventType == EventTypeToolCall && e.ToolName != nil && *e.ToolName != "" {
+					tm := getTool(*e.ToolName)
+					tm.calls++
+					if e.Status == "error" {
+						tm.errors++
+					}
+				}
+			}
+		} else {
+			for _, t := range ledger.Tools {
+				if t.Name != "" {
+					tm := getTool(t.Name)
+					tm.calls += t.Calls
+					tm.errors += t.Errors
+				}
+			}
+		}
+	}
+
+	totalTickets := int64(len(ledgers))
+	var anomalyRatePerTicket float64
+	if totalTickets > 0 {
+		anomalyRatePerTicket = math.Round((float64(totalAnomalies)/float64(totalTickets))*100.0) / 100.0
+	}
+
+	brittleTools := make([]BrittleToolSummary, 0)
+	for toolName, tm := range toolStats {
+		if tm.errors > 0 || tm.anomalies > 0 {
+			var failRate float64
+			if tm.calls > 0 {
+				failRate = math.Round((float64(tm.errors)/float64(tm.calls))*1000.0) / 10.0
+			}
+			brittleTools = append(brittleTools, BrittleToolSummary{
+				ToolName:       toolName,
+				AnomalyCount:   tm.anomalies,
+				TotalCalls:     tm.calls,
+				ErrorCount:     tm.errors,
+				FailureRatePct: failRate,
+			})
+		}
+	}
+
+	sort.SliceStable(brittleTools, func(i, j int) bool {
+		if brittleTools[i].AnomalyCount != brittleTools[j].AnomalyCount {
+			return brittleTools[i].AnomalyCount > brittleTools[j].AnomalyCount
+		}
+		if brittleTools[i].ErrorCount != brittleTools[j].ErrorCount {
+			return brittleTools[i].ErrorCount > brittleTools[j].ErrorCount
+		}
+		if brittleTools[i].FailureRatePct != brittleTools[j].FailureRatePct {
+			return brittleTools[i].FailureRatePct > brittleTools[j].FailureRatePct
+		}
+		return brittleTools[i].ToolName < brittleTools[j].ToolName
+	})
+
+	return FleetAnomalySummary{
+		TotalAnomalies:       totalAnomalies,
+		WarningCount:         warningCount,
+		CriticalCount:        criticalCount,
+		SeverityCounts:       severityCounts,
+		RuleCounts:           ruleCounts,
+		TotalTickets:         totalTickets,
+		TicketsWithAnomalies: ticketsWithAnomalies,
+		AnomalyRatePerTicket: anomalyRatePerTicket,
+		BrittleTools:         brittleTools,
+	}
+}

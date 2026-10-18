@@ -4,6 +4,7 @@ import {
   fetchWorkspaces,
   fetchWorkspaceById,
   fetchWorkspaceLedgers,
+  fetchWorkspaceEvents,
 } from './client';
 import {
   mockFleetSummary,
@@ -321,6 +322,86 @@ describe('Boundary API Client', () => {
       const res = await fetchWorkspaceLedgers();
       expect(res.isMock).toBe(true);
       expect(res.data.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('fetchWorkspaceEvents', () => {
+    it('returns events on successful HTTP 200 response', async () => {
+      const mockEvents = [
+        {
+          timestamp: '2026-10-18T10:00:00Z',
+          session_id: 'ses-1',
+          turn: 1,
+          role: 'coder',
+          event_type: 'tool_call' as const,
+          tool_name: 'bash',
+          status: 'error',
+          context_tokens: 15000,
+        },
+      ];
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockEvents,
+      }));
+
+      const res = await fetchWorkspaceEvents('AL-8');
+      expect(res.isMock).toBe(false);
+      expect(res.data).toHaveLength(1);
+      expect(res.data[0]?.tool_name).toBe('bash');
+    });
+
+    it('falls back to mock ledger events on network failure', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+
+      const res = await fetchWorkspaceEvents('AL-1');
+      expect(res.isMock).toBe(true);
+      expect(Array.isArray(res.data)).toBe(true);
+    });
+
+    it('falls back to mock events on 404 when ticket exists in mocks', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      }));
+
+      const res = await fetchWorkspaceEvents('AL-1');
+      expect(res.isMock).toBe(true);
+      expect(Array.isArray(res.data)).toBe(true);
+    });
+
+    it('throws structured error when ticketId does not exist in backend nor mocks on 404', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      }));
+
+      await expect(fetchWorkspaceEvents('NON-EXISTENT')).rejects.toThrow(
+        'Workspace NON-EXISTENT not found'
+      );
+    });
+
+    it('throws structured error on network failure when ticketId not in mocks', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+      await expect(fetchWorkspaceEvents('UNKNOWN-TICKET')).rejects.toThrow(
+        'Failed to fetch'
+      );
+    });
+
+    it('falls back to mock ledger events on malformed JSON response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new SyntaxError('Invalid JSON');
+        },
+      }));
+
+      const res = await fetchWorkspaceEvents('AL-1');
+      expect(res.isMock).toBe(true);
+      expect(Array.isArray(res.data)).toBe(true);
     });
   });
 });

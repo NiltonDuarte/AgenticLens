@@ -1,5 +1,6 @@
 import type {
   AgenticMetricsLedger,
+  EventFact,
   FleetSummary,
   TicketComparisonRow,
   WorkspaceDetail,
@@ -94,6 +95,7 @@ export async function fetchWorkspaceById(
           data: {
             ledger: ledgerFallback,
             artifacts: { ticket_id: ticketId, contract_content: null, summary_content: null },
+            anomalies: ledgerFallback.anomalies ?? [],
           },
           isMock: true,
         };
@@ -113,9 +115,41 @@ export async function fetchWorkspaceById(
         data: {
           ledger: ledgerFallback,
           artifacts: { ticket_id: ticketId, contract_content: null, summary_content: null },
+          anomalies: ledgerFallback.anomalies ?? [],
         },
         isMock: true,
       };
+    }
+    const msg = err instanceof Error ? err.message : 'Unknown network failure';
+    throw new Error(msg);
+  }
+}
+
+export async function fetchWorkspaceEvents(
+  ticketId: string
+): Promise<ApiResponse<readonly EventFact[]>> {
+  try {
+    const res = await fetch(`/api/workspaces/${encodeURIComponent(ticketId)}/events`);
+    if (!res.ok) {
+      if (res.status === 404) {
+        const fallbackLedger = mockAgenticMetricsLedgers[ticketId];
+        if (fallbackLedger) {
+          return { data: fallbackLedger.facts?.events ?? [], isMock: true };
+        }
+        throw new Error(`Workspace ${ticketId} not found`);
+      }
+      const fallbackEvents = mockAgenticMetricsLedgers[ticketId]?.facts?.events ?? [];
+      return { data: fallbackEvents, isMock: true };
+    }
+    const data = (await res.json()) as readonly EventFact[];
+    return { data, isMock: false };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === `Workspace ${ticketId} not found`) {
+      throw err;
+    }
+    const fallbackLedger = mockAgenticMetricsLedgers[ticketId];
+    if (fallbackLedger) {
+      return { data: fallbackLedger.facts?.events ?? [], isMock: true };
     }
     const msg = err instanceof Error ? err.message : 'Unknown network failure';
     throw new Error(msg);
