@@ -13,12 +13,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
 - `workspaces/plan/done/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
 - `workspaces/plan/done/AL-14 implement automated github release workflows for release candidates and stable versions.md`
+- `workspaces/plan/done/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`
 - `workspaces/plan/done/AL-16 execute codebase and skills refactoring with provided review skill.md`
 - `workspaces/plan/done/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
 - `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 - `workspaces/plan/done/AL-23 natural ticket identifier ordering and sortable tables.md`
+- `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
-- `workspaces/plan/to-do/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`
 - `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 - `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
@@ -29,7 +30,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/to-do/AL-27 metric progression custom window one-day range and hourly granularity.md`
 - `workspaces/plan/to-do/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 - `workspaces/plan/to-do/AL-29 conventional commit ticket type classification in telemetry engine.md`
-- `workspaces/plan/to-do/AL-30 fail telemetry generation on missing root session.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 
 ---
@@ -43,14 +43,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None (AL-8 Done)
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
-
-- **AL-15**: Implement Universal Multi-Version Schema Migration Engine for Telemetry Ledgers
-  - **Subsystem**: Domain / Adapters / CLI / Tests
-  - **Phase**: Phase 3
-  - **Status**: In Progress
-  - **Blocked by**: None (AL-12 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`
 
 - **AL-24**: Dynamic Role and Model Aggregations and Presentation
   - **Subsystem**: Domain / Presentation / Adapters / Tests
@@ -83,14 +75,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-29 conventional commit ticket type classification in telemetry engine.md`
-
-- **AL-30**: Fail Telemetry Generation on Unresolved Root Session
-  - **Subsystem**: CLI / Adapters / Tests
-  - **Phase**: Phase 5
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-30 fail telemetry generation on missing root session.md`
 
 ---
 
@@ -148,6 +132,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Done
 
+- **AL-30**: Fail Telemetry Generation on Unresolved Root Session
+  - **Subsystem**: CLI / Adapters / Tests
+  - **Phase**: Phase 5
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
+
 - **AL-23**: Natural Ticket Identifier Ordering and Sortable Tables
   - **Subsystem**: Domain / Presentation / Adapters / Tests
   - **Phase**: Phase 5
@@ -163,6 +155,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/done/AL-16 execute codebase and skills refactoring with provided review skill.md`
+
+- **AL-15**: Implement Universal Multi-Version Schema Migration Engine for Telemetry Ledgers
+  - **Subsystem**: Domain / Adapters / CLI / Tests
+  - **Phase**: Phase 3
+  - **Status**: Done
+  - **Blocked by**: None (AL-12 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`
 
 - **AL-13**: Implement Semantic Versioning and Automated CI for Pull Requests and Main Merges
   - **Subsystem**: Domain / Adapters / Presentation / CLI / Tests
