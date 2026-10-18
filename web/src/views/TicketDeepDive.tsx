@@ -16,6 +16,7 @@ import { TicketSelector } from '../components/TicketSelector';
 import { SaturationBar } from '../components/SaturationBar';
 import { ThreadViewer } from '../components/ThreadViewer';
 import { ArtifactViewer } from '../components/ArtifactViewer';
+import { InfoTooltip } from '../components/InfoTooltip';
 
 export interface TicketDeepDiveProps {
   readonly selectedTicketId?: string | null;
@@ -193,13 +194,13 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           title="Turnaround Lead Time"
           value={formatLeadTime(leadSecs)}
           secondary={leadSecs ? `${leadSecs.toLocaleString()}s elapsed` : 'Active'}
-          tooltip="Clock duration from first event to completion"
+          tooltip="Total wall-clock elapsed time from ticket inception to completion. Can be less than Active Compute Duration when subagents execute in parallel."
         />
         <KPICard
           title="Active Compute Duration"
           value={eff.active_duration_formatted || formatDurationSeconds(eff.active_duration_seconds)}
           secondary={`${eff.active_duration_seconds.toLocaleString()}s total`}
-          tooltip="Sum of active invocation durations"
+          tooltip="Cumulative active compute duration across all agent invocations (analogous to cumulative man-hours). Can exceed wall-clock lead time due to concurrent subagent execution."
         />
         <KPICard
           title="Total Cost"
@@ -290,7 +291,13 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       {/* Row 4: Subagent Turn Velocity */}
       <div className="turn-velocity-card">
         <div className="turn-velocity-header">
-          <h4 className="section-title">Subagent Turn Velocity</h4>
+          <div className="turn-velocity-title-group">
+            <h4 className="section-title">Subagent Turn Velocity</h4>
+            <InfoTooltip
+              content="Average and peak conversational turns executed per agent invocation, categorized by subagent persona role."
+              ariaLabel="Information about Subagent Turn Velocity"
+            />
+          </div>
           <div className="turn-velocity-badges">
             <span className="velocity-badge">Avg Turns: {subTurns.avg_turns_per_invocation.toFixed(1)}</span>
             <span className="velocity-badge">Peak Turns: {subTurns.peak_turns}</span>
@@ -321,16 +328,68 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       {/* Row 5: Role and Model Metrics Tables */}
       <div className="tables-grid">
         <div className="table-card">
-          <h4 className="table-card-title">Role Resource Consumption</h4>
+          <div className="table-card-header">
+            <h4 className="table-card-title">Role Resource Consumption</h4>
+            <InfoTooltip
+              content="Telemetry breakdown of model invocations, token volume, cache hit rate, and spend by agent persona role."
+              placement="left"
+              ariaLabel="Information about Role Resource Consumption"
+            />
+          </div>
           <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Role</th>
-                  <th className="num-col">Invocations</th>
-                  <th className="num-col">Tokens</th>
-                  <th className="num-col">Cache Hit</th>
-                  <th className="num-col">Cost</th>
+                  <th>
+                    <span className="th-content">
+                      <span>Role</span>
+                      <InfoTooltip
+                        content="Agent persona role (orchestrator, coder, tester, reviewer, planner)"
+                        placement="bottom"
+                        ariaLabel="Information about Role"
+                      />
+                    </span>
+                  </th>
+                  <th className="num-col">
+                    <span className="th-content">
+                      <span>Invocations</span>
+                      <InfoTooltip
+                        content="Total count of model invocations initiated by this role"
+                        placement="bottom"
+                        ariaLabel="Information about Invocations"
+                      />
+                    </span>
+                  </th>
+                  <th className="num-col">
+                    <span className="th-content">
+                      <span>Tokens</span>
+                      <InfoTooltip
+                        content="Total input and output tokens consumed by this role"
+                        placement="bottom"
+                        ariaLabel="Information about Tokens"
+                      />
+                    </span>
+                  </th>
+                  <th className="num-col">
+                    <span className="th-content">
+                      <span>Cache Hit</span>
+                      <InfoTooltip
+                        content="Percentage of prompt tokens served from prompt cache for this role"
+                        placement="bottom"
+                        ariaLabel="Information about Cache Hit"
+                      />
+                    </span>
+                  </th>
+                  <th className="num-col">
+                    <span className="th-content">
+                      <span>Cost</span>
+                      <InfoTooltip
+                        content="Total model inference spend in US dollars for this role"
+                        placement="bottom"
+                        ariaLabel="Information about Cost"
+                      />
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -349,16 +408,68 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         </div>
 
         <div className="table-card">
-          <h4 className="table-card-title">Model Resource Consumption</h4>
+          <div className="table-card-header">
+            <h4 className="table-card-title">Model Resource Consumption</h4>
+            <InfoTooltip
+              content="Telemetry breakdown of invocations, token volume, cache hit rate, and spend by model family and version."
+              placement="left"
+              ariaLabel="Information about Model Resource Consumption"
+            />
+          </div>
           <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Model</th>
-                  <th className="num-col">Invocations</th>
-                  <th className="num-col">Tokens</th>
-                  <th className="num-col">Cache Hit</th>
-                  <th className="num-col">Cost</th>
+                  <th>
+                    <span className="th-content">
+                      <span>Model</span>
+                      <InfoTooltip
+                        content="Model identifier and version invoked"
+                        placement="bottom"
+                        ariaLabel="Information about Model"
+                      />
+                    </span>
+                  </th>
+                  <th className="num-col">
+                    <span className="th-content">
+                      <span>Invocations</span>
+                      <InfoTooltip
+                        content="Total count of invocations executed on this model"
+                        placement="bottom"
+                        ariaLabel="Information about Invocations"
+                      />
+                    </span>
+                  </th>
+                  <th className="num-col">
+                    <span className="th-content">
+                      <span>Tokens</span>
+                      <InfoTooltip
+                        content="Total input and output tokens consumed by this model"
+                        placement="bottom"
+                        ariaLabel="Information about Tokens"
+                      />
+                    </span>
+                  </th>
+                  <th className="num-col">
+                    <span className="th-content">
+                      <span>Cache Hit</span>
+                      <InfoTooltip
+                        content="Percentage of prompt tokens served from prompt cache for this model"
+                        placement="bottom"
+                        ariaLabel="Information about Cache Hit"
+                      />
+                    </span>
+                  </th>
+                  <th className="num-col">
+                    <span className="th-content">
+                      <span>Cost</span>
+                      <InfoTooltip
+                        content="Total model inference spend in US dollars for this model"
+                        placement="bottom"
+                        ariaLabel="Information about Cost"
+                      />
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>

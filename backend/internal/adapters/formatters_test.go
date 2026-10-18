@@ -1,6 +1,7 @@
 package adapters_test
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -256,4 +257,71 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 			t.Errorf("expected formatted bullet, got:\n%s", tableMD)
 		}
 	})
+}
+
+func TestFormatMarkdownMetricsTable_EmptyAndZeroValues(t *testing.T) {
+	t.Parallel()
+	emptyLedger := domain.AgenticMetricsLedger{}
+	tableMD := adapters.FormatMarkdownMetricsTable(emptyLedger)
+
+	requiredHeadings := []string{
+		"### Workflow Efficiency",
+		"### Anomalies & Health Flags",
+		"### Agentic Execution Metrics",
+		"#### By Subagent Role",
+		"#### By Model",
+	}
+
+	for _, heading := range requiredHeadings {
+		if !strings.Contains(tableMD, heading) {
+			t.Errorf("expected markdown to contain heading %q", heading)
+		}
+	}
+
+	requiredKPIs := []string{
+		"- **Software Development Life Cycle Iterations:**",
+		"- **Active Agent Duration:**",
+		"- **Context Window Health:**",
+		"- **Role Effort Distribution (Subagents):**",
+		"- **Subagent Turn Velocity & Thrashing:**",
+		"- **Test-to-Production Code Ratio:**",
+		"- **Code Delivered:**",
+		"- **Reasoning Effort:**",
+		"- **Tool Health & Self-Correction:**",
+	}
+
+	for _, kpi := range requiredKPIs {
+		if !strings.Contains(tableMD, kpi) {
+			t.Errorf("expected markdown to contain KPI row %q", kpi)
+		}
+	}
+
+	emojiPattern := regexp.MustCompile(`[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F1E6}-\x{1F1FF}\x{1F600}-\x{1F64F}\x{1F680}-\x{1F6FF}]`)
+	if emojiPattern.MatchString(tableMD) {
+		t.Errorf("expected zero emojis in markdown table for empty ledger, found emoji match")
+	}
+}
+
+func TestFormatMarkdownMetricsTable_ZeroEmojis(t *testing.T) {
+	t.Parallel()
+	tid := "AL-ZERO-EMOJI"
+	ledger := domain.AgenticMetricsLedger{
+		TicketID: &tid,
+		WorkflowEfficiency: domain.WorkflowEfficiency{
+			ActiveDurationFormatted: "1h 30m",
+			ContextWindowHealth: domain.ContextWindowHealth{
+				Status: "HEALTHY",
+			},
+		},
+		Totals: domain.GroupedMetric{
+			Invocations: 5,
+			CostUSD:     1.25,
+		},
+	}
+
+	tableMD := adapters.FormatMarkdownMetricsTable(ledger)
+	emojiPattern := regexp.MustCompile(`[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F1E6}-\x{1F1FF}\x{1F600}-\x{1F64F}\x{1F680}-\x{1F6FF}]`)
+	if emojiPattern.MatchString(tableMD) {
+		t.Errorf("expected zero emojis in populated markdown table, found emoji match")
+	}
 }

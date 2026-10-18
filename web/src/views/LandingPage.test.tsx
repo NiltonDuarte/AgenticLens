@@ -671,4 +671,67 @@ describe('LandingPage View Component', () => {
       expect(screen.getByText(/zero workspaces discovered/i)).toBeInTheDocument();
     });
   });
+
+  it('clicking InfoTooltip trigger on sortable table headers does not trigger sort', async () => {
+    const customRows = [
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-10',
+        ticket_title: 'Zeta feature',
+        sdlc_iterations: 1,
+      },
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-2',
+        ticket_title: 'Beta feature',
+        sdlc_iterations: 5,
+      },
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-1',
+        ticket_title: 'Alpha feature',
+        sdlc_iterations: 3,
+      },
+    ];
+
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+      data: mockFleetSummary,
+      isMock: true,
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+      data: customRows,
+      isMock: true,
+    });
+
+    render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+
+    const getRowTickets = () => {
+      const rows = screen.getAllByRole('row');
+      return rows.slice(1).map((r) => r.querySelector('.mono-number')?.textContent?.trim());
+    };
+
+    // Default natural order: AL-1, AL-2, AL-10
+    expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
+
+    // Click InfoTooltip button for Ticket ID header
+    const ticketIdTooltipBtn = screen.getByRole('button', { name: 'Information about Ticket ID' });
+    fireEvent.click(ticketIdTooltipBtn);
+
+    // Order must NOT change (sort was not triggered)
+    expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
+
+    // Click InfoTooltip button for Title header
+    const titleTooltipBtn = screen.getByRole('button', { name: 'Information about Title' });
+    fireEvent.click(titleTooltipBtn);
+    expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
+
+    // Click InfoTooltip button for Iterations header
+    const iterationsTooltipBtn = screen.getByRole('button', { name: 'Information about Iterations' });
+    fireEvent.click(iterationsTooltipBtn);
+    expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
+  });
 });

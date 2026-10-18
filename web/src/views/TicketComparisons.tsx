@@ -14,6 +14,7 @@ import {
 } from '../domain/formatters';
 import { KPICard } from '../components/KPICard';
 import { EmptyState } from '../components/EmptyState';
+import { InfoTooltip } from '../components/InfoTooltip';
 
 export interface TicketComparisonsProps {
   readonly onSelectTicket?: (ticketId: string) => void;
@@ -168,7 +169,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           title="Average Active Duration"
           value={benchmarks.avgDurationFormatted}
           secondary="Compute time per ticket"
-          tooltip="Average active invocation execution time"
+          tooltip="Average cumulative active compute time across all agent invocations per ticket (cumulative man-hours)."
         />
         <KPICard
           title="Average Iterations"
@@ -216,61 +217,195 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           <table className="comparison-matrix-table">
             <thead>
               <tr>
-                <th onClick={() => handleHeaderSort('ticket_id')} className="sortable-col">
-                  Ticket ID {renderSortIndicator('ticket_id')}
+                <th
+                  onClick={() => handleHeaderSort('ticket_id')}
+                  className="sortable-col"
+                  aria-label="Ticket ID"
+                >
+                  <span className="th-content">
+                    <span>Ticket ID {renderSortIndicator('ticket_id')}</span>
+                    <InfoTooltip
+                      content="Unique identifier for the development ticket workspace"
+                      placement="bottom"
+                      ariaLabel="Information about Ticket ID"
+                    />
+                  </span>
                 </th>
-                <th>Title</th>
-                <th>Status</th>
-                <th onClick={() => handleHeaderSort('completed_at')} className="sortable-col">
-                  Completed {renderSortIndicator('completed_at')}
+                <th aria-label="Title">
+                  <span className="th-content">
+                    <span>Title</span>
+                    <InfoTooltip
+                      content="Descriptive title of the ticket or work item"
+                      placement="bottom"
+                      ariaLabel="Information about Title"
+                    />
+                  </span>
                 </th>
-                <th onClick={() => handleHeaderSort('started_at')} className="sortable-col">
-                  Started {renderSortIndicator('started_at')}
+                <th aria-label="Status">
+                  <span className="th-content">
+                    <span>Status</span>
+                    <InfoTooltip
+                      content="Workspace lifecycle status (Completed or In Progress)"
+                      placement="bottom"
+                      ariaLabel="Information about Status"
+                    />
+                  </span>
                 </th>
-                <th>Lead Time</th>
+                <th
+                  onClick={() => handleHeaderSort('completed_at')}
+                  className="sortable-col"
+                  aria-label="Completed"
+                >
+                  <span className="th-content">
+                    <span>Completed {renderSortIndicator('completed_at')}</span>
+                    <InfoTooltip
+                      content="Timestamp when the ticket workspace execution completed"
+                      placement="bottom"
+                      ariaLabel="Information about Completed"
+                    />
+                  </span>
+                </th>
+                <th
+                  onClick={() => handleHeaderSort('started_at')}
+                  className="sortable-col"
+                  aria-label="Started"
+                >
+                  <span className="th-content">
+                    <span>Started {renderSortIndicator('started_at')}</span>
+                    <InfoTooltip
+                      content="Timestamp when the ticket workspace execution began"
+                      placement="bottom"
+                      ariaLabel="Information about Started"
+                    />
+                  </span>
+                </th>
+                <th aria-label="Lead Time">
+                  <span className="th-content">
+                    <span>Lead Time</span>
+                    <InfoTooltip
+                      content="Total wall-clock elapsed time from first event to completion."
+                      placement="bottom"
+                      ariaLabel="Information about Lead Time"
+                    />
+                  </span>
+                </th>
                 <th
                   onClick={() => handleHeaderSort('active_duration_seconds')}
                   className="sortable-col num-col"
+                  aria-label="Active Time"
                 >
-                  Active Time {renderSortIndicator('active_duration_seconds')}
+                  <span className="th-content">
+                    <span>Active Time {renderSortIndicator('active_duration_seconds')}</span>
+                    <InfoTooltip
+                      content="Cumulative active compute duration across all agent invocations (cumulative man-hours); can exceed elapsed lead time when subagents run in parallel."
+                      placement="bottom"
+                      ariaLabel="Information about Active Time"
+                    />
+                  </span>
                 </th>
                 <th
                   onClick={() => handleHeaderSort('sdlc_iterations')}
                   className="sortable-col num-col"
+                  aria-label="Iterations"
                 >
-                  Iterations {renderSortIndicator('sdlc_iterations')}
+                  <span className="th-content">
+                    <span>Iterations {renderSortIndicator('sdlc_iterations')}</span>
+                    <InfoTooltip
+                      content="Total number of SDLC feedback cycles executed"
+                      placement="bottom"
+                      ariaLabel="Information about Iterations"
+                    />
+                  </span>
                 </th>
                 <th
                   onClick={() => handleHeaderSort('cost_usd')}
                   className="sortable-col num-col"
+                  aria-label="Cost (USD)"
                 >
-                  Cost (USD) {renderSortIndicator('cost_usd')}
+                  <span className="th-content">
+                    <span>Cost (USD) {renderSortIndicator('cost_usd')}</span>
+                    <InfoTooltip
+                      content="Total LLM inference spend in US dollars"
+                      placement="bottom"
+                      ariaLabel="Information about Cost (USD)"
+                    />
+                  </span>
                 </th>
                 <th
                   onClick={() => handleHeaderSort('cache_hit_rate_pct')}
                   className="sortable-col num-col"
+                  aria-label="Cache Hit"
                 >
-                  Cache Hit {renderSortIndicator('cache_hit_rate_pct')}
+                  <span className="th-content">
+                    <span>Cache Hit {renderSortIndicator('cache_hit_rate_pct')}</span>
+                    <InfoTooltip
+                      content="Percentage of prompt tokens read from KV prompt cache"
+                      placement="bottom"
+                      ariaLabel="Information about Cache Hit"
+                    />
+                  </span>
                 </th>
-                <th className="num-col">Test:Prod</th>
+                <th className="num-col" aria-label="Test:Prod">
+                  <span className="th-content">
+                    <span>Test:Prod</span>
+                    <InfoTooltip
+                      content="Ratio of test lines added to production lines added"
+                      placement="bottom"
+                      ariaLabel="Information about Test:Prod"
+                    />
+                  </span>
+                </th>
                 <th
                   onClick={() => handleHeaderSort('lines_added')}
                   className="sortable-col num-col"
+                  aria-label="Code Lines"
                 >
-                  Code Lines {renderSortIndicator('lines_added')}
+                  <span className="th-content">
+                    <span>Code Lines {renderSortIndicator('lines_added')}</span>
+                    <InfoTooltip
+                      content="Total code churn: lines added, lines deleted, and files changed"
+                      placement="bottom"
+                      ariaLabel="Information about Code Lines"
+                    />
+                  </span>
                 </th>
                 <th
                   onClick={() => handleHeaderSort('tool_success_rate_pct')}
                   className="sortable-col num-col"
+                  aria-label="Tool Success"
                 >
-                  Tool Success {renderSortIndicator('tool_success_rate_pct')}
+                  <span className="th-content">
+                    <span>Tool Success {renderSortIndicator('tool_success_rate_pct')}</span>
+                    <InfoTooltip
+                      content="Percentage of subagent tool executions that succeeded without error"
+                      placement="bottom"
+                      ariaLabel="Information about Tool Success"
+                    />
+                  </span>
                 </th>
-                <th>Context Health</th>
+                <th aria-label="Context Health">
+                  <span className="th-content">
+                    <span>Context Health</span>
+                    <InfoTooltip
+                      content="Context window saturation evaluation status (HEALTHY, ELEVATED, BLOATED, CRITICAL)"
+                      placement="bottom"
+                      ariaLabel="Information about Context Health"
+                    />
+                  </span>
+                </th>
                 <th
                   onClick={() => handleHeaderSort('orchestrator_saturation_pct')}
                   className="sortable-col num-col"
+                  aria-label="Saturation"
                 >
-                  Saturation {renderSortIndicator('orchestrator_saturation_pct')}
+                  <span className="th-content">
+                    <span>Saturation {renderSortIndicator('orchestrator_saturation_pct')}</span>
+                    <InfoTooltip
+                      content="Peak context window utilization percentage relative to the 200k token ceiling"
+                      placement="bottom"
+                      ariaLabel="Information about Saturation"
+                    />
+                  </span>
                 </th>
               </tr>
             </thead>

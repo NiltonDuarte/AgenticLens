@@ -2,15 +2,18 @@ import React from 'react';
 import type { ContextWindowHealth } from '../domain/types';
 import { formatTokensK, HEALTHY_CEILING_TOKENS } from '../domain/formatters';
 import { getHealthStatusColor, THEME_COLORS } from '../utils/theme';
+import { InfoTooltip } from './InfoTooltip';
 
 export interface SaturationBarProps {
   readonly contextHealth: ContextWindowHealth;
   readonly healthyCeilingTokens?: number;
+  readonly tooltip?: string | undefined;
 }
 
 export const SaturationBar: React.FC<SaturationBarProps> = ({
   contextHealth,
   healthyCeilingTokens = HEALTHY_CEILING_TOKENS,
+  tooltip,
 }) => {
   const ceiling = healthyCeilingTokens > 0 ? healthyCeilingTokens : HEALTHY_CEILING_TOKENS;
   const orchTokens = contextHealth.orchestrator_peak_tokens;
@@ -31,6 +34,13 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
       <div className="saturation-header">
         <div className="saturation-title-group">
           <h4 className="saturation-title">Context Window Saturation</h4>
+          <InfoTooltip
+            content={
+              tooltip ??
+              'Context window utilization of the orchestrator and subagents evaluated against the 200,000 token healthy operating ceiling.'
+            }
+            ariaLabel="Information about Context Window Saturation"
+          />
           <span className="ceiling-label">Ceiling: {formatTokensK(ceiling)} tokens</span>
         </div>
         <div className="saturation-status-badge" style={{ borderColor: statusColor, color: statusColor }}>

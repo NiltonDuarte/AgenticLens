@@ -889,6 +889,12 @@ body {
   margin-bottom: 16px;
 }
 
+.turn-velocity-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .turn-velocity-badges {
   display: flex;
   gap: 8px;
@@ -961,7 +967,16 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.table-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 8px;
 }
 
 .table-card-title {
@@ -973,8 +988,21 @@ body {
   padding-bottom: 8px;
 }
 
+.table-card-header .table-card-title {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .data-table {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   font-size: 0.85rem;
   text-align: left;
@@ -986,12 +1014,15 @@ body {
   font-weight: 600;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+  user-select: none;
 }
 
 .data-table td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .data-table tr:hover td {
@@ -1022,6 +1053,12 @@ body {
   margin-bottom: 16px;
 }
 
+.thread-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .thread-count-badge {
   font-size: 0.75rem;
   background-color: var(--bg-surface-elevated);
@@ -1040,7 +1077,7 @@ body {
 .thread-accordion-item {
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .thread-header-btn {
@@ -1055,6 +1092,11 @@ body {
   color: var(--text-primary);
   text-align: left;
   transition: background-color 0.15s ease;
+  border-radius: 6px;
+}
+
+.thread-header-btn.open {
+  border-radius: 6px 6px 0 0;
 }
 
 .thread-header-btn:hover {
@@ -1090,10 +1132,12 @@ body {
   padding: 16px;
   background-color: var(--bg-surface);
   border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 6px 6px;
 }
 
 .thread-models-table {
   width: 100%;
+  min-width: 850px;
   border-collapse: collapse;
   font-size: 0.825rem;
 }
@@ -1103,11 +1147,14 @@ body {
   color: var(--text-secondary);
   padding: 8px 10px;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+  user-select: none;
 }
 
 .thread-models-table td {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
 }
 
 .health-pill.mini {
@@ -1617,6 +1664,12 @@ body {
   align-items: center;
   margin-bottom: 16px;
   flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trend-title-group {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
 }
 
@@ -2147,4 +2200,172 @@ body {
 .quick-launch-btn:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
+}
+
+/* Contextual Information Tooltip (AL-25) */
+.info-tooltip-container {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.info-tooltip-trigger {
+  background: transparent;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: 4px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.info-tooltip-trigger:hover {
+  color: var(--text-primary);
+}
+
+.info-tooltip-trigger:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.info-tooltip-glyph {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.info-tooltip-bubble {
+  position: absolute;
+  z-index: 100;
+  min-width: 160px;
+  max-width: 260px;
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+  text-align: left;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.info-tooltip-trigger:hover + .info-tooltip-bubble,
+.info-tooltip-trigger:focus + .info-tooltip-bubble,
+.info-tooltip-container:hover .info-tooltip-bubble,
+.info-tooltip-bubble.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.info-tooltip-bubble.placement-top {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+}
+
+.info-tooltip-bubble.placement-bottom {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+}
+
+.info-tooltip-bubble.placement-left {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+}
+
+.info-tooltip-bubble.placement-right {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+}
+
+.info-tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  border-style: solid;
+}
+
+.info-tooltip-bubble.placement-top::after {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0 5px;
+  border-color: var(--bg-surface-elevated) transparent transparent transparent;
+}
+
+.info-tooltip-bubble.placement-bottom::after {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 5px 5px 5px;
+  border-color: transparent transparent var(--bg-surface-elevated) transparent;
+}
+
+.info-tooltip-bubble.placement-left::after {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px 0 5px 5px;
+  border-color: transparent transparent transparent var(--bg-surface-elevated);
+}
+
+.info-tooltip-bubble.placement-right::after {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px 5px 5px 0;
+  border-color: transparent var(--bg-surface-elevated) transparent transparent;
+}
+
+.distribution-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 8px;
+}
+
+.distribution-header .card-title {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pulse-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feature-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+th.num-col .th-content {
+  justify-content: flex-end;
 }

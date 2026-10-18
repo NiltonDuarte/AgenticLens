@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { EmptyState } from './EmptyState';
 import { KPICard } from './KPICard';
 import { DistributionCard } from './DistributionCard';
+import { InfoTooltip, InfoIcon } from './InfoTooltip';
 import { Navbar } from './Navbar';
 import { TrendChart } from './TrendChart';
 import { SaturationBar } from './SaturationBar';
@@ -52,9 +53,43 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.getByText('Total Cost')).toBeInTheDocument();
       expect(screen.getByText('$12.50')).toBeInTheDocument();
       expect(screen.getByText('2 tickets')).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Test tooltip');
+      expect(
+        screen.getByRole('button', { name: 'Information about Total Cost' })
+      ).toBeInTheDocument();
 
       rerender(<KPICard title="Zero Card" value="" />);
       expect(screen.getByText('-')).toBeInTheDocument();
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
+
+    it('renders zero numeric, currency, and token quantities without falling back to dash', () => {
+      const { rerender } = render(<KPICard title="Zero Numeric" value="0" />);
+      expect(screen.getByText('0')).toBeInTheDocument();
+      expect(screen.queryByText('-')).not.toBeInTheDocument();
+
+      rerender(<KPICard title="Zero Tokens" value="0 tokens" />);
+      expect(screen.getByText('0 tokens')).toBeInTheDocument();
+
+      rerender(<KPICard title="Zero Dollars" value="$0.00" />);
+      expect(screen.getByText('$0.00')).toBeInTheDocument();
+
+      rerender(<KPICard title="Empty String" value="" />);
+      expect(screen.getByText('-')).toBeInTheDocument();
+    });
+
+    it('contains zero emojis in KPICard rendering', () => {
+      const { container } = render(
+        <KPICard
+          title="Subagent Velocity"
+          value="4.5 turns"
+          secondary="Coder peak"
+          tooltip="Average turns per subagent invocation"
+        />
+      );
+      const text = container.textContent ?? '';
+      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
+      expect(emojiRegex.test(text)).toBe(false);
     });
   });
 
@@ -100,6 +135,175 @@ describe('Presentation Components Boundary Tests', () => {
       expect(items[0]).toHaveTextContent('expensive-model');
       expect(items[1]).toHaveTextContent('mid-model');
       expect(items[2]).toHaveTextContent('cheap-model');
+    });
+
+    it('renders InfoTooltip when tooltip prop is provided', () => {
+      render(
+        <DistributionCard
+          title="Role Breakdown"
+          items={{ coder: 10 }}
+          totalCostUSD={10}
+          tooltip="Detailed explanation of role inference spend"
+        />
+      );
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Detailed explanation of role inference spend'
+      );
+      expect(
+        screen.getByRole('button', { name: 'Information about Role Breakdown' })
+      ).toBeInTheDocument();
+    });
+
+    it('handles single item with 100% cost allocation cleanly', () => {
+      render(
+        <DistributionCard
+          title="Single Model"
+          items={{ 'gemini-3.8-flash': 50.0 }}
+          totalCostUSD={50.0}
+        />
+      );
+
+      expect(screen.getByText('gemini-3.8-flash')).toBeInTheDocument();
+      expect(screen.getByText('(100.0%)')).toBeInTheDocument();
+    });
+
+    it('contains zero emojis in DistributionCard rendering', () => {
+      const { container } = render(
+        <DistributionCard
+          title="Role Costs"
+          items={{ coder: 10, tester: 5 }}
+          totalCostUSD={15}
+          tooltip="Distribution information"
+        />
+      );
+      const text = container.textContent ?? '';
+      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
+      expect(emojiRegex.test(text)).toBe(false);
+    });
+  });
+
+  describe('InfoTooltip Component', () => {
+    it('renders trigger button with accessible aria attributes and role="tooltip"', () => {
+      render(<InfoTooltip content="Helpful information" ariaLabel="Help details" />);
+      const button = screen.getByRole('button', { name: 'Help details' });
+      expect(button).toBeInTheDocument();
+      const tooltip = screen.getByRole('tooltip');
+      expect(tooltip).toBeInTheDocument();
+      expect(tooltip).toHaveTextContent('Helpful information');
+      expect(button).toHaveAttribute('aria-describedby', tooltip.id);
+    });
+
+    it('uses default aria-label when not provided', () => {
+      render(<InfoTooltip content="Default label info" />);
+      expect(screen.getByRole('button', { name: 'Information' })).toBeInTheDocument();
+    });
+
+    it('returns null when content is empty string', () => {
+      const { container } = render(<InfoTooltip content="" />);
+      expect(container.firstChild).toBeNull();
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    });
+
+    it('toggles visibility class on mouseenter and mouseleave', () => {
+      render(<InfoTooltip content="Interactive tooltip" />);
+      const button = screen.getByRole('button', { name: 'Information' });
+      const tooltip = screen.getByRole('tooltip');
+
+      expect(tooltip).not.toHaveClass('is-visible');
+
+      fireEvent.mouseEnter(button);
+      expect(tooltip).toHaveClass('is-visible');
+
+      fireEvent.mouseLeave(button);
+      expect(tooltip).not.toHaveClass('is-visible');
+    });
+
+    it('toggles visibility class on focus, blur, and dismisses on Escape key', () => {
+      render(<InfoTooltip content="Keyboard tooltip" />);
+      const button = screen.getByRole('button', { name: 'Information' });
+      const tooltip = screen.getByRole('tooltip');
+
+      fireEvent.focus(button);
+      expect(tooltip).toHaveClass('is-visible');
+
+      fireEvent.keyDown(button, { key: 'Escape' });
+      expect(tooltip).not.toHaveClass('is-visible');
+
+      fireEvent.focus(button);
+      expect(tooltip).toHaveClass('is-visible');
+
+      fireEvent.blur(button);
+      expect(tooltip).not.toHaveClass('is-visible');
+    });
+
+    it('retains visibility when non-Escape keys are pressed while focused', () => {
+      render(<InfoTooltip content="Key check" />);
+      const button = screen.getByRole('button', { name: 'Information' });
+      const tooltip = screen.getByRole('tooltip');
+
+      fireEvent.focus(button);
+      expect(tooltip).toHaveClass('is-visible');
+
+      fireEvent.keyDown(button, { key: 'Enter' });
+      expect(tooltip).toHaveClass('is-visible');
+
+      fireEvent.keyDown(button, { key: 'Tab' });
+      expect(tooltip).toHaveClass('is-visible');
+
+      fireEvent.keyDown(button, { key: 'ArrowDown' });
+      expect(tooltip).toHaveClass('is-visible');
+
+      fireEvent.keyDown(button, { key: ' ' });
+      expect(tooltip).toHaveClass('is-visible');
+    });
+
+    it('applies custom className to container element', () => {
+      const { container } = render(
+        <InfoTooltip content="Class test" className="header-tip-custom" />
+      );
+      const wrapper = container.querySelector('.info-tooltip-container');
+      expect(wrapper).toHaveClass('info-tooltip-container', 'header-tip-custom');
+    });
+
+    it('applies custom placement classes correctly', () => {
+      const { rerender } = render(<InfoTooltip content="Top tip" placement="top" />);
+      expect(screen.getByRole('tooltip')).toHaveClass('placement-top');
+
+      rerender(<InfoTooltip content="Bottom tip" placement="bottom" />);
+      expect(screen.getByRole('tooltip')).toHaveClass('placement-bottom');
+
+      rerender(<InfoTooltip content="Left tip" placement="left" />);
+      expect(screen.getByRole('tooltip')).toHaveClass('placement-left');
+
+      rerender(<InfoTooltip content="Right tip" placement="right" />);
+      expect(screen.getByRole('tooltip')).toHaveClass('placement-right');
+    });
+
+    it('prevents click event propagation to parent elements', () => {
+      const parentClick = vi.fn();
+      render(
+        <div onClick={parentClick}>
+          <InfoTooltip content="Nested info" />
+        </div>
+      );
+      const button = screen.getByRole('button', { name: 'Information' });
+      fireEvent.click(button);
+      expect(parentClick).not.toHaveBeenCalled();
+    });
+
+    it('contains zero emojis in the rendered component', () => {
+      const { container } = render(
+        <InfoTooltip content="Zero emoji requirement strictly verified" />
+      );
+      const renderedText = container.textContent ?? '';
+      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
+      expect(emojiRegex.test(renderedText)).toBe(false);
+    });
+
+    it('exports InfoIcon alias identically', () => {
+      expect(InfoIcon).toBe(InfoTooltip);
     });
   });
 
@@ -183,6 +387,122 @@ describe('Presentation Components Boundary Tests', () => {
       const rects = container.querySelectorAll('rect');
       expect(rects.length).toBeGreaterThan(0);
     });
+
+    it('renders InfoTooltip when tooltip prop is provided in both populated and empty states', () => {
+      const { rerender } = render(
+        <TrendChart
+          title="Spend Velocity"
+          data={[{ date: '2026-10-18', val: 10 }]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+          tooltip="Spend velocity trajectory explanation"
+        />
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'Information about Spend Velocity' })
+      ).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Spend velocity trajectory explanation');
+
+      // Empty state
+      rerender(
+        <TrendChart
+          title="Spend Velocity"
+          data={[]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+          tooltip="Spend velocity trajectory explanation"
+        />
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'Information about Spend Velocity' })
+      ).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Spend velocity trajectory explanation');
+    });
+
+    it('does not render InfoTooltip when tooltip prop is omitted or empty in populated and empty states', () => {
+      const { rerender } = render(
+        <TrendChart
+          title="Unannotated Velocity"
+          data={[{ date: '2026-10-18', val: 10 }]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+        />
+      );
+
+      expect(
+        screen.queryByRole('button', { name: 'Information about Unannotated Velocity' })
+      ).not.toBeInTheDocument();
+
+      // Empty state without tooltip
+      rerender(
+        <TrendChart
+          title="Unannotated Velocity"
+          data={[]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+        />
+      );
+      expect(
+        screen.queryByRole('button', { name: 'Information about Unannotated Velocity' })
+      ).not.toBeInTheDocument();
+
+      // Populated state with empty string tooltip
+      rerender(
+        <TrendChart
+          title="Unannotated Velocity"
+          data={[{ date: '2026-10-18', val: 10 }]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+          tooltip=""
+        />
+      );
+      expect(
+        screen.queryByRole('button', { name: 'Information about Unannotated Velocity' })
+      ).not.toBeInTheDocument();
+
+      // Empty state with empty string tooltip
+      rerender(
+        <TrendChart
+          title="Unannotated Velocity"
+          data={[]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+          tooltip=""
+        />
+      );
+      expect(
+        screen.queryByRole('button', { name: 'Information about Unannotated Velocity' })
+      ).not.toBeInTheDocument();
+    });
+
+    it('handles hover and keyboard focus states on TrendChart InfoTooltip trigger', () => {
+      render(
+        <TrendChart
+          title="Interactive Velocity"
+          data={[{ date: '2026-10-18', val: 10 }]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+          tooltip="Detailed explanation of interactive velocity"
+        />
+      );
+
+      const trigger = screen.getByRole('button', {
+        name: 'Information about Interactive Velocity',
+      });
+      const bubble = screen.getByRole('tooltip');
+
+      expect(bubble).not.toHaveClass('is-visible');
+
+      // Mouse hover
+      fireEvent.mouseEnter(trigger);
+      expect(bubble).toHaveClass('is-visible');
+
+      fireEvent.mouseLeave(trigger);
+      expect(bubble).not.toHaveClass('is-visible');
+
+      // Keyboard focus
+      fireEvent.focus(trigger);
+      expect(bubble).toHaveClass('is-visible');
+
+      // Escape key dismiss
+      fireEvent.keyDown(trigger, { key: 'Escape' });
+      expect(bubble).not.toHaveClass('is-visible');
+    });
   });
 
   describe('SaturationBar Component', () => {
@@ -209,6 +529,34 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.getByText('Ceiling: 200k tokens')).toBeInTheDocument();
       expect(screen.getByText('orchestrator')).toBeInTheDocument();
       expect(screen.getByText('coder')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Information about Context Window Saturation' })
+      ).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Context window utilization of the orchestrator and subagents evaluated against the 200,000 token healthy operating ceiling.'
+      );
+    });
+
+    it('renders custom tooltip prop on SaturationBar when provided', () => {
+      render(
+        <SaturationBar
+          contextHealth={{
+            healthy_ceiling_tokens: 200000,
+            status: 'HEALTHY',
+            orchestrator_peak_tokens: 10000,
+            orchestrator_saturation_pct: 5.0,
+            subagents_peak_tokens: 5000,
+            subagents_peak_role: 'none',
+            compactions: 0,
+            peak_by_role: {},
+          }}
+          tooltip="Custom saturation analysis description"
+        />
+      );
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Custom saturation analysis description'
+      );
     });
 
     it('renders critical saturation badge when status is CRITICAL', () => {
@@ -231,13 +579,70 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.getByText('CRITICAL')).toBeInTheDocument();
       expect(screen.getByText(/105\.0%/)).toBeInTheDocument();
     });
+
+    it('handles zero or negative healthy ceiling tokens with defensive fallback and tooltip rendering', () => {
+      const { rerender } = render(
+        <SaturationBar
+          contextHealth={{
+            healthy_ceiling_tokens: 0,
+            status: 'HEALTHY',
+            orchestrator_peak_tokens: 0,
+            orchestrator_saturation_pct: 0.0,
+            subagents_peak_tokens: 0,
+            subagents_peak_role: 'none',
+            compactions: 0,
+            peak_by_role: {},
+          }}
+          healthyCeilingTokens={0}
+        />
+      );
+
+      expect(screen.getByText('Ceiling: 200k tokens')).toBeInTheDocument();
+      expect(screen.getByText('(0.0% of ceiling)')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Information about Context Window Saturation' })
+      ).toBeInTheDocument();
+
+      // Negative ceiling tokens falls back to 200k
+      rerender(
+        <SaturationBar
+          contextHealth={{
+            healthy_ceiling_tokens: 200000,
+            status: 'ELEVATED',
+            orchestrator_peak_tokens: 150000,
+            orchestrator_saturation_pct: 75.0,
+            subagents_peak_tokens: 20000,
+            subagents_peak_role: 'coder',
+            compactions: 1,
+            peak_by_role: { orchestrator: 150000 },
+          }}
+          healthyCeilingTokens={-50000}
+          tooltip="Negative ceiling fallback explanation"
+        />
+      );
+
+      expect(screen.getByText('Ceiling: 200k tokens')).toBeInTheDocument();
+      expect(screen.getByText('ELEVATED')).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Negative ceiling fallback explanation'
+      );
+    });
   });
 
   describe('ThreadViewer Component', () => {
-    it('renders empty notice when threads array is empty', () => {
+    it('renders empty notice and section header tooltip when threads array is empty', () => {
       render(<ThreadViewer threads={[]} />);
       expect(
         screen.getByText('No session execution threads recorded for this workspace.')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Session Execution Threads')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Information about Session Execution Threads' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Hierarchical session execution threads tracking multi-agent turns, context compactions, and model usage per role.'
+        )
       ).toBeInTheDocument();
     });
 
@@ -281,6 +686,164 @@ describe('Presentation Components Boundary Tests', () => {
       // Click to expand again
       fireEvent.click(toggleBtn);
       expect(screen.getByText('gemini-3.8-flash')).toBeInTheDocument();
+    });
+
+    it('renders InfoTooltip on section header and all 10 column headers of thread models table', () => {
+      const dummyThread = {
+        session_id: 'ses-root-02',
+        user: 'dev',
+        compactions: 0,
+        roles: [
+          {
+            role: 'orchestrator',
+            models: [
+              {
+                model: 'claude-3-5-sonnet',
+                invocations: 2,
+                input_tokens: 2000,
+                output_tokens: 400,
+                cache_read_tokens: 1000,
+                cache_hit_rate_pct: 33.3,
+                cost_usd: 1.25,
+                peak_context_tokens: 3500,
+                context_health: 'HEALTHY',
+              },
+            ],
+          },
+        ],
+      };
+
+      render(<ThreadViewer threads={[dummyThread]} />);
+
+      // Section header tooltip
+      expect(
+        screen.getByRole('button', { name: 'Information about Session Execution Threads' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Hierarchical session execution threads tracking multi-agent turns, context compactions, and model usage per role.'
+        )
+      ).toBeInTheDocument();
+
+      // All 10 column header tooltips with placement-bottom and exact explanatory content
+      const expectedColumns: readonly { readonly label: string; readonly content: string }[] = [
+        { label: 'Role', content: 'Agent persona role executing in this thread' },
+        { label: 'Model', content: 'Model family and version used in this session' },
+        { label: 'Invocations', content: 'Total count of model invocations in this thread' },
+        { label: 'Input', content: 'Input prompt tokens sent to the model' },
+        { label: 'Output', content: 'Completion output tokens generated by the model' },
+        { label: 'Cache Read', content: 'Prompt tokens read directly from prompt cache' },
+        { label: 'Cache Hit', content: 'Percentage of prompt context served from cache' },
+        { label: 'Cost', content: 'Total inference cost in US dollars for this model' },
+        {
+          label: 'Peak Context',
+          content: 'Maximum single-turn context window size encountered in this thread',
+        },
+        {
+          label: 'Context Health',
+          content:
+            'Context window saturation status against healthy ceiling (HEALTHY, ELEVATED, BLOATED, CRITICAL)',
+        },
+      ];
+
+      for (const col of expectedColumns) {
+        const btn = screen.getByRole('button', { name: `Information about ${col.label}` });
+        expect(btn).toBeInTheDocument();
+        const tooltipId = btn.getAttribute('aria-describedby');
+        expect(tooltipId).toBeTruthy();
+        const bubble = document.getElementById(tooltipId!);
+        expect(bubble).toHaveClass('placement-bottom');
+        expect(bubble).toHaveTextContent(col.content);
+      }
+    });
+
+    it('clicking column header InfoTooltip triggers stops propagation and does not toggle thread details', () => {
+      const dummyThread = {
+        session_id: 'ses-root-03',
+        user: 'dev',
+        compactions: 0,
+        roles: [
+          {
+            role: 'orchestrator',
+            models: [
+              {
+                model: 'claude-3-5-sonnet',
+                invocations: 1,
+                input_tokens: 1000,
+                output_tokens: 200,
+                cache_read_tokens: 500,
+                cache_hit_rate_pct: 50.0,
+                cost_usd: 0.5,
+                peak_context_tokens: 1500,
+                context_health: 'HEALTHY',
+              },
+            ],
+          },
+        ],
+      };
+
+      render(<ThreadViewer threads={[dummyThread]} />);
+
+      expect(screen.getByText('claude-3-5-sonnet')).toBeInTheDocument();
+
+      // Click column header tooltip button
+      const roleTooltipBtn = screen.getByRole('button', { name: 'Information about Role' });
+      fireEvent.click(roleTooltipBtn);
+
+      // Model table must remain open and expanded
+      expect(screen.getByText('claude-3-5-sonnet')).toBeInTheDocument();
+
+      const costTooltipBtn = screen.getByRole('button', { name: 'Information about Cost' });
+      fireEvent.click(costTooltipBtn);
+
+      expect(screen.getByText('claude-3-5-sonnet')).toBeInTheDocument();
+    });
+
+    it('wraps thread models table in .table-responsive container and keeps section header outside', () => {
+      const dummyThread = {
+        session_id: 'ses-root-04',
+        user: 'dev',
+        compactions: 0,
+        roles: [
+          {
+            role: 'orchestrator',
+            models: [
+              {
+                model: 'claude-3-5-sonnet',
+                invocations: 1,
+                input_tokens: 1000,
+                output_tokens: 200,
+                cache_read_tokens: 500,
+                cache_hit_rate_pct: 50.0,
+                cost_usd: 0.5,
+                peak_context_tokens: 1500,
+                context_health: 'HEALTHY',
+              },
+            ],
+          },
+        ],
+      };
+
+      const { container } = render(<ThreadViewer threads={[dummyThread]} />);
+
+      const table = container.querySelector('table.thread-models-table');
+      expect(table).not.toBeNull();
+
+      const responsiveWrapper = table!.parentElement;
+      expect(responsiveWrapper).not.toBeNull();
+      expect(responsiveWrapper).toHaveClass('table-responsive');
+
+      // Section header must be outside .table-responsive
+      const header = container.querySelector('.thread-viewer-header');
+      expect(header).not.toBeNull();
+      expect(responsiveWrapper!.contains(header)).toBe(false);
+
+      // Verify all 10 column header tooltips in table have placement-bottom
+      const columnBubbles = table!.querySelectorAll('.info-tooltip-bubble');
+      expect(columnBubbles.length).toBe(10);
+      columnBubbles.forEach((bubble) => {
+        expect(bubble).toHaveClass('placement-bottom');
+      });
     });
   });
 

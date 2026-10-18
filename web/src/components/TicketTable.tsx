@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { TicketComparisonRow } from '../domain/types';
 import { compareTicketIds, formatCurrencyUSD, formatPercentage } from '../domain/formatters';
 import { EmptyState } from './EmptyState';
+import { InfoTooltip } from './InfoTooltip';
 
 export interface TicketTableProps {
   readonly rows: readonly TicketComparisonRow[];
@@ -97,29 +98,93 @@ export const TicketTable: React.FC<TicketTableProps> = ({
                   className="sortable"
                   onClick={() => handleSort('ticket_id')}
                 >
-                  Ticket ID{getSortIndicator('ticket_id')}
+                  <span className="th-content">
+                    <span>Ticket ID{getSortIndicator('ticket_id')}</span>
+                    <InfoTooltip
+                      content="Unique identifier for the development ticket and workspace directory"
+                      placement="bottom"
+                      ariaLabel="Information about Ticket ID"
+                    />
+                  </span>
                 </th>
-                <th>Title</th>
-                <th>Status</th>
+                <th>
+                  <span className="th-content">
+                    <span>Title</span>
+                    <InfoTooltip
+                      content="Summary title of the feature, bugfix, or task tracked by this ticket"
+                      placement="bottom"
+                      ariaLabel="Information about Title"
+                    />
+                  </span>
+                </th>
+                <th>
+                  <span className="th-content">
+                    <span>Status</span>
+                    <InfoTooltip
+                      content="Context window saturation health status (HEALTHY, ELEVATED, BLOATED, or CRITICAL)"
+                      placement="bottom"
+                      ariaLabel="Information about Status"
+                    />
+                  </span>
+                </th>
                 <th
                   className="sortable"
                   onClick={() => handleSort('active_duration_seconds')}
                 >
-                  Active Duration{getSortIndicator('active_duration_seconds')}
+                  <span className="th-content">
+                    <span>Active Duration{getSortIndicator('active_duration_seconds')}</span>
+                    <InfoTooltip
+                      content="Cumulative active compute duration across all agent invocations (cumulative man-hours), which can exceed elapsed wall-clock time if agents run concurrently."
+                      placement="bottom"
+                      ariaLabel="Information about Active Duration"
+                    />
+                  </span>
                 </th>
                 <th
                   className="sortable"
                   onClick={() => handleSort('cost_usd')}
                 >
-                  Cost (USD){getSortIndicator('cost_usd')}
+                  <span className="th-content">
+                    <span>Cost (USD){getSortIndicator('cost_usd')}</span>
+                    <InfoTooltip
+                      content="Total model inference spend in US dollars"
+                      placement="bottom"
+                      ariaLabel="Information about Cost (USD)"
+                    />
+                  </span>
                 </th>
-                <th>Cache Hit Rate</th>
-                <th>Code Delivered</th>
+                <th>
+                  <span className="th-content">
+                    <span>Cache Hit Rate</span>
+                    <InfoTooltip
+                      content="Percentage of prompt tokens read from key-value prompt cache"
+                      placement="bottom"
+                      ariaLabel="Information about Cache Hit Rate"
+                    />
+                  </span>
+                </th>
+                <th>
+                  <span className="th-content">
+                    <span>Code Delivered</span>
+                    <InfoTooltip
+                      content="Lines of code added and deleted, and total files changed"
+                      placement="bottom"
+                      ariaLabel="Information about Code Delivered"
+                    />
+                  </span>
+                </th>
                 <th
                   className="sortable"
                   onClick={() => handleSort('sdlc_iterations')}
                 >
-                  SDLC Iterations{getSortIndicator('sdlc_iterations')}
+                  <span className="th-content">
+                    <span>SDLC Iterations{getSortIndicator('sdlc_iterations')}</span>
+                    <InfoTooltip
+                      content="Count of completed development iterations for this ticket"
+                      placement="bottom"
+                      ariaLabel="Information about SDLC Iterations"
+                    />
+                  </span>
                 </th>
               </tr>
             </thead>

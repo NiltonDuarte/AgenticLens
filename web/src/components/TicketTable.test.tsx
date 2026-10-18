@@ -257,4 +257,106 @@ describe('TicketTable Component', () => {
       expect(onSelect).toHaveBeenCalledWith('AL-2');
     });
   });
+
+  describe('Header InfoTooltips and Event Propagation', () => {
+    it('renders InfoTooltip on all 8 table headers with placement="bottom"', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      const expectedTooltips = [
+        'Information about Ticket ID',
+        'Information about Title',
+        'Information about Status',
+        'Information about Active Duration',
+        'Information about Cost (USD)',
+        'Information about Cache Hit Rate',
+        'Information about Code Delivered',
+        'Information about SDLC Iterations',
+      ];
+
+      for (const label of expectedTooltips) {
+        const btn = screen.getByRole('button', { name: label });
+        expect(btn).toBeInTheDocument();
+        const tooltipId = btn.getAttribute('aria-describedby');
+        expect(tooltipId).toBeTruthy();
+        const tooltip = document.getElementById(tooltipId!);
+        expect(tooltip).toHaveClass('placement-bottom');
+      }
+    });
+
+    it('clicking InfoTooltip trigger on sortable headers stops click propagation and preserves sort order', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      // Initial default order is ticket_id asc naturally: AL-2, AL-10, GEN-9
+      let rows = screen.getAllByRole('row');
+      expect(rows[1]).toHaveTextContent('AL-2');
+      expect(rows[2]).toHaveTextContent('AL-10');
+      expect(rows[3]).toHaveTextContent('GEN-9');
+
+      // Click InfoTooltip on Cost (USD) sortable header
+      const costTooltipBtn = screen.getByRole('button', { name: 'Information about Cost (USD)' });
+      fireEvent.click(costTooltipBtn);
+
+      // Order must remain unchanged!
+      rows = screen.getAllByRole('row');
+      expect(rows[1]).toHaveTextContent('AL-2');
+      expect(rows[2]).toHaveTextContent('AL-10');
+      expect(rows[3]).toHaveTextContent('GEN-9');
+
+      // Click InfoTooltip on Active Duration sortable header
+      const durationTooltipBtn = screen.getByRole('button', { name: 'Information about Active Duration' });
+      fireEvent.click(durationTooltipBtn);
+
+      // Order must still remain unchanged!
+      rows = screen.getAllByRole('row');
+      expect(rows[1]).toHaveTextContent('AL-2');
+      expect(rows[2]).toHaveTextContent('AL-10');
+      expect(rows[3]).toHaveTextContent('GEN-9');
+
+      // Click InfoTooltip on SDLC Iterations sortable header
+      const iterTooltipBtn = screen.getByRole('button', { name: 'Information about SDLC Iterations' });
+      fireEvent.click(iterTooltipBtn);
+
+      // Order must still remain unchanged!
+      rows = screen.getAllByRole('row');
+      expect(rows[1]).toHaveTextContent('AL-2');
+      expect(rows[2]).toHaveTextContent('AL-10');
+      expect(rows[3]).toHaveTextContent('GEN-9');
+
+      // Now click the Cost header text to trigger sort asc
+      const costHeader = screen.getByText(/^Cost \(USD\)/i);
+      fireEvent.click(costHeader);
+
+      // Sort by cost asc: AL-2 ($2.20), GEN-9 ($8.00), AL-10 ($12.50)
+      rows = screen.getAllByRole('row');
+      expect(rows[1]).toHaveTextContent('AL-2');
+      expect(rows[2]).toHaveTextContent('GEN-9');
+      expect(rows[3]).toHaveTextContent('AL-10');
+
+      // Click InfoTooltip on Cost header again
+      fireEvent.click(costTooltipBtn);
+
+      // Order must NOT toggle to descending; it must remain sorted asc!
+      rows = screen.getAllByRole('row');
+      expect(rows[1]).toHaveTextContent('AL-2');
+      expect(rows[2]).toHaveTextContent('GEN-9');
+      expect(rows[3]).toHaveTextContent('AL-10');
+
+      // Click InfoTooltip on Ticket ID header
+      const ticketIdTooltipBtn = screen.getByRole('button', { name: 'Information about Ticket ID' });
+      fireEvent.click(ticketIdTooltipBtn);
+
+      // Order must NOT change to ticket_id sort; it must remain sorted by cost asc!
+      rows = screen.getAllByRole('row');
+      expect(rows[1]).toHaveTextContent('AL-2');
+      expect(rows[2]).toHaveTextContent('GEN-9');
+      expect(rows[3]).toHaveTextContent('AL-10');
+    });
+
+    it('contains zero emojis throughout rendered TicketTable', () => {
+      const { container } = render(<TicketTable rows={sampleRows} />);
+      const text = container.textContent ?? '';
+      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
+      expect(emojiRegex.test(text)).toBe(false);
+    });
+  });
 });

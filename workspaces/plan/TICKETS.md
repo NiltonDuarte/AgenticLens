@@ -55,7 +55,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - **AL-25**: Contextual Hover Information Icons for Cards and Tables
   - **Subsystem**: Presentation / Components / Tests
   - **Phase**: Phase 5
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-25 contextual hover information icons for cards and tables.md`

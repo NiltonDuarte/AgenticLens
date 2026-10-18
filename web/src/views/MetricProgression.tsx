@@ -276,6 +276,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             }
             height={260}
             data={chartData}
+            tooltip="Historical model inference spend per time period alongside cumulative trajectory in US dollars."
             valueFormatter={(v) => formatCurrencyUSD(v)}
             series={
               granularity === 'cumulative'
@@ -309,6 +310,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             title="Token Volume Distribution"
             height={260}
             data={chartData}
+            tooltip="Distribution of token throughput across input prompts, output completions, and key-value prompt cache reads."
             valueFormatter={(v) => formatTokensK(v)}
             series={[
               {
@@ -337,6 +339,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             title="Prompt Cache Hit Rate Trajectory (%)"
             height={260}
             data={chartData}
+            tooltip="Percentage of prompt tokens served from prompt cache per bucket against baseline (50%) and target (80%) thresholds."
             yAxisMin={0}
             valueFormatter={(v) => `${v.toFixed(1)}%`}
             referenceLines={[
@@ -368,6 +371,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             title="Delivered Code Line Churn & Net Growth"
             height={260}
             data={chartData}
+            tooltip="Volume of production and test code lines added, deleted, and net code growth delivered per time bucket."
             valueFormatter={(v) => `${v.toLocaleString()} lines`}
             series={[
               {
@@ -396,6 +400,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             title="Peak Context Window Saturation vs Ceiling"
             height={260}
             data={chartData}
+            tooltip="Peak active context tokens per time bucket measured against the standard 200,000 token healthy context ceiling."
             valueFormatter={(v) => `${formatTokensK(v)} tokens`}
             referenceLines={[
               {

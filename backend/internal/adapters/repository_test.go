@@ -1065,6 +1065,42 @@ func TestUpdateSummaryFile(t *testing.T) {
 			t.Errorf("expected subsequent section to be preserved")
 		}
 	})
+
+	t.Run("strict idempotency across repeated sequential updates", func(t *testing.T) {
+		idempotentFile := filepath.Join(tempDir, "IDEMPOTENT_SUMMARY.md")
+		initial := "# Work Summary\n\nExisting work log.\n\n### Workflow Efficiency\n- Initial Efficiency\n\n## Future Notes\nPreserved.\n"
+		if err := os.WriteFile(idempotentFile, []byte(initial), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Perform 5 successive updates with identical tableMD
+		for i := 0; i < 5; i++ {
+			err := adapters.UpdateSummaryFile(idempotentFile, tableMD)
+			if err != nil {
+				t.Fatalf("update %d failed: %v", i+1, err)
+			}
+		}
+
+		data, err := os.ReadFile(idempotentFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result := string(data)
+
+		// Assert exactly one occurrence of each heading
+		if strings.Count(result, "### Workflow Efficiency") != 1 {
+			t.Errorf("expected exactly 1 occurrence of '### Workflow Efficiency', got %d", strings.Count(result, "### Workflow Efficiency"))
+		}
+		if strings.Count(result, "### Anomalies & Health Flags") != 1 {
+			t.Errorf("expected exactly 1 occurrence of '### Anomalies & Health Flags', got %d", strings.Count(result, "### Anomalies & Health Flags"))
+		}
+		if !strings.Contains(result, "Existing work log.") {
+			t.Errorf("expected preamble to be preserved")
+		}
+		if !strings.Contains(result, "## Future Notes\nPreserved.") {
+			t.Errorf("expected trailing section to be preserved")
+		}
+	})
 }
 
 func TestSaveFactLedger(t *testing.T) {

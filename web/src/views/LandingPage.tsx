@@ -3,6 +3,7 @@ import type { ActiveTab, FleetSummary, TicketComparisonRow } from '../domain/typ
 import { compareTicketIds, formatCurrencyUSD, formatPercentage } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { EmptyState } from '../components/EmptyState';
+import { InfoTooltip } from '../components/InfoTooltip';
 
 export type QuickLaunchSortField =
   | 'ticket_id'
@@ -150,22 +151,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Pulse Metrics Bar */}
       <section className="pulse-metrics-grid" aria-label="Pulse Metrics">
         <div className="pulse-card">
-          <span className="pulse-label">Total Ticket Workspaces</span>
+          <div className="pulse-card-header">
+            <span className="pulse-label">Total Ticket Workspaces</span>
+            <InfoTooltip
+              content="Total number of registered agentic development workspaces with recorded telemetry"
+              ariaLabel="Information about Total Ticket Workspaces"
+            />
+          </div>
           <span className="pulse-value mono-number">{totalWorkspaces}</span>
           <span className="pulse-subtext">Registered SDLC workspaces</span>
         </div>
         <div className="pulse-card">
-          <span className="pulse-label">Cumulative Fleet Spend</span>
+          <div className="pulse-card-header">
+            <span className="pulse-label">Cumulative Fleet Spend</span>
+            <InfoTooltip
+              content="Total monetary expenditure for LLM model inference across all workspaces"
+              ariaLabel="Information about Cumulative Fleet Spend"
+            />
+          </div>
           <span className="pulse-value mono-number">{totalSpend}</span>
           <span className="pulse-subtext">Total model inference costs</span>
         </div>
         <div className="pulse-card">
-          <span className="pulse-label">Total Iterations</span>
+          <div className="pulse-card-header">
+            <span className="pulse-label">Total Iterations</span>
+            <InfoTooltip
+              content="Total number of completed SDLC development iterations across all workspaces"
+              ariaLabel="Information about Total Iterations"
+            />
+          </div>
           <span className="pulse-value mono-number">{totalIterations}</span>
           <span className="pulse-subtext">Completed SDLC cycles</span>
         </div>
         <div className="pulse-card">
-          <span className="pulse-label">Cache Hit Efficiency</span>
+          <div className="pulse-card-header">
+            <span className="pulse-label">Cache Hit Efficiency</span>
+            <InfoTooltip
+              content="Overall percentage of prompt context tokens served from prompt cache"
+              ariaLabel="Information about Cache Hit Efficiency"
+            />
+          </div>
           <span className="pulse-value mono-number">{cacheHitEfficiency}</span>
           <span className="pulse-subtext">Prompt cache read ratio</span>
         </div>
@@ -175,7 +200,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="feature-cards-grid" aria-label="Analytical Perspectives">
         <div className="feature-nav-card">
           <div className="feature-card-header">
-            <span className="feature-card-badge">Macro Fleet</span>
+            <div className="feature-card-top-row">
+              <span className="feature-card-badge">Macro Fleet</span>
+              <InfoTooltip
+                content="Macro fleet-level analytics, cumulative spend, token throughput, and role/model distributions"
+                ariaLabel="Information about Fleet Overview"
+              />
+            </div>
             <h2 className="feature-card-title">Fleet Overview</h2>
           </div>
           <p className="feature-card-desc">
@@ -192,7 +223,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <div className="feature-nav-card">
           <div className="feature-card-header">
-            <span className="feature-card-badge">Single Ticket</span>
+            <div className="feature-card-top-row">
+              <span className="feature-card-badge">Single Ticket</span>
+              <InfoTooltip
+                content="Detailed autopsy of single ticket workspaces, context saturation, subagent turns, and artifacts"
+                ariaLabel="Information about Ticket Deep Dive"
+              />
+            </div>
             <h2 className="feature-card-title">Ticket Deep Dive</h2>
           </div>
           <p className="feature-card-desc">
@@ -209,7 +246,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <div className="feature-nav-card">
           <div className="feature-card-header">
-            <span className="feature-card-badge">Temporal Trends</span>
+            <div className="feature-card-top-row">
+              <span className="feature-card-badge">Temporal Trends</span>
+              <InfoTooltip
+                content="Longitudinal temporal progression tracking period spend, invocations, tokens, and code churn"
+                ariaLabel="Information about Metric Progression"
+              />
+            </div>
             <h2 className="feature-card-title">Metric Progression</h2>
           </div>
           <p className="feature-card-desc">
@@ -226,7 +269,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <div className="feature-nav-card">
           <div className="feature-card-header">
-            <span className="feature-card-badge">Benchmarking</span>
+            <div className="feature-card-top-row">
+              <span className="feature-card-badge">Benchmarking</span>
+              <InfoTooltip
+                content="Cross-workspace benchmarking matrix comparing lead time, compute, test ratios, and health"
+                ariaLabel="Information about Ticket Comparisons"
+              />
+            </div>
             <h2 className="feature-card-title">Ticket Comparisons</h2>
           </div>
           <p className="feature-card-desc">
@@ -264,37 +313,81 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     onClick={() => handleSort('ticket_id')}
                     aria-sort={sortField === 'ticket_id' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
-                    Ticket ID{getSortIndicator('ticket_id')}
+                    <span className="th-content">
+                      <span>Ticket ID{getSortIndicator('ticket_id')}</span>
+                      <InfoTooltip
+                        content="Unique identifier for the development ticket and workspace directory"
+                        placement="bottom"
+                        ariaLabel="Information about Ticket ID"
+                      />
+                    </span>
                   </th>
                   <th
                     className="sortable"
                     onClick={() => handleSort('ticket_title')}
                     aria-sort={sortField === 'ticket_title' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
-                    Title{getSortIndicator('ticket_title')}
+                    <span className="th-content">
+                      <span>Title{getSortIndicator('ticket_title')}</span>
+                      <InfoTooltip
+                        content="Summary title of the feature, bugfix, or task tracked by this ticket"
+                        placement="bottom"
+                        ariaLabel="Information about Title"
+                      />
+                    </span>
                   </th>
                   <th
                     className="sortable"
                     onClick={() => handleSort('context_health_status')}
                     aria-sort={sortField === 'context_health_status' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
-                    Status{getSortIndicator('context_health_status')}
+                    <span className="th-content">
+                      <span>Status{getSortIndicator('context_health_status')}</span>
+                      <InfoTooltip
+                        content="Context window saturation health status (HEALTHY, ELEVATED, BLOATED, or CRITICAL)"
+                        placement="bottom"
+                        ariaLabel="Information about Status"
+                      />
+                    </span>
                   </th>
                   <th
                     className="sortable"
                     onClick={() => handleSort('sdlc_iterations')}
                     aria-sort={sortField === 'sdlc_iterations' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
-                    Iterations{getSortIndicator('sdlc_iterations')}
+                    <span className="th-content">
+                      <span>Iterations{getSortIndicator('sdlc_iterations')}</span>
+                      <InfoTooltip
+                        content="Number of SDLC feedback cycles executed for this ticket"
+                        placement="bottom"
+                        ariaLabel="Information about Iterations"
+                      />
+                    </span>
                   </th>
                   <th
                     className="sortable"
                     onClick={() => handleSort('active_duration_seconds')}
                     aria-sort={sortField === 'active_duration_seconds' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
-                    Active Duration{getSortIndicator('active_duration_seconds')}
+                    <span className="th-content">
+                      <span>Active Duration{getSortIndicator('active_duration_seconds')}</span>
+                      <InfoTooltip
+                        content="Cumulative active invocation duration spent on this ticket (cumulative man-hours)."
+                        placement="bottom"
+                        ariaLabel="Information about Active Duration"
+                      />
+                    </span>
                   </th>
-                  <th>Action</th>
+                  <th>
+                    <span className="th-content">
+                      <span>Action</span>
+                      <InfoTooltip
+                        content="Direct navigation action to inspect single ticket autopsy"
+                        placement="bottom"
+                        ariaLabel="Information about Action"
+                      />
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>

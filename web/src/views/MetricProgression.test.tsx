@@ -276,6 +276,124 @@ describe('MetricProgression View Component', () => {
     });
   });
 
+  it('renders InfoTooltip triggers and explanations across all five trend charts', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: ledgers,
+      isMock: true,
+    });
+
+    render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+
+    // Chart 1
+    expect(
+      screen.getByRole('button', {
+        name: 'Information about Financial Spend & Cumulative Trajectory ($ USD)',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Historical model inference spend per time period alongside cumulative trajectory in US dollars.'
+      )
+    ).toBeInTheDocument();
+
+    // Chart 2
+    expect(
+      screen.getByRole('button', {
+        name: 'Information about Token Volume Distribution',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Distribution of token throughput across input prompts, output completions, and key-value prompt cache reads.'
+      )
+    ).toBeInTheDocument();
+
+    // Chart 3
+    expect(
+      screen.getByRole('button', {
+        name: 'Information about Prompt Cache Hit Rate Trajectory (%)',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Percentage of prompt tokens served from prompt cache per bucket against baseline (50%) and target (80%) thresholds.'
+      )
+    ).toBeInTheDocument();
+
+    // Chart 4
+    expect(
+      screen.getByRole('button', {
+        name: 'Information about Delivered Code Line Churn & Net Growth',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Volume of production and test code lines added, deleted, and net code growth delivered per time bucket.'
+      )
+    ).toBeInTheDocument();
+
+    // Chart 5
+    expect(
+      screen.getByRole('button', {
+        name: 'Information about Peak Context Window Saturation vs Ceiling',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Peak active context tokens per time bucket measured against the standard 200,000 token healthy context ceiling.'
+      )
+    ).toBeInTheDocument();
+
+    // Toggle granularity to cumulative and verify Chart 1 updates title and tooltip accessibility
+    const cumulativeBtn = screen.getByRole('button', { name: 'Cumulative' });
+    fireEvent.click(cumulativeBtn);
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Information about Cumulative Financial Trajectory ($ USD)',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Historical model inference spend per time period alongside cumulative trajectory in US dollars.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('handles focus and hover transitions on trend chart tooltips in MetricProgression', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: ledgers,
+      isMock: true,
+    });
+
+    render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+
+    const trigger = screen.getByRole('button', {
+      name: 'Information about Token Volume Distribution',
+    });
+    const tooltipId = trigger.getAttribute('aria-describedby');
+    expect(tooltipId).toBeTruthy();
+    const bubble = document.getElementById(tooltipId!);
+
+    expect(bubble).not.toHaveClass('is-visible');
+
+    fireEvent.focus(trigger);
+    expect(bubble).toHaveClass('is-visible');
+
+    fireEvent.blur(trigger);
+    expect(bubble).not.toHaveClass('is-visible');
+  });
+
   it('contains zero emojis in the rendered progression document body', async () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({

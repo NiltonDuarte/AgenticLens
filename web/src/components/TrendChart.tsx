@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { InfoTooltip } from './InfoTooltip';
 
 export interface ChartSeries {
   readonly key: string;
@@ -23,6 +24,7 @@ export interface TrendChartProps {
   readonly referenceLines?: readonly ChartReferenceLine[];
   readonly emptyMessage?: string;
   readonly yAxisMin?: number;
+  readonly tooltip?: string | undefined;
 }
 
 export const TrendChart: React.FC<TrendChartProps> = ({
@@ -34,13 +36,22 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   referenceLines = [],
   emptyMessage = 'No progression data available in this time window',
   yAxisMin = 0,
+  tooltip,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   if (!data || data.length === 0) {
     return (
       <div className="trend-card empty">
-        <h4 className="trend-title">{title}</h4>
+        <div className="trend-title-group">
+          <h4 className="trend-title">{title}</h4>
+          {tooltip && (
+            <InfoTooltip
+              content={tooltip}
+              ariaLabel={`Information about ${title}`}
+            />
+          )}
+        </div>
         <div className="trend-empty-placeholder">{emptyMessage}</div>
       </div>
     );
@@ -95,7 +106,15 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   return (
     <div className="trend-card">
       <div className="trend-header">
-        <h4 className="trend-title">{title}</h4>
+        <div className="trend-title-group">
+          <h4 className="trend-title">{title}</h4>
+          {tooltip && (
+            <InfoTooltip
+              content={tooltip}
+              ariaLabel={`Information about ${title}`}
+            />
+          )}
+        </div>
         <div className="trend-legend">
           {series.map((s) => (
             <span key={s.key} className="legend-item">

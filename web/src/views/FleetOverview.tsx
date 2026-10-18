@@ -119,7 +119,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           title="Active Duration"
           value={summary.formatted_total_duration}
           secondary={`${summary.total_files_changed} files touched`}
-          tooltip="Cumulative active agent execution time across all tickets"
+          tooltip="Cumulative active agent execution time across all tickets (cumulative man-hours)."
         />
       </section>
 
@@ -129,11 +129,13 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           title="Role Cost Distribution"
           items={summary.role_costs}
           totalCostUSD={summary.total_cost_usd}
+          tooltip="Breakdown of cumulative LLM inference spend categorized by agent persona role (orchestrator, coder, tester, reviewer, planner)"
         />
         <DistributionCard
           title="Model Cost Distribution"
           items={summary.model_costs}
           totalCostUSD={summary.total_cost_usd}
+          tooltip="Breakdown of cumulative LLM inference spend categorized by model family and version"
         />
       </section>
 
