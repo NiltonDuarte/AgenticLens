@@ -256,9 +256,45 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger) string {
 			we.ToolExecution.SuccessRatePct,
 		),
 		"",
+		"### Anomalies & Health Flags",
+	}
+
+	if len(ledger.Anomalies) == 0 {
+		lines = append(lines, "- **Status:** No execution anomalies detected (clean session).")
+	} else {
+		var critCount, warnCount int
+		for _, a := range ledger.Anomalies {
+			if a.Severity == domain.SeverityCritical {
+				critCount++
+			} else {
+				warnCount++
+			}
+		}
+
+		var breakdownParts []string
+		if critCount > 0 {
+			breakdownParts = append(breakdownParts, fmt.Sprintf("%d %s", critCount, domain.SeverityCritical))
+		}
+		if warnCount > 0 {
+			breakdownParts = append(breakdownParts, fmt.Sprintf("%d %s", warnCount, domain.SeverityWarning))
+		}
+
+		statusNoun := "execution anomalies"
+		if len(ledger.Anomalies) == 1 {
+			statusNoun = "execution anomaly"
+		}
+		lines = append(lines, fmt.Sprintf("- **Status:** %d %s detected (%s).", len(ledger.Anomalies), statusNoun, strings.Join(breakdownParts, ", ")))
+
+		for _, a := range ledger.Anomalies {
+			lines = append(lines, fmt.Sprintf("- [%s] **%s**: %s — %s", a.Severity, a.RuleID, a.Title, a.Description))
+		}
+	}
+
+	lines = append(lines,
+		"",
 		"### Agentic Execution Metrics",
 		"",
-	}
+	)
 
 	if len(contributors) > 0 {
 		lines = append(lines, fmt.Sprintf("**Contributors:** %s", strings.Join(contributors, ", ")), "")

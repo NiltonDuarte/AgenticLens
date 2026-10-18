@@ -127,3 +127,21 @@ const (
 	EventTypeTurnMessage EventType = "turn_message"
 	EventTypeCompaction  EventType = "compaction"
 )
+
+// AnomalySeverity defines the severity classification of a detected anomaly.
+type AnomalySeverity string
+
+const (
+	SeverityWarning  AnomalySeverity = "WARNING"
+	SeverityCritical AnomalySeverity = "CRITICAL"
+)
+
+// AnomalyRuleID defines the unique identifier for a domain anomaly rule.
+type AnomalyRuleID string
+
+const (
+	RuleToolRetryStreak        AnomalyRuleID = "TOOL_RETRY_STREAK"
+	RuleToolHighFailureRate    AnomalyRuleID = "TOOL_HIGH_FAILURE_RATE"
+	RuleContextSaturationSpike AnomalyRuleID = "CONTEXT_SATURATION_SPIKE"
+	RuleSubagentReworkLoop     AnomalyRuleID = "SUBAGENT_REWORK_LOOP"
+)

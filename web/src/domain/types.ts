@@ -195,6 +195,36 @@ export interface ThreadExecutionRecord {
   readonly compactions: number;
 }
 
+export type AnomalySeverity = 'WARNING' | 'CRITICAL';
+
+export type AnomalyRuleID =
+  | 'TOOL_RETRY_STREAK'
+  | 'TOOL_HIGH_FAILURE_RATE'
+  | 'CONTEXT_SATURATION_SPIKE'
+  | 'SUBAGENT_REWORK_LOOP';
+
+export interface AnomalyContext {
+  readonly tool_name?: string;
+  readonly session_id?: string;
+  readonly turn?: number;
+  readonly role?: string;
+  readonly secondary_role?: string;
+  readonly count?: number;
+  readonly total_calls?: number;
+  readonly token_delta?: number;
+  readonly context_tokens?: number;
+  readonly threshold?: string;
+  readonly failure_rate_pct?: number;
+}
+
+export interface Anomaly {
+  readonly rule_id: AnomalyRuleID;
+  readonly severity: AnomalySeverity;
+  readonly title: string;
+  readonly description: string;
+  readonly context: AnomalyContext;
+}
+
 export interface AgenticMetricsLedger {
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
@@ -208,6 +238,7 @@ export interface AgenticMetricsLedger {
   readonly totals: GroupedMetric;
   readonly roles: readonly RoleMetric[];
   readonly models: readonly ModelMetric[];
+  readonly anomalies?: readonly Anomaly[];
 }
 
 export interface FleetSummary {

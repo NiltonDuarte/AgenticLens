@@ -36,6 +36,7 @@ func runGenerate(args []string) {
 	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update structured JSON ledger")
 	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
+	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
 
 	if err := genFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing generate flags: %v\n", err)
@@ -235,13 +236,21 @@ func runGenerate(args []string) {
 		fmt.Printf("Structured metrics ledger written to %s\n", *jsonOutputFlag)
 	}
 
+	if *anomaliesFlag {
+		tid := "UNKNOWN"
+		if metricsLedger.TicketID != nil && *metricsLedger.TicketID != "" {
+			tid = *metricsLedger.TicketID
+		}
+		printAnomalyDiagnostics(tid, metricsLedger.Anomalies)
+	}
+
 	if *appendFlag != "" {
 		if err := adapters.UpdateSummaryFile(*appendFlag, tableMD); err != nil {
 			fmt.Fprintf(os.Stderr, "Error updating summary file %s: %v\n", *appendFlag, err)
 			os.Exit(1)
 		}
 		fmt.Printf("Metrics table successfully updated in %s\n", *appendFlag)
-	} else if *jsonOutputFlag == "" {
+	} else if *jsonOutputFlag == "" && !*anomaliesFlag {
 		fmt.Println(tableMD)
 	}
 }
@@ -418,6 +427,42 @@ func runBackfill(args []string) {
 	fmt.Println("================================================================================")
 }
 
+func formatAnomalyListSummary(anomalies []domain.Anomaly) string {
+	if len(anomalies) == 0 {
+		return "0"
+	}
+	var crit, warn int
+	for _, a := range anomalies {
+		if a.Severity == domain.SeverityCritical {
+			crit++
+		} else {
+			warn++
+		}
+	}
+	var parts []string
+	if crit > 0 {
+		parts = append(parts, fmt.Sprintf("%d crit", crit))
+	}
+	if warn > 0 {
+		parts = append(parts, fmt.Sprintf("%d warn", warn))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly) {
+	if len(anomalies) == 0 {
+		fmt.Printf("No anomalies detected for ticket %s.\n", ticketID)
+		return
+	}
+	fmt.Printf("Found %d anomalies for ticket %s:\n\n", len(anomalies), ticketID)
+	header := fmt.Sprintf("%-10s %-28s %-40s %s", "Severity", "Rule ID", "Title", "Description")
+	fmt.Println(header)
+	fmt.Println(strings.Repeat("-", len(header)))
+	for _, a := range anomalies {
+		fmt.Printf("%-10s %-28s %-40s %s\n", string(a.Severity), string(a.RuleID), a.Title, a.Description)
+	}
+}
+
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "server" {
 		runServer(os.Args[2:])
@@ -439,6 +484,7 @@ func main() {
 	appendFlag := flag.String("append", "", "Path to markdown summary file to idempotently update with metrics table")
 	jsonOutputFlag := flag.String("json-output", "", "Path to write computed metrics ledger as JSON")
 	listFlag := flag.Bool("list", false, "List all discovered ticket workspaces and summary metrics")
+	anomaliesFlag := flag.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
 
 	flag.Parse()
 
@@ -452,7 +498,7 @@ func main() {
 
 	if *listFlag {
 		fmt.Printf("Found %d ticket workspaces in %s:\n\n", len(report.Ledgers), workspacesDir)
-		header := fmt.Sprintf("%-15s %-12s %-10s %-12s %-10s %s", "Ticket ID", "Duration", "Cost", "Health", "Iterations", "Title")
+		header := fmt.Sprintf("%-15s %-12s %-10s %-12s %-10s %-16s %s", "Ticket ID", "Duration", "Cost", "Health", "Iterations", "Anomalies", "Title")
 		fmt.Println(header)
 		fmt.Println(strings.Repeat("-", len(header)))
 		for _, ledger := range report.Ledgers {
@@ -464,11 +510,12 @@ func main() {
 			cost := fmt.Sprintf("$%.2f", ledger.Totals.CostUSD)
 			health := ledger.WorkflowEfficiency.ContextWindowHealth.Status
 			iters := fmt.Sprintf("%d", ledger.WorkflowEfficiency.SDLCIterations)
+			anomSummary := formatAnomalyListSummary(ledger.Anomalies)
 			title := "N/A"
 			if ledger.TicketTitle != nil && *ledger.TicketTitle != "" {
 				title = *ledger.TicketTitle
 			}
-			fmt.Printf("%-15s %-12s %-10s %-12s %-10s %s\n", tid, dur, cost, health, iters, title)
+			fmt.Printf("%-15s %-12s %-10s %-12s %-10s %-16s %s\n", tid, dur, cost, health, iters, anomSummary, title)
 		}
 		return
 	}
@@ -496,6 +543,15 @@ func main() {
 			}
 		}
 		targetLedger = latest
+	}
+
+	if *anomaliesFlag {
+		tid := "UNKNOWN"
+		if targetLedger.TicketID != nil && *targetLedger.TicketID != "" {
+			tid = *targetLedger.TicketID
+		}
+		printAnomalyDiagnostics(tid, targetLedger.Anomalies)
+		return
 	}
 
 	tableMD := adapters.FormatMarkdownMetricsTable(*targetLedger)

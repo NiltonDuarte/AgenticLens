@@ -7,9 +7,9 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-4 typescript ticket deep dive and progression.md`
 - `workspaces/plan/done/AL-5 single binary integration parity and deprecation.md`
 - `workspaces/plan/done/AL-6 versioned schema migration and chronological event extraction.md`
+- `workspaces/plan/done/AL-7 domain anomaly detection and rule engine.md`
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
-- `workspaces/plan/to-do/AL-7 domain anomaly detection and rule engine.md`
 - `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
@@ -18,25 +18,17 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Ready
 
-- **AL-7**: Domain Anomaly Detection and Rule Engine
-  - **Subsystem**: Domain / CLI / Tests
+- **AL-8**: Anomaly API Endpoints and Fleet Health Aggregation
+  - **Subsystem**: Adapters / HTTP / Server / Tests
   - **Phase**: Phase 2
   - **Status**: Ready
-  - **Blocked by**: None (AL-6 Done)
-  - **Blocks**: AL-8
-  - **File**: `workspaces/plan/to-do/AL-7 domain anomaly detection and rule engine.md`
+  - **Blocked by**: None (AL-7 Done)
+  - **Blocks**: AL-9
+  - **File**: `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
 
 ---
 
 ## Pending
-
-- **AL-8**: Anomaly API Endpoints and Fleet Health Aggregation
-  - **Subsystem**: Adapters / HTTP / Server / Tests
-  - **Phase**: Phase 2
-  - **Status**: Pending
-  - **Blocked by**: AL-7
-  - **Blocks**: AL-9
-  - **File**: `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
 
 - **AL-9**: Visual Trace Waterfall and Anomaly Inspector
   - **Subsystem**: Presentation / Web / Tests
@@ -49,6 +41,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-7**: Domain Anomaly Detection and Rule Engine
+  - **Subsystem**: Domain / CLI / Tests
+  - **Phase**: Phase 2
+  - **Status**: Done
+  - **Blocked by**: None (AL-6 Done)
+  - **Blocks**: AL-8
+  - **File**: `workspaces/plan/done/AL-7 domain anomaly detection and rule engine.md`
 
 - **AL-6**: Chronological Event Extraction and Schema Evolution in Go
   - **Subsystem**: Adapters / Domain / CLI / Tests

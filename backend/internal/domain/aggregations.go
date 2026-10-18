@@ -532,6 +532,7 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger) AgenticMetricsLedger {
 	roles := ComputeRoleMetrics(factLedger.Invocations)
 	models := ComputeModelMetrics(factLedger.Invocations)
 	threads := ComputeThreadSummaries(factLedger.Invocations)
+	anomalies := DetectAnomalies(factLedger)
 
 	return AgenticMetricsLedger{
 		TicketID:           factLedger.TicketID,
@@ -546,6 +547,7 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger) AgenticMetricsLedger {
 		Totals:             totals,
 		Roles:              roles,
 		Models:             models,
+		Anomalies:          anomalies,
 	}
 }
 

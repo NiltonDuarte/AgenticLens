@@ -297,7 +297,7 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 	}
 
 	// Schema 1: Direct atomic fact schema
-	if len(raw.Invocations) > 0 {
+	if len(raw.Invocations) > 0 || len(raw.Tools) > 0 {
 		var invs []domain.InvocationFact
 		var rootIDs []string
 		for _, dto := range raw.Invocations {

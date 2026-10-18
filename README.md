@@ -40,6 +40,44 @@ go build -o bin/agentic-lens ./cmd/agentic-lens
 
 Visit `http://localhost:8501`.
 
+## Execution Anomaly Detection
+
+AgenticLens features a deterministic, pure-functional anomaly detection engine running inside the domain core (`internal/domain`). During telemetry ingestion and metric projection, the engine scans tool execution logs, context growth curves, and subagent invocation transitions to identify operational hazards:
+
+### Detection Rules
+
+- **`TOOL_RETRY_STREAK`**: Detects consecutive failures on identical tools.
+  - `WARNING`: 3 consecutive errors.
+  - `CRITICAL`: 5 consecutive errors.
+- **`TOOL_HIGH_FAILURE_RATE`**: Detects elevated failure rates for tools with at least 5 invocations.
+  - `WARNING`: Failure rate > 20%.
+  - `CRITICAL`: Failure rate >= 50%.
+- **`CONTEXT_SATURATION_SPIKE`**: Detects hazardous context window growth.
+  - `WARNING`: Single-turn token delta > 40,000 tokens.
+  - `CRITICAL`: Single-turn token delta > 80,000 tokens, or peak context tokens >= 160,000 tokens (80% of healthy ceiling).
+- **`SUBAGENT_REWORK_LOOP`**: Detects cyclical delegation bouncing between subagent roles (for example, coder and tester alternating).
+  - `WARNING`: 3 alternating cycles.
+  - `CRITICAL`: 5 alternating cycles.
+
+### CLI Diagnostics
+
+Inspect anomalies directly from the CLI:
+
+```bash
+# List discovered workspaces with anomaly summary counts
+./bin/agentic-lens --workspaces workspaces --list
+
+# View detailed anomaly diagnosis table for a ticket
+./bin/agentic-lens --workspaces workspaces --ticket-id <TICKET_ID> --anomalies
+
+# Append or update markdown metrics and anomalies table in SUMMARY.md
+./bin/agentic-lens --workspaces workspaces --ticket-id <TICKET_ID> --append workspaces/<TICKET_ID>/SUMMARY.md
+```
+
+### Markdown Report Integration
+
+When generating or updating markdown summaries via `--append`, an `### Anomalies & Health Flags` section is rendered. If no issues are found, a clean session status is displayed; otherwise, detected anomalies are formatted with severity badges (`[CRITICAL]`, `[WARNING]`), rule identifiers, and contextual descriptions.
+
 ## Local Cluster Deployment
 
 To build and deploy AgenticLens container into the local Kubernetes cluster (`sinklayer-local`):

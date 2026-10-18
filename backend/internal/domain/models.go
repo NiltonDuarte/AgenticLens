@@ -206,6 +206,7 @@ type AgenticMetricsLedger struct {
 	Totals             GroupedMetric           `json:"totals"`
 	Roles              []RoleMetric            `json:"roles"`
 	Models             []ModelMetric           `json:"models"`
+	Anomalies          []Anomaly               `json:"anomalies,omitempty"`
 }
 
 // TimeBucketMetric captures telemetry aggregates for a chronological time bucket.

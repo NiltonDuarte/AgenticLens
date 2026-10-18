@@ -32,11 +32,14 @@ func TestMain(m *testing.M) {
 	cmd := exec.Command("go", "build", "-o", binPath, ".")
 	cmd.Dir = "."
 	if out, err := cmd.CombinedOutput(); err != nil {
+		os.RemoveAll(tempDir)
 		panic(string(out))
 	}
 	cliBinaryPath = binPath
 
-	os.Exit(m.Run())
+	code := m.Run()
+	os.RemoveAll(tempDir)
+	os.Exit(code)
 }
 
 func sampleFactJSON(ticketID, title string, duration int64, cost float64) string {
@@ -148,12 +151,166 @@ func TestCLIListCommand(t *testing.T) {
 	if !strings.Contains(out, "Found 2 ticket workspaces") {
 		t.Errorf("expected 2 ticket workspaces in output, got: %s", out)
 	}
+	if !strings.Contains(out, "Anomalies") {
+		t.Errorf("expected Anomalies column header in list, got: %s", out)
+	}
 	if !strings.Contains(out, "TICKET-1") || !strings.Contains(out, "TICKET-2") {
 		t.Errorf("expected TICKET-1 and TICKET-2 in list, got: %s", out)
 	}
 	if !strings.Contains(out, "First Feature") || !strings.Contains(out, "Second Feature") {
 		t.Errorf("expected titles in list, got: %s", out)
 	}
+}
+
+func TestCLIAnomaliesCommand(t *testing.T) {
+	wsDir := setupTestWorkspace(t)
+
+	// Add a ticket with an anomaly
+	tanomDir := filepath.Join(wsDir, "TICKET-ANOMALY")
+	if err := os.MkdirAll(tanomDir, 0755); err != nil {
+		t.Fatalf("failed to create TICKET-ANOMALY dir: %v", err)
+	}
+	anomalyFactJSON := `{
+		"ticket_id": "TICKET-ANOMALY",
+		"ticket_title": "Failing Feature",
+		"session_id": "ses-anom",
+		"updated_at": "2026-10-18T10:00:00Z",
+		"tools": [
+			{
+				"name": "bash",
+				"calls": 10,
+				"errors": 6
+			}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(tanomDir, "agentic_metrics.json"), []byte(anomalyFactJSON), 0644); err != nil {
+		t.Fatalf("failed to write TICKET-ANOMALY ledger: %v", err)
+	}
+
+	t.Run("clean ticket shows no anomalies message", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-1", "--anomalies")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("CLI --anomalies failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "No anomalies detected for ticket TICKET-1.") {
+			t.Errorf("expected no anomalies message, got: %s", out)
+		}
+	})
+
+	t.Run("ticket with anomalies formats table", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-ANOMALY", "--anomalies")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("CLI --anomalies failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "Found 1 anomalies for ticket TICKET-ANOMALY:") {
+			t.Errorf("expected header with count, got: %s", out)
+		}
+		if !strings.Contains(out, "Severity") || !strings.Contains(out, "Rule ID") {
+			t.Errorf("expected table columns, got: %s", out)
+		}
+		if !strings.Contains(out, "CRITICAL") || !strings.Contains(out, "TOOL_HIGH_FAILURE_RATE") {
+			t.Errorf("expected CRITICAL TOOL_HIGH_FAILURE_RATE in output, got: %s", out)
+		}
+	})
+
+	t.Run("list output shows anomaly counts", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--list")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("CLI --list failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "Anomalies") {
+			t.Errorf("expected Anomalies column in list, got: %s", out)
+		}
+		if !strings.Contains(out, "1 crit") {
+			t.Errorf("expected '1 crit' in list output, got: %s", out)
+		}
+		if !strings.Contains(out, "0") {
+			t.Errorf("expected '0' for clean tickets in list output, got: %s", out)
+		}
+	})
+
+	t.Run("generate subcommand with --anomalies flag on ticket with anomalies", func(t *testing.T) {
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "anom_gen.json")
+		// Seed an existing JSON ledger with high failure rate
+		seedJSON := `{
+			"ticket_id": "AL-GEN-ANOM",
+			"tools": [
+				{"name": "bash", "calls": 8, "errors": 6}
+			]
+		}`
+		if err := os.WriteFile(outJSON, []byte(seedJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--ticket-id", "AL-GEN-ANOM",
+			"--json-output", outJSON,
+			"--anomalies",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate --anomalies failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "Found 1 anomalies for ticket AL-GEN-ANOM:") {
+			t.Errorf("expected anomaly count header in generate --anomalies output, got: %s", out)
+		}
+		if !strings.Contains(out, "CRITICAL") || !strings.Contains(out, "TOOL_HIGH_FAILURE_RATE") {
+			t.Errorf("expected CRITICAL TOOL_HIGH_FAILURE_RATE in generate output, got: %s", out)
+		}
+	})
+
+	t.Run("generate subcommand with --anomalies flag on clean ticket", func(t *testing.T) {
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "clean_gen.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--ticket-id", "AL-GEN-CLEAN",
+			"--json-output", outJSON,
+			"--anomalies",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate --anomalies clean failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "No anomalies detected for ticket AL-GEN-CLEAN.") {
+			t.Errorf("expected no anomalies message, got: %s", out)
+		}
+	})
 }
 
 func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {

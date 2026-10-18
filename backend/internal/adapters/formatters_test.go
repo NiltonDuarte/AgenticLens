@@ -158,6 +158,12 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 	if !strings.Contains(tableMD, "### Workflow Efficiency") {
 		t.Errorf("missing Workflow Efficiency heading")
 	}
+	if !strings.Contains(tableMD, "### Anomalies & Health Flags") {
+		t.Errorf("missing Anomalies & Health Flags heading")
+	}
+	if !strings.Contains(tableMD, "No execution anomalies detected (clean session).") {
+		t.Errorf("missing clean session status in clean run")
+	}
 	if !strings.Contains(tableMD, "### Agentic Execution Metrics") {
 		t.Errorf("missing Agentic Execution Metrics heading")
 	}
@@ -175,11 +181,90 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 	}
 }
 
+func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
+	tid := "AL-ANOMALIES"
+	toolBash := "bash"
+	toolGit := "git"
+	turn3 := int64(3)
+	count5 := int64(5)
+	count2 := int64(2)
+	total6 := int64(6)
+	failPct := 33.3
+
+	t.Run("multiple anomalies with mixed severities", func(t *testing.T) {
+		ledger := domain.AgenticMetricsLedger{
+			TicketID: &tid,
+			Anomalies: []domain.Anomaly{
+				{
+					RuleID:      domain.RuleToolRetryStreak,
+					Severity:    domain.SeverityCritical,
+					Title:       "Tool retry streak: bash (5 consecutive errors)",
+					Description: "Tool 'bash' encountered 5 consecutive execution failures (session: s1, turn: 3)",
+					Context: domain.AnomalyContext{
+						ToolName: &toolBash,
+						Count:    &count5,
+						Turn:     &turn3,
+					},
+				},
+				{
+					RuleID:      domain.RuleToolHighFailureRate,
+					Severity:    domain.SeverityWarning,
+					Title:       "High tool failure rate: git (33.3%)",
+					Description: "Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%)",
+					Context: domain.AnomalyContext{
+						ToolName:       &toolGit,
+						Count:          &count2,
+						TotalCalls:     &total6,
+						FailureRatePct: &failPct,
+					},
+				},
+			},
+		}
+
+		tableMD := adapters.FormatMarkdownMetricsTable(ledger)
+
+		if !strings.Contains(tableMD, "### Anomalies & Health Flags") {
+			t.Fatalf("expected Anomalies & Health Flags heading")
+		}
+		if !strings.Contains(tableMD, "- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).") {
+			t.Errorf("expected 2 execution anomalies status summary, got:\n%s", tableMD)
+		}
+		if !strings.Contains(tableMD, "- [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: bash (5 consecutive errors) — Tool 'bash' encountered 5 consecutive execution failures (session: s1, turn: 3)") {
+			t.Errorf("expected formatted CRITICAL anomaly bullet, got:\n%s", tableMD)
+		}
+		if !strings.Contains(tableMD, "- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: git (33.3%) — Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%)") {
+			t.Errorf("expected formatted WARNING anomaly bullet, got:\n%s", tableMD)
+		}
+	})
+
+	t.Run("single anomaly uses singular phrasing", func(t *testing.T) {
+		ledger := domain.AgenticMetricsLedger{
+			TicketID: &tid,
+			Anomalies: []domain.Anomaly{
+				{
+					RuleID:      domain.RuleContextSaturationSpike,
+					Severity:    domain.SeverityCritical,
+					Title:       "Context ceiling breached (165k tokens)",
+					Description: "Context tokens reached 165k, breaching 160k critical ceiling",
+				},
+			},
+		}
+
+		tableMD := adapters.FormatMarkdownMetricsTable(ledger)
+		if !strings.Contains(tableMD, "- **Status:** 1 execution anomaly detected (1 CRITICAL).") {
+			t.Errorf("expected singular phrasing for 1 anomaly, got:\n%s", tableMD)
+		}
+		if !strings.Contains(tableMD, "- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165k tokens) — Context tokens reached 165k, breaching 160k critical ceiling") {
+			t.Errorf("expected formatted bullet, got:\n%s", tableMD)
+		}
+	})
+}
+
 func TestUpdateSummaryFile(t *testing.T) {
 	tempDir := t.TempDir()
 	summaryFile := filepath.Join(tempDir, "SUMMARY.md")
 
-	tableMD := "### Workflow Efficiency\n- **Iterations:** 1\n"
+	tableMD := "### Workflow Efficiency\n- **Iterations:** 1\n\n### Anomalies & Health Flags\n- **Status:** No execution anomalies detected (clean session).\n"
 
 	t.Run("append to new file", func(t *testing.T) {
 		err := adapters.UpdateSummaryFile(summaryFile, tableMD)
@@ -193,12 +278,12 @@ func TestUpdateSummaryFile(t *testing.T) {
 	})
 
 	t.Run("idempotent replacement in existing file with other sections", func(t *testing.T) {
-		initial := "# Title\n\n### Workflow Efficiency\n- Old Content\n\n## Next Section\nSomething else\n"
+		initial := "# Title\n\n### Workflow Efficiency\n- Old Content\n\n### Anomalies & Health Flags\n- Old Anomaly\n\n## Next Section\nSomething else\n"
 		if err := os.WriteFile(summaryFile, []byte(initial), 0644); err != nil {
 			t.Fatal(err)
 		}
 
-		newTable := "### Workflow Efficiency\n- New Content\n"
+		newTable := "### Workflow Efficiency\n- New Content\n\n### Anomalies & Health Flags\n- **Status:** 1 execution anomaly detected (1 CRITICAL).\n"
 		err := adapters.UpdateSummaryFile(summaryFile, newTable)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -206,14 +291,45 @@ func TestUpdateSummaryFile(t *testing.T) {
 
 		updated, _ := os.ReadFile(summaryFile)
 		updatedStr := string(updated)
-		if strings.Contains(updatedStr, "Old Content") {
-			t.Errorf("expected Old Content to be replaced")
+		if strings.Contains(updatedStr, "Old Content") || strings.Contains(updatedStr, "Old Anomaly") {
+			t.Errorf("expected Old Content and Old Anomaly to be replaced")
 		}
 		if !strings.Contains(updatedStr, "New Content") {
 			t.Errorf("expected New Content to be present")
 		}
+		if !strings.Contains(updatedStr, "1 execution anomaly detected") {
+			t.Errorf("expected new anomaly status to be present")
+		}
 		if !strings.Contains(updatedStr, "## Next Section") {
 			t.Errorf("expected Next Section to be preserved")
+		}
+		if strings.Count(updatedStr, "### Workflow Efficiency") != 1 {
+			t.Errorf("expected exactly 1 Workflow Efficiency header, got %d", strings.Count(updatedStr, "### Workflow Efficiency"))
+		}
+	})
+
+	t.Run("replaces legacy header cleanly", func(t *testing.T) {
+		legacyFile := filepath.Join(tempDir, "LEGACY_SUMMARY.md")
+		initialLegacy := "# Summary\n\n### Agentic Execution Metrics\n- Old metrics\n\n## Results\nDone\n"
+		if err := os.WriteFile(legacyFile, []byte(initialLegacy), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		err := adapters.UpdateSummaryFile(legacyFile, tableMD)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		content, _ := os.ReadFile(legacyFile)
+		contentStr := string(content)
+		if strings.Contains(contentStr, "Old metrics") {
+			t.Errorf("expected legacy metrics to be replaced")
+		}
+		if !strings.Contains(contentStr, "### Workflow Efficiency") {
+			t.Errorf("expected new Workflow Efficiency header")
+		}
+		if !strings.Contains(contentStr, "## Results") {
+			t.Errorf("expected subsequent section to be preserved")
 		}
 	})
 }

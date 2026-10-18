@@ -344,23 +344,135 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 	}
 }
 
-// SerializedLedgerDTO represents the JSON output format produced by the CLI.
-type SerializedLedgerDTO struct {
-	TicketID           *string                    `json:"ticket_id"`
-	TicketTitle        *string                    `json:"ticket_title"`
-	TicketType         *string                    `json:"ticket_type"`
-	StartedAt          *string                    `json:"started_at"`
-	CompletedAt        *string                    `json:"completed_at"`
-	UpdatedAt          string                     `json:"updated_at"`
-	WorkflowEfficiency domain.WorkflowEfficiency  `json:"workflow_efficiency"`
-	Totals             domain.GroupedMetric       `json:"totals"`
-	Roles              []domain.RoleMetric        `json:"roles"`
-	Models             []domain.ModelMetric       `json:"models"`
+// AnomalyContextDTO represents anomaly contextual metadata in JSON boundary serialization.
+type AnomalyContextDTO struct {
+	ToolName       *string  `json:"tool_name,omitempty"`
+	SessionID      *string  `json:"session_id,omitempty"`
+	Turn           *int64   `json:"turn,omitempty"`
+	Role           *string  `json:"role,omitempty"`
+	SecondaryRole  *string  `json:"secondary_role,omitempty"`
+	Count          *int64   `json:"count,omitempty"`
+	TotalCalls     *int64   `json:"total_calls,omitempty"`
+	TokenDelta     *int64   `json:"token_delta,omitempty"`
+	ContextTokens  *int64   `json:"context_tokens,omitempty"`
+	Threshold      *string  `json:"threshold,omitempty"`
+	FailureRatePct *float64 `json:"failure_rate_pct,omitempty"`
 }
 
-// SerializeLedger converts a domain AgenticMetricsLedger into a SerializedLedgerDTO.
-func SerializeLedger(ledger domain.AgenticMetricsLedger) SerializedLedgerDTO {
-	return SerializedLedgerDTO{
+func (dto AnomalyContextDTO) ToDomain() domain.AnomalyContext {
+	return domain.AnomalyContext{
+		ToolName:       dto.ToolName,
+		SessionID:      dto.SessionID,
+		Turn:           dto.Turn,
+		Role:           dto.Role,
+		SecondaryRole:  dto.SecondaryRole,
+		Count:          dto.Count,
+		TotalCalls:     dto.TotalCalls,
+		TokenDelta:     dto.TokenDelta,
+		ContextTokens:  dto.ContextTokens,
+		Threshold:      dto.Threshold,
+		FailureRatePct: dto.FailureRatePct,
+	}
+}
+
+// AnomalyContextDTOFromDomain converts domain.AnomalyContext to AnomalyContextDTO.
+func AnomalyContextDTOFromDomain(ctx domain.AnomalyContext) AnomalyContextDTO {
+	return AnomalyContextDTO{
+		ToolName:       ctx.ToolName,
+		SessionID:      ctx.SessionID,
+		Turn:           ctx.Turn,
+		Role:           ctx.Role,
+		SecondaryRole:  ctx.SecondaryRole,
+		Count:          ctx.Count,
+		TotalCalls:     ctx.TotalCalls,
+		TokenDelta:     ctx.TokenDelta,
+		ContextTokens:  ctx.ContextTokens,
+		Threshold:      ctx.Threshold,
+		FailureRatePct: ctx.FailureRatePct,
+	}
+}
+
+// AnomalyDTO represents a detected domain execution anomaly in JSON boundary serialization.
+type AnomalyDTO struct {
+	RuleID      string            `json:"rule_id"`
+	Severity    string            `json:"severity"`
+	Title       string            `json:"title"`
+	Description string            `json:"description"`
+	Context     AnomalyContextDTO `json:"context"`
+}
+
+func (dto AnomalyDTO) ToDomain() domain.Anomaly {
+	return domain.Anomaly{
+		RuleID:      domain.AnomalyRuleID(dto.RuleID),
+		Severity:    domain.AnomalySeverity(dto.Severity),
+		Title:       dto.Title,
+		Description: dto.Description,
+		Context:     dto.Context.ToDomain(),
+	}
+}
+
+// AnomalyDTOFromDomain converts domain.Anomaly to AnomalyDTO.
+func AnomalyDTOFromDomain(anomaly domain.Anomaly) AnomalyDTO {
+	return AnomalyDTO{
+		RuleID:      string(anomaly.RuleID),
+		Severity:    string(anomaly.Severity),
+		Title:       anomaly.Title,
+		Description: anomaly.Description,
+		Context:     AnomalyContextDTOFromDomain(anomaly.Context),
+	}
+}
+
+// AgenticMetricsLedgerDTO represents the computed metrics ledger format in JSON.
+type AgenticMetricsLedgerDTO struct {
+	TicketID           *string                   `json:"ticket_id"`
+	TicketTitle        *string                   `json:"ticket_title"`
+	TicketType         *string                   `json:"ticket_type"`
+	StartedAt          *string                   `json:"started_at"`
+	CompletedAt        *string                   `json:"completed_at"`
+	UpdatedAt          string                    `json:"updated_at"`
+	WorkflowEfficiency domain.WorkflowEfficiency `json:"workflow_efficiency"`
+	Totals             domain.GroupedMetric      `json:"totals"`
+	Roles              []domain.RoleMetric       `json:"roles"`
+	Models             []domain.ModelMetric      `json:"models"`
+	Anomalies          []AnomalyDTO              `json:"anomalies,omitempty"`
+}
+
+// SerializedLedgerDTO is an alias to AgenticMetricsLedgerDTO for backward compatibility.
+type SerializedLedgerDTO = AgenticMetricsLedgerDTO
+
+func (dto AgenticMetricsLedgerDTO) ToDomain() domain.AgenticMetricsLedger {
+	var anomalies []domain.Anomaly
+	if len(dto.Anomalies) > 0 {
+		anomalies = make([]domain.Anomaly, len(dto.Anomalies))
+		for i, a := range dto.Anomalies {
+			anomalies[i] = a.ToDomain()
+		}
+	}
+	return domain.AgenticMetricsLedger{
+		TicketID:           dto.TicketID,
+		TicketTitle:        dto.TicketTitle,
+		TicketType:         dto.TicketType,
+		StartedAt:          dto.StartedAt,
+		CompletedAt:        dto.CompletedAt,
+		UpdatedAt:          dto.UpdatedAt,
+		WorkflowEfficiency: dto.WorkflowEfficiency,
+		Totals:             dto.Totals,
+		Roles:              dto.Roles,
+		Models:             dto.Models,
+		Anomalies:          anomalies,
+	}
+}
+
+// SerializeLedger converts a domain AgenticMetricsLedger into an AgenticMetricsLedgerDTO.
+func SerializeLedger(ledger domain.AgenticMetricsLedger) AgenticMetricsLedgerDTO {
+	var anomalies []AnomalyDTO
+	if len(ledger.Anomalies) > 0 {
+		anomalies = make([]AnomalyDTO, len(ledger.Anomalies))
+		for i, a := range ledger.Anomalies {
+			anomalies[i] = AnomalyDTOFromDomain(a)
+		}
+	}
+	return AgenticMetricsLedgerDTO{
 		TicketID:           ledger.TicketID,
 		TicketTitle:        ledger.TicketTitle,
 		TicketType:         ledger.TicketType,
@@ -371,5 +483,6 @@ func SerializeLedger(ledger domain.AgenticMetricsLedger) SerializedLedgerDTO {
 		Totals:             ledger.Totals,
 		Roles:              ledger.Roles,
 		Models:             ledger.Models,
+		Anomalies:          anomalies,
 	}
 }
