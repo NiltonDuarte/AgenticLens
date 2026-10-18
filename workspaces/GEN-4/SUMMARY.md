@@ -11,26 +11,29 @@
   - Created `.release-please-manifest.json` setting root version to `0.1.0`.
   - Created `.github/workflows/release-please.yml` triggered on pushes to `main`.
   - Created base `CHANGELOG.md` file.
+- Optimized `.github/workflows/release-candidate.yml`:
+  - Added path filtering (`backend/**`, `web/**`, `Makefile`, `go.work*`) to prevent pre-release builds on docs, tickets, and telemetry changes.
+  - Added skip check for `chore(main): release` and `chore: release` commits to prevent duplicate candidate releases on release PR merges.
 - Allocated isolated workspace under `workspaces/GEN-4/`.
 
 ## Verification
 - Verified git status reflects tracked renames and clean diff on `workspaces/plan/TICKETS.md`.
 - Verified no broken links or inconsistent file paths in `workspaces/plan/TICKETS.md`.
 - Verified JSON syntax for `.release-please-config.json` and `.release-please-manifest.json`.
-- Verified YAML syntax for `.github/workflows/release-please.yml`.
+- Verified YAML syntax for `.github/workflows/release-please.yml` and `.github/workflows/release-candidate.yml`.
 - Verified `make check` and `make test-backend` pass cleanly.
 - Verified zero emojis across all modified files and workspace deliverables.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 8m 34s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Orchestrator peak 86.4k tokens (43% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Active Agent Duration:** 11m 7s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Orchestrator peak 95.3k tokens (48% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 18,612 reasoning tokens (60.0% of generated output)
-- **Tool Health & Self-Correction:** 95 tool calls (2 self-corrections, 97.9% success rate)
+- **Code Delivered:** +22 / -0 lines across 1 code files (excluding docs)
+- **Reasoning Effort:** 21,329 reasoning tokens (57.9% of generated output)
+- **Tool Health & Self-Correction:** 115 tool calls (2 self-corrections, 98.3% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -42,11 +45,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 514,050 | 12,433 | 5,338,974 | 91.2% | 86.4k | HEALTHY | $0.90 |
-| **Total** | **1** | **514,050** | **12,433** | **5,338,974** | **91.2%** | **86.4k** | **HEALTHY** | **$0.90** |
+| **orchestrator** | 1 | 602,713 | 15,528 | 7,437,822 | 92.5% | 95.3k | HEALTHY | $1.15 |
+| **Total** | **1** | **602,713** | **15,528** | **7,437,822** | **92.5%** | **95.3k** | **HEALTHY** | **$1.15** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 514,050 | 12,433 | 5,338,974 | 91.2% | $0.90 |
-| **Total** | **1** | **514,050** | **12,433** | **5,338,974** | **91.2%** | **$0.90** |
+| **gemini-3.8-flash** | 1 | 602,713 | 15,528 | 7,437,822 | 92.5% | $1.15 |
+| **Total** | **1** | **602,713** | **15,528** | **7,437,822** | **92.5%** | **$1.15** |

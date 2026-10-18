@@ -14,4 +14,5 @@ Updates `workspaces/plan/TICKETS.md` and ticket specification files for complete
 - Added `.release-please-manifest.json` setting the root baseline version to `0.1.0`.
 - Added `.github/workflows/release-please.yml` running on pushes to `main`.
 - Added root `CHANGELOG.md` seed file for release-please automated tracking.
+- Optimized `.github/workflows/release-candidate.yml` with path filtering (`backend/**`, `web/**`, `Makefile`, `go.work*`) and release commit filtering to prevent generating pre-releases on docs-only commits.
 - Allocated ticket workspace under `workspaces/GEN-4/`.

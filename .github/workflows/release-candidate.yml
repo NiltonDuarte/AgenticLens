@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - 'web/**'
+      - 'Makefile'
+      - 'go.work*'
 
 concurrency:
   group: release-candidate
@@ -13,6 +18,7 @@ jobs:
   release-candidate:
     name: Build and Publish Release Candidate
     runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, 'chore(main): release') && !startsWith(github.event.head_commit.message, 'chore: release')"
     permissions:
       contents: write
     steps:
