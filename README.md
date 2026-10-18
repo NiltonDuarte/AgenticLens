@@ -13,13 +13,29 @@ AgenticLens is implemented in **Go** and **TypeScript** following the Functional
 
 ## Running Locally
 
+### Installation
+
+Install all backend and frontend dependencies:
+
+```bash
+make install
+```
+
+Or install dependencies individually:
+
+```bash
+make install-backend   # Download Go modules
+make install-frontend  # Install web npm packages
+```
+
 ### Development Mode
 
 Run the Go server and Vite dev server with hot reload:
 
 ```bash
 # Terminal 1: Run Go API / telemetry engine
-cd backend && go run ./cmd/agentic-lens server --port 8085
+make server
+# Or directly: cd backend && go run ./cmd/agentic-lens server --port 8085
 
 # Terminal 2: Run TypeScript UI with API proxy
 cd web && npm run dev
@@ -30,15 +46,37 @@ cd web && npm run dev
 Build and run the self-contained binary:
 
 ```bash
-# Build frontend assets and Go binary
-cd web && npm run build && cd ..
-cd backend && go build -o bin/agentic-lens ./cmd/agentic-lens
+# Build frontend bundle and Go binary
+make build
 
-# Run dashboard (serves embedded UI and API)
-./bin/agentic-lens server --port 8501
+# Run dashboard (serves embedded UI and API on default port 8085)
+make server
+# Or directly: ./bin/agentic-lens server --port 8085
 ```
 
-Visit `http://localhost:8501`.
+Visit `http://localhost:8085`.
+
+## Make Targets
+
+AgenticLens provides Makefile targets for installation, quality checks, testing, and execution:
+
+| Target | Description |
+|---|---|
+| `make all` | Install dependencies, run checks, tests, and build standalone binary |
+| `make install` | Install all dependencies (Go modules and web npm packages) |
+| `make install-backend` | Download Go backend module dependencies (`go mod download`) |
+| `make install-frontend` | Install npm dependencies for frontend dashboard (`npm install`) |
+| `make check` | Run static checks (`go vet`, frontend lint/typecheck, `git diff --check`) |
+| `make test` | Run all test suites (backend with race detector and frontend Vitest) |
+| `make test-backend` | Run Go test suite with race detector (`go test -race ./...`) |
+| `make test-frontend` | Run frontend test suite (`npm test`) |
+| `make vet` | Run `go vet` across all Go backend packages |
+| `make lint` | Run Go vet, frontend typecheck, and ESLint |
+| `make build` | Compile frontend bundle and build binary to `bin/agentic-lens` |
+| `make server` | Build and run HTTP server on `PORT` (default: 8085) |
+| `make serve` | Alias for `make server` |
+| `make clean` | Remove build and release distribution artifacts |
+| `make help` | Display available targets and descriptions |
 
 ## Execution Anomaly Detection
 

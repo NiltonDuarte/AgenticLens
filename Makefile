@@ -17,27 +17,42 @@ LDFLAGS := -X 'agenticlens/internal/domain.Version=$(VERSION)' \
            -X 'agenticlens/internal/domain.GitCommit=$(GIT_COMMIT)' \
            -X 'agenticlens/internal/domain.BuildDate=$(BUILD_DATE)'
 
-.PHONY: all check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean
+.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean
 
-all: check test build
+all: install check test build
 
 help:
 	@echo "Available targets:"
-	@echo "  all             - Run checks, tests, and build"
-	@echo "  check           - Run static checks (vet, lint, git diff check)"
-	@echo "  test            - Run all tests (backend and frontend if present)"
-	@echo "  test-backend    - Run Go test suite with race detector"
-	@echo "  test-frontend   - Run frontend test suite (if web directory exists)"
-	@echo "  vet             - Run go vet on all Go packages"
-	@echo "  lint            - Run Go vet and frontend linting"
-	@echo "  build           - Build backend executable (and web bundle if present)"
-	@echo "  release-build   - Cross-compile binaries for all supported platforms"
-	@echo "  release-package - Package release archives and generate SHA256SUMS"
-	@echo "  release-verify  - Verify release checksums and host binary execution"
-	@echo "  release-clean   - Remove release distribution artifacts"
-	@echo "  server          - Build and run HTTP server (PORT=$(PORT) WORKSPACES=$(WORKSPACES))"
-	@echo "  serve           - Alias for server target"
-	@echo "  clean           - Remove build and release artifacts"
+	@echo "  all              - Install dependencies, run checks, tests, and build"
+	@echo "  install          - Install all dependencies (backend and frontend)"
+	@echo "  install-backend  - Download Go backend module dependencies"
+	@echo "  install-frontend - Install npm packages for frontend dashboard"
+	@echo "  check            - Run static checks (vet, lint, git diff check)"
+	@echo "  test             - Run all tests (backend and frontend if present)"
+	@echo "  test-backend     - Run Go test suite with race detector"
+	@echo "  test-frontend    - Run frontend test suite (if web directory exists)"
+	@echo "  vet              - Run go vet on all Go packages"
+	@echo "  lint             - Run Go vet and frontend linting"
+	@echo "  build            - Build backend executable (and web bundle if present)"
+	@echo "  release-build    - Cross-compile binaries for all supported platforms"
+	@echo "  release-package  - Package release archives and generate SHA256SUMS"
+	@echo "  release-verify   - Verify release checksums and host binary execution"
+	@echo "  release-clean    - Remove release distribution artifacts"
+	@echo "  server           - Build and run HTTP server (PORT=$(PORT) WORKSPACES=$(WORKSPACES))"
+	@echo "  serve            - Alias for server target"
+	@echo "  clean            - Remove build and release artifacts"
+
+install: install-backend install-frontend
+
+install-backend:
+	@echo "Installing backend dependencies..."
+	(cd $(BACKEND_DIR) && go mod download)
+
+install-frontend:
+	@if [ -d "$(WEB_DIR)" ]; then \
+		echo "Installing frontend dependencies..."; \
+		(cd $(WEB_DIR) && npm install); \
+	fi
 
 check: vet lint
 	@git diff --check
