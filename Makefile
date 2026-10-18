@@ -3,6 +3,7 @@
 BIN_DIR := bin
 BINARY := $(BIN_DIR)/agentic-lens
 WEB_DIR := web
+BACKEND_DIR := backend
 PORT ?= 8085
 WORKSPACES ?= workspaces
 
@@ -28,7 +29,7 @@ check: vet lint
 	@git diff --check
 
 vet:
-	go vet ./...
+	(cd $(BACKEND_DIR) && go vet ./...)
 
 lint: vet
 	@if [ -d "$(WEB_DIR)/node_modules" ]; then \
@@ -39,7 +40,7 @@ lint: vet
 test: test-backend test-frontend
 
 test-backend:
-	go test -race ./...
+	(cd $(BACKEND_DIR) && go test -race ./...)
 
 test-frontend:
 	@if [ -d "$(WEB_DIR)/node_modules" ]; then \
@@ -53,7 +54,7 @@ build:
 		(cd $(WEB_DIR) && npm run build); \
 	fi
 	@mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) ./cmd/agentic-lens
+	(cd $(BACKEND_DIR) && go build -o ../$(BINARY) ./cmd/agentic-lens)
 
 server: build
 	./$(BINARY) server --port $(PORT) --workspaces $(WORKSPACES)

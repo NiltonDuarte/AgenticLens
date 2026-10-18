@@ -110,17 +110,16 @@ func ResolveSessionByWorkspacePath(db *sql.DB, ticketID string, minTimeMs int64,
 		WHERE s.parent_id IS NULL
 		  AND (p.data LIKE ? OR p.data LIKE ?)
 	`
-	args := []any{pattern1, pattern2}
-
-	if minTimeMs > 0 && maxTimeMs > 0 {
-		query += " AND s.time_created >= ? AND s.time_created <= ?"
-		args = append(args, minTimeMs, maxTimeMs)
-	}
-
-	query += " ORDER BY p.time_created ASC LIMIT 1"
 
 	var sessionID string
-	err := db.QueryRow(query, args...).Scan(&sessionID)
+	var err error
+	if minTimeMs > 0 && maxTimeMs > 0 {
+		query += " AND s.time_created >= ? AND s.time_created <= ? ORDER BY p.time_created ASC LIMIT 1"
+		err = db.QueryRow(query, pattern1, pattern2, minTimeMs, maxTimeMs).Scan(&sessionID)
+	} else {
+		query += " ORDER BY p.time_created ASC LIMIT 1"
+		err = db.QueryRow(query, pattern1, pattern2).Scan(&sessionID)
+	}
 	if err == nil {
 		return &sessionID, nil
 	}

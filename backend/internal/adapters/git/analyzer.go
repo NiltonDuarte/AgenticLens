@@ -133,6 +133,7 @@ func GetTicketNumstat(ticketID string) []NumstatEntry {
 					if len(parsed) > 0 {
 						for _, r := range parsed {
 							if strings.HasPrefix(r.Path, "src/") ||
+								strings.HasPrefix(r.Path, "backend/") ||
 								strings.HasPrefix(r.Path, "internal/") ||
 								strings.HasPrefix(r.Path, "cmd/") ||
 								strings.HasPrefix(r.Path, "web/") ||
@@ -164,6 +165,7 @@ func GetTicketNumstat(ticketID string) []NumstatEntry {
 					if len(parsed) > 0 {
 						for _, r := range parsed {
 							if strings.HasPrefix(r.Path, "src/") ||
+								strings.HasPrefix(r.Path, "backend/") ||
 								strings.HasPrefix(r.Path, "internal/") ||
 								strings.HasPrefix(r.Path, "cmd/") ||
 								strings.HasPrefix(r.Path, "web/") ||

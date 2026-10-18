@@ -5,9 +5,9 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-2 go embedded http server and api.md`
 - `workspaces/plan/done/AL-3 typescript spa shell and fleet overview.md`
 - `workspaces/plan/done/AL-4 typescript ticket deep dive and progression.md`
+- `workspaces/plan/done/AL-5 single binary integration parity and deprecation.md`
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
-- `workspaces/plan/to-do/AL-5 single binary integration parity and deprecation.md`
 - `workspaces/plan/to-do/AL-6 versioned schema migration and chronological event extraction.md`
 - `workspaces/plan/to-do/AL-7 domain anomaly detection and rule engine.md`
 - `workspaces/plan/to-do/AL-8 anomaly api endpoints and fleet health aggregation.md`
@@ -18,25 +18,17 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Ready
 
-- **AL-5**: Integrate Single Binary Build, Verify Parity, and Deprecate Python App
-  - **Subsystem**: Build / Packaging / Tests
-  - **Phase**: Phase 1
+- **AL-6**: Versioned Schema Migration and Chronological Event Extraction
+  - **Subsystem**: Adapters / Domain / Scripts / Tests
+  - **Phase**: Phase 2
   - **Status**: Ready
-  - **Blocked by**: None (AL-4, AL-11, AL-12 Done)
-  - **Blocks**: AL-6
-  - **File**: `workspaces/plan/to-do/AL-5 single binary integration parity and deprecation.md`
+  - **Blocked by**: None (AL-5, AL-12 Done)
+  - **Blocks**: AL-7
+  - **File**: `workspaces/plan/to-do/AL-6 versioned schema migration and chronological event extraction.md`
 
 ---
 
 ## Pending
-
-- **AL-6**: Versioned Schema Migration and Chronological Event Extraction
-  - **Subsystem**: Adapters / Domain / Scripts / Tests
-  - **Phase**: Phase 2
-  - **Status**: Pending
-  - **Blocked by**: AL-5, AL-12
-  - **Blocks**: AL-7
-  - **File**: `workspaces/plan/to-do/AL-6 versioned schema migration and chronological event extraction.md`
 
 - **AL-7**: Domain Anomaly Detection and Rule Engine
   - **Subsystem**: Domain / CLI / Tests
@@ -65,6 +57,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-5**: Integrate Single Binary Build, Verify Parity, and Deprecate Python App
+  - **Subsystem**: Build / Packaging / Tests
+  - **Phase**: Phase 1
+  - **Status**: Done
+  - **Blocked by**: None (AL-4, AL-11, AL-12 Done)
+  - **Blocks**: AL-6
+  - **File**: `workspaces/plan/done/AL-5 single binary integration parity and deprecation.md`
 
 - **AL-1**: Implement Go Domain Aggregations, Workspace Scanner, and CLI Engine
   - **Subsystem**: Domain / Adapters / CLI

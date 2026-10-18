@@ -806,4 +806,125 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 			t.Errorf("expected tie-breaker reverse in descending, got %s, %s", *desc[0].TicketID, *desc[1].TicketID)
 		}
 	})
+
+	t.Run("edge cases pure mathematical parity", func(t *testing.T) {
+		t.Run("all zero values", func(t *testing.T) {
+			emptyLedger := domain.AgenticFactLedger{
+				Code:        domain.CodeFacts{},
+				Invocations: nil,
+				Tools:       nil,
+			}
+			eff := domain.ComputeWorkflowEfficiency(emptyLedger)
+			tot := domain.ComputeTotals(emptyLedger.Invocations)
+
+			if tot.Invocations != 0 {
+				t.Errorf("expected 0 invocations, got %d", tot.Invocations)
+			}
+			if tot.CostUSD != 0.0 {
+				t.Errorf("expected 0 cost, got %f", tot.CostUSD)
+			}
+			if tot.CacheHitRatePct != 0.0 {
+				t.Errorf("expected 0 cache hit rate, got %f", tot.CacheHitRatePct)
+			}
+			if tot.ContextHealth != string(domain.ContextHealthHealthy) {
+				t.Errorf("expected HEALTHY, got %s", tot.ContextHealth)
+			}
+			if eff.ActiveDurationFormatted != "0m 0s" {
+				t.Errorf("expected 0m 0s, got %s", eff.ActiveDurationFormatted)
+			}
+			if eff.TestToProductionRatio.Ratio != "0:0" {
+				t.Errorf("expected 0:0, got %s", eff.TestToProductionRatio.Ratio)
+			}
+			if eff.ToolExecution.SuccessRatePct != 100.0 {
+				t.Errorf("expected 100.0, got %f", eff.ToolExecution.SuccessRatePct)
+			}
+			if eff.ContextWindowHealth.Status != string(domain.ContextHealthHealthy) {
+				t.Errorf("expected HEALTHY, got %s", eff.ContextWindowHealth.Status)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+				t.Errorf("expected none, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+		})
+
+		t.Run("pure test code 1:0 ratio", func(t *testing.T) {
+			ledger := domain.AgenticFactLedger{
+				Code: domain.CodeFacts{
+					TestLinesAdded: 50,
+					ProdLinesAdded: 0,
+				},
+			}
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.TestToProductionRatio.Ratio != "50:0" {
+				t.Errorf("expected 50:0, got %s", eff.TestToProductionRatio.Ratio)
+			}
+		})
+
+		t.Run("pure prod code 0:1 ratio", func(t *testing.T) {
+			ledger := domain.AgenticFactLedger{
+				Code: domain.CodeFacts{
+					TestLinesAdded: 0,
+					ProdLinesAdded: 50,
+				},
+			}
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.TestToProductionRatio.Ratio != "0.0:1" {
+				t.Errorf("expected 0.0:1, got %s", eff.TestToProductionRatio.Ratio)
+			}
+		})
+
+		t.Run("high token saturation exceeding 200k ceiling", func(t *testing.T) {
+			parentID := "ses-0"
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:   "ses-0",
+						Role: "orchestrator",
+						Tokens: domain.InvocationTokens{
+							PeakContext: 250000,
+						},
+					},
+					{
+						ID:       "ses-1",
+						ParentID: &parentID,
+						Role:     "coder",
+						Tokens: domain.InvocationTokens{
+							PeakContext: 210000,
+						},
+						Turns: 10,
+					},
+				},
+			}
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.ContextWindowHealth.Status != string(domain.ContextHealthBloated) {
+				t.Errorf("expected BLOATED, got %s", eff.ContextWindowHealth.Status)
+			}
+			if eff.ContextWindowHealth.OrchestratorSaturationPct != 125.0 {
+				t.Errorf("expected 125.0 orchestrator saturation, got %f", eff.ContextWindowHealth.OrchestratorSaturationPct)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakTokens != 210000 {
+				t.Errorf("expected 210000 subagent peak, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakRole != "coder" {
+				t.Errorf("expected coder subagent peak role, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+		})
+
+		t.Run("critical token saturation exceeding 400k ceiling", func(t *testing.T) {
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:   "ses-0",
+						Role: "orchestrator",
+						Tokens: domain.InvocationTokens{
+							PeakContext: 450000,
+						},
+					},
+				},
+			}
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.ContextWindowHealth.Status != string(domain.ContextHealthCritical) {
+				t.Errorf("expected CRITICAL, got %s", eff.ContextWindowHealth.Status)
+			}
+		})
+	})
 }

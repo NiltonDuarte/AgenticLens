@@ -6,8 +6,8 @@ __pycache__/
 *.pyd
 .pytest_cache/
 dist/
-!internal/adapters/web/dist/
-!internal/adapters/web/dist/**
+!backend/internal/adapters/web/dist/
+!backend/internal/adapters/web/dist/**
 build/
 *.egg-info/
 bin/

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && rm -rf ../internal/adapters/web/dist/* && cp -r dist/* ../internal/adapters/web/dist/",
+    "build": "tsc --noEmit && vite build && rm -rf ../backend/internal/adapters/web/dist/* && cp -r dist/* ../backend/internal/adapters/web/dist/",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings 0",
     "test": "vitest run"
