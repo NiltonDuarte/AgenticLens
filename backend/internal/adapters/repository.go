@@ -9,12 +9,9 @@ import (
 	"sort"
 	"strings"
 
+	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
-
-type configDTO struct {
-	WorkspacesDir string `json:"workspaces_dir"`
-}
 
 // ResolveWorkspacesDir resolves workspaces directory from argument, environment, config, or parent lookup.
 func ResolveWorkspacesDir(overridePath string) string {
@@ -27,48 +24,40 @@ func ResolveWorkspacesDir(overridePath string) string {
 		return "/app/workspaces"
 	}
 
-	// 2. Configured workspace dir in .agenticlens/config.json
-	cwd, err := os.Getwd()
-	if err == nil {
-		curr := cwd
-		for {
-			cfgPath := filepath.Join(curr, ".agenticlens", "config.json")
-			if fi, err := os.Stat(cfgPath); err == nil && !fi.IsDir() {
-				if data, err := os.ReadFile(cfgPath); err == nil {
-					var cfg configDTO
-					if err := json.Unmarshal(data, &cfg); err == nil && cfg.WorkspacesDir != "" {
-						candidate := filepath.Join(curr, cfg.WorkspacesDir)
-						if cfi, err := os.Stat(candidate); err == nil && cfi.IsDir() {
-							return candidate
-						}
-					}
-				}
-			}
-			parent := filepath.Dir(curr)
-			if parent == curr {
-				break
-			}
-			curr = parent
+	// 2. Configured workspace dir from centralized config loader
+	cfg, err := config.Load("")
+	cfgPath, _ := config.FindConfigFile("")
+	wsDir := "workspaces"
+	if err == nil && cfg.Workspaces.Dir != "" {
+		wsDir = cfg.Workspaces.Dir
+	}
+
+	if cfgPath != "" {
+		baseDir := filepath.Dir(filepath.Dir(cfgPath))
+		candidate := filepath.Join(baseDir, wsDir)
+		if cfi, err := os.Stat(candidate); err == nil && cfi.IsDir() {
+			return candidate
 		}
 	}
 
 	// 3. Current working directory ./workspaces
-	if cwd != "" {
-		candidate := filepath.Join(cwd, "workspaces")
+	cwd, err := os.Getwd()
+	if cwd != "" && err == nil {
+		candidate := filepath.Join(cwd, wsDir)
 		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
 			return candidate
 		}
 	}
 
 	// 4. Parent traversal (e.g. running from a nested subfolder)
-	if cwd != "" {
+	if cwd != "" && err == nil {
 		curr := cwd
 		for {
 			parent := filepath.Dir(curr)
 			if parent == curr {
 				break
 			}
-			candidate := filepath.Join(parent, "workspaces")
+			candidate := filepath.Join(parent, wsDir)
 			if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
 				return candidate
 			}
@@ -76,7 +65,7 @@ func ResolveWorkspacesDir(overridePath string) string {
 		}
 	}
 
-	return "workspaces"
+	return wsDir
 }
 
 // ScanWorkspaces scans target workspaces directory for all agentic_metrics.json ledgers.

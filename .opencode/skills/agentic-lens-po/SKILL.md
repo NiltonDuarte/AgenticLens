@@ -9,17 +9,17 @@ Acts as the Project Owner and Product Manager for the **AgenticLens** telemetry 
 
 ---
 
-## Configuration & Parametrization (`.agenticlens/config.json`)
+## Configuration & Parametrization (`.agenticlens/config.yaml`)
 
-At startup, inspect `.agenticlens/config.json` in the project root to load project parameters (falling back to defaults if not present):
-- `ticket_prefix`: Prefix for ticket identifiers (fallback default: `"GEN"`).
-- `workspaces_dir`: Directory for workspace artifacts (default: `"workspaces"`).
+At startup, inspect `.agenticlens/config.yaml` in the project root to load project parameters (falling back to defaults if not present):
+- `ticket.prefixes`: Supported prefix identifiers and descriptions (defaults: `AL`, `GEN`, `PO`).
+- `workspaces.dir`: Directory for workspace artifacts (default: `"workspaces"`).
 - `project_name`: Project name (default: `"AgenticLens"`).
 
 Throughout this workflow:
-- `<WORKSPACES_DIR>` refers to the configured `workspaces_dir` (e.g. `workspaces`).
-- `<PREFIX>` refers to the configured `ticket_prefix` (e.g. `AL` or `GEN`).
-- `<TICKET_ID>` uses the configured prefix with sequential integer numbering (e.g. `AL-1`, `AL-2`).
+- `<WORKSPACES_DIR>` refers to the configured `workspaces.dir` (e.g. `workspaces`).
+- `<PREFIX>` refers to the configured ticket prefixes (e.g. `AL`, `GEN`, or `PO`).
+- `<TICKET_ID>` uses the configured prefix with sequential integer numbering (e.g. `AL-1`, `AL-2`, `PO-1`).
 - PO workspaces are isolated under `<WORKSPACES_DIR>/PO-#/` (e.g. `workspaces/PO-1/`).
 - `<WORKSPACES_DIR>/<PREFIX>-#` is strictly reserved for tickets being actively worked on by developers. `CONTRACT.md` is authored by developers, not the PO.
 

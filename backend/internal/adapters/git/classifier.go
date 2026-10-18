@@ -1,10 +1,10 @@
 package git
 
 import (
-	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
+
+	"agenticlens/internal/adapters/config"
 )
 
 // ClassificationConfig holds user-configured file glob patterns.
@@ -15,43 +15,19 @@ type ClassificationConfig struct {
 	ProdPatterns []string `json:"prod_patterns"`
 }
 
-type rootConfig struct {
-	WorkspacesDir string                `json:"workspaces_dir"`
-	CodeMetrics   *ClassificationConfig `json:"code_metrics"`
-}
-
-// LoadConfig attempts to load ClassificationConfig from .agenticlens/config.json.
+// LoadConfig attempts to load ClassificationConfig from repository configuration.
 func LoadConfig(repoRoot string) (*ClassificationConfig, error) {
-	searchDir := repoRoot
-	if searchDir == "" {
-		cwd, err := os.Getwd()
-		if err == nil {
-			searchDir = cwd
-		}
+	cfg, err := config.Load(repoRoot)
+	if err != nil {
+		return nil, err
 	}
 
-	curr := searchDir
-	for curr != "" {
-		cfgPath := filepath.Join(curr, ".agenticlens", "config.json")
-		if fi, err := os.Stat(cfgPath); err == nil && !fi.IsDir() {
-			data, err := os.ReadFile(cfgPath)
-			if err != nil {
-				return nil, err
-			}
-			var cfg rootConfig
-			if err := json.Unmarshal(data, &cfg); err != nil {
-				return nil, err
-			}
-			return cfg.CodeMetrics, nil
-		}
-		parent := filepath.Dir(curr)
-		if parent == curr {
-			break
-		}
-		curr = parent
-	}
-
-	return nil, nil
+	return &ClassificationConfig{
+		Include:      cfg.CodeMetrics.Include,
+		Exclude:      cfg.CodeMetrics.Exclude,
+		TestPatterns: cfg.CodeMetrics.TestPatterns,
+		ProdPatterns: cfg.CodeMetrics.ProdPatterns,
+	}, nil
 }
 
 // FileCategory represents the category of a modified file.

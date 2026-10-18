@@ -30,7 +30,7 @@ Determine the audit boundary before reading files:
    ```
 3. Read baseline documents:
    - `TECHNICAL_GUIDELINES.md` (Go & TypeScript architectural invariants, FCIS, typing, `embed.FS`)
-   - `.agenticlens/config.json` (Project parametrization)
+   - `.agenticlens/config.yaml` (Project parametrization)
 
 ---
 

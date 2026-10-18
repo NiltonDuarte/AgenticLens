@@ -45,6 +45,33 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Errorf("expected %s, got %s", wsDir, resolved)
 		}
 	})
+
+	t.Run("yaml config file resolution", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		wsDir := filepath.Join(tempDir, "yaml_workspaces")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		cfgContent := "workspaces:\n  dir: yaml_workspaces\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != wsDir {
+			t.Errorf("expected %s, got %s", wsDir, resolved)
+		}
+	})
 }
 
 func TestScanWorkspaces(t *testing.T) {

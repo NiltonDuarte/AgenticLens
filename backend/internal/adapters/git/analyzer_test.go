@@ -1,6 +1,8 @@
 package git_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"agenticlens/internal/adapters/git"
@@ -223,3 +225,57 @@ not_a_number	not_a_number	file.go
 	})
 }
 
+func TestLoadConfig_CentralizedIntegration(t *testing.T) {
+	tempDir := t.TempDir()
+	cfgDir := filepath.Join(tempDir, ".agenticlens")
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	yamlContent := `
+code_metrics:
+  include:
+    - "custom/include/**"
+  exclude:
+    - "custom/exclude/**"
+  test_patterns:
+    - "*_test_custom.go"
+  prod_patterns:
+    - "*.custom_prod"
+`
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := git.LoadConfig(tempDir)
+	if err != nil {
+		t.Fatalf("unexpected error loading config: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("expected non-nil ClassificationConfig")
+	}
+
+	if len(cfg.Include) != 1 || cfg.Include[0] != "custom/include/**" {
+		t.Errorf("unexpected include: %v", cfg.Include)
+	}
+	if len(cfg.Exclude) != 1 || cfg.Exclude[0] != "custom/exclude/**" {
+		t.Errorf("unexpected exclude: %v", cfg.Exclude)
+	}
+	if len(cfg.TestPatterns) != 1 || cfg.TestPatterns[0] != "*_test_custom.go" {
+		t.Errorf("unexpected test_patterns: %v", cfg.TestPatterns)
+	}
+	if len(cfg.ProdPatterns) != 1 || cfg.ProdPatterns[0] != "*.custom_prod" {
+		t.Errorf("unexpected prod_patterns: %v", cfg.ProdPatterns)
+	}
+
+	// Verify classification applies loaded patterns
+	catInc := git.ClassifyFile("custom/include/file.xyz", cfg)
+	if catInc != git.CategoryProd {
+		t.Errorf("expected CategoryProd for custom/include/file.xyz, got %s", catInc)
+	}
+
+	catExc := git.ClassifyFile("custom/exclude/file.go", cfg)
+	if catExc != git.CategoryIgnored {
+		t.Errorf("expected CategoryIgnored for custom/exclude/file.go, got %s", catExc)
+	}
+}

@@ -12,6 +12,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
 - `workspaces/plan/done/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
+- `workspaces/plan/done/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
 - `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 - `workspaces/plan/to-do/AL-14 implement automated github release workflows for release candidates and stable versions.md`
@@ -21,7 +22,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-- `workspaces/plan/to-do/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
 - `workspaces/plan/to-do/AL-23 natural ticket identifier ordering and sortable tables.md`
 - `workspaces/plan/to-do/AL-24 dynamic role and model aggregations and presentation.md`
 - `workspaces/plan/to-do/AL-25 contextual hover information icons for cards and tables.md`
@@ -67,14 +67,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-16 execute codebase and skills refactoring with provided review skill.md`
-
-- **AL-21**: Migrate Configuration to YAML and Establish Agent-Backend Bridge Definitions
-  - **Subsystem**: Adapters / Domain / Config / Tests
-  - **Phase**: Phase 4
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-17
-  - **File**: `workspaces/plan/to-do/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
 
 - **AL-23**: Natural Ticket Identifier Ordering and Sortable Tables
   - **Subsystem**: Domain / Presentation / Adapters / Tests
@@ -124,7 +116,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Adapters / Domain / HTTP / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: AL-21
+  - **Blocked by**: None (AL-21 Done)
   - **Blocks**: AL-18
   - **File**: `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 
@@ -187,6 +179,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None (AL-5 Done)
   - **Blocks**: AL-14
   - **File**: `workspaces/plan/done/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
+
+- **AL-21**: Migrate Configuration to YAML and Establish Agent-Backend Bridge Definitions
+  - **Subsystem**: Adapters / Domain / Config / Tests
+  - **Phase**: Phase 4
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: AL-17
+  - **File**: `workspaces/plan/done/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
 
 - **AL-22**: Render Rich Markdown for Workspace Summary and Contract Artifacts
   - **Subsystem**: Presentation / Web / Tests
