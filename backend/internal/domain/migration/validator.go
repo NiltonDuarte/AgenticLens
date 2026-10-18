@@ -1,0 +1,154 @@
+package migration
+
+import (
+	"fmt"
+
+	"agenticlens/internal/domain"
+)
+
+// InvariantValidator audits domain ledgers before and after a migration transition
+// to guarantee that no identity, timestamp, code, invocation, tool, or event data is corrupted or lost.
+type InvariantValidator struct{}
+
+// NewInvariantValidator creates an InvariantValidator instance.
+func NewInvariantValidator() *InvariantValidator {
+	return &InvariantValidator{}
+}
+
+// Validate compares pre-migration and post-migration states against strict preservation invariants.
+func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after domain.AgenticFactLedger, expectedTargetVersion int) error {
+	// 1. Schema version invariant
+	if after.SchemaVersion == nil {
+		return fmt.Errorf("%w: schema_version is nil after migration; expected %d",
+			ErrInvariantViolation, expectedTargetVersion)
+	}
+	if *after.SchemaVersion != expectedTargetVersion {
+		return fmt.Errorf("%w: schema_version is %d after migration; expected %d",
+			ErrInvariantViolation, *after.SchemaVersion, expectedTargetVersion)
+	}
+
+	// 2. Ticket identification invariant
+	if !stringPtrEqual(before.TicketID, after.TicketID) {
+		return fmt.Errorf("%w: ticket_id modified from %v to %v",
+			ErrInvariantViolation, ptrString(before.TicketID), ptrString(after.TicketID))
+	}
+	if !stringPtrEqual(before.TicketTitle, after.TicketTitle) {
+		return fmt.Errorf("%w: ticket_title modified from %v to %v",
+			ErrInvariantViolation, ptrString(before.TicketTitle), ptrString(after.TicketTitle))
+	}
+	if !stringPtrEqual(before.TicketType, after.TicketType) {
+		return fmt.Errorf("%w: ticket_type modified from %v to %v",
+			ErrInvariantViolation, ptrString(before.TicketType), ptrString(after.TicketType))
+	}
+
+	// 3. Timestamps invariant
+	if !stringPtrEqual(before.StartedAt, after.StartedAt) {
+		return fmt.Errorf("%w: started_at modified from %v to %v",
+			ErrInvariantViolation, ptrString(before.StartedAt), ptrString(after.StartedAt))
+	}
+	if !stringPtrEqual(before.CompletedAt, after.CompletedAt) {
+		return fmt.Errorf("%w: completed_at modified from %v to %v",
+			ErrInvariantViolation, ptrString(before.CompletedAt), ptrString(after.CompletedAt))
+	}
+	if before.UpdatedAt != "" && after.UpdatedAt == "" {
+		return fmt.Errorf("%w: updated_at was cleared during migration",
+			ErrInvariantViolation)
+	}
+
+	// 4. Git code facts invariant
+	if before.Code != after.Code {
+		return fmt.Errorf("%w: code facts modified from %+v to %+v",
+			ErrInvariantViolation, before.Code, after.Code)
+	}
+
+	// 5. Invocations invariant
+	if len(after.Invocations) != len(before.Invocations) {
+		return fmt.Errorf("%w: invocation count changed from %d to %d",
+			ErrInvariantViolation, len(before.Invocations), len(after.Invocations))
+	}
+	for i := range before.Invocations {
+		b := before.Invocations[i]
+		a := after.Invocations[i]
+		if b.ID != a.ID ||
+			!stringPtrEqual(b.ParentID, a.ParentID) ||
+			b.Role != a.Role ||
+			b.Model != a.Model ||
+			b.User != a.User ||
+			!stringPtrEqual(b.StartedAt, a.StartedAt) ||
+			!stringPtrEqual(b.CompletedAt, a.CompletedAt) ||
+			b.ActiveDurationSeconds != a.ActiveDurationSeconds ||
+			b.Turns != a.Turns ||
+			b.Tokens != a.Tokens ||
+			b.CostUSD != a.CostUSD ||
+			b.Compactions != a.Compactions {
+			return fmt.Errorf("%w: invocation[%d] (ID %s) data modified",
+				ErrInvariantViolation, i, b.ID)
+		}
+	}
+
+	// 6. Tools invariant
+	if len(after.Tools) != len(before.Tools) {
+		return fmt.Errorf("%w: tools count changed from %d to %d",
+			ErrInvariantViolation, len(before.Tools), len(after.Tools))
+	}
+	for i := range before.Tools {
+		b := before.Tools[i]
+		a := after.Tools[i]
+		if b != a {
+			return fmt.Errorf("%w: tool[%d] (%s) modified from %+v to %+v",
+				ErrInvariantViolation, i, b.Name, b, a)
+		}
+	}
+
+	// 7. Event facts invariant
+	if len(after.Events) < len(before.Events) {
+		return fmt.Errorf("%w: events count decreased from %d to %d",
+			ErrInvariantViolation, len(before.Events), len(after.Events))
+	}
+	for i := range before.Events {
+		b := before.Events[i]
+		a := after.Events[i]
+		if b.Timestamp != a.Timestamp ||
+			b.SessionID != a.SessionID ||
+			b.Turn != a.Turn ||
+			b.Role != a.Role ||
+			b.EventType != a.EventType ||
+			!stringPtrEqual(b.ToolName, a.ToolName) ||
+			b.Status != a.Status ||
+			!stringPtrEqual(b.ErrorMessage, a.ErrorMessage) ||
+			!int64PtrEqual(b.DurationMs, a.DurationMs) ||
+			b.ContextTokens != a.ContextTokens {
+			return fmt.Errorf("%w: pre-existing event[%d] modified",
+				ErrInvariantViolation, i)
+		}
+	}
+
+	return nil
+}
+
+func stringPtrEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+func int64PtrEqual(a, b *int64) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+func ptrString(s *string) string {
+	if s == nil {
+		return "<nil>"
+	}
+	return *s
+}

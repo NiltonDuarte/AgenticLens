@@ -364,3 +364,95 @@ func TestFleetAnomalySummaryDTO_BidirectionalMapping(t *testing.T) {
 		}
 	})
 }
+
+func TestSchemaMigrationDTOBoundaries(t *testing.T) {
+	t.Run("v2 schema guarantees events array in serialized JSON", func(t *testing.T) {
+		v2 := 2
+		tid := "AL-V2-EMPTY"
+		ledger := domain.AgenticFactLedger{
+			SchemaVersion: &v2,
+			TicketID:      &tid,
+			UpdatedAt:     "2026-10-18T10:00:00Z",
+			Events:        nil, // nil events in domain
+		}
+
+		dto := adapters.AgenticFactLedgerDTOFromDomain(ledger)
+		if dto.Events == nil {
+			t.Fatal("expected DTO.Events to be initialized to empty slice for schema_version >= 2")
+		}
+
+		data, err := json.Marshal(dto)
+		if err != nil {
+			t.Fatalf("marshal failed: %v", err)
+		}
+		jsonStr := string(data)
+		if !strings.Contains(jsonStr, `"events":[]`) {
+			t.Errorf("expected serialized JSON to contain '\"events\":[]', got %s", jsonStr)
+		}
+	})
+
+	t.Run("v1 schema without events serializes without synthetic events array", func(t *testing.T) {
+		v1 := 1
+		tid := "AL-V1"
+		ledger := domain.AgenticFactLedger{
+			SchemaVersion: &v1,
+			TicketID:      &tid,
+			UpdatedAt:     "2026-10-18T10:00:00Z",
+			Events:        nil,
+		}
+
+		dto := adapters.AgenticFactLedgerDTOFromDomain(ledger)
+		if dto.Events != nil {
+			t.Errorf("expected DTO.Events to be nil for v1 with nil events, got %+v", dto.Events)
+		}
+	})
+
+	t.Run("boundary unmarshaling with malformed schema types", func(t *testing.T) {
+		corruptedInputs := []struct {
+			name    string
+			payload string
+		}{
+			{"schema_version string", `{"schema_version": "2"}`},
+			{"schema_version float", `{"schema_version": 2.5}`},
+			{"events not an array", `{"schema_version": 2, "events": true}`},
+			{"events array with invalid element", `{"schema_version": 2, "events": [123]}`},
+			{"code not an object", `{"code": "not_an_object"}`},
+			{"invocations not an array", `{"invocations": {}}`},
+			{"migration not an object", `{"migration": ["git_code_facts"]}`},
+		}
+
+		for _, tc := range corruptedInputs {
+			t.Run(tc.name, func(t *testing.T) {
+				var dto adapters.AgenticFactLedgerDTO
+				err := json.Unmarshal([]byte(tc.payload), &dto)
+				if err == nil {
+					t.Errorf("expected unmarshal error for %s, got nil", tc.name)
+				}
+			})
+		}
+	})
+
+	t.Run("empty json object ToDomain defaults safely without panic", func(t *testing.T) {
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(`{}`), &dto); err != nil {
+			t.Fatalf("unexpected unmarshal error: %v", err)
+		}
+
+		dom := dto.ToDomain()
+		if dom.SchemaVersion != nil {
+			t.Errorf("expected nil schema_version for empty JSON")
+		}
+		if dom.Code.SDLCIterations != 1 {
+			t.Errorf("expected default SDLC iterations 1, got %d", dom.Code.SDLCIterations)
+		}
+		if len(dom.Events) != 0 {
+			t.Errorf("expected 0 events, got len %d", len(dom.Events))
+		}
+		if len(dom.Invocations) != 0 {
+			t.Errorf("expected 0 invocations, got %d", len(dom.Invocations))
+		}
+		if len(dom.Tools) != 0 {
+			t.Errorf("expected 0 tools, got %d", len(dom.Tools))
+		}
+	})
+}

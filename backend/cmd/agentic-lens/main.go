@@ -26,6 +26,11 @@ import (
 
 func runGenerate(args []string) {
 	genFlags := flag.NewFlagSet("generate", flag.ExitOnError)
+	if len(args) > 0 && args[0] == "help" {
+		genFlags.Usage()
+		return
+	}
+
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
 	nonceFlag := genFlags.String("nonce", "", "Unique random execution nonce to lock session resolution to")
 	sessionIDFlag := genFlags.String("session-id", "", "Explicit root session ID")
@@ -268,6 +273,10 @@ func runServer(args []string) {
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	portFlag := serverFlags.Int("port", defaultPort, "Port to listen on")
 	workspacesFlag := serverFlags.String("workspaces", "", "Path to workspaces directory")
+	if len(args) > 0 && args[0] == "help" {
+		serverFlags.Usage()
+		return
+	}
 
 	if err := serverFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing server flags: %v\n", err)
@@ -318,10 +327,31 @@ func runServer(args []string) {
 
 func runBackfill(args []string) {
 	backfillFlags := flag.NewFlagSet("backfill", flag.ExitOnError)
+	backfillFlags.Usage = func() {
+		out := backfillFlags.Output()
+		fmt.Fprintf(out, "Usage: agentic-lens backfill [flags]\n\n")
+		fmt.Fprintf(out, "Batch telemetry backfill, Git code facts recomputation, and schema upgrades.\n\n")
+		fmt.Fprintf(out, "Flags:\n")
+		fmt.Fprintf(out, "  --workspaces <path>    Path to root workspaces directory containing agentic_metrics.json ledgers\n")
+		fmt.Fprintf(out, "  --ticket-id <id>       Target single ticket identifier to filter backfill operation\n")
+		fmt.Fprintf(out, "  --recompute-git        Recompute Git code facts and SDLC iterations from repository history\n")
+		fmt.Fprintf(out, "  --recompute-db         Recompute OpenCode invocations and tool facts from local SQLite DB\n")
+		fmt.Fprintf(out, "  --migrate-schema       Upgrade telemetry ledger schema versions to latest supported version\n")
+		fmt.Fprintf(out, "  --dry-run              Preview planned migrations without writing changes to disk\n")
+		fmt.Fprintf(out, "  --update-summaries     Idempotently update SUMMARY.md markdown metrics tables\n")
+		fmt.Fprintf(out, "  --db-path <path>       Explicit path to OpenCode SQLite database file\n")
+		fmt.Fprintf(out, "  --force                Force migration and recompute even if ledger is already completed\n")
+	}
+	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help" || args[0] == "-help") {
+		backfillFlags.SetOutput(os.Stdout)
+		backfillFlags.Usage()
+		return
+	}
 	workspacesFlag := backfillFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
 	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
 	recomputeGitFlag := backfillFlags.Bool("recompute-git", false, "Recompute Git code facts and SDLC iterations from repository history")
 	recomputeDBFlag := backfillFlags.Bool("recompute-db", false, "Recompute OpenCode invocations and tool facts from local SQLite DB")
+	migrateSchemaFlag := backfillFlags.Bool("migrate-schema", false, "Upgrade telemetry ledger schema versions to latest supported version")
 	dryRunFlag := backfillFlags.Bool("dry-run", false, "Preview planned migrations without writing changes to disk")
 	updateSummariesFlag := backfillFlags.Bool("update-summaries", false, "Idempotently update SUMMARY.md markdown metrics tables")
 	dbPathFlag := backfillFlags.String("db-path", "", "Explicit path to OpenCode SQLite database file")
@@ -337,6 +367,7 @@ func runBackfill(args []string) {
 		TicketID:        *ticketIDFlag,
 		RecomputeGit:    *recomputeGitFlag,
 		RecomputeDB:     *recomputeDBFlag,
+		MigrateSchema:   *migrateSchemaFlag,
 		DryRun:          *dryRunFlag,
 		UpdateSummaries: *updateSummariesFlag,
 		DBPath:          *dbPathFlag,
@@ -365,6 +396,7 @@ func runBackfill(args []string) {
 	}
 	fmt.Printf("Recompute Git Facts:         %t\n", opts.RecomputeGit)
 	fmt.Printf("Recompute OpenCode DB:       %t\n", opts.RecomputeDB)
+	fmt.Printf("Migrate Schema:              %t\n", opts.MigrateSchema)
 	fmt.Printf("Update Markdown Summaries:   %t\n", opts.UpdateSummaries)
 	fmt.Printf("Force Migration:             %t\n", opts.Force)
 	fmt.Println("--------------------------------------------------------------------------------")
@@ -418,9 +450,130 @@ func runBackfill(args []string) {
 	fmt.Printf("Summary: Scanned: %d | Updated: %d | Skipped: %d | Completed: %d | Partial: %d\n",
 		report.Scanned, report.Updated, report.Skipped, report.Completed, report.Partial)
 
+	if report.SchemaMigration != nil {
+		fmt.Println("--------------------------------------------------------------------------------")
+		fmt.Printf("Schema Migration: Migrated: %d | Up to date: %d | Skipped: %d | Errors: %d\n",
+			report.SchemaMigration.Migrated, report.SchemaMigration.UpToDate,
+			report.SchemaMigration.Skipped, len(report.SchemaMigration.Errors))
+	}
+
 	if len(report.Warnings) > 0 {
 		fmt.Printf("\nWarnings / Non-fatal Errors (%d):\n", len(report.Warnings))
 		for _, w := range report.Warnings {
+			fmt.Printf("- %s\n", w)
+		}
+	}
+	fmt.Println("================================================================================")
+}
+
+func runMigrate(args []string) {
+	migrateFlags := flag.NewFlagSet("migrate", flag.ExitOnError)
+	migrateFlags.Usage = func() {
+		out := migrateFlags.Output()
+		fmt.Fprintf(out, "Usage: agentic-lens migrate [flags]\n\n")
+		fmt.Fprintf(out, "Universal stepwise schema migration engine for telemetry ledgers.\n\n")
+		fmt.Fprintf(out, "Flags:\n")
+		fmt.Fprintf(out, "  --workspaces <path>      Path to root workspaces directory containing agentic_metrics.json ledgers\n")
+		fmt.Fprintf(out, "  --ticket-id <id>         Target single ticket identifier to filter migration\n")
+		fmt.Fprintf(out, "  --target-version <int>   Target schema version integer (default %d)\n", domain.CurrentSchemaVersion)
+		fmt.Fprintf(out, "  --dry-run                Preview planned migrations without writing changes to disk\n")
+		fmt.Fprintf(out, "  --backup                 Create .bak backup copy of original file before writing\n")
+		fmt.Fprintf(out, "  --update-summaries       Idempotently update SUMMARY.md markdown metrics tables\n")
+	}
+	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help" || args[0] == "-help") {
+		migrateFlags.SetOutput(os.Stdout)
+		migrateFlags.Usage()
+		return
+	}
+	workspacesFlag := migrateFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	ticketIDFlag := migrateFlags.String("ticket-id", "", "Target single ticket identifier to filter migration")
+	targetVersionFlag := migrateFlags.Int("target-version", domain.CurrentSchemaVersion, "Target schema version integer")
+	dryRunFlag := migrateFlags.Bool("dry-run", false, "Preview planned migrations without writing changes to disk")
+	backupFlag := migrateFlags.Bool("backup", false, "Create .bak backup copy of original file before writing")
+	updateSummariesFlag := migrateFlags.Bool("update-summaries", false, "Idempotently update SUMMARY.md markdown metrics tables")
+
+	if err := migrateFlags.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing migrate flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	opts := backfill.MigrationOptions{
+		WorkspacesDir:   *workspacesFlag,
+		TicketID:        *ticketIDFlag,
+		TargetVersion:   *targetVersionFlag,
+		DryRun:          *dryRunFlag,
+		Backup:          *backupFlag,
+		UpdateSummaries: *updateSummariesFlag,
+	}
+
+	runner := backfill.NewMigrationRunner(nil)
+	report, err := runner.Run(opts)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Migration failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	modeStr := "EXECUTION"
+	if opts.DryRun {
+		modeStr = "DRY-RUN PREVIEW"
+	}
+
+	fmt.Println("================================================================================")
+	fmt.Printf("AGENTIC LENS - UNIVERSAL SCHEMA MIGRATION [%s]\n", modeStr)
+	fmt.Println("================================================================================")
+	fmt.Printf("Target Workspaces Directory: %s\n", targetDir)
+	if opts.TicketID != "" {
+		fmt.Printf("Filter Ticket ID:            %s\n", opts.TicketID)
+	}
+	fmt.Printf("Target Schema Version:       v%d\n", opts.TargetVersion)
+	fmt.Printf("Create Backups (.bak):       %t\n", opts.Backup)
+	fmt.Printf("Update Markdown Summaries:   %t\n", opts.UpdateSummaries)
+	fmt.Println("--------------------------------------------------------------------------------")
+
+	if len(report.Results) == 0 {
+		fmt.Println("No matching ticket workspaces found to migrate.")
+		return
+	}
+
+	header := fmt.Sprintf("%-15s %-12s %-12s %-18s %s", "Ticket ID", "From Version", "To Version", "Status", "Notes")
+	fmt.Println(header)
+	fmt.Println(strings.Repeat("-", len(header)))
+
+	for _, res := range report.Results {
+		fromStr := "unknown"
+		if res.SourceVersion == 0 {
+			fromStr = "unversioned"
+		} else if res.SourceVersion > 0 {
+			fromStr = fmt.Sprintf("v%d", res.SourceVersion)
+		}
+
+		toStr := fmt.Sprintf("v%d", res.TargetVersion)
+		if res.TargetVersion == 0 {
+			toStr = "-"
+		}
+
+		notes := res.DiffSummary
+		if res.Error != nil {
+			notes = fmt.Sprintf("error: %v", res.Error)
+		}
+
+		fmt.Printf("%-15s %-12s %-12s %-18s %s\n",
+			res.TicketID,
+			fromStr,
+			toStr,
+			res.Status,
+			notes,
+		)
+	}
+
+	fmt.Println("--------------------------------------------------------------------------------")
+	fmt.Printf("Summary: Scanned: %d | Migrated: %d | Up to date: %d | Skipped: %d | Errors: %d\n",
+		report.Scanned, report.Migrated, report.UpToDate, report.Skipped, len(report.Errors))
+
+	if len(report.Errors) > 0 {
+		fmt.Printf("\nWarnings / Errors (%d):\n", len(report.Errors))
+		for _, w := range report.Errors {
 			fmt.Printf("- %s\n", w)
 		}
 	}
@@ -463,6 +616,32 @@ func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly) {
 	}
 }
 
+func printRootUsage() {
+	out := flag.CommandLine.Output()
+	fmt.Fprintln(out, "AgenticLens Developer Telemetry and Observability CLI")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Usage:")
+	fmt.Fprintln(out, "  agentic-lens <subcommand> [flags]")
+	fmt.Fprintln(out, "  agentic-lens [flags]")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Subcommands:")
+	fmt.Fprintln(out, "  server    Start the HTTP dashboard server and API service")
+	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode SQLite DB and Git history")
+	fmt.Fprintln(out, "  backfill  Batch telemetry backfill, Git code facts recomputation, and schema upgrades")
+	fmt.Fprintln(out, "  migrate   Universal stepwise schema migration engine for telemetry ledgers")
+	fmt.Fprintln(out, "  version   Print version and build information")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Root Workspace Inspection Flags:")
+	fmt.Fprintln(out, "  --workspaces <path>   Path to root workspaces directory containing agentic_metrics.json ledgers")
+	fmt.Fprintln(out, "  --ticket-id <id>      Target ticket identifier to filter and report on")
+	fmt.Fprintln(out, "  --list                List all discovered ticket workspaces and summary metrics")
+	fmt.Fprintln(out, "  --anomalies           Display anomalies and health flags for target ticket")
+	fmt.Fprintln(out, "  --append <path>       Path to markdown summary file to idempotently update with metrics table")
+	fmt.Fprintln(out, "  --json-output <path>  Path to write computed metrics ledger as JSON")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Run 'agentic-lens <subcommand> --help' for subcommand-specific flags and options.")
+}
+
 func runVersion(args []string) {
 	versionFlags := flag.NewFlagSet("version", flag.ExitOnError)
 	jsonFlag := versionFlags.Bool("json", false, "Output version information in JSON format")
@@ -495,7 +674,33 @@ func runVersion(args []string) {
 
 func main() {
 	if len(os.Args) > 1 {
-		switch os.Args[1] {
+		arg := os.Args[1]
+		if arg == "help" || arg == "-h" || arg == "--help" || arg == "-help" {
+			if len(os.Args) > 2 {
+				switch os.Args[2] {
+				case "server":
+					runServer([]string{"--help"})
+					return
+				case "generate":
+					runGenerate([]string{"--help"})
+					return
+				case "backfill":
+					runBackfill([]string{"--help"})
+					return
+				case "migrate":
+					runMigrate([]string{"--help"})
+					return
+				case "version":
+					runVersion([]string{"--help"})
+					return
+				}
+			}
+			flag.CommandLine.SetOutput(os.Stdout)
+			printRootUsage()
+			os.Exit(0)
+		}
+
+		switch arg {
 		case "version":
 			runVersion(os.Args[2:])
 			return
@@ -511,8 +716,13 @@ func main() {
 		case "backfill":
 			runBackfill(os.Args[2:])
 			return
+		case "migrate":
+			runMigrate(os.Args[2:])
+			return
 		}
 	}
+
+	flag.Usage = printRootUsage
 
 	ticketIDFlag := flag.String("ticket-id", "", "Target ticket identifier to filter and report on")
 	workspacesFlag := flag.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")

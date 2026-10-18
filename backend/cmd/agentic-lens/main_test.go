@@ -1121,6 +1121,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 	})
 }
 
+
 func TestCLIVersionCommand(t *testing.T) {
 	t.Run("version subcommand outputs formatted string", func(t *testing.T) {
 		cmd := exec.Command(cliBinaryPath, "version")
@@ -1222,7 +1223,6 @@ func TestCLIVersionCommand(t *testing.T) {
 			t.Errorf("expected non-empty build_date in JSON output")
 		}
 
-		// Also unmarshal directly into domain.BuildInfo
 		var domainInfo domain.BuildInfo
 		if err := json.Unmarshal(stdout.Bytes(), &domainInfo); err != nil {
 			t.Fatalf("failed unmarshaling directly into domain.BuildInfo: %v", err)
@@ -1342,6 +1342,574 @@ func TestCLIVersionCommand(t *testing.T) {
 		out := stdout.String()
 		if !strings.HasPrefix(out, "agentic-lens version ") {
 			t.Errorf("expected version output when --version passed after workspaces flag, got: %s", out)
+		}
+	})
+}
+
+func TestCLIMigrateCommand(t *testing.T) {
+	wsDir := setupTestWorkspace(t)
+
+	t.Run("dry-run preview outputs table without mutating files", func(t *testing.T) {
+		cmd := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", wsDir,
+			"--dry-run",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("migrate dry-run failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "UNIVERSAL SCHEMA MIGRATION [DRY-RUN PREVIEW]") {
+			t.Errorf("expected dry-run header, got: %s", out)
+		}
+		if !strings.Contains(out, "TICKET-1") || !strings.Contains(out, "TICKET-2") {
+			t.Errorf("expected tickets in output, got: %s", out)
+		}
+		if !strings.Contains(out, "Summary: Scanned: 2 | Migrated: 2 | Up to date: 0") {
+			t.Errorf("expected 2 migrated preview in summary, got: %s", out)
+		}
+
+		// Verify files are unmutated (no schema_version)
+		data, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
+		if err != nil {
+			t.Fatalf("failed reading file: %v", err)
+		}
+		if strings.Contains(string(data), `"schema_version"`) {
+			t.Errorf("expected file to remain unmutated during dry-run")
+		}
+	})
+
+	t.Run("migrate with ticket-id filter and backup creates .bak and upgrades schema", func(t *testing.T) {
+		cmd := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", wsDir,
+			"--ticket-id", "TICKET-1",
+			"--backup",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("migrate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "UNIVERSAL SCHEMA MIGRATION [EXECUTION]") {
+			t.Errorf("expected execution header, got: %s", out)
+		}
+		if !strings.Contains(out, "TICKET-1") {
+			t.Errorf("expected TICKET-1 in output, got: %s", out)
+		}
+
+		// Verify backup file was created
+		bakData, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json.bak"))
+		if err != nil {
+			t.Fatalf("expected backup file to exist: %v", err)
+		}
+		if strings.Contains(string(bakData), `"schema_version"`) {
+			t.Errorf("backup file should be the original unversioned ledger")
+		}
+
+		// Verify migrated file is version 2 with events array
+		migratedData, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
+		if err != nil {
+			t.Fatalf("failed reading migrated file: %v", err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(migratedData, &parsed); err != nil {
+			t.Fatalf("failed parsing migrated JSON: %v", err)
+		}
+		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 2 {
+			t.Errorf("expected schema_version 2, got %v", parsed.SchemaVersion)
+		}
+		if parsed.Events == nil {
+			t.Errorf("expected events array to be initialized in v2")
+		}
+
+		// TICKET-2 should remain untouched
+		t2Data, err := os.ReadFile(filepath.Join(wsDir, "TICKET-2", "agentic_metrics.json"))
+		if err != nil {
+			t.Fatalf("failed reading TICKET-2 file: %v", err)
+		}
+		if strings.Contains(string(t2Data), `"schema_version"`) {
+			t.Errorf("TICKET-2 should not be migrated when filtered by ticket-id")
+		}
+	})
+
+	t.Run("idempotent migration marks already upgraded ledgers up-to-date", func(t *testing.T) {
+		cmd := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", wsDir,
+			"--ticket-id", "TICKET-1",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("second migrate run failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "up-to-date") {
+			t.Errorf("expected status 'up-to-date', got: %s", out)
+		}
+		if !strings.Contains(out, "Migrated: 0 | Up to date: 1") {
+			t.Errorf("expected summary with 1 up to date, got: %s", out)
+		}
+	})
+}
+
+func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
+	wsDir := setupTestWorkspace(t)
+
+	cmd := exec.Command(
+		cliBinaryPath,
+		"backfill",
+		"--workspaces", wsDir,
+		"--migrate-schema",
+		"--recompute-git",
+	)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("backfill with --migrate-schema failed: %v, stderr: %s", err, stderr.String())
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "Migrate Schema:              true") {
+		t.Errorf("expected Migrate Schema: true in header, got: %s", out)
+	}
+	if !strings.Contains(out, "Schema Migration:") {
+		t.Errorf("expected Schema Migration section in output, got: %s", out)
+	}
+
+	// Verify both tickets have schema_version 2
+	for _, tid := range []string{"TICKET-1", "TICKET-2"} {
+		data, err := os.ReadFile(filepath.Join(wsDir, tid, "agentic_metrics.json"))
+		if err != nil {
+			t.Fatalf("failed reading %s: %v", tid, err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("failed parsing %s: %v", tid, err)
+		}
+		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 2 {
+			t.Errorf("expected %s schema_version 2, got %v", tid, parsed.SchemaVersion)
+		}
+	}
+}
+
+func containsEmoji(s string) bool {
+	for _, r := range s {
+		if (r >= 0x1F600 && r <= 0x1F64F) ||
+			(r >= 0x1F300 && r <= 0x1F5FF) ||
+			(r >= 0x1F680 && r <= 0x1F6FF) ||
+			(r >= 0x2600 && r <= 0x26FF) ||
+			(r >= 0x2700 && r <= 0x27BF) ||
+			(r >= 0x1F900 && r <= 0x1F9FF) ||
+			(r >= 0x1FA70 && r <= 0x1FAFF) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestCLIMigrateCommand_Adversarial(t *testing.T) {
+	t.Run("fails on non-existent workspaces directory", func(t *testing.T) {
+		cmd := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", "/non/existent/path/for/sure/workspace",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected migrate command to exit with error for non-existent workspaces")
+		}
+		if !strings.Contains(stderr.String(), "Migration failed") {
+			t.Errorf("expected 'Migration failed' in stderr, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("empty workspaces directory displays clean message", func(t *testing.T) {
+		emptyDir := t.TempDir()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", emptyDir,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("migrate failed on empty dir: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "No matching ticket workspaces found to migrate") {
+			t.Errorf("expected 'No matching ticket workspaces found to migrate', got: %s", out)
+		}
+	})
+
+	t.Run("filtering for non-existent ticket ID displays clean message", func(t *testing.T) {
+		wsDir := setupTestWorkspace(t)
+		cmd := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", wsDir,
+			"--ticket-id", "NON-EXISTENT-TICKET",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("migrate failed with filter: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "No matching ticket workspaces found to migrate") {
+			t.Errorf("expected clean message for unmatching ticket filter, got: %s", out)
+		}
+	})
+
+	t.Run("output strictly adheres to zero-emoji invariant", func(t *testing.T) {
+		wsDir := setupTestWorkspace(t)
+		cmd := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", wsDir,
+			"--dry-run",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("migrate failed: %v", err)
+		}
+
+		if containsEmoji(stdout.String()) {
+			t.Errorf("stdout contains forbidden emoji characters: %s", stdout.String())
+		}
+		if containsEmoji(stderr.String()) {
+			t.Errorf("stderr contains forbidden emoji characters: %s", stderr.String())
+		}
+	})
+
+	t.Run("update summaries is strictly idempotent across runs", func(t *testing.T) {
+		root := t.TempDir()
+		wsDir := filepath.Join(root, "workspaces")
+		t1Dir := filepath.Join(wsDir, "T-SUM")
+		_ = os.MkdirAll(t1Dir, 0755)
+
+		t1JSON := `{
+			"ticket_id": "T-SUM",
+			"ticket_title": "Summary Test",
+			"updated_at": "2026-10-18T10:00:00Z",
+			"code": {"lines_added": 20, "sdlc_iterations": 1},
+			"invocations": [],
+			"tools": []
+		}`
+		_ = os.WriteFile(filepath.Join(t1Dir, "agentic_metrics.json"), []byte(t1JSON), 0644)
+		_ = os.WriteFile(filepath.Join(t1Dir, "SUMMARY.md"), []byte("# T-SUM Summary\nInitial description.\n"), 0644)
+
+		// Pass 1: Migrate and update summary
+		cmd1 := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", wsDir,
+			"--update-summaries",
+		)
+		var s1, e1 bytes.Buffer
+		cmd1.Stdout = &s1
+		cmd1.Stderr = &e1
+		if err := cmd1.Run(); err != nil {
+			t.Fatalf("pass 1 failed: %v, stderr: %s", err, e1.String())
+		}
+
+		sum1, err := os.ReadFile(filepath.Join(t1Dir, "SUMMARY.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(sum1), "### Workflow Efficiency") {
+			t.Errorf("expected SUMMARY.md to contain workflow efficiency table")
+		}
+
+		// Pass 2: Re-run
+		cmd2 := exec.Command(
+			cliBinaryPath,
+			"migrate",
+			"--workspaces", wsDir,
+			"--update-summaries",
+		)
+		var s2, e2 bytes.Buffer
+		cmd2.Stdout = &s2
+		cmd2.Stderr = &e2
+		if err := cmd2.Run(); err != nil {
+			t.Fatalf("pass 2 failed: %v, stderr: %s", err, e2.String())
+		}
+
+		sum2, err := os.ReadFile(filepath.Join(t1Dir, "SUMMARY.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(sum1) != string(sum2) {
+			t.Errorf("SUMMARY.md modified during second idempotent run")
+		}
+	})
+}
+
+func TestCLIHelpCommand(t *testing.T) {
+	t.Run("root --help outputs structured subcommands and root flags", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "--help")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected --help to exit cleanly, got error: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String() + stderr.String()
+		expectedStrings := []string{
+			"AgenticLens Developer Telemetry and Observability CLI",
+			"Usage:",
+			"agentic-lens <subcommand> [flags]",
+			"server",
+			"generate",
+			"backfill",
+			"migrate",
+			"version",
+			"--workspaces",
+			"--ticket-id",
+			"--list",
+			"--anomalies",
+			"--append",
+			"--json-output",
+			"agentic-lens <subcommand> --help",
+		}
+		for _, exp := range expectedStrings {
+			if !strings.Contains(out, exp) {
+				t.Errorf("expected help output to contain %q, but was missing. Output:\n%s", exp, out)
+			}
+		}
+
+		if containsEmoji(out) {
+			t.Errorf("root --help output contains forbidden emoji characters: %s", out)
+		}
+	})
+
+	t.Run("root -h outputs structured subcommands", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "-h")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected -h to exit cleanly, got error: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String() + stderr.String()
+		for _, sub := range []string{"server", "generate", "backfill", "migrate", "version"} {
+			if !strings.Contains(out, sub) {
+				t.Errorf("expected -h output to contain subcommand %q, but was missing", sub)
+			}
+		}
+
+		if containsEmoji(out) {
+			t.Errorf("root -h output contains forbidden emoji characters: %s", out)
+		}
+	})
+
+	t.Run("root help subcommand outputs structured subcommands", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "help")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected help to exit cleanly, got error: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String() + stderr.String()
+		for _, sub := range []string{"server", "generate", "backfill", "migrate", "version"} {
+			if !strings.Contains(out, sub) {
+				t.Errorf("expected help output to contain subcommand %q, but was missing", sub)
+			}
+		}
+
+		if containsEmoji(out) {
+			t.Errorf("root help output contains forbidden emoji characters: %s", out)
+		}
+	})
+
+	t.Run("root -help outputs structured subcommands", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "-help")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected -help to exit cleanly, got error: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String() + stderr.String()
+		for _, sub := range []string{"server", "generate", "backfill", "migrate", "version"} {
+			if !strings.Contains(out, sub) {
+				t.Errorf("expected -help output to contain subcommand %q, but was missing", sub)
+			}
+		}
+
+		if containsEmoji(out) {
+			t.Errorf("root -help output contains forbidden emoji characters: %s", out)
+		}
+	})
+
+	t.Run("backfill --help lists all backfill flags", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "backfill", "--help")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected backfill --help to exit cleanly, got error: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String() + stderr.String()
+		expectedFlags := []string{
+			"--migrate-schema",
+			"--recompute-git",
+			"--recompute-db",
+			"--dry-run",
+			"--update-summaries",
+			"--force",
+			"--workspaces",
+			"--ticket-id",
+			"--db-path",
+		}
+		for _, flag := range expectedFlags {
+			if !strings.Contains(out, flag) {
+				t.Errorf("expected backfill --help output to contain %q, but was missing. Output:\n%s", flag, out)
+			}
+		}
+
+		if containsEmoji(out) {
+			t.Errorf("backfill --help output contains forbidden emoji characters: %s", out)
+		}
+	})
+
+	t.Run("backfill -h and backfill help list all backfill flags", func(t *testing.T) {
+		for _, invocation := range [][]string{{"backfill", "-h"}, {"backfill", "help"}} {
+			cmd := exec.Command(cliBinaryPath, invocation...)
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout = &stdout
+			cmd.Stderr = &stderr
+
+			if err := cmd.Run(); err != nil {
+				t.Fatalf("expected %v to exit cleanly, got error: %v, stderr: %s", invocation, err, stderr.String())
+			}
+
+			out := stdout.String() + stderr.String()
+			for _, flag := range []string{"--migrate-schema", "--recompute-git", "--recompute-db", "--dry-run"} {
+				if !strings.Contains(out, flag) {
+					t.Errorf("expected %v output to contain %q", invocation, flag)
+				}
+			}
+			if containsEmoji(out) {
+				t.Errorf("%v output contains forbidden emoji characters", invocation)
+			}
+		}
+	})
+
+	t.Run("migrate --help lists all migrate flags", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "migrate", "--help")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected migrate --help to exit cleanly, got error: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String() + stderr.String()
+		expectedFlags := []string{
+			"--workspaces",
+			"--ticket-id",
+			"--target-version",
+			"--dry-run",
+			"--backup",
+			"--update-summaries",
+		}
+		for _, flag := range expectedFlags {
+			if !strings.Contains(out, flag) {
+				t.Errorf("expected migrate --help output to contain %q, but was missing. Output:\n%s", flag, out)
+			}
+		}
+
+		if containsEmoji(out) {
+			t.Errorf("migrate --help output contains forbidden emoji characters: %s", out)
+		}
+	})
+
+	t.Run("migrate -h and migrate help list all migrate flags", func(t *testing.T) {
+		for _, invocation := range [][]string{{"migrate", "-h"}, {"migrate", "help"}} {
+			cmd := exec.Command(cliBinaryPath, invocation...)
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout = &stdout
+			cmd.Stderr = &stderr
+
+			if err := cmd.Run(); err != nil {
+				t.Fatalf("expected %v to exit cleanly, got error: %v, stderr: %s", invocation, err, stderr.String())
+			}
+
+			out := stdout.String() + stderr.String()
+			for _, flag := range []string{"--target-version", "--dry-run", "--backup", "--update-summaries"} {
+				if !strings.Contains(out, flag) {
+					t.Errorf("expected %v output to contain %q", invocation, flag)
+				}
+			}
+			if containsEmoji(out) {
+				t.Errorf("%v output contains forbidden emoji characters", invocation)
+			}
+		}
+	})
+
+	t.Run("help <subcommand> delegates to subcommand help", func(t *testing.T) {
+		cmdMigrate := exec.Command(cliBinaryPath, "help", "migrate")
+		var outMigrate bytes.Buffer
+		cmdMigrate.Stdout = &outMigrate
+		if err := cmdMigrate.Run(); err != nil {
+			t.Fatalf("expected help migrate to exit cleanly: %v", err)
+		}
+		if !strings.Contains(outMigrate.String(), "--target-version") {
+			t.Errorf("expected help migrate to list --target-version")
+		}
+
+		cmdBackfill := exec.Command(cliBinaryPath, "help", "backfill")
+		var outBackfill bytes.Buffer
+		cmdBackfill.Stdout = &outBackfill
+		if err := cmdBackfill.Run(); err != nil {
+			t.Fatalf("expected help backfill to exit cleanly: %v", err)
+		}
+		if !strings.Contains(outBackfill.String(), "--migrate-schema") {
+			t.Errorf("expected help backfill to list --migrate-schema")
 		}
 	})
 }

@@ -233,7 +233,7 @@ type AgenticFactLedgerDTO struct {
 	Code          CodeFactsDTO        `json:"code"`
 	Invocations   []InvocationFactDTO `json:"invocations"`
 	Tools         []ToolFactDTO       `json:"tools"`
-	Events        []EventFactDTO      `json:"events,omitempty"`
+	Events        []EventFactDTO      `json:"events"`
 }
 
 func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
@@ -247,7 +247,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	}
 
 	var events []domain.EventFact
-	if len(dto.Events) > 0 {
+	if dto.Events != nil {
 		events = make([]domain.EventFact, len(dto.Events))
 		for i, e := range dto.Events {
 			events[i] = e.ToDomain()
@@ -312,11 +312,13 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 	}
 
 	var events []EventFactDTO
-	if len(ledger.Events) > 0 {
+	if ledger.Events != nil {
 		events = make([]EventFactDTO, len(ledger.Events))
 		for i, e := range ledger.Events {
 			events[i] = EventFactDTOFromDomain(e)
 		}
+	} else if ledger.SchemaVersion != nil && *ledger.SchemaVersion >= 2 {
+		events = []EventFactDTO{}
 	}
 
 	return AgenticFactLedgerDTO{

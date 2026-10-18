@@ -73,6 +73,28 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		return report, nil
 	}
 
+	// 1.5. If schema migration requested, execute universal schema migration runner first
+	if opts.MigrateSchema {
+		migRunner := NewMigrationRunner(nil)
+		migOpts := MigrationOptions{
+			WorkspacesDir:   opts.WorkspacesDir,
+			TicketID:        opts.TicketID,
+			TargetVersion:   domain.CurrentSchemaVersion,
+			DryRun:          opts.DryRun,
+			Backup:          false,
+			UpdateSummaries: false,
+		}
+		migReport, migErr := migRunner.Run(migOpts)
+		report.SchemaMigration = migReport
+		if migErr != nil {
+			report.Warnings = append(report.Warnings, fmt.Sprintf("Schema migration failed: %v", migErr))
+		} else if migReport != nil {
+			for _, w := range migReport.Errors {
+				report.Warnings = append(report.Warnings, fmt.Sprintf("Schema migration: %s", w))
+			}
+		}
+	}
+
 	// Prepare SQLite DB handle if DB recompute requested
 	var opencodeDB *opencode.OpenCodeDB
 	if opts.RecomputeDB {

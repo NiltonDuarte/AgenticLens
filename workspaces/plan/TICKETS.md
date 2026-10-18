@@ -55,7 +55,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - **AL-15**: Implement Universal Multi-Version Schema Migration Engine for Telemetry Ledgers
   - **Subsystem**: Domain / Adapters / CLI / Tests
   - **Phase**: Phase 3
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None (AL-12 Done)
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`

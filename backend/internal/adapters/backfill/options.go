@@ -10,4 +10,15 @@ type BackfillOptions struct {
 	UpdateSummaries bool
 	DBPath          string
 	Force           bool
+	MigrateSchema   bool
+}
+
+// MigrationOptions specifies parameters for standalone universal schema migration.
+type MigrationOptions struct {
+	WorkspacesDir   string
+	TicketID        string
+	TargetVersion   int
+	DryRun          bool
+	Backup          bool
+	UpdateSummaries bool
 }
