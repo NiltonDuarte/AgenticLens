@@ -11,6 +11,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-8 anomaly api endpoints and fleet health aggregation.md`
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
+- `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 - `workspaces/plan/to-do/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
 - `workspaces/plan/to-do/AL-14 implement automated github release workflows for release candidates and stable versions.md`
@@ -21,7 +22,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/to-do/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
-- `workspaces/plan/to-do/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 
 ---
@@ -67,14 +67,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: AL-17
   - **File**: `workspaces/plan/to-do/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
-
-- **AL-22**: Render Rich Markdown for Workspace Summary and Contract Artifacts
-  - **Subsystem**: Presentation / Web / Tests
-  - **Phase**: Phase 4
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 
 ---
 
@@ -123,6 +115,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-22**: Render Rich Markdown for Workspace Summary and Contract Artifacts
+  - **Subsystem**: Presentation / Web / Tests
+  - **Phase**: Phase 4
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 
 - **AL-8**: Anomaly API Endpoints and Fleet Health Aggregation
   - **Subsystem**: Adapters / HTTP / Server / Tests

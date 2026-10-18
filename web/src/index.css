@@ -1127,7 +1127,16 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 14px;
+}
+
+.artifact-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .artifact-tabs {
@@ -1158,12 +1167,72 @@ body {
   border-color: var(--accent-blue);
 }
 
+.view-mode-toggle {
+  display: inline-flex;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.view-mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.view-mode-btn:hover {
+  color: var(--text-primary);
+}
+
+.view-mode-btn.active {
+  background-color: var(--accent-blue);
+  color: #ffffff;
+}
+
+.artifact-copy-btn {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 64px;
+  text-align: center;
+}
+
+.artifact-copy-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background-color: var(--bg-surface-hover);
+}
+
+.artifact-copy-btn.copied {
+  background-color: rgba(16, 185, 129, 0.15);
+  border-color: var(--status-green);
+  color: var(--status-green);
+}
+
+.artifact-copy-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .artifact-body {
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  padding: 16px;
-  max-height: 400px;
+  padding: 18px;
+  max-height: 520px;
   overflow-y: auto;
 }
 
@@ -1179,6 +1248,237 @@ body {
 .artifact-empty-note {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* Rich Markdown Container and Elements */
+.artifact-markdown-container {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.artifact-markdown-container > :first-child {
+  margin-top: 0;
+}
+
+.artifact-markdown-container > :last-child {
+  margin-bottom: 0;
+}
+
+.artifact-markdown-container h1,
+.markdown-h1 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.artifact-markdown-container h2,
+.markdown-h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 18px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.artifact-markdown-container h3,
+.markdown-h3 {
+  font-size: 1.0rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 14px 0 6px;
+}
+
+.artifact-markdown-container h4,
+.markdown-h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 12px 0 4px;
+}
+
+.artifact-markdown-container h5,
+.markdown-h5 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 10px 0 4px;
+}
+
+.artifact-markdown-container h6,
+.markdown-h6 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 8px 0 4px;
+}
+
+.artifact-markdown-container p {
+  margin: 10px 0;
+}
+
+.artifact-markdown-container strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.artifact-markdown-container ul,
+.artifact-markdown-container ol {
+  padding-left: 24px;
+  margin: 10px 0;
+}
+
+.artifact-markdown-container li {
+  margin: 4px 0;
+}
+
+.artifact-markdown-container ul.contains-task-list {
+  list-style-type: none;
+  padding-left: 4px;
+}
+
+.markdown-task-list-item {
+  list-style-type: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.markdown-checkbox {
+  accent-color: var(--accent-blue);
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  vertical-align: middle;
+  cursor: default;
+}
+
+.markdown-table-wrapper {
+  overflow-x: auto;
+  margin: 14px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.markdown-th {
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.markdown-th:last-child {
+  border-right: none;
+}
+
+.markdown-td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.markdown-td:last-child {
+  border-right: none;
+}
+
+.markdown-table tbody tr:nth-child(even) {
+  background-color: var(--bg-surface);
+}
+
+.markdown-table tbody tr:nth-child(odd) {
+  background-color: var(--bg-primary);
+}
+
+.markdown-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown-table tbody tr:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.markdown-blockquote,
+.artifact-markdown-container blockquote {
+  border-left: 3px solid var(--accent-blue);
+  margin: 12px 0;
+  padding: 8px 16px;
+  background-color: rgba(59, 130, 246, 0.05);
+  color: var(--text-secondary);
+  border-radius: 0 4px 4px 0;
+}
+
+.markdown-blockquote p {
+  margin: 4px 0;
+}
+
+.markdown-pre,
+.artifact-markdown-container pre {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 14px;
+  overflow-x: auto;
+  margin: 12px 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+.markdown-pre code,
+.artifact-markdown-container pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.markdown-code-inline,
+.artifact-markdown-container :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #93c5fd;
+}
+
+.markdown-link,
+.artifact-markdown-container a {
+  color: var(--accent-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-link:hover,
+.artifact-markdown-container a:hover {
+  color: var(--accent-blue-hover);
+}
+
+.artifact-markdown-container hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 18px 0;
 }
 
 /* Metric Progression View */
