@@ -18,4 +18,6 @@ Updates `workspaces/plan/TICKETS.md` and ticket specification files for complete
 - Added sliding-window pruning to `.github/workflows/release-candidate.yml` keeping the latest 3 candidate pre-releases and cleaning older tags via GitHub CLI.
 - Added automated sweep to `.github/workflows/release-stable.yml` purging all remaining pre-release candidates upon publishing a stable release.
 - Optimized `.github/workflows/ci.yml` with concurrency cancellation on branches/PRs while preserving `main` runs, and restricted triggers strictly to `main` pushes and pull requests.
+- Added cross-platform compilation to `Makefile` producing `bin/agentic-lens-linux-amd64`, `bin/agentic-lens-linux-arm64`, `bin/agentic-lens-darwin-arm64`, and `bin/agentic-lens-darwin-amd64`.
+- Added architecture dispatcher wrapper script at `scripts/agentic-lens-wrapper.sh`, deployed to `bin/agentic-lens` during `make build` to seamlessly route executions on both host macOS and Linux containers.
 - Allocated ticket workspace under `workspaces/GEN-4/`.

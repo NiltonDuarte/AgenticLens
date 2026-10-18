@@ -83,7 +83,13 @@ build:
 		(cd $(WEB_DIR) && npm run build); \
 	fi
 	@mkdir -p $(BIN_DIR)
-	(cd $(BACKEND_DIR) && go build -ldflags "$(LDFLAGS)" -o ../$(BINARY) ./cmd/agentic-lens)
+	@echo "Building multi-platform binaries..."
+	(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o ../$(BIN_DIR)/agentic-lens-linux-amd64 ./cmd/agentic-lens)
+	(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o ../$(BIN_DIR)/agentic-lens-linux-arm64 ./cmd/agentic-lens)
+	(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o ../$(BIN_DIR)/agentic-lens-darwin-arm64 ./cmd/agentic-lens)
+	(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o ../$(BIN_DIR)/agentic-lens-darwin-amd64 ./cmd/agentic-lens)
+	@cp scripts/agentic-lens-wrapper.sh $(BINARY)
+	@chmod +x $(BINARY)
 
 server: build
 	./$(BINARY) server --port $(PORT) --workspaces $(WORKSPACES)

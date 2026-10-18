@@ -20,6 +20,10 @@
 - Optimized `.github/workflows/ci.yml`:
   - Added concurrency group with `cancel-in-progress` for branches and pull requests to prevent wasted runner minutes on obsolete commits, preserving runs on `main`.
   - Restricted trigger events strictly to pushes on `main` and pull requests targeting `main`.
+- Implemented multi-platform build and architecture dispatcher:
+  - Updated `Makefile` `build` target to compile `agentic-lens-linux-amd64`, `agentic-lens-linux-arm64`, `agentic-lens-darwin-arm64`, and `agentic-lens-darwin-amd64`.
+  - Added `scripts/agentic-lens-wrapper.sh` POSIX shell dispatcher that dynamically detects host OS/architecture and executes the corresponding native binary.
+  - Deployed wrapper to `bin/agentic-lens` during build.
 - Allocated isolated workspace under `workspaces/GEN-4/`.
 
 ## Verification
@@ -32,14 +36,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 21m 38s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 119.4k tokens (60% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Active Agent Duration:** 27m 36s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 146.4k tokens (73% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +25 / -0 lines across 2 code files (excluding docs)
-- **Reasoning Effort:** 27,373 reasoning tokens (53.1% of generated output)
-- **Tool Health & Self-Correction:** 173 tool calls (2 self-corrections, 98.8% success rate)
+- **Code Delivered:** +4 / -2 lines across 1 code files (excluding docs)
+- **Reasoning Effort:** 35,657 reasoning tokens (55.1% of generated output)
+- **Tool Health & Self-Correction:** 223 tool calls (2 self-corrections, 99.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 1 execution anomaly detected (1 CRITICAL).
@@ -52,11 +56,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 1,060,309 | 24,160 | 14,052,348 | 93.0% | 119.4k | ELEVATED | $2.04 |
-| **Total** | **1** | **1,060,309** | **24,160** | **14,052,348** | **93.0%** | **119.4k** | **ELEVATED** | **$2.04** |
+| **orchestrator** | 1 | 1,388,255 | 29,088 | 20,867,433 | 93.8% | 146.4k | ELEVATED | $2.85 |
+| **Total** | **1** | **1,388,255** | **29,088** | **20,867,433** | **93.8%** | **146.4k** | **ELEVATED** | **$2.85** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 1,060,309 | 24,160 | 14,052,348 | 93.0% | $2.04 |
-| **Total** | **1** | **1,060,309** | **24,160** | **14,052,348** | **93.0%** | **$2.04** |
+| **gemini-3.8-flash** | 1 | 1,388,255 | 29,088 | 20,867,433 | 93.8% | $2.85 |
+| **Total** | **1** | **1,388,255** | **29,088** | **20,867,433** | **93.8%** | **$2.85** |
