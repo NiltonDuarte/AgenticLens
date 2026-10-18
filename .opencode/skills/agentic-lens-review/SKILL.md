@@ -1,105 +1,105 @@
 ---
 name: agentic-lens-review
-description: Use when auditing the AgenticLens Go and TypeScript codebase, diagnosing slow test suites, profiling test execution bottlenecks, or reviewing PR diffs for architectural compliance and performance.
+description: Use when auditing, reviewing, or finding refactoring, performance, and architectural improvement opportunities in the AgenticLens Go and TypeScript codebase, with deep test suite profiling for slow tests.
 ---
 
-# AgenticLens Code & Test Suite Review Skill
+# AgenticLens Architecture, Code & Test Suite Review
 
-Audits the **AgenticLens** codebase (Go backend/CLI and TypeScript frontend). Performs deep profiling of the test suite to diagnose and fix slow test executions, audits architectural integrity against `TECHNICAL_GUIDELINES.md`, and verifies zero `any`, FCIS layer isolation, and single-binary packaging.
-
----
-
-## 1. Diagnostics & Review Modes
-
-This skill supports two specialized audit modes:
-
-### Mode 1: Test Suite Performance & Runtime Optimization (Primary)
-Use when tests take too long to run or CI execution is sluggish.
-Profiles both Go and TypeScript test suites, pinpoints the slowest tests, diagnoses the root cause (I/O churn, missing parallelism, artificial sleeps, heavy fixtures), and generates concrete performance optimization patches.
-
-### Mode 2: Full Codebase & Diff Review
-Use when reviewing a PR, branch diff, or active iteration (`workspaces/<TICKET_ID>/`).
-Audits changes against `TECHNICAL_GUIDELINES.md` (FCIS inward flow, Go 1.23+ idioms, TypeScript strict mode, zero `any`, `embed.FS` bundling, zero emojis) and originating ticket specifications.
+Audits the **AgenticLens** codebase (Go backend/CLI/engine and TypeScript frontend) for architectural drift, code smells, shallow abstractions, and test suite execution bottlenecks. Synthesizes deep module design with strict Functional Core, Imperative Shell (FCIS) invariants to deliver prioritized, actionable refactoring and performance optimization proposals.
 
 ---
 
-## 2. Test Suite Profiling & Diagnostics Protocol
+## Core Review Principles
 
-### Step 1: Measure & Profile Go Test Suite
-Run the Go test suite with verbose JSON output to extract precise execution durations:
-```bash
-go test -json ./... | jq -r 'select(.Action=="pass" or .Action=="fail") | select(.Test != null) | "\(.Elapsed)s \(.Package) \(.Test)"' | sort -nr | head -20
-```
-Also measure total package-level durations:
-```bash
-go test -json ./... | jq -r 'select(.Action=="pass" or .Action=="fail") | select(.Test == null) | "\(.Elapsed)s \(.Package)"' | sort -nr
-```
-
-### Step 2: Measure TypeScript / Frontend Test Suite (if present)
-```bash
-test -d web && (cd web && npm test -- --reporter=verbose) || true
-```
-
-### Step 3: Investigate Root-Cause Bottlenecks
-
-Inspect flagged slow tests against the following anti-pattern checklist:
-
-1. **Missing Test Parallelism (`t.Parallel()`)**:
-   - Are independent unit and table-driven subtests executing serially?
-   - Add `t.Parallel()` to top-level test functions and inside `t.Run()` loops (capturing `tc := tc` or relying on Go 1.22+ loop scoping).
-2. **Artificial Delays & Sleeps**:
-   - Search for `time.Sleep(...)` across `*_test.go` and `web/**/*.test.ts`.
-   - **Rule**: Banish `time.Sleep` from tests. Replace with synchronized channels (`select { case <-done: ... case <-time.After(50*time.Millisecond): t.Fatal(...) }`), mutex conditions, or deterministic polled assertions.
-3. **Redundant Disk I/O & Database Fixture Churn**:
-   - Are tests creating fresh SQLite databases on disk (`tempfile`) instead of using in-memory SQLite (`:memory:` or `file::memory:?cache=shared`)?
-   - Are file traversal tests generating thousands of files on physical disk rather than using memory-backed filesystems or minimal representative trees?
-4. **Subprocess Spawning in Loops**:
-   - Are tests executing `exec.Command("git", ...)` or `exec.Command("go", ...)` inside tight test loops?
-   - Refactor tests to call pure domain functions or memory adapters directly instead of shelling out to subprocesses.
-5. **Slow Pure Domain Tests**:
-   - Pure functions in `internal/domain` should execute in **microseconds (< 0.001s)**. If any domain test exceeds 5ms, check for accidental I/O, heavy memory allocations, or quadratic algorithms.
-6. **Frontend Test Environment Overhead**:
-   - Are pure utility formatters running under heavy `jsdom` rather than lightweight node/happy-dom test runners?
-   - Are tests repeatedly mounting full React trees when testing pure functional calculations?
+- **Subtraction Before Addition**: Always look for what can be deleted first (dead code, speculative wrappers, redundant adapters, unused interfaces) before proposing new abstractions.
+- **Deep Modules Over Passthroughs**: A module should provide significant capability behind a compact interface. Flag shallow wrappers that just delegate calls without compressing complexity.
+- **Minimize Reader Load**: Measure maintainability by mental tracing cost. Can a developer answer "where does X come from?" and "what computes X?" in under 30 seconds? If not, flag for simplification.
+- **Domain Modeling Over Scattered Conditionals**: Replace ad-hoc boolean flags, status strings, and nested conditionals with typed value structs, string enums, and exhaustive type switches in Go, and Discriminated Unions in TypeScript.
+- **Microsecond Pure Domain SLA**: Pure domain functions in `internal/domain` must execute in microseconds without disk, network, or clock side effects. Tests must run deterministically with zero artificial delays.
 
 ---
 
-## 3. Architecture & Standards Audit Checklist
+## Audit Workflow
 
-Verify compliance with `TECHNICAL_GUIDELINES.md`:
-
-### Go Standards
-- **FCIS Isolation**: `internal/domain` contains zero imports of `os`, `net/http`, `database/sql`, or outer adapter packages.
-- **Value Semantics**: Domain models use value-semantic structs; aggregations are pure deterministic functions.
-- **Zero `any` / `interface{}`**: All structs, interfaces, and function parameters use concrete types or strictly bounded generics.
-- **Error Discipline**: Errors are wrapped with domain context using `%w`. Zero discarded errors (`_ = ...`).
-- **Single Binary**: Static assets in `web/dist` are bundled via `embed.FS`.
-
-### TypeScript Standards
-- **Strict Mode**: `"strict": true` and `"noImplicitAny": true`. Zero `any` types.
-- **Pure Presentation**: View components cleanly separated from API clients. Graceful empty states.
-- **Zero Emojis**: Audit code, comments, UI strings, charts, metric cards, and terminal logs for zero emojis.
+### 1. Scope & Hotspot Discovery
+Determine the audit boundary before reading files:
+1. If the user specifies a subsystem, package, or ticket (e.g. `internal/domain`, `internal/adapters`, `web/`, or a workspace diff), focus on that scope.
+2. Otherwise, identify churn hotspots:
+   ```bash
+   git log --oneline -n 50 --stat
+   ```
+3. Read baseline documents:
+   - `TECHNICAL_GUIDELINES.md` (Go & TypeScript architectural invariants, FCIS, typing, `embed.FS`)
+   - `.agenticlens/config.json` (Project parametrization)
 
 ---
 
-## 4. Review Report Structure
+### 2. Multi-Tier Inspection
 
-The review must output an actionable report in markdown format:
+Execute four inspection tiers against the target scope:
+
+#### Tier 1: Layering & Boundary Discipline (Go + TypeScript FCIS)
+- **FCIS Isolation Breach**: Does `internal/domain` import any outer layer (`internal/adapters`, `cmd/`) or I/O library (`os`, `net/http`, `database/sql`, `path/filepath`)? Reject immediately.
+- **Impure Domain Functions**: Do functions in `internal/domain` call `time.Now()`, generate random numbers, or access global mutable variables instead of receiving values as immutable arguments?
+- **Boundary Model Leakage**: Are raw JSON dictionaries (`map[string]any`) leaking into domain functions? External JSON must be unmarshaled and validated in `internal/adapters` into immutable value structs before passing to domain logic.
+- **Stateless Handlers & Scanner**: Do adapter structs or HTTP handlers accumulate mutable runtime state between calls instead of remaining strictly stateless?
+
+#### Tier 2: Module Depth & Structural Friction
+- **Shallow Passthroughs & One-Caller Wrappers**: Are there Go functions or TypeScript helpers that merely forward arguments to another standard library or third-party function without adding validation, domain conversion, or caching? Flag for inlining or deletion.
+- **Unnecessary Interfaces**: Are Go interfaces defined in producer packages or declared with only one implementation before any second implementation exists? In Go, define small interfaces where they are consumed. Flag speculative interfaces.
+- **The Deletion Test**: If a helper or adapter is deleted, does it simplify the system or scatter complexity? If deleting simplifies the codebase, recommend deletion first.
+- **Speculative Generality**: Are there unneeded Go generics (`[T any]`), extra hook callbacks, or hypothetical configuration options not backed by actual telemetry requirements?
+
+#### Tier 3: Domain Modeling & Fowler Code Smells
+- **Primitive Obsession**: Are raw strings or integers used for core domain concepts (e.g. ticket IDs, model names, token counts, health categories) instead of dedicated typed string/int types (e.g. `type TicketID string`, `type HealthStatus string`)?
+- **Feature Envy**: Does a method in package A constantly reach into and manipulate fields of struct B? Move the calculation onto struct B or into `internal/domain/aggregations`.
+- **Data Clumps**: Do the same group of token counters (input, output, cache read/write, reasoning) travel together as separate function parameters? Bundle them into a dedicated value struct (`TokenMetrics`).
+- **Missing Discriminated Unions / Sum Types**: Are multi-state UI results or Go workflow results represented with multiple optional pointers and boolean flags instead of typed state structs or TypeScript Discriminated Unions?
+- **Shotgun Surgery**: Does adding a new metric dimension require coordinated edits across multiple disconnected files? Gather metric computation into cohesive domain aggregations.
+
+#### Tier 4: Test Suite Performance, Execution Speed & Flakiness
+- **Millisecond Profiling**: Run test suite profiling to identify all tests exceeding 100ms:
+  ```bash
+  go test -json ./... | jq -r 'select(.Action=="pass" or .Action=="fail") | select(.Test != null) | "\(.Elapsed)s \(.Package) \(.Test)"' | sort -nr | head -20
+  ```
+- **Missing Test Parallelism (`t.Parallel()`)**:
+  - Are independent unit tests and table-driven subtests executing serially?
+  - Verify `t.Parallel()` is applied to independent test functions and inside `t.Run()` loops.
+- **Artificial Delays & Sleeps**:
+  - Search for `time.Sleep(...)` across `*_test.go` and `web/**/*.test.ts`.
+  - Banish `time.Sleep`. Replace with deterministic channel synchronization (`select { case <-done: ... case <-time.After(50*time.Millisecond): ... }`), mutex conditions, or polled assertions.
+- **Disk & SQLite I/O Churn**:
+  - Flag tests generating physical on-disk files or temporary database files instead of in-memory representations (`:memory:` or memory-backed filesystems).
+- **Subprocess Spawning in Loops**:
+  - Flag tests shelling out to `exec.Command("git", ...)` or `exec.Command("go", ...)` inside tight test loops. Replace with fast in-memory adapters or static fixtures.
+- **Pure Domain Microsecond SLA**:
+  - All unit tests in `internal/domain` must execute in **microseconds (< 0.001s)** with zero mocks.
+- **Frontend Test Environment Overhead**:
+  - Check for heavy `jsdom` setup on pure utility tests and unmocked component tree mounts.
+
+---
+
+### 3. Deliver Findings
+
+Output findings as a structured Markdown review report:
 
 ```markdown
-# AgenticLens Code & Test Review Report
+# AgenticLens Architecture, Code & Test Review Report: <Scope>
 
-## 1. Test Suite Performance Diagnostics
+## 1. Executive Summary
+Concise assessment of the audited scope, highlighting the top 1-2 architectural risks, highest-yield code simplifications, and test execution bottlenecks.
+
+## 2. Test Suite Performance Diagnostics
 - **Total Suite Execution Time**: <X.XXs>
 - **Target Execution Time**: <Y.YYs>
 
-### Top Slowest Tests
+### Slowest Tests & Bottlenecks
 | Duration | Package | Test Name | Diagnosed Bottleneck | Recommended Optimization |
 |---|---|---|---|---|
-| 1.45s | `internal/adapters` | `TestScanWorkspaces` | Disk fixture generation | Switch to in-memory fixtures / t.Parallel() |
-| 0.82s | `internal/adapters` | `TestExtractMetrics` | Subprocess git invocation | Mock git output / stub helper |
+| 1.45s | `internal/adapters` | `TestScanWorkspaces` | Disk fixture generation | In-memory fixtures + `t.Parallel()` |
+| 0.82s | `internal/adapters` | `TestExtractMetrics` | Subprocess git invocation | In-memory adapter stub |
 
-### Test Performance Findings & Actionable Fixes
+### Test Performance Findings & Concrete Patches
 1. **<Bottleneck Category 1>**:
    - Problem: ...
    - Prescription / Code Patch:
@@ -107,16 +107,26 @@ The review must output an actionable report in markdown format:
    // Before vs After
    ```
 
-## 2. Architecture & Standards Audit
-| Area | Status | Finding / Violation |
-|---|---|---|
-| FCIS Layer Flow | PASS / WARN | ... |
-| Go Type Strictness | PASS / FAIL | ... |
-| Error Handling (%w) | PASS / FAIL | ... |
-| TypeScript Strictness | PASS / FAIL | ... |
-| Emoji Audit | PASS / FAIL | ... |
+## 3. Architecture & Code Smells by Severity
 
-## 3. Prioritized Remediation Plan
-- [ ] Task 1: ...
-- [ ] Task 2: ...
+### [High | Medium | Low]: <Finding Title>
+- **Tier**: Tier 1 (Layering) | Tier 2 (Module Depth) | Tier 3 (Domain Modeling)
+- **Affected Files**: `<path/to/file.go>:<line>`
+- **Observed Smell**: Concrete description of the smell, boundary breach, or shallow abstraction.
+- **Subtraction Target**: Exactly what dead code, wrapper, or flag can be eliminated first.
+- **Proposed Target Shape**: Proposed simplified structure (describe types and seams; zero speculative code blocks).
+- **Benefits**: Impact on maintainability, testability, reader load (30-second rule), and runtime performance.
+- **Blast Radius**: What downstream callers or external packages touch this; safety proof needed.
+
+## 4. Top Remediation Recommendations
+Prioritized list of the highest-leverage refactorings and performance improvements to execute first.
 ```
+
+---
+
+## 4. Interactive Next Steps
+
+Prompt the user using the `question` tool to select how to proceed:
+1. **Execute Optimization/Refactor**: Hand off chosen findings directly to `agentic-lens-dev` for implementation in `workspaces/<TICKET_ID>/`.
+2. **Draft Jira Ticket**: Decompose finding into a vertical tracer-bullet ticket via `agentic-lens-po`.
+3. **Deepen Test Profiling**: Run targeted CPU/memory profiling (`go test -cpuprofile`) on a specific package.
