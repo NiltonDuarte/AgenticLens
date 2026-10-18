@@ -2,7 +2,7 @@
   "schema_version": 2,
   "ticket_id": "GEN-1",
   "ticket_title": "Session Sandbox Network Policy for Go \u0026 TypeScript Toolchains",
-  "ticket_type": "feature",
+  "ticket_type": "chore",
   "started_at": "2026-10-17T15:31:01.795000+00:00",
   "completed_at": "2026-10-17T15:39:30.399000+00:00",
   "updated_at": "2026-10-18T08:13:09.338384389Z",
