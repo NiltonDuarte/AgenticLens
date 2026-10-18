@@ -17,4 +17,5 @@ Updates `workspaces/plan/TICKETS.md` and ticket specification files for complete
 - Optimized `.github/workflows/release-candidate.yml` with path filtering (`backend/**`, `web/**`, `Makefile`, `go.work*`) and release commit filtering to prevent generating pre-releases on docs-only commits.
 - Added sliding-window pruning to `.github/workflows/release-candidate.yml` keeping the latest 3 candidate pre-releases and cleaning older tags via GitHub CLI.
 - Added automated sweep to `.github/workflows/release-stable.yml` purging all remaining pre-release candidates upon publishing a stable release.
+- Optimized `.github/workflows/ci.yml` with concurrency cancellation on branches/PRs while preserving `main` runs, and restricted triggers strictly to `main` pushes and pull requests.
 - Allocated ticket workspace under `workspaces/GEN-4/`.
