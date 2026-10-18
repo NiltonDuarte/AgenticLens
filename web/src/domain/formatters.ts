@@ -120,6 +120,55 @@ export function formatIsoDateTimeShort(isoString: string | null | undefined): st
   return datePart;
 }
 
+const TICKET_ID_REGEX = /^([a-zA-Z]+)[-_]?([0-9]+)(.*)$/;
+
+export function compareTicketIds(a: string, b: string): number {
+  const cleanA = a.trim();
+  const cleanB = b.trim();
+
+  if (cleanA === cleanB) {
+    return 0;
+  }
+  if (cleanA === '') {
+    return -1;
+  }
+  if (cleanB === '') {
+    return 1;
+  }
+
+  const matchA = TICKET_ID_REGEX.exec(cleanA);
+  const matchB = TICKET_ID_REGEX.exec(cleanB);
+
+  const hasMatchA = matchA !== null;
+  const hasMatchB = matchB !== null;
+
+  if (hasMatchA && hasMatchB) {
+    const prefixA = matchA[1]!.toUpperCase();
+    const prefixB = matchB[1]!.toUpperCase();
+    if (prefixA !== prefixB) {
+      return prefixA < prefixB ? -1 : 1;
+    }
+
+    const numA = parseInt(matchA[2]!, 10);
+    const numB = parseInt(matchB[2]!, 10);
+
+    if (numA !== numB) {
+      return numA - numB;
+    }
+
+    return cleanA < cleanB ? -1 : cleanA > cleanB ? 1 : 0;
+  }
+
+  if (hasMatchA && !hasMatchB) {
+    return -1;
+  }
+  if (!hasMatchA && hasMatchB) {
+    return 1;
+  }
+
+  return cleanA < cleanB ? -1 : cleanA > cleanB ? 1 : 0;
+}
+
 export function deriveTicketComparisonRows(
   ledgers: readonly AgenticMetricsLedger[],
   sortField?: ComparisonSortField,
@@ -176,7 +225,7 @@ export function deriveTicketComparisonRows(
         return startBStr.localeCompare(startAStr);
       }
 
-      return b.ticket_id.localeCompare(a.ticket_id);
+      return compareTicketIds(b.ticket_id, a.ticket_id);
     });
   }
 
@@ -212,7 +261,7 @@ export function deriveTicketComparisonRows(
         break;
       }
       case 'ticket_id':
-        cmp = a.ticket_id.localeCompare(b.ticket_id);
+        cmp = compareTicketIds(a.ticket_id, b.ticket_id);
         break;
       case 'cost_usd':
         cmp = a.cost_usd - b.cost_usd;
@@ -240,6 +289,6 @@ export function deriveTicketComparisonRows(
     if (cmp !== 0) {
       return sortOrder === 'asc' ? cmp : -cmp;
     }
-    return a.ticket_id.localeCompare(b.ticket_id);
+    return compareTicketIds(a.ticket_id, b.ticket_id);
   });
 }

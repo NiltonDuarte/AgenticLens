@@ -3,10 +3,72 @@ package domain
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
+
+var ticketIDPattern = regexp.MustCompile(`^([a-zA-Z]+)[-_]?([0-9]+)(.*)$`)
+
+// CompareTicketIDs compares two ticket identifiers using natural numerical sequence ordering.
+// Conforming ticket identifiers have a letter prefix, optional hyphen/underscore, and numeric sequence.
+// Conforming tickets sort before non-conforming strings.
+// Returns -1 if a < b, 0 if a == b, and 1 if a > b.
+func CompareTicketIDs(a, b string) int {
+	cleanA := strings.TrimSpace(a)
+	cleanB := strings.TrimSpace(b)
+
+	if cleanA == cleanB {
+		return 0
+	}
+	if cleanA == "" {
+		return -1
+	}
+	if cleanB == "" {
+		return 1
+	}
+
+	matchA := ticketIDPattern.FindStringSubmatch(cleanA)
+	matchB := ticketIDPattern.FindStringSubmatch(cleanB)
+
+	hasMatchA := len(matchA) == 4
+	hasMatchB := len(matchB) == 4
+
+	if hasMatchA && hasMatchB {
+		prefixA := strings.ToUpper(matchA[1])
+		prefixB := strings.ToUpper(matchB[1])
+		if prefixA != prefixB {
+			if prefixA < prefixB {
+				return -1
+			}
+			return 1
+		}
+
+		numA, errA := strconv.ParseInt(matchA[2], 10, 64)
+		numB, errB := strconv.ParseInt(matchB[2], 10, 64)
+		if errA == nil && errB == nil {
+			if numA != numB {
+				if numA < numB {
+					return -1
+				}
+				return 1
+			}
+			// When numerical values are equal (e.g. AL-1 vs AL-01), fall back to raw string comparison.
+			return strings.Compare(cleanA, cleanB)
+		}
+	}
+
+	if hasMatchA && !hasMatchB {
+		return -1
+	}
+	if !hasMatchA && hasMatchB {
+		return 1
+	}
+
+	return strings.Compare(cleanA, cleanB)
+}
 
 type invocationAccumulator struct {
 	invocations       int64
@@ -758,6 +820,10 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 			return startIStr > startJStr
 		}
 
+		cmp := CompareTicketIDs(rI.TicketID, rJ.TicketID)
+		if cmp != 0 {
+			return cmp > 0
+		}
 		return rI.TicketID > rJ.TicketID
 	})
 
@@ -917,6 +983,21 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 
 		var less bool
 		switch field {
+		case SortFieldTicketID:
+			tidA := ""
+			if a.TicketID != nil {
+				tidA = *a.TicketID
+			}
+			tidB := ""
+			if b.TicketID != nil {
+				tidB = *b.TicketID
+			}
+			cmp := CompareTicketIDs(tidA, tidB)
+			if cmp == 0 {
+				less = a.UpdatedAt < b.UpdatedAt
+			} else {
+				less = cmp < 0
+			}
 		case SortFieldCost:
 			if a.Totals.CostUSD == b.Totals.CostUSD {
 				less = a.UpdatedAt < b.UpdatedAt

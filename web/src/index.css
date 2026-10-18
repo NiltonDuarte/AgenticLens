@@ -2101,6 +2101,15 @@ body {
   border-bottom: 1px solid var(--border-color);
 }
 
+.quick-launch-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.quick-launch-table th.sortable:hover {
+  color: #ffffff;
+}
+
 .quick-launch-table td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-subtle);

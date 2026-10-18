@@ -1,8 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { ActiveTab, FleetSummary, TicketComparisonRow } from '../domain/types';
-import { formatCurrencyUSD, formatPercentage } from '../domain/formatters';
+import { compareTicketIds, formatCurrencyUSD, formatPercentage } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { EmptyState } from '../components/EmptyState';
+
+export type QuickLaunchSortField =
+  | 'ticket_id'
+  | 'ticket_title'
+  | 'context_health_status'
+  | 'sdlc_iterations'
+  | 'active_duration_seconds';
+
+export type QuickLaunchSortOrder = 'asc' | 'desc';
 
 export interface LandingPageProps {
   readonly onNavigate: (tab: ActiveTab) => void;
@@ -19,6 +28,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [workspaces, setWorkspaces] = useState<readonly TicketComparisonRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<QuickLaunchSortField>('ticket_id');
+  const [sortOrder, setSortOrder] = useState<QuickLaunchSortOrder>('asc');
+
+  const handleSort = (field: QuickLaunchSortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const getSortIndicator = (field: QuickLaunchSortField): string => {
+    if (sortField !== field) return '';
+    return sortOrder === 'asc' ? ' (asc)' : ' (desc)';
+  };
+
+  const sortedWorkspaces = useMemo(() => {
+    return [...workspaces].sort((a, b) => {
+      let diff = 0;
+      switch (sortField) {
+        case 'ticket_id':
+          diff = compareTicketIds(a.ticket_id, b.ticket_id);
+          break;
+        case 'ticket_title':
+          diff = a.ticket_title.localeCompare(b.ticket_title);
+          break;
+        case 'context_health_status':
+          diff = a.context_health_status.localeCompare(b.context_health_status);
+          break;
+        case 'sdlc_iterations':
+          diff = a.sdlc_iterations - b.sdlc_iterations;
+          break;
+        case 'active_duration_seconds':
+          diff = a.active_duration_seconds - b.active_duration_seconds;
+          break;
+      }
+      if (diff !== 0) {
+        return sortOrder === 'asc' ? diff : -diff;
+      }
+      return compareTicketIds(a.ticket_id, b.ticket_id);
+    });
+  }, [workspaces, sortField, sortOrder]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -207,16 +259,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <table className="quick-launch-table">
               <thead>
                 <tr>
-                  <th>Ticket ID</th>
-                  <th>Title</th>
-                  <th>Status</th>
-                  <th>Iterations</th>
-                  <th>Active Duration</th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('ticket_id')}
+                    aria-sort={sortField === 'ticket_id' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Ticket ID{getSortIndicator('ticket_id')}
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('ticket_title')}
+                    aria-sort={sortField === 'ticket_title' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Title{getSortIndicator('ticket_title')}
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('context_health_status')}
+                    aria-sort={sortField === 'context_health_status' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Status{getSortIndicator('context_health_status')}
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('sdlc_iterations')}
+                    aria-sort={sortField === 'sdlc_iterations' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Iterations{getSortIndicator('sdlc_iterations')}
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('active_duration_seconds')}
+                    aria-sort={sortField === 'active_duration_seconds' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Active Duration{getSortIndicator('active_duration_seconds')}
+                  </th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {workspaces.map((w) => {
+                {sortedWorkspaces.map((w) => {
                   const statusClass = ['HEALTHY', 'ELEVATED', 'BLOATED', 'CRITICAL'].includes(
                     w.context_health_status
                   )

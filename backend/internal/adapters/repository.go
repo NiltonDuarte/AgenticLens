@@ -130,8 +130,10 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 		ledgers = append(ledgers, ledger)
 	}
 
+	sortedLedgers := domain.SortLedgers(ledgers, domain.SortFieldTicketID, true)
+
 	return domain.ScanReport{
-		Ledgers: ledgers,
+		Ledgers: sortedLedgers,
 		Errors:  scanErrors,
 	}
 }

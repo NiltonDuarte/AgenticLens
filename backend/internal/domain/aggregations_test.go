@@ -1105,3 +1105,247 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 		}
 	})
 }
+
+func TestCompareTicketIDs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		a        string
+		b        string
+		expected int
+	}{
+		// Identity and empty checks
+		{"identical identifiers", "AL-1", "AL-1", 0},
+		{"identical with whitespace", "  AL-1 ", "AL-1", 0},
+		{"both empty", "", "", 0},
+		{"empty a sorts before non-empty b", "", "AL-1", -1},
+		{"non-empty a sorts after empty b", "AL-1", "", 1},
+
+		// Standard prefix natural progression
+		{"AL-1 vs AL-2", "AL-1", "AL-2", -1},
+		{"AL-2 vs AL-1", "AL-2", "AL-1", 1},
+		{"AL-2 vs AL-9", "AL-2", "AL-9", -1},
+		{"AL-9 vs AL-10", "AL-9", "AL-10", -1},
+		{"AL-10 vs AL-11", "AL-10", "AL-11", -1},
+		{"AL-11 vs AL-22", "AL-11", "AL-22", -1},
+		{"AL-2 vs AL-10", "AL-2", "AL-10", -1},
+		{"AL-10 vs AL-2", "AL-10", "AL-2", 1},
+
+		// Prefix without hyphen
+		{"AL1 vs AL2", "AL1", "AL2", -1},
+		{"AL2 vs AL10", "AL2", "AL10", -1},
+		{"AL10 vs AL1", "AL10", "AL1", 1},
+
+		// Prefix with underscore
+		{"AL_1 vs AL_2", "AL_1", "AL_2", -1},
+		{"AL_2 vs AL_10", "AL_2", "AL_10", -1},
+
+		// Mixed distinct prefixes
+		{"AL-10 vs GEN-1", "AL-10", "GEN-1", -1},
+		{"GEN-1 vs GEN-2", "GEN-1", "GEN-2", -1},
+		{"GEN-2 vs PO-1", "GEN-2", "PO-1", -1},
+		{"PO-1 vs AL-10", "PO-1", "AL-10", 1},
+
+		// Case insensitivity
+		{"al-2 vs AL-10", "al-2", "AL-10", -1},
+		{"AL-2 vs al-10", "AL-2", "al-10", -1},
+		{"al-10 vs AL-2", "al-10", "AL-2", 1},
+
+		// Leading zeroes tie-breaking
+		{"AL-1 vs AL-01", "AL-1", "AL-01", 1},
+		{"AL-01 vs AL-1", "AL-01", "AL-1", -1},
+
+		// Conforming vs non-conforming
+		{"conforming AL-1 sorts before non-conforming AL-", "AL-1", "AL-", -1},
+		{"non-conforming AL- sorts after conforming AL-1", "AL-", "AL-1", 1},
+		{"conforming AL-1 sorts before ticket-xyz", "AL-1", "ticket-xyz", -1},
+		{"ticket-xyz sorts after conforming AL-1", "ticket-xyz", "AL-1", 1},
+		{"conforming AL-2 sorts before UNKNOWN", "AL-2", "UNKNOWN", -1},
+		{"UNKNOWN sorts after conforming AL-2", "UNKNOWN", "AL-2", 1},
+		{"conforming AL-1 sorts before purely numeric 123", "AL-1", "123", -1},
+		{"purely numeric 123 sorts after conforming AL-1", "123", "AL-1", 1},
+
+		// Missing numbers / prefix-only (neither conforms)
+		{"missing numbers lex order", "AL-", "GEN-", -1},
+		{"missing numbers without hyphen", "AL", "AL-1", 1},
+
+		// Purely numeric strings (neither conforms, fallback to lexicographical)
+		{"purely numeric lex order", "123", "456", -1},
+		{"purely numeric lex order reverse", "456", "123", 1},
+		{"purely numeric lex order unequal length", "100", "20", -1},
+
+		// Leading zeroes variations
+		{"multiple leading zeroes AL-001 vs AL-01", "AL-001", "AL-01", -1},
+		{"leading zeroes AL-02 vs AL-10", "AL-02", "AL-10", -1},
+		{"leading zeroes AL-009 vs AL-1", "AL-009", "AL-1", 1},
+		{"leading zeroes AL-00 vs AL-0", "AL-00", "AL-0", 1},
+		{"leading zeroes AL-0 vs AL-00", "AL-0", "AL-00", -1},
+
+		// Mixed case variations
+		{"mixed case al-10 vs AL-2", "al-10", "AL-2", 1},
+		{"mixed case AL-2 vs al-10", "AL-2", "al-10", -1},
+		{"mixed case Al-100 vs aL-99", "Al-100", "aL-99", 1},
+		{"identical numbers different case al-1 vs AL-1", "al-1", "AL-1", 1},
+		{"identical numbers different case AL-1 vs al-1", "AL-1", "al-1", -1},
+
+		// Delimiter variations
+		{"delimiter hyphen vs underscore AL-1 vs AL_1", "AL-1", "AL_1", -1},
+		{"delimiter underscore vs hyphen AL_1 vs AL-1", "AL_1", "AL-1", 1},
+		{"mixed delimiters AL-10 vs AL_2", "AL-10", "AL_2", 1},
+		{"mixed delimiters AL_2 vs AL-10", "AL_2", "AL-10", -1},
+		{"non-standard delimiter AL.1 vs AL.2 lex fallback", "AL.1", "AL.2", -1},
+		{"non-standard delimiter AL/1 vs AL/2 lex fallback", "AL/1", "AL/2", -1},
+
+		// Whitespace variations
+		{"whitespace tab and newline \tAL-1\n vs AL-2", "\tAL-1\n", "AL-2", -1},
+		{"whitespace only vs empty", "   ", "", 0},
+		{"empty vs whitespace only", "", "   ", 0},
+		{"whitespace only vs AL-1", "   ", "AL-1", -1},
+		{"AL-1 vs whitespace only", "AL-1", "   ", 1},
+		{"whitespace surrounding AL-2 vs AL-10", "  AL-2  ", "AL-10", -1},
+
+		// Suffix variations
+		{"suffix comparison AL-1-a vs AL-1-b", "AL-1-a", "AL-1-b", -1},
+		{"suffix comparison AL-1-b vs AL-1-a", "AL-1-b", "AL-1-a", 1},
+		{"suffix comparison AL-1-hotfix vs AL-2-hotfix", "AL-1-hotfix", "AL-2-hotfix", -1},
+		{"suffix comparison AL-2-beta vs AL-10-alpha", "AL-2-beta", "AL-10-alpha", -1},
+		{"suffix comparison AL-1 vs AL-1-hotfix", "AL-1", "AL-1-hotfix", -1},
+		{"suffix comparison AL-1-hotfix vs AL-1", "AL-1-hotfix", "AL-1", 1},
+
+		// Large numbers and overflow boundaries
+		{"max int64 sequence AL-9223372036854775807 vs AL-1", "AL-9223372036854775807", "AL-1", 1},
+		{"AL-1 vs max int64 sequence", "AL-1", "AL-9223372036854775807", -1},
+		{"overflowing int64 sequence does not panic", "AL-9999999999999999999999999999999", "AL-1", 1},
+
+		// Neither conforms (lexicographical fallback)
+		{"non-conforming lex order", "abc", "xyz", -1},
+		{"non-conforming lex order reverse", "xyz", "abc", 1},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := domain.CompareTicketIDs(tc.a, tc.b)
+			if got != tc.expected {
+				t.Errorf("CompareTicketIDs(%q, %q) = %d; expected %d", tc.a, tc.b, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestSortLedgers_TicketID(t *testing.T) {
+	t.Parallel()
+
+	ticketIDs := []string{"AL-10", "AL-2", "AL-1", "GEN-5", "AL-22", "PO-1"}
+	input := make([]domain.AgenticMetricsLedger, len(ticketIDs))
+	for i, id := range ticketIDs {
+		tid := id
+		input[i] = domain.AgenticMetricsLedger{
+			TicketID:  &tid,
+			UpdatedAt: "2026-10-18T10:00:00Z",
+		}
+	}
+
+	// Ascending sort
+	ascSorted := domain.SortLedgers(input, domain.SortFieldTicketID, true)
+	expectedAsc := []string{"AL-1", "AL-2", "AL-10", "AL-22", "GEN-5", "PO-1"}
+	if len(ascSorted) != len(expectedAsc) {
+		t.Fatalf("expected %d ledgers, got %d", len(expectedAsc), len(ascSorted))
+	}
+	for i, exp := range expectedAsc {
+		if *ascSorted[i].TicketID != exp {
+			t.Errorf("asc index %d: expected %s, got %s", i, exp, *ascSorted[i].TicketID)
+		}
+	}
+
+	// Descending sort
+	descSorted := domain.SortLedgers(input, domain.SortFieldTicketID, false)
+	expectedDesc := []string{"PO-1", "GEN-5", "AL-22", "AL-10", "AL-2", "AL-1"}
+	if len(descSorted) != len(expectedDesc) {
+		t.Fatalf("expected %d ledgers, got %d", len(expectedDesc), len(descSorted))
+	}
+	for i, exp := range expectedDesc {
+		if *descSorted[i].TicketID != exp {
+			t.Errorf("desc index %d: expected %s, got %s", i, exp, *descSorted[i].TicketID)
+		}
+	}
+
+	// Immutability check: input slice must not be modified
+	originalIDs := []string{"AL-10", "AL-2", "AL-1", "GEN-5", "AL-22", "PO-1"}
+	for i, orig := range originalIDs {
+		if *input[i].TicketID != orig {
+			t.Errorf("input modified at index %d: expected %s, got %s", i, orig, *input[i].TicketID)
+		}
+	}
+
+	t.Run("nil and empty ticket ID handling", func(t *testing.T) {
+		t.Parallel()
+		tid1 := "AL-10"
+		tid2 := "AL-2"
+		emptyStr := ""
+		ledgers := []domain.AgenticMetricsLedger{
+			{TicketID: &tid1, UpdatedAt: "2026-10-18T12:00:00Z"},
+			{TicketID: nil, UpdatedAt: "2026-10-18T10:00:00Z"},
+			{TicketID: &emptyStr, UpdatedAt: "2026-10-18T11:00:00Z"},
+			{TicketID: &tid2, UpdatedAt: "2026-10-18T13:00:00Z"},
+		}
+
+		asc := domain.SortLedgers(ledgers, domain.SortFieldTicketID, true)
+		if len(asc) != 4 {
+			t.Fatalf("expected 4 ledgers, got %d", len(asc))
+		}
+		// Empty / nil tickets sort first in ascending
+		if asc[0].TicketID != nil && *asc[0].TicketID != "" {
+			t.Errorf("expected first to be nil or empty, got %v", asc[0].TicketID)
+		}
+		if *asc[2].TicketID != "AL-2" || *asc[3].TicketID != "AL-10" {
+			t.Errorf("expected AL-2 then AL-10 at end of asc, got %v then %v", *asc[2].TicketID, *asc[3].TicketID)
+		}
+
+		desc := domain.SortLedgers(ledgers, domain.SortFieldTicketID, false)
+		if len(desc) != 4 {
+			t.Fatalf("expected 4 ledgers, got %d", len(desc))
+		}
+		if *desc[0].TicketID != "AL-10" || *desc[1].TicketID != "AL-2" {
+			t.Errorf("expected AL-10 then AL-2 at start of desc, got %v then %v", *desc[0].TicketID, *desc[1].TicketID)
+		}
+	})
+
+	t.Run("empty and nil slices", func(t *testing.T) {
+		t.Parallel()
+		resNil := domain.SortLedgers(nil, domain.SortFieldTicketID, true)
+		if len(resNil) != 0 {
+			t.Errorf("expected 0 ledgers for nil slice, got %d", len(resNil))
+		}
+		resEmpty := domain.SortLedgers([]domain.AgenticMetricsLedger{}, domain.SortFieldTicketID, false)
+		if len(resEmpty) != 0 {
+			t.Errorf("expected 0 ledgers for empty slice, got %d", len(resEmpty))
+		}
+	})
+
+	t.Run("duplicate ticket ID deterministic tie breaking by updated_at", func(t *testing.T) {
+		t.Parallel()
+		tid := "AL-1"
+		dups := []domain.AgenticMetricsLedger{
+			{TicketID: &tid, UpdatedAt: "2026-10-18T14:00:00Z"},
+			{TicketID: &tid, UpdatedAt: "2026-10-18T10:00:00Z"},
+			{TicketID: &tid, UpdatedAt: "2026-10-18T12:00:00Z"},
+		}
+		asc := domain.SortLedgers(dups, domain.SortFieldTicketID, true)
+		if asc[0].UpdatedAt != "2026-10-18T10:00:00Z" ||
+			asc[1].UpdatedAt != "2026-10-18T12:00:00Z" ||
+			asc[2].UpdatedAt != "2026-10-18T14:00:00Z" {
+			t.Errorf("expected tie-break by updated_at asc, got %s, %s, %s",
+				asc[0].UpdatedAt, asc[1].UpdatedAt, asc[2].UpdatedAt)
+		}
+	})
+}
+
+func TestParseLedgerSortField_TicketID(t *testing.T) {
+	t.Parallel()
+	if domain.ParseLedgerSortField("ticket_id") != domain.SortFieldTicketID {
+		t.Errorf("expected SortFieldTicketID, got %v", domain.ParseLedgerSortField("ticket_id"))
+	}
+}

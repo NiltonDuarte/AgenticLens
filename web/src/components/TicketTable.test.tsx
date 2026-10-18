@@ -135,6 +135,33 @@ describe('TicketTable Component', () => {
   });
 
   describe('Sorting Invariants', () => {
+    it('sorts by ticket ID naturally ascending and descending', () => {
+      render(<TicketTable rows={sampleRows} />);
+
+      // Default sort is ticket_id asc naturally: AL-2, AL-10, GEN-9
+      let cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('AL-2');
+      expect(cells[2]).toHaveTextContent('AL-10');
+      expect(cells[3]).toHaveTextContent('GEN-9');
+
+      const ticketIdHeader = screen.getByText(/ticket id/i);
+      // Click ticket ID -> toggle to desc: GEN-9, AL-10, AL-2
+      fireEvent.click(ticketIdHeader);
+
+      cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('GEN-9');
+      expect(cells[2]).toHaveTextContent('AL-10');
+      expect(cells[3]).toHaveTextContent('AL-2');
+
+      // Click ticket ID again -> toggle to asc: AL-2, AL-10, GEN-9
+      fireEvent.click(ticketIdHeader);
+
+      cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('AL-2');
+      expect(cells[2]).toHaveTextContent('AL-10');
+      expect(cells[3]).toHaveTextContent('GEN-9');
+    });
+
     it('sorts by cost ascending and descending upon header clicks', () => {
       render(<TicketTable rows={sampleRows} />);
 
@@ -201,6 +228,23 @@ describe('TicketTable Component', () => {
       expect(cells[1]).toHaveTextContent('AL-10');
       expect(cells[2]).toHaveTextContent('GEN-9');
       expect(cells[3]).toHaveTextContent('AL-2');
+    });
+
+    it('tie-breaks equal metric values with natural ticket ID comparison', () => {
+      const equalRows = [
+        { ...sampleRows[0]!, ticket_id: 'AL-10', cost_usd: 5.0 },
+        { ...sampleRows[0]!, ticket_id: 'AL-2', cost_usd: 5.0 },
+        { ...sampleRows[0]!, ticket_id: 'AL-1', cost_usd: 5.0 },
+      ];
+
+      render(<TicketTable rows={equalRows} />);
+      const costHeader = screen.getByText(/cost \(usd\)/i);
+      fireEvent.click(costHeader);
+
+      const cells = screen.getAllByRole('row');
+      expect(cells[1]).toHaveTextContent('AL-1');
+      expect(cells[2]).toHaveTextContent('AL-2');
+      expect(cells[3]).toHaveTextContent('AL-10');
     });
   });
 

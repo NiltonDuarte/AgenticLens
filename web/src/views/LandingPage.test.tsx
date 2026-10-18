@@ -518,4 +518,157 @@ describe('LandingPage View Component', () => {
     const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
     expect(emojiRegex.test(renderedText)).toBe(false);
   });
+
+  it('sorts quick-launch workspaces naturally by ticket ID and supports column header toggles', async () => {
+    const customRows = [
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-10',
+        ticket_title: 'Zeta feature',
+        sdlc_iterations: 1,
+      },
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-2',
+        ticket_title: 'Beta feature',
+        sdlc_iterations: 5,
+      },
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-1',
+        ticket_title: 'Alpha feature',
+        sdlc_iterations: 3,
+      },
+    ];
+
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+      data: mockFleetSummary,
+      isMock: true,
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+      data: customRows,
+      isMock: true,
+    });
+
+    render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+
+    const getRowTickets = () => {
+      const rows = screen.getAllByRole('row');
+      return rows.slice(1).map((r) => r.querySelector('.mono-number')?.textContent?.trim());
+    };
+
+    expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
+
+    // Click Ticket ID header -> desc: AL-10, AL-2, AL-1
+    const ticketIdHeader = screen.getByRole('columnheader', { name: /ticket id/i });
+    fireEvent.click(ticketIdHeader);
+    expect(getRowTickets()).toEqual(['AL-10', 'AL-2', 'AL-1']);
+
+    // Click Title header -> asc: AL-1 (Alpha), AL-2 (Beta), AL-10 (Zeta)
+    const titleHeader = screen.getByRole('columnheader', { name: /title/i });
+    fireEvent.click(titleHeader);
+    expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
+
+    // Click Iterations header -> asc: AL-10 (1), AL-1 (3), AL-2 (5)
+    const iterationsHeader = screen.getByRole('columnheader', { name: /iterations/i });
+    fireEvent.click(iterationsHeader);
+    expect(getRowTickets()).toEqual(['AL-10', 'AL-1', 'AL-2']);
+
+    // Click Iterations header again -> desc: AL-2 (5), AL-1 (3), AL-10 (1)
+    fireEvent.click(iterationsHeader);
+    expect(getRowTickets()).toEqual(['AL-2', 'AL-1', 'AL-10']);
+
+    // Click Active Duration header -> asc
+    const durationHeader = screen.getByRole('columnheader', { name: /active duration/i });
+    fireEvent.click(durationHeader);
+    expect(durationHeader).toHaveTextContent(/active duration \(asc\)/i);
+
+    // Click Status header -> asc
+    const statusHeader = screen.getByRole('columnheader', { name: /status/i });
+    fireEvent.click(statusHeader);
+    expect(statusHeader).toHaveTextContent(/status \(asc\)/i);
+    // Click Status header again -> desc
+    fireEvent.click(statusHeader);
+    expect(statusHeader).toHaveTextContent(/status \(desc\)/i);
+  });
+
+  it('tie-breaks identical column values using natural ticket identifier comparison', async () => {
+    const identicalRows = [
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-10',
+        ticket_title: 'Same Title',
+        context_health_status: 'HEALTHY' as const,
+        sdlc_iterations: 2,
+        active_duration_seconds: 100,
+      },
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-2',
+        ticket_title: 'Same Title',
+        context_health_status: 'HEALTHY' as const,
+        sdlc_iterations: 2,
+        active_duration_seconds: 100,
+      },
+      {
+        ...mockTicketComparisonRows[0]!,
+        ticket_id: 'AL-1',
+        ticket_title: 'Same Title',
+        context_health_status: 'HEALTHY' as const,
+        sdlc_iterations: 2,
+        active_duration_seconds: 100,
+      },
+    ];
+
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+      data: mockFleetSummary,
+      isMock: true,
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+      data: identicalRows,
+      isMock: true,
+    });
+
+    render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+
+    const getRowTickets = () => {
+      const rows = screen.getAllByRole('row');
+      return rows.slice(1).map((r) => r.querySelector('.mono-number')?.textContent?.trim());
+    };
+
+    // Sorted by title (identical): should tie-break naturally AL-1, AL-2, AL-10
+    const titleHeader = screen.getByRole('columnheader', { name: /title/i });
+    fireEvent.click(titleHeader);
+    expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
+
+    // Sorted by iterations (identical): should tie-break naturally AL-1, AL-2, AL-10
+    const iterHeader = screen.getByRole('columnheader', { name: /iterations/i });
+    fireEvent.click(iterHeader);
+    expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
+  });
+
+  it('renders graceful empty state when workspaces array is empty', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+      data: mockFleetSummary,
+      isMock: true,
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+      data: [],
+      isMock: true,
+    });
+
+    render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/zero workspaces discovered/i)).toBeInTheDocument();
+    });
+  });
 });

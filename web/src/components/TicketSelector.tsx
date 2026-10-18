@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { compareTicketIds } from '../domain/formatters';
 
 export interface TicketSelectorOption {
   readonly ticket_id: string;
@@ -17,6 +18,10 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
   selectedTicketId,
   onSelectTicket,
 }) => {
+  const sortedTickets = useMemo(() => {
+    return [...tickets].sort((a, b) => compareTicketIds(a.ticket_id, b.ticket_id));
+  }, [tickets]);
+
   return (
     <div className="ticket-selector-bar">
       <label htmlFor="ticket-select" className="ticket-selector-label">
@@ -29,14 +34,14 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
           value={selectedTicketId ?? ''}
           onChange={(e) => onSelectTicket(e.target.value)}
         >
-          {tickets.length === 0 && (
+          {sortedTickets.length === 0 && (
             <option value="" disabled>
               No workspaces available
             </option>
           )}
-          {tickets.map((t) => (
+          {sortedTickets.map((t) => (
             <option key={t.ticket_id} value={t.ticket_id}>
-              {t.ticket_id} - {t.ticket_title ?? 'Untitled'}
+              {t.ticket_id} - {t.ticket_title && t.ticket_title.trim().length > 0 ? t.ticket_title : 'Untitled'}
               {t.context_health_status ? ` [${t.context_health_status}]` : ''}
             </option>
           ))}

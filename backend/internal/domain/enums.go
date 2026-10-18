@@ -34,6 +34,7 @@ const (
 	SortFieldCost        LedgerSortField = "cost"
 	SortFieldDuration    LedgerSortField = "duration"
 	SortFieldInvocations LedgerSortField = "invocations"
+	SortFieldTicketID    LedgerSortField = "ticket_id"
 )
 
 // ParseLedgerSortField parses a string into a LedgerSortField enum, defaulting to SortFieldUpdatedAt.
@@ -45,6 +46,8 @@ func ParseLedgerSortField(val string) LedgerSortField {
 		return SortFieldDuration
 	case "invocations":
 		return SortFieldInvocations
+	case "ticket_id":
+		return SortFieldTicketID
 	case "updated_at":
 		return SortFieldUpdatedAt
 	default:

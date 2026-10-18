@@ -28,6 +28,9 @@ func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 		if sortParam != "" || orderParam != "" {
 			field := domain.ParseLedgerSortField(sortParam)
 			ascending := strings.ToLower(orderParam) == "asc"
+			if orderParam == "" && field == domain.SortFieldTicketID {
+				ascending = true
+			}
 			ledgers = domain.SortLedgers(ledgers, field, ascending)
 		}
 

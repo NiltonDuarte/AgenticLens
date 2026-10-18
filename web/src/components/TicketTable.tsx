@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { TicketComparisonRow } from '../domain/types';
-import { formatCurrencyUSD, formatPercentage } from '../domain/formatters';
+import { compareTicketIds, formatCurrencyUSD, formatPercentage } from '../domain/formatters';
 import { EmptyState } from './EmptyState';
 
 export interface TicketTableProps {
@@ -41,7 +41,7 @@ export const TicketTable: React.FC<TicketTableProps> = ({
       let diff = 0;
       switch (sortField) {
         case 'ticket_id':
-          diff = a.ticket_id.localeCompare(b.ticket_id);
+          diff = compareTicketIds(a.ticket_id, b.ticket_id);
           break;
         case 'cost_usd':
           diff = a.cost_usd - b.cost_usd;
@@ -53,7 +53,10 @@ export const TicketTable: React.FC<TicketTableProps> = ({
           diff = a.sdlc_iterations - b.sdlc_iterations;
           break;
       }
-      return sortAscending ? diff : -diff;
+      if (diff !== 0) {
+        return sortAscending ? diff : -diff;
+      }
+      return compareTicketIds(a.ticket_id, b.ticket_id);
     });
   }, [rows, searchTerm, sortField, sortAscending]);
 

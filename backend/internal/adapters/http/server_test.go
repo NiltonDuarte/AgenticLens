@@ -207,6 +207,111 @@ func TestGetWorkspaces(t *testing.T) {
 			t.Errorf("expected AL-2 then AL-1, got %s then %s", *ledgers[0].TicketID, *ledgers[1].TicketID)
 		}
 	})
+
+	t.Run("sort workspaces by ticket_id ascending and descending", func(t *testing.T) {
+		tempDir := t.TempDir()
+		wsDir := filepath.Join(tempDir, "workspaces")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		for _, tid := range []string{"AL-10", "AL-2", "AL-1"} {
+			dir := filepath.Join(wsDir, tid)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			data := `{"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z"}`
+			if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(data), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		mockFS := fstest.MapFS{
+			"index.html": &fstest.MapFile{Data: []byte("<html></html>")},
+		}
+		server := adaptershttp.NewServer(wsDir, mockFS)
+		srv := httptest.NewServer(server.Handler())
+		defer srv.Close()
+
+		// Ascending
+		respAsc, err := http.Get(srv.URL + "/api/workspaces?sort=ticket_id&order=asc")
+		if err != nil {
+			t.Fatalf("failed GET asc: %v", err)
+		}
+		defer respAsc.Body.Close()
+		if respAsc.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", respAsc.StatusCode)
+		}
+		var ledgersAsc []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respAsc.Body).Decode(&ledgersAsc); err != nil {
+			t.Fatalf("failed decode asc: %v", err)
+		}
+		if len(ledgersAsc) != 3 {
+			t.Fatalf("expected 3 ledgers, got %d", len(ledgersAsc))
+		}
+		if *ledgersAsc[0].TicketID != "AL-1" || *ledgersAsc[1].TicketID != "AL-2" || *ledgersAsc[2].TicketID != "AL-10" {
+			t.Errorf("expected AL-1, AL-2, AL-10; got %s, %s, %s",
+				*ledgersAsc[0].TicketID, *ledgersAsc[1].TicketID, *ledgersAsc[2].TicketID)
+		}
+
+		// Descending
+		respDesc, err := http.Get(srv.URL + "/api/workspaces?sort=ticket_id&order=desc")
+		if err != nil {
+			t.Fatalf("failed GET desc: %v", err)
+		}
+		defer respDesc.Body.Close()
+		if respDesc.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", respDesc.StatusCode)
+		}
+		var ledgersDesc []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respDesc.Body).Decode(&ledgersDesc); err != nil {
+			t.Fatalf("failed decode desc: %v", err)
+		}
+		if len(ledgersDesc) != 3 {
+			t.Fatalf("expected 3 ledgers, got %d", len(ledgersDesc))
+		}
+		if *ledgersDesc[0].TicketID != "AL-10" || *ledgersDesc[1].TicketID != "AL-2" || *ledgersDesc[2].TicketID != "AL-1" {
+			t.Errorf("expected AL-10, AL-2, AL-1; got %s, %s, %s",
+				*ledgersDesc[0].TicketID, *ledgersDesc[1].TicketID, *ledgersDesc[2].TicketID)
+		}
+
+		// Default sort (no params): naturally ordered ascending by default ScanWorkspaces
+		respDefault, err := http.Get(srv.URL + "/api/workspaces")
+		if err != nil {
+			t.Fatalf("failed GET default: %v", err)
+		}
+		defer respDefault.Body.Close()
+		var ledgersDefault []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respDefault.Body).Decode(&ledgersDefault); err != nil {
+			t.Fatalf("failed decode default: %v", err)
+		}
+		if len(ledgersDefault) != 3 || *ledgersDefault[0].TicketID != "AL-1" || *ledgersDefault[1].TicketID != "AL-2" || *ledgersDefault[2].TicketID != "AL-10" {
+			t.Errorf("expected default natural order AL-1, AL-2, AL-10; got %v", ledgersDefault)
+		}
+
+		// sort=ticket_id without order param: defaults to ascending
+		respNoOrder, err := http.Get(srv.URL + "/api/workspaces?sort=ticket_id")
+		if err != nil {
+			t.Fatalf("failed GET sort=ticket_id: %v", err)
+		}
+		defer respNoOrder.Body.Close()
+		var ledgersNoOrder []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respNoOrder.Body).Decode(&ledgersNoOrder); err != nil {
+			t.Fatalf("failed decode sort=ticket_id: %v", err)
+		}
+		if len(ledgersNoOrder) != 3 || *ledgersNoOrder[0].TicketID != "AL-1" || *ledgersNoOrder[1].TicketID != "AL-2" || *ledgersNoOrder[2].TicketID != "AL-10" {
+			t.Errorf("expected sort=ticket_id without order to be asc AL-1, AL-2, AL-10; got %v", ledgersNoOrder)
+		}
+
+		// sort with unknown parameter: defaults safely to updated_at without panicking
+		respUnknown, err := http.Get(srv.URL + "/api/workspaces?sort=nonexistent_field")
+		if err != nil {
+			t.Fatalf("failed GET unknown sort: %v", err)
+		}
+		defer respUnknown.Body.Close()
+		if respUnknown.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 for unknown sort field, got %d", respUnknown.StatusCode)
+		}
+	})
 }
 
 func TestGetWorkspaceDetail(t *testing.T) {

@@ -152,6 +152,107 @@ func TestScanWorkspaces(t *testing.T) {
 	}
 }
 
+func TestScanWorkspaces_NaturalOrdering(t *testing.T) {
+	tempDir := t.TempDir()
+
+	tickets := []string{"AL-10", "AL-2", "AL-1", "GEN-1", "AL-22"}
+	for _, tid := range tickets {
+		dir := filepath.Join(tempDir, tid)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		factJSON := `{"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z"}`
+		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	report := adapters.ScanWorkspaces(tempDir)
+	if len(report.Ledgers) != len(tickets) {
+		t.Fatalf("expected %d ledgers, got %d", len(tickets), len(report.Ledgers))
+	}
+
+	expectedOrder := []string{"AL-1", "AL-2", "AL-10", "AL-22", "GEN-1"}
+	for i, expected := range expectedOrder {
+		if report.Ledgers[i].TicketID == nil || *report.Ledgers[i].TicketID != expected {
+			t.Errorf("ledger index %d: expected %s, got %v", i, expected, report.Ledgers[i].TicketID)
+		}
+	}
+}
+
+func TestScanWorkspaces_AdversarialResilienceAndOrdering(t *testing.T) {
+	tempDir := t.TempDir()
+
+	validWorkspaces := []string{
+		"AL-10",
+		"AL-2",
+		"123",
+		"AL-01",
+		"al-1",
+		"unknown",
+		"GEN-2",
+		"AL-1",
+	}
+
+	for _, tid := range validWorkspaces {
+		dir := filepath.Join(tempDir, tid)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		factJSON := `{"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z"}`
+		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Empty workspace directory (should be ignored gracefully without error)
+	emptyDir := filepath.Join(tempDir, "EMPTY-WS")
+	if err := os.MkdirAll(emptyDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Corrupted JSON workspace (should produce a scan error without crashing)
+	corruptDir := filepath.Join(tempDir, "CORRUPT-JSON")
+	if err := os.MkdirAll(corruptDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(corruptDir, "agentic_metrics.json"), []byte("{invalid-json"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	report := adapters.ScanWorkspaces(tempDir)
+
+	if len(report.Ledgers) != len(validWorkspaces) {
+		t.Fatalf("expected %d valid ledgers, got %d", len(validWorkspaces), len(report.Ledgers))
+	}
+
+	// Natural ordering expectation:
+	// AL-01 < AL-1 < al-1 < AL-2 < AL-10 < GEN-2 < 123 < unknown
+	expectedNaturalOrder := []string{
+		"AL-01",
+		"AL-1",
+		"al-1",
+		"AL-2",
+		"AL-10",
+		"GEN-2",
+		"123",
+		"unknown",
+	}
+
+	for i, expected := range expectedNaturalOrder {
+		if report.Ledgers[i].TicketID == nil || *report.Ledgers[i].TicketID != expected {
+			t.Errorf("ledger index %d: expected %s, got %v", i, expected, report.Ledgers[i].TicketID)
+		}
+	}
+
+	if len(report.Errors) != 1 {
+		t.Fatalf("expected 1 scan error for CORRUPT-JSON, got %d: %v", len(report.Errors), report.Errors)
+	}
+	if !strings.Contains(report.Errors[0], "CORRUPT-JSON") {
+		t.Errorf("expected error to mention CORRUPT-JSON, got %s", report.Errors[0])
+	}
+}
+
 func TestReadTicketArtifacts(t *testing.T) {
 	tempDir := t.TempDir()
 	ticketDir := filepath.Join(tempDir, "TICKET-10")

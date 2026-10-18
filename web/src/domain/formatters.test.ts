@@ -10,6 +10,7 @@ import {
   deriveTicketComparisonRows,
   formatIsoDateOnly,
   formatIsoDateTimeShort,
+  compareTicketIds,
 } from './formatters';
 import { mockAgenticMetricsLedgers } from '../api/mockData';
 
@@ -393,8 +394,29 @@ describe('Domain Pure Formatters', () => {
       // Sort by ticket_id ascending
       const byIdAsc = deriveTicketComparisonRows(ledgers, 'ticket_id', 'asc');
       for (let i = 0; i < byIdAsc.length - 1; i++) {
-        expect(byIdAsc[i]!.ticket_id.localeCompare(byIdAsc[i + 1]!.ticket_id)).toBeLessThanOrEqual(0);
+        expect(compareTicketIds(byIdAsc[i]!.ticket_id, byIdAsc[i + 1]!.ticket_id)).toBeLessThanOrEqual(0);
       }
+    });
+
+    it('naturally orders comparison rows by ticket_id and tie-breaks equal metric values', () => {
+      const baseLedger = Object.values(mockAgenticMetricsLedgers)[0]!;
+      const testLedgers = [
+        { ...baseLedger, ticket_id: 'AL-10', totals: { ...baseLedger.totals, cost_usd: 10.0 } },
+        { ...baseLedger, ticket_id: 'AL-2', totals: { ...baseLedger.totals, cost_usd: 10.0 } },
+        { ...baseLedger, ticket_id: 'AL-1', totals: { ...baseLedger.totals, cost_usd: 10.0 } },
+      ];
+
+      // Explicit ticket_id asc
+      const rowsAsc = deriveTicketComparisonRows(testLedgers, 'ticket_id', 'asc');
+      expect(rowsAsc.map((r) => r.ticket_id)).toEqual(['AL-1', 'AL-2', 'AL-10']);
+
+      // Explicit ticket_id desc
+      const rowsDesc = deriveTicketComparisonRows(testLedgers, 'ticket_id', 'desc');
+      expect(rowsDesc.map((r) => r.ticket_id)).toEqual(['AL-10', 'AL-2', 'AL-1']);
+
+      // Equal cost tie-breaking (asc): natural ticket ID comparison
+      const rowsCostAsc = deriveTicketComparisonRows(testLedgers, 'cost_usd', 'asc');
+      expect(rowsCostAsc.map((r) => r.ticket_id)).toEqual(['AL-1', 'AL-2', 'AL-10']);
     });
   });
 
@@ -413,6 +435,122 @@ describe('Domain Pure Formatters', () => {
       expect(formatIsoDateTimeShort(null)).toBe('N/A');
       expect(formatIsoDateTimeShort(undefined)).toBe('N/A');
       expect(formatIsoDateTimeShort('short')).toBe('N/A');
+    });
+  });
+
+  describe('compareTicketIds', () => {
+    it('sorts naturally so AL-2 precedes AL-10', () => {
+      expect(compareTicketIds('AL-2', 'AL-10')).toBeLessThan(0);
+      expect(compareTicketIds('AL-10', 'AL-2')).toBeGreaterThan(0);
+      expect(compareTicketIds('AL-1', 'AL-2')).toBeLessThan(0);
+    });
+
+    it('sorts identically formatted tickets correctly', () => {
+      expect(compareTicketIds('AL-1', 'AL-1')).toBe(0);
+      expect(compareTicketIds('AL-1', 'al-1')).toBeLessThan(0);
+      expect(compareTicketIds('al-1', 'AL-1')).toBeGreaterThan(0);
+    });
+
+    it('orders by prefix first', () => {
+      expect(compareTicketIds('AL-99', 'BL-1')).toBeLessThan(0);
+      expect(compareTicketIds('PO-1', 'AL-10')).toBeGreaterThan(0);
+    });
+
+    it('supports delimiter variations', () => {
+      expect(compareTicketIds('AL_2', 'AL-10')).toBeLessThan(0);
+      expect(compareTicketIds('AL2', 'AL10')).toBeLessThan(0);
+    });
+
+    it('places conforming tickets before non-conforming strings', () => {
+      expect(compareTicketIds('AL-1', 'unknown')).toBeLessThan(0);
+      expect(compareTicketIds('unknown', 'AL-1')).toBeGreaterThan(0);
+    });
+
+    it('handles empty strings and whitespace defensively', () => {
+      expect(compareTicketIds('', 'AL-1')).toBeLessThan(0);
+      expect(compareTicketIds('AL-1', '')).toBeGreaterThan(0);
+      expect(compareTicketIds('', '')).toBe(0);
+      expect(compareTicketIds('   ', '')).toBe(0);
+      expect(compareTicketIds('', '   ')).toBe(0);
+      expect(compareTicketIds('   ', 'AL-1')).toBeLessThan(0);
+      expect(compareTicketIds('AL-1', '   ')).toBeGreaterThan(0);
+      expect(compareTicketIds('\tAL-1\n', 'AL-2')).toBeLessThan(0);
+      expect(compareTicketIds('  AL-2  ', 'AL-10')).toBeLessThan(0);
+    });
+
+    it('handles missing prefixes, missing numbers, and purely numeric strings', () => {
+      // Purely numeric vs conforming
+      expect(compareTicketIds('AL-1', '123')).toBeLessThan(0);
+      expect(compareTicketIds('123', 'AL-1')).toBeGreaterThan(0);
+
+      // Purely numeric fallback to lexicographical
+      expect(compareTicketIds('123', '456')).toBeLessThan(0);
+      expect(compareTicketIds('456', '123')).toBeGreaterThan(0);
+      expect(compareTicketIds('100', '20')).toBeLessThan(0);
+
+      // Missing numbers (conforming sorts before non-conforming)
+      expect(compareTicketIds('AL-', 'AL-1')).toBeGreaterThan(0);
+      expect(compareTicketIds('AL', 'AL-1')).toBeGreaterThan(0);
+      expect(compareTicketIds('AL-', 'GEN-')).toBeLessThan(0);
+    });
+
+    it('handles leading zeroes variations correctly', () => {
+      expect(compareTicketIds('AL-01', 'AL-1')).toBeLessThan(0);
+      expect(compareTicketIds('AL-1', 'AL-01')).toBeGreaterThan(0);
+      expect(compareTicketIds('AL-001', 'AL-01')).toBeLessThan(0);
+      expect(compareTicketIds('AL-02', 'AL-10')).toBeLessThan(0);
+      expect(compareTicketIds('AL-009', 'AL-1')).toBeGreaterThan(0);
+      expect(compareTicketIds('AL-0', 'AL-00')).toBeLessThan(0);
+      expect(compareTicketIds('AL-00', 'AL-0')).toBeGreaterThan(0);
+    });
+
+    it('handles mixed case and suffixes', () => {
+      expect(compareTicketIds('al-10', 'AL-2')).toBeGreaterThan(0);
+      expect(compareTicketIds('AL-2', 'al-10')).toBeLessThan(0);
+      expect(compareTicketIds('Al-100', 'aL-99')).toBeGreaterThan(0);
+
+      expect(compareTicketIds('AL-1-a', 'AL-1-b')).toBeLessThan(0);
+      expect(compareTicketIds('AL-1-b', 'AL-1-a')).toBeGreaterThan(0);
+      expect(compareTicketIds('AL-1-hotfix', 'AL-2-hotfix')).toBeLessThan(0);
+      expect(compareTicketIds('AL-2-beta', 'AL-10-alpha')).toBeLessThan(0);
+      expect(compareTicketIds('AL-1', 'AL-1-hotfix')).toBeLessThan(0);
+    });
+
+    it('handles delimiter variations between hyphen and underscore', () => {
+      expect(compareTicketIds('AL-10', 'AL_2')).toBeGreaterThan(0);
+      expect(compareTicketIds('AL_2', 'AL-10')).toBeLessThan(0);
+      expect(compareTicketIds('AL-1', 'AL_1')).toBeLessThan(0);
+      expect(compareTicketIds('AL_1', 'AL-1')).toBeGreaterThan(0);
+    });
+
+    it('correctly sorts an entire array of mixed ticket IDs', () => {
+      const input = [
+        'AL-10',
+        '123',
+        'AL-01',
+        'al-2',
+        'AL-1',
+        'AL_2',
+        'AL-',
+        '',
+        'GEN-1',
+        'unknown',
+        '456',
+      ];
+      const sorted = [...input].sort(compareTicketIds);
+      expect(sorted).toEqual([
+        '',
+        'AL-01',
+        'AL-1',
+        'AL_2',
+        'al-2',
+        'AL-10',
+        'GEN-1',
+        '123',
+        '456',
+        'AL-',
+        'unknown',
+      ]);
     });
   });
 });

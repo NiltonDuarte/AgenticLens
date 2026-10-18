@@ -340,5 +340,64 @@ describe('Presentation Components Boundary Tests', () => {
       fireEvent.change(select, { target: { value: 'AL-2' } });
       expect(onSelect).toHaveBeenCalledWith('AL-2');
     });
+
+    it('sorts options naturally by ticket id', () => {
+      render(
+        <TicketSelector
+          tickets={[
+            { ticket_id: 'AL-10', ticket_title: 'Ticket Ten' },
+            { ticket_id: 'AL-2', ticket_title: 'Ticket Two' },
+            { ticket_id: 'AL-1', ticket_title: 'Ticket One' },
+          ]}
+          selectedTicketId="AL-1"
+          onSelectTicket={vi.fn()}
+        />
+      );
+
+      const options = screen.getAllByRole('option');
+      expect(options[0]).toHaveTextContent('AL-1 - Ticket One');
+      expect(options[1]).toHaveTextContent('AL-2 - Ticket Two');
+      expect(options[2]).toHaveTextContent('AL-10 - Ticket Ten');
+    });
+
+    it('handles adversarial tickets with leading zeroes, mixed case, non-conforming IDs, and health badges', () => {
+      render(
+        <TicketSelector
+          tickets={[
+            { ticket_id: 'AL-10', ticket_title: 'Ten' },
+            { ticket_id: '123', ticket_title: 'Numeric' },
+            { ticket_id: 'AL-01', ticket_title: 'Zero One', context_health_status: 'HEALTHY' },
+            { ticket_id: 'al-2', ticket_title: 'Lower Two' },
+            { ticket_id: 'GEN-2', ticket_title: 'Generic' },
+            { ticket_id: 'AL-1', ticket_title: '' },
+          ]}
+          selectedTicketId="AL-01"
+          onSelectTicket={vi.fn()}
+        />
+      );
+
+      const options = screen.getAllByRole('option');
+      expect(options).toHaveLength(6);
+      expect(options[0]).toHaveTextContent('AL-01 - Zero One [HEALTHY]');
+      expect(options[1]).toHaveTextContent('AL-1 - Untitled');
+      expect(options[2]).toHaveTextContent('al-2 - Lower Two');
+      expect(options[3]).toHaveTextContent('AL-10 - Ten');
+      expect(options[4]).toHaveTextContent('GEN-2 - Generic');
+      expect(options[5]).toHaveTextContent('123 - Numeric');
+    });
+
+    it('renders disabled placeholder when tickets list is empty', () => {
+      render(
+        <TicketSelector
+          tickets={[]}
+          selectedTicketId={null}
+          onSelectTicket={vi.fn()}
+        />
+      );
+
+      const option = screen.getByRole('option');
+      expect(option).toBeDisabled();
+      expect(option).toHaveTextContent(/no workspaces available/i);
+    });
   });
 });
