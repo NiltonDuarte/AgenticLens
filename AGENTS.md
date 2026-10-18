@@ -25,12 +25,16 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
    - `workspaces/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
    - `workspaces/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger.
    - `workspaces/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
-6. **Telemetry Ingestion**:
-   - Every iteration must extract telemetry facts and append metrics using the AgenticLens CLI:
+6. **Telemetry Ingestion & Conventional Commit Type Classification**:
+   - Every iteration must extract telemetry facts and append metrics using the AgenticLens CLI with an explicit conventional commit `type`:
      ```bash
      NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-     ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --json-output workspaces/<TICKET_ID>/agentic_metrics.json --append workspaces/<TICKET_ID>/SUMMARY.md
+     ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output workspaces/<TICKET_ID>/agentic_metrics.json --append workspaces/<TICKET_ID>/SUMMARY.md
      ```
+   - `<CONVENTIONAL_TYPE>` must match standard conventional commit classifications (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
+   - PO tickets (`PO-#`) must strictly use `--ticket-type docs`.
+   - Generic tickets (`GEN-#`) must use `--ticket-type chore` unless explicitly a feature (`feat`).
+   - Developer tickets must use the corresponding conventional commit type matching their branch prefix (`feat`, `fix`, `refactor`, etc.). Never default all tickets to `feature`.
 
 ---
 
@@ -41,6 +45,8 @@ Work in this repository is orchestrated through specialized agents and skills:
 - **Product / Scope Inception (`agentic-lens-po`)**:
   - Elicits requirements and decomposes features into tracer-bullet tickets.
   - Used when creating new tickets, structuring specifications, or defining acceptance criteria.
+  - **PO Non-Execution Invariant**: Project Owners are strictly prohibited from writing or modifying application code, test files, runtime scripts, or adapters. Project Owners only plan tasks, author product specifications (`SPEC.md`), and decompose roadmaps into Jira tickets. All implementation must be performed through `agentic-lens-dev`.
+  - **PO Session Separation**: The PO session strictly ends once specifications and planning tickets are authored. Development must never take place in the same session and must always run in a separate, dedicated session.
 - **Development Orchestrator (`orchestrator` / `agentic-lens-dev`)**:
   - Coordinates iterations across subagents (`planner` -> `coder` -> `tester` -> `reviewer`).
   - **Orchestrator Non-Execution Invariant**: Orchestrators never write application code directly.

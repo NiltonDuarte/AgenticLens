@@ -22,6 +22,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/to-do/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
+- `workspaces/plan/to-do/AL-23 natural ticket identifier ordering and sortable tables.md`
+- `workspaces/plan/to-do/AL-24 dynamic role and model aggregations and presentation.md`
+- `workspaces/plan/to-do/AL-25 contextual hover information icons for cards and tables.md`
+- `workspaces/plan/to-do/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
+- `workspaces/plan/to-do/AL-27 metric progression custom window one-day range and hourly granularity.md`
+- `workspaces/plan/to-do/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
+- `workspaces/plan/to-do/AL-29 conventional commit ticket type classification in telemetry engine.md`
+- `workspaces/plan/to-do/AL-30 fail telemetry generation on missing root session.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 
 ---
@@ -68,6 +76,46 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocks**: AL-17
   - **File**: `workspaces/plan/to-do/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
 
+- **AL-23**: Natural Ticket Identifier Ordering and Sortable Tables
+  - **Subsystem**: Domain / Presentation / Adapters / Tests
+  - **Phase**: Phase 5
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-26
+  - **File**: `workspaces/plan/to-do/AL-23 natural ticket identifier ordering and sortable tables.md`
+
+- **AL-24**: Dynamic Role and Model Aggregations and Presentation
+  - **Subsystem**: Domain / Presentation / Adapters / Tests
+  - **Phase**: Phase 5
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-24 dynamic role and model aggregations and presentation.md`
+
+- **AL-25**: Contextual Hover Information Icons for Cards and Tables
+  - **Subsystem**: Presentation / Components / Tests
+  - **Phase**: Phase 5
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-25 contextual hover information icons for cards and tables.md`
+
+- **AL-29**: Conventional Commit Ticket Type Classification in Telemetry Engine
+  - **Subsystem**: CLI / Adapters / Domain / Tests
+  - **Phase**: Phase 5
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-29 conventional commit ticket type classification in telemetry engine.md`
+
+- **AL-30**: Fail Telemetry Generation on Unresolved Root Session
+  - **Subsystem**: CLI / Adapters / Tests
+  - **Phase**: Phase 5
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-30 fail telemetry generation on missing root session.md`
+
 ---
 
 ## Pending
@@ -103,6 +151,30 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: AL-18, AL-19
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
+
+- **AL-26**: Fleet Overview Completion Date Filtering and Autopsy Date Sorting
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Pending
+  - **Blocked by**: AL-23
+  - **Blocks**: AL-27, AL-28
+  - **File**: `workspaces/plan/to-do/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
+
+- **AL-27**: Metric Progression Custom Window, 1-Day Window, and Hourly Granularity
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Pending
+  - **Blocked by**: AL-26
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-27 metric progression custom window one-day range and hourly granularity.md`
+
+- **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Pending
+  - **Blocked by**: AL-26
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 
 ---
 

@@ -76,28 +76,19 @@ PO session-specific deliverables live under `<WORKSPACES_DIR>/PO-#/`:
 - `SPEC.md`: Structured feature specification.
 - `SUMMARY.md`: Session execution log with appended AgenticLens metrics table.
 - `PULL_REQUEST.md`: Conventional PR draft describing the specification.
-- `agentic_metrics.json`: Extracted session fact ledger.
+- `agentic_metrics.json`: Extracted session fact ledger generated with conventional commit type (`--ticket-type docs`).
+
+Generate PO session metrics via:
+```bash
+NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
+./bin/agentic-lens generate --nonce $NONCE --ticket-id PO-# --ticket-type docs --json-output <WORKSPACES_DIR>/PO-#/agentic_metrics.json --append <WORKSPACES_DIR>/PO-#/SUMMARY.md
+```
 
 ---
 
-## 3. Handoff to Development (`agentic-lens-dev`)
-
-Once tickets are created in `<WORKSPACES_DIR>/plan/to-do/`:
-1. Provide the ticket ID and target scope to the developer or run the development workflow:
-   ```bash
-   # Kick off multi-agent iteration under agentic-lens-dev
-   /agentic-lens-dev <PREFIX>-#
-   ```
-2. The developer skill (`agentic-lens-dev`) will allocate the working workspace `<WORKSPACES_DIR>/<PREFIX>-#/`, author `CONTRACT.md`, and execute the implementation loop (`planner` -> `coder` -> `tester` -> `reviewer`).
-3. Ensure the resulting implementation satisfies the PO acceptance criteria and records telemetry via:
-   ```bash
-   NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-   ./bin/agentic-lens generate --nonce $NONCE --ticket-id <PREFIX>-# --json-output <WORKSPACES_DIR>/<PREFIX>-#/agentic_metrics.json --append <WORKSPACES_DIR>/<PREFIX>-#/SUMMARY.md
-   ```
-
----
-
-## 4. Key Rules for the Project Owner
+## 3. Key Rules for the Project Owner
+- **Zero Code Changes Invariant (PO Non-Execution)**: Project Owners are strictly prohibited from writing, editing, or modifying application code, test files, runtime scripts, or adapters. The Project Owner only plans tasks, elicits requirements, authors product specifications (`SPEC.md`), and decomposes work into vertical Jira tickets (`workspaces/plan/to-do/`). All implementation, refactoring, and bug fixing must be performed by developers through `agentic-lens-dev`.
+- **Session Boundary & Separate Development Session**: The Project Owner session terminates once requirements are elicited, specifications are written, tickets are placed in `<WORKSPACES_DIR>/plan/to-do/`, roadmap registries are updated, and PO session artifacts are generated. Implementation of planned tickets must NEVER be started within the same PO session. Development must always be initiated in a separate, dedicated session using `agentic-lens-dev`.
 - **Zero Hallucinated Metrics**: Every metric must be derivable from real agent trace logs or explicit session inputs.
 - **No Premature Workspaces or Contracts**: `workspaces/<PREFIX>-#` directories are strictly for active developer work, and `CONTRACT.md` is authored by developers during `agentic-lens-dev`, never by the PO. PO writes ticket files to `workspaces/plan/to-do/<PREFIX>-# <slug>.md`.
 - **Maintain PO Workspace Isolation**: The PO records its own session facts, summary, and PR draft under `workspaces/PO-#/`.

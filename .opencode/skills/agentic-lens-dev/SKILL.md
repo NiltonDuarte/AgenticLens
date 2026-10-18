@@ -102,10 +102,10 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
    ```
 2. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus verification status.
 3. **Extract Telemetry & Render Metrics via AgenticLens**:
-   Run AgenticLens Go CLI to query OpenCode SQLite and Git, construct the fact ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs:
+   Run AgenticLens Go CLI to query OpenCode SQLite and Git, construct the fact ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs. Pass explicit `--ticket-type` matching the conventional commit classification (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`):
    ```bash
    NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-   ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
+   ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
    ```
 4. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
 5. Print concise handoff summary to user (active duration, cost, cache hits, test status, context window health).
