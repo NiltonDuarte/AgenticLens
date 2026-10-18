@@ -1,7 +1,7 @@
-# GEN-4: Update TICKETS.md and Move Merged Tickets to Done
+# GEN-4: Update TICKETS.md Status for Merged Workspaces and Configure Release-Please
 
 ## Summary
-Updates `workspaces/plan/TICKETS.md` and ticket specification files for completed tickets AL-15 and AL-30 whose workspaces and implementations have already been merged into `main`. Moves their specification files from `workspaces/plan/to-do/` to `workspaces/plan/done/`, removes them from the `Ready` list, and marks their status as `Done`.
+Updates `workspaces/plan/TICKETS.md` and ticket specification files for completed tickets AL-15 and AL-30 whose workspaces and implementations have already been merged into `main`. Configures automated semantic versioning and changelog generation via Google's `release-please` GitHub Action.
 
 ## Changes
 - Moved `workspaces/plan/to-do/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md` to `workspaces/plan/done/`.
@@ -10,4 +10,8 @@ Updates `workspaces/plan/TICKETS.md` and ticket specification files for complete
   - Updated individual ticket definition links to reflect `done/` locations for AL-15 and AL-30.
   - Removed AL-15 and AL-30 from `## Ready`.
   - Added AL-15 and AL-30 to `## Done` with `Status: Done` and updated file paths.
+- Added `.release-please-config.json` configuring Go release type with `extra-files` for `web/package.json`.
+- Added `.release-please-manifest.json` setting the root baseline version to `0.1.0`.
+- Added `.github/workflows/release-please.yml` running on pushes to `main`.
+- Added root `CHANGELOG.md` seed file for release-please automated tracking.
 - Allocated ticket workspace under `workspaces/GEN-4/`.
