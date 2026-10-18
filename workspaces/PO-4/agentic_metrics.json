@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "ticket_id": "PO-4",
+  "ticket_title": "Session CI/CD Pipelines, Multi-Version Schema Migration, Review Skill, and Live Observability",
+  "ticket_type": "feature",
+  "started_at": null,
+  "completed_at": null,
+  "updated_at": "2026-10-18T13:21:28.079571+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 1
+  },
+  "invocations": null,
+  "tools": null
+}
