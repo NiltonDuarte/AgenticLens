@@ -626,7 +626,7 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 			}
 			contentType := resp.Header.Get("Content-Type")
 			if !strings.Contains(contentType, "application/json") {
-				t.Errorf("expected application/json for 404 on %s, got %s", ap, contentType)
+				t.Errorf("expected application/json for 404, got %s", contentType)
 			}
 		}
 	})
@@ -680,7 +680,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		}
 		var parsed domain.FleetSummary
 		if err := json.NewDecoder(rec.Body).Decode(&parsed); err != nil {
-			t.Fatalf("failed decoding: %v", err)
+			t.Fatalf("failed decoding fleet: %v", err)
 		}
 		if parsed.TotalTickets != 5 || parsed.TotalCostUSD != 1.25 {
 			t.Errorf("unexpected fleet summary: %+v", parsed)
@@ -699,6 +699,29 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		}
 		if errResp.Error != "invalid_input" || errResp.Message != "invalid query" || errResp.StatusCode != 400 {
 			t.Errorf("unexpected error response: %+v", errResp)
+		}
+	})
+
+	t.Run("WriteVersionResponse writes valid JSON", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		info := domain.BuildInfo{
+			Version:   "v0.1.0-dev",
+			GitCommit: "abcdef1",
+			BuildDate: "2026-10-18T10:00:00Z",
+		}
+		adaptershttp.WriteVersionResponse(rec, info)
+		if rec.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", rec.Code)
+		}
+		if rec.Header().Get("Content-Type") != "application/json; charset=utf-8" {
+			t.Errorf("unexpected content type: %s", rec.Header().Get("Content-Type"))
+		}
+		var parsed adaptershttp.BuildInfoDTO
+		if err := json.NewDecoder(rec.Body).Decode(&parsed); err != nil {
+			t.Fatalf("failed decoding version response: %v", err)
+		}
+		if parsed.Version != "v0.1.0-dev" || parsed.Commit != "abcdef1" || parsed.BuildDate != "2026-10-18T10:00:00Z" {
+			t.Errorf("unexpected version DTO values: %+v", parsed)
 		}
 	})
 
@@ -724,6 +747,161 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		}
 		if len(parsed) != 1 || parsed[0].SessionID != "ses-1" {
 			t.Errorf("unexpected events parsed: %+v", parsed)
+		}
+	})
+}
+
+func TestGetVersion(t *testing.T) {
+	ts, _ := setupTestServer(t)
+
+	t.Run("successful GET returns 200 with BuildInfoDTO schema", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/version")
+		if err != nil {
+			t.Fatalf("failed GET /api/version: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
+		}
+
+		contentType := resp.Header.Get("Content-Type")
+		if contentType != "application/json; charset=utf-8" {
+			t.Errorf("expected application/json; charset=utf-8, got %q", contentType)
+		}
+
+		var dto adaptershttp.BuildInfoDTO
+		if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+			t.Fatalf("failed decoding version response: %v", err)
+		}
+
+		if dto.Version == "" {
+			t.Errorf("expected non-empty version in response")
+		}
+		if dto.Commit == "" {
+			t.Errorf("expected non-empty commit in response")
+		}
+		if dto.BuildDate == "" {
+			t.Errorf("expected non-empty build_date in response")
+		}
+	})
+
+	t.Run("unsupported HTTP methods return non-200 status", func(t *testing.T) {
+		disallowedMethods := []string{
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodDelete,
+			http.MethodPatch,
+		}
+
+		for _, method := range disallowedMethods {
+			req, err := http.NewRequest(method, ts.URL+"/api/version", nil)
+			if err != nil {
+				t.Fatalf("failed creating request: %v", err)
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("failed executing %s /api/version: %v", method, err)
+			}
+			resp.Body.Close()
+
+			if resp.StatusCode == http.StatusOK {
+				t.Errorf("expected non-200 for %s /api/version, got %d", method, resp.StatusCode)
+			}
+		}
+	})
+
+	t.Run("subpath under version endpoint returns 404 JSON, not SPA fallback", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/version/unrecognized")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("expected 404 for subpath /api/version/unrecognized, got %d", resp.StatusCode)
+		}
+		contentType := resp.Header.Get("Content-Type")
+		if !strings.Contains(contentType, "application/json") {
+			t.Errorf("expected application/json for 404, got %s", contentType)
+		}
+	})
+
+	t.Run("query parameters are safely ignored and 200 OK returned", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/version?param=junk&another=test&flag=true")
+		if err != nil {
+			t.Fatalf("failed GET with query params: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("expected 200 OK with query parameters, got %d", resp.StatusCode)
+		}
+
+		var dto adaptershttp.BuildInfoDTO
+		if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+			t.Fatalf("failed decoding version response: %v", err)
+		}
+		if dto.Version == "" {
+			t.Errorf("expected non-empty version")
+		}
+	})
+
+	t.Run("CORS preflight on version endpoint returns 204 No Content", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodOptions, ts.URL+"/api/version", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Origin", "http://localhost:5173")
+		req.Header.Set("Access-Control-Request-Method", "GET")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("failed OPTIONS request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNoContent {
+			t.Errorf("expected 204 No Content for CORS preflight, got %d", resp.StatusCode)
+		}
+		if resp.Header.Get("Access-Control-Allow-Origin") != "*" {
+			t.Errorf("expected Access-Control-Allow-Origin: *")
+		}
+	})
+
+	t.Run("empty domain variables fall back to defaults in HTTP response", func(t *testing.T) {
+		origVersion := domain.Version
+		origCommit := domain.GitCommit
+		origDate := domain.BuildDate
+		t.Cleanup(func() {
+			domain.Version = origVersion
+			domain.GitCommit = origCommit
+			domain.BuildDate = origDate
+		})
+
+		domain.Version = ""
+		domain.GitCommit = ""
+		domain.BuildDate = ""
+
+		resp, err := http.Get(ts.URL + "/api/version")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer resp.Body.Close()
+
+		var dto adaptershttp.BuildInfoDTO
+		if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+			t.Fatalf("failed decoding: %v", err)
+		}
+
+		if dto.Version != domain.DefaultVersion {
+			t.Errorf("expected default version %q, got %q", domain.DefaultVersion, dto.Version)
+		}
+		if dto.Commit != domain.DefaultGitCommit {
+			t.Errorf("expected default commit %q, got %q", domain.DefaultGitCommit, dto.Commit)
+		}
+		if dto.BuildDate != domain.DefaultBuildDate {
+			t.Errorf("expected default build date %q, got %q", domain.DefaultBuildDate, dto.BuildDate)
 		}
 	})
 }
@@ -975,5 +1153,3 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		}
 	})
 }
-
-

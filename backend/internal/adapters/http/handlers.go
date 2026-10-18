@@ -144,3 +144,11 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 		WriteFleetResponse(w, summary)
 	}
 }
+
+// VersionHandler handles GET /api/version
+func VersionHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		info := domain.GetBuildInfo()
+		WriteVersionResponse(w, info)
+	}
+}

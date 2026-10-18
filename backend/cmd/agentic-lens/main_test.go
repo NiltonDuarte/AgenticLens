@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
 )
 
@@ -1116,6 +1117,231 @@ func TestCLIBackfillCommand(t *testing.T) {
 		}
 		if parsed.Migration != nil {
 			t.Errorf("expected migration object to be omitted on completed status, got %v", parsed.Migration)
+		}
+	})
+}
+
+func TestCLIVersionCommand(t *testing.T) {
+	t.Run("version subcommand outputs formatted string", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "version")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("version command failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.HasPrefix(out, "agentic-lens version ") {
+			t.Errorf("expected output to start with 'agentic-lens version ', got: %s", out)
+		}
+		if !strings.Contains(out, "commit:") || !strings.Contains(out, "built:") {
+			t.Errorf("expected commit and built metadata in version output, got: %s", out)
+		}
+	})
+
+	t.Run("-v flag outputs formatted string", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "-v")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("-v failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.HasPrefix(out, "agentic-lens version ") {
+			t.Errorf("expected output to start with 'agentic-lens version ', got: %s", out)
+		}
+	})
+
+	t.Run("--version flag outputs formatted string", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "--version")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("--version failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.HasPrefix(out, "agentic-lens version ") {
+			t.Errorf("expected output to start with 'agentic-lens version ', got: %s", out)
+		}
+	})
+
+	t.Run("version --short outputs raw version string", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "version", "--short")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("version --short failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := strings.TrimSpace(stdout.String())
+		if !strings.HasPrefix(out, "v") {
+			t.Errorf("expected short version to start with 'v', got: %s", out)
+		}
+		if strings.Contains(out, "commit:") {
+			t.Errorf("short version should not contain commit metadata, got: %s", out)
+		}
+	})
+
+	t.Run("version --json outputs valid JSON payload", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "version", "--json")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("version --json failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		var payload struct {
+			Version   string `json:"version"`
+			Commit    string `json:"commit"`
+			BuildDate string `json:"build_date"`
+		}
+
+		if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+			t.Fatalf("version --json failed to produce valid JSON: %v, stdout: %s", err, stdout.String())
+		}
+
+		if payload.Version == "" {
+			t.Errorf("expected non-empty version in JSON output")
+		}
+		if payload.Commit == "" {
+			t.Errorf("expected non-empty commit in JSON output")
+		}
+		if payload.BuildDate == "" {
+			t.Errorf("expected non-empty build_date in JSON output")
+		}
+
+		// Also unmarshal directly into domain.BuildInfo
+		var domainInfo domain.BuildInfo
+		if err := json.Unmarshal(stdout.Bytes(), &domainInfo); err != nil {
+			t.Fatalf("failed unmarshaling directly into domain.BuildInfo: %v", err)
+		}
+		if domainInfo.Version != payload.Version || domainInfo.GitCommit != payload.Commit || domainInfo.BuildDate != payload.BuildDate {
+			t.Errorf("mismatch between DTO and domain.BuildInfo: dto=%+v, domain=%+v", payload, domainInfo)
+		}
+	})
+
+	t.Run("version -short single-dash flag", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "version", "-short")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("version -short failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := strings.TrimSpace(stdout.String())
+		if !strings.HasPrefix(out, "v") {
+			t.Errorf("expected short version to start with 'v', got: %s", out)
+		}
+	})
+
+	t.Run("version -json single-dash flag", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "version", "-json")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("version -json failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		var info domain.BuildInfo
+		if err := json.Unmarshal(stdout.Bytes(), &info); err != nil {
+			t.Fatalf("version -json failed to produce valid JSON: %v", err)
+		}
+		if info.Version == "" {
+			t.Errorf("expected non-empty version")
+		}
+	})
+
+	t.Run("version with both --json and --short flags prefers JSON", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "version", "--json", "--short")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("version --json --short failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		var info domain.BuildInfo
+		if err := json.Unmarshal(stdout.Bytes(), &info); err != nil {
+			t.Fatalf("expected valid JSON output when --json is provided: %v", err)
+		}
+	})
+
+	t.Run("version with unrecognized flag returns non-zero exit code", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "version", "--bogus-flag-123")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected non-zero exit code for unrecognized flag, got exit code 0")
+		}
+	})
+
+	t.Run("-version standard Go flag style", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "-version")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("-version failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.HasPrefix(out, "agentic-lens version ") {
+			t.Errorf("expected output to start with 'agentic-lens version ', got: %s", out)
+		}
+	})
+
+	t.Run("root flags: -v after --workspaces outputs version and exits cleanly", func(t *testing.T) {
+		wsDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "-v")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("--workspaces ... -v failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.HasPrefix(out, "agentic-lens version ") {
+			t.Errorf("expected version output when -v passed after workspaces flag, got: %s", out)
+		}
+	})
+
+	t.Run("root flags: --version after --workspaces outputs version and exits cleanly", func(t *testing.T) {
+		wsDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--version")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("--workspaces ... --version failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.HasPrefix(out, "agentic-lens version ") {
+			t.Errorf("expected version output when --version passed after workspaces flag, got: %s", out)
 		}
 	})
 }

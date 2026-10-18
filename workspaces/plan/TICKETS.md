@@ -11,9 +11,9 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-8 anomaly api endpoints and fleet health aggregation.md`
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
+- `workspaces/plan/done/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
 - `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 - `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
-- `workspaces/plan/to-do/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
 - `workspaces/plan/to-do/AL-14 implement automated github release workflows for release candidates and stable versions.md`
 - `workspaces/plan/to-do/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`
 - `workspaces/plan/to-do/AL-16 execute codebase and skills refactoring with provided review skill.md`
@@ -36,13 +36,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 
-- **AL-13**: Implement Semantic Versioning and Automated CI for Pull Requests and Main Merges
-  - **Subsystem**: Domain / Adapters / Presentation / CLI / Tests
+- **AL-14**: Implement Automated GitHub Release Workflows for Release Candidates and Stable Versions
+  - **Subsystem**: CLI / Adapters / Build / Tests
   - **Phase**: Phase 3
   - **Status**: Ready
-  - **Blocked by**: None (AL-5 Done)
-  - **Blocks**: AL-14
-  - **File**: `workspaces/plan/to-do/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
+  - **Blocked by**: None (AL-13 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-14 implement automated github release workflows for release candidates and stable versions.md`
 
 - **AL-15**: Implement Universal Multi-Version Schema Migration Engine for Telemetry Ledgers
   - **Subsystem**: Domain / Adapters / CLI / Tests
@@ -71,14 +71,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Pending
-
-- **AL-14**: Implement Automated GitHub Release Workflows for Release Candidates and Stable Versions
-  - **Subsystem**: CLI / Adapters / Build / Tests
-  - **Phase**: Phase 3
-  - **Status**: Pending
-  - **Blocked by**: AL-13
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-14 implement automated github release workflows for release candidates and stable versions.md`
 
 - **AL-17**: Implement Non-Locking Live Database Hook, Session Tree Engine, and Config-Driven Ticket Inference
   - **Subsystem**: Adapters / Domain / HTTP / Tests
@@ -115,6 +107,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-13**: Implement Semantic Versioning and Automated CI for Pull Requests and Main Merges
+  - **Subsystem**: Domain / Adapters / Presentation / CLI / Tests
+  - **Phase**: Phase 3
+  - **Status**: Done
+  - **Blocked by**: None (AL-5 Done)
+  - **Blocks**: AL-14
+  - **File**: `workspaces/plan/done/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
 
 - **AL-22**: Render Rich Markdown for Workspace Summary and Contract Artifacts
   - **Subsystem**: Presentation / Web / Tests

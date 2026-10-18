@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  backend-check:
+    name: Backend Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Go Vet
+        working-directory: backend
+        run: go vet ./...
+
+      - name: Go Test with Race Detector
+        working-directory: backend
+        run: go test -v -race ./...
+
+  frontend-check:
+    name: Frontend Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: TypeScript Typecheck
+        working-directory: web
+        run: npm run typecheck
+
+      - name: ESLint
+        working-directory: web
+        run: npm run lint
+
+      - name: Frontend Unit Tests
+        working-directory: web
+        run: npm test
+
+  build-binary:
+    name: Build Binary and Verify Version
+    needs: [backend-check, frontend-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build Single Binary
+        run: make build
+
+      - name: Verify CLI Version Command
+        run: |
+          ./bin/agentic-lens version
+          ./bin/agentic-lens version --short
+          ./bin/agentic-lens version --json
+          ./bin/agentic-lens -v
+          ./bin/agentic-lens --version

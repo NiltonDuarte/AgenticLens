@@ -20,6 +20,7 @@ func NewServer(workspacesDir string, staticFS fs.FS) *Server {
 	mux := http.NewServeMux()
 
 	// Register API endpoints
+	mux.HandleFunc("GET /api/version", VersionHandler())
 	mux.HandleFunc("GET /api/workspaces", WorkspacesHandler(workspacesDir))
 	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(workspacesDir))
 	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(workspacesDir))

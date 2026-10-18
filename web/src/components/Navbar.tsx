@@ -1,17 +1,46 @@
-import React from 'react';
-import type { ActiveTab } from '../domain/types';
+import React, { useEffect, useState } from 'react';
+import type { ActiveTab, BuildInfo } from '../domain/types';
+import { fetchVersion } from '../api/client';
 
 export interface NavbarProps {
   readonly isMock: boolean;
   readonly activeTab: ActiveTab;
   readonly onSelectTab?: (tab: ActiveTab) => void;
+  readonly versionInfo?: BuildInfo;
 }
+
+const DEFAULT_BUILD_INFO: BuildInfo = {
+  version: 'v0.1.0-dev',
+  commit: 'unknown',
+  build_date: 'unknown',
+};
 
 export const Navbar: React.FC<NavbarProps> = ({
   isMock,
   activeTab,
   onSelectTab,
+  versionInfo,
 }) => {
+  const [internalVersion, setInternalVersion] = useState<BuildInfo | null>(versionInfo ?? null);
+
+  useEffect(() => {
+    if (versionInfo) {
+      setInternalVersion(versionInfo);
+      return;
+    }
+    let mounted = true;
+    void fetchVersion().then((resp) => {
+      if (mounted) {
+        setInternalVersion(resp.data);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [versionInfo]);
+
+  const displayVersion = internalVersion ?? DEFAULT_BUILD_INFO;
+
   const handleBrandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -79,7 +108,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
       </nav>
 
-      <div>
+      <div className="navbar-actions">
+        <span
+          className="version-badge"
+          title={`Commit: ${displayVersion.commit} | Built: ${displayVersion.build_date}`}
+        >
+          {displayVersion.version}
+        </span>
         {isMock ? (
           <span className="status-pill mock" title="Running with local deterministic mock fixtures">
             <span className="status-dot" />

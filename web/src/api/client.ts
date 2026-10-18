@@ -1,5 +1,6 @@
 import type {
   AgenticMetricsLedger,
+  BuildInfo,
   EventFact,
   FleetSummary,
   TicketComparisonRow,
@@ -11,6 +12,7 @@ import {
   mockTicketComparisonRows,
   mockAgenticMetricsLedgers,
   mockWorkspaceDetails,
+  mockBuildInfo,
 } from './mockData';
 
 export interface ApiResponse<T> {
@@ -122,6 +124,19 @@ export async function fetchWorkspaceById(
     }
     const msg = err instanceof Error ? err.message : 'Unknown network failure';
     throw new Error(msg);
+  }
+}
+
+export async function fetchVersion(): Promise<ApiResponse<BuildInfo>> {
+  try {
+    const res = await fetch('/api/version');
+    if (!res.ok) {
+      return { data: mockBuildInfo, isMock: true };
+    }
+    const data = (await res.json()) as BuildInfo;
+    return { data, isMock: false };
+  } catch {
+    return { data: mockBuildInfo, isMock: true };
   }
 }
 

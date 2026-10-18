@@ -463,20 +463,55 @@ func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly) {
 	}
 }
 
+func runVersion(args []string) {
+	versionFlags := flag.NewFlagSet("version", flag.ExitOnError)
+	jsonFlag := versionFlags.Bool("json", false, "Output version information in JSON format")
+	shortFlag := versionFlags.Bool("short", false, "Output short version string only")
+
+	if err := versionFlags.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing version flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	info := domain.GetBuildInfo()
+
+	if *jsonFlag {
+		data, err := json.MarshalIndent(info, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error marshaling version JSON: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(string(data))
+		return
+	}
+
+	if *shortFlag {
+		fmt.Println(domain.FormatShortVersion(info))
+		return
+	}
+
+	fmt.Println(domain.FormatBuildInfo(info))
+}
+
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "server" {
-		runServer(os.Args[2:])
-		return
-	}
-
-	if len(os.Args) > 1 && os.Args[1] == "generate" {
-		runGenerate(os.Args[2:])
-		return
-	}
-
-	if len(os.Args) > 1 && os.Args[1] == "backfill" {
-		runBackfill(os.Args[2:])
-		return
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "version":
+			runVersion(os.Args[2:])
+			return
+		case "-v", "--version", "-version":
+			runVersion(nil)
+			return
+		case "server":
+			runServer(os.Args[2:])
+			return
+		case "generate":
+			runGenerate(os.Args[2:])
+			return
+		case "backfill":
+			runBackfill(os.Args[2:])
+			return
+		}
 	}
 
 	ticketIDFlag := flag.String("ticket-id", "", "Target ticket identifier to filter and report on")
@@ -485,8 +520,15 @@ func main() {
 	jsonOutputFlag := flag.String("json-output", "", "Path to write computed metrics ledger as JSON")
 	listFlag := flag.Bool("list", false, "List all discovered ticket workspaces and summary metrics")
 	anomaliesFlag := flag.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
+	versionFlag := flag.Bool("v", false, "Print version information and exit")
+	versionLongFlag := flag.Bool("version", false, "Print version information and exit")
 
 	flag.Parse()
+
+	if *versionFlag || *versionLongFlag {
+		runVersion(nil)
+		return
+	}
 
 	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
 	report := adapters.ScanWorkspaces(workspacesDir)

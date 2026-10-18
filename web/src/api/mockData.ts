@@ -1,9 +1,16 @@
 import type {
   AgenticMetricsLedger,
+  BuildInfo,
   FleetSummary,
   TicketComparisonRow,
   WorkspaceDetail,
 } from '../domain/types';
+
+export const mockBuildInfo: BuildInfo = {
+  version: 'v0.1.0-dev',
+  commit: 'abcdef1',
+  build_date: '2026-10-18T10:00:00Z',
+};
 
 export const mockFleetSummary: FleetSummary = {
   total_tickets: 4,

@@ -359,3 +359,9 @@ export interface TimeBucketMetric {
   readonly cumulative_lines_deleted: number;
   readonly cumulative_invocations: number;
 }
+
+export interface BuildInfo {
+  readonly version: string;
+  readonly commit: string;
+  readonly build_date: string;
+}

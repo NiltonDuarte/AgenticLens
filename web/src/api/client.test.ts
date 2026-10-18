@@ -5,12 +5,14 @@ import {
   fetchWorkspaceById,
   fetchWorkspaceLedgers,
   fetchWorkspaceEvents,
+  fetchVersion,
 } from './client';
 import {
   mockFleetSummary,
   mockTicketComparisonRows,
   mockWorkspaceDetails,
   mockAgenticMetricsLedgers,
+  mockBuildInfo,
 } from './mockData';
 
 describe('Boundary API Client', () => {
@@ -402,6 +404,79 @@ describe('Boundary API Client', () => {
       const res = await fetchWorkspaceEvents('AL-1');
       expect(res.isMock).toBe(true);
       expect(Array.isArray(res.data)).toBe(true);
+    });
+  });
+
+  describe('fetchVersion', () => {
+    it('returns live build info on successful HTTP 200 response', async () => {
+      const liveInfo = {
+        version: 'v1.2.3',
+        commit: '1234567',
+        build_date: '2026-10-18T12:00:00Z',
+      };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => liveInfo,
+      }));
+
+      const res = await fetchVersion();
+      expect(res.isMock).toBe(false);
+      expect(res.data.version).toBe('v1.2.3');
+      expect(res.data.commit).toBe('1234567');
+      expect(res.data.build_date).toBe('2026-10-18T12:00:00Z');
+    });
+
+    it('falls back to mockBuildInfo on network error', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+
+      const res = await fetchVersion();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockBuildInfo);
+    });
+
+    it('falls back to mockBuildInfo on 500 error response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Server Error',
+      }));
+
+      const res = await fetchVersion();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockBuildInfo);
+    });
+
+    it('falls back to mockBuildInfo on 404 not found response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      }));
+
+      const res = await fetchVersion();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockBuildInfo);
+    });
+
+    it('falls back to mockBuildInfo on DOMException abort/timeout', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('The operation was aborted', 'AbortError')));
+
+      const res = await fetchVersion();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockBuildInfo);
+    });
+
+    it('falls back to mockBuildInfo on invalid JSON response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error('Malformed JSON');
+        },
+      }));
+
+      const res = await fetchVersion();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockBuildInfo);
     });
   });
 });

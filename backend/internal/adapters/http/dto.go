@@ -21,9 +21,16 @@ type WorkspaceDetailResponse struct {
 	Anomalies []domain.Anomaly            `json:"anomalies"`
 }
 
+// BuildInfoDTO represents the serialized build information payload.
+type BuildInfoDTO struct {
+	Version   string `json:"version"`
+	Commit    string `json:"commit"`
+	BuildDate string `json:"build_date"`
+}
+
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | BuildInfoDTO
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
@@ -69,6 +76,16 @@ func WriteWorkspaceDetailResponse(w http.ResponseWriter, detail WorkspaceDetailR
 // WriteFleetResponse writes a domain.FleetSummary as JSON.
 func WriteFleetResponse(w http.ResponseWriter, summary domain.FleetSummary) {
 	WriteJSON(w, http.StatusOK, summary)
+}
+
+// WriteVersionResponse writes a domain.BuildInfo as JSON.
+func WriteVersionResponse(w http.ResponseWriter, info domain.BuildInfo) {
+	dto := BuildInfoDTO{
+		Version:   info.Version,
+		Commit:    info.GitCommit,
+		BuildDate: info.BuildDate,
+	}
+	WriteJSON(w, http.StatusOK, dto)
 }
 
 // WriteEventsResponse writes a slice of EventFact as JSON.

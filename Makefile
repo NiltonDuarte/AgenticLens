@@ -7,6 +7,14 @@ BACKEND_DIR := backend
 PORT ?= 8085
 WORKSPACES ?= workspaces
 
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "v0.1.0-dev")
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
+
+LDFLAGS := -X 'agenticlens/internal/domain.Version=$(VERSION)' \
+           -X 'agenticlens/internal/domain.GitCommit=$(GIT_COMMIT)' \
+           -X 'agenticlens/internal/domain.BuildDate=$(BUILD_DATE)'
+
 .PHONY: all check test test-backend test-frontend lint vet build clean help server serve
 
 all: check test build
@@ -54,7 +62,7 @@ build:
 		(cd $(WEB_DIR) && npm run build); \
 	fi
 	@mkdir -p $(BIN_DIR)
-	(cd $(BACKEND_DIR) && go build -o ../$(BINARY) ./cmd/agentic-lens)
+	(cd $(BACKEND_DIR) && go build -ldflags "$(LDFLAGS)" -o ../$(BINARY) ./cmd/agentic-lens)
 
 server: build
 	./$(BINARY) server --port $(PORT) --workspaces $(WORKSPACES)
