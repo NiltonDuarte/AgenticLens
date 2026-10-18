@@ -168,10 +168,12 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// Skip condition:
 	// Fully completed tickets are skipped unless --force is specified.
-	// A ticket is considered completed if it has CurrentSchemaVersion
-	// and does not have a partial migration pending.
+	// A ticket is considered completed if it has CurrentSchemaVersion,
+	// does not have a partial migration pending, and does not require event backfill when RecomputeDB is requested.
+	needsEventBackfill := opts.RecomputeDB && len(factLedger.Events) == 0
 	isCompleted := factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
-		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial)
+		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) &&
+		!needsEventBackfill
 
 	if !opts.Force && isCompleted {
 		result.Skipped = true
@@ -206,7 +208,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// 2. OpenCode DB Recomputation with safe fallback preservation
 	dbAttempted := false
 	dbSessionFound := false
-	hasExistingDBFacts := len(factLedger.Invocations) > 0
+	hasExistingDBFacts := len(factLedger.Invocations) > 0 || len(factLedger.Events) > 0
 
 	if opts.RecomputeDB {
 		dbAttempted = true
@@ -261,20 +263,35 @@ func (e *BackfillEngine) processSingleWorkspace(
 			if resolvedSessionID != nil && strings.TrimSpace(*resolvedSessionID) != "" {
 				dbSessionFound = true
 				rootID := strings.TrimSpace(*resolvedSessionID)
-				invs, tools, stISO, endISO, err := opencode.ExtractFacts(
+				invs, tools, events, stISO, endISO, err := opencode.ExtractFacts(
 					opencodeDB.DB(),
 					[]string{rootID},
 					gitUser,
 					make(map[string]string),
 				)
 				if err == nil && len(invs) > 0 {
-					factLedger.Invocations = invs
-					factLedger.Tools = tools
-					if stISO != nil {
-						factLedger.StartedAt = stISO
+					shouldUpdateInvocations := !hasExistingDBFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
+					if shouldUpdateInvocations {
+						factLedger.Invocations = invs
+						factLedger.Tools = tools
+						if stISO != nil {
+							factLedger.StartedAt = stISO
+						}
+						if endISO != nil {
+							factLedger.CompletedAt = endISO
+						}
 					}
-					if endISO != nil {
-						factLedger.CompletedAt = endISO
+					if !shouldUpdateInvocations && factLedger.CompletedAt != nil && *factLedger.CompletedAt != "" {
+						cutoff := *factLedger.CompletedAt
+						var filteredEvents []domain.EventFact
+						for _, ev := range events {
+							if ev.Timestamp <= cutoff {
+								filteredEvents = append(filteredEvents, ev)
+							}
+						}
+						factLedger.Events = filteredEvents
+					} else {
+						factLedger.Events = events
 					}
 					result.DBUpdated = true
 				}

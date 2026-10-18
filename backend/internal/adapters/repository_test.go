@@ -481,3 +481,247 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 		}
 	})
 }
+
+func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
+	t.Run("legacy payload omitting events decodes without error", func(t *testing.T) {
+		legacyJSON := `{
+			"schema_version": 2,
+			"ticket_id": "AL-LEGACY",
+			"updated_at": "2026-10-18T10:00:00Z",
+			"invocations": [
+				{
+					"id": "ses-legacy",
+					"role": "orchestrator",
+					"model": "gemini-3.8-flash",
+					"user": "eng",
+					"active_duration_seconds": 30,
+					"turns": 2,
+					"tokens": {"input": 100, "output": 20, "cache_read": 50, "reasoning": 0, "peak_context": 150},
+					"cost_usd": 0.01,
+					"compactions": 0
+				}
+			]
+		}`
+
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(legacyJSON), &dto); err != nil {
+			t.Fatalf("failed to unmarshal legacy ledger without events: %v", err)
+		}
+		if dto.Events != nil {
+			t.Errorf("expected dto.Events to be nil, got: %+v", dto.Events)
+		}
+
+		dom := dto.ToDomain()
+		if len(dom.Events) != 0 {
+			t.Errorf("expected empty domain events slice, got len %d", len(dom.Events))
+		}
+	})
+
+	t.Run("ledger with events parses and round-trips cleanly", func(t *testing.T) {
+		toolName := "bash"
+		errMsg := "command not found: foobar"
+		var durMs int64 = 150
+
+		eventJSON := `{
+			"schema_version": 2,
+			"ticket_id": "AL-EVENTS",
+			"updated_at": "2026-10-18T10:00:00Z",
+			"events": [
+				{
+					"timestamp": "2026-10-18T10:00:01.100000+00:00",
+					"session_id": "ses-1",
+					"turn": 1,
+					"role": "orchestrator",
+					"event_type": "turn_message",
+					"status": "completed",
+					"duration_ms": 1200,
+					"context_tokens": 5000
+				},
+				{
+					"timestamp": "2026-10-18T10:00:02.300000+00:00",
+					"session_id": "ses-1",
+					"turn": 1,
+					"role": "orchestrator",
+					"event_type": "tool_call",
+					"tool_name": "bash",
+					"status": "error",
+					"error_message": "command not found: foobar",
+					"duration_ms": 150,
+					"context_tokens": 5000
+				},
+				{
+					"timestamp": "2026-10-18T10:00:03.000000+00:00",
+					"session_id": "ses-1",
+					"turn": 2,
+					"role": "orchestrator",
+					"event_type": "compaction",
+					"status": "completed",
+					"context_tokens": 4200
+				}
+			]
+		}`
+
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(eventJSON), &dto); err != nil {
+			t.Fatalf("failed to unmarshal ledger with events: %v", err)
+		}
+		if len(dto.Events) != 3 {
+			t.Fatalf("expected 3 events in DTO, got %d", len(dto.Events))
+		}
+
+		dom := dto.ToDomain()
+		if len(dom.Events) != 3 {
+			t.Fatalf("expected 3 events in domain model, got %d", len(dom.Events))
+		}
+
+		e0 := dom.Events[0]
+		if e0.EventType != domain.EventTypeTurnMessage || e0.Turn != 1 || e0.ContextTokens != 5000 {
+			t.Errorf("unexpected event 0: %+v", e0)
+		}
+
+		e1 := dom.Events[1]
+		if e1.EventType != domain.EventTypeToolCall || e1.ToolName == nil || *e1.ToolName != toolName {
+			t.Errorf("unexpected tool name in event 1: %+v", e1)
+		}
+		if e1.ErrorMessage == nil || *e1.ErrorMessage != errMsg {
+			t.Errorf("unexpected error message in event 1: %+v", e1)
+		}
+		if e1.DurationMs == nil || *e1.DurationMs != durMs {
+			t.Errorf("unexpected duration in event 1: %+v", e1)
+		}
+
+		e2 := dom.Events[2]
+		if e2.EventType != domain.EventTypeCompaction || e2.Turn != 2 {
+			t.Errorf("unexpected event 2: %+v", e2)
+		}
+
+		// Round-trip
+		roundDTO := adapters.AgenticFactLedgerDTOFromDomain(dom)
+		roundBytes, err := json.Marshal(roundDTO)
+		if err != nil {
+			t.Fatalf("failed to marshal round-trip DTO: %v", err)
+		}
+
+		var reloadedDTO adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(roundBytes, &reloadedDTO); err != nil {
+			t.Fatalf("failed to unmarshal reloaded DTO: %v", err)
+		}
+		if len(reloadedDTO.Events) != 3 {
+			t.Fatalf("expected 3 reloaded events, got %d", len(reloadedDTO.Events))
+		}
+		if *reloadedDTO.Events[1].ToolName != toolName {
+			t.Errorf("expected tool_name %s, got %s", toolName, *reloadedDTO.Events[1].ToolName)
+		}
+	})
+
+	t.Run("LoadExistingFactLedger loads events and handles absence", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// 1. Workspace without events
+		noEventsDir := filepath.Join(tempDir, "NO-EVENTS")
+		if err := os.MkdirAll(noEventsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		noEventsFile := filepath.Join(noEventsDir, "agentic_metrics.json")
+		if err := os.WriteFile(noEventsFile, []byte(`{"ticket_id":"NO-EVENTS","updated_at":"2026-10-18T10:00:00Z"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		factsNoEvents, err := adapters.LoadExistingFactLedger(noEventsFile)
+		if err != nil {
+			t.Fatalf("LoadExistingFactLedger failed on ledger without events: %v", err)
+		}
+		if len(factsNoEvents.Events) != 0 {
+			t.Errorf("expected empty events slice, got %d", len(factsNoEvents.Events))
+		}
+
+		// 2. Workspace with events
+		withEventsDir := filepath.Join(tempDir, "WITH-EVENTS")
+		if err := os.MkdirAll(withEventsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		withEventsFile := filepath.Join(withEventsDir, "agentic_metrics.json")
+		payload := `{
+			"ticket_id":"WITH-EVENTS",
+			"updated_at":"2026-10-18T10:00:00Z",
+			"events":[
+				{"timestamp":"2026-10-18T10:00:00Z","session_id":"s1","turn":1,"role":"coder","event_type":"tool_call","tool_name":"edit","status":"completed","context_tokens":1000}
+			]
+		}`
+		if err := os.WriteFile(withEventsFile, []byte(payload), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		factsWithEvents, err := adapters.LoadExistingFactLedger(withEventsFile)
+		if err != nil {
+			t.Fatalf("LoadExistingFactLedger failed on ledger with events: %v", err)
+		}
+		if len(factsWithEvents.Events) != 1 {
+			t.Fatalf("expected 1 event, got %d", len(factsWithEvents.Events))
+		}
+		if factsWithEvents.Events[0].EventType != domain.EventTypeToolCall {
+			t.Errorf("expected tool_call event, got %s", factsWithEvents.Events[0].EventType)
+		}
+	})
+
+	t.Run("explicit events null decodes gracefully with empty slice", func(t *testing.T) {
+		nullEventsJSON := `{"schema_version":2,"ticket_id":"AL-NULL","updated_at":"2026-10-18T10:00:00Z","events":null}`
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(nullEventsJSON), &dto); err != nil {
+			t.Fatalf("failed to unmarshal explicit null events: %v", err)
+		}
+		if dto.Events != nil {
+			t.Errorf("expected dto.Events to be nil, got %+v", dto.Events)
+		}
+		dom := dto.ToDomain()
+		if len(dom.Events) != 0 {
+			t.Errorf("expected empty domain events slice, got len %d", len(dom.Events))
+		}
+	})
+
+	t.Run("explicit events empty array decodes gracefully with empty slice", func(t *testing.T) {
+		emptyArrayJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY","updated_at":"2026-10-18T10:00:00Z","events":[]}`
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(emptyArrayJSON), &dto); err != nil {
+			t.Fatalf("failed to unmarshal explicit empty events array: %v", err)
+		}
+		if dto.Events == nil {
+			t.Fatal("expected dto.Events to be non-nil empty slice")
+		}
+		if len(dto.Events) != 0 {
+			t.Errorf("expected 0 events, got %d", len(dto.Events))
+		}
+		dom := dto.ToDomain()
+		if len(dom.Events) != 0 {
+			t.Errorf("expected empty domain events slice, got len %d", len(dom.Events))
+		}
+	})
+
+	t.Run("event with empty role and status defaults safely", func(t *testing.T) {
+		eventDTO := adapters.EventFactDTO{
+			Timestamp:     "2026-10-18T10:00:00Z",
+			SessionID:     "ses-default",
+			Turn:          1,
+			Role:          "", // should default to orchestrator
+			EventType:     "turn_message",
+			Status:        "", // should default to completed
+			ContextTokens: 100,
+		}
+		dom := eventDTO.ToDomain()
+		if dom.Role != "orchestrator" {
+			t.Errorf("expected default role orchestrator, got %q", dom.Role)
+		}
+		if dom.Status != "completed" {
+			t.Errorf("expected default status completed, got %q", dom.Status)
+		}
+	})
+
+	t.Run("corrupted event json payload returns unmarshal error", func(t *testing.T) {
+		corruptedEventsJSON := `{"schema_version":2,"ticket_id":"AL-CORRUPT","events":[{"timestamp": 12345}]}` // timestamp should be string
+		var dto adapters.AgenticFactLedgerDTO
+		err := json.Unmarshal([]byte(corruptedEventsJSON), &dto)
+		if err == nil {
+			t.Fatal("expected unmarshal error for non-string timestamp in events, got nil")
+		}
+	})
+}

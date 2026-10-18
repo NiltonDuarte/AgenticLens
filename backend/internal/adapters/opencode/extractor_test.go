@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"agenticlens/internal/adapters/opencode"
+	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
 )
 
@@ -225,7 +226,7 @@ func TestExtractFacts(t *testing.T) {
 		t.Fatalf("failed inserting tools: %v", err)
 	}
 
-	invocations, tools, startedAt, completedAt, err := opencode.ExtractFacts(
+	invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(
 		db,
 		[]string{"ses_root"},
 		"default_user@test.com",
@@ -304,6 +305,50 @@ func TestExtractFacts(t *testing.T) {
 			t.Errorf("unexpected tool %s", tool.Name)
 		}
 	}
+
+	// Chronological Events
+	if len(events) != 9 {
+		t.Fatalf("expected 9 events, got %d", len(events))
+	}
+
+	// Check chronological ordering
+	for i := 1; i < len(events); i++ {
+		if events[i].Timestamp < events[i-1].Timestamp {
+			t.Errorf("events not in chronological order: index %d (%s) < index %d (%s)",
+				i, events[i].Timestamp, i-1, events[i-1].Timestamp)
+		}
+	}
+
+	// Verify specific event properties
+	ev0 := events[0] // m1 turn message
+	if ev0.EventType != domain.EventTypeTurnMessage || ev0.Turn != 1 || ev0.ContextTokens != 6000 || ev0.Role != "orchestrator" {
+		t.Errorf("unexpected event 0: %+v", ev0)
+	}
+
+	ev1 := events[1] // t1 tool call (bash)
+	if ev1.EventType != domain.EventTypeToolCall || ev1.ToolName == nil || *ev1.ToolName != "bash" || ev1.Status != "completed" || ev1.Turn != 1 || ev1.ContextTokens != 6000 {
+		t.Errorf("unexpected event 1: %+v", ev1)
+	}
+
+	ev2 := events[2] // m2 turn message
+	if ev2.EventType != domain.EventTypeTurnMessage || ev2.Turn != 2 || ev2.ContextTokens != 8000 || ev2.Role != "orchestrator" {
+		t.Errorf("unexpected event 2: %+v", ev2)
+	}
+
+	ev3 := events[3] // t2 tool call (bash error)
+	if ev3.EventType != domain.EventTypeToolCall || ev3.Status != "error" || ev3.ErrorMessage == nil || *ev3.ErrorMessage != "permission denied" {
+		t.Errorf("unexpected event 3: %+v", ev3)
+	}
+
+	ev4 := events[4] // p_comp_1 compaction
+	if ev4.EventType != domain.EventTypeCompaction || ev4.Status != "completed" {
+		t.Errorf("unexpected event 4: %+v", ev4)
+	}
+
+	ev8 := events[8] // t4 tool call (read error)
+	if ev8.EventType != domain.EventTypeToolCall || ev8.Status != "error" || ev8.ErrorMessage == nil || *ev8.ErrorMessage != "Error: file not found" {
+		t.Errorf("unexpected event 8: %+v", ev8)
+	}
 }
 
 func TestExtractFacts_AdversarialEdgeCases(t *testing.T) {
@@ -311,7 +356,7 @@ func TestExtractFacts_AdversarialEdgeCases(t *testing.T) {
 		db := setupTestDB(t)
 		defer db.Close()
 
-		invocations, tools, startedAt, completedAt, err := opencode.ExtractFacts(
+		invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(
 			db,
 			[]string{"non_existent_thread"},
 			"default_user",
@@ -326,13 +371,16 @@ func TestExtractFacts_AdversarialEdgeCases(t *testing.T) {
 		if len(tools) != 0 {
 			t.Errorf("expected 0 tools, got %d", len(tools))
 		}
+		if len(events) != 0 {
+			t.Errorf("expected 0 events, got %d", len(events))
+		}
 		if startedAt != nil || completedAt != nil {
 			t.Errorf("expected nil timestamps for empty thread, got start=%v completed=%v", startedAt, completedAt)
 		}
 	})
 
 	t.Run("nil database returns explicit error", func(t *testing.T) {
-		_, _, _, _, err := opencode.ExtractFacts(nil, []string{"thread_1"}, "user", nil)
+		_, _, _, _, _, err := opencode.ExtractFacts(nil, []string{"thread_1"}, "user", nil)
 		if err == nil {
 			t.Fatal("expected error for nil db, got nil")
 		}
@@ -388,7 +436,7 @@ func TestExtractFacts_AdversarialEdgeCases(t *testing.T) {
 			t.Fatalf("failed inserting parts: %v", err)
 		}
 
-		invocations, tools, startedAt, completedAt, err := opencode.ExtractFacts(
+		invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(
 			db,
 			[]string{"ses_corrupt"},
 			"test-user",
@@ -408,6 +456,10 @@ func TestExtractFacts_AdversarialEdgeCases(t *testing.T) {
 		inv := invocations[0]
 		if inv.Tokens.Input != 0 || inv.Tokens.Output != 0 || inv.CostUSD != 0.0 {
 			t.Errorf("expected zero tokens and zero cost, got %+v, cost=%f", inv.Tokens, inv.CostUSD)
+		}
+
+		if len(events) != 3 {
+			t.Errorf("expected 3 valid events (1 turn message, 2 tool calls), got %d: %+v", len(events), events)
 		}
 
 		if len(tools) != 2 {
@@ -440,7 +492,7 @@ func TestExtractFacts_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		for _, payload := range injectionPayloads {
-			_, _, _, _, err := opencode.ExtractFacts(db, []string{payload}, "user", nil)
+			_, _, _, _, _, err := opencode.ExtractFacts(db, []string{payload}, "user", nil)
 			if err == nil {
 				t.Errorf("expected error for malicious thread ID %q, got nil", payload)
 			}
@@ -465,5 +517,303 @@ func TestExtractFacts_AdversarialEdgeCases(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestExtractFacts_ChronologicalOrderingAndTieBreaking(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Seed session
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_ord', NULL, 'build', 'default_model', 'AL-Order', 1000, 5000);
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting session: %v", err)
+	}
+
+	// Insert messages with identical timestamp 1760000000000
+	// m1 (turn 1), m2 (turn 2), m3 (turn 3)
+	// And one earlier message m0 (turn 0) at 1760000000000 - 1000
+	// And one later message m4 (turn 4) at 1760000000000 + 1000
+	const tieTime = 1760000010000
+	_, err = db.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m0', 'ses_ord', 1760000005000, 1760000005000, '{"role":"assistant","tokens":{"input":100,"output":10}}'),
+		('m1', 'ses_ord', ?, ?, '{"role":"assistant","tokens":{"input":200,"output":20}}'),
+		('m2', 'ses_ord', ?, ?, '{"role":"assistant","tokens":{"input":300,"output":30}}'),
+		('m3', 'ses_ord', ?, ?, '{"role":"assistant","tokens":{"input":400,"output":40}}'),
+		('m4', 'ses_ord', 1760000020000, 1760000020000, '{"role":"assistant","tokens":{"input":500,"output":50}}');
+	`, tieTime, tieTime, tieTime, tieTime, tieTime, tieTime)
+	if err != nil {
+		t.Fatalf("failed inserting messages: %v", err)
+	}
+
+	// Insert tool calls and compactions at the exact same tieTime (1760000010000)
+	// correlated to different turns
+	_, err = db.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_tool_t1', 'ses_ord', 'm1', ?, ?, '{"type":"tool","tool":"bash","state":{"status":"completed","output":"turn 2 tool"}}'),
+		('p_comp_t2', 'ses_ord', 'm2', ?, ?, '{"type":"compaction"}'),
+		('p_tool_t3', 'ses_ord', 'm3', ?, ?, '{"type":"tool","tool":"read","state":{"status":"completed","output":"turn 4 tool"}}');
+	`, tieTime, tieTime, tieTime, tieTime, tieTime, tieTime)
+	if err != nil {
+		t.Fatalf("failed inserting parts: %v", err)
+	}
+
+	_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_ord"}, "user", nil)
+	if err != nil {
+		t.Fatalf("ExtractFacts failed: %v", err)
+	}
+
+	if len(events) != 8 {
+		t.Fatalf("expected 8 events (5 messages, 2 tools, 1 compaction), got %d", len(events))
+	}
+
+	// 1. Strict primary ordering by timestamp ascending
+	for i := 1; i < len(events); i++ {
+		if events[i].Timestamp < events[i-1].Timestamp {
+			t.Fatalf("timestamp ordering violation at index %d: %s < %s",
+				i, events[i].Timestamp, events[i-1].Timestamp)
+		}
+	}
+
+	// 2. Strict secondary ordering by turn when timestamps are identical
+	for i := 1; i < len(events); i++ {
+		if events[i].Timestamp == events[i-1].Timestamp {
+			if events[i].Turn < events[i-1].Turn {
+				t.Fatalf("turn tie-break ordering violation at index %d: turn %d < previous turn %d (both at %s)",
+					i, events[i].Turn, events[i-1].Turn, events[i].Timestamp)
+			}
+		}
+	}
+}
+
+func TestExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_tools', NULL, 'build', 'default_model', 'AL-Tools', 1000, 10000);
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting session: %v", err)
+	}
+
+	_, err = db.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m1', 'ses_tools', 1760000001000, 1760000001000, '{"role":"assistant","tokens":{"input":1000,"cache":{"read":500}}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting message: %v", err)
+	}
+
+	// Long error string > 200 chars
+	longErrOutput := "Error: "
+	for i := 0; i < 250; i++ {
+		longErrOutput += "x"
+	}
+
+	// Tool 1: Clean completed tool with 350ms duration (time_created=1000, time_updated=1350)
+	// Tool 2: Tool with status "error" and 0ms duration
+	// Tool 3: Tool with Traceback in output (status "completed")
+	// Tool 4: Tool with "Error:" prefix in output (status "success")
+	// Tool 5: Tool with long error output exceeding 200 characters (truncated)
+	// Tool 6: Tool with invalid inverted timestamps (time_updated < time_created) -> duration should be nil
+	_, err = db.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_clean', 'ses_tools', 'm1', 1760000002000, 1760000002350, '{"type":"tool","tool":"bash","state":{"status":"completed","output":"all tests passed"}}'),
+		('p_stat_err', 'ses_tools', 'm1', 1760000003000, 1760000003000, '{"type":"tool","tool":"bash","state":{"status":"error","output":"command failed with status 1"}}'),
+		('p_traceback', 'ses_tools', 'm1', 1760000004000, 1760000004200, '{"type":"tool","tool":"python","state":{"status":"completed","output":"Traceback (most recent call last):\n  File script.py, line 5\nZeroDivisionError"}}'),
+		('p_err_prefix', 'ses_tools', 'm1', 1760000005000, 1760000005100, '{"type":"tool","tool":"read","state":{"status":"success","output":"Error: path not found: /etc/missing"}}'),
+		('p_long_err', 'ses_tools', 'm1', 1760000006000, 1760000006050, ?),
+		('p_inv_time', 'ses_tools', 'm1', 1760000007000, 1760000006900, '{"type":"tool","tool":"grep","state":{"status":"completed","output":"matched"}}');
+	`, `{"type":"tool","tool":"edit","state":{"status":"failed","output":"`+longErrOutput+`"}}`)
+	if err != nil {
+		t.Fatalf("failed inserting parts: %v", err)
+	}
+
+	_, tools, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_tools"}, "user", nil)
+	if err != nil {
+		t.Fatalf("ExtractFacts failed: %v", err)
+	}
+
+	// Verify ToolFact aggregations
+	toolMap := make(map[string]domain.ToolFact)
+	for _, t := range tools {
+		toolMap[t.Name] = t
+	}
+
+	// bash: 2 calls, 1 error
+	if bash, ok := toolMap["bash"]; !ok || bash.Calls != 2 || bash.Errors != 1 {
+		t.Errorf("expected bash calls=2 errors=1, got: %+v", bash)
+	}
+	// python: 1 call, 1 error (due to Traceback)
+	if py, ok := toolMap["python"]; !ok || py.Calls != 1 || py.Errors != 1 {
+		t.Errorf("expected python calls=1 errors=1 (Traceback), got: %+v", py)
+	}
+	// read: 1 call, 1 error (due to Error: prefix)
+	if rd, ok := toolMap["read"]; !ok || rd.Calls != 1 || rd.Errors != 1 {
+		t.Errorf("expected read calls=1 errors=1 (Error: prefix), got: %+v", rd)
+	}
+	// edit: 1 call, 1 error (due to Error: prefix)
+	if ed, ok := toolMap["edit"]; !ok || ed.Calls != 1 || ed.Errors != 1 {
+		t.Errorf("expected edit calls=1 errors=1 (Error: prefix), got: %+v", ed)
+	}
+	// grep: 1 call, 0 errors
+	if gr, ok := toolMap["grep"]; !ok || gr.Calls != 1 || gr.Errors != 0 {
+		t.Errorf("expected grep calls=1 errors=0, got: %+v", gr)
+	}
+
+	// Find tool call events
+	eventMap := make(map[string]domain.EventFact)
+	for _, ev := range events {
+		if ev.ToolName != nil {
+			eventMap[*ev.ToolName+"_"+ev.Status] = ev
+		}
+	}
+
+	// Verify Clean Tool Call
+	cleanEv := events[1] // p_clean
+	if cleanEv.Status != "completed" || cleanEv.ErrorMessage != nil {
+		t.Errorf("expected clean tool completed with nil error message, got: %+v", cleanEv)
+	}
+	if cleanEv.DurationMs == nil || *cleanEv.DurationMs != 350 {
+		t.Errorf("expected clean tool duration 350ms, got: %v", cleanEv.DurationMs)
+	}
+	if cleanEv.ContextTokens != 1500 {
+		t.Errorf("expected 1500 context tokens, got %d", cleanEv.ContextTokens)
+	}
+
+	// Verify Status Error Tool Call
+	statErrEv := events[2] // p_stat_err
+	if statErrEv.Status != "error" || statErrEv.ErrorMessage == nil || *statErrEv.ErrorMessage != "command failed with status 1" {
+		t.Errorf("expected status error tool call, got: %+v", statErrEv)
+	}
+	if statErrEv.DurationMs == nil || *statErrEv.DurationMs != 0 {
+		t.Errorf("expected 0ms duration, got: %v", statErrEv.DurationMs)
+	}
+
+	// Verify Traceback Detection Tool Call
+	traceEv := events[3] // p_traceback
+	if traceEv.Status != "error" || traceEv.ErrorMessage == nil || !containsSubstring(*traceEv.ErrorMessage, "Traceback") {
+		t.Errorf("expected Traceback detection error, got: %+v", traceEv)
+	}
+	if traceEv.DurationMs == nil || *traceEv.DurationMs != 200 {
+		t.Errorf("expected 200ms duration, got: %v", traceEv.DurationMs)
+	}
+
+	// Verify Error: Prefix Detection Tool Call
+	errPrefixEv := events[4] // p_err_prefix
+	if errPrefixEv.Status != "error" || errPrefixEv.ErrorMessage == nil || *errPrefixEv.ErrorMessage != "Error: path not found: /etc/missing" {
+		t.Errorf("expected Error: prefix detection, got: %+v", errPrefixEv)
+	}
+
+	// Verify Long Error Message Truncation (max 200 chars)
+	longErrEv := events[5] // p_long_err
+	if longErrEv.Status != "error" || longErrEv.ErrorMessage == nil {
+		t.Fatalf("expected long error to be flagged as error, got: %+v", longErrEv)
+	}
+	if len(*longErrEv.ErrorMessage) != 200 {
+		t.Errorf("expected truncated error message of length 200, got %d", len(*longErrEv.ErrorMessage))
+	}
+
+	// Verify Inverted Timestamps yields nil DurationMs
+	invTimeEv := events[6] // p_inv_time
+	if invTimeEv.DurationMs != nil {
+		t.Errorf("expected nil duration for inverted timestamps, got: %v", *invTimeEv.DurationMs)
+	}
+}
+
+func TestExtractFacts_CompactionEvents(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_comp', NULL, 'build', 'default_model', 'AL-Compaction', 1000, 10000);
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting session: %v", err)
+	}
+
+	// Message with tokens
+	_, err = db.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m_comp_1', 'ses_comp', 1760000001000, 1760000001500, '{"role":"assistant","tokens":{"input":8000,"cache":{"read":2000}}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting message: %v", err)
+	}
+
+	// 1. Compaction linked to message m_comp_1
+	// 2. Compaction unlinked (message_id is NULL)
+	_, err = db.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_comp_linked', 'ses_comp', 'm_comp_1', 1760000002000, 1760000002000, '{"type":"compaction"}'),
+		('p_comp_unlinked', 'ses_comp', NULL, 1760000003000, 1760000003000, '{"type":"compaction"}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting compaction parts: %v", err)
+	}
+
+	invocations, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_comp"}, "user", nil)
+	if err != nil {
+		t.Fatalf("ExtractFacts failed: %v", err)
+	}
+
+	// Compactions counted in invocation
+	if len(invocations) != 1 {
+		t.Fatalf("expected 1 invocation, got %d", len(invocations))
+	}
+	if invocations[0].Compactions != 2 {
+		t.Errorf("expected 2 compactions on invocation, got %d", invocations[0].Compactions)
+	}
+
+	// Events: m_comp_1, p_comp_linked, p_comp_unlinked
+	if len(events) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(events))
+	}
+
+	// Linked compaction: turn=1, contextTokens=10000 (8000+2000)
+	linkedComp := events[1]
+	if linkedComp.EventType != domain.EventTypeCompaction || linkedComp.Status != "completed" {
+		t.Errorf("unexpected linked compaction: %+v", linkedComp)
+	}
+	if linkedComp.Turn != 1 {
+		t.Errorf("expected linked compaction turn 1, got %d", linkedComp.Turn)
+	}
+	if linkedComp.ContextTokens != 10000 {
+		t.Errorf("expected linked compaction context tokens 10000, got %d", linkedComp.ContextTokens)
+	}
+	if linkedComp.DurationMs != nil {
+		t.Errorf("expected nil duration on compaction, got %v", linkedComp.DurationMs)
+	}
+
+	// Unlinked compaction: defaults to turn=1, contextTokens=0
+	unlinkedComp := events[2]
+	if unlinkedComp.EventType != domain.EventTypeCompaction || unlinkedComp.Status != "completed" {
+		t.Errorf("unexpected unlinked compaction: %+v", unlinkedComp)
+	}
+	if unlinkedComp.Turn != 1 {
+		t.Errorf("expected unlinked compaction default turn 1, got %d", unlinkedComp.Turn)
+	}
+	if unlinkedComp.ContextTokens != 0 {
+		t.Errorf("expected unlinked compaction default context tokens 0, got %d", unlinkedComp.ContextTokens)
+	}
+}
+
+func containsSubstring(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || filepath.Base(s) != "" && stringsContains(s, substr))
+}
+
+func stringsContains(s, substr string) bool {
+	for i := 0; i+len(substr) <= len(s); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 

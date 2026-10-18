@@ -210,6 +210,7 @@ type ExistingLedgerFacts struct {
 	Code          *domain.CodeFacts
 	Invocations   []domain.InvocationFact
 	Tools         []domain.ToolFact
+	Events        []domain.EventFact
 }
 
 type legacyThreadItem struct {
@@ -244,6 +245,7 @@ type rawExistingLedger struct {
 	Code               *CodeFactsDTO             `json:"code"`
 	Invocations        []InvocationFactDTO       `json:"invocations"`
 	Tools              []ToolFactDTO             `json:"tools"`
+	Events             []EventFactDTO            `json:"events,omitempty"`
 	Threads            []legacyThreadItem        `json:"threads"`
 	WorkflowEfficiency *legacyWorkflowEfficiency `json:"workflow_efficiency"`
 }
@@ -275,6 +277,14 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		mig = &domMig
 	}
 
+	var events []domain.EventFact
+	if len(raw.Events) > 0 {
+		events = make([]domain.EventFact, len(raw.Events))
+		for i, e := range raw.Events {
+			events[i] = e.ToDomain()
+		}
+	}
+
 	result := &ExistingLedgerFacts{
 		SchemaVersion: raw.SchemaVersion,
 		Migration:     mig,
@@ -283,6 +293,7 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		TicketType:    raw.TicketType,
 		StartedAt:     raw.StartedAt,
 		CompletedAt:   raw.CompletedAt,
+		Events:        events,
 	}
 
 	// Schema 1: Direct atomic fact schema

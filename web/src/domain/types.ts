@@ -58,6 +58,21 @@ export interface ToolFact {
   readonly errors: number;
 }
 
+export type EventType = 'tool_call' | 'turn_message' | 'compaction';
+
+export interface EventFact {
+  readonly timestamp: string;
+  readonly session_id: string;
+  readonly turn: number;
+  readonly role: string;
+  readonly event_type: EventType;
+  readonly tool_name?: string | null;
+  readonly status: string;
+  readonly error_message?: string | null;
+  readonly duration_ms?: number | null;
+  readonly context_tokens: number;
+}
+
 export interface CodeFacts {
   readonly lines_added: number;
   readonly lines_deleted: number;
@@ -81,6 +96,7 @@ export interface AgenticFactLedger {
   readonly code: CodeFacts;
   readonly invocations: readonly InvocationFact[];
   readonly tools: readonly ToolFact[];
+  readonly events?: readonly EventFact[];
 }
 
 export interface GroupedMetric {

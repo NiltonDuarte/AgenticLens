@@ -928,3 +928,164 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 		})
 	})
 }
+
+func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
+	tid := "AL-6"
+	title := "Chronological Event Extraction"
+	ttype := "feature"
+	baseLedger := domain.AgenticFactLedger{
+		TicketID:    &tid,
+		TicketTitle: &title,
+		TicketType:  &ttype,
+		Code: domain.CodeFacts{
+			LinesAdded:   100,
+			LinesDeleted: 20,
+			FilesChanged: 4,
+		},
+		Invocations: []domain.InvocationFact{
+			{
+				ID:                    "ses-orch-1",
+				Role:                  "orchestrator",
+				Model:                 "gemini-3.8-flash",
+				User:                  "engineer",
+				ActiveDurationSeconds: 120,
+				Turns:                 5,
+				Tokens: domain.InvocationTokens{
+					Input:       5000,
+					Output:      1000,
+					CacheRead:   15000,
+					PeakContext: 20000,
+				},
+				CostUSD: 0.05,
+			},
+		},
+		Tools: []domain.ToolFact{
+			{Name: "bash", Calls: 5, Errors: 1},
+		},
+	}
+
+	t.Run("nil events preserved in Facts and does not mutate mathematical derivations", func(t *testing.T) {
+		ledgerNilEvents := baseLedger
+		ledgerNilEvents.Events = nil
+
+		metrics := domain.DeriveMetricsLedger(ledgerNilEvents)
+		if metrics.Facts.Events != nil {
+			t.Errorf("expected nil Facts.Events, got %+v", metrics.Facts.Events)
+		}
+		if metrics.Totals.Invocations != 1 {
+			t.Errorf("expected 1 invocation, got %d", metrics.Totals.Invocations)
+		}
+		if metrics.Totals.CostUSD != 0.05 {
+			t.Errorf("expected cost 0.05, got %f", metrics.Totals.CostUSD)
+		}
+	})
+
+	t.Run("empty slice events preserved in Facts", func(t *testing.T) {
+		ledgerEmptyEvents := baseLedger
+		ledgerEmptyEvents.Events = []domain.EventFact{}
+
+		metrics := domain.DeriveMetricsLedger(ledgerEmptyEvents)
+		if metrics.Facts.Events == nil {
+			t.Fatal("expected non-nil empty Events slice")
+		}
+		if len(metrics.Facts.Events) != 0 {
+			t.Errorf("expected 0 events, got %d", len(metrics.Facts.Events))
+		}
+	})
+
+	t.Run("populated events preserved without mutating totals or efficiency", func(t *testing.T) {
+		toolBash := "bash"
+		errBash := "exit status 1"
+		var durMs int64 = 42
+
+		events := []domain.EventFact{
+			{
+				Timestamp:     "2026-10-18T10:00:00.000000+00:00",
+				SessionID:     "ses-orch-1",
+				Turn:          1,
+				Role:          "orchestrator",
+				EventType:     domain.EventTypeTurnMessage,
+				Status:        "completed",
+				ContextTokens: 20000,
+			},
+			{
+				Timestamp:     "2026-10-18T10:00:01.000000+00:00",
+				SessionID:     "ses-orch-1",
+				Turn:          1,
+				Role:          "orchestrator",
+				EventType:     domain.EventTypeToolCall,
+				ToolName:      &toolBash,
+				Status:        "error",
+				ErrorMessage:  &errBash,
+				DurationMs:    &durMs,
+				ContextTokens: 20000,
+			},
+			{
+				Timestamp:     "2026-10-18T10:00:02.000000+00:00",
+				SessionID:     "ses-orch-1",
+				Turn:          2,
+				Role:          "orchestrator",
+				EventType:     domain.EventTypeCompaction,
+				Status:        "completed",
+				ContextTokens: 15000,
+			},
+		}
+
+		ledgerWithEvents := baseLedger
+		ledgerWithEvents.Events = events
+
+		metricsWithEvents := domain.DeriveMetricsLedger(ledgerWithEvents)
+		metricsWithoutEvents := domain.DeriveMetricsLedger(baseLedger)
+
+		if len(metricsWithEvents.Facts.Events) != 3 {
+			t.Fatalf("expected 3 events in Facts, got %d", len(metricsWithEvents.Facts.Events))
+		}
+
+		// Invariant: totals, efficiency, roles, models must be identical
+		if metricsWithEvents.Totals != metricsWithoutEvents.Totals {
+			t.Errorf("totals mutated by presence of events: with=%+v without=%+v",
+				metricsWithEvents.Totals, metricsWithoutEvents.Totals)
+		}
+		if metricsWithEvents.WorkflowEfficiency.ActiveDurationFormatted != metricsWithoutEvents.WorkflowEfficiency.ActiveDurationFormatted {
+			t.Errorf("active duration mutated by presence of events")
+		}
+		if metricsWithEvents.WorkflowEfficiency.ToolExecution != metricsWithoutEvents.WorkflowEfficiency.ToolExecution {
+			t.Errorf("tool execution mutated by presence of events")
+		}
+
+		// Verify event facts fidelity
+		ev0 := metricsWithEvents.Facts.Events[0]
+		if ev0.EventType != domain.EventTypeTurnMessage || ev0.Turn != 1 {
+			t.Errorf("unexpected event 0: %+v", ev0)
+		}
+		ev1 := metricsWithEvents.Facts.Events[1]
+		if ev1.EventType != domain.EventTypeToolCall || ev1.Status != "error" || *ev1.ErrorMessage != errBash || *ev1.DurationMs != durMs {
+			t.Errorf("unexpected event 1: %+v", ev1)
+		}
+		ev2 := metricsWithEvents.Facts.Events[2]
+		if ev2.EventType != domain.EventTypeCompaction || ev2.Turn != 2 {
+			t.Errorf("unexpected event 2: %+v", ev2)
+		}
+	})
+
+	t.Run("zero division on completely empty fact ledger", func(t *testing.T) {
+		emptyLedger := domain.AgenticFactLedger{}
+		metrics := domain.DeriveMetricsLedger(emptyLedger)
+
+		if metrics.Totals.Invocations != 0 {
+			t.Errorf("expected 0 invocations, got %d", metrics.Totals.Invocations)
+		}
+		if metrics.Totals.CacheHitRatePct != 0.0 {
+			t.Errorf("expected 0 cache hit rate, got %f", metrics.Totals.CacheHitRatePct)
+		}
+		if metrics.WorkflowEfficiency.ActiveDurationFormatted != "0m 0s" {
+			t.Errorf("expected '0m 0s', got %q", metrics.WorkflowEfficiency.ActiveDurationFormatted)
+		}
+		if metrics.WorkflowEfficiency.ToolExecution.SuccessRatePct != 100.0 {
+			t.Errorf("expected 100.0%% default success rate, got %f", metrics.WorkflowEfficiency.ToolExecution.SuccessRatePct)
+		}
+		if len(metrics.Facts.Events) != 0 {
+			t.Errorf("expected 0 events, got %d", len(metrics.Facts.Events))
+		}
+	})
+}

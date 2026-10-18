@@ -63,14 +63,16 @@ func setupMockOpenCodeDB(t *testing.T, dbPath string, sessionID string, ticketID
 		id TEXT PRIMARY KEY,
 		session_id TEXT,
 		data TEXT,
-		time_created INTEGER
+		time_created INTEGER,
+		time_updated INTEGER
 	);
 	CREATE TABLE part (
 		id TEXT PRIMARY KEY,
 		session_id TEXT,
 		message_id TEXT,
 		data TEXT,
-		time_created INTEGER
+		time_created INTEGER,
+		time_updated INTEGER
 	);
 	`
 	if _, err := db.Exec(schema); err != nil {
@@ -89,14 +91,14 @@ func setupMockOpenCodeDB(t *testing.T, dbPath string, sessionID string, ticketID
 	// Insert assistant message with tokens
 	msgData := fmt.Sprintf(`{"role":"assistant","modelID":"gpt-4o","tokens":{"input":1000,"output":200,"cache":{"read":500},"reasoning":50},"cost":0.01,"time":{"created":%d,"completed":%d}}`,
 		now-9000, now-8000)
-	_, err = db.Exec(`INSERT INTO message (id, session_id, data, time_created) VALUES ('m1', ?, ?, ?)`, sessionID, msgData, now-9000)
+	_, err = db.Exec(`INSERT INTO message (id, session_id, data, time_created, time_updated) VALUES ('m1', ?, ?, ?, ?)`, sessionID, msgData, now-9000, now-8000)
 	if err != nil {
 		t.Fatalf("failed to insert mock message: %v", err)
 	}
 
 	// Insert tool call part
 	partData := `{"type":"tool","tool":"bash","state":{"status":"completed","output":"success"}}`
-	_, err = db.Exec(`INSERT INTO part (id, session_id, message_id, data, time_created) VALUES ('p1', ?, 'm1', ?, ?)`, sessionID, partData, now-8500)
+	_, err = db.Exec(`INSERT INTO part (id, session_id, message_id, data, time_created, time_updated) VALUES ('p1', ?, 'm1', ?, ?, ?)`, sessionID, partData, now-8500, now-8000)
 	if err != nil {
 		t.Fatalf("failed to insert mock part: %v", err)
 	}

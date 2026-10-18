@@ -110,23 +110,53 @@ func formatEpochMilli(ms int64) string {
 	return t.Format("2006-01-02T15:04:05.000000+00:00")
 }
 
-// ExtractFacts queries invocation and tool facts from OpenCode SQLite database for given root threads.
+func tableHasColumn(db *sql.DB, tableName, columnName string) bool {
+	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", tableName))
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err == nil {
+			if strings.EqualFold(name, columnName) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ExtractFacts queries invocation, tool, and chronological event facts from OpenCode SQLite database for given root threads.
 func ExtractFacts(
 	db *sql.DB,
 	threadIDs []string,
 	defaultUser string,
 	userBySessionID map[string]string,
-) ([]domain.InvocationFact, []domain.ToolFact, *string, *string, error) {
+) ([]domain.InvocationFact, []domain.ToolFact, []domain.EventFact, *string, *string, error) {
 	if db == nil {
-		return nil, nil, nil, nil, errors.New("database connection is nil")
+		return nil, nil, nil, nil, nil, errors.New("database connection is nil")
 	}
 	if len(threadIDs) == 0 {
-		return []domain.InvocationFact{}, []domain.ToolFact{}, nil, nil, nil
+		return []domain.InvocationFact{}, []domain.ToolFact{}, []domain.EventFact{}, nil, nil, nil
 	}
 
 	quotedList, err := buildQuotedIDList(threadIDs)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
+	}
+
+	msgTimeUpdatedCol := "0 AS time_updated"
+	if tableHasColumn(db, "message", "time_updated") {
+		msgTimeUpdatedCol = "m.time_updated"
+	}
+
+	partTimeUpdatedCol := "0 AS time_updated"
+	if tableHasColumn(db, "part", "time_updated") {
+		partTimeUpdatedCol = "p.time_updated"
 	}
 
 	// 1. Earliest start time and latest completed time across sessions
@@ -139,7 +169,7 @@ func ExtractFacts(
 	var minCreated, maxUpdated sql.NullInt64
 	err = db.QueryRow(qTimes).Scan(&minCreated, &maxUpdated)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, nil, nil, fmt.Errorf("querying session time boundaries: %w", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("querying session time boundaries: %w", err)
 	}
 
 	var startedAtISO, completedAtISO *string
@@ -152,42 +182,7 @@ func ExtractFacts(
 		completedAtISO = &formatted
 	}
 
-	// 2. Compactions per session
-	qComp := fmt.Sprintf(`
-		SELECT p.session_id, p.data
-		FROM part p
-		JOIN session s ON p.session_id = s.id
-		WHERE (s.id IN (%s) OR s.parent_id IN (%s))
-		  AND p.data LIKE '%%"type":"compaction"%%'
-	`, quotedList, quotedList)
-
-	compMap := make(map[string]int64)
-	compRows, err := db.Query(qComp)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("querying session compactions: %w", err)
-	}
-	defer compRows.Close()
-
-	for compRows.Next() {
-		var sid string
-		var rawData sql.NullString
-		if err := compRows.Scan(&sid, &rawData); err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("scanning compaction row: %w", err)
-		}
-		if rawData.Valid && strings.TrimSpace(rawData.String) != "" {
-			var rawPD rawPartData
-			if err := json.Unmarshal([]byte(rawData.String), &rawPD); err == nil {
-				if rawPD.Type != nil && *rawPD.Type == "compaction" {
-					compMap[sid]++
-				}
-			}
-		}
-	}
-	if err := compRows.Err(); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("iterating compaction rows: %w", err)
-	}
-
-	// 3. Sessions
+	// 2. Query sessions
 	qSess := fmt.Sprintf(`
 		SELECT s.id, s.parent_id, s.agent, s.model, s.time_created
 		FROM session s
@@ -197,7 +192,7 @@ func ExtractFacts(
 
 	sessRows, err := db.Query(qSess)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("querying sessions: %w", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("querying sessions: %w", err)
 	}
 	defer sessRows.Close()
 
@@ -215,7 +210,7 @@ func ExtractFacts(
 		var pid, agent, model sql.NullString
 		var timeCreated int64
 		if err := sessRows.Scan(&sid, &pid, &agent, &model, &timeCreated); err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("scanning session row: %w", err)
+			return nil, nil, nil, nil, nil, fmt.Errorf("scanning session row: %w", err)
 		}
 		var parentPtr *string
 		if pid.Valid && strings.TrimSpace(pid.String) != "" {
@@ -231,11 +226,23 @@ func ExtractFacts(
 		})
 	}
 	if err := sessRows.Err(); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("iterating session rows: %w", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("iterating session rows: %w", err)
 	}
 
-	var invocations []domain.InvocationFact
+	type msgMeta struct {
+		turn          int64
+		contextTokens int64
+		timestamp     string
+	}
 
+	msgLookup := make(map[string]msgMeta)
+	var events []domain.EventFact
+	sessionRoleMap := make(map[string]string)
+	sessionModels := make(map[string]map[string]*sessionModelAccumulator)
+	sessionModelOrders := make(map[string][]string)
+	sessionTurns := make(map[string]int64)
+
+	// 3. Process messages per session
 	for _, s := range sessions {
 		role := "orchestrator"
 		if s.parentID != nil && s.agent != "build" && s.agent != "orchestrator" {
@@ -243,33 +250,32 @@ func ExtractFacts(
 				role = strings.TrimSpace(s.agent)
 			}
 		}
+		sessionRoleMap[s.id] = role
 
-		sessionUser := defaultUser
-		if u, ok := userBySessionID[s.id]; ok && strings.TrimSpace(u) != "" {
-			sessionUser = strings.TrimSpace(u)
-		}
-
-		qMsgs := `
-			SELECT m.data
+		qMsgs := fmt.Sprintf(`
+			SELECT m.id, m.time_created, %s, m.data
 			FROM message m
 			WHERE m.session_id = ?
 			ORDER BY m.time_created ASC
-		`
+		`, msgTimeUpdatedCol)
 		msgRows, err := db.Query(qMsgs, s.id)
 		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("querying messages for session %s: %w", s.id, err)
+			return nil, nil, nil, nil, nil, fmt.Errorf("querying messages for session %s: %w", s.id, err)
 		}
 
 		byModel := make(map[string]*sessionModelAccumulator)
 		var modelOrder []string
 		var totalSessionMsgs int64
+		var sessionAssistantTurn int64
 
 		for msgRows.Next() {
 			totalSessionMsgs++
+			var mid string
+			var mCreated, mUpdated int64
 			var mData sql.NullString
-			if err := msgRows.Scan(&mData); err != nil {
+			if err := msgRows.Scan(&mid, &mCreated, &mUpdated, &mData); err != nil {
 				msgRows.Close()
-				return nil, nil, nil, nil, fmt.Errorf("scanning message row: %w", err)
+				return nil, nil, nil, nil, nil, fmt.Errorf("scanning message row: %w", err)
 			}
 			if !mData.Valid || strings.TrimSpace(mData.String) == "" {
 				continue
@@ -283,6 +289,64 @@ func ExtractFacts(
 			if rawMD.Role == nil || *rawMD.Role != "assistant" {
 				continue
 			}
+
+			sessionAssistantTurn++
+			turn := sessionAssistantTurn
+
+			var inp, out, cache, reas int64
+			if rawMD.Tokens != nil {
+				if rawMD.Tokens.Input != nil {
+					inp = *rawMD.Tokens.Input
+				}
+				if rawMD.Tokens.Output != nil {
+					out = *rawMD.Tokens.Output
+				}
+				if rawMD.Tokens.Cache != nil && rawMD.Tokens.Cache.Read != nil {
+					cache = *rawMD.Tokens.Cache.Read
+				}
+				if rawMD.Tokens.Reasoning != nil {
+					reas = *rawMD.Tokens.Reasoning
+				}
+			}
+			ctxTokens := inp + cache
+
+			msgTSMillis := mCreated
+			if rawMD.Time != nil && rawMD.Time.Created != nil && int64(*rawMD.Time.Created) > 0 {
+				msgTSMillis = int64(*rawMD.Time.Created)
+			}
+			msgTS := formatEpochMilli(msgTSMillis)
+
+			var msgDurMs *int64
+			if rawMD.Time != nil && rawMD.Time.Created != nil && rawMD.Time.Completed != nil {
+				dur := int64(*rawMD.Time.Completed) - int64(*rawMD.Time.Created)
+				if dur >= 0 {
+					msgDurMs = &dur
+				}
+			} else if mUpdated >= mCreated && mCreated > 0 {
+				dur := mUpdated - mCreated
+				msgDurMs = &dur
+			}
+
+			if mid != "" {
+				msgLookup[mid] = msgMeta{
+					turn:          turn,
+					contextTokens: ctxTokens,
+					timestamp:     msgTS,
+				}
+			}
+
+			events = append(events, domain.EventFact{
+				Timestamp:     msgTS,
+				SessionID:     s.id,
+				Turn:          turn,
+				Role:          role,
+				EventType:     domain.EventTypeTurnMessage,
+				ToolName:      nil,
+				Status:        "completed",
+				ErrorMessage:  nil,
+				DurationMs:    msgDurMs,
+				ContextTokens: ctxTokens,
+			})
 
 			mName := "default"
 			if rawMD.ModelID != nil && strings.TrimSpace(*rawMD.ModelID) != "" {
@@ -317,28 +381,12 @@ func ExtractFacts(
 				}
 			}
 
-			if rawMD.Tokens != nil {
-				var inp, out, cache, reas int64
-				if rawMD.Tokens.Input != nil {
-					inp = *rawMD.Tokens.Input
-				}
-				if rawMD.Tokens.Output != nil {
-					out = *rawMD.Tokens.Output
-				}
-				if rawMD.Tokens.Cache != nil && rawMD.Tokens.Cache.Read != nil {
-					cache = *rawMD.Tokens.Cache.Read
-				}
-				if rawMD.Tokens.Reasoning != nil {
-					reas = *rawMD.Tokens.Reasoning
-				}
-
-				acc.input += inp
-				acc.output += out
-				acc.cache += cache
-				acc.reasoning += reas
-				if inp+cache > acc.peak {
-					acc.peak = inp + cache
-				}
+			acc.input += inp
+			acc.output += out
+			acc.cache += cache
+			acc.reasoning += reas
+			if inp+cache > acc.peak {
+				acc.peak = inp + cache
 			}
 
 			if rawMD.Cost != nil {
@@ -365,7 +413,188 @@ func ExtractFacts(
 			modelOrder = append(modelOrder, fallbackModel)
 		}
 
+		sessionModels[s.id] = byModel
+		sessionModelOrders[s.id] = modelOrder
+		sessionTurns[s.id] = totalSessionMsgs
+	}
+
+	// 4. Query parts (tool calls and compactions)
+	qParts := fmt.Sprintf(`
+		SELECT p.id, p.session_id, p.message_id, p.time_created, %s, p.data
+		FROM part p
+		JOIN session s ON p.session_id = s.id
+		WHERE (s.id IN (%s) OR s.parent_id IN (%s))
+		  AND (p.data LIKE '%%"type":"tool"%%' OR p.data LIKE '%%"type":"compaction"%%')
+		ORDER BY p.time_created ASC
+	`, partTimeUpdatedCol, quotedList, quotedList)
+
+	partRows, err := db.Query(qParts)
+	if err != nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("querying parts: %w", err)
+	}
+	defer partRows.Close()
+
+	compMap := make(map[string]int64)
+	toolMap := make(map[string]*toolAccumulator)
+
+	for partRows.Next() {
+		var pid, sid, mid sql.NullString
+		var tCreated, tUpdated sql.NullInt64
+		var pData sql.NullString
+		if err := partRows.Scan(&pid, &sid, &mid, &tCreated, &tUpdated, &pData); err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("scanning part row: %w", err)
+		}
+		if !pData.Valid || strings.TrimSpace(pData.String) == "" {
+			continue
+		}
+
+		var rawPD rawPartData
+		if err := json.Unmarshal([]byte(pData.String), &rawPD); err != nil {
+			continue
+		}
+
+		if rawPD.Type == nil {
+			continue
+		}
+
+		sID := ""
+		if sid.Valid {
+			sID = sid.String
+		}
+		mID := ""
+		if mid.Valid {
+			mID = mid.String
+		}
+
+		role := "orchestrator"
+		if r, ok := sessionRoleMap[sID]; ok {
+			role = r
+		}
+
+		turn := int64(1)
+		var ctxTokens int64
+		if meta, ok := msgLookup[mID]; ok {
+			turn = meta.turn
+			ctxTokens = meta.contextTokens
+		}
+
+		ts := ""
+		if tCreated.Valid && tCreated.Int64 > 0 {
+			ts = formatEpochMilli(tCreated.Int64)
+		} else if meta, ok := msgLookup[mID]; ok && meta.timestamp != "" {
+			ts = meta.timestamp
+		} else {
+			ts = formatEpochMilli(0)
+		}
+
+		if *rawPD.Type == "compaction" {
+			compMap[sID]++
+			events = append(events, domain.EventFact{
+				Timestamp:     ts,
+				SessionID:     sID,
+				Turn:          turn,
+				Role:          role,
+				EventType:     domain.EventTypeCompaction,
+				ToolName:      nil,
+				Status:        "completed",
+				ErrorMessage:  nil,
+				DurationMs:    nil,
+				ContextTokens: ctxTokens,
+			})
+			continue
+		}
+
+		if *rawPD.Type == "tool" {
+			toolName := "unknown"
+			if rawPD.Tool != nil && strings.TrimSpace(*rawPD.Tool) != "" {
+				toolName = strings.TrimSpace(*rawPD.Tool)
+			}
+
+			tAcc, exists := toolMap[toolName]
+			if !exists {
+				tAcc = &toolAccumulator{}
+				toolMap[toolName] = tAcc
+			}
+			tAcc.calls++
+
+			stat := ""
+			out := ""
+			if rawPD.State != nil {
+				if rawPD.State.Status != nil {
+					stat = *rawPD.State.Status
+				}
+				if rawPD.State.Output != nil {
+					out = *rawPD.State.Output
+				}
+			}
+
+			outPrefix := out
+			if len(outPrefix) > 50 {
+				outPrefix = outPrefix[:50]
+			}
+
+			trimmedOut := strings.TrimSpace(out)
+			isError := stat == "error" || strings.Contains(out, "Traceback") || strings.HasPrefix(trimmedOut, "Error:") || strings.Contains(outPrefix, "Error:")
+			if isError {
+				tAcc.errors++
+			}
+
+			eventStatus := "completed"
+			var errExcerpt *string
+			if isError {
+				eventStatus = "error"
+				errMsg := trimmedOut
+				if errMsg == "" {
+					errMsg = stat
+					if errMsg == "" {
+						errMsg = "tool error"
+					}
+				}
+				if len(errMsg) > 200 {
+					errMsg = errMsg[:200]
+				}
+				errExcerpt = &errMsg
+			}
+
+			var durMs *int64
+			if tCreated.Valid && tUpdated.Valid && tCreated.Int64 > 0 && tUpdated.Int64 >= tCreated.Int64 {
+				dur := tUpdated.Int64 - tCreated.Int64
+				durMs = &dur
+			}
+
+			tName := toolName
+			events = append(events, domain.EventFact{
+				Timestamp:     ts,
+				SessionID:     sID,
+				Turn:          turn,
+				Role:          role,
+				EventType:     domain.EventTypeToolCall,
+				ToolName:      &tName,
+				Status:        eventStatus,
+				ErrorMessage:  errExcerpt,
+				DurationMs:    durMs,
+				ContextTokens: ctxTokens,
+			})
+			continue
+		}
+	}
+	if err := partRows.Err(); err != nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("iterating part rows: %w", err)
+	}
+
+	// 5. Build invocations
+	var invocations []domain.InvocationFact
+	for _, s := range sessions {
+		sessionUser := defaultUser
+		if u, ok := userBySessionID[s.id]; ok && strings.TrimSpace(u) != "" {
+			sessionUser = strings.TrimSpace(u)
+		}
+		role := sessionRoleMap[s.id]
+		byModel := sessionModels[s.id]
+		modelOrder := sessionModelOrders[s.id]
+		totalSessionMsgs := sessionTurns[s.id]
 		sessionCompactions := compMap[s.id]
+
 		for idx, mName := range modelOrder {
 			st := byModel[mName]
 			fTS := s.timeCreated
@@ -417,73 +646,7 @@ func ExtractFacts(
 		}
 	}
 
-	// 4. Tool calls
-	qTools := fmt.Sprintf(`
-		SELECT p.data
-		FROM part p
-		JOIN session s ON p.session_id = s.id
-		WHERE (s.id IN (%s) OR s.parent_id IN (%s))
-		  AND p.data LIKE '%%"type":"tool"%%'
-	`, quotedList, quotedList)
-
-	toolRows, err := db.Query(qTools)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("querying tool calls: %w", err)
-	}
-	defer toolRows.Close()
-
-	toolMap := make(map[string]*toolAccumulator)
-
-	for toolRows.Next() {
-		var pData sql.NullString
-		if err := toolRows.Scan(&pData); err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("scanning tool row: %w", err)
-		}
-		if !pData.Valid || strings.TrimSpace(pData.String) == "" {
-			continue
-		}
-
-		var rawPD rawPartData
-		if err := json.Unmarshal([]byte(pData.String), &rawPD); err != nil {
-			continue
-		}
-
-		toolName := "unknown"
-		if rawPD.Tool != nil && strings.TrimSpace(*rawPD.Tool) != "" {
-			toolName = strings.TrimSpace(*rawPD.Tool)
-		}
-
-		tAcc, exists := toolMap[toolName]
-		if !exists {
-			tAcc = &toolAccumulator{}
-			toolMap[toolName] = tAcc
-		}
-		tAcc.calls++
-
-		if rawPD.State != nil {
-			stat := ""
-			out := ""
-			if rawPD.State.Status != nil {
-				stat = *rawPD.State.Status
-			}
-			if rawPD.State.Output != nil {
-				out = *rawPD.State.Output
-			}
-
-			outPrefix := out
-			if len(outPrefix) > 50 {
-				outPrefix = outPrefix[:50]
-			}
-
-			if stat == "error" || strings.Contains(out, "Traceback") || strings.Contains(outPrefix, "Error:") {
-				tAcc.errors++
-			}
-		}
-	}
-	if err := toolRows.Err(); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("iterating tool rows: %w", err)
-	}
-
+	// 6. Build tools
 	var tools []domain.ToolFact
 	for tName, tStats := range toolMap {
 		tools = append(tools, domain.ToolFact{
@@ -500,6 +663,18 @@ func ExtractFacts(
 		return tools[i].Calls > tools[j].Calls
 	})
 
+	// 7. Chronological sort of events
+	sort.SliceStable(events, func(i, j int) bool {
+		if events[i].Timestamp != events[j].Timestamp {
+			return events[i].Timestamp < events[j].Timestamp
+		}
+		if events[i].Turn != events[j].Turn {
+			return events[i].Turn < events[j].Turn
+		}
+		return events[i].SessionID < events[j].SessionID
+	})
+
+	// 8. Determine overall completed timestamp
 	var maxCompleted *string
 	for _, inv := range invocations {
 		if inv.CompletedAt != nil && *inv.CompletedAt != "" {
@@ -512,5 +687,5 @@ func ExtractFacts(
 		completedAtISO = maxCompleted
 	}
 
-	return invocations, tools, startedAtISO, completedAtISO, nil
+	return invocations, tools, events, startedAtISO, completedAtISO, nil
 }

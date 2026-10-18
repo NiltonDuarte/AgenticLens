@@ -118,3 +118,12 @@ const (
 	MigrationStatusPartial   MigrationStatus = "partial"
 	MigrationStatusCompleted MigrationStatus = "completed"
 )
+
+// EventType defines discrete lifecycle event occurrences within an agent execution session.
+type EventType string
+
+const (
+	EventTypeToolCall    EventType = "tool_call"
+	EventTypeTurnMessage EventType = "turn_message"
+	EventTypeCompaction  EventType = "compaction"
+)

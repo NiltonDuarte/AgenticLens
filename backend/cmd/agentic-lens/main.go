@@ -97,6 +97,7 @@ func runGenerate(args []string) {
 	userBySessionID := make(map[string]string)
 	var invocations []domain.InvocationFact
 	var tools []domain.ToolFact
+	var events []domain.EventFact
 	var fallbackCode *domain.CodeFacts
 
 	if cachedFacts != nil {
@@ -106,6 +107,7 @@ func runGenerate(args []string) {
 		}
 		invocations = append(invocations, cachedFacts.Invocations...)
 		tools = append(tools, cachedFacts.Tools...)
+		events = append(events, cachedFacts.Events...)
 		fallbackCode = cachedFacts.Code
 	}
 
@@ -133,7 +135,7 @@ func runGenerate(args []string) {
 		}
 
 		if len(knownThreadIDs) > 0 {
-			dbInvs, dbTools, dbStarted, dbCompleted, err := opencode.ExtractFacts(
+			dbInvs, dbTools, dbEvents, dbStarted, dbCompleted, err := opencode.ExtractFacts(
 				dbClient.DB(),
 				knownThreadIDs,
 				currentUser,
@@ -142,6 +144,7 @@ func runGenerate(args []string) {
 			if err == nil && len(dbInvs) > 0 {
 				invocations = dbInvs
 				tools = dbTools
+				events = dbEvents
 				if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
 					activeStartedAt = dbStarted
 				}
@@ -206,6 +209,7 @@ func runGenerate(args []string) {
 		Code:          codeFacts,
 		Invocations:   invocations,
 		Tools:         tools,
+		Events:        events,
 	}
 
 	metricsLedger := domain.DeriveMetricsLedger(factLedger)

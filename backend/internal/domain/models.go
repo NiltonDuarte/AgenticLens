@@ -32,6 +32,20 @@ type ToolFact struct {
 	Errors int64  `json:"errors"`
 }
 
+// EventFact captures a single discrete, ordered lifecycle occurrence in an agent session.
+type EventFact struct {
+	Timestamp     string    `json:"timestamp"`
+	SessionID     string    `json:"session_id"`
+	Turn          int64     `json:"turn"`
+	Role          string    `json:"role"`
+	EventType     EventType `json:"event_type"`
+	ToolName      *string   `json:"tool_name,omitempty"`
+	Status        string    `json:"status"`
+	ErrorMessage  *string   `json:"error_message,omitempty"`
+	DurationMs    *int64    `json:"duration_ms,omitempty"`
+	ContextTokens int64     `json:"context_tokens"`
+}
+
 // CodeFacts stores lines of code modified and SDLC iteration counts.
 type CodeFacts struct {
 	LinesAdded      int64 `json:"lines_added"`
@@ -68,6 +82,7 @@ type AgenticFactLedger struct {
 	Code          CodeFacts        `json:"code"`
 	Invocations   []InvocationFact `json:"invocations"`
 	Tools         []ToolFact       `json:"tools"`
+	Events        []EventFact      `json:"events,omitempty"`
 }
 
 // GroupedMetric aggregates metrics across invocations.

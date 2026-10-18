@@ -87,6 +87,59 @@ func (dto ToolFactDTO) ToDomain() domain.ToolFact {
 	}
 }
 
+// EventFactDTO represents a single chronological event fact in JSON boundary serialization.
+type EventFactDTO struct {
+	Timestamp     string  `json:"timestamp"`
+	SessionID     string  `json:"session_id"`
+	Turn          int64   `json:"turn"`
+	Role          string  `json:"role"`
+	EventType     string  `json:"event_type"`
+	ToolName      *string `json:"tool_name,omitempty"`
+	Status        string  `json:"status"`
+	ErrorMessage  *string `json:"error_message,omitempty"`
+	DurationMs    *int64  `json:"duration_ms,omitempty"`
+	ContextTokens int64   `json:"context_tokens"`
+}
+
+func (dto EventFactDTO) ToDomain() domain.EventFact {
+	role := dto.Role
+	if role == "" {
+		role = "orchestrator"
+	}
+	status := dto.Status
+	if status == "" {
+		status = "completed"
+	}
+	return domain.EventFact{
+		Timestamp:     dto.Timestamp,
+		SessionID:     dto.SessionID,
+		Turn:          dto.Turn,
+		Role:          role,
+		EventType:     domain.EventType(dto.EventType),
+		ToolName:      dto.ToolName,
+		Status:        status,
+		ErrorMessage:  dto.ErrorMessage,
+		DurationMs:    dto.DurationMs,
+		ContextTokens: dto.ContextTokens,
+	}
+}
+
+// EventFactDTOFromDomain converts domain.EventFact to EventFactDTO.
+func EventFactDTOFromDomain(fact domain.EventFact) EventFactDTO {
+	return EventFactDTO{
+		Timestamp:     fact.Timestamp,
+		SessionID:     fact.SessionID,
+		Turn:          fact.Turn,
+		Role:          fact.Role,
+		EventType:     string(fact.EventType),
+		ToolName:      fact.ToolName,
+		Status:        fact.Status,
+		ErrorMessage:  fact.ErrorMessage,
+		DurationMs:    fact.DurationMs,
+		ContextTokens: fact.ContextTokens,
+	}
+}
+
 // CodeFactsDTO represents code facts in JSON.
 type CodeFactsDTO struct {
 	LinesAdded      int64 `json:"lines_added"`
@@ -180,6 +233,7 @@ type AgenticFactLedgerDTO struct {
 	Code          CodeFactsDTO        `json:"code"`
 	Invocations   []InvocationFactDTO `json:"invocations"`
 	Tools         []ToolFactDTO       `json:"tools"`
+	Events        []EventFactDTO      `json:"events,omitempty"`
 }
 
 func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
@@ -190,6 +244,14 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	tools := make([]domain.ToolFact, len(dto.Tools))
 	for i, t := range dto.Tools {
 		tools[i] = t.ToDomain()
+	}
+
+	var events []domain.EventFact
+	if len(dto.Events) > 0 {
+		events = make([]domain.EventFact, len(dto.Events))
+		for i, e := range dto.Events {
+			events[i] = e.ToDomain()
+		}
 	}
 
 	var mig *domain.MigrationInfo
@@ -210,6 +272,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		Code:          dto.Code.ToDomain(),
 		Invocations:   invs,
 		Tools:         tools,
+		Events:        events,
 	}
 }
 
@@ -248,6 +311,14 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		}
 	}
 
+	var events []EventFactDTO
+	if len(ledger.Events) > 0 {
+		events = make([]EventFactDTO, len(ledger.Events))
+		for i, e := range ledger.Events {
+			events[i] = EventFactDTOFromDomain(e)
+		}
+	}
+
 	return AgenticFactLedgerDTO{
 		SchemaVersion: ledger.SchemaVersion,
 		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
@@ -269,6 +340,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		},
 		Invocations: invs,
 		Tools:       tools,
+		Events:      events,
 	}
 }
 
