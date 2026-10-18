@@ -1,6 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import type { AgenticMetricsLedger, WorkspaceDetail } from '../domain/types';
-import { fetchWorkspaceById, fetchWorkspaceLedgers } from '../api/client';
+import type {
+  AgenticMetricsLedger,
+  Anomaly,
+  EventFact,
+  WorkspaceDetail,
+} from '../domain/types';
+import {
+  fetchWorkspaceById,
+  fetchWorkspaceEvents,
+  fetchWorkspaceLedgers,
+} from '../api/client';
 import {
   formatCurrencyUSD,
   formatDurationSeconds,
@@ -16,6 +25,9 @@ import { TicketSelector } from '../components/TicketSelector';
 import { SaturationBar } from '../components/SaturationBar';
 import { ThreadViewer } from '../components/ThreadViewer';
 import { ArtifactViewer } from '../components/ArtifactViewer';
+import { TraceWaterfall } from '../components/TraceWaterfall';
+import { AnomalyDrawer } from '../components/AnomalyDrawer';
+import { AnomalyBadge } from '../components/AnomalyBadge';
 import { InfoTooltip } from '../components/InfoTooltip';
 
 export interface TicketDeepDiveProps {
@@ -31,6 +43,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [detail, setDetail] = useState<WorkspaceDetail | null>(null);
+  const [events, setEvents] = useState<readonly EventFact[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<EventFact | null>(null);
+  const [selectedAnomaly, setSelectedAnomaly] = useState<Anomaly | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(selectedTicketId ?? null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,9 +87,22 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       if (targetId) {
         const detailRes = await fetchWorkspaceById(targetId);
         setDetail(detailRes.data);
-        onMockChange?.(isMockFleet || detailRes.isMock);
+
+        let loadedEvents: readonly EventFact[] = detailRes.data.ledger?.facts?.events ?? [];
+        let isMockEvents = false;
+        try {
+          const eventsRes = await fetchWorkspaceEvents(targetId);
+          loadedEvents = eventsRes.data && eventsRes.data.length > 0 ? eventsRes.data : loadedEvents;
+          isMockEvents = eventsRes.isMock;
+        } catch {
+          // Gracefully keep events from detail.ledger.facts.events if fetch fails
+        }
+
+        setEvents(loadedEvents);
+        onMockChange?.(isMockFleet || detailRes.isMock || isMockEvents);
       } else {
         setDetail(null);
+        setEvents([]);
         onMockChange?.(isMockFleet);
       }
     } catch (err: unknown) {
@@ -95,6 +124,18 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const handleSelectTicket = (ticketId: string) => {
     setActiveTicketId(ticketId);
     onSelectTicket?.(ticketId);
+  };
+
+  const handleSelectEvent = (event: EventFact, anomaly?: Anomaly) => {
+    setSelectedEvent(event);
+    const isFlagged = Boolean(anomaly) || event.status === 'error';
+    if (isFlagged) {
+      setSelectedAnomaly(anomaly ?? null);
+      setIsDrawerOpen(true);
+    } else {
+      setSelectedAnomaly(null);
+      setIsDrawerOpen(false);
+    }
   };
 
   if (loading) {
@@ -488,11 +529,71 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         </div>
       </div>
 
-      {/* Row 6: Session Thread Logs */}
+      {/* Row 6: Visual Trace Waterfall or Legacy v1 Fallback */}
+      {events && events.length > 0 ? (
+        <TraceWaterfall
+          events={events}
+          anomalies={detail.anomalies}
+          selectedEvent={selectedEvent}
+          onSelectEvent={handleSelectEvent}
+        />
+      ) : (
+        <div className="legacy-fallback-banner" data-testid="legacy-fallback-banner">
+          <h4 className="legacy-banner-title">Legacy Telemetry Schema Notice</h4>
+          <p className="legacy-banner-text">
+            Chronological trace waterfall is unavailable for legacy v1 telemetry ledgers. Aggregate workspace anomalies and thread records are displayed below.
+          </p>
+          {detail.anomalies && detail.anomalies.length > 0 && (
+            <div className="legacy-anomalies-section">
+              <span className="legacy-anomalies-heading">Detected Workspace Anomalies:</span>
+              <div className="legacy-anomalies-list">
+                {detail.anomalies.map((a, i) => (
+                  <div
+                    key={`${a.rule_id}-${i}`}
+                    className="legacy-anomaly-item"
+                    onClick={() => {
+                      setSelectedAnomaly(a);
+                      setSelectedEvent(null);
+                      setIsDrawerOpen(true);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedAnomaly(a);
+                        setSelectedEvent(null);
+                        setIsDrawerOpen(true);
+                      }
+                    }}
+                    aria-label={`Inspect anomaly: ${a.title}`}
+                  >
+                    <div className="legacy-anomaly-info">
+                      <span className="legacy-anomaly-title">{a.title}</span>
+                      <span className="legacy-anomaly-desc">{a.description}</span>
+                    </div>
+                    <AnomalyBadge severity={a.severity} label={a.severity} size="sm" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Row 7: Session Thread Logs */}
       <ThreadViewer threads={ledger.threads} />
 
-      {/* Row 7: Workspace Artifacts */}
+      {/* Row 8: Workspace Artifacts */}
       <ArtifactViewer artifacts={artifacts} />
+
+      {/* Anomaly Inspection Drawer */}
+      <AnomalyDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        anomaly={selectedAnomaly}
+        event={selectedEvent}
+      />
     </div>
   );
 };

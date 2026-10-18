@@ -1,9 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { TicketDeepDive } from './TicketDeepDive';
 import * as apiClient from '../api/client';
+import { EventFact } from '../types/telemetry';
 import {
   mockAgenticMetricsLedgers,
   mockWorkspaceDetails,
@@ -784,5 +785,346 @@ describe('TicketDeepDive View Component', () => {
     const renderedText = container.textContent ?? '';
     const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
     expect(emojiRegex.test(renderedText)).toBe(false);
+  });
+
+  describe('Waterfall, Legacy Fallback, and AnomalyDrawer Integration', () => {
+    it('renders legacy v1 fallback banner when viewing a ticket whose events array is empty', async () => {
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-1']!,
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: [],
+        isMock: true,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('legacy-fallback-banner')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Legacy Telemetry Schema Notice')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Chronological trace waterfall is unavailable for legacy v1 telemetry ledgers/i)
+      ).toBeInTheDocument();
+    });
+
+    it('displays aggregate anomalies in legacy fallback banner for v1 tickets', async () => {
+      const v1WithAnomalies = {
+        ...mockWorkspaceDetails['AL-1']!,
+        anomalies: [
+          {
+            rule_id: 'CONTEXT_SATURATION_SPIKE' as const,
+            severity: 'CRITICAL' as const,
+            title: 'Critical Context Saturation',
+            description: 'Context spiked sharply',
+            context: { turn: 5, token_delta: 50000 },
+          },
+        ],
+      };
+
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: v1WithAnomalies,
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: [],
+        isMock: true,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Detected Workspace Anomalies:')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Critical Context Saturation')).toBeInTheDocument();
+      expect(screen.getByText('CRITICAL')).toBeInTheDocument();
+
+      // Clicking legacy anomaly item opens AnomalyDrawer
+      fireEvent.click(screen.getByText('Critical Context Saturation'));
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+      expect(screen.getByText('CONTEXT_SATURATION_SPIKE')).toBeInTheDocument();
+    });
+
+    it('renders TraceWaterfall component when viewing a ticket with populated events', async () => {
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-2']!,
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+        isMock: true,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-2" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
+    });
+
+    it('clicking an anomalous event in the waterfall opens AnomalyDrawer and closing restores state', async () => {
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-2']!,
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+        isMock: true,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-2" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      });
+
+      // Anomaly drawer is initially not present
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      // Click the warning anomaly badge in the waterfall
+      const warningBadges = screen.getAllByText('WARNING');
+      expect(warningBadges.length).toBeGreaterThan(0);
+      fireEvent.click(warningBadges[0]!);
+
+      // Anomaly drawer is now open
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Tool retry streak: bash/i)).toBeInTheDocument();
+
+      // Close the drawer
+      const closeBtn = screen.getByRole('button', { name: 'Close' });
+      fireEvent.click(closeBtn);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+    });
+
+    it('clicking an unflagged timeline node highlights it without opening the AnomalyDrawer', async () => {
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-2']!,
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+        isMock: true,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-2" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      });
+
+      // Switch to All Events to access Turn 1
+      const allBtn = screen.getByRole('button', { name: 'All Events' });
+      fireEvent.click(allBtn);
+
+      const turn1Items = screen.getAllByTestId('timeline-item-1');
+      expect(turn1Items.length).toBeGreaterThan(0);
+      const unflaggedNode = turn1Items[0]!;
+
+      // Click unflagged node
+      fireEvent.click(unflaggedNode);
+
+      // Verify node is highlighted
+      expect(unflaggedNode).toHaveClass('selected');
+
+      // Verify drawer did NOT open
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('clicking an unflagged node closes the drawer if previously opened by a flagged node', async () => {
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-2']!,
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+        isMock: true,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-2" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      });
+
+      // Switch to All Events
+      const allBtn = screen.getByRole('button', { name: 'All Events' });
+      fireEvent.click(allBtn);
+
+      // Click flagged item (turn 4 error item)
+      const turn4Items = screen.getAllByTestId('timeline-item-4');
+      const flaggedNode = turn4Items[0]!;
+      fireEvent.click(flaggedNode);
+
+      // Drawer opens
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      // Now click unflagged turn 1
+      const turn1Items = screen.getAllByTestId('timeline-item-1');
+      const unflaggedNode = turn1Items[0]!;
+      fireEvent.click(unflaggedNode);
+
+      // Drawer should now be closed and unflagged node selected
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(unflaggedNode).toHaveClass('selected');
+    });
+
+    it('inspecting a plain tool error without anomaly rule opens drawer with Tool Execution Failure title and no Rule Diagnosis', async () => {
+      const plainErrorEvent: EventFact = {
+        timestamp: '2026-10-18T10:10:00Z',
+        session_id: 's-plain-err',
+        turn: 1,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'bash',
+        status: 'error',
+        error_message: 'exit status 2: command not found',
+        duration_ms: 100,
+        context_tokens: 20000,
+      };
+
+      const plainDetail = {
+        ...mockWorkspaceDetails['AL-2']!,
+        anomalies: [],
+        ledger: {
+          ...mockWorkspaceDetails['AL-2']!.ledger,
+          facts: {
+            ...mockWorkspaceDetails['AL-2']!.ledger.facts,
+            events: [plainErrorEvent],
+          },
+        },
+      };
+
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: plainDetail,
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: [plainErrorEvent],
+        isMock: true,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-2" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      });
+
+      // Click error item (visible under default Errors and Anomalies Only)
+      const errItem = screen.getByTestId('timeline-item-1');
+      fireEvent.click(errItem);
+
+      // Drawer opens
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      // Drawer title is Tool Execution Failure
+      expect(screen.getByText('Tool Execution Failure')).toBeInTheDocument();
+
+      // Rule Diagnosis section is NOT present
+      expect(screen.queryByText('Rule Diagnosis')).not.toBeInTheDocument();
+
+      // Full error message is present in the drawer
+      expect(within(screen.getByRole('dialog')).getByText('exit status 2: command not found')).toBeInTheDocument();
+    });
+
+    it('clicking Inspect Failure button on tool error turn opens drawer with Tool Execution Failure title', async () => {
+      const plainErrorEvent: EventFact = {
+        timestamp: '2026-10-18T10:10:00Z',
+        session_id: 's-plain-err',
+        turn: 1,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'bash',
+        status: 'error',
+        error_message: 'exit status 2: command not found',
+        duration_ms: 100,
+        context_tokens: 20000,
+      };
+
+      const plainDetail = {
+        ...mockWorkspaceDetails['AL-2']!,
+        anomalies: [],
+        ledger: {
+          ...mockWorkspaceDetails['AL-2']!.ledger,
+          facts: {
+            ...mockWorkspaceDetails['AL-2']!.ledger.facts,
+            events: [plainErrorEvent],
+          },
+        },
+      };
+
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: plainDetail,
+        isMock: true,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: [plainErrorEvent],
+        isMock: true,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-2" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      });
+
+      const inspectBtn = screen.getByRole('button', { name: 'Inspect failure for turn 1' });
+      fireEvent.click(inspectBtn);
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Tool Execution Failure')).toBeInTheDocument();
+      expect(within(screen.getByRole('dialog')).getByText('exit status 2: command not found')).toBeInTheDocument();
+    });
   });
 });

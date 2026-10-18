@@ -58,20 +58,22 @@ export interface ToolFact {
   readonly errors: number;
 }
 
-export type EventType = 'tool_call' | 'turn_message' | 'compaction';
+export type {
+  EventType,
+  EventFact,
+  AnomalySeverity,
+  AnomalyRuleID,
+  AnomalyContext,
+  Anomaly,
+  BrittleToolSummary,
+  FleetAnomalySummary,
+} from '../types/telemetry';
 
-export interface EventFact {
-  readonly timestamp: string;
-  readonly session_id: string;
-  readonly turn: number;
-  readonly role: string;
-  readonly event_type: EventType;
-  readonly tool_name?: string | null;
-  readonly status: string;
-  readonly error_message?: string | null;
-  readonly duration_ms?: number | null;
-  readonly context_tokens: number;
-}
+import type {
+  EventFact,
+  Anomaly,
+  FleetAnomalySummary,
+} from '../types/telemetry';
 
 export interface CodeFacts {
   readonly lines_added: number;
@@ -193,56 +195,6 @@ export interface ThreadExecutionRecord {
   readonly user: string;
   readonly roles: readonly ThreadRoleMetric[];
   readonly compactions: number;
-}
-
-export type AnomalySeverity = 'WARNING' | 'CRITICAL';
-
-export type AnomalyRuleID =
-  | 'TOOL_RETRY_STREAK'
-  | 'TOOL_HIGH_FAILURE_RATE'
-  | 'CONTEXT_SATURATION_SPIKE'
-  | 'SUBAGENT_REWORK_LOOP';
-
-export interface AnomalyContext {
-  readonly tool_name?: string;
-  readonly session_id?: string;
-  readonly turn?: number;
-  readonly role?: string;
-  readonly secondary_role?: string;
-  readonly count?: number;
-  readonly total_calls?: number;
-  readonly token_delta?: number;
-  readonly context_tokens?: number;
-  readonly threshold?: string;
-  readonly failure_rate_pct?: number;
-}
-
-export interface Anomaly {
-  readonly rule_id: AnomalyRuleID;
-  readonly severity: AnomalySeverity;
-  readonly title: string;
-  readonly description: string;
-  readonly context: AnomalyContext;
-}
-
-export interface BrittleToolSummary {
-  readonly tool_name: string;
-  readonly anomaly_count: number;
-  readonly total_calls: number;
-  readonly error_count: number;
-  readonly failure_rate_pct: number;
-}
-
-export interface FleetAnomalySummary {
-  readonly total_anomalies: number;
-  readonly warning_count: number;
-  readonly critical_count: number;
-  readonly severity_counts: Readonly<Record<string, number>>;
-  readonly rule_counts: Readonly<Record<string, number>>;
-  readonly total_tickets: number;
-  readonly tickets_with_anomalies: number;
-  readonly anomaly_rate_per_ticket: number;
-  readonly brittle_tools: readonly BrittleToolSummary[];
 }
 
 export interface AgenticMetricsLedger {

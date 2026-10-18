@@ -10,6 +10,7 @@ import { KPICard } from '../components/KPICard';
 import { DistributionCard } from '../components/DistributionCard';
 import { TicketTable } from '../components/TicketTable';
 import { EmptyState } from '../components/EmptyState';
+import { FleetAnomalyCard } from '../components/FleetAnomalyCard';
 
 export interface FleetOverviewProps {
   readonly onMockChange?: (isMock: boolean) => void;
@@ -120,6 +121,14 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           value={summary.formatted_total_duration}
           secondary={`${summary.total_files_changed} files touched`}
           tooltip="Cumulative active agent execution time across all tickets (cumulative man-hours)."
+        />
+      </section>
+
+      {/* Fleet Anomaly and Reliability Profile Card */}
+      <section aria-label="Fleet Anomaly Profile">
+        <FleetAnomalyCard
+          summary={summary.anomaly_summary}
+          onViewTicket={onSelectTicket}
         />
       </section>
 

@@ -550,8 +550,8 @@ func ExtractFacts(
 						errMsg = "tool error"
 					}
 				}
-				if len(errMsg) > 200 {
-					errMsg = errMsg[:200]
+				if len(errMsg) > 4096 {
+					errMsg = errMsg[:4096]
 				}
 				errExcerpt = &errMsg
 			}

@@ -684,17 +684,14 @@ func TestExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 		t.Fatalf("failed inserting message: %v", err)
 	}
 
-	// Long error string > 200 chars
-	longErrOutput := "Error: "
-	for i := 0; i < 250; i++ {
-		longErrOutput += "x"
-	}
+	// Long error string > 4096 chars (5000 chars)
+	longErrOutput := "Error: " + strings.Repeat("x", 5000-len("Error: "))
 
 	// Tool 1: Clean completed tool with 350ms duration (time_created=1000, time_updated=1350)
 	// Tool 2: Tool with status "error" and 0ms duration
 	// Tool 3: Tool with Traceback in output (status "completed")
 	// Tool 4: Tool with "Error:" prefix in output (status "success")
-	// Tool 5: Tool with long error output exceeding 200 characters (truncated)
+	// Tool 5: Tool with long error output exceeding 4096 characters (truncated to 4096)
 	// Tool 6: Tool with invalid inverted timestamps (time_updated < time_created) -> duration should be nil
 	_, err = db.Exec(`
 		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
@@ -785,19 +782,196 @@ func TestExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 		t.Errorf("expected Error: prefix detection, got: %+v", errPrefixEv)
 	}
 
-	// Verify Long Error Message Truncation (max 200 chars)
+	// Verify Long Error Message Truncation (max 4096 chars)
 	longErrEv := events[5] // p_long_err
 	if longErrEv.Status != "error" || longErrEv.ErrorMessage == nil {
 		t.Fatalf("expected long error to be flagged as error, got: %+v", longErrEv)
 	}
-	if len(*longErrEv.ErrorMessage) != 200 {
-		t.Errorf("expected truncated error message of length 200, got %d", len(*longErrEv.ErrorMessage))
+	if len(*longErrEv.ErrorMessage) != 4096 {
+		t.Errorf("expected truncated error message of length 4096, got %d", len(*longErrEv.ErrorMessage))
 	}
 
 	// Verify Inverted Timestamps yields nil DurationMs
 	invTimeEv := events[6] // p_inv_time
 	if invTimeEv.DurationMs != nil {
 		t.Errorf("expected nil duration for inverted timestamps, got: %v", *invTimeEv.DurationMs)
+	}
+}
+
+func TestExtractFacts_Sub4096ErrorPreservation(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_sub', NULL, 'build', 'default_model', 'AL-Sub4096', 1000, 10000);
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m_sub', 'ses_sub', 1760000001000, 1760000001000, '{"role":"assistant","tokens":{"input":100}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting session and message: %v", err)
+	}
+
+	sub4096Err := "Error: " + strings.Repeat("z", 1500-len("Error: "))
+	_, err = db.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_sub_err', 'ses_sub', 'm_sub', 1760000002000, 1760000002100, ?);
+	`, `{"type":"tool","tool":"edit","state":{"status":"failed","output":"`+sub4096Err+`"}}`)
+	if err != nil {
+		t.Fatalf("failed inserting part: %v", err)
+	}
+
+	_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_sub"}, "user", nil)
+	if err != nil {
+		t.Fatalf("ExtractFacts failed: %v", err)
+	}
+
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(events))
+	}
+	ev := events[1]
+	if ev.Status != "error" || ev.ErrorMessage == nil {
+		t.Fatalf("expected error event, got: %+v", ev)
+	}
+	if len(*ev.ErrorMessage) != 1500 {
+		t.Errorf("expected 1500 chars preserved, got %d", len(*ev.ErrorMessage))
+	}
+	if *ev.ErrorMessage != sub4096Err {
+		t.Errorf("expected error message to match exact content")
+	}
+}
+
+func TestExtractFacts_ErrorPayloadAdversarialBoundaries(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_adv_err', NULL, 'build', 'default_model', 'AL-AdvErr', 1000, 10000);
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m_adv_err', 'ses_adv_err', 1760000001000, 1760000001000, '{"role":"assistant","tokens":{"input":100}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting session and message: %v", err)
+	}
+
+	exact4096 := "Error: " + strings.Repeat("A", 4096-len("Error: "))
+	offByOne4097 := "Error: " + strings.Repeat("B", 4097-len("Error: "))
+	huge5000 := "Error: " + strings.Repeat("C", 5000-len("Error: "))
+	small100 := "Error: " + strings.Repeat("D", 100-len("Error: "))
+
+	cases := []struct {
+		name             string
+		partID           string
+		partJSON         string
+		expectedStatus   string
+		expectedMsgLen   int
+		expectedPrefix   string
+		expectedMsgExact string
+	}{
+		{
+			name:           "exact_4096_boundary_preserved_intact",
+			partID:         "p_exact_4096",
+			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"` + exact4096 + `"}}`,
+			expectedStatus: "error",
+			expectedMsgLen: 4096,
+			expectedPrefix: exact4096,
+		},
+		{
+			name:           "off_by_one_4097_truncated_to_4096",
+			partID:         "p_off_by_one_4097",
+			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"` + offByOne4097 + `"}}`,
+			expectedStatus: "error",
+			expectedMsgLen: 4096,
+			expectedPrefix: offByOne4097[:4096],
+		},
+		{
+			name:           "over_limit_5000_truncated_to_4096",
+			partID:         "p_huge_5000",
+			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"` + huge5000 + `"}}`,
+			expectedStatus: "error",
+			expectedMsgLen: 4096,
+			expectedPrefix: huge5000[:4096],
+		},
+		{
+			name:           "sub_4096_payload_integrity_preserved",
+			partID:         "p_small_100",
+			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"` + small100 + `"}}`,
+			expectedStatus: "error",
+			expectedMsgLen: 100,
+			expectedPrefix: small100,
+		},
+		{
+			name:             "empty_error_output_falls_back_to_status",
+			partID:           "p_empty_err_output",
+			partJSON:         `{"type":"tool","tool":"bash","state":{"status":"error","output":""}}`,
+			expectedStatus:   "error",
+			expectedMsgLen:   5,
+			expectedMsgExact: "error",
+		},
+		{
+			name:             "whitespace_only_error_output_trimmed_and_falls_back_to_status",
+			partID:           "p_whitespace_err_output",
+			partJSON:         `{"type":"tool","tool":"bash","state":{"status":"error","output":"   \n\t  "}}`,
+			expectedStatus:   "error",
+			expectedMsgLen:   5,
+			expectedMsgExact: "error",
+		},
+		{
+			name:             "empty_status_with_error_prefix_handled",
+			partID:           "p_err_prefix_clean",
+			partJSON:         `{"type":"tool","tool":"bash","state":{"output":"Error: simple failure"}}`,
+			expectedStatus:   "error",
+			expectedMsgLen:   21,
+			expectedMsgExact: "Error: simple failure",
+		},
+	}
+
+	for i, tc := range cases {
+		_, err := db.Exec(`
+			INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+			(?, 'ses_adv_err', 'm_adv_err', ?, ?, ?)
+		`, tc.partID, 1760000002000+int64(i*1000), 1760000002000+int64(i*1000)+100, tc.partJSON)
+		if err != nil {
+			t.Fatalf("failed inserting part %s: %v", tc.partID, err)
+		}
+	}
+
+	_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_adv_err"}, "user", nil)
+	if err != nil {
+		t.Fatalf("ExtractFacts failed: %v", err)
+	}
+
+	var toolEvents []domain.EventFact
+	for _, ev := range events {
+		if ev.EventType == domain.EventTypeToolCall {
+			toolEvents = append(toolEvents, ev)
+		}
+	}
+
+	if len(toolEvents) != len(cases) {
+		t.Fatalf("expected %d tool events, got %d", len(cases), len(toolEvents))
+	}
+
+	for i, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ev := toolEvents[i]
+			if ev.Status != tc.expectedStatus {
+				t.Errorf("status mismatch: expected %q, got %q", tc.expectedStatus, ev.Status)
+			}
+			if ev.ErrorMessage == nil {
+				t.Fatalf("expected non-nil error message, got nil")
+			}
+			if len(*ev.ErrorMessage) != tc.expectedMsgLen {
+				t.Errorf("length mismatch: expected %d, got %d", tc.expectedMsgLen, len(*ev.ErrorMessage))
+			}
+			if tc.expectedMsgExact != "" && *ev.ErrorMessage != tc.expectedMsgExact {
+				t.Errorf("exact message mismatch: expected %q, got %q", tc.expectedMsgExact, *ev.ErrorMessage)
+			}
+			if tc.expectedPrefix != "" && !strings.HasPrefix(*ev.ErrorMessage, tc.expectedPrefix) {
+				t.Errorf("prefix mismatch: expected prefix length %d", len(tc.expectedPrefix))
+			}
+		})
 	}
 }
 

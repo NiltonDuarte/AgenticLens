@@ -5,6 +5,7 @@ import {
   fetchWorkspaceById,
   fetchWorkspaceLedgers,
   fetchWorkspaceEvents,
+  fetchWorkspaceAnomalies,
   fetchVersion,
 } from './client';
 import {
@@ -404,6 +405,80 @@ describe('Boundary API Client', () => {
       const res = await fetchWorkspaceEvents('AL-1');
       expect(res.isMock).toBe(true);
       expect(Array.isArray(res.data)).toBe(true);
+    });
+
+    it('returns empty array with isMock false when backend returns empty events stream', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      }));
+
+      const res = await fetchWorkspaceEvents('AL-1');
+      expect(res.isMock).toBe(false);
+      expect(res.data).toEqual([]);
+    });
+  });
+
+  describe('fetchWorkspaceAnomalies', () => {
+    it('returns anomalies from workspace detail response when fetch succeeds', async () => {
+      const liveDetail = {
+        ...mockWorkspaceDetails['AL-2'],
+        anomalies: [
+          {
+            rule_id: 'TOOL_RETRY_STREAK',
+            severity: 'WARNING',
+            title: 'Repeated Tool Failures',
+            description: 'Tool failed 3 times',
+            context: { tool_name: 'bash', count: 3 },
+          },
+        ],
+      };
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => liveDetail,
+      }));
+
+      const res = await fetchWorkspaceAnomalies('AL-2');
+      expect(res.isMock).toBe(false);
+      expect(res.data).toHaveLength(1);
+      expect(res.data[0]?.rule_id).toBe('TOOL_RETRY_STREAK');
+    });
+
+    it('returns empty array when workspace detail has no anomalies', async () => {
+      const cleanDetail = {
+        ...mockWorkspaceDetails['AL-1']!,
+        anomalies: [],
+      };
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => cleanDetail,
+      }));
+
+      const res = await fetchWorkspaceAnomalies('AL-1');
+      expect(res.isMock).toBe(false);
+      expect(res.data).toEqual([]);
+    });
+
+    it('falls back to mock anomalies when workspace detail fetch fails', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+
+      const res = await fetchWorkspaceAnomalies('AL-2');
+      expect(res.isMock).toBe(true);
+      expect(Array.isArray(res.data)).toBe(true);
+      expect(res.data.length).toBeGreaterThan(0);
+    });
+
+    it('throws structured error when workspace does not exist in backend nor mocks', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      }));
+
+      await expect(fetchWorkspaceAnomalies('UNKNOWN-NONEXISTENT')).rejects.toThrow(
+        'Workspace UNKNOWN-NONEXISTENT not found'
+      );
     });
   });
 

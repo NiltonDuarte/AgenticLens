@@ -197,5 +197,27 @@ describe('FleetOverview View Component', () => {
       fireEvent.click(screen.getByText('AL-1'));
       expect(onSelectTicket).toHaveBeenCalledWith('AL-1');
     });
+
+    it('renders FleetAnomalyCard in the fleet overview layout with anomaly metrics', async () => {
+      vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+        data: mockFleetSummary,
+        isMock: false,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+        data: [...mockTicketComparisonRows],
+        isMock: false,
+      });
+
+      render(<FleetOverview />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Fleet Anomaly and Reliability Profile')).toBeInTheDocument();
+      });
+
+      // Fleet anomaly metrics
+      expect(screen.getByText('1 warning, 1 critical')).toBeInTheDocument();
+      expect(screen.getByText('Tool Retry Streak')).toBeInTheDocument();
+      expect(screen.getByText('Brittle Tools')).toBeInTheDocument();
+    });
   });
 });

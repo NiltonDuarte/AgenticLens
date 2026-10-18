@@ -1,5 +1,6 @@
 import type {
   AgenticMetricsLedger,
+  Anomaly,
   BuildInfo,
   EventFact,
   FleetSummary,
@@ -166,6 +167,21 @@ export async function fetchWorkspaceEvents(
     if (fallbackLedger) {
       return { data: fallbackLedger.facts?.events ?? [], isMock: true };
     }
+    const msg = err instanceof Error ? err.message : 'Unknown network failure';
+    throw new Error(msg);
+  }
+}
+
+export async function fetchWorkspaceAnomalies(
+  ticketId: string
+): Promise<ApiResponse<readonly Anomaly[]>> {
+  try {
+    const detailRes = await fetchWorkspaceById(ticketId);
+    return {
+      data: detailRes.data.anomalies ?? [],
+      isMock: detailRes.isMock,
+    };
+  } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown network failure';
     throw new Error(msg);
   }

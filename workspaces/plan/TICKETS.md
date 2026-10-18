@@ -9,6 +9,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-6 versioned schema migration and chronological event extraction.md`
 - `workspaces/plan/done/AL-7 domain anomaly detection and rule engine.md`
 - `workspaces/plan/done/AL-8 anomaly api endpoints and fleet health aggregation.md`
+- `workspaces/plan/done/AL-9 visual trace waterfall and anomaly inspector.md`
 - `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
 - `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
 - `workspaces/plan/done/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
@@ -19,7 +20,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
 - `workspaces/plan/done/AL-23 natural ticket identifier ordering and sortable tables.md`
 - `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
-- `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 - `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 - `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
@@ -35,14 +35,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Ready
-
-- **AL-9**: Visual Trace Waterfall and Anomaly Inspector
-  - **Subsystem**: Presentation / Web / Tests
-  - **Phase**: Phase 2
-  - **Status**: Ready
-  - **Blocked by**: None (AL-8 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-9 visual trace waterfall and anomaly inspector.md`
 
 - **AL-24**: Dynamic Role and Model Aggregations and Presentation
   - **Subsystem**: Domain / Presentation / Adapters / Tests
@@ -131,6 +123,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-9**: Visual Trace Waterfall and Anomaly Inspector
+  - **Subsystem**: Presentation / Web / Tests
+  - **Phase**: Phase 2
+  - **Status**: Done
+  - **Blocked by**: None (AL-8 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-9 visual trace waterfall and anomaly inspector.md`
 
 - **AL-30**: Fail Telemetry Generation on Unresolved Root Session
   - **Subsystem**: CLI / Adapters / Tests
