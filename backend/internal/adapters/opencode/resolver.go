@@ -10,7 +10,7 @@ import (
 // ResolveActiveRootSession resolves the active root session identifier using prioritized matching strategies:
 // Priority 1: Exact Nonce matching against the part table data.
 // Priority 2: Explicit session ID passed directly as parameter.
-// Priority 3: Ticket ID matching against root session titles.
+// Priority 3: Ticket ID matching against root session titles. If title matching yields no rows, falls back to workspace path matching via ResolveSessionByWorkspacePath.
 // Priority 4: Fallback to the most recent message session parent or ID when neither nonce nor ticket ID is supplied.
 func ResolveActiveRootSession(db *sql.DB, nonce string, ticketID string, explicitSessionID string) (*string, error) {
 	if db == nil {
@@ -60,6 +60,14 @@ func ResolveActiveRootSession(db *sql.DB, nonce string, ticketID string, explici
 		}
 		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("resolving session by ticket id: %w", err)
+		}
+
+		fallbackID, fallbackErr := ResolveSessionByWorkspacePath(db, cleanTicket, 0, 0)
+		if fallbackErr != nil {
+			return nil, fmt.Errorf("resolving session by workspace path fallback: %w", fallbackErr)
+		}
+		if fallbackID != nil && strings.TrimSpace(*fallbackID) != "" {
+			return fallbackID, nil
 		}
 	}
 

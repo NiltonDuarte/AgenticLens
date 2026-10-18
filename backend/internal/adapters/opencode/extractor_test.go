@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/opencode"
@@ -123,6 +124,80 @@ func TestResolveActiveRootSession(t *testing.T) {
 		}
 		if res == nil || *res != "ses_root_1" {
 			t.Fatalf("expected ses_root_1 as parent of latest message session, got %v", res)
+		}
+	})
+
+	// Test Priority 3 Fallback: Workspace Path matching when title lookup finds no rows
+	t.Run("Priority 3 Workspace Path Fallback", func(t *testing.T) {
+		_, err := db.Exec(`
+			INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+			('ses_root_fallback', NULL, 'build', '{"id":"claude-3-opus"}', 'Unrelated Title Without Ticket', 6000, 7000),
+			('ses_child_fallback', 'ses_root_fallback', 'coder', '{"id":"claude-3-opus"}', NULL, 6100, 6900);
+			INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+			('part_fallback', 'ses_child_fallback', 'msg_fb', 6200, 6200, '{"path":"workspaces/AL-300/agentic_metrics.json"}');
+		`)
+		if err != nil {
+			t.Fatalf("failed inserting fallback test records: %v", err)
+		}
+
+		res, err := opencode.ResolveActiveRootSession(db, "", "AL-300", "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res == nil || *res != "ses_root_fallback" {
+			t.Fatalf("expected ses_root_fallback, got %v", res)
+		}
+	})
+
+	t.Run("Unresolved Ticket Returns Nil", func(t *testing.T) {
+		res, err := opencode.ResolveActiveRootSession(db, "", "AL-NON-EXISTENT", "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res != nil {
+			t.Fatalf("expected nil for non-existent ticket, got %v", *res)
+		}
+	})
+
+	t.Run("Priority 3 Fallback Database Error Handling", func(t *testing.T) {
+		errDB := setupTestDB(t)
+		defer errDB.Close()
+
+		// Drop part table so ResolveSessionByWorkspacePath will fail with a database error
+		if _, err := errDB.Exec("DROP TABLE part;"); err != nil {
+			t.Fatalf("failed dropping part table: %v", err)
+		}
+
+		res, err := opencode.ResolveActiveRootSession(errDB, "", "AL-FALLBACK-ERR", "")
+		if err == nil {
+			t.Fatal("expected error when part table is missing during fallback, got nil")
+		}
+		if res != nil {
+			t.Fatalf("expected nil session ID on error, got %v", *res)
+		}
+		if !strings.Contains(err.Error(), "resolving session by workspace path fallback") {
+			t.Fatalf("expected wrapped fallback error, got %v", err)
+		}
+	})
+
+	t.Run("Priority 3 Session Query Database Error Handling", func(t *testing.T) {
+		errDB := setupTestDB(t)
+		defer errDB.Close()
+
+		// Drop session table so initial ticket query fails with a database error
+		if _, err := errDB.Exec("DROP TABLE session;"); err != nil {
+			t.Fatalf("failed dropping session table: %v", err)
+		}
+
+		res, err := opencode.ResolveActiveRootSession(errDB, "", "AL-SESSION-ERR", "")
+		if err == nil {
+			t.Fatal("expected error when session table is missing, got nil")
+		}
+		if res != nil {
+			t.Fatalf("expected nil session ID on error, got %v", *res)
+		}
+		if !strings.Contains(err.Error(), "resolving session by ticket id") {
+			t.Fatalf("expected wrapped ticket id error, got %v", err)
 		}
 	})
 }

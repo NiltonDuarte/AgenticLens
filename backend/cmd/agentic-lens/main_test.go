@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -275,6 +276,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--ticket-id", "AL-GEN-ANOM",
 			"--json-output", outJSON,
 			"--anomalies",
+			"--allow-empty",
 		)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -305,6 +307,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--ticket-id", "AL-GEN-CLEAN",
 			"--json-output", outJSON,
 			"--anomalies",
+			"--allow-empty",
 		)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -961,6 +964,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--db-path", nonExistentDB,
 			"--ticket-id", "AL-FALLBACK",
 			"--json-output", outJSON,
+			"--allow-empty",
 		)
 
 		var stdout, stderr bytes.Buffer
@@ -1003,6 +1007,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--db-path", filepath.Join(tempDir, "none.db"),
 			"--ticket-id", "AL-RECOVER",
 			"--json-output", outJSON,
+			"--allow-empty",
 		)
 
 		var stdout, stderr bytes.Buffer
@@ -1076,6 +1081,456 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		}
 		if !strings.Contains(mdStr, "0.0%") {
 			t.Errorf("expected 0.0%% cache hit rate / reasoning ratio on zero tokens")
+		}
+	})
+}
+
+func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
+	t.Parallel()
+
+	t.Run("generate fails with status 1 and logs error when root session cannot be identified", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		emptyDB := filepath.Join(tempDir, "empty.db")
+		db, err := sql.Open("sqlite", emptyDB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		targetJSON := filepath.Join(tempDir, "should_not_exist.json")
+		targetMD := filepath.Join(tempDir, "should_not_exist.md")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", emptyDB,
+			"--ticket-id", "NON_EXISTENT",
+			"--json-output", targetJSON,
+			"--append", targetMD,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err = cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate to fail with exit status 1, but succeeded")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: unable to identify root session for ticket 'NON_EXISTENT'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted."
+		if !strings.Contains(stderr.String(), expectedErr) {
+			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
+		}
+
+		if _, err := os.Stat(targetJSON); !os.IsNotExist(err) {
+			t.Fatalf("expected target JSON file not to be created, but it exists: %s", targetJSON)
+		}
+		if _, err := os.Stat(targetMD); !os.IsNotExist(err) {
+			t.Fatalf("expected target markdown file not to be created, but it exists: %s", targetMD)
+		}
+	})
+
+	t.Run("existing summary file is not modified when generation fails", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		emptyDB := filepath.Join(tempDir, "empty.db")
+		db, err := sql.Open("sqlite", emptyDB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		summaryMD := filepath.Join(tempDir, "SUMMARY.md")
+		initialContent := "# Preserved Summary\n\nOriginal content must not change.\n"
+		if err := os.WriteFile(summaryMD, []byte(initialContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", emptyDB,
+			"--ticket-id", "NON_EXISTENT_2",
+			"--append", summaryMD,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err == nil {
+			t.Fatal("expected command to fail with exit status 1")
+		}
+
+		content, err := os.ReadFile(summaryMD)
+		if err != nil {
+			t.Fatalf("failed reading summary file: %v", err)
+		}
+		if string(content) != initialContent {
+			t.Fatalf("expected summary file to remain unchanged, got:\n%s", string(content))
+		}
+	})
+
+	t.Run("passing --allow-empty allows execution to proceed when sessions are absent", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "allowed_empty.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--ticket-id", "AL-ALLOW-EMPTY",
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected --allow-empty to exit with code 0, got err: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("expected output JSON to exist: %v", err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("expected valid JSON: %v", err)
+		}
+		if parsed.TicketID == nil || *parsed.TicketID != "AL-ALLOW-EMPTY" {
+			t.Errorf("expected AL-ALLOW-EMPTY, got %v", parsed.TicketID)
+		}
+	})
+
+	t.Run("valid ticket with identifiable session succeeds without --allow-empty", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		dbPath := filepath.Join(tempDir, "valid.db")
+		db, err := sql.Open("sqlite", dbPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			INSERT INTO session VALUES ('ses_root_valid', NULL, 'build', 'default_model', 'Work on AL-VALID feature', 1000, 2000);
+			INSERT INTO message VALUES ('msg_valid', 'ses_root_valid', 1100, 1900, '{"role":"assistant","tokens":{"input":100,"output":50},"cost":0.001}');
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		outJSON := filepath.Join(tempDir, "valid.json")
+		summaryMD := filepath.Join(tempDir, "SUMMARY.md")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", dbPath,
+			"--ticket-id", "AL-VALID",
+			"--json-output", outJSON,
+			"--append", summaryMD,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected generate to succeed for valid session: %v, stderr: %s", err, stderr.String())
+		}
+
+		if _, err := os.Stat(outJSON); err != nil {
+			t.Fatalf("expected JSON output file to exist: %v", err)
+		}
+		if _, err := os.Stat(summaryMD); err != nil {
+			t.Fatalf("expected summary markdown file to exist: %v", err)
+		}
+	})
+
+	t.Run("generate without ticket id displays UNKNOWN on failure", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", filepath.Join(tempDir, "missing.db"),
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected failure without root session or ticket id")
+		}
+		expectedErr := "Error: unable to identify root session for ticket 'UNKNOWN'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted."
+		if !strings.Contains(stderr.String(), expectedErr) {
+			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
+		}
+	})
+
+	t.Run("cached ledger facts with invocations allows generate to succeed without root session in DB", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		emptyDB := filepath.Join(tempDir, "empty.db")
+		db, err := sql.Open("sqlite", emptyDB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		cachedJSON := filepath.Join(tempDir, "cached_with_inv.json")
+		cachedJSONContent := `{"schema_version":2,"ticket_id":"AL-CACHED-INV","invocations":[{"id":"ses_cached_inv_1","user":"engineer","role":"coder","model":"gpt-4o","tokens":{"input":150,"output":75},"cost_usd":0.003}]}`
+		if err := os.WriteFile(cachedJSON, []byte(cachedJSONContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		summaryMD := filepath.Join(tempDir, "SUMMARY.md")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", emptyDB,
+			"--ticket-id", "AL-CACHED-INV",
+			"--json-output", cachedJSON,
+			"--append", summaryMD,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected generate to succeed with cached invocations, got err: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(cachedJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+		if len(parsed.Invocations) != 1 {
+			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.Invocations))
+		}
+		if parsed.Invocations[0].ID != "ses_cached_inv_1" {
+			t.Errorf("expected invocation ID ses_cached_inv_1, got %s", parsed.Invocations[0].ID)
+		}
+	})
+
+	t.Run("cached ledger facts without invocations fails when DB has no root session", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		emptyDB := filepath.Join(tempDir, "empty.db")
+		db, err := sql.Open("sqlite", emptyDB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
+		initialJSON := `{"schema_version":2,"ticket_id":"AL-CACHED-NO-INV","invocations":[]}`
+		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", emptyDB,
+			"--ticket-id", "AL-CACHED-NO-INV",
+			"--json-output", cachedJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err = cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate to fail with exit status 1, but succeeded")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: unable to identify root session for ticket 'AL-CACHED-NO-INV'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted."
+		if !strings.Contains(stderr.String(), expectedErr) {
+			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
+		}
+
+		content, err := os.ReadFile(cachedJSON)
+		if err != nil {
+			t.Fatalf("failed reading cached JSON file: %v", err)
+		}
+		if string(content) != initialJSON {
+			t.Fatalf("expected cached JSON file to remain unchanged, got:\n%s", string(content))
+		}
+	})
+
+	t.Run("both DB and cached facts have 0 thread IDs and 0 invocations succeeds when --allow-empty is passed", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		emptyDB := filepath.Join(tempDir, "empty.db")
+		db, err := sql.Open("sqlite", emptyDB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		cachedJSON := filepath.Join(tempDir, "cached_empty.json")
+		initialJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY-BOTH","invocations":[]}`
+		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", emptyDB,
+			"--ticket-id", "AL-EMPTY-BOTH",
+			"--json-output", cachedJSON,
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected --allow-empty to succeed with code 0, got err: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(cachedJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatalf("expected valid JSON: %v", err)
+		}
+		if parsed.TicketID == nil || *parsed.TicketID != "AL-EMPTY-BOTH" {
+			t.Errorf("expected AL-EMPTY-BOTH, got %v", parsed.TicketID)
+		}
+		if len(parsed.Invocations) != 0 {
+			t.Errorf("expected 0 invocations, got %d", len(parsed.Invocations))
+		}
+	})
+
+	t.Run("database error during workspace path fallback fails cleanly with exit code 1", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		brokenDB := filepath.Join(tempDir, "broken.db")
+		db, err := sql.Open("sqlite", brokenDB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// session table exists, but part table is missing.
+		// Title search returns sql.ErrNoRows, and workspace path fallback fails when querying part table.
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		targetJSON := filepath.Join(tempDir, "should_not_exist.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", brokenDB,
+			"--ticket-id", "AL-DB-ERR",
+			"--json-output", targetJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err = cmd.Run()
+		if err == nil {
+			t.Fatal("expected failure on database error during fallback")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: unable to identify root session for ticket 'AL-DB-ERR'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted."
+		if !strings.Contains(stderr.String(), expectedErr) {
+			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
+		}
+
+		if _, err := os.Stat(targetJSON); !os.IsNotExist(err) {
+			t.Fatalf("expected target JSON not to exist: %s", targetJSON)
 		}
 	})
 }

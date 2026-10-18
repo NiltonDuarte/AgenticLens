@@ -41,6 +41,7 @@ func runGenerate(args []string) {
 	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
 	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
+	allowEmptyFlag := genFlags.Bool("allow-empty", false, "Allow empty metrics generation even if no root session or invocations are resolved (test escape hatch)")
 
 	if err := genFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing generate flags: %v\n", err)
@@ -158,6 +159,15 @@ func runGenerate(args []string) {
 				}
 			}
 		}
+	}
+
+	if len(knownThreadIDs) == 0 && len(invocations) == 0 && !*allowEmptyFlag {
+		targetTicket := "UNKNOWN"
+		if activeTicketID != "" {
+			targetTicket = activeTicketID
+		}
+		fmt.Fprintf(os.Stderr, "Error: unable to identify root session for ticket '%s'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted.\n", targetTicket)
+		os.Exit(1)
 	}
 
 	if len(invocations) > 0 && strings.TrimSpace(*startedAtFlag) == "" {

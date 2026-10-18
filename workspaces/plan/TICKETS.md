@@ -87,7 +87,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - **AL-30**: Fail Telemetry Generation on Unresolved Root Session
   - **Subsystem**: CLI / Adapters / Tests
   - **Phase**: Phase 5
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-30 fail telemetry generation on missing root session.md`
