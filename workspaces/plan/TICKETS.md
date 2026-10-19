@@ -27,9 +27,9 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-29 conventional commit ticket type classification in telemetry engine.md`
 - `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
 - `workspaces/plan/done/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
+- `workspaces/plan/done/AL-31 decouple root session structural hierarchy from persona roles.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-- `workspaces/plan/to-do/AL-31 decouple root session structural hierarchy from persona roles.md`
 - `workspaces/plan/to-do/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
 - `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 - `workspaces/plan/to-do/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
@@ -53,14 +53,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None (AL-17 Done)
   - **Blocks**: AL-20
   - **File**: `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
-
-- **AL-31**: Decouple Root Session Structural Hierarchy from Persona Roles in Domain Engine and Tests
-  - **Subsystem**: Domain / Adapters / Tests
-  - **Phase**: Phase 6
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-31 decouple root session structural hierarchy from persona roles.md`
 
 - **AL-32**: Telemetry Event Pruning, Database Message Stripping, Agent Data Investigation, and Ledger Backfill
   - **Subsystem**: Domain / Adapters / CLI / Migration / Tests
@@ -86,7 +78,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Presentation / Web / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: AL-19 (AL-17 Done)
+  - **Blocked by**: AL-17, AL-19
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 
@@ -94,7 +86,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
   - **Phase**: Phase 6
   - **Status**: Pending
-  - **Blocked by**: AL-32 (AL-17 Done)
+  - **Blocked by**: AL-32, AL-17
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
@@ -109,6 +101,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None (AL-21 Done)
   - **Blocks**: AL-19, AL-20, AL-33
   - **File**: `workspaces/plan/done/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
+
+- **AL-31**: Decouple Root Session Structural Hierarchy from Persona Roles in Domain Engine and Tests
+  - **Subsystem**: Domain / Adapters / Tests
+  - **Phase**: Phase 6
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-31 decouple root session structural hierarchy from persona roles.md`
 
 - **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
   - **Subsystem**: Domain / Adapters / Presentation / Tests

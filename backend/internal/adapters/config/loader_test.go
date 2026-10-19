@@ -57,6 +57,10 @@ code_metrics:
 role_mappings:
   architect: planner
   qa: tester
+role_order:
+  - tester
+  - planner
+  - coder
 `
 	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(yamlContent), 0644); err != nil {
 		t.Fatal(err)
@@ -115,6 +119,9 @@ role_mappings:
 	}
 	if cfg.RoleMappings.ResolveRole("qa") != domain.RoleTester {
 		t.Errorf("expected RoleTester for qa, got %s", cfg.RoleMappings.ResolveRole("qa"))
+	}
+	if len(cfg.RoleOrder) != 3 || cfg.RoleOrder[0] != "tester" || cfg.RoleOrder[1] != "planner" || cfg.RoleOrder[2] != "coder" {
+		t.Errorf("unexpected RoleOrder: %v", cfg.RoleOrder)
 	}
 }
 
@@ -1124,6 +1131,221 @@ ticket:
 		}
 		if cfg.Ticket.Prefixes[3].Prefix != "SCALAR" || cfg.Ticket.Prefixes[3].TicketType != "" {
 			t.Errorf("expected SCALAR with empty ticket_type, got %+v", cfg.Ticket.Prefixes[3])
+		}
+	})
+}
+
+func TestLoad_RoleOrderParsingAndFallback(t *testing.T) {
+	t.Parallel()
+
+	defaultOrder := domain.DefaultProjectConfig().RoleOrder
+
+	t.Run("role_order parsed accurately from JSON", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		jsonContent := `{
+			"project_name": "JSONRoleOrderProject",
+			"role_order": ["tester", "researcher", "developer", "coder"]
+		}`
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(jsonContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error loading config: %v", err)
+		}
+
+		expected := []string{"tester", "researcher", "developer", "coder"}
+		if len(cfg.RoleOrder) != len(expected) {
+			t.Fatalf("expected RoleOrder len %d, got %d: %v", len(expected), len(cfg.RoleOrder), cfg.RoleOrder)
+		}
+		for i, r := range expected {
+			if cfg.RoleOrder[i] != r {
+				t.Errorf("expected RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
+			}
+		}
+	})
+
+	t.Run("role_order parsed accurately from YAML", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		yamlContent := `
+project_name: YAMLRoleOrderProject
+role_order:
+  - lead-qa
+  - architect
+  - researcher
+`
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error loading config: %v", err)
+		}
+
+		expected := []string{"lead-qa", "architect", "researcher"}
+		if len(cfg.RoleOrder) != len(expected) {
+			t.Fatalf("expected RoleOrder len %d, got %d: %v", len(expected), len(cfg.RoleOrder), cfg.RoleOrder)
+		}
+		for i, r := range expected {
+			if cfg.RoleOrder[i] != r {
+				t.Errorf("expected RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
+			}
+		}
+	})
+
+	t.Run("fallback to DefaultProjectConfig when role_order omitted from YAML", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		yamlContent := `project_name: OmittedRoleOrderYAML`
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error loading config: %v", err)
+		}
+
+		if len(cfg.RoleOrder) != len(defaultOrder) {
+			t.Fatalf("expected default RoleOrder len %d, got %d: %v", len(defaultOrder), len(cfg.RoleOrder), cfg.RoleOrder)
+		}
+		for i, r := range defaultOrder {
+			if cfg.RoleOrder[i] != r {
+				t.Errorf("expected default RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
+			}
+		}
+	})
+
+	t.Run("fallback to DefaultProjectConfig when role_order omitted from JSON", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		jsonContent := `{"project_name": "OmittedRoleOrderJSON"}`
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(jsonContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error loading config: %v", err)
+		}
+
+		if len(cfg.RoleOrder) != len(defaultOrder) {
+			t.Fatalf("expected default RoleOrder len %d, got %d: %v", len(defaultOrder), len(cfg.RoleOrder), cfg.RoleOrder)
+		}
+		for i, r := range defaultOrder {
+			if cfg.RoleOrder[i] != r {
+				t.Errorf("expected default RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
+			}
+		}
+	})
+
+	t.Run("fallback to DefaultProjectConfig when config file completely absent", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error loading config from empty dir: %v", err)
+		}
+
+		if len(cfg.RoleOrder) != len(defaultOrder) {
+			t.Fatalf("expected default RoleOrder len %d, got %d: %v", len(defaultOrder), len(cfg.RoleOrder), cfg.RoleOrder)
+		}
+		for i, r := range defaultOrder {
+			if cfg.RoleOrder[i] != r {
+				t.Errorf("expected default RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
+			}
+		}
+	})
+
+	t.Run("role_order sanitization trims whitespace lowercases and filters empty in YAML", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		yamlContent := `
+role_order:
+  - "  TESTER  "
+  - "   "
+  - ""
+  - "  RESEARCHER\t"
+  - "DeVeLoPeR"
+`
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		expected := []string{"tester", "researcher", "developer"}
+		if len(cfg.RoleOrder) != len(expected) {
+			t.Fatalf("expected len %d, got %d: %v", len(expected), len(cfg.RoleOrder), cfg.RoleOrder)
+		}
+		for i, r := range expected {
+			if cfg.RoleOrder[i] != r {
+				t.Errorf("at index %d: expected %q, got %q", i, r, cfg.RoleOrder[i])
+			}
+		}
+	})
+
+	t.Run("role_order sanitization trims whitespace lowercases and filters empty in JSON", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		jsonContent := `{
+			"role_order": ["  LEAD-QA  ", "  \n  ", "", "ArChItEcT"]
+		}`
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(jsonContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		expected := []string{"lead-qa", "architect"}
+		if len(cfg.RoleOrder) != len(expected) {
+			t.Fatalf("expected len %d, got %d: %v", len(expected), len(cfg.RoleOrder), cfg.RoleOrder)
+		}
+		for i, r := range expected {
+			if cfg.RoleOrder[i] != r {
+				t.Errorf("at index %d: expected %q, got %q", i, r, cfg.RoleOrder[i])
+			}
 		}
 	})
 }
