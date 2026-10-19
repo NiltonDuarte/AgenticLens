@@ -1,4 +1,4 @@
-ma# Pull Request: AL-17 Non-Locking Live Database Hook, Session Tree Engine, Ticket Inference, and Live Trace Telemetry
+# feat(live): implement non-locking database hook, session tree engine, and live telemetry (AL-17)
 
 ## Overview
 This PR implements live session discovery, hierarchical session tree reconstruction, title-based ticket inference, and transient trace streaming for AgenticLens.
