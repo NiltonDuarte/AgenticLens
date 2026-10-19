@@ -7,7 +7,7 @@ Previously, persisting entire raw turn and tool histories resulted in ledgers ba
 1. In-memory metrics derivation computes all aggregations and anomalies across the full raw event history.
 2. Events are pruned via `domain.PruneEventsForPersistence` prior to persistence, omitting routine turns and retaining only bare tool failures (`status: error`), compactions, and anomaly-associated events with all `error_message` fields cleared to `nil`.
 3. Schema version is promoted to 3, supported by a new migration step `StepV2ToV3Sanitized` in the migration engine and invariant validation.
-4. Historical workspace ledgers (36 workspaces) have been migrated to schema version 3, dropping file sizes from hundreds of kilobytes to compact, leak-free JSON payloads.
+4. All historical workspace ledgers (37 workspaces) have been migrated to schema version 3, dropping file sizes from hundreds of kilobytes to compact, leak-free JSON payloads.
 
 - Contract: [workspaces/AL-32/CONTRACT.md](workspaces/AL-32/CONTRACT.md)
 - Telemetry: [workspaces/AL-32/SUMMARY.md](workspaces/AL-32/SUMMARY.md)
@@ -40,6 +40,6 @@ Previously, persisting entire raw turn and tool histories resulted in ledgers ba
 - Added domain unit tests in `events_test.go` and `migration/engine_test.go` testing v2 -> v3 migration, chained v1 -> v3 migration, idempotency, and calculation parity.
 - Added migration runner integration tests in `migration_runner_test.go` verifying batch v3 upgrade, zero `"error_message"` keys, and file size limits.
 - Added CLI integration tests in `main_test.go` (`TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage`) verifying generated JSON structure, pruned events, zero error messages, and summary markdown preservation.
-- Migrated all 36 historical workspace ledgers to schema version 3.
+- Migrated all historical workspace ledgers to schema version 3.
 - Verified zero `any` or empty `interface{}` across Go backend.
 - Verified zero emojis across all code, tests, and artifacts.
