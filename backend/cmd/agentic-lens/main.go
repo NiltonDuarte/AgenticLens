@@ -259,7 +259,9 @@ func runGenerate(args []string) {
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 
 	if *jsonOutputFlag != "" {
-		if err := adapters.SaveFactLedger(*jsonOutputFlag, factLedger); err != nil {
+		persistedFactLedger := factLedger
+		persistedFactLedger.Events = domain.PruneEventsForPersistence(factLedger)
+		if err := adapters.SaveFactLedger(*jsonOutputFlag, persistedFactLedger); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
 		}

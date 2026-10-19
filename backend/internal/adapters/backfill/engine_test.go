@@ -236,8 +236,8 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if err := json.Unmarshal(dataB, &loadedB); err != nil {
 		t.Fatalf("unmarshaling tidB: %v", err)
 	}
-	if loadedB.SchemaVersion == nil || *loadedB.SchemaVersion != 2 {
-		t.Errorf("expected schema_version 2, got %v", loadedB.SchemaVersion)
+	if loadedB.SchemaVersion == nil || *loadedB.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, loadedB.SchemaVersion)
 	}
 	if loadedB.Migration == nil || loadedB.Migration.Status != string(domain.MigrationStatusPartial) {
 		t.Errorf("expected status partial, got %v", loadedB.Migration)
@@ -282,8 +282,8 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if err := json.Unmarshal(dataB2, &loadedB2); err != nil {
 		t.Fatalf("unmarshaling tidB2: %v", err)
 	}
-	if loadedB2.SchemaVersion == nil || *loadedB2.SchemaVersion != 2 {
-		t.Errorf("expected schema_version 2, got %v", loadedB2.SchemaVersion)
+	if loadedB2.SchemaVersion == nil || *loadedB2.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, loadedB2.SchemaVersion)
 	}
 	if loadedB2.Migration != nil {
 		t.Errorf("expected migration object to be omitted on completed status, got %v", loadedB2.Migration)
@@ -354,8 +354,8 @@ func TestBackfillEngine_CorruptedFileResilience(t *testing.T) {
 		if err := json.Unmarshal(data, &loaded); err != nil {
 			t.Fatalf("unmarshaling %s: %v", goodTid, err)
 		}
-		if loaded.SchemaVersion == nil || *loaded.SchemaVersion != 2 {
-			t.Errorf("expected schema_version 2 for %s, got %v", goodTid, loaded.SchemaVersion)
+		if loaded.SchemaVersion == nil || *loaded.SchemaVersion != domain.CurrentSchemaVersion {
+			t.Errorf("expected schema_version %d for %s, got %v", domain.CurrentSchemaVersion, goodTid, loaded.SchemaVersion)
 		}
 		if loaded.Migration != nil {
 			t.Errorf("expected migration object to be omitted on completed status for %s, got %v", goodTid, loaded.Migration)

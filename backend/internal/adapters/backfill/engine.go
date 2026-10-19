@@ -192,7 +192,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// Fully completed tickets are skipped unless --force is specified.
 	// A ticket is considered completed if it has CurrentSchemaVersion,
 	// does not have a partial migration pending, and does not require event backfill when RecomputeDB is requested.
-	needsEventBackfill := opts.RecomputeDB && len(factLedger.Events) == 0
+	needsEventBackfill := opts.RecomputeDB && (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && len(factLedger.Events) == 0
 	isCompleted := factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
 		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) &&
 		!needsEventBackfill
@@ -354,7 +354,9 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	// 4. Atomic File Write
-	dtoToSave := adapters.AgenticFactLedgerDTOFromDomain(factLedger)
+	persistedLedger := factLedger
+	persistedLedger.Events = domain.PruneEventsForPersistence(factLedger)
+	dtoToSave := adapters.AgenticFactLedgerDTOFromDomain(persistedLedger)
 	data, err := json.MarshalIndent(dtoToSave, "", "  ")
 	if err != nil {
 		result.Error = fmt.Errorf("marshaling updated JSON: %w", err)
