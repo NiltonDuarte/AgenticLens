@@ -121,7 +121,17 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 
 	statsMap := make(map[string]*toolStats)
 
-	if len(ledger.Events) > 0 {
+	if len(ledger.Tools) > 0 {
+		for _, t := range ledger.Tools {
+			if t.Name == "" {
+				continue
+			}
+			statsMap[t.Name] = &toolStats{
+				calls:  t.Calls,
+				errors: t.Errors,
+			}
+		}
+	} else if len(ledger.Events) > 0 {
 		for _, e := range ledger.Events {
 			if e.EventType != EventTypeToolCall || e.ToolName == nil || *e.ToolName == "" {
 				continue
@@ -135,16 +145,6 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 			st.calls++
 			if e.Status == "error" {
 				st.errors++
-			}
-		}
-	} else {
-		for _, t := range ledger.Tools {
-			if t.Name == "" {
-				continue
-			}
-			statsMap[t.Name] = &toolStats{
-				calls:  t.Calls,
-				errors: t.Errors,
 			}
 		}
 	}

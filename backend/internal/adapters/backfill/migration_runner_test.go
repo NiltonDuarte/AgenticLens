@@ -640,3 +640,87 @@ func TestMigrationRunner_TicketFilterAdversarial(t *testing.T) {
 		}
 	})
 }
+
+func TestMigrationRunner_BatchV3(t *testing.T) {
+	wsDir := setupMigrationTestWorkspaces(t)
+	runner := backfill.NewMigrationRunner(nil)
+
+	// Step 1: Dry run to v3 should not modify any files on disk
+	reportDry, err := runner.Run(backfill.MigrationOptions{
+		WorkspacesDir: wsDir,
+		TargetVersion: 3,
+		DryRun:        true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected runner error on dry run: %v", err)
+	}
+	if reportDry.Migrated != 3 {
+		t.Errorf("expected 3 planned migrations in dry-run, got %d", reportDry.Migrated)
+	}
+
+	// Verify files remain at original versions after dry-run
+	al3DataDry, err := os.ReadFile(filepath.Join(wsDir, "AL-3", "agentic_metrics.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var al3DTODry adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(al3DataDry, &al3DTODry); err != nil {
+		t.Fatal(err)
+	}
+	if al3DTODry.SchemaVersion == nil || *al3DTODry.SchemaVersion != 2 {
+		t.Errorf("expected AL-3 to remain version 2 after dry-run, got %v", al3DTODry.SchemaVersion)
+	}
+
+	// Step 2: Live migration to v3
+	report, err := runner.Run(backfill.MigrationOptions{
+		WorkspacesDir: wsDir,
+		TargetVersion: 3,
+	})
+	if err != nil {
+		t.Fatalf("unexpected runner error: %v", err)
+	}
+
+	if report.Scanned != 4 {
+		t.Errorf("expected 4 scanned workspaces, got %d", report.Scanned)
+	}
+	if report.Migrated != 3 {
+		t.Errorf("expected 3 migrated workspaces (AL-1, AL-2, AL-3), got %d", report.Migrated)
+	}
+	if len(report.Errors) != 1 {
+		t.Errorf("expected 1 error for corrupt AL-4, got %d", len(report.Errors))
+	}
+
+	for _, tid := range []string{"AL-1", "AL-2", "AL-3"} {
+		path := filepath.Join(wsDir, tid, "agentic_metrics.json")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", tid, err)
+		}
+
+		// Verify file size is under 5 KB (5120 bytes)
+		if len(data) >= 5120 {
+			t.Errorf("workspace %s file size %d exceeds 5 KB limit", tid, len(data))
+		}
+
+		// Verify zero "error_message" strings in raw JSON
+		if strings.Contains(string(data), `"error_message"`) {
+			t.Errorf("workspace %s contains persisted error_message keys: %s", tid, string(data))
+		}
+
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &dto); err != nil {
+			t.Fatalf("unmarshaling %s: %v", tid, err)
+		}
+
+		if dto.SchemaVersion == nil || *dto.SchemaVersion != 3 {
+			t.Errorf("expected schema version 3 for %s, got %v", tid, dto.SchemaVersion)
+		}
+
+		// Verify all events have nil ErrorMessage
+		for i, ev := range dto.Events {
+			if ev.ErrorMessage != nil {
+				t.Errorf("workspace %s event[%d] has non-nil ErrorMessage: %s", tid, i, *ev.ErrorMessage)
+			}
+		}
+	}
+}
