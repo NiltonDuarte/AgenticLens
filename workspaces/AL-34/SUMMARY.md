@@ -63,17 +63,17 @@ Ticket AL-34 eliminates "Cumulative" from the Metric Progression granularity opt
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 2h 42m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 168.2k tokens (84% of 200k healthy ceiling, 5 compactions) | Subagents peak 168.9k (Tester)
-- **Role Effort Distribution (Subagents):** Planner 7.6%, Coder 56.2%, Tester 26.4%, Reviewer 9.7%
-- **Subagent Turn Velocity & Thrashing:** 92.3 avg turns/run (peak: 285 turns) | Planner 62.0, Coder 96.8, Tester 144.0, Reviewer 53.0
+- **Active Agent Duration:** 2h 50m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 168.2k tokens (84% of 200k healthy ceiling, 6 compactions) | Subagents peak 168.9k (Tester)
+- **Role Effort Distribution (Subagents):** Planner 7.5%, Coder 57.1%, Tester 25.9%, Reviewer 9.5%
+- **Subagent Turn Velocity & Thrashing:** 83.1 avg turns/run (peak: 285 turns) | Planner 62.0, Coder 81.2, Tester 144.0, Reviewer 53.0
 - **Test-to-Production Code Ratio:** 5.5:1 (+803 test lines / +145 prod lines)
 - **Code Delivered:** +976 / -142 lines across 17 code files (excluding docs)
-- **Reasoning Effort:** 166,532 reasoning tokens (60.1% of generated output)
-- **Tool Health & Self-Correction:** 882 tool calls (9 self-corrections, 99.0% success rate)
+- **Reasoning Effort:** 180,712 reasoning tokens (60.9% of generated output)
+- **Tool Health & Self-Correction:** 953 tool calls (9 self-corrections, 99.1% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 9 execution anomalies detected (4 CRITICAL, 5 WARNING).
+- **Status:** 10 execution anomalies detected (4 CRITICAL, 6 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k in turn 28 (session: ses_eaa6a1fe4ffeRETrbx7cZmcvfS), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k in turn 79 (session: ses_eaa7dfb7effe8KcGclwVTrLvku), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.1k tokens) — Context tokens reached 161.1k in turn 89 (session: ses_eaa96a6b0ffeA5GEReuDcVsYzx), breaching 160k critical ceiling
@@ -83,6 +83,7 @@ Ticket AL-34 eliminates "Cumulative" from the Metric Progression granularity opt
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+57.1k tokens) — Context tokens surged by 57.1k tokens in turn 100 (session: ses_eaa96a6b0ffeA5GEReuDcVsYzx, total: 57.1k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+75.5k tokens) — Context tokens surged by 75.5k tokens in turn 125 (session: ses_eaaa516a0ffeGJNNcwC4miQtfo, total: 75.5k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+51.3k tokens) — Context tokens surged by 51.3k tokens in turn 201 (session: ses_eaa96a6b0ffeA5GEReuDcVsYzx, total: 51.3k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+48.5k tokens) — Context tokens surged by 48.5k tokens in turn 284 (session: ses_eaaa516a0ffeGJNNcwC4miQtfo, total: 48.5k tokens, threshold: 40000)
 
 ### Agentic Execution Metrics
 
@@ -91,15 +92,15 @@ Ticket AL-34 eliminates "Cumulative" from the Metric Progression granularity opt
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 2,216,209 | 42,480 | 21,176,237 | 90.5% | 168.2k | ELEVATED | $3.53 |
+| **orchestrator** | 1 | 2,501,487 | 45,714 | 26,894,315 | 91.5% | 168.2k | ELEVATED | $4.21 |
 | **planner** | 1 | 306,062 | 8,808 | 2,268,837 | 88.1% | 81.0k | HEALTHY | $0.50 |
-| **coder** | 4 | 1,957,500 | 38,032 | 23,881,260 | 92.4% | 168.6k | ELEVATED | $3.68 |
+| **coder** | 5 | 2,055,616 | 40,153 | 24,249,736 | 92.2% | 168.6k | ELEVATED | $3.81 |
 | **tester** | 1 | 1,094,070 | 17,008 | 9,530,395 | 89.7% | 168.9k | ELEVATED | $1.73 |
 | **reviewer** | 1 | 356,264 | 4,354 | 4,239,730 | 92.2% | 168.6k | ELEVATED | $0.64 |
-| **Total** | **8** | **5,930,105** | **110,682** | **61,096,459** | **91.2%** | **168.9k** | **ELEVATED** | **$10.07** |
+| **Total** | **9** | **6,313,499** | **116,037** | **67,183,013** | **91.4%** | **168.9k** | **ELEVATED** | **$10.89** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 8 | 5,930,105 | 110,682 | 61,096,459 | 91.2% | $10.07 |
-| **Total** | **8** | **5,930,105** | **110,682** | **61,096,459** | **91.2%** | **$10.07** |
+| **gemini-3.8-flash** | 9 | 6,313,499 | 116,037 | 67,183,013 | 91.4% | $10.89 |
+| **Total** | **9** | **6,313,499** | **116,037** | **67,183,013** | **91.4%** | **$10.89** |
