@@ -23,38 +23,30 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-25 contextual hover information icons for cards and tables.md`
 - `workspaces/plan/done/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
 - `workspaces/plan/done/AL-27 metric progression custom window one-day range and hourly granularity.md`
+- `workspaces/plan/done/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 - `workspaces/plan/done/AL-29 conventional commit ticket type classification in telemetry engine.md`
 - `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
 - `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 - `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-- `workspaces/plan/to-do/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 
 ---
 
 ## Ready
 
-- **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
-  - **Subsystem**: Domain / Adapters / Presentation / Tests
-  - **Phase**: Phase 5
+- **AL-17**: Implement Non-Locking Live Database Hook, Session Tree Engine, and Config-Driven Ticket Inference
+  - **Subsystem**: Adapters / Domain / HTTP / Tests
+  - **Phase**: Phase 4
   - **Status**: Ready
-  - **Blocked by**: None (AL-26 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
+  - **Blocked by**: None (AL-21 Done)
+  - **Blocks**: AL-18
+  - **File**: `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 
 ---
 
 ## Pending
-
-- **AL-17**: Implement Non-Locking Live Database Hook, Session Tree Engine, and Config-Driven Ticket Inference
-  - **Subsystem**: Adapters / Domain / HTTP / Tests
-  - **Phase**: Phase 4
-  - **Status**: Pending
-  - **Blocked by**: None (AL-21 Done)
-  - **Blocks**: AL-18
-  - **File**: `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 
 - **AL-18**: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry
   - **Subsystem**: Domain / Adapters / HTTP / Tests
@@ -83,6 +75,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Done
+  - **Blocked by**: None (AL-26 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 
 - **AL-29**: Conventional Commit Ticket Type Classification in Telemetry Engine
   - **Subsystem**: CLI / Adapters / Domain / Tests
@@ -282,4 +282,3 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Status**: Discarded (Superseded by AL-11)
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`

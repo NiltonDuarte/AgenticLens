@@ -1719,6 +1719,519 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 	})
 }
 
+func setupMultiFilterWorkspaces(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	wsDir := filepath.Join(root, "workspaces")
+	if err := os.MkdirAll(wsDir, 0755); err != nil {
+		t.Fatalf("failed creating workspaces dir: %v", err)
+	}
+
+	tickets := []struct {
+		id          string
+		ticketType  string
+		completedAt string
+		cost        string
+	}{
+		{"AL-1", "feature", "2026-10-15T11:00:00Z", "1.00"},
+		{"AL-2", "bug", "2026-10-16T11:00:00Z", "2.00"},
+		{"PO-1", "docs", "2026-10-17T11:00:00Z", "3.00"},
+		{"GEN-1", "chore", "2026-10-18T11:00:00Z", "4.00"},
+	}
+
+	for _, tc := range tickets {
+		dir := filepath.Join(wsDir, tc.id)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("failed creating dir for %s: %v", tc.id, err)
+		}
+		rawJSON := `{
+			"ticket_id": "` + tc.id + `",
+			"ticket_title": "Title ` + tc.id + `",
+			"ticket_type": "` + tc.ticketType + `",
+			"started_at": "2026-10-10T10:00:00Z",
+			"completed_at": "` + tc.completedAt + `",
+			"updated_at": "` + tc.completedAt + `",
+			"code": {"lines_added": 10, "lines_deleted": 0, "test_lines_added": 5, "test_lines_deleted": 0, "prod_lines_added": 5, "prod_lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
+			"invocations": [
+				{
+					"id": "ses-` + tc.id + `",
+					"role": "orchestrator",
+					"model": "gpt-4",
+					"user": "dev",
+					"active_duration_seconds": 60,
+					"turns": 1,
+					"tokens": {"input": 100, "output": 50, "cache_read": 0, "reasoning": 0, "peak_context": 5000},
+					"cost_usd": ` + tc.cost + `,
+					"compactions": 0
+				}
+			],
+			"tools": []
+		}`
+		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(rawJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	return wsDir
+}
+
+func TestMultiFilterEndpoints(t *testing.T) {
+	t.Parallel()
+
+	wsDir := setupMultiFilterWorkspaces(t)
+	mockFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("<html>OK</html>")},
+	}
+	server := adaptershttp.NewServer(wsDir, mockFS)
+	ts := httptest.NewServer(server.Handler())
+	t.Cleanup(func() { ts.Close() })
+
+	t.Run("GET /api/workspaces with repeated and comma-separated ticket_type and prefix filters", func(t *testing.T) {
+		t.Parallel()
+
+		// 1. Single ticket_type alias feat -> AL-1
+		resp, err := http.Get(ts.URL + "/api/workspaces?ticket_type=feat")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp.Body).Decode(&ledgers); err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		if len(ledgers) != 1 || *ledgers[0].TicketID != "AL-1" {
+			t.Fatalf("expected AL-1, got %+v", ledgers)
+		}
+
+		// 2. Comma-separated ticket_type: feat,bug -> AL-1, AL-2
+		resp2, err := http.Get(ts.URL + "/api/workspaces?ticket_type=feat,bug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledgers2 []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp2.Body).Decode(&ledgers2); err != nil {
+			t.Fatal(err)
+		}
+		_ = resp2.Body.Close()
+		if len(ledgers2) != 2 {
+			t.Fatalf("expected 2 ledgers for feat,bug, got %d", len(ledgers2))
+		}
+
+		// 3. Repeated ticket_type params: ticket_type=feat&ticket_type=docs -> AL-1, PO-1
+		resp3, err := http.Get(ts.URL + "/api/workspaces?ticket_type=feat&ticket_type=docs")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledgers3 []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp3.Body).Decode(&ledgers3); err != nil {
+			t.Fatal(err)
+		}
+		_ = resp3.Body.Close()
+		if len(ledgers3) != 2 {
+			t.Fatalf("expected 2 ledgers, got %d", len(ledgers3))
+		}
+
+		// 4. Prefix filter: prefix=AL -> AL-1, AL-2
+		resp4, err := http.Get(ts.URL + "/api/workspaces?prefix=al")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledgers4 []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp4.Body).Decode(&ledgers4); err != nil {
+			t.Fatal(err)
+		}
+		_ = resp4.Body.Close()
+		if len(ledgers4) != 2 {
+			t.Fatalf("expected 2 ledgers for prefix=al, got %d", len(ledgers4))
+		}
+
+		// 5. Joint prefix and ticket_type: prefix=AL&ticket_type=bug -> AL-2
+		resp5, err := http.Get(ts.URL + "/api/workspaces?prefix=AL&ticket_type=bug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledgers5 []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp5.Body).Decode(&ledgers5); err != nil {
+			t.Fatal(err)
+		}
+		_ = resp5.Body.Close()
+		if len(ledgers5) != 1 || *ledgers5[0].TicketID != "AL-2" {
+			t.Fatalf("expected AL-2, got %+v", ledgers5)
+		}
+
+		// 6. 'all' resets filter -> all 4 ledgers
+		resp6, err := http.Get(ts.URL + "/api/workspaces?prefix=all&ticket_type=all")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledgers6 []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp6.Body).Decode(&ledgers6); err != nil {
+			t.Fatal(err)
+		}
+		_ = resp6.Body.Close()
+		if len(ledgers6) != 4 {
+			t.Fatalf("expected 4 ledgers, got %d", len(ledgers6))
+		}
+	})
+
+	t.Run("GET /api/fleet with multi-filters", func(t *testing.T) {
+		t.Parallel()
+
+		resp, err := http.Get(ts.URL + "/api/fleet?ticket_type=chore")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+		}
+		var summary domain.FleetSummary
+		if err := json.NewDecoder(resp.Body).Decode(&summary); err != nil {
+			t.Fatal(err)
+		}
+		if summary.TotalTickets != 1 {
+			t.Errorf("expected 1 ticket for chore filter, got %d", summary.TotalTickets)
+		}
+		if summary.TotalCostUSD != 4.00 {
+			t.Errorf("expected 4.00 cost, got %f", summary.TotalCostUSD)
+		}
+	})
+
+	t.Run("GET /api/comparison endpoint", func(t *testing.T) {
+		t.Parallel()
+
+		// 1. Success with ticket_type filter
+		resp, err := http.Get(ts.URL + "/api/comparison?ticket_type=bug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+		}
+
+		var rows []domain.TicketComparisonRow
+		if err := json.NewDecoder(resp.Body).Decode(&rows); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != 1 {
+			t.Fatalf("expected 1 row for bug filter, got %d", len(rows))
+		}
+		if rows[0].TicketID != "AL-2" {
+			t.Errorf("expected ticket ID AL-2, got %s", rows[0].TicketID)
+		}
+		if rows[0].TicketType == nil || *rows[0].TicketType != "bug" {
+			t.Errorf("expected ticket_type bug, got %v", rows[0].TicketType)
+		}
+
+		// 2. Bad request on invalid temporal filter
+		respBad, err := http.Get(ts.URL + "/api/comparison?since=not-a-date")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = respBad.Body.Close() }()
+		if respBad.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request, got %d", respBad.StatusCode)
+		}
+	})
+
+	t.Run("GET /api/progression endpoint", func(t *testing.T) {
+		t.Parallel()
+
+		// 1. Success - chronologically sorted buckets
+		resp, err := http.Get(ts.URL + "/api/progression?prefix=AL,PO")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+		}
+
+		var buckets []domain.TimeBucketMetric
+		if err := json.NewDecoder(resp.Body).Decode(&buckets); err != nil {
+			t.Fatal(err)
+		}
+		if len(buckets) != 3 {
+			t.Fatalf("expected 3 progression buckets for AL,PO, got %d", len(buckets))
+		}
+		// Chronological check: 2026-10-15 -> 2026-10-16 -> 2026-10-17
+		if buckets[0].BucketKey != "2026-10-15" || buckets[1].BucketKey != "2026-10-16" || buckets[2].BucketKey != "2026-10-17" {
+			t.Errorf("expected chronological order 2026-10-15, 2026-10-16, 2026-10-17, got %s, %s, %s",
+				buckets[0].BucketKey, buckets[1].BucketKey, buckets[2].BucketKey)
+		}
+
+		// 2. Bad request on invalid temporal filter
+		respBad, err := http.Get(ts.URL + "/api/progression?since=not-a-date")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = respBad.Body.Close() }()
+		if respBad.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request, got %d", respBad.StatusCode)
+		}
+	})
+}
+
+func TestMultiFilterEndpoints_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	wsDir := setupMultiFilterWorkspaces(t)
+	mockFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("<html>OK</html>")},
+	}
+	server := adaptershttp.NewServer(wsDir, mockFS)
+	ts := httptest.NewServer(server.Handler())
+	t.Cleanup(func() { ts.Close() })
+
+	t.Run("GET /api/fleet equivalence between comma-separated and repeated parameters", func(t *testing.T) {
+		t.Parallel()
+
+		// Comma-delimited
+		respComma, err := http.Get(ts.URL + "/api/fleet?ticket_type=feat,bug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var summaryComma domain.FleetSummary
+		if err := json.NewDecoder(respComma.Body).Decode(&summaryComma); err != nil {
+			t.Fatal(err)
+		}
+		_ = respComma.Body.Close()
+
+		// Repeated parameters
+		respRepeated, err := http.Get(ts.URL + "/api/fleet?ticket_type=feat&ticket_type=bug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var summaryRepeated domain.FleetSummary
+		if err := json.NewDecoder(respRepeated.Body).Decode(&summaryRepeated); err != nil {
+			t.Fatal(err)
+		}
+		_ = respRepeated.Body.Close()
+
+		if summaryComma.TotalTickets != 2 || summaryRepeated.TotalTickets != 2 {
+			t.Fatalf("expected 2 tickets each, got comma=%d repeated=%d", summaryComma.TotalTickets, summaryRepeated.TotalTickets)
+		}
+		if summaryComma.TotalCostUSD != 3.00 || summaryRepeated.TotalCostUSD != 3.00 {
+			t.Errorf("expected cost 3.00 each, got comma=%f repeated=%f", summaryComma.TotalCostUSD, summaryRepeated.TotalCostUSD)
+		}
+
+		// Prefix repeated vs comma on fleet
+		respPrefixComma, err := http.Get(ts.URL + "/api/fleet?prefix=AL,PO")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var prefixComma domain.FleetSummary
+		if err := json.NewDecoder(respPrefixComma.Body).Decode(&prefixComma); err != nil {
+			t.Fatal(err)
+		}
+		_ = respPrefixComma.Body.Close()
+
+		respPrefixRepeated, err := http.Get(ts.URL + "/api/fleet?prefix=AL&prefix=PO")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var prefixRepeated domain.FleetSummary
+		if err := json.NewDecoder(respPrefixRepeated.Body).Decode(&prefixRepeated); err != nil {
+			t.Fatal(err)
+		}
+		_ = respPrefixRepeated.Body.Close()
+
+		if prefixComma.TotalTickets != 3 || prefixRepeated.TotalTickets != 3 {
+			t.Fatalf("expected 3 tickets for prefix AL,PO, got comma=%d repeated=%d", prefixComma.TotalTickets, prefixRepeated.TotalTickets)
+		}
+		if prefixComma.TotalCostUSD != 6.00 || prefixRepeated.TotalCostUSD != 6.00 {
+			t.Errorf("expected 6.00 cost, got comma=%f repeated=%f", prefixComma.TotalCostUSD, prefixRepeated.TotalCostUSD)
+		}
+
+		// Mixed comma and repeated on fleet
+		respMixed, err := http.Get(ts.URL + "/api/fleet?ticket_type=feat,bug&ticket_type=docs")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var summaryMixed domain.FleetSummary
+		if err := json.NewDecoder(respMixed.Body).Decode(&summaryMixed); err != nil {
+			t.Fatal(err)
+		}
+		_ = respMixed.Body.Close()
+		if summaryMixed.TotalTickets != 3 || summaryMixed.TotalCostUSD != 6.00 {
+			t.Errorf("expected 3 tickets and 6.00 cost for mixed, got tickets=%d cost=%f", summaryMixed.TotalTickets, summaryMixed.TotalCostUSD)
+		}
+	})
+
+	t.Run("GET /api/workspaces trailing commas and redundant separators", func(t *testing.T) {
+		t.Parallel()
+
+		resp, err := http.Get(ts.URL + "/api/workspaces?ticket_type=feat,,bug,")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp.Body).Decode(&ledgers); err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+
+		if len(ledgers) != 2 {
+			t.Fatalf("expected 2 ledgers for feat,,bug,, got %d", len(ledgers))
+		}
+
+		// Combined repeated prefixes with comma-separated token
+		respMixedPrefix, err := http.Get(ts.URL + "/api/workspaces?prefix=AL,PO&prefix=GEN")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledgersMixed []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respMixedPrefix.Body).Decode(&ledgersMixed); err != nil {
+			t.Fatal(err)
+		}
+		_ = respMixedPrefix.Body.Close()
+
+		if len(ledgersMixed) != 4 {
+			t.Fatalf("expected 4 ledgers for prefix=AL,PO&prefix=GEN, got %d", len(ledgersMixed))
+		}
+	})
+
+	t.Run("GET /api/comparison comma-separated and repeated equivalence", func(t *testing.T) {
+		t.Parallel()
+
+		// Comma-separated
+		respComma, err := http.Get(ts.URL + "/api/comparison?ticket_type=feat,bug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rowsComma []domain.TicketComparisonRow
+		if err := json.NewDecoder(respComma.Body).Decode(&rowsComma); err != nil {
+			t.Fatal(err)
+		}
+		_ = respComma.Body.Close()
+
+		// Repeated
+		respRepeated, err := http.Get(ts.URL + "/api/comparison?ticket_type=feat&ticket_type=bug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rowsRepeated []domain.TicketComparisonRow
+		if err := json.NewDecoder(respRepeated.Body).Decode(&rowsRepeated); err != nil {
+			t.Fatal(err)
+		}
+		_ = respRepeated.Body.Close()
+
+		if len(rowsComma) != 2 || len(rowsRepeated) != 2 {
+			t.Fatalf("expected 2 comparison rows, got comma=%d repeated=%d", len(rowsComma), len(rowsRepeated))
+		}
+
+		// Prefix repeated on comparison
+		respPrefixRepeated, err := http.Get(ts.URL + "/api/comparison?prefix=AL&prefix=GEN")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rowsPrefix []domain.TicketComparisonRow
+		if err := json.NewDecoder(respPrefixRepeated.Body).Decode(&rowsPrefix); err != nil {
+			t.Fatal(err)
+		}
+		_ = respPrefixRepeated.Body.Close()
+
+		if len(rowsPrefix) != 3 {
+			t.Fatalf("expected 3 comparison rows for prefix AL and GEN, got %d", len(rowsPrefix))
+		}
+
+		// Non-matching filter returns 200 OK with empty slice
+		respEmpty, err := http.Get(ts.URL + "/api/comparison?ticket_type=nonexistent_category")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if respEmpty.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK for disjoint filter, got %d", respEmpty.StatusCode)
+		}
+		var rowsEmpty []domain.TicketComparisonRow
+		if err := json.NewDecoder(respEmpty.Body).Decode(&rowsEmpty); err != nil {
+			t.Fatal(err)
+		}
+		_ = respEmpty.Body.Close()
+		if len(rowsEmpty) != 0 {
+			t.Errorf("expected empty comparison rows, got %d", len(rowsEmpty))
+		}
+	})
+
+	t.Run("GET /api/progression repeated parameters and disjoint queries", func(t *testing.T) {
+		t.Parallel()
+
+		// Repeated ticket_type
+		respRepeated, err := http.Get(ts.URL + "/api/progression?ticket_type=feat&ticket_type=bug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var bucketsRepeated []domain.TimeBucketMetric
+		if err := json.NewDecoder(respRepeated.Body).Decode(&bucketsRepeated); err != nil {
+			t.Fatal(err)
+		}
+		_ = respRepeated.Body.Close()
+
+		if len(bucketsRepeated) != 2 {
+			t.Fatalf("expected 2 buckets for repeated ticket_type, got %d", len(bucketsRepeated))
+		}
+
+		// Repeated prefix
+		respPrefixRepeated, err := http.Get(ts.URL + "/api/progression?prefix=AL&prefix=GEN")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var bucketsPrefix []domain.TimeBucketMetric
+		if err := json.NewDecoder(respPrefixRepeated.Body).Decode(&bucketsPrefix); err != nil {
+			t.Fatal(err)
+		}
+		_ = respPrefixRepeated.Body.Close()
+
+		if len(bucketsPrefix) != 3 {
+			t.Fatalf("expected 3 buckets for repeated prefix, got %d", len(bucketsPrefix))
+		}
+
+		// Disjoint query returns empty slice
+		respEmpty, err := http.Get(ts.URL + "/api/progression?prefix=NONEXISTENT")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if respEmpty.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", respEmpty.StatusCode)
+		}
+		var bucketsEmpty []domain.TimeBucketMetric
+		if err := json.NewDecoder(respEmpty.Body).Decode(&bucketsEmpty); err != nil {
+			t.Fatal(err)
+		}
+		_ = respEmpty.Body.Close()
+		if len(bucketsEmpty) != 0 {
+			t.Errorf("expected 0 buckets for nonexistent prefix, got %d", len(bucketsEmpty))
+		}
+	})
+
+	t.Run("path traversal attempts in filter parameters do not panic", func(t *testing.T) {
+		t.Parallel()
+
+		traversalQueries := []string{
+			"/api/fleet?prefix=../../etc/passwd",
+			"/api/workspaces?prefix=../../etc/passwd",
+			"/api/comparison?prefix=../../etc/passwd",
+			"/api/progression?prefix=../../etc/passwd",
+			"/api/workspaces?ticket_type=../../etc/passwd",
+		}
+
+		for _, u := range traversalQueries {
+			resp, err := http.Get(ts.URL + u)
+			if err != nil {
+				t.Fatalf("failed query %s: %v", u, err)
+			}
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("expected 200 OK for %s, got %d", u, resp.StatusCode)
+			}
+			_ = resp.Body.Close()
+		}
+	})
+}
+
 func TestProgressionHandler(t *testing.T) {
 	wsDir := setupFixtureWorkspaces(t)
 	server := adaptershttp.NewServer(wsDir, fstest.MapFS{})

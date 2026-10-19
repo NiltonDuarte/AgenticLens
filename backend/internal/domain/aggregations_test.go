@@ -549,6 +549,7 @@ func TestBuildComparisonRows(t *testing.T) {
 	ledgers := []domain.AgenticMetricsLedger{
 		{
 			TicketID:    ptr("AL-1"),
+			TicketType:  ptr("feature"),
 			StartedAt:   &time1,
 			CompletedAt: &time2,
 			UpdatedAt:   time2,
@@ -573,6 +574,9 @@ func TestBuildComparisonRows(t *testing.T) {
 	}
 	if rows[0].TicketID != "AL-1" {
 		t.Errorf("expected ticket_id AL-1, got %s", rows[0].TicketID)
+	}
+	if rows[0].TicketType == nil || *rows[0].TicketType != "feature" {
+		t.Errorf("expected ticket_type feature, got %v", rows[0].TicketType)
 	}
 	if rows[0].LeadDurationFormatted != "1h 0m" {
 		t.Errorf("expected 1h 0m lead time, got %q", rows[0].LeadDurationFormatted)
@@ -3211,6 +3215,7 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 	})
 }
 
+
 func TestResolveDatePreset(t *testing.T) {
 	t.Parallel()
 	ref := time.Date(2026, 10, 19, 15, 30, 0, 0, time.UTC)
@@ -3717,6 +3722,571 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 		buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", nil, nil)
 		if len(buckets) != 0 {
 			t.Fatalf("expected 0 buckets for unparseable dates, got %d", len(buckets))
+		}
+	})
+}
+
+
+func TestCanonicalTicketType(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"feat", "feature"},
+		{"FEAT", "feature"},
+		{"feature", "feature"},
+		{" FEATURE ", "feature"},
+		{"bug", "bug"},
+		{"BUG", "bug"},
+		{"fix", "bug"},
+		{"FIX", "bug"},
+		{"bugfix", "bug"},
+		{"BugFix", "bug"},
+		{"doc", "docs"},
+		{"DOC", "docs"},
+		{"docs", "docs"},
+		{" DOCS ", "docs"},
+		{"chore", "chore"},
+		{"CHORE", "chore"},
+		{"refactor", "refactor"},
+		{"ci", "ci"},
+		{"test", "test"},
+		{"", ""},
+		{"   ", ""},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			got := domain.CanonicalTicketType(tc.input)
+			if got != tc.expected {
+				t.Errorf("CanonicalTicketType(%q) = %q, expected %q", tc.input, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestFilterLedgersByTicketTypes(t *testing.T) {
+	t.Parallel()
+
+	featLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-1"), TicketType: ptr("feature")}
+	featAliasLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-2"), TicketType: ptr("feat")}
+	bugLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-3"), TicketType: ptr("bug")}
+	bugFixLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-4"), TicketType: ptr("fix")}
+	choreLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-5"), TicketType: ptr("chore")}
+	docsLedger := domain.AgenticMetricsLedger{TicketID: ptr("PO-1"), TicketType: ptr("docs")}
+	nilTypeLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-6"), TicketType: nil}
+
+	allLedgers := []domain.AgenticMetricsLedger{
+		featLedger, featAliasLedger, bugLedger, bugFixLedger, choreLedger, docsLedger, nilTypeLedger,
+	}
+
+	t.Run("empty ledgers returns empty slice", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByTicketTypes(nil, []string{"feature"})
+		if len(res) != 0 {
+			t.Errorf("expected 0 ledgers, got %d", len(res))
+		}
+	})
+
+	t.Run("empty ticketTypes returns copy of all ledgers", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByTicketTypes(allLedgers, nil)
+		if len(res) != len(allLedgers) {
+			t.Fatalf("expected %d ledgers, got %d", len(allLedgers), len(res))
+		}
+	})
+
+	t.Run("ticketTypes with all or empty string returns all ledgers", func(t *testing.T) {
+		t.Parallel()
+		res1 := domain.FilterLedgersByTicketTypes(allLedgers, []string{"all"})
+		if len(res1) != len(allLedgers) {
+			t.Errorf("expected all ledgers for ['all'], got %d", len(res1))
+		}
+		res2 := domain.FilterLedgersByTicketTypes(allLedgers, []string{"ALL"})
+		if len(res2) != len(allLedgers) {
+			t.Errorf("expected all ledgers for ['ALL'], got %d", len(res2))
+		}
+		res3 := domain.FilterLedgersByTicketTypes(allLedgers, []string{"feature", "all"})
+		if len(res3) != len(allLedgers) {
+			t.Errorf("expected all ledgers when 'all' is included, got %d", len(res3))
+		}
+		res4 := domain.FilterLedgersByTicketTypes(allLedgers, []string{""})
+		if len(res4) != len(allLedgers) {
+			t.Errorf("expected all ledgers for [''], got %d", len(res4))
+		}
+	})
+
+	t.Run("single selection matches canonical and aliases", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByTicketTypes(allLedgers, []string{"feature"})
+		if len(res) != 2 {
+			t.Fatalf("expected 2 feature ledgers, got %d", len(res))
+		}
+		if *res[0].TicketID != "AL-1" || *res[1].TicketID != "AL-2" {
+			t.Errorf("unexpected matches: %+v", res)
+		}
+
+		resAlias := domain.FilterLedgersByTicketTypes(allLedgers, []string{"feat"})
+		if len(resAlias) != 2 {
+			t.Fatalf("expected 2 feature ledgers for alias feat, got %d", len(resAlias))
+		}
+	})
+
+	t.Run("multi-selection combines matching types", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByTicketTypes(allLedgers, []string{"feature", "bug"})
+		if len(res) != 4 {
+			t.Fatalf("expected 4 ledgers (feature + bug), got %d", len(res))
+		}
+		expectedIDs := map[string]bool{"AL-1": true, "AL-2": true, "AL-3": true, "AL-4": true}
+		for _, l := range res {
+			if !expectedIDs[*l.TicketID] {
+				t.Errorf("unexpected ticket ID in multi-filter: %s", *l.TicketID)
+			}
+		}
+	})
+
+	t.Run("case insensitivity and whitespace trimming", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByTicketTypes(allLedgers, []string{" FEATURE ", "BuG"})
+		if len(res) != 4 {
+			t.Fatalf("expected 4 ledgers, got %d", len(res))
+		}
+	})
+
+	t.Run("disjoint query returns empty slice", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByTicketTypes(allLedgers, []string{"nonexistent"})
+		if len(res) != 0 {
+			t.Errorf("expected 0 ledgers for nonexistent query, got %d", len(res))
+		}
+	})
+
+	t.Run("immutability of input slice", func(t *testing.T) {
+		t.Parallel()
+		input := make([]domain.AgenticMetricsLedger, len(allLedgers))
+		copy(input, allLedgers)
+		res := domain.FilterLedgersByTicketTypes(input, []string{"feature"})
+		if len(res) > 0 {
+			res[0].UpdatedAt = "MUTATED"
+		}
+		if input[0].UpdatedAt == "MUTATED" {
+			t.Errorf("input ledger was mutated!")
+		}
+	})
+}
+
+func TestFilterLedgersByTicketType_Wrapper(t *testing.T) {
+	t.Parallel()
+	featLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-1"), TicketType: ptr("feature")}
+	bugLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-2"), TicketType: ptr("bug")}
+	allLedgers := []domain.AgenticMetricsLedger{featLedger, bugLedger}
+
+	t.Run("comma-separated types", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByTicketType(allLedgers, "feature,bug")
+		if len(res) != 2 {
+			t.Errorf("expected 2 ledgers, got %d", len(res))
+		}
+	})
+
+	t.Run("empty string and all pass through", func(t *testing.T) {
+		t.Parallel()
+		res1 := domain.FilterLedgersByTicketType(allLedgers, "")
+		if len(res1) != 2 {
+			t.Errorf("expected 2 ledgers, got %d", len(res1))
+		}
+		res2 := domain.FilterLedgersByTicketType(allLedgers, "all")
+		if len(res2) != 2 {
+			t.Errorf("expected 2 ledgers, got %d", len(res2))
+		}
+	})
+}
+
+func TestExtractTicketPrefix(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"AL-1", "AL"},
+		{"al-1", "AL"},
+		{"AL-28", "AL"},
+		{"GEN_4", "GEN"},
+		{"gen_4", "GEN"},
+		{"PO-2", "PO"},
+		{"al10", "AL"},
+		{"AL-", "AL"},
+		{"ticket-xyz", "TICKET"},
+		{"ticket_xyz", "TICKET"},
+		{"123-abc", ""},
+		{"123", ""},
+		{"", ""},
+		{"   ", ""},
+		{"UNKNOWN", ""},
+		{"AL.1", ""},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			got := domain.ExtractTicketPrefix(tc.input)
+			if got != tc.expected {
+				t.Errorf("ExtractTicketPrefix(%q) = %q, expected %q", tc.input, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestFilterLedgersByPrefixes(t *testing.T) {
+	t.Parallel()
+	al1 := domain.AgenticMetricsLedger{TicketID: ptr("AL-1")}
+	al28 := domain.AgenticMetricsLedger{TicketID: ptr("al-28")}
+	gen4 := domain.AgenticMetricsLedger{TicketID: ptr("GEN_4")}
+	po2 := domain.AgenticMetricsLedger{TicketID: ptr("PO-2")}
+	nilID := domain.AgenticMetricsLedger{TicketID: nil}
+	invalidID := domain.AgenticMetricsLedger{TicketID: ptr("123")}
+
+	allLedgers := []domain.AgenticMetricsLedger{al1, al28, gen4, po2, nilID, invalidID}
+
+	t.Run("empty ledgers returns empty slice", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByPrefixes(nil, []string{"AL"})
+		if len(res) != 0 {
+			t.Errorf("expected 0 ledgers, got %d", len(res))
+		}
+	})
+
+	t.Run("empty prefixes returns copy of all ledgers", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByPrefixes(allLedgers, nil)
+		if len(res) != len(allLedgers) {
+			t.Fatalf("expected %d ledgers, got %d", len(allLedgers), len(res))
+		}
+	})
+
+	t.Run("prefixes with all or empty string returns all ledgers", func(t *testing.T) {
+		t.Parallel()
+		res1 := domain.FilterLedgersByPrefixes(allLedgers, []string{"all"})
+		if len(res1) != len(allLedgers) {
+			t.Errorf("expected all ledgers for ['all'], got %d", len(res1))
+		}
+		res2 := domain.FilterLedgersByPrefixes(allLedgers, []string{"AL", "all"})
+		if len(res2) != len(allLedgers) {
+			t.Errorf("expected all ledgers when 'all' is included, got %d", len(res2))
+		}
+		res3 := domain.FilterLedgersByPrefixes(allLedgers, []string{""})
+		if len(res3) != len(allLedgers) {
+			t.Errorf("expected all ledgers for [''], got %d", len(res3))
+		}
+	})
+
+	t.Run("multi-prefix selection", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"AL", "GEN"})
+		if len(res) != 3 {
+			t.Fatalf("expected 3 ledgers (AL + GEN), got %d", len(res))
+		}
+		expectedIDs := map[string]bool{"AL-1": true, "al-28": true, "GEN_4": true}
+		for _, l := range res {
+			if !expectedIDs[*l.TicketID] {
+				t.Errorf("unexpected ticket ID: %s", *l.TicketID)
+			}
+		}
+	})
+
+	t.Run("case insensitivity", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"al", "gen"})
+		if len(res) != 3 {
+			t.Fatalf("expected 3 ledgers, got %d", len(res))
+		}
+	})
+
+	t.Run("disjoint prefix query returns empty slice", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"XYZ"})
+		if len(res) != 0 {
+			t.Errorf("expected 0 ledgers for XYZ, got %d", len(res))
+		}
+	})
+}
+
+func TestFilterLedgersByPrefix_Wrapper(t *testing.T) {
+	t.Parallel()
+	al1 := domain.AgenticMetricsLedger{TicketID: ptr("AL-1")}
+	gen1 := domain.AgenticMetricsLedger{TicketID: ptr("GEN-1")}
+	allLedgers := []domain.AgenticMetricsLedger{al1, gen1}
+
+	t.Run("comma-separated prefixes", func(t *testing.T) {
+		t.Parallel()
+		res := domain.FilterLedgersByPrefix(allLedgers, "AL,GEN")
+		if len(res) != 2 {
+			t.Errorf("expected 2 ledgers, got %d", len(res))
+		}
+	})
+
+	t.Run("empty string and all pass through", func(t *testing.T) {
+		t.Parallel()
+		res1 := domain.FilterLedgersByPrefix(allLedgers, "")
+		if len(res1) != 2 {
+			t.Errorf("expected 2 ledgers, got %d", len(res1))
+		}
+		res2 := domain.FilterLedgersByPrefix(allLedgers, "all")
+		if len(res2) != 2 {
+			t.Errorf("expected 2 ledgers, got %d", len(res2))
+		}
+	})
+}
+
+func TestExtractDistinctPrefixes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty ledgers returns empty slice", func(t *testing.T) {
+		t.Parallel()
+		res := domain.ExtractDistinctPrefixes(nil)
+		if len(res) != 0 {
+			t.Errorf("expected 0 prefixes, got %d", len(res))
+		}
+	})
+
+	t.Run("deduplicates and sorts in ascending alphabetical order", func(t *testing.T) {
+		t.Parallel()
+		ledgers := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("PO-2")},
+			{TicketID: ptr("AL-10")},
+			{TicketID: ptr("GEN-1")},
+			{TicketID: ptr("AL-1")},
+			{TicketID: ptr("PO-1")},
+			{TicketID: nil},
+			{TicketID: ptr("")},
+			{TicketID: ptr("123")},
+		}
+
+		res := domain.ExtractDistinctPrefixes(ledgers)
+		expected := []string{"AL", "GEN", "PO"}
+		if len(res) != len(expected) {
+			t.Fatalf("expected %d prefixes, got %d: %+v", len(expected), len(res), res)
+		}
+		for i, exp := range expected {
+			if res[i] != exp {
+				t.Errorf("at index %d: expected %s, got %s", i, exp, res[i])
+			}
+		}
+	})
+}
+
+func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty and nil inputs across filter functions", func(t *testing.T) {
+		t.Parallel()
+
+		// FilterLedgersByTicketTypes with nil and empty slices
+		resNilLedgers := domain.FilterLedgersByTicketTypes(nil, []string{"feature"})
+		if resNilLedgers == nil || len(resNilLedgers) != 0 {
+			t.Errorf("expected non-nil empty slice for nil ledgers, got %+v", resNilLedgers)
+		}
+
+		resEmptyLedgers := domain.FilterLedgersByTicketTypes([]domain.AgenticMetricsLedger{}, []string{"feature"})
+		if resEmptyLedgers == nil || len(resEmptyLedgers) != 0 {
+			t.Errorf("expected non-nil empty slice for empty ledgers, got %+v", resEmptyLedgers)
+		}
+
+		sample := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("AL-1"), TicketType: ptr("feature")},
+			{TicketID: ptr("AL-2"), TicketType: ptr("bug")},
+		}
+
+		resEmptyTypes := domain.FilterLedgersByTicketTypes(sample, []string{})
+		if len(resEmptyTypes) != 2 {
+			t.Errorf("expected 2 ledgers for empty types, got %d", len(resEmptyTypes))
+		}
+
+		resWhitespaceTypes := domain.FilterLedgersByTicketTypes(sample, []string{"   ", "\t", "\n"})
+		if len(resWhitespaceTypes) != 2 {
+			t.Errorf("expected all ledgers retained for whitespace types, got %d", len(resWhitespaceTypes))
+		}
+
+		// FilterLedgersByPrefixes with nil and empty slices
+		resNilPrefixes := domain.FilterLedgersByPrefixes(nil, []string{"AL"})
+		if resNilPrefixes == nil || len(resNilPrefixes) != 0 {
+			t.Errorf("expected non-nil empty slice for nil ledgers, got %+v", resNilPrefixes)
+		}
+
+		resEmptyPrefixLedgers := domain.FilterLedgersByPrefixes([]domain.AgenticMetricsLedger{}, []string{"AL"})
+		if resEmptyPrefixLedgers == nil || len(resEmptyPrefixLedgers) != 0 {
+			t.Errorf("expected non-nil empty slice for empty ledgers, got %+v", resEmptyPrefixLedgers)
+		}
+
+		resEmptyPrefixes := domain.FilterLedgersByPrefixes(sample, []string{})
+		if len(resEmptyPrefixes) != 2 {
+			t.Errorf("expected 2 ledgers for empty prefixes, got %d", len(resEmptyPrefixes))
+		}
+
+		resWhitespacePrefixes := domain.FilterLedgersByPrefixes(sample, []string{"   ", "\t", "\n"})
+		if len(resWhitespacePrefixes) != 2 {
+			t.Errorf("expected all ledgers retained for whitespace prefixes, got %d", len(resWhitespacePrefixes))
+		}
+
+		// ExtractDistinctPrefixes with nil and empty slices
+		resNilDistinct := domain.ExtractDistinctPrefixes(nil)
+		if resNilDistinct == nil || len(resNilDistinct) != 0 {
+			t.Errorf("expected non-nil empty slice for nil ledgers, got %+v", resNilDistinct)
+		}
+
+		resEmptyDistinct := domain.ExtractDistinctPrefixes([]domain.AgenticMetricsLedger{})
+		if resEmptyDistinct == nil || len(resEmptyDistinct) != 0 {
+			t.Errorf("expected non-nil empty slice for empty ledgers, got %+v", resEmptyDistinct)
+		}
+	})
+
+	t.Run("nil and pathological ticket types and ticket IDs", func(t *testing.T) {
+		t.Parallel()
+
+		pathologicalLedgers := []domain.AgenticMetricsLedger{
+			{TicketID: nil, TicketType: nil},
+			{TicketID: ptr(""), TicketType: ptr("")},
+			{TicketID: ptr("   "), TicketType: ptr("   ")},
+			{TicketID: ptr("123-abc"), TicketType: ptr("\t\n")},
+			{TicketID: ptr("___"), TicketType: ptr("unknown_custom_type")},
+			{TicketID: ptr("AL-1"), TicketType: ptr("feature")},
+		}
+
+		// Querying concrete ticket types excludes all nil/empty/pathological types
+		resType := domain.FilterLedgersByTicketTypes(pathologicalLedgers, []string{"feature"})
+		if len(resType) != 1 || *resType[0].TicketID != "AL-1" {
+			t.Fatalf("expected only AL-1 for feature query, got %+v", resType)
+		}
+
+		// Querying all retains all 6 ledgers including nil/empty
+		resAllType := domain.FilterLedgersByTicketTypes(pathologicalLedgers, []string{"all"})
+		if len(resAllType) != len(pathologicalLedgers) {
+			t.Errorf("expected all 6 ledgers retained for 'all' query, got %d", len(resAllType))
+		}
+
+		// Querying concrete prefix excludes nil/empty/unparseable IDs
+		resPrefix := domain.FilterLedgersByPrefixes(pathologicalLedgers, []string{"AL"})
+		if len(resPrefix) != 1 || *resPrefix[0].TicketID != "AL-1" {
+			t.Fatalf("expected only AL-1 for prefix AL query, got %+v", resPrefix)
+		}
+
+		// Querying all prefixes retains all 6 ledgers
+		resAllPrefix := domain.FilterLedgersByPrefixes(pathologicalLedgers, []string{"all"})
+		if len(resAllPrefix) != len(pathologicalLedgers) {
+			t.Errorf("expected all 6 ledgers retained for 'all' prefix query, got %d", len(resAllPrefix))
+		}
+
+		// ExtractDistinctPrefixes ignores all nil/empty/non-conforming IDs
+		distinct := domain.ExtractDistinctPrefixes(pathologicalLedgers)
+		if len(distinct) != 1 || distinct[0] != "AL" {
+			t.Errorf("expected only ['AL'], got %+v", distinct)
+		}
+	})
+
+	t.Run("symmetrical alias expansion matrix", func(t *testing.T) {
+		t.Parallel()
+
+		aliasLedgers := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("T-1"), TicketType: ptr("feat")},
+			{TicketID: ptr("T-2"), TicketType: ptr("feature")},
+			{TicketID: ptr("T-3"), TicketType: ptr("bug")},
+			{TicketID: ptr("T-4"), TicketType: ptr("fix")},
+			{TicketID: ptr("T-5"), TicketType: ptr("bugfix")},
+			{TicketID: ptr("T-6"), TicketType: ptr("doc")},
+			{TicketID: ptr("T-7"), TicketType: ptr("docs")},
+			{TicketID: ptr("T-8"), TicketType: ptr("chore")},
+		}
+
+		// Test "feature" aliases: "feat" and "feature"
+		for _, q := range []string{"feat", "FEAT", "feature", "FEATURE", "  FeAt  "} {
+			matched := domain.FilterLedgersByTicketTypes(aliasLedgers, []string{q})
+			if len(matched) != 2 {
+				t.Errorf("query %q: expected 2 matches, got %d", q, len(matched))
+			}
+			for _, m := range matched {
+				if *m.TicketID != "T-1" && *m.TicketID != "T-2" {
+					t.Errorf("query %q: unexpected match %s", q, *m.TicketID)
+				}
+			}
+		}
+
+		// Test "bug" aliases: "bug", "fix", and "bugfix"
+		for _, q := range []string{"bug", "BUG", "fix", "FIX", "bugfix", "BUGFIX", "  bUgFiX\t"} {
+			matched := domain.FilterLedgersByTicketTypes(aliasLedgers, []string{q})
+			if len(matched) != 3 {
+				t.Errorf("query %q: expected 3 matches, got %d", q, len(matched))
+			}
+			for _, m := range matched {
+				if *m.TicketID != "T-3" && *m.TicketID != "T-4" && *m.TicketID != "T-5" {
+					t.Errorf("query %q: unexpected match %s", q, *m.TicketID)
+				}
+			}
+		}
+
+		// Test "docs" aliases: "doc" and "docs"
+		for _, q := range []string{"doc", "DOC", "docs", "DOCS", "  DoC  "} {
+			matched := domain.FilterLedgersByTicketTypes(aliasLedgers, []string{q})
+			if len(matched) != 2 {
+				t.Errorf("query %q: expected 2 matches, got %d", q, len(matched))
+			}
+			for _, m := range matched {
+				if *m.TicketID != "T-6" && *m.TicketID != "T-7" {
+					t.Errorf("query %q: unexpected match %s", q, *m.TicketID)
+				}
+			}
+		}
+
+		// Mixed alias combination: fix + doc -> matches T-3, T-4, T-5, T-6, T-7 (5 ledgers)
+		matchedMixed := domain.FilterLedgersByTicketTypes(aliasLedgers, []string{"fix", "doc"})
+		if len(matchedMixed) != 5 {
+			t.Fatalf("expected 5 matches for fix+doc, got %d", len(matchedMixed))
+		}
+
+		// All conventional types combined: feat + bugfix + docs + chore -> all 8 ledgers
+		matchedAllConv := domain.FilterLedgersByTicketTypes(aliasLedgers, []string{"feat", "bugfix", "docs", "chore"})
+		if len(matchedAllConv) != 8 {
+			t.Fatalf("expected 8 matches for feat+bugfix+docs+chore, got %d", len(matchedAllConv))
+		}
+	})
+
+	t.Run("prefix extraction corner cases", func(t *testing.T) {
+		t.Parallel()
+
+		cases := []struct {
+			id       string
+			expected string
+		}{
+			{"AL-100", "AL"},
+			{"al_200", "AL"},
+			{"GEN-0", "GEN"},
+			{"PO-9999", "PO"},
+			{"PROD_FIX-1", "PROD"},
+			{"FEATURE-42", "FEATURE"},
+			{"al123", "AL"},
+			{"AL-", "AL"},
+			{"AL_", "AL"},
+			{"---", ""},
+			{"___", ""},
+			{"-123", ""},
+			{"_123", ""},
+			{"123-AL", ""},
+			{"123_AL", ""},
+			{"123456", ""},
+			{"", ""},
+			{"   ", ""},
+			{"\t\n", ""},
+		}
+
+		for _, tc := range cases {
+			got := domain.ExtractTicketPrefix(tc.id)
+			if got != tc.expected {
+				t.Errorf("ExtractTicketPrefix(%q) = %q, expected %q", tc.id, got, tc.expected)
+			}
 		}
 	})
 }

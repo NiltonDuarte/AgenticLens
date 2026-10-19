@@ -237,8 +237,20 @@ export interface FleetSummary {
   readonly anomaly_summary: FleetAnomalySummary;
 }
 
+export type StandardTicketType =
+  | 'feature'
+  | 'bug'
+  | 'chore'
+  | 'docs'
+  | 'refactor'
+  | 'test'
+  | 'ci'
+  | 'perf'
+  | 'build';
+
 export interface TicketComparisonRow {
   readonly ticket_id: string;
+  readonly ticket_type?: StandardTicketType | string | null;
   readonly updated_at: string;
   readonly sdlc_iterations: number;
   readonly active_duration_seconds: number;

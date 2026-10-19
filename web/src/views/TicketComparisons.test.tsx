@@ -249,4 +249,184 @@ describe('TicketComparisons View Component', () => {
     const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
     expect(emojiRegex.test(renderedText)).toBe(false);
   });
+
+  it('filters comparison rows by ticket type and workspace prefix dropdowns', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: ledgers,
+      isMock: true,
+    });
+
+    render(<TicketComparisons />);
+
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+
+    // Verify all rows initially visible
+    expect(screen.getByText('AL-1')).toBeInTheDocument();
+    expect(screen.getByText('AL-2')).toBeInTheDocument();
+    expect(screen.getByText('AL-3')).toBeInTheDocument();
+    expect(screen.getByText('PO-1')).toBeInTheDocument();
+    expect(screen.getByText('GEN-1')).toBeInTheDocument();
+
+    // Filter by Ticket Type: Feature
+    const typeTrigger = screen.getByRole('combobox', { name: 'Ticket Type selector' });
+    fireEvent.click(typeTrigger);
+    const featureCheckbox = screen.getByRole('checkbox', { name: 'Feature' });
+    fireEvent.click(featureCheckbox);
+
+    // Only AL-1, AL-2, AL-3 should be visible
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+    expect(screen.getByText('AL-2')).toBeInTheDocument();
+    expect(screen.getByText('AL-3')).toBeInTheDocument();
+    expect(screen.queryByText('PO-1')).not.toBeInTheDocument();
+    expect(screen.queryByText('GEN-1')).not.toBeInTheDocument();
+
+    // Reset ticket type filter to All
+    const allTypeCheckbox = screen.getByRole('checkbox', { name: 'Select all Ticket Type' });
+    fireEvent.click(allTypeCheckbox);
+
+    // All should be back
+    await waitFor(() => {
+      expect(screen.getByText('PO-1')).toBeInTheDocument();
+    });
+    expect(screen.getByText('AL-1')).toBeInTheDocument();
+
+    // Close ticket type dropdown
+    fireEvent.click(typeTrigger);
+
+    // Filter by Prefix: PO
+    const prefixTrigger = screen.getByRole('combobox', { name: 'Prefix selector' });
+    fireEvent.click(prefixTrigger);
+    const poCheckbox = screen.getByRole('checkbox', { name: 'PO' });
+    fireEvent.click(poCheckbox);
+
+    // Only PO-1 should be visible
+    await waitFor(() => {
+      expect(screen.getByText('PO-1')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('AL-1')).not.toBeInTheDocument();
+    expect(screen.queryByText('AL-2')).not.toBeInTheDocument();
+    expect(screen.queryByText('AL-3')).not.toBeInTheDocument();
+    expect(screen.queryByText('GEN-1')).not.toBeInTheDocument();
+
+    // Reset Prefix filter to All
+    const allPrefixCheckbox = screen.getByRole('checkbox', { name: 'Select all Prefix' });
+    fireEvent.click(allPrefixCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+
+    // Close prefix dropdown
+    fireEvent.click(prefixTrigger);
+
+    // Unmatched filter displays fallback table message
+    fireEvent.click(typeTrigger);
+    const bugCheckbox = screen.getByRole('checkbox', { name: 'Bug' });
+    fireEvent.click(bugCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('No tickets match the selected filters.')).toBeInTheDocument();
+    });
+  });
+
+  it('keeps table controls bar visible and interactive when zero ledgers match filters', async () => {
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: [],
+      isMock: true,
+    });
+
+    const { container } = render(<TicketComparisons />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Comparison Workspaces Available')).toBeInTheDocument();
+    });
+
+    expect(container.querySelector('.kpi-grid')).toBeInTheDocument();
+    expect(container.querySelector('.table-controls-bar')).toBeInTheDocument();
+
+    expect(screen.getByRole('combobox', { name: 'Ticket Type selector' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Prefix selector' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search by ticket id or title/i)).toBeInTheDocument();
+  });
+
+  it('allows interactive recovery from empty filter selection in TicketComparisons', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
+      .mockResolvedValueOnce({
+        data: ledgers,
+        isMock: true,
+      })
+      .mockResolvedValueOnce({
+        data: [],
+        isMock: true,
+      })
+      .mockResolvedValueOnce({
+        data: ledgers,
+        isMock: true,
+      });
+
+    const { container } = render(<TicketComparisons />);
+
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+
+    const typeTrigger = screen.getByRole('combobox', { name: 'Ticket Type selector' });
+    fireEvent.click(typeTrigger);
+    const bugCheckbox = screen.getByRole('checkbox', { name: 'Bug' });
+    fireEvent.click(bugCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Comparison Workspaces Available')).toBeInTheDocument();
+    });
+    expect(container.querySelector('.table-controls-bar')).toBeInTheDocument();
+
+    const allCheckbox = screen.getByRole('checkbox', { name: 'Select all Ticket Type' });
+    fireEvent.click(allCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Zero Comparison Workspaces Available')).not.toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('re-triggers data fetch when filters change from initial zero ledgers empty state', async () => {
+    const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
+      .mockResolvedValueOnce({
+        data: [],
+        isMock: true,
+      })
+      .mockResolvedValueOnce({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+
+    const { container } = render(<TicketComparisons />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Comparison Workspaces Available')).toBeInTheDocument();
+    });
+
+    expect(container.querySelector('.table-controls-bar')).toBeInTheDocument();
+
+    // Change prefix filter from empty state
+    const prefixTrigger = screen.getByRole('combobox', { name: 'Prefix selector' });
+    fireEvent.click(prefixTrigger);
+    const alCheckbox = screen.getByRole('checkbox', { name: 'AL' });
+    fireEvent.click(alCheckbox);
+
+    // Should re-fetch and render the returned rows
+    await waitFor(() => {
+      expect(screen.getByText('AL-1')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Zero Comparison Workspaces Available')).not.toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenLastCalledWith('all', undefined, undefined, undefined, ['AL']);
+  });
 });

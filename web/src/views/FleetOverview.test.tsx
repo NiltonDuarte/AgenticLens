@@ -275,5 +275,34 @@ describe('FleetOverview View Component', () => {
         expect(fetchWorkspacesSpy).toHaveBeenCalledWith('all', '', '', '2026-03-01', '2026-03-15');
       });
     });
+
+    it('triggers refetch when ticket type and prefix filters change', async () => {
+      const fetchFleetSpy = vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+        data: mockFleetSummary,
+        isMock: false,
+      });
+      const fetchWorkspacesSpy = vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+        data: [...mockTicketComparisonRows],
+        isMock: false,
+      });
+
+      render(<FleetOverview />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Total Cost')).toBeInTheDocument();
+      });
+
+      // Open ticket type dropdown and select Bug
+      const typeTrigger = screen.getByRole('combobox', { name: 'Ticket Type selector' });
+      fireEvent.click(typeTrigger);
+
+      const bugCheckbox = screen.getByRole('checkbox', { name: 'Bug' });
+      fireEvent.click(bugCheckbox);
+
+      await waitFor(() => {
+        expect(fetchFleetSpy).toHaveBeenCalledWith('all', undefined, undefined, ['bug'], undefined);
+        expect(fetchWorkspacesSpy).toHaveBeenCalledWith('all', '', '', undefined, undefined, ['bug'], undefined);
+      });
+    });
   });
 });

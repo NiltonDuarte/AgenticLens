@@ -7,6 +7,8 @@ import {
   fetchWorkspaceEvents,
   fetchWorkspaceAnomalies,
   fetchVersion,
+  fetchComparisonRows,
+  fetchProgressionLedgers,
   fetchProgressionMetrics,
 } from './client';
 import {
@@ -553,6 +555,105 @@ describe('Boundary API Client', () => {
       const res = await fetchVersion();
       expect(res.isMock).toBe(true);
       expect(res.data).toEqual(mockBuildInfo);
+    });
+  });
+
+  describe('fetchComparisonRows and fetchProgressionLedgers', () => {
+    it('appends ticket_type and prefix multi-parameters to /api/comparison', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockTicketComparisonRows,
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const res = await fetchComparisonRows('30d', undefined, undefined, ['feature', 'bug'], ['AL', 'PO']);
+      expect(res.isMock).toBe(false);
+      expect(fetchSpy).toHaveBeenCalled();
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('/api/comparison?');
+      expect(calledUrl).toContain('window=30d');
+      expect(calledUrl).toContain('ticket_type=feature');
+      expect(calledUrl).toContain('ticket_type=bug');
+      expect(calledUrl).toContain('prefix=AL');
+      expect(calledUrl).toContain('prefix=PO');
+    });
+
+    it('falls back to filtered mock data on /api/comparison failure', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+
+      const res = await fetchComparisonRows('all', undefined, undefined, ['feature'], ['AL']);
+      expect(res.isMock).toBe(true);
+      expect(res.data.length).toBeGreaterThan(0);
+      for (const row of res.data) {
+        expect(row.ticket_id.startsWith('AL')).toBe(true);
+      }
+    });
+
+    it('appends ticket_type and prefix multi-parameters to /api/progression', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => Object.values(mockAgenticMetricsLedgers),
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const res = await fetchProgressionLedgers('all', undefined, undefined, ['chore'], ['GEN']);
+      expect(res.isMock).toBe(false);
+      expect(fetchSpy).toHaveBeenCalled();
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('/api/progression?');
+      expect(calledUrl).toContain('ticket_type=chore');
+      expect(calledUrl).toContain('prefix=GEN');
+    });
+
+    it('falls back to filtered mock ledgers on /api/progression failure', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+      }));
+
+      const res = await fetchProgressionLedgers('all', undefined, undefined, ['feature'], ['AL']);
+      expect(res.isMock).toBe(true);
+      expect(res.data.length).toBeGreaterThan(0);
+      for (const ledger of res.data) {
+        expect(ledger.ticket_id?.startsWith('AL')).toBe(true);
+      }
+    });
+
+    it('appends multi-parameters to fetchFleetSummary and omits all', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockFleetSummary,
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
+      // With concrete types
+      await fetchFleetSummary('all', undefined, undefined, ['feature', 'bug'], ['AL']);
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('/api/fleet?');
+      expect(calledUrl).toContain('ticket_type=feature');
+      expect(calledUrl).toContain('ticket_type=bug');
+      expect(calledUrl).toContain('prefix=AL');
+
+      // With 'all' filter, params are omitted
+      fetchSpy.mockClear();
+      await fetchFleetSummary('all', undefined, undefined, ['all'], ['all']);
+      const calledUrlAll = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrlAll).toBe('/api/fleet');
+    });
+
+    it('appends multi-parameters to fetchWorkspaces and omits all', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockTicketComparisonRows,
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
+      await fetchWorkspaces('30d', 'cost_usd', 'desc', undefined, undefined, ['chore'], ['GEN']);
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('ticket_type=chore');
+      expect(calledUrl).toContain('prefix=GEN');
+      expect(calledUrl).toContain('sort=cost_usd');
+      expect(calledUrl).toContain('order=desc');
     });
   });
 

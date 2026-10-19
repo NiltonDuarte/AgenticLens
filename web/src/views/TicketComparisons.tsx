@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type {
   AgenticMetricsLedger,
   ComparisonSortField,
@@ -7,6 +7,9 @@ import type {
 import { fetchWorkspaceLedgers } from '../api/client';
 import {
   deriveTicketComparisonRows,
+  extractTicketPrefix,
+  filterLedgersByPrefixes,
+  filterLedgersByTicketTypes,
   formatCurrencyUSD,
   formatDurationSeconds,
   formatIsoDateTimeShort,
@@ -15,6 +18,19 @@ import {
 import { KPICard } from '../components/KPICard';
 import { EmptyState } from '../components/EmptyState';
 import { InfoTooltip } from '../components/InfoTooltip';
+import { MultiSelectDropdown, type MultiSelectOption } from '../components/MultiSelectDropdown';
+
+const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
+  { value: 'feature', label: 'Feature' },
+  { value: 'bug', label: 'Bug' },
+  { value: 'chore', label: 'Chore' },
+  { value: 'docs', label: 'Docs' },
+  { value: 'refactor', label: 'Refactor' },
+  { value: 'test', label: 'Test' },
+  { value: 'ci', label: 'CI' },
+  { value: 'perf', label: 'Perf' },
+  { value: 'build', label: 'Build' },
+];
 
 export interface TicketComparisonsProps {
   readonly onSelectTicket?: (ticketId: string) => void;
@@ -26,18 +42,38 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   onMockChange,
 }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
+  const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
+  const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
+  const [selectedPrefixes, setSelectedPrefixes] = useState<readonly string[]>(['all']);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<ComparisonSortField | undefined>(undefined);
   const [sortOrder, setSortOrder] = useState<ComparisonSortOrder>('desc');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const loadLedgers = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const res = await fetchWorkspaceLedgers('all');
+      const typesParam =
+        selectedTicketTypes.length === 0 ||
+        (selectedTicketTypes.length === 1 && selectedTicketTypes[0] === 'all')
+          ? undefined
+          : selectedTicketTypes;
+      const prefixesParam =
+        selectedPrefixes.length === 0 ||
+        (selectedPrefixes.length === 1 && selectedPrefixes[0] === 'all')
+          ? undefined
+          : selectedPrefixes;
+
+      const res = typesParam || prefixesParam
+        ? await fetchWorkspaceLedgers('all', undefined, undefined, typesParam, prefixesParam)
+        : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
+      hasLoadedRef.current = true;
       onMockChange?.(res.isMock);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch comparison workspaces';
@@ -45,15 +81,43 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [onMockChange]);
+  }, [onMockChange, selectedTicketTypes, selectedPrefixes]);
 
   useEffect(() => {
     loadLedgers();
   }, [loadLedgers]);
 
+  // Keep track of all prefixes discovered across all loaded ledgers
+  useEffect(() => {
+    if (ledgers.length > 0) {
+      setKnownPrefixes((prev) => {
+        const nextSet = new Set(prev);
+        for (const l of ledgers) {
+          if (l.ticket_id) {
+            const p = extractTicketPrefix(l.ticket_id);
+            if (p) nextSet.add(p);
+          }
+        }
+        return Array.from(nextSet).sort();
+      });
+    }
+  }, [ledgers]);
+
+  const prefixOptions: readonly MultiSelectOption[] = useMemo(() => {
+    const list = knownPrefixes.length > 0 ? knownPrefixes : ['AL', 'GEN', 'PO'];
+    return list.map((p) => ({ value: p, label: p }));
+  }, [knownPrefixes]);
+
+  const filteredLedgers = useMemo(() => {
+    let list = ledgers;
+    list = filterLedgersByTicketTypes(list, selectedTicketTypes);
+    list = filterLedgersByPrefixes(list, selectedPrefixes);
+    return list;
+  }, [ledgers, selectedTicketTypes, selectedPrefixes]);
+
   const allRows = useMemo(() => {
-    return deriveTicketComparisonRows(ledgers, sortField, sortOrder);
-  }, [ledgers, sortField, sortOrder]);
+    return deriveTicketComparisonRows(filteredLedgers, sortField, sortOrder);
+  }, [filteredLedgers, sortField, sortOrder]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -126,7 +190,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
     );
   };
 
-  if (loading) {
+  if (loading && !hasLoadedRef.current) {
     return (
       <div className="loading-container">
         <div className="loading-spinner" />
@@ -143,15 +207,6 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           Retry Connection
         </button>
       </div>
-    );
-  }
-
-  if (allRows.length === 0) {
-    return (
-      <EmptyState
-        title="Zero Comparison Workspaces Available"
-        message="No workspace telemetry files were found. Run an agentic workflow to generate comparison data."
-      />
     );
   }
 
@@ -206,13 +261,36 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+
+        <MultiSelectDropdown
+          id="comp-ticket-type"
+          label="Ticket Type"
+          options={TICKET_TYPE_OPTIONS}
+          selectedValues={selectedTicketTypes}
+          onChange={setSelectedTicketTypes}
+        />
+
+        <MultiSelectDropdown
+          id="comp-prefix"
+          label="Prefix"
+          options={prefixOptions}
+          selectedValues={selectedPrefixes}
+          onChange={setSelectedPrefixes}
+        />
+
         <div className="table-row-count">
           Showing {filteredRows.length} of {allRows.length} tickets
         </div>
       </div>
 
-      {/* Comparison Matrix Table */}
-      <div className="table-container">
+      {ledgers.length === 0 ? (
+        <EmptyState
+          title="Zero Comparison Workspaces Available"
+          message="No workspace telemetry files were found. Run an agentic workflow to generate comparison data."
+        />
+      ) : (
+        /* Comparison Matrix Table */
+        <div className="table-container">
         <div className="table-responsive">
           <table className="comparison-matrix-table">
             <thead>
@@ -413,7 +491,9 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
               {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={15} className="empty-table-cell">
-                    No tickets match the query "{searchQuery}".
+                    {searchQuery
+                      ? `No tickets match the query "${searchQuery}".`
+                      : 'No tickets match the selected filters.'}
                   </td>
                 </tr>
               ) : (
@@ -476,6 +556,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -791,6 +791,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 			OrchestratorSaturationPct: cwh.OrchestratorSaturationPct,
 			PeakContextTokens:         cwh.OrchestratorPeakTokens,
 			TicketTitle:               title,
+			TicketType:                ledger.TicketType,
 			StartedAt:                 ledger.StartedAt,
 			CompletedAt:               ledger.CompletedAt,
 			LeadDurationSeconds:       leadSecs,
@@ -919,6 +920,217 @@ func GetLedgerCompletionDate(ledger AgenticMetricsLedger) (time.Time, bool) {
 		return t, true
 	}
 	return time.Time{}, false
+}
+
+// CanonicalTicketType normalizes a raw ticket type string to its canonical form,
+// resolving aliases such as "feat" -> "feature", "bug"/"fix"/"bugfix" -> "bug", and "doc"/"docs" -> "docs".
+func CanonicalTicketType(raw string) string {
+	clean := strings.ToLower(strings.TrimSpace(raw))
+	switch clean {
+	case "feat", "feature":
+		return "feature"
+	case "bug", "fix", "bugfix":
+		return "bug"
+	case "doc", "docs":
+		return "docs"
+	default:
+		return clean
+	}
+}
+
+// FilterLedgersByTicketTypes filters ledgers whose canonical ticket type matches any of the supplied types.
+// If ticketTypes is empty, or contains "all" (case-insensitive) or an empty token, all ledgers are retained.
+// Returns a newly allocated slice.
+func FilterLedgersByTicketTypes(ledgers []AgenticMetricsLedger, ticketTypes []string) []AgenticMetricsLedger {
+	if len(ledgers) == 0 {
+		return []AgenticMetricsLedger{}
+	}
+	if len(ticketTypes) == 0 {
+		result := make([]AgenticMetricsLedger, len(ledgers))
+		copy(result, ledgers)
+		return result
+	}
+
+	for _, raw := range ticketTypes {
+		clean := strings.ToLower(strings.TrimSpace(raw))
+		if clean == "" || clean == "all" {
+			result := make([]AgenticMetricsLedger, len(ledgers))
+			copy(result, ledgers)
+			return result
+		}
+	}
+
+	targetSet := make(map[string]struct{})
+	for _, raw := range ticketTypes {
+		canon := CanonicalTicketType(raw)
+		if canon != "" {
+			targetSet[canon] = struct{}{}
+		}
+	}
+
+	if len(targetSet) == 0 {
+		result := make([]AgenticMetricsLedger, len(ledgers))
+		copy(result, ledgers)
+		return result
+	}
+
+	filtered := make([]AgenticMetricsLedger, 0, len(ledgers))
+	for _, ledger := range ledgers {
+		if ledger.TicketType != nil {
+			canon := CanonicalTicketType(*ledger.TicketType)
+			if _, ok := targetSet[canon]; ok {
+				filtered = append(filtered, ledger)
+			}
+		}
+	}
+
+	return filtered
+}
+
+// FilterLedgersByTicketType is a convenience wrapper delegating to FilterLedgersByTicketTypes,
+// supporting comma-delimited strings.
+func FilterLedgersByTicketType(ledgers []AgenticMetricsLedger, ticketType string) []AgenticMetricsLedger {
+	clean := strings.TrimSpace(ticketType)
+	if clean == "" || strings.EqualFold(clean, "all") {
+		return FilterLedgersByTicketTypes(ledgers, nil)
+	}
+	parts := strings.Split(clean, ",")
+	var types []string
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			types = append(types, trimmed)
+		}
+	}
+	return FilterLedgersByTicketTypes(ledgers, types)
+}
+
+func isAllASCIIAlpha(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+			return false
+		}
+	}
+	return true
+}
+
+// ExtractTicketPrefix extracts the uppercase ticket prefix (e.g. "AL", "GEN", "PO").
+// Evaluates conforming patterns (leading letters followed by digits) or leading alphabetic tokens before delimiters.
+func ExtractTicketPrefix(ticketID string) string {
+	clean := strings.TrimSpace(ticketID)
+	if clean == "" {
+		return ""
+	}
+	match := ticketIDPattern.FindStringSubmatch(clean)
+	if len(match) >= 2 && match[1] != "" {
+		return strings.ToUpper(match[1])
+	}
+	idx := strings.IndexAny(clean, "-_")
+	if idx > 0 {
+		candidate := clean[:idx]
+		if isAllASCIIAlpha(candidate) {
+			return strings.ToUpper(candidate)
+		}
+	}
+	return ""
+}
+
+// FilterLedgersByPrefixes filters ledgers whose extracted ticket prefix matches any of the supplied prefixes.
+// If prefixes is empty, or contains "all" (case-insensitive) or an empty token, all ledgers are retained.
+// Returns a newly allocated slice.
+func FilterLedgersByPrefixes(ledgers []AgenticMetricsLedger, prefixes []string) []AgenticMetricsLedger {
+	if len(ledgers) == 0 {
+		return []AgenticMetricsLedger{}
+	}
+	if len(prefixes) == 0 {
+		result := make([]AgenticMetricsLedger, len(ledgers))
+		copy(result, ledgers)
+		return result
+	}
+
+	for _, raw := range prefixes {
+		clean := strings.ToLower(strings.TrimSpace(raw))
+		if clean == "" || clean == "all" {
+			result := make([]AgenticMetricsLedger, len(ledgers))
+			copy(result, ledgers)
+			return result
+		}
+	}
+
+	targetSet := make(map[string]struct{})
+	for _, raw := range prefixes {
+		clean := strings.ToUpper(strings.TrimSpace(raw))
+		if clean != "" {
+			targetSet[clean] = struct{}{}
+		}
+	}
+
+	if len(targetSet) == 0 {
+		result := make([]AgenticMetricsLedger, len(ledgers))
+		copy(result, ledgers)
+		return result
+	}
+
+	filtered := make([]AgenticMetricsLedger, 0, len(ledgers))
+	for _, ledger := range ledgers {
+		if ledger.TicketID != nil {
+			prefix := ExtractTicketPrefix(*ledger.TicketID)
+			if prefix != "" {
+				if _, ok := targetSet[prefix]; ok {
+					filtered = append(filtered, ledger)
+				}
+			}
+		}
+	}
+
+	return filtered
+}
+
+// FilterLedgersByPrefix is a convenience wrapper delegating to FilterLedgersByPrefixes,
+// supporting comma-delimited strings.
+func FilterLedgersByPrefix(ledgers []AgenticMetricsLedger, prefix string) []AgenticMetricsLedger {
+	clean := strings.TrimSpace(prefix)
+	if clean == "" || strings.EqualFold(clean, "all") {
+		return FilterLedgersByPrefixes(ledgers, nil)
+	}
+	parts := strings.Split(clean, ",")
+	var prefixes []string
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			prefixes = append(prefixes, trimmed)
+		}
+	}
+	return FilterLedgersByPrefixes(ledgers, prefixes)
+}
+
+// ExtractDistinctPrefixes returns an array of unique non-empty uppercase ticket prefix strings sorted in ascending alphabetical order.
+func ExtractDistinctPrefixes(ledgers []AgenticMetricsLedger) []string {
+	if len(ledgers) == 0 {
+		return []string{}
+	}
+	prefixMap := make(map[string]struct{})
+	for _, ledger := range ledgers {
+		if ledger.TicketID != nil {
+			p := ExtractTicketPrefix(*ledger.TicketID)
+			if p != "" {
+				prefixMap[p] = struct{}{}
+			}
+		}
+	}
+	if len(prefixMap) == 0 {
+		return []string{}
+	}
+	results := make([]string, 0, len(prefixMap))
+	for p := range prefixMap {
+		results = append(results, p)
+	}
+	sort.Strings(results)
+	return results
 }
 
 // FilterLedgersByCompletionDate filters ledgers based on their effective completion date within inclusive bounds.

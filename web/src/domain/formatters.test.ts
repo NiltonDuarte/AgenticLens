@@ -14,9 +14,16 @@ import {
   getEffectiveCompletionDateMs,
   compareTicketCompletionDate,
   filterLedgersByCompletionDate,
+  canonicalTicketType,
+  extractTicketPrefix,
+  extractDistinctPrefixes,
+  filterLedgersByTicketTypes,
+  filterLedgersByPrefixes,
+  filterComparisonRows,
   formatChartAxisTimestamp,
 } from './formatters';
 import { mockAgenticMetricsLedgers } from '../api/mockData';
+import type { AgenticMetricsLedger, TicketComparisonRow } from './types';
 
 describe('Domain Pure Formatters', () => {
   describe('formatTokensK', () => {
@@ -687,6 +694,296 @@ describe('Domain Pure Formatters', () => {
       const null2 = { ticket_id: 'AL-2', completed_at: null };
       expect(compareTicketCompletionDate(null2, null10)).toBeLessThan(0);
       expect(compareTicketCompletionDate(null10, null2)).toBeGreaterThan(0);
+    });
+  });
+
+  describe('canonicalTicketType', () => {
+    it('normalizes casing, whitespace, and conventional aliases', () => {
+      expect(canonicalTicketType('feat')).toBe('feature');
+      expect(canonicalTicketType('FEAT')).toBe('feature');
+      expect(canonicalTicketType('feature')).toBe('feature');
+      expect(canonicalTicketType('  feature  ')).toBe('feature');
+      expect(canonicalTicketType('bug')).toBe('bug');
+      expect(canonicalTicketType('BUG')).toBe('bug');
+      expect(canonicalTicketType('fix')).toBe('bug');
+      expect(canonicalTicketType('bugfix')).toBe('bug');
+      expect(canonicalTicketType('doc')).toBe('docs');
+      expect(canonicalTicketType('docs')).toBe('docs');
+      expect(canonicalTicketType('chore')).toBe('chore');
+      expect(canonicalTicketType('refactor')).toBe('refactor');
+      expect(canonicalTicketType('ci')).toBe('ci');
+      expect(canonicalTicketType('test')).toBe('test');
+      expect(canonicalTicketType('perf')).toBe('perf');
+      expect(canonicalTicketType('build')).toBe('build');
+      expect(canonicalTicketType('custom')).toBe('custom');
+      expect(canonicalTicketType('')).toBe('');
+    });
+  });
+
+  describe('extractTicketPrefix', () => {
+    it('extracts uppercase alphabetic prefix before delimiter or digits', () => {
+      expect(extractTicketPrefix('AL-1')).toBe('AL');
+      expect(extractTicketPrefix('al-28')).toBe('AL');
+      expect(extractTicketPrefix('GEN_4')).toBe('GEN');
+      expect(extractTicketPrefix('po-2')).toBe('PO');
+      expect(extractTicketPrefix('al10')).toBe('AL');
+      expect(extractTicketPrefix('AL-')).toBe('AL');
+      expect(extractTicketPrefix('ticket-xyz')).toBe('TICKET');
+      expect(extractTicketPrefix('123-abc')).toBe('');
+      expect(extractTicketPrefix('123')).toBe('');
+      expect(extractTicketPrefix('UNKNOWN')).toBe('');
+      expect(extractTicketPrefix('AL.1')).toBe('');
+      expect(extractTicketPrefix('')).toBe('');
+    });
+  });
+
+  describe('extractDistinctPrefixes', () => {
+    it('extracts, deduplicates, and sorts prefixes ascending', () => {
+      const base = Object.values(mockAgenticMetricsLedgers)[0]!;
+      const ledgers: readonly AgenticMetricsLedger[] = [
+        { ...base, ticket_id: 'PO-2' },
+        { ...base, ticket_id: 'AL-10' },
+        { ...base, ticket_id: 'GEN-1' },
+        { ...base, ticket_id: 'AL-1' },
+        { ...base, ticket_id: null },
+        { ...base, ticket_id: '123' },
+      ];
+      expect(extractDistinctPrefixes(ledgers)).toEqual(['AL', 'GEN', 'PO']);
+    });
+  });
+
+  describe('filterLedgersByTicketTypes', () => {
+    const baseLedger = Object.values(mockAgenticMetricsLedgers)[0]!;
+    const featLedger = { ...baseLedger, ticket_id: 'AL-1', ticket_type: 'feature' };
+    const aliasFeatLedger = { ...baseLedger, ticket_id: 'AL-2', ticket_type: 'feat' };
+    const bugLedger = { ...baseLedger, ticket_id: 'AL-3', ticket_type: 'bug' };
+    const choreLedger = { ...baseLedger, ticket_id: 'AL-4', ticket_type: 'chore' };
+    const nullTypeLedger = { ...baseLedger, ticket_id: 'AL-5', ticket_type: null };
+    const all = [featLedger, aliasFeatLedger, bugLedger, choreLedger, nullTypeLedger];
+
+    it('returns all ledgers if types is empty or contains all', () => {
+      expect(filterLedgersByTicketTypes(all, [])).toEqual(all);
+      expect(filterLedgersByTicketTypes(all, ['all'])).toEqual(all);
+      expect(filterLedgersByTicketTypes(all, ['ALL'])).toEqual(all);
+      expect(filterLedgersByTicketTypes(all, ['feature', 'all'])).toEqual(all);
+    });
+
+    it('filters ledgers matching canonical types and aliases', () => {
+      const res = filterLedgersByTicketTypes(all, ['feature']);
+      expect(res.map((l) => l.ticket_id)).toEqual(['AL-1', 'AL-2']);
+
+      const resMulti = filterLedgersByTicketTypes(all, ['feat', 'bug']);
+      expect(resMulti.map((l) => l.ticket_id)).toEqual(['AL-1', 'AL-2', 'AL-3']);
+    });
+  });
+
+  describe('filterLedgersByPrefixes', () => {
+    const baseLedger = Object.values(mockAgenticMetricsLedgers)[0]!;
+    const al1 = { ...baseLedger, ticket_id: 'AL-1' };
+    const al2 = { ...baseLedger, ticket_id: 'al-2' };
+    const po1 = { ...baseLedger, ticket_id: 'PO-1' };
+    const gen1 = { ...baseLedger, ticket_id: 'GEN_1' };
+    const nullId = { ...baseLedger, ticket_id: null };
+    const all = [al1, al2, po1, gen1, nullId];
+
+    it('returns all ledgers if prefixes is empty or contains all', () => {
+      expect(filterLedgersByPrefixes(all, [])).toEqual(all);
+      expect(filterLedgersByPrefixes(all, ['all'])).toEqual(all);
+      expect(filterLedgersByPrefixes(all, ['AL', 'all'])).toEqual(all);
+    });
+
+    it('filters ledgers by prefix case-insensitively', () => {
+      const res = filterLedgersByPrefixes(all, ['al']);
+      expect(res.map((l) => l.ticket_id)).toEqual(['AL-1', 'al-2']);
+
+      const resMulti = filterLedgersByPrefixes(all, ['AL', 'PO']);
+      expect(resMulti.map((l) => l.ticket_id)).toEqual(['AL-1', 'al-2', 'PO-1']);
+    });
+  });
+
+  describe('filterComparisonRows', () => {
+    const rows: readonly TicketComparisonRow[] = [
+      {
+        ticket_id: 'AL-1',
+        ticket_type: 'feature',
+        updated_at: '2026-10-15T11:00:00Z',
+        sdlc_iterations: 1,
+        active_duration_seconds: 60,
+        active_duration_formatted: '1m 0s',
+        cost_usd: 1,
+        cache_hit_rate_pct: 0,
+        test_to_code_ratio: '1.0:1',
+        lines_added: 10,
+        lines_deleted: 0,
+        files_changed: 1,
+        tool_success_rate_pct: 100,
+        context_health_status: 'HEALTHY',
+        orchestrator_saturation_pct: 10,
+        peak_context_tokens: 1000,
+        ticket_title: 'Title 1',
+        started_at: '2026-10-15T10:00:00Z',
+        completed_at: '2026-10-15T11:00:00Z',
+        lead_duration_seconds: 3600,
+        lead_duration_formatted: '1h 0m',
+      },
+      {
+        ticket_id: 'AL-2',
+        ticket_type: 'bug',
+        updated_at: '2026-10-16T11:00:00Z',
+        sdlc_iterations: 1,
+        active_duration_seconds: 60,
+        active_duration_formatted: '1m 0s',
+        cost_usd: 2,
+        cache_hit_rate_pct: 0,
+        test_to_code_ratio: '1.0:1',
+        lines_added: 10,
+        lines_deleted: 0,
+        files_changed: 1,
+        tool_success_rate_pct: 100,
+        context_health_status: 'HEALTHY',
+        orchestrator_saturation_pct: 10,
+        peak_context_tokens: 1000,
+        ticket_title: 'Title 2',
+        started_at: '2026-10-16T10:00:00Z',
+        completed_at: '2026-10-16T11:00:00Z',
+        lead_duration_seconds: 3600,
+        lead_duration_formatted: '1h 0m',
+      },
+      {
+        ticket_id: 'PO-1',
+        ticket_type: 'docs',
+        updated_at: '2026-10-17T11:00:00Z',
+        sdlc_iterations: 1,
+        active_duration_seconds: 60,
+        active_duration_formatted: '1m 0s',
+        cost_usd: 3,
+        cache_hit_rate_pct: 0,
+        test_to_code_ratio: '1.0:1',
+        lines_added: 10,
+        lines_deleted: 0,
+        files_changed: 1,
+        tool_success_rate_pct: 100,
+        context_health_status: 'HEALTHY',
+        orchestrator_saturation_pct: 10,
+        peak_context_tokens: 1000,
+        ticket_title: 'Title 3',
+        started_at: '2026-10-17T10:00:00Z',
+        completed_at: '2026-10-17T11:00:00Z',
+        lead_duration_seconds: 3600,
+        lead_duration_formatted: '1h 0m',
+      },
+      {
+        ticket_id: 'GEN-1',
+        ticket_type: 'chore',
+        updated_at: '2026-10-18T11:00:00Z',
+        sdlc_iterations: 1,
+        active_duration_seconds: 60,
+        active_duration_formatted: '1m 0s',
+        cost_usd: 4,
+        cache_hit_rate_pct: 0,
+        test_to_code_ratio: '1.0:1',
+        lines_added: 10,
+        lines_deleted: 0,
+        files_changed: 1,
+        tool_success_rate_pct: 100,
+        context_health_status: 'HEALTHY',
+        orchestrator_saturation_pct: 10,
+        peak_context_tokens: 1000,
+        ticket_title: 'Title 4',
+        started_at: '2026-10-18T10:00:00Z',
+        completed_at: '2026-10-18T11:00:00Z',
+        lead_duration_seconds: 3600,
+        lead_duration_formatted: '1h 0m',
+      },
+    ];
+
+    it('filters rows by both ticket type and prefix', () => {
+      expect(filterComparisonRows(rows, ['all'], ['all'])).toEqual(rows);
+      expect(filterComparisonRows(rows, ['bug'], ['all'])).toEqual([rows[1]]);
+      expect(filterComparisonRows(rows, ['all'], ['AL'])).toEqual([rows[0], rows[1]]);
+      expect(filterComparisonRows(rows, ['feature', 'bug'], ['AL'])).toEqual([rows[0], rows[1]]);
+      expect(filterComparisonRows(rows, ['docs'], ['AL'])).toEqual([]);
+    });
+
+    it('handles pathological comparison rows with null or omitted types and prefixes', () => {
+      // Row 1: omitted ticket_type; Row 2: explicit null ticket_type
+      const rowWithoutType: Record<string, unknown> = { ...rows[0]! };
+      delete rowWithoutType.ticket_type;
+      const pathologicalRows: readonly TicketComparisonRow[] = [
+        {
+          ...(rowWithoutType as unknown as TicketComparisonRow),
+          ticket_id: 'unknown',
+        },
+        {
+          ...rows[0]!,
+          ticket_id: '12345',
+          ticket_type: null,
+        },
+        {
+          ...rows[0]!,
+          ticket_id: 'AL-1',
+          ticket_type: 'feature',
+        },
+      ];
+
+      // Concrete query should exclude rows with null/undefined ticket_type
+      const matchedType = filterComparisonRows(pathologicalRows, ['feature'], ['all']);
+      expect(matchedType).toHaveLength(1);
+      expect(matchedType[0]?.ticket_id).toBe('AL-1');
+
+      // Concrete prefix query should exclude rows with unresolvable prefix
+      const matchedPrefix = filterComparisonRows(pathologicalRows, ['all'], ['AL']);
+      expect(matchedPrefix).toHaveLength(1);
+      expect(matchedPrefix[0]?.ticket_id).toBe('AL-1');
+
+      // 'all' passes through all rows
+      expect(filterComparisonRows(pathologicalRows, ['all'], ['all'])).toEqual(pathologicalRows);
+    });
+  });
+
+  describe('Adversarial Multi-Dimensional Filtering Edge Cases', () => {
+    it('handles empty arrays, whitespace tokens, and disjoint queries', () => {
+      const base = Object.values(mockAgenticMetricsLedgers)[0]!;
+      const ledgers = [
+        { ...base, ticket_id: 'AL-1', ticket_type: 'feature' },
+        { ...base, ticket_id: 'PO-1', ticket_type: 'docs' },
+      ];
+
+      // Empty input ledgers
+      expect(filterLedgersByTicketTypes([], ['feature'])).toEqual([]);
+      expect(filterLedgersByPrefixes([], ['AL'])).toEqual([]);
+
+      // Whitespace only in filter arrays behaves like 'all'
+      expect(filterLedgersByTicketTypes(ledgers, ['   ', ''])).toEqual(ledgers);
+      expect(filterLedgersByPrefixes(ledgers, ['   ', ''])).toEqual(ledgers);
+
+      // Disjoint queries
+      expect(filterLedgersByTicketTypes(ledgers, ['nonexistent'])).toEqual([]);
+      expect(filterLedgersByPrefixes(ledgers, ['NONEXISTENT'])).toEqual([]);
+    });
+
+    it('verifies symmetrical alias matching across all conventional pairs', () => {
+      const base = Object.values(mockAgenticMetricsLedgers)[0]!;
+      const aliasLedgers = [
+        { ...base, ticket_id: 'T-1', ticket_type: 'feat' },
+        { ...base, ticket_id: 'T-2', ticket_type: 'feature' },
+        { ...base, ticket_id: 'T-3', ticket_type: 'bug' },
+        { ...base, ticket_id: 'T-4', ticket_type: 'fix' },
+        { ...base, ticket_id: 'T-5', ticket_type: 'bugfix' },
+        { ...base, ticket_id: 'T-6', ticket_type: 'doc' },
+        { ...base, ticket_id: 'T-7', ticket_type: 'docs' },
+      ];
+
+      // Querying with alias matches canonical and all other aliases
+      expect(filterLedgersByTicketTypes(aliasLedgers, ['feat']).map((l) => l.ticket_id)).toEqual(['T-1', 'T-2']);
+      expect(filterLedgersByTicketTypes(aliasLedgers, ['feature']).map((l) => l.ticket_id)).toEqual(['T-1', 'T-2']);
+
+      expect(filterLedgersByTicketTypes(aliasLedgers, ['fix']).map((l) => l.ticket_id)).toEqual(['T-3', 'T-4', 'T-5']);
+      expect(filterLedgersByTicketTypes(aliasLedgers, ['bug']).map((l) => l.ticket_id)).toEqual(['T-3', 'T-4', 'T-5']);
+      expect(filterLedgersByTicketTypes(aliasLedgers, ['bugfix']).map((l) => l.ticket_id)).toEqual(['T-3', 'T-4', 'T-5']);
+
+      expect(filterLedgersByTicketTypes(aliasLedgers, ['doc']).map((l) => l.ticket_id)).toEqual(['T-6', 'T-7']);
+      expect(filterLedgersByTicketTypes(aliasLedgers, ['docs']).map((l) => l.ticket_id)).toEqual(['T-6', 'T-7']);
     });
   });
 

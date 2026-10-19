@@ -1,8 +1,11 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { AgenticMetricsLedger, TimeGranularity, TimeWindowPreset } from '../domain/types';
 import { fetchWorkspaceLedgers } from '../api/client';
 import { aggregateMetricsOverTime } from '../domain/progression';
 import {
+  extractTicketPrefix,
+  filterLedgersByPrefixes,
+  filterLedgersByTicketTypes,
   formatCurrencyUSD,
   formatPercentage,
   formatTokensK,
@@ -12,6 +15,19 @@ import { KPICard } from '../components/KPICard';
 import { TrendChart } from '../components/TrendChart';
 import { EmptyState } from '../components/EmptyState';
 import { CHART_COLORS } from '../utils/theme';
+import { MultiSelectDropdown, type MultiSelectOption } from '../components/MultiSelectDropdown';
+
+const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
+  { value: 'feature', label: 'Feature' },
+  { value: 'bug', label: 'Bug' },
+  { value: 'chore', label: 'Chore' },
+  { value: 'docs', label: 'Docs' },
+  { value: 'refactor', label: 'Refactor' },
+  { value: 'test', label: 'Test' },
+  { value: 'ci', label: 'CI' },
+  { value: 'perf', label: 'Perf' },
+  { value: 'build', label: 'Build' },
+];
 
 export interface MetricProgressionProps {
   readonly onMockChange?: (isMock: boolean) => void;
@@ -19,19 +35,40 @@ export interface MetricProgressionProps {
 
 export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChange }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
+  const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
+  const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
+  const [selectedPrefixes, setSelectedPrefixes] = useState<readonly string[]>(['all']);
   const [granularity, setGranularity] = useState<TimeGranularity>('daily');
   const [preset, setPreset] = useState<TimeWindowPreset>('all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const loadLedgers = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const res = await fetchWorkspaceLedgers('all');
+      const typesParam =
+        selectedTicketTypes.length === 0 ||
+        (selectedTicketTypes.length === 1 && selectedTicketTypes[0] === 'all')
+          ? undefined
+          : selectedTicketTypes;
+      const prefixesParam =
+        selectedPrefixes.length === 0 ||
+        (selectedPrefixes.length === 1 && selectedPrefixes[0] === 'all')
+          ? undefined
+          : selectedPrefixes;
+
+      const res =
+        typesParam || prefixesParam
+          ? await fetchWorkspaceLedgers(preset, undefined, undefined, typesParam, prefixesParam)
+          : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
+      hasLoadedRef.current = true;
       onMockChange?.(res.isMock);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch telemetry ledgers';
@@ -39,15 +76,44 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
     } finally {
       setLoading(false);
     }
-  }, [onMockChange]);
+  }, [onMockChange, selectedTicketTypes, selectedPrefixes, preset]);
 
   useEffect(() => {
     loadLedgers();
   }, [loadLedgers]);
 
-  // Compute date boundaries based on preset and ledger dates
+  // Keep track of distinct workspace prefixes discovered across ledgers
+  useEffect(() => {
+    if (ledgers.length > 0) {
+      setKnownPrefixes((prev) => {
+        const nextSet = new Set(prev);
+        for (const l of ledgers) {
+          if (l.ticket_id) {
+            const p = extractTicketPrefix(l.ticket_id);
+            if (p) nextSet.add(p);
+          }
+        }
+        return Array.from(nextSet).sort();
+      });
+    }
+  }, [ledgers]);
+
+  const prefixOptions: readonly MultiSelectOption[] = useMemo(() => {
+    const list = knownPrefixes.length > 0 ? knownPrefixes : ['AL', 'GEN', 'PO'];
+    return list.map((p) => ({ value: p, label: p }));
+  }, [knownPrefixes]);
+
+  // Apply pure domain filtering across selected types and prefixes
+  const filteredLedgers = useMemo(() => {
+    let list = ledgers;
+    list = filterLedgersByTicketTypes(list, selectedTicketTypes);
+    list = filterLedgersByPrefixes(list, selectedPrefixes);
+    return list;
+  }, [ledgers, selectedTicketTypes, selectedPrefixes]);
+
+  // Compute date boundaries based on preset and filtered ledger dates
   const { startDate, endDate } = useMemo(() => {
-    if (preset === 'all' || ledgers.length === 0) {
+    if (preset === 'all' || filteredLedgers.length === 0) {
       return { startDate: null, endDate: null };
     }
 
@@ -59,7 +125,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
 
     // Find the latest timestamp across ledgers as the reference anchor
     let latestMs = 0;
-    for (const l of ledgers) {
+    for (const l of filteredLedgers) {
       const ts = l.completed_at ?? l.started_at ?? l.updated_at;
       const ms = ts ? Date.parse(ts) : NaN;
       if (!Number.isNaN(ms) && ms > latestMs) {
@@ -91,7 +157,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
     const startStr = new Date(startMs).toISOString().slice(0, 10);
 
     return { startDate: startStr, endDate: endStr };
-  }, [preset, ledgers, customStart, customEnd]);
+  }, [preset, filteredLedgers, customStart, customEnd]);
 
   const isCustomRangeInverted = useMemo(() => {
     if (preset !== 'custom' || !customStart || !customEnd) {
@@ -104,8 +170,8 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
 
   // Compute progression buckets using pure domain algorithm
   const buckets = useMemo(() => {
-    return aggregateMetricsOverTime(ledgers, granularity, startDate, endDate);
-  }, [ledgers, granularity, startDate, endDate]);
+    return aggregateMetricsOverTime(filteredLedgers, granularity, startDate, endDate);
+  }, [filteredLedgers, granularity, startDate, endDate]);
 
   // Active window rollup KPIs
   const summary = useMemo(() => {
@@ -141,50 +207,25 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
     };
   }, [buckets]);
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner" />
-        <span className="loading-text">Aggregating longitudinal telemetry progression...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="error-banner">
-        <span className="error-text">{error}</span>
-        <button type="button" className="btn-secondary" onClick={loadLedgers}>
-          Retry Connection
-        </button>
-      </div>
-    );
-  }
-
-  if (ledgers.length === 0) {
-    return (
-      <EmptyState
-        title="Zero Progression Telemetry Available"
-        message="No workspace telemetry files were found. Run an agentic workflow to populate longitudinal progression charts."
-      />
-    );
-  }
-
-  const chartData = buckets.map((b) => ({
-    bucket_date: b.bucket_date,
-    cost_usd: b.cost_usd,
-    cumulative_cost_usd: b.cumulative_cost_usd,
-    invocations: b.invocations,
-    cumulative_invocations: b.cumulative_invocations,
-    input_tokens: b.input_tokens,
-    output_tokens: b.output_tokens,
-    cache_read_tokens: b.cache_read_tokens,
-    cache_hit_rate_pct: b.cache_hit_rate_pct,
-    lines_added: b.lines_added,
-    lines_deleted: b.lines_deleted,
-    net_lines_added: b.net_lines_added,
-    peak_context_tokens: b.peak_context_tokens,
-  }));
+  const chartData = useMemo(
+    () =>
+      buckets.map((b) => ({
+        bucket_date: b.bucket_date,
+        cost_usd: b.cost_usd,
+        cumulative_cost_usd: b.cumulative_cost_usd,
+        invocations: b.invocations,
+        cumulative_invocations: b.cumulative_invocations,
+        input_tokens: b.input_tokens,
+        output_tokens: b.output_tokens,
+        cache_read_tokens: b.cache_read_tokens,
+        cache_hit_rate_pct: b.cache_hit_rate_pct,
+        lines_added: b.lines_added,
+        lines_deleted: b.lines_deleted,
+        net_lines_added: b.net_lines_added,
+        peak_context_tokens: b.peak_context_tokens,
+      })),
+    [buckets]
+  );
 
   return (
     <div className="progression-container">
@@ -236,6 +277,23 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               Custom
             </button>
           </div>
+        </div>
+
+        <div className="controls-filters">
+          <MultiSelectDropdown
+            id="prog-ticket-type"
+            label="Ticket Type"
+            options={TICKET_TYPE_OPTIONS}
+            selectedValues={selectedTicketTypes}
+            onChange={setSelectedTicketTypes}
+          />
+          <MultiSelectDropdown
+            id="prog-prefix"
+            label="Prefix"
+            options={prefixOptions}
+            selectedValues={selectedPrefixes}
+            onChange={setSelectedPrefixes}
+          />
         </div>
 
         <div className="controls-right">
@@ -306,8 +364,27 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
         </div>
       )}
 
-      {/* Active Window KPI Summary Banner */}
-      <div className="kpi-grid">
+      {loading && !hasLoadedRef.current ? (
+        <div className="loading-container">
+          <div className="loading-spinner" />
+          <span className="loading-text">Aggregating longitudinal telemetry progression...</span>
+        </div>
+      ) : error ? (
+        <div className="error-banner">
+          <span className="error-text">{error}</span>
+          <button type="button" className="btn-secondary" onClick={loadLedgers}>
+            Retry Connection
+          </button>
+        </div>
+      ) : ledgers.length === 0 || filteredLedgers.length === 0 ? (
+        <EmptyState
+          title="Zero Progression Telemetry Available"
+          message="No workspace telemetry files were found. Run an agentic workflow to populate longitudinal progression charts."
+        />
+      ) : (
+        <>
+          {/* Active Window KPI Summary Banner */}
+          <div className="kpi-grid">
         <KPICard
           title="Period Spend"
           value={formatCurrencyUSD(summary.spend)}
@@ -504,8 +581,10 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               },
             ]}
           />
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </>
+    )}
+  </div>
   );
 };

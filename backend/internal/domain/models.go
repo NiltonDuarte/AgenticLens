@@ -295,6 +295,7 @@ type TicketComparisonRow struct {
 	OrchestratorSaturationPct float64 `json:"orchestrator_saturation_pct"`
 	PeakContextTokens         int64   `json:"peak_context_tokens"`
 	TicketTitle               string  `json:"ticket_title"`
+	TicketType                *string `json:"ticket_type,omitempty"`
 	StartedAt                 *string `json:"started_at"`
 	CompletedAt               *string `json:"completed_at"`
 	LeadDurationSeconds       *int64  `json:"lead_duration_seconds"`

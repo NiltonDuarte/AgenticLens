@@ -10,7 +10,12 @@ import type {
   TimeWindowPreset,
   WorkspaceDetail,
 } from '../domain/types';
-import { deriveTicketComparisonRows, filterLedgersByCompletionDate } from '../domain/formatters';
+import {
+  deriveTicketComparisonRows,
+  filterLedgersByCompletionDate,
+  filterLedgersByTicketTypes,
+  filterLedgersByPrefixes,
+} from '../domain/formatters';
 import { aggregateMetricsOverTime } from '../domain/progression';
 import {
   mockFleetSummary,
@@ -25,10 +30,40 @@ export interface ApiResponse<T> {
   readonly isMock: boolean;
 }
 
+function appendMultiParams(params: URLSearchParams, key: string, values?: readonly string[]): void {
+  if (!values || values.length === 0) return;
+  const filtered = values.map((v) => v.trim()).filter((v) => v !== '' && v.toLowerCase() !== 'all');
+  if (filtered.length === 0) return;
+  for (const v of filtered) {
+    params.append(key, v);
+  }
+}
+
+function getFilteredMockLedgers(
+  sinceParam?: string,
+  untilParam?: string,
+  ticketTypes?: readonly string[],
+  prefixes?: readonly string[]
+): readonly AgenticMetricsLedger[] {
+  let list: readonly AgenticMetricsLedger[] = Object.values(mockAgenticMetricsLedgers);
+  if (sinceParam || untilParam) {
+    list = filterLedgersByCompletionDate(list, sinceParam, untilParam);
+  }
+  if (ticketTypes && ticketTypes.length > 0) {
+    list = filterLedgersByTicketTypes(list, ticketTypes);
+  }
+  if (prefixes && prefixes.length > 0) {
+    list = filterLedgersByPrefixes(list, prefixes);
+  }
+  return list;
+}
+
 export async function fetchFleetSummary(
   windowParam: string = 'all',
   sinceParam?: string,
-  untilParam?: string
+  untilParam?: string,
+  ticketTypes?: readonly string[],
+  prefixes?: readonly string[]
 ): Promise<ApiResponse<FleetSummary>> {
   try {
     const params = new URLSearchParams();
@@ -41,6 +76,9 @@ export async function fetchFleetSummary(
     if (untilParam) {
       params.set('until', untilParam);
     }
+    appendMultiParams(params, 'ticket_type', ticketTypes);
+    appendMultiParams(params, 'prefix', prefixes);
+
     const query = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/fleet${query}`);
     if (!res.ok) {
@@ -56,7 +94,9 @@ export async function fetchFleetSummary(
 export async function fetchWorkspaceLedgers(
   windowParam: string = 'all',
   sinceParam?: string,
-  untilParam?: string
+  untilParam?: string,
+  ticketTypes?: readonly string[],
+  prefixes?: readonly string[]
 ): Promise<ApiResponse<readonly AgenticMetricsLedger[]>> {
   try {
     const params = new URLSearchParams();
@@ -69,23 +109,18 @@ export async function fetchWorkspaceLedgers(
     if (untilParam) {
       params.set('until', untilParam);
     }
+    appendMultiParams(params, 'ticket_type', ticketTypes);
+    appendMultiParams(params, 'prefix', prefixes);
+
     const query = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/workspaces${query}`);
     if (!res.ok) {
-      const allMock = Object.values(mockAgenticMetricsLedgers);
-      if (sinceParam || untilParam) {
-        return { data: filterLedgersByCompletionDate(allMock, sinceParam, untilParam), isMock: true };
-      }
-      return { data: allMock, isMock: true };
+      return { data: getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes), isMock: true };
     }
     const ledgers = (await res.json()) as AgenticMetricsLedger[];
     return { data: ledgers, isMock: false };
   } catch {
-    const allMock = Object.values(mockAgenticMetricsLedgers);
-    if (sinceParam || untilParam) {
-      return { data: filterLedgersByCompletionDate(allMock, sinceParam, untilParam), isMock: true };
-    }
-    return { data: allMock, isMock: true };
+    return { data: getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes), isMock: true };
   }
 }
 
@@ -94,7 +129,9 @@ export async function fetchWorkspaces(
   sortParam: string = '',
   orderParam: string = '',
   sinceParam?: string,
-  untilParam?: string
+  untilParam?: string,
+  ticketTypes?: readonly string[],
+  prefixes?: readonly string[]
 ): Promise<ApiResponse<TicketComparisonRow[]>> {
   try {
     const params = new URLSearchParams();
@@ -113,12 +150,14 @@ export async function fetchWorkspaces(
     if (untilParam) {
       params.set('until', untilParam);
     }
+    appendMultiParams(params, 'ticket_type', ticketTypes);
+    appendMultiParams(params, 'prefix', prefixes);
+
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/workspaces${qs}`);
     if (!res.ok) {
-      if (sinceParam || untilParam) {
-        const allMock = Object.values(mockAgenticMetricsLedgers);
-        const filtered = filterLedgersByCompletionDate(allMock, sinceParam, untilParam);
+      const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
+      if (sinceParam || untilParam || (ticketTypes && ticketTypes.length > 0) || (prefixes && prefixes.length > 0)) {
         return { data: deriveTicketComparisonRows(filtered), isMock: true };
       }
       return { data: [...mockTicketComparisonRows], isMock: true };
@@ -127,12 +166,81 @@ export async function fetchWorkspaces(
     const rows = deriveTicketComparisonRows(ledgers);
     return { data: rows, isMock: false };
   } catch {
-    if (sinceParam || untilParam) {
-      const allMock = Object.values(mockAgenticMetricsLedgers);
-      const filtered = filterLedgersByCompletionDate(allMock, sinceParam, untilParam);
+    const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
+    if (sinceParam || untilParam || (ticketTypes && ticketTypes.length > 0) || (prefixes && prefixes.length > 0)) {
       return { data: deriveTicketComparisonRows(filtered), isMock: true };
     }
     return { data: [...mockTicketComparisonRows], isMock: true };
+  }
+}
+
+export async function fetchComparisonRows(
+  windowParam: string = 'all',
+  sinceParam?: string,
+  untilParam?: string,
+  ticketTypes?: readonly string[],
+  prefixes?: readonly string[]
+): Promise<ApiResponse<readonly TicketComparisonRow[]>> {
+  try {
+    const params = new URLSearchParams();
+    if (windowParam && windowParam !== 'all') {
+      params.set('window', windowParam);
+    }
+    if (sinceParam) {
+      params.set('since', sinceParam);
+    }
+    if (untilParam) {
+      params.set('until', untilParam);
+    }
+    appendMultiParams(params, 'ticket_type', ticketTypes);
+    appendMultiParams(params, 'prefix', prefixes);
+
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`/api/comparison${qs}`);
+    if (!res.ok) {
+      const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
+      return { data: deriveTicketComparisonRows(filtered), isMock: true };
+    }
+    const rows = (await res.json()) as readonly TicketComparisonRow[];
+    return { data: rows, isMock: false };
+  } catch {
+    const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
+    return { data: deriveTicketComparisonRows(filtered), isMock: true };
+  }
+}
+
+export async function fetchProgressionLedgers(
+  windowParam: string = 'all',
+  sinceParam?: string,
+  untilParam?: string,
+  ticketTypes?: readonly string[],
+  prefixes?: readonly string[]
+): Promise<ApiResponse<readonly AgenticMetricsLedger[]>> {
+  try {
+    const params = new URLSearchParams();
+    if (windowParam && windowParam !== 'all') {
+      params.set('window', windowParam);
+    }
+    if (sinceParam) {
+      params.set('since', sinceParam);
+    }
+    if (untilParam) {
+      params.set('until', untilParam);
+    }
+    appendMultiParams(params, 'ticket_type', ticketTypes);
+    appendMultiParams(params, 'prefix', prefixes);
+
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`/api/progression${qs}`);
+    if (!res.ok) {
+      const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
+      return { data: filtered, isMock: true };
+    }
+    const ledgers = (await res.json()) as readonly AgenticMetricsLedger[];
+    return { data: ledgers, isMock: false };
+  } catch {
+    const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
+    return { data: filtered, isMock: true };
   }
 }
 
@@ -246,16 +354,26 @@ export async function fetchProgressionMetrics(params?: {
   readonly granularity?: TimeGranularity;
   readonly startDate?: string;
   readonly endDate?: string;
+  readonly ticketTypes?: readonly string[];
+  readonly prefixes?: readonly string[];
 }): Promise<ApiResponse<readonly TimeBucketMetric[]>> {
   const windowParam = params?.window ?? 'all';
   const granularityParam = params?.granularity ?? 'daily';
   const startDateParam = params?.startDate;
   const endDateParam = params?.endDate;
+  const ticketTypes = params?.ticketTypes;
+  const prefixes = params?.prefixes;
 
   const fallback = (): readonly TimeBucketMetric[] => {
-    const allMock = Object.values(mockAgenticMetricsLedgers);
+    let mockList: readonly AgenticMetricsLedger[] = Object.values(mockAgenticMetricsLedgers);
+    if (ticketTypes && ticketTypes.length > 0) {
+      mockList = filterLedgersByTicketTypes(mockList, ticketTypes);
+    }
+    if (prefixes && prefixes.length > 0) {
+      mockList = filterLedgersByPrefixes(mockList, prefixes);
+    }
     return aggregateMetricsOverTime(
-      allMock,
+      mockList,
       granularityParam,
       startDateParam,
       endDateParam
@@ -276,6 +394,8 @@ export async function fetchProgressionMetrics(params?: {
     if (endDateParam) {
       query.set('endDate', endDateParam);
     }
+    appendMultiParams(query, 'ticket_type', ticketTypes);
+    appendMultiParams(query, 'prefix', prefixes);
 
     const qs = query.toString() ? `?${query.toString()}` : '';
     const res = await fetch(`/api/progression${qs}`);

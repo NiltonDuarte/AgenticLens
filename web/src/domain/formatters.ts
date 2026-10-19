@@ -278,6 +278,7 @@ export function deriveTicketComparisonRows(
 
     return {
       ticket_id: tid,
+      ticket_type: ledger.ticket_type,
       updated_at: ledger.updated_at,
       sdlc_iterations: eff.sdlc_iterations,
       active_duration_seconds: eff.active_duration_seconds,
@@ -385,6 +386,153 @@ export function deriveTicketComparisonRows(
     }
     return compareTicketIds(a.ticket_id, b.ticket_id);
   });
+}
+
+/**
+ * Normalizes raw ticket types by trimming, converting to lower case,
+ * and mapping conventional aliases.
+ */
+export function canonicalTicketType(raw: string): string {
+  const clean = raw.trim().toLowerCase();
+  switch (clean) {
+    case 'feat':
+    case 'feature':
+      return 'feature';
+    case 'bug':
+    case 'fix':
+    case 'bugfix':
+      return 'bug';
+    case 'doc':
+    case 'docs':
+      return 'docs';
+    case 'chore':
+      return 'chore';
+    case 'refactor':
+      return 'refactor';
+    case 'ci':
+      return 'ci';
+    case 'test':
+      return 'test';
+    case 'perf':
+      return 'perf';
+    case 'build':
+      return 'build';
+    default:
+      return clean;
+  }
+}
+
+/**
+ * Extracts ticket prefix in uppercase (e.g. "AL" from "AL-12" or "GEN" from "GEN_4").
+ * Returns an empty string if no valid alphabetic prefix is identified.
+ */
+export function extractTicketPrefix(ticketId: string): string {
+  const clean = ticketId.trim();
+  if (!clean) return '';
+
+  const delimMatch = /^([A-Za-z]+)[-_]/.exec(clean);
+  if (delimMatch) {
+    return delimMatch[1].toUpperCase();
+  }
+
+  const digitMatch = /^([A-Za-z]+)[0-9]/.exec(clean);
+  if (digitMatch) {
+    return digitMatch[1].toUpperCase();
+  }
+
+  return '';
+}
+
+/**
+ * Extracts distinct ticket prefixes from ledgers, sorted ascending alphabetically.
+ */
+export function extractDistinctPrefixes(ledgers: readonly AgenticMetricsLedger[]): readonly string[] {
+  const prefixSet = new Set<string>();
+  for (const ledger of ledgers) {
+    if (ledger.ticket_id) {
+      const p = extractTicketPrefix(ledger.ticket_id);
+      if (p) {
+        prefixSet.add(p);
+      }
+    }
+  }
+  return Array.from(prefixSet).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Filters ledgers by ticket types supporting canonical alias matching.
+ * Returns all ledgers if types is empty or contains 'all'.
+ */
+export function filterLedgersByTicketTypes(
+  ledgers: readonly AgenticMetricsLedger[],
+  types: readonly string[]
+): readonly AgenticMetricsLedger[] {
+  if (types.length === 0) return ledgers;
+  const normalizedTypes = types.map((t) => t.trim().toLowerCase()).filter(Boolean);
+  if (normalizedTypes.length === 0 || normalizedTypes.includes('all')) {
+    return ledgers;
+  }
+  const canonicalSet = new Set(normalizedTypes.map(canonicalTicketType));
+
+  return ledgers.filter((ledger) => {
+    if (!ledger.ticket_type) return false;
+    const ledgerCanonical = canonicalTicketType(ledger.ticket_type);
+    return canonicalSet.has(ledgerCanonical);
+  });
+}
+
+/**
+ * Filters ledgers by workspace prefixes case-insensitively.
+ * Returns all ledgers if prefixes is empty or contains 'all'.
+ */
+export function filterLedgersByPrefixes(
+  ledgers: readonly AgenticMetricsLedger[],
+  prefixes: readonly string[]
+): readonly AgenticMetricsLedger[] {
+  if (prefixes.length === 0) return ledgers;
+  const normalizedPrefixes = prefixes.map((p) => p.trim().toUpperCase()).filter(Boolean);
+  if (normalizedPrefixes.length === 0 || normalizedPrefixes.includes('ALL')) {
+    return ledgers;
+  }
+  const prefixSet = new Set(normalizedPrefixes);
+
+  return ledgers.filter((ledger) => {
+    if (!ledger.ticket_id) return false;
+    const p = extractTicketPrefix(ledger.ticket_id);
+    return prefixSet.has(p);
+  });
+}
+
+/**
+ * Pure multi-filter for ticket comparison rows by ticket types and prefixes.
+ */
+export function filterComparisonRows(
+  rows: readonly TicketComparisonRow[],
+  types: readonly string[],
+  prefixes: readonly string[]
+): readonly TicketComparisonRow[] {
+  let filtered = rows;
+
+  const normalizedTypes = types.map((t) => t.trim().toLowerCase()).filter(Boolean);
+  if (normalizedTypes.length > 0 && !normalizedTypes.includes('all')) {
+    const canonicalSet = new Set(normalizedTypes.map(canonicalTicketType));
+    filtered = filtered.filter((row) => {
+      if (!row.ticket_type) return false;
+      const rowCanonical = canonicalTicketType(row.ticket_type);
+      return canonicalSet.has(rowCanonical);
+    });
+  }
+
+  const normalizedPrefixes = prefixes.map((p) => p.trim().toUpperCase()).filter(Boolean);
+  if (normalizedPrefixes.length > 0 && !normalizedPrefixes.includes('ALL')) {
+    const prefixSet = new Set(normalizedPrefixes);
+    filtered = filtered.filter((row) => {
+      const p = extractTicketPrefix(row.ticket_id);
+      return prefixSet.has(p);
+    });
+  }
+
+  return filtered;
 }
 
 export function formatChartAxisTimestamp(

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { MetricProgression } from './MetricProgression';
 import * as apiClient from '../api/client';
 import { mockAgenticMetricsLedgers } from '../api/mockData';
@@ -412,6 +412,57 @@ describe('MetricProgression View Component', () => {
     expect(emojiRegex.test(renderedText)).toBe(false);
   });
 
+  it('filters progression data and updates KPIs when ticket type and prefix filters change', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: ledgers,
+      isMock: true,
+    });
+
+    render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+
+    // Check initial KPI value: Total Invocations = 14 across all mock ledgers
+    const card = screen.getByText('Total Invocations').closest('.kpi-card');
+    expect(card).not.toBeNull();
+    expect(card?.textContent).toContain('14');
+
+    // Filter by Ticket Type: Feature (AL-1, AL-2, AL-3 = 11 invocations)
+    const typeTrigger = screen.getByRole('combobox', { name: 'Ticket Type selector' });
+    fireEvent.click(typeTrigger);
+    const featureCheckbox = screen.getByRole('checkbox', { name: 'Feature' });
+    fireEvent.click(featureCheckbox);
+
+    // Total Invocations should update to 11
+    await waitFor(() => {
+      expect(card?.textContent).toContain('11');
+    });
+
+    // Reset ticket type filter to All
+    const allTypeCheckbox = screen.getByRole('checkbox', { name: 'Select all Ticket Type' });
+    fireEvent.click(allTypeCheckbox);
+
+    await waitFor(() => {
+      expect(card?.textContent).toContain('14');
+    });
+
+    // Close ticket type dropdown
+    fireEvent.click(typeTrigger);
+
+    // Filter by Prefix: PO (PO-1 has 1 invocation)
+    const prefixTrigger = screen.getByRole('combobox', { name: 'Prefix selector' });
+    fireEvent.click(prefixTrigger);
+    const poCheckbox = screen.getByRole('checkbox', { name: 'PO' });
+    fireEvent.click(poCheckbox);
+
+    await waitFor(() => {
+      expect(card?.textContent).toContain('1');
+    });
+  });
+
   it('toggles 24 Hours, Hourly granularity, and Custom datetime window with validation', async () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
@@ -428,19 +479,25 @@ describe('MetricProgression View Component', () => {
     // Toggle 24 Hours
     const btn24h = screen.getByRole('button', { name: '24 Hours' });
     expect(btn24h).toBeInTheDocument();
-    fireEvent.click(btn24h);
+    await act(async () => {
+      fireEvent.click(btn24h);
+    });
     expect(btn24h).toHaveClass('active');
 
     // Toggle Hourly Granularity
     const btnHourly = screen.getByRole('button', { name: 'Hourly' });
     expect(btnHourly).toBeInTheDocument();
-    fireEvent.click(btnHourly);
+    await act(async () => {
+      fireEvent.click(btnHourly);
+    });
     expect(btnHourly).toHaveClass('active');
 
     // Toggle Custom Window
     const btnCustom = screen.getByRole('button', { name: 'Custom' });
     expect(btnCustom).toBeInTheDocument();
-    fireEvent.click(btnCustom);
+    await act(async () => {
+      fireEvent.click(btnCustom);
+    });
     expect(btnCustom).toHaveClass('active');
 
     // Custom datetime inputs should now appear
@@ -450,12 +507,16 @@ describe('MetricProgression View Component', () => {
     expect(endInput).toBeInTheDocument();
 
     // Enter valid date range
-    fireEvent.change(startInput, { target: { value: '2026-10-15T09:00' } });
-    fireEvent.change(endInput, { target: { value: '2026-10-15T18:00' } });
+    await act(async () => {
+      fireEvent.change(startInput, { target: { value: '2026-10-15T09:00' } });
+      fireEvent.change(endInput, { target: { value: '2026-10-15T18:00' } });
+    });
     expect(screen.queryByText(/Start datetime cannot be after End datetime/i)).not.toBeInTheDocument();
 
     // Enter inverted date range (start > end)
-    fireEvent.change(startInput, { target: { value: '2026-10-15T20:00' } });
+    await act(async () => {
+      fireEvent.change(startInput, { target: { value: '2026-10-15T20:00' } });
+    });
     expect(screen.getByText(/Start datetime cannot be after End datetime/i)).toBeInTheDocument();
   });
 
@@ -474,5 +535,141 @@ describe('MetricProgression View Component', () => {
     expect(
       screen.getByText(/No workspace telemetry files were found/i)
     ).toBeInTheDocument();
+  });
+
+  it('keeps progression controls bar visible and interactive when zero ledgers match filters', async () => {
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: [],
+      isMock: true,
+    });
+
+    const { container } = render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Progression Telemetry Available')).toBeInTheDocument();
+    });
+
+    const controlsBar = container.querySelector('.progression-controls-bar');
+    expect(controlsBar).toBeInTheDocument();
+
+    expect(screen.getByRole('combobox', { name: 'Ticket Type selector' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Prefix selector' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lifetime' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Daily' })).toBeInTheDocument();
+  });
+
+  it('allows interactive recovery from empty filter selection without page reload', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
+      .mockResolvedValueOnce({
+        data: ledgers,
+        isMock: true,
+      })
+      .mockResolvedValueOnce({
+        data: [],
+        isMock: true,
+      })
+      .mockResolvedValueOnce({
+        data: ledgers,
+        isMock: true,
+      });
+
+    const { container } = render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+
+    const typeTrigger = screen.getByRole('combobox', { name: 'Ticket Type selector' });
+    fireEvent.click(typeTrigger);
+    const bugCheckbox = screen.getByRole('checkbox', { name: 'Bug' });
+    fireEvent.click(bugCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Progression Telemetry Available')).toBeInTheDocument();
+    });
+    expect(container.querySelector('.progression-controls-bar')).toBeInTheDocument();
+
+    const allCheckbox = screen.getByRole('checkbox', { name: 'Select all Ticket Type' });
+    fireEvent.click(allCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Zero Progression Telemetry Available')).not.toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('displays empty state while keeping controls bar interactive when client-side filter matches zero ledgers', async () => {
+    const singleLedger = [mockAgenticMetricsLedgers['AL-1']!];
+    const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: singleLedger,
+      isMock: true,
+    });
+
+    const { container } = render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+
+    // Client-side filter: select 'Bug' which does not match AL-1
+    const typeTrigger = screen.getByRole('combobox', { name: 'Ticket Type selector' });
+    fireEvent.click(typeTrigger);
+    const bugCheckbox = screen.getByRole('checkbox', { name: 'Bug' });
+    fireEvent.click(bugCheckbox);
+
+    // Empty state should appear because filteredLedgers is empty
+    await waitFor(() => {
+      expect(screen.getByText('Zero Progression Telemetry Available')).toBeInTheDocument();
+    });
+
+    // Controls bar must still be present and visible
+    const controlsBar = container.querySelector('.progression-controls-bar');
+    expect(controlsBar).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Ticket Type selector' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Prefix selector' })).toBeInTheDocument();
+
+    // Changing filter back to All should restore progression view without page reload
+    const allCheckbox = screen.getByRole('checkbox', { name: 'Select all Ticket Type' });
+    fireEvent.click(allCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Zero Progression Telemetry Available')).not.toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('re-triggers data fetch when prefix filter changes from initial zero ledgers empty state', async () => {
+    const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
+      .mockResolvedValueOnce({
+        data: [],
+        isMock: true,
+      })
+      .mockResolvedValueOnce({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: true,
+      });
+
+    const { container } = render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Progression Telemetry Available')).toBeInTheDocument();
+    });
+
+    expect(container.querySelector('.progression-controls-bar')).toBeInTheDocument();
+
+    const prefixTrigger = screen.getByRole('combobox', { name: 'Prefix selector' });
+    fireEvent.click(prefixTrigger);
+    const alCheckbox = screen.getByRole('checkbox', { name: 'AL' });
+    fireEvent.click(alCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Zero Progression Telemetry Available')).not.toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenLastCalledWith('all', undefined, undefined, undefined, ['AL']);
   });
 });

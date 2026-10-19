@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset } from '../domain/types';
 import {
   formatCurrencyUSD,
   formatPercentage,
   formatTokensK,
+  extractTicketPrefix,
 } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { KPICard } from '../components/KPICard';
@@ -11,6 +12,19 @@ import { DistributionCard } from '../components/DistributionCard';
 import { TicketTable } from '../components/TicketTable';
 import { EmptyState } from '../components/EmptyState';
 import { FleetAnomalyCard } from '../components/FleetAnomalyCard';
+import { MultiSelectDropdown, type MultiSelectOption } from '../components/MultiSelectDropdown';
+
+const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
+  { value: 'feature', label: 'Feature' },
+  { value: 'bug', label: 'Bug' },
+  { value: 'chore', label: 'Chore' },
+  { value: 'docs', label: 'Docs' },
+  { value: 'refactor', label: 'Refactor' },
+  { value: 'test', label: 'Test' },
+  { value: 'ci', label: 'CI' },
+  { value: 'perf', label: 'Perf' },
+  { value: 'build', label: 'Build' },
+];
 
 export interface FleetOverviewProps {
   readonly onMockChange?: (isMock: boolean) => void;
@@ -29,6 +43,27 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
   const [windowPreset, setWindowPreset] = useState<TimeWindowPreset>('all');
   const [customSince, setCustomSince] = useState<string>('');
   const [customUntil, setCustomUntil] = useState<string>('');
+  const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
+  const [selectedPrefixes, setSelectedPrefixes] = useState<readonly string[]>(['all']);
+  const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
+
+  useEffect(() => {
+    if (workspaces.length > 0) {
+      setKnownPrefixes((prev) => {
+        const nextSet = new Set(prev);
+        for (const w of workspaces) {
+          const p = extractTicketPrefix(w.ticket_id);
+          if (p) nextSet.add(p);
+        }
+        return Array.from(nextSet).sort();
+      });
+    }
+  }, [workspaces]);
+
+  const prefixOptions = useMemo(() => {
+    const list = knownPrefixes.length > 0 ? knownPrefixes : ['AL', 'GEN', 'PO'];
+    return list.map((p) => ({ value: p, label: p }));
+  }, [knownPrefixes]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -38,9 +73,22 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       const sinceParam = windowPreset === 'custom' && customSince ? customSince : undefined;
       const untilParam = windowPreset === 'custom' && customUntil ? customUntil : undefined;
 
+      const typesParam =
+        selectedTicketTypes.length === 0 || (selectedTicketTypes.length === 1 && selectedTicketTypes[0] === 'all')
+          ? undefined
+          : selectedTicketTypes;
+      const prefixesParam =
+        selectedPrefixes.length === 0 || (selectedPrefixes.length === 1 && selectedPrefixes[0] === 'all')
+          ? undefined
+          : selectedPrefixes;
+
       const [fleetRes, workspacesRes] = await Promise.all([
-        fetchFleetSummary(windowParam, sinceParam, untilParam),
-        fetchWorkspaces(windowParam, '', '', sinceParam, untilParam),
+        typesParam || prefixesParam
+          ? fetchFleetSummary(windowParam, sinceParam, untilParam, typesParam, prefixesParam)
+          : fetchFleetSummary(windowParam, sinceParam, untilParam),
+        typesParam || prefixesParam
+          ? fetchWorkspaces(windowParam, '', '', sinceParam, untilParam, typesParam, prefixesParam)
+          : fetchWorkspaces(windowParam, '', '', sinceParam, untilParam),
       ]);
 
       setSummary(fleetRes.data);
@@ -53,7 +101,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [windowPreset, customSince, customUntil, onMockChange]);
+  }, [windowPreset, customSince, customUntil, selectedTicketTypes, selectedPrefixes, onMockChange]);
 
   useEffect(() => {
     void loadData();
@@ -110,6 +158,22 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           </div>
         </div>
       )}
+
+      <MultiSelectDropdown
+        id="fleet-ticket-type"
+        label="Ticket Type"
+        options={TICKET_TYPE_OPTIONS}
+        selectedValues={selectedTicketTypes}
+        onChange={setSelectedTicketTypes}
+      />
+
+      <MultiSelectDropdown
+        id="fleet-prefix"
+        label="Prefix"
+        options={prefixOptions}
+        selectedValues={selectedPrefixes}
+        onChange={setSelectedPrefixes}
+      />
     </section>
   );
 

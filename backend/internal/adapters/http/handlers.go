@@ -96,6 +96,27 @@ func resolveTemporalFilter(windowParam, sinceParam, untilParam string) (*time.Ti
 	return nil, nil, nil
 }
 
+// parseMultiQueryParam splits comma-delimited strings across repeated query parameters,
+// trims whitespace, and returns non-empty tokens.
+func parseMultiQueryParam(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
+	}
+	var result []string
+	for _, val := range values {
+		for _, token := range strings.Split(val, ",") {
+			clean := strings.TrimSpace(token)
+			if clean != "" {
+				result = append(result, clean)
+			}
+		}
+	}
+	if len(result) == 0 {
+		return []string{}
+	}
+	return result
+}
+
 // WorkspacesHandler handles GET /api/workspaces
 func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +142,16 @@ func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 		}
 
 		ledgers := domain.FilterLedgersByCompletionDate(report.Ledgers, since, until)
+
+		ticketTypes := parseMultiQueryParam(query["ticket_type"])
+		if len(ticketTypes) > 0 {
+			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
+		}
+
+		prefixes := parseMultiQueryParam(query["prefix"])
+		if len(prefixes) > 0 {
+			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes)
+		}
 
 		if sortParam != "" || orderParam != "" {
 			field := domain.ParseLedgerSortField(sortParam)
@@ -214,8 +245,61 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 		}
 
 		ledgers := domain.FilterLedgersByCompletionDate(report.Ledgers, since, until)
+
+		ticketTypes := parseMultiQueryParam(query["ticket_type"])
+		if len(ticketTypes) > 0 {
+			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
+		}
+
+		prefixes := parseMultiQueryParam(query["prefix"])
+		if len(prefixes) > 0 {
+			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes)
+		}
+
 		summary := domain.CalculateFleetSummary(ledgers)
 		WriteFleetResponse(w, summary)
+	}
+}
+
+// ComparisonHandler handles GET /api/comparison
+func ComparisonHandler(workspacesDir string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		report := adapters.ScanWorkspaces(workspacesDir)
+
+		query := r.URL.Query()
+		windowParam := query.Get("window")
+		sinceParam := query.Get("since")
+		if sinceParam == "" {
+			sinceParam = query.Get("startDate")
+		}
+		untilParam := query.Get("until")
+		if untilParam == "" {
+			untilParam = query.Get("endDate")
+		}
+
+		since, until, err := resolveTemporalFilter(windowParam, sinceParam, untilParam)
+		if err != nil {
+			WriteError(w, http.StatusBadRequest, "bad_request", err.Error())
+			return
+		}
+
+		ledgers := domain.FilterLedgersByCompletionDate(report.Ledgers, since, until)
+
+		ticketTypes := parseMultiQueryParam(query["ticket_type"])
+		if len(ticketTypes) > 0 {
+			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
+		}
+
+		prefixes := parseMultiQueryParam(query["prefix"])
+		if len(prefixes) > 0 {
+			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes)
+		}
+
+		rows := domain.BuildComparisonRows(ledgers)
+		if rows == nil {
+			rows = []domain.TicketComparisonRow{}
+		}
+		WriteComparisonResponse(w, rows)
 	}
 }
 
@@ -252,7 +336,19 @@ func ProgressionHandler(workspacesDir string) http.HandlerFunc {
 			return
 		}
 
-		buckets := domain.AggregateMetricsOverTime(report.Ledgers, string(granularity), since, until)
+		ledgers := report.Ledgers
+
+		ticketTypes := parseMultiQueryParam(query["ticket_type"])
+		if len(ticketTypes) > 0 {
+			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
+		}
+
+		prefixes := parseMultiQueryParam(query["prefix"])
+		if len(prefixes) > 0 {
+			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes)
+		}
+
+		buckets := domain.AggregateMetricsOverTime(ledgers, string(granularity), since, until)
 		WriteProgressionResponse(w, buckets)
 	}
 }
