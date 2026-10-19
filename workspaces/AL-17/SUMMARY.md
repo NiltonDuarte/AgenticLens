@@ -39,8 +39,8 @@ Implemented real-time telemetry observation and active session tree reconstructi
 - **Subagent Turn Velocity & Thrashing:** 71.8 avg turns/run (peak: 131 turns) | Planner 46.0, Coder 131.0, Tester 79.0, Reviewer 31.0
 - **Test-to-Production Code Ratio:** 1.4:1 (+1,991 test lines / +1,425 prod lines)
 - **Code Delivered:** +3,416 / -3 lines across 11 code files (excluding docs)
-- **Reasoning Effort:** 104,003 reasoning tokens (44.9% of generated output)
-- **Tool Health & Self-Correction:** 384 tool calls (24 self-corrections, 93.8% success rate)
+- **Reasoning Effort:** 104,741 reasoning tokens (44.8% of generated output)
+- **Tool Health & Self-Correction:** 391 tool calls (24 self-corrections, 93.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 7 execution anomalies detected (5 CRITICAL, 2 WARNING).
@@ -59,15 +59,15 @@ Implemented real-time telemetry observation and active session tree reconstructi
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 2,069,273 | 32,589 | 8,089,875 | 79.6% | 167.9k | ELEVATED | $2.34 |
+| **orchestrator** | 1 | 2,101,892 | 34,088 | 8,352,281 | 79.9% | 167.9k | ELEVATED | $2.39 |
 | **planner** | 1 | 695,610 | 28,531 | 2,757,591 | 79.9% | 143.9k | ELEVATED | $0.91 |
 | **coder** | 1 | 652,052 | 38,941 | 10,205,540 | 94.0% | 169.3k | ELEVATED | $1.53 |
 | **tester** | 1 | 842,533 | 24,747 | 5,701,816 | 87.1% | 160.1k | ELEVATED | $1.25 |
 | **reviewer** | 1 | 176,525 | 2,599 | 1,810,291 | 91.1% | 91.3k | HEALTHY | $0.30 |
-| **Total** | **5** | **4,435,993** | **127,407** | **28,565,113** | **86.6%** | **169.3k** | **ELEVATED** | **$6.34** |
+| **Total** | **5** | **4,468,612** | **128,906** | **28,827,519** | **86.6%** | **169.3k** | **ELEVATED** | **$6.39** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 5 | 4,435,993 | 127,407 | 28,565,113 | 86.6% | $6.34 |
-| **Total** | **5** | **4,435,993** | **127,407** | **28,565,113** | **86.6%** | **$6.34** |
+| **gemini-3.8-flash** | 5 | 4,468,612 | 128,906 | 28,827,519 | 86.6% | $6.39 |
+| **Total** | **5** | **4,468,612** | **128,906** | **28,827,519** | **86.6%** | **$6.39** |
