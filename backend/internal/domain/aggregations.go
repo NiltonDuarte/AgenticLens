@@ -1447,7 +1447,7 @@ type bucketAccumulator struct {
 	filesChanged          int64
 }
 
-// AggregateMetricsOverTime aggregates metrics chronologically into daily, weekly, or cumulative buckets.
+// AggregateMetricsOverTime aggregates metrics chronologically into hourly, daily, or weekly buckets.
 func AggregateMetricsOverTime(
 	ledgers []AgenticMetricsLedger,
 	granularity string,
@@ -1608,9 +1608,10 @@ func AggregateMetricsOverTime(
 			CumulativeCostUSD:      math.Round(runningCumCost*10000.0) / 10000.0,
 			CumulativeInputTokens:  runningCumInput,
 			CumulativeOutputTokens: runningCumOutput,
-			CumulativeLinesAdded:   runningCumLinesAdded,
-			CumulativeLinesDeleted: runningCumLinesDeleted,
-			CumulativeInvocations:  runningCumInvocations,
+			CumulativeLinesAdded:    runningCumLinesAdded,
+			CumulativeLinesDeleted:  runningCumLinesDeleted,
+			CumulativeNetLinesAdded: runningCumLinesAdded - runningCumLinesDeleted,
+			CumulativeInvocations:   runningCumInvocations,
 		})
 	}
 

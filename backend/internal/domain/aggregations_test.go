@@ -119,14 +119,14 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 		parentID := "ses-orch"
 		ledger := domain.AgenticFactLedger{
 			Code: domain.CodeFacts{
-				LinesAdded:      150,
-				LinesDeleted:    30,
-				TestLinesAdded:  80,
+				LinesAdded:       150,
+				LinesDeleted:     30,
+				TestLinesAdded:   80,
 				TestLinesDeleted: 10,
-				ProdLinesAdded:  40,
+				ProdLinesAdded:   40,
 				ProdLinesDeleted: 20,
-				FilesChanged:    5,
-				SDLCIterations:  2,
+				FilesChanged:     5,
+				SDLCIterations:   2,
 			},
 			Invocations: []domain.InvocationFact{
 				{
@@ -292,11 +292,11 @@ func TestCalculateFleetSummary(t *testing.T) {
 	ledgers := []domain.AgenticMetricsLedger{
 		{
 			Totals: domain.GroupedMetric{
-				Invocations:      2,
-				CostUSD:          1.5,
-				InputTokens:      5000,
-				OutputTokens:     1000,
-				CacheReadTokens:  5000,
+				Invocations:     2,
+				CostUSD:         1.5,
+				InputTokens:     5000,
+				OutputTokens:    1000,
+				CacheReadTokens: 5000,
 			},
 			WorkflowEfficiency: domain.WorkflowEfficiency{
 				ActiveDurationSeconds: 120,
@@ -1500,8 +1500,8 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
 				{
-					ID:   "ses-orch",
-					Role: "orchestrator",
+					ID:     "ses-orch",
+					Role:   "orchestrator",
 					Tokens: domain.InvocationTokens{PeakContext: 50000},
 				},
 				{
@@ -3286,7 +3286,6 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 	})
 }
 
-
 func TestResolveDatePreset(t *testing.T) {
 	t.Parallel()
 	ref := time.Date(2026, 10, 19, 15, 30, 0, 0, time.UTC)
@@ -3431,6 +3430,10 @@ func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 		t.Errorf("expected 50 lines added in bucket 1, got %d", b1.LinesAdded)
 	}
 
+	if b1.CumulativeNetLinesAdded != 40 {
+		t.Errorf("expected 40 cumulative net lines added in bucket 1, got %d", b1.CumulativeNetLinesAdded)
+	}
+
 	b2 := buckets[1]
 	if b2.BucketKey != "2026-10-19T11:00:00Z" {
 		t.Errorf("expected bucket key 2026-10-19T11:00:00Z, got %s", b2.BucketKey)
@@ -3443,6 +3446,9 @@ func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 	}
 	if b2.CumulativeInputTokens != 600 {
 		t.Errorf("expected cumulative 600 input tokens, got %d", b2.CumulativeInputTokens)
+	}
+	if b2.CumulativeNetLinesAdded != 55 {
+		t.Errorf("expected cumulative 55 net lines added in bucket 2, got %d", b2.CumulativeNetLinesAdded)
 	}
 
 	t.Run("boundary filtering by start and end timestamp", func(t *testing.T) {
@@ -3473,7 +3479,8 @@ func TestParseTimeGranularity(t *testing.T) {
 		{name: "daily lowercase", input: "daily", expected: domain.GranularityDaily, valid: true},
 		{name: "daily uppercase", input: "DAILY", expected: domain.GranularityDaily, valid: true},
 		{name: "weekly lowercase", input: "weekly", expected: domain.GranularityWeekly, valid: true},
-		{name: "cumulative lowercase", input: "cumulative", expected: domain.GranularityCumulative, valid: true},
+		{name: "cumulative rejected", input: "cumulative", expected: "", valid: false},
+		{name: "cumulative uppercase rejected", input: "CUMULATIVE", expected: "", valid: false},
 		{name: "whitespace padded", input: "  hourly  ", expected: domain.GranularityHourly, valid: true},
 		{name: "invalid minutely", input: "minutely", expected: "", valid: false},
 		{name: "invalid seconds", input: "seconds", expected: "", valid: false},
@@ -3796,7 +3803,6 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 		}
 	})
 }
-
 
 func TestCanonicalTicketType(t *testing.T) {
 	t.Parallel()
@@ -5422,6 +5428,257 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
 			t.Errorf("expected SubagentsPeakRole 'none', got %q", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+	})
+}
+
+func TestAL34_NetLinesGrowthAndGranularityAdversarial(t *testing.T) {
+	t.Parallel()
+
+	t.Run("CumulativeNetLinesAdded accurately tracks running additions minus running deletions across buckets", func(t *testing.T) {
+		t.Parallel()
+
+		d1 := "2026-10-10T10:00:00Z"
+		d2 := "2026-10-11T10:00:00Z"
+		d3 := "2026-10-12T10:00:00Z"
+		d4 := "2026-10-13T10:00:00Z"
+
+		ledgers := []domain.AgenticMetricsLedger{
+			{
+				TicketID:    ptr("T-D1"),
+				CompletedAt: &d1,
+				WorkflowEfficiency: domain.WorkflowEfficiency{
+					CodeDelivered: domain.CodeDeliveredStats{
+						LinesAdded:   1000,
+						LinesDeleted: 200,
+					},
+				},
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{CompletedAt: &d1, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
+					},
+				},
+			},
+			{
+				TicketID:    ptr("T-D2"),
+				CompletedAt: &d2,
+				WorkflowEfficiency: domain.WorkflowEfficiency{
+					CodeDelivered: domain.CodeDeliveredStats{
+						LinesAdded:   100,
+						LinesDeleted: 1200,
+					},
+				},
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{CompletedAt: &d2, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
+					},
+				},
+			},
+			{
+				TicketID:    ptr("T-D3"),
+				CompletedAt: &d3,
+				WorkflowEfficiency: domain.WorkflowEfficiency{
+					CodeDelivered: domain.CodeDeliveredStats{
+						LinesAdded:   0,
+						LinesDeleted: 0,
+					},
+				},
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{CompletedAt: &d3, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
+					},
+				},
+			},
+			{
+				TicketID:    ptr("T-D4"),
+				CompletedAt: &d4,
+				WorkflowEfficiency: domain.WorkflowEfficiency{
+					CodeDelivered: domain.CodeDeliveredStats{
+						LinesAdded:   500,
+						LinesDeleted: 50,
+					},
+				},
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{CompletedAt: &d4, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
+					},
+				},
+			},
+		}
+
+		buckets := domain.AggregateMetricsOverTime(ledgers, "daily", nil, nil)
+		if len(buckets) != 4 {
+			t.Fatalf("expected 4 daily buckets, got %d", len(buckets))
+		}
+
+		// Expected trajectory:
+		// Bucket 0 (2026-10-10): added=1000, deleted=200, net=800, cumAdded=1000, cumDeleted=200, cumNet=800
+		// Bucket 1 (2026-10-11): added=100, deleted=1200, net=-1100, cumAdded=1100, cumDeleted=1400, cumNet=-300
+		// Bucket 2 (2026-10-12): added=0, deleted=0, net=0, cumAdded=1100, cumDeleted=1400, cumNet=-300
+		// Bucket 3 (2026-10-13): added=500, deleted=50, net=450, cumAdded=1600, cumDeleted=1450, cumNet=150
+		expectedTrajectory := []struct {
+			date       string
+			added      int64
+			deleted    int64
+			net        int64
+			cumAdded   int64
+			cumDeleted int64
+			cumNet     int64
+		}{
+			{"2026-10-10", 1000, 200, 800, 1000, 200, 800},
+			{"2026-10-11", 100, 1200, -1100, 1100, 1400, -300},
+			{"2026-10-12", 0, 0, 0, 1100, 1400, -300},
+			{"2026-10-13", 500, 50, 450, 1600, 1450, 150},
+		}
+
+		for i, exp := range expectedTrajectory {
+			b := buckets[i]
+			if b.BucketDate != exp.date {
+				t.Errorf("[%d] expected date %s, got %s", i, exp.date, b.BucketDate)
+			}
+			if b.LinesAdded != exp.added {
+				t.Errorf("[%d] expected linesAdded %d, got %d", i, exp.added, b.LinesAdded)
+			}
+			if b.LinesDeleted != exp.deleted {
+				t.Errorf("[%d] expected linesDeleted %d, got %d", i, exp.deleted, b.LinesDeleted)
+			}
+			if b.NetLinesAdded != exp.net {
+				t.Errorf("[%d] expected netLinesAdded %d, got %d", i, exp.net, b.NetLinesAdded)
+			}
+			if b.CumulativeLinesAdded != exp.cumAdded {
+				t.Errorf("[%d] expected cumLinesAdded %d, got %d", i, exp.cumAdded, b.CumulativeLinesAdded)
+			}
+			if b.CumulativeLinesDeleted != exp.cumDeleted {
+				t.Errorf("[%d] expected cumLinesDeleted %d, got %d", i, exp.cumDeleted, b.CumulativeLinesDeleted)
+			}
+			if b.CumulativeNetLinesAdded != exp.cumNet {
+				t.Errorf("[%d] expected cumNetLinesAdded %d, got %d", i, exp.cumNet, b.CumulativeNetLinesAdded)
+			}
+			// Invariant assertion: CumulativeNetLinesAdded == CumulativeLinesAdded - CumulativeLinesDeleted
+			if b.CumulativeNetLinesAdded != b.CumulativeLinesAdded-b.CumulativeLinesDeleted {
+				t.Errorf("[%d] CumulativeNetLinesAdded (%d) does not match CumulativeLinesAdded - CumulativeLinesDeleted (%d - %d)",
+					i, b.CumulativeNetLinesAdded, b.CumulativeLinesAdded, b.CumulativeLinesDeleted)
+			}
+		}
+	})
+
+	t.Run("ParseTimeGranularity rejects cumulative and arbitrary non-temporal strings with case and whitespace variations", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			input    string
+			valid    bool
+			expected domain.TimeGranularity
+		}{
+			{"cumulative", false, ""},
+			{"CUMULATIVE", false, ""},
+			{"Cumulative", false, ""},
+			{"cUmUlAtIvE", false, ""},
+			{"  cumulative  ", false, ""},
+			{"\tcumulative\n", false, ""},
+			{"hourly", true, domain.GranularityHourly},
+			{"HOURLY", true, domain.GranularityHourly},
+			{"Hourly", true, domain.GranularityHourly},
+			{"  hourly  ", true, domain.GranularityHourly},
+			{"daily", true, domain.GranularityDaily},
+			{"DAILY", true, domain.GranularityDaily},
+			{"Daily", true, domain.GranularityDaily},
+			{"  daily  ", true, domain.GranularityDaily},
+			{"weekly", true, domain.GranularityWeekly},
+			{"WEEKLY", true, domain.GranularityWeekly},
+			{"Weekly", true, domain.GranularityWeekly},
+			{"  weekly  ", true, domain.GranularityWeekly},
+			{"minutely", false, ""},
+			{"secondly", false, ""},
+			{"yearly", false, ""},
+			{"monthly", false, ""},
+			{"decade", false, ""},
+			{"all", false, ""},
+			{"none", false, ""},
+			{"1d", false, ""},
+			{"7d", false, ""},
+			{"custom", false, ""},
+			{"", false, ""},
+			{"   ", false, ""},
+			{"../../etc/passwd", false, ""},
+			{"!@#$%^&*", false, ""},
+		}
+
+		for _, tt := range tests {
+			got, ok := domain.ParseTimeGranularity(tt.input)
+			if ok != tt.valid {
+				t.Errorf("ParseTimeGranularity(%q) valid = %v, want %v", tt.input, ok, tt.valid)
+			}
+			if got != tt.expected {
+				t.Errorf("ParseTimeGranularity(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		}
+	})
+
+	t.Run("AggregateMetricsOverTime edge cases: nil, empty, zero tokens, and division by zero", func(t *testing.T) {
+		t.Parallel()
+
+		// Nil ledgers
+		resNil := domain.AggregateMetricsOverTime(nil, "daily", nil, nil)
+		if len(resNil) != 0 {
+			t.Errorf("expected empty slice for nil ledgers, got %d", len(resNil))
+		}
+
+		// Empty ledgers
+		resEmpty := domain.AggregateMetricsOverTime([]domain.AgenticMetricsLedger{}, "daily", nil, nil)
+		if len(resEmpty) != 0 {
+			t.Errorf("expected empty slice for empty ledgers, got %d", len(resEmpty))
+		}
+
+		// Zero tokens and zero cache read (division by zero guard in CacheHitRatePct)
+		d := "2026-10-15T12:00:00Z"
+		zeroLedger := []domain.AgenticMetricsLedger{
+			{
+				TicketID:    ptr("ZERO-1"),
+				CompletedAt: &d,
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							CompletedAt: &d,
+							Tokens: domain.InvocationTokens{
+								Input:     0,
+								Output:    0,
+								CacheRead: 0,
+								Reasoning: 0,
+							},
+						},
+					},
+				},
+				WorkflowEfficiency: domain.WorkflowEfficiency{
+					CodeDelivered: domain.CodeDeliveredStats{
+						LinesAdded:   0,
+						LinesDeleted: 0,
+					},
+				},
+			},
+		}
+
+		buckets := domain.AggregateMetricsOverTime(zeroLedger, "daily", nil, nil)
+		if len(buckets) != 1 {
+			t.Fatalf("expected 1 bucket for zero tokens ledger, got %d", len(buckets))
+		}
+		b := buckets[0]
+		if b.CacheHitRatePct != 0.0 {
+			t.Errorf("expected CacheHitRatePct 0.0, got %f", b.CacheHitRatePct)
+		}
+		if b.CumulativeNetLinesAdded != 0 {
+			t.Errorf("expected CumulativeNetLinesAdded 0, got %d", b.CumulativeNetLinesAdded)
+		}
+		if b.NetLinesAdded != 0 {
+			t.Errorf("expected NetLinesAdded 0, got %d", b.NetLinesAdded)
+		}
+
+		// Inverted date range
+		start := time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)
+		bucketsInverted := domain.AggregateMetricsOverTime(zeroLedger, "daily", &start, &end)
+		if len(bucketsInverted) != 0 {
+			t.Errorf("expected 0 buckets for inverted date range, got %d", len(bucketsInverted))
 		}
 	})
 }

@@ -21,6 +21,8 @@ import {
   filterLedgersByPrefixes,
   filterComparisonRows,
   formatChartAxisTimestamp,
+  formatCompactCount,
+  formatLinesCompact,
 } from './formatters';
 import { mockAgenticMetricsLedgers } from '../api/mockData';
 import type { AgenticMetricsLedger, TicketComparisonRow } from './types';
@@ -994,11 +996,10 @@ describe('Domain Pure Formatters', () => {
       expect(formatChartAxisTimestamp('2026-10-19T00:00:00Z', 'hourly')).toBe('00:00');
     });
 
-    it('formats daily, weekly, and cumulative timestamps as YYYY-MM-DD', () => {
+    it('formats daily and weekly timestamps as YYYY-MM-DD', () => {
       expect(formatChartAxisTimestamp('2026-10-19', 'daily')).toBe('2026-10-19');
       expect(formatChartAxisTimestamp('2026-10-19T14:00:00Z', 'daily')).toBe('2026-10-19');
       expect(formatChartAxisTimestamp('2026-10-19', 'weekly')).toBe('2026-10-19');
-      expect(formatChartAxisTimestamp('2026-10-19', 'cumulative')).toBe('2026-10-19');
     });
 
     it('handles empty or malformed timestamp defensively', () => {
@@ -1008,6 +1009,72 @@ describe('Domain Pure Formatters', () => {
       expect(formatChartAxisTimestamp('2026-10-19T18:45', 'hourly')).toBe('18:00');
       expect(formatChartAxisTimestamp('2026-10-19T23:59:59Z', 'hourly')).toBe('23:00');
       expect(formatChartAxisTimestamp('2026-10-19T04:15:00+03:00', 'hourly')).toBe('04:00');
+    });
+  });
+
+  describe('formatCompactCount', () => {
+    it('formats small numbers without suffix', () => {
+      expect(formatCompactCount(0)).toBe('0');
+      expect(formatCompactCount(1)).toBe('1');
+      expect(formatCompactCount(42)).toBe('42');
+      expect(formatCompactCount(999)).toBe('999');
+    });
+
+    it('formats thousands with k suffix', () => {
+      expect(formatCompactCount(1000)).toBe('1k');
+      expect(formatCompactCount(1500)).toBe('1.5k');
+      expect(formatCompactCount(10000)).toBe('10k');
+      expect(formatCompactCount(30000)).toBe('30k');
+      expect(formatCompactCount(30500)).toBe('30.5k');
+      expect(formatCompactCount(999400)).toBe('999.4k');
+    });
+
+    it('formats millions with M suffix', () => {
+      expect(formatCompactCount(1000000)).toBe('1M');
+      expect(formatCompactCount(1500000)).toBe('1.5M');
+      expect(formatCompactCount(25000000)).toBe('25M');
+    });
+
+    it('handles negative numbers', () => {
+      expect(formatCompactCount(-42)).toBe('-42');
+      expect(formatCompactCount(-1000)).toBe('-1k');
+      expect(formatCompactCount(-1500)).toBe('-1.5k');
+      expect(formatCompactCount(-1000000)).toBe('-1M');
+    });
+
+    it('handles explicitPlus flag', () => {
+      expect(formatCompactCount(0, { explicitPlus: true })).toBe('+0');
+      expect(formatCompactCount(42, { explicitPlus: true })).toBe('+42');
+      expect(formatCompactCount(1500, { explicitPlus: true })).toBe('+1.5k');
+      expect(formatCompactCount(-1500, { explicitPlus: true })).toBe('-1.5k');
+    });
+
+    it('handles non-finite numbers defensively', () => {
+      expect(formatCompactCount(NaN)).toBe('0');
+      expect(formatCompactCount(Infinity)).toBe('0');
+      expect(formatCompactCount(-Infinity)).toBe('0');
+    });
+  });
+
+  describe('formatLinesCompact', () => {
+    it('formats discrete line counts compactly', () => {
+      expect(formatLinesCompact(0)).toBe('0');
+      expect(formatLinesCompact(250)).toBe('250');
+      expect(formatLinesCompact(1200)).toBe('1.2k');
+      expect(formatLinesCompact(50000)).toBe('50k');
+      expect(formatLinesCompact(-450)).toBe('-450');
+      expect(formatLinesCompact(-3500)).toBe('-3.5k');
+    });
+
+    it('supports explicitPlus option', () => {
+      expect(formatLinesCompact(0, { explicitPlus: true })).toBe('+0');
+      expect(formatLinesCompact(450, { explicitPlus: true })).toBe('+450');
+      expect(formatLinesCompact(-450, { explicitPlus: true })).toBe('-450');
+    });
+
+    it('handles non-finite values defensively', () => {
+      expect(formatLinesCompact(NaN)).toBe('0');
+      expect(formatLinesCompact(Infinity)).toBe('0');
     });
   });
 });

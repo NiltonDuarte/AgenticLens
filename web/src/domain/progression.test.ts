@@ -561,7 +561,7 @@ describe('Domain Progression Aggregator', () => {
 
     it('verifies cumulative horizon calculations match running totals across all buckets', () => {
       const ledgers = Object.values(mockAgenticMetricsLedgers);
-      const buckets = aggregateMetricsOverTime(ledgers, 'cumulative');
+      const buckets = aggregateMetricsOverTime(ledgers, 'daily');
 
       expect(buckets.length).toBeGreaterThan(0);
 
@@ -569,17 +569,24 @@ describe('Domain Progression Aggregator', () => {
       let runningInputs = 0;
       let runningOutputs = 0;
       let runningInvocations = 0;
+      let runningLinesAdded = 0;
+      let runningLinesDeleted = 0;
 
       for (const b of buckets) {
         runningCost += b.cost_usd;
         runningInputs += b.input_tokens;
         runningOutputs += b.output_tokens;
         runningInvocations += b.invocations;
+        runningLinesAdded += b.lines_added;
+        runningLinesDeleted += b.lines_deleted;
 
         expect(b.cumulative_cost_usd).toBeCloseTo(Math.round(runningCost * 10000) / 10000, 3);
         expect(b.cumulative_input_tokens).toBe(runningInputs);
         expect(b.cumulative_output_tokens).toBe(runningOutputs);
         expect(b.cumulative_invocations).toBe(runningInvocations);
+        expect(b.cumulative_lines_added).toBe(runningLinesAdded);
+        expect(b.cumulative_lines_deleted).toBe(runningLinesDeleted);
+        expect(b.cumulative_net_lines_added).toBe(runningLinesAdded - runningLinesDeleted);
       }
     });
 
@@ -1246,6 +1253,128 @@ describe('Domain Progression Aggregator', () => {
       // Empty and null inputs
       expect(aggregateMetricsOverTime([], 'hourly')).toHaveLength(0);
       expect(aggregateMetricsOverTime(null as unknown as readonly AgenticMetricsLedger[], 'hourly')).toHaveLength(0);
+    });
+
+    it('AL-34: strictly verifies cumulative_net_lines_added across positive, negative, and zero churn buckets', () => {
+      const makeLedger = (id: string, dateStr: string, added: number, deleted: number): AgenticMetricsLedger => ({
+        ticket_id: id,
+        ticket_title: `Ticket ${id}`,
+        ticket_type: 'feature',
+        started_at: `${dateStr}T08:00:00Z`,
+        completed_at: `${dateStr}T12:00:00Z`,
+        updated_at: `${dateStr}T12:00:00Z`,
+        facts: {
+          ticket_id: id,
+          ticket_title: `Ticket ${id}`,
+          ticket_type: 'feature',
+          started_at: `${dateStr}T08:00:00Z`,
+          completed_at: `${dateStr}T12:00:00Z`,
+          updated_at: `${dateStr}T12:00:00Z`,
+          invocations: [
+            {
+              id: `inv-${id}`,
+              parent_id: null,
+              role: 'coder',
+              model: 'model-x',
+              user: 'engineer',
+              started_at: `${dateStr}T08:00:00Z`,
+              completed_at: `${dateStr}T12:00:00Z`,
+              active_duration_seconds: 3600,
+              turns: 4,
+              compactions: 0,
+              tokens: { input: 100, output: 50, cache_read: 20, reasoning: 0, peak_context: 500 },
+              cost_usd: 0.05,
+            },
+          ],
+          tools: [],
+          events: [],
+          code: {
+            lines_added: added,
+            lines_deleted: deleted,
+            files_changed: 2,
+            prod_lines_added: added,
+            prod_lines_deleted: deleted,
+            test_lines_added: 0,
+            test_lines_deleted: 0,
+            sdlc_iterations: 1,
+          },
+        },
+        workflow_efficiency: {
+          sdlc_iterations: 1,
+          active_duration_seconds: 3600,
+          active_duration_formatted: '1h',
+          role_effort_distribution_pct: {},
+          subagent_turn_velocity: { avg_turns_per_invocation: 4, peak_turns: 4, by_role: {} },
+          test_to_production_ratio: { ratio: '1.0', test_lines_added: 0, prod_lines_added: added },
+          reasoning_tokens: 0,
+          reasoning_ratio_pct: 0,
+          code_delivered: { lines_added: added, lines_deleted: deleted, files_changed: 2 },
+          tool_execution: { total_calls: 0, errors_and_corrections: 0, success_rate_pct: 100 },
+          context_window_health: {
+            healthy_ceiling_tokens: 200000,
+            status: 'HEALTHY',
+            orchestrator_peak_tokens: 0,
+            orchestrator_saturation_pct: 0,
+            subagents_peak_tokens: 0,
+            subagents_peak_role: 'coder',
+            compactions: 0,
+            peak_by_role: {},
+          },
+        },
+        threads: [],
+        totals: {
+          invocations: 1,
+          input_tokens: 100,
+          output_tokens: 50,
+          cache_read_tokens: 20,
+          cache_hit_rate_pct: 16.7,
+          cost_usd: 0.05,
+          peak_context_tokens: 500,
+          context_health: 'HEALTHY',
+        },
+        roles: [],
+        models: [],
+      });
+
+      const ledgers: AgenticMetricsLedger[] = [
+        makeLedger('T-1', '2026-10-15', 1000, 200), // Net: +800, Cum Net: +800
+        makeLedger('T-2', '2026-10-16', 100, 1200), // Net: -1100, Cum Net: -300
+        makeLedger('T-3', '2026-10-17', 0, 0),       // Net: 0, Cum Net: -300
+        makeLedger('T-4', '2026-10-18', 500, 50),   // Net: +450, Cum Net: +150
+      ];
+
+      const daily = aggregateMetricsOverTime(ledgers, 'daily');
+      expect(daily).toHaveLength(4);
+
+      // Bucket 0
+      expect(daily[0]?.net_lines_added).toBe(800);
+      expect(daily[0]?.cumulative_lines_added).toBe(1000);
+      expect(daily[0]?.cumulative_lines_deleted).toBe(200);
+      expect(daily[0]?.cumulative_net_lines_added).toBe(800);
+
+      // Bucket 1 (cumulative dips negative)
+      expect(daily[1]?.net_lines_added).toBe(-1100);
+      expect(daily[1]?.cumulative_lines_added).toBe(1100);
+      expect(daily[1]?.cumulative_lines_deleted).toBe(1400);
+      expect(daily[1]?.cumulative_net_lines_added).toBe(-300);
+
+      // Bucket 2 (neutral churn)
+      expect(daily[2]?.net_lines_added).toBe(0);
+      expect(daily[2]?.cumulative_lines_added).toBe(1100);
+      expect(daily[2]?.cumulative_lines_deleted).toBe(1400);
+      expect(daily[2]?.cumulative_net_lines_added).toBe(-300);
+
+      // Bucket 3 (recovers positive)
+      expect(daily[3]?.net_lines_added).toBe(450);
+      expect(daily[3]?.cumulative_lines_added).toBe(1600);
+      expect(daily[3]?.cumulative_lines_deleted).toBe(1450);
+      expect(daily[3]?.cumulative_net_lines_added).toBe(150);
+
+      // Invariant: across all buckets, cumulative_net_lines_added === cumulative_lines_added - cumulative_lines_deleted
+      for (const b of daily) {
+        expect(b.cumulative_net_lines_added).toBe(b.cumulative_lines_added - b.cumulative_lines_deleted);
+        expect(b.net_lines_added).toBe(b.lines_added - b.lines_deleted);
+      }
     });
   });
 });

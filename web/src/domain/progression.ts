@@ -274,6 +274,7 @@ export function aggregateMetricsOverTime(
       cumulative_output_tokens: runningCumOutput,
       cumulative_lines_added: runningCumLinesAdded,
       cumulative_lines_deleted: runningCumLinesDeleted,
+      cumulative_net_lines_added: runningCumLinesAdded - runningCumLinesDeleted,
       cumulative_invocations: runningCumInvocations,
     });
   }

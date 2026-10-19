@@ -558,3 +558,47 @@ export function formatChartAxisTimestamp(
   }
   return timestamp;
 }
+
+export function formatCompactCount(
+  count: number,
+  options?: { showSign?: boolean; explicitPlus?: boolean }
+): string {
+  if (!Number.isFinite(count)) {
+    return '0';
+  }
+  const explicitPlus = Boolean(options?.explicitPlus || options?.showSign);
+  if (count === 0) {
+    return explicitPlus ? '+0' : '0';
+  }
+
+  const isNegative = count < 0;
+  const sign = isNegative ? '-' : explicitPlus ? '+' : '';
+  const abs = Math.abs(count);
+
+  if (abs >= 1_000_000) {
+    const val = Math.round((abs / 1_000_000) * 10) / 10;
+    const formatted = Number.isInteger(val) ? val.toFixed(0) : val.toFixed(1);
+    return `${sign}${formatted}M`;
+  }
+
+  if (abs >= 1_000) {
+    const val = Math.round((abs / 1_000) * 10) / 10;
+    if (val >= 1000) {
+      return `${sign}1M`;
+    }
+    const formatted = Number.isInteger(val) ? val.toFixed(0) : val.toFixed(1);
+    return `${sign}${formatted}k`;
+  }
+
+  return `${sign}${Math.round(abs)}`;
+}
+
+export function formatLinesCompact(
+  lines: number,
+  options?: { explicitPlus?: boolean }
+): string {
+  if (!Number.isFinite(lines)) {
+    return '0';
+  }
+  return formatCompactCount(Math.round(lines), options);
+}

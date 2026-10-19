@@ -231,6 +231,7 @@ type TimeBucketMetric struct {
 	CumulativeOutputTokens  int64   `json:"cumulative_output_tokens"`
 	CumulativeLinesAdded    int64   `json:"cumulative_lines_added"`
 	CumulativeLinesDeleted  int64   `json:"cumulative_lines_deleted"`
+	CumulativeNetLinesAdded int64   `json:"cumulative_net_lines_added"`
 	CumulativeInvocations   int64   `json:"cumulative_invocations"`
 }
 

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -2323,6 +2324,7 @@ func TestProgressionHandler(t *testing.T) {
 			"minutely",
 			"secondly",
 			"yearly",
+			"cumulative",
 		}
 		for _, g := range invalidGranularities {
 			req := httptest.NewRequest(http.MethodGet, "/api/progression?granularity="+g, nil)
@@ -2339,6 +2341,27 @@ func TestProgressionHandler(t *testing.T) {
 			if errResp.Error != "bad_request" {
 				t.Errorf("expected error code 'bad_request', got %s", errResp.Error)
 			}
+		}
+	})
+
+	t.Run("granularity=cumulative returns 400 Bad Request with proper error structure", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/progression?granularity=cumulative", nil)
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400 Bad Request, got %d (body: %s)", rec.Code, rec.Body.String())
+		}
+		var errResp adaptershttp.ErrorResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &errResp); err != nil {
+			t.Fatalf("failed unmarshaling error response: %v", err)
+		}
+		if errResp.Error != "bad_request" {
+			t.Errorf("expected error code 'bad_request', got %q", errResp.Error)
+		}
+		expectedMsg := `invalid granularity "cumulative": must be hourly, daily, or weekly`
+		if errResp.Message != expectedMsg {
+			t.Errorf("expected error message %q, got %q", expectedMsg, errResp.Message)
 		}
 	})
 
@@ -2488,6 +2511,140 @@ func TestProgressionHandler(t *testing.T) {
 
 			if rec.Code != http.StatusOK {
 				t.Errorf("expected 200 OK for %s, got %d", path, rec.Code)
+			}
+		}
+	})
+}
+
+func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Seed workspace with authentic multi-turn records
+	wsDir := filepath.Join(tempDir, "AL-TEST-34")
+	if err := os.MkdirAll(wsDir, 0755); err != nil {
+		t.Fatalf("failed creating test workspace: %v", err)
+	}
+
+	rawJSON := `{
+  "ticket_id": "AL-TEST-34",
+  "ticket_type": "feature",
+  "started_at": "2026-10-15T09:00:00Z",
+  "completed_at": "2026-10-15T18:00:00Z",
+  "updated_at": "2026-10-15T18:00:00Z",
+  "code": {
+    "lines_added": 250,
+    "lines_deleted": 75,
+    "files_changed": 5
+  },
+  "facts": {
+    "invocations": [
+      {
+        "id": "inv-1",
+        "started_at": "2026-10-15T09:00:00Z",
+        "completed_at": "2026-10-15T10:00:00Z",
+        "tokens": {
+          "input": 1500,
+          "output": 350,
+          "cache_read": 1200,
+          "reasoning": 80
+        },
+        "cost_usd": 0.05
+      }
+    ]
+  }
+}`
+	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(rawJSON), 0644); err != nil {
+		t.Fatalf("failed writing test metrics: %v", err)
+	}
+
+	server := adaptershttp.NewServer(tempDir, fstest.MapFS{})
+
+	t.Run("hostile granularity inputs rejecting cumulative and arbitrary strings with HTTP 400", func(t *testing.T) {
+		hostileGranularities := []string{
+			"cumulative",
+			"CUMULATIVE",
+			"Cumulative",
+			"cUmUlAtIvE",
+			"  cumulative  ",
+			"%20%20cumulative%20%20",
+			"yearly",
+			"minutely",
+			"secondly",
+			"monthly",
+			"decade",
+			"all",
+			"none",
+			"../../etc/passwd",
+			"%00nullbyte",
+			"<script>alert(1)</script>",
+			"hourly;DROP TABLE;",
+		}
+
+		for _, g := range hostileGranularities {
+			req := httptest.NewRequest(http.MethodGet, "/api/progression?granularity="+url.QueryEscape(g), nil)
+			rec := httptest.NewRecorder()
+			server.Handler().ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("granularity %q: expected 400 Bad Request, got %d (body: %s)", g, rec.Code, rec.Body.String())
+				continue
+			}
+
+			var errResp adaptershttp.ErrorResponse
+			if err := json.Unmarshal(rec.Body.Bytes(), &errResp); err != nil {
+				t.Errorf("granularity %q: failed unmarshaling error response: %v", g, err)
+				continue
+			}
+			if errResp.Error != "bad_request" {
+				t.Errorf("granularity %q: expected error code 'bad_request', got %q", g, errResp.Error)
+			}
+			if !strings.Contains(errResp.Message, "must be hourly, daily, or weekly") {
+				t.Errorf("granularity %q: expected message to state must be hourly, daily, or weekly, got %q", g, errResp.Message)
+			}
+		}
+	})
+
+	t.Run("valid granularities return 200 OK and CumulativeNetLinesAdded is correctly calculated", func(t *testing.T) {
+		validGranularities := []string{"hourly", "daily", "weekly", ""}
+
+		for _, g := range validGranularities {
+			url := "/api/progression"
+			if g != "" {
+				url += "?granularity=" + g
+			}
+			req := httptest.NewRequest(http.MethodGet, url, nil)
+			rec := httptest.NewRecorder()
+			server.Handler().ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200 OK for %s, got %d (body: %s)", url, rec.Code, rec.Body.String())
+			}
+
+			var buckets []domain.TimeBucketMetric
+			if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
+				t.Fatalf("failed unmarshaling progression response for %s: %v", url, err)
+			}
+
+			if len(buckets) != 1 {
+				t.Fatalf("expected 1 bucket for %s, got %d", url, len(buckets))
+			}
+
+			b := buckets[0]
+			if b.LinesAdded != 250 {
+				t.Errorf("[%s] expected linesAdded 250, got %d", url, b.LinesAdded)
+			}
+			if b.LinesDeleted != 75 {
+				t.Errorf("[%s] expected linesDeleted 75, got %d", url, b.LinesDeleted)
+			}
+			if b.NetLinesAdded != 175 {
+				t.Errorf("[%s] expected NetLinesAdded 175, got %d", url, b.NetLinesAdded)
+			}
+			if b.CumulativeNetLinesAdded != 175 {
+				t.Errorf("[%s] expected CumulativeNetLinesAdded 175, got %d", url, b.CumulativeNetLinesAdded)
+			}
+			if b.CumulativeNetLinesAdded != b.CumulativeLinesAdded-b.CumulativeLinesDeleted {
+				t.Errorf("[%s] CumulativeNetLinesAdded mismatch: %d != %d - %d",
+					url, b.CumulativeNetLinesAdded, b.CumulativeLinesAdded, b.CumulativeLinesDeleted)
 			}
 		}
 	})

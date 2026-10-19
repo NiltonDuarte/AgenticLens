@@ -7,6 +7,7 @@ import {
   filterLedgersByPrefixes,
   filterLedgersByTicketTypes,
   formatCurrencyUSD,
+  formatLinesCompact,
   formatPercentage,
   formatTokensK,
   HEALTHY_CEILING_TOKENS,
@@ -220,8 +221,9 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
         cache_read_tokens: b.cache_read_tokens,
         cache_hit_rate_pct: b.cache_hit_rate_pct,
         lines_added: b.lines_added,
-        lines_deleted: b.lines_deleted,
+        lines_deleted: -Math.abs(b.lines_deleted),
         net_lines_added: b.net_lines_added,
+        cumulative_net_lines_added: b.cumulative_net_lines_added,
         peak_context_tokens: b.peak_context_tokens,
       })),
     [buckets]
@@ -319,13 +321,6 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
               onClick={() => setGranularity('weekly')}
             >
               Weekly
-            </button>
-            <button
-              type="button"
-              className={`granularity-btn ${granularity === 'cumulative' ? 'active' : ''}`}
-              onClick={() => setGranularity('cumulative')}
-            >
-              Cumulative
             </button>
           </div>
         </div>
@@ -426,41 +421,26 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
         <div className="progression-charts-grid">
           {/* Chart 1: Financial & Invocations */}
           <TrendChart
-            title={
-              granularity === 'cumulative'
-                ? 'Cumulative Financial Trajectory ($ USD)'
-                : 'Financial Spend & Cumulative Trajectory ($ USD)'
-            }
+            title="Financial Spend & Cumulative Trajectory ($ USD)"
             height={260}
             data={chartData}
             granularity={granularity}
             tooltip="Historical model inference spend per time period alongside cumulative trajectory in US dollars."
             valueFormatter={(v) => formatCurrencyUSD(v)}
-            series={
-              granularity === 'cumulative'
-                ? [
-                    {
-                      key: 'cumulative_cost_usd',
-                      label: 'Cumulative Spend',
-                      color: CHART_COLORS.spendCumulative,
-                      type: 'area',
-                    },
-                  ]
-                : [
-                    {
-                      key: 'cost_usd',
-                      label: 'Period Spend',
-                      color: CHART_COLORS.spendPeriod,
-                      type: 'bar',
-                    },
-                    {
-                      key: 'cumulative_cost_usd',
-                      label: 'Cumulative Spend',
-                      color: CHART_COLORS.spendCumulative,
-                      type: 'line',
-                    },
-                  ]
-            }
+            series={[
+              {
+                key: 'cost_usd',
+                label: 'Period Spend',
+                color: CHART_COLORS.spendPeriod,
+                type: 'bar',
+              },
+              {
+                key: 'cumulative_cost_usd',
+                label: 'Cumulative Spend',
+                color: CHART_COLORS.spendCumulative,
+                type: 'line',
+              },
+            ]}
           />
 
           {/* Chart 2: Token Throughput */}
@@ -533,7 +513,10 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             data={chartData}
             granularity={granularity}
             tooltip="Volume of production and test code lines added, deleted, and net code growth delivered per time bucket."
-            valueFormatter={(v) => `${v.toLocaleString()} lines`}
+            valueFormatter={(v) => `${v > 0 ? '+' : ''}${v.toLocaleString()} lines`}
+            yAxisFormatter={(v) => (v > 0 ? `+${formatLinesCompact(v)}` : formatLinesCompact(v))}
+            integerTicks={true}
+            divergingZeroBaseline={true}
             series={[
               {
                 key: 'lines_added',
@@ -548,8 +531,8 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
                 type: 'bar',
               },
               {
-                key: 'net_lines_added',
-                label: 'Net Lines Growth',
+                key: 'cumulative_net_lines_added',
+                label: 'Cumulative Net Growth',
                 color: CHART_COLORS.linesNet,
                 type: 'line',
               },

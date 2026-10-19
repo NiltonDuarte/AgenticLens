@@ -104,7 +104,7 @@ describe('MetricProgression View Component', () => {
     expect(container.querySelector('.chart-tooltip')).not.toBeInTheDocument();
   });
 
-  it('toggles granularity and updates chart titles and series modes', async () => {
+  it('toggles granularity and verifies cumulative option is removed', async () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
@@ -117,19 +117,13 @@ describe('MetricProgression View Component', () => {
       expect(screen.getByText('Financial Spend & Cumulative Trajectory ($ USD)')).toBeInTheDocument();
     });
 
-    // Toggle to Cumulative
-    const cumulativeBtn = screen.getByRole('button', { name: /^cumulative$/i });
-    fireEvent.click(cumulativeBtn);
-    expect(cumulativeBtn).toHaveClass('active');
+    // Verify Cumulative button is strictly not present
+    expect(screen.queryByRole('button', { name: /^cumulative$/i })).toBeNull();
 
-    // Chart title must reflect cumulative mode
-    expect(
-      screen.getByText('Cumulative Financial Trajectory ($ USD)')
-    ).toBeInTheDocument();
-
-    // Cumulative chart uses area fill
-    const areaPaths = container.querySelectorAll('path[fill-opacity="0.15"]');
-    expect(areaPaths.length).toBeGreaterThan(0);
+    // Toggle to Hourly
+    const hourlyBtn = screen.getByRole('button', { name: /^hourly$/i });
+    fireEvent.click(hourlyBtn);
+    expect(hourlyBtn).toHaveClass('active');
 
     // Toggle to Weekly
     const weeklyBtn = screen.getByRole('button', { name: /^weekly$/i });
@@ -141,6 +135,13 @@ describe('MetricProgression View Component', () => {
     fireEvent.click(dailyBtn);
     expect(dailyBtn).toHaveClass('active');
     expect(screen.getByText('Financial Spend & Cumulative Trajectory ($ USD)')).toBeInTheDocument();
+
+    // Verify Chart 4 has zero baseline and legend labels
+    expect(screen.getByText('Delivered Code Line Churn & Net Growth')).toBeInTheDocument();
+    expect(screen.getByText('Lines Added (+)')).toBeInTheDocument();
+    expect(screen.getByText('Lines Deleted (-)')).toBeInTheDocument();
+    expect(screen.getByText('Cumulative Net Growth')).toBeInTheDocument();
+    expect(container.querySelector('line.chart-zero-baseline')).toBeInTheDocument();
   });
 
   it('renders empty notice when ledgers have zero matches in the selected window', async () => {
@@ -180,7 +181,7 @@ describe('MetricProgression View Component', () => {
     });
   });
 
-  it('toggles granularity between daily, weekly, and cumulative', async () => {
+  it('toggles granularity between hourly, daily, and weekly', async () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
@@ -193,15 +194,18 @@ describe('MetricProgression View Component', () => {
       expect(screen.getByText('Total Invocations')).toBeInTheDocument();
     });
 
+    // Verify Cumulative button is absent
+    expect(screen.queryByRole('button', { name: /^cumulative$/i })).toBeNull();
+
+    // Toggle to Hourly
+    const hourlyBtn = screen.getByRole('button', { name: /^hourly$/i });
+    fireEvent.click(hourlyBtn);
+    expect(hourlyBtn).toHaveClass('active');
+
     // Toggle to Weekly
     const weeklyBtn = screen.getByRole('button', { name: /^weekly$/i });
     fireEvent.click(weeklyBtn);
     expect(weeklyBtn).toHaveClass('active');
-
-    // Toggle to Cumulative
-    const cumulativeBtn = screen.getByRole('button', { name: /^cumulative$/i });
-    fireEvent.click(cumulativeBtn);
-    expect(cumulativeBtn).toHaveClass('active');
 
     // Toggle back to Daily
     const dailyBtn = screen.getByRole('button', { name: /^daily$/i });
@@ -346,21 +350,6 @@ describe('MetricProgression View Component', () => {
     expect(
       screen.getByText(
         'Peak active context tokens per time bucket measured against the standard 200,000 token healthy context ceiling.'
-      )
-    ).toBeInTheDocument();
-
-    // Toggle granularity to cumulative and verify Chart 1 updates title and tooltip accessibility
-    const cumulativeBtn = screen.getByRole('button', { name: 'Cumulative' });
-    fireEvent.click(cumulativeBtn);
-
-    expect(
-      screen.getByRole('button', {
-        name: 'Information about Cumulative Financial Trajectory ($ USD)',
-      })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'Historical model inference spend per time period alongside cumulative trajectory in US dollars.'
       )
     ).toBeInTheDocument();
   });

@@ -23,11 +23,15 @@ export interface TrendChartProps {
   readonly data: readonly Readonly<Record<string, number | string>>[];
   readonly height?: number;
   readonly valueFormatter?: (val: number) => string;
+  readonly yAxisFormatter?: (val: number) => string;
   readonly xAxisFormatter?: (val: string) => string;
   readonly granularity?: TimeGranularity;
   readonly referenceLines?: readonly ChartReferenceLine[];
   readonly emptyMessage?: string;
   readonly yAxisMin?: number;
+  readonly yAxisMax?: number;
+  readonly integerTicks?: boolean;
+  readonly divergingZeroBaseline?: boolean;
   readonly tooltip?: string | undefined;
 }
 
@@ -37,11 +41,15 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   data,
   height = 240,
   valueFormatter = (val) => val.toLocaleString(),
+  yAxisFormatter,
   xAxisFormatter,
   granularity,
   referenceLines = [],
   emptyMessage = 'No progression data available in this time window',
-  yAxisMin = 0,
+  yAxisMin,
+  yAxisMax,
+  integerTicks = false,
+  divergingZeroBaseline = false,
   tooltip,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -69,11 +77,15 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   const chartHeight = height - padding.top - padding.bottom;
 
   let maxDataValue = 0;
+  let minDataValue = 0;
   for (const row of data) {
     for (const s of series) {
       const val = typeof row[s.key] === 'number' ? (row[s.key] as number) : 0;
       if (val > maxDataValue) {
         maxDataValue = val;
+      }
+      if (val < minDataValue) {
+        minDataValue = val;
       }
     }
   }
@@ -82,10 +94,36 @@ export const TrendChart: React.FC<TrendChartProps> = ({
     if (ref.value > maxDataValue) {
       maxDataValue = ref.value;
     }
+    if (ref.value < minDataValue) {
+      minDataValue = ref.value;
+    }
   }
 
-  const maxY = maxDataValue > 0 ? maxDataValue * 1.12 : 10;
-  const minY = yAxisMin;
+  const isDiverging = divergingZeroBaseline || (minDataValue < 0 && yAxisMin === undefined);
+
+  let minY: number;
+  let maxY: number;
+
+  if (isDiverging) {
+    const maxAbs = Math.max(Math.abs(minDataValue), Math.abs(maxDataValue));
+    let ceiling = maxAbs > 0 ? maxAbs * 1.15 : 10;
+    if (integerTicks) {
+      ceiling = Math.ceil(ceiling);
+      if (ceiling % 2 !== 0) {
+        ceiling += 1;
+      }
+    }
+    minY = yAxisMin !== undefined ? yAxisMin : -ceiling;
+    maxY = yAxisMax !== undefined ? yAxisMax : ceiling;
+  } else {
+    minY = yAxisMin !== undefined ? yAxisMin : 0;
+    maxY = yAxisMax !== undefined ? yAxisMax : (maxDataValue > 0 ? maxDataValue * 1.12 : 10);
+    if (integerTicks) {
+      minY = Math.floor(minY);
+      maxY = Math.ceil(maxY);
+    }
+  }
+
   const yRange = maxY - minY > 0 ? maxY - minY : 1;
 
   const getYCoord = (val: number): number => {
@@ -104,8 +142,11 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   const yTicksCount = 4;
   const yTicks: number[] = [];
   for (let i = 0; i <= yTicksCount; i++) {
-    yTicks.push(minY + (i / yTicksCount) * (maxY - minY));
+    const rawVal = minY + (i / yTicksCount) * (maxY - minY);
+    yTicks.push(integerTicks ? Math.round(rawVal) : rawVal);
   }
+
+  const formatYTick = yAxisFormatter ?? valueFormatter;
 
   const xTickStep = Math.max(1, Math.ceil(data.length / 6));
 
@@ -164,11 +205,24 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                   textAnchor="end"
                   className="chart-axis-label"
                 >
-                  {valueFormatter(tickVal)}
+                  {formatYTick(tickVal)}
                 </text>
               </g>
             );
           })}
+
+          {/* Prominent Zero Baseline */}
+          {(divergingZeroBaseline || (minY < 0 && maxY > 0)) && (
+            <line
+              x1={padding.left}
+              y1={getYCoord(0)}
+              x2={svgWidth - padding.right}
+              y2={getYCoord(0)}
+              stroke="#94a3b8"
+              strokeWidth="1.5"
+              className="chart-zero-baseline"
+            />
+          )}
 
           {/* Reference Lines */}
           {referenceLines.map((ref, idx) => {
@@ -232,8 +286,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                         ? padding.left + chartWidth / 2
                         : padding.left + (i / (data.length - 1)) * chartWidth;
                     const x = xCenter - barWidth / 2;
-                    const y = getYCoord(val);
-                    const barH = Math.max(0, padding.top + chartHeight - y);
+                    const yVal = getYCoord(val);
+                    const yZero = getYCoord(0);
+                    const y = Math.min(yVal, yZero);
+                    const barH = Math.max(0, Math.abs(yVal - yZero));
                     return (
                       <rect
                         key={`bar-${s.key}-${i}`}
