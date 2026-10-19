@@ -1,4 +1,4 @@
-# Pull Request: feat(progression): eliminate cumulative granularity and implement bidirectional code churn visualization (AL-34)
+# feat(progression): eliminate cumulative granularity and implement bidirectional code churn visualization (AL-34)
 
 ## Summary of Changes
 
