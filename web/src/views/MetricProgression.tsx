@@ -21,6 +21,8 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [granularity, setGranularity] = useState<TimeGranularity>('daily');
   const [preset, setPreset] = useState<TimeWindowPreset>('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +51,12 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
       return { startDate: null, endDate: null };
     }
 
+    if (preset === 'custom') {
+      const s = customStart.trim() || null;
+      const e = customEnd.trim() || null;
+      return { startDate: s, endDate: e };
+    }
+
     // Find the latest timestamp across ledgers as the reference anchor
     let latestMs = 0;
     for (const l of ledgers) {
@@ -64,6 +72,15 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
     }
 
     const refDate = new Date(latestMs);
+
+    if (preset === '1d') {
+      const startMs = refDate.getTime() - 24 * 3600_000;
+      return {
+        startDate: new Date(startMs).toISOString(),
+        endDate: refDate.toISOString(),
+      };
+    }
+
     const endStr = refDate.toISOString().slice(0, 10);
 
     let days = 7;
@@ -74,7 +91,16 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
     const startStr = new Date(startMs).toISOString().slice(0, 10);
 
     return { startDate: startStr, endDate: endStr };
-  }, [preset, ledgers]);
+  }, [preset, ledgers, customStart, customEnd]);
+
+  const isCustomRangeInverted = useMemo(() => {
+    if (preset !== 'custom' || !customStart || !customEnd) {
+      return false;
+    }
+    const s = Date.parse(customStart);
+    const e = Date.parse(customEnd);
+    return !Number.isNaN(s) && !Number.isNaN(e) && s > e;
+  }, [preset, customStart, customEnd]);
 
   // Compute progression buckets using pure domain algorithm
   const buckets = useMemo(() => {
@@ -176,6 +202,13 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             </button>
             <button
               type="button"
+              className={`preset-btn ${preset === '1d' ? 'active' : ''}`}
+              onClick={() => setPreset('1d')}
+            >
+              24 Hours
+            </button>
+            <button
+              type="button"
               className={`preset-btn ${preset === '7d' ? 'active' : ''}`}
               onClick={() => setPreset('7d')}
             >
@@ -195,12 +228,26 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             >
               90 Days
             </button>
+            <button
+              type="button"
+              className={`preset-btn ${preset === 'custom' ? 'active' : ''}`}
+              onClick={() => setPreset('custom')}
+            >
+              Custom
+            </button>
           </div>
         </div>
 
         <div className="controls-right">
           <span className="control-label">Granularity:</span>
           <div className="granularity-toggle-group">
+            <button
+              type="button"
+              className={`granularity-btn ${granularity === 'hourly' ? 'active' : ''}`}
+              onClick={() => setGranularity('hourly')}
+            >
+              Hourly
+            </button>
             <button
               type="button"
               className={`granularity-btn ${granularity === 'daily' ? 'active' : ''}`}
@@ -225,6 +272,39 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
           </div>
         </div>
       </div>
+
+      {/* Custom Datetime Input Controls */}
+      {preset === 'custom' && (
+        <div className="custom-datetime-bar">
+          <label className="datetime-input-group">
+            <span className="control-label">From:</span>
+            <input
+              type="datetime-local"
+              className="datetime-input"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              placeholder="YYYY-MM-DDTHH:mm"
+              aria-label="Start Date and Time"
+            />
+          </label>
+          <label className="datetime-input-group">
+            <span className="control-label">To:</span>
+            <input
+              type="datetime-local"
+              className="datetime-input"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              placeholder="YYYY-MM-DDTHH:mm"
+              aria-label="End Date and Time"
+            />
+          </label>
+          {isCustomRangeInverted && (
+            <span className="datetime-warning">
+              Start datetime cannot be after End datetime.
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Active Window KPI Summary Banner */}
       <div className="kpi-grid">
@@ -276,6 +356,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             }
             height={260}
             data={chartData}
+            granularity={granularity}
             tooltip="Historical model inference spend per time period alongside cumulative trajectory in US dollars."
             valueFormatter={(v) => formatCurrencyUSD(v)}
             series={
@@ -310,6 +391,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             title="Token Volume Distribution"
             height={260}
             data={chartData}
+            granularity={granularity}
             tooltip="Distribution of token throughput across input prompts, output completions, and key-value prompt cache reads."
             valueFormatter={(v) => formatTokensK(v)}
             series={[
@@ -339,6 +421,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             title="Prompt Cache Hit Rate Trajectory (%)"
             height={260}
             data={chartData}
+            granularity={granularity}
             tooltip="Percentage of prompt tokens served from prompt cache per bucket against baseline (50%) and target (80%) thresholds."
             yAxisMin={0}
             valueFormatter={(v) => `${v.toFixed(1)}%`}
@@ -371,6 +454,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             title="Delivered Code Line Churn & Net Growth"
             height={260}
             data={chartData}
+            granularity={granularity}
             tooltip="Volume of production and test code lines added, deleted, and net code growth delivered per time bucket."
             valueFormatter={(v) => `${v.toLocaleString()} lines`}
             series={[
@@ -400,6 +484,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
             title="Peak Context Window Saturation vs Ceiling"
             height={260}
             data={chartData}
+            granularity={granularity}
             tooltip="Peak active context tokens per time bucket measured against the standard 200,000 token healthy context ceiling."
             valueFormatter={(v) => `${formatTokensK(v)} tokens`}
             referenceLines={[

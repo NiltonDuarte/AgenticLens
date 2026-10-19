@@ -40,6 +40,14 @@ func parseDateBoundary(param string, isEnd bool) (*time.Time, error) {
 		utc := t.UTC()
 		return &utc, nil
 	}
+	if t, err := time.Parse("2006-01-02T15:04", clean); err == nil {
+		utc := t.UTC()
+		if isEnd {
+			endOfMin := time.Date(utc.Year(), utc.Month(), utc.Day(), utc.Hour(), utc.Minute(), 59, 999999999, time.UTC)
+			return &endOfMin, nil
+		}
+		return &utc, nil
+	}
 
 	return nil, fmt.Errorf("invalid date format %q: expected YYYY-MM-DD or RFC3339", param)
 }
@@ -60,7 +68,13 @@ func resolveTemporalFilter(windowParam, sinceParam, untilParam string) (*time.Ti
 
 	if windowParam != "" {
 		window := domain.ParseTimeWindow(windowParam)
-		if window != domain.TimeWindowAll {
+		if window == domain.TimeWindow1D {
+			now := time.Now().UTC()
+			refStart := now.Add(-24 * time.Hour)
+			refEnd := now
+			return &refStart, &refEnd, nil
+		}
+		if window != domain.TimeWindowAll && window != domain.TimeWindowCustom {
 			var days int
 			switch window {
 			case domain.TimeWindow7D:
@@ -90,7 +104,13 @@ func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 		query := r.URL.Query()
 		windowParam := query.Get("window")
 		sinceParam := query.Get("since")
+		if sinceParam == "" {
+			sinceParam = query.Get("startDate")
+		}
 		untilParam := query.Get("until")
+		if untilParam == "" {
+			untilParam = query.Get("endDate")
+		}
 		sortParam := query.Get("sort")
 		orderParam := query.Get("order")
 
@@ -179,7 +199,13 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 		query := r.URL.Query()
 		windowParam := query.Get("window")
 		sinceParam := query.Get("since")
+		if sinceParam == "" {
+			sinceParam = query.Get("startDate")
+		}
 		untilParam := query.Get("until")
+		if untilParam == "" {
+			untilParam = query.Get("endDate")
+		}
 
 		since, until, err := resolveTemporalFilter(windowParam, sinceParam, untilParam)
 		if err != nil {
@@ -190,6 +216,44 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 		ledgers := domain.FilterLedgersByCompletionDate(report.Ledgers, since, until)
 		summary := domain.CalculateFleetSummary(ledgers)
 		WriteFleetResponse(w, summary)
+	}
+}
+
+// ProgressionHandler handles GET /api/progression
+func ProgressionHandler(workspacesDir string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		report := adapters.ScanWorkspaces(workspacesDir)
+
+		query := r.URL.Query()
+		windowParam := query.Get("window")
+		granularityParam := query.Get("granularity")
+		if granularityParam == "" {
+			granularityParam = string(domain.GranularityDaily)
+		}
+
+		granularity, ok := domain.ParseTimeGranularity(granularityParam)
+		if !ok {
+			WriteError(w, http.StatusBadRequest, "bad_request", fmt.Sprintf("invalid granularity %q: must be hourly, daily, weekly, or cumulative", granularityParam))
+			return
+		}
+
+		startDateParam := query.Get("startDate")
+		if startDateParam == "" {
+			startDateParam = query.Get("since")
+		}
+		endDateParam := query.Get("endDate")
+		if endDateParam == "" {
+			endDateParam = query.Get("until")
+		}
+
+		since, until, err := resolveTemporalFilter(windowParam, startDateParam, endDateParam)
+		if err != nil {
+			WriteError(w, http.StatusBadRequest, "bad_request", err.Error())
+			return
+		}
+
+		buckets := domain.AggregateMetricsOverTime(report.Ledgers, string(granularity), since, until)
+		WriteProgressionResponse(w, buckets)
 	}
 }
 

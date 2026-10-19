@@ -394,6 +394,22 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 		}
 	})
 
+	t.Run("1d window returns within 24 hours", func(t *testing.T) {
+		dateWithin24h := "2026-10-17T02:00:00Z"
+		dateOlderThan24h := "2026-10-16T10:00:00Z"
+		oneDayLedgers := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("T-RECENT"), UpdatedAt: dateWithin24h},
+			{TicketID: ptr("T-OLD-24H"), UpdatedAt: dateOlderThan24h},
+		}
+		res := domain.FilterLedgersByTimeWindow(oneDayLedgers, domain.TimeWindow1D, ref)
+		if len(res) != 1 {
+			t.Fatalf("expected 1 ledger, got %d", len(res))
+		}
+		if *res[0].TicketID != "T-RECENT" {
+			t.Errorf("expected T-RECENT, got %s", *res[0].TicketID)
+		}
+	})
+
 	t.Run("empty input returns empty slice", func(t *testing.T) {
 		res := domain.FilterLedgersByTimeWindow(nil, domain.TimeWindow7D, ref)
 		if len(res) != 0 {
@@ -3191,6 +3207,516 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 		_ = domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
 		if *items[0].TicketID != "AL-1" || *items[1].TicketID != "AL-2" {
 			t.Errorf("original slice was modified!")
+		}
+	})
+}
+
+func TestResolveDatePreset(t *testing.T) {
+	t.Parallel()
+	ref := time.Date(2026, 10, 19, 15, 30, 0, 0, time.UTC)
+
+	t.Run("Last 24 Hours preset", func(t *testing.T) {
+		start, end := domain.ResolveDatePreset(string(domain.TimeWindowLast24Hours), ref)
+		if start == nil || end == nil {
+			t.Fatalf("expected non-nil start and end")
+		}
+		expectedStart := ref.Add(-24 * time.Hour)
+		if !start.Equal(expectedStart) {
+			t.Errorf("expected start %v, got %v", expectedStart, *start)
+		}
+		if !end.Equal(ref) {
+			t.Errorf("expected end %v, got %v", ref, *end)
+		}
+	})
+
+	t.Run("Last 7 Days preset", func(t *testing.T) {
+		start, end := domain.ResolveDatePreset(string(domain.TimeWindowLast7Days), ref)
+		if start == nil || end == nil {
+			t.Fatalf("expected non-nil start and end")
+		}
+		refMidnight := time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC)
+		expectedStart := refMidnight.AddDate(0, 0, -7)
+		if !start.Equal(expectedStart) {
+			t.Errorf("expected start %v, got %v", expectedStart, *start)
+		}
+		if !end.Equal(refMidnight) {
+			t.Errorf("expected end %v, got %v", refMidnight, *end)
+		}
+	})
+
+	t.Run("unknown preset returns nil", func(t *testing.T) {
+		start, end := domain.ResolveDatePreset("Unknown", ref)
+		if start != nil || end != nil {
+			t.Errorf("expected nil for unknown preset")
+		}
+	})
+}
+
+func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
+	t.Parallel()
+	ts1 := "2026-10-19T10:15:00Z"
+	ts2 := "2026-10-19T10:45:00Z"
+	ts3 := "2026-10-19T11:05:00Z"
+
+	ledgers := []domain.AgenticMetricsLedger{
+		{
+			TicketID:    ptr("AL-1"),
+			CompletedAt: &ts1,
+			Facts: domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:          "inv-1",
+						CompletedAt: &ts1,
+						Tokens: domain.InvocationTokens{
+							Input:       100,
+							Output:      50,
+							CacheRead:   20,
+							PeakContext: 1000,
+						},
+						CostUSD:               0.05,
+						ActiveDurationSeconds: 10,
+					},
+					{
+						ID:          "inv-2",
+						CompletedAt: &ts2,
+						Tokens: domain.InvocationTokens{
+							Input:       200,
+							Output:      100,
+							CacheRead:   80,
+							PeakContext: 2000,
+						},
+						CostUSD:               0.10,
+						ActiveDurationSeconds: 20,
+					},
+				},
+			},
+			WorkflowEfficiency: domain.WorkflowEfficiency{
+				CodeDelivered: domain.CodeDeliveredStats{
+					LinesAdded:   50,
+					LinesDeleted: 10,
+					FilesChanged: 2,
+				},
+			},
+		},
+		{
+			TicketID:    ptr("AL-2"),
+			CompletedAt: &ts3,
+			Facts: domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:          "inv-3",
+						CompletedAt: &ts3,
+						Tokens: domain.InvocationTokens{
+							Input:       300,
+							Output:      150,
+							CacheRead:   100,
+							PeakContext: 1500,
+						},
+						CostUSD:               0.15,
+						ActiveDurationSeconds: 15,
+					},
+				},
+			},
+			WorkflowEfficiency: domain.WorkflowEfficiency{
+				CodeDelivered: domain.CodeDeliveredStats{
+					LinesAdded:   20,
+					LinesDeleted: 5,
+					FilesChanged: 1,
+				},
+			},
+		},
+	}
+
+	buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", nil, nil)
+	if len(buckets) != 2 {
+		t.Fatalf("expected 2 hourly buckets, got %d", len(buckets))
+	}
+
+	b1 := buckets[0]
+	if b1.BucketKey != "2026-10-19T10:00:00Z" {
+		t.Errorf("expected bucket key 2026-10-19T10:00:00Z, got %s", b1.BucketKey)
+	}
+	if b1.Invocations != 2 {
+		t.Errorf("expected 2 invocations in bucket 1, got %d", b1.Invocations)
+	}
+	if b1.InputTokens != 300 {
+		t.Errorf("expected 300 input tokens in bucket 1, got %d", b1.InputTokens)
+	}
+	if b1.OutputTokens != 150 {
+		t.Errorf("expected 150 output tokens in bucket 1, got %d", b1.OutputTokens)
+	}
+	if b1.CacheReadTokens != 100 {
+		t.Errorf("expected 100 cache read tokens in bucket 1, got %d", b1.CacheReadTokens)
+	}
+	if b1.CostUSD != 0.15 {
+		t.Errorf("expected 0.15 cost in bucket 1, got %f", b1.CostUSD)
+	}
+	if b1.LinesAdded != 50 {
+		t.Errorf("expected 50 lines added in bucket 1, got %d", b1.LinesAdded)
+	}
+
+	b2 := buckets[1]
+	if b2.BucketKey != "2026-10-19T11:00:00Z" {
+		t.Errorf("expected bucket key 2026-10-19T11:00:00Z, got %s", b2.BucketKey)
+	}
+	if b2.Invocations != 1 {
+		t.Errorf("expected 1 invocation in bucket 2, got %d", b2.Invocations)
+	}
+	if b2.CumulativeInvocations != 3 {
+		t.Errorf("expected cumulative 3 invocations, got %d", b2.CumulativeInvocations)
+	}
+	if b2.CumulativeInputTokens != 600 {
+		t.Errorf("expected cumulative 600 input tokens, got %d", b2.CumulativeInputTokens)
+	}
+
+	t.Run("boundary filtering by start and end timestamp", func(t *testing.T) {
+		start := time.Date(2026, 10, 19, 10, 30, 0, 0, time.UTC)
+		end := time.Date(2026, 10, 19, 10, 50, 0, 0, time.UTC)
+		filteredBuckets := domain.AggregateMetricsOverTime(ledgers, "hourly", &start, &end)
+		if len(filteredBuckets) != 1 {
+			t.Fatalf("expected 1 hourly bucket within boundary, got %d", len(filteredBuckets))
+		}
+		if filteredBuckets[0].Invocations != 1 {
+			t.Errorf("expected 1 invocation (inv-2), got %d", filteredBuckets[0].Invocations)
+		}
+	})
+}
+
+func TestParseTimeGranularity(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected domain.TimeGranularity
+		valid    bool
+	}{
+		{name: "hourly lowercase", input: "hourly", expected: domain.GranularityHourly, valid: true},
+		{name: "hourly capitalized", input: "Hourly", expected: domain.GranularityHourly, valid: true},
+		{name: "hourly uppercase", input: "HOURLY", expected: domain.GranularityHourly, valid: true},
+		{name: "daily lowercase", input: "daily", expected: domain.GranularityDaily, valid: true},
+		{name: "daily uppercase", input: "DAILY", expected: domain.GranularityDaily, valid: true},
+		{name: "weekly lowercase", input: "weekly", expected: domain.GranularityWeekly, valid: true},
+		{name: "cumulative lowercase", input: "cumulative", expected: domain.GranularityCumulative, valid: true},
+		{name: "whitespace padded", input: "  hourly  ", expected: domain.GranularityHourly, valid: true},
+		{name: "invalid minutely", input: "minutely", expected: "", valid: false},
+		{name: "invalid seconds", input: "seconds", expected: "", valid: false},
+		{name: "empty string", input: "", expected: "", valid: false},
+		{name: "whitespace only", input: "   ", expected: "", valid: false},
+		{name: "random word", input: "yearly", expected: "", valid: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := domain.ParseTimeGranularity(tt.input)
+			if ok != tt.valid {
+				t.Fatalf("ParseTimeGranularity(%q) ok = %v, want %v", tt.input, ok, tt.valid)
+			}
+			if got != tt.expected {
+				t.Errorf("ParseTimeGranularity(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseTimeWindow_AL27(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input    string
+		expected domain.TimeWindow
+	}{
+		{input: "1d", expected: domain.TimeWindow1D},
+		{input: "custom", expected: domain.TimeWindowCustom},
+		{input: "7d", expected: domain.TimeWindow7D},
+		{input: "30d", expected: domain.TimeWindow30D},
+		{input: "90d", expected: domain.TimeWindow90D},
+		{input: "all", expected: domain.TimeWindowAll},
+		{input: "unrecognized", expected: domain.TimeWindowAll},
+		{input: "", expected: domain.TimeWindowAll},
+	}
+
+	for _, tt := range tests {
+		got := domain.ParseTimeWindow(tt.input)
+		if got != tt.expected {
+			t.Errorf("ParseTimeWindow(%q) = %q, want %q", tt.input, got, tt.expected)
+		}
+	}
+}
+
+func TestFilterLedgersByTimeWindow_1D_ExactBoundaries(t *testing.T) {
+	t.Parallel()
+	ref := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	start := ref.Add(-24 * time.Hour) // 2026-10-18T12:00:00Z
+
+	tsAtStart := start.Format(time.RFC3339)
+	tsBeforeStart := start.Add(-1 * time.Second).Format(time.RFC3339)
+	tsAtEnd := ref.Format(time.RFC3339)
+	tsAfterEnd := ref.Add(1 * time.Second).Format(time.RFC3339)
+	tsInside := start.Add(12 * time.Hour).Format(time.RFC3339)
+
+	ledgers := []domain.AgenticMetricsLedger{
+		{TicketID: ptr("T-AT-START"), CompletedAt: &tsAtStart},
+		{TicketID: ptr("T-BEFORE-START"), CompletedAt: &tsBeforeStart},
+		{TicketID: ptr("T-AT-END"), CompletedAt: &tsAtEnd},
+		{TicketID: ptr("T-AFTER-END"), CompletedAt: &tsAfterEnd},
+		{TicketID: ptr("T-INSIDE"), CompletedAt: &tsInside},
+		{TicketID: ptr("T-NO-DATES")},
+	}
+
+	filtered := domain.FilterLedgersByTimeWindow(ledgers, domain.TimeWindow1D, ref)
+	if len(filtered) != 3 {
+		t.Fatalf("expected 3 ledgers within 24h window, got %d", len(filtered))
+	}
+
+	expectedIDs := map[string]bool{
+		"T-AT-START": true,
+		"T-AT-END":   true,
+		"T-INSIDE":   true,
+	}
+	for _, l := range filtered {
+		if !expectedIDs[*l.TicketID] {
+			t.Errorf("unexpected ticket in 24h filtered list: %s", *l.TicketID)
+		}
+	}
+
+	t.Run("nil and empty inputs", func(t *testing.T) {
+		resNil := domain.FilterLedgersByTimeWindow(nil, domain.TimeWindow1D, ref)
+		if resNil == nil || len(resNil) != 0 {
+			t.Errorf("expected empty non-nil slice for nil input")
+		}
+
+		resEmpty := domain.FilterLedgersByTimeWindow([]domain.AgenticMetricsLedger{}, domain.TimeWindow1D, ref)
+		if resEmpty == nil || len(resEmpty) != 0 {
+			t.Errorf("expected empty non-nil slice for empty input")
+		}
+	})
+}
+
+func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
+	t.Parallel()
+
+	t.Run("midnight transition and chronological sorting", func(t *testing.T) {
+		tsLate := "2026-10-18T23:55:00Z"
+		tsEarly := "2026-10-19T00:05:00Z"
+		tsMid := "2026-10-19T01:30:00Z"
+
+		ledgers := []domain.AgenticMetricsLedger{
+			{
+				TicketID:    ptr("AL-MIDNIGHT"),
+				CompletedAt: &tsEarly,
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							ID:          "inv-early",
+							CompletedAt: &tsEarly,
+							Tokens:      domain.InvocationTokens{Input: 100, Output: 50, CacheRead: 25},
+							CostUSD:     0.02,
+						},
+						{
+							ID:          "inv-late",
+							CompletedAt: &tsLate,
+							Tokens:      domain.InvocationTokens{Input: 200, Output: 100, CacheRead: 50},
+							CostUSD:     0.04,
+						},
+						{
+							ID:          "inv-mid",
+							CompletedAt: &tsMid,
+							Tokens:      domain.InvocationTokens{Input: 300, Output: 150, CacheRead: 75},
+							CostUSD:     0.06,
+						},
+					},
+				},
+			},
+		}
+
+		buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", nil, nil)
+		if len(buckets) != 3 {
+			t.Fatalf("expected 3 hourly buckets, got %d", len(buckets))
+		}
+
+		if buckets[0].BucketKey != "2026-10-18T23:00:00Z" {
+			t.Errorf("bucket 0 key want 2026-10-18T23:00:00Z, got %s", buckets[0].BucketKey)
+		}
+		if buckets[1].BucketKey != "2026-10-19T00:00:00Z" {
+			t.Errorf("bucket 1 key want 2026-10-19T00:00:00Z, got %s", buckets[1].BucketKey)
+		}
+		if buckets[2].BucketKey != "2026-10-19T01:00:00Z" {
+			t.Errorf("bucket 2 key want 2026-10-19T01:00:00Z, got %s", buckets[2].BucketKey)
+		}
+
+		// Cumulative invocations check
+		if buckets[2].CumulativeInvocations != 3 {
+			t.Errorf("expected cumulative invocations 3, got %d", buckets[2].CumulativeInvocations)
+		}
+	})
+
+	t.Run("timezone offsets normalized to UTC hourly bucket", func(t *testing.T) {
+		// 14:30 +02:00 is 12:30 UTC
+		tsPlus2 := "2026-10-19T14:30:00+02:00"
+		// 08:30 -04:00 is 12:30 UTC
+		tsMinus4 := "2026-10-19T08:30:00-04:00"
+
+		ledgers := []domain.AgenticMetricsLedger{
+			{
+				TicketID: ptr("AL-TZ"),
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							ID:          "inv-plus2",
+							CompletedAt: &tsPlus2,
+							Tokens:      domain.InvocationTokens{Input: 100, Output: 20},
+							CostUSD:     0.01,
+						},
+						{
+							ID:          "inv-minus4",
+							CompletedAt: &tsMinus4,
+							Tokens:      domain.InvocationTokens{Input: 200, Output: 40},
+							CostUSD:     0.02,
+						},
+					},
+				},
+			},
+		}
+
+		buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", nil, nil)
+		if len(buckets) != 1 {
+			t.Fatalf("expected both TZ offsets to normalize to single 12:00:00Z bucket, got %d buckets", len(buckets))
+		}
+		if buckets[0].BucketKey != "2026-10-19T12:00:00Z" {
+			t.Errorf("expected bucket key 2026-10-19T12:00:00Z, got %s", buckets[0].BucketKey)
+		}
+		if buckets[0].Invocations != 2 {
+			t.Errorf("expected 2 invocations, got %d", buckets[0].Invocations)
+		}
+	})
+
+	t.Run("html datetime-local format without seconds", func(t *testing.T) {
+		tsNoSeconds := "2026-10-19T16:45"
+		ledgers := []domain.AgenticMetricsLedger{
+			{
+				TicketID: ptr("AL-NO-SEC"),
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							ID:          "inv-no-sec",
+							CompletedAt: &tsNoSeconds,
+							Tokens:      domain.InvocationTokens{Input: 50, Output: 10},
+						},
+					},
+				},
+			},
+		}
+
+		buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", nil, nil)
+		if len(buckets) != 1 {
+			t.Fatalf("expected 1 bucket, got %d", len(buckets))
+		}
+		if buckets[0].BucketKey != "2026-10-19T16:00:00Z" {
+			t.Errorf("expected bucket key 2026-10-19T16:00:00Z, got %s", buckets[0].BucketKey)
+		}
+	})
+
+	t.Run("zero tokens and zero division cache hit rate", func(t *testing.T) {
+		ts := "2026-10-19T10:00:00Z"
+		ledgers := []domain.AgenticMetricsLedger{
+			{
+				TicketID: ptr("AL-ZERO"),
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							ID:          "inv-zero",
+							CompletedAt: &ts,
+							Tokens:      domain.InvocationTokens{Input: 0, Output: 0, CacheRead: 0, Reasoning: 0},
+							CostUSD:     0.0,
+						},
+					},
+				},
+			},
+		}
+
+		buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", nil, nil)
+		if len(buckets) != 1 {
+			t.Fatalf("expected 1 bucket, got %d", len(buckets))
+		}
+		b := buckets[0]
+		if b.CacheHitRatePct != 0.0 {
+			t.Errorf("expected CacheHitRatePct = 0.0 for zero tokens, got %f", b.CacheHitRatePct)
+		}
+		if b.CostUSD != 0.0 {
+			t.Errorf("expected CostUSD = 0.0, got %f", b.CostUSD)
+		}
+	})
+
+	t.Run("inverted date range returns empty slice", func(t *testing.T) {
+		ts := "2026-10-19T10:00:00Z"
+		ledgers := []domain.AgenticMetricsLedger{
+			{
+				TicketID: ptr("AL-RANGE"),
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							ID:          "inv-1",
+							CompletedAt: &ts,
+							Tokens:      domain.InvocationTokens{Input: 100, Output: 50},
+						},
+					},
+				},
+			},
+		}
+
+		start := time.Date(2026, 10, 19, 15, 0, 0, 0, time.UTC)
+		end := time.Date(2026, 10, 19, 10, 0, 0, 0, time.UTC)
+		buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", &start, &end)
+		if len(buckets) != 0 {
+			t.Fatalf("expected 0 buckets for inverted date range, got %d", len(buckets))
+		}
+	})
+
+	t.Run("empty and nil ledgers", func(t *testing.T) {
+		resNil := domain.AggregateMetricsOverTime(nil, "hourly", nil, nil)
+		if resNil == nil || len(resNil) != 0 {
+			t.Errorf("expected empty non-nil slice for nil ledgers")
+		}
+
+		resEmpty := domain.AggregateMetricsOverTime([]domain.AgenticMetricsLedger{}, "hourly", nil, nil)
+		if resEmpty == nil || len(resEmpty) != 0 {
+			t.Errorf("expected empty non-nil slice for empty ledgers")
+		}
+
+		noInvs := []domain.AgenticMetricsLedger{
+			{
+				TicketID: ptr("NO-INVS"),
+				Facts:    domain.AgenticFactLedger{Invocations: []domain.InvocationFact{}},
+			},
+		}
+		resNoInvs := domain.AggregateMetricsOverTime(noInvs, "hourly", nil, nil)
+		if resNoInvs == nil || len(resNoInvs) != 0 {
+			t.Errorf("expected empty non-nil slice for ledger with no invocations and no code churn")
+		}
+	})
+
+	t.Run("unparseable timestamps ignored gracefully", func(t *testing.T) {
+		badDate := "not-a-valid-date"
+		ledgers := []domain.AgenticMetricsLedger{
+			{
+				TicketID:    ptr("AL-CORRUPTED"),
+				CompletedAt: &badDate,
+				Facts: domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							ID:          "inv-bad",
+							CompletedAt: &badDate,
+							Tokens:      domain.InvocationTokens{Input: 100, Output: 50},
+						},
+					},
+				},
+			},
+		}
+
+		buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", nil, nil)
+		if len(buckets) != 0 {
+			t.Fatalf("expected 0 buckets for unparseable dates, got %d", len(buckets))
 		}
 	})
 }

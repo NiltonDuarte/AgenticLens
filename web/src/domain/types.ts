@@ -272,9 +272,9 @@ export interface WorkspaceDetail {
   readonly anomalies: readonly Anomaly[];
 }
 
-export type TimeGranularity = 'daily' | 'weekly' | 'cumulative';
+export type TimeGranularity = 'hourly' | 'daily' | 'weekly' | 'cumulative';
 
-export type TimeWindowPreset = 'all' | '7d' | '30d' | '90d' | 'custom';
+export type TimeWindowPreset = '1d' | '7d' | '30d' | '90d' | 'all' | 'custom';
 
 export type AutopsySortMode = 'ticket_id' | 'completed_at';
 

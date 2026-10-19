@@ -30,7 +30,7 @@ type BuildInfoDTO struct {
 
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | BuildInfoDTO
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | BuildInfoDTO | []domain.TimeBucketMetric
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
@@ -94,4 +94,12 @@ func WriteEventsResponse(w http.ResponseWriter, events []domain.EventFact) {
 		events = []domain.EventFact{}
 	}
 	WriteJSON(w, http.StatusOK, events)
+}
+
+// WriteProgressionResponse writes a slice of TimeBucketMetric as JSON.
+func WriteProgressionResponse(w http.ResponseWriter, metrics []domain.TimeBucketMetric) {
+	if metrics == nil {
+		metrics = []domain.TimeBucketMetric{}
+	}
+	WriteJSON(w, http.StatusOK, metrics)
 }

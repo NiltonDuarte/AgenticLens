@@ -25,6 +25,7 @@ func NewServer(workspacesDir string, staticFS fs.FS) *Server {
 	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(workspacesDir))
 	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(workspacesDir))
 	mux.HandleFunc("GET /api/fleet", FleetHandler(workspacesDir))
+	mux.HandleFunc("GET /api/progression", ProgressionHandler(workspacesDir))
 
 	// Register SPA static files and fallback handler on root
 	spaHandler := NewSPAHandler(staticFS)

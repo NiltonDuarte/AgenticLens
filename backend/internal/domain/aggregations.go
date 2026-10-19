@@ -893,6 +893,10 @@ func parseTimestamp(ts *string) (time.Time, bool) {
 	if t, err := time.Parse("2006-01-02T15:04:05", clean); err == nil {
 		return t.UTC(), true
 	}
+	// Try HTML datetime-local format without seconds
+	if t, err := time.Parse("2006-01-02T15:04", clean); err == nil {
+		return t.UTC(), true
+	}
 	// Try date-only YYYY-MM-DD
 	if t, err := time.Parse("2006-01-02", clean); err == nil {
 		return t.UTC(), true
@@ -975,6 +979,10 @@ func GetTicketEffectiveDate(completedAt, startedAt *string, updatedAt string) (t
 func ResolveDatePreset(preset string, refDate time.Time) (startDate *time.Time, endDate *time.Time) {
 	ref := time.Date(refDate.Year(), refDate.Month(), refDate.Day(), 0, 0, 0, 0, time.UTC)
 	switch TimeWindowPreset(preset) {
+	case TimeWindowLast24Hours:
+		start := refDate.Add(-24 * time.Hour)
+		end := refDate
+		return &start, &end
 	case TimeWindowLast7Days:
 		start := ref.AddDate(0, 0, -7)
 		return &start, &ref
@@ -1019,6 +1027,24 @@ func FilterLedgersByTimeWindow(ledgers []AgenticMetricsLedger, window TimeWindow
 		result := make([]AgenticMetricsLedger, len(ledgers))
 		copy(result, ledgers)
 		return result
+	}
+
+	if window == TimeWindow1D {
+		start := refDate.Add(-24 * time.Hour)
+		var filtered []AgenticMetricsLedger
+		for _, ledger := range ledgers {
+			t, ok := GetLedgerCompletionDate(ledger)
+			if !ok {
+				continue
+			}
+			if !t.Before(start) && !t.After(refDate) {
+				filtered = append(filtered, ledger)
+			}
+		}
+		if filtered == nil {
+			return []AgenticMetricsLedger{}
+		}
+		return filtered
 	}
 
 	var days int
@@ -1170,40 +1196,45 @@ func AggregateMetricsOverTime(
 	granularity string,
 	startDate, endDate *time.Time,
 ) []TimeBucketMetric {
-	isWeekly := strings.ToLower(granularity) == string(GranularityWeekly) || strings.ToLower(granularity) == "weekly"
+	isHourly := strings.EqualFold(granularity, string(GranularityHourly))
+	isWeekly := strings.EqualFold(granularity, string(GranularityWeekly))
 
 	accumulators := make(map[string]*bucketAccumulator)
 
 	getBucketKey := func(d time.Time) string {
+		utc := d.UTC()
+		if isHourly {
+			return utc.Format("2006-01-02T15:00:00Z")
+		}
 		if isWeekly {
 			// Find Monday
-			weekday := int(d.Weekday())
+			weekday := int(utc.Weekday())
 			if weekday == 0 {
 				weekday = 7 // Sunday is 7 days from last Monday
 			}
-			monday := d.AddDate(0, 0, -(weekday - 1))
+			monday := utc.AddDate(0, 0, -(weekday - 1))
 			return monday.Format("2006-01-02")
 		}
-		return d.Format("2006-01-02")
+		return utc.Format("2006-01-02")
 	}
 
 	for _, ledger := range ledgers {
 		for _, inv := range ledger.Facts.Invocations {
 			var invDate time.Time
 			var ok bool
-			if d, okInv := parseISODate(inv.CompletedAt); okInv {
+			if d, okInv := parseTimestamp(inv.CompletedAt); okInv {
 				invDate = d
 				ok = true
-			} else if d, okInv := parseISODate(inv.StartedAt); okInv {
+			} else if d, okInv := parseTimestamp(inv.StartedAt); okInv {
 				invDate = d
 				ok = true
-			} else if d, okInv := parseISODate(ledger.CompletedAt); okInv {
+			} else if d, okInv := parseTimestamp(ledger.CompletedAt); okInv {
 				invDate = d
 				ok = true
-			} else if d, okInv := parseISODate(ledger.StartedAt); okInv {
+			} else if d, okInv := parseTimestamp(ledger.StartedAt); okInv {
 				invDate = d
 				ok = true
-			} else if d, okInv := parseISODate(&ledger.UpdatedAt); okInv {
+			} else if d, okInv := parseTimestamp(&ledger.UpdatedAt); okInv {
 				invDate = d
 				ok = true
 			}
@@ -1237,13 +1268,13 @@ func AggregateMetricsOverTime(
 
 		var codeDate time.Time
 		var codeDateOk bool
-		if d, ok := parseISODate(ledger.CompletedAt); ok {
+		if d, ok := parseTimestamp(ledger.CompletedAt); ok {
 			codeDate = d
 			codeDateOk = true
-		} else if d, ok := parseISODate(ledger.StartedAt); ok {
+		} else if d, ok := parseTimestamp(ledger.StartedAt); ok {
 			codeDate = d
 			codeDateOk = true
-		} else if d, ok := parseISODate(&ledger.UpdatedAt); ok {
+		} else if d, ok := parseTimestamp(&ledger.UpdatedAt); ok {
 			codeDate = d
 			codeDateOk = true
 		}

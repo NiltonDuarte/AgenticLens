@@ -411,4 +411,68 @@ describe('MetricProgression View Component', () => {
     const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
     expect(emojiRegex.test(renderedText)).toBe(false);
   });
+
+  it('toggles 24 Hours, Hourly granularity, and Custom datetime window with validation', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: ledgers,
+      isMock: true,
+    });
+
+    render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
+
+    // Toggle 24 Hours
+    const btn24h = screen.getByRole('button', { name: '24 Hours' });
+    expect(btn24h).toBeInTheDocument();
+    fireEvent.click(btn24h);
+    expect(btn24h).toHaveClass('active');
+
+    // Toggle Hourly Granularity
+    const btnHourly = screen.getByRole('button', { name: 'Hourly' });
+    expect(btnHourly).toBeInTheDocument();
+    fireEvent.click(btnHourly);
+    expect(btnHourly).toHaveClass('active');
+
+    // Toggle Custom Window
+    const btnCustom = screen.getByRole('button', { name: 'Custom' });
+    expect(btnCustom).toBeInTheDocument();
+    fireEvent.click(btnCustom);
+    expect(btnCustom).toHaveClass('active');
+
+    // Custom datetime inputs should now appear
+    const startInput = screen.getByLabelText('Start Date and Time');
+    const endInput = screen.getByLabelText('End Date and Time');
+    expect(startInput).toBeInTheDocument();
+    expect(endInput).toBeInTheDocument();
+
+    // Enter valid date range
+    fireEvent.change(startInput, { target: { value: '2026-10-15T09:00' } });
+    fireEvent.change(endInput, { target: { value: '2026-10-15T18:00' } });
+    expect(screen.queryByText(/Start datetime cannot be after End datetime/i)).not.toBeInTheDocument();
+
+    // Enter inverted date range (start > end)
+    fireEvent.change(startInput, { target: { value: '2026-10-15T20:00' } });
+    expect(screen.getByText(/Start datetime cannot be after End datetime/i)).toBeInTheDocument();
+  });
+
+  it('renders gracefully with zero ledgers displaying empty state without runtime errors', async () => {
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: [],
+      isMock: true,
+    });
+
+    render(<MetricProgression />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Progression Telemetry Available')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/No workspace telemetry files were found/i)
+    ).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { InfoTooltip } from './InfoTooltip';
+import type { TimeGranularity } from '../domain/types';
+import { formatChartAxisTimestamp } from '../domain/formatters';
 
 export interface ChartSeries {
   readonly key: string;
@@ -21,6 +23,8 @@ export interface TrendChartProps {
   readonly data: readonly Readonly<Record<string, number | string>>[];
   readonly height?: number;
   readonly valueFormatter?: (val: number) => string;
+  readonly xAxisFormatter?: (val: string) => string;
+  readonly granularity?: TimeGranularity;
   readonly referenceLines?: readonly ChartReferenceLine[];
   readonly emptyMessage?: string;
   readonly yAxisMin?: number;
@@ -33,6 +37,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   data,
   height = 240,
   valueFormatter = (val) => val.toLocaleString(),
+  xAxisFormatter,
+  granularity,
   referenceLines = [],
   emptyMessage = 'No progression data available in this time window',
   yAxisMin = 0,
@@ -291,7 +297,14 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             const showTick = i % xTickStep === 0 || i === data.length - 1;
             if (!showTick) return null;
             const x = getXCoord(i);
-            const label = String(row['bucket_date'] ?? row['label'] ?? '');
+            const rawLabel = String(row['bucket_date'] ?? row['label'] ?? '');
+            const displayLabel = xAxisFormatter
+              ? xAxisFormatter(rawLabel)
+              : granularity
+                ? formatChartAxisTimestamp(rawLabel, granularity)
+                : rawLabel.length > 5
+                  ? rawLabel.slice(5)
+                  : rawLabel;
             return (
               <g key={`xtick-${i}`}>
                 <line
@@ -307,7 +320,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                   textAnchor="middle"
                   className="chart-axis-label"
                 >
-                  {label.length > 5 ? label.slice(5) : label}
+                  {displayLabel}
                 </text>
               </g>
             );

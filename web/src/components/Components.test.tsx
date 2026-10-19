@@ -562,6 +562,50 @@ describe('Presentation Components Boundary Tests', () => {
       fireEvent.keyDown(trigger, { key: 'Escape' });
       expect(bubble).not.toHaveClass('is-visible');
     });
+
+    it('formats x-axis labels using hourly granularity when provided', () => {
+      render(
+        <TrendChart
+          title="Hourly Throughput"
+          granularity="hourly"
+          data={[
+            { bucket_date: '2026-10-19T10:00:00Z', val: 50 },
+            { bucket_date: '2026-10-19T11:00:00Z', val: 75 },
+          ]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+        />
+      );
+
+      expect(screen.getByText('10:00')).toBeInTheDocument();
+      expect(screen.getByText('11:00')).toBeInTheDocument();
+    });
+
+    it('respects custom xAxisFormatter and renders empty state message on empty data', () => {
+      const customFormatter = (v: string) => `TICK:${v.slice(11, 16)}`;
+      const { rerender } = render(
+        <TrendChart
+          title="Custom Axis Formatter"
+          xAxisFormatter={customFormatter}
+          data={[
+            { bucket_date: '2026-10-19T14:00:00Z', val: 100 },
+          ]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+        />
+      );
+
+      expect(screen.getByText('TICK:14:00')).toBeInTheDocument();
+
+      rerender(
+        <TrendChart
+          title="Empty Progression"
+          data={[]}
+          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
+          emptyMessage="No progression data available in this time window"
+        />
+      );
+
+      expect(screen.getByText('No progression data available in this time window')).toBeInTheDocument();
+    });
   });
 
   describe('SaturationBar Component', () => {

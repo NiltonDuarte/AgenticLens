@@ -114,6 +114,13 @@ describe('Domain Progression Aggregator', () => {
       const dSunJan = new Date(Date.UTC(2027, 0, 3));
       expect(getBucketKey(dSunJan, true)).toBe('2026-12-28');
     });
+
+    it('returns YYYY-MM-DDTHH:00:00Z for hourly granularity', () => {
+      const d = new Date(Date.UTC(2026, 9, 15, 14, 25, 30));
+      expect(getBucketKey(d, 'hourly')).toBe('2026-10-15T14:00:00Z');
+      const d2 = new Date(Date.UTC(2026, 0, 1, 0, 5, 0));
+      expect(getBucketKey(d2, 'hourly')).toBe('2026-01-01T00:00:00Z');
+    });
   });
 
   describe('aggregateMetricsOverTime', () => {
@@ -149,6 +156,140 @@ describe('Domain Progression Aggregator', () => {
         // Day 1 is Monday in UTC
         expect(d?.getUTCDay()).toBe(1);
       }
+    });
+
+    it('aggregates hourly buckets accurately with YYYY-MM-DDTHH:00:00Z keys', () => {
+      const ledgers = Object.values(mockAgenticMetricsLedgers);
+      const buckets = aggregateMetricsOverTime(ledgers, 'hourly');
+
+      expect(buckets.length).toBeGreaterThan(0);
+      for (const b of buckets) {
+        expect(b.bucket_key).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:00:00Z$/);
+        expect(b.bucket_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:00:00Z$/);
+      }
+    });
+
+    it('filters with sub-day datetime boundaries for hourly granularity', () => {
+      const testLedger: AgenticMetricsLedger = {
+        ticket_id: 'HOURLY-1',
+        ticket_title: 'Hourly test',
+        ticket_type: 'task',
+        started_at: '2026-10-19T09:00:00Z',
+        completed_at: '2026-10-19T11:30:00Z',
+        updated_at: '2026-10-19T11:30:00Z',
+        facts: {
+          ticket_id: 'HOURLY-1',
+          ticket_title: 'Hourly test',
+          ticket_type: 'task',
+          started_at: '2026-10-19T09:00:00Z',
+          completed_at: '2026-10-19T11:30:00Z',
+          updated_at: '2026-10-19T11:30:00Z',
+          invocations: [
+            {
+              id: 'inv-1',
+              parent_id: null,
+              role: 'coder',
+              model: 'gpt-4',
+              user: 'dev',
+              started_at: '2026-10-19T09:15:00Z',
+              completed_at: '2026-10-19T09:20:00Z',
+              active_duration_seconds: 300,
+              turns: 2,
+              tokens: { input: 100, output: 50, cache_read: 20, reasoning: 0, peak_context: 500 },
+              cost_usd: 0.05,
+              compactions: 0,
+            },
+            {
+              id: 'inv-2',
+              parent_id: null,
+              role: 'coder',
+              model: 'gpt-4',
+              user: 'dev',
+              started_at: '2026-10-19T10:15:00Z',
+              completed_at: '2026-10-19T10:20:00Z',
+              active_duration_seconds: 300,
+              turns: 2,
+              tokens: { input: 200, output: 100, cache_read: 50, reasoning: 0, peak_context: 1000 },
+              cost_usd: 0.10,
+              compactions: 0,
+            },
+            {
+              id: 'inv-3',
+              parent_id: null,
+              role: 'coder',
+              model: 'gpt-4',
+              user: 'dev',
+              started_at: '2026-10-19T11:15:00Z',
+              completed_at: '2026-10-19T11:20:00Z',
+              active_duration_seconds: 300,
+              turns: 2,
+              tokens: { input: 300, output: 150, cache_read: 80, reasoning: 0, peak_context: 1500 },
+              cost_usd: 0.15,
+              compactions: 0,
+            },
+          ],
+          tools: [],
+          events: [],
+          code: {
+            lines_added: 0,
+            lines_deleted: 0,
+            files_changed: 0,
+            prod_lines_added: 0,
+            prod_lines_deleted: 0,
+            test_lines_added: 0,
+            test_lines_deleted: 0,
+            sdlc_iterations: 1,
+          },
+        },
+        workflow_efficiency: {
+          sdlc_iterations: 1,
+          active_duration_seconds: 900,
+          active_duration_formatted: '15m',
+          role_effort_distribution_pct: {},
+          subagent_turn_velocity: { avg_turns_per_invocation: 2, peak_turns: 2, by_role: {} },
+          test_to_production_ratio: { ratio: '1.0', test_lines_added: 0, prod_lines_added: 0 },
+          reasoning_tokens: 0,
+          reasoning_ratio_pct: 0,
+          code_delivered: { lines_added: 0, lines_deleted: 0, files_changed: 0 },
+          tool_execution: { total_calls: 0, errors_and_corrections: 0, success_rate_pct: 100 },
+          context_window_health: {
+            healthy_ceiling_tokens: 200000,
+            status: 'HEALTHY',
+            orchestrator_peak_tokens: 0,
+            orchestrator_saturation_pct: 0,
+            subagents_peak_tokens: 0,
+            subagents_peak_role: 'coder',
+            compactions: 0,
+            peak_by_role: {},
+          },
+        },
+        threads: [],
+        totals: {
+          invocations: 3,
+          input_tokens: 600,
+          output_tokens: 300,
+          cache_read_tokens: 150,
+          cache_hit_rate_pct: 20,
+          cost_usd: 0.30,
+          peak_context_tokens: 1500,
+          context_health: 'HEALTHY',
+        },
+        roles: [],
+        models: [],
+        anomalies: [],
+      };
+
+      // Filter between 10:00 and 10:45
+      const filtered = aggregateMetricsOverTime(
+        [testLedger],
+        'hourly',
+        '2026-10-19T10:00',
+        '2026-10-19T10:45'
+      );
+      expect(filtered.length).toBe(1);
+      expect(filtered[0]?.bucket_key).toBe('2026-10-19T10:00:00Z');
+      expect(filtered[0]?.invocations).toBe(1);
+      expect(filtered[0]?.cost_usd).toBe(0.10);
     });
 
     it('defensively calculates cache hit rate when zero tokens are present', () => {
@@ -986,6 +1127,125 @@ describe('Domain Progression Aggregator', () => {
       expect(buckets[0]?.invocations).toBe(1);
       expect(buckets[0]?.lines_added).toBe(10);
       expect(buckets[0]?.net_lines_added).toBe(8);
+    });
+
+    it('adversarial: handles midnight transitions, timezone offsets, and empty inputs', () => {
+      // Midnight transition: 23:50 on 2026-10-18 and 00:10 on 2026-10-19
+      const invLate: InvocationFact = {
+        id: 'inv-late',
+        parent_id: null,
+        role: 'coder',
+        model: 'm',
+        user: 'u',
+        started_at: '2026-10-18T23:50:00Z',
+        completed_at: '2026-10-18T23:55:00Z',
+        active_duration_seconds: 60,
+        turns: 1,
+        tokens: { input: 100, output: 50, cache_read: 0, reasoning: 0, peak_context: 500 },
+        cost_usd: 0.01,
+        compactions: 0,
+      };
+
+      const invEarly: InvocationFact = {
+        id: 'inv-early',
+        parent_id: null,
+        role: 'coder',
+        model: 'm',
+        user: 'u',
+        // 02:10 +02:00 is 00:10 UTC on 2026-10-19
+        started_at: '2026-10-19T02:05:00+02:00',
+        completed_at: '2026-10-19T02:10:00+02:00',
+        active_duration_seconds: 60,
+        turns: 1,
+        tokens: { input: 200, output: 80, cache_read: 50, reasoning: 0, peak_context: 800 },
+        cost_usd: 0.02,
+        compactions: 0,
+      };
+
+      const ledger: AgenticMetricsLedger = {
+        ticket_id: 'ADV-1',
+        ticket_title: 'Adversarial Test',
+        ticket_type: 'task',
+        started_at: '2026-10-18T23:50:00Z',
+        completed_at: '2026-10-19T00:15:00Z',
+        updated_at: '2026-10-19T00:15:00Z',
+        facts: {
+          ticket_id: 'ADV-1',
+          ticket_title: 'Adversarial Test',
+          ticket_type: 'task',
+          started_at: '2026-10-18T23:50:00Z',
+          completed_at: '2026-10-19T00:15:00Z',
+          updated_at: '2026-10-19T00:15:00Z',
+          code: {
+            lines_added: 20,
+            lines_deleted: 5,
+            test_lines_added: 10,
+            test_lines_deleted: 0,
+            prod_lines_added: 10,
+            prod_lines_deleted: 5,
+            files_changed: 2,
+            sdlc_iterations: 1,
+          },
+          invocations: [invLate, invEarly],
+          tools: [],
+        },
+        workflow_efficiency: {
+          sdlc_iterations: 1,
+          active_duration_seconds: 120,
+          active_duration_formatted: '2m',
+          role_effort_distribution_pct: {},
+          subagent_turn_velocity: { avg_turns_per_invocation: 1, peak_turns: 1, by_role: {} },
+          test_to_production_ratio: { ratio: '1.0', test_lines_added: 10, prod_lines_added: 10 },
+          reasoning_tokens: 0,
+          reasoning_ratio_pct: 0,
+          code_delivered: { lines_added: 20, lines_deleted: 5, files_changed: 2 },
+          tool_execution: { total_calls: 0, errors_and_corrections: 0, success_rate_pct: 100 },
+          context_window_health: {
+            healthy_ceiling_tokens: 200000,
+            status: 'HEALTHY',
+            orchestrator_peak_tokens: 0,
+            orchestrator_saturation_pct: 0,
+            subagents_peak_tokens: 0,
+            subagents_peak_role: 'coder',
+            compactions: 0,
+            peak_by_role: {},
+          },
+        },
+        threads: [],
+        totals: {
+          invocations: 2,
+          input_tokens: 300,
+          output_tokens: 130,
+          cache_read_tokens: 50,
+          cache_hit_rate_pct: 14.3,
+          cost_usd: 0.03,
+          peak_context_tokens: 800,
+          context_health: 'HEALTHY',
+        },
+        roles: [],
+        models: [],
+      };
+
+      const buckets = aggregateMetricsOverTime([ledger], 'hourly');
+      expect(buckets).toHaveLength(2);
+      expect(buckets[0]?.bucket_key).toBe('2026-10-18T23:00:00Z');
+      expect(buckets[1]?.bucket_key).toBe('2026-10-19T00:00:00Z');
+      expect(buckets[0]?.invocations).toBe(1);
+      expect(buckets[1]?.invocations).toBe(1);
+      expect(buckets[1]?.cumulative_invocations).toBe(2);
+
+      // Inverted date range returns empty array
+      const inverted = aggregateMetricsOverTime(
+        [ledger],
+        'hourly',
+        '2026-10-19T12:00',
+        '2026-10-19T08:00'
+      );
+      expect(inverted).toHaveLength(0);
+
+      // Empty and null inputs
+      expect(aggregateMetricsOverTime([], 'hourly')).toHaveLength(0);
+      expect(aggregateMetricsOverTime(null as unknown as readonly AgenticMetricsLedger[], 'hourly')).toHaveLength(0);
     });
   });
 });

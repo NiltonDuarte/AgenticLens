@@ -15,31 +15,79 @@ interface MutableBucketAccumulator {
 }
 
 export function parseIsoDateToUtc(ts: string | null | undefined): Date | null {
-  if (!ts || ts.length < 10) {
+  if (!ts) {
     return null;
   }
-  const clean = ts.slice(0, 10);
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean);
+  const clean = ts.trim();
+  if (clean.length < 10) {
+    return null;
+  }
+
+  // Format: YYYY-MM-DD optionally followed by T or space and HH:mm[:ss[.sss]][Z|(+/-HH:mm)]
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/.exec(clean);
   if (!match) {
     return null;
   }
+
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
 
-  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
     return null;
   }
 
-  const d = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-  if (Number.isNaN(d.getTime())) {
-    return null;
-  }
-  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
+  // Validate day count per month and leap year
+  const daysInMonth = [31, (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (day > daysInMonth[month - 1]) {
     return null;
   }
 
-  return d;
+  const hourStr = match[4];
+  const minuteStr = match[5];
+  const secondStr = match[6];
+  const tzStr = match[7];
+
+  const hour = hourStr !== undefined ? Number(hourStr) : 0;
+  const minute = minuteStr !== undefined ? Number(minuteStr) : 0;
+  const second = secondStr !== undefined ? Number(secondStr) : 0;
+
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+    return null;
+  }
+
+  if (tzStr) {
+    const d = new Date(clean);
+    if (!Number.isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  return new Date(Date.UTC(year, month - 1, day, hour, minute, second, 0));
+}
+
+export function parseIsoBoundary(ts: string | null | undefined, isEnd: boolean): Date | null {
+  if (!ts) {
+    return null;
+  }
+  const clean = ts.trim();
+  if (clean.length === 10) {
+    const d = parseIsoDateToUtc(clean);
+    if (!d) return null;
+    if (isEnd) {
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+    }
+    return d;
+  }
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}$/.test(clean)) {
+    const d = parseIsoDateToUtc(clean);
+    if (!d) return null;
+    if (isEnd) {
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), 59, 999));
+    }
+    return d;
+  }
+  return parseIsoDateToUtc(clean);
 }
 
 function formatUtcDate(d: Date): string {
@@ -49,7 +97,19 @@ function formatUtcDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export function getBucketKey(d: Date, isWeekly: boolean): string {
+function formatUtcHour(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const h = String(d.getUTCHours()).padStart(2, '0');
+  return `${y}-${m}-${day}T${h}:00:00Z`;
+}
+
+export function getBucketKey(d: Date, granularity: TimeGranularity | boolean): string {
+  if (granularity === 'hourly') {
+    return formatUtcHour(d);
+  }
+  const isWeekly = granularity === 'weekly' || granularity === true;
   if (isWeekly) {
     let weekday = d.getUTCDay();
     if (weekday === 0) {
@@ -72,9 +132,12 @@ export function aggregateMetricsOverTime(
     return [];
   }
 
-  const isWeekly = granularity === 'weekly';
-  const startUtc = parseIsoDateToUtc(startDate);
-  const endUtc = parseIsoDateToUtc(endDate);
+  const startUtc = parseIsoBoundary(startDate, false);
+  const endUtc = parseIsoBoundary(endDate, true);
+
+  if (startUtc && endUtc && startUtc.getTime() > endUtc.getTime()) {
+    return [];
+  }
 
   const accumulators = new Map<string, MutableBucketAccumulator>();
 
@@ -120,7 +183,7 @@ export function aggregateMetricsOverTime(
         continue;
       }
 
-      const bkey = getBucketKey(invDate, isWeekly);
+      const bkey = getBucketKey(invDate, granularity);
       const acc = getOrCreate(bkey);
 
       acc.invocations += 1;
@@ -150,7 +213,7 @@ export function aggregateMetricsOverTime(
       }
 
       if (inRange) {
-        const bkey = getBucketKey(codeDate, isWeekly);
+        const bkey = getBucketKey(codeDate, granularity);
         const acc = getOrCreate(bkey);
         const code = ledger.workflow_efficiency.code_delivered;
         acc.lines_added += code.lines_added;

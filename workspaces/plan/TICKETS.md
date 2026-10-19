@@ -21,13 +21,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-23 natural ticket identifier ordering and sortable tables.md`
 - `workspaces/plan/done/AL-24 dynamic role and model aggregations and presentation.md`
 - `workspaces/plan/done/AL-25 contextual hover information icons for cards and tables.md`
+- `workspaces/plan/done/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
+- `workspaces/plan/done/AL-27 metric progression custom window one-day range and hourly granularity.md`
 - `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
 - `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 - `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-- `workspaces/plan/to-do/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
-- `workspaces/plan/to-do/AL-27 metric progression custom window one-day range and hourly granularity.md`
 - `workspaces/plan/to-do/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 - `workspaces/plan/to-do/AL-29 conventional commit ticket type classification in telemetry engine.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
@@ -35,14 +35,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Ready
-
-- **AL-27**: Metric Progression Custom Window, 1-Day Window, and Hourly Granularity
-  - **Subsystem**: Domain / Adapters / Presentation / Tests
-  - **Phase**: Phase 5
-  - **Status**: Ready
-  - **Blocked by**: None (AL-26 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-27 metric progression custom window one-day range and hourly granularity.md`
 
 - **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
   - **Subsystem**: Domain / Adapters / Presentation / Tests
@@ -76,7 +68,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Domain / Adapters / HTTP / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: None (AL-17 Done)
+  - **Blocked by**: AL-17
   - **Blocks**: AL-19, AL-20
   - **File**: `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
@@ -92,13 +84,21 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Presentation / Web / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: AL-19
+  - **Blocked by**: AL-18, AL-19
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 
 ---
 
 ## Done
+
+- **AL-27**: Metric Progression Custom Window, 1-Day Window, and Hourly Granularity
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Done
+  - **Blocked by**: None (AL-26 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-27 metric progression custom window one-day range and hourly granularity.md`
 
 - **AL-26**: Fleet Overview Completion Date Filtering and Autopsy Date Sorting
   - **Subsystem**: Domain / Adapters / Presentation / Tests

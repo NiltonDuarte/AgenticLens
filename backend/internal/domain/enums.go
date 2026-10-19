@@ -9,21 +9,27 @@ import (
 type TimeWindow string
 
 const (
-	TimeWindowAll TimeWindow = "all"
-	TimeWindow7D  TimeWindow = "7d"
-	TimeWindow30D TimeWindow = "30d"
-	TimeWindow90D TimeWindow = "90d"
+	TimeWindowAll    TimeWindow = "all"
+	TimeWindow1D     TimeWindow = "1d"
+	TimeWindow7D     TimeWindow = "7d"
+	TimeWindow30D    TimeWindow = "30d"
+	TimeWindow90D    TimeWindow = "90d"
+	TimeWindowCustom TimeWindow = "custom"
 )
 
 // ParseTimeWindow parses a string into a TimeWindow enum, defaulting to TimeWindowAll.
 func ParseTimeWindow(val string) TimeWindow {
 	switch val {
+	case "1d":
+		return TimeWindow1D
 	case "7d":
 		return TimeWindow7D
 	case "30d":
 		return TimeWindow30D
 	case "90d":
 		return TimeWindow90D
+	case "custom":
+		return TimeWindowCustom
 	case "all":
 		return TimeWindowAll
 	default:
@@ -88,15 +94,33 @@ const (
 type TimeGranularity string
 
 const (
+	GranularityHourly     TimeGranularity = "hourly"
 	GranularityDaily      TimeGranularity = "daily"
 	GranularityWeekly     TimeGranularity = "weekly"
 	GranularityCumulative TimeGranularity = "cumulative"
 )
 
+// ParseTimeGranularity parses a string into a TimeGranularity enum, returning false if unrecognized.
+func ParseTimeGranularity(val string) (TimeGranularity, bool) {
+	switch strings.ToLower(strings.TrimSpace(val)) {
+	case string(GranularityHourly):
+		return GranularityHourly, true
+	case string(GranularityDaily):
+		return GranularityDaily, true
+	case string(GranularityWeekly):
+		return GranularityWeekly, true
+	case string(GranularityCumulative):
+		return GranularityCumulative, true
+	default:
+		return "", false
+	}
+}
+
 // TimeWindowPreset defines standard date filtering ranges.
 type TimeWindowPreset string
 
 const (
+	TimeWindowLast24Hours     TimeWindowPreset = "Last 24 Hours"
 	TimeWindowLast7Days        TimeWindowPreset = "Last 7 Days"
 	TimeWindowLast30Days       TimeWindowPreset = "Last 30 Days"
 	TimeWindowLast90Days       TimeWindowPreset = "Last 90 Days"

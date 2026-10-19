@@ -14,6 +14,7 @@ import {
   getEffectiveCompletionDateMs,
   compareTicketCompletionDate,
   filterLedgersByCompletionDate,
+  formatChartAxisTimestamp,
 } from './formatters';
 import { mockAgenticMetricsLedgers } from '../api/mockData';
 
@@ -686,6 +687,30 @@ describe('Domain Pure Formatters', () => {
       const null2 = { ticket_id: 'AL-2', completed_at: null };
       expect(compareTicketCompletionDate(null2, null10)).toBeLessThan(0);
       expect(compareTicketCompletionDate(null10, null2)).toBeGreaterThan(0);
+    });
+  });
+
+  describe('formatChartAxisTimestamp', () => {
+    it('formats hourly timestamp as HH:00', () => {
+      expect(formatChartAxisTimestamp('2026-10-19T14:00:00Z', 'hourly')).toBe('14:00');
+      expect(formatChartAxisTimestamp('2026-10-19T09:00:00Z', 'hourly')).toBe('09:00');
+      expect(formatChartAxisTimestamp('2026-10-19T00:00:00Z', 'hourly')).toBe('00:00');
+    });
+
+    it('formats daily, weekly, and cumulative timestamps as YYYY-MM-DD', () => {
+      expect(formatChartAxisTimestamp('2026-10-19', 'daily')).toBe('2026-10-19');
+      expect(formatChartAxisTimestamp('2026-10-19T14:00:00Z', 'daily')).toBe('2026-10-19');
+      expect(formatChartAxisTimestamp('2026-10-19', 'weekly')).toBe('2026-10-19');
+      expect(formatChartAxisTimestamp('2026-10-19', 'cumulative')).toBe('2026-10-19');
+    });
+
+    it('handles empty or malformed timestamp defensively', () => {
+      expect(formatChartAxisTimestamp('', 'hourly')).toBe('');
+      expect(formatChartAxisTimestamp('unknown', 'hourly')).toBe('unknown');
+      expect(formatChartAxisTimestamp('abc', 'daily')).toBe('abc');
+      expect(formatChartAxisTimestamp('2026-10-19T18:45', 'hourly')).toBe('18:00');
+      expect(formatChartAxisTimestamp('2026-10-19T23:59:59Z', 'hourly')).toBe('23:00');
+      expect(formatChartAxisTimestamp('2026-10-19T04:15:00+03:00', 'hourly')).toBe('04:00');
     });
   });
 });

@@ -2,6 +2,7 @@ package http_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/domain"
@@ -1713,6 +1715,267 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		}
 		if events[0].SessionID != "ses-1" || events[1].SessionID != "ses-2" {
 			t.Errorf("expected events stably sorted: %+v", events)
+		}
+	})
+}
+
+func TestProgressionHandler(t *testing.T) {
+	wsDir := setupFixtureWorkspaces(t)
+	server := adaptershttp.NewServer(wsDir, fstest.MapFS{})
+
+	t.Run("default progression returns 200 with daily buckets", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/progression", nil)
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d (body: %s)", rec.Code, rec.Body.String())
+		}
+
+		var buckets []domain.TimeBucketMetric
+		if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
+			t.Fatalf("failed unmarshaling progression response: %v", err)
+		}
+
+		if len(buckets) == 0 {
+			t.Errorf("expected at least one progression bucket")
+		}
+		// In daily granularity, bucket key format is YYYY-MM-DD
+		for _, b := range buckets {
+			if len(b.BucketKey) != 10 {
+				t.Errorf("expected daily bucket key format YYYY-MM-DD, got %s", b.BucketKey)
+			}
+		}
+	})
+
+	t.Run("hourly granularity produces hourly bucket keys", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/progression?granularity=hourly", nil)
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", rec.Code)
+		}
+
+		var buckets []domain.TimeBucketMetric
+		if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
+			t.Fatalf("failed unmarshaling progression response: %v", err)
+		}
+
+		if len(buckets) == 0 {
+			t.Errorf("expected at least one hourly progression bucket")
+		}
+		for _, b := range buckets {
+			if !strings.HasSuffix(b.BucketKey, ":00:00Z") {
+				t.Errorf("expected hourly bucket key format YYYY-MM-DDTHH:00:00Z, got %s", b.BucketKey)
+			}
+		}
+	})
+
+	t.Run("custom datetime range with YYYY-MM-DDTHH:mm format", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/progression?startDate=2026-10-15T09:00&endDate=2026-10-15T12:00&granularity=hourly", nil)
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d (body: %s)", rec.Code, rec.Body.String())
+		}
+
+		var buckets []domain.TimeBucketMetric
+		if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
+			t.Fatalf("failed unmarshaling progression response: %v", err)
+		}
+
+		for _, b := range buckets {
+			if !strings.HasPrefix(b.BucketKey, "2026-10-15T") {
+				t.Errorf("expected bucket in range, got %s", b.BucketKey)
+			}
+		}
+	})
+
+	t.Run("invalid datetime returns 400 Bad Request", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/progression?startDate=invalid-date", nil)
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400 Bad Request, got %d", rec.Code)
+		}
+	})
+
+	t.Run("invalid granularity returns 400 Bad Request", func(t *testing.T) {
+		invalidGranularities := []string{
+			"unsupported",
+			"bogus",
+			"minutely",
+			"secondly",
+			"yearly",
+		}
+		for _, g := range invalidGranularities {
+			req := httptest.NewRequest(http.MethodGet, "/api/progression?granularity="+g, nil)
+			rec := httptest.NewRecorder()
+			server.Handler().ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("expected 400 Bad Request for granularity=%s, got %d (body: %s)", g, rec.Code, rec.Body.String())
+			}
+			var errResp adaptershttp.ErrorResponse
+			if err := json.Unmarshal(rec.Body.Bytes(), &errResp); err != nil {
+				t.Errorf("expected JSON error response: %v", err)
+			}
+			if errResp.Error != "bad_request" {
+				t.Errorf("expected error code 'bad_request', got %s", errResp.Error)
+			}
+		}
+	})
+
+	t.Run("invalid until parameter returns 400 Bad Request", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/progression?until=not-a-date", nil)
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400 Bad Request, got %d", rec.Code)
+		}
+	})
+
+	t.Run("window=1d filters last 24 hours dynamically", func(t *testing.T) {
+		// Create temporary workspace with one recent ticket and one old ticket
+		root := t.TempDir()
+		wsDir := filepath.Join(root, "workspaces")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		now := time.Now().UTC()
+		recentTS := now.Add(-1 * time.Hour).Format(time.RFC3339)
+		oldTS := now.Add(-48 * time.Hour).Format(time.RFC3339)
+
+		tRecentDir := filepath.Join(wsDir, "RECENT-1")
+		_ = os.MkdirAll(tRecentDir, 0755)
+		recentJSON := fmt.Sprintf(`{
+			"ticket_id": "RECENT-1",
+			"ticket_title": "Recent Ticket",
+			"ticket_type": "feature",
+			"started_at": "%s",
+			"completed_at": "%s",
+			"updated_at": "%s",
+			"code": {"lines_added": 10, "lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
+			"invocations": [
+				{
+					"id": "inv-rec-1",
+					"role": "coder",
+					"model": "gpt-4",
+					"user": "dev",
+					"started_at": "%s",
+					"completed_at": "%s",
+					"tokens": {"input": 500, "output": 100, "cache_read": 200, "reasoning": 0, "peak_context": 2000},
+					"cost_usd": 0.05
+				}
+			],
+			"tools": []
+		}`, recentTS, recentTS, recentTS, recentTS, recentTS)
+		_ = os.WriteFile(filepath.Join(tRecentDir, "agentic_metrics.json"), []byte(recentJSON), 0644)
+
+		tOldDir := filepath.Join(wsDir, "OLD-1")
+		_ = os.MkdirAll(tOldDir, 0755)
+		oldJSON := fmt.Sprintf(`{
+			"ticket_id": "OLD-1",
+			"ticket_title": "Old Ticket",
+			"ticket_type": "feature",
+			"started_at": "%s",
+			"completed_at": "%s",
+			"updated_at": "%s",
+			"code": {"lines_added": 10, "lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
+			"invocations": [
+				{
+					"id": "inv-old-1",
+					"role": "coder",
+					"model": "gpt-4",
+					"user": "dev",
+					"started_at": "%s",
+					"completed_at": "%s",
+					"tokens": {"input": 500, "output": 100, "cache_read": 200, "reasoning": 0, "peak_context": 2000},
+					"cost_usd": 0.05
+				}
+			],
+			"tools": []
+		}`, oldTS, oldTS, oldTS, oldTS, oldTS)
+		_ = os.WriteFile(filepath.Join(tOldDir, "agentic_metrics.json"), []byte(oldJSON), 0644)
+
+		s := adaptershttp.NewServer(wsDir, fstest.MapFS{})
+
+		req := httptest.NewRequest(http.MethodGet, "/api/progression?window=1d&granularity=hourly", nil)
+		rec := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d (body: %s)", rec.Code, rec.Body.String())
+		}
+
+		var buckets []domain.TimeBucketMetric
+		if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
+			t.Fatalf("failed unmarshaling progression response: %v", err)
+		}
+
+		if len(buckets) != 1 {
+			t.Fatalf("expected exactly 1 bucket within last 24h, got %d", len(buckets))
+		}
+		if buckets[0].Invocations != 1 {
+			t.Errorf("expected 1 invocation, got %d", buckets[0].Invocations)
+		}
+		if buckets[0].CostUSD != 0.05 {
+			t.Errorf("expected 0.05 cost, got %f", buckets[0].CostUSD)
+		}
+	})
+
+	t.Run("inverted date range returns 200 OK with empty slice", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/progression?startDate=2026-10-15T18:00&endDate=2026-10-15T09:00", nil)
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", rec.Code)
+		}
+
+		var buckets []domain.TimeBucketMetric
+		if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
+			t.Fatalf("failed unmarshaling progression response: %v", err)
+		}
+		if len(buckets) != 0 {
+			t.Fatalf("expected 0 buckets for inverted dates, got %d", len(buckets))
+		}
+	})
+
+	t.Run("empty workspace returns 200 OK with empty slice", func(t *testing.T) {
+		emptyWs := t.TempDir()
+		s := adaptershttp.NewServer(emptyWs, fstest.MapFS{})
+		req := httptest.NewRequest(http.MethodGet, "/api/progression", nil)
+		rec := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", rec.Code)
+		}
+
+		var buckets []domain.TimeBucketMetric
+		if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
+			t.Fatalf("failed unmarshaling empty progression response: %v", err)
+		}
+		if len(buckets) != 0 {
+			t.Errorf("expected 0 buckets for empty workspaces, got %d", len(buckets))
+		}
+	})
+
+	t.Run("fleet and workspaces handlers support window=1d", func(t *testing.T) {
+		for _, path := range []string{"/api/fleet?window=1d", "/api/workspaces?window=1d"} {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rec := httptest.NewRecorder()
+			server.Handler().ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("expected 200 OK for %s, got %d", path, rec.Code)
+			}
 		}
 	})
 }

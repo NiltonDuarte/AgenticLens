@@ -1598,6 +1598,43 @@ body {
   gap: 2px;
 }
 
+.custom-datetime-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 16px;
+  flex-wrap: wrap;
+}
+
+.datetime-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.datetime-input {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  outline: none;
+}
+
+.datetime-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.datetime-warning {
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
 .preset-btn, .granularity-btn {
   background: transparent;
   border: none;

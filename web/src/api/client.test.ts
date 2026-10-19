@@ -7,6 +7,7 @@ import {
   fetchWorkspaceEvents,
   fetchWorkspaceAnomalies,
   fetchVersion,
+  fetchProgressionMetrics,
 } from './client';
 import {
   mockFleetSummary,
@@ -552,6 +553,83 @@ describe('Boundary API Client', () => {
       const res = await fetchVersion();
       expect(res.isMock).toBe(true);
       expect(res.data).toEqual(mockBuildInfo);
+    });
+  });
+
+  describe('fetchProgressionMetrics', () => {
+    it('returns live backend payload and passes query parameters accurately', async () => {
+      const mockBuckets = [
+        {
+          bucket_key: '2026-10-19T14:00:00Z',
+          bucket_date: '2026-10-19T14:00:00Z',
+          invocations: 5,
+          cost_usd: 0.25,
+          input_tokens: 1000,
+          output_tokens: 200,
+          cache_read_tokens: 500,
+          reasoning_tokens: 0,
+          cache_hit_rate_pct: 33.3,
+          lines_added: 50,
+          lines_deleted: 10,
+          files_changed: 2,
+          net_lines_added: 40,
+          peak_context_tokens: 5000,
+          active_duration_seconds: 60,
+          cumulative_cost_usd: 0.25,
+          cumulative_input_tokens: 1000,
+          cumulative_output_tokens: 200,
+          cumulative_lines_added: 50,
+          cumulative_lines_deleted: 10,
+          cumulative_invocations: 5,
+        },
+      ];
+
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockBuckets,
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const res = await fetchProgressionMetrics({
+        window: '1d',
+        granularity: 'hourly',
+        startDate: '2026-10-19T00:00',
+        endDate: '2026-10-19T23:59',
+      });
+
+      expect(res.isMock).toBe(false);
+      expect(res.data).toHaveLength(1);
+      expect(res.data[0]?.bucket_key).toBe('2026-10-19T14:00:00Z');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/progression?window=1d&granularity=hourly&startDate=2026-10-19T00%3A00&endDate=2026-10-19T23%3A59'
+      );
+    });
+
+    it('falls back to local aggregateMetricsOverTime on network failure', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')));
+
+      const res = await fetchProgressionMetrics({
+        window: 'all',
+        granularity: 'daily',
+      });
+
+      expect(res.isMock).toBe(true);
+      expect(res.data.length).toBeGreaterThan(0);
+    });
+
+    it('falls back to local aggregateMetricsOverTime on non-200 HTTP status', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+      }));
+
+      const res = await fetchProgressionMetrics({
+        window: '7d',
+        granularity: 'weekly',
+      });
+
+      expect(res.isMock).toBe(true);
+      expect(res.data.length).toBeGreaterThan(0);
     });
   });
 });

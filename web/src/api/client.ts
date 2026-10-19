@@ -5,9 +5,13 @@ import type {
   EventFact,
   FleetSummary,
   TicketComparisonRow,
+  TimeBucketMetric,
+  TimeGranularity,
+  TimeWindowPreset,
   WorkspaceDetail,
 } from '../domain/types';
 import { deriveTicketComparisonRows, filterLedgersByCompletionDate } from '../domain/formatters';
+import { aggregateMetricsOverTime } from '../domain/progression';
 import {
   mockFleetSummary,
   mockTicketComparisonRows,
@@ -234,5 +238,53 @@ export async function fetchWorkspaceAnomalies(
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown network failure';
     throw new Error(msg);
+  }
+}
+
+export async function fetchProgressionMetrics(params?: {
+  readonly window?: TimeWindowPreset;
+  readonly granularity?: TimeGranularity;
+  readonly startDate?: string;
+  readonly endDate?: string;
+}): Promise<ApiResponse<readonly TimeBucketMetric[]>> {
+  const windowParam = params?.window ?? 'all';
+  const granularityParam = params?.granularity ?? 'daily';
+  const startDateParam = params?.startDate;
+  const endDateParam = params?.endDate;
+
+  const fallback = (): readonly TimeBucketMetric[] => {
+    const allMock = Object.values(mockAgenticMetricsLedgers);
+    return aggregateMetricsOverTime(
+      allMock,
+      granularityParam,
+      startDateParam,
+      endDateParam
+    );
+  };
+
+  try {
+    const query = new URLSearchParams();
+    if (windowParam && windowParam !== 'all') {
+      query.set('window', windowParam);
+    }
+    if (granularityParam) {
+      query.set('granularity', granularityParam);
+    }
+    if (startDateParam) {
+      query.set('startDate', startDateParam);
+    }
+    if (endDateParam) {
+      query.set('endDate', endDateParam);
+    }
+
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const res = await fetch(`/api/progression${qs}`);
+    if (!res.ok) {
+      return { data: fallback(), isMock: true };
+    }
+    const data = (await res.json()) as readonly TimeBucketMetric[];
+    return { data, isMock: false };
+  } catch {
+    return { data: fallback(), isMock: true };
   }
 }

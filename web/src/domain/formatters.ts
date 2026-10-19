@@ -3,6 +3,7 @@ import type {
   ComparisonSortField,
   ComparisonSortOrder,
   TicketComparisonRow,
+  TimeGranularity,
 } from './types';
 
 export const HEALTHY_CEILING_TOKENS = 200_000;
@@ -384,4 +385,28 @@ export function deriveTicketComparisonRows(
     }
     return compareTicketIds(a.ticket_id, b.ticket_id);
   });
+}
+
+export function formatChartAxisTimestamp(
+  timestamp: string,
+  granularity: TimeGranularity
+): string {
+  if (!timestamp) {
+    return '';
+  }
+  if (granularity === 'hourly') {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):/.exec(timestamp);
+    if (match) {
+      return `${match[4]}:00`;
+    }
+    const fallbackHour = /T(\d{2}):/.exec(timestamp);
+    if (fallbackHour) {
+      return `${fallbackHour[1]}:00`;
+    }
+    return timestamp;
+  }
+  if (timestamp.length >= 10) {
+    return timestamp.slice(0, 10);
+  }
+  return timestamp;
 }
