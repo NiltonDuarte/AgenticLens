@@ -32,22 +32,25 @@
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
 - **Active Agent Duration:** 20m 41s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Orchestrator peak 88.5k tokens (44% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Context Window Health:** HEALTHY — Orchestrator peak 0 tokens (0% of 200k healthy ceiling, 0 compactions) | Subagents peak 88.5k (General)
+- **Role Effort Distribution (Subagents):** General 100.0%
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
 - **Reasoning Effort:** 17,265 reasoning tokens (50.0% of generated output)
 - **Tool Health & Self-Correction:** 110 tool calls (1 self-corrections, 99.1% success rate)
 
+### Anomalies & Health Flags
+- **Status:** No execution anomalies detected (clean session).
+
 ### Agentic Execution Metrics
 
-**Contributors:** nilton.guedes_duarte@digits.schwarz
+**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 757,331 | 17,281 | 6,092,711 | 88.9% | 88.5k | HEALTHY | $1.15 |
+| **general** | 1 | 757,331 | 17,281 | 6,092,711 | 88.9% | 88.5k | HEALTHY | $1.15 |
 | **Total** | **1** | **757,331** | **17,281** | **6,092,711** | **88.9%** | **88.5k** | **HEALTHY** | **$1.15** |
 
 #### By Model

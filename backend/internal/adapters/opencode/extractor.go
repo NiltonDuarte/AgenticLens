@@ -6,12 +6,32 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"agenticlens/internal/domain"
 )
+
+var emailPattern = regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
+
+func sanitizeTelemetryText(text string) string {
+	if text == "" {
+		return ""
+	}
+	cwd, err := os.Getwd()
+	if err == nil && cwd != "" && cwd != "/" {
+		text = strings.ReplaceAll(text, cwd, "<workspace>")
+	}
+	home, err := os.UserHomeDir()
+	if err == nil && home != "" && home != "/" {
+		text = strings.ReplaceAll(text, home, "~")
+	}
+	text = emailPattern.ReplaceAllString(text, "[REDACTED_EMAIL]")
+	return text
+}
 
 type rawTimeInfo struct {
 	Created   *float64 `json:"created"`
@@ -546,7 +566,7 @@ func ExtractFacts(
 			var errExcerpt *string
 			if isError {
 				eventStatus = "error"
-				errMsg := trimmedOut
+				errMsg := sanitizeTelemetryText(trimmedOut)
 				if errMsg == "" {
 					errMsg = stat
 					if errMsg == "" {

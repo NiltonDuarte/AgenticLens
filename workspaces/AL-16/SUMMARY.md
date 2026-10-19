@@ -28,7 +28,7 @@
 
 ### Agent Persona & Skill Modernization (`.opencode/`)
 - **Persona Layer Alignment**: Updated `.opencode/agent/planner.md`, `coder.md`, `tester.md`, and `reviewer.md` to reference `backend/` directory prefixes.
-- **Path Sanitization**: Removed hardcoded developer machine paths (`/Users/guedesduarte/...`) from `.opencode/agent/planner.md` and `.opencode/skills/agentic-lens-dev/SKILL.md`.
+- **Path Sanitization**: Removed hardcoded developer machine paths (`/Users/<username>/...`) from `.opencode/agent/planner.md` and `.opencode/skills/agentic-lens-dev/SKILL.md`.
 - **Config Manifest Parity**: Ensured all agent guidelines reference `.agenticlens/config.yaml`.
 
 ### Quality & Verification
@@ -38,14 +38,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 5h 36m (excludes user wait time)
+- **Active Agent Duration:** 5h 43m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Orchestrator peak 170.1k tokens (85% of 200k healthy ceiling, 4 compactions) | Subagents peak 171.9k (Planner)
 - **Role Effort Distribution (Subagents):** Planner 20.4%, Coder 57.3%, Tester 11.8%, Reviewer 10.5%
 - **Subagent Turn Velocity & Thrashing:** 93.9 avg turns/run (peak: 231 turns) | Planner 75.0, Coder 195.5, Tester 55.0, Reviewer 50.0
 - **Test-to-Production Code Ratio:** 2.9:1 (+856 test lines / +291 prod lines)
 - **Code Delivered:** +1,147 / -4,630 lines across 41 code files (excluding docs)
-- **Reasoning Effort:** 184,265 reasoning tokens (53.3% of generated output)
-- **Tool Health & Self-Correction:** 938 tool calls (15 self-corrections, 98.4% success rate)
+- **Reasoning Effort:** 189,789 reasoning tokens (52.5% of generated output)
+- **Tool Health & Self-Correction:** 999 tool calls (15 self-corrections, 98.5% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 8 execution anomalies detected (5 CRITICAL, 3 WARNING).
@@ -60,20 +60,20 @@
 
 ### Agentic Execution Metrics
 
-**Contributors:** nilton.guedes_duarte@digits.schwarz
+**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 2,317,313 | 49,167 | 13,131,186 | 85.0% | 170.1k | ELEVATED | $3.04 |
+| **orchestrator** | 1 | 2,798,785 | 59,676 | 20,963,211 | 88.2% | 170.1k | ELEVATED | $4.05 |
 | **planner** | 2 | 1,034,399 | 22,285 | 8,582,472 | 89.2% | 171.9k | ELEVATED | $1.63 |
 | **coder** | 2 | 2,249,253 | 67,652 | 30,919,339 | 93.2% | 168.0k | ELEVATED | $4.57 |
 | **tester** | 2 | 574,985 | 13,749 | 5,277,688 | 90.2% | 83.4k | HEALTHY | $0.94 |
 | **reviewer** | 2 | 551,233 | 8,424 | 4,392,113 | 88.8% | 89.4k | HEALTHY | $0.84 |
-| **Total** | **9** | **6,727,183** | **161,277** | **62,302,798** | **90.3%** | **171.9k** | **ELEVATED** | **$11.01** |
+| **Total** | **9** | **7,208,655** | **171,786** | **70,134,823** | **90.7%** | **171.9k** | **ELEVATED** | **$12.02** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 9 | 6,727,183 | 161,277 | 62,302,798 | 90.3% | $11.01 |
-| **Total** | **9** | **6,727,183** | **161,277** | **62,302,798** | **90.3%** | **$11.01** |
+| **gemini-3.8-flash** | 9 | 7,208,655 | 171,786 | 70,134,823 | 90.7% | $12.02 |
+| **Total** | **9** | **7,208,655** | **171,786** | **70,134,823** | **90.7%** | **$12.02** |

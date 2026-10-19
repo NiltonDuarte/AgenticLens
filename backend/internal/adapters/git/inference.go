@@ -7,16 +7,8 @@ import (
 	"strings"
 )
 
-// GetGitUser retrieves user email or user name from git config.
+// GetGitUser retrieves user name strictly from git config (user.name).
 func GetGitUser() string {
-	email, err := runGitCommand("config", "user.email")
-	if err == nil {
-		clean := strings.TrimSpace(email)
-		if clean != "" {
-			return clean
-		}
-	}
-
 	name, err := runGitCommand("config", "user.name")
 	if err == nil {
 		clean := strings.TrimSpace(name)

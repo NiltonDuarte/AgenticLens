@@ -62,9 +62,23 @@
 - **Reasoning Effort:** 194,925 reasoning tokens (46.5% of generated output)
 - **Tool Health & Self-Correction:** 878 tool calls (16 self-corrections, 98.2% success rate)
 
+### Anomalies & Health Flags
+- **Status:** 11 execution anomalies detected (4 CRITICAL, 7 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k in turn 49 (session: ses_eb47ed4ecffetJeODsIZNIlBom), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.6k tokens) — Context tokens reached 163.6k in turn 63 (session: ses_eb49456d5ffeFKwBAj16rRsArN), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+85.4k tokens) — Context tokens surged by 85.4k tokens in turn 69 (session: ses_eb49456d5ffeFKwBAj16rRsArN, total: 85.4k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 139 (session: ses_eb49fc8eeffeHdKz5VKGwRmXjO), breaching 160k critical ceiling
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.7k tokens) — Context tokens surged by 43.7k tokens in turn 54 (session: ses_eb47ed4ecffetJeODsIZNIlBom, total: 43.7k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+48.7k tokens) — Context tokens surged by 48.7k tokens in turn 123 (session: ses_eb49456d5ffeFKwBAj16rRsArN, total: 48.7k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+75.7k tokens) — Context tokens surged by 75.7k tokens in turn 144 (session: ses_eb49fc8eeffeHdKz5VKGwRmXjO, total: 75.7k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+50.1k tokens) — Context tokens surged by 50.1k tokens in turn 202 (session: ses_eb49fc8eeffeHdKz5VKGwRmXjO, total: 131.6k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+61.1k tokens) — Context tokens surged by 61.1k tokens in turn 245 (session: ses_eb49fc8eeffeHdKz5VKGwRmXjO, total: 61.1k tokens, threshold: 40000)
+- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: t3-code_preview_evaluate (28.6%) — Tool 't3-code_preview_evaluate' failed 2 out of 7 calls (28.6% failure rate, threshold: >20%)
+- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: t3-code_preview_navigate (33.3%) — Tool 't3-code_preview_navigate' failed 3 out of 9 calls (33.3% failure rate, threshold: >20%)
+
 ### Agentic Execution Metrics
 
-**Contributors:** nilton.guedes_duarte@digits.schwarz
+**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |

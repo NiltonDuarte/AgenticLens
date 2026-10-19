@@ -20,24 +20,29 @@
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
 - **Active Agent Duration:** 33m 19s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Orchestrator peak 77.9k tokens (39% of 200k healthy ceiling, 0 compactions) | Subagents peak 87.0k (Planner)
-- **Role Effort Distribution (Subagents):** Planner 59.5%, Coder 40.5%
+- **Context Window Health:** HEALTHY — Orchestrator peak 0 tokens (0% of 200k healthy ceiling, 0 compactions) | Subagents peak 87.0k (Planner)
+- **Role Effort Distribution (Subagents):** Planner 29.2%, Coder 19.8%, General 51.0%
 - **Subagent Turn Velocity & Thrashing:** 25.7 avg turns/run (peak: 31 turns) | Planner 23.0, Coder 31.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
 - **Reasoning Effort:** 47,716 reasoning tokens (58.9% of generated output)
 - **Tool Health & Self-Correction:** 177 tool calls (8 self-corrections, 95.5% success rate)
 
+### Anomalies & Health Flags
+- **Status:** 2 execution anomalies detected (2 WARNING).
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+62.4k tokens) — Context tokens surged by 62.4k tokens in turn 47 (session: ses_eb49f4c12ffeqKe8SwAW27I9yb, total: 62.4k tokens, threshold: 40000)
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: mcp-gateway_mcp-exec (3 consecutive errors) — Tool 'mcp-gateway_mcp-exec' encountered 3 consecutive execution failures (session: ses_eb49e8e35ffe4tOlB0urEsJTAm, turn: 27)
+
 ### Agentic Execution Metrics
 
-**Contributors:** nilton.guedes_duarte@digits.schwarz
+**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 596,513 | 19,700 | 3,704,428 | 86.1% | 77.9k | HEALTHY | $0.85 |
 | **planner** | 2 | 292,530 | 11,761 | 2,059,373 | 87.6% | 87.0k | HEALTHY | $0.48 |
 | **coder** | 1 | 174,613 | 1,843 | 1,650,455 | 90.4% | 84.6k | HEALTHY | $0.33 |
+| **general** | 1 | 596,513 | 19,700 | 3,704,428 | 86.1% | 77.9k | HEALTHY | $0.85 |
 | **Total** | **4** | **1,063,656** | **33,304** | **7,414,256** | **87.5%** | **87.0k** | **HEALTHY** | **$1.66** |
 
 #### By Model

@@ -57,9 +57,15 @@
 - **Reasoning Effort:** 36,787 reasoning tokens (28.2% of generated output)
 - **Tool Health & Self-Correction:** 425 tool calls (6 self-corrections, 98.6% success rate)
 
+### Anomalies & Health Flags
+- **Status:** 3 execution anomalies detected (1 CRITICAL, 2 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+82.5k tokens) — Context tokens surged by 82.5k tokens in turn 57 (session: ses_eb4f4deedffenMAjNNnoaOCTA0, total: 82.5k tokens, threshold: 80000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+64.9k tokens) — Context tokens surged by 64.9k tokens in turn 49 (session: ses_eb4f4deedffenMAjNNnoaOCTA0, total: 64.9k tokens, threshold: 40000)
+- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: task (25.0%) — Tool 'task' failed 2 out of 8 calls (25.0% failure rate, threshold: >20%)
+
 ### Agentic Execution Metrics
 
-**Contributors:** nilton.guedes_duarte@digits.schwarz
+**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |

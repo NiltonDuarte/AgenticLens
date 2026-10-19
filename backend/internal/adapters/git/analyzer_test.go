@@ -3,6 +3,7 @@ package git_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/git"
@@ -124,6 +125,9 @@ func TestInferenceOnActiveWorkspace(t *testing.T) {
 	user := git.GetGitUser()
 	if user == "" {
 		t.Errorf("expected non-empty git user")
+	}
+	if strings.Contains(user, "@") {
+		t.Errorf("expected git user not to leak full email domain, got: %s", user)
 	}
 }
 

@@ -4,8 +4,8 @@
   "ticket_title": "Chronological Event Extraction and Schema Evolution in Go",
   "ticket_type": "feature",
   "started_at": "2026-10-18T07:27:23.738000+00:00",
-  "completed_at": "2026-10-18T08:33:32.045000+00:00",
-  "updated_at": "2026-10-18T08:33:45.550817+00:00",
+  "completed_at": "2026-10-18T09:16:39.441000+00:00",
+  "updated_at": "2026-10-19T13:00:13.241024505Z",
   "code": {
     "lines_added": 1244,
     "lines_deleted": 168,
@@ -22,19 +22,19 @@
       "parent_id": null,
       "role": "orchestrator",
       "model": "gemini-3.8-flash",
-      "user": "nilton.guedes_duarte@digits.schwarz",
+      "user": "Nilton Duarte",
       "started_at": "2026-10-18T07:27:24.183000+00:00",
-      "completed_at": "2026-10-18T08:33:32.045000+00:00",
-      "active_duration_seconds": 3740,
-      "turns": 86,
+      "completed_at": "2026-10-18T09:16:39.441000+00:00",
+      "active_duration_seconds": 3889,
+      "turns": 113,
       "tokens": {
-        "input": 918041,
-        "output": 21407,
-        "cache_read": 4764110,
-        "reasoning": 15057,
-        "peak_context": 110985
+        "input": 1241799,
+        "output": 24867,
+        "cache_read": 7684979,
+        "reasoning": 17594,
+        "peak_context": 126408
       },
-      "cost_usd": 1.182579,
+      "cost_usd": 1.666951,
       "compactions": 0
     },
     {
@@ -42,7 +42,7 @@
       "parent_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
       "role": "planner",
       "model": "gemini-3.8-flash",
-      "user": "nilton.guedes_duarte@digits.schwarz",
+      "user": "Nilton Duarte",
       "started_at": "2026-10-18T07:34:50.166000+00:00",
       "completed_at": "2026-10-18T07:47:56.801000+00:00",
       "active_duration_seconds": 301,
@@ -62,7 +62,7 @@
       "parent_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
       "role": "coder",
       "model": "gemini-3.8-flash",
-      "user": "nilton.guedes_duarte@digits.schwarz",
+      "user": "Nilton Duarte",
       "started_at": "2026-10-18T07:49:58.054000+00:00",
       "completed_at": "2026-10-18T08:20:36.636000+00:00",
       "active_duration_seconds": 1836,
@@ -82,7 +82,7 @@
       "parent_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
       "role": "tester",
       "model": "gemini-3.8-flash",
-      "user": "nilton.guedes_duarte@digits.schwarz",
+      "user": "Nilton Duarte",
       "started_at": "2026-10-18T08:20:43.389000+00:00",
       "completed_at": "2026-10-18T08:26:38.516000+00:00",
       "active_duration_seconds": 355,
@@ -102,7 +102,7 @@
       "parent_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
       "role": "reviewer",
       "model": "gemini-3.8-flash",
-      "user": "nilton.guedes_duarte@digits.schwarz",
+      "user": "Nilton Duarte",
       "started_at": "2026-10-18T08:26:47.113000+00:00",
       "completed_at": "2026-10-18T08:31:03.531000+00:00",
       "active_duration_seconds": 256,
@@ -121,12 +121,12 @@
   "tools": [
     {
       "name": "read",
-      "calls": 256,
+      "calls": 259,
       "errors": 29
     },
     {
       "name": "bash",
-      "calls": 119,
+      "calls": 137,
       "errors": 2
     },
     {
@@ -136,7 +136,7 @@
     },
     {
       "name": "edit",
-      "calls": 46,
+      "calls": 47,
       "errors": 7
     },
     {
@@ -160,14 +160,14 @@
       "errors": 4
     },
     {
+      "name": "todowrite",
+      "calls": 6,
+      "errors": 0
+    },
+    {
       "name": "mcp-gateway_mcp-exec",
       "calls": 5,
       "errors": 5
-    },
-    {
-      "name": "todowrite",
-      "calls": 5,
-      "errors": 0
     },
     {
       "name": "list_mcp_resources",
@@ -187,6 +187,11 @@
     {
       "name": "skill",
       "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "t3-code_list_thread_pull_requests",
+      "calls": 1,
       "errors": 0
     }
   ],
@@ -503,7 +508,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n401: \t\t\t\tModel:                 mName,\n402: \t\t\t\tUser:    ",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n401: \t\t\t\tModel:                 mName,\n402: \t\t\t\tUser:                  sessionUser,\n403: \t\t\t\tStartedAt:             \u0026stISO,\n404: \t\t\t\tCompletedAt:           \u0026endISO,\n405: \t\t\t\tActiveDurationSeconds: activeSecs,\n406: \t\t\t\tTurns:                 turns,\n407: \t\t\t\tTokens: domain.InvocationTokens{\n408: \t\t\t\t\tInput:       st.input,\n409: \t\t\t\t\tOutput:      st.output,\n410: \t\t\t\t\tCacheRead:   st.cache,\n411: \t\t\t\t\tReasoning:   st.reasoning,\n412: \t\t\t\t\tPeakContext: st.peak,\n413: \t\t\t\t},\n414: \t\t\t\tCostUSD:     math.Round(st.cost*1e6) / 1e6,\n415: \t\t\t\tCompactions: compactions,\n416: \t\t\t})\n417: \t\t}\n418: \t}\n419: \n420: \t// 4. Tool calls\n421: \tqTools := fmt.Sprintf(`\n422: \t\tSELECT p.data\n423: \t\tFROM part p\n424: \t\tJOIN session s ON p.session_id = s.id\n425: \t\tWHERE (s.id IN (%s) OR s.parent_id IN (%s))\n426: \t\t  AND p.data LIKE '%%\"type\":\"tool\"%%'\n427: \t`, quotedList, quotedList)\n428: \n429: \ttoolRows, err := db.Query(qTools)\n430: \tif err != nil {\n431: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying tool calls: %w\", err)\n432: \t}\n433: \tdefer toolRows.Close()\n434: \n435: \ttoolMap := make(map[string]*toolAccumulator)\n436: \n437: \tfor toolRows.Next() {\n438: \t\tvar pData sql.NullString\n439: \t\tif err := toolRows.Scan(\u0026pData); err != nil {\n440: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning tool row: %w\", err)\n441: \t\t}\n442: \t\tif !pData.Valid || strings.TrimSpace(pData.String) == \"\" {\n443: \t\t\tcontinue\n444: \t\t}\n445: \n446: \t\tvar rawPD rawPartData\n447: \t\tif err := json.Unmarshal([]byte(pData.String), \u0026rawPD); err != nil {\n448: \t\t\tcontinue\n449: \t\t}\n450: \n451: \t\ttoolName := \"unknown\"\n452: \t\tif rawPD.Tool != nil \u0026\u0026 strings.TrimSpace(*rawPD.Tool) != \"\" {\n453: \t\t\ttoolName = strings.TrimSpace(*rawPD.Tool)\n454: \t\t}\n455: \n456: \t\ttAcc, exists := toolMap[toolName]\n457: \t\tif !exists {\n458: \t\t\ttAcc = \u0026toolAccumulator{}\n459: \t\t\ttoolMap[toolName] = tAcc\n460: \t\t}\n461: \t\ttAcc.calls++\n462: \n463: \t\tif rawPD.State != nil {\n464: \t\t\tstat := \"\"\n465: \t\t\tout := \"\"\n466: \t\t\tif rawPD.State.Status != nil {\n467: \t\t\t\tstat = *rawPD.State.Status\n468: \t\t\t}\n469: \t\t\tif rawPD.State.Output != nil {\n470: \t\t\t\tout = *rawPD.State.Output\n471: \t\t\t}\n472: \n473: \t\t\toutPrefix := out\n474: \t\t\tif len(outPrefix) \u003e 50 {\n475: \t\t\t\toutPrefix = outPrefix[:50]\n476: \t\t\t}\n477: \n478: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n479: \t\t\t\ttAcc.errors++\n480: \t\t\t}\n481: \t\t}\n482: \t}\n483: \tif err := toolRows.Err(); err != nil {\n484: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n485: \t}\n486: \n487: \tvar tools []domain.ToolFact\n488: \tfor tName, tStats := range toolMap {\n489: \t\ttools = append(tools, domain.ToolFact{\n490: \t\t\tName:   tName,\n491: \t\t\tCalls:  tStats.calls,\n492: \t\t\tErrors: tStats.errors,\n493: \t\t})\n494: \t}\n495: \n496: \tsort.Slice(tools, func(i, j int) bool {\n497: \t\tif tools[i].Calls == tools[j].Calls {\n498: \t\t\treturn tools[i].Name \u003c tools[j].Name\n499: \t\t}\n500: \t\treturn tools[i].Calls \u003e tools[j].Calls\n501: \t})\n502: \n503: \tvar maxCompleted *string\n504: \tfor _, inv := range invocations {\n505: \t\tif inv.CompletedAt != nil \u0026\u0026 *inv.CompletedAt != \"\" {\n506: \t\t\tif maxCompleted == nil || *inv.CompletedAt \u003e *maxCompleted {\n507: \t\t\t\tmaxCompleted = inv.CompletedAt\n508: \t\t\t}\n509: \t\t}\n510: \t}\n511: \tif maxCompleted != nil {\n512: \t\tcompletedAtISO = maxCompleted\n513: \t}\n514: \n515: \treturn invocations, tools, startedAtISO, completedAtISO, nil\n516: }\n\n(End of file - total 516 lines)\n\u003c/content\u003e",
       "duration_ms": 9,
       "context_tokens": 33483
     },
@@ -1018,7 +1023,7 @@
       "event_type": "tool_call",
       "tool_name": "task",
       "status": "error",
-      "error_message": "\u003ctask id=\"ses_eb210b5d8ffeQFhV7pQWckzb2W\" state=\"completed\"\u003e\n\u003ctask_result\u003e\n# CONTRACT.md: AL-6 Chronological Event Extraction and Schema Evolution in Go\n\nLocation: `workspaces/AL-6/CONTRACT.md`\n\n```ma",
+      "error_message": "\u003ctask id=\"ses_eb210b5d8ffeQFhV7pQWckzb2W\" state=\"completed\"\u003e\n\u003ctask_result\u003e\n# CONTRACT.md: AL-6 Chronological Event Extraction and Schema Evolution in Go\n\nLocation: `workspaces/AL-6/CONTRACT.md`\n\n```markdown\n# Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go\n\n## 1. Problem Statement\nActive session telemetry in AgenticLens is generated and backfilled natively by the Go engine across `backend/cmd/agentic-lens`, `backend/internal/adapters/opencode`, and `backend/internal/adapters/backfill`. While workspace ledgers (`agentic_metrics.json`) are already at schema version 2 with migration metadata, they record only coarse aggregate numbers per invocation and overall tool execution/error counts.\n\nDetecting fine-grained execution anomalies (such as consecutive tool failure streaks, subagent rework loops, and single-turn context window spikes planned in AL-7, AL-8, and AL-9) requires ordered, turn-level event telemetry. \n\nTicket AL-6 delivers native Go chronological event extraction and schema evolution:\n1. Defines pure domain event models (`EventFact`) representing atomic turn events, tool executions, and compaction milestones.\n2. Updates OpenCode SQLite extraction in `backend/internal/adapters/opencode/extractor.go` to extract, correlate, and chronologically sort events from `session`, `message`, and `part` tables.\n3. Provides seamless bidirectional serialization and backward compatibility in `backend/internal/adapters/schemas.go` and `backend/internal/adapters/repository.go`, ensuring historical ledgers lacking events deserialize cleanly without regression.\n4. Integrates event capture into both `agentic-lens generate` and `agentic-lens backfill --recompute-db`.\n5. Establishes TypeScript domain contract parity in `web/src/domain/types.ts`.\n\n---\n\n## 2. Functional Core, Imperative Shell (FCIS) Invariants\n\nAll implementation must strictly comply with architectural boundaries established in TECHNICAL_GUIDELINES.md:\n\n### Inward Dependency Flow\nDependencies flow strictly inward across layers:\n1. CLI Subcommand Layer (`backend/cmd/agentic-lens/main.go`):\n   - Application entrypoint, CLI flag parsing (`generate`, `backfill`, `server`), console output rendering, and adapter wiring.\n2. Imperative Adapters Layer (`backend/internal/adapters/`):\n   - External boundary serialization and DTO mapping (`backend/internal/adapters/schemas.go`).\n   - Filesystem workspace traversal and raw ledger reading (`backend/internal/adapters/repository.go`).\n   - SQLite read-only queries and extraction from OpenCode database (`backend/internal/adapters/opencode/`).\n   - Multi-workspace backfill coordination (`backend/internal/adapters/backfill/`).\n3. Functional Core Domain Layer (`backend/internal/domain/`):\n   - Houses pure domain models (`EventFact`, `AgenticFactLedger`, `AgenticMetricsLedger`), typed event enums (`EventType`), and pure aggregation algorithms.\n   - Must contain zero disk I/O, zero network calls, zero SQL queries, and zero system clocks. All timestamps, durations, and external identifiers must be passed as arguments from the imperative shell.\n\n### Pure Domain Core Isolation\n1. `EventType` is defined as a typed string enum in `backend/internal/domain/enums.go` with explicit constants for tool calls, turn messages, and compactions.\n2. `EventFact` is an immutable domain value object capturing timestamp, session identifier, turn index, agent role, event type, optional tool name, execution status, optional error message, optional duration in milliseconds, and context token count.\n3. Adding `Events []EventFact` to `AgenticFactLedger` in `backend/internal/domain/models.go` must not mutate or invalidate any existing pure mathematical aggregations in `backend/internal/domain/aggregations.go`.\n4. Domain logic remains deterministic and resilient against zero values, empty event slices, and nil pointers.\n\n### Imperative Boundary Shell Rules\n1. Seamless Backward Compatibility Mandate: Existing historical ledgers lacking an `events` array must deserialize without error, panic, or data loss. In Go, omitted `events` fields must map to",
       "duration_ms": 212375,
       "context_tokens": 57367
     },
@@ -1494,7 +1499,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: package opencode\n2: \n3: import (\n4: \t\"database/sql\"\n5:",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: package opencode\n2: \n3: import (\n4: \t\"database/sql\"\n5: \t\"encoding/json\"\n6: \t\"errors\"\n7: \t\"fmt\"\n8: \t\"math\"\n9: \t\"sort\"\n10: \t\"strings\"\n11: \t\"time\"\n12: \n13: \t\"agenticlens/internal/domain\"\n14: )\n15: \n16: type rawTimeInfo struct {\n17: \tCreated   *float64 `json:\"created\"`\n18: \tCompleted *float64 `json:\"completed\"`\n19: }\n20: \n21: type rawCacheInfo struct {\n22: \tRead *int64 `json:\"read\"`\n23: }\n24: \n25: type rawTokensInfo struct {\n26: \tInput     *int64        `json:\"input\"`\n27: \tOutput    *int64        `json:\"output\"`\n28: \tCache     *rawCacheInfo `json:\"cache\"`\n29: \tReasoning *int64        `json:\"reasoning\"`\n30: }\n31: \n32: type rawMessageData struct {\n33: \tModelID *string        `json:\"modelID\"`\n34: \tRole    *string        `json:\"role\"`\n35: \tTime    *rawTimeInfo   `json:\"time\"`\n36: \tTokens  *rawTokensInfo `json:\"tokens\"`\n37: \tCost    *float64       `json:\"cost\"`\n38: }\n39: \n40: type rawPartState struct {\n41: \tStatus *string `json:\"status\"`\n42: \tOutput *string `json:\"output\"`\n43: }\n44: \n45: type rawPartData struct {\n46: \tType  *string       `json:\"type\"`\n47: \tTool  *string       `json:\"tool\"`\n48: \tState *rawPartState `json:\"state\"`\n49: }\n50: \n51: type rawModelJSON struct {\n52: \tID *string `json:\"id\"`\n53: }\n54: \n55: type sessionModelAccumulator struct {\n56: \tinput     int64\n57: \toutput    int64\n58: \tcache     int64\n59: \treasoning int64\n60: \tpeak      int64\n61: \tcost      float64\n62: \tactiveMS  int64\n63: \tfirstTS   *int64\n64: \tlastTS    *int64\n65: \tasstMsgs  int64\n66: }\n67: \n68: type toolAccumulator struct {\n69: \tcalls  int64\n70: \terrors int64\n71: }\n72: \n73: func sanitizeSessionID(id string) (string, error) {\n74: \tclean := strings.TrimSpace(id)\n75: \tif clean == \"\" {\n76: \t\treturn \"\", errors.New(\"empty session id\")\n77: \t}\n78: \tfor i := 0; i \u003c len(clean); i++ {\n79: \t\tc := clean[i]\n80: \t\tif (c \u003e= 'a' \u0026\u0026 c \u003c= 'z') || (c \u003e= 'A' \u0026\u0026 c \u003c= 'Z') || (c \u003e= '0' \u0026\u0026 c \u003c= '9') || c == '_' || c == '-' {\n81: \t\t\tcontinue\n82: \t\t}\n83: \t\treturn \"\", fmt.Errorf(\"invalid character '%c' in session id %q\", c, clean)\n84: \t}\n85: \treturn clean, nil\n86: }\n87: \n88: func buildQuotedIDList(threadIDs []string) (string, error) {\n89: \tif len(threadIDs) == 0 {\n90: \t\treturn \"\", errors.New(\"empty thread id list\")\n91: \t}\n92: \tvar b strings.Builder\n93: \tfor i, id := range threadIDs {\n94: \t\tclean, err := sanitizeSessionID(id)\n95: \t\tif err != nil {\n96: \t\t\treturn \"\", err\n97: \t\t}\n98: \t\tif i \u003e 0 {\n99: \t\t\tb.WriteString(\", \")\n100: \t\t}\n101: \t\tb.WriteByte('\\'')\n102: \t\tb.WriteString(clean)\n103: \t\tb.WriteByte('\\'')\n104: \t}\n105: \treturn b.String(), nil\n106: }\n107: \n108: func formatEpochMilli(ms int64) string {\n109: \tt := time.UnixMilli(ms).UTC()\n110: \treturn t.Format(\"2006-01-02T15:04:05.000000+00:00\")\n111: }\n112: \n113: // ExtractFacts queries invocation and tool facts from OpenCode SQLite database for given root threads.\n114: func ExtractFacts(\n115: \tdb *sql.DB,\n116: \tthreadIDs []string,\n117: \tdefaultUser string,\n118: \tuserBySessionID map[string]string,\n119: ) ([]domain.InvocationFact, []domain.ToolFact, *string, *string, error) {\n120: \tif db == nil {\n121: \t\treturn nil, nil, nil, nil, errors.New(\"database connection is nil\")\n122: \t}\n123: \tif len(threadIDs) == 0 {\n124: \t\treturn []domain.InvocationFact{}, []domain.ToolFact{}, nil, nil, nil\n125: \t}\n126: \n127: \tquotedList, err := buildQuotedIDList(threadIDs)\n128: \tif err != nil {\n129: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"validating thread ids: %w\", err)\n130: \t}\n131: \n132: \t// 1. Earliest start time and latest completed time across sessions\n133: \tqTimes := fmt.Sprintf(`\n134: \t\tSELECT MIN(time_created), MAX(time_updated)\n135: \t\tFROM session\n136: \t\tWHERE id IN (%s) OR parent_id IN (%s)\n137: \t`, quotedList, quotedList)\n138: \n139: \tvar minCreated, maxUpdated sql.NullInt64\n140: \terr = db.QueryRow(qTimes).Scan(\u0026minCreated, \u0026maxUpdated)\n141: \tif err != nil \u0026\u0026 !errors.Is(err, sql.ErrNoRows) {\n142: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying session time boundaries: %w\", err)\n143: \t}\n144: \n145: \tvar startedA",
       "duration_ms": 9,
       "context_tokens": 49957
     },
@@ -1884,7 +1889,7 @@
       "event_type": "tool_call",
       "tool_name": "task",
       "status": "error",
-      "error_message": "\u003ctask id=\"ses_eb210b5d8ffeQFhV7pQWckzb2W\" state=\"completed\"\u003e\n\u003ctask_result\u003e\nI do not have access to a `write` tool in this subagent environment. My toolset is restricted to read-only file and search op",
+      "error_message": "\u003ctask id=\"ses_eb210b5d8ffeQFhV7pQWckzb2W\" state=\"completed\"\u003e\n\u003ctask_result\u003e\nI do not have access to a `write` tool in this subagent environment. My toolset is restricted to read-only file and search operations (`read`, `glob`, `grep`), browser preview, and gateway tools.\n\nThe complete, exact file contents for both artifacts are provided below so you or the orchestrator can write them directly to disk.\n\n---\n\n### File 1: `workspaces/AL-6/CONTRACT.md`\n\n```markdown\n# Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go\n\n## 1. Problem Statement\nActive session telemetry in AgenticLens is generated and backfilled natively by the Go engine across `backend/cmd/agentic-lens`, `backend/internal/adapters/opencode`, and `backend/internal/adapters/backfill`. While workspace ledgers (`agentic_metrics.json`) are already at schema version 2 with migration metadata, they record only coarse aggregate numbers per invocation and overall tool execution/error counts.\n\nDetecting fine-grained execution anomalies (such as consecutive tool failure streaks, subagent rework loops, and single-turn context window spikes planned in AL-7, AL-8, and AL-9) requires ordered, turn-level event telemetry.\n\nTicket AL-6 delivers native Go chronological event extraction and schema evolution:\n1. Defines pure domain event models (`EventFact`) representing atomic turn events, tool executions, and compaction milestones.\n2. Updates OpenCode SQLite extraction in `backend/internal/adapters/opencode/extractor.go` to extract, correlate, and chronologically sort events from `session`, `message`, and `part` tables.\n3. Provides seamless bidirectional serialization and backward compatibility in `backend/internal/adapters/schemas.go` and `backend/internal/adapters/repository.go`, ensuring historical ledgers lacking events deserialize cleanly without regression.\n4. Integrates event capture into both `agentic-lens generate` and `agentic-lens backfill --recompute-db`.\n5. Establishes TypeScript domain contract parity in `web/src/domain/types.ts`.\n\n---\n\n## 2. Functional Core, Imperative Shell (FCIS) Invariants\n\nAll implementation must strictly comply with architectural boundaries established in TECHNICAL_GUIDELINES.md:\n\n### Inward Dependency Flow\nDependencies flow strictly inward across layers:\n1. CLI Subcommand Layer (`backend/cmd/agentic-lens/main.go`):\n   - Application entrypoint, CLI flag parsing (`generate`, `backfill`, `server`), console output rendering, and adapter wiring.\n2. Imperative Adapters Layer (`backend/internal/adapters/`):\n   - External boundary serialization and DTO mapping (`backend/internal/adapters/schemas.go`).\n   - Filesystem workspace traversal and raw ledger reading (`backend/internal/adapters/repository.go`).\n   - SQLite read-only queries and extraction from OpenCode database (`backend/internal/adapters/opencode/`).\n   - Multi-workspace backfill coordination (`backend/internal/adapters/backfill/`).\n3. Functional Core Domain Layer (`backend/internal/domain/`):\n   - Houses pure domain models (`EventFact`, `AgenticFactLedger`, `AgenticMetricsLedger`), typed event enums (`EventType`), and pure aggregation algorithms.\n   - Must contain zero disk I/O, zero network calls, zero SQL queries, and zero system clocks. All timestamps, durations, and external identifiers must be passed as arguments from the imperative shell.\n\n### Pure Domain Core Isolation\n1. `EventType` is defined as a typed string enum in `backend/internal/domain/enums.go` with explicit constants for tool calls, turn messages, and compactions.\n2. `EventFact` is an immutable domain value object capturing timestamp, session identifier, turn index, agent role, event type, optional tool name, execution status, optional error message, optional duration in milliseconds, and context token count.\n3. Adding `Events []EventFact` to `AgenticFactLedger` in `backend/internal/domain/models.go` must not mutate or invalidate any existing pure mathematical aggregations in `backend/internal/domain/aggregations.go`.\n4. Domain logic remains deterministic and resilient against zero values, empty event",
       "duration_ms": 44441,
       "context_tokens": 64106
     },
@@ -2154,7 +2159,7 @@
       "event_type": "tool_call",
       "tool_name": "task",
       "status": "error",
-      "error_message": "\u003ctask id=\"ses_eb210b5d8ffeQFhV7pQWckzb2W\" state=\"completed\"\u003e\n\u003ctask_result\u003e\n# CONTRACT.md: AL-6 Chronological Event Extraction and Schema Evolution in Go\n\nLocation: `workspaces/AL-6/CONTRACT.md`\n\n```ma",
+      "error_message": "\u003ctask id=\"ses_eb210b5d8ffeQFhV7pQWckzb2W\" state=\"completed\"\u003e\n\u003ctask_result\u003e\n# CONTRACT.md: AL-6 Chronological Event Extraction and Schema Evolution in Go\n\nLocation: `workspaces/AL-6/CONTRACT.md`\n\n```markdown\n# Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go\n\n## 1. Problem Statement\nActive session telemetry in AgenticLens is generated and backfilled natively by the Go engine across backend/cmd/agentic-lens, backend/internal/adapters/opencode, and backend/internal/adapters/backfill. While workspace ledgers (agentic_metrics.json) are already at schema version 2 with migration metadata, they record only coarse aggregate numbers per invocation and overall tool execution and error counts.\n\nDetecting fine-grained execution anomalies (such as consecutive tool failure streaks, subagent rework loops, and single-turn context window spikes planned in AL-7, AL-8, and AL-9) requires ordered, turn-level event telemetry.\n\nFurthermore, existing workspaces on disk (under workspaces/) currently lack this ordered chronological event stream. To prevent fleet telemetry fragmentation, the new chronological event extraction must not only serve future sessions, but must also be actively backfilled across all existing workspaces where sessions exist in the OpenCode SQLite database.\n\nTicket AL-6 delivers native Go chronological event extraction, schema evolution, and workspace backfill:\n1. Defines pure domain event models (EventFact) representing atomic turn events, tool executions, and compaction milestones.\n2. Updates OpenCode SQLite extraction in backend/internal/adapters/opencode/extractor.go to extract, correlate, and chronologically sort events from session, message, and part tables.\n3. Provides seamless bidirectional serialization and backward compatibility in backend/internal/adapters/schemas.go and backend/internal/adapters/repository.go, ensuring historical ledgers lacking events deserialize cleanly without regression.\n4. Integrates event capture into both agentic-lens generate and agentic-lens backfill --recompute-db.\n5. Backfills existing workspaces on disk to populate chronological events from local OpenCode SQLite session traces.\n6. Establishes TypeScript domain contract parity in web/src/domain/types.ts.\n\n---\n\n## 2. Functional Core, Imperative Shell (FCIS) Invariants\n\nAll implementation must strictly comply with architectural boundaries established in TECHNICAL_GUIDELINES.md:\n\n### Inward Dependency Flow\nDependencies flow strictly inward across layers:\n1. CLI Subcommand Layer (backend/cmd/agentic-lens/main.go):\n   - Application entrypoint, CLI flag parsing (generate, backfill, server), console output rendering, and adapter wiring.\n2. Imperative Adapters Layer (backend/internal/adapters/):\n   - External boundary serialization and DTO mapping (backend/internal/adapters/schemas.go).\n   - Filesystem workspace traversal and raw ledger reading (backend/internal/adapters/repository.go).\n   - SQLite read-only queries and extraction from OpenCode database (backend/internal/adapters/opencode/).\n   - Multi-workspace backfill coordination (backend/internal/adapters/backfill/).\n3. Functional Core Domain Layer (backend/internal/domain/):\n   - Houses pure domain models (EventFact, AgenticFactLedger, AgenticMetricsLedger), typed event enums (EventType), and pure aggregation algorithms.\n   - Must contain zero disk I/O, zero network calls, zero SQL queries, and zero system clocks. All timestamps, durations, and external identifiers must be passed as arguments from the imperative shell.\n\n### Pure Domain Core Isolation\n1. EventType is defined as a typed string enum in backend/internal/domain/enums.go with explicit constants for tool calls, turn messages, and compactions.\n2. EventFact is an immutable domain value object capturing timestamp, session identifier, turn index, agent role, event type, optional tool name, execution status, optional error message, optional duration in milliseconds, and context token count.\n3. Adding Events []EventFact to AgenticFactLedger in backend/internal/domain/models.go must not mutate or invalidate ",
       "duration_ms": 44767,
       "context_tokens": 77886
     },
@@ -2291,7 +2296,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go\n2: \n3: ## 1. Problem Statement\n4: Active session telemetry in AgenticLens is generated and backfilled natively by the Go engine across backend/cmd/agentic-lens, backend/internal/adapters/opencode, and backend/internal/adapters/backfill. While workspace ledgers (agentic_metrics.json) are already at schema version 2 with migration metadata, they record only coarse aggregate numbers per invocation and overall tool execution and error counts.\n5: \n6: Detecting fine-grained execution anomalies (such as consecutive tool failure streaks, subagent rework loops, and single-turn context window spikes planned in AL-7, AL-8, and AL-9) requires ordered, turn-level event telemetry.\n7: \n8: Furthermore, existing workspaces on disk (under workspaces/) currently lack this ordered chronological event stream. To prevent fleet telemetry fragmentation, the new chronological event extraction must not only serve future sessions, but must also be actively backfilled across all existing workspaces where sessions exist in the OpenCode SQLite database.\n9: \n10: Ticket AL-6 delivers native Go chronological event extraction, schema evolution, and workspace backfill:\n11: 1. Defines pure domain event models (EventFact) representing atomic turn events, tool executions, and compaction milestones.\n12: 2. Updates OpenCode SQLite extraction in backend/internal/adapters/opencode/extractor.go to extract, correlate, and chronologically sort events from session, message, and part tables.\n13: 3. Provides seamless bidirectional serialization and backward compatibility in backend/internal/adapters/schemas.go and backend/internal/adapters/repository.go, ensuring historical ledgers lacking events deserialize cleanly without regression.\n14: 4. Integrates event capture into both agentic-lens generate and agentic-lens backfill --recompute-db.\n15: 5. Backfills existing workspaces on disk to populate chronological events from local OpenCode SQLite session traces.\n16: 6. Establishes TypeScript domain contract parity in web/src/domain/types.ts.\n17: \n18: ---\n19: \n20: ## 2. Functional Core, Imperative Shell (FCIS) Invariants\n21: \n22: All implementation must strictly comply with architectural boundaries established in TECHNICAL_GUIDELINES.md:\n23: \n24: ### Inward Dependency Flow\n25: Dependencies flow strictly inward across layers:\n26: 1. CLI Subcommand Layer (backend/cmd/agentic-lens/main.go):\n27:    - Application entrypoint, CLI flag parsing (generate, backfill, server), console output rendering, and adapter wiring.\n28: 2. Imperative Adapters Layer (backend/internal/adapters/):\n29:    - External boundary serialization and DTO mapping (backend/internal/adapters/schemas.go).\n30:    - Filesystem workspace traversal and raw ledger reading (backend/internal/adapters/repository.go).\n31:    - SQLite read-only queries and extraction from OpenCode database (backend/internal/adapters/opencode/).\n32:    - Multi-workspace backfill coordination (backend/internal/adapters/backfill/).\n33: 3. Functional Core Domain Layer (backend/internal/domain/):\n34:    - Houses pure domain models (EventFact, AgenticFactLedger, AgenticMetricsLedger), typed event enums (EventType), and pure aggregation algorithms.\n35:    - Must contain zero disk I/O, zero network calls, zero SQL queries, and zero system clocks. All timestamps, durations, and external identifiers must be passed as arguments from the imperative shell.\n36: \n37: ### Pure Domain Core Isolation\n38: 1. EventType is defined as a typed string enum in backend/internal/domain/enums.go with explicit constants for tool calls, turn messages, and compactions.\n39: 2. EventFact is an immutable domain value object capturing timestamp, session identifier, turn index, agent role, event type, optional tool name, execution status, optional error message, optional duration in milliseconds, and context token count.\n40: 3. Adding Events []EventFact to AgenticFactLedger in backend",
       "duration_ms": 7,
       "context_tokens": 10351
     },
@@ -2313,7 +2318,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/iterations/01/PLAN.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Implementation Plan: AL-6 Chronological Event Extraction and S",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/iterations/01/PLAN.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Implementation Plan: AL-6 Chronological Event Extraction and Schema Evolution in Go\n2: \n3: ## 1. Goal and Iteration Scope\n4: Deliver chronological event extraction, schema evolution, and existing workspace backfill natively in Go across domain core, boundary adapters, SQLite extractor, CLI commands, and TypeScript frontend type contracts. This enables fine-grained event telemetry extraction from OpenCode SQLite databases into agentic_metrics.json, maintains complete backward compatibility with existing ledgers that omit events, and upgrades historical workspace ledgers on disk with populated event streams.\n5: \n6: ---\n7: \n8: ## 2. Grounded Reference Architecture and Concrete Paths\n9: \n10: The implementation maps to the following existing files and packages:\n11: \n12: ### Domain Core Layer (backend/internal/domain/)\n13: - backend/internal/domain/enums.go: Add EventType string enum type and typed constants (EventTypeToolCall, EventTypeTurnMessage, EventTypeCompaction).\n14: - backend/internal/domain/models.go: Add EventFact struct. Add optional Events []EventFact to AgenticFactLedger.\n15: - backend/internal/domain/aggregations.go: Verify pure aggregation functions preserve Events without regression.\n16: \n17: ### Boundary Adapters Layer (backend/internal/adapters/)\n18: - backend/internal/adapters/schemas.go: Add EventFactDTO struct with bidirectional mapping to domain.EventFact. Update AgenticFactLedgerDTO with Events []EventFactDTO (json tag events,omitempty).\n19: - backend/internal/adapters/repository.go: Update ExistingLedgerFacts and rawExistingLedger to parse and hold Events. Ensure safe decoding when events is absent.\n20: - backend/internal/adapters/opencode/extractor.go: Extend extraction logic to query messages and parts, construct EventFact slices, correlate turn numbers and context tokens, detect tool errors, compute execution duration, and sort events chronologically.\n21: - backend/internal/adapters/backfill/engine.go: Wire extracted events into processSingleWorkspace when --recompute-db is executed, ensure ledgers lacking events are candidate targets for recompute, and preserve non-destructive facts when local sessions are absent.\n22: \n23: ### CLI Application Layer (backend/cmd/agentic-lens/)\n24: - backend/cmd/agentic-lens/main.go: Update runGenerate to receive extracted events from opencode.ExtractFacts, cache existing events if SQLite is not queried, and persist events in AgenticFactLedger. Ensure backfill subcommand runs smoothly for batch workspace updates.\n25: \n26: ### TypeScript Presentation Layer (web/src/domain/)\n27: - web/src/domain/types.ts: Define EventFact interface with readonly fields matching domain models. Add optional readonly events?: readonly EventFact[]; to AgenticFactLedger.\n28: \n29: ### Test Suites\n30: - backend/internal/adapters/opencode/extractor_test.go: Unit and adversarial tests for chronological event extraction, tool error detection, compaction correlation, and sorting.\n31: - backend/internal/adapters/repository_test.go: Backward compatibility tests loading ledgers without events, and round-trip tests with events.\n32: - backend/internal/adapters/backfill/engine_test.go: Backfill tests asserting event population on database match and preservation on database miss.\n33: - backend/cmd/agentic-lens/main_test.go: CLI integration tests for generate and backfill with event emission.\n34: \n35: ---\n36: \n37: ## 3. Phased Implementation Tasks\n38: \n39: ### Phase 1: Domain Core Models and Event Types (backend/internal/domain/)\n40: - Task 1.1: Define EventType string enum type in backend/internal/domain/enums.go:\n41:   - Constant EventTypeToolCall = \"tool_call\"\n42:   - Constant EventTypeTurnMessage = \"turn_message\"\n43:   - Constant EventTypeCompaction = \"compaction\"\n44: - Task 1.2: Define EventFact struct in backend/internal/domain/models.go:\n45:   - Field Timestamp of type string with JSON tag timestamp\n46:   - Field SessionID of type string with JSON tag session_id\n47:   - F",
       "duration_ms": 9,
       "context_tokens": 14067
     },
@@ -2692,7 +2697,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n391: \t\t\tif idx == 0 {\n392: \t\t\t\tcompactions = sessionCompa",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n391: \t\t\tif idx == 0 {\n392: \t\t\t\tcompactions = sessionCompactions\n393: \t\t\t}\n394: \n395: \t\t\tactiveSecs := int64(math.Round(float64(st.activeMS) / 1000.0))\n396: \n397: \t\t\tinvocations = append(invocations, domain.InvocationFact{\n398: \t\t\t\tID:                    s.id,\n399: \t\t\t\tParentID:              s.parentID,\n400: \t\t\t\tRole:                  role,\n401: \t\t\t\tModel:                 mName,\n402: \t\t\t\tUser:                  sessionUser,\n403: \t\t\t\tStartedAt:             \u0026stISO,\n404: \t\t\t\tCompletedAt:           \u0026endISO,\n405: \t\t\t\tActiveDurationSeconds: activeSecs,\n406: \t\t\t\tTurns:                 turns,\n407: \t\t\t\tTokens: domain.InvocationTokens{\n408: \t\t\t\t\tInput:       st.input,\n409: \t\t\t\t\tOutput:      st.output,\n410: \t\t\t\t\tCacheRead:   st.cache,\n411: \t\t\t\t\tReasoning:   st.reasoning,\n412: \t\t\t\t\tPeakContext: st.peak,\n413: \t\t\t\t},\n414: \t\t\t\tCostUSD:     math.Round(st.cost*1e6) / 1e6,\n415: \t\t\t\tCompactions: compactions,\n416: \t\t\t})\n417: \t\t}\n418: \t}\n419: \n420: \t// 4. Tool calls\n421: \tqTools := fmt.Sprintf(`\n422: \t\tSELECT p.data\n423: \t\tFROM part p\n424: \t\tJOIN session s ON p.session_id = s.id\n425: \t\tWHERE (s.id IN (%s) OR s.parent_id IN (%s))\n426: \t\t  AND p.data LIKE '%%\"type\":\"tool\"%%'\n427: \t`, quotedList, quotedList)\n428: \n429: \ttoolRows, err := db.Query(qTools)\n430: \tif err != nil {\n431: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying tool calls: %w\", err)\n432: \t}\n433: \tdefer toolRows.Close()\n434: \n435: \ttoolMap := make(map[string]*toolAccumulator)\n436: \n437: \tfor toolRows.Next() {\n438: \t\tvar pData sql.NullString\n439: \t\tif err := toolRows.Scan(\u0026pData); err != nil {\n440: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning tool row: %w\", err)\n441: \t\t}\n442: \t\tif !pData.Valid || strings.TrimSpace(pData.String) == \"\" {\n443: \t\t\tcontinue\n444: \t\t}\n445: \n446: \t\tvar rawPD rawPartData\n447: \t\tif err := json.Unmarshal([]byte(pData.String), \u0026rawPD); err != nil {\n448: \t\t\tcontinue\n449: \t\t}\n450: \n451: \t\ttoolName := \"unknown\"\n452: \t\tif rawPD.Tool != nil \u0026\u0026 strings.TrimSpace(*rawPD.Tool) != \"\" {\n453: \t\t\ttoolName = strings.TrimSpace(*rawPD.Tool)\n454: \t\t}\n455: \n456: \t\ttAcc, exists := toolMap[toolName]\n457: \t\tif !exists {\n458: \t\t\ttAcc = \u0026toolAccumulator{}\n459: \t\t\ttoolMap[toolName] = tAcc\n460: \t\t}\n461: \t\ttAcc.calls++\n462: \n463: \t\tif rawPD.State != nil {\n464: \t\t\tstat := \"\"\n465: \t\t\tout := \"\"\n466: \t\t\tif rawPD.State.Status != nil {\n467: \t\t\t\tstat = *rawPD.State.Status\n468: \t\t\t}\n469: \t\t\tif rawPD.State.Output != nil {\n470: \t\t\t\tout = *rawPD.State.Output\n471: \t\t\t}\n472: \n473: \t\t\toutPrefix := out\n474: \t\t\tif len(outPrefix) \u003e 50 {\n475: \t\t\t\toutPrefix = outPrefix[:50]\n476: \t\t\t}\n477: \n478: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n479: \t\t\t\ttAcc.errors++\n480: \t\t\t}\n481: \t\t}\n482: \t}\n483: \tif err := toolRows.Err(); err != nil {\n484: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n485: \t}\n486: \n487: \tvar tools []domain.ToolFact\n488: \tfor tName, tStats := range toolMap {\n489: \t\ttools = append(tools, domain.ToolFact{\n490: \t\t\tName:   tName,\n491: \t\t\tCalls:  tStats.calls,\n492: \t\t\tErrors: tStats.errors,\n493: \t\t})\n494: \t}\n495: \n496: \tsort.Slice(tools, func(i, j int) bool {\n497: \t\tif tools[i].Calls == tools[j].Calls {\n498: \t\t\treturn tools[i].Name \u003c tools[j].Name\n499: \t\t}\n500: \t\treturn tools[i].Calls \u003e tools[j].Calls\n501: \t})\n502: \n503: \tvar maxCompleted *string\n504: \tfor _, inv := range invocations {\n505: \t\tif inv.CompletedAt != nil \u0026\u0026 *inv.CompletedAt != \"\" {\n506: \t\t\tif maxCompleted == nil || *inv.CompletedAt \u003e *maxCompleted {\n507: \t\t\t\tmaxCompleted = inv.CompletedAt\n508: \t\t\t}\n509: \t\t}\n510: \t}\n511: \tif maxCompleted != nil {\n512: \t\tcompletedAtISO = maxCompleted\n513: \t}\n514: \n515: \treturn invocations, tools, startedAtISO, completedAtISO, nil\n516: }\n\n(End of file - total 516 lines)\n\u003c/content\u003e",
       "duration_ms": 8,
       "context_tokens": 49213
     },
@@ -3743,7 +3748,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n415: \t\t\t\tCompactions: compactions,\n416: \t\t\t})\n417: \t\t}\n41",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n415: \t\t\t\tCompactions: compactions,\n416: \t\t\t})\n417: \t\t}\n418: \t}\n419: \n420: \t// 4. Tool calls\n421: \tqTools := fmt.Sprintf(`\n422: \t\tSELECT p.data\n423: \t\tFROM part p\n424: \t\tJOIN session s ON p.session_id = s.id\n425: \t\tWHERE (s.id IN (%s) OR s.parent_id IN (%s))\n426: \t\t  AND p.data LIKE '%%\"type\":\"tool\"%%'\n427: \t`, quotedList, quotedList)\n428: \n429: \ttoolRows, err := db.Query(qTools)\n430: \tif err != nil {\n431: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying tool calls: %w\", err)\n432: \t}\n433: \tdefer toolRows.Close()\n434: \n435: \ttoolMap := make(map[string]*toolAccumulator)\n436: \n437: \tfor toolRows.Next() {\n438: \t\tvar pData sql.NullString\n439: \t\tif err := toolRows.Scan(\u0026pData); err != nil {\n440: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning tool row: %w\", err)\n441: \t\t}\n442: \t\tif !pData.Valid || strings.TrimSpace(pData.String) == \"\" {\n443: \t\t\tcontinue\n444: \t\t}\n445: \n446: \t\tvar rawPD rawPartData\n447: \t\tif err := json.Unmarshal([]byte(pData.String), \u0026rawPD); err != nil {\n448: \t\t\tcontinue\n449: \t\t}\n450: \n451: \t\ttoolName := \"unknown\"\n452: \t\tif rawPD.Tool != nil \u0026\u0026 strings.TrimSpace(*rawPD.Tool) != \"\" {\n453: \t\t\ttoolName = strings.TrimSpace(*rawPD.Tool)\n454: \t\t}\n455: \n456: \t\ttAcc, exists := toolMap[toolName]\n457: \t\tif !exists {\n458: \t\t\ttAcc = \u0026toolAccumulator{}\n459: \t\t\ttoolMap[toolName] = tAcc\n460: \t\t}\n461: \t\ttAcc.calls++\n462: \n463: \t\tif rawPD.State != nil {\n464: \t\t\tstat := \"\"\n465: \t\t\tout := \"\"\n466: \t\t\tif rawPD.State.Status != nil {\n467: \t\t\t\tstat = *rawPD.State.Status\n468: \t\t\t}\n469: \t\t\tif rawPD.State.Output != nil {\n470: \t\t\t\tout = *rawPD.State.Output\n471: \t\t\t}\n472: \n473: \t\t\toutPrefix := out\n474: \t\t\tif len(outPrefix) \u003e 50 {\n475: \t\t\t\toutPrefix = outPrefix[:50]\n476: \t\t\t}\n477: \n478: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n479: \t\t\t\ttAcc.errors++\n480: \t\t\t}\n481: \t\t}\n482: \t}\n483: \tif err := toolRows.Err(); err != nil {\n484: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n485: \t}\n486: \n487: \tvar tools []domain.ToolFact\n488: \tfor tName, tStats := range toolMap {\n489: \t\ttools = append(tools, domain.ToolFact{\n490: \t\t\tName:   tName,\n491: \t\t\tCalls:  tStats.calls,\n492: \t\t\tErrors: tStats.errors,\n493: \t\t})\n494: \t}\n495: \n496: \tsort.Slice(tools, func(i, j int) bool {\n497: \t\tif tools[i].Calls == tools[j].Calls {\n498: \t\t\treturn tools[i].Name \u003c tools[j].Name\n499: \t\t}\n500: \t\treturn tools[i].Calls \u003e tools[j].Calls\n501: \t})\n502: \n503: \tvar maxCompleted *string\n504: \tfor _, inv := range invocations {\n505: \t\tif inv.CompletedAt != nil \u0026\u0026 *inv.CompletedAt != \"\" {\n506: \t\t\tif maxCompleted == nil || *inv.CompletedAt \u003e *maxCompleted {\n507: \t\t\t\tmaxCompleted = inv.CompletedAt\n508: \t\t\t}\n509: \t\t}\n510: \t}\n511: \tif maxCompleted != nil {\n512: \t\tcompletedAtISO = maxCompleted\n513: \t}\n514: \n515: \treturn invocations, tools, startedAtISO, completedAtISO, nil\n516: }\n\n(End of file - total 516 lines)\n\u003c/content\u003e",
       "duration_ms": 8,
       "context_tokens": 142617
     },
@@ -3870,7 +3875,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n113: // ExtractFacts queries invocation and tool facts fr",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n113: // ExtractFacts queries invocation and tool facts from OpenCode SQLite database for given root threads.\n114: func ExtractFacts(\n115: \tdb *sql.DB,\n116: \tthreadIDs []string,\n117: \tdefaultUser string,\n118: \tuserBySessionID map[string]string,\n119: ) ([]domain.InvocationFact, []domain.ToolFact, *string, *string, error) {\n120: \tif db == nil {\n121: \t\treturn nil, nil, nil, nil, errors.New(\"database connection is nil\")\n122: \t}\n123: \tif len(threadIDs) == 0 {\n124: \t\treturn []domain.InvocationFact{}, []domain.ToolFact{}, nil, nil, nil\n125: \t}\n126: \n127: \tquotedList, err := buildQuotedIDList(threadIDs)\n128: \tif err != nil {\n129: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"validating thread ids: %w\", err)\n130: \t}\n131: \n132: \t// 1. Earliest start time and latest completed time across sessions\n133: \tqTimes := fmt.Sprintf(`\n134: \t\tSELECT MIN(time_created), MAX(time_updated)\n135: \t\tFROM session\n136: \t\tWHERE id IN (%s) OR parent_id IN (%s)\n137: \t`, quotedList, quotedList)\n138: \n139: \tvar minCreated, maxUpdated sql.NullInt64\n140: \terr = db.QueryRow(qTimes).Scan(\u0026minCreated, \u0026maxUpdated)\n141: \tif err != nil \u0026\u0026 !errors.Is(err, sql.ErrNoRows) {\n142: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying session time boundaries: %w\", err)\n143: \t}\n144: \n145: \tvar startedAtISO, completedAtISO *string\n146: \tif minCreated.Valid {\n147: \t\tformatted := formatEpochMilli(minCreated.Int64)\n148: \t\tstartedAtISO = \u0026formatted\n149: \t}\n150: \tif maxUpdated.Valid {\n151: \t\tformatted := formatEpochMilli(maxUpdated.Int64)\n152: \t\tcompletedAtISO = \u0026formatted\n153: \t}\n154: \n155: \t// 2. Compactions per session\n156: \tqComp := fmt.Sprintf(`\n157: \t\tSELECT p.session_id, p.data\n158: \t\tFROM part p\n159: \t\tJOIN session s ON p.session_id = s.id\n160: \t\tWHERE (s.id IN (%s) OR s.parent_id IN (%s))\n161: \t\t  AND p.data LIKE '%%\"type\":\"compaction\"%%'\n162: \t`, quotedList, quotedList)\n163: \n164: \tcompMap := make(map[string]int64)\n165: \tcompRows, err := db.Query(qComp)\n166: \tif err != nil {\n167: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying session compactions: %w\", err)\n168: \t}\n169: \tdefer compRows.Close()\n170: \n171: \tfor compRows.Next() {\n172: \t\tvar sid string\n173: \t\tvar rawData sql.NullString\n174: \t\tif err := compRows.Scan(\u0026sid, \u0026rawData); err != nil {\n175: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning compaction row: %w\", err)\n176: \t\t}\n177: \t\tif rawData.Valid \u0026\u0026 strings.TrimSpace(rawData.String) != \"\" {\n178: \t\t\tvar rawPD rawPartData\n179: \t\t\tif err := json.Unmarshal([]byte(rawData.String), \u0026rawPD); err == nil {\n180: \t\t\t\tif rawPD.Type != nil \u0026\u0026 *rawPD.Type == \"compaction\" {\n181: \t\t\t\t\tcompMap[sid]++\n182: \t\t\t\t}\n183: \t\t\t}\n184: \t\t}\n185: \t}\n186: \tif err := compRows.Err(); err != nil {\n187: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating compaction rows: %w\", err)\n188: \t}\n189: \n190: \t// 3. Sessions\n191: \tqSess := fmt.Sprintf(`\n192: \t\tSELECT s.id, s.parent_id, s.agent, s.model, s.time_created\n193: \t\tFROM session s\n194: \t\tWHERE s.id IN (%s) OR s.parent_id IN (%s)\n195: \t\tORDER BY s.time_created ASC\n196: \t`, quotedList, quotedList)\n197: \n198: \tsessRows, err := db.Query(qSess)\n199: \tif err != nil {\n200: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying sessions: %w\", err)\n201: \t}\n202: \tdefer sessRows.Close()\n203: \n204: \ttype sessRecord struct {\n205: \t\tid          string\n206: \t\tparentID    *string\n207: \t\tagent       string\n208: \t\tmodel       string\n209: \t\ttimeCreated int64\n210: \t}\n211: \n212: \tvar sessions []sessRecord\n213: \tfor sessRows.Next() {\n214: \t\tvar sid string\n215: \t\tvar pid, agent, model sql.NullString\n216: \t\tvar timeCreated int64\n217: \t\tif err := sessRows.Scan(\u0026sid, \u0026pid, \u0026agent, \u0026model, \u0026timeCreated); err != nil {\n218: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning session row: %w\", err)\n219: \t\t}\n220: \t\tvar parentPtr *string\n221: \t\tif pid.Valid \u0026\u0026 strings.TrimSpace(pid.String) != \"\" {\n222: \t\t\tval := strings.TrimSpace(pid.String)\n223: \t\t\tparentPtr = \u0026val\n224: \t\t}\n225: \t\tsessions = append(sessions, sessRecord{\n226: \t\t\tid:          sid,\n227: \t\t\tpa",
       "duration_ms": 9,
       "context_tokens": 152681
     },
@@ -4038,7 +4043,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n300: \t\t\t\tacc.input += inp\n301: \t\t\t\tacc.output += out\n302:",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n300: \t\t\t\tacc.input += inp\n301: \t\t\t\tacc.output += out\n302: \t\t\t\tacc.cache += cache\n303: \t\t\t\tacc.reasoning += reas\n304: \t\t\t\tif inp+cache \u003e acc.peak {\n305: \t\t\t\t\tacc.peak = inp + cache\n306: \t\t\t\t}\n307: \t\t\t}\n308: \n309: \t\t\tif rawMD.Cost != nil {\n310: \t\t\t\tacc.cost += *rawMD.Cost\n311: \t\t\t}\n312: \t\t}\n313: \t\tmsgRows.Close()\n314: \n315: \t\tif len(byModel) == 0 {\n316: \t\t\tfallbackModel := \"default\"\n317: \t\t\tif strings.TrimSpace(s.model) != \"\" {\n318: \t\t\t\tvar mJSON rawModelJSON\n319: \t\t\t\tif err := json.Unmarshal([]byte(s.model), \u0026mJSON); err == nil \u0026\u0026 mJSON.ID != nil \u0026\u0026 strings.TrimSpace(*mJSON.ID) != \"\" {\n320: \t\t\t\t\tfallbackModel = strings.TrimSpace(*mJSON.ID)\n321: \t\t\t\t} else {\n322: \t\t\t\t\tfallbackModel = strings.TrimSpace(s.model)\n323: \t\t\t\t}\n324: \t\t\t}\n325: \t\t\ttCreated := s.timeCreated\n326: \t\t\tbyModel[fallbackModel] = \u0026sessionModelAccumulator{\n327: \t\t\t\tfirstTS: \u0026tCreated,\n328: \t\t\t\tlastTS:  \u0026tCreated,\n329: \t\t\t}\n330: \t\t\tmodelOrder = append(modelOrder, fallbackModel)\n331: \t\t}\n332: \n333: \t\tsessionCompactions := compMap[s.id]\n334: \t\tfor idx, mName := range modelOrder {\n335: \t\t\tst := byModel[mName]\n336: \t\t\tfTS := s.timeCreated\n337: \t\t\tif st.firstTS != nil {\n338: \t\t\t\tfTS = *st.firstTS\n339: \t\t\t}\n340: \t\t\tlTS := s.timeCreated\n341: \t\t\tif st.lastTS != nil {\n342: \t\t\t\tlTS = *st.lastTS\n343: \t\t\t}\n344: \n345: \t\t\tstISO := formatEpochMilli(fTS)\n346: \t\t\tendISO := formatEpochMilli(lTS)\n347: \n348: \t\t\tvar turns int64\n349: \t\t\tif len(byModel) == 1 {\n350: \t\t\t\tturns = totalSessionMsgs\n351: \t\t\t} else {\n352: \t\t\t\tturns = st.asstMsgs\n353: \t\t\t}\n354: \n355: \t\t\tvar compactions int64\n356: \t\t\tif idx == 0 {\n357: \t\t\t\tcompactions = sessionCompactions\n358: \t\t\t}\n359: \n360: \t\t\tactiveSecs := int64(math.Round(float64(st.activeMS) / 1000.0))\n361: \n362: \t\t\tinvocations = append(invocations, domain.InvocationFact{\n363: \t\t\t\tID:                    s.id,\n364: \t\t\t\tParentID:              s.parentID,\n365: \t\t\t\tRole:                  role,\n366: \t\t\t\tModel:                 mName,\n367: \t\t\t\tUser:                  sessionUser,\n368: \t\t\t\tStartedAt:             \u0026stISO,\n369: \t\t\t\tCompletedAt:           \u0026endISO,\n370: \t\t\t\tActiveDurationSeconds: activeSecs,\n371: \t\t\t\tTurns:                 turns,\n372: \t\t\t\tTokens: domain.InvocationTokens{\n373: \t\t\t\t\tInput:       st.input,\n374: \t\t\t\t\tOutput:      st.output,\n375: \t\t\t\t\tCacheRead:   st.cache,\n376: \t\t\t\t\tReasoning:   st.reasoning,\n377: \t\t\t\t\tPeakContext: st.peak,\n378: \t\t\t\t},\n379: \t\t\t\tCostUSD:     math.Round(st.cost*1e6) / 1e6,\n380: \t\t\t\tCompactions: compactions,\n381: \t\t\t})\n382: \t\t}\n383: \t}\n384: \n385: \t// 4. Tool calls\n386: \tqTools := fmt.Sprintf(`\n387: \t\tSELECT p.data\n388: \t\tFROM part p\n389: \t\tJOIN session s ON p.session_id = s.id\n390: \t\tWHERE (s.id IN (%s) OR s.parent_id IN (%s))\n391: \t\t  AND p.data LIKE '%%\"type\":\"tool\"%%'\n392: \t`, quotedList, quotedList)\n393: \n394: \ttoolRows, err := db.Query(qTools)\n395: \tif err != nil {\n396: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying tool calls: %w\", err)\n397: \t}\n398: \tdefer toolRows.Close()\n399: \n400: \ttoolMap := make(map[string]*toolAccumulator)\n401: \n402: \tfor toolRows.Next() {\n403: \t\tvar pData sql.NullString\n404: \t\tif err := toolRows.Scan(\u0026pData); err != nil {\n405: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning tool row: %w\", err)\n406: \t\t}\n407: \t\tif !pData.Valid || strings.TrimSpace(pData.String) == \"\" {\n408: \t\t\tcontinue\n409: \t\t}\n410: \n411: \t\tvar rawPD rawPartData\n412: \t\tif err := json.Unmarshal([]byte(pData.String), \u0026rawPD); err != nil {\n413: \t\t\tcontinue\n414: \t\t}\n415: \n416: \t\ttoolName := \"unknown\"\n417: \t\tif rawPD.Tool != nil \u0026\u0026 strings.TrimSpace(*rawPD.Tool) != \"\" {\n418: \t\t\ttoolName = strings.TrimSpace(*rawPD.Tool)\n419: \t\t}\n420: \n421: \t\ttAcc, exists := toolMap[toolName]\n422: \t\tif !exists {\n423: \t\t\ttAcc = \u0026toolAccumulator{}\n424: \t\t\ttoolMap[toolName] = tAcc\n425: \t\t}\n426: \t\ttAcc.calls++\n427: \n428: \t\tif rawPD.State != nil {\n429: \t\t\tstat := \"\"\n430: \t\t\tout := \"\"\n431: \t\t\tif rawPD.State.Status != nil {\n432: \t\t\t\tstat = *rawPD.State.Status\n433: \t\t\t}\n434: \t\t\tif rawPD.State.Output != nil {\n435: \t\t\t\tout =",
       "duration_ms": 15,
       "context_tokens": 33984
     },
@@ -4187,7 +4192,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n351: \t\t\t} else {\n352: \t\t\t\tturns = st.asstMsgs\n353: \t\t\t}\n3",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n351: \t\t\t} else {\n352: \t\t\t\tturns = st.asstMsgs\n353: \t\t\t}\n354: \n355: \t\t\tvar compactions int64\n356: \t\t\tif idx == 0 {\n357: \t\t\t\tcompactions = sessionCompactions\n358: \t\t\t}\n359: \n360: \t\t\tactiveSecs := int64(math.Round(float64(st.activeMS) / 1000.0))\n361: \n362: \t\t\tinvocations = append(invocations, domain.InvocationFact{\n363: \t\t\t\tID:                    s.id,\n364: \t\t\t\tParentID:              s.parentID,\n365: \t\t\t\tRole:                  role,\n366: \t\t\t\tModel:                 mName,\n367: \t\t\t\tUser:                  sessionUser,\n368: \t\t\t\tStartedAt:             \u0026stISO,\n369: \t\t\t\tCompletedAt:           \u0026endISO,\n370: \t\t\t\tActiveDurationSeconds: activeSecs,\n371: \t\t\t\tTurns:                 turns,\n372: \t\t\t\tTokens: domain.InvocationTokens{\n373: \t\t\t\t\tInput:       st.input,\n374: \t\t\t\t\tOutput:      st.output,\n375: \t\t\t\t\tCacheRead:   st.cache,\n376: \t\t\t\t\tReasoning:   st.reasoning,\n377: \t\t\t\t\tPeakContext: st.peak,\n378: \t\t\t\t},\n379: \t\t\t\tCostUSD:     math.Round(st.cost*1e6) / 1e6,\n380: \t\t\t\tCompactions: compactions,\n381: \t\t\t})\n382: \t\t}\n383: \t}\n384: \n385: \t// 4. Tool calls\n386: \tqTools := fmt.Sprintf(`\n387: \t\tSELECT p.data\n388: \t\tFROM part p\n389: \t\tJOIN session s ON p.session_id = s.id\n390: \t\tWHERE (s.id IN (%s) OR s.parent_id IN (%s))\n391: \t\t  AND p.data LIKE '%%\"type\":\"tool\"%%'\n392: \t`, quotedList, quotedList)\n393: \n394: \ttoolRows, err := db.Query(qTools)\n395: \tif err != nil {\n396: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying tool calls: %w\", err)\n397: \t}\n398: \tdefer toolRows.Close()\n399: \n400: \ttoolMap := make(map[string]*toolAccumulator)\n401: \n402: \tfor toolRows.Next() {\n403: \t\tvar pData sql.NullString\n404: \t\tif err := toolRows.Scan(\u0026pData); err != nil {\n405: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning tool row: %w\", err)\n406: \t\t}\n407: \t\tif !pData.Valid || strings.TrimSpace(pData.String) == \"\" {\n408: \t\t\tcontinue\n409: \t\t}\n410: \n411: \t\tvar rawPD rawPartData\n412: \t\tif err := json.Unmarshal([]byte(pData.String), \u0026rawPD); err != nil {\n413: \t\t\tcontinue\n414: \t\t}\n415: \n416: \t\ttoolName := \"unknown\"\n417: \t\tif rawPD.Tool != nil \u0026\u0026 strings.TrimSpace(*rawPD.Tool) != \"\" {\n418: \t\t\ttoolName = strings.TrimSpace(*rawPD.Tool)\n419: \t\t}\n420: \n421: \t\ttAcc, exists := toolMap[toolName]\n422: \t\tif !exists {\n423: \t\t\ttAcc = \u0026toolAccumulator{}\n424: \t\t\ttoolMap[toolName] = tAcc\n425: \t\t}\n426: \t\ttAcc.calls++\n427: \n428: \t\tif rawPD.State != nil {\n429: \t\t\tstat := \"\"\n430: \t\t\tout := \"\"\n431: \t\t\tif rawPD.State.Status != nil {\n432: \t\t\t\tstat = *rawPD.State.Status\n433: \t\t\t}\n434: \t\t\tif rawPD.State.Output != nil {\n435: \t\t\t\tout = *rawPD.State.Output\n436: \t\t\t}\n437: \n438: \t\t\toutPrefix := out\n439: \t\t\tif len(outPrefix) \u003e 50 {\n440: \t\t\t\toutPrefix = outPrefix[:50]\n441: \t\t\t}\n442: \n443: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n444: \t\t\t\ttAcc.errors++\n445: \t\t\t}\n446: \t\t}\n447: \t}\n448: \tif err := toolRows.Err(); err != nil {\n449: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n450: \t}\n451: \n452: \tvar tools []domain.ToolFact\n453: \tfor tName, tStats := range toolMap {\n454: \t\ttools = append(tools, domain.ToolFact{\n455: \t\t\tName:   tName,\n456: \t\t\tCalls:  tStats.calls,\n457: \t\t\tErrors: tStats.errors,\n458: \t\t})\n459: \t}\n460: \n461: \tsort.Slice(tools, func(i, j int) bool {\n462: \t\tif tools[i].Calls == tools[j].Calls {\n463: \t\t\treturn tools[i].Name \u003c tools[j].Name\n464: \t\t}\n465: \t\treturn tools[i].Calls \u003e tools[j].Calls\n466: \t})\n467: \n468: \tvar maxCompleted *string\n469: \tfor _, inv := range invocations {\n470: \t\tif inv.CompletedAt != nil \u0026\u0026 *inv.CompletedAt != \"\" {\n471: \t\t\tif maxCompleted == nil || *inv.CompletedAt \u003e *maxCompleted {\n472: \t\t\t\tmaxCompleted = inv.CompletedAt\n473: \t\t\t}\n474: \t\t}\n475: \t}\n476: \tif maxCompleted != nil {\n477: \t\tcompletedAtISO = maxCompleted\n478: \t}\n479: \n480: \treturn invocations, tools, startedAtISO, completedAtISO, nil\n481: }\n\n(End of file - total 481 lines)\n\u003c/content\u003e",
       "duration_ms": 9,
       "context_tokens": 47857
     },
@@ -4462,7 +4467,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n430: \t\t\t\tTokens: domain.InvocationTokens{\n431: \t\t\t\t\tInput",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n430: \t\t\t\tTokens: domain.InvocationTokens{\n431: \t\t\t\t\tInput:       st.input,\n432: \t\t\t\t\tOutput:      st.output,\n433: \t\t\t\t\tCacheRead:   st.cache,\n434: \t\t\t\t\tReasoning:   st.reasoning,\n435: \t\t\t\t\tPeakContext: st.peak,\n436: \t\t\t\t},\n437: \t\t\t\tCostUSD:     math.Round(st.cost*1e6) / 1e6,\n438: \t\t\t\tCompactions: compactions,\n439: \t\t\t})\n440: \t\t}\n441: \t}\n442: \n443: \t// 4. Tool calls\n444: \tqTools := fmt.Sprintf(`\n445: \t\tSELECT p.data\n446: \t\tFROM part p\n447: \t\tJOIN session s ON p.session_id = s.id\n448: \t\tWHERE (s.id IN (%s) OR s.parent_id IN (%s))\n449: \t\t  AND p.data LIKE '%%\"type\":\"tool\"%%'\n450: \t`, quotedList, quotedList)\n451: \n452: \ttoolRows, err := db.Query(qTools)\n453: \tif err != nil {\n454: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying tool calls: %w\", err)\n455: \t}\n456: \tdefer toolRows.Close()\n457: \n458: \ttoolMap := make(map[string]*toolAccumulator)\n459: \n460: \tfor toolRows.Next() {\n461: \t\tvar pData sql.NullString\n462: \t\tif err := toolRows.Scan(\u0026pData); err != nil {\n463: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning tool row: %w\", err)\n464: \t\t}\n465: \t\tif !pData.Valid || strings.TrimSpace(pData.String) == \"\" {\n466: \t\t\tcontinue\n467: \t\t}\n468: \n469: \t\tvar rawPD rawPartData\n470: \t\tif err := json.Unmarshal([]byte(pData.String), \u0026rawPD); err != nil {\n471: \t\t\tcontinue\n472: \t\t}\n473: \n474: \t\ttoolName := \"unknown\"\n475: \t\tif rawPD.Tool != nil \u0026\u0026 strings.TrimSpace(*rawPD.Tool) != \"\" {\n476: \t\t\ttoolName = strings.TrimSpace(*rawPD.Tool)\n477: \t\t}\n478: \n479: \t\ttAcc, exists := toolMap[toolName]\n480: \t\tif !exists {\n481: \t\t\ttAcc = \u0026toolAccumulator{}\n482: \t\t\ttoolMap[toolName] = tAcc\n483: \t\t}\n484: \t\ttAcc.calls++\n485: \n486: \t\tif rawPD.State != nil {\n487: \t\t\tstat := \"\"\n488: \t\t\tout := \"\"\n489: \t\t\tif rawPD.State.Status != nil {\n490: \t\t\t\tstat = *rawPD.State.Status\n491: \t\t\t}\n492: \t\t\tif rawPD.State.Output != nil {\n493: \t\t\t\tout = *rawPD.State.Output\n494: \t\t\t}\n495: \n496: \t\t\toutPrefix := out\n497: \t\t\tif len(outPrefix) \u003e 50 {\n498: \t\t\t\toutPrefix = outPrefix[:50]\n499: \t\t\t}\n500: \n501: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n502: \t\t\t\ttAcc.errors++\n503: \t\t\t}\n504: \t\t}\n505: \t}\n506: \tif err := toolRows.Err(); err != nil {\n507: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n508: \t}\n509: \n510: \tvar tools []domain.ToolFact\n511: \tfor tName, tStats := range toolMap {\n512: \t\ttools = append(tools, domain.ToolFact{\n513: \t\t\tName:   tName,\n514: \t\t\tCalls:  tStats.calls,\n515: \t\t\tErrors: tStats.errors,\n516: \t\t})\n517: \t}\n518: \n519: \tsort.Slice(tools, func(i, j int) bool {\n520: \t\tif tools[i].Calls == tools[j].Calls {\n521: \t\t\treturn tools[i].Name \u003c tools[j].Name\n522: \t\t}\n523: \t\treturn tools[i].Calls \u003e tools[j].Calls\n524: \t})\n525: \n526: \tvar maxCompleted *string\n527: \tfor _, inv := range invocations {\n528: \t\tif inv.CompletedAt != nil \u0026\u0026 *inv.CompletedAt != \"\" {\n529: \t\t\tif maxCompleted == nil || *inv.CompletedAt \u003e *maxCompleted {\n530: \t\t\t\tmaxCompleted = inv.CompletedAt\n531: \t\t\t}\n532: \t\t}\n533: \t}\n534: \tif maxCompleted != nil {\n535: \t\tcompletedAtISO = maxCompleted\n536: \t}\n537: \n538: \treturn invocations, tools, startedAtISO, completedAtISO, nil\n539: }\n\n(End of file - total 539 lines)\n\u003c/content\u003e",
       "duration_ms": 6,
       "context_tokens": 68758
     },
@@ -4527,7 +4532,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n500: \n501: \t\t\tif stat == \"error\" || strings.Contains(out,",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n500: \n501: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n502: \t\t\t\ttAcc.errors++\n503: \t\t\t}\n504: \t\t}\n505: \t}\n506: \tif err := toolRows.Err(); err != nil {\n507: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n508: \t}\n509: \n510: \tvar tools []domain.ToolFact\n511: \tfor tName, tStats := range toolMap {\n512: \t\ttools = append(tools, domain.ToolFact{\n513: \t\t\tName:   tName,\n514: \t\t\tCalls:  tStats.calls,\n515: \t\t\tErrors: tStats.errors,\n516: \t\t})\n517: \t}\n518: \n519: \tsort.Slice(tools, func(i, j int) bool {\n520: \t\tif tools[i].Calls == tools[j].Calls {\n521: \t\t\treturn tools[i].Name \u003c tools[j].Name\n522: \t\t}\n523: \t\treturn tools[i].Calls \u003e tools[j].Calls\n524: \t})\n525: \n526: \tvar maxCompleted *string\n527: \tfor _, inv := range invocations {\n528: \t\tif inv.CompletedAt != nil \u0026\u0026 *inv.CompletedAt != \"\" {\n529: \t\t\tif maxCompleted == nil || *inv.CompletedAt \u003e *maxCompleted {\n530: \t\t\t\tmaxCompleted = inv.CompletedAt\n531: \t\t\t}\n532: \t\t}\n533: \t}\n534: \tif maxCompleted != nil {\n535: \t\tcompletedAtISO = maxCompleted\n536: \t}\n537: \n538: \treturn invocations, tools, startedAtISO, completedAtISO, nil\n539: }\n\n(End of file - total 539 lines)\n\u003c/content\u003e",
       "duration_ms": 8,
       "context_tokens": 74698
     },
@@ -4718,7 +4723,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n385: \n386: \t\tsessionModels[s.id] = byModel\n387: \t\tsession",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n385: \n386: \t\tsessionModels[s.id] = byModel\n387: \t\tsessionModelOrders[s.id] = modelOrder\n388: \t\tsessionTurns[s.id] = totalSessionMsgs\n389: \t}\n390: \n391: \t// 4. Tool calls\n392: \tqTools := fmt.Sprintf(`\n393: \t\tSELECT p.data\n394: \t\tFROM part p\n395: \t\tJOIN session s ON p.session_id = s.id\n396: \t\tWHERE (s.id IN (%s) OR s.parent_id IN (%s))\n397: \t\t  AND p.data LIKE '%%\"type\":\"tool\"%%'\n398: \t`, quotedList, quotedList)\n399: \n400: \ttoolRows, err := db.Query(qTools)\n401: \tif err != nil {\n402: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"querying tool calls: %w\", err)\n403: \t}\n404: \tdefer toolRows.Close()\n405: \n406: \ttoolMap := make(map[string]*toolAccumulator)\n407: \n408: \tfor toolRows.Next() {\n409: \t\tvar pData sql.NullString\n410: \t\tif err := toolRows.Scan(\u0026pData); err != nil {\n411: \t\t\treturn nil, nil, nil, nil, fmt.Errorf(\"scanning tool row: %w\", err)\n412: \t\t}\n413: \t\tif !pData.Valid || strings.TrimSpace(pData.String) == \"\" {\n414: \t\t\tcontinue\n415: \t\t}\n416: \n417: \t\tvar rawPD rawPartData\n418: \t\tif err := json.Unmarshal([]byte(pData.String), \u0026rawPD); err != nil {\n419: \t\t\tcontinue\n420: \t\t}\n421: \n422: \t\ttoolName := \"unknown\"\n423: \t\tif rawPD.Tool != nil \u0026\u0026 strings.TrimSpace(*rawPD.Tool) != \"\" {\n424: \t\t\ttoolName = strings.TrimSpace(*rawPD.Tool)\n425: \t\t}\n426: \n427: \t\ttAcc, exists := toolMap[toolName]\n428: \t\tif !exists {\n429: \t\t\ttAcc = \u0026toolAccumulator{}\n430: \t\t\ttoolMap[toolName] = tAcc\n431: \t\t}\n432: \t\ttAcc.calls++\n433: \n434: \t\tif rawPD.State != nil {\n435: \t\t\tstat := \"\"\n436: \t\t\tout := \"\"\n437: \t\t\tif rawPD.State.Status != nil {\n438: \t\t\t\tstat = *rawPD.State.Status\n439: \t\t\t}\n440: \t\t\tif rawPD.State.Output != nil {\n441: \t\t\t\tout = *rawPD.State.Output\n442: \t\t\t}\n443: \n444: \t\t\toutPrefix := out\n445: \t\t\tif len(outPrefix) \u003e 50 {\n446: \t\t\t\toutPrefix = outPrefix[:50]\n447: \t\t\t}\n448: \n449: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n450: \t\t\t\ttAcc.errors++\n451: \t\t\t}\n452: \t\t}\n453: \t}\n454: \tif err := toolRows.Err(); err != nil {\n455: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n456: \t}\n457: \n458: \tvar tools []domain.ToolFact\n459: \tfor tName, tStats := range toolMap {\n460: \t\ttools = append(tools, domain.ToolFact{\n461: \t\t\tName:   tName,\n462: \t\t\tCalls:  tStats.calls,\n463: \t\t\tErrors: tStats.errors,\n464: \t\t})\n465: \t}\n466: \n467: \tsort.Slice(tools, func(i, j int) bool {\n468: \t\tif tools[i].Calls == tools[j].Calls {\n469: \t\t\treturn tools[i].Name \u003c tools[j].Name\n470: \t\t}\n471: \t\treturn tools[i].Calls \u003e tools[j].Calls\n472: \t})\n473: \n474: \tvar maxCompleted *string\n475: \tfor _, inv := range invocations {\n476: \t\tif inv.CompletedAt != nil \u0026\u0026 *inv.CompletedAt != \"\" {\n477: \t\t\tif maxCompleted == nil || *inv.CompletedAt \u003e *maxCompleted {\n478: \t\t\t\tmaxCompleted = inv.CompletedAt\n479: \t\t\t}\n480: \t\t}\n481: \t}\n482: \tif maxCompleted != nil {\n483: \t\tcompletedAtISO = maxCompleted\n484: \t}\n485: \n486: \treturn invocations, tools, startedAtISO, completedAtISO, nil\n487: }\n\n(End of file - total 487 lines)\n\u003c/content\u003e",
       "duration_ms": 6,
       "context_tokens": 83698
     },
@@ -4804,7 +4809,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n440: \t\t\tif rawPD.State.Output != nil {\n441: \t\t\t\tout = *ra",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n440: \t\t\tif rawPD.State.Output != nil {\n441: \t\t\t\tout = *rawPD.State.Output\n442: \t\t\t}\n443: \n444: \t\t\toutPrefix := out\n445: \t\t\tif len(outPrefix) \u003e 50 {\n446: \t\t\t\toutPrefix = outPrefix[:50]\n447: \t\t\t}\n448: \n449: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n450: \t\t\t\ttAcc.errors++\n451: \t\t\t}\n452: \t\t}\n453: \t}\n454: \tif err := toolRows.Err(); err != nil {\n455: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n456: \t}\n457: \n458: \tvar tools []domain.ToolFact\n459: \tfor tName, tStats := range toolMap {\n460: \t\ttools = append(tools, domain.ToolFact{\n461: \t\t\tName:   tName,\n462: \t\t\tCalls:  tStats.calls,\n463: \t\t\tErrors: tStats.errors,\n464: \t\t})\n\n(Showing lines 440-464 of 487. Use offset=465 to continue.)\n\u003c/content\u003e",
       "duration_ms": 8,
       "context_tokens": 89657
     },
@@ -4868,7 +4873,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n430: \t\t\ttoolMap[toolName] = tAcc\n431: \t\t}\n432: \t\ttAcc.cal",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n430: \t\t\ttoolMap[toolName] = tAcc\n431: \t\t}\n432: \t\ttAcc.calls++\n433: \n434: \t\tif rawPD.State != nil {\n435: \t\t\tstat := \"\"\n436: \t\t\tout := \"\"\n437: \t\t\tif rawPD.State.Status != nil {\n438: \t\t\t\tstat = *rawPD.State.Status\n439: \t\t\t}\n440: \t\t\tif rawPD.State.Output != nil {\n441: \t\t\t\tout = *rawPD.State.Output\n442: \t\t\t}\n443: \n444: \t\t\toutPrefix := out\n445: \t\t\tif len(outPrefix) \u003e 50 {\n446: \t\t\t\toutPrefix = outPrefix[:50]\n447: \t\t\t}\n448: \n449: \t\t\tif stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.Contains(outPrefix, \"Error:\") {\n450: \t\t\t\ttAcc.errors++\n451: \t\t\t}\n452: \t\t}\n453: \t}\n454: \tif err := toolRows.Err(); err != nil {\n455: \t\treturn nil, nil, nil, nil, fmt.Errorf(\"iterating tool rows: %w\", err)\n456: \t}\n457: \n458: \tvar tools []domain.ToolFact\n459: \tfor tName, tStats := range toolMap {\n\n(Showing lines 430-459 of 487. Use offset=460 to continue.)\n\u003c/content\u003e",
       "duration_ms": 10,
       "context_tokens": 91749
     },
@@ -5689,7 +5694,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n80: \n81: ### Out of Scope\n82: 1. Domain anomaly detection rule algorithms (e.",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n80: \n81: ### Out of Scope\n82: 1. Domain anomaly detection rule algorithms (e.g. TOOL_RETRY_STREAK, CONTEXT_SATURATION_SPIKE, SUBAGENT_REWORK_LOOP), which belong to AL-7.\n83: 2. REST/SSE API endpoints specifically for anomaly queries or trace streaming, which belong to AL-8.\n84: 3. Visual timeline and waterfall UI components in the web dashboard, which belong to AL-9.\n85: 4. Any Python scripts or runtime dependencies (Python has been removed from the repository).\n86: \n87: ---\n88: \n89: ## 4. Event Telemetry Data Architecture \u0026 Extraction Lifecycle\n90: \n91: ### Event Fact Structure\n92: Each EventFact represents a discrete, ordered lifecycle occurrence:\n93: - timestamp: ISO 8601 formatted timestamp string in UTC (microsecond precision).\n94: - session_id: Unique identifier of the session where the event occurred.\n95: - turn: Sequential 1-based turn number within the session.\n96: - role: Agent role associated with the session (e.g. orchestrator, planner, coder, tester, reviewer).\n97: - event_type: Categorical identifier (tool_call, turn_message, compaction).\n98: - tool_name: Optional string containing the tool name (e.g. bash, read, edit, grep, write), present for tool calls.\n99: - status: Execution status string (e.g. completed, error).\n100: - error_message: Optional string containing the error excerpt if the event encountered an error.\n101: - duration_ms: Optional int64 measuring execution duration in milliseconds.\n102: - context_tokens: Cumulative context token volume (input tokens plus cache read tokens) at the point of the event.\n103: \n104: ### Chronological Correlation Algorithm\n105: 1. Query session records for target root threads and child invocations, establishing session role and model mapping.\n106: 2. Query message records for all sessions ordered by creation timestamp:\n107:    - Assign sequential 1-based turn numbers to messages within each session.\n108:    - Extract input and cache tokens to compute context_tokens.\n109:    - Generate turn_message event facts.\n110: 3. Query part records for all sessions ordered by creation timestamp:\n111:    - For parts where data LIKE '%\"type\":\"tool\"%':\n112:      - Parse tool name, state status, and output.\n113:      - Detect tool errors (matching status error, presence of Traceback, or output beginning with Error:).\n114:      - Extract truncated error message excerpt when status is error.\n115:      - Calculate duration_ms from time_updated - time_created.\n116:      - Correlate turn index and context tokens from parent message ID.\n117:      - Generate tool_call event facts.\n118:    - For parts where data LIKE '%\"type\":\"compaction\"%':\n119:      - Correlate turn index from parent message ID.\n120:      - Generate compaction event facts.\n121: 4. Merge all extracted events into a single slice.\n122: 5. Sort chronologically by timestamp in ascending order, using turn as secondary tie-breaker.\n123: \n124: ### Existing Workspace Backfill Migration\n125: 1. Discover all workspace directories in workspaces/ containing agentic_metrics.json.\n126: 2. For each workspace:\n127:    - Load existing ledger facts.\n128:    - When --recompute-db is passed, if the ledger lacks events or has incomplete telemetry, query the local OpenCode SQLite database using session resolution strategies (cached session ID, ticket ID matching, workspace path correlation).\n129:    - If session records exist: extract full chronological events, update invocations and tools, and write updated agentic_metrics.json with populated events.\n130:    - If session records do not exist locally: retain existing invocations, tools, and duration facts verbatim, marking pending steps as appropriate.\n131: \n132: ---\n133: \n134: ## 5. Acceptance Criteria\n135: \n136: 1. Legacy agentic_metrics.json ledgers omitting events deserialize successfully without error or panic.\n137: 2. All existing domain aggregations (ComputeTotals, ComputeWorkflowEfficiency, ComputeRoleMetrics, ComputeModelMetrics, DeriveMetricsLedger) continue to pass witho",
       "duration_ms": 9,
       "context_tokens": 132806
     },
@@ -6832,7 +6837,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n80: \n81: ### Out of Scope\n82: 1. Domain anomaly detection rule algorithms (e.",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n80: \n81: ### Out of Scope\n82: 1. Domain anomaly detection rule algorithms (e.g. TOOL_RETRY_STREAK, CONTEXT_SATURATION_SPIKE, SUBAGENT_REWORK_LOOP), which belong to AL-7.\n83: 2. REST/SSE API endpoints specifically for anomaly queries or trace streaming, which belong to AL-8.\n84: 3. Visual timeline and waterfall UI components in the web dashboard, which belong to AL-9.\n85: 4. Any Python scripts or runtime dependencies (Python has been removed from the repository).\n86: \n87: ---\n88: \n89: ## 4. Event Telemetry Data Architecture \u0026 Extraction Lifecycle\n90: \n91: ### Event Fact Structure\n92: Each EventFact represents a discrete, ordered lifecycle occurrence:\n93: - timestamp: ISO 8601 formatted timestamp string in UTC (microsecond precision).\n94: - session_id: Unique identifier of the session where the event occurred.\n95: - turn: Sequential 1-based turn number within the session.\n96: - role: Agent role associated with the session (e.g. orchestrator, planner, coder, tester, reviewer).\n97: - event_type: Categorical identifier (tool_call, turn_message, compaction).\n98: - tool_name: Optional string containing the tool name (e.g. bash, read, edit, grep, write), present for tool calls.\n99: - status: Execution status string (e.g. completed, error).\n100: - error_message: Optional string containing the error excerpt if the event encountered an error.\n101: - duration_ms: Optional int64 measuring execution duration in milliseconds.\n102: - context_tokens: Cumulative context token volume (input tokens plus cache read tokens) at the point of the event.\n103: \n104: ### Chronological Correlation Algorithm\n105: 1. Query session records for target root threads and child invocations, establishing session role and model mapping.\n106: 2. Query message records for all sessions ordered by creation timestamp:\n107:    - Assign sequential 1-based turn numbers to messages within each session.\n108:    - Extract input and cache tokens to compute context_tokens.\n109:    - Generate turn_message event facts.\n110: 3. Query part records for all sessions ordered by creation timestamp:\n111:    - For parts where data LIKE '%\"type\":\"tool\"%':\n112:      - Parse tool name, state status, and output.\n113:      - Detect tool errors (matching status error, presence of Traceback, or output beginning with Error:).\n114:      - Extract truncated error message excerpt when status is error.\n115:      - Calculate duration_ms from time_updated - time_created.\n116:      - Correlate turn index and context tokens from parent message ID.\n117:      - Generate tool_call event facts.\n118:    - For parts where data LIKE '%\"type\":\"compaction\"%':\n119:      - Correlate turn index from parent message ID.\n120:      - Generate compaction event facts.\n121: 4. Merge all extracted events into a single slice.\n122: 5. Sort chronologically by timestamp in ascending order, using turn as secondary tie-breaker.\n123: \n124: ### Existing Workspace Backfill Migration\n125: 1. Discover all workspace directories in workspaces/ containing agentic_metrics.json.\n126: 2. For each workspace:\n127:    - Load existing ledger facts.\n128:    - When --recompute-db is passed, if the ledger lacks events or has incomplete telemetry, query the local OpenCode SQLite database using session resolution strategies (cached session ID, ticket ID matching, workspace path correlation).\n129:    - If session records exist: extract full chronological events, update invocations and tools, and write updated agentic_metrics.json with populated events.\n130:    - If session records do not exist locally: retain existing invocations, tools, and duration facts verbatim, marking pending steps as appropriate.\n131: \n132: ---\n133: \n134: ## 5. Acceptance Criteria\n135: \n136: 1. Legacy agentic_metrics.json ledgers omitting events deserialize successfully without error or panic.\n137: 2. All existing domain aggregations (ComputeTotals, ComputeWorkflowEfficiency, ComputeRoleMetrics, ComputeModelMetrics, DeriveMetricsLedger) continue to pass witho",
       "duration_ms": 6,
       "context_tokens": 25380
     },
@@ -6854,7 +6859,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/iterations/01/PLAN.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Implementation Plan: AL-6 Chronological Event Extraction and S",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/iterations/01/PLAN.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Implementation Plan: AL-6 Chronological Event Extraction and Schema Evolution in Go\n2: \n3: ## 1. Goal and Iteration Scope\n4: Deliver chronological event extraction, schema evolution, and existing workspace backfill natively in Go across domain core, boundary adapters, SQLite extractor, CLI commands, and TypeScript frontend type contracts. This enables fine-grained event telemetry extraction from OpenCode SQLite databases into agentic_metrics.json, maintains complete backward compatibility with existing ledgers that omit events, and upgrades historical workspace ledgers on disk with populated event streams.\n5: \n6: ---\n7: \n8: ## 2. Grounded Reference Architecture and Concrete Paths\n9: \n10: The implementation maps to the following existing files and packages:\n11: \n12: ### Domain Core Layer (backend/internal/domain/)\n13: - backend/internal/domain/enums.go: Add EventType string enum type and typed constants (EventTypeToolCall, EventTypeTurnMessage, EventTypeCompaction).\n14: - backend/internal/domain/models.go: Add EventFact struct. Add optional Events []EventFact to AgenticFactLedger.\n15: - backend/internal/domain/aggregations.go: Verify pure aggregation functions preserve Events without regression.\n16: \n17: ### Boundary Adapters Layer (backend/internal/adapters/)\n18: - backend/internal/adapters/schemas.go: Add EventFactDTO struct with bidirectional mapping to domain.EventFact. Update AgenticFactLedgerDTO with Events []EventFactDTO (json tag events,omitempty).\n19: - backend/internal/adapters/repository.go: Update ExistingLedgerFacts and rawExistingLedger to parse and hold Events. Ensure safe decoding when events is absent.\n20: - backend/internal/adapters/opencode/extractor.go: Extend extraction logic to query messages and parts, construct EventFact slices, correlate turn numbers and context tokens, detect tool errors, compute execution duration, and sort events chronologically.\n21: - backend/internal/adapters/backfill/engine.go: Wire extracted events into processSingleWorkspace when --recompute-db is executed, ensure ledgers lacking events are candidate targets for recompute, and preserve non-destructive facts when local sessions are absent.\n22: \n23: ### CLI Application Layer (backend/cmd/agentic-lens/)\n24: - backend/cmd/agentic-lens/main.go: Update runGenerate to receive extracted events from opencode.ExtractFacts, cache existing events if SQLite is not queried, and persist events in AgenticFactLedger. Ensure backfill subcommand runs smoothly for batch workspace updates.\n25: \n26: ### TypeScript Presentation Layer (web/src/domain/)\n27: - web/src/domain/types.ts: Define EventFact interface with readonly fields matching domain models. Add optional readonly events?: readonly EventFact[]; to AgenticFactLedger.\n28: \n29: ### Test Suites\n30: - backend/internal/adapters/opencode/extractor_test.go: Unit and adversarial tests for chronological event extraction, tool error detection, compaction correlation, and sorting.\n31: - backend/internal/adapters/repository_test.go: Backward compatibility tests loading ledgers without events, and round-trip tests with events.\n32: - backend/internal/adapters/backfill/engine_test.go: Backfill tests asserting event population on database match and preservation on database miss.\n33: - backend/cmd/agentic-lens/main_test.go: CLI integration tests for generate and backfill with event emission.\n34: \n35: ---\n36: \n37: ## 3. Phased Implementation Tasks\n38: \n39: ### Phase 1: Domain Core Models and Event Types (backend/internal/domain/)\n40: - Task 1.1: Define EventType string enum type in backend/internal/domain/enums.go:\n41:   - Constant EventTypeToolCall = \"tool_call\"\n42:   - Constant EventTypeTurnMessage = \"turn_message\"\n43:   - Constant EventTypeCompaction = \"compaction\"\n44: - Task 1.2: Define EventFact struct in backend/internal/domain/models.go:\n45:   - Field Timestamp of type string with JSON tag timestamp\n46:   - Field SessionID of type string with JSON tag session_id\n47:   - F",
       "duration_ms": 6,
       "context_tokens": 26933
     },
@@ -8126,7 +8131,7 @@
       "event_type": "tool_call",
       "tool_name": "task",
       "status": "error",
-      "error_message": "\u003ctask id=\"ses_eb1e6b311ffeug4WvW5Q8m9k4l\" state=\"completed\"\u003e\n\u003ctask_result\u003e\n### Test Execution Summary\n\n#### 1. Pure Go Domain Tests (`backend/internal/domain/`, zero mocks, race detector enabled)\nComm",
+      "error_message": "\u003ctask id=\"ses_eb1e6b311ffeug4WvW5Q8m9k4l\" state=\"completed\"\u003e\n\u003ctask_result\u003e\n### Test Execution Summary\n\n#### 1. Pure Go Domain Tests (`backend/internal/domain/`, zero mocks, race detector enabled)\nCommand: `go test -v -count=1 -race ./internal/domain/...`\n\n```\n=== RUN   TestEvaluateMigrationStatus\n--- PASS: TestEvaluateMigrationStatus (0.00s)\n=== RUN   TestComputeTotals\n--- PASS: TestComputeTotals (0.00s)\n=== RUN   TestComputeWorkflowEfficiency\n--- PASS: TestComputeWorkflowEfficiency (0.00s)\n=== RUN   TestComputeRoleAndModelMetrics\n--- PASS: TestComputeRoleAndModelMetrics (0.00s)\n=== RUN   TestComputeThreadSummaries\n--- PASS: TestComputeThreadSummaries (0.00s)\n=== RUN   TestCalculateFleetSummary\n--- PASS: TestCalculateFleetSummary (0.00s)\n=== RUN   TestFilterLedgersByTimeWindow\n--- PASS: TestFilterLedgersByTimeWindow (0.00s)\n=== RUN   TestSortLedgers\n--- PASS: TestSortLedgers (0.00s)\n=== RUN   TestEnumsParsing\n--- PASS: TestEnumsParsing (0.00s)\n=== RUN   TestBuildComparisonRows\n--- PASS: TestBuildComparisonRows (0.00s)\n=== RUN   TestDateFiltersAndAggregations\n--- PASS: TestDateFiltersAndAggregations (0.00s)\n=== RUN   TestFleetSummaryAndComparisonEdgeCases\n--- PASS: TestFleetSummaryAndComparisonEdgeCases (0.00s)\n=== RUN   TestLeadTimeEdgeCases\n--- PASS: TestLeadTimeEdgeCases (0.00s)\n=== RUN   TestAdversarialDomainAggregations\n--- PASS: TestAdversarialDomainAggregations (0.00s)\n=== RUN   TestDeriveMetricsLedger_EventsPreservationAndInvariants\n    --- PASS: TestDeriveMetricsLedger_EventsPreservationAndInvariants/nil_events_preserved_in_Facts_and_does_not_mutate_mathematical_derivations (0.00s)\n    --- PASS: TestDeriveMetricsLedger_EventsPreservationAndInvariants/empty_slice_events_preserved_in_Facts (0.00s)\n    --- PASS: TestDeriveMetricsLedger_EventsPreservationAndInvariants/populated_events_preserved_without_mutating_totals_or_efficiency (0.00s)\n    --- PASS: TestDeriveMetricsLedger_EventsPreservationAndInvariants/zero_division_on_completely_empty_fact_ledger (0.00s)\n=== RUN   TestFormatTokensK\n--- PASS: TestFormatTokensK (0.00s)\n=== RUN   TestGetBaseHealthStatus\n--- PASS: TestGetBaseHealthStatus (0.00s)\n=== RUN   TestGetHealthLabel\n--- PASS: TestGetHealthLabel (0.00s)\nPASS\nok  \tagenticlens/internal/domain\t1.013s\n```\n\n#### 2. OpenCode SQLite Extractor Tests (`backend/internal/adapters/opencode/`)\nCommand: `go test -v -count=1 -race ./internal/adapters/opencode/...`\n\n```\n=== RUN   TestResolveActiveRootSession\n    --- PASS: TestResolveActiveRootSession/Priority_1_Nonce (0.00s)\n    --- PASS: TestResolveActiveRootSession/Priority_2_Explicit_Session_ID (0.00s)\n    --- PASS: TestResolveActiveRootSession/Priority_3_Ticket_ID (0.00s)\n    --- PASS: TestResolveActiveRootSession/Priority_4_Latest_Message_Fallback (0.00s)\n=== RUN   TestResolveSessionByWorkspacePath\n    --- PASS: TestResolveSessionByWorkspacePath/nil_DB_error (0.00s)\n    --- PASS: TestResolveSessionByWorkspacePath/empty_ticket_returns_nil (0.00s)\n    --- PASS: TestResolveSessionByWorkspacePath/resolves_root_session_within_timestamp_window (0.00s)\n    --- PASS: TestResolveSessionByWorkspacePath/filters_out_session_outside_timestamp_window (0.00s)\n=== RUN   TestExtractFacts\n--- PASS: TestExtractFacts (0.01s)\n=== RUN   TestExtractFacts_AdversarialEdgeCases\n    --- PASS: TestExtractFacts_AdversarialEdgeCases/empty_db_returns_empty_facts_without_panic (0.00s)\n    --- PASS: TestExtractFacts_AdversarialEdgeCases/nil_database_returns_explicit_error (0.00s)\n    --- PASS: TestExtractFacts_AdversarialEdgeCases/unparseable_JSON_part_data_and_corrupted_message_payloads_are_skipped_gracefully (0.01s)\n    --- PASS: TestExtractFacts_AdversarialEdgeCases/thread_ID_sanitization_blocks_injection (0.00s)\n    --- PASS: TestExtractFacts_AdversarialEdgeCases/corrupted_SQLite_file_handling (0.00s)\n=== RUN   TestExtractFacts_ChronologicalOrderingAndTieBreaking\n--- PASS: TestExtractFacts_ChronologicalOrderingAndTieBreaking (0.01s)\n=== RUN   TestExtractFacts_ToolCallErrorParsingAndDuration\n--- PASS: TestExtractFacts_ToolCallErrorParsingAndDuration (0.01s)\n=== RUN   TestExtractFacts_CompactionEve",
       "duration_ms": 355154,
       "context_tokens": 92627
     },
@@ -8148,7 +8153,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go\n2: \n3: ## 1. Problem Statement\n4: Active session telemetry in AgenticLens is generated and backfilled natively by the Go engine across backend/cmd/agentic-lens, backend/internal/adapters/opencode, and backend/internal/adapters/backfill. While workspace ledgers (agentic_metrics.json) are already at schema version 2 with migration metadata, they record only coarse aggregate numbers per invocation and overall tool execution and error counts.\n5: \n6: Detecting fine-grained execution anomalies (such as consecutive tool failure streaks, subagent rework loops, and single-turn context window spikes planned in AL-7, AL-8, and AL-9) requires ordered, turn-level event telemetry.\n7: \n8: Furthermore, existing workspaces on disk (under workspaces/) currently lack this ordered chronological event stream. To prevent fleet telemetry fragmentation, the new chronological event extraction must not only serve future sessions, but must also be actively backfilled across all existing workspaces where sessions exist in the OpenCode SQLite database.\n9: \n10: Ticket AL-6 delivers native Go chronological event extraction, schema evolution, and workspace backfill:\n11: 1. Defines pure domain event models (EventFact) representing atomic turn events, tool executions, and compaction milestones.\n12: 2. Updates OpenCode SQLite extraction in backend/internal/adapters/opencode/extractor.go to extract, correlate, and chronologically sort events from session, message, and part tables.\n13: 3. Provides seamless bidirectional serialization and backward compatibility in backend/internal/adapters/schemas.go and backend/internal/adapters/repository.go, ensuring historical ledgers lacking events deserialize cleanly without regression.\n14: 4. Integrates event capture into both agentic-lens generate and agentic-lens backfill --recompute-db.\n15: 5. Backfills existing workspaces on disk to populate chronological events from local OpenCode SQLite session traces.\n16: 6. Establishes TypeScript domain contract parity in web/src/domain/types.ts.\n17: \n18: ---\n19: \n20: ## 2. Functional Core, Imperative Shell (FCIS) Invariants\n21: \n22: All implementation must strictly comply with architectural boundaries established in TECHNICAL_GUIDELINES.md:\n23: \n24: ### Inward Dependency Flow\n25: Dependencies flow strictly inward across layers:\n26: 1. CLI Subcommand Layer (backend/cmd/agentic-lens/main.go):\n27:    - Application entrypoint, CLI flag parsing (generate, backfill, server), console output rendering, and adapter wiring.\n28: 2. Imperative Adapters Layer (backend/internal/adapters/):\n29:    - External boundary serialization and DTO mapping (backend/internal/adapters/schemas.go).\n30:    - Filesystem workspace traversal and raw ledger reading (backend/internal/adapters/repository.go).\n31:    - SQLite read-only queries and extraction from OpenCode database (backend/internal/adapters/opencode/).\n32:    - Multi-workspace backfill coordination (backend/internal/adapters/backfill/).\n33: 3. Functional Core Domain Layer (backend/internal/domain/):\n34:    - Houses pure domain models (EventFact, AgenticFactLedger, AgenticMetricsLedger), typed event enums (EventType), and pure aggregation algorithms.\n35:    - Must contain zero disk I/O, zero network calls, zero SQL queries, and zero system clocks. All timestamps, durations, and external identifiers must be passed as arguments from the imperative shell.\n36: \n37: ### Pure Domain Core Isolation\n38: 1. EventType is defined as a typed string enum in backend/internal/domain/enums.go with explicit constants for tool calls, turn messages, and compactions.\n39: 2. EventFact is an immutable domain value object capturing timestamp, session identifier, turn index, agent role, event type, optional tool name, execution status, optional error message, optional duration in milliseconds, and context token count.\n40: 3. Adding Events []EventFact to AgenticFactLedger in backend",
       "duration_ms": 17,
       "context_tokens": 9987
     },
@@ -8160,7 +8165,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/iterations/01/PLAN.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Implementation Plan: AL-6 Chronological Event Extraction and S",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/iterations/01/PLAN.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Implementation Plan: AL-6 Chronological Event Extraction and Schema Evolution in Go\n2: \n3: ## 1. Goal and Iteration Scope\n4: Deliver chronological event extraction, schema evolution, and existing workspace backfill natively in Go across domain core, boundary adapters, SQLite extractor, CLI commands, and TypeScript frontend type contracts. This enables fine-grained event telemetry extraction from OpenCode SQLite databases into agentic_metrics.json, maintains complete backward compatibility with existing ledgers that omit events, and upgrades historical workspace ledgers on disk with populated event streams.\n5: \n6: ---\n7: \n8: ## 2. Grounded Reference Architecture and Concrete Paths\n9: \n10: The implementation maps to the following existing files and packages:\n11: \n12: ### Domain Core Layer (backend/internal/domain/)\n13: - backend/internal/domain/enums.go: Add EventType string enum type and typed constants (EventTypeToolCall, EventTypeTurnMessage, EventTypeCompaction).\n14: - backend/internal/domain/models.go: Add EventFact struct. Add optional Events []EventFact to AgenticFactLedger.\n15: - backend/internal/domain/aggregations.go: Verify pure aggregation functions preserve Events without regression.\n16: \n17: ### Boundary Adapters Layer (backend/internal/adapters/)\n18: - backend/internal/adapters/schemas.go: Add EventFactDTO struct with bidirectional mapping to domain.EventFact. Update AgenticFactLedgerDTO with Events []EventFactDTO (json tag events,omitempty).\n19: - backend/internal/adapters/repository.go: Update ExistingLedgerFacts and rawExistingLedger to parse and hold Events. Ensure safe decoding when events is absent.\n20: - backend/internal/adapters/opencode/extractor.go: Extend extraction logic to query messages and parts, construct EventFact slices, correlate turn numbers and context tokens, detect tool errors, compute execution duration, and sort events chronologically.\n21: - backend/internal/adapters/backfill/engine.go: Wire extracted events into processSingleWorkspace when --recompute-db is executed, ensure ledgers lacking events are candidate targets for recompute, and preserve non-destructive facts when local sessions are absent.\n22: \n23: ### CLI Application Layer (backend/cmd/agentic-lens/)\n24: - backend/cmd/agentic-lens/main.go: Update runGenerate to receive extracted events from opencode.ExtractFacts, cache existing events if SQLite is not queried, and persist events in AgenticFactLedger. Ensure backfill subcommand runs smoothly for batch workspace updates.\n25: \n26: ### TypeScript Presentation Layer (web/src/domain/)\n27: - web/src/domain/types.ts: Define EventFact interface with readonly fields matching domain models. Add optional readonly events?: readonly EventFact[]; to AgenticFactLedger.\n28: \n29: ### Test Suites\n30: - backend/internal/adapters/opencode/extractor_test.go: Unit and adversarial tests for chronological event extraction, tool error detection, compaction correlation, and sorting.\n31: - backend/internal/adapters/repository_test.go: Backward compatibility tests loading ledgers without events, and round-trip tests with events.\n32: - backend/internal/adapters/backfill/engine_test.go: Backfill tests asserting event population on database match and preservation on database miss.\n33: - backend/cmd/agentic-lens/main_test.go: CLI integration tests for generate and backfill with event emission.\n34: \n35: ---\n36: \n37: ## 3. Phased Implementation Tasks\n38: \n39: ### Phase 1: Domain Core Models and Event Types (backend/internal/domain/)\n40: - Task 1.1: Define EventType string enum type in backend/internal/domain/enums.go:\n41:   - Constant EventTypeToolCall = \"tool_call\"\n42:   - Constant EventTypeTurnMessage = \"turn_message\"\n43:   - Constant EventTypeCompaction = \"compaction\"\n44: - Task 1.2: Define EventFact struct in backend/internal/domain/models.go:\n45:   - Field Timestamp of type string with JSON tag timestamp\n46:   - Field SessionID of type string with JSON tag session_id\n47:   - F",
       "duration_ms": 18,
       "context_tokens": 9987
     },
@@ -8214,7 +8219,7 @@
       "event_type": "tool_call",
       "tool_name": "bash",
       "status": "error",
-      "error_message": "diff --git a/backend/cmd/agentic-lens/main.go b/backend/cmd/agentic-lens/main.go\nindex 1a82aea..5193ff3 100644\n--- a/backend/cmd/agentic-lens/main.go\n+++ b/backend/cmd/agentic-lens/main.go\n@@ -97,6 +9",
+      "error_message": "diff --git a/backend/cmd/agentic-lens/main.go b/backend/cmd/agentic-lens/main.go\nindex 1a82aea..5193ff3 100644\n--- a/backend/cmd/agentic-lens/main.go\n+++ b/backend/cmd/agentic-lens/main.go\n@@ -97,6 +97,7 @@ func runGenerate(args []string) {\n \tuserBySessionID := make(map[string]string)\n \tvar invocations []domain.InvocationFact\n \tvar tools []domain.ToolFact\n+\tvar events []domain.EventFact\n \tvar fallbackCode *domain.CodeFacts\n \n \tif cachedFacts != nil {\n@@ -106,6 +107,7 @@ func runGenerate(args []string) {\n \t\t}\n \t\tinvocations = append(invocations, cachedFacts.Invocations...)\n \t\ttools = append(tools, cachedFacts.Tools...)\n+\t\tevents = append(events, cachedFacts.Events...)\n \t\tfallbackCode = cachedFacts.Code\n \t}\n \n@@ -133,7 +135,7 @@ func runGenerate(args []string) {\n \t\t}\n \n \t\tif len(knownThreadIDs) \u003e 0 {\n-\t\t\tdbInvs, dbTools, dbStarted, dbCompleted, err := opencode.ExtractFacts(\n+\t\t\tdbInvs, dbTools, dbEvents, dbStarted, dbCompleted, err := opencode.ExtractFacts(\n \t\t\t\tdbClient.DB(),\n \t\t\t\tknownThreadIDs,\n \t\t\t\tcurrentUser,\n@@ -142,6 +144,7 @@ func runGenerate(args []string) {\n \t\t\tif err == nil \u0026\u0026 len(dbInvs) \u003e 0 {\n \t\t\t\tinvocations = dbInvs\n \t\t\t\ttools = dbTools\n+\t\t\t\tevents = dbEvents\n \t\t\t\tif strings.TrimSpace(*startedAtFlag) == \"\" \u0026\u0026 dbStarted != nil {\n \t\t\t\t\tactiveStartedAt = dbStarted\n \t\t\t\t}\n@@ -206,6 +209,7 @@ func runGenerate(args []string) {\n \t\tCode:          codeFacts,\n \t\tInvocations:   invocations,\n \t\tTools:         tools,\n+\t\tEvents:        events,\n \t}\n \n \tmetricsLedger := domain.DeriveMetricsLedger(factLedger)\ndiff --git a/backend/internal/adapters/backfill/engine.go b/backend/internal/adapters/backfill/engine.go\nindex db335aa..8ce1183 100644\n--- a/backend/internal/adapters/backfill/engine.go\n+++ b/backend/internal/adapters/backfill/engine.go\n@@ -168,10 +168,12 @@ func (e *BackfillEngine) processSingleWorkspace(\n \n \t// Skip condition:\n \t// Fully completed tickets are skipped unless --force is specified.\n-\t// A ticket is considered completed if it has CurrentSchemaVersion\n-\t// and does not have a partial migration pending.\n+\t// A ticket is considered completed if it has CurrentSchemaVersion,\n+\t// does not have a partial migration pending, and does not require event backfill when RecomputeDB is requested.\n+\tneedsEventBackfill := opts.RecomputeDB \u0026\u0026 len(factLedger.Events) == 0\n \tisCompleted := factLedger.SchemaVersion != nil \u0026\u0026 *factLedger.SchemaVersion == domain.CurrentSchemaVersion \u0026\u0026\n-\t\t(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial)\n+\t\t(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) \u0026\u0026\n+\t\t!needsEventBackfill\n \n \tif !opts.Force \u0026\u0026 isCompleted {\n \t\tresult.Skipped = true\n@@ -206,7 +208,7 @@ func (e *BackfillEngine) processSingleWorkspace(\n \t// 2. OpenCode DB Recomputation with safe fallback preservation\n \tdbAttempted := false\n \tdbSessionFound := false\n-\thasExistingDBFacts := len(factLedger.Invocations) \u003e 0\n+\thasExistingDBFacts := len(factLedger.Invocations) \u003e 0 || len(factLedger.Events) \u003e 0\n \n \tif opts.RecomputeDB {\n \t\tdbAttempted = true\n@@ -261,20 +263,35 @@ func (e *BackfillEngine) processSingleWorkspace(\n \t\t\tif resolvedSessionID != nil \u0026\u0026 strings.TrimSpace(*resolvedSessionID) != \"\" {\n \t\t\t\tdbSessionFound = true\n \t\t\t\trootID := strings.TrimSpace(*resolvedSessionID)\n-\t\t\t\tinvs, tools, stISO, endISO, err := opencode.ExtractFacts(\n+\t\t\t\tinvs, tools, events, stISO, endISO, err := opencode.ExtractFacts(\n \t\t\t\t\topencodeDB.DB(),\n \t\t\t\t\t[]string{rootID},\n \t\t\t\t\tgitUser,\n \t\t\t\t\tmake(map[string]string),\n \t\t\t\t)\n \t\t\t\tif err == nil \u0026\u0026 len(invs) \u003e 0 {\n-\t\t\t\t\tfactLedger.Invocations = invs\n-\t\t\t\t\tfactLedger.Tools = tools\n-\t\t\t\t\tif stISO != nil {\n-\t\t\t\t\t\tfactLedger.StartedAt = stISO\n+\t\t\t\t\tshouldUpdateInvocations := !hasExistingDBFacts || opts.Force || (factLedger.Migration != nil \u0026\u0026 factLedger.Migration.Status == domain.MigrationStatusPartial)\n+\t\t\t\t\tif shouldUpdateInvocations {\n+\t\t\t\t\t\tfactLedger.Invocations = invs\n+\t\t\t\t\t\tfactLedger.Tools = tools\n+\t\t\t\t\t\tif stISO != nil {\n+\t\t\t\t\t\t\tfactLedger.StartedAt = stISO\n+\t\t\t\t\t\t}\n+\t\t\t\t\t\tif endISO != nil {\n+\t\t\t\t\t\t\tfactLedger.Com",
       "duration_ms": 33,
       "context_tokens": 20148
     },
@@ -9476,7 +9481,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/CONTRACT.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Contract: AL-6 Chronological Event Extraction and Schema Evolution in Go\n2: \n3: ## 1. Problem Statement\n4: Active session telemetry in AgenticLens is generated and backfilled natively by the Go engine across backend/cmd/agentic-lens, backend/internal/adapters/opencode, and backend/internal/adapters/backfill. While workspace ledgers (agentic_metrics.json) are already at schema version 2 with migration metadata, they record only coarse aggregate numbers per invocation and overall tool execution and error counts.\n5: \n6: Detecting fine-grained execution anomalies (such as consecutive tool failure streaks, subagent rework loops, and single-turn context window spikes planned in AL-7, AL-8, and AL-9) requires ordered, turn-level event telemetry.\n7: \n8: Furthermore, existing workspaces on disk (under workspaces/) currently lack this ordered chronological event stream. To prevent fleet telemetry fragmentation, the new chronological event extraction must not only serve future sessions, but must also be actively backfilled across all existing workspaces where sessions exist in the OpenCode SQLite database.\n9: \n10: Ticket AL-6 delivers native Go chronological event extraction, schema evolution, and workspace backfill:\n11: 1. Defines pure domain event models (EventFact) representing atomic turn events, tool executions, and compaction milestones.\n12: 2. Updates OpenCode SQLite extraction in backend/internal/adapters/opencode/extractor.go to extract, correlate, and chronologically sort events from session, message, and part tables.\n13: 3. Provides seamless bidirectional serialization and backward compatibility in backend/internal/adapters/schemas.go and backend/internal/adapters/repository.go, ensuring historical ledgers lacking events deserialize cleanly without regression.\n14: 4. Integrates event capture into both agentic-lens generate and agentic-lens backfill --recompute-db.\n15: 5. Backfills existing workspaces on disk to populate chronological events from local OpenCode SQLite session traces.\n16: 6. Establishes TypeScript domain contract parity in web/src/domain/types.ts.\n17: \n18: ---\n19: \n20: ## 2. Functional Core, Imperative Shell (FCIS) Invariants\n21: \n22: All implementation must strictly comply with architectural boundaries established in TECHNICAL_GUIDELINES.md:\n23: \n24: ### Inward Dependency Flow\n25: Dependencies flow strictly inward across layers:\n26: 1. CLI Subcommand Layer (backend/cmd/agentic-lens/main.go):\n27:    - Application entrypoint, CLI flag parsing (generate, backfill, server), console output rendering, and adapter wiring.\n28: 2. Imperative Adapters Layer (backend/internal/adapters/):\n29:    - External boundary serialization and DTO mapping (backend/internal/adapters/schemas.go).\n30:    - Filesystem workspace traversal and raw ledger reading (backend/internal/adapters/repository.go).\n31:    - SQLite read-only queries and extraction from OpenCode database (backend/internal/adapters/opencode/).\n32:    - Multi-workspace backfill coordination (backend/internal/adapters/backfill/).\n33: 3. Functional Core Domain Layer (backend/internal/domain/):\n34:    - Houses pure domain models (EventFact, AgenticFactLedger, AgenticMetricsLedger), typed event enums (EventType), and pure aggregation algorithms.\n35:    - Must contain zero disk I/O, zero network calls, zero SQL queries, and zero system clocks. All timestamps, durations, and external identifiers must be passed as arguments from the imperative shell.\n36: \n37: ### Pure Domain Core Isolation\n38: 1. EventType is defined as a typed string enum in backend/internal/domain/enums.go with explicit constants for tool calls, turn messages, and compactions.\n39: 2. EventFact is an immutable domain value object capturing timestamp, session identifier, turn index, agent role, event type, optional tool name, execution status, optional error message, optional duration in milliseconds, and context token count.\n40: 3. Adding Events []EventFact to AgenticFactLedger in backend",
       "duration_ms": 13,
       "context_tokens": 8206
     },
@@ -9488,7 +9493,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/iterations/01/PLAN.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Implementation Plan: AL-6 Chronological Event Extraction and S",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/workspaces/AL-6/iterations/01/PLAN.md\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: # Implementation Plan: AL-6 Chronological Event Extraction and Schema Evolution in Go\n2: \n3: ## 1. Goal and Iteration Scope\n4: Deliver chronological event extraction, schema evolution, and existing workspace backfill natively in Go across domain core, boundary adapters, SQLite extractor, CLI commands, and TypeScript frontend type contracts. This enables fine-grained event telemetry extraction from OpenCode SQLite databases into agentic_metrics.json, maintains complete backward compatibility with existing ledgers that omit events, and upgrades historical workspace ledgers on disk with populated event streams.\n5: \n6: ---\n7: \n8: ## 2. Grounded Reference Architecture and Concrete Paths\n9: \n10: The implementation maps to the following existing files and packages:\n11: \n12: ### Domain Core Layer (backend/internal/domain/)\n13: - backend/internal/domain/enums.go: Add EventType string enum type and typed constants (EventTypeToolCall, EventTypeTurnMessage, EventTypeCompaction).\n14: - backend/internal/domain/models.go: Add EventFact struct. Add optional Events []EventFact to AgenticFactLedger.\n15: - backend/internal/domain/aggregations.go: Verify pure aggregation functions preserve Events without regression.\n16: \n17: ### Boundary Adapters Layer (backend/internal/adapters/)\n18: - backend/internal/adapters/schemas.go: Add EventFactDTO struct with bidirectional mapping to domain.EventFact. Update AgenticFactLedgerDTO with Events []EventFactDTO (json tag events,omitempty).\n19: - backend/internal/adapters/repository.go: Update ExistingLedgerFacts and rawExistingLedger to parse and hold Events. Ensure safe decoding when events is absent.\n20: - backend/internal/adapters/opencode/extractor.go: Extend extraction logic to query messages and parts, construct EventFact slices, correlate turn numbers and context tokens, detect tool errors, compute execution duration, and sort events chronologically.\n21: - backend/internal/adapters/backfill/engine.go: Wire extracted events into processSingleWorkspace when --recompute-db is executed, ensure ledgers lacking events are candidate targets for recompute, and preserve non-destructive facts when local sessions are absent.\n22: \n23: ### CLI Application Layer (backend/cmd/agentic-lens/)\n24: - backend/cmd/agentic-lens/main.go: Update runGenerate to receive extracted events from opencode.ExtractFacts, cache existing events if SQLite is not queried, and persist events in AgenticFactLedger. Ensure backfill subcommand runs smoothly for batch workspace updates.\n25: \n26: ### TypeScript Presentation Layer (web/src/domain/)\n27: - web/src/domain/types.ts: Define EventFact interface with readonly fields matching domain models. Add optional readonly events?: readonly EventFact[]; to AgenticFactLedger.\n28: \n29: ### Test Suites\n30: - backend/internal/adapters/opencode/extractor_test.go: Unit and adversarial tests for chronological event extraction, tool error detection, compaction correlation, and sorting.\n31: - backend/internal/adapters/repository_test.go: Backward compatibility tests loading ledgers without events, and round-trip tests with events.\n32: - backend/internal/adapters/backfill/engine_test.go: Backfill tests asserting event population on database match and preservation on database miss.\n33: - backend/cmd/agentic-lens/main_test.go: CLI integration tests for generate and backfill with event emission.\n34: \n35: ---\n36: \n37: ## 3. Phased Implementation Tasks\n38: \n39: ### Phase 1: Domain Core Models and Event Types (backend/internal/domain/)\n40: - Task 1.1: Define EventType string enum type in backend/internal/domain/enums.go:\n41:   - Constant EventTypeToolCall = \"tool_call\"\n42:   - Constant EventTypeTurnMessage = \"turn_message\"\n43:   - Constant EventTypeCompaction = \"compaction\"\n44: - Task 1.2: Define EventFact struct in backend/internal/domain/models.go:\n45:   - Field Timestamp of type string with JSON tag timestamp\n46:   - Field SessionID of type string with JSON tag session_id\n47:   - F",
       "duration_ms": 6,
       "context_tokens": 8206
     },
@@ -9922,7 +9927,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n480: \n481: \t\tts := \"\"\n482: \t\tif tCreated.Valid \u0026\u0026 tCreate",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n480: \n481: \t\tts := \"\"\n482: \t\tif tCreated.Valid \u0026\u0026 tCreated.Int64 \u003e 0 {\n483: \t\t\tts = formatEpochMilli(tCreated.Int64)\n484: \t\t} else if meta, ok := msgLookup[mID]; ok \u0026\u0026 meta.timestamp != \"\" {\n485: \t\t\tts = meta.timestamp\n486: \t\t} else {\n487: \t\t\tts = formatEpochMilli(0)\n488: \t\t}\n489: \n490: \t\tif *rawPD.Type == \"compaction\" {\n491: \t\t\tcompMap[sID]++\n492: \t\t\tevents = append(events, domain.EventFact{\n493: \t\t\t\tTimestamp:     ts,\n494: \t\t\t\tSessionID:     sID,\n495: \t\t\t\tTurn:          turn,\n496: \t\t\t\tRole:          role,\n497: \t\t\t\tEventType:     domain.EventTypeCompaction,\n498: \t\t\t\tToolName:      nil,\n499: \t\t\t\tStatus:        \"completed\",\n500: \t\t\t\tErrorMessage:  nil,\n501: \t\t\t\tDurationMs:    nil,\n502: \t\t\t\tContextTokens: ctxTokens,\n503: \t\t\t})\n504: \t\t\tcontinue\n505: \t\t}\n506: \n507: \t\tif *rawPD.Type == \"tool\" {\n508: \t\t\ttoolName := \"unknown\"\n509: \t\t\tif rawPD.Tool != nil \u0026\u0026 strings.TrimSpace(*rawPD.Tool) != \"\" {\n510: \t\t\t\ttoolName = strings.TrimSpace(*rawPD.Tool)\n511: \t\t\t}\n512: \n513: \t\t\ttAcc, exists := toolMap[toolName]\n514: \t\t\tif !exists {\n515: \t\t\t\ttAcc = \u0026toolAccumulator{}\n516: \t\t\t\ttoolMap[toolName] = tAcc\n517: \t\t\t}\n518: \t\t\ttAcc.calls++\n519: \n520: \t\t\tstat := \"\"\n521: \t\t\tout := \"\"\n522: \t\t\tif rawPD.State != nil {\n523: \t\t\t\tif rawPD.State.Status != nil {\n524: \t\t\t\t\tstat = *rawPD.State.Status\n525: \t\t\t\t}\n526: \t\t\t\tif rawPD.State.Output != nil {\n527: \t\t\t\t\tout = *rawPD.State.Output\n528: \t\t\t\t}\n529: \t\t\t}\n530: \n531: \t\t\toutPrefix := out\n532: \t\t\tif len(outPrefix) \u003e 50 {\n533: \t\t\t\toutPrefix = outPrefix[:50]\n534: \t\t\t}\n535: \n536: \t\t\ttrimmedOut := strings.TrimSpace(out)\n537: \t\t\tisError := stat == \"error\" || strings.Contains(out, \"Traceback\") || strings.HasPrefix(trimmedOut, \"Error:\") || strings.Contains(outPrefix, \"Error:\")\n538: \t\t\tif isError {\n539: \t\t\t\ttAcc.errors++\n540: \t\t\t}\n541: \n542: \t\t\teventStatus := \"completed\"\n543: \t\t\tvar errExcerpt *string\n544: \t\t\tif isError {\n545: \t\t\t\teventStatus = \"error\"\n546: \t\t\t\terrMsg := trimmedOut\n547: \t\t\t\tif errMsg == \"\" {\n548: \t\t\t\t\terrMsg = stat\n549: \t\t\t\t\tif errMsg == \"\" {\n550: \t\t\t\t\t\terrMsg = \"tool error\"\n551: \t\t\t\t\t}\n552: \t\t\t\t}\n553: \t\t\t\tif len(errMsg) \u003e 200 {\n554: \t\t\t\t\terrMsg = errMsg[:200]\n555: \t\t\t\t}\n556: \t\t\t\terrExcerpt = \u0026errMsg\n557: \t\t\t}\n558: \n559: \t\t\tvar durMs *int64\n560: \t\t\tif tCreated.Valid \u0026\u0026 tUpdated.Valid \u0026\u0026 tCreated.Int64 \u003e 0 \u0026\u0026 tUpdated.Int64 \u003e= tCreated.Int64 {\n561: \t\t\t\tdur := tUpdated.Int64 - tCreated.Int64\n562: \t\t\t\tdurMs = \u0026dur\n563: \t\t\t}\n564: \n565: \t\t\ttName := toolName\n566: \t\t\tevents = append(events, domain.EventFact{\n567: \t\t\t\tTimestamp:     ts,\n568: \t\t\t\tSessionID:     sID,\n569: \t\t\t\tTurn:          turn,\n570: \t\t\t\tRole:          role,\n571: \t\t\t\tEventType:     domain.EventTypeToolCall,\n572: \t\t\t\tToolName:      \u0026tName,\n573: \t\t\t\tStatus:        eventStatus,\n574: \t\t\t\tErrorMessage:  errExcerpt,\n575: \t\t\t\tDurationMs:    durMs,\n576: \t\t\t\tContextTokens: ctxTokens,\n577: \t\t\t})\n578: \t\t\tcontinue\n579: \t\t}\n580: \t}\n581: \tif err := partRows.Err(); err != nil {\n582: \t\treturn nil, nil, nil, nil, nil, fmt.Errorf(\"iterating part rows: %w\", err)\n583: \t}\n584: \n585: \t// 5. Build invocations\n586: \tvar invocations []domain.InvocationFact\n587: \tfor _, s := range sessions {\n588: \t\tsessionUser := defaultUser\n589: \t\tif u, ok := userBySessionID[s.id]; ok \u0026\u0026 strings.TrimSpace(u) != \"\" {\n590: \t\t\tsessionUser = strings.TrimSpace(u)\n591: \t\t}\n592: \t\trole := sessionRoleMap[s.id]\n593: \t\tbyModel := sessionModels[s.id]\n594: \t\tmodelOrder := sessionModelOrders[s.id]\n595: \t\ttotalSessionMsgs := sessionTurns[s.id]\n596: \t\tsessionCompactions := compMap[s.id]\n597: \n598: \t\tfor idx, mName := range modelOrder {\n599: \t\t\tst := byModel[mName]\n\n(Showing lines 480-599 of 691. Use offset=600 to continue.)\n\u003c/content\u003e",
       "duration_ms": 7,
       "context_tokens": 47635
     },
@@ -10364,7 +10369,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor_test.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n520: }\n521: \n522: func TestExtractFacts_Chronologica",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor_test.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n520: }\n521: \n522: func TestExtractFacts_ChronologicalOrderingAndTieBreaking(t *testing.T) {\n523: \tdb := setupTestDB(t)\n524: \tdefer db.Close()\n525: \n526: \t// Seed session\n527: \t_, err := db.Exec(`\n528: \t\tINSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES\n529: \t\t('ses_ord', NULL, 'build', 'default_model', 'AL-Order', 1000, 5000);\n530: \t`)\n531: \tif err != nil {\n532: \t\tt.Fatalf(\"failed inserting session: %v\", err)\n533: \t}\n534: \n535: \t// Insert messages with identical timestamp 1760000000000\n536: \t// m1 (turn 1), m2 (turn 2), m3 (turn 3)\n537: \t// And one earlier message m0 (turn 0) at 1760000000000 - 1000\n538: \t// And one later message m4 (turn 4) at 1760000000000 + 1000\n539: \tconst tieTime = 1760000010000\n540: \t_, err = db.Exec(`\n541: \t\tINSERT INTO message (id, session_id, time_created, time_updated, data) VALUES\n542: \t\t('m0', 'ses_ord', 1760000005000, 1760000005000, '{\"role\":\"assistant\",\"tokens\":{\"input\":100,\"output\":10}}'),\n543: \t\t('m1', 'ses_ord', ?, ?, '{\"role\":\"assistant\",\"tokens\":{\"input\":200,\"output\":20}}'),\n544: \t\t('m2', 'ses_ord', ?, ?, '{\"role\":\"assistant\",\"tokens\":{\"input\":300,\"output\":30}}'),\n545: \t\t('m3', 'ses_ord', ?, ?, '{\"role\":\"assistant\",\"tokens\":{\"input\":400,\"output\":40}}'),\n546: \t\t('m4', 'ses_ord', 1760000020000, 1760000020000, '{\"role\":\"assistant\",\"tokens\":{\"input\":500,\"output\":50}}');\n547: \t`, tieTime, tieTime, tieTime, tieTime, tieTime, tieTime)\n548: \tif err != nil {\n549: \t\tt.Fatalf(\"failed inserting messages: %v\", err)\n550: \t}\n551: \n552: \t// Insert tool calls and compactions at the exact same tieTime (1760000010000)\n553: \t// correlated to different turns\n554: \t_, err = db.Exec(`\n555: \t\tINSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES\n556: \t\t('p_tool_t1', 'ses_ord', 'm1', ?, ?, '{\"type\":\"tool\",\"tool\":\"bash\",\"state\":{\"status\":\"completed\",\"output\":\"turn 2 tool\"}}'),\n557: \t\t('p_comp_t2', 'ses_ord', 'm2', ?, ?, '{\"type\":\"compaction\"}'),\n558: \t\t('p_tool_t3', 'ses_ord', 'm3', ?, ?, '{\"type\":\"tool\",\"tool\":\"read\",\"state\":{\"status\":\"completed\",\"output\":\"turn 4 tool\"}}');\n559: \t`, tieTime, tieTime, tieTime, tieTime, tieTime, tieTime)\n560: \tif err != nil {\n561: \t\tt.Fatalf(\"failed inserting parts: %v\", err)\n562: \t}\n563: \n564: \t_, _, events, _, _, err := opencode.ExtractFacts(db, []string{\"ses_ord\"}, \"user\", nil)\n565: \tif err != nil {\n566: \t\tt.Fatalf(\"ExtractFacts failed: %v\", err)\n567: \t}\n568: \n569: \tif len(events) != 8 {\n570: \t\tt.Fatalf(\"expected 8 events (5 messages, 2 tools, 1 compaction), got %d\", len(events))\n571: \t}\n572: \n573: \t// 1. Strict primary ordering by timestamp ascending\n574: \tfor i := 1; i \u003c len(events); i++ {\n575: \t\tif events[i].Timestamp \u003c events[i-1].Timestamp {\n576: \t\t\tt.Fatalf(\"timestamp ordering violation at index %d: %s \u003c %s\",\n577: \t\t\t\ti, events[i].Timestamp, events[i-1].Timestamp)\n578: \t\t}\n579: \t}\n580: \n581: \t// 2. Strict secondary ordering by turn when timestamps are identical\n582: \tfor i := 1; i \u003c len(events); i++ {\n583: \t\tif events[i].Timestamp == events[i-1].Timestamp {\n584: \t\t\tif events[i].Turn \u003c events[i-1].Turn {\n585: \t\t\t\tt.Fatalf(\"turn tie-break ordering violation at index %d: turn %d \u003c previous turn %d (both at %s)\",\n586: \t\t\t\t\ti, events[i].Turn, events[i-1].Turn, events[i].Timestamp)\n587: \t\t\t}\n588: \t\t}\n589: \t}\n590: }\n591: \n592: func TestExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {\n593: \tdb := setupTestDB(t)\n594: \tdefer db.Close()\n595: \n596: \t_, err := db.Exec(`\n597: \t\tINSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES\n598: \t\t('ses_tools', NULL, 'build', 'default_model', 'AL-Tools', 1000, 10000);\n599: \t`)\n600: \tif err != nil {\n601: \t\tt.Fatalf(\"failed inserting session: %v\", err)\n602: \t}\n603: \n604: \t_, err = db.Exec(`\n605: \t\tINSERT INTO message (id, session_id, time_created, time_updated, data) VALUES\n606: \t\t('m1', 'ses_tools', 1760000001000, 1760000001000, '{\"role\":\"assistant\",\"tokens\":{\"input\":1000,\"cache\":{\"read",
       "duration_ms": 9,
       "context_tokens": 64026
     },
@@ -10386,7 +10391,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor_test.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n640: \t}\n641: \n642: \t// Verify ToolFact aggregations\n",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/backend/internal/adapters/opencode/extractor_test.go\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n640: \t}\n641: \n642: \t// Verify ToolFact aggregations\n643: \ttoolMap := make(map[string]domain.ToolFact)\n644: \tfor _, t := range tools {\n645: \t\ttoolMap[t.Name] = t\n646: \t}\n647: \n648: \t// bash: 2 calls, 1 error\n649: \tif bash, ok := toolMap[\"bash\"]; !ok || bash.Calls != 2 || bash.Errors != 1 {\n650: \t\tt.Errorf(\"expected bash calls=2 errors=1, got: %+v\", bash)\n651: \t}\n652: \t// python: 1 call, 1 error (due to Traceback)\n653: \tif py, ok := toolMap[\"python\"]; !ok || py.Calls != 1 || py.Errors != 1 {\n654: \t\tt.Errorf(\"expected python calls=1 errors=1 (Traceback), got: %+v\", py)\n655: \t}\n656: \t// read: 1 call, 1 error (due to Error: prefix)\n657: \tif rd, ok := toolMap[\"read\"]; !ok || rd.Calls != 1 || rd.Errors != 1 {\n658: \t\tt.Errorf(\"expected read calls=1 errors=1 (Error: prefix), got: %+v\", rd)\n659: \t}\n660: \t// edit: 1 call, 1 error (due to Error: prefix)\n661: \tif ed, ok := toolMap[\"edit\"]; !ok || ed.Calls != 1 || ed.Errors != 1 {\n662: \t\tt.Errorf(\"expected edit calls=1 errors=1 (Error: prefix), got: %+v\", ed)\n663: \t}\n664: \t// grep: 1 call, 0 errors\n665: \tif gr, ok := toolMap[\"grep\"]; !ok || gr.Calls != 1 || gr.Errors != 0 {\n666: \t\tt.Errorf(\"expected grep calls=1 errors=0, got: %+v\", gr)\n667: \t}\n668: \n669: \t// Find tool call events\n670: \teventMap := make(map[string]domain.EventFact)\n671: \tfor _, ev := range events {\n672: \t\tif ev.ToolName != nil {\n673: \t\t\teventMap[*ev.ToolName+\"_\"+ev.Status] = ev\n674: \t\t}\n675: \t}\n676: \n677: \t// Verify Clean Tool Call\n678: \tcleanEv := events[1] // p_clean\n679: \tif cleanEv.Status != \"completed\" || cleanEv.ErrorMessage != nil {\n680: \t\tt.Errorf(\"expected clean tool completed with nil error message, got: %+v\", cleanEv)\n681: \t}\n682: \tif cleanEv.DurationMs == nil || *cleanEv.DurationMs != 350 {\n683: \t\tt.Errorf(\"expected clean tool duration 350ms, got: %v\", cleanEv.DurationMs)\n684: \t}\n685: \tif cleanEv.ContextTokens != 1500 {\n686: \t\tt.Errorf(\"expected 1500 context tokens, got %d\", cleanEv.ContextTokens)\n687: \t}\n688: \n689: \t// Verify Status Error Tool Call\n690: \tstatErrEv := events[2] // p_stat_err\n691: \tif statErrEv.Status != \"error\" || statErrEv.ErrorMessage == nil || *statErrEv.ErrorMessage != \"command failed with status 1\" {\n692: \t\tt.Errorf(\"expected status error tool call, got: %+v\", statErrEv)\n693: \t}\n694: \tif statErrEv.DurationMs == nil || *statErrEv.DurationMs != 0 {\n695: \t\tt.Errorf(\"expected 0ms duration, got: %v\", statErrEv.DurationMs)\n696: \t}\n697: \n698: \t// Verify Traceback Detection Tool Call\n699: \ttraceEv := events[3] // p_traceback\n700: \tif traceEv.Status != \"error\" || traceEv.ErrorMessage == nil || !containsSubstring(*traceEv.ErrorMessage, \"Traceback\") {\n701: \t\tt.Errorf(\"expected Traceback detection error, got: %+v\", traceEv)\n702: \t}\n703: \tif traceEv.DurationMs == nil || *traceEv.DurationMs != 200 {\n704: \t\tt.Errorf(\"expected 200ms duration, got: %v\", traceEv.DurationMs)\n705: \t}\n706: \n707: \t// Verify Error: Prefix Detection Tool Call\n708: \terrPrefixEv := events[4] // p_err_prefix\n709: \tif errPrefixEv.Status != \"error\" || errPrefixEv.ErrorMessage == nil || *errPrefixEv.ErrorMessage != \"Error: path not found: /etc/missing\" {\n710: \t\tt.Errorf(\"expected Error: prefix detection, got: %+v\", errPrefixEv)\n711: \t}\n712: \n713: \t// Verify Long Error Message Truncation (max 200 chars)\n714: \tlongErrEv := events[5] // p_long_err\n715: \tif longErrEv.Status != \"error\" || longErrEv.ErrorMessage == nil {\n716: \t\tt.Fatalf(\"expected long error to be flagged as error, got: %+v\", longErrEv)\n717: \t}\n718: \tif len(*longErrEv.ErrorMessage) != 200 {\n719: \t\tt.Errorf(\"expected truncated error message of length 200, got %d\", len(*longErrEv.ErrorMessage))\n720: \t}\n721: \n722: \t// Verify Inverted Timestamps yields nil DurationMs\n723: \tinvTimeEv := events[6] // p_inv_time\n724: \tif invTimeEv.DurationMs != nil {\n725: \t\tt.Errorf(\"expected nil duration for inverted timestamps, got: %v\", *invTimeEv.DurationMs)\n726: \t}\n727: }\n728: \n729: func TestExtractFacts_CompactionEvents(t *testing.T) {\n730: \tdb := setup",
       "duration_ms": 9,
       "context_tokens": 67015
     },
@@ -10871,7 +10876,7 @@
       "event_type": "tool_call",
       "tool_name": "read",
       "status": "error",
-      "error_message": "\u003cpath\u003e/home/agent/.t3/worktrees/AgenticLens/t3code-779bb37c/web/src/domain/events.test.ts\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: import { describe, it, expect } from 'vitest';\n2: import type { AgenticF",
+      "error_message": "\u003cpath\u003e~/.t3/worktrees/AgenticLens/t3code-779bb37c/web/src/domain/events.test.ts\u003c/path\u003e\n\u003ctype\u003efile\u003c/type\u003e\n\u003ccontent\u003e\n1: import { describe, it, expect } from 'vitest';\n2: import type { AgenticFactLedger, EventFact, EventType } from './types';\n3: \n4: describe('Event Telemetry and Schema Evolution Contracts', () =\u003e {\n5:   describe('Legacy and Backward Compatibility Boundaries', () =\u003e {\n6:     it('deserializes legacy JSON omitting events field without error', () =\u003e {\n7:       const legacyPayload = JSON.stringify({\n8:         schema_version: 2,\n9:         ticket_id: 'AL-LEGACY',\n10:         ticket_title: 'Legacy ticket',\n11:         updated_at: '2026-10-18T10:00:00Z',\n12:         code: {\n13:           lines_added: 50,\n14:           lines_deleted: 10,\n15:           files_changed: 2,\n16:           sdlc_iterations: 1,\n17:         },\n18:         invocations: [],\n19:         tools: [],\n20:       });\n21: \n22:       const parsed: AgenticFactLedger = JSON.parse(legacyPayload);\n23:       expect(parsed.ticket_id).toBe('AL-LEGACY');\n24:       expect(parsed.events).toBeUndefined();\n25:     });\n26: \n27:     it('deserializes legacy JSON with explicit null events field', () =\u003e {\n28:       const payloadWithNull = JSON.stringify({\n29:         schema_version: 2,\n30:         ticket_id: 'AL-NULL',\n31:         updated_at: '2026-10-18T10:00:00Z',\n32:         code: { lines_added: 0, lines_deleted: 0, files_changed: 0, sdlc_iterations: 0 },\n33:         invocations: [],\n34:         tools: [],\n35:         events: null,\n36:       });\n37: \n38:       const parsed: AgenticFactLedger = JSON.parse(payloadWithNull);\n39:       expect(parsed.events).toBeNull();\n40:     });\n41: \n42:     it('deserializes ledger with empty events array', () =\u003e {\n43:       const payloadWithEmpty = JSON.stringify({\n44:         schema_version: 2,\n45:         ticket_id: 'AL-EMPTY',\n46:         updated_at: '2026-10-18T10:00:00Z',\n47:         code: { lines_added: 0, lines_deleted: 0, files_changed: 0, sdlc_iterations: 0 },\n48:         invocations: [],\n49:         tools: [],\n50:         events: [],\n51:       });\n52: \n53:       const parsed: AgenticFactLedger = JSON.parse(payloadWithEmpty);\n54:       expect(parsed.events).toBeDefined();\n55:       expect(parsed.events).toHaveLength(0);\n56:     });\n57:   });\n58: \n59:   describe('EventFact Type Discrimination and Property Fidelity', () =\u003e {\n60:     const mockEvents: readonly EventFact[] = [\n61:       {\n62:         timestamp: '2026-10-18T10:00:01.000000+00:00',\n63:         session_id: 'ses-orch-1',\n64:         turn: 1,\n65:         role: 'orchestrator',\n66:         event_type: 'turn_message',\n67:         status: 'completed',\n68:         duration_ms: 1200,\n69:         context_tokens: 5000,\n70:       },\n71:       {\n72:         timestamp: '2026-10-18T10:00:02.000000+00:00',\n73:         session_id: 'ses-orch-1',\n74:         turn: 1,\n75:         role: 'orchestrator',\n76:         event_type: 'tool_call',\n77:         tool_name: 'bash',\n78:         status: 'error',\n79:         error_message: 'Traceback (most recent call last):\\n  File script.py, line 2',\n80:         duration_ms: 450,\n81:         context_tokens: 5000,\n82:       },\n83:       {\n84:         timestamp: '2026-10-18T10:00:03.000000+00:00',\n85:         session_id: 'ses-orch-1',\n86:         turn: 2,\n87:         role: 'orchestrator',\n88:         event_type: 'compaction',\n89:         status: 'completed',\n90:         context_tokens: 3800,\n91:       },\n92:     ];\n93: \n94:     it('correctly discriminates event_type enums', () =\u003e {\n95:       const types: EventType[] = mockEvents.map((e) =\u003e e.event_type);\n96:       expect(types).toEqual(['turn_message', 'tool_call', 'compaction']);\n97:     });\n98: \n99:     it('preserves tool call error excerpt and execution duration', () =\u003e {\n100:       const toolEvent = mockEvents[1];\n101:       expect(toolEvent.event_type).toBe('tool_call');\n102:       expect(toolEvent.tool_name).toBe('bash');\n103:       expect(toolEvent.status).toBe('error');\n104:       expect(toolEvent.error_message).toContain('Traceback');\n105:       expect(toolEvent.duration_ms).toBe(450);\n106: ",
       "duration_ms": 10,
       "context_tokens": 95318
     },
@@ -11481,8 +11486,8 @@
       "role": "orchestrator",
       "event_type": "turn_message",
       "status": "completed",
-      "duration_ms": 1,
-      "context_tokens": 0
+      "duration_ms": 13553,
+      "context_tokens": 111872
     },
     {
       "timestamp": "2026-10-18T08:33:45.097000+00:00",
@@ -11492,8 +11497,532 @@
       "event_type": "tool_call",
       "tool_name": "bash",
       "status": "completed",
+      "duration_ms": 461,
+      "context_tokens": 111872
+    },
+    {
+      "timestamp": "2026-10-18T08:33:45.608000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 85,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 2984,
+      "context_tokens": 112165
+    },
+    {
+      "timestamp": "2026-10-18T08:33:48.370000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 85,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 12,
+      "context_tokens": 112165
+    },
+    {
+      "timestamp": "2026-10-18T08:33:48.601000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 86,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 8054,
+      "context_tokens": 112790
+    },
+    {
+      "timestamp": "2026-10-18T08:33:56.504000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 86,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "completed",
+      "duration_ms": 11,
+      "context_tokens": 112790
+    },
+    {
+      "timestamp": "2026-10-18T08:33:56.664000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 87,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 8280,
+      "context_tokens": 114102
+    },
+    {
+      "timestamp": "2026-10-18T08:34:04.850000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 87,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "todowrite",
+      "status": "completed",
+      "duration_ms": 6,
+      "context_tokens": 114102
+    },
+    {
+      "timestamp": "2026-10-18T08:34:04.955000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 88,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 9392,
+      "context_tokens": 114611
+    },
+    {
+      "timestamp": "2026-10-18T09:14:52.546000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 89,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 15880,
+      "context_tokens": 115281
+    },
+    {
+      "timestamp": "2026-10-18T09:15:08.305000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 89,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 66,
+      "context_tokens": 115281
+    },
+    {
+      "timestamp": "2026-10-18T09:15:08.438000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 90,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4167,
+      "context_tokens": 115982
+    },
+    {
+      "timestamp": "2026-10-18T09:15:12.392000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 90,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 13,
+      "context_tokens": 115982
+    },
+    {
+      "timestamp": "2026-10-18T09:15:12.618000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 91,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3347,
+      "context_tokens": 116633
+    },
+    {
+      "timestamp": "2026-10-18T09:15:15.887000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 91,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 17,
+      "context_tokens": 116633
+    },
+    {
+      "timestamp": "2026-10-18T09:15:15.973000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 92,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3387,
+      "context_tokens": 116756
+    },
+    {
+      "timestamp": "2026-10-18T09:15:19.250000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 92,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "completed",
+      "duration_ms": 11,
+      "context_tokens": 116756
+    },
+    {
+      "timestamp": "2026-10-18T09:15:19.371000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 93,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3441,
+      "context_tokens": 117610
+    },
+    {
+      "timestamp": "2026-10-18T09:15:22.596000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 93,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "completed",
       "duration_ms": 7,
-      "context_tokens": 0
+      "context_tokens": 117610
+    },
+    {
+      "timestamp": "2026-10-18T09:15:22.821000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 94,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 10879,
+      "context_tokens": 118276
+    },
+    {
+      "timestamp": "2026-10-18T09:15:33.473000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 94,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "edit",
+      "status": "completed",
+      "duration_ms": 11,
+      "context_tokens": 118276
+    },
+    {
+      "timestamp": "2026-10-18T09:15:33.709000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 95,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3474,
+      "context_tokens": 119974
+    },
+    {
+      "timestamp": "2026-10-18T09:15:36.829000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 95,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 13,
+      "context_tokens": 119974
+    },
+    {
+      "timestamp": "2026-10-18T09:15:37.194000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 96,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3676,
+      "context_tokens": 120642
+    },
+    {
+      "timestamp": "2026-10-18T09:15:40.650000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 96,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 34,
+      "context_tokens": 120642
+    },
+    {
+      "timestamp": "2026-10-18T09:15:40.880000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 97,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3286,
+      "context_tokens": 120685
+    },
+    {
+      "timestamp": "2026-10-18T09:15:44.133000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 97,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 16,
+      "context_tokens": 120685
+    },
+    {
+      "timestamp": "2026-10-18T09:15:44.176000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 98,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4445,
+      "context_tokens": 121372
+    },
+    {
+      "timestamp": "2026-10-18T09:15:48.434000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 98,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 49,
+      "context_tokens": 121372
+    },
+    {
+      "timestamp": "2026-10-18T09:15:48.630000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 99,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3983,
+      "context_tokens": 121874
+    },
+    {
+      "timestamp": "2026-10-18T09:15:52.424000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 99,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 16,
+      "context_tokens": 121874
+    },
+    {
+      "timestamp": "2026-10-18T09:15:52.623000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 100,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 5172,
+      "context_tokens": 122454
+    },
+    {
+      "timestamp": "2026-10-18T09:15:57.660000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 100,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 20,
+      "context_tokens": 122454
+    },
+    {
+      "timestamp": "2026-10-18T09:15:57.804000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 101,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3440,
+      "context_tokens": 123349
+    },
+    {
+      "timestamp": "2026-10-18T09:16:00.942000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 101,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 49,
+      "context_tokens": 123349
+    },
+    {
+      "timestamp": "2026-10-18T09:16:01.255000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 102,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3997,
+      "context_tokens": 123471
+    },
+    {
+      "timestamp": "2026-10-18T09:16:05.093000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 102,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 11,
+      "context_tokens": 123471
+    },
+    {
+      "timestamp": "2026-10-18T09:16:05.261000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 103,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 5149,
+      "context_tokens": 123651
+    },
+    {
+      "timestamp": "2026-10-18T09:16:10.259000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 103,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 70,
+      "context_tokens": 123651
+    },
+    {
+      "timestamp": "2026-10-18T09:16:10.427000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 104,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4041,
+      "context_tokens": 124798
+    },
+    {
+      "timestamp": "2026-10-18T09:16:14.234000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 104,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 38,
+      "context_tokens": 124798
+    },
+    {
+      "timestamp": "2026-10-18T09:16:14.477000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 105,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 5415,
+      "context_tokens": 125537
+    },
+    {
+      "timestamp": "2026-10-18T09:16:19.717000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 105,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 30,
+      "context_tokens": 125537
+    },
+    {
+      "timestamp": "2026-10-18T09:16:19.903000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 106,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3560,
+      "context_tokens": 125917
+    },
+    {
+      "timestamp": "2026-10-18T09:16:23.064000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 106,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 9,
+      "context_tokens": 125917
+    },
+    {
+      "timestamp": "2026-10-18T09:16:23.473000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 107,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3612,
+      "context_tokens": 126048
+    },
+    {
+      "timestamp": "2026-10-18T09:16:26.875000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 107,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 13,
+      "context_tokens": 126048
+    },
+    {
+      "timestamp": "2026-10-18T09:16:27.094000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 108,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3973,
+      "context_tokens": 126126
+    },
+    {
+      "timestamp": "2026-10-18T09:16:30.856000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 108,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 12,
+      "context_tokens": 126126
+    },
+    {
+      "timestamp": "2026-10-18T09:16:31.077000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 109,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3939,
+      "context_tokens": 126243
+    },
+    {
+      "timestamp": "2026-10-18T09:16:34.920000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 109,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "t3-code_list_thread_pull_requests",
+      "status": "completed",
+      "duration_ms": 8,
+      "context_tokens": 126243
+    },
+    {
+      "timestamp": "2026-10-18T09:16:35.027000+00:00",
+      "session_id": "ses_eb21785a5ffeUzhv5WUHpe4cZA",
+      "turn": 110,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4414,
+      "context_tokens": 126408
     }
   ]
 }

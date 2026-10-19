@@ -43,9 +43,12 @@
 - **Reasoning Effort:** 58,936 reasoning tokens (47.1% of generated output)
 - **Tool Health & Self-Correction:** 409 tool calls (3 self-corrections, 99.3% success rate)
 
+### Anomalies & Health Flags
+- **Status:** No execution anomalies detected (clean session).
+
 ### Agentic Execution Metrics
 
-**Contributors:** nilton.guedes_duarte@digits.schwarz
+**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |

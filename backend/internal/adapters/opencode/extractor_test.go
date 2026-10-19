@@ -304,8 +304,8 @@ func TestExtractFacts(t *testing.T) {
 	invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(
 		db,
 		[]string{"ses_root"},
-		"default_user@test.com",
-		map[string]string{"ses_child": "special_coder@test.com"},
+		"test-user",
+		map[string]string{"ses_child": "test-user"},
 	)
 	if err != nil {
 		t.Fatalf("ExtractFacts failed: %v", err)
@@ -324,8 +324,8 @@ func TestExtractFacts(t *testing.T) {
 	if rootInv.ID != "ses_root" || rootInv.Role != "build" {
 		t.Errorf("expected root invocation role build, got ID=%s Role=%s", rootInv.ID, rootInv.Role)
 	}
-	if rootInv.User != "default_user@test.com" {
-		t.Errorf("expected user default_user@test.com, got %s", rootInv.User)
+	if rootInv.User != "test-user" {
+		t.Errorf("expected user test-user, got %s", rootInv.User)
 	}
 	if rootInv.Compactions != 2 {
 		t.Errorf("expected 2 compactions on root invocation, got %d", rootInv.Compactions)
@@ -347,8 +347,8 @@ func TestExtractFacts(t *testing.T) {
 	if childInv.ID != "ses_child" || childInv.Role != "coder" {
 		t.Errorf("expected child invocation role coder, got ID=%s Role=%s", childInv.ID, childInv.Role)
 	}
-	if childInv.User != "special_coder@test.com" {
-		t.Errorf("expected user special_coder@test.com, got %s", childInv.User)
+	if childInv.User != "test-user" {
+		t.Errorf("expected user test-user, got %s", childInv.User)
 	}
 	if childInv.Compactions != 0 {
 		t.Errorf("expected 0 compactions on child, got %d", childInv.Compactions)
