@@ -1,5 +1,11 @@
 h3. Title: AL-18: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry
 
+*STATUS*: Discarded (Superseded and Merged into AL-17)
+
+*DISCARD REASONING*
+
+This ticket was discarded and consolidated into AL-17. AL-18 represented an artificial split of the live backend SQLite extraction vertical slice already initiated in AL-17. Both tickets target the exact same subsystem (`AgenticLens (domain | adapters | http | tests)`), modify the exact same files (`internal/domain/live.go`, `internal/adapters/live/sqlite.go`, and `internal/adapters/http/handlers.go`), and share the same non-locking SQLite database connection. Rather than separating session tree discovery from message/reasoning trace extraction across two fragmented tickets, all live backend trace extraction capabilities are incorporated directly into the scope and acceptance criteria of AL-17.
+
 *TARGET*: AgenticLens (domain | adapters | http | tests)
 
 *CONTEXT*

@@ -27,40 +27,51 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-29 conventional commit ticket type classification in telemetry engine.md`
 - `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
 - `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
-- `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
+- `workspaces/plan/to-do/AL-31 decouple root session structural hierarchy from persona roles.md`
+- `workspaces/plan/to-do/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
+- `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
+- `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
 ---
 
 ## Ready
 
-- **AL-17**: Implement Non-Locking Live Database Hook, Session Tree Engine, and Config-Driven Ticket Inference
+- **AL-17**: Implement Non-Locking Live Database Hook, Session Tree Engine, Ticket Inference, and Live Trace Telemetry
   - **Subsystem**: Adapters / Domain / HTTP / Tests
   - **Phase**: Phase 4
   - **Status**: Ready
   - **Blocked by**: None (AL-21 Done)
-  - **Blocks**: AL-18
+  - **Blocks**: AL-19, AL-20, AL-33
   - **File**: `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
+
+- **AL-31**: Decouple Root Session Structural Hierarchy from Persona Roles in Domain Engine and Tests
+  - **Subsystem**: Domain / Adapters / Tests
+  - **Phase**: Phase 6
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-31 decouple root session structural hierarchy from persona roles.md`
+
+- **AL-32**: Telemetry Event Pruning, Database Message Stripping, Agent Data Investigation, and Ledger Backfill
+  - **Subsystem**: Domain / Adapters / CLI / Migration / Tests
+  - **Phase**: Phase 6
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-33
+  - **File**: `workspaces/plan/to-do/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
 
 ---
 
 ## Pending
 
-- **AL-18**: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry
-  - **Subsystem**: Domain / Adapters / HTTP / Tests
-  - **Phase**: Phase 4
-  - **Status**: Pending
-  - **Blocked by**: AL-17
-  - **Blocks**: AL-19, AL-20
-  - **File**: `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
-
 - **AL-19**: Implement Live Anomaly Detection Engine and Realtime Session Health Rules
   - **Subsystem**: Domain / Adapters / HTTP / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: AL-18
+  - **Blocked by**: AL-17
   - **Blocks**: AL-20
   - **File**: `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 
@@ -68,9 +79,17 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Presentation / Web / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: AL-18, AL-19
+  - **Blocked by**: AL-17, AL-19
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
+
+- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
+  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 6
+  - **Status**: Pending
+  - **Blocked by**: AL-32, AL-17
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
 ---
 
@@ -282,3 +301,12 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Status**: Discarded (Superseded by AL-11)
   - **Blocked by**: None
   - **Blocks**: None
+  - **File**: `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
+
+- **AL-18**: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry
+  - **Subsystem**: Domain / Adapters / HTTP / Tests
+  - **Phase**: Phase 4
+  - **Status**: Discarded (Superseded and Merged into AL-17)
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
