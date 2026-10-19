@@ -746,14 +746,22 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 	t.Parallel()
 	t.Run("coder <-> tester 3 cycles triggers WARNING", func(t *testing.T) {
+		rootID := "ses-root"
+		childCoderID := "ses-coder"
+		childTesterID := "ses-tester"
 		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "general"},
+				{ID: childCoderID, ParentID: &rootID, Role: "coder"},
+				{ID: childTesterID, ParentID: &rootID, Role: "tester"},
+			},
 			Events: []domain.EventFact{
-				{Turn: 1, Role: "coder"},
-				{Turn: 2, Role: "tester"},
-				{Turn: 3, Role: "coder"},
-				{Turn: 4, Role: "tester"},
-				{Turn: 5, Role: "coder"},
-				{Turn: 6, Role: "tester"},
+				{SessionID: childCoderID, Turn: 1, Role: "coder"},
+				{SessionID: childTesterID, Turn: 2, Role: "tester"},
+				{SessionID: childCoderID, Turn: 3, Role: "coder"},
+				{SessionID: childTesterID, Turn: 4, Role: "tester"},
+				{SessionID: childCoderID, Turn: 5, Role: "coder"},
+				{SessionID: childTesterID, Turn: 6, Role: "tester"},
 			},
 		}
 
@@ -783,12 +791,20 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 	})
 
 	t.Run("coder <-> tester 4 cycles triggers WARNING", func(t *testing.T) {
+		rootID := "ses-root"
+		childCoderID := "ses-coder"
+		childTesterID := "ses-tester"
 		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "general"},
+				{ID: childCoderID, ParentID: &rootID, Role: "coder"},
+				{ID: childTesterID, ParentID: &rootID, Role: "tester"},
+			},
 			Events: []domain.EventFact{
-				{Turn: 1, Role: "coder"}, {Turn: 2, Role: "tester"},
-				{Turn: 3, Role: "coder"}, {Turn: 4, Role: "tester"},
-				{Turn: 5, Role: "coder"}, {Turn: 6, Role: "tester"},
-				{Turn: 7, Role: "coder"}, {Turn: 8, Role: "tester"},
+				{SessionID: childCoderID, Turn: 1, Role: "coder"}, {SessionID: childTesterID, Turn: 2, Role: "tester"},
+				{SessionID: childCoderID, Turn: 3, Role: "coder"}, {SessionID: childTesterID, Turn: 4, Role: "tester"},
+				{SessionID: childCoderID, Turn: 5, Role: "coder"}, {SessionID: childTesterID, Turn: 6, Role: "tester"},
+				{SessionID: childCoderID, Turn: 7, Role: "coder"}, {SessionID: childTesterID, Turn: 8, Role: "tester"},
 			},
 		}
 
@@ -805,13 +821,15 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 	})
 
 	t.Run("coder <-> tester 5 cycles triggers CRITICAL", func(t *testing.T) {
+		rootID := "ses-root"
 		ledger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
-				{Role: "coder"}, {Role: "tester"},
-				{Role: "coder"}, {Role: "tester"},
-				{Role: "coder"}, {Role: "tester"},
-				{Role: "coder"}, {Role: "tester"},
-				{Role: "coder"}, {Role: "tester"},
+				{ID: rootID, ParentID: nil, Role: "general"},
+				{ID: "c1", ParentID: &rootID, Role: "coder"}, {ID: "t1", ParentID: &rootID, Role: "tester"},
+				{ID: "c2", ParentID: &rootID, Role: "coder"}, {ID: "t2", ParentID: &rootID, Role: "tester"},
+				{ID: "c3", ParentID: &rootID, Role: "coder"}, {ID: "t3", ParentID: &rootID, Role: "tester"},
+				{ID: "c4", ParentID: &rootID, Role: "coder"}, {ID: "t4", ParentID: &rootID, Role: "tester"},
+				{ID: "c5", ParentID: &rootID, Role: "coder"}, {ID: "t5", ParentID: &rootID, Role: "tester"},
 			},
 		}
 
@@ -832,12 +850,20 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 	})
 
 	t.Run("fewer than 3 cycles does not trigger", func(t *testing.T) {
+		rootID := "ses-root"
+		childCoderID := "ses-coder"
+		childTesterID := "ses-tester"
 		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "general"},
+				{ID: childCoderID, ParentID: &rootID, Role: "coder"},
+				{ID: childTesterID, ParentID: &rootID, Role: "tester"},
+			},
 			Events: []domain.EventFact{
-				{Turn: 1, Role: "coder"},
-				{Turn: 2, Role: "tester"},
-				{Turn: 3, Role: "coder"},
-				{Turn: 4, Role: "tester"},
+				{SessionID: childCoderID, Turn: 1, Role: "coder"},
+				{SessionID: childTesterID, Turn: 2, Role: "tester"},
+				{SessionID: childCoderID, Turn: 3, Role: "coder"},
+				{SessionID: childTesterID, Turn: 4, Role: "tester"},
 			},
 		}
 
@@ -849,14 +875,24 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 
 	t.Run("non-alternating transitions do not trigger", func(t *testing.T) {
 		// coder -> tester -> reviewer -> coder -> tester -> reviewer (3 distinct roles)
+		rootID := "ses-root"
+		childCoderID := "ses-coder"
+		childTesterID := "ses-tester"
+		childReviewerID := "ses-reviewer"
 		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "general"},
+				{ID: childCoderID, ParentID: &rootID, Role: "coder"},
+				{ID: childTesterID, ParentID: &rootID, Role: "tester"},
+				{ID: childReviewerID, ParentID: &rootID, Role: "reviewer"},
+			},
 			Events: []domain.EventFact{
-				{Turn: 1, Role: "coder"},
-				{Turn: 2, Role: "tester"},
-				{Turn: 3, Role: "reviewer"},
-				{Turn: 4, Role: "coder"},
-				{Turn: 5, Role: "tester"},
-				{Turn: 6, Role: "reviewer"},
+				{SessionID: childCoderID, Turn: 1, Role: "coder"},
+				{SessionID: childTesterID, Turn: 2, Role: "tester"},
+				{SessionID: childReviewerID, Turn: 3, Role: "reviewer"},
+				{SessionID: childCoderID, Turn: 4, Role: "coder"},
+				{SessionID: childTesterID, Turn: 5, Role: "tester"},
+				{SessionID: childReviewerID, Turn: 6, Role: "reviewer"},
 			},
 		}
 
@@ -870,20 +906,28 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 
 	t.Run("orchestrator role is strictly ignored in rework loop detection", func(t *testing.T) {
 		// Orchestrator calls coder, then tester, then coder, etc.
+		rootID := "ses-root"
+		childCoderID := "ses-coder"
+		childTesterID := "ses-tester"
 		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "orchestrator"},
+				{ID: childCoderID, ParentID: &rootID, Role: "coder"},
+				{ID: childTesterID, ParentID: &rootID, Role: "tester"},
+			},
 			Events: []domain.EventFact{
-				{Turn: 1, Role: "orchestrator"},
-				{Turn: 2, Role: "coder"},
-				{Turn: 3, Role: "orchestrator"},
-				{Turn: 4, Role: "tester"},
-				{Turn: 5, Role: "orchestrator"},
-				{Turn: 6, Role: "coder"},
-				{Turn: 7, Role: "orchestrator"},
-				{Turn: 8, Role: "tester"},
-				{Turn: 9, Role: "orchestrator"},
-				{Turn: 10, Role: "coder"},
-				{Turn: 11, Role: "orchestrator"},
-				{Turn: 12, Role: "tester"},
+				{SessionID: rootID, Turn: 1, Role: "orchestrator"},
+				{SessionID: childCoderID, Turn: 2, Role: "coder"},
+				{SessionID: rootID, Turn: 3, Role: "orchestrator"},
+				{SessionID: childTesterID, Turn: 4, Role: "tester"},
+				{SessionID: rootID, Turn: 5, Role: "orchestrator"},
+				{SessionID: childCoderID, Turn: 6, Role: "coder"},
+				{SessionID: rootID, Turn: 7, Role: "orchestrator"},
+				{SessionID: childTesterID, Turn: 8, Role: "tester"},
+				{SessionID: rootID, Turn: 9, Role: "orchestrator"},
+				{SessionID: childCoderID, Turn: 10, Role: "coder"},
+				{SessionID: rootID, Turn: 11, Role: "orchestrator"},
+				{SessionID: childTesterID, Turn: 12, Role: "tester"},
 			},
 		}
 
@@ -991,12 +1035,20 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 	})
 
 	t.Run("consecutive identical roles collapsed without false trigger", func(t *testing.T) {
+		rootID := "ses-root"
+		childCoderID := "ses-coder"
+		childTesterID := "ses-tester"
 		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "general"},
+				{ID: childCoderID, ParentID: &rootID, Role: "coder"},
+				{ID: childTesterID, ParentID: &rootID, Role: "tester"},
+			},
 			Events: []domain.EventFact{
-				{Turn: 1, Role: "coder"},
-				{Turn: 2, Role: "coder"},
-				{Turn: 3, Role: "tester"},
-				{Turn: 4, Role: "tester"},
+				{SessionID: childCoderID, Turn: 1, Role: "coder"},
+				{SessionID: childCoderID, Turn: 2, Role: "coder"},
+				{SessionID: childTesterID, Turn: 3, Role: "tester"},
+				{SessionID: childTesterID, Turn: 4, Role: "tester"},
 			},
 		}
 
@@ -1104,6 +1156,275 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		}
 		if *rework.Context.Role != "tester" || *rework.Context.SecondaryRole != "coder" {
 			t.Errorf("expected tester <-> coder loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
+		}
+	})
+
+	t.Run("boundary: empty ledger yields zero rework loop anomalies", func(t *testing.T) {
+		ledger := domain.AgenticFactLedger{}
+		anomalies := domain.DetectAnomalies(ledger)
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("empty ledger must not produce rework loop anomalies, got: %+v", a)
+			}
+		}
+	})
+
+	t.Run("boundary: events with unmapped SessionID are ignored and never trigger rework loop", func(t *testing.T) {
+		rootID := "ses-root"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "orchestrator"},
+			},
+			Events: []domain.EventFact{
+				{SessionID: "phantom-session-1", Turn: 1, Role: "coder"},
+				{SessionID: "phantom-session-2", Turn: 2, Role: "tester"},
+				{SessionID: "phantom-session-1", Turn: 3, Role: "coder"},
+				{SessionID: "phantom-session-2", Turn: 4, Role: "tester"},
+				{SessionID: "phantom-session-1", Turn: 5, Role: "coder"},
+				{SessionID: "phantom-session-2", Turn: 6, Role: "tester"},
+				{SessionID: "", Turn: 7, Role: "coder"},
+				{SessionID: "", Turn: 8, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("events with unmapped SessionID must not trigger rework loop, got: %+v", a)
+			}
+		}
+	})
+
+	t.Run("boundary: unmapped SessionID events do not dilute or corrupt legitimate child rework loop", func(t *testing.T) {
+		rootID := "ses-root"
+		childCoderID := "ses-coder"
+		childTesterID := "ses-tester"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "orchestrator"},
+				{ID: childCoderID, ParentID: &rootID, Role: "coder"},
+				{ID: childTesterID, ParentID: &rootID, Role: "tester"},
+			},
+			Events: []domain.EventFact{
+				{SessionID: "unmapped-1", Turn: 1, Role: "reviewer"},
+				{SessionID: childCoderID, Turn: 2, Role: "coder"},
+				{SessionID: "unmapped-2", Turn: 3, Role: "planner"},
+				{SessionID: childTesterID, Turn: 4, Role: "tester"},
+				{SessionID: "", Turn: 5, Role: "reviewer"},
+				{SessionID: childCoderID, Turn: 6, Role: "coder"},
+				{SessionID: "unmapped-3", Turn: 7, Role: "planner"},
+				{SessionID: childTesterID, Turn: 8, Role: "tester"},
+				{SessionID: childCoderID, Turn: 9, Role: "coder"},
+				{SessionID: childTesterID, Turn: 10, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("expected rework loop for valid child sessions despite unmapped noise, got: %+v", anomalies)
+		}
+		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
+			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
+		}
+	})
+
+	t.Run("boundary: invocations with only root sessions never trigger rework loop in events", func(t *testing.T) {
+		r1 := "root-orchestrator"
+		r2 := "root-general"
+		r3 := "root-build"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: r1, ParentID: nil, Role: "orchestrator"},
+				{ID: r2, ParentID: nil, Role: "general"},
+				{ID: r3, ParentID: nil, Role: "build"},
+			},
+			Events: []domain.EventFact{
+				{SessionID: r1, Turn: 1, Role: "coder"},
+				{SessionID: r2, Turn: 2, Role: "tester"},
+				{SessionID: r1, Turn: 3, Role: "coder"},
+				{SessionID: r2, Turn: 4, Role: "tester"},
+				{SessionID: r1, Turn: 5, Role: "coder"},
+				{SessionID: r2, Turn: 6, Role: "tester"},
+				{SessionID: r1, Turn: 7, Role: "coder"},
+				{SessionID: r2, Turn: 8, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("only root sessions in events must not trigger rework loop, got: %+v", a)
+			}
+		}
+	})
+
+	t.Run("boundary: invocations with only root sessions never trigger rework loop in fallback", func(t *testing.T) {
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "r1", ParentID: nil, Role: "coder"},
+				{ID: "r2", ParentID: nil, Role: "tester"},
+				{ID: "r3", ParentID: nil, Role: "coder"},
+				{ID: "r4", ParentID: nil, Role: "tester"},
+				{ID: "r5", ParentID: nil, Role: "coder"},
+				{ID: "r6", ParentID: nil, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("only root sessions in invocations fallback must not trigger rework loop, got: %+v", a)
+			}
+		}
+	})
+
+	t.Run("boundary: orphaned child sessions with non-existent parent ID trigger rework loop in events", func(t *testing.T) {
+		missingParent := "missing-parent-404"
+		child1 := "child-c"
+		child2 := "child-t"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: child1, ParentID: &missingParent, Role: "coder"},
+				{ID: child2, ParentID: &missingParent, Role: "tester"},
+			},
+			Events: []domain.EventFact{
+				{SessionID: child1, Turn: 1, Role: "coder"},
+				{SessionID: child2, Turn: 2, Role: "tester"},
+				{SessionID: child1, Turn: 3, Role: "coder"},
+				{SessionID: child2, Turn: 4, Role: "tester"},
+				{SessionID: child1, Turn: 5, Role: "coder"},
+				{SessionID: child2, Turn: 6, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("orphaned child sessions with non-nil ParentID must trigger rework loop, got: %+v", anomalies)
+		}
+		if rework.Severity != domain.SeverityWarning {
+			t.Errorf("expected WARNING, got %s", rework.Severity)
+		}
+		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
+			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
+		}
+	})
+
+	t.Run("boundary: orphaned child sessions in fallback sequence trigger rework loop", func(t *testing.T) {
+		phantomParent := "missing-root-ses"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "c1", ParentID: &phantomParent, Role: "coder"},
+				{ID: "t1", ParentID: &phantomParent, Role: "tester"},
+				{ID: "c2", ParentID: &phantomParent, Role: "coder"},
+				{ID: "t2", ParentID: &phantomParent, Role: "tester"},
+				{ID: "c3", ParentID: &phantomParent, Role: "coder"},
+				{ID: "t3", ParentID: &phantomParent, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("orphaned child sessions in fallback must trigger rework loop, got: %+v", anomalies)
+		}
+		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
+			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
+		}
+	})
+
+	t.Run("boundary: child invocations with empty ID string handled safely in fallback", func(t *testing.T) {
+		parent := "root"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "", ParentID: &parent, Role: "coder"},
+				{ID: "", ParentID: &parent, Role: "tester"},
+				{ID: "", ParentID: &parent, Role: "coder"},
+				{ID: "", ParentID: &parent, Role: "tester"},
+				{ID: "", ParentID: &parent, Role: "coder"},
+				{ID: "", ParentID: &parent, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("child invocations with empty ID in fallback must trigger rework loop, got: %+v", anomalies)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
+		}
+	})
+
+	t.Run("boundary: events with only unmapped SessionIDs fall back to invocations sequence", func(t *testing.T) {
+		rootID := "ses-root"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "orchestrator"},
+				{ID: "c1", ParentID: &rootID, Role: "coder"},
+				{ID: "t1", ParentID: &rootID, Role: "tester"},
+				{ID: "c2", ParentID: &rootID, Role: "coder"},
+				{ID: "t2", ParentID: &rootID, Role: "tester"},
+				{ID: "c3", ParentID: &rootID, Role: "coder"},
+				{ID: "t3", ParentID: &rootID, Role: "tester"},
+			},
+			Events: []domain.EventFact{
+				// All events have unmapped session IDs
+				{SessionID: "unmapped-orphan-1", Turn: 1, Role: "reviewer"},
+				{SessionID: "unmapped-orphan-2", Turn: 2, Role: "reviewer"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("expected fallback to invocations when all events are unmapped, got: %+v", anomalies)
+		}
+		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
+			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
 		}
 		if *rework.Context.Count != 3 {
 			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
@@ -1226,7 +1547,12 @@ func TestDetectAnomalies_DeterministicSortingAllRules(t *testing.T) {
 	// Rule 2: TOOL_HIGH_FAILURE_RATE (CRITICAL: 6 calls, 4 errors for toolC; WARNING: 6 calls, 2 errors for toolB)
 	// Rule 3: CONTEXT_SATURATION_SPIKE (CRITICAL: ceiling breach 165k; CRITICAL: jump 90k; WARNING: jump 50k)
 	// Rule 4: SUBAGENT_REWORK_LOOP (WARNING: 3 cycles between coder and tester)
+	rootID := "ses-root"
 	ledger := domain.AgenticFactLedger{
+		Invocations: []domain.InvocationFact{
+			{ID: rootID, ParentID: nil, Role: "orchestrator"},
+			{ID: "s1", ParentID: &rootID, Role: "coder"},
+		},
 		Events: []domain.EventFact{
 			// Rule 3: Token jumps and ceiling breach
 			{SessionID: "s1", Turn: 1, Role: "coder", ContextTokens: 5_000},

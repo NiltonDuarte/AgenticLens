@@ -1256,50 +1256,6 @@ func TestCompareTicketIDs(t *testing.T) {
 	}
 }
 
-func TestIsSubagentRole(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name     string
-		role     string
-		expected bool
-	}{
-		{name: "empty role", role: "", expected: false},
-		{name: "whitespace role", role: "   ", expected: false},
-		{name: "orchestrator lowercase", role: "orchestrator", expected: false},
-		{name: "orchestrator mixed case", role: "Orchestrator", expected: false},
-		{name: "orchestrator with whitespace", role: "  orchestrator  ", expected: false},
-		{name: "general lowercase", role: "general", expected: false},
-		{name: "general mixed case", role: "General", expected: false},
-		{name: "general with whitespace", role: "  general  ", expected: false},
-		{name: "build lowercase", role: "build", expected: false},
-		{name: "build mixed case", role: "Build", expected: false},
-		{name: "build with whitespace", role: "  build  ", expected: false},
-		{name: "root lowercase", role: "root", expected: false},
-		{name: "root mixed case", role: "Root", expected: false},
-		{name: "root with whitespace", role: "  root  ", expected: false},
-		{name: "canonical subagent planner", role: "planner", expected: true},
-		{name: "canonical subagent coder", role: "coder", expected: true},
-		{name: "canonical subagent tester", role: "tester", expected: true},
-		{name: "canonical subagent reviewer", role: "reviewer", expected: true},
-		{name: "custom role advisor", role: "advisor", expected: true},
-		{name: "custom role po", role: "po", expected: true},
-		{name: "custom role researcher", role: "researcher", expected: true},
-		{name: "custom role security-auditor", role: "security-auditor", expected: true},
-		{name: "custom role custom-agent", role: "custom-agent", expected: true},
-	}
-
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := domain.IsSubagentRole(tc.role)
-			if got != tc.expected {
-				t.Errorf("IsSubagentRole(%q) = %v, expected %v", tc.role, got, tc.expected)
-			}
-		})
-	}
-}
-
 func TestSortLedgers_TicketID(t *testing.T) {
 	t.Parallel()
 

@@ -104,6 +104,8 @@ func TestClassifyFile(t *testing.T) {
 }
 
 func TestInferenceOnActiveWorkspace(t *testing.T) {
+	createTestBranch(t, "feat/AL-11-ci-fixture")
+
 	// Active ticket in this worktree is AL-11
 	title := git.InferTicketTitle("AL-11")
 	if title == nil || *title == "" {

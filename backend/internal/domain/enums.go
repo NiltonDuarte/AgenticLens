@@ -145,21 +145,6 @@ var SubagentRoleOrder = []string{
 	string(RoleReviewer),
 }
 
-// IsSubagentRole returns true if the trimmed and lowercase-normalized role is a valid worker subagent persona.
-// Root coordination personas (orchestrator, general, build, root) and empty/whitespace strings return false.
-//
-// Deprecated: Session classification is purely structural via ParentID != nil.
-// IsSubagentRole is retained for backwards compatibility with callers lacking session hierarchy context.
-func IsSubagentRole(role string) bool {
-	trimmed := strings.ToLower(strings.TrimSpace(role))
-	switch trimmed {
-	case "", "orchestrator", "general", "build", "root":
-		return false
-	default:
-		return true
-	}
-}
-
 // OrderRoles deduplicates and orders roles by CanonicalRoleOrder first,
 // followed by remaining custom roles sorted in alphabetical order.
 func OrderRoles(roles []string) []string {

@@ -299,14 +299,9 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 // detectSubagentReworkLoops detects cyclic ping-pong role transitions between worker subagents.
 func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 	isChildSession := make(map[string]bool)
-	hasHierarchy := false
 	for _, inv := range ledger.Invocations {
-		isChild := inv.ParentID != nil
 		if inv.ID != "" {
-			isChildSession[inv.ID] = isChild
-		}
-		if isChild {
-			hasHierarchy = true
+			isChildSession[inv.ID] = inv.ParentID != nil
 		}
 	}
 
@@ -314,13 +309,7 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 
 	if len(ledger.Events) > 0 {
 		for _, e := range ledger.Events {
-			var isSubagent bool
-			if hasHierarchy {
-				isSubagent = isChildSession[e.SessionID]
-			} else {
-				isSubagent = IsSubagentRole(e.Role)
-			}
-			if isSubagent {
+			if isChildSession[e.SessionID] {
 				r := strings.ToLower(strings.TrimSpace(e.Role))
 				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
 					roles = append(roles, r)
@@ -331,13 +320,7 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 
 	if len(roles) == 0 {
 		for _, inv := range ledger.Invocations {
-			var isSubagent bool
-			if hasHierarchy {
-				isSubagent = inv.ParentID != nil
-			} else {
-				isSubagent = IsSubagentRole(inv.Role)
-			}
-			if isSubagent {
+			if inv.ParentID != nil {
 				r := strings.ToLower(strings.TrimSpace(inv.Role))
 				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
 					roles = append(roles, r)
