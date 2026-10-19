@@ -23,10 +23,12 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
    - Never mix artifacts across tickets or leave untracked changes in the working directory.
 5. **Workspace Deliverables Checklist**:
    - `workspaces/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
-   - `workspaces/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger.
    - `workspaces/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
-6. **Telemetry Ingestion & Conventional Commit Type Classification**:
-   - Every iteration must extract telemetry facts and append metrics using the AgenticLens CLI with an explicit conventional commit `type`:
+   - **Plan Lifecycle Synchronization**: Move specification file from `workspaces/plan/to-do/<TICKET_ID>*.md` to `workspaces/plan/done/`, update `workspaces/plan/TICKETS.md` status to `Done`, and unblock downstream tickets (inspect any tickets blocked by `<TICKET_ID>` and promote those whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`).
+   - `workspaces/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger (generated at the very final step of the iteration).
+6. **Telemetry Ingestion as the Final Step & Conventional Commit Type Classification**:
+   - **Delayed Ingestion Mandate**: Generating telemetry must always be delayed to the very last step of the workflow. Running telemetry early causes subsequent turns, tool calls, compactions, and subagent sessions to be omitted from the ledger.
+   - Execute AgenticLens CLI with an explicit conventional commit `type` immediately before final commit:
      ```bash
      NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
      ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output workspaces/<TICKET_ID>/agentic_metrics.json --append workspaces/<TICKET_ID>/SUMMARY.md

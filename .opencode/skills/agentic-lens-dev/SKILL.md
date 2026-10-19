@@ -101,11 +101,14 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
    # or run individually: make check && make test && make build
    ```
 2. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus verification status.
-3. **Extract Telemetry & Render Metrics via AgenticLens**:
+3. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
+4. **Plan Lifecycle Synchronization**:
+   Move specification file from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` to `<WORKSPACES_DIR>/plan/done/`, update `<WORKSPACES_DIR>/plan/TICKETS.md` status to `Done`, and unblock downstream tickets: check tickets blocked by `<TICKET_ID>` and promote any whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`.
+5. Print concise handoff summary to user (active duration, cost, cache hits, test status, context window health).
+6. **Extract Telemetry & Render Metrics (Final Step)**:
+   Delayed strictly to the final step of the iteration so that zero turns, tool calls, compactions, or subagent sessions are omitted.
    Run AgenticLens Go CLI to query OpenCode SQLite and Git, construct the fact ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs. Pass explicit `--ticket-type` matching the conventional commit classification (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`):
    ```bash
    NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
    ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
    ```
-4. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
-5. Print concise handoff summary to user (active duration, cost, cache hits, test status, context window health).

@@ -21,4 +21,7 @@ Updates `workspaces/plan/TICKETS.md` and ticket specification files for complete
 - Added cross-platform compilation to `Makefile` producing `bin/agentic-lens-linux-amd64`, `bin/agentic-lens-linux-arm64`, `bin/agentic-lens-darwin-arm64`, and `bin/agentic-lens-darwin-amd64`.
 - Added architecture dispatcher wrapper script at `scripts/agentic-lens-wrapper.sh`, deployed to `bin/agentic-lens` during `make build` to seamlessly route executions on both host macOS and Linux containers.
 - Enhanced release distribution across `Makefile`, `release-candidate.yml`, and `release-stable.yml` to publish uncompressed standalone binary files (`dist/bin/agentic-lens-*`) directly alongside archives, with full SHA256 checksum verification.
+- Documented root session role vs hierarchy conflation issue (`workspaces/plan/ISSUE-root-session-role-conflation.md`).
+- Moved AL-29 specification to `workspaces/plan/done/` and updated `workspaces/plan/TICKETS.md` status to Done.
+- Standardized SDLC guidelines across `AGENTS.md`, `.opencode/skills/agentic-lens-dev/SKILL.md`, and `.opencode/agent/orchestrator.md` adding plan lifecycle synchronization and mandating delayed telemetry generation as the final step.
 - Allocated ticket workspace under `workspaces/GEN-4/`.
