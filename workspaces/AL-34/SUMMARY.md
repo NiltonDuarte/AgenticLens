@@ -63,14 +63,14 @@ Ticket AL-34 eliminates "Cumulative" from the Metric Progression granularity opt
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 2h 33m (excludes user wait time)
+- **Active Agent Duration:** 2h 42m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Orchestrator peak 168.2k tokens (84% of 200k healthy ceiling, 5 compactions) | Subagents peak 168.9k (Tester)
-- **Role Effort Distribution (Subagents):** Planner 7.8%, Coder 55.1%, Tester 27.1%, Reviewer 10.0%
-- **Subagent Turn Velocity & Thrashing:** 123.2 avg turns/run (peak: 285 turns) | Planner 62.0, Coder 178.5, Tester 144.0, Reviewer 53.0
+- **Role Effort Distribution (Subagents):** Planner 7.6%, Coder 56.2%, Tester 26.4%, Reviewer 9.7%
+- **Subagent Turn Velocity & Thrashing:** 92.3 avg turns/run (peak: 285 turns) | Planner 62.0, Coder 96.8, Tester 144.0, Reviewer 53.0
 - **Test-to-Production Code Ratio:** 5.5:1 (+803 test lines / +145 prod lines)
 - **Code Delivered:** +976 / -142 lines across 17 code files (excluding docs)
-- **Reasoning Effort:** 157,202 reasoning tokens (60.0% of generated output)
-- **Tool Health & Self-Correction:** 795 tool calls (8 self-corrections, 99.0% success rate)
+- **Reasoning Effort:** 166,532 reasoning tokens (60.1% of generated output)
+- **Tool Health & Self-Correction:** 882 tool calls (9 self-corrections, 99.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 9 execution anomalies detected (4 CRITICAL, 5 WARNING).
@@ -91,15 +91,15 @@ Ticket AL-34 eliminates "Cumulative" from the Metric Progression granularity opt
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 1,844,280 | 39,001 | 14,227,778 | 88.5% | 168.2k | ELEVATED | $2.70 |
+| **orchestrator** | 1 | 2,216,209 | 42,480 | 21,176,237 | 90.5% | 168.2k | ELEVATED | $3.53 |
 | **planner** | 1 | 306,062 | 8,808 | 2,268,837 | 88.1% | 81.0k | HEALTHY | $0.50 |
-| **coder** | 2 | 1,821,837 | 35,589 | 23,457,143 | 92.8% | 168.6k | ELEVATED | $3.52 |
+| **coder** | 4 | 1,957,500 | 38,032 | 23,881,260 | 92.4% | 168.6k | ELEVATED | $3.68 |
 | **tester** | 1 | 1,094,070 | 17,008 | 9,530,395 | 89.7% | 168.9k | ELEVATED | $1.73 |
 | **reviewer** | 1 | 356,264 | 4,354 | 4,239,730 | 92.2% | 168.6k | ELEVATED | $0.64 |
-| **Total** | **6** | **5,422,513** | **104,760** | **53,723,883** | **90.8%** | **168.9k** | **ELEVATED** | **$9.08** |
+| **Total** | **8** | **5,930,105** | **110,682** | **61,096,459** | **91.2%** | **168.9k** | **ELEVATED** | **$10.07** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 6 | 5,422,513 | 104,760 | 53,723,883 | 90.8% | $9.08 |
-| **Total** | **6** | **5,422,513** | **104,760** | **53,723,883** | **90.8%** | **$9.08** |
+| **gemini-3.8-flash** | 8 | 5,930,105 | 110,682 | 61,096,459 | 91.2% | $10.07 |
+| **Total** | **8** | **5,930,105** | **110,682** | **61,096,459** | **91.2%** | **$10.07** |
