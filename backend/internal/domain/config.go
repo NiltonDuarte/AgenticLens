@@ -16,6 +16,7 @@ type ProjectConfig struct {
 	Live         LiveConfig              `json:"live" yaml:"live"`
 	CodeMetrics  CodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
 	RoleMappings RoleMappings            `json:"role_mappings" yaml:"role_mappings"`
+	RoleOrder    []string                `json:"role_order" yaml:"role_order"`
 }
 
 // TicketPrefix represents a configured ticket identifier prefix and its operational description.
@@ -137,7 +138,7 @@ type RoleMappings map[string]string
 func (m RoleMappings) ResolveRole(rawAgent string) AgentRole {
 	cleaned := strings.ToLower(strings.TrimSpace(rawAgent))
 	if cleaned == "" {
-		return RoleOrchestrator
+		return RoleUnassigned
 	}
 
 	if m != nil {
@@ -154,20 +155,7 @@ func (m RoleMappings) ResolveRole(rawAgent string) AgentRole {
 		}
 	}
 
-	switch cleaned {
-	case "orchestrator", "build", "root":
-		return RoleOrchestrator
-	case "planner":
-		return RolePlanner
-	case "coder":
-		return RoleCoder
-	case "tester":
-		return RoleTester
-	case "reviewer":
-		return RoleReviewer
-	default:
-		return AgentRole(cleaned)
-	}
+	return AgentRole(cleaned)
 }
 
 // DefaultProjectConfig returns the standard baseline configuration with domain defaults.
@@ -227,6 +215,13 @@ func DefaultProjectConfig() ProjectConfig {
 			"coder":        "coder",
 			"tester":       "tester",
 			"reviewer":     "reviewer",
+		},
+		RoleOrder: []string{
+			"orchestrator",
+			"planner",
+			"coder",
+			"tester",
+			"reviewer",
 		},
 	}
 }

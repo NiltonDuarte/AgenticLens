@@ -88,6 +88,7 @@ const (
 	RoleCoder        AgentRole = "coder"
 	RoleTester       AgentRole = "tester"
 	RoleReviewer     AgentRole = "reviewer"
+	RoleUnassigned   AgentRole = "unassigned"
 )
 
 // TimeGranularity defines aggregation time windows for progression charts.
@@ -125,33 +126,7 @@ const (
 	TimeWindowCustomRange      TimeWindowPreset = "Custom Range"
 )
 
-// CanonicalRoleOrder defines the display priority order for agent roles.
-var CanonicalRoleOrder = []string{
-	string(RoleOrchestrator),
-	string(RolePlanner),
-	string(RoleCoder),
-	string(RoleTester),
-	string(RoleReviewer),
-}
-
-// SubagentRoleOrder defines the display priority order for subagents (excluding orchestrator).
-var SubagentRoleOrder = []string{
-	string(RolePlanner),
-	string(RoleCoder),
-	string(RoleTester),
-	string(RoleReviewer),
-}
-
-// IsSubagentRole returns true if the trimmed and lowercase-normalized role is non-empty
-// and not equal to RoleOrchestrator.
-func IsSubagentRole(role string) bool {
-	trimmed := strings.ToLower(strings.TrimSpace(role))
-	return trimmed != "" && trimmed != string(RoleOrchestrator)
-}
-
-// OrderRoles deduplicates and orders roles by CanonicalRoleOrder first,
-// followed by remaining custom roles sorted in alphabetical order.
-func OrderRoles(roles []string) []string {
+func orderRolesHelper(roles []string, customOrder ...[]string) []string {
 	present := make(map[string]struct{})
 	for _, r := range roles {
 		trimmed := strings.TrimSpace(r)
@@ -159,54 +134,66 @@ func OrderRoles(roles []string) []string {
 			present[trimmed] = struct{}{}
 		}
 	}
-	canonicalSet := make(map[string]struct{}, len(CanonicalRoleOrder))
-	for _, r := range CanonicalRoleOrder {
-		canonicalSet[r] = struct{}{}
+	if len(present) == 0 {
+		return nil
 	}
+
+	var hasCustom bool
+	var orderList []string
+	if len(customOrder) > 0 && len(customOrder[0]) > 0 {
+		for _, o := range customOrder[0] {
+			trimmed := strings.TrimSpace(o)
+			if trimmed != "" {
+				orderList = append(orderList, trimmed)
+			}
+		}
+		if len(orderList) > 0 {
+			hasCustom = true
+		}
+	}
+
+	if !hasCustom {
+		var all []string
+		for r := range present {
+			all = append(all, r)
+		}
+		sort.Strings(all)
+		return all
+	}
+
 	var ordered []string
-	for _, r := range CanonicalRoleOrder {
+	seenInOrder := make(map[string]struct{})
+	for _, r := range orderList {
 		if _, exists := present[r]; exists {
-			ordered = append(ordered, r)
+			if _, alreadyAdded := seenInOrder[r]; !alreadyAdded {
+				ordered = append(ordered, r)
+				seenInOrder[r] = struct{}{}
+				delete(present, r)
+			}
 		}
 	}
-	var custom []string
+
+	var remaining []string
 	for r := range present {
-		if _, isCanonical := canonicalSet[r]; !isCanonical {
-			custom = append(custom, r)
-		}
+		remaining = append(remaining, r)
 	}
-	sort.Strings(custom)
-	return append(ordered, custom...)
+	sort.Strings(remaining)
+	return append(ordered, remaining...)
 }
 
-// OrderSubagentRoles deduplicates and orders subagent roles by SubagentRoleOrder first,
-// followed by remaining custom subagent roles sorted in alphabetical order.
-func OrderSubagentRoles(roles []string) []string {
-	present := make(map[string]struct{})
-	for _, r := range roles {
-		trimmed := strings.TrimSpace(r)
-		if IsSubagentRole(trimmed) {
-			present[trimmed] = struct{}{}
-		}
-	}
-	canonicalSet := make(map[string]struct{}, len(SubagentRoleOrder))
-	for _, r := range SubagentRoleOrder {
-		canonicalSet[r] = struct{}{}
-	}
-	var ordered []string
-	for _, r := range SubagentRoleOrder {
-		if _, exists := present[r]; exists {
-			ordered = append(ordered, r)
-		}
-	}
-	var custom []string
-	for r := range present {
-		if _, isCanonical := canonicalSet[r]; !isCanonical {
-			custom = append(custom, r)
-		}
-	}
-	sort.Strings(custom)
-	return append(ordered, custom...)
+// OrderRoles deduplicates and orders roles by custom order first (if provided and non-empty),
+// followed by remaining roles sorted in ascending alphabetical order.
+// If custom order is omitted or empty, all roles are sorted alphabetically.
+func OrderRoles(roles []string, customOrder ...[]string) []string {
+	return orderRolesHelper(roles, customOrder...)
+}
+
+// OrderSubagentRoles deduplicates non-empty trimmed candidate roles, sorts roles defined by
+// custom order first (if provided and non-empty), followed by remaining candidate roles sorted
+// in ascending alphabetical order. If custom order is omitted or empty, all candidate roles
+// are sorted alphabetically.
+func OrderSubagentRoles(roles []string, customOrder ...[]string) []string {
+	return orderRolesHelper(roles, customOrder...)
 }
 
 // MigrationStatus defines the schema and metric migration progress state.

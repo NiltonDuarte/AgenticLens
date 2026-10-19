@@ -154,29 +154,50 @@ func ComputeTotals(invocations []InvocationFact) GroupedMetric {
 }
 
 // ComputeWorkflowEfficiency derives workflow efficiency profile from an atomic fact ledger.
-func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
+func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) WorkflowEfficiency {
 	invs := ledger.Invocations
 	tools := ledger.Tools
 	code := ledger.Code
 
 	var activeDurationSeconds int64
-	roleCosts := make(map[string]float64)
-	rolePeaks := make(map[string]int64)
-	roleTurns := make(map[string][]int64)
 	var totReasoning, totOutput, totCompactions int64
+	rolePeaks := make(map[string]int64)
+
+	var rootPeak int64
+	var hasRoot bool
+
+	subCosts := make(map[string]float64)
+	var totSubCost float64
+	subPeaks := make(map[string]int64)
+	roleTurns := make(map[string][]int64)
 
 	for _, inv := range invs {
 		activeDurationSeconds += inv.ActiveDurationSeconds
-		roleCosts[inv.Role] += inv.CostUSD
-		if inv.Tokens.PeakContext > rolePeaks[inv.Role] {
-			rolePeaks[inv.Role] = inv.Tokens.PeakContext
-		}
-		if inv.ParentID != nil && IsSubagentRole(inv.Role) {
-			roleTurns[inv.Role] = append(roleTurns[inv.Role], inv.Turns)
-		}
 		totReasoning += inv.Tokens.Reasoning
 		totOutput += inv.Tokens.Output
 		totCompactions += inv.Compactions
+
+		if curr, exists := rolePeaks[inv.Role]; !exists || inv.Tokens.PeakContext > curr {
+			rolePeaks[inv.Role] = inv.Tokens.PeakContext
+		}
+
+		if inv.ParentID == nil {
+			if !hasRoot || inv.Tokens.PeakContext > rootPeak {
+				rootPeak = inv.Tokens.PeakContext
+			}
+			hasRoot = true
+		} else {
+			role := strings.TrimSpace(inv.Role)
+			if role == "" {
+				role = "unassigned"
+			}
+			subCosts[role] += inv.CostUSD
+			totSubCost += inv.CostUSD
+			if curr, exists := subPeaks[role]; !exists || inv.Tokens.PeakContext > curr {
+				subPeaks[role] = inv.Tokens.PeakContext
+			}
+			roleTurns[role] = append(roleTurns[role], inv.Turns)
+		}
 	}
 
 	durHours := activeDurationSeconds / 3600
@@ -191,17 +212,8 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 		activeDurationFormatted = fmt.Sprintf("%dm %ds", durMins, durRemSecs)
 	}
 
-	subCosts := make(map[string]float64)
-	var totSubCost float64
-	for r, c := range roleCosts {
-		if IsSubagentRole(r) {
-			subCosts[r] = c
-			totSubCost += c
-		}
-	}
-
 	roleEffortDistributionPct := make(map[string]float64)
-	if totSubCost > 0 {
+	if totSubCost > 0 && len(subCosts) > 0 {
 		for r, c := range subCosts {
 			if c > 0 {
 				roleEffortDistributionPct[r] = math.Round(c/totSubCost*1000.0) / 10.0
@@ -214,9 +226,18 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 	for r := range roleTurns {
 		subTurnRoles = append(subTurnRoles, r)
 	}
-	for _, r := range OrderSubagentRoles(subTurnRoles) {
+	orderedRolesForTurns := OrderSubagentRoles(subTurnRoles, roleOrder...)
+	orderedSet := make(map[string]struct{}, len(orderedRolesForTurns))
+	for _, r := range orderedRolesForTurns {
+		orderedSet[r] = struct{}{}
 		if turns, ok := roleTurns[r]; ok {
 			allSubTurns = append(allSubTurns, turns...)
+		}
+	}
+	sort.Strings(subTurnRoles)
+	for _, r := range subTurnRoles {
+		if _, ok := orderedSet[r]; !ok {
+			allSubTurns = append(allSubTurns, roleTurns[r]...)
 		}
 	}
 
@@ -292,7 +313,10 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 		SuccessRatePct:       toolSuccessRate,
 	}
 
-	orchPeak := rolePeaks[string(RoleOrchestrator)]
+	var orchPeak int64
+	if hasRoot {
+		orchPeak = rootPeak
+	}
 	var orchSatPct float64
 	if HealthyCeilingTokens > 0 {
 		orchSatPct = math.Round(float64(orchPeak)/float64(HealthyCeilingTokens)*1000.0) / 10.0
@@ -301,18 +325,30 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 	var subPeak int64
 	subRoleStr := "none"
 	var foundSubRole bool
-	var candidateSubRoles []string
-	for r := range rolePeaks {
-		if IsSubagentRole(r) {
+
+	if len(subPeaks) > 0 {
+		var candidateSubRoles []string
+		for r := range subPeaks {
 			candidateSubRoles = append(candidateSubRoles, r)
 		}
-	}
-	for _, r := range OrderSubagentRoles(candidateSubRoles) {
-		if peak, ok := rolePeaks[r]; ok {
+		orderedCandidateRoles := OrderSubagentRoles(candidateSubRoles, roleOrder...)
+		for _, r := range orderedCandidateRoles {
+			peak := subPeaks[r]
 			if !foundSubRole || peak > subPeak {
 				subPeak = peak
 				subRoleStr = r
 				foundSubRole = true
+			}
+		}
+		if !foundSubRole {
+			sort.Strings(candidateSubRoles)
+			for _, r := range candidateSubRoles {
+				peak := subPeaks[r]
+				if !foundSubRole || peak > subPeak {
+					subPeak = peak
+					subRoleStr = r
+					foundSubRole = true
+				}
 			}
 		}
 	}
@@ -349,8 +385,8 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 	}
 }
 
-// ComputeRoleMetrics calculates aggregated metrics grouped by agent role in canonical order.
-func ComputeRoleMetrics(invocations []InvocationFact) []RoleMetric {
+// ComputeRoleMetrics calculates aggregated metrics grouped by agent role.
+func ComputeRoleMetrics(invocations []InvocationFact, roleOrder ...[]string) []RoleMetric {
 	byRole := make(map[string][]InvocationFact)
 	for _, inv := range invocations {
 		byRole[inv.Role] = append(byRole[inv.Role], inv)
@@ -360,7 +396,7 @@ func ComputeRoleMetrics(invocations []InvocationFact) []RoleMetric {
 	for r := range byRole {
 		roles = append(roles, r)
 	}
-	orderedRoles := OrderRoles(roles)
+	orderedRoles := OrderRoles(roles, roleOrder...)
 
 	var metrics []RoleMetric
 	for _, role := range orderedRoles {
@@ -420,7 +456,7 @@ func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
 }
 
 // ComputeThreadSummaries groups invocations by root session into hierarchical thread execution records.
-func ComputeThreadSummaries(invocations []InvocationFact) []ThreadExecutionRecord {
+func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string) []ThreadExecutionRecord {
 	if len(invocations) == 0 {
 		return []ThreadExecutionRecord{}
 	}
@@ -482,7 +518,7 @@ func ComputeThreadSummaries(invocations []InvocationFact) []ThreadExecutionRecor
 		for r := range byRole {
 			threadRoles = append(threadRoles, r)
 		}
-		orderedRoles := OrderRoles(threadRoles)
+		orderedRoles := OrderRoles(threadRoles, roleOrder...)
 
 		var roleMetrics []ThreadRoleMetric
 		for _, role := range orderedRoles {
@@ -558,11 +594,11 @@ func ComputeThreadSummaries(invocations []InvocationFact) []ThreadExecutionRecor
 	return records
 }
 
-// DeriveMetricsLedger projects all aggregations from an atomic fact ledger.
-func DeriveMetricsLedger(factLedger AgenticFactLedger, roleMappings ...RoleMappings) AgenticMetricsLedger {
-	mappings := DefaultProjectConfig().RoleMappings
-	if len(roleMappings) > 0 && roleMappings[0] != nil {
-		mappings = roleMappings[0]
+// DeriveMetricsLedgerWithConfig projects all aggregations from an atomic fact ledger using full project configuration.
+func DeriveMetricsLedgerWithConfig(factLedger AgenticFactLedger, cfg ProjectConfig) AgenticMetricsLedger {
+	mappings := cfg.RoleMappings
+	if mappings == nil {
+		mappings = DefaultProjectConfig().RoleMappings
 	}
 
 	mappedInvocations := make([]InvocationFact, len(factLedger.Invocations))
@@ -585,10 +621,10 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, roleMappings ...RoleMappi
 	mappedFactLedger.Events = mappedEvents
 
 	totals := ComputeTotals(mappedInvocations)
-	eff := ComputeWorkflowEfficiency(mappedFactLedger)
-	roles := ComputeRoleMetrics(mappedInvocations)
+	eff := ComputeWorkflowEfficiency(mappedFactLedger, cfg.RoleOrder)
+	roles := ComputeRoleMetrics(mappedInvocations, cfg.RoleOrder)
 	models := ComputeModelMetrics(mappedInvocations)
-	threads := ComputeThreadSummaries(mappedInvocations)
+	threads := ComputeThreadSummaries(mappedInvocations, cfg.RoleOrder)
 	anomalies := DetectAnomalies(mappedFactLedger)
 
 	return AgenticMetricsLedger{
@@ -606,6 +642,15 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, roleMappings ...RoleMappi
 		Models:             models,
 		Anomalies:          anomalies,
 	}
+}
+
+// DeriveMetricsLedger projects all aggregations from an atomic fact ledger.
+func DeriveMetricsLedger(factLedger AgenticFactLedger, roleMappings ...RoleMappings) AgenticMetricsLedger {
+	cfg := DefaultProjectConfig()
+	if len(roleMappings) > 0 && roleMappings[0] != nil {
+		cfg.RoleMappings = roleMappings[0]
+	}
+	return DeriveMetricsLedgerWithConfig(factLedger, cfg)
 }
 
 // CalculateFleetSummary aggregates high-level metrics across multiple ledgers.

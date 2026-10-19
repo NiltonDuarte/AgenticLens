@@ -85,6 +85,15 @@ func TestDefaultProjectConfig(t *testing.T) {
 	if len(cfg.RoleMappings) == 0 {
 		t.Errorf("expected non-empty RoleMappings")
 	}
+	expectedRoleOrder := []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
+	if len(cfg.RoleOrder) != len(expectedRoleOrder) {
+		t.Fatalf("expected %d RoleOrder items, got %d", len(expectedRoleOrder), len(cfg.RoleOrder))
+	}
+	for i, r := range expectedRoleOrder {
+		if cfg.RoleOrder[i] != r {
+			t.Errorf("expected RoleOrder[%d] %s, got %s", i, r, cfg.RoleOrder[i])
+		}
+	}
 }
 
 func TestNormalizeTicketID_ExactMatches(t *testing.T) {
@@ -287,16 +296,16 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 	if mappings.ResolveRole("build") != domain.RoleOrchestrator {
 		t.Errorf("expected RoleOrchestrator for build, got %s", mappings.ResolveRole("build"))
 	}
-	if mappings.ResolveRole("root") != domain.RoleOrchestrator {
-		t.Errorf("expected RoleOrchestrator for root, got %s", mappings.ResolveRole("root"))
+	if mappings.ResolveRole("root") != domain.AgentRole("root") {
+		t.Errorf("expected unmapped role root for root, got %s", mappings.ResolveRole("root"))
 	}
 
 	// Empty string safety
-	if mappings.ResolveRole("") != domain.RoleOrchestrator {
-		t.Errorf("expected RoleOrchestrator for empty string, got %s", mappings.ResolveRole(""))
+	if mappings.ResolveRole("") != domain.RoleUnassigned {
+		t.Errorf("expected RoleUnassigned for empty string, got %s", mappings.ResolveRole(""))
 	}
-	if mappings.ResolveRole("   ") != domain.RoleOrchestrator {
-		t.Errorf("expected RoleOrchestrator for whitespace, got %s", mappings.ResolveRole("   "))
+	if mappings.ResolveRole("   ") != domain.RoleUnassigned {
+		t.Errorf("expected RoleUnassigned for whitespace, got %s", mappings.ResolveRole("   "))
 	}
 
 	// Custom mapping
@@ -622,9 +631,9 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 			{"ORCHESTRATOR", domain.RoleOrchestrator},
 			{"Orchestrator", domain.RoleOrchestrator},
 			{"BUILD", domain.RoleOrchestrator},
-			{"ROOT", domain.RoleOrchestrator},
+			{"ROOT", domain.AgentRole("root")},
 			{"  build  ", domain.RoleOrchestrator},
-			{"  root  ", domain.RoleOrchestrator},
+			{"  root  ", domain.AgentRole("root")},
 		}
 
 		for _, tt := range tests {
@@ -635,14 +644,14 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("empty and whitespace strings default to orchestrator", func(t *testing.T) {
+	t.Run("empty and whitespace strings default to unassigned", func(t *testing.T) {
 		mappings := domain.DefaultProjectConfig().RoleMappings
 
 		emptyInputs := []string{"", " ", "   ", "\t", "\n", "\r\n"}
 		for _, input := range emptyInputs {
 			got := mappings.ResolveRole(input)
-			if got != domain.RoleOrchestrator {
-				t.Errorf("ResolveRole(%q) = %s, expected RoleOrchestrator", input, got)
+			if got != domain.RoleUnassigned {
+				t.Errorf("ResolveRole(%q) = %s, expected RoleUnassigned", input, got)
 			}
 		}
 	})
@@ -682,8 +691,8 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 		if nilMap.ResolveRole("coder") != domain.RoleCoder {
 			t.Errorf("expected RoleCoder, got %s", nilMap.ResolveRole("coder"))
 		}
-		if nilMap.ResolveRole("") != domain.RoleOrchestrator {
-			t.Errorf("expected RoleOrchestrator for empty string, got %s", nilMap.ResolveRole(""))
+		if nilMap.ResolveRole("") != domain.RoleUnassigned {
+			t.Errorf("expected RoleUnassigned for empty string, got %s", nilMap.ResolveRole(""))
 		}
 		if nilMap.ResolveRole("arbitrary") != domain.AgentRole("arbitrary") {
 			t.Errorf("expected arbitrary cast, got %s", nilMap.ResolveRole("arbitrary"))
@@ -693,8 +702,8 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 		if emptyMap.ResolveRole("reviewer") != domain.RoleReviewer {
 			t.Errorf("expected RoleReviewer, got %s", emptyMap.ResolveRole("reviewer"))
 		}
-		if emptyMap.ResolveRole("") != domain.RoleOrchestrator {
-			t.Errorf("expected RoleOrchestrator for empty string, got %s", emptyMap.ResolveRole(""))
+		if emptyMap.ResolveRole("") != domain.RoleUnassigned {
+			t.Errorf("expected RoleUnassigned for empty string, got %s", emptyMap.ResolveRole(""))
 		}
 	})
 }
@@ -965,4 +974,149 @@ func TestTicketConfig_InferTicketType(t *testing.T) {
 	if ok || got != "" {
 		t.Errorf("expected ('', false), got (%q, %v)", got, ok)
 	}
+}
+
+func TestRoleMappings_ResolveRole_AdversarialUnmappedAndWhitespace(t *testing.T) {
+	t.Parallel()
+
+	t.Run("arbitrary unmapped roles resolve to lowercase cleaned AgentRole", func(t *testing.T) {
+		t.Parallel()
+		defaultMappings := domain.DefaultProjectConfig().RoleMappings
+
+		tests := []struct {
+			input    string
+			expected domain.AgentRole
+		}{
+			{"developer", domain.AgentRole("developer")},
+			{"DEVELOPER", domain.AgentRole("developer")},
+			{"  developer  ", domain.AgentRole("developer")},
+			{"DeVeLoPeR", domain.AgentRole("developer")},
+			{"\tdeveloper\n", domain.AgentRole("developer")},
+			{"researcher", domain.AgentRole("researcher")},
+			{"RESEARCHER", domain.AgentRole("researcher")},
+			{"  researcher  ", domain.AgentRole("researcher")},
+			{"ReSeArChEr", domain.AgentRole("researcher")},
+			{"architect", domain.AgentRole("architect")},
+			{"ARCHITECT", domain.AgentRole("architect")},
+			{"  architect  ", domain.AgentRole("architect")},
+			{"ArChItEcT", domain.AgentRole("architect")},
+			{"lead-qa", domain.AgentRole("lead-qa")},
+			{"LEAD-QA", domain.AgentRole("lead-qa")},
+			{"Lead-QA", domain.AgentRole("lead-qa")},
+			{"  lead-qa  ", domain.AgentRole("lead-qa")},
+			{"\tLead-QA\r\n", domain.AgentRole("lead-qa")},
+			{"security-engineer", domain.AgentRole("security-engineer")},
+			{"data-analyst", domain.AgentRole("data-analyst")},
+			{"devops", domain.AgentRole("devops")},
+			{"sre", domain.AgentRole("sre")},
+			{"  SRE  ", domain.AgentRole("sre")},
+			{"product-manager", domain.AgentRole("product-manager")},
+		}
+
+		for _, tc := range tests {
+			got := defaultMappings.ResolveRole(tc.input)
+			if got != tc.expected {
+				t.Errorf("defaultMappings.ResolveRole(%q) = %q, expected %q", tc.input, got, tc.expected)
+			}
+		}
+	})
+
+	t.Run("empty and whitespace variations across mappings instances resolve to RoleUnassigned", func(t *testing.T) {
+		t.Parallel()
+
+		whitespaceInputs := []string{
+			"",
+			" ",
+			"  ",
+			"   ",
+			"\t",
+			"\n",
+			"\r\n",
+			"\t\t",
+			"  \t  \n  \r  ",
+		}
+
+		mappingInstances := []struct {
+			name     string
+			mappings domain.RoleMappings
+		}{
+			{"default mappings", domain.DefaultProjectConfig().RoleMappings},
+			{"nil mappings", nil},
+			{"empty mappings", domain.RoleMappings{}},
+			{"custom mappings", domain.RoleMappings{"custom": "coder"}},
+		}
+
+		for _, mi := range mappingInstances {
+			for _, input := range whitespaceInputs {
+				got := mi.mappings.ResolveRole(input)
+				if got != domain.RoleUnassigned {
+					t.Errorf("%s: ResolveRole(%q) = %q, expected RoleUnassigned (%q)", mi.name, input, got, domain.RoleUnassigned)
+				}
+			}
+		}
+	})
+
+	t.Run("nil and empty mappings return unmapped cleaned roles", func(t *testing.T) {
+		t.Parallel()
+
+		unmappedRoles := []string{"developer", "researcher", "architect", "lead-qa"}
+		var nilMap domain.RoleMappings
+		emptyMap := domain.RoleMappings{}
+
+		for _, role := range unmappedRoles {
+			if got := nilMap.ResolveRole(role); got != domain.AgentRole(role) {
+				t.Errorf("nilMap.ResolveRole(%q) = %q, expected %q", role, got, role)
+			}
+			if got := emptyMap.ResolveRole(role); got != domain.AgentRole(role) {
+				t.Errorf("emptyMap.ResolveRole(%q) = %q, expected %q", role, got, role)
+			}
+		}
+	})
+
+	t.Run("custom mappings partial override with unmapped fallback and key normalization", func(t *testing.T) {
+		t.Parallel()
+
+		custom := domain.RoleMappings{
+			"Architect":    "planner",
+			"  Lead-QA  ":  "tester",
+			"reviewer-bot": "  REVIEWER  ",
+			"empty-target": "   ",
+		}
+
+		if got := custom.ResolveRole("architect"); got != domain.RolePlanner {
+			t.Errorf("expected RolePlanner for architect, got %q", got)
+		}
+		if got := custom.ResolveRole("ARCHITECT"); got != domain.RolePlanner {
+			t.Errorf("expected RolePlanner for ARCHITECT, got %q", got)
+		}
+		if got := custom.ResolveRole("  architect  "); got != domain.RolePlanner {
+			t.Errorf("expected RolePlanner for '  architect  ', got %q", got)
+		}
+		if got := custom.ResolveRole("lead-qa"); got != domain.RoleTester {
+			t.Errorf("expected RoleTester for lead-qa, got %q", got)
+		}
+		if got := custom.ResolveRole("LEAD-QA"); got != domain.RoleTester {
+			t.Errorf("expected RoleTester for LEAD-QA, got %q", got)
+		}
+		if got := custom.ResolveRole("reviewer-bot"); got != domain.RoleReviewer {
+			t.Errorf("expected RoleReviewer for reviewer-bot, got %q", got)
+		}
+
+		if got := custom.ResolveRole("empty-target"); got != domain.AgentRole("empty-target") {
+			t.Errorf("expected empty-target fallback, got %q", got)
+		}
+
+		if got := custom.ResolveRole("developer"); got != domain.AgentRole("developer") {
+			t.Errorf("expected developer, got %q", got)
+		}
+		if got := custom.ResolveRole("  DEVELOPER  "); got != domain.AgentRole("developer") {
+			t.Errorf("expected developer for '  DEVELOPER  ', got %q", got)
+		}
+		if got := custom.ResolveRole("researcher"); got != domain.AgentRole("researcher") {
+			t.Errorf("expected researcher, got %q", got)
+		}
+		if got := custom.ResolveRole("ReSeArChEr"); got != domain.AgentRole("researcher") {
+			t.Errorf("expected researcher for ReSeArChEr, got %q", got)
+		}
+	})
 }

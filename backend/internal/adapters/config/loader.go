@@ -127,6 +127,7 @@ type rawProjectConfigDTO struct {
 	Live         *rawLiveConfig        `json:"live" yaml:"live"`
 	CodeMetrics  *rawCodeMetricsConfig `json:"code_metrics" yaml:"code_metrics"`
 	RoleMappings map[string]string     `json:"role_mappings" yaml:"role_mappings"`
+	RoleOrder    []string              `json:"role_order" yaml:"role_order"`
 
 	// Legacy root-level fields from config.json
 	LegacyTicketPrefix  *string  `json:"ticket_prefix" yaml:"ticket_prefix"`
@@ -260,6 +261,17 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 				cfg.RoleMappings[cleanKey] = cleanVal
 			}
 		}
+	}
+
+	if dto.RoleOrder != nil {
+		cleanOrder := make([]string, 0, len(dto.RoleOrder))
+		for _, r := range dto.RoleOrder {
+			trimmed := strings.ToLower(strings.TrimSpace(r))
+			if trimmed != "" {
+				cleanOrder = append(cleanOrder, trimmed)
+			}
+		}
+		cfg.RoleOrder = cleanOrder
 	}
 
 	return cfg

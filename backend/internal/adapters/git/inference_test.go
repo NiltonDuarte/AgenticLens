@@ -1,11 +1,24 @@
 package git_test
 
 import (
+	"os/exec"
 	"testing"
 
 	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/domain"
 )
+
+func createTestBranch(t *testing.T, branchName string) {
+	t.Helper()
+	_ = exec.Command("git", "branch", "-D", branchName).Run()
+	cmd := exec.Command("git", "branch", branchName, "HEAD")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("failed to create test branch %s: %v (output: %s)", branchName, err, string(out))
+	}
+	t.Cleanup(func() {
+		_ = exec.Command("git", "branch", "-D", branchName).Run()
+	})
+}
 
 func TestInferTicketType_PrefixMapping(t *testing.T) {
 	t.Parallel()
@@ -101,18 +114,20 @@ func TestInferTicketType_UnmatchedReturnsNil(t *testing.T) {
 }
 
 func TestInferTicketType_BranchPrefixResolution(t *testing.T) {
-	// Verify existing branches in repo are resolved to their conventional commit types
+	// Verify branches in repo are resolved to their conventional commit types
 	branchTests := []struct {
-		ticketID string
-		expected string
+		ticketID   string
+		branchName string
+		expected   string
 	}{
-		{ticketID: "AL-1", expected: "feat"},
-		{ticketID: "AL-14", expected: "ci"},
-		{ticketID: "AL-16", expected: "refactor"},
-		{ticketID: "AL-30", expected: "fix"},
+		{ticketID: "AL-1", branchName: "feat/AL-1-ci-fixture", expected: "feat"},
+		{ticketID: "AL-14", branchName: "ci/AL-14-ci-fixture", expected: "ci"},
+		{ticketID: "AL-16", branchName: "refactor/AL-16-ci-fixture", expected: "refactor"},
+		{ticketID: "AL-30", branchName: "fix/AL-30-ci-fixture", expected: "fix"},
 	}
 
 	for _, tc := range branchTests {
+		createTestBranch(t, tc.branchName)
 		res := git.InferTicketType(tc.ticketID)
 		if res == nil {
 			t.Fatalf("expected non-nil ticket type for branch ticket %s, got nil", tc.ticketID)
@@ -124,7 +139,9 @@ func TestInferTicketType_BranchPrefixResolution(t *testing.T) {
 }
 
 func TestInferTicketType_Precedence_BranchOverConfiguredPrefix(t *testing.T) {
-	// AL-30 exists on branch fix/AL-30-fail-telemetry-generation-on-missing-root-session.
+	// Create transient branch fixture for AL-30
+	createTestBranch(t, "fix/AL-30-ci-fixture")
+
 	// Supplying a configured prefix mapping AL -> chore MUST NOT override the branch type "fix".
 	conflictingPrefixes := []domain.TicketPrefix{
 		{Prefix: "AL", TicketType: "chore"},

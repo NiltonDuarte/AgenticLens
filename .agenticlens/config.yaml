@@ -81,3 +81,12 @@ role_mappings:
   coder: coder
   tester: tester
   reviewer: reviewer
+
+# Configurable sequence for sorting agent roles in CLI tables and metric cards.
+# Roles appearing here are sorted first in this exact order; unlisted roles follow alphabetically.
+role_order:
+  - orchestrator
+  - planner
+  - coder
+  - tester
+  - reviewer

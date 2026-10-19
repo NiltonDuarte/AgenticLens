@@ -134,3 +134,286 @@ func TestIsValidTicketType(t *testing.T) {
 		}
 	}
 }
+
+func TestOrderSubagentRoles_OrderingAndPreservation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		input       []string
+		customOrder []string
+		expected    []string
+	}{
+		{
+			name:        "empty input slice",
+			input:       []string{},
+			customOrder: nil,
+			expected:    nil,
+		},
+		{
+			name:        "slice with only whitespace and empty strings",
+			input:       []string{"", "   ", "\t\n"},
+			customOrder: nil,
+			expected:    nil,
+		},
+		{
+			name:        "alphabetical order when no custom order provided",
+			input:       []string{"reviewer", "tester", "coder", "planner"},
+			customOrder: nil,
+			expected:    []string{"coder", "planner", "reviewer", "tester"},
+		},
+		{
+			name:        "custom order priority with alphabetical remainder",
+			input:       []string{"reviewer", "tester", "coder", "planner", "zeta", "alpha"},
+			customOrder: []string{"planner", "coder", "tester", "reviewer"},
+			expected:    []string{"planner", "coder", "tester", "reviewer", "alpha", "zeta"},
+		},
+		{
+			name:        "custom order with duplicates and whitespace",
+			input:       []string{" coder ", "planner", "coder", " tester\t", "reviewer", "planner"},
+			customOrder: []string{"planner", "coder", "tester", "reviewer"},
+			expected:    []string{"planner", "coder", "tester", "reviewer"},
+		},
+		{
+			name:        "mixed custom order and remaining roles sorted alphabetically",
+			input:       []string{"advisor", "reviewer", "orchestrator", "general", "build", "root", "po", "planner", "advisor", "General", "BUILD"},
+			customOrder: []string{"planner", "reviewer"},
+			expected:    []string{"planner", "reviewer", "BUILD", "General", "advisor", "build", "general", "orchestrator", "po", "root"},
+		},
+		{
+			name:        "purely custom roles sorted alphabetically when no custom order",
+			input:       []string{"zebra", "alpha", "beta"},
+			customOrder: nil,
+			expected:    []string{"alpha", "beta", "zebra"},
+		},
+		{
+			name:        "unassigned role included among roles",
+			input:       []string{"unassigned", "planner", "coder"},
+			customOrder: nil,
+			expected:    []string{"coder", "planner", "unassigned"},
+		},
+		{
+			name:        "nil input",
+			input:       nil,
+			customOrder: nil,
+			expected:    nil,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var got []string
+			if tc.customOrder != nil {
+				got = domain.OrderSubagentRoles(tc.input, tc.customOrder)
+			} else {
+				got = domain.OrderSubagentRoles(tc.input)
+			}
+			if len(got) != len(tc.expected) {
+				t.Fatalf("expected len %d, got %d: %v", len(tc.expected), len(got), got)
+			}
+			for i := range tc.expected {
+				if got[i] != tc.expected[i] {
+					t.Errorf("at index %d: expected %s, got %s", i, tc.expected[i], got[i])
+				}
+			}
+		})
+	}
+}
+
+func TestOrderRoles_OrderingAndPreservation(t *testing.T) {
+	t.Parallel()
+
+	input := []string{"tester", "coder", "orchestrator", "custom", "reviewer", "planner"}
+	customOrder := []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
+
+	gotCustom := domain.OrderRoles(input, customOrder)
+	expectedCustom := []string{"orchestrator", "planner", "coder", "tester", "reviewer", "custom"}
+	if len(gotCustom) != len(expectedCustom) {
+		t.Fatalf("expected len %d, got %d: %v", len(expectedCustom), len(gotCustom), gotCustom)
+	}
+	for i := range expectedCustom {
+		if gotCustom[i] != expectedCustom[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expectedCustom[i], gotCustom[i])
+		}
+	}
+
+	gotAlpha := domain.OrderRoles(input)
+	expectedAlpha := []string{"coder", "custom", "orchestrator", "planner", "reviewer", "tester"}
+	if len(gotAlpha) != len(expectedAlpha) {
+		t.Fatalf("expected len %d, got %d: %v", len(expectedAlpha), len(gotAlpha), gotAlpha)
+	}
+	for i := range expectedAlpha {
+		if gotAlpha[i] != expectedAlpha[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expectedAlpha[i], gotAlpha[i])
+		}
+	}
+}
+
+func TestOrderRoles_And_OrderSubagentRoles_AdversarialComprehensive(t *testing.T) {
+	t.Parallel()
+
+	type testCase struct {
+		name        string
+		input       []string
+		customOrder [][]string
+		expected    []string
+	}
+
+	testCases := []testCase{
+		{
+			name:        "nil input returns nil",
+			input:       nil,
+			customOrder: nil,
+			expected:    nil,
+		},
+		{
+			name:        "empty input slice returns nil",
+			input:       []string{},
+			customOrder: nil,
+			expected:    nil,
+		},
+		{
+			name:        "whitespace-only input elements return nil",
+			input:       []string{"", "  ", "\t", "\n", "\r\n"},
+			customOrder: nil,
+			expected:    nil,
+		},
+		{
+			name:        "omitted customOrder sorts strictly alphabetically",
+			input:       []string{"developer", "architect", "researcher", "lead-qa"},
+			customOrder: nil,
+			expected:    []string{"architect", "developer", "lead-qa", "researcher"},
+		},
+		{
+			name:        "nil customOrder slice sorts strictly alphabetically",
+			input:       []string{"developer", "architect", "researcher", "lead-qa"},
+			customOrder: [][]string{nil},
+			expected:    []string{"architect", "developer", "lead-qa", "researcher"},
+		},
+		{
+			name:        "empty customOrder slice sorts strictly alphabetically",
+			input:       []string{"developer", "architect", "researcher", "lead-qa"},
+			customOrder: [][]string{{}},
+			expected:    []string{"architect", "developer", "lead-qa", "researcher"},
+		},
+		{
+			name:        "whitespace-only customOrder slice sorts strictly alphabetically",
+			input:       []string{"developer", "architect", "researcher", "lead-qa"},
+			customOrder: [][]string{{"", "  ", "\t"}},
+			expected:    []string{"architect", "developer", "lead-qa", "researcher"},
+		},
+		{
+			name:        "input with duplicate roles and whitespace trimmed and deduplicated alphabetically",
+			input:       []string{" developer ", "architect", "DEVELOPER", "  developer  ", "architect\t", "lead-qa"},
+			customOrder: nil,
+			expected:    []string{"DEVELOPER", "architect", "developer", "lead-qa"},
+		},
+		{
+			name:        "customOrder priority first followed by alphabetical remainder",
+			input:       []string{"developer", "architect", "researcher", "lead-qa", "tester", "coder"},
+			customOrder: [][]string{{"lead-qa", "developer"}},
+			expected:    []string{"lead-qa", "developer", "architect", "coder", "researcher", "tester"},
+		},
+		{
+			name:        "customOrder with unlisted roles not present in input are cleanly ignored",
+			input:       []string{"developer", "researcher"},
+			customOrder: [][]string{{"missing-1", "researcher", "missing-2", "developer", "missing-3"}},
+			expected:    []string{"researcher", "developer"},
+		},
+		{
+			name:        "customOrder with duplicate roles in custom order deduplicated without repeat",
+			input:       []string{"developer", "researcher", "architect"},
+			customOrder: [][]string{{"researcher", "researcher", "architect", "researcher"}},
+			expected:    []string{"researcher", "architect", "developer"},
+		},
+		{
+			name:        "customOrder matching zero input roles falls back to full alphabetical sort",
+			input:       []string{"developer", "researcher", "architect"},
+			customOrder: [][]string{{"planner", "coder", "tester", "reviewer"}},
+			expected:    []string{"architect", "developer", "researcher"},
+		},
+		{
+			name:        "customOrder matching all input roles in reverse order preserves exact customOrder",
+			input:       []string{"architect", "developer", "lead-qa", "researcher"},
+			customOrder: [][]string{{"researcher", "lead-qa", "developer", "architect"}},
+			expected:    []string{"researcher", "lead-qa", "developer", "architect"},
+		},
+		{
+			name:        "customOrder with whitespace trimmed around role names",
+			input:       []string{"developer", "researcher", "architect"},
+			customOrder: [][]string{{"  researcher  ", "\tarchitect\n"}},
+			expected:    []string{"researcher", "architect", "developer"},
+		},
+		{
+			name:        "already sorted input preserves alphabetical order",
+			input:       []string{"alpha", "beta", "gamma", "omega"},
+			customOrder: nil,
+			expected:    []string{"alpha", "beta", "gamma", "omega"},
+		},
+		{
+			name:        "reverse sorted input sorts ascending alphabetically",
+			input:       []string{"omega", "gamma", "beta", "alpha"},
+			customOrder: nil,
+			expected:    []string{"alpha", "beta", "gamma", "omega"},
+		},
+		{
+			name:        "single role input returned as single element",
+			input:       []string{"developer"},
+			customOrder: nil,
+			expected:    []string{"developer"},
+		},
+		{
+			name:        "single role input with customOrder matching",
+			input:       []string{"developer"},
+			customOrder: [][]string{{"developer"}},
+			expected:    []string{"developer"},
+		},
+		{
+			name:        "single role input with customOrder not matching",
+			input:       []string{"developer"},
+			customOrder: [][]string{{"architect"}},
+			expected:    []string{"developer"},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run("OrderRoles/"+tc.name, func(t *testing.T) {
+			t.Parallel()
+			var got []string
+			if tc.customOrder != nil {
+				got = domain.OrderRoles(tc.input, tc.customOrder...)
+			} else {
+				got = domain.OrderRoles(tc.input)
+			}
+			if len(got) != len(tc.expected) {
+				t.Fatalf("OrderRoles len mismatch: expected %d (%v), got %d (%v)", len(tc.expected), tc.expected, len(got), got)
+			}
+			for i := range tc.expected {
+				if got[i] != tc.expected[i] {
+					t.Errorf("OrderRoles at [%d]: expected %q, got %q", i, tc.expected[i], got[i])
+				}
+			}
+		})
+
+		t.Run("OrderSubagentRoles/"+tc.name, func(t *testing.T) {
+			t.Parallel()
+			var got []string
+			if tc.customOrder != nil {
+				got = domain.OrderSubagentRoles(tc.input, tc.customOrder...)
+			} else {
+				got = domain.OrderSubagentRoles(tc.input)
+			}
+			if len(got) != len(tc.expected) {
+				t.Fatalf("OrderSubagentRoles len mismatch: expected %d (%v), got %d (%v)", len(tc.expected), tc.expected, len(got), got)
+			}
+			for i := range tc.expected {
+				if got[i] != tc.expected[i] {
+					t.Errorf("OrderSubagentRoles at [%d]: expected %q, got %q", i, tc.expected[i], got[i])
+				}
+			}
+		})
+	}
+}
