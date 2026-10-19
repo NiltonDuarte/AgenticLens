@@ -71,8 +71,6 @@ func runGenerate(args []string) {
 		activeTicketTitle = &clean
 	} else if cachedFacts != nil && cachedFacts.TicketTitle != nil {
 		activeTicketTitle = cachedFacts.TicketTitle
-	} else {
-		activeTicketTitle = git.InferTicketTitle(activeTicketID)
 	}
 
 	var activeTicketType *string
@@ -257,8 +255,8 @@ func runGenerate(args []string) {
 		Events:        events,
 	}
 
-	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg.RoleMappings)
-	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger)
+	metricsLedger := domain.DeriveMetricsLedgerWithConfig(factLedger, projCfg)
+	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 
 	if *jsonOutputFlag != "" {
 		if err := adapters.SaveFactLedger(*jsonOutputFlag, factLedger); err != nil {
@@ -768,6 +766,7 @@ func main() {
 	}
 
 	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
+	projCfg, _ := adaptersconfig.Load("")
 	report := adapters.ScanWorkspaces(workspacesDir)
 
 	if len(report.Ledgers) == 0 {
@@ -833,7 +832,7 @@ func main() {
 		return
 	}
 
-	tableMD := adapters.FormatMarkdownMetricsTable(*targetLedger)
+	tableMD := adapters.FormatMarkdownMetricsTable(*targetLedger, projCfg.RoleOrder)
 
 	if *appendFlag != "" {
 		if err := adapters.UpdateSummaryFile(*appendFlag, tableMD); err != nil {

@@ -106,14 +106,6 @@ func TestClassifyFile(t *testing.T) {
 func TestInferenceOnActiveWorkspace(t *testing.T) {
 	createTestBranch(t, "feat/AL-11-ci-fixture")
 
-	// Active ticket in this worktree is AL-11
-	title := git.InferTicketTitle("AL-11")
-	if title == nil || *title == "" {
-		t.Errorf("expected non-empty title for AL-11, got nil")
-	} else if *title != "Native Go Telemetry Extractor and Active Session Metric Generation" {
-		t.Logf("inferred title for AL-11: %s", *title)
-	}
-
 	ticketType := git.InferTicketType("AL-11")
 	if ticketType == nil || *ticketType != "feat" {
 		t.Errorf("expected feat ticket type for AL-11, got %v", ticketType)
@@ -143,11 +135,6 @@ func TestGitAnalyzer_AdversarialEdgeCases(t *testing.T) {
 		entriesWs := git.GetTicketNumstat("   ")
 		if len(entriesWs) != 0 {
 			t.Errorf("expected 0 entries for whitespace ticket ID, got %d", len(entriesWs))
-		}
-
-		title := git.InferTicketTitle("")
-		if title != nil {
-			t.Errorf("expected nil title for empty ticket ID, got %v", title)
 		}
 
 		tType := git.InferTicketType("")

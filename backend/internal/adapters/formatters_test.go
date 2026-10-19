@@ -358,18 +358,30 @@ func TestFormatMarkdownMetricsTable_MixedCanonicalAndCustomSubagentsPrecedence(t
 		},
 	}
 
-	tableMD := adapters.FormatMarkdownMetricsTable(ledger)
+	customOrder := []string{"planner", "coder", "tester", "reviewer"}
+	tableMD := adapters.FormatMarkdownMetricsTable(ledger, customOrder)
 
-	// Canonical subagents (Planner, Coder) must appear first in canonical order,
-	// followed by custom subagents (Advisor, Po) in alphabetical order.
+	// Custom subagent priority (Planner, Coder) must appear first in specified order,
+	// followed by remaining subagents (Advisor, Po) in alphabetical order.
 	expectedDist := "- **Role Effort Distribution (Subagents):** Planner 30.0%, Coder 40.0%, Advisor 20.0%, Po 10.0%"
 	if !strings.Contains(tableMD, expectedDist) {
-		t.Errorf("expected canonical precedence in role distribution:\nwant: %s\ngot:\n%s", expectedDist, tableMD)
+		t.Errorf("expected custom order precedence in role distribution:\nwant: %s\ngot:\n%s", expectedDist, tableMD)
 	}
 
 	expectedVel := "- **Subagent Turn Velocity & Thrashing:** 4.2 avg turns/run (peak: 8 turns) | Planner 2.0, Coder 6.0, Advisor 4.0, Po 5.0"
 	if !strings.Contains(tableMD, expectedVel) {
-		t.Errorf("expected canonical precedence in turn velocity:\nwant: %s\ngot:\n%s", expectedVel, tableMD)
+		t.Errorf("expected custom order precedence in turn velocity:\nwant: %s\ngot:\n%s", expectedVel, tableMD)
+	}
+
+	// Alphabetical order default when no custom order provided
+	tableMDDefault := adapters.FormatMarkdownMetricsTable(ledger)
+	expectedDistDefault := "- **Role Effort Distribution (Subagents):** Advisor 20.0%, Coder 40.0%, Planner 30.0%, Po 10.0%"
+	if !strings.Contains(tableMDDefault, expectedDistDefault) {
+		t.Errorf("expected alphabetical order default in role distribution:\nwant: %s\ngot:\n%s", expectedDistDefault, tableMDDefault)
+	}
+	expectedVelDefault := "- **Subagent Turn Velocity & Thrashing:** 4.2 avg turns/run (peak: 8 turns) | Advisor 4.0, Coder 6.0, Planner 2.0, Po 5.0"
+	if !strings.Contains(tableMDDefault, expectedVelDefault) {
+		t.Errorf("expected alphabetical order default in turn velocity:\nwant: %s\ngot:\n%s", expectedVelDefault, tableMDDefault)
 	}
 }
 

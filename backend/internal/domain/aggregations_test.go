@@ -1374,15 +1374,29 @@ func TestParseLedgerSortField_TicketID(t *testing.T) {
 func TestOrderRoles(t *testing.T) {
 	t.Parallel()
 	input := []string{"advisor", "tester", "researcher", "orchestrator", "coder", "advisor"}
-	expected := []string{"orchestrator", "coder", "tester", "advisor", "researcher"}
 
-	got := domain.OrderRoles(input)
-	if len(got) != len(expected) {
-		t.Fatalf("expected len %d, got %d: %v", len(expected), len(got), got)
+	// With custom order:
+	customOrder := []string{"orchestrator", "coder", "tester"}
+	gotCustom := domain.OrderRoles(input, customOrder)
+	expectedCustom := []string{"orchestrator", "coder", "tester", "advisor", "researcher"}
+	if len(gotCustom) != len(expectedCustom) {
+		t.Fatalf("expected len %d, got %d: %v", len(expectedCustom), len(gotCustom), gotCustom)
 	}
-	for i := range expected {
-		if got[i] != expected[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expected[i], got[i])
+	for i := range expectedCustom {
+		if gotCustom[i] != expectedCustom[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expectedCustom[i], gotCustom[i])
+		}
+	}
+
+	// Default alphabetical sort without custom order:
+	gotAlpha := domain.OrderRoles(input)
+	expectedAlpha := []string{"advisor", "coder", "orchestrator", "researcher", "tester"}
+	if len(gotAlpha) != len(expectedAlpha) {
+		t.Fatalf("expected len %d, got %d: %v", len(expectedAlpha), len(gotAlpha), gotAlpha)
+	}
+	for i := range expectedAlpha {
+		if gotAlpha[i] != expectedAlpha[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expectedAlpha[i], gotAlpha[i])
 		}
 	}
 }
@@ -1390,15 +1404,29 @@ func TestOrderRoles(t *testing.T) {
 func TestOrderSubagentRoles(t *testing.T) {
 	t.Parallel()
 	input := []string{"advisor", "reviewer", "orchestrator", "general", "build", "root", "po", "planner", "advisor", "General", "BUILD"}
-	expected := []string{"planner", "reviewer", "BUILD", "General", "advisor", "build", "general", "orchestrator", "po", "root"}
 
-	got := domain.OrderSubagentRoles(input)
-	if len(got) != len(expected) {
-		t.Fatalf("expected len %d, got %d: %v", len(expected), len(got), got)
+	// With custom order:
+	customOrder := []string{"planner", "reviewer"}
+	gotCustom := domain.OrderSubagentRoles(input, customOrder)
+	expectedCustom := []string{"planner", "reviewer", "BUILD", "General", "advisor", "build", "general", "orchestrator", "po", "root"}
+	if len(gotCustom) != len(expectedCustom) {
+		t.Fatalf("expected len %d, got %d: %v", len(expectedCustom), len(gotCustom), gotCustom)
 	}
-	for i := range expected {
-		if got[i] != expected[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expected[i], got[i])
+	for i := range expectedCustom {
+		if gotCustom[i] != expectedCustom[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expectedCustom[i], gotCustom[i])
+		}
+	}
+
+	// Default alphabetical sort without custom order:
+	gotAlpha := domain.OrderSubagentRoles(input)
+	expectedAlpha := []string{"BUILD", "General", "advisor", "build", "general", "orchestrator", "planner", "po", "reviewer", "root"}
+	if len(gotAlpha) != len(expectedAlpha) {
+		t.Fatalf("expected len %d, got %d: %v", len(expectedAlpha), len(gotAlpha), gotAlpha)
+	}
+	for i := range expectedAlpha {
+		if gotAlpha[i] != expectedAlpha[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expectedAlpha[i], gotAlpha[i])
 		}
 	}
 }
@@ -1505,7 +1533,7 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 	t.Run("peak context tie-breaking precedence", func(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-root"
-		// Canonical vs Custom tie-break: canonical (coder) takes precedence
+		// Default tie-break: alphabetical order breaks ties (advisor before coder)
 		ledgerCanonicalVsCustom := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
 				{
@@ -1524,8 +1552,14 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		}
 
 		eff1 := domain.ComputeWorkflowEfficiency(ledgerCanonicalVsCustom)
-		if eff1.ContextWindowHealth.SubagentsPeakRole != "coder" {
-			t.Errorf("expected canonical role 'coder' to win tie-breaker, got %s", eff1.ContextWindowHealth.SubagentsPeakRole)
+		if eff1.ContextWindowHealth.SubagentsPeakRole != "advisor" {
+			t.Errorf("expected alphabetical role 'advisor' to win default tie-breaker, got %s", eff1.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order tie-break: custom order slice takes precedence (coder before advisor)
+		eff1Custom := domain.ComputeWorkflowEfficiency(ledgerCanonicalVsCustom, []string{"coder", "advisor"})
+		if eff1Custom.ContextWindowHealth.SubagentsPeakRole != "coder" {
+			t.Errorf("expected custom role 'coder' to win tie-breaker, got %s", eff1Custom.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom vs Custom tie-break: alphabetical (advisor before po)
@@ -1615,15 +1649,28 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 		{ID: "5", Role: "orchestrator", CostUSD: 5.0},
 	}
 
-	metrics := domain.ComputeRoleMetrics(invs)
-	if len(metrics) != 5 {
-		t.Fatalf("expected 5 roles, got %d", len(metrics))
+	// Default alphabetical ordering when no custom order provided
+	metricsAlpha := domain.ComputeRoleMetrics(invs)
+	if len(metricsAlpha) != 5 {
+		t.Fatalf("expected 5 roles, got %d", len(metricsAlpha))
+	}
+	expectedAlpha := []string{"advisor", "architect", "orchestrator", "planner", "reviewer"}
+	for i, exp := range expectedAlpha {
+		if metricsAlpha[i].Role != exp {
+			t.Errorf("default at index %d: expected %s, got %s", i, exp, metricsAlpha[i].Role)
+		}
 	}
 
-	expectedRoles := []string{"orchestrator", "planner", "reviewer", "advisor", "architect"}
-	for i, exp := range expectedRoles {
-		if metrics[i].Role != exp {
-			t.Errorf("at index %d: expected %s, got %s", i, exp, metrics[i].Role)
+	// Custom order priority followed by alphabetical remainder
+	customOrder := []string{"orchestrator", "planner", "reviewer"}
+	metricsCustom := domain.ComputeRoleMetrics(invs, customOrder)
+	if len(metricsCustom) != 5 {
+		t.Fatalf("expected 5 roles, got %d", len(metricsCustom))
+	}
+	expectedCustom := []string{"orchestrator", "planner", "reviewer", "advisor", "architect"}
+	for i, exp := range expectedCustom {
+		if metricsCustom[i].Role != exp {
+			t.Errorf("custom at index %d: expected %s, got %s", i, exp, metricsCustom[i].Role)
 		}
 	}
 }
@@ -1661,7 +1708,9 @@ func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
 		},
 	}
 
-	records := domain.ComputeThreadSummaries(invs)
+	// With custom order prioritizing orchestrator, coder
+	customOrder := []string{"orchestrator", "coder"}
+	records := domain.ComputeThreadSummaries(invs, customOrder)
 	if len(records) != 1 {
 		t.Fatalf("expected 1 thread record, got %d", len(records))
 	}
@@ -1745,24 +1794,35 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialEdgeCases(t *testing.T) {
 		t.Parallel()
 		// Reversed canonical roles
 		input := []string{"reviewer", "tester", "coder", "planner", "orchestrator"}
+		customOrder := []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
 		expected := []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
 
-		got := domain.OrderRoles(input)
+		got := domain.OrderRoles(input, customOrder)
 		for i := range expected {
 			if got[i] != expected[i] {
 				t.Errorf("at %d: expected %s, got %s", i, expected[i], got[i])
 			}
 		}
 
-		// Subagents: canonical roles first, then custom roles alphabetically
+		// Subagents: custom order first, then remaining roles alphabetically
+		subOrder := []string{"planner", "coder", "tester", "reviewer"}
 		subExpected := []string{"planner", "coder", "tester", "reviewer", "orchestrator"}
-		gotSub := domain.OrderSubagentRoles(input)
+		gotSub := domain.OrderSubagentRoles(input, subOrder)
 		if len(gotSub) != len(subExpected) {
 			t.Fatalf("expected len %d, got %d: %v", len(subExpected), len(gotSub), gotSub)
 		}
 		for i := range subExpected {
 			if gotSub[i] != subExpected[i] {
 				t.Errorf("subagent at %d: expected %s, got %s", i, subExpected[i], gotSub[i])
+			}
+		}
+
+		// Alphabetical default when no custom order provided
+		alphaExpected := []string{"coder", "orchestrator", "planner", "reviewer", "tester"}
+		gotAlpha := domain.OrderRoles(input)
+		for i := range alphaExpected {
+			if gotAlpha[i] != alphaExpected[i] {
+				t.Errorf("alpha at %d: expected %s, got %s", i, alphaExpected[i], gotAlpha[i])
 			}
 		}
 	})
@@ -1842,7 +1902,7 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 		t.Parallel()
 
 		parentID := "ses-root"
-		// Case A: 4 canonical subagents all tied at 120k tokens. Precedence: planner > coder > tester > reviewer
+		// Case A: 4 subagents tied at 120k tokens. Default alphabetical: coder > planner > reviewer > tester
 		canonicalTiedLedger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
 				{ID: "1", ParentID: &parentID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
@@ -1852,8 +1912,14 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 			},
 		}
 		effA := domain.ComputeWorkflowEfficiency(canonicalTiedLedger)
-		if effA.ContextWindowHealth.SubagentsPeakRole != "planner" {
-			t.Errorf("expected 'planner' to win 4-way canonical tie-breaker, got %s", effA.ContextWindowHealth.SubagentsPeakRole)
+		if effA.ContextWindowHealth.SubagentsPeakRole != "coder" {
+			t.Errorf("expected 'coder' to win 4-way alphabetical tie-breaker, got %s", effA.ContextWindowHealth.SubagentsPeakRole)
+		}
+		// With custom order: planner > coder > tester > reviewer
+		customOrderA := []string{"planner", "coder", "tester", "reviewer"}
+		effACustom := domain.ComputeWorkflowEfficiency(canonicalTiedLedger, customOrderA)
+		if effACustom.ContextWindowHealth.SubagentsPeakRole != "planner" {
+			t.Errorf("expected 'planner' to win with custom order, got %s", effACustom.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Case B: 4 custom subagents all tied at 120k tokens. Precedence: alphabetical (advisor > po > researcher > security-auditor)
@@ -1870,8 +1936,8 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected 'advisor' to win 4-way custom tie-breaker, got %s", effB.ContextWindowHealth.SubagentsPeakRole)
 		}
 
-		// Case C: Lowest-precedence canonical (reviewer) vs highest-precedence custom (advisor) tied at 120k.
-		// Canonical must win over custom.
+		// Case C: Tied at 120k between reviewer and advisor.
+		// Alphabetical default: advisor < reviewer.
 		mixedTiedLedger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
 				{ID: "1", ParentID: &parentID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
@@ -1879,8 +1945,13 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 			},
 		}
 		effC := domain.ComputeWorkflowEfficiency(mixedTiedLedger)
-		if effC.ContextWindowHealth.SubagentsPeakRole != "reviewer" {
-			t.Errorf("expected canonical 'reviewer' to beat custom 'advisor' on tie-break, got %s", effC.ContextWindowHealth.SubagentsPeakRole)
+		if effC.ContextWindowHealth.SubagentsPeakRole != "advisor" {
+			t.Errorf("expected alphabetical 'advisor' to beat 'reviewer' on default tie-break, got %s", effC.ContextWindowHealth.SubagentsPeakRole)
+		}
+		// With custom order prioritizing reviewer:
+		effCCustom := domain.ComputeWorkflowEfficiency(mixedTiedLedger, []string{"reviewer", "advisor"})
+		if effCCustom.ContextWindowHealth.SubagentsPeakRole != "reviewer" {
+			t.Errorf("expected custom order 'reviewer' to beat 'advisor' on tie-break, got %s", effCCustom.ContextWindowHealth.SubagentsPeakRole)
 		}
 	})
 
@@ -1988,14 +2059,28 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 			{ID: "4", Role: "coder", CostUSD: 0.0},
 		}
 
+		// Default alphabetical ordering:
 		metrics := domain.ComputeRoleMetrics(invs)
-		expected := []string{"coder", "reviewer", "advisor", "security-auditor"}
+		expected := []string{"advisor", "coder", "reviewer", "security-auditor"}
 		if len(metrics) != len(expected) {
 			t.Fatalf("expected %d metrics, got %d", len(expected), len(metrics))
 		}
 		for i, exp := range expected {
 			if metrics[i].Role != exp {
 				t.Errorf("at index %d: expected %s, got %s", i, exp, metrics[i].Role)
+			}
+		}
+
+		// With custom order prioritizing coder and reviewer:
+		customOrder := []string{"coder", "reviewer"}
+		metricsCustom := domain.ComputeRoleMetrics(invs, customOrder)
+		expectedCustom := []string{"coder", "reviewer", "advisor", "security-auditor"}
+		if len(metricsCustom) != len(expectedCustom) {
+			t.Fatalf("expected %d custom metrics, got %d", len(expectedCustom), len(metricsCustom))
+		}
+		for i, exp := range expectedCustom {
+			if metricsCustom[i].Role != exp {
+				t.Errorf("custom at index %d: expected %s, got %s", i, exp, metricsCustom[i].Role)
 			}
 		}
 	})
@@ -4669,10 +4754,15 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
 		}
-		// When multiple subagents share peak tokens (0), canonical role order breaks ties:
-		// planner comes before coder and reviewer
-		if eff.ContextWindowHealth.SubagentsPeakRole != "planner" {
-			t.Errorf("expected SubagentsPeakRole 'planner' via canonical tie-break, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		// When multiple subagents share peak tokens (0), alphabetical order breaks ties by default:
+		// coder comes before planner and reviewer
+		if eff.ContextWindowHealth.SubagentsPeakRole != "coder" {
+			t.Errorf("expected SubagentsPeakRole 'coder' via default tie-break, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		// When custom role order is supplied, it takes priority:
+		effCustom := domain.ComputeWorkflowEfficiency(ledger, []string{"planner", "coder", "reviewer"})
+		if effCustom.ContextWindowHealth.SubagentsPeakRole != "planner" {
+			t.Errorf("expected SubagentsPeakRole 'planner' via custom tie-break, got %s", effCustom.ContextWindowHealth.SubagentsPeakRole)
 		}
 		// Subagent costs must still be computed: total = 4.0, coder = 50%, planner = 25%, reviewer = 25%
 		if eff.RoleEffortDistributionPct["coder"] != 50.0 {
@@ -4938,9 +5028,14 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 				},
 			}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
-			// tester comes before reviewer in canonical order
-			if eff.ContextWindowHealth.SubagentsPeakRole != "tester" {
-				t.Errorf("expected SubagentsPeakRole 'tester', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			// reviewer comes before tester in default alphabetical order
+			if eff.ContextWindowHealth.SubagentsPeakRole != "reviewer" {
+				t.Errorf("expected SubagentsPeakRole 'reviewer' via default alphabetical tie-break, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+			// When custom role order is supplied, tester comes before reviewer
+			effCustom := domain.ComputeWorkflowEfficiency(ledger, []string{"tester", "reviewer"})
+			if effCustom.ContextWindowHealth.SubagentsPeakRole != "tester" {
+				t.Errorf("expected SubagentsPeakRole 'tester' via custom tie-break, got %s", effCustom.ContextWindowHealth.SubagentsPeakRole)
 			}
 		})
 
@@ -5151,6 +5246,182 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 		}
 		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 5.0 {
 			t.Errorf("expected AvgTurnsPerInvocation 5.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+	})
+}
+
+func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
+	t.Parallel()
+
+	rootID := "ses-root"
+
+	t.Run("five-way tie across arbitrary unmapped roles alphabetical default and custom order", func(t *testing.T) {
+		t.Parallel()
+
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "inv-1", ParentID: &rootID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+				{ID: "inv-2", ParentID: &rootID, Role: "researcher", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+				{ID: "inv-3", ParentID: &rootID, Role: "developer", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+				{ID: "inv-4", ParentID: &rootID, Role: "architect", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+				{ID: "inv-5", ParentID: &rootID, Role: "lead-qa", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+			},
+		}
+
+		// Alphabetical default: architect < developer < lead-qa < researcher < reviewer
+		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
+		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 125000 {
+			t.Errorf("expected SubagentsPeakTokens 125000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if effAlpha.ContextWindowHealth.SubagentsPeakRole != "architect" {
+			t.Errorf("expected 'architect' via alphabetical tie-breaking, got %q", effAlpha.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Empty custom order slice falls back to alphabetical
+		effEmptyCustom := domain.ComputeWorkflowEfficiency(ledger, []string{})
+		if effEmptyCustom.ContextWindowHealth.SubagentsPeakRole != "architect" {
+			t.Errorf("expected 'architect' via empty custom order, got %q", effEmptyCustom.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order prioritizing lead-qa
+		effLeadQA := domain.ComputeWorkflowEfficiency(ledger, []string{"lead-qa", "developer"})
+		if effLeadQA.ContextWindowHealth.SubagentsPeakRole != "lead-qa" {
+			t.Errorf("expected 'lead-qa' via custom order, got %q", effLeadQA.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order prioritizing researcher
+		effResearcher := domain.ComputeWorkflowEfficiency(ledger, []string{"researcher", "architect"})
+		if effResearcher.ContextWindowHealth.SubagentsPeakRole != "researcher" {
+			t.Errorf("expected 'researcher' via custom order, got %q", effResearcher.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order prioritizing reviewer
+		effReviewer := domain.ComputeWorkflowEfficiency(ledger, []string{"reviewer"})
+		if effReviewer.ContextWindowHealth.SubagentsPeakRole != "reviewer" {
+			t.Errorf("expected 'reviewer' via custom order, got %q", effReviewer.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order with unlisted/nonexistent roles first, then matching role
+		effUnlisted := domain.ComputeWorkflowEfficiency(ledger, []string{"ghost-agent", "nonexistent", "developer"})
+		if effUnlisted.ContextWindowHealth.SubagentsPeakRole != "developer" {
+			t.Errorf("expected 'developer' via custom order with unlisted prefix, got %q", effUnlisted.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order with ONLY nonexistent roles falls back to full alphabetical
+		effGhostOnly := domain.ComputeWorkflowEfficiency(ledger, []string{"ghost-1", "ghost-2"})
+		if effGhostOnly.ContextWindowHealth.SubagentsPeakRole != "architect" {
+			t.Errorf("expected 'architect' fallback when custom order has no matches, got %q", effGhostOnly.ContextWindowHealth.SubagentsPeakRole)
+		}
+	})
+
+	t.Run("multiple invocations per role with peak tie", func(t *testing.T) {
+		t.Parallel()
+
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "inv-coder-1", ParentID: &rootID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 40000}},
+				{ID: "inv-coder-2", ParentID: &rootID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 90000}},
+				{ID: "inv-tester-1", ParentID: &rootID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 90000}},
+				{ID: "inv-tester-2", ParentID: &rootID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 60000}},
+				{ID: "inv-planner-1", ParentID: &rootID, Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 70000}},
+			},
+		}
+
+		// Alphabetical default: coder < tester
+		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
+		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 90000 {
+			t.Errorf("expected SubagentsPeakTokens 90000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if effAlpha.ContextWindowHealth.SubagentsPeakRole != "coder" {
+			t.Errorf("expected 'coder' via default tie-break, got %q", effAlpha.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order prioritizing tester over coder
+		effTester := domain.ComputeWorkflowEfficiency(ledger, []string{"tester", "coder"})
+		if effTester.ContextWindowHealth.SubagentsPeakRole != "tester" {
+			t.Errorf("expected 'tester' via custom order, got %q", effTester.ContextWindowHealth.SubagentsPeakRole)
+		}
+	})
+
+	t.Run("unassigned role participates in tie-breaking properly", func(t *testing.T) {
+		t.Parallel()
+
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "inv-empty", ParentID: &rootID, Role: "   ", Tokens: domain.InvocationTokens{PeakContext: 85000}},
+				{ID: "inv-advisor", ParentID: &rootID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 85000}},
+			},
+		}
+
+		// Alphabetical default: advisor < unassigned
+		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
+		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 85000 {
+			t.Errorf("expected SubagentsPeakTokens 85000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if effAlpha.ContextWindowHealth.SubagentsPeakRole != "advisor" {
+			t.Errorf("expected 'advisor' via alphabetical tie-break, got %q", effAlpha.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order prioritizing unassigned
+		effUnassigned := domain.ComputeWorkflowEfficiency(ledger, []string{"unassigned", "advisor"})
+		if effUnassigned.ContextWindowHealth.SubagentsPeakRole != "unassigned" {
+			t.Errorf("expected 'unassigned' via custom tie-break, got %q", effUnassigned.ContextWindowHealth.SubagentsPeakRole)
+		}
+	})
+
+	t.Run("structural hierarchy isolation during tie-breaking", func(t *testing.T) {
+		t.Parallel()
+
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "inv-root-orch", ParentID: nil, Role: "orchestrator", Tokens: domain.InvocationTokens{PeakContext: 200000}},
+				{ID: "inv-root-gen", ParentID: nil, Role: "general", Tokens: domain.InvocationTokens{PeakContext: 200000}},
+				{ID: "inv-sub-dev", ParentID: &rootID, Role: "developer", Tokens: domain.InvocationTokens{PeakContext: 95000}},
+				{ID: "inv-sub-arch", ParentID: &rootID, Role: "architect", Tokens: domain.InvocationTokens{PeakContext: 95000}},
+			},
+		}
+
+		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
+		if effAlpha.ContextWindowHealth.OrchestratorPeakTokens != 200000 {
+			t.Errorf("expected OrchestratorPeakTokens 200000, got %d", effAlpha.ContextWindowHealth.OrchestratorPeakTokens)
+		}
+		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 95000 {
+			t.Errorf("expected SubagentsPeakTokens 95000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		// Alphabetical tie-break between architect and developer
+		if effAlpha.ContextWindowHealth.SubagentsPeakRole != "architect" {
+			t.Errorf("expected SubagentsPeakRole 'architect', got %q", effAlpha.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order prioritizing developer
+		effDev := domain.ComputeWorkflowEfficiency(ledger, []string{"developer", "architect"})
+		if effDev.ContextWindowHealth.SubagentsPeakRole != "developer" {
+			t.Errorf("expected SubagentsPeakRole 'developer', got %q", effDev.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Custom order prioritizing root personas does not cause root to become SubagentsPeakRole
+		effRootOrder := domain.ComputeWorkflowEfficiency(ledger, []string{"orchestrator", "general", "developer", "architect"})
+		if effRootOrder.ContextWindowHealth.SubagentsPeakRole != "developer" {
+			t.Errorf("expected SubagentsPeakRole 'developer' (excluding root personas), got %q", effRootOrder.ContextWindowHealth.SubagentsPeakRole)
+		}
+	})
+
+	t.Run("pure root sessions always evaluate to none regardless of custom order", func(t *testing.T) {
+		t.Parallel()
+
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "inv-root-1", ParentID: nil, Role: "general", Tokens: domain.InvocationTokens{PeakContext: 110000}},
+				{ID: "inv-root-2", ParentID: nil, Role: "orchestrator", Tokens: domain.InvocationTokens{PeakContext: 130000}},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger, []string{"orchestrator", "planner", "coder", "general"})
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected SubagentsPeakRole 'none', got %q", eff.ContextWindowHealth.SubagentsPeakRole)
 		}
 	})
 }
