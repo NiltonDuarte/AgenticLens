@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -19,6 +20,7 @@ import (
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	adaptershttp "agenticlens/internal/adapters/http"
+	"agenticlens/internal/adapters/live"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/adapters/web"
 	"agenticlens/internal/domain"
@@ -300,6 +302,7 @@ func runServer(args []string) {
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	portFlag := serverFlags.Int("port", defaultPort, "Port to listen on")
 	workspacesFlag := serverFlags.String("workspaces", "", "Path to workspaces directory")
+	dbPathFlag := serverFlags.String("db-path", "", "Path to OpenCode SQLite database (overrides config)")
 	if len(args) > 0 && args[0] == "help" {
 		serverFlags.Usage()
 		return
@@ -323,7 +326,44 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	srv := adaptershttp.NewServer(workspacesDir, staticFS)
+	projCfg, _ := adaptersconfig.Load("")
+
+	dbPath := strings.TrimSpace(*dbPathFlag)
+	if dbPath == "" {
+		dbPath = strings.TrimSpace(projCfg.Database.Path)
+	}
+	if dbPath == "" {
+		if defPath, err := opencode.DefaultDBPath(); err == nil {
+			dbPath = defPath
+		}
+	}
+
+	cleanDBPath := dbPath
+	if strings.HasPrefix(cleanDBPath, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			cleanDBPath = filepath.Join(home, cleanDBPath[2:])
+		}
+	}
+
+	var liveService *live.LiveService
+	if cleanDBPath != "" {
+		if _, err := os.Stat(cleanDBPath); err == nil {
+			busyTimeout := projCfg.Database.BusyTimeoutMs
+			if busyTimeout <= 0 {
+				busyTimeout = 5000
+			}
+			hook, err := live.OpenReadOnlyHook(cleanDBPath, busyTimeout)
+			if err != nil {
+				fmt.Printf("Notice: could not initialize live SQLite hook (%v); live telemetry disabled\n", err)
+			} else {
+				liveService = live.NewLiveService(hook, projCfg)
+				liveService.Start(context.Background())
+				fmt.Printf("Live telemetry hook active on %s (polling every %dms)\n", cleanDBPath, projCfg.Live.PollIntervalMs)
+			}
+		}
+	}
+
+	srv := adaptershttp.NewServer(workspacesDir, staticFS, liveService)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
@@ -342,6 +382,12 @@ func runServer(args []string) {
 
 	<-stop
 	fmt.Println("\nShutting down AgenticLens server...")
+
+	if liveService != nil {
+		if err := liveService.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning closing live service: %v\n", err)
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
