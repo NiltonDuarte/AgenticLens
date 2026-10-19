@@ -411,7 +411,7 @@ func TestExtractFacts(t *testing.T) {
 	}
 
 	ev3 := events[3] // t2 tool call (bash error)
-	if ev3.EventType != domain.EventTypeToolCall || ev3.Status != "error" || ev3.ErrorMessage == nil || *ev3.ErrorMessage != "permission denied" {
+	if ev3.EventType != domain.EventTypeToolCall || ev3.Status != "error" || ev3.ErrorMessage != nil {
 		t.Errorf("unexpected event 3: %+v", ev3)
 	}
 
@@ -421,7 +421,7 @@ func TestExtractFacts(t *testing.T) {
 	}
 
 	ev8 := events[8] // t4 tool call (read error)
-	if ev8.EventType != domain.EventTypeToolCall || ev8.Status != "error" || ev8.ErrorMessage == nil || *ev8.ErrorMessage != "Error: file not found" {
+	if ev8.EventType != domain.EventTypeToolCall || ev8.Status != "error" || ev8.ErrorMessage != nil {
 		t.Errorf("unexpected event 8: %+v", ev8)
 	}
 }
@@ -760,8 +760,8 @@ func TestExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 
 	// Verify Status Error Tool Call
 	statErrEv := events[2] // p_stat_err
-	if statErrEv.Status != "error" || statErrEv.ErrorMessage == nil || *statErrEv.ErrorMessage != "command failed with status 1" {
-		t.Errorf("expected status error tool call, got: %+v", statErrEv)
+	if statErrEv.Status != "error" || statErrEv.ErrorMessage != nil {
+		t.Errorf("expected status error tool call with nil error message, got: %+v", statErrEv)
 	}
 	if statErrEv.DurationMs == nil || *statErrEv.DurationMs != 0 {
 		t.Errorf("expected 0ms duration, got: %v", statErrEv.DurationMs)
@@ -769,8 +769,8 @@ func TestExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 
 	// Verify Traceback Detection Tool Call
 	traceEv := events[3] // p_traceback
-	if traceEv.Status != "error" || traceEv.ErrorMessage == nil || !containsSubstring(*traceEv.ErrorMessage, "Traceback") {
-		t.Errorf("expected Traceback detection error, got: %+v", traceEv)
+	if traceEv.Status != "error" || traceEv.ErrorMessage != nil {
+		t.Errorf("expected Traceback detection error with nil error message, got: %+v", traceEv)
 	}
 	if traceEv.DurationMs == nil || *traceEv.DurationMs != 200 {
 		t.Errorf("expected 200ms duration, got: %v", traceEv.DurationMs)
@@ -778,17 +778,14 @@ func TestExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 
 	// Verify Error: Prefix Detection Tool Call
 	errPrefixEv := events[4] // p_err_prefix
-	if errPrefixEv.Status != "error" || errPrefixEv.ErrorMessage == nil || *errPrefixEv.ErrorMessage != "Error: path not found: /etc/missing" {
-		t.Errorf("expected Error: prefix detection, got: %+v", errPrefixEv)
+	if errPrefixEv.Status != "error" || errPrefixEv.ErrorMessage != nil {
+		t.Errorf("expected Error: prefix detection with nil error message, got: %+v", errPrefixEv)
 	}
 
-	// Verify Long Error Message Truncation (max 4096 chars)
+	// Verify Long Error Message sets ErrorMessage to nil
 	longErrEv := events[5] // p_long_err
-	if longErrEv.Status != "error" || longErrEv.ErrorMessage == nil {
-		t.Fatalf("expected long error to be flagged as error, got: %+v", longErrEv)
-	}
-	if len(*longErrEv.ErrorMessage) != 4096 {
-		t.Errorf("expected truncated error message of length 4096, got %d", len(*longErrEv.ErrorMessage))
+	if longErrEv.Status != "error" || longErrEv.ErrorMessage != nil {
+		t.Fatalf("expected long error to be flagged as error with nil ErrorMessage, got: %+v", longErrEv)
 	}
 
 	// Verify Inverted Timestamps yields nil DurationMs
@@ -830,14 +827,14 @@ func TestExtractFacts_Sub4096ErrorPreservation(t *testing.T) {
 		t.Fatalf("expected 2 events, got %d", len(events))
 	}
 	ev := events[1]
-	if ev.Status != "error" || ev.ErrorMessage == nil {
+	if ev.Status != "error" {
 		t.Fatalf("expected error event, got: %+v", ev)
 	}
-	if len(*ev.ErrorMessage) != 1500 {
-		t.Errorf("expected 1500 chars preserved, got %d", len(*ev.ErrorMessage))
+	if ev.ErrorMessage != nil {
+		t.Errorf("expected ErrorMessage nil under zero message persistence, got: %s", *ev.ErrorMessage)
 	}
-	if *ev.ErrorMessage != sub4096Err {
-		t.Errorf("expected error message to match exact content")
+	if ev.ToolName == nil || *ev.ToolName != "edit" {
+		t.Errorf("expected tool_name 'edit', got %v", ev.ToolName)
 	}
 }
 
@@ -861,69 +858,52 @@ func TestExtractFacts_ErrorPayloadAdversarialBoundaries(t *testing.T) {
 	small100 := "Error: " + strings.Repeat("D", 100-len("Error: "))
 
 	cases := []struct {
-		name             string
-		partID           string
-		partJSON         string
-		expectedStatus   string
-		expectedMsgLen   int
-		expectedPrefix   string
-		expectedMsgExact string
+		name           string
+		partID         string
+		partJSON       string
+		expectedStatus string
 	}{
 		{
-			name:           "exact_4096_boundary_preserved_intact",
+			name:           "exact_4096_boundary_error_detected",
 			partID:         "p_exact_4096",
 			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"` + exact4096 + `"}}`,
 			expectedStatus: "error",
-			expectedMsgLen: 4096,
-			expectedPrefix: exact4096,
 		},
 		{
-			name:           "off_by_one_4097_truncated_to_4096",
+			name:           "off_by_one_4097_error_detected",
 			partID:         "p_off_by_one_4097",
 			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"` + offByOne4097 + `"}}`,
 			expectedStatus: "error",
-			expectedMsgLen: 4096,
-			expectedPrefix: offByOne4097[:4096],
 		},
 		{
-			name:           "over_limit_5000_truncated_to_4096",
+			name:           "over_limit_5000_error_detected",
 			partID:         "p_huge_5000",
 			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"` + huge5000 + `"}}`,
 			expectedStatus: "error",
-			expectedMsgLen: 4096,
-			expectedPrefix: huge5000[:4096],
 		},
 		{
-			name:           "sub_4096_payload_integrity_preserved",
+			name:           "sub_4096_payload_error_detected",
 			partID:         "p_small_100",
 			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"` + small100 + `"}}`,
 			expectedStatus: "error",
-			expectedMsgLen: 100,
-			expectedPrefix: small100,
 		},
 		{
-			name:             "empty_error_output_falls_back_to_status",
-			partID:           "p_empty_err_output",
-			partJSON:         `{"type":"tool","tool":"bash","state":{"status":"error","output":""}}`,
-			expectedStatus:   "error",
-			expectedMsgLen:   5,
-			expectedMsgExact: "error",
+			name:           "empty_error_output_falls_back_to_status",
+			partID:         "p_empty_err_output",
+			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":""}}`,
+			expectedStatus: "error",
 		},
 		{
-			name:             "whitespace_only_error_output_trimmed_and_falls_back_to_status",
-			partID:           "p_whitespace_err_output",
-			partJSON:         `{"type":"tool","tool":"bash","state":{"status":"error","output":"   \n\t  "}}`,
-			expectedStatus:   "error",
-			expectedMsgLen:   5,
-			expectedMsgExact: "error",
+			name:           "whitespace_only_error_output_trimmed_and_falls_back_to_status",
+			partID:         "p_whitespace_err_output",
+			partJSON:       `{"type":"tool","tool":"bash","state":{"status":"error","output":"   \n\t  "}}`,
+			expectedStatus: "error",
 		},
 		{
-			name:             "empty_status_with_error_prefix_handled",
-			partID:           "p_err_prefix_clean",
-			partJSON:         `{"type":"tool","tool":"bash","state":{"output":"Error: simple failure"}}`,
-			expectedStatus:   "error",
-			expectedMsgLen:   21,
-			expectedMsgExact: "Error: simple failure",
+			name:           "empty_status_with_error_prefix_handled",
+			partID:         "p_err_prefix_clean",
+			partJSON:       `{"type":"tool","tool":"bash","state":{"output":"Error: simple failure"}}`,
+			expectedStatus: "error",
 		},
 	}
 
@@ -959,17 +939,11 @@ func TestExtractFacts_ErrorPayloadAdversarialBoundaries(t *testing.T) {
 			if ev.Status != tc.expectedStatus {
 				t.Errorf("status mismatch: expected %q, got %q", tc.expectedStatus, ev.Status)
 			}
-			if ev.ErrorMessage == nil {
-				t.Fatalf("expected non-nil error message, got nil")
+			if ev.ErrorMessage != nil {
+				t.Errorf("expected ErrorMessage nil under zero message persistence, got %q", *ev.ErrorMessage)
 			}
-			if len(*ev.ErrorMessage) != tc.expectedMsgLen {
-				t.Errorf("length mismatch: expected %d, got %d", tc.expectedMsgLen, len(*ev.ErrorMessage))
-			}
-			if tc.expectedMsgExact != "" && *ev.ErrorMessage != tc.expectedMsgExact {
-				t.Errorf("exact message mismatch: expected %q, got %q", tc.expectedMsgExact, *ev.ErrorMessage)
-			}
-			if tc.expectedPrefix != "" && !strings.HasPrefix(*ev.ErrorMessage, tc.expectedPrefix) {
-				t.Errorf("prefix mismatch: expected prefix length %d", len(tc.expectedPrefix))
+			if ev.ToolName == nil || *ev.ToolName != "bash" {
+				t.Errorf("expected tool name bash, got %v", ev.ToolName)
 			}
 		})
 	}

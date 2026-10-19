@@ -841,6 +841,147 @@ func TestInvariantValidator(t *testing.T) {
 	})
 }
 
+func TestInvariantValidator_SchemaV3Rules(t *testing.T) {
+	validator := migration.NewInvariantValidator()
+
+	v2Ver := 2
+	v3Ver := 3
+
+	toolNameBash := "bash"
+	errMsgRaw := "command failed with exit status 1"
+	dur100 := int64(100)
+
+	baseV2 := sampleFactLedger()
+	baseV2.SchemaVersion = &v2Ver
+	baseV2.Events = []domain.EventFact{
+		{
+			Timestamp:     "2026-10-18T10:00:00Z",
+			SessionID:     "ses-1",
+			Turn:          1,
+			Role:          "orchestrator",
+			EventType:     domain.EventTypeTurnMessage,
+			Status:        "success",
+			ContextTokens: 1000,
+		},
+		{
+			Timestamp:     "2026-10-18T10:00:01Z",
+			SessionID:     "ses-1",
+			Turn:          2,
+			Role:          "coder",
+			EventType:     domain.EventTypeToolCall,
+			ToolName:      &toolNameBash,
+			Status:        "error",
+			ErrorMessage:  &errMsgRaw,
+			DurationMs:    &dur100,
+			ContextTokens: 2000,
+		},
+		{
+			Timestamp:     "2026-10-18T10:00:02Z",
+			SessionID:     "ses-1",
+			Turn:          3,
+			Role:          "orchestrator",
+			EventType:     domain.EventTypeCompaction,
+			Status:        "success",
+			DurationMs:    &dur100,
+			ContextTokens: 800,
+		},
+	}
+
+	validV3 := baseV2
+	validV3.SchemaVersion = &v3Ver
+	validV3.Events = []domain.EventFact{
+		{
+			Timestamp:     "2026-10-18T10:00:01Z",
+			SessionID:     "ses-1",
+			Turn:          2,
+			Role:          "coder",
+			EventType:     domain.EventTypeToolCall,
+			ToolName:      &toolNameBash,
+			Status:        "error",
+			ErrorMessage:  nil,
+			DurationMs:    &dur100,
+			ContextTokens: 2000,
+		},
+		{
+			Timestamp:     "2026-10-18T10:00:02Z",
+			SessionID:     "ses-1",
+			Turn:          3,
+			Role:          "orchestrator",
+			EventType:     domain.EventTypeCompaction,
+			Status:        "success",
+			DurationMs:    &dur100,
+			ContextTokens: 800,
+		},
+	}
+
+	t.Run("valid v3 pruned events passes validation", func(t *testing.T) {
+		err := validator.Validate(baseV2, validV3, 3)
+		if err != nil {
+			t.Fatalf("expected valid v3 migration to pass, got: %v", err)
+		}
+	})
+
+	t.Run("v3 migration fails if events count increased", func(t *testing.T) {
+		mIncreased := validV3
+		mIncreased.Events = append([]domain.EventFact(nil), validV3.Events...)
+		mIncreased.Events = append(mIncreased.Events, domain.EventFact{
+			Timestamp: "2026-10-18T10:00:03Z",
+			SessionID: "ses-1",
+			Turn:      4,
+			EventType: domain.EventTypeCompaction,
+			Status:    "success",
+		})
+		mIncreased.Events = append(mIncreased.Events, domain.EventFact{
+			Timestamp: "2026-10-18T10:00:04Z",
+			SessionID: "ses-1",
+			Turn:      5,
+			EventType: domain.EventTypeCompaction,
+			Status:    "success",
+		})
+		// Now len is 4, which is > baseV2 len 3
+		err := validator.Validate(baseV2, mIncreased, 3)
+		if !errors.Is(err, migration.ErrInvariantViolation) {
+			t.Errorf("expected ErrInvariantViolation when events count increased, got: %v", err)
+		}
+	})
+
+	t.Run("v3 migration fails if any retained event has non-nil ErrorMessage", func(t *testing.T) {
+		mWithErr := validV3
+		mWithErr.Events = append([]domain.EventFact(nil), validV3.Events...)
+		leakStr := "residual sensitive error message"
+		mWithErr.Events[0].ErrorMessage = &leakStr
+
+		err := validator.Validate(baseV2, mWithErr, 3)
+		if !errors.Is(err, migration.ErrInvariantViolation) {
+			t.Errorf("expected ErrInvariantViolation when event retains non-nil ErrorMessage, got: %v", err)
+		}
+	})
+
+	t.Run("v3 migration fails if retained event does not correspond to any pre-migration event", func(t *testing.T) {
+		mUnmatched := validV3
+		mUnmatched.Events = append([]domain.EventFact(nil), validV3.Events...)
+		inventedTool := "synthetic_tool"
+		mUnmatched.Events[0].ToolName = &inventedTool
+
+		err := validator.Validate(baseV2, mUnmatched, 3)
+		if !errors.Is(err, migration.ErrInvariantViolation) {
+			t.Errorf("expected ErrInvariantViolation when pruned event cannot be mapped, got: %v", err)
+		}
+	})
+
+	t.Run("v3 migration fails if ComputeTotals aggregate metrics change", func(t *testing.T) {
+		mMutatedTotals := validV3
+		mMutatedTotals.Invocations = append([]domain.InvocationFact(nil), validV3.Invocations...)
+		// Mutate cost in invocation
+		mMutatedTotals.Invocations[0].CostUSD = 999.0
+
+		err := validator.Validate(baseV2, mMutatedTotals, 3)
+		if !errors.Is(err, migration.ErrInvariantViolation) {
+			t.Errorf("expected ErrInvariantViolation when totals mutate, got: %v", err)
+		}
+	})
+}
+
 func TestEngineMigrate(t *testing.T) {
 	engine := migration.NewEngine(nil)
 
@@ -1075,6 +1216,148 @@ func TestEngineMigrate(t *testing.T) {
 		}
 		if migrated.Migration == nil || len(migrated.Migration.StepsCompleted) != 2 {
 			t.Errorf("expected 2 migration steps completed, got %+v", migrated.Migration)
+		}
+	})
+
+	t.Run("migrates v2 ledger with events and error messages to v3 using real StepV2ToV3Sanitized", func(t *testing.T) {
+		v2WithEventsJSON := `{
+			"schema_version": 2,
+			"ticket_id": "AL-32",
+			"ticket_title": "Sanitization",
+			"ticket_type": "feat",
+			"started_at": "2026-10-18T10:00:00Z",
+			"completed_at": "2026-10-18T10:30:00Z",
+			"updated_at": "2026-10-18T10:30:00Z",
+			"code": {
+				"lines_added": 20,
+				"lines_deleted": 5,
+				"test_lines_added": 10,
+				"test_lines_deleted": 0,
+				"prod_lines_added": 10,
+				"prod_lines_deleted": 5,
+				"files_changed": 2,
+				"sdlc_iterations": 1
+			},
+			"invocations": [
+				{
+					"id": "inv-1",
+					"role": "orchestrator",
+					"model": "claude-3-opus",
+					"user": "developer",
+					"active_duration_seconds": 60,
+					"turns": 2,
+					"tokens": {"input": 100, "output": 50},
+					"cost_usd": 0.05
+				}
+			],
+			"tools": [
+				{"name": "read", "calls": 5, "errors": 0},
+				{"name": "bash", "calls": 2, "errors": 1}
+			],
+			"events": [
+				{
+					"timestamp": "2026-10-18T10:00:01Z",
+					"session_id": "ses-1",
+					"turn": 1,
+					"role": "orchestrator",
+					"event_type": "turn_message",
+					"status": "success",
+					"context_tokens": 1000
+				},
+				{
+					"timestamp": "2026-10-18T10:00:02Z",
+					"session_id": "ses-1",
+					"turn": 2,
+					"role": "coder",
+					"event_type": "tool_call",
+					"tool_name": "bash",
+					"status": "error",
+					"error_message": "secret token leak: 12345",
+					"duration_ms": 150,
+					"context_tokens": 1200
+				}
+			]
+		}`
+
+		migrated, err := engine.Migrate([]byte(v2WithEventsJSON), 3)
+		if err != nil {
+			t.Fatalf("unexpected error migrating to v3: %v", err)
+		}
+
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 3 {
+			t.Fatalf("expected schema_version 3, got %v", migrated.SchemaVersion)
+		}
+
+		if len(migrated.Events) != 1 {
+			t.Fatalf("expected 1 event retained after pruning, got %d", len(migrated.Events))
+		}
+
+		retained := migrated.Events[0]
+		if retained.Turn != 2 || retained.Status != "error" {
+			t.Errorf("expected error tool event retained, got %+v", retained)
+		}
+		if retained.ToolName == nil || *retained.ToolName != "bash" {
+			t.Errorf("expected tool_name bash, got %v", retained.ToolName)
+		}
+		if retained.ErrorMessage != nil {
+			t.Errorf("expected ErrorMessage stripped to nil, got %s", *retained.ErrorMessage)
+		}
+		if retained.DurationMs == nil || *retained.DurationMs != 150 {
+			t.Errorf("expected DurationMs 150, got %v", retained.DurationMs)
+		}
+
+		if migrated.Migration == nil {
+			t.Fatal("expected non-nil migration info")
+		}
+		if migrated.Migration.SchemaVersion != 3 {
+			t.Errorf("expected migration info schema_version 3, got %d", migrated.Migration.SchemaVersion)
+		}
+		hasStep := false
+		for _, s := range migrated.Migration.StepsCompleted {
+			if s == domain.MigrationStepSanitizedEvents {
+				hasStep = true
+				break
+			}
+		}
+		if !hasStep {
+			t.Errorf("expected %s in StepsCompleted: %+v", domain.MigrationStepSanitizedEvents, migrated.Migration.StepsCompleted)
+		}
+	})
+
+	t.Run("chained migration from v1 unversioned to v3 via default NewEngine(nil)", func(t *testing.T) {
+		migrated, err := engine.Migrate([]byte(unversionedJSON), 3)
+		if err != nil {
+			t.Fatalf("unexpected error on chained v1 -> v3 migration: %v", err)
+		}
+
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 3 {
+			t.Errorf("expected schema version 3, got %v", migrated.SchemaVersion)
+		}
+		if migrated.Migration == nil || len(migrated.Migration.StepsCompleted) != 2 {
+			t.Fatalf("expected 2 migration steps completed (baseline and sanitized), got %+v", migrated.Migration)
+		}
+		if migrated.Migration.StepsCompleted[0] != "schema_v2_baseline" || migrated.Migration.StepsCompleted[1] != domain.MigrationStepSanitizedEvents {
+			t.Errorf("unexpected steps: %v", migrated.Migration.StepsCompleted)
+		}
+	})
+
+	t.Run("idempotency: migrating already v3 ledger returns unmodified data", func(t *testing.T) {
+		v3JSON := `{
+			"schema_version": 3,
+			"ticket_id": "AL-32",
+			"updated_at": "2026-10-18T11:00:00Z",
+			"code": {"lines_added": 10},
+			"invocations": [],
+			"tools": [],
+			"events": []
+		}`
+
+		migrated, err := engine.Migrate([]byte(v3JSON), 3)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 3 {
+			t.Errorf("expected schema_version 3, got %v", migrated.SchemaVersion)
 		}
 	})
 

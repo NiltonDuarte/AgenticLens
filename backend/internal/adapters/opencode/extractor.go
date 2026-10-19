@@ -6,32 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"agenticlens/internal/domain"
 )
-
-var emailPattern = regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
-
-func sanitizeTelemetryText(text string) string {
-	if text == "" {
-		return ""
-	}
-	cwd, err := os.Getwd()
-	if err == nil && cwd != "" && cwd != "/" {
-		text = strings.ReplaceAll(text, cwd, "<workspace>")
-	}
-	home, err := os.UserHomeDir()
-	if err == nil && home != "" && home != "/" {
-		text = strings.ReplaceAll(text, home, "~")
-	}
-	text = emailPattern.ReplaceAllString(text, "[REDACTED_EMAIL]")
-	return text
-}
 
 type rawTimeInfo struct {
 	Created   *float64 `json:"created"`
@@ -563,20 +543,8 @@ func ExtractFacts(
 			}
 
 			eventStatus := "completed"
-			var errExcerpt *string
 			if isError {
 				eventStatus = "error"
-				errMsg := sanitizeTelemetryText(trimmedOut)
-				if errMsg == "" {
-					errMsg = stat
-					if errMsg == "" {
-						errMsg = "tool error"
-					}
-				}
-				if len(errMsg) > 4096 {
-					errMsg = errMsg[:4096]
-				}
-				errExcerpt = &errMsg
 			}
 
 			var durMs *int64
@@ -594,7 +562,7 @@ func ExtractFacts(
 				EventType:     domain.EventTypeToolCall,
 				ToolName:      &tName,
 				Status:        eventStatus,
-				ErrorMessage:  errExcerpt,
+				ErrorMessage:  nil,
 				DurationMs:    durMs,
 				ContextTokens: ctxTokens,
 			})
