@@ -164,7 +164,7 @@ func titleCase(s string) string {
 }
 
 // FormatMarkdownMetricsTable reconstructs the exact markdown review table from domain ledger.
-func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger) string {
+func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ...[]string) string {
 	we := ledger.WorkflowEfficiency
 	cwh := we.ContextWindowHealth
 	totals := ledger.Totals
@@ -185,12 +185,12 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger) string {
 	for role := range we.RoleEffortDistributionPct {
 		distRoles = append(distRoles, role)
 	}
-	orderedDistRoles := domain.OrderSubagentRoles(distRoles)
+	orderedDistRoles := domain.OrderSubagentRoles(distRoles, roleOrder...)
 
 	var roleDistParts []string
 	for _, role := range orderedDistRoles {
 		pct := we.RoleEffortDistributionPct[role]
-		if role != string(domain.RoleOrchestrator) && pct > 0 {
+		if pct > 0 {
 			roleDistParts = append(roleDistParts, fmt.Sprintf("%s %.1f%%", titleCase(role), pct))
 		}
 	}
@@ -203,7 +203,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger) string {
 	for role := range we.SubagentTurnVelocity.ByRole {
 		velRoles = append(velRoles, role)
 	}
-	orderedVelRoles := domain.OrderSubagentRoles(velRoles)
+	orderedVelRoles := domain.OrderSubagentRoles(velRoles, roleOrder...)
 
 	var velParts []string
 	for _, role := range orderedVelRoles {
