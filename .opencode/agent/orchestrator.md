@@ -56,14 +56,33 @@ Workflow Execution Loop:
      - `CHANGES_REQUESTED`: Feed findings back to `coder`/`tester`.
      - `BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
 6. Phase 3 (Delivery Sync & Self-Reflexive Telemetry via AgenticLens):
-   - Quality check: verify compilation, testing, and linting:
-     `make` (or `make check && make test && make build`)
+   - Commit implementation: stage and commit all implementation and test files on the feature branch first to ensure a clean working tree:
+     ```bash
+     git add -A
+     git commit -m "<type>(<scope>): <summary> (<TICKET_ID>)"
+     ```
+   - Sync upstream and quality check: merge `main` into feature branch. If there is any conflict dispatch `coder` to resolve. Then verify compilation, testing, and linting:
+     ```bash
+     git fetch origin main && git merge origin/main --no-edit
+     make
+     ```
    - Update `<workspaces_dir>/<TICKET_ID>/SUMMARY.md`: Unified summary of changes grouped by layer (`domain`, `adapters`, `presentation`).
-   - Update `<workspaces_dir>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to CONTRACT.md and SUMMARY.md, summary of changes; no test evidence).
+   - Update `<workspaces_dir>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft with first line formatted as `# <type>(<scope>): <summary> (<TICKET_ID>)` (max 3000 chars, pointers to CONTRACT.md and SUMMARY.md, summary of changes; no test evidence).
    - Plan Lifecycle Synchronization: Move specification file from `<workspaces_dir>/plan/to-do/<TICKET_ID>*.md` to `<workspaces_dir>/plan/done/`, update `<workspaces_dir>/plan/TICKETS.md` status to `Done`, and unblock downstream tickets: check tickets blocked by `<TICKET_ID>` and promote any whose dependencies are satisfied to `## Ready` with `Status: Ready`.
-   - Print concise handoff summary to user (cost, cache hits, test status, context saturation).
-   - Extract raw facts ledger and render telemetry via AgenticLens (Final Step, delayed to strictly the end so no session events are missed) with explicit conventional commit `--ticket-type` (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build` matching ticket branch):
+   - Extract raw facts ledger and render telemetry via AgenticLens (Final Step before committing so no session events are missed) with explicit conventional commit `--ticket-type` (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build` matching ticket branch):
      ```bash
      NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
      ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <workspaces_dir>/<TICKET_ID>/agentic_metrics.json --append <workspaces_dir>/<TICKET_ID>/SUMMARY.md
      ```
+   - Commit deliverables, push feature branch, and open GitHub Pull Request using title from the first line of `PULL_REQUEST.md`:
+     ```bash
+     PR_TITLE=$(head -n 1 <workspaces_dir>/<TICKET_ID>/PULL_REQUEST.md | sed 's/^# *//')
+     git add -A
+     git commit -m "$PR_TITLE"
+     git push -u origin <branch>
+     PR_URL=$(gh pr create --title "$PR_TITLE" --body-file <workspaces_dir>/<TICKET_ID>/PULL_REQUEST.md)
+     ```
+     If PR tracking tools are available (e.g. `link_pull_request`), register the pull request URL immediately.
+   - Print concise handoff summary to user, featuring the Pull Request URL prominently at the top:
+     - **Pull Request**: `<PR_URL>`
+     - Cost, cache hits, test status, context saturation.

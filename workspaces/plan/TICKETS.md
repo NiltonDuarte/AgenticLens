@@ -32,6 +32,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/to-do/AL-31 decouple root session structural hierarchy from persona roles.md`
 - `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
+- `workspaces/plan/to-do/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
@@ -55,6 +56,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-31 decouple root session structural hierarchy from persona roles.md`
 
+- **AL-34**: Eliminate Cumulative Granularity and Implement Bi-Directional Code Churn Visualization
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 ---
 
 ## Pending
