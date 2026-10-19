@@ -37,6 +37,13 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
    - PO tickets (`PO-#`) must strictly use `--ticket-type docs`.
    - Generic tickets (`GEN-#`) must use `--ticket-type chore` unless explicitly a feature (`feat`).
    - Developer tickets must use the corresponding conventional commit type matching their branch prefix (`feat`, `fix`, `refactor`, etc.). Never default all tickets to `feature`.
+7. **Pull Request Delivery & Handoff**:
+   - Commit all implementation deliverables on the feature branch first (`git add -A && git commit -m "$COMMIT_MSG"`). Git requires a clean working tree before merging.
+   - Merge `main` into the feature branch (`git fetch origin main && git merge origin/main --no-edit`) to resolve any upstream conflicts, and verify test suites pass (`make`).
+   - Extract the PR title directly from the first line of `PULL_REQUEST.md` (e.g. `PR_TITLE=$(head -n 1 workspaces/<TICKET_ID>/PULL_REQUEST.md | sed 's/^# *//')`).
+   - Commit final deliverables and telemetry facts on the feature branch, push upstream, and open a GitHub Pull Request via `gh pr create --title "$PR_TITLE" --body-file workspaces/<TICKET_ID>/PULL_REQUEST.md`.
+   - Avoid directly merging or checking out `main` within agent worktrees.
+   - The Pull Request URL must be prominently displayed at the top of the final handoff report.
 
 ---
 

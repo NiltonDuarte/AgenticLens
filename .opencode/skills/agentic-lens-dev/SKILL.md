@@ -94,21 +94,42 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
 - `STATUS: BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
 
 ### Phase 3: Delivery Sync (Every Iteration)
-1. Verify code quality:
+1. **Commit Implementation**:
+   Commit all implementation files and test changes on the feature branch first to ensure a clean working tree:
    ```bash
+   git add -A
+   git commit -m "<type>(<scope>): <summary> (<TICKET_ID>)"
+   ```
+2. **Sync Upstream & Verify Code Quality**:
+   Merge `main` into the feature branch with a clean working tree to resolve any conflicts, then run automated checks:
+   ```bash
+   git fetch origin main && git merge origin/main --no-edit
    # Run automated checks, tests, and build via Makefile
    make
    # or run individually: make check && make test && make build
    ```
-2. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus verification status.
-3. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
-4. **Plan Lifecycle Synchronization**:
+3. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus verification status.
+4. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft with the first line formatted as `# <type>(<scope>): <summary> (<TICKET_ID>)` (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
+5. **Plan Lifecycle Synchronization**:
    Move specification file from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` to `<WORKSPACES_DIR>/plan/done/`, update `<WORKSPACES_DIR>/plan/TICKETS.md` status to `Done`, and unblock downstream tickets: check tickets blocked by `<TICKET_ID>` and promote any whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`.
-5. Print concise handoff summary to user (active duration, cost, cache hits, test status, context window health).
-6. **Extract Telemetry & Render Metrics (Final Step)**:
-   Delayed strictly to the final step of the iteration so that zero turns, tool calls, compactions, or subagent sessions are omitted.
+6. **Extract Telemetry & Render Metrics (Final Step Before PR Commit)**:
+   Delayed strictly to the final step before committing so that fewer turns, tool calls, compactions, or subagent sessions are omitted.
    Run AgenticLens Go CLI to query OpenCode SQLite and Git, construct the fact ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs. Pass explicit `--ticket-type` matching the conventional commit classification (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`):
    ```bash
    NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
    ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
    ```
+7. **Commit, Push & Open Pull Request**:
+   Extract title from the first line of `PULL_REQUEST.md`, commit final workspace and telemetry files, push upstream, and open a GitHub Pull Request:
+   ```bash
+   PR_TITLE=$(head -n 1 <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md | sed 's/^# *//')
+   git add -A
+   git commit -m "chore(telemetry): update workspace metrics and summary ($PR_TITLE)" # or git commit --amend
+   git push -u origin <branch>
+   PR_URL=$(gh pr create --title "$PR_TITLE" --body-file <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md)
+   ```
+   If running in an environment with pull request linking tools (e.g. `link_pull_request`), register the pull request URL immediately.
+8. **Print Handoff Summary & Pull Request Link**:
+   Print concise handoff summary to user, with the Pull Request link prominently displayed at the top:
+   - **Pull Request**: `<PR_URL>`
+   - Active duration, cost, cache hits, test status, context window health.

@@ -38,6 +38,7 @@
 - Standardized SDLC guidelines across `AGENTS.md`, `.opencode/skills/agentic-lens-dev/SKILL.md`, and `.opencode/agent/orchestrator.md`:
   - Added plan lifecycle synchronization to mandatory wrap-up checklist (move completed specifications to `done/`, mark `TICKETS.md` status as `Done`, and unblock downstream tickets to `Ready`).
   - Mandated delaying telemetry ledger extraction to the final step to prevent omitting subsequent session events.
+  - Mandated GitHub Pull Request creation (`gh pr create`) from feature branches and prominent PR link inclusion in the final handoff report.
 - Allocated isolated workspace under `workspaces/GEN-4/`.
 
 ## Verification
@@ -50,17 +51,17 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 1h 31m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 0 tokens (0% of 200k healthy ceiling, 3 compactions) | Subagents peak 168.2k (General)
+- **Active Agent Duration:** 1h 51m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 0 tokens (0% of 200k healthy ceiling, 4 compactions) | Subagents peak 170.1k (General)
 - **Role Effort Distribution (Subagents):** General 100.0%
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0.5:1 (+10 test lines / +22 prod lines)
 - **Code Delivered:** +32 / -16 lines across 4 code files (excluding docs)
-- **Reasoning Effort:** 93,435 reasoning tokens (50.5% of generated output)
-- **Tool Health & Self-Correction:** 644 tool calls (22 self-corrections, 96.6% success rate)
+- **Reasoning Effort:** 120,441 reasoning tokens (51.4% of generated output)
+- **Tool Health & Self-Correction:** 792 tool calls (23 self-corrections, 97.1% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 7 execution anomalies detected (6 CRITICAL, 1 WARNING).
+- **Status:** 8 execution anomalies detected (6 CRITICAL, 2 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+98.5k tokens) — Context tokens surged by 98.5k tokens in turn 137 (session: ses_eaf6f58bfffeEB0IMofMHpmGUF, total: 98.5k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.0k tokens) — Context tokens reached 160.0k in turn 279 (session: ses_eaf6f58bfffeEB0IMofMHpmGUF), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+162.2k tokens) — Context tokens surged by 162.2k tokens in turn 284 (session: ses_eaf6f58bfffeEB0IMofMHpmGUF, total: 162.2k tokens, threshold: 80000)
@@ -68,6 +69,7 @@
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+140.5k tokens) — Context tokens surged by 140.5k tokens in turn 644 (session: ses_eaf6f58bfffeEB0IMofMHpmGUF, total: 140.5k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+88.0k tokens) — Context tokens surged by 88.0k tokens in turn 678 (session: ses_eaf6f58bfffeEB0IMofMHpmGUF, total: 88.0k tokens, threshold: 80000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.2k tokens) — Context tokens surged by 72.2k tokens in turn 477 (session: ses_eaf6f58bfffeEB0IMofMHpmGUF, total: 72.2k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+62.3k tokens) — Context tokens surged by 62.3k tokens in turn 820 (session: ses_eaf6f58bfffeEB0IMofMHpmGUF, total: 62.3k tokens, threshold: 40000)
 
 ### Agentic Execution Metrics
 
@@ -76,11 +78,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **general** | 1 | 7,722,173 | 91,731 | 57,881,066 | 88.2% | 168.2k | ELEVATED | $10.83 |
-| **Total** | **1** | **7,722,173** | **91,731** | **57,881,066** | **88.2%** | **168.2k** | **ELEVATED** | **$10.83** |
+| **general** | 1 | 10,265,169 | 113,927 | 69,265,061 | 87.1% | 170.1k | ELEVATED | $13.77 |
+| **Total** | **1** | **10,265,169** | **113,927** | **69,265,061** | **87.1%** | **170.1k** | **ELEVATED** | **$13.77** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 7,722,173 | 91,731 | 57,881,066 | 88.2% | $10.83 |
-| **Total** | **1** | **7,722,173** | **91,731** | **57,881,066** | **88.2%** | **$10.83** |
+| **gemini-3.8-flash** | 1 | 10,265,169 | 113,927 | 69,265,061 | 87.1% | $13.77 |
+| **Total** | **1** | **10,265,169** | **113,927** | **69,265,061** | **87.1%** | **$13.77** |
