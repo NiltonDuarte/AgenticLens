@@ -11,6 +11,9 @@ import {
   formatIsoDateOnly,
   formatIsoDateTimeShort,
   compareTicketIds,
+  getEffectiveCompletionDateMs,
+  compareTicketCompletionDate,
+  filterLedgersByCompletionDate,
 } from './formatters';
 import { mockAgenticMetricsLedgers } from '../api/mockData';
 
@@ -551,6 +554,138 @@ describe('Domain Pure Formatters', () => {
         'AL-',
         'unknown',
       ]);
+    });
+  });
+
+  describe('Completion Date Parsing, Comparison, and Filtering', () => {
+    it('resolves effective completion date adhering to fallback hierarchy', () => {
+      // completed_at present
+      expect(
+        getEffectiveCompletionDateMs({
+          completed_at: '2026-03-10T12:00:00Z',
+          updated_at: '2026-03-09T12:00:00Z',
+          started_at: '2026-03-08T12:00:00Z',
+        })
+      ).toBe(new Date('2026-03-10T12:00:00Z').getTime());
+
+      // fallback to updated_at
+      expect(
+        getEffectiveCompletionDateMs({
+          completed_at: null,
+          updated_at: '2026-03-09T12:00:00Z',
+          started_at: '2026-03-08T12:00:00Z',
+        })
+      ).toBe(new Date('2026-03-09T12:00:00Z').getTime());
+
+      // fallback to started_at
+      expect(
+        getEffectiveCompletionDateMs({
+          completed_at: null,
+          updated_at: undefined,
+          started_at: '2026-03-08T12:00:00Z',
+        })
+      ).toBe(new Date('2026-03-08T12:00:00Z').getTime());
+
+      // invalid date strings return null
+      expect(
+        getEffectiveCompletionDateMs({
+          completed_at: 'not-a-date',
+          updated_at: 'bad-date',
+          started_at: '',
+        })
+      ).toBeNull();
+    });
+
+    it('compares tickets by completion date descending with nulls positioned last and tie-breaking by ticket ID', () => {
+      const t1 = { ticket_id: 'AL-1', completed_at: '2026-03-05T00:00:00Z' };
+      const t2 = { ticket_id: 'AL-2', completed_at: '2026-03-15T00:00:00Z' };
+      const t3 = { ticket_id: 'AL-3', completed_at: '2026-03-15T00:00:00Z' };
+      const t4 = { ticket_id: 'AL-4', completed_at: null };
+      const t5 = { ticket_id: 'AL-5', completed_at: undefined };
+
+      // t2 vs t1: t2 is later so t2 comes before t1 in descending (compare(t2, t1) < 0)
+      expect(compareTicketCompletionDate(t2, t1)).toBeLessThan(0);
+      expect(compareTicketCompletionDate(t1, t2)).toBeGreaterThan(0);
+
+      // t2 vs t3: same date, ties broken by ticket_id (AL-2 before AL-3)
+      expect(compareTicketCompletionDate(t2, t3)).toBeLessThan(0);
+      expect(compareTicketCompletionDate(t3, t2)).toBeGreaterThan(0);
+
+      // non-null vs null: non-null comes first
+      expect(compareTicketCompletionDate(t1, t4)).toBeLessThan(0);
+      expect(compareTicketCompletionDate(t4, t1)).toBeGreaterThan(0);
+
+      // null vs null: tie-broken by ticket_id
+      expect(compareTicketCompletionDate(t4, t5)).toBeLessThan(0);
+
+      const items = [t1, t4, t3, t5, t2];
+      const sorted = [...items].sort(compareTicketCompletionDate);
+      expect(sorted.map((t) => t.ticket_id)).toEqual(['AL-2', 'AL-3', 'AL-1', 'AL-4', 'AL-5']);
+    });
+
+    it('filters ledgers by completion date with inclusive boundaries', () => {
+      const ledgers = [
+        { ticket_id: 'AL-1', completed_at: '2026-03-01T00:00:00Z' },
+        { ticket_id: 'AL-2', completed_at: '2026-03-10T12:00:00Z' },
+        { ticket_id: 'AL-3', completed_at: '2026-03-20T23:59:59Z' },
+        { ticket_id: 'AL-4', completed_at: null },
+      ];
+
+      // No boundaries: returns all ledgers
+      expect(filterLedgersByCompletionDate(ledgers)).toHaveLength(4);
+
+      // Since boundary
+      const since = new Date('2026-03-10T00:00:00Z').getTime();
+      const afterSince = filterLedgersByCompletionDate(ledgers, since);
+      expect(afterSince.map((l) => l.ticket_id)).toEqual(['AL-2', 'AL-3']);
+
+      // Until boundary
+      const until = new Date('2026-03-10T23:59:59Z').getTime();
+      const beforeUntil = filterLedgersByCompletionDate(ledgers, undefined, until);
+      expect(beforeUntil.map((l) => l.ticket_id)).toEqual(['AL-1', 'AL-2']);
+
+      // Both boundaries inclusive
+      const windowed = filterLedgersByCompletionDate(ledgers, since, until);
+      expect(windowed.map((l) => l.ticket_id)).toEqual(['AL-2']);
+    });
+
+    it('handles timezone offsets, leap years, inverted ranges, and natural ticket ID tie breaking', () => {
+      // Timezone offsets resolution
+      const jstMs = getEffectiveCompletionDateMs({ completed_at: '2026-03-01T15:00:00+09:00' });
+      const edtMs = getEffectiveCompletionDateMs({ completed_at: '2026-03-01T02:00:00-04:00' });
+      const utcMs = getEffectiveCompletionDateMs({ completed_at: '2026-03-01T06:00:00Z' });
+      expect(jstMs).toBe(utcMs);
+      expect(edtMs).toBe(utcMs);
+
+      // Leap year 2024-02-29
+      const leapMs = getEffectiveCompletionDateMs({ completed_at: '2024-02-29T12:00:00Z' });
+      expect(leapMs).not.toBeNull();
+      expect(new Date(leapMs!).getUTCFullYear()).toBe(2024);
+      expect(new Date(leapMs!).getUTCMonth()).toBe(1); // February is 1
+      expect(new Date(leapMs!).getUTCDate()).toBe(29);
+
+      // Inverted date ranges in filterLedgersByCompletionDate
+      const sample = [
+        { ticket_id: 'AL-1', completed_at: '2026-03-10T12:00:00Z' },
+      ];
+      const invertedSince = new Date('2026-03-20T00:00:00Z').getTime();
+      const invertedUntil = new Date('2026-03-05T00:00:00Z').getTime();
+      expect(filterLedgersByCompletionDate(sample, invertedSince, invertedUntil)).toEqual([]);
+
+      // Empty input array
+      expect(filterLedgersByCompletionDate([], invertedSince, invertedUntil)).toEqual([]);
+
+      // Tie-breaking identical dates with natural ticket ID (AL-2 before AL-10)
+      const cand10 = { ticket_id: 'AL-10', completed_at: '2026-03-10T00:00:00Z' };
+      const cand2 = { ticket_id: 'AL-2', completed_at: '2026-03-10T00:00:00Z' };
+      expect(compareTicketCompletionDate(cand2, cand10)).toBeLessThan(0);
+      expect(compareTicketCompletionDate(cand10, cand2)).toBeGreaterThan(0);
+
+      // Tie-breaking both null dates with natural ticket ID
+      const null10 = { ticket_id: 'AL-10', completed_at: null };
+      const null2 = { ticket_id: 'AL-2', completed_at: null };
+      expect(compareTicketCompletionDate(null2, null10)).toBeLessThan(0);
+      expect(compareTicketCompletionDate(null10, null2)).toBeGreaterThan(0);
     });
   });
 });

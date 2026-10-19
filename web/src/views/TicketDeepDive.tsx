@@ -182,6 +182,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     ticket_id: l.ticket_id ?? 'unknown',
     ticket_title: l.ticket_title,
     context_health_status: l.workflow_efficiency?.context_window_health?.status,
+    completed_at: l.completed_at,
+    updated_at: l.updated_at,
+    started_at: l.started_at,
   }));
 
   const turnEntries = Object.entries(subTurns.by_role ?? {}).sort((a, b) => b[1] - a[1]);

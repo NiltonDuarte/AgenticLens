@@ -1,10 +1,14 @@
-import React, { useMemo } from 'react';
-import { compareTicketIds } from '../domain/formatters';
+import React, { useState, useMemo } from 'react';
+import type { AutopsySortMode } from '../domain/types';
+import { compareTicketIds, compareTicketCompletionDate } from '../domain/formatters';
 
 export interface TicketSelectorOption {
   readonly ticket_id: string;
   readonly ticket_title?: string | null;
   readonly context_health_status?: string;
+  readonly completed_at?: string | null;
+  readonly updated_at?: string;
+  readonly started_at?: string | null;
 }
 
 export interface TicketSelectorProps {
@@ -18,9 +22,14 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
   selectedTicketId,
   onSelectTicket,
 }) => {
+  const [sortMode, setSortMode] = useState<AutopsySortMode>('ticket_id');
+
   const sortedTickets = useMemo(() => {
+    if (sortMode === 'completed_at') {
+      return [...tickets].sort(compareTicketCompletionDate);
+    }
     return [...tickets].sort((a, b) => compareTicketIds(a.ticket_id, b.ticket_id));
-  }, [tickets]);
+  }, [tickets, sortMode]);
 
   return (
     <div className="ticket-selector-bar">
@@ -45,6 +54,21 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
               {t.context_health_status ? ` [${t.context_health_status}]` : ''}
             </option>
           ))}
+        </select>
+      </div>
+      <div className="autopsy-sort-control">
+        <label htmlFor="autopsy-sort-select" className="autopsy-sort-label">
+          Sort:
+        </label>
+        <select
+          id="autopsy-sort-select"
+          className="autopsy-sort-dropdown"
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as AutopsySortMode)}
+          aria-label="Sort Workspaces"
+        >
+          <option value="ticket_id">Ticket ID</option>
+          <option value="completed_at">Completion Date</option>
         </select>
       </div>
     </div>

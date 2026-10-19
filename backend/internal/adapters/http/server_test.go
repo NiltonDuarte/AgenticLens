@@ -312,6 +312,176 @@ func TestGetWorkspaces(t *testing.T) {
 			t.Fatalf("expected 200 for unknown sort field, got %d", respUnknown.StatusCode)
 		}
 	})
+
+	t.Run("sort workspaces by completed_at", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces?sort=completed_at&order=desc")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp.Body).Decode(&ledgers); err != nil {
+			t.Fatalf("failed decode: %v", err)
+		}
+		if len(ledgers) != 2 {
+			t.Fatalf("expected 2 ledgers, got %d", len(ledgers))
+		}
+	})
+
+	t.Run("temporal boundary filtering with valid dates", func(t *testing.T) {
+		// Both tickets AL-1 (2026-10-15) and AL-2 (2026-10-17) fall within 2026-10-15 to 2026-10-17
+		resp, err := http.Get(ts.URL + "/api/workspaces?since=2026-10-15&until=2026-10-17")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(resp.Body).Decode(&ledgers); err != nil {
+			t.Fatalf("failed decode: %v", err)
+		}
+		if len(ledgers) != 2 {
+			t.Fatalf("expected 2 ledgers between 2026-10-15 and 2026-10-17, got %d", len(ledgers))
+		}
+
+		// Single day 2026-10-17 matches AL-2 only
+		respSingle, err := http.Get(ts.URL + "/api/workspaces?since=2026-10-17&until=2026-10-17")
+		if err != nil {
+			t.Fatalf("failed GET single day: %v", err)
+		}
+		defer respSingle.Body.Close()
+		var ledgersSingle []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respSingle.Body).Decode(&ledgersSingle); err != nil {
+			t.Fatalf("failed decode single day: %v", err)
+		}
+		if len(ledgersSingle) != 1 || *ledgersSingle[0].TicketID != "AL-2" {
+			t.Fatalf("expected 1 ledger (AL-2) on 2026-10-17, got %+v", ledgersSingle)
+		}
+
+		// Filter beyond all tickets
+		respFuture, err := http.Get(ts.URL + "/api/workspaces?since=2027-01-01")
+		if err != nil {
+			t.Fatalf("failed GET future: %v", err)
+		}
+		defer respFuture.Body.Close()
+		var emptyLedgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respFuture.Body).Decode(&emptyLedgers); err != nil {
+			t.Fatalf("failed decode future: %v", err)
+		}
+		if len(emptyLedgers) != 0 {
+			t.Fatalf("expected 0 ledgers, got %d", len(emptyLedgers))
+		}
+	})
+
+	t.Run("invalid since or until returns 400 Bad Request", func(t *testing.T) {
+		respSince, err := http.Get(ts.URL + "/api/workspaces?since=not-a-date")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer respSince.Body.Close()
+		if respSince.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request for bad since, got %d", respSince.StatusCode)
+		}
+
+		respUntil, err := http.Get(ts.URL + "/api/workspaces?until=not-a-date")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer respUntil.Body.Close()
+		if respUntil.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request for bad until, got %d", respUntil.StatusCode)
+		}
+
+		respFleetSince, err := http.Get(ts.URL + "/api/fleet?since=invalid-date")
+		if err != nil {
+			t.Fatalf("failed GET fleet bad since: %v", err)
+		}
+		defer respFleetSince.Body.Close()
+		if respFleetSince.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request for fleet bad since, got %d", respFleetSince.StatusCode)
+		}
+
+		respFleetUntil, err := http.Get(ts.URL + "/api/fleet?until=invalid-date")
+		if err != nil {
+			t.Fatalf("failed GET fleet bad until: %v", err)
+		}
+		defer respFleetUntil.Body.Close()
+		if respFleetUntil.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request for fleet bad until, got %d", respFleetUntil.StatusCode)
+		}
+	})
+
+	t.Run("inverted date ranges return empty results without panicking", func(t *testing.T) {
+		respWS, err := http.Get(ts.URL + "/api/workspaces?since=2026-10-25&until=2026-10-10")
+		if err != nil {
+			t.Fatalf("failed GET workspaces inverted: %v", err)
+		}
+		defer respWS.Body.Close()
+		if respWS.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK for inverted date range, got %d", respWS.StatusCode)
+		}
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respWS.Body).Decode(&ledgers); err != nil {
+			t.Fatalf("failed decode: %v", err)
+		}
+		if len(ledgers) != 0 {
+			t.Errorf("expected 0 ledgers for inverted date range, got %d", len(ledgers))
+		}
+
+		respFleet, err := http.Get(ts.URL + "/api/fleet?since=2026-10-25&until=2026-10-10")
+		if err != nil {
+			t.Fatalf("failed GET fleet inverted: %v", err)
+		}
+		defer respFleet.Body.Close()
+		if respFleet.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK for fleet inverted, got %d", respFleet.StatusCode)
+		}
+		var fleet domain.FleetSummary
+		if err := json.NewDecoder(respFleet.Body).Decode(&fleet); err != nil {
+			t.Fatalf("failed decode fleet: %v", err)
+		}
+		if fleet.TotalTickets != 0 || fleet.TotalCostUSD != 0.0 {
+			t.Errorf("expected zeroed fleet summary for inverted date range, got %+v", fleet)
+		}
+	})
+
+	t.Run("timezone offsets and window presets in query parameters", func(t *testing.T) {
+		// Timezone offset query parameters: AL-2 completed at 2026-10-17T11:00:00Z
+		// since 2026-10-17T19:00:00+09:00 == 2026-10-17T10:00:00Z (before completion)
+		// until 2026-10-17T08:00:00-04:00 == 2026-10-17T12:00:00Z (after completion)
+		respTZ, err := http.Get(ts.URL + "/api/workspaces?since=2026-10-17T19:00:00%2B09:00&until=2026-10-17T08:00:00-04:00")
+		if err != nil {
+			t.Fatalf("failed GET with timezone offsets: %v", err)
+		}
+		defer respTZ.Body.Close()
+		if respTZ.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", respTZ.StatusCode)
+		}
+		var ledgersTZ []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(respTZ.Body).Decode(&ledgersTZ); err != nil {
+			t.Fatalf("failed decode: %v", err)
+		}
+		if len(ledgersTZ) != 1 || *ledgersTZ[0].TicketID != "AL-2" {
+			t.Fatalf("expected exactly AL-2 matching timezone window, got %+v", ledgersTZ)
+		}
+
+		// Window presets on /api/fleet
+		for _, w := range []string{"7d", "30d", "90d", "all"} {
+			respWin, err := http.Get(ts.URL + "/api/fleet?window=" + w)
+			if err != nil {
+				t.Fatalf("failed GET fleet window %s: %v", w, err)
+			}
+			respWin.Body.Close()
+			if respWin.StatusCode != http.StatusOK {
+				t.Errorf("expected 200 for window %s, got %d", w, respWin.StatusCode)
+			}
+		}
+	})
 }
 
 func TestGetWorkspaceDetail(t *testing.T) {
@@ -372,27 +542,110 @@ func TestGetWorkspaceDetail(t *testing.T) {
 func TestGetFleet(t *testing.T) {
 	ts, _ := setupTestServer(t)
 
-	resp, err := http.Get(ts.URL + "/api/fleet")
-	if err != nil {
-		t.Fatalf("failed GET /api/fleet: %v", err)
-	}
-	defer resp.Body.Close()
+	t.Run("default fleet summary without params", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/fleet")
+		if err != nil {
+			t.Fatalf("failed GET /api/fleet: %v", err)
+		}
+		defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", resp.StatusCode)
-	}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
+		}
 
-	var fleet domain.FleetSummary
-	if err := json.NewDecoder(resp.Body).Decode(&fleet); err != nil {
-		t.Fatalf("failed decoding fleet: %v", err)
-	}
+		var fleet domain.FleetSummary
+		if err := json.NewDecoder(resp.Body).Decode(&fleet); err != nil {
+			t.Fatalf("failed decoding fleet: %v", err)
+		}
 
-	if fleet.TotalTickets != 2 {
-		t.Errorf("expected 2 total tickets, got %d", fleet.TotalTickets)
-	}
-	if fleet.TotalCostUSD != 0.60 {
-		t.Errorf("expected total cost 0.60, got %f", fleet.TotalCostUSD)
-	}
+		if fleet.TotalTickets != 2 {
+			t.Errorf("expected 2 total tickets, got %d", fleet.TotalTickets)
+		}
+		if fleet.TotalCostUSD != 0.60 {
+			t.Errorf("expected total cost 0.60, got %f", fleet.TotalCostUSD)
+		}
+	})
+
+	t.Run("window preset parameter accepts 7d, 30d, 90d, all", func(t *testing.T) {
+		for _, w := range []string{"7d", "30d", "90d", "all"} {
+			resp, err := http.Get(ts.URL + "/api/fleet?window=" + w)
+			if err != nil {
+				t.Fatalf("failed GET /api/fleet?window=%s: %v", w, err)
+			}
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("expected 200 for window %s, got %d", w, resp.StatusCode)
+			}
+		}
+	})
+
+	t.Run("temporal since and until filtering", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/fleet?since=2026-10-15&until=2026-10-17")
+		if err != nil {
+			t.Fatalf("failed GET /api/fleet: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
+		}
+
+		var fleet domain.FleetSummary
+		if err := json.NewDecoder(resp.Body).Decode(&fleet); err != nil {
+			t.Fatalf("failed decoding fleet: %v", err)
+		}
+		if fleet.TotalTickets != 2 {
+			t.Errorf("expected 2 tickets, got %d", fleet.TotalTickets)
+		}
+
+		// Single day 2026-10-17 matches AL-2 only
+		respSingle, err := http.Get(ts.URL + "/api/fleet?since=2026-10-17&until=2026-10-17")
+		if err != nil {
+			t.Fatalf("failed GET single day: %v", err)
+		}
+		defer respSingle.Body.Close()
+		var fleetSingle domain.FleetSummary
+		if err := json.NewDecoder(respSingle.Body).Decode(&fleetSingle); err != nil {
+			t.Fatalf("failed decoding single fleet: %v", err)
+		}
+		if fleetSingle.TotalTickets != 1 {
+			t.Errorf("expected 1 ticket on 2026-10-17, got %d", fleetSingle.TotalTickets)
+		}
+
+		// Future since filter returns 0 tickets
+		respFuture, err := http.Get(ts.URL + "/api/fleet?since=2027-01-01")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer respFuture.Body.Close()
+		var emptyFleet domain.FleetSummary
+		if err := json.NewDecoder(respFuture.Body).Decode(&emptyFleet); err != nil {
+			t.Fatalf("failed decoding empty fleet: %v", err)
+		}
+		if emptyFleet.TotalTickets != 0 {
+			t.Errorf("expected 0 tickets for future filter, got %d", emptyFleet.TotalTickets)
+		}
+	})
+
+	t.Run("invalid since or until returns 400 Bad Request", func(t *testing.T) {
+		respSince, err := http.Get(ts.URL + "/api/fleet?since=invalid-date")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer respSince.Body.Close()
+		if respSince.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request, got %d", respSince.StatusCode)
+		}
+
+		respUntil, err := http.Get(ts.URL + "/api/fleet?until=invalid-date")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer respUntil.Body.Close()
+		if respUntil.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request, got %d", respUntil.StatusCode)
+		}
+	})
 }
 
 func TestCORSPreflight(t *testing.T) {

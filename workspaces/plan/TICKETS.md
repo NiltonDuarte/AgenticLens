@@ -36,13 +36,21 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Ready
 
-- **AL-26**: Fleet Overview Completion Date Filtering and Autopsy Date Sorting
+- **AL-27**: Metric Progression Custom Window, 1-Day Window, and Hourly Granularity
   - **Subsystem**: Domain / Adapters / Presentation / Tests
   - **Phase**: Phase 5
   - **Status**: Ready
-  - **Blocked by**: None (AL-23 Done)
-  - **Blocks**: AL-27, AL-28
-  - **File**: `workspaces/plan/to-do/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
+  - **Blocked by**: None (AL-26 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-27 metric progression custom window one-day range and hourly granularity.md`
+
+- **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Ready
+  - **Blocked by**: None (AL-26 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 
 - **AL-29**: Conventional Commit Ticket Type Classification in Telemetry Engine
   - **Subsystem**: CLI / Adapters / Domain / Tests
@@ -68,11 +76,11 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Domain / Adapters / HTTP / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: AL-17
+  - **Blocked by**: None (AL-17 Done)
   - **Blocks**: AL-19, AL-20
   - **File**: `workspaces/plan/to-do/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
-- **AL-19**: Implement Live Anomaly Detection Engine and Real-Time Session Health Rules
+- **AL-19**: Implement Live Anomaly Detection Engine and Realtime Session Health Rules
   - **Subsystem**: Domain / Adapters / HTTP / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
@@ -84,29 +92,21 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Presentation / Web / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: AL-18, AL-19
+  - **Blocked by**: AL-19
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-
-- **AL-27**: Metric Progression Custom Window, 1-Day Window, and Hourly Granularity
-  - **Subsystem**: Domain / Adapters / Presentation / Tests
-  - **Phase**: Phase 5
-  - **Status**: Pending
-  - **Blocked by**: AL-26
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-27 metric progression custom window one-day range and hourly granularity.md`
-
-- **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
-  - **Subsystem**: Domain / Adapters / Presentation / Tests
-  - **Phase**: Phase 5
-  - **Status**: Pending
-  - **Blocked by**: AL-26
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 
 ---
 
 ## Done
+
+- **AL-26**: Fleet Overview Completion Date Filtering and Autopsy Date Sorting
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Done
+  - **Blocked by**: None (AL-23 Done)
+  - **Blocks**: AL-27, AL-28
+  - **File**: `workspaces/plan/done/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
 
 - **AL-24**: Dynamic Role and Model Aggregations and Presentation
   - **Subsystem**: Domain / Presentation / Adapters / Tests

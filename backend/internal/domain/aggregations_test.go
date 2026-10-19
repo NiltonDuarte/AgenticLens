@@ -2625,3 +2625,572 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 	})
 }
+
+func TestParseLedgerSortField_CompletedAt(t *testing.T) {
+	t.Parallel()
+	if domain.ParseLedgerSortField("completed_at") != domain.SortFieldCompletedAt {
+		t.Errorf("expected SortFieldCompletedAt, got %v", domain.ParseLedgerSortField("completed_at"))
+	}
+}
+
+func TestGetLedgerCompletionDate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("uses completed_at when present", func(t *testing.T) {
+		t.Parallel()
+		completed := "2026-03-10T15:30:00Z"
+		ledger := domain.AgenticMetricsLedger{
+			CompletedAt: &completed,
+			UpdatedAt:   "2026-03-09T10:00:00Z",
+			StartedAt:   &completed,
+		}
+		got, ok := domain.GetLedgerCompletionDate(ledger)
+		if !ok {
+			t.Fatal("expected ok = true")
+		}
+		expected, _ := time.Parse(time.RFC3339, completed)
+		if !got.Equal(expected) {
+			t.Errorf("expected %v, got %v", expected, got)
+		}
+	})
+
+	t.Run("falls back to updated_at when completed_at is nil", func(t *testing.T) {
+		t.Parallel()
+		updated := "2026-03-09T10:00:00Z"
+		started := "2026-03-08T08:00:00Z"
+		ledger := domain.AgenticMetricsLedger{
+			CompletedAt: nil,
+			UpdatedAt:   updated,
+			StartedAt:   &started,
+		}
+		got, ok := domain.GetLedgerCompletionDate(ledger)
+		if !ok {
+			t.Fatal("expected ok = true")
+		}
+		expected, _ := time.Parse(time.RFC3339, updated)
+		if !got.Equal(expected) {
+			t.Errorf("expected %v, got %v", expected, got)
+		}
+	})
+
+	t.Run("falls back to started_at when completed_at and updated_at are absent", func(t *testing.T) {
+		t.Parallel()
+		started := "2026-03-08T08:00:00Z"
+		ledger := domain.AgenticMetricsLedger{
+			CompletedAt: nil,
+			UpdatedAt:   "",
+			StartedAt:   &started,
+		}
+		got, ok := domain.GetLedgerCompletionDate(ledger)
+		if !ok {
+			t.Fatal("expected ok = true")
+		}
+		expected, _ := time.Parse(time.RFC3339, started)
+		if !got.Equal(expected) {
+			t.Errorf("expected %v, got %v", expected, got)
+		}
+	})
+
+	t.Run("returns false when all timestamps are absent or unparseable", func(t *testing.T) {
+		t.Parallel()
+		badStr := "invalid-date"
+		ledger := domain.AgenticMetricsLedger{
+			CompletedAt: &badStr,
+			UpdatedAt:   "also-invalid",
+			StartedAt:   nil,
+		}
+		got, ok := domain.GetLedgerCompletionDate(ledger)
+		if ok {
+			t.Errorf("expected ok = false, got true with %v", got)
+		}
+		if !got.IsZero() {
+			t.Errorf("expected zero time, got %v", got)
+		}
+	})
+}
+
+func TestFilterLedgersByCompletionDate(
+	t *testing.T) {
+	t.Parallel()
+
+	date1 := "2026-03-01T10:00:00Z"
+	date2 := "2026-03-10T12:00:00Z"
+	date3 := "2026-03-20T18:00:00Z"
+
+	ledgers := []domain.AgenticMetricsLedger{
+		{TicketID: ptr("AL-1"), CompletedAt: &date1},
+		{TicketID: ptr("AL-2"), CompletedAt: &date2},
+		{TicketID: ptr("AL-3"), CompletedAt: &date3},
+		{TicketID: ptr("AL-4"), CompletedAt: nil, UpdatedAt: ""},
+	}
+
+	t.Run("nil boundaries returns all ledgers", func(t *testing.T) {
+		t.Parallel()
+		filtered := domain.FilterLedgersByCompletionDate(ledgers, nil, nil)
+		if len(filtered) != 4 {
+			t.Fatalf("expected 4 ledgers, got %d", len(filtered))
+		}
+	})
+
+	t.Run("since boundary inclusive filters older and dateless ledgers", func(t *testing.T) {
+		t.Parallel()
+		since, _ := time.Parse(time.RFC3339, "2026-03-10T12:00:00Z")
+		filtered := domain.FilterLedgersByCompletionDate(ledgers, &since, nil)
+		if len(filtered) != 2 {
+			t.Fatalf("expected 2 ledgers, got %d", len(filtered))
+		}
+		if *filtered[0].TicketID != "AL-2" || *filtered[1].TicketID != "AL-3" {
+			t.Errorf("unexpected ledgers: %v, %v", *filtered[0].TicketID, *filtered[1].TicketID)
+		}
+	})
+
+	t.Run("until boundary inclusive filters newer and dateless ledgers", func(t *testing.T) {
+		t.Parallel()
+		until, _ := time.Parse(time.RFC3339, "2026-03-10T12:00:00Z")
+		filtered := domain.FilterLedgersByCompletionDate(ledgers, nil, &until)
+		if len(filtered) != 2 {
+			t.Fatalf("expected 2 ledgers, got %d", len(filtered))
+		}
+		if *filtered[0].TicketID != "AL-1" || *filtered[1].TicketID != "AL-2" {
+			t.Errorf("unexpected ledgers: %v, %v", *filtered[0].TicketID, *filtered[1].TicketID)
+		}
+	})
+
+	t.Run("both boundaries filter to closed interval inclusive", func(t *testing.T) {
+		t.Parallel()
+		since, _ := time.Parse(time.RFC3339, "2026-03-05T00:00:00Z")
+		until, _ := time.Parse(time.RFC3339, "2026-03-15T00:00:00Z")
+		filtered := domain.FilterLedgersByCompletionDate(ledgers, &since, &until)
+		if len(filtered) != 1 {
+			t.Fatalf("expected 1 ledger, got %d", len(filtered))
+		}
+		if *filtered[0].TicketID != "AL-2" {
+			t.Errorf("expected AL-2, got %s", *filtered[0].TicketID)
+		}
+	})
+}
+
+func TestSortLedgersByCompletedAt(t *testing.T) {
+	t.Parallel()
+
+	dEarly := "2026-03-01T00:00:00Z"
+	dMid := "2026-03-15T00:00:00Z"
+	dLate := "2026-03-25T00:00:00Z"
+
+	t.Run("descending sort places latest first and nulls last", func(t *testing.T) {
+		t.Parallel()
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("AL-1"), CompletedAt: &dEarly},
+			{TicketID: ptr("AL-3"), CompletedAt: nil, UpdatedAt: ""},
+			{TicketID: ptr("AL-2"), CompletedAt: &dLate},
+			{TicketID: ptr("AL-4"), CompletedAt: &dMid},
+			{TicketID: ptr("AL-5"), CompletedAt: nil, UpdatedAt: ""},
+		}
+
+		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		expectedIDs := []string{"AL-2", "AL-4", "AL-1", "AL-3", "AL-5"}
+		for i, id := range expectedIDs {
+			if *sorted[i].TicketID != id {
+				t.Errorf("index %d: expected %s, got %s", i, id, *sorted[i].TicketID)
+			}
+		}
+	})
+
+	t.Run("ascending sort places earliest first and nulls last", func(t *testing.T) {
+		t.Parallel()
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("AL-1"), CompletedAt: &dEarly},
+			{TicketID: ptr("AL-3"), CompletedAt: nil, UpdatedAt: ""},
+			{TicketID: ptr("AL-2"), CompletedAt: &dLate},
+			{TicketID: ptr("AL-4"), CompletedAt: &dMid},
+			{TicketID: ptr("AL-5"), CompletedAt: nil, UpdatedAt: ""},
+		}
+
+		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, true)
+		expectedIDs := []string{"AL-1", "AL-4", "AL-2", "AL-3", "AL-5"}
+		for i, id := range expectedIDs {
+			if *sorted[i].TicketID != id {
+				t.Errorf("index %d: expected %s, got %s", i, id, *sorted[i].TicketID)
+			}
+		}
+	})
+
+	t.Run("tie breaks identical dates using natural ticket ID comparison", func(t *testing.T) {
+		t.Parallel()
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("AL-10"), CompletedAt: &dMid},
+			{TicketID: ptr("AL-2"), CompletedAt: &dMid},
+			{TicketID: ptr("AL-1"), CompletedAt: &dMid},
+		}
+
+		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		expectedIDs := []string{"AL-1", "AL-2", "AL-10"}
+		for i, id := range expectedIDs {
+			if *sorted[i].TicketID != id {
+				t.Errorf("index %d: expected %s, got %s", i, id, *sorted[i].TicketID)
+			}
+		}
+	})
+}
+
+func TestGetLedgerCompletionDate_AdversarialTimezonesAndLeapYears(t *testing.T) {
+	t.Parallel()
+
+	t.Run("timezone offsets resolve to equivalent UTC timestamps", func(t *testing.T) {
+		t.Parallel()
+		jstDate := "2026-03-01T15:00:00+09:00"
+		edtDate := "2026-03-01T02:00:00-04:00"
+		utcDate := "2026-03-01T06:00:00Z"
+
+		ledgerJST := domain.AgenticMetricsLedger{CompletedAt: &jstDate}
+		ledgerEDT := domain.AgenticMetricsLedger{CompletedAt: &edtDate}
+		ledgerUTC := domain.AgenticMetricsLedger{CompletedAt: &utcDate}
+
+		tJST, okJST := domain.GetLedgerCompletionDate(ledgerJST)
+		tEDT, okEDT := domain.GetLedgerCompletionDate(ledgerEDT)
+		tUTC, okUTC := domain.GetLedgerCompletionDate(ledgerUTC)
+
+		if !okJST || !okEDT || !okUTC {
+			t.Fatalf("expected all timezone timestamps to parse successfully")
+		}
+
+		expectedUTC, _ := time.Parse(time.RFC3339, utcDate)
+		if !tJST.Equal(expectedUTC) || !tEDT.Equal(expectedUTC) || !tUTC.Equal(expectedUTC) {
+			t.Errorf("expected all timestamps to equal UTC %v; got JST=%v, EDT=%v, UTC=%v", expectedUTC, tJST, tEDT, tUTC)
+		}
+	})
+
+	t.Run("leap year dates parse correctly on leap years and reject on non-leap years", func(t *testing.T) {
+		t.Parallel()
+		leap2024 := "2024-02-29T12:00:00Z"
+		leap2028 := "2028-02-29T23:59:59Z"
+		nonLeap := "2023-02-29T12:00:00Z"
+
+		ledger2024 := domain.AgenticMetricsLedger{CompletedAt: &leap2024}
+		t2024, ok2024 := domain.GetLedgerCompletionDate(ledger2024)
+		if !ok2024 || t2024.Year() != 2024 || t2024.Month() != time.February || t2024.Day() != 29 {
+			t.Errorf("failed parsing leap year 2024: %v, ok=%v", t2024, ok2024)
+		}
+
+		ledger2028 := domain.AgenticMetricsLedger{CompletedAt: &leap2028}
+		t2028, ok2028 := domain.GetLedgerCompletionDate(ledger2028)
+		if !ok2028 || t2028.Year() != 2028 || t2028.Month() != time.February || t2028.Day() != 29 {
+			t.Errorf("failed parsing leap year 2028: %v, ok=%v", t2028, ok2028)
+		}
+
+		ledgerNonLeap := domain.AgenticMetricsLedger{CompletedAt: &nonLeap}
+		_, okNonLeap := domain.GetLedgerCompletionDate(ledgerNonLeap)
+		if okNonLeap {
+			t.Errorf("expected non-leap year Feb 29 to fail parsing")
+		}
+	})
+
+	t.Run("nano precision, date-only, and ISO without timezone parsing", func(t *testing.T) {
+		t.Parallel()
+		nanoStr := "2026-10-18T10:00:00.123456789Z"
+		dateOnlyStr := "2026-10-18"
+		isoNoTZStr := "2026-10-18T10:00:00"
+		paddedStr := "   2026-10-18T10:00:00Z  \t "
+
+		ledgerNano := domain.AgenticMetricsLedger{CompletedAt: &nanoStr}
+		tNano, okNano := domain.GetLedgerCompletionDate(ledgerNano)
+		if !okNano || tNano.Nanosecond() != 123456789 {
+			t.Errorf("expected nano precision parsed: %v, ok=%v", tNano, okNano)
+		}
+
+		ledgerDateOnly := domain.AgenticMetricsLedger{CompletedAt: &dateOnlyStr}
+		tDateOnly, okDateOnly := domain.GetLedgerCompletionDate(ledgerDateOnly)
+		if !okDateOnly || tDateOnly.Day() != 18 || tDateOnly.Hour() != 0 {
+			t.Errorf("expected date-only parsed at 00:00: %v, ok=%v", tDateOnly, okDateOnly)
+		}
+
+		ledgerISONoTZ := domain.AgenticMetricsLedger{CompletedAt: &isoNoTZStr}
+		tISONoTZ, okISONoTZ := domain.GetLedgerCompletionDate(ledgerISONoTZ)
+		if !okISONoTZ || tISONoTZ.Hour() != 10 {
+			t.Errorf("expected ISO without TZ parsed: %v, ok=%v", tISONoTZ, okISONoTZ)
+		}
+
+		ledgerPadded := domain.AgenticMetricsLedger{CompletedAt: &paddedStr}
+		tPadded, okPadded := domain.GetLedgerCompletionDate(ledgerPadded)
+		if !okPadded || tPadded.Hour() != 10 {
+			t.Errorf("expected padded string trimmed and parsed: %v, ok=%v", tPadded, okPadded)
+		}
+	})
+
+	t.Run("secondary fallback to started_at when completed_at and updated_at are malformed", func(t *testing.T) {
+		t.Parallel()
+		bad1 := "garbage-completed"
+		bad2 := "garbage-updated"
+		validStarted := "2026-07-04T12:00:00Z"
+
+		ledger := domain.AgenticMetricsLedger{
+			CompletedAt: &bad1,
+			UpdatedAt:   bad2,
+			StartedAt:   &validStarted,
+		}
+
+		tGot, ok := domain.GetLedgerCompletionDate(ledger)
+		if !ok {
+			t.Fatalf("expected fallback to valid started_at")
+		}
+		expected, _ := time.Parse(time.RFC3339, validStarted)
+		if !tGot.Equal(expected) {
+			t.Errorf("expected %v, got %v", expected, tGot)
+		}
+	})
+}
+
+func TestFilterLedgersByCompletionDate_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	sinceUTC, _ := time.Parse(time.RFC3339, "2026-06-01T00:00:00Z")
+	untilUTC, _ := time.Parse(time.RFC3339, "2026-06-01T23:59:59Z")
+
+	t.Run("empty and nil ledgers return empty allocated slice without panicking", func(t *testing.T) {
+		t.Parallel()
+		filteredEmpty := domain.FilterLedgersByCompletionDate([]domain.AgenticMetricsLedger{}, &sinceUTC, &untilUTC)
+		if filteredEmpty == nil || len(filteredEmpty) != 0 {
+			t.Errorf("expected non-nil empty slice, got %v", filteredEmpty)
+		}
+
+		filteredNil := domain.FilterLedgersByCompletionDate(nil, &sinceUTC, &untilUTC)
+		if filteredNil == nil || len(filteredNil) != 0 {
+			t.Errorf("expected non-nil empty slice, got %v", filteredNil)
+		}
+	})
+
+	t.Run("exact inclusive boundary timestamps: exact matches, 1ns before and 1ns after", func(t *testing.T) {
+		t.Parallel()
+		exactSince := "2026-06-01T00:00:00.000000000Z"
+		beforeSince := "2026-05-31T23:59:59.999999999Z"
+		exactUntil := "2026-06-01T23:59:59.000000000Z"
+		afterUntil := "2026-06-01T23:59:59.000000001Z"
+
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("EXACT-SINCE"), CompletedAt: &exactSince},
+			{TicketID: ptr("BEFORE-SINCE"), CompletedAt: &beforeSince},
+			{TicketID: ptr("EXACT-UNTIL"), CompletedAt: &exactUntil},
+			{TicketID: ptr("AFTER-UNTIL"), CompletedAt: &afterUntil},
+		}
+
+		filtered := domain.FilterLedgersByCompletionDate(items, &sinceUTC, &untilUTC)
+		if len(filtered) != 2 {
+			t.Fatalf("expected 2 ledgers, got %d", len(filtered))
+		}
+		if *filtered[0].TicketID != "EXACT-SINCE" || *filtered[1].TicketID != "EXACT-UNTIL" {
+			t.Errorf("unexpected filtered tickets: %v, %v", *filtered[0].TicketID, *filtered[1].TicketID)
+		}
+	})
+
+	t.Run("inverted date range (since > until) returns empty slice without panic", func(t *testing.T) {
+		t.Parallel()
+		d1 := "2026-06-01T12:00:00Z"
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("AL-1"), CompletedAt: &d1},
+		}
+
+		sinceInverted, _ := time.Parse(time.RFC3339, "2026-06-10T00:00:00Z")
+		untilInverted, _ := time.Parse(time.RFC3339, "2026-06-01T00:00:00Z")
+
+		filtered := domain.FilterLedgersByCompletionDate(items, &sinceInverted, &untilInverted)
+		if filtered == nil || len(filtered) != 0 {
+			t.Errorf("expected empty slice for inverted range, got %v", filtered)
+		}
+
+		// CalculateFleetSummary on inverted empty result must not divide by zero or panic
+		fleet := domain.CalculateFleetSummary(filtered)
+		if fleet.TotalTickets != 0 || fleet.TotalCostUSD != 0.0 {
+			t.Errorf("expected zeroed fleet summary, got %+v", fleet)
+		}
+	})
+
+	t.Run("timezone offsets resolved against UTC boundaries", func(t *testing.T) {
+		t.Parallel()
+		// sinceUTC: 2026-06-01T00:00:00Z, untilUTC: 2026-06-01T23:59:59Z
+		// JST (+09:00): 2026-06-01 08:00:00+09:00 == 2026-05-31 23:00:00Z (before window)
+		jstBefore := "2026-06-01T08:00:00+09:00"
+		// JST (+09:00): 2026-06-02 01:00:00+09:00 == 2026-06-01 16:00:00Z (inside window)
+		jstInside := "2026-06-02T01:00:00+09:00"
+		// EDT (-04:00): 2026-05-31 21:00:00-04:00 == 2026-06-01 01:00:00Z (inside window)
+		edtInside := "2026-05-31T21:00:00-04:00"
+		// EDT (-04:00): 2026-06-01 21:00:00-04:00 == 2026-06-02 01:00:00Z (after window)
+		edtAfter := "2026-06-01T21:00:00-04:00"
+
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("JST-BEFORE"), CompletedAt: &jstBefore},
+			{TicketID: ptr("JST-INSIDE"), CompletedAt: &jstInside},
+			{TicketID: ptr("EDT-INSIDE"), CompletedAt: &edtInside},
+			{TicketID: ptr("EDT-AFTER"), CompletedAt: &edtAfter},
+		}
+
+		filtered := domain.FilterLedgersByCompletionDate(items, &sinceUTC, &untilUTC)
+		if len(filtered) != 2 {
+			t.Fatalf("expected 2 ledgers matching timezone boundaries, got %d", len(filtered))
+		}
+		if *filtered[0].TicketID != "JST-INSIDE" || *filtered[1].TicketID != "EDT-INSIDE" {
+			t.Errorf("unexpected tickets: %v, %v", *filtered[0].TicketID, *filtered[1].TicketID)
+		}
+	})
+
+	t.Run("leap year 2024-02-29 ledger inclusion", func(t *testing.T) {
+		t.Parallel()
+		leapSince, _ := time.Parse(time.RFC3339, "2024-02-28T00:00:00Z")
+		leapUntil, _ := time.Parse(time.RFC3339, "2024-03-01T00:00:00Z")
+
+		feb27 := "2024-02-27T12:00:00Z"
+		feb29 := "2024-02-29T12:00:00Z"
+		mar02 := "2024-03-02T12:00:00Z"
+
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("FEB-27"), CompletedAt: &feb27},
+			{TicketID: ptr("FEB-29"), CompletedAt: &feb29},
+			{TicketID: ptr("MAR-02"), CompletedAt: &mar02},
+		}
+
+		filtered := domain.FilterLedgersByCompletionDate(items, &leapSince, &leapUntil)
+		if len(filtered) != 1 || *filtered[0].TicketID != "FEB-29" {
+			t.Fatalf("expected only FEB-29 on leap year, got %+v", filtered)
+		}
+	})
+
+	t.Run("fallback hierarchy: updated_at, started_at, and all-null exclusion", func(t *testing.T) {
+		t.Parallel()
+		validDate := "2026-06-01T12:00:00Z"
+		badStr := "invalid-date"
+
+		items := []domain.AgenticMetricsLedger{
+			// Ledger 1: null completed_at, valid updated_at
+			{TicketID: ptr("FALLBACK-UPDATED"), CompletedAt: nil, UpdatedAt: validDate},
+			// Ledger 2: invalid completed_at, empty updated_at, valid started_at
+			{TicketID: ptr("FALLBACK-STARTED"), CompletedAt: &badStr, UpdatedAt: "", StartedAt: &validDate},
+			// Ledger 3: all null
+			{TicketID: ptr("ALL-NULL"), CompletedAt: nil, UpdatedAt: "", StartedAt: nil},
+			// Ledger 4: all invalid
+			{TicketID: ptr("ALL-INVALID"), CompletedAt: &badStr, UpdatedAt: badStr, StartedAt: &badStr},
+		}
+
+		filtered := domain.FilterLedgersByCompletionDate(items, &sinceUTC, &untilUTC)
+		if len(filtered) != 2 {
+			t.Fatalf("expected 2 fallbacks included and 2 dateless excluded, got %d", len(filtered))
+		}
+		if *filtered[0].TicketID != "FALLBACK-UPDATED" || *filtered[1].TicketID != "FALLBACK-STARTED" {
+			t.Errorf("unexpected filtered ledgers: %v, %v", *filtered[0].TicketID, *filtered[1].TicketID)
+		}
+	})
+
+	t.Run("zero tokens, zero cost, and zero duration ledgers compute cleanly via CalculateFleetSummary", func(t *testing.T) {
+		t.Parallel()
+		d := "2026-06-01T10:00:00Z"
+		zeroLedger := domain.AgenticMetricsLedger{
+			TicketID:    ptr("AL-ZERO"),
+			CompletedAt: &d,
+			Totals: domain.GroupedMetric{
+				CostUSD:           0,
+				Invocations:       0,
+				InputTokens:       0,
+				OutputTokens:      0,
+				CacheReadTokens:   0,
+				CacheHitRatePct:   0,
+				PeakContextTokens: 0,
+			},
+			WorkflowEfficiency: domain.WorkflowEfficiency{
+				ActiveDurationSeconds:   0,
+				ActiveDurationFormatted: "0m 0s",
+				ReasoningTokens:         0,
+			},
+		}
+
+		filtered := domain.FilterLedgersByCompletionDate([]domain.AgenticMetricsLedger{zeroLedger}, &sinceUTC, &untilUTC)
+		if len(filtered) != 1 {
+			t.Fatalf("expected 1 filtered ledger, got %d", len(filtered))
+		}
+
+		fleet := domain.CalculateFleetSummary(filtered)
+		if fleet.TotalTickets != 1 {
+			t.Errorf("expected 1 ticket in fleet, got %d", fleet.TotalTickets)
+		}
+		if fleet.TotalCostUSD != 0.0 || fleet.TotalInvocations != 0 || fleet.OverallCacheHitRatePct != 0.0 {
+			t.Errorf("expected 0 for cost/invocations/cache-hit-rate, got cost=%v, inv=%v, hit=%v",
+				fleet.TotalCostUSD, fleet.TotalInvocations, fleet.OverallCacheHitRatePct)
+		}
+	})
+}
+
+func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	dEarly := "2026-03-01T00:00:00Z"
+	dMid := "2026-03-15T00:00:00Z"
+	dLate := "2026-03-25T00:00:00Z"
+
+	t.Run("multiple null candidates tie-break deterministically by natural ticket ID", func(t *testing.T) {
+		t.Parallel()
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("AL-10"), CompletedAt: nil, UpdatedAt: ""},
+			{TicketID: ptr("AL-2"), CompletedAt: nil, UpdatedAt: ""},
+			{TicketID: ptr("AL-1"), CompletedAt: &dMid},
+			{TicketID: ptr("AL-01"), CompletedAt: nil, UpdatedAt: ""},
+		}
+
+		// Descending: non-null AL-1 first, then AL-01, AL-2, AL-10 (natural ticket ID)
+		sortedDesc := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		expectedDesc := []string{"AL-1", "AL-01", "AL-2", "AL-10"}
+		for i, exp := range expectedDesc {
+			if *sortedDesc[i].TicketID != exp {
+				t.Errorf("descending index %d: expected %s, got %s", i, exp, *sortedDesc[i].TicketID)
+			}
+		}
+
+		// Ascending: non-null AL-1 still precedes nulls! Nulls are always last!
+		sortedAsc := domain.SortLedgers(items, domain.SortFieldCompletedAt, true)
+		expectedAsc := []string{"AL-1", "AL-01", "AL-2", "AL-10"}
+		for i, exp := range expectedAsc {
+			if *sortedAsc[i].TicketID != exp {
+				t.Errorf("ascending index %d: expected %s, got %s", i, exp, *sortedAsc[i].TicketID)
+			}
+		}
+	})
+
+	t.Run("fallback timestamps across completed_at, updated_at, and started_at sort accurately", func(t *testing.T) {
+		t.Parallel()
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("EARLY-COMPLETED"), CompletedAt: &dEarly},
+			{TicketID: ptr("MID-UPDATED"), CompletedAt: nil, UpdatedAt: dMid},
+			{TicketID: ptr("LATE-STARTED"), CompletedAt: nil, UpdatedAt: "", StartedAt: &dLate},
+		}
+
+		sortedDesc := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		expectedIDs := []string{"LATE-STARTED", "MID-UPDATED", "EARLY-COMPLETED"}
+		for i, exp := range expectedIDs {
+			if *sortedDesc[i].TicketID != exp {
+				t.Errorf("index %d: expected %s, got %s", i, exp, *sortedDesc[i].TicketID)
+			}
+		}
+	})
+
+	t.Run("identical timestamps tie-break by natural ticket ID comparison (AL-2 before AL-10)", func(t *testing.T) {
+		t.Parallel()
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("AL-10"), CompletedAt: &dMid},
+			{TicketID: ptr("AL-2"), CompletedAt: &dMid},
+		}
+
+		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		if *sorted[0].TicketID != "AL-2" || *sorted[1].TicketID != "AL-10" {
+			t.Errorf("expected natural order AL-2 before AL-10, got %s, %s", *sorted[0].TicketID, *sorted[1].TicketID)
+		}
+	})
+
+	t.Run("immutability: input slice remains unmutated", func(t *testing.T) {
+		t.Parallel()
+		items := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("AL-1"), CompletedAt: &dEarly},
+			{TicketID: ptr("AL-2"), CompletedAt: &dLate},
+		}
+
+		_ = domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		if *items[0].TicketID != "AL-1" || *items[1].TicketID != "AL-2" {
+			t.Errorf("original slice was modified!")
+		}
+	})
+}

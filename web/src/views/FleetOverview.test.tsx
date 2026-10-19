@@ -219,5 +219,61 @@ describe('FleetOverview View Component', () => {
       expect(screen.getByText('Tool Retry Streak')).toBeInTheDocument();
       expect(screen.getByText('Brittle Tools')).toBeInTheDocument();
     });
+
+    it('triggers refetch with preset window when date range preset changes', async () => {
+      const fetchFleetSpy = vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+        data: mockFleetSummary,
+        isMock: false,
+      });
+      const fetchWorkspacesSpy = vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+        data: [...mockTicketComparisonRows],
+        isMock: false,
+      });
+
+      render(<FleetOverview />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Total Cost')).toBeInTheDocument();
+      });
+
+      const presetSelect = screen.getByLabelText(/date range preset/i);
+      fireEvent.change(presetSelect, { target: { value: '7d' } });
+
+      await waitFor(() => {
+        expect(fetchFleetSpy).toHaveBeenCalledWith('7d', undefined, undefined);
+        expect(fetchWorkspacesSpy).toHaveBeenCalledWith('7d', '', '', undefined, undefined);
+      });
+    });
+
+    it('displays custom date pickers and passes since/until when custom preset is selected', async () => {
+      const fetchFleetSpy = vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+        data: mockFleetSummary,
+        isMock: false,
+      });
+      const fetchWorkspacesSpy = vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+        data: [...mockTicketComparisonRows],
+        isMock: false,
+      });
+
+      render(<FleetOverview />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Total Cost')).toBeInTheDocument();
+      });
+
+      const presetSelect = screen.getByLabelText(/date range preset/i);
+      fireEvent.change(presetSelect, { target: { value: 'custom' } });
+
+      const sinceInput = await screen.findByLabelText(/custom start date/i);
+      const untilInput = await screen.findByLabelText(/custom end date/i);
+
+      fireEvent.change(sinceInput, { target: { value: '2026-03-01' } });
+      fireEvent.change(untilInput, { target: { value: '2026-03-15' } });
+
+      await waitFor(() => {
+        expect(fetchFleetSpy).toHaveBeenCalledWith('all', '2026-03-01', '2026-03-15');
+        expect(fetchWorkspacesSpy).toHaveBeenCalledWith('all', '', '', '2026-03-01', '2026-03-15');
+      });
+    });
   });
 });

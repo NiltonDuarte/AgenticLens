@@ -276,6 +276,8 @@ export type TimeGranularity = 'daily' | 'weekly' | 'cumulative';
 
 export type TimeWindowPreset = 'all' | '7d' | '30d' | '90d' | 'custom';
 
+export type AutopsySortMode = 'ticket_id' | 'completed_at';
+
 export type ActiveTab = 'landing' | 'overview' | 'deep-dive' | 'progression' | 'comparisons';
 
 export type ComparisonSortField =

@@ -873,6 +873,81 @@ func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger) map[string]Groupe
 	return rollup
 }
 
+func parseTimestamp(ts *string) (time.Time, bool) {
+	if ts == nil {
+		return time.Time{}, false
+	}
+	clean := strings.TrimSpace(*ts)
+	if clean == "" {
+		return time.Time{}, false
+	}
+	// Try RFC3339Nano
+	if t, err := time.Parse(time.RFC3339Nano, clean); err == nil {
+		return t.UTC(), true
+	}
+	// Try RFC3339
+	if t, err := time.Parse(time.RFC3339, clean); err == nil {
+		return t.UTC(), true
+	}
+	// Try ISO 8601 without timezone
+	if t, err := time.Parse("2006-01-02T15:04:05", clean); err == nil {
+		return t.UTC(), true
+	}
+	// Try date-only YYYY-MM-DD
+	if t, err := time.Parse("2006-01-02", clean); err == nil {
+		return t.UTC(), true
+	}
+	return time.Time{}, false
+}
+
+// GetLedgerCompletionDate resolves the effective completion date for a ledger.
+// Fallback order: completed_at -> updated_at -> started_at.
+func GetLedgerCompletionDate(ledger AgenticMetricsLedger) (time.Time, bool) {
+	if t, ok := parseTimestamp(ledger.CompletedAt); ok {
+		return t, true
+	}
+	if ledger.UpdatedAt != "" {
+		if t, ok := parseTimestamp(&ledger.UpdatedAt); ok {
+			return t, true
+		}
+	}
+	if t, ok := parseTimestamp(ledger.StartedAt); ok {
+		return t, true
+	}
+	return time.Time{}, false
+}
+
+// FilterLedgersByCompletionDate filters ledgers based on their effective completion date within inclusive bounds.
+// Ledgers lacking a valid date are excluded when boundaries are active.
+// Returns a newly allocated slice.
+func FilterLedgersByCompletionDate(ledgers []AgenticMetricsLedger, since, until *time.Time) []AgenticMetricsLedger {
+	if len(ledgers) == 0 {
+		return []AgenticMetricsLedger{}
+	}
+	if since == nil && until == nil {
+		result := make([]AgenticMetricsLedger, len(ledgers))
+		copy(result, ledgers)
+		return result
+	}
+
+	filtered := make([]AgenticMetricsLedger, 0, len(ledgers))
+	for _, ledger := range ledgers {
+		t, ok := GetLedgerCompletionDate(ledger)
+		if !ok {
+			continue
+		}
+		if since != nil && t.Before(*since) {
+			continue
+		}
+		if until != nil && t.After(*until) {
+			continue
+		}
+		filtered = append(filtered, ledger)
+	}
+
+	return filtered
+}
+
 func parseISODate(ts *string) (time.Time, bool) {
 	if ts == nil || len(*ts) < 10 {
 		return time.Time{}, false
@@ -993,6 +1068,37 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 	sort.SliceStable(result, func(i, j int) bool {
 		a := result[i]
 		b := result[j]
+
+		if field == SortFieldCompletedAt {
+			dateA, okA := GetLedgerCompletionDate(a)
+			dateB, okB := GetLedgerCompletionDate(b)
+			if okA != okB {
+				// Nulls last invariant regardless of sort direction:
+				// a candidate with a date precedes a candidate without a date.
+				return okA
+			}
+			if okA && okB {
+				if !dateA.Equal(dateB) {
+					if ascending {
+						return dateA.Before(dateB)
+					}
+					return dateA.After(dateB)
+				}
+			}
+			tidA := ""
+			if a.TicketID != nil {
+				tidA = *a.TicketID
+			}
+			tidB := ""
+			if b.TicketID != nil {
+				tidB = *b.TicketID
+			}
+			cmp := CompareTicketIDs(tidA, tidB)
+			if cmp != 0 {
+				return cmp < 0
+			}
+			return a.UpdatedAt < b.UpdatedAt
+		}
 
 		var less bool
 		switch field {

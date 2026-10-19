@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { EmptyState } from './EmptyState';
 import { KPICard } from './KPICard';
 import { DistributionCard } from './DistributionCard';
@@ -1031,7 +1031,8 @@ describe('Presentation Components Boundary Tests', () => {
         />
       );
 
-      const options = screen.getAllByRole('option');
+      const ticketSelect = screen.getByLabelText(/workspace autopsy/i);
+      const options = within(ticketSelect).getAllByRole('option');
       expect(options).toHaveLength(6);
       expect(options[0]).toHaveTextContent('AL-01 - Zero One [HEALTHY]');
       expect(options[1]).toHaveTextContent('AL-1 - Untitled');
@@ -1050,9 +1051,41 @@ describe('Presentation Components Boundary Tests', () => {
         />
       );
 
-      const option = screen.getByRole('option');
+      const ticketSelect = screen.getByLabelText(/workspace autopsy/i);
+      const option = within(ticketSelect).getByRole('option');
       expect(option).toBeDisabled();
       expect(option).toHaveTextContent(/no workspaces available/i);
+    });
+
+    it('toggles sort mode between Ticket ID and Completion Date', () => {
+      render(
+        <TicketSelector
+          tickets={[
+            { ticket_id: 'AL-1', ticket_title: 'One', completed_at: '2026-03-01T00:00:00Z' },
+            { ticket_id: 'AL-2', ticket_title: 'Two', completed_at: '2026-03-15T00:00:00Z' },
+            { ticket_id: 'AL-3', ticket_title: 'Three', completed_at: null },
+          ]}
+          selectedTicketId="AL-1"
+          onSelectTicket={vi.fn()}
+        />
+      );
+
+      const ticketSelect = screen.getByLabelText(/workspace autopsy/i);
+      let options = within(ticketSelect).getAllByRole('option');
+      // Default: natural ticket ID order
+      expect(options[0]).toHaveTextContent('AL-1 - One');
+      expect(options[1]).toHaveTextContent('AL-2 - Two');
+      expect(options[2]).toHaveTextContent('AL-3 - Three');
+
+      // Change sort mode to completion date
+      const sortSelect = screen.getByLabelText(/sort/i);
+      fireEvent.change(sortSelect, { target: { value: 'completed_at' } });
+
+      options = within(ticketSelect).getAllByRole('option');
+      // Descending by completion date, nulls last
+      expect(options[0]).toHaveTextContent('AL-2 - Two');
+      expect(options[1]).toHaveTextContent('AL-1 - One');
+      expect(options[2]).toHaveTextContent('AL-3 - Three');
     });
   });
 });

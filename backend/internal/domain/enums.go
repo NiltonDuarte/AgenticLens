@@ -35,6 +35,7 @@ func ParseTimeWindow(val string) TimeWindow {
 type LedgerSortField string
 
 const (
+	SortFieldCompletedAt LedgerSortField = "completed_at"
 	SortFieldUpdatedAt   LedgerSortField = "updated_at"
 	SortFieldCost        LedgerSortField = "cost"
 	SortFieldDuration    LedgerSortField = "duration"
@@ -45,6 +46,8 @@ const (
 // ParseLedgerSortField parses a string into a LedgerSortField enum, defaulting to SortFieldUpdatedAt.
 func ParseLedgerSortField(val string) LedgerSortField {
 	switch val {
+	case "completed_at":
+		return SortFieldCompletedAt
 	case "cost":
 		return SortFieldCost
 	case "duration":

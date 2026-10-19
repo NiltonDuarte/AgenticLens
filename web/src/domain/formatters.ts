@@ -169,6 +169,99 @@ export function compareTicketIds(a: string, b: string): number {
   return cleanA < cleanB ? -1 : cleanA > cleanB ? 1 : 0;
 }
 
+export interface TicketDateComparable {
+  readonly ticket_id?: string | null | undefined;
+  readonly completed_at?: string | null | undefined;
+  readonly updated_at?: string | undefined;
+  readonly started_at?: string | null | undefined;
+}
+
+export function getEffectiveCompletionDateMs(item: TicketDateComparable): number | null {
+  const candidates = [item.completed_at, item.updated_at, item.started_at];
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === 'string' && candidate.trim().length > 0) {
+      const ms = Date.parse(candidate.trim());
+      if (!Number.isNaN(ms)) {
+        return ms;
+      }
+    }
+  }
+  return null;
+}
+
+export function compareTicketCompletionDate(
+  a: TicketDateComparable,
+  b: TicketDateComparable
+): number {
+  const dateA = getEffectiveCompletionDateMs(a);
+  const dateB = getEffectiveCompletionDateMs(b);
+
+  if (dateA !== null && dateB === null) {
+    return -1;
+  }
+  if (dateA === null && dateB !== null) {
+    return 1;
+  }
+  if (dateA !== null && dateB !== null && dateA !== dateB) {
+    return dateB - dateA;
+  }
+  return compareTicketIds(a.ticket_id ?? '', b.ticket_id ?? '');
+}
+
+export function filterLedgersByCompletionDate<T extends TicketDateComparable>(
+  ledgers: readonly T[],
+  since?: string | number | null,
+  until?: string | number | null
+): T[] {
+  if (!since && !until) {
+    return [...ledgers];
+  }
+
+  let startMs: number | null = null;
+  if (typeof since === 'number' && !Number.isNaN(since)) {
+    startMs = since;
+  } else if (typeof since === 'string' && since.trim().length > 0) {
+    const cleanSince = since.trim();
+    const parsed = cleanSince.length === 10
+      ? Date.parse(`${cleanSince}T00:00:00.000Z`)
+      : Date.parse(cleanSince);
+    if (!Number.isNaN(parsed)) {
+      startMs = parsed;
+    }
+  }
+
+  let endMs: number | null = null;
+  if (typeof until === 'number' && !Number.isNaN(until)) {
+    endMs = until;
+  } else if (typeof until === 'string' && until.trim().length > 0) {
+    const cleanUntil = until.trim();
+    const parsed = cleanUntil.length === 10
+      ? Date.parse(`${cleanUntil}T23:59:59.999Z`)
+      : Date.parse(cleanUntil);
+    if (!Number.isNaN(parsed)) {
+      endMs = parsed;
+    }
+  }
+
+  if (startMs === null && endMs === null) {
+    return [...ledgers];
+  }
+
+  return ledgers.filter((ledger) => {
+    const effectiveMs = getEffectiveCompletionDateMs(ledger);
+    if (effectiveMs === null) {
+      return false;
+    }
+    if (startMs !== null && effectiveMs < startMs) {
+      return false;
+    }
+    if (endMs !== null && effectiveMs > endMs) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export function deriveTicketComparisonRows(
   ledgers: readonly AgenticMetricsLedger[],
   sortField?: ComparisonSortField,
