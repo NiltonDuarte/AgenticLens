@@ -439,3 +439,67 @@ func TestFormatMarkdownMetricsTable_ZeroEmojis(t *testing.T) {
 		t.Errorf("expected zero emojis in populated markdown table, found emoji match")
 	}
 }
+
+func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
+	t.Parallel()
+	tid := "GEN-1"
+	ledger := domain.AgenticMetricsLedger{
+		TicketID: &tid,
+		Facts: domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:                    "ses-root-gen",
+					Role:                  "general",
+					ActiveDurationSeconds: 120,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 60000,
+					},
+					CostUSD: 0.50,
+				},
+			},
+		},
+		WorkflowEfficiency: domain.WorkflowEfficiency{
+			ActiveDurationFormatted:   "2m 0s",
+			RoleEffortDistributionPct: map[string]float64{},
+			SubagentTurnVelocity: domain.SubagentTurnVelocity{
+				AvgTurnsPerInvocation: 0.0,
+				PeakTurns:             0,
+				ByRole:                map[string]float64{},
+			},
+			ContextWindowHealth: domain.ContextWindowHealth{
+				Status:                    "HEALTHY",
+				OrchestratorPeakTokens:    60000,
+				OrchestratorSaturationPct: 30.0,
+				SubagentsPeakTokens:       0,
+				SubagentsPeakRole:         "none",
+				Compactions:               0,
+			},
+		},
+		Totals: domain.GroupedMetric{
+			Invocations: 1,
+			CostUSD:     0.50,
+		},
+	}
+
+	tableMD := adapters.FormatMarkdownMetricsTable(ledger)
+
+	expectedHealth := "- **Context Window Health:** HEALTHY — Orchestrator peak 60k tokens (30% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)"
+	if !strings.Contains(tableMD, expectedHealth) {
+		t.Errorf("expected clean zero-subagents health format:\nwant: %s\ngot:\n%s", expectedHealth, tableMD)
+	}
+
+	expectedDist := "- **Role Effort Distribution (Subagents):** N/A"
+	if !strings.Contains(tableMD, expectedDist) {
+		t.Errorf("expected N/A for empty subagents effort distribution:\nwant: %s\ngot:\n%s", expectedDist, tableMD)
+	}
+
+	expectedVel := "- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)"
+	if !strings.Contains(tableMD, expectedVel) {
+		t.Errorf("expected zero turn velocity format:\nwant: %s\ngot:\n%s", expectedVel, tableMD)
+	}
+
+	emojiPattern := regexp.MustCompile(`[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F1E6}-\x{1F1FF}\x{1F600}-\x{1F64F}\x{1F680}-\x{1F6FF}]`)
+	if emojiPattern.MatchString(tableMD) {
+		t.Errorf("expected zero emojis in markdown table, found emoji match")
+	}
+}

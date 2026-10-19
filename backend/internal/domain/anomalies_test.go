@@ -909,6 +909,87 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		}
 	})
 
+	t.Run("structural hierarchy ignores root session events regardless of persona name", func(t *testing.T) {
+		rootID := "ses-root"
+		childCoderID := "ses-coder"
+		childTesterID := "ses-tester"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "general"},
+				{ID: childCoderID, ParentID: &rootID, Role: "coder"},
+				{ID: childTesterID, ParentID: &rootID, Role: "tester"},
+			},
+			Events: []domain.EventFact{
+				{SessionID: rootID, Turn: 1, Role: "general"},
+				{SessionID: childCoderID, Turn: 2, Role: "coder"},
+				{SessionID: rootID, Turn: 3, Role: "general"},
+				{SessionID: childTesterID, Turn: 4, Role: "tester"},
+				{SessionID: rootID, Turn: 5, Role: "general"},
+				{SessionID: childCoderID, Turn: 6, Role: "coder"},
+				{SessionID: rootID, Turn: 7, Role: "general"},
+				{SessionID: childTesterID, Turn: 8, Role: "tester"},
+				{SessionID: rootID, Turn: 9, Role: "general"},
+				{SessionID: childCoderID, Turn: 10, Role: "coder"},
+				{SessionID: rootID, Turn: 11, Role: "general"},
+				{SessionID: childTesterID, Turn: 12, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("expected rework loop when root general events are interleaved, got: %+v", anomalies)
+		}
+		if rework.Severity != domain.SeverityWarning {
+			t.Errorf("expected WARNING, got %s", rework.Severity)
+		}
+		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
+			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
+		}
+	})
+
+	t.Run("structural hierarchy ignores root invocations in fallback sequence", func(t *testing.T) {
+		rootID := "ses-root"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "general"},
+				{ID: "ses-c1", ParentID: &rootID, Role: "coder"},
+				{ID: "ses-t1", ParentID: &rootID, Role: "tester"},
+				{ID: "ses-c2", ParentID: &rootID, Role: "coder"},
+				{ID: "ses-t2", ParentID: &rootID, Role: "tester"},
+				{ID: "ses-c3", ParentID: &rootID, Role: "coder"},
+				{ID: "ses-t3", ParentID: &rootID, Role: "tester"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("expected rework loop in invocations fallback with root ignored, got: %+v", anomalies)
+		}
+		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
+			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
+		}
+	})
+
 	t.Run("consecutive identical roles collapsed without false trigger", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			Events: []domain.EventFact{
@@ -922,6 +1003,110 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		anomalies := domain.DetectAnomalies(ledger)
 		if len(anomalies) != 0 {
 			t.Fatalf("expected 0 anomalies, got %d: %+v", len(anomalies), anomalies)
+		}
+	})
+
+	t.Run("adversarial: root session labeled coder interleaved between planner and reviewer structurally ignored", func(t *testing.T) {
+		rootID := "ses-root"
+		c1ID := "ses-planner"
+		c2ID := "ses-reviewer"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "coder"},
+				{ID: c1ID, ParentID: &rootID, Role: "planner"},
+				{ID: c2ID, ParentID: &rootID, Role: "reviewer"},
+			},
+			Events: []domain.EventFact{
+				{SessionID: rootID, Turn: 1, Role: "coder"},
+				{SessionID: c1ID, Turn: 2, Role: "planner"},
+				{SessionID: rootID, Turn: 3, Role: "coder"},
+				{SessionID: c2ID, Turn: 4, Role: "reviewer"},
+				{SessionID: rootID, Turn: 5, Role: "coder"},
+				{SessionID: c1ID, Turn: 6, Role: "planner"},
+				{SessionID: rootID, Turn: 7, Role: "coder"},
+				{SessionID: c2ID, Turn: 8, Role: "reviewer"},
+				{SessionID: rootID, Turn: 9, Role: "coder"},
+				{SessionID: c1ID, Turn: 10, Role: "planner"},
+				{SessionID: rootID, Turn: 11, Role: "coder"},
+				{SessionID: c2ID, Turn: 12, Role: "reviewer"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("expected rework loop when root coder events are interleaved, got: %+v", anomalies)
+		}
+		if *rework.Context.Role != "planner" || *rework.Context.SecondaryRole != "reviewer" {
+			t.Errorf("expected planner <-> reviewer loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
+		}
+	})
+
+	t.Run("adversarial: root session events alternating subagent roles do not trigger rework loop", func(t *testing.T) {
+		rootID := "ses-root"
+		childID := "ses-child"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "orchestrator"},
+				{ID: childID, ParentID: &rootID, Role: "coder"},
+			},
+			Events: []domain.EventFact{
+				{SessionID: rootID, Turn: 1, Role: "planner"},
+				{SessionID: rootID, Turn: 2, Role: "reviewer"},
+				{SessionID: rootID, Turn: 3, Role: "planner"},
+				{SessionID: rootID, Turn: 4, Role: "reviewer"},
+				{SessionID: rootID, Turn: 5, Role: "planner"},
+				{SessionID: rootID, Turn: 6, Role: "reviewer"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("root session events must not trigger SUBAGENT_REWORK_LOOP, got: %+v", a)
+			}
+		}
+	})
+
+	t.Run("adversarial: invocations fallback ignores root invocation labeled reviewer", func(t *testing.T) {
+		rootID := "ses-root"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: rootID, ParentID: nil, Role: "reviewer"},
+				{ID: "ses-t1", ParentID: &rootID, Role: "tester"},
+				{ID: "ses-c1", ParentID: &rootID, Role: "coder"},
+				{ID: "ses-t2", ParentID: &rootID, Role: "tester"},
+				{ID: "ses-c2", ParentID: &rootID, Role: "coder"},
+				{ID: "ses-t3", ParentID: &rootID, Role: "tester"},
+				{ID: "ses-c3", ParentID: &rootID, Role: "coder"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var rework *domain.Anomaly
+		for i := range anomalies {
+			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
+				rework = &anomalies[i]
+				break
+			}
+		}
+		if rework == nil {
+			t.Fatalf("expected rework loop in invocations fallback with root reviewer ignored, got: %+v", anomalies)
+		}
+		if *rework.Context.Role != "tester" || *rework.Context.SecondaryRole != "coder" {
+			t.Errorf("expected tester <-> coder loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
+		}
+		if *rework.Context.Count != 3 {
+			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
 		}
 	})
 }

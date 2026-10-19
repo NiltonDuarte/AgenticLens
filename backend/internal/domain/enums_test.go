@@ -134,3 +134,121 @@ func TestIsValidTicketType(t *testing.T) {
 		}
 	}
 }
+
+func TestOrderSubagentRoles_OrderingAndPreservation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name:     "empty input slice",
+			input:    []string{},
+			expected: nil,
+		},
+		{
+			name:     "slice with only whitespace and empty strings",
+			input:    []string{"", "   ", "\t\n"},
+			expected: nil,
+		},
+		{
+			name:     "canonical roles unordered",
+			input:    []string{"reviewer", "tester", "coder", "planner"},
+			expected: []string{"planner", "coder", "tester", "reviewer"},
+		},
+		{
+			name:     "canonical roles with duplicates and whitespace",
+			input:    []string{" coder ", "planner", "coder", " tester\t", "reviewer", "planner"},
+			expected: []string{"planner", "coder", "tester", "reviewer"},
+		},
+		{
+			name:     "mixed canonical and custom roles preserving all non-empty roles",
+			input:    []string{"advisor", "reviewer", "orchestrator", "general", "build", "root", "po", "planner", "advisor", "General", "BUILD"},
+			expected: []string{"planner", "reviewer", "BUILD", "General", "advisor", "build", "general", "orchestrator", "po", "root"},
+		},
+		{
+			name:     "purely custom roles sorted alphabetically",
+			input:    []string{"zebra", "alpha", "beta"},
+			expected: []string{"alpha", "beta", "zebra"},
+		},
+		{
+			name:     "unassigned role included among custom roles",
+			input:    []string{"unassigned", "planner", "coder"},
+			expected: []string{"planner", "coder", "unassigned"},
+		},
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name:     "former root roles exclusively preserved and sorted alphabetically",
+			input:    []string{"root", "general", "build", "orchestrator"},
+			expected: []string{"build", "general", "orchestrator", "root"},
+		},
+		{
+			name:     "duplicate reverse canonicals and whitespace",
+			input:    []string{" reviewer ", "reviewer", "tester", "tester", "coder", "planner", " planner "},
+			expected: []string{"planner", "coder", "tester", "reviewer"},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := domain.OrderSubagentRoles(tc.input)
+			if len(got) != len(tc.expected) {
+				t.Fatalf("expected len %d, got %d: %v", len(tc.expected), len(got), got)
+			}
+			for i := range tc.expected {
+				if got[i] != tc.expected[i] {
+					t.Errorf("at index %d: expected %s, got %s", i, tc.expected[i], got[i])
+				}
+			}
+		})
+	}
+}
+
+func TestIsSubagentRole_DeprecationAndBackwardsCompatibility(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		role     string
+		expected bool
+	}{
+		{name: "empty string", role: "", expected: false},
+		{name: "whitespace only", role: "   \t\n", expected: false},
+		{name: "orchestrator lowercase", role: "orchestrator", expected: false},
+		{name: "orchestrator uppercase", role: "ORCHESTRATOR", expected: false},
+		{name: "orchestrator with whitespace", role: "  orchestrator  ", expected: false},
+		{name: "general lowercase", role: "general", expected: false},
+		{name: "general mixed case", role: "General", expected: false},
+		{name: "general with whitespace", role: "\tgeneral \n", expected: false},
+		{name: "build lowercase", role: "build", expected: false},
+		{name: "build uppercase", role: "BUILD", expected: false},
+		{name: "root lowercase", role: "root", expected: false},
+		{name: "root uppercase", role: "ROOT", expected: false},
+		{name: "canonical planner", role: "planner", expected: true},
+		{name: "canonical coder", role: "coder", expected: true},
+		{name: "canonical tester", role: "tester", expected: true},
+		{name: "canonical reviewer", role: "reviewer", expected: true},
+		{name: "custom advisor", role: "advisor", expected: true},
+		{name: "custom unassigned", role: "unassigned", expected: true},
+		{name: "custom researcher", role: "researcher", expected: true},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := domain.IsSubagentRole(tc.role)
+			if got != tc.expected {
+				t.Errorf("IsSubagentRole(%q) = %v, expected %v", tc.role, got, tc.expected)
+			}
+		})
+	}
+}

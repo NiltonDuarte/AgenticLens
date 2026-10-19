@@ -1268,6 +1268,15 @@ func TestIsSubagentRole(t *testing.T) {
 		{name: "orchestrator lowercase", role: "orchestrator", expected: false},
 		{name: "orchestrator mixed case", role: "Orchestrator", expected: false},
 		{name: "orchestrator with whitespace", role: "  orchestrator  ", expected: false},
+		{name: "general lowercase", role: "general", expected: false},
+		{name: "general mixed case", role: "General", expected: false},
+		{name: "general with whitespace", role: "  general  ", expected: false},
+		{name: "build lowercase", role: "build", expected: false},
+		{name: "build mixed case", role: "Build", expected: false},
+		{name: "build with whitespace", role: "  build  ", expected: false},
+		{name: "root lowercase", role: "root", expected: false},
+		{name: "root mixed case", role: "Root", expected: false},
+		{name: "root with whitespace", role: "  root  ", expected: false},
 		{name: "canonical subagent planner", role: "planner", expected: true},
 		{name: "canonical subagent coder", role: "coder", expected: true},
 		{name: "canonical subagent tester", role: "tester", expected: true},
@@ -1276,6 +1285,7 @@ func TestIsSubagentRole(t *testing.T) {
 		{name: "custom role po", role: "po", expected: true},
 		{name: "custom role researcher", role: "researcher", expected: true},
 		{name: "custom role security-auditor", role: "security-auditor", expected: true},
+		{name: "custom role custom-agent", role: "custom-agent", expected: true},
 	}
 
 	for _, tc := range tests {
@@ -1423,8 +1433,8 @@ func TestOrderRoles(t *testing.T) {
 
 func TestOrderSubagentRoles(t *testing.T) {
 	t.Parallel()
-	input := []string{"advisor", "reviewer", "orchestrator", "po", "planner", "advisor"}
-	expected := []string{"planner", "reviewer", "advisor", "po"}
+	input := []string{"advisor", "reviewer", "orchestrator", "general", "build", "root", "po", "planner", "advisor", "General", "BUILD"}
+	expected := []string{"planner", "reviewer", "BUILD", "General", "advisor", "build", "general", "orchestrator", "po", "root"}
 
 	got := domain.OrderSubagentRoles(input)
 	if len(got) != len(expected) {
@@ -1502,6 +1512,7 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 
 	t.Run("subagent peak context tracking with custom role", func(t *testing.T) {
 		t.Parallel()
+		parentID := "ses-orch"
 		ledger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
 				{
@@ -1510,14 +1521,16 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 					Tokens: domain.InvocationTokens{PeakContext: 50000},
 				},
 				{
-					ID:   "ses-coder",
-					Role: "coder",
-					Tokens: domain.InvocationTokens{PeakContext: 120000},
+					ID:       "ses-coder",
+					ParentID: &parentID,
+					Role:     "coder",
+					Tokens:   domain.InvocationTokens{PeakContext: 120000},
 				},
 				{
-					ID:   "ses-adv",
-					Role: "advisor",
-					Tokens: domain.InvocationTokens{PeakContext: 180000},
+					ID:       "ses-adv",
+					ParentID: &parentID,
+					Role:     "advisor",
+					Tokens:   domain.InvocationTokens{PeakContext: 180000},
 				},
 			},
 		}
@@ -1535,18 +1548,21 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 
 	t.Run("peak context tie-breaking precedence", func(t *testing.T) {
 		t.Parallel()
+		parentID := "ses-root"
 		// Canonical vs Custom tie-break: canonical (coder) takes precedence
 		ledgerCanonicalVsCustom := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
 				{
-					ID:   "ses-coder",
-					Role: "coder",
-					Tokens: domain.InvocationTokens{PeakContext: 100000},
+					ID:       "ses-coder",
+					ParentID: &parentID,
+					Role:     "coder",
+					Tokens:   domain.InvocationTokens{PeakContext: 100000},
 				},
 				{
-					ID:   "ses-adv",
-					Role: "advisor",
-					Tokens: domain.InvocationTokens{PeakContext: 100000},
+					ID:       "ses-adv",
+					ParentID: &parentID,
+					Role:     "advisor",
+					Tokens:   domain.InvocationTokens{PeakContext: 100000},
 				},
 			},
 		}
@@ -1560,14 +1576,16 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		ledgerCustomVsCustom := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
 				{
-					ID:   "ses-po",
-					Role: "po",
-					Tokens: domain.InvocationTokens{PeakContext: 100000},
+					ID:       "ses-po",
+					ParentID: &parentID,
+					Role:     "po",
+					Tokens:   domain.InvocationTokens{PeakContext: 100000},
 				},
 				{
-					ID:   "ses-adv",
-					Role: "advisor",
-					Tokens: domain.InvocationTokens{PeakContext: 100000},
+					ID:       "ses-adv",
+					ParentID: &parentID,
+					Role:     "advisor",
+					Tokens:   domain.InvocationTokens{PeakContext: 100000},
 				},
 			},
 		}
@@ -1780,8 +1798,8 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialEdgeCases(t *testing.T) {
 			}
 		}
 
-		// Subagents: orchestrator must be excluded
-		subExpected := []string{"planner", "coder", "tester", "reviewer"}
+		// Subagents: canonical roles first, then custom roles alphabetically
+		subExpected := []string{"planner", "coder", "tester", "reviewer", "orchestrator"}
 		gotSub := domain.OrderSubagentRoles(input)
 		if len(gotSub) != len(subExpected) {
 			t.Fatalf("expected len %d, got %d: %v", len(subExpected), len(gotSub), gotSub)
@@ -1867,13 +1885,14 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 	t.Run("multi-way peak context tie-breaking across canonical and custom roles", func(t *testing.T) {
 		t.Parallel()
 
+		parentID := "ses-root"
 		// Case A: 4 canonical subagents all tied at 120k tokens. Precedence: planner > coder > tester > reviewer
 		canonicalTiedLedger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
-				{ID: "1", Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "2", Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "3", Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "4", Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "1", ParentID: &parentID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "2", ParentID: &parentID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "3", ParentID: &parentID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "4", ParentID: &parentID, Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 120000}},
 			},
 		}
 		effA := domain.ComputeWorkflowEfficiency(canonicalTiedLedger)
@@ -1884,10 +1903,10 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 		// Case B: 4 custom subagents all tied at 120k tokens. Precedence: alphabetical (advisor > po > researcher > security-auditor)
 		customTiedLedger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
-				{ID: "1", Role: "security-auditor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "2", Role: "researcher", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "3", Role: "po", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "4", Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "1", ParentID: &parentID, Role: "security-auditor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "2", ParentID: &parentID, Role: "researcher", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "3", ParentID: &parentID, Role: "po", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "4", ParentID: &parentID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
 			},
 		}
 		effB := domain.ComputeWorkflowEfficiency(customTiedLedger)
@@ -1899,8 +1918,8 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 		// Canonical must win over custom.
 		mixedTiedLedger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
-				{ID: "1", Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "2", Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "1", ParentID: &parentID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+				{ID: "2", ParentID: &parentID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
 			},
 		}
 		effC := domain.ComputeWorkflowEfficiency(mixedTiedLedger)
@@ -1909,22 +1928,33 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("subagent invocations without parent ID excluded from turn velocity but included in cost", func(t *testing.T) {
+	t.Run("subagent invocations without parent ID are root sessions: excluded from subagent metrics", func(t *testing.T) {
 		t.Parallel()
 		ledger := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
-				{ID: "1", Role: "advisor", ParentID: nil, CostUSD: 2.0, Turns: 10},
+				{ID: "1", Role: "advisor", ParentID: nil, CostUSD: 2.0, Turns: 10, Tokens: domain.InvocationTokens{PeakContext: 50000}},
 			},
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
-		// Cost included:
-		if eff.RoleEffortDistributionPct["advisor"] != 100.0 {
-			t.Errorf("expected 100%% effort for advisor, got %f", eff.RoleEffortDistributionPct["advisor"])
+		// Excluded from subagent effort distribution:
+		if len(eff.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty effort distribution for root session, got %+v", eff.RoleEffortDistributionPct)
 		}
-		// Turns excluded because ParentID is nil:
+		// Excluded from subagent turn velocity:
 		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
 			t.Errorf("expected 0.0 avg turns because ParentID is nil, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		// Subagents peak tokens and role should be 0 and none:
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected 0 subagents peak tokens, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected 'none' subagents peak role, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		// Root coordination peak tokens matches root session:
+		if eff.ContextWindowHealth.OrchestratorPeakTokens != 50000 {
+			t.Errorf("expected 50000 orchestrator peak tokens, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
 		}
 	})
 }
@@ -2194,19 +2224,19 @@ func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T
 		},
 	}
 
-	t.Run("Scenario A: custom-bot mapped to orchestrator is excluded from subagent metrics", func(t *testing.T) {
+	t.Run("Scenario A: child invocation mapped to orchestrator is included in subagent metrics structurally", func(t *testing.T) {
 		t.Parallel()
 		mappings := domain.RoleMappings{
 			"custom-bot": "orchestrator",
 		}
 		metrics := domain.DeriveMetricsLedger(baseLedger, mappings)
 
-		if len(metrics.WorkflowEfficiency.RoleEffortDistributionPct) != 0 {
-			t.Errorf("expected empty RoleEffortDistributionPct, got: %+v",
-				metrics.WorkflowEfficiency.RoleEffortDistributionPct)
+		eff := metrics.WorkflowEfficiency.RoleEffortDistributionPct
+		if eff["orchestrator"] != 100.0 {
+			t.Errorf("expected orchestrator=100.0%% effort under structural classification, got: %+v", eff)
 		}
-		if metrics.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation != 0 {
-			t.Errorf("expected 0 avg turns, got %f",
+		if metrics.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation != 4.0 {
+			t.Errorf("expected 4.0 avg turns, got %f",
 				metrics.WorkflowEfficiency.SubagentTurnVelocity.AvgTurnsPerInvocation)
 		}
 	})
@@ -2572,8 +2602,8 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 				rawRole:            "build",
 				parentID:           &parentID,
 				targetRole:         domain.RoleOrchestrator,
-				expectSubagentCost: false,
-				expectTurnCounted:  false,
+				expectSubagentCost: true,
+				expectTurnCounted:  true,
 			},
 			{
 				name:               "child session with custom-worker mapped to coder",
@@ -2592,11 +2622,11 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 				expectTurnCounted:  true,
 			},
 			{
-				name:               "root session with unmapped custom subagent role: cost counted, turns excluded",
+				name:               "root session with unmapped custom subagent role: cost and turns excluded",
 				rawRole:            "independent-agent",
 				parentID:           nil,
 				targetRole:         "independent-agent",
-				expectSubagentCost: true,
+				expectSubagentCost: false,
 				expectTurnCounted:  false,
 			},
 		}
@@ -4287,6 +4317,884 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 			if got != tc.expected {
 				t.Errorf("ExtractTicketPrefix(%q) = %q, expected %q", tc.id, got, tc.expected)
 			}
+		}
+	})
+}
+
+func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Case A: Single root invocation with role general", func(t *testing.T) {
+		t.Parallel()
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:       "ses-root-gen",
+					ParentID: nil,
+					Role:     "general",
+					CostUSD:  1.50,
+					Turns:    12,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 60000,
+					},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if eff.ContextWindowHealth.OrchestratorPeakTokens != 60000 {
+			t.Errorf("expected OrchestratorPeakTokens 60000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		}
+		expectedSat := math.Round(60000.0/float64(domain.HealthyCeilingTokens)*1000.0) / 10.0
+		if eff.ContextWindowHealth.OrchestratorSaturationPct != expectedSat {
+			t.Errorf("expected OrchestratorSaturationPct %f, got %f", expectedSat, eff.ContextWindowHealth.OrchestratorSaturationPct)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected SubagentsPeakRole 'none', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		if len(eff.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty RoleEffortDistributionPct, got %+v", eff.RoleEffortDistributionPct)
+		}
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+			t.Errorf("expected AvgTurnsPerInvocation 0.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 0 {
+			t.Errorf("expected PeakTurns 0, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+	})
+
+	t.Run("Case B: Single root invocation with role build or custom root persona", func(t *testing.T) {
+		t.Parallel()
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:       "ses-root-build",
+					ParentID: nil,
+					Role:     "build",
+					CostUSD:  2.25,
+					Turns:    8,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 75000,
+					},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if eff.ContextWindowHealth.OrchestratorPeakTokens != 75000 {
+			t.Errorf("expected OrchestratorPeakTokens 75000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected SubagentsPeakRole 'none', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		if len(eff.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty RoleEffortDistributionPct, got %+v", eff.RoleEffortDistributionPct)
+		}
+	})
+
+	t.Run("Case C: Root session with role general and child subagents", func(t *testing.T) {
+		t.Parallel()
+		rootID := "ses-root-1"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					CostUSD:  1.00,
+					Turns:    5,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 40000,
+					},
+				},
+				{
+					ID:       "ses-planner",
+					ParentID: &rootID,
+					Role:     "planner",
+					CostUSD:  2.00,
+					Turns:    10,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 80000,
+					},
+				},
+				{
+					ID:       "ses-coder",
+					ParentID: &rootID,
+					Role:     "coder",
+					CostUSD:  4.00,
+					Turns:    20,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 150000,
+					},
+				},
+				{
+					ID:       "ses-tester",
+					ParentID: &rootID,
+					Role:     "tester",
+					CostUSD:  2.00,
+					Turns:    10,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 90000,
+					},
+				},
+				{
+					ID:       "ses-reviewer",
+					ParentID: &rootID,
+					Role:     "reviewer",
+					CostUSD:  2.00,
+					Turns:    10,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 70000,
+					},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if eff.ContextWindowHealth.OrchestratorPeakTokens != 40000 {
+			t.Errorf("expected OrchestratorPeakTokens 40000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 150000 {
+			t.Errorf("expected SubagentsPeakTokens 150000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "coder" {
+			t.Errorf("expected SubagentsPeakRole 'coder', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		// Effort distribution sums only child subagents: 2 + 4 + 2 + 2 = 10.0
+		// planner: 2/10 = 20%, coder: 4/10 = 40%, tester: 2/10 = 20%, reviewer: 2/10 = 20%
+		if eff.RoleEffortDistributionPct["general"] != 0.0 {
+			t.Errorf("general root role should not appear in RoleEffortDistributionPct, got %f", eff.RoleEffortDistributionPct["general"])
+		}
+		if eff.RoleEffortDistributionPct["coder"] != 40.0 {
+			t.Errorf("expected coder 40.0%%, got %f", eff.RoleEffortDistributionPct["coder"])
+		}
+		if eff.RoleEffortDistributionPct["planner"] != 20.0 {
+			t.Errorf("expected planner 20.0%%, got %f", eff.RoleEffortDistributionPct["planner"])
+		}
+		var totalEffort float64
+		for _, pct := range eff.RoleEffortDistributionPct {
+			totalEffort += pct
+		}
+		if totalEffort < 99.9 || totalEffort > 100.1 {
+			t.Errorf("expected subagent effort distribution to sum to ~100%%, got %f", totalEffort)
+		}
+	})
+
+	t.Run("Case D: Empty ledger with zero invocations", func(t *testing.T) {
+		t.Parallel()
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if eff.ContextWindowHealth.OrchestratorPeakTokens != 0 {
+			t.Errorf("expected OrchestratorPeakTokens 0, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected SubagentsPeakRole 'none', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		if len(eff.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty RoleEffortDistributionPct, got %+v", eff.RoleEffortDistributionPct)
+		}
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+			t.Errorf("expected AvgTurnsPerInvocation 0.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 0 {
+			t.Errorf("expected PeakTurns 0, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+	})
+
+	t.Run("Case E: Multi-tier child subagents with ParentID != nil", func(t *testing.T) {
+		t.Parallel()
+		rootID := "ses-root-0"
+		tier1ID := "ses-planner-1"
+		tier2ID := "ses-coder-2"
+
+		// Deep hierarchy: root -> planner -> coder -> tester
+		// All tiers where ParentID != nil must be classified as delegated subagents
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					CostUSD:  1.00,
+					Turns:    3,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 35000,
+					},
+				},
+				{
+					ID:       tier1ID,
+					ParentID: &rootID,
+					Role:     "planner",
+					CostUSD:  2.00,
+					Turns:    5,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 65000,
+					},
+				},
+				{
+					ID:       tier2ID,
+					ParentID: &tier1ID,
+					Role:     "coder",
+					CostUSD:  5.00,
+					Turns:    15,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 145000,
+					},
+				},
+				{
+					ID:       "ses-tester-3",
+					ParentID: &tier2ID,
+					Role:     "tester",
+					CostUSD:  3.00,
+					Turns:    10,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 95000,
+					},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+
+		// Root coordination metrics must exclusively capture the ParentID == nil invocation
+		if eff.ContextWindowHealth.OrchestratorPeakTokens != 35000 {
+			t.Errorf("expected OrchestratorPeakTokens 35000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		}
+
+		// Delegated subagents metrics must capture all tiers with ParentID != nil
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 145000 {
+			t.Errorf("expected SubagentsPeakTokens 145000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "coder" {
+			t.Errorf("expected SubagentsPeakRole 'coder', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Total subagent cost = 2.0 + 5.0 + 3.0 = 10.0
+		// Planner = 20%, Coder = 50%, Tester = 30%
+		if eff.RoleEffortDistributionPct["general"] != 0.0 {
+			t.Errorf("root role 'general' must not appear in RoleEffortDistributionPct")
+		}
+		if eff.RoleEffortDistributionPct["planner"] != 20.0 {
+			t.Errorf("expected planner 20.0%%, got %f", eff.RoleEffortDistributionPct["planner"])
+		}
+		if eff.RoleEffortDistributionPct["coder"] != 50.0 {
+			t.Errorf("expected coder 50.0%%, got %f", eff.RoleEffortDistributionPct["coder"])
+		}
+		if eff.RoleEffortDistributionPct["tester"] != 30.0 {
+			t.Errorf("expected tester 30.0%%, got %f", eff.RoleEffortDistributionPct["tester"])
+		}
+
+		// Subagent turn velocity: total turns = 5 + 15 + 10 = 30 across 3 subagents -> 10.0 avg
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 10.0 {
+			t.Errorf("expected AvgTurnsPerInvocation 10.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 15 {
+			t.Errorf("expected PeakTurns 15, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+	})
+
+	t.Run("Case F: Diverse root personas table-driven", func(t *testing.T) {
+		t.Parallel()
+		personas := []struct {
+			role        string
+			peakContext int64
+			costUSD     float64
+			turns       int64
+		}{
+			{role: "general", peakContext: 42000, costUSD: 1.10, turns: 4},
+			{role: "build", peakContext: 58000, costUSD: 2.20, turns: 6},
+			{role: "orchestrator", peakContext: 73000, costUSD: 3.30, turns: 8},
+			{role: "po", peakContext: 89000, costUSD: 4.40, turns: 10},
+			{role: "custom-root", peakContext: 61000, costUSD: 1.50, turns: 5},
+			{role: "root", peakContext: 39000, costUSD: 0.90, turns: 3},
+			{role: "  GENERAL  ", peakContext: 55000, costUSD: 1.20, turns: 7},
+			{role: "", peakContext: 25000, costUSD: 0.50, turns: 2},
+		}
+
+		for _, tc := range personas {
+			tc := tc
+			t.Run("persona_"+tc.role, func(t *testing.T) {
+				t.Parallel()
+				ledger := domain.AgenticFactLedger{
+					Invocations: []domain.InvocationFact{
+						{
+							ID:       "ses-single-root",
+							ParentID: nil,
+							Role:     tc.role,
+							CostUSD:  tc.costUSD,
+							Turns:    tc.turns,
+							Tokens: domain.InvocationTokens{
+								PeakContext: tc.peakContext,
+							},
+						},
+					},
+				}
+
+				eff := domain.ComputeWorkflowEfficiency(ledger)
+				if eff.ContextWindowHealth.OrchestratorPeakTokens != tc.peakContext {
+					t.Errorf("role %q: expected OrchestratorPeakTokens %d, got %d", tc.role, tc.peakContext, eff.ContextWindowHealth.OrchestratorPeakTokens)
+				}
+				if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+					t.Errorf("role %q: expected SubagentsPeakTokens 0, got %d", tc.role, eff.ContextWindowHealth.SubagentsPeakTokens)
+				}
+				if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+					t.Errorf("role %q: expected SubagentsPeakRole 'none', got %s", tc.role, eff.ContextWindowHealth.SubagentsPeakRole)
+				}
+				if len(eff.RoleEffortDistributionPct) != 0 {
+					t.Errorf("role %q: expected empty RoleEffortDistributionPct, got %+v", tc.role, eff.RoleEffortDistributionPct)
+				}
+				if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+					t.Errorf("role %q: expected AvgTurnsPerInvocation 0.0, got %f", tc.role, eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+				}
+				if eff.SubagentTurnVelocity.PeakTurns != 0 {
+					t.Errorf("role %q: expected PeakTurns 0, got %d", tc.role, eff.SubagentTurnVelocity.PeakTurns)
+				}
+			})
+		}
+	})
+
+	t.Run("Case G: Child subagents with zero peak tokens and tie-breaking", func(t *testing.T) {
+		t.Parallel()
+		rootID := "ses-root-0"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					CostUSD:  1.0,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 50000,
+					},
+				},
+				{
+					ID:       "ses-coder",
+					ParentID: &rootID,
+					Role:     "coder",
+					CostUSD:  2.0,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 0,
+					},
+				},
+				{
+					ID:       "ses-planner",
+					ParentID: &rootID,
+					Role:     "planner",
+					CostUSD:  1.0,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 0,
+					},
+				},
+				{
+					ID:       "ses-reviewer",
+					ParentID: &rootID,
+					Role:     "reviewer",
+					CostUSD:  1.0,
+					Tokens: domain.InvocationTokens{
+						PeakContext: 0,
+					},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		// When multiple subagents share peak tokens (0), canonical role order breaks ties:
+		// planner comes before coder and reviewer
+		if eff.ContextWindowHealth.SubagentsPeakRole != "planner" {
+			t.Errorf("expected SubagentsPeakRole 'planner' via canonical tie-break, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		// Subagent costs must still be computed: total = 4.0, coder = 50%, planner = 25%, reviewer = 25%
+		if eff.RoleEffortDistributionPct["coder"] != 50.0 {
+			t.Errorf("expected coder 50.0%%, got %f", eff.RoleEffortDistributionPct["coder"])
+		}
+		if eff.RoleEffortDistributionPct["planner"] != 25.0 {
+			t.Errorf("expected planner 25.0%%, got %f", eff.RoleEffortDistributionPct["planner"])
+		}
+	})
+
+	t.Run("Case H: Boundary conditions and division by zero defense", func(t *testing.T) {
+		t.Parallel()
+		rootID := "ses-root-h"
+
+		t.Run("zero total subagent cost with active subagents", func(t *testing.T) {
+			t.Parallel()
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:       rootID,
+						ParentID: nil,
+						Role:     "general",
+						CostUSD:  0.0,
+						Tokens:   domain.InvocationTokens{PeakContext: 10000},
+					},
+					{
+						ID:       "ses-c1",
+						ParentID: &rootID,
+						Role:     "coder",
+						CostUSD:  0.0,
+						Tokens:   domain.InvocationTokens{PeakContext: 20000},
+					},
+					{
+						ID:       "ses-p1",
+						ParentID: &rootID,
+						Role:     "planner",
+						CostUSD:  0.0,
+						Tokens:   domain.InvocationTokens{PeakContext: 15000},
+					},
+				},
+			}
+
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if len(eff.RoleEffortDistributionPct) != 0 {
+				t.Errorf("expected empty RoleEffortDistributionPct on 0 subagent cost, got %+v", eff.RoleEffortDistributionPct)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakTokens != 20000 {
+				t.Errorf("expected SubagentsPeakTokens 20000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakRole != "coder" {
+				t.Errorf("expected SubagentsPeakRole 'coder', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+		})
+
+		t.Run("nil invocations slice", func(t *testing.T) {
+			t.Parallel()
+			ledger := domain.AgenticFactLedger{
+				Invocations: nil,
+			}
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.ContextWindowHealth.OrchestratorPeakTokens != 0 {
+				t.Errorf("expected OrchestratorPeakTokens 0, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+				t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+				t.Errorf("expected SubagentsPeakRole 'none', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+		})
+
+		t.Run("child invocation with non-subagent role string classified structurally", func(t *testing.T) {
+			t.Parallel()
+			// Under pure structural classification, child invocations (ParentID != nil) are treated
+			// as subagents regardless of their persona role string (e.g. orchestrator or general).
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:       rootID,
+						ParentID: nil,
+						Role:     "general",
+						Tokens:   domain.InvocationTokens{PeakContext: 30000},
+					},
+					{
+						ID:       "ses-child-orch",
+						ParentID: &rootID,
+						Role:     "orchestrator",
+						Tokens:   domain.InvocationTokens{PeakContext: 50000},
+					},
+					{
+						ID:       "ses-child-gen",
+						ParentID: &rootID,
+						Role:     "general",
+						Tokens:   domain.InvocationTokens{PeakContext: 40000},
+					},
+				},
+			}
+
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			// Root peak is 30000 from the ParentID == nil invocation
+			if eff.ContextWindowHealth.OrchestratorPeakTokens != 30000 {
+				t.Errorf("expected OrchestratorPeakTokens 30000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+			}
+			// Delegated child invocations are classified structurally as subagents
+			if eff.ContextWindowHealth.SubagentsPeakTokens != 50000 {
+				t.Errorf("expected SubagentsPeakTokens 50000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakRole != "orchestrator" {
+				t.Errorf("expected SubagentsPeakRole 'orchestrator', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+		})
+
+		t.Run("child invocation with whitespace role normalizes to unassigned", func(t *testing.T) {
+			t.Parallel()
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:       rootID,
+						ParentID: nil,
+						Role:     "general",
+						Tokens:   domain.InvocationTokens{PeakContext: 25000},
+					},
+					{
+						ID:       "ses-child-blank",
+						ParentID: &rootID,
+						Role:     "   ",
+						CostUSD:  1.20,
+						Turns:    6,
+						Tokens:   domain.InvocationTokens{PeakContext: 45000},
+					},
+				},
+			}
+
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.ContextWindowHealth.SubagentsPeakTokens != 45000 {
+				t.Errorf("expected SubagentsPeakTokens 45000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakRole != "unassigned" {
+				t.Errorf("expected SubagentsPeakRole 'unassigned', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+			if eff.RoleEffortDistributionPct["unassigned"] != 100.0 {
+				t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct["unassigned"])
+			}
+			if eff.SubagentTurnVelocity.ByRole["unassigned"] != 6.0 {
+				t.Errorf("expected unassigned turn velocity 6.0, got %f", eff.SubagentTurnVelocity.ByRole["unassigned"])
+			}
+		})
+
+		t.Run("single-invocation ticket with custom persona produces zero subagent metrics", func(t *testing.T) {
+			t.Parallel()
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:       "ses-single-custom",
+						ParentID: nil,
+						Role:     "custom-researcher",
+						CostUSD:  3.50,
+						Turns:    10,
+						Tokens:   domain.InvocationTokens{PeakContext: 68000},
+					},
+				},
+			}
+
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.ContextWindowHealth.OrchestratorPeakTokens != 68000 {
+				t.Errorf("expected OrchestratorPeakTokens 68000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+				t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+				t.Errorf("expected SubagentsPeakRole 'none', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+			if len(eff.RoleEffortDistributionPct) != 0 {
+				t.Errorf("expected empty RoleEffortDistributionPct, got %+v", eff.RoleEffortDistributionPct)
+			}
+			if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+				t.Errorf("expected AvgTurnsPerInvocation 0.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+			}
+		})
+
+		t.Run("multi-tier child invocations all treated as subagents", func(t *testing.T) {
+			t.Parallel()
+			tier1ID := "ses-tier1"
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:       rootID,
+						ParentID: nil,
+						Role:     "general",
+						CostUSD:  1.0,
+						Tokens:   domain.InvocationTokens{PeakContext: 20000},
+					},
+					{
+						ID:       tier1ID,
+						ParentID: &rootID,
+						Role:     "coordinator-subagent",
+						CostUSD:  2.0,
+						Turns:    5,
+						Tokens:   domain.InvocationTokens{PeakContext: 35000},
+					},
+					{
+						ID:       "ses-tier2",
+						ParentID: &tier1ID,
+						Role:     "specialist-subagent",
+						CostUSD:  2.0,
+						Turns:    7,
+						Tokens:   domain.InvocationTokens{PeakContext: 42000},
+					},
+				},
+			}
+
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.ContextWindowHealth.OrchestratorPeakTokens != 20000 {
+				t.Errorf("expected OrchestratorPeakTokens 20000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakTokens != 42000 {
+				t.Errorf("expected SubagentsPeakTokens 42000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+			}
+			if eff.ContextWindowHealth.SubagentsPeakRole != "specialist-subagent" {
+				t.Errorf("expected SubagentsPeakRole 'specialist-subagent', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+			if eff.RoleEffortDistributionPct["coordinator-subagent"] != 50.0 {
+				t.Errorf("expected coordinator-subagent 50.0%%, got %f", eff.RoleEffortDistributionPct["coordinator-subagent"])
+			}
+			if eff.RoleEffortDistributionPct["specialist-subagent"] != 50.0 {
+				t.Errorf("expected specialist-subagent 50.0%%, got %f", eff.RoleEffortDistributionPct["specialist-subagent"])
+			}
+			if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 6.0 {
+				t.Errorf("expected AvgTurnsPerInvocation 6.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+			}
+		})
+	})
+
+	t.Run("Case I: Multiple subagents tie-break canonical and custom roles", func(t *testing.T) {
+		t.Parallel()
+		rootID := "ses-root-i"
+
+		t.Run("canonical tie-break tester vs reviewer", func(t *testing.T) {
+			t.Parallel()
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:       rootID,
+						ParentID: nil,
+						Role:     "general",
+						Tokens:   domain.InvocationTokens{PeakContext: 20000},
+					},
+					{
+						ID:       "ses-reviewer",
+						ParentID: &rootID,
+						Role:     "reviewer",
+						CostUSD:  1.0,
+						Tokens:   domain.InvocationTokens{PeakContext: 80000},
+					},
+					{
+						ID:       "ses-tester",
+						ParentID: &rootID,
+						Role:     "tester",
+						CostUSD:  1.0,
+						Tokens:   domain.InvocationTokens{PeakContext: 80000},
+					},
+				},
+			}
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			// tester comes before reviewer in canonical order
+			if eff.ContextWindowHealth.SubagentsPeakRole != "tester" {
+				t.Errorf("expected SubagentsPeakRole 'tester', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+		})
+
+		t.Run("custom tie-break alphabetical order", func(t *testing.T) {
+			t.Parallel()
+			ledger := domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{
+						ID:       rootID,
+						ParentID: nil,
+						Role:     "general",
+						Tokens:   domain.InvocationTokens{PeakContext: 20000},
+					},
+					{
+						ID:       "ses-zebra",
+						ParentID: &rootID,
+						Role:     "zebra-agent",
+						CostUSD:  1.0,
+						Tokens:   domain.InvocationTokens{PeakContext: 75000},
+					},
+					{
+						ID:       "ses-alpha",
+						ParentID: &rootID,
+						Role:     "alpha-agent",
+						CostUSD:  1.0,
+						Tokens:   domain.InvocationTokens{PeakContext: 75000},
+					},
+				},
+			}
+			eff := domain.ComputeWorkflowEfficiency(ledger)
+			// alpha-agent comes before zebra-agent alphabetically
+			if eff.ContextWindowHealth.SubagentsPeakRole != "alpha-agent" {
+				t.Errorf("expected SubagentsPeakRole 'alpha-agent', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			}
+		})
+	})
+}
+
+func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inverted persona roles: root as coder and child as orchestrator", func(t *testing.T) {
+		t.Parallel()
+		rootID := "ses-inverted-root"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "coder",
+					CostUSD:  10.0,
+					Turns:    15,
+					Tokens:   domain.InvocationTokens{PeakContext: 120000},
+				},
+				{
+					ID:       "ses-inverted-child",
+					ParentID: &rootID,
+					Role:     "orchestrator",
+					CostUSD:  5.0,
+					Turns:    8,
+					Tokens:   domain.InvocationTokens{PeakContext: 45000},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+
+		// Root coordination is strictly ParentID == nil (even though role is coder)
+		if eff.ContextWindowHealth.OrchestratorPeakTokens != 120000 {
+			t.Errorf("expected OrchestratorPeakTokens 120000 from root coder, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		}
+
+		// Subagents are strictly ParentID != nil (even though role is orchestrator)
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 45000 {
+			t.Errorf("expected SubagentsPeakTokens 45000 from child orchestrator, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "orchestrator" {
+			t.Errorf("expected SubagentsPeakRole 'orchestrator', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+
+		// Subagent effort distribution contains child orchestrator, never root coder
+		if eff.RoleEffortDistributionPct["orchestrator"] != 100.0 {
+			t.Errorf("expected orchestrator effort 100.0%%, got %f", eff.RoleEffortDistributionPct["orchestrator"])
+		}
+		if _, hasCoder := eff.RoleEffortDistributionPct["coder"]; hasCoder {
+			t.Errorf("root coder must not appear in RoleEffortDistributionPct")
+		}
+
+		// Subagent turn velocity aggregates child orchestrator turns only
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 8.0 {
+			t.Errorf("expected AvgTurnsPerInvocation 8.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 8 {
+			t.Errorf("expected PeakTurns 8, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+		if eff.SubagentTurnVelocity.ByRole["orchestrator"] != 8.0 {
+			t.Errorf("expected ByRole[orchestrator] 8.0, got %f", eff.SubagentTurnVelocity.ByRole["orchestrator"])
+		}
+		if _, hasCoder := eff.SubagentTurnVelocity.ByRole["coder"]; hasCoder {
+			t.Errorf("root coder must not appear in SubagentTurnVelocity.ByRole")
+		}
+	})
+
+	t.Run("multiple root sessions with zero children", func(t *testing.T) {
+		t.Parallel()
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:       "ses-root-1",
+					ParentID: nil,
+					Role:     "general",
+					CostUSD:  2.0,
+					Turns:    10,
+					Tokens:   domain.InvocationTokens{PeakContext: 50000},
+				},
+				{
+					ID:       "ses-root-2",
+					ParentID: nil,
+					Role:     "build",
+					CostUSD:  3.0,
+					Turns:    15,
+					Tokens:   domain.InvocationTokens{PeakContext: 110000},
+				},
+				{
+					ID:       "ses-root-3",
+					ParentID: nil,
+					Role:     "orchestrator",
+					CostUSD:  1.0,
+					Turns:    5,
+					Tokens:   domain.InvocationTokens{PeakContext: 80000},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+
+		// Max root peak is 110000
+		if eff.ContextWindowHealth.OrchestratorPeakTokens != 110000 {
+			t.Errorf("expected OrchestratorPeakTokens 110000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
+			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
+			t.Errorf("expected SubagentsPeakRole 'none', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		if len(eff.RoleEffortDistributionPct) != 0 {
+			t.Errorf("expected empty RoleEffortDistributionPct, got %+v", eff.RoleEffortDistributionPct)
+		}
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
+			t.Errorf("expected AvgTurnsPerInvocation 0.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 0 {
+			t.Errorf("expected PeakTurns 0, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+		if len(eff.SubagentTurnVelocity.ByRole) != 0 {
+			t.Errorf("expected empty SubagentTurnVelocity.ByRole, got %+v", eff.SubagentTurnVelocity.ByRole)
+		}
+	})
+
+	t.Run("empty string and whitespace-only roles on multiple child invocations normalize to unassigned", func(t *testing.T) {
+		t.Parallel()
+		rootID := "ses-root"
+		ledger := domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					Tokens:   domain.InvocationTokens{PeakContext: 20000},
+				},
+				{
+					ID:       "ses-child-empty",
+					ParentID: &rootID,
+					Role:     "",
+					CostUSD:  2.0,
+					Turns:    4,
+					Tokens:   domain.InvocationTokens{PeakContext: 60000},
+				},
+				{
+					ID:       "ses-child-spaces",
+					ParentID: &rootID,
+					Role:     "   \t\n  ",
+					CostUSD:  3.0,
+					Turns:    6,
+					Tokens:   domain.InvocationTokens{PeakContext: 70000},
+				},
+			},
+		}
+
+		eff := domain.ComputeWorkflowEfficiency(ledger)
+
+		// Both children are combined under role "unassigned"
+		if eff.ContextWindowHealth.SubagentsPeakTokens != 70000 {
+			t.Errorf("expected SubagentsPeakTokens 70000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
+		}
+		if eff.ContextWindowHealth.SubagentsPeakRole != "unassigned" {
+			t.Errorf("expected SubagentsPeakRole 'unassigned', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		}
+		if eff.RoleEffortDistributionPct["unassigned"] != 100.0 {
+			t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct["unassigned"])
+		}
+		if eff.SubagentTurnVelocity.ByRole["unassigned"] != 5.0 {
+			t.Errorf("expected unassigned turn velocity 5.0, got %f", eff.SubagentTurnVelocity.ByRole["unassigned"])
+		}
+		if eff.SubagentTurnVelocity.PeakTurns != 6 {
+			t.Errorf("expected PeakTurns 6, got %d", eff.SubagentTurnVelocity.PeakTurns)
+		}
+		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 5.0 {
+			t.Errorf("expected AvgTurnsPerInvocation 5.0, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
 		}
 	})
 }

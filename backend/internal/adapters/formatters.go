@@ -190,7 +190,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger) string {
 	var roleDistParts []string
 	for _, role := range orderedDistRoles {
 		pct := we.RoleEffortDistributionPct[role]
-		if role != string(domain.RoleOrchestrator) && pct > 0 {
+		if pct > 0 {
 			roleDistParts = append(roleDistParts, fmt.Sprintf("%s %.1f%%", titleCase(role), pct))
 		}
 	}

@@ -160,23 +160,44 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 	code := ledger.Code
 
 	var activeDurationSeconds int64
-	roleCosts := make(map[string]float64)
-	rolePeaks := make(map[string]int64)
-	roleTurns := make(map[string][]int64)
 	var totReasoning, totOutput, totCompactions int64
+	rolePeaks := make(map[string]int64)
+
+	var rootPeak int64
+	var hasRoot bool
+
+	subCosts := make(map[string]float64)
+	var totSubCost float64
+	subPeaks := make(map[string]int64)
+	roleTurns := make(map[string][]int64)
 
 	for _, inv := range invs {
 		activeDurationSeconds += inv.ActiveDurationSeconds
-		roleCosts[inv.Role] += inv.CostUSD
-		if inv.Tokens.PeakContext > rolePeaks[inv.Role] {
-			rolePeaks[inv.Role] = inv.Tokens.PeakContext
-		}
-		if inv.ParentID != nil && IsSubagentRole(inv.Role) {
-			roleTurns[inv.Role] = append(roleTurns[inv.Role], inv.Turns)
-		}
 		totReasoning += inv.Tokens.Reasoning
 		totOutput += inv.Tokens.Output
 		totCompactions += inv.Compactions
+
+		if curr, exists := rolePeaks[inv.Role]; !exists || inv.Tokens.PeakContext > curr {
+			rolePeaks[inv.Role] = inv.Tokens.PeakContext
+		}
+
+		if inv.ParentID == nil {
+			if !hasRoot || inv.Tokens.PeakContext > rootPeak {
+				rootPeak = inv.Tokens.PeakContext
+			}
+			hasRoot = true
+		} else {
+			role := strings.TrimSpace(inv.Role)
+			if role == "" {
+				role = "unassigned"
+			}
+			subCosts[role] += inv.CostUSD
+			totSubCost += inv.CostUSD
+			if curr, exists := subPeaks[role]; !exists || inv.Tokens.PeakContext > curr {
+				subPeaks[role] = inv.Tokens.PeakContext
+			}
+			roleTurns[role] = append(roleTurns[role], inv.Turns)
+		}
 	}
 
 	durHours := activeDurationSeconds / 3600
@@ -191,17 +212,8 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 		activeDurationFormatted = fmt.Sprintf("%dm %ds", durMins, durRemSecs)
 	}
 
-	subCosts := make(map[string]float64)
-	var totSubCost float64
-	for r, c := range roleCosts {
-		if IsSubagentRole(r) {
-			subCosts[r] = c
-			totSubCost += c
-		}
-	}
-
 	roleEffortDistributionPct := make(map[string]float64)
-	if totSubCost > 0 {
+	if totSubCost > 0 && len(subCosts) > 0 {
 		for r, c := range subCosts {
 			if c > 0 {
 				roleEffortDistributionPct[r] = math.Round(c/totSubCost*1000.0) / 10.0
@@ -214,9 +226,18 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 	for r := range roleTurns {
 		subTurnRoles = append(subTurnRoles, r)
 	}
-	for _, r := range OrderSubagentRoles(subTurnRoles) {
+	orderedRolesForTurns := OrderSubagentRoles(subTurnRoles)
+	orderedSet := make(map[string]struct{}, len(orderedRolesForTurns))
+	for _, r := range orderedRolesForTurns {
+		orderedSet[r] = struct{}{}
 		if turns, ok := roleTurns[r]; ok {
 			allSubTurns = append(allSubTurns, turns...)
+		}
+	}
+	sort.Strings(subTurnRoles)
+	for _, r := range subTurnRoles {
+		if _, ok := orderedSet[r]; !ok {
+			allSubTurns = append(allSubTurns, roleTurns[r]...)
 		}
 	}
 
@@ -292,7 +313,10 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 		SuccessRatePct:       toolSuccessRate,
 	}
 
-	orchPeak := rolePeaks[string(RoleOrchestrator)]
+	var orchPeak int64
+	if hasRoot {
+		orchPeak = rootPeak
+	}
 	var orchSatPct float64
 	if HealthyCeilingTokens > 0 {
 		orchSatPct = math.Round(float64(orchPeak)/float64(HealthyCeilingTokens)*1000.0) / 10.0
@@ -301,18 +325,30 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger) WorkflowEfficiency {
 	var subPeak int64
 	subRoleStr := "none"
 	var foundSubRole bool
-	var candidateSubRoles []string
-	for r := range rolePeaks {
-		if IsSubagentRole(r) {
+
+	if len(subPeaks) > 0 {
+		var candidateSubRoles []string
+		for r := range subPeaks {
 			candidateSubRoles = append(candidateSubRoles, r)
 		}
-	}
-	for _, r := range OrderSubagentRoles(candidateSubRoles) {
-		if peak, ok := rolePeaks[r]; ok {
+		orderedCandidateRoles := OrderSubagentRoles(candidateSubRoles)
+		for _, r := range orderedCandidateRoles {
+			peak := subPeaks[r]
 			if !foundSubRole || peak > subPeak {
 				subPeak = peak
 				subRoleStr = r
 				foundSubRole = true
+			}
+		}
+		if !foundSubRole {
+			sort.Strings(candidateSubRoles)
+			for _, r := range candidateSubRoles {
+				peak := subPeaks[r]
+				if !foundSubRole || peak > subPeak {
+					subPeak = peak
+					subRoleStr = r
+					foundSubRole = true
+				}
 			}
 		}
 	}

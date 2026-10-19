@@ -156,7 +156,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "compactions": 0,
         "peak_by_role": {
           "coder": 85656,
-          "orchestrator": 123350,
+          "general": 123350,
           "planner": 52416,
           "reviewer": 81209,
           "tester": 84421
@@ -220,7 +220,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "compactions": 0,
         "peak_by_role": {
           "coder": 84570,
-          "orchestrator": 77899,
+          "general": 77899,
           "planner": 87045
         }
       },
@@ -282,7 +282,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "compactions": 0,
         "peak_by_role": {
           "coder": 179717,
-          "orchestrator": 142662,
+          "general": 142662,
           "planner": 94178,
           "reviewer": 75376,
           "tester": 138499
@@ -304,20 +304,20 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
   "AL-12": {
     "totals": {
       "invocations": 5,
-      "input_tokens": 2405402,
-      "output_tokens": 84769,
-      "cache_read_tokens": 25288836,
-      "cache_hit_rate_pct": 91.3,
-      "cost_usd": 4.2343,
+      "input_tokens": 2570848,
+      "output_tokens": 86331,
+      "cache_read_tokens": 26768589,
+      "cache_hit_rate_pct": 91.2,
+      "cost_usd": 4.4845,
       "peak_context_tokens": 168532,
       "context_health": "ELEVATED"
     },
     "workflow_efficiency": {
       "sdlc_iterations": 1,
-      "active_duration_seconds": 3685,
-      "active_duration_formatted": "1h 1m",
-      "reasoning_tokens": 57511,
-      "reasoning_ratio_pct": 40.4,
+      "active_duration_seconds": 3784,
+      "active_duration_formatted": "1h 3m",
+      "reasoning_tokens": 59998,
+      "reasoning_ratio_pct": 41.0,
       "subagent_turn_velocity": {
         "avg_turns_per_invocation": 42.5,
         "peak_turns": 75,
@@ -334,9 +334,9 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "prod_lines_added": 946
       },
       "tool_execution": {
-        "total_calls": 409,
+        "total_calls": 425,
         "errors_and_corrections": 6,
-        "success_rate_pct": 98.5
+        "success_rate_pct": 98.6
       },
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
@@ -348,7 +348,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "compactions": 0,
         "peak_by_role": {
           "coder": 105014,
-          "orchestrator": 168532,
+          "general": 168532,
           "planner": 58111,
           "reviewer": 54018,
           "tester": 94236
@@ -606,7 +606,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "subagents_peak_role": "none",
         "compactions": 0,
         "peak_by_role": {
-          "orchestrator": 26252
+          "general": 26252
         }
       },
       "code_delivered": {
@@ -658,7 +658,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "subagents_peak_role": "none",
         "compactions": 0,
         "peak_by_role": {
-          "orchestrator": 29125
+          "general": 29125
         }
       },
       "code_delivered": {
@@ -710,7 +710,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "subagents_peak_role": "none",
         "compactions": 0,
         "peak_by_role": {
-          "orchestrator": 113824
+          "general": 113824
         }
       },
       "code_delivered": {
@@ -762,7 +762,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "subagents_peak_role": "none",
         "compactions": 0,
         "peak_by_role": {
-          "orchestrator": 88541
+          "general": 88541
         }
       },
       "code_delivered": {
@@ -814,7 +814,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
         "subagents_peak_role": "none",
         "compactions": 0,
         "peak_by_role": {
-          "orchestrator": 86075
+          "general": 86075
         }
       },
       "code_delivered": {
@@ -1002,29 +1002,29 @@ func TestFleetSummaryAndComparisonParity(t *testing.T) {
 	if fleet.TotalTickets != 12 {
 		t.Errorf("TotalTickets: expected 12, got %d", fleet.TotalTickets)
 	}
-	if !almostEqual(fleet.TotalCostUSD, 36.2928, 0.0001) {
-		t.Errorf("TotalCostUSD: expected 36.2928, got %f", fleet.TotalCostUSD)
+	if !almostEqual(fleet.TotalCostUSD, 36.5430, 0.0001) {
+		t.Errorf("TotalCostUSD: expected 36.5430, got %f", fleet.TotalCostUSD)
 	}
 	if fleet.TotalInvocations != 54 {
 		t.Errorf("TotalInvocations: expected 54, got %d", fleet.TotalInvocations)
 	}
-	if fleet.TotalInputTokens != 22688003 {
-		t.Errorf("TotalInputTokens: expected 22688003, got %d", fleet.TotalInputTokens)
+	if fleet.TotalInputTokens != 22853449 {
+		t.Errorf("TotalInputTokens: expected 22853449, got %d", fleet.TotalInputTokens)
 	}
-	if fleet.TotalOutputTokens != 728819 {
-		t.Errorf("TotalOutputTokens: expected 728819, got %d", fleet.TotalOutputTokens)
+	if fleet.TotalOutputTokens != 730381 {
+		t.Errorf("TotalOutputTokens: expected 730381, got %d", fleet.TotalOutputTokens)
 	}
-	if fleet.TotalCacheReadTokens != 192940164 {
-		t.Errorf("TotalCacheReadTokens: expected 192940164, got %d", fleet.TotalCacheReadTokens)
+	if fleet.TotalCacheReadTokens != 194419917 {
+		t.Errorf("TotalCacheReadTokens: expected 194419917, got %d", fleet.TotalCacheReadTokens)
 	}
 	if !almostEqual(fleet.OverallCacheHitRatePct, 89.5, 0.05) {
 		t.Errorf("OverallCacheHitRatePct: expected 89.5, got %f", fleet.OverallCacheHitRatePct)
 	}
-	if fleet.TotalDurationSeconds != 37214 {
-		t.Errorf("TotalDurationSeconds: expected 37214, got %d", fleet.TotalDurationSeconds)
+	if fleet.TotalDurationSeconds != 37313 {
+		t.Errorf("TotalDurationSeconds: expected 37313, got %d", fleet.TotalDurationSeconds)
 	}
-	if fleet.FormattedTotalDuration != "10h 20m" {
-		t.Errorf("FormattedTotalDuration: expected '10h 20m', got %s", fleet.FormattedTotalDuration)
+	if fleet.FormattedTotalDuration != "10h 21m" {
+		t.Errorf("FormattedTotalDuration: expected '10h 21m', got %s", fleet.FormattedTotalDuration)
 	}
 	if fleet.TotalLinesAdded != 19290 {
 		t.Errorf("TotalLinesAdded: expected 19290, got %d", fleet.TotalLinesAdded)
@@ -1035,15 +1035,16 @@ func TestFleetSummaryAndComparisonParity(t *testing.T) {
 	if fleet.TotalFilesChanged != 126 {
 		t.Errorf("TotalFilesChanged: expected 126, got %d", fleet.TotalFilesChanged)
 	}
-	if fleet.TotalReasoningTokens != 552849 {
-		t.Errorf("TotalReasoningTokens: expected 552849, got %d", fleet.TotalReasoningTokens)
+	if fleet.TotalReasoningTokens != 555336 {
+		t.Errorf("TotalReasoningTokens: expected 555336, got %d", fleet.TotalReasoningTokens)
 	}
-	if !almostEqual(fleet.OverallReasoningRatioPct, 43.1, 0.05) {
-		t.Errorf("OverallReasoningRatioPct: expected 43.1, got %f", fleet.OverallReasoningRatioPct)
+	if !almostEqual(fleet.OverallReasoningRatioPct, 43.2, 0.05) {
+		t.Errorf("OverallReasoningRatioPct: expected 43.2, got %f", fleet.OverallReasoningRatioPct)
 	}
 
 	expectedRoleCosts := map[string]float64{
-		"orchestrator": 18.5764,
+		"orchestrator": 7.8645,
+		"general":      10.9622,
 		"planner":      2.3555,
 		"coder":        7.9505,
 		"tester":       4.8435,
@@ -1057,7 +1058,70 @@ func TestFleetSummaryAndComparisonParity(t *testing.T) {
 	}
 
 	modelCost, ok := fleet.ModelCosts["gemini-3.8-flash"]
-	if !ok || !almostEqual(modelCost, 36.2928, 0.0001) {
-		t.Errorf("ModelCost[gemini-3.8-flash]: expected 36.2928, got %f", modelCost)
+	if !ok || !almostEqual(modelCost, 36.5430, 0.0001) {
+		t.Errorf("ModelCost[gemini-3.8-flash]: expected 36.5430, got %f", modelCost)
+	}
+}
+
+func TestStructuralClassificationParityOnWorkspaces(t *testing.T) {
+	workspacesDir := findWorkspacesDir()
+	report := adapters.ScanWorkspaces(workspacesDir)
+	if len(report.Ledgers) == 0 {
+		t.Fatalf("expected ledgers in %s, got 0", workspacesDir)
+	}
+
+	for _, ledger := range report.Ledgers {
+		if ledger.TicketID == nil {
+			continue
+		}
+		ticketID := *ledger.TicketID
+		t.Run(ticketID, func(t *testing.T) {
+			facts := ledger.Facts
+			var hasRoot bool
+			var expRootPeak int64
+			var hasChild bool
+			var expChildPeak int64
+
+			for _, inv := range facts.Invocations {
+				if inv.ParentID == nil {
+					hasRoot = true
+					if inv.Tokens.PeakContext > expRootPeak {
+						expRootPeak = inv.Tokens.PeakContext
+					}
+				} else {
+					hasChild = true
+					if inv.Tokens.PeakContext > expChildPeak {
+						expChildPeak = inv.Tokens.PeakContext
+					}
+				}
+			}
+
+			cwh := ledger.WorkflowEfficiency.ContextWindowHealth
+			if hasRoot {
+				if cwh.OrchestratorPeakTokens != expRootPeak {
+					t.Errorf("[%s] OrchestratorPeakTokens: expected %d, got %d", ticketID, expRootPeak, cwh.OrchestratorPeakTokens)
+				}
+			} else {
+				if cwh.OrchestratorPeakTokens != 0 {
+					t.Errorf("[%s] OrchestratorPeakTokens: expected 0, got %d", ticketID, cwh.OrchestratorPeakTokens)
+				}
+			}
+
+			if !hasChild {
+				if cwh.SubagentsPeakTokens != 0 {
+					t.Errorf("[%s] expected 0 SubagentsPeakTokens, got %d", ticketID, cwh.SubagentsPeakTokens)
+				}
+				if cwh.SubagentsPeakRole != "none" {
+					t.Errorf("[%s] expected SubagentsPeakRole 'none', got %s", ticketID, cwh.SubagentsPeakRole)
+				}
+				if len(ledger.WorkflowEfficiency.RoleEffortDistributionPct) != 0 {
+					t.Errorf("[%s] expected empty RoleEffortDistributionPct, got %+v", ticketID, ledger.WorkflowEfficiency.RoleEffortDistributionPct)
+				}
+			} else {
+				if cwh.SubagentsPeakTokens != expChildPeak {
+					t.Errorf("[%s] SubagentsPeakTokens: expected %d, got %d", ticketID, expChildPeak, cwh.SubagentsPeakTokens)
+				}
+			}
+		})
 	}
 }

@@ -145,11 +145,19 @@ var SubagentRoleOrder = []string{
 	string(RoleReviewer),
 }
 
-// IsSubagentRole returns true if the trimmed and lowercase-normalized role is non-empty
-// and not equal to RoleOrchestrator.
+// IsSubagentRole returns true if the trimmed and lowercase-normalized role is a valid worker subagent persona.
+// Root coordination personas (orchestrator, general, build, root) and empty/whitespace strings return false.
+//
+// Deprecated: Session classification is purely structural via ParentID != nil.
+// IsSubagentRole is retained for backwards compatibility with callers lacking session hierarchy context.
 func IsSubagentRole(role string) bool {
 	trimmed := strings.ToLower(strings.TrimSpace(role))
-	return trimmed != "" && trimmed != string(RoleOrchestrator)
+	switch trimmed {
+	case "", "orchestrator", "general", "build", "root":
+		return false
+	default:
+		return true
+	}
 }
 
 // OrderRoles deduplicates and orders roles by CanonicalRoleOrder first,
@@ -182,13 +190,14 @@ func OrderRoles(roles []string) []string {
 	return append(ordered, custom...)
 }
 
-// OrderSubagentRoles deduplicates and orders subagent roles by SubagentRoleOrder first,
-// followed by remaining custom subagent roles sorted in alphabetical order.
+// OrderSubagentRoles deduplicates non-empty trimmed input roles, sorts canonical roles
+// (planner, coder, tester, reviewer) defined by SubagentRoleOrder first, followed by
+// remaining custom subagent roles sorted in alphabetical order.
 func OrderSubagentRoles(roles []string) []string {
 	present := make(map[string]struct{})
 	for _, r := range roles {
 		trimmed := strings.TrimSpace(r)
-		if IsSubagentRole(trimmed) {
+		if trimmed != "" {
 			present[trimmed] = struct{}{}
 		}
 	}
