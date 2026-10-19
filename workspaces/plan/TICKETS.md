@@ -26,13 +26,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 - `workspaces/plan/done/AL-29 conventional commit ticket type classification in telemetry engine.md`
 - `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
+- `workspaces/plan/done/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 - `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/to-do/AL-31 decouple root session structural hierarchy from persona roles.md`
 - `workspaces/plan/to-do/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
 - `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
-- `workspaces/plan/to-do/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
@@ -63,14 +63,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: AL-33
   - **File**: `workspaces/plan/to-do/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
-
-- **AL-34**: Eliminate Cumulative Granularity and Implement Bi-Directional Code Churn Visualization
-  - **Subsystem**: Domain / Adapters / Presentation / Tests
-  - **Phase**: Phase 5
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 
 ---
 
@@ -103,6 +95,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-34**: Eliminate Cumulative Granularity and Implement Bi-Directional Code Churn Visualization
+  - **Subsystem**: Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 5
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 
 - **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
   - **Subsystem**: Domain / Adapters / Presentation / Tests

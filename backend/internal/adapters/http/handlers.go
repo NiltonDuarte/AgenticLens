@@ -317,7 +317,7 @@ func ProgressionHandler(workspacesDir string) http.HandlerFunc {
 
 		granularity, ok := domain.ParseTimeGranularity(granularityParam)
 		if !ok {
-			WriteError(w, http.StatusBadRequest, "bad_request", fmt.Sprintf("invalid granularity %q: must be hourly, daily, weekly, or cumulative", granularityParam))
+			WriteError(w, http.StatusBadRequest, "bad_request", fmt.Sprintf("invalid granularity %q: must be hourly, daily, or weekly", granularityParam))
 			return
 		}
 

@@ -94,10 +94,9 @@ const (
 type TimeGranularity string
 
 const (
-	GranularityHourly     TimeGranularity = "hourly"
-	GranularityDaily      TimeGranularity = "daily"
-	GranularityWeekly     TimeGranularity = "weekly"
-	GranularityCumulative TimeGranularity = "cumulative"
+	GranularityHourly TimeGranularity = "hourly"
+	GranularityDaily  TimeGranularity = "daily"
+	GranularityWeekly TimeGranularity = "weekly"
 )
 
 // ParseTimeGranularity parses a string into a TimeGranularity enum, returning false if unrecognized.
@@ -109,8 +108,6 @@ func ParseTimeGranularity(val string) (TimeGranularity, bool) {
 		return GranularityDaily, true
 	case string(GranularityWeekly):
 		return GranularityWeekly, true
-	case string(GranularityCumulative):
-		return GranularityCumulative, true
 	default:
 		return "", false
 	}

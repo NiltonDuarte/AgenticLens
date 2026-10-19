@@ -284,7 +284,7 @@ export interface WorkspaceDetail {
   readonly anomalies: readonly Anomaly[];
 }
 
-export type TimeGranularity = 'hourly' | 'daily' | 'weekly' | 'cumulative';
+export type TimeGranularity = 'hourly' | 'daily' | 'weekly';
 
 export type TimeWindowPreset = '1d' | '7d' | '30d' | '90d' | 'all' | 'custom';
 
@@ -327,6 +327,7 @@ export interface TimeBucketMetric {
   readonly cumulative_output_tokens: number;
   readonly cumulative_lines_added: number;
   readonly cumulative_lines_deleted: number;
+  readonly cumulative_net_lines_added: number;
   readonly cumulative_invocations: number;
 }
 
