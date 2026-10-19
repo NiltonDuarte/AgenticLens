@@ -2,6 +2,7 @@ package migration
 
 import (
 	"fmt"
+	"reflect"
 
 	"agenticlens/internal/domain"
 )
@@ -101,25 +102,76 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 	}
 
 	// 7. Event facts invariant
-	if len(after.Events) < len(before.Events) {
-		return fmt.Errorf("%w: events count decreased from %d to %d",
-			ErrInvariantViolation, len(before.Events), len(after.Events))
-	}
-	for i := range before.Events {
-		b := before.Events[i]
-		a := after.Events[i]
-		if b.Timestamp != a.Timestamp ||
-			b.SessionID != a.SessionID ||
-			b.Turn != a.Turn ||
-			b.Role != a.Role ||
-			b.EventType != a.EventType ||
-			!stringPtrEqual(b.ToolName, a.ToolName) ||
-			b.Status != a.Status ||
-			!stringPtrEqual(b.ErrorMessage, a.ErrorMessage) ||
-			!int64PtrEqual(b.DurationMs, a.DurationMs) ||
-			b.ContextTokens != a.ContextTokens {
-			return fmt.Errorf("%w: pre-existing event[%d] modified",
-				ErrInvariantViolation, i)
+	if expectedTargetVersion >= 3 {
+		// Version 3+ invariant: event pruning and error message stripping
+		if len(after.Events) > len(before.Events) {
+			return fmt.Errorf("%w: events count increased in v3 migration from %d to %d",
+				ErrInvariantViolation, len(before.Events), len(after.Events))
+		}
+		matched := make(map[int]bool)
+		for i, a := range after.Events {
+			if a.ErrorMessage != nil {
+				return fmt.Errorf("%w: event[%d] in schema v3 has non-nil error_message: %s",
+					ErrInvariantViolation, i, *a.ErrorMessage)
+			}
+			found := false
+			for j, b := range before.Events {
+				if matched[j] {
+					continue
+				}
+				if b.Timestamp == a.Timestamp &&
+					b.SessionID == a.SessionID &&
+					b.Turn == a.Turn &&
+					b.Role == a.Role &&
+					b.EventType == a.EventType &&
+					stringPtrEqual(b.ToolName, a.ToolName) &&
+					b.Status == a.Status &&
+					int64PtrEqual(b.DurationMs, a.DurationMs) &&
+					b.ContextTokens == a.ContextTokens {
+					matched[j] = true
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("%w: pruned event[%d] in schema v3 does not correspond to any pre-migration event",
+					ErrInvariantViolation, i)
+			}
+		}
+
+		totalsBefore := domain.ComputeTotals(before.Invocations)
+		totalsAfter := domain.ComputeTotals(after.Invocations)
+		if !reflect.DeepEqual(totalsBefore, totalsAfter) {
+			return fmt.Errorf("%w: ComputeTotals mismatch after migration", ErrInvariantViolation)
+		}
+
+		effBefore := domain.ComputeWorkflowEfficiency(before)
+		effAfter := domain.ComputeWorkflowEfficiency(after)
+		if !reflect.DeepEqual(effBefore, effAfter) {
+			return fmt.Errorf("%w: ComputeWorkflowEfficiency mismatch after migration", ErrInvariantViolation)
+		}
+	} else {
+		// Schema v1/v2: events count cannot decrease and all prior events must be strictly preserved
+		if len(after.Events) < len(before.Events) {
+			return fmt.Errorf("%w: events count decreased from %d to %d",
+				ErrInvariantViolation, len(before.Events), len(after.Events))
+		}
+		for i := range before.Events {
+			b := before.Events[i]
+			a := after.Events[i]
+			if b.Timestamp != a.Timestamp ||
+				b.SessionID != a.SessionID ||
+				b.Turn != a.Turn ||
+				b.Role != a.Role ||
+				b.EventType != a.EventType ||
+				!stringPtrEqual(b.ToolName, a.ToolName) ||
+				b.Status != a.Status ||
+				!stringPtrEqual(b.ErrorMessage, a.ErrorMessage) ||
+				!int64PtrEqual(b.DurationMs, a.DurationMs) ||
+				b.ContextTokens != a.ContextTokens {
+				return fmt.Errorf("%w: pre-existing event[%d] modified",
+					ErrInvariantViolation, i)
+			}
 		}
 	}
 

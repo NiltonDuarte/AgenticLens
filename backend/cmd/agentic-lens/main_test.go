@@ -907,8 +907,14 @@ func TestCLIGenerateCommand(t *testing.T) {
 	if parsed.TicketID == nil || *parsed.TicketID != "AL-999" {
 		t.Errorf("expected ticket_id AL-999, got %v", parsed.TicketID)
 	}
+	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 3 {
+		t.Errorf("expected schema_version 3, got %v", parsed.SchemaVersion)
+	}
 	if len(parsed.Invocations) != 2 {
 		t.Fatalf("expected 2 invocations, got %d", len(parsed.Invocations))
+	}
+	if strings.Contains(string(data), `"error_message"`) {
+		t.Errorf("expected zero error_message in output JSON: %s", string(data))
 	}
 
 	// Verify summary markdown
@@ -949,6 +955,152 @@ func TestCLIGenerateCommand(t *testing.T) {
 		t.Errorf("expected exactly 1 Workflow Efficiency header after second run, found %d", strings.Count(string(mdData2), "### Workflow Efficiency"))
 	}
 }
+
+func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "test_prune.db")
+
+	schema := `
+		CREATE TABLE session (
+			id TEXT PRIMARY KEY,
+			parent_id TEXT,
+			agent TEXT,
+			model TEXT,
+			title TEXT,
+			time_created INTEGER,
+			time_updated INTEGER
+		);
+		CREATE TABLE message (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		CREATE TABLE part (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			message_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_root', NULL, 'build', 'gemini-3.8-flash', 'Task AL-888 Feature', 1760000000000, 1760000050000),
+		('ses_child', 'ses_root', 'coder', 'gemini-3.8-flash', NULL, 1760000010000, 1760000045000);
+
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_nonce', 'ses_child', 'msg_1', 1760000015000, 1760000015000, '{"type":"tool","tool":"bash","state":{"input":"nonce_test_888"}}'),
+		('p_ok_tool', 'ses_child', 'msg_1', 1760000016000, 1760000017000, '{"type":"tool","tool":"read_file","state":{"status":"completed"}}'),
+		('p_err_tool', 'ses_child', 'msg_1', 1760000018000, 1760000019000, '{"type":"tool","tool":"execute_cmd","state":{"status":"error","error":{"message":"API_KEY=secret_xyz failed to connect to database postgres://admin:secret123@prod.db"}}}'),
+		('p_comp', 'ses_root', 'msg_1', 1760000020000, 1760000020000, '{"type":"compaction"}');
+
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('msg_root', 'ses_root', 1760000005000, 1760000025000, '{"role":"assistant","modelID":"gemini-3.8-flash","time":{"created":1760000005000,"completed":1760000025000},"tokens":{"input":1500,"output":300,"cache":{"read":4500},"reasoning":50},"cost":0.02}'),
+		('msg_child', 'ses_child', 1760000015000, 1760000040000, '{"role":"assistant","modelID":"gemini-3.8-flash","time":{"created":1760000015000,"completed":1760000040000},"tokens":{"input":2500,"output":500,"cache":{"read":7500},"reasoning":100},"cost":0.08}');
+	`
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening sqlite fixture db: %v", err)
+	}
+	if _, err := db.Exec(schema); err != nil {
+		db.Close()
+		t.Fatalf("failed creating schema: %v", err)
+	}
+	db.Close()
+
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+	summaryMD := filepath.Join(tempDir, "SUMMARY.md")
+	if err := os.WriteFile(summaryMD, []byte("# Ticket AL-888 Summary\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", dbPath,
+		"--ticket-id", "AL-888",
+		"--nonce", "nonce_test_888",
+		"--json-output", outJSON,
+		"--append", summaryMD,
+	)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate failed: %v, stderr: %s, stdout: %s", err, stderr.String(), stdout.String())
+	}
+
+	rawJSON, err := os.ReadFile(outJSON)
+	if err != nil {
+		t.Fatalf("failed reading output JSON: %v", err)
+	}
+
+	// 1. File size must be well under 5 KB
+	if len(rawJSON) >= 5120 {
+		t.Errorf("expected output JSON under 5120 bytes, got %d", len(rawJSON))
+	}
+
+	// 2. Raw JSON must contain zero sensitive error strings and zero "error_message" keys
+	if strings.Contains(string(rawJSON), "API_KEY=secret_xyz") {
+		t.Errorf("output JSON leaked secret error string: %s", string(rawJSON))
+	}
+	if strings.Contains(string(rawJSON), "postgres://admin:secret123") {
+		t.Errorf("output JSON leaked connection string: %s", string(rawJSON))
+	}
+	if strings.Contains(string(rawJSON), `"error_message"`) {
+		t.Errorf("output JSON must omit error_message key when nil: %s", string(rawJSON))
+	}
+
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(rawJSON, &parsed); err != nil {
+		t.Fatalf("failed unmarshaling output JSON: %v", err)
+	}
+
+	// 3. Schema version must be 3
+	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 3 {
+		t.Errorf("expected schema_version 3, got %v", parsed.SchemaVersion)
+	}
+
+	// 4. In-memory derived metrics (invocations, tokens, cost) are fully preserved
+	if len(parsed.Invocations) != 2 {
+		t.Fatalf("expected 2 invocations, got %d", len(parsed.Invocations))
+	}
+
+	// 5. Events are pruned: routine tool "read_file" is pruned, but failed tool "execute_cmd" and compaction are preserved
+	var hasErrorTool, hasCompaction, hasRoutineTool bool
+	for _, ev := range parsed.Events {
+		if ev.ErrorMessage != nil {
+			t.Errorf("expected event ErrorMessage to be nil, got: %s", *ev.ErrorMessage)
+		}
+		if ev.EventType == string(domain.EventTypeToolCall) && ev.ToolName != nil && *ev.ToolName == "execute_cmd" {
+			hasErrorTool = true
+			if ev.Status != "error" {
+				t.Errorf("expected execute_cmd status 'error', got %s", ev.Status)
+			}
+		}
+		if ev.EventType == string(domain.EventTypeCompaction) {
+			hasCompaction = true
+		}
+		if ev.EventType == string(domain.EventTypeToolCall) && ev.ToolName != nil && *ev.ToolName == "read_file" {
+			hasRoutineTool = true
+		}
+	}
+
+	if !hasErrorTool {
+		t.Errorf("expected failed tool call to be preserved in pruned events")
+	}
+	if !hasCompaction {
+		t.Errorf("expected compaction event to be preserved in pruned events")
+	}
+	if hasRoutineTool {
+		t.Errorf("expected routine successful tool call to be pruned from persisted events")
+	}
+}
+
 func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 	t.Parallel()
 
@@ -1593,8 +1745,8 @@ func TestCLIBackfillCommand(t *testing.T) {
 			t.Fatalf("failed parsing updated JSON: %v", err)
 		}
 
-		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 2 {
-			t.Errorf("expected schema_version 2, got %v", parsed.SchemaVersion)
+		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
+			t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 		}
 		if parsed.Migration != nil {
 			t.Errorf("expected migration object to be omitted on completed status, got %v", parsed.Migration)
@@ -1913,7 +2065,7 @@ func TestCLIMigrateCommand(t *testing.T) {
 			t.Errorf("backup file should be the original unversioned ledger")
 		}
 
-		// Verify migrated file is version 2 with events array
+		// Verify migrated file is upgraded to current schema version with events array
 		migratedData, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
 		if err != nil {
 			t.Fatalf("failed reading migrated file: %v", err)
@@ -1922,11 +2074,11 @@ func TestCLIMigrateCommand(t *testing.T) {
 		if err := json.Unmarshal(migratedData, &parsed); err != nil {
 			t.Fatalf("failed parsing migrated JSON: %v", err)
 		}
-		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 2 {
-			t.Errorf("expected schema_version 2, got %v", parsed.SchemaVersion)
+		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
+			t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 		}
 		if parsed.Events == nil {
-			t.Errorf("expected events array to be initialized in v2")
+			t.Errorf("expected events array to be initialized")
 		}
 
 		// TICKET-2 should remain untouched
@@ -1990,7 +2142,7 @@ func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 		t.Errorf("expected Schema Migration section in output, got: %s", out)
 	}
 
-	// Verify both tickets have schema_version 2
+	// Verify both tickets have schema_version upgraded
 	for _, tid := range []string{"TICKET-1", "TICKET-2"} {
 		data, err := os.ReadFile(filepath.Join(wsDir, tid, "agentic_metrics.json"))
 		if err != nil {
@@ -2000,8 +2152,8 @@ func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 		if err := json.Unmarshal(data, &parsed); err != nil {
 			t.Fatalf("failed parsing %s: %v", tid, err)
 		}
-		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 2 {
-			t.Errorf("expected %s schema_version 2, got %v", tid, parsed.SchemaVersion)
+		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
+			t.Errorf("expected %s schema_version %d, got %v", tid, domain.CurrentSchemaVersion, parsed.SchemaVersion)
 		}
 	}
 }
