@@ -12,7 +12,9 @@
   - Created `.github/workflows/release-please.yml` triggered on pushes to `main`.
   - Created base `CHANGELOG.md` file.
 - Optimized `.github/workflows/release-candidate.yml`:
-  - Added path filtering (`backend/**`, `web/**`, `Makefile`, `go.work*`) to prevent pre-release builds on docs, tickets, and telemetry changes.
+  - Added fast pre-job `detect-changes` inspecting `git diff` against the last reachable tag for `backend/**`, `web/**`, `Makefile`, and `go.work*`.
+  - Added `workflow_dispatch` trigger to support manual execution on demand.
+  - Eliminated webhook-level `paths:` trigger drops, ensuring release candidates are built even when code changes are accompanied or followed by non-code commits.
   - Added skip check for `chore(main): release` and `chore: release` commits to prevent duplicate candidate releases on release PR merges.
   - Added sliding window pruning step to retain only the newest 3 candidate releases and delete older releases and tags via `gh release delete`.
 - Enhanced `.github/workflows/release-stable.yml`:
@@ -39,14 +41,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 33m 59s (excludes user wait time)
+- **Active Agent Duration:** 38m 3s (excludes user wait time)
 - **Context Window Health:** ELEVATED — Orchestrator peak 0 tokens (0% of 200k healthy ceiling, 1 compactions) | Subagents peak 167.6k (General)
 - **Role Effort Distribution (Subagents):** General 100.0%
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0.0:1 (+0 test lines / +1 prod lines)
 - **Code Delivered:** +3 / -1 lines across 3 code files (excluding docs)
-- **Reasoning Effort:** 40,853 reasoning tokens (53.1% of generated output)
-- **Tool Health & Self-Correction:** 274 tool calls (2 self-corrections, 99.3% success rate)
+- **Reasoning Effort:** 54,519 reasoning tokens (57.4% of generated output)
+- **Tool Health & Self-Correction:** 309 tool calls (3 self-corrections, 99.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 4 execution anomalies detected (4 CRITICAL).
@@ -62,11 +64,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **general** | 1 | 2,317,670 | 36,125 | 27,445,146 | 92.2% | 167.6k | ELEVATED | $4.09 |
-| **Total** | **1** | **2,317,670** | **36,125** | **27,445,146** | **92.2%** | **167.6k** | **ELEVATED** | **$4.09** |
+| **general** | 1 | 2,600,269 | 40,531 | 28,960,420 | 91.8% | 167.6k | ELEVATED | $4.48 |
+| **Total** | **1** | **2,600,269** | **40,531** | **28,960,420** | **91.8%** | **167.6k** | **ELEVATED** | **$4.48** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 2,317,670 | 36,125 | 27,445,146 | 92.2% | $4.09 |
-| **Total** | **1** | **2,317,670** | **36,125** | **27,445,146** | **92.2%** | **$4.09** |
+| **gemini-3.8-flash** | 1 | 2,600,269 | 40,531 | 28,960,420 | 91.8% | $4.48 |
+| **Total** | **1** | **2,600,269** | **40,531** | **28,960,420** | **91.8%** | **$4.48** |
