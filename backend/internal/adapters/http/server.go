@@ -13,10 +13,16 @@ type Server struct {
 	httpServer    *http.Server
 	workspacesDir string
 	staticFS      fs.FS
+	liveService   LiveServiceInterface
 }
 
 // NewServer creates a new HTTP Server instance configured with API routes and SPA static serving.
-func NewServer(workspacesDir string, staticFS fs.FS) *Server {
+func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceInterface) *Server {
+	var ls LiveServiceInterface
+	if len(liveService) > 0 {
+		ls = liveService[0]
+	}
+
 	mux := http.NewServeMux()
 
 	// Register API endpoints
@@ -28,6 +34,11 @@ func NewServer(workspacesDir string, staticFS fs.FS) *Server {
 	mux.HandleFunc("GET /api/comparison", ComparisonHandler(workspacesDir))
 	mux.HandleFunc("GET /api/progression", ProgressionHandler(workspacesDir))
 
+	// Register Live API endpoints
+	mux.HandleFunc("GET /api/live/sessions", LiveSessionsHandler(ls))
+	mux.HandleFunc("GET /api/live/sessions/{id}/trace", LiveTraceHandler(ls))
+	mux.HandleFunc("GET /api/live/stream", LiveStreamHandler(ls))
+
 	// Register SPA static files and fallback handler on root
 	spaHandler := NewSPAHandler(staticFS)
 	mux.Handle("/", spaHandler)
@@ -38,6 +49,7 @@ func NewServer(workspacesDir string, staticFS fs.FS) *Server {
 	s := &Server{
 		workspacesDir: workspacesDir,
 		staticFS:      staticFS,
+		liveService:   ls,
 	}
 
 	s.httpServer = &http.Server{
