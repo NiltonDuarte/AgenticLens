@@ -26,7 +26,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
 - `workspaces/plan/done/AL-29 conventional commit ticket type classification in telemetry engine.md`
 - `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
-- `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
+- `workspaces/plan/done/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 - `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/to-do/AL-31 decouple root session structural hierarchy from persona roles.md`
@@ -37,15 +37,21 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ---
 
+## In Progress
+
+(None)
+
+---
+
 ## Ready
 
-- **AL-17**: Implement Non-Locking Live Database Hook, Session Tree Engine, Ticket Inference, and Live Trace Telemetry
-  - **Subsystem**: Adapters / Domain / HTTP / Tests
+- **AL-19**: Implement Live Anomaly Detection Engine and Realtime Session Health Rules
+  - **Subsystem**: Domain / Adapters / HTTP / Tests
   - **Phase**: Phase 4
   - **Status**: Ready
-  - **Blocked by**: None (AL-21 Done)
-  - **Blocks**: AL-19, AL-20, AL-33
-  - **File**: `workspaces/plan/to-do/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
+  - **Blocked by**: None (AL-17 Done)
+  - **Blocks**: AL-20
+  - **File**: `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 
 - **AL-31**: Decouple Root Session Structural Hierarchy from Persona Roles in Domain Engine and Tests
   - **Subsystem**: Domain / Adapters / Tests
@@ -67,19 +73,11 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Pending
 
-- **AL-19**: Implement Live Anomaly Detection Engine and Realtime Session Health Rules
-  - **Subsystem**: Domain / Adapters / HTTP / Tests
-  - **Phase**: Phase 4
-  - **Status**: Pending
-  - **Blocked by**: AL-17
-  - **Blocks**: AL-20
-  - **File**: `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
-
 - **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
   - **Subsystem**: Presentation / Web / Tests
   - **Phase**: Phase 4
   - **Status**: Pending
-  - **Blocked by**: AL-17, AL-19
+  - **Blocked by**: AL-19 (AL-17 Done)
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 
@@ -87,13 +85,21 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
   - **Phase**: Phase 6
   - **Status**: Pending
-  - **Blocked by**: AL-32, AL-17
+  - **Blocked by**: AL-32 (AL-17 Done)
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
 ---
 
 ## Done
+
+- **AL-17**: Implement Non-Locking Live Database Hook, Session Tree Engine, Ticket Inference, and Live Trace Telemetry
+  - **Subsystem**: Adapters / Domain / HTTP / Tests
+  - **Phase**: Phase 4
+  - **Status**: Done
+  - **Blocked by**: None (AL-21 Done)
+  - **Blocks**: AL-19, AL-20, AL-33
+  - **File**: `workspaces/plan/done/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
 
 - **AL-28**: Multi-Dimensional Filtering by Ticket Type and Workspace Prefix
   - **Subsystem**: Domain / Adapters / Presentation / Tests
