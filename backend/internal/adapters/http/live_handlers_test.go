@@ -437,3 +437,217 @@ func TestLiveStreamHandler_MultipleConcurrentSubscribers(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestLiveSessionsHandler_AnomaliesField(t *testing.T) {
+	mock := &mockLiveService{
+		tree: domain.LiveSessionTree{
+			RootSessions: []*domain.LiveSessionNode{
+				{
+					ID:                  "ses_alert_1",
+					Agent:               "coder",
+					Role:                domain.RoleCoder,
+					Model:               "gemini-3.8-flash",
+					Title:               "Test Anomaly",
+					TimeCreated:         "2026-10-19T10:00:00Z",
+					TimeUpdated:         "2026-10-19T10:05:00Z",
+					Status:              "running",
+					SubSessions:         []*domain.LiveSessionNode{},
+					Anomalies: []domain.LiveAnomalyAlert{
+						{
+							SessionID:    "ses_alert_1",
+							RuleName:     domain.RuleConsecutiveToolErrors,
+							Severity:     domain.LiveSeverityHigh,
+							Message:      "3 consecutive tool execution failures",
+							TriggerEvent: "part_3",
+							Timestamp:    "2026-10-19T10:05:00Z",
+						},
+					},
+				},
+			},
+			LastRefreshedAt:     "2026-10-19T10:05:01Z",
+			TotalActiveSessions: 1,
+			ActiveAnomalies: []domain.LiveAnomalyAlert{
+				{
+					SessionID:    "ses_alert_1",
+					RuleName:     domain.RuleConsecutiveToolErrors,
+					Severity:     domain.LiveSeverityHigh,
+					Message:      "3 consecutive tool execution failures",
+					TriggerEvent: "part_3",
+					Timestamp:    "2026-10-19T10:05:00Z",
+				},
+			},
+		},
+		events: make(chan live.LiveEvent, 1),
+	}
+
+	ts := setupLiveTestServer(mock)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/live/sessions")
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	var raw map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		t.Fatalf("failed decoding json: %v", err)
+	}
+
+	activeAnomalies, ok := raw["active_anomalies"].([]interface{})
+	if !ok {
+		t.Fatalf("expected active_anomalies to be array, got %T", raw["active_anomalies"])
+	}
+	if len(activeAnomalies) != 1 {
+		t.Errorf("expected 1 active anomaly, got %d", len(activeAnomalies))
+	}
+
+	rootSessions := raw["root_sessions"].([]interface{})
+	node := rootSessions[0].(map[string]interface{})
+	nodeAnomalies, ok := node["anomalies"].([]interface{})
+	if !ok {
+		t.Fatalf("expected node anomalies to be array, got %T", node["anomalies"])
+	}
+	if len(nodeAnomalies) != 1 {
+		t.Errorf("expected 1 node anomaly, got %d", len(nodeAnomalies))
+	}
+}
+
+func TestLiveTraceHandler_AnomaliesField(t *testing.T) {
+	mock := &mockLiveService{
+		trace: domain.LiveTraceView{
+			SessionID: "ses_alert_2",
+			Messages:  []domain.LiveMessageFact{},
+			Anomalies: []domain.LiveAnomalyAlert{
+				{
+					SessionID:    "ses_alert_2",
+					RuleName:     domain.RuleContextCeilingApproach,
+					Severity:     domain.LiveSeverityCritical,
+					Message:      "Context length exceeded 200k ceiling (210k/200k, 105.0%)",
+					TriggerEvent: "msg_2",
+					Timestamp:    "2026-10-19T10:10:00Z",
+				},
+			},
+		},
+		events: make(chan live.LiveEvent, 1),
+	}
+
+	ts := setupLiveTestServer(mock)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/live/sessions/ses_alert_2/trace")
+	if err != nil {
+		t.Fatalf("trace request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	var trace domain.LiveTraceView
+	if err := json.NewDecoder(resp.Body).Decode(&trace); err != nil {
+		t.Fatalf("failed decoding trace view: %v", err)
+	}
+
+	if len(trace.Anomalies) != 1 {
+		t.Fatalf("expected 1 anomaly in trace, got %d", len(trace.Anomalies))
+	}
+	if trace.Anomalies[0].RuleName != domain.RuleContextCeilingApproach {
+		t.Errorf("expected %s, got %s", domain.RuleContextCeilingApproach, trace.Anomalies[0].RuleName)
+	}
+	if trace.Anomalies[0].Severity != domain.LiveSeverityCritical {
+		t.Errorf("expected %s, got %s", domain.LiveSeverityCritical, trace.Anomalies[0].Severity)
+	}
+}
+
+func TestLiveStreamHandler_AnomalyAlertBroadcast(t *testing.T) {
+	eventsCh := make(chan live.LiveEvent, 5)
+	mock := &mockLiveService{
+		tree: domain.LiveSessionTree{
+			RootSessions:        []*domain.LiveSessionNode{},
+			LastRefreshedAt:     "2026-10-19T10:00:00Z",
+			TotalActiveSessions: 0,
+		},
+		events: eventsCh,
+	}
+
+	ts := setupLiveTestServer(mock)
+	defer ts.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", ts.URL+"/api/live/stream", nil)
+	if err != nil {
+		t.Fatalf("creating stream request: %v", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("stream connection failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+
+	// Consume initial session_tree event
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			t.Fatalf("reading initial stream: %v", err)
+		}
+		if strings.Contains(line, "event: session_tree") {
+			break
+		}
+	}
+
+	// Push an anomaly alert
+	alert := domain.LiveAnomalyAlert{
+		SessionID:    "s_alert_broadcast",
+		RuleName:     domain.RuleConsecutiveToolErrors,
+		Severity:     domain.LiveSeverityHigh,
+		Message:      "3 consecutive tool failures",
+		TriggerEvent: "p_tool_fail",
+		Timestamp:    "2026-10-19T10:15:00Z",
+	}
+	alertBytes, _ := json.Marshal(alert)
+	eventsCh <- live.LiveEvent{
+		Type: live.LiveEventAnomalyAlert,
+		Data: alertBytes,
+	}
+
+	// Read streamed anomaly_alert event
+	receivedAlert := false
+	for {
+		line, readErr := reader.ReadString('\n')
+		if readErr != nil {
+			t.Fatalf("reading streamed event line: %v", readErr)
+		}
+		if strings.Contains(line, "event: anomaly_alert") {
+			receivedAlert = true
+			dataLine, dataErr := reader.ReadString('\n')
+			if dataErr != nil {
+				t.Fatalf("reading anomaly alert data: %v", dataErr)
+			}
+			cleanData := strings.TrimSpace(strings.TrimPrefix(dataLine, "data: "))
+			var receivedAlertObj domain.LiveAnomalyAlert
+			if err := json.Unmarshal([]byte(cleanData), &receivedAlertObj); err != nil {
+				t.Fatalf("failed unmarshaling alert: %v", err)
+			}
+			if receivedAlertObj.SessionID != "s_alert_broadcast" {
+				t.Errorf("expected session s_alert_broadcast, got %s", receivedAlertObj.SessionID)
+			}
+			break
+		}
+	}
+
+	if !receivedAlert {
+		t.Error("expected to receive event: anomaly_alert")
+	}
+}

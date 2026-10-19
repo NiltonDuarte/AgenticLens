@@ -3,6 +3,7 @@ package live_test
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -580,5 +581,207 @@ func TestLiveService_AdversarialSessionIDValidation(t *testing.T) {
 				t.Errorf("expected invalid session id error for %q, got: %v", invalidID, err)
 			}
 		})
+	}
+}
+
+func TestLiveService_TokenExtractionAndAnomalyDetection(t *testing.T) {
+	dbPath := createTestDBFile(t)
+
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	now := time.Now().UnixMilli()
+
+	// Seed session
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, title, agent, model, time_created, time_updated)
+		VALUES ('s_anom_1', 'Task AL-19: Live anomaly detection', 'coder', 'gemini-3.8-flash', ?, ?)
+	`, now-10000, now-1000)
+	if err != nil {
+		t.Fatalf("seeding session: %v", err)
+	}
+
+	// Seed message with token metrics (150k input + 20k cache.read = 170k context tokens, 5k output = 175k total tokens)
+	msgData := `{"role":"assistant","tokens":{"input":150000,"output":5000,"cache":{"read":20000},"reasoning":2000}}`
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_anom_1', 's_anom_1', ?, ?, ?)
+	`, now-8000, now-8000, msgData)
+	if err != nil {
+		t.Fatalf("seeding message: %v", err)
+	}
+
+	// Seed 3 consecutive failing tool parts
+	part1Data := `{"type":"tool","tool":"bash","state":{"status":"error","output":"command exit status 1"}}`
+	part2Data := `{"type":"tool","tool":"bash","state":{"status":"error","output":"command exit status 1"}}`
+	part3Data := `{"type":"tool","tool":"bash","state":{"status":"error","output":"command exit status 1"}}`
+
+	for idx, pData := range []string{part1Data, part2Data, part3Data} {
+		_, err = rwDB.Exec(`
+			INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+			VALUES (?, 's_anom_1', 'm_anom_1', ?, ?, ?)
+		`, fmt.Sprintf("p_anom_%d", idx+1), now-7000+int64(idx*1000), now-7000+int64(idx*1000), pData)
+		if err != nil {
+			t.Fatalf("seeding part: %v", err)
+		}
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 2000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	defer service.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// 1. Verify GetSessionTrace token parsing and anomalies
+	trace, err := service.GetSessionTrace(ctx, "s_anom_1")
+	if err != nil {
+		t.Fatalf("GetSessionTrace failed: %v", err)
+	}
+
+	if len(trace.Messages) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(trace.Messages))
+	}
+
+	msg := trace.Messages[0]
+	if msg.InputTokens != 150000 {
+		t.Errorf("expected 150000 input tokens, got %d", msg.InputTokens)
+	}
+	if msg.CacheReadTokens != 20000 {
+		t.Errorf("expected 20000 cache read tokens, got %d", msg.CacheReadTokens)
+	}
+	if msg.ContextTokens != 170000 {
+		t.Errorf("expected 170000 context tokens, got %d", msg.ContextTokens)
+	}
+	if msg.OutputTokens != 5000 {
+		t.Errorf("expected 5000 output tokens, got %d", msg.OutputTokens)
+	}
+	if msg.ReasoningTokens != 2000 {
+		t.Errorf("expected 2000 reasoning tokens, got %d", msg.ReasoningTokens)
+	}
+	if msg.TotalTokens != 175000 {
+		t.Errorf("expected 175000 total tokens, got %d", msg.TotalTokens)
+	}
+
+	if len(trace.Anomalies) == 0 {
+		t.Fatal("expected trace anomalies to be populated, got 0")
+	}
+
+	// Verify that ConsecutiveToolErrors, ContextCeilingApproach, TokenVelocityRunaway, and ToolThrashing were evaluated
+	ruleNames := make(map[string]bool)
+	for _, a := range trace.Anomalies {
+		ruleNames[a.RuleName] = true
+	}
+	if !ruleNames[domain.RuleConsecutiveToolErrors] {
+		t.Errorf("expected ConsecutiveToolErrors anomaly to be present")
+	}
+	if !ruleNames[domain.RuleContextCeilingApproach] {
+		t.Errorf("expected ContextCeilingApproach anomaly to be present")
+	}
+	if !ruleNames[domain.RuleTokenVelocityRunaway] {
+		t.Errorf("expected TokenVelocityRunaway anomaly to be present")
+	}
+	if !ruleNames[domain.RuleToolThrashing] {
+		t.Errorf("expected ToolThrashing anomaly to be present")
+	}
+
+	// 2. Verify GetSessionTree node anomalies and active_anomalies
+	tree, err := service.GetSessionTree(ctx)
+	if err != nil {
+		t.Fatalf("GetSessionTree failed: %v", err)
+	}
+
+	if len(tree.RootSessions) != 1 {
+		t.Fatalf("expected 1 root session, got %d", len(tree.RootSessions))
+	}
+	node := tree.RootSessions[0]
+	if len(node.Anomalies) == 0 {
+		t.Error("expected session node anomalies to be populated")
+	}
+	if len(tree.ActiveAnomalies) == 0 {
+		t.Error("expected tree active_anomalies to be populated")
+	}
+}
+
+func TestLiveService_AnomalyAlertBroadcastStream(t *testing.T) {
+	dbPath := createTestDBFile(t)
+
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	now := time.Now().UnixMilli()
+
+	// Seed session and high token message
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, title, agent, model, time_created, time_updated)
+		VALUES ('s_stream_1', 'Task AL-19: Streaming alerts', 'coder', 'gemini-3.8-flash', ?, ?)
+	`, now-5000, now-500)
+	if err != nil {
+		t.Fatalf("seeding session: %v", err)
+	}
+
+	msgData := `{"role":"assistant","tokens":{"input":220000,"output":5000,"cache":{"read":0},"reasoning":0}}`
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_stream_1', 's_stream_1', ?, ?, ?)
+	`, now-3000, now-3000, msgData)
+	if err != nil {
+		t.Fatalf("seeding message: %v", err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 2000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	cfg := domain.DefaultProjectConfig()
+	cfg.Live.PollIntervalMs = 50
+
+	service := live.NewLiveService(hook, cfg)
+	defer service.Close()
+
+	eventsCh, unsubscribe := service.Subscribe()
+	defer unsubscribe()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	service.Start(ctx)
+
+	// Wait for LiveEventAnomalyAlert event
+	receivedAnomaly := false
+	timeout := time.After(1 * time.Second)
+
+	for !receivedAnomaly {
+		select {
+		case ev := <-eventsCh:
+			if ev.Type == live.LiveEventAnomalyAlert {
+				receivedAnomaly = true
+				var alert domain.LiveAnomalyAlert
+				if err := json.Unmarshal(ev.Data, &alert); err != nil {
+					t.Fatalf("failed decoding anomaly alert JSON: %v", err)
+				}
+				if alert.RuleName != domain.RuleContextCeilingApproach && alert.RuleName != domain.RuleTokenVelocityRunaway {
+					t.Errorf("unexpected rule name in broadcast alert: %s", alert.RuleName)
+				}
+				if alert.Severity != domain.LiveSeverityCritical {
+					t.Errorf("expected CRITICAL severity, got %s", alert.Severity)
+				}
+			}
+		case <-timeout:
+			t.Fatal("timed out waiting for LiveEventAnomalyAlert event")
+		}
 	}
 }

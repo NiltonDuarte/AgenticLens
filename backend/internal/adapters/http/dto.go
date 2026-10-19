@@ -30,7 +30,7 @@ type BuildInfoDTO struct {
 
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | BuildInfoDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | BuildInfoDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
@@ -120,4 +120,17 @@ func WriteLiveSessionTreeResponse(w http.ResponseWriter, tree domain.LiveSession
 // WriteLiveTraceResponse writes a domain.LiveTraceView as JSON.
 func WriteLiveTraceResponse(w http.ResponseWriter, trace domain.LiveTraceView) {
 	WriteJSON(w, http.StatusOK, trace)
+}
+
+// WriteLiveAnomalyAlertResponse writes a domain.LiveAnomalyAlert as JSON.
+func WriteLiveAnomalyAlertResponse(w http.ResponseWriter, alert domain.LiveAnomalyAlert) {
+	WriteJSON(w, http.StatusOK, alert)
+}
+
+// WriteLiveAnomalyAlertsResponse writes a slice of domain.LiveAnomalyAlert as JSON.
+func WriteLiveAnomalyAlertsResponse(w http.ResponseWriter, alerts []domain.LiveAnomalyAlert) {
+	if alerts == nil {
+		alerts = []domain.LiveAnomalyAlert{}
+	}
+	WriteJSON(w, http.StatusOK, alerts)
 }
