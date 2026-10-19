@@ -113,8 +113,8 @@ func TestInferenceOnActiveWorkspace(t *testing.T) {
 	}
 
 	ticketType := git.InferTicketType("AL-11")
-	if ticketType == nil || *ticketType != "feature" {
-		t.Errorf("expected feature ticket type for AL-11, got %v", ticketType)
+	if ticketType == nil || *ticketType != "feat" {
+		t.Errorf("expected feat ticket type for AL-11, got %v", ticketType)
 	}
 
 	iters := git.ComputeSDLCIterations("AL-11")

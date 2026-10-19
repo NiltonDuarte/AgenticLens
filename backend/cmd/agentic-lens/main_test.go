@@ -2480,3 +2480,953 @@ func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
 		t.Errorf("expected summary markdown NOT to contain '| **build** |', got:\n%s", mdContent)
 	}
 }
+
+func TestCLITicketTypeClassification(t *testing.T) {
+	t.Parallel()
+
+	t.Run("explicit ticket-type alias feature normalizes to feat in JSON ledger", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "AL-29",
+			"--ticket-type", "feature",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType, got nil")
+		}
+		if *parsed.TicketType != "feat" {
+			t.Errorf("expected normalized TicketType 'feat', got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("explicit invalid ticket-type exits with status 1 and lists valid types", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "AL-29",
+			"--ticket-type", "invalid-type",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate to fail with exit status 1 for invalid ticket type, but succeeded")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: invalid ticket type 'invalid-type'. Must be one of: feat, fix, docs, chore, refactor, test, ci, perf, build"
+		if !strings.Contains(stderr.String(), expectedErr) {
+			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
+		}
+
+		if _, err := os.Stat(outJSON); !os.IsNotExist(err) {
+			t.Fatalf("expected output JSON not to exist, but was created: %s", outJSON)
+		}
+	})
+
+	t.Run("automatic resolution of PO ticket records docs without flag", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "PO-5",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for PO-5, got nil")
+		}
+		if *parsed.TicketType != "docs" {
+			t.Errorf("expected TicketType 'docs' for PO-5, got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("automatic resolution of GEN ticket records chore without flag", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "GEN-1",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for GEN-1, got nil")
+		}
+		if *parsed.TicketType != "chore" {
+			t.Errorf("expected TicketType 'chore' for GEN-1, got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("unmatched ticket without strict-type logs warning and records ticket_type null", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "UNMATCHED-9999",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		expectedWarn := "WARNING: Missing ticket type for ticket UNMATCHED-9999. Specify --ticket-type explicitly."
+		if !strings.Contains(stderr.String(), expectedWarn) {
+			t.Fatalf("expected stderr to contain warning:\n%s\ngot:\n%s", expectedWarn, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType != nil {
+			t.Errorf("expected TicketType to be nil, got %q", *parsed.TicketType)
+		}
+
+		// Also verify raw JSON contains "ticket_type": null
+		if !strings.Contains(string(jsonData), `"ticket_type": null`) {
+			t.Errorf("expected raw JSON to contain '\"ticket_type\": null', got:\n%s", string(jsonData))
+		}
+	})
+
+	t.Run("unmatched ticket with strict-type exits with status 1 and logs error", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "UNMATCHED-9999",
+			"--strict-type",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate with --strict-type on unmatched ticket to fail, but succeeded")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: missing ticket type for ticket 'UNMATCHED-9999'. Specify --ticket-type explicitly."
+		if !strings.Contains(stderr.String(), expectedErr) {
+			t.Fatalf("expected stderr to contain error:\n%s\ngot:\n%s", expectedErr, stderr.String())
+		}
+
+		if _, err := os.Stat(outJSON); !os.IsNotExist(err) {
+			t.Fatalf("expected output JSON not to exist on strict failure, but found: %s", outJSON)
+		}
+	})
+
+	t.Run("cached facts with alias feature normalizes to feat when flag omitted", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		// Create existing fact ledger with legacy "feature"
+		legacyJSON := `{
+			"schema_version": 2,
+			"ticket_id": "AL-29",
+			"ticket_type": "feature",
+			"code": {
+				"lines_added": 10,
+				"lines_deleted": 2,
+				"files_changed": 1,
+				"sdlc_iterations": 1
+			},
+			"invocations": [],
+			"tools": [],
+			"events": []
+		}`
+		if err := os.WriteFile(outJSON, []byte(legacyJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "AL-29",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType, got nil")
+		}
+		if *parsed.TicketType != "feat" {
+			t.Errorf("expected normalized TicketType 'feat', got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("explicit ticket-type with whitespace and mixed cases normalizes correctly", func(t *testing.T) {
+		t.Parallel()
+		mixedCases := []struct {
+			input    string
+			expected string
+		}{
+			{input: "  FeAt  ", expected: "feat"},
+			{input: "BUGFIX", expected: "fix"},
+			{input: "DoCs", expected: "docs"},
+			{input: "  cI  ", expected: "ci"},
+			{input: "PeRfOrMaNcE", expected: "perf"},
+			{input: "  bUiLd  ", expected: "build"},
+		}
+
+		for _, tc := range mixedCases {
+			tc := tc
+			t.Run(tc.input, func(t *testing.T) {
+				t.Parallel()
+				tempDir := t.TempDir()
+				outJSON := filepath.Join(tempDir, "facts.json")
+
+				cmd := exec.Command(
+					cliBinaryPath,
+					"generate",
+					"--ticket-id", "AL-29",
+					"--ticket-type", tc.input,
+					"--allow-empty",
+					"--json-output", outJSON,
+				)
+				var stdout, stderr bytes.Buffer
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stderr
+
+				if err := cmd.Run(); err != nil {
+					t.Fatalf("generate failed for input %q: %v, stderr: %s", tc.input, err, stderr.String())
+				}
+
+				jsonData, err := os.ReadFile(outJSON)
+				if err != nil {
+					t.Fatalf("failed reading output JSON: %v", err)
+				}
+
+				var parsed domain.AgenticFactLedger
+				if err := json.Unmarshal(jsonData, &parsed); err != nil {
+					t.Fatalf("failed unmarshaling output JSON: %v", err)
+				}
+
+				if parsed.TicketType == nil {
+					t.Fatalf("expected non-nil TicketType for input %q, got nil", tc.input)
+				}
+				if *parsed.TicketType != tc.expected {
+					t.Errorf("for input %q, expected %q, got %q", tc.input, tc.expected, *parsed.TicketType)
+				}
+			})
+		}
+	})
+
+	t.Run("false prefix POD-1 does NOT match PO- and requires explicit type", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		// Without strict-type: emits warning and writes ticket_type null
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "POD-1",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		expectedWarn := "WARNING: Missing ticket type for ticket POD-1. Specify --ticket-type explicitly."
+		if !strings.Contains(stderr.String(), expectedWarn) {
+			t.Fatalf("expected stderr to contain warning:\n%s\ngot:\n%s", expectedWarn, stderr.String())
+		}
+		if strings.Contains(stderr.String(), "docs") {
+			t.Fatalf("stderr should not mention docs for false prefix POD-1, got: %s", stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType != nil {
+			t.Fatalf("expected TicketType nil for POD-1, got %q", *parsed.TicketType)
+		}
+
+		// With strict-type: terminates with exit status 1
+		strictJSON := filepath.Join(tempDir, "strict.json")
+		strictCmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "POD-1",
+			"--strict-type",
+			"--allow-empty",
+			"--json-output", strictJSON,
+		)
+		var strictOut, strictErr bytes.Buffer
+		strictCmd.Stdout = &strictOut
+		strictCmd.Stderr = &strictErr
+
+		err = strictCmd.Run()
+		if err == nil {
+			t.Fatal("expected generate with --strict-type on POD-1 to fail, but succeeded")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: missing ticket type for ticket 'POD-1'. Specify --ticket-type explicitly."
+		if !strings.Contains(strictErr.String(), expectedErr) {
+			t.Fatalf("expected strict error:\n%s\ngot:\n%s", expectedErr, strictErr.String())
+		}
+	})
+
+	t.Run("false prefix GENTLE-1 does NOT match GEN- and requires explicit type", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		// Without strict-type: emits warning and writes ticket_type null
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "GENTLE-1",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		expectedWarn := "WARNING: Missing ticket type for ticket GENTLE-1. Specify --ticket-type explicitly."
+		if !strings.Contains(stderr.String(), expectedWarn) {
+			t.Fatalf("expected stderr to contain warning:\n%s\ngot:\n%s", expectedWarn, stderr.String())
+		}
+		if strings.Contains(stderr.String(), "chore") {
+			t.Fatalf("stderr should not mention chore for false prefix GENTLE-1, got: %s", stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType != nil {
+			t.Fatalf("expected TicketType nil for GENTLE-1, got %q", *parsed.TicketType)
+		}
+
+		// With strict-type: terminates with exit status 1
+		strictJSON := filepath.Join(tempDir, "strict.json")
+		strictCmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "GENTLE-1",
+			"--strict-type",
+			"--allow-empty",
+			"--json-output", strictJSON,
+		)
+		var strictOut, strictErr bytes.Buffer
+		strictCmd.Stdout = &strictOut
+		strictCmd.Stderr = &strictErr
+
+		err = strictCmd.Run()
+		if err == nil {
+			t.Fatal("expected generate with --strict-type on GENTLE-1 to fail, but succeeded")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: missing ticket type for ticket 'GENTLE-1'. Specify --ticket-type explicitly."
+		if !strings.Contains(strictErr.String(), expectedErr) {
+			t.Fatalf("expected strict error:\n%s\ngot:\n%s", expectedErr, strictErr.String())
+		}
+	})
+
+	t.Run("strict-type with missing ticket-id uses UNKNOWN fallback in error message", func(t *testing.T) {
+		t.Parallel()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--strict-type",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate with --strict-type and missing ticket-id to fail, but succeeded")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: missing ticket type for ticket 'UNKNOWN'. Specify --ticket-type explicitly."
+		if !strings.Contains(stderr.String(), expectedErr) {
+			t.Fatalf("expected strict error:\n%s\ngot:\n%s", expectedErr, stderr.String())
+		}
+	})
+
+	t.Run("strict-type with whitespace-only ticket-type fails on unmatched ticket", func(t *testing.T) {
+		t.Parallel()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-type", "   \t",
+			"--strict-type",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate with whitespace ticket-type and --strict-type to fail, but succeeded")
+		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		} else {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+
+		expectedErr := "Error: missing ticket type for ticket 'UNMATCHED-9999'. Specify --ticket-type explicitly."
+		if !strings.Contains(stderr.String(), expectedErr) {
+			t.Fatalf("expected strict error:\n%s\ngot:\n%s", expectedErr, stderr.String())
+		}
+	})
+
+	t.Run("strict-type succeeds when explicit ticket-type is provided", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-type", "feat",
+			"--strict-type",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate with --strict-type and valid --ticket-type failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil || *parsed.TicketType != "feat" {
+			t.Errorf("expected TicketType 'feat', got %v", parsed.TicketType)
+		}
+	})
+
+	t.Run("unrecognized CLI flag exits with non-zero status", func(t *testing.T) {
+		t.Parallel()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--completely-unknown-adversarial-flag",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate with unrecognized flag to fail, but succeeded")
+		}
+	})
+
+	t.Run("custom prefix resolves automatically from project config", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatalf("failed creating .agenticlens dir: %v", err)
+		}
+		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config.yaml: %v", err)
+		}
+
+		outJSON := filepath.Join(tempDir, "facts.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "CUSTOM-101",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for CUSTOM-101, got nil")
+		}
+		if *parsed.TicketType != "fix" {
+			t.Errorf("expected TicketType 'fix' for CUSTOM-101, got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("configured prefix overrides default prefix mapping", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatalf("failed creating .agenticlens dir: %v", err)
+		}
+		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config.yaml: %v", err)
+		}
+
+		outJSON := filepath.Join(tempDir, "facts.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "PO-88",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for PO-88, got nil")
+		}
+		if *parsed.TicketType != "feat" {
+			t.Errorf("expected overridden TicketType 'feat' for PO-88, got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("explicit CLI ticket-type flag overrides configured prefix", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatalf("failed creating .agenticlens dir: %v", err)
+		}
+		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config.yaml: %v", err)
+		}
+
+		outJSON := filepath.Join(tempDir, "facts.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "CUSTOM-101",
+			"--ticket-type", "chore",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for CUSTOM-101, got nil")
+		}
+		if *parsed.TicketType != "chore" {
+			t.Errorf("expected overridden TicketType 'chore' for CUSTOM-101, got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("strict-type succeeds when custom prefix matches in project config", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatalf("failed creating .agenticlens dir: %v", err)
+		}
+		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config.yaml: %v", err)
+		}
+
+		outJSON := filepath.Join(tempDir, "facts.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "HOTFIX-77",
+			"--strict-type",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed with --strict-type: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for HOTFIX-77, got nil")
+		}
+		if *parsed.TicketType != "fix" {
+			t.Errorf("expected TicketType 'fix' for HOTFIX-77, got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("Tier 1 explicit flag overrides Tier 2 git branch prefix", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		// Initialize tempDir as an isolated git repository with a branch fix/AL-30-test
+		if err := exec.Command("git", "init", tempDir).Run(); err != nil {
+			t.Fatalf("git init failed: %v", err)
+		}
+		if err := exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run(); err != nil {
+			t.Fatalf("git config user.email failed: %v", err)
+		}
+		if err := exec.Command("git", "-C", tempDir, "config", "user.name", "Test Agent").Run(); err != nil {
+			t.Fatalf("git config user.name failed: %v", err)
+		}
+		if err := exec.Command("git", "-C", tempDir, "commit", "--allow-empty", "-m", "init").Run(); err != nil {
+			t.Fatalf("git commit failed: %v", err)
+		}
+		if err := exec.Command("git", "-C", tempDir, "checkout", "-b", "fix/AL-30-test").Run(); err != nil {
+			t.Fatalf("git checkout -b failed: %v", err)
+		}
+
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		// AL-30 is on branch fix/AL-30-test. Passing --ticket-type chore MUST override the branch prefix "fix".
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "AL-30",
+			"--ticket-type", "chore",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for AL-30, got nil")
+		}
+		if *parsed.TicketType != "chore" {
+			t.Errorf("expected explicit flag 'chore' to override branch 'fix', got %q", *parsed.TicketType)
+		}
+	})
+
+	t.Run("Tier 2 git branch prefix overrides Tier 3 project config prefix", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		// Initialize tempDir as an isolated git repository with a commit and branch fix/AL-30-test
+		if err := exec.Command("git", "init", tempDir).Run(); err != nil {
+			t.Fatalf("git init failed: %v", err)
+		}
+		if err := exec.Command("git", "-C", tempDir, "config", "user.email", "test@agenticlens.local").Run(); err != nil {
+			t.Fatalf("git config user.email failed: %v", err)
+		}
+		if err := exec.Command("git", "-C", tempDir, "config", "user.name", "Test Agent").Run(); err != nil {
+			t.Fatalf("git config user.name failed: %v", err)
+		}
+		if err := exec.Command("git", "-C", tempDir, "commit", "--allow-empty", "-m", "init").Run(); err != nil {
+			t.Fatalf("git commit failed: %v", err)
+		}
+		if err := exec.Command("git", "-C", tempDir, "checkout", "-b", "fix/AL-30-test").Run(); err != nil {
+			t.Fatalf("git checkout -b failed: %v", err)
+		}
+
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatalf("failed creating .agenticlens dir: %v", err)
+		}
+		// Configure AL to map to docs in config.yaml (Tier 3)
+		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config.yaml: %v", err)
+		}
+
+		outJSON := filepath.Join(tempDir, "facts.json")
+		// Branch prefix "fix" (Tier 2) MUST take precedence over config prefix "docs" (Tier 3).
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "AL-30",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for AL-30, got nil")
+		}
+		if *parsed.TicketType != "fix" {
+			t.Errorf("expected branch prefix 'fix' to override config prefix 'docs', got %q", *parsed.TicketType)
+		}
+	})
+}

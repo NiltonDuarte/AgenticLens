@@ -16,6 +16,7 @@ import (
 type rawPrefixItem struct {
 	Prefix      string `json:"prefix" yaml:"prefix"`
 	Description string `json:"description" yaml:"description"`
+	TicketType  string `json:"ticket_type" yaml:"ticket_type"`
 }
 
 func (r *rawPrefixItem) UnmarshalYAML(node *yaml.Node) error {
@@ -25,18 +26,21 @@ func (r *rawPrefixItem) UnmarshalYAML(node *yaml.Node) error {
 		}
 		r.Prefix = strings.TrimSpace(node.Value)
 		r.Description = ""
+		r.TicketType = ""
 		return nil
 	}
 	if node.Kind == yaml.MappingNode {
 		var item struct {
 			Prefix      string `yaml:"prefix"`
 			Description string `yaml:"description"`
+			TicketType  string `yaml:"ticket_type"`
 		}
 		if err := node.Decode(&item); err != nil {
 			return fmt.Errorf("decoding ticket prefix mapping: %w", err)
 		}
 		r.Prefix = strings.TrimSpace(item.Prefix)
 		r.Description = strings.TrimSpace(item.Description)
+		r.TicketType = strings.TrimSpace(item.TicketType)
 		return nil
 	}
 	return fmt.Errorf("invalid ticket prefix format: expected string or mapping, got node kind %d", node.Kind)
@@ -55,6 +59,7 @@ func (r *rawPrefixItem) UnmarshalJSON(data []byte) error {
 		}
 		r.Prefix = strings.TrimSpace(s)
 		r.Description = ""
+		r.TicketType = ""
 		return nil
 	}
 
@@ -62,12 +67,14 @@ func (r *rawPrefixItem) UnmarshalJSON(data []byte) error {
 		var item struct {
 			Prefix      string `json:"prefix"`
 			Description string `json:"description"`
+			TicketType  string `json:"ticket_type"`
 		}
 		if err := json.Unmarshal(trimmed, &item); err != nil {
 			return fmt.Errorf("decoding object ticket prefix: %w", err)
 		}
 		r.Prefix = strings.TrimSpace(item.Prefix)
 		r.Description = strings.TrimSpace(item.Description)
+		r.TicketType = strings.TrimSpace(item.TicketType)
 		return nil
 	}
 
@@ -143,6 +150,7 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 				prefixes = append(prefixes, domain.TicketPrefix{
 					Prefix:      cleanPrefix,
 					Description: strings.TrimSpace(item.Description),
+					TicketType:  strings.TrimSpace(item.TicketType),
 				})
 			}
 		}

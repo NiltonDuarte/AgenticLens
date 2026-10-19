@@ -15,8 +15,10 @@ ticket:
       description: Core AgenticLens development features, bugfixes, and technical initiatives
     - prefix: GEN
       description: General multi-agent engineering tasks and ad-hoc untracked work
+      ticket_type: chore
     - prefix: PO
       description: Product Owner specifications, requirements definitions, and roadmap breakdowns
+      ticket_type: docs
   # Enable case-insensitive prefix parsing (e.g. al-21 -> AL-21).
   case_insensitive: true
   # Additional regex patterns to match unconventional ticket naming formats.

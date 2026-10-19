@@ -55,7 +55,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - **AL-29**: Conventional Commit Ticket Type Classification in Telemetry Engine
   - **Subsystem**: CLI / Adapters / Domain / Tests
   - **Phase**: Phase 5
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-29 conventional commit ticket type classification in telemetry engine.md`

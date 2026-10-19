@@ -636,3 +636,147 @@ func TestAgenticMetricsLedgerDTO_DynamicRolesAndModelsSerialization(t *testing.T
 		t.Errorf("custom models corrupted during serialization: %+v", roundDom.Models)
 	}
 }
+
+func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
+	t.Parallel()
+
+	t.Run("explicit ticket_type null preserves nil pointer across round-trip", func(t *testing.T) {
+		t.Parallel()
+		jsonBlob := `{
+			"schema_version": 2,
+			"ticket_id": "AL-29",
+			"ticket_type": null,
+			"code": {
+				"lines_added": 0,
+				"lines_deleted": 0,
+				"files_changed": 0,
+				"sdlc_iterations": 1
+			},
+			"invocations": [],
+			"tools": [],
+			"events": []
+		}`
+
+		var factDTO adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(jsonBlob), &factDTO); err != nil {
+			t.Fatalf("unmarshal error: %v", err)
+		}
+		if factDTO.TicketType != nil {
+			t.Fatalf("expected nil TicketType in fact DTO, got %q", *factDTO.TicketType)
+		}
+
+		dom := factDTO.ToDomain()
+		if dom.TicketType != nil {
+			t.Fatalf("expected nil TicketType in domain fact ledger, got %q", *dom.TicketType)
+		}
+
+		serializedDTO := adapters.AgenticFactLedgerDTOFromDomain(dom)
+		data, err := json.Marshal(serializedDTO)
+		if err != nil {
+			t.Fatalf("marshal error: %v", err)
+		}
+		if !strings.Contains(string(data), `"ticket_type":null`) && !strings.Contains(string(data), `"ticket_type": null`) {
+			t.Errorf("expected serialized JSON to contain 'ticket_type: null', got:\n%s", string(data))
+		}
+	})
+
+	t.Run("omitted ticket_type defaults to nil pointer", func(t *testing.T) {
+		t.Parallel()
+		jsonBlob := `{
+			"schema_version": 2,
+			"ticket_id": "AL-29",
+			"code": {
+				"lines_added": 0,
+				"lines_deleted": 0,
+				"files_changed": 0,
+				"sdlc_iterations": 1
+			},
+			"invocations": [],
+			"tools": [],
+			"events": []
+		}`
+
+		var factDTO adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(jsonBlob), &factDTO); err != nil {
+			t.Fatalf("unmarshal error: %v", err)
+		}
+		if factDTO.TicketType != nil {
+			t.Fatalf("expected nil TicketType when omitted, got %q", *factDTO.TicketType)
+		}
+	})
+
+	t.Run("canonical ticket_type values round-trip through metrics and fact DTOs", func(t *testing.T) {
+		t.Parallel()
+		types := []string{"feat", "fix", "docs", "chore", "refactor", "test", "ci", "perf", "build"}
+		for _, tt := range types {
+			domFact := domain.AgenticFactLedger{
+				TicketID:   strPtr("AL-29"),
+				TicketType: strPtr(tt),
+				Code: domain.CodeFacts{
+					SDLCIterations: 1,
+				},
+			}
+			dto := adapters.AgenticFactLedgerDTOFromDomain(domFact)
+			if dto.TicketType == nil || *dto.TicketType != tt {
+				t.Errorf("expected %q in FactDTO, got %v", tt, dto.TicketType)
+			}
+			backToDom := dto.ToDomain()
+			if backToDom.TicketType == nil || *backToDom.TicketType != tt {
+				t.Errorf("expected %q back in domain, got %v", tt, backToDom.TicketType)
+			}
+
+			domMetrics := domain.AgenticMetricsLedger{
+				TicketID:   strPtr("AL-29"),
+				TicketType: strPtr(tt),
+			}
+			metricsDTO := adapters.SerializeLedger(domMetrics)
+			if metricsDTO.TicketType == nil || *metricsDTO.TicketType != tt {
+				t.Errorf("expected %q in MetricsDTO, got %v", tt, metricsDTO.TicketType)
+			}
+			metricsBackToDom := metricsDTO.ToDomain()
+			if metricsBackToDom.TicketType == nil || *metricsBackToDom.TicketType != tt {
+				t.Errorf("expected %q back in metrics domain, got %v", tt, metricsBackToDom.TicketType)
+			}
+		}
+	})
+
+	t.Run("corrupted ticket_type formats return unmarshal error", func(t *testing.T) {
+		t.Parallel()
+		corruptedCases := []struct {
+			name string
+			json string
+		}{
+			{
+				name: "ticket_type as integer number",
+				json: `{"schema_version": 2, "ticket_id": "AL-29", "ticket_type": 123}`,
+			},
+			{
+				name: "ticket_type as boolean",
+				json: `{"schema_version": 2, "ticket_id": "AL-29", "ticket_type": true}`,
+			},
+			{
+				name: "ticket_type as array",
+				json: `{"schema_version": 2, "ticket_id": "AL-29", "ticket_type": ["feat"]}`,
+			},
+			{
+				name: "ticket_type as nested object",
+				json: `{"schema_version": 2, "ticket_id": "AL-29", "ticket_type": {"name": "feat"}}`,
+			},
+		}
+
+		for _, tc := range corruptedCases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				var factDTO adapters.AgenticFactLedgerDTO
+				if err := json.Unmarshal([]byte(tc.json), &factDTO); err == nil {
+					t.Fatalf("expected unmarshal error for %s, but succeeded with %+v", tc.name, factDTO)
+				}
+
+				var metricsDTO adapters.AgenticMetricsLedgerDTO
+				if err := json.Unmarshal([]byte(tc.json), &metricsDTO); err == nil {
+					t.Fatalf("expected unmarshal error for %s on metrics DTO, but succeeded with %+v", tc.name, metricsDTO)
+				}
+			})
+		}
+	})
+}

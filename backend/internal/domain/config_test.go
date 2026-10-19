@@ -17,12 +17,13 @@ func TestDefaultProjectConfig(t *testing.T) {
 		t.Fatalf("expected 3 ticket prefixes, got %d: %v", len(cfg.Ticket.Prefixes), cfg.Ticket.Prefixes)
 	}
 	expectedPrefixes := []struct {
-		prefix string
-		desc   string
+		prefix     string
+		desc       string
+		ticketType string
 	}{
-		{"AL", "Core AgenticLens development features, bugfixes, and technical initiatives"},
-		{"GEN", "General multi-agent engineering tasks and ad-hoc untracked work"},
-		{"PO", "Product Owner specifications, requirements definitions, and roadmap breakdowns"},
+		{"AL", "Core AgenticLens development features, bugfixes, and technical initiatives", ""},
+		{"GEN", "General multi-agent engineering tasks and ad-hoc untracked work", "chore"},
+		{"PO", "Product Owner specifications, requirements definitions, and roadmap breakdowns", "docs"},
 	}
 	for i, exp := range expectedPrefixes {
 		if cfg.Ticket.Prefixes[i].Prefix != exp.prefix {
@@ -30,6 +31,9 @@ func TestDefaultProjectConfig(t *testing.T) {
 		}
 		if cfg.Ticket.Prefixes[i].Description != exp.desc {
 			t.Errorf("expected description[%d] %q, got %q", i, exp.desc, cfg.Ticket.Prefixes[i].Description)
+		}
+		if cfg.Ticket.Prefixes[i].TicketType != exp.ticketType {
+			t.Errorf("expected ticketType[%d] %q, got %q", i, exp.ticketType, cfg.Ticket.Prefixes[i].TicketType)
 		}
 	}
 	names := cfg.Ticket.PrefixNames()
@@ -693,4 +697,272 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected RoleOrchestrator for empty string, got %s", emptyMap.ResolveRole(""))
 		}
 	})
+}
+
+func TestInferTicketTypeFromPrefix(t *testing.T) {
+	t.Parallel()
+
+	defaultCfg := domain.DefaultProjectConfig().Ticket
+
+	tests := []struct {
+		name       string
+		ticketID   string
+		prefixes   []domain.TicketPrefix
+		expected   domain.ConventionalTicketType
+		expectedOk bool
+	}{
+		// Default configured prefixes: PO -> docs, GEN -> chore, AL -> empty
+		{name: "PO-1 uppercase", ticketID: "PO-1", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+		{name: "po-42 lowercase", ticketID: "po-42", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+		{name: "Po-100 mixed case", ticketID: "Po-100", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+		{name: "PO-5 with whitespace", ticketID: "  PO-5  ", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+		{name: "PO-ARCH prefix", ticketID: "PO-ARCH", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+		{name: "PO-DOCS-SPEC prefix", ticketID: "PO-DOCS-SPEC", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+		{name: "po-999 with carriage return and tabs", ticketID: "\r\n  po-999  \t", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+		{name: "PO_1 underscore delimiter", ticketID: "PO_1", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+		{name: "po_42 lowercase underscore", ticketID: "po_42", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeDocs, expectedOk: true},
+
+		{name: "GEN-100 uppercase", ticketID: "GEN-100", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeChore, expectedOk: true},
+		{name: "gen-5 lowercase", ticketID: "gen-5", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeChore, expectedOk: true},
+		{name: "Gen-42 mixed case", ticketID: "Gen-42", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeChore, expectedOk: true},
+		{name: "GEN-1 with whitespace", ticketID: "\tGEN-1\n", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeChore, expectedOk: true},
+		{name: "GEN-INFRA-RENAME prefix", ticketID: "GEN-INFRA-RENAME", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeChore, expectedOk: true},
+		{name: "gen-888 with carriage return and tabs", ticketID: "\r\n  gen-888  \t", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeChore, expectedOk: true},
+		{name: "GEN_1 underscore delimiter", ticketID: "GEN_1", prefixes: defaultCfg.Prefixes, expected: domain.TicketTypeChore, expectedOk: true},
+
+		// AL has no configured ticket_type
+		{name: "AL-1 has no configured ticket type", ticketID: "AL-1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "al-11 lowercase no ticket type", ticketID: "al-11", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+
+		// False prefix matches (MUST NOT match PO or GEN)
+		{name: "false prefix POD-1", ticketID: "POD-1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix GENTLE-1", ticketID: "GENTLE-1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix POST-1", ticketID: "POST-1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix GENESIS-1", ticketID: "GENESIS-1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix POW-10", ticketID: "POW-10", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix GENERAL-5", ticketID: "GENERAL-5", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix PO1 without delimiter", ticketID: "PO1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix GEN1 without delimiter", ticketID: "GEN1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix POLICE-99", ticketID: "POLICE-99", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "false prefix GENETIC-42", ticketID: "GENETIC-42", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+
+		// Delimiter without suffix or whitespace suffix
+		{name: "just PO- with empty suffix", ticketID: "PO-", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "just GEN- with empty suffix", ticketID: "GEN-", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "PO- with trailing spaces only", ticketID: "PO-   ", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "GEN- with trailing spaces only", ticketID: "GEN-   ", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "PO- with control characters only", ticketID: "\tPO-\n", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "GEN- with control characters only", ticketID: "\tGEN-\n", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "just PO_ with empty suffix", ticketID: "PO_", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "just GEN_ with empty suffix", ticketID: "GEN_", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+
+		// Non-supported delimiters (slash, dot, etc.)
+		{name: "PO/1 slash delimiter", ticketID: "PO/1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "GEN/1 slash delimiter", ticketID: "GEN/1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "PO.1 dot delimiter", ticketID: "PO.1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "GEN.1 dot delimiter", ticketID: "GEN.1", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+
+		// Empty/whitespace ticketID
+		{name: "empty ticket", ticketID: "", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "whitespace only", ticketID: "   ", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "just PO without delimiter", ticketID: "PO", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+		{name: "just GEN without delimiter", ticketID: "GEN", prefixes: defaultCfg.Prefixes, expected: "", expectedOk: false},
+
+		// Empty prefixes slice
+		{name: "empty prefixes slice", ticketID: "PO-1", prefixes: nil, expected: "", expectedOk: false},
+
+		// Custom prefixes configuration
+		{
+			name:     "custom DOC prefix to docs",
+			ticketID: "DOC-101",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "DOC", TicketType: "docs"},
+			},
+			expected:   domain.TicketTypeDocs,
+			expectedOk: true,
+		},
+		{
+			name:     "custom TASK prefix to chore",
+			ticketID: "TASK-42",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "TASK", TicketType: "chore"},
+			},
+			expected:   domain.TicketTypeChore,
+			expectedOk: true,
+		},
+		{
+			name:     "custom BUG prefix to fix",
+			ticketID: "BUG-99",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "BUG", TicketType: "fix"},
+			},
+			expected:   domain.TicketTypeFix,
+			expectedOk: true,
+		},
+		{
+			name:     "custom FEAT prefix with alias feature",
+			ticketID: "FEAT-7",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FEAT", TicketType: "feature"},
+			},
+			expected:   domain.TicketTypeFeat,
+			expectedOk: true,
+		},
+		{
+			name:     "custom prefix with trailing hyphen in config",
+			ticketID: "SPEC-5",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "SPEC-", TicketType: "docs"},
+			},
+			expected:   domain.TicketTypeDocs,
+			expectedOk: true,
+		},
+		{
+			name:     "custom prefix with trailing underscore in config",
+			ticketID: "SPEC_5",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "SPEC_", TicketType: "docs"},
+			},
+			expected:   domain.TicketTypeDocs,
+			expectedOk: true,
+		},
+		{
+			name:     "custom prefix with invalid ticket type",
+			ticketID: "INVALID-1",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "INVALID", TicketType: "nonexistent-type"},
+			},
+			expected:   "",
+			expectedOk: false,
+		},
+		{
+			name:     "empty prefix in config is skipped",
+			ticketID: "FOO-1",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "", TicketType: "feat"},
+				{Prefix: "   ", TicketType: "fix"},
+				{Prefix: "---", TicketType: "docs"},
+				{Prefix: "___", TicketType: "chore"},
+			},
+			expected:   "",
+			expectedOk: false,
+		},
+		{
+			name:     "delimiter test FOO_1 with underscore delimiter",
+			ticketID: "FOO_1",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FOO", TicketType: "feat"},
+			},
+			expected:   domain.TicketTypeFeat,
+			expectedOk: true,
+		},
+		{
+			name:     "delimiter test FOO-1 with hyphen delimiter",
+			ticketID: "FOO-1",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FOO", TicketType: "feat"},
+			},
+			expected:   domain.TicketTypeFeat,
+			expectedOk: true,
+		},
+		{
+			name:     "delimiter test FOOBAR-1 does NOT match prefix FOO",
+			ticketID: "FOOBAR-1",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FOO", TicketType: "feat"},
+			},
+			expected:   "",
+			expectedOk: false,
+		},
+		{
+			name:     "non-numeric suffix FOO-BAR matches prefix FOO",
+			ticketID: "FOO-BAR",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FOO", TicketType: "feat"},
+			},
+			expected:   domain.TicketTypeFeat,
+			expectedOk: true,
+		},
+		{
+			name:     "non-numeric suffix FOO_BAR_EXTRA matches prefix FOO",
+			ticketID: "FOO_BAR_EXTRA",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FOO", TicketType: "feat"},
+			},
+			expected:   domain.TicketTypeFeat,
+			expectedOk: true,
+		},
+		{
+			name:     "bare FOO without delimiter returns false",
+			ticketID: "FOO",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FOO", TicketType: "feat"},
+			},
+			expected:   "",
+			expectedOk: false,
+		},
+		{
+			name:     "FOO- with empty suffix returns false",
+			ticketID: "FOO-",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FOO", TicketType: "feat"},
+			},
+			expected:   "",
+			expectedOk: false,
+		},
+		{
+			name:     "FOO_ with empty suffix returns false",
+			ticketID: "FOO_",
+			prefixes: []domain.TicketPrefix{
+				{Prefix: "FOO", TicketType: "feat"},
+			},
+			expected:   "",
+			expectedOk: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			actual, ok := domain.InferTicketTypeFromPrefix(tc.ticketID, tc.prefixes)
+			if ok != tc.expectedOk {
+				t.Fatalf("InferTicketTypeFromPrefix(%q) ok = %v, expected %v", tc.ticketID, ok, tc.expectedOk)
+			}
+			if actual != tc.expected {
+				t.Errorf("InferTicketTypeFromPrefix(%q) = %q, expected %q", tc.ticketID, actual, tc.expected)
+			}
+		})
+	}
+}
+
+func TestTicketConfig_InferTicketType(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TicketConfig{
+		Prefixes: []domain.TicketPrefix{
+			{Prefix: "PO", TicketType: "docs"},
+			{Prefix: "GEN", TicketType: "chore"},
+			{Prefix: "HOTFIX", TicketType: "fix"},
+		},
+	}
+
+	got, ok := cfg.InferTicketType("PO-42")
+	if !ok || got != domain.TicketTypeDocs {
+		t.Errorf("expected (docs, true), got (%q, %v)", got, ok)
+	}
+
+	got, ok = cfg.InferTicketType("gen-100")
+	if !ok || got != domain.TicketTypeChore {
+		t.Errorf("expected (chore, true), got (%q, %v)", got, ok)
+	}
+
+	got, ok = cfg.InferTicketType("HOTFIX_7")
+	if !ok || got != domain.TicketTypeFix {
+		t.Errorf("expected (fix, true), got (%q, %v)", got, ok)
+	}
+
+	got, ok = cfg.InferTicketType("UNKNOWN-1")
+	if ok || got != "" {
+		t.Errorf("expected ('', false), got (%q, %v)", got, ok)
+	}
 }

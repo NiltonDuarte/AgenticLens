@@ -223,3 +223,64 @@ const (
 	RuleContextSaturationSpike AnomalyRuleID = "CONTEXT_SATURATION_SPIKE"
 	RuleSubagentReworkLoop     AnomalyRuleID = "SUBAGENT_REWORK_LOOP"
 )
+
+// ConventionalTicketType defines canonical conventional commit classifications.
+type ConventionalTicketType string
+
+const (
+	TicketTypeFeat     ConventionalTicketType = "feat"
+	TicketTypeFix      ConventionalTicketType = "fix"
+	TicketTypeDocs     ConventionalTicketType = "docs"
+	TicketTypeChore    ConventionalTicketType = "chore"
+	TicketTypeRefactor ConventionalTicketType = "refactor"
+	TicketTypeTest     ConventionalTicketType = "test"
+	TicketTypeCI       ConventionalTicketType = "ci"
+	TicketTypePerf     ConventionalTicketType = "perf"
+	TicketTypeBuild    ConventionalTicketType = "build"
+)
+
+// CanonicalTicketTypes lists all supported conventional commit types in canonical order.
+var CanonicalTicketTypes = []ConventionalTicketType{
+	TicketTypeFeat,
+	TicketTypeFix,
+	TicketTypeDocs,
+	TicketTypeChore,
+	TicketTypeRefactor,
+	TicketTypeTest,
+	TicketTypeCI,
+	TicketTypePerf,
+	TicketTypeBuild,
+}
+
+// NormalizeTicketType normalizes raw strings and aliases into canonical conventional commit types.
+func NormalizeTicketType(raw string) (ConventionalTicketType, bool) {
+	trimmed := strings.ToLower(strings.TrimSpace(raw))
+	switch trimmed {
+	case "feat", "feature":
+		return TicketTypeFeat, true
+	case "fix", "bug", "bugfix":
+		return TicketTypeFix, true
+	case "docs", "doc", "documentation":
+		return TicketTypeDocs, true
+	case "chore", "task":
+		return TicketTypeChore, true
+	case "refactor":
+		return TicketTypeRefactor, true
+	case "test", "tests":
+		return TicketTypeTest, true
+	case "ci":
+		return TicketTypeCI, true
+	case "perf", "performance":
+		return TicketTypePerf, true
+	case "build":
+		return TicketTypeBuild, true
+	default:
+		return "", false
+	}
+}
+
+// IsValidTicketType reports whether the raw ticket type resolves to a valid conventional type.
+func IsValidTicketType(raw string) bool {
+	_, ok := NormalizeTicketType(raw)
+	return ok
+}

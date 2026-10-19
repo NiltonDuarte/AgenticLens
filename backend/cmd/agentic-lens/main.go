@@ -35,7 +35,8 @@ func runGenerate(args []string) {
 	nonceFlag := genFlags.String("nonce", "", "Unique random execution nonce to lock session resolution to")
 	sessionIDFlag := genFlags.String("session-id", "", "Explicit root session ID")
 	ticketTitleFlag := genFlags.String("ticket-title", "", "Human-readable ticket title or descriptive name")
-	ticketTypeFlag := genFlags.String("ticket-type", "", "Ticket type classification (e.g., feature, bug, chore, refactor)")
+	ticketTypeFlag := genFlags.String("ticket-type", "", "Ticket type classification (e.g., feat, fix, docs, chore, refactor, test, ci, perf, build)")
+	strictTypeFlag := genFlags.Bool("strict-type", false, "Require a valid ticket type, failing if omitted and cannot be inferred")
 	startedAtFlag := genFlags.String("started-at", "", "Explicit start timestamp ISO format")
 	completedAtFlag := genFlags.String("completed-at", "", "Explicit completion timestamp ISO format")
 	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update structured JSON ledger")
@@ -57,6 +58,8 @@ func runGenerate(args []string) {
 		}
 	}
 
+	projCfg, _ := adaptersconfig.Load("")
+
 	activeTicketID := strings.TrimSpace(*ticketIDFlag)
 	if activeTicketID == "" && cachedFacts != nil && cachedFacts.TicketID != nil {
 		activeTicketID = strings.TrimSpace(*cachedFacts.TicketID)
@@ -74,12 +77,38 @@ func runGenerate(args []string) {
 
 	var activeTicketType *string
 	if strings.TrimSpace(*ticketTypeFlag) != "" {
-		clean := strings.TrimSpace(*ticketTypeFlag)
-		activeTicketType = &clean
+		normalized, ok := domain.NormalizeTicketType(*ticketTypeFlag)
+		if !ok {
+			var names []string
+			for _, t := range domain.CanonicalTicketTypes {
+				names = append(names, string(t))
+			}
+			fmt.Fprintf(os.Stderr, "Error: invalid ticket type '%s'. Must be one of: %s\n", *ticketTypeFlag, strings.Join(names, ", "))
+			os.Exit(1)
+		}
+		s := string(normalized)
+		activeTicketType = &s
 	} else if cachedFacts != nil && cachedFacts.TicketType != nil {
-		activeTicketType = cachedFacts.TicketType
-	} else {
-		activeTicketType = git.InferTicketType(activeTicketID)
+		if normalized, ok := domain.NormalizeTicketType(*cachedFacts.TicketType); ok {
+			s := string(normalized)
+			activeTicketType = &s
+		}
+	}
+
+	if activeTicketType == nil && activeTicketID != "" {
+		activeTicketType = git.InferTicketType(activeTicketID, projCfg.Ticket.Prefixes...)
+	}
+
+	if activeTicketType == nil {
+		targetTicket := "UNKNOWN"
+		if activeTicketID != "" {
+			targetTicket = activeTicketID
+		}
+		if *strictTypeFlag {
+			fmt.Fprintf(os.Stderr, "Error: missing ticket type for ticket '%s'. Specify --ticket-type explicitly.\n", targetTicket)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "WARNING: Missing ticket type for ticket %s. Specify --ticket-type explicitly.\n", targetTicket)
 	}
 
 	currentUser := git.GetGitUser()
@@ -228,7 +257,6 @@ func runGenerate(args []string) {
 		Events:        events,
 	}
 
-	projCfg, _ := adaptersconfig.Load("")
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg.RoleMappings)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger)
 

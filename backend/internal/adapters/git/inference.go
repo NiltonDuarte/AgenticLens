@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"agenticlens/internal/domain"
 )
 
 // GetGitUser retrieves user name strictly from git config (user.name).
@@ -153,85 +155,68 @@ func cleanHeadingTitle(line, ticketID, docType string) string {
 	return strings.Trim(strings.TrimSpace(clean), ": -")
 }
 
-// InferTicketType infers ticket classification (feature, bug, chore, refactor, documentation) from git.
-func InferTicketType(ticketID string) *string {
+// InferTicketTypeFromBranchList parses git branch list output to resolve conventional commit type.
+func InferTicketTypeFromBranchList(branchOut, ticketID string) *string {
 	cleanTicket := strings.TrimSpace(ticketID)
 	if cleanTicket == "" {
 		return nil
 	}
 
-	// 1. Search git branches
-	branchOut, err := runGitCommand("branch", "-a", "--list", "*"+cleanTicket+"*")
-	if err == nil {
-		for _, line := range strings.Split(branchOut, "\n") {
-			clean := strings.TrimSpace(strings.TrimLeft(line, "*+ "))
-			if strings.Contains(clean, "/") {
-				parts := strings.Split(clean, "/")
-				var filtered []string
-				for _, p := range parts {
-					if p != "remotes" {
-						filtered = append(filtered, p)
-					}
+	ticketPattern := regexp.MustCompile(`(?i)(?:^|[/_.-])` + regexp.QuoteMeta(cleanTicket) + `(?:[/_.-]|$)`)
+	for _, line := range strings.Split(branchOut, "\n") {
+		clean := strings.TrimSpace(strings.TrimLeft(line, "*+ "))
+		if clean == "" || !ticketPattern.MatchString(clean) {
+			continue
+		}
+		if strings.Contains(clean, "/") {
+			parts := strings.Split(clean, "/")
+			var filtered []string
+			for _, p := range parts {
+				if p != "remotes" && p != "" {
+					filtered = append(filtered, p)
 				}
-				prefix := ""
-				if len(filtered) > 0 {
-					if filtered[0] != "origin" {
-						prefix = strings.ToLower(filtered[0])
-					} else if len(filtered) > 1 {
-						prefix = strings.ToLower(filtered[1])
-					}
+			}
+			if len(filtered) > 0 {
+				prefix := strings.ToLower(filtered[0])
+				if tt, ok := domain.NormalizeTicketType(prefix); ok {
+					s := string(tt)
+					return &s
 				}
-				res := mapPrefixToType(prefix)
-				if res != nil {
-					return res
+				// If first segment was a remote identifier (e.g. origin, upstream), check the next segment
+				if len(filtered) > 1 {
+					if tt, ok := domain.NormalizeTicketType(strings.ToLower(filtered[1])); ok {
+						s := string(tt)
+						return &s
+					}
 				}
 			}
 		}
 	}
-
-	// 2. Search git log commits mentioning ticket
-	logOut, err := runGitCommand("log", "--all", "--grep="+cleanTicket, "--oneline", "-n", "5")
-	if err == nil {
-		for _, line := range strings.Split(logOut, "\n") {
-			lower := strings.ToLower(line)
-			if strings.Contains(lower, "feat(") || strings.Contains(lower, "feat:") || strings.Contains(lower, "feature") {
-				feat := "feature"
-				return &feat
-			}
-			if strings.Contains(lower, "fix(") || strings.Contains(lower, "fix:") || strings.Contains(lower, "bug") {
-				bug := "bug"
-				return &bug
-			}
-			if strings.Contains(lower, "chore(") || strings.Contains(lower, "chore:") || strings.Contains(lower, "ci(") || strings.Contains(lower, "ci:") {
-				chore := "chore"
-				return &chore
-			}
-			if strings.Contains(lower, "refactor(") || strings.Contains(lower, "refactor:") {
-				ref := "refactor"
-				return &ref
-			}
-		}
-	}
-
-	feat := "feature"
-	return &feat
+	return nil
 }
 
-func mapPrefixToType(prefix string) *string {
-	var val string
-	switch prefix {
-	case "feat", "feature":
-		val = "feature"
-	case "fix", "bug", "bugfix":
-		val = "bug"
-	case "chore", "ci", "task":
-		val = "chore"
-	case "refactor":
-		val = "refactor"
-	case "docs":
-		val = "documentation"
-	default:
+// InferTicketType infers ticket classification from git branch prefix or caller-supplied configured prefixes.
+func InferTicketType(ticketID string, prefixes ...domain.TicketPrefix) *string {
+	cleanTicket := strings.TrimSpace(ticketID)
+	if cleanTicket == "" {
 		return nil
 	}
-	return &val
+
+	// 1. Search git branches (Tier 2)
+	branchOut, err := runGitCommand("branch", "-a", "--list", "*"+cleanTicket+"*")
+	if err == nil {
+		if res := InferTicketTypeFromBranchList(branchOut, cleanTicket); res != nil {
+			return res
+		}
+	}
+
+	// 2. Search configured ticket identifier prefix backup (Tier 3)
+	if len(prefixes) > 0 {
+		if tt, ok := domain.InferTicketTypeFromPrefix(cleanTicket, prefixes); ok {
+			s := string(tt)
+			return &s
+		}
+	}
+
+	return nil
 }

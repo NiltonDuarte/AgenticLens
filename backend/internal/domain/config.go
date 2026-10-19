@@ -22,6 +22,7 @@ type ProjectConfig struct {
 type TicketPrefix struct {
 	Prefix      string `json:"prefix" yaml:"prefix"`
 	Description string `json:"description" yaml:"description"`
+	TicketType  string `json:"ticket_type,omitempty" yaml:"ticket_type,omitempty"`
 }
 
 // TicketConfig specifies ticket identification, casing rules, and pattern parsing.
@@ -41,6 +42,55 @@ func (t TicketConfig) PrefixNames() []string {
 		}
 	}
 	return names
+}
+
+// InferTicketType determines conventional commit type from ticket identifier using configured prefixes.
+func (t TicketConfig) InferTicketType(ticketID string) (ConventionalTicketType, bool) {
+	return InferTicketTypeFromPrefix(ticketID, t.Prefixes)
+}
+
+// InferTicketTypeFromPrefix determines conventional commit type from ticket identifier using configured prefixes.
+func InferTicketTypeFromPrefix(ticketID string, prefixes []TicketPrefix) (ConventionalTicketType, bool) {
+	cleanTicket := strings.TrimSpace(ticketID)
+	if cleanTicket == "" {
+		return "", false
+	}
+
+	for _, p := range prefixes {
+		rawType := strings.TrimSpace(p.TicketType)
+		if rawType == "" {
+			continue
+		}
+
+		normType, ok := NormalizeTicketType(rawType)
+		if !ok {
+			continue
+		}
+
+		cleanPrefix := strings.TrimSpace(p.Prefix)
+		cleanPrefix = strings.TrimRight(cleanPrefix, "-_")
+		cleanPrefix = strings.TrimSpace(cleanPrefix)
+		if cleanPrefix == "" {
+			continue
+		}
+
+		prefixLen := len(cleanPrefix)
+		if len(cleanTicket) <= prefixLen {
+			continue
+		}
+
+		if strings.EqualFold(cleanTicket[:prefixLen], cleanPrefix) {
+			delim := cleanTicket[prefixLen]
+			if delim == '-' || delim == '_' {
+				remainder := strings.TrimSpace(cleanTicket[prefixLen+1:])
+				if remainder != "" {
+					return normType, true
+				}
+			}
+		}
+	}
+
+	return "", false
 }
 
 // WorkspacesConfig defines filesystem paths for ticket workspaces and source repositories.
@@ -133,10 +183,12 @@ func DefaultProjectConfig() ProjectConfig {
 				{
 					Prefix:      "GEN",
 					Description: "General multi-agent engineering tasks and ad-hoc untracked work",
+					TicketType:  "chore",
 				},
 				{
 					Prefix:      "PO",
 					Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
+					TicketType:  "docs",
 				},
 			},
 			CaseInsensitive: true,

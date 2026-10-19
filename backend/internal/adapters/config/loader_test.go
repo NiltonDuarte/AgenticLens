@@ -284,6 +284,11 @@ func TestLoad_MissingConfigurationFileFallback(t *testing.T) {
 	if len(cfg.Ticket.Prefixes) != len(defaultCfg.Ticket.Prefixes) {
 		t.Errorf("expected default prefixes %v, got %v", defaultCfg.Ticket.Prefixes, cfg.Ticket.Prefixes)
 	}
+	for i, exp := range defaultCfg.Ticket.Prefixes {
+		if cfg.Ticket.Prefixes[i].TicketType != exp.TicketType {
+			t.Errorf("expected default prefix[%d] %q TicketType %q, got %q", i, exp.Prefix, exp.TicketType, cfg.Ticket.Prefixes[i].TicketType)
+		}
+	}
 }
 
 func TestLoad_PartialConfigurationMerging(t *testing.T) {
@@ -1026,6 +1031,99 @@ ticket:
 		_, err = config.LoadFromFile(jsonBoolPath)
 		if err == nil {
 			t.Fatal("expected error on boolean prefix in JSON, got nil")
+		}
+	})
+}
+
+func TestLoad_TicketTypePrefixParsing(t *testing.T) {
+	t.Parallel()
+
+	t.Run("YAML structured prefix with ticket_type", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		yamlContent := `
+ticket:
+  prefixes:
+    - prefix: AL
+      description: Core features
+    - prefix: GEN
+      description: General tasks
+      ticket_type: chore
+    - prefix: PO
+      description: Product owner
+      ticket_type: docs
+    - prefix: FIX
+      ticket_type: " fix "
+`
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(cfg.Ticket.Prefixes) != 4 {
+			t.Fatalf("expected 4 prefixes, got %d", len(cfg.Ticket.Prefixes))
+		}
+		if cfg.Ticket.Prefixes[0].Prefix != "AL" || cfg.Ticket.Prefixes[0].TicketType != "" {
+			t.Errorf("expected AL with empty ticket_type, got %+v", cfg.Ticket.Prefixes[0])
+		}
+		if cfg.Ticket.Prefixes[1].Prefix != "GEN" || cfg.Ticket.Prefixes[1].TicketType != "chore" {
+			t.Errorf("expected GEN with ticket_type chore, got %+v", cfg.Ticket.Prefixes[1])
+		}
+		if cfg.Ticket.Prefixes[2].Prefix != "PO" || cfg.Ticket.Prefixes[2].TicketType != "docs" {
+			t.Errorf("expected PO with ticket_type docs, got %+v", cfg.Ticket.Prefixes[2])
+		}
+		if cfg.Ticket.Prefixes[3].Prefix != "FIX" || cfg.Ticket.Prefixes[3].TicketType != "fix" {
+			t.Errorf("expected FIX with trimmed ticket_type fix, got %+v", cfg.Ticket.Prefixes[3])
+		}
+	})
+
+	t.Run("JSON structured prefix with ticket_type", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		jsonPath := filepath.Join(tempDir, "config.json")
+
+		jsonContent := `{
+			"ticket": {
+				"prefixes": [
+					{"prefix": "AL", "description": "Core"},
+					{"prefix": "GEN", "description": "Tasks", "ticket_type": "chore"},
+					{"prefix": "PO", "ticket_type": "docs"},
+					"SCALAR"
+				]
+			}
+		}`
+		if err := os.WriteFile(jsonPath, []byte(jsonContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.LoadFromFile(jsonPath)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(cfg.Ticket.Prefixes) != 4 {
+			t.Fatalf("expected 4 prefixes, got %d", len(cfg.Ticket.Prefixes))
+		}
+		if cfg.Ticket.Prefixes[0].Prefix != "AL" || cfg.Ticket.Prefixes[0].TicketType != "" {
+			t.Errorf("expected AL with empty ticket_type, got %+v", cfg.Ticket.Prefixes[0])
+		}
+		if cfg.Ticket.Prefixes[1].Prefix != "GEN" || cfg.Ticket.Prefixes[1].TicketType != "chore" {
+			t.Errorf("expected GEN with ticket_type chore, got %+v", cfg.Ticket.Prefixes[1])
+		}
+		if cfg.Ticket.Prefixes[2].Prefix != "PO" || cfg.Ticket.Prefixes[2].TicketType != "docs" {
+			t.Errorf("expected PO with ticket_type docs, got %+v", cfg.Ticket.Prefixes[2])
+		}
+		if cfg.Ticket.Prefixes[3].Prefix != "SCALAR" || cfg.Ticket.Prefixes[3].TicketType != "" {
+			t.Errorf("expected SCALAR with empty ticket_type, got %+v", cfg.Ticket.Prefixes[3])
 		}
 	})
 }
