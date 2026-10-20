@@ -3,6 +3,7 @@ package config_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/config"
@@ -1346,6 +1347,722 @@ role_order:
 			if cfg.RoleOrder[i] != r {
 				t.Errorf("at index %d: expected %q, got %q", i, r, cfg.RoleOrder[i])
 			}
+		}
+	})
+}
+
+func TestLoad_RootConfigurationParsing(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+
+	yamlContent := `
+project_name: RootProject
+ticket:
+  prefixes:
+    - prefix: ROOT
+      description: Root initiatives
+      ticket_type: feat
+    - prefix: TASK
+      description: Task trackers
+      ticket_type: chore
+  case_insensitive: true
+  custom_patterns:
+    - ROOT-(\d+)
+workspaces:
+  dir: root_workspaces
+  src_folders:
+    - web
+    - backend
+database:
+  path: /tmp/root.db
+  query_timeout_ms: 6000
+  busy_timeout_ms: 7000
+  read_only: true
+live:
+  active_threshold_seconds: 250
+  poll_interval_ms: 1500
+  max_trace_buffer_messages: 600
+  anomaly_thresholds:
+    stall_threshold_seconds: 90
+    error_rate_threshold: 0.20
+    context_exhaustion_pct: 0.80
+code_metrics:
+  include:
+    - "backend/**"
+  exclude:
+    - "vendor/**"
+  test_patterns:
+    - "*_test.go"
+  prod_patterns:
+    - "*.go"
+role_mappings:
+  architect: planner
+  qa: tester
+role_order:
+  - orchestrator
+  - planner
+  - coder
+`
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := config.Load(tempDir)
+	if err != nil {
+		t.Fatalf("unexpected error loading root config: %v", err)
+	}
+
+	if cfg.ProjectName != "RootProject" {
+		t.Errorf("expected RootProject, got %s", cfg.ProjectName)
+	}
+	if len(cfg.Ticket.Prefixes) != 2 || cfg.Ticket.Prefixes[0].Prefix != "ROOT" || cfg.Ticket.Prefixes[1].Prefix != "TASK" {
+		t.Errorf("unexpected ticket prefixes: %v", cfg.Ticket.Prefixes)
+	}
+	if cfg.Ticket.Prefixes[0].TicketType != "feat" || cfg.Ticket.Prefixes[1].TicketType != "chore" {
+		t.Errorf("unexpected ticket types: %v", cfg.Ticket.Prefixes)
+	}
+	if !cfg.Ticket.CaseInsensitive {
+		t.Errorf("expected CaseInsensitive to be true")
+	}
+	if len(cfg.Ticket.CustomPatterns) != 1 || cfg.Ticket.CustomPatterns[0] != `ROOT-(\d+)` {
+		t.Errorf("unexpected custom patterns: %v", cfg.Ticket.CustomPatterns)
+	}
+	if cfg.Workspaces.Dir != "root_workspaces" {
+		t.Errorf("expected root_workspaces, got %s", cfg.Workspaces.Dir)
+	}
+	if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "web" || cfg.Workspaces.SrcFolders[1] != "backend" {
+		t.Errorf("unexpected src_folders: %v", cfg.Workspaces.SrcFolders)
+	}
+	if cfg.Database.Path != "/tmp/root.db" {
+		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
+	}
+	if cfg.Database.QueryTimeoutMs != 6000 || cfg.Database.BusyTimeoutMs != 7000 || !cfg.Database.ReadOnly {
+		t.Errorf("unexpected database config: %+v", cfg.Database)
+	}
+	if cfg.Live.ActiveThresholdSeconds != 250 || cfg.Live.PollIntervalMs != 1500 || cfg.Live.MaxTraceBufferMessages != 600 {
+		t.Errorf("unexpected live config: %+v", cfg.Live)
+	}
+	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 90 || cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.20 || cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.80 {
+		t.Errorf("unexpected anomaly thresholds: %+v", cfg.Live.AnomalyThresholds)
+	}
+	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "backend/**" {
+		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
+	}
+	if cfg.RoleMappings.ResolveRole("architect") != domain.RolePlanner {
+		t.Errorf("expected RolePlanner for architect, got %s", cfg.RoleMappings.ResolveRole("architect"))
+	}
+	if len(cfg.RoleOrder) != 3 || cfg.RoleOrder[0] != "orchestrator" || cfg.RoleOrder[1] != "planner" || cfg.RoleOrder[2] != "coder" {
+		t.Errorf("unexpected RoleOrder: %v", cfg.RoleOrder)
+	}
+}
+
+func TestLoad_RootFilePriorityAndPrecedence(t *testing.T) {
+	t.Parallel()
+
+	t.Run("root yaml takes precedence over root yml and root json", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte("project_name: FromRootYAML"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte("project_name: FromRootYML"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromRootJSON"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "FromRootYAML" {
+			t.Errorf("expected FromRootYAML, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("root yml takes precedence over root json", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte("project_name: FromRootYML"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromRootJSON"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "FromRootYML" {
+			t.Errorf("expected FromRootYML, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("root json selected when root yaml and yml absent", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromRootJSON"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "FromRootJSON" {
+			t.Errorf("expected FromRootJSON, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("root yaml takes precedence over legacy subfolder yaml", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		legacyDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(legacyDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte("project_name: FromRootYAML"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(legacyDir, "config.yaml"), []byte("project_name: FromLegacyYAML"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "FromRootYAML" {
+			t.Errorf("expected FromRootYAML over legacy YAML, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("root json takes precedence over legacy subfolder yaml", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		legacyDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(legacyDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromRootJSON"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(legacyDir, "config.yaml"), []byte("project_name: FromLegacyYAML"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "FromRootJSON" {
+			t.Errorf("expected FromRootJSON over legacy YAML, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("legacy fallback when root config files absent", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		legacyDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(legacyDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.WriteFile(filepath.Join(legacyDir, "config.yaml"), []byte("project_name: LegacyFallbackYAML"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "LegacyFallbackYAML" {
+			t.Errorf("expected LegacyFallbackYAML, got %s", cfg.ProjectName)
+		}
+	})
+}
+
+func TestFindConfigFile_RootUpwardTraversal(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+	if err := os.WriteFile(expectedPath, []byte("project_name: RootTraversal"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	subDir := filepath.Join(tempDir, "sub1", "sub2", "sub3")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	found, err := config.FindConfigFile(subDir)
+	if err != nil {
+		t.Fatalf("unexpected error finding config file: %v", err)
+	}
+	if found != expectedPath {
+		t.Errorf("expected %s, got %s", expectedPath, found)
+	}
+}
+
+func TestLoad_StrictSixTierCandidatePriorityElimination(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	legacyDir := filepath.Join(tempDir, ".agenticlens")
+	if err := os.MkdirAll(legacyDir, 0755); err != nil {
+		t.Fatalf("failed creating legacy directory: %v", err)
+	}
+
+	c1 := filepath.Join(tempDir, ".agenticlens-config.yaml")
+	c2 := filepath.Join(tempDir, ".agenticlens-config.yml")
+	c3 := filepath.Join(tempDir, ".agenticlens-config.json")
+	c4 := filepath.Join(legacyDir, "config.yaml")
+	c5 := filepath.Join(legacyDir, "config.yml")
+	c6 := filepath.Join(legacyDir, "config.json")
+
+	if err := os.WriteFile(c1, []byte("project_name: Tier1_RootYAML\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(c2, []byte("project_name: Tier2_RootYML\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(c3, []byte(`{"project_name": "Tier3_RootJSON"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(c4, []byte("project_name: Tier4_LegacyYAML\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(c5, []byte("project_name: Tier5_LegacyYML\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(c6, []byte(`{"project_name": "Tier6_LegacyJSON"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tiers := []struct {
+		name         string
+		expectedPath string
+		expectedName string
+		toDelete     string
+	}{
+		{
+			name:         "Tier 1: Root YAML",
+			expectedPath: c1,
+			expectedName: "Tier1_RootYAML",
+			toDelete:     c1,
+		},
+		{
+			name:         "Tier 2: Root YML",
+			expectedPath: c2,
+			expectedName: "Tier2_RootYML",
+			toDelete:     c2,
+		},
+		{
+			name:         "Tier 3: Root JSON",
+			expectedPath: c3,
+			expectedName: "Tier3_RootJSON",
+			toDelete:     c3,
+		},
+		{
+			name:         "Tier 4: Legacy YAML",
+			expectedPath: c4,
+			expectedName: "Tier4_LegacyYAML",
+			toDelete:     c4,
+		},
+		{
+			name:         "Tier 5: Legacy YML",
+			expectedPath: c5,
+			expectedName: "Tier5_LegacyYML",
+			toDelete:     c5,
+		},
+		{
+			name:         "Tier 6: Legacy JSON",
+			expectedPath: c6,
+			expectedName: "Tier6_LegacyJSON",
+			toDelete:     c6,
+		},
+	}
+
+	for _, tc := range tiers {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			found, err := config.FindConfigFile(tempDir)
+			if err != nil {
+				t.Fatalf("unexpected error finding config: %v", err)
+			}
+			if found != tc.expectedPath {
+				t.Errorf("expected path %s, got %s", tc.expectedPath, found)
+			}
+
+			cfg, err := config.Load(tempDir)
+			if err != nil {
+				t.Fatalf("unexpected error loading config: %v", err)
+			}
+			if cfg.ProjectName != tc.expectedName {
+				t.Errorf("expected project name %s, got %s", tc.expectedName, cfg.ProjectName)
+			}
+
+			if err := os.Remove(tc.toDelete); err != nil {
+				t.Fatalf("failed removing %s: %v", tc.toDelete, err)
+			}
+		})
+	}
+
+	t.Run("Tier 7: Default fallback after all candidates removed", func(t *testing.T) {
+		found, err := config.FindConfigFile(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error finding config: %v", err)
+		}
+		if found != "" {
+			t.Errorf("expected empty path, got %s", found)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error loading fallback config: %v", err)
+		}
+		defaultCfg := domain.DefaultProjectConfig()
+		if cfg.ProjectName != defaultCfg.ProjectName {
+			t.Errorf("expected default project name %s, got %s", defaultCfg.ProjectName, cfg.ProjectName)
+		}
+	})
+}
+
+func TestLoad_HostileFilesystemEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("root yaml is a directory should be skipped in favor of root yml", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		dirCandidate := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.MkdirAll(dirCandidate, 0755); err != nil {
+			t.Fatal(err)
+		}
+		fileCandidate := filepath.Join(tempDir, ".agenticlens-config.yml")
+		if err := os.WriteFile(fileCandidate, []byte("project_name: SkipDirYML\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		found, err := config.FindConfigFile(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if found != fileCandidate {
+			t.Errorf("expected %s, got %s", fileCandidate, found)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected load error: %v", err)
+		}
+		if cfg.ProjectName != "SkipDirYML" {
+			t.Errorf("expected SkipDirYML, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("legacy .agenticlens path is a file rather than directory", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		legacyFile := filepath.Join(tempDir, ".agenticlens")
+		if err := os.WriteFile(legacyFile, []byte("regular file, not directory"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		jsonCandidate := filepath.Join(tempDir, ".agenticlens-config.json")
+		if err := os.WriteFile(jsonCandidate, []byte(`{"project_name": "LegacyFileSafeJSON"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		found, err := config.FindConfigFile(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if found != jsonCandidate {
+			t.Errorf("expected %s, got %s", jsonCandidate, found)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "LegacyFileSafeJSON" {
+			t.Errorf("expected LegacyFileSafeJSON, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("empty legacy directory in child does not shadow root config in parent", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		parentConfig := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(parentConfig, []byte("project_name: ParentRootYAML\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		childDir := filepath.Join(tempDir, "child_repo")
+		emptyLegacyDir := filepath.Join(childDir, ".agenticlens")
+		if err := os.MkdirAll(emptyLegacyDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		found, err := config.FindConfigFile(childDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if found != parentConfig {
+			t.Errorf("expected parent config %s, got %s", parentConfig, found)
+		}
+
+		cfg, err := config.Load(childDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "ParentRootYAML" {
+			t.Errorf("expected ParentRootYAML, got %s", cfg.ProjectName)
+		}
+	})
+}
+
+func TestLoad_BoundaryAndCorruptedConfigs(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty root yaml config file yields defaults with zero errors", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte(""), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("expected nil error on empty file, got: %v", err)
+		}
+		defaultCfg := domain.DefaultProjectConfig()
+		if cfg.ProjectName != defaultCfg.ProjectName {
+			t.Errorf("expected default project name %s, got %s", defaultCfg.ProjectName, cfg.ProjectName)
+		}
+	})
+
+	t.Run("whitespace-only root yaml config file yields defaults", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte("   \n\n   \n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("expected nil error on whitespace file, got: %v", err)
+		}
+		defaultCfg := domain.DefaultProjectConfig()
+		if cfg.ProjectName != defaultCfg.ProjectName {
+			t.Errorf("expected default project name %s, got %s", defaultCfg.ProjectName, cfg.ProjectName)
+		}
+	})
+
+	t.Run("tab-character in root yaml config file returns descriptive error", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte("\tinvalid_tab: true\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatalf("expected error on tab-character yaml file, got nil")
+		}
+		if !strings.Contains(err.Error(), "decoding yaml configuration") {
+			t.Errorf("expected error containing 'decoding yaml configuration', got: %v", err)
+		}
+	})
+
+	t.Run("corrupted root yaml syntax returns descriptive error without panicking", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte("project_name: [unclosed_mapping:\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatalf("expected error loading corrupted yaml, got nil")
+		}
+		if !strings.Contains(err.Error(), "decoding yaml configuration") {
+			t.Errorf("expected error containing 'decoding yaml configuration', got: %v", err)
+		}
+	})
+
+	t.Run("corrupted root json syntax returns descriptive error without panicking", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.json")
+		if err := os.WriteFile(cfgPath, []byte(`{"project_name": "bad_json", `), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatalf("expected error loading corrupted json, got nil")
+		}
+		if !strings.Contains(err.Error(), "decoding json configuration") {
+			t.Errorf("expected error containing 'decoding json configuration', got: %v", err)
+		}
+	})
+
+	t.Run("malformed ticket prefix scalar tag in root config returns descriptive error", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		content := `
+ticket:
+  prefixes:
+    - !!int 12345
+`
+		if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatalf("expected error decoding non-string scalar prefix, got nil")
+		}
+		if !strings.Contains(err.Error(), "invalid ticket prefix scalar type") {
+			t.Errorf("expected error containing 'invalid ticket prefix scalar type', got: %v", err)
+		}
+	})
+
+	t.Run("legacy subfolder .agenticlens/config.yml parses correctly", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		legacyDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(legacyDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		cfgPath := filepath.Join(legacyDir, "config.yml")
+		if err := os.WriteFile(cfgPath, []byte("project_name: LegacyYMLOnly\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "LegacyYMLOnly" {
+			t.Errorf("expected LegacyYMLOnly, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("legacy subfolder .agenticlens/config.json with legacy root fields parses correctly", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		legacyDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(legacyDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		cfgPath := filepath.Join(legacyDir, "config.json")
+		content := `{
+			"ticket_prefix": "LEGACYPREFIX",
+			"workspaces_dir": "legacy_workspaces_dir",
+			"src_folders": ["src_legacy_1", "src_legacy_2"]
+		}`
+		if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(cfg.Ticket.Prefixes) != 1 || cfg.Ticket.Prefixes[0].Prefix != "LEGACYPREFIX" {
+			t.Errorf("unexpected legacy prefix: %+v", cfg.Ticket.Prefixes)
+		}
+		if cfg.Workspaces.Dir != "legacy_workspaces_dir" {
+			t.Errorf("expected legacy_workspaces_dir, got %s", cfg.Workspaces.Dir)
+		}
+		if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "src_legacy_1" {
+			t.Errorf("unexpected src_folders: %+v", cfg.Workspaces.SrcFolders)
+		}
+	})
+}
+
+func TestLoad_CustomExtensionAndEmptyPathEdgeCases(t *testing.T) {
+	t.Run("FindConfigFile with empty string uses working directory", func(t *testing.T) {
+		tempDir := t.TempDir()
+		expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(expectedPath, []byte("project_name: CwdTest\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		found, err := config.FindConfigFile("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if found != expectedPath {
+			t.Errorf("expected %s, got %s", expectedPath, found)
+		}
+
+		cfg, err := config.Load("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "CwdTest" {
+			t.Errorf("expected CwdTest, got %s", cfg.ProjectName)
+		}
+	})
+
+	t.Run("LoadFromFile with non-standard extension falls back to YAML then JSON", func(t *testing.T) {
+		tempDir := t.TempDir()
+		yamlConf := filepath.Join(tempDir, "config.conf")
+		if err := os.WriteFile(yamlConf, []byte("project_name: NonStandardYAML\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.LoadFromFile(yamlConf)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.ProjectName != "NonStandardYAML" {
+			t.Errorf("expected NonStandardYAML, got %s", cfg.ProjectName)
+		}
+
+		jsonConf := filepath.Join(tempDir, "config.ext")
+		if err := os.WriteFile(jsonConf, []byte(`{"project_name": "NonStandardJSON"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg2, err := config.LoadFromFile(jsonConf)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg2.ProjectName != "NonStandardJSON" {
+			t.Errorf("expected NonStandardJSON, got %s", cfg2.ProjectName)
+		}
+
+		badConf := filepath.Join(tempDir, "config.bad")
+		if err := os.WriteFile(badConf, []byte(`[invalid: {`), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = config.LoadFromFile(badConf)
+		if err == nil {
+			t.Fatalf("expected error on invalid file, got nil")
 		}
 	})
 }

@@ -3582,3 +3582,152 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 	})
 }
+
+func TestCLI_RootConfigurationDiscovery(t *testing.T) {
+	t.Parallel()
+
+	t.Run("generate and scan pick up workspaces and prefixes from root .agenticlens-config.yaml", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		customWsDir := filepath.Join(tempDir, "custom_root_ws")
+		ticketWsDir := filepath.Join(customWsDir, "MYROOT-5")
+		if err := os.MkdirAll(ticketWsDir, 0755); err != nil {
+			t.Fatalf("failed creating ticket dir: %v", err)
+		}
+
+		cfgContent := `
+project_name: CustomRootTest
+ticket:
+  prefixes:
+    - prefix: "MYROOT"
+      ticket_type: "fix"
+workspaces:
+  dir: "custom_root_ws"
+`
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config: %v", err)
+		}
+
+		outJSON := filepath.Join(ticketWsDir, "agentic_metrics.json")
+		genCmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "MYROOT-5",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		genCmd.Dir = tempDir
+		var genStdout, genStderr bytes.Buffer
+		genCmd.Stdout = &genStdout
+		genCmd.Stderr = &genStderr
+
+		if err := genCmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, genStderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil || *parsed.TicketType != "fix" {
+			t.Errorf("expected TicketType 'fix' from root config, got %v", parsed.TicketType)
+		}
+
+		// Verify scan with default workspaces flag resolves custom_root_ws from root config
+		scanCmd := exec.Command(
+			cliBinaryPath,
+			"--list",
+		)
+		scanCmd.Dir = tempDir
+		var scanStdout, scanStderr bytes.Buffer
+		scanCmd.Stdout = &scanStdout
+		scanCmd.Stderr = &scanStderr
+
+		if err := scanCmd.Run(); err != nil {
+			t.Fatalf("scan list failed: %v, stderr: %s", err, scanStderr.String())
+		}
+
+		scanOut := scanStdout.String()
+		if !strings.Contains(scanOut, "MYROOT-5") {
+			t.Errorf("expected MYROOT-5 in scan output, got: %s", scanOut)
+		}
+	})
+
+	t.Run("root config takes precedence over legacy config folder in CLI", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		legacyDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(legacyDir, 0755); err != nil {
+			t.Fatalf("failed creating legacy dir: %v", err)
+		}
+
+		rootWsDir := filepath.Join(tempDir, "root_ws", "ROOTPRIO-1")
+		legacyWsDir := filepath.Join(tempDir, "legacy_ws", "ROOTPRIO-1")
+		if err := os.MkdirAll(rootWsDir, 0755); err != nil || os.MkdirAll(legacyWsDir, 0755) != nil {
+			t.Fatalf("failed creating ws dirs")
+		}
+
+		// Root config maps ROOTPRIO to "feat" and dir to "root_ws"
+		rootCfg := `
+ticket:
+  prefixes:
+    - prefix: "ROOTPRIO"
+      ticket_type: "feat"
+workspaces:
+  dir: "root_ws"
+`
+		// Legacy config maps ROOTPRIO to "chore" and dir to "legacy_ws"
+		legacyCfg := `
+ticket:
+  prefixes:
+    - prefix: "ROOTPRIO"
+      ticket_type: "chore"
+workspaces:
+  dir: "legacy_ws"
+`
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(rootCfg), 0644); err != nil {
+			t.Fatalf("failed writing root config: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(legacyDir, "config.yaml"), []byte(legacyCfg), 0644); err != nil {
+			t.Fatalf("failed writing legacy config: %v", err)
+		}
+
+		outJSON := filepath.Join(rootWsDir, "agentic_metrics.json")
+		genCmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "ROOTPRIO-1",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		genCmd.Dir = tempDir
+		var genStdout, genStderr bytes.Buffer
+		genCmd.Stdout = &genStdout
+		genCmd.Stderr = &genStderr
+
+		if err := genCmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, genStderr.String())
+		}
+
+		jsonData, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(jsonData, &parsed); err != nil {
+			t.Fatalf("failed unmarshaling output JSON: %v", err)
+		}
+
+		if parsed.TicketType == nil || *parsed.TicketType != "feat" {
+			t.Errorf("expected TicketType 'feat' from root config (overriding legacy chore), got %v", parsed.TicketType)
+		}
+	})
+}
