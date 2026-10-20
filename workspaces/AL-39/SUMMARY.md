@@ -15,8 +15,6 @@
   - Enriched `ClassificationConfig` with `BaseBranch string`, `SrcFolders []string`, and `WorkspacesDir string`.
   - Updated `LoadConfig` to populate these fields from `domain.ProjectConfig`.
   - Decoupled `ClassifyFile` from static `"workspaces/"` strings by respecting `cfg.WorkspacesDir` (fallback `"workspaces"`).
-- **Iteration Inference Adapter (`git/inference.go`)**:
-  - Decoupled `findWorkspaceDir` and `ComputeSDLCIterations` to accept a dynamic workspaces directory name (fallback `"workspaces"`).
 - **Git Analyzer Adapter (`git/analyzer.go`)**:
   - Implemented dynamic upstream base branch resolution in `ResolveBaseBranch(repoRoot string, cfg *domain.ProjectConfig) (string, error)` with 4-tier strategy:
     1. Explicit configuration (`cfg.CodeMetrics.BaseBranch`) with commit existence verification.
@@ -26,11 +24,17 @@
   - Replaced all 4 hardcoded `"origin/main"` references in `GetTicketNumstat` with dynamic `baseBranch`.
   - Implemented `ValidateSrcFolders(srcFolders []string) error` with explicit failure invariant: fails if empty or whitespace-only prompting `workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml`.
   - Implemented pure helper `IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool` matching configured source folders, `cfg.Include`, and `cfg.ProdPatterns`.
-  - Eliminated duplicate 6-condition checks at lines 135-140 and lines 167-172 of `analyzer.go`.
+  - Eliminated duplicate 6-condition checks in `analyzer.go`.
   - Updated `ComputeCodeFacts` signature to return `(domain.CodeFacts, error)`, validating source folders and resolving base branch dynamically.
-  - Refactored `GetTicketNumstat` fallback resolution to validate `cfg.BaseBranch` against git commit objects using `ResolveBaseBranch`.
+  - Decoupled `ComputeCodeFacts` from filesystem iteration directories: uses fallback iterations if non-nil and > 0, else defaults to 1.
+- **Git Inference Adapter (`git/inference.go`)**:
+  - Eliminated fragile filesystem crawling for iteration subdirectories: completely removed `findWorkspaceDir`.
+  - Deprecated `ComputeSDLCIterations` to return default count 1 without performing any `os.Stat` or `os.ReadDir` traversals.
+- **OpenCode Telemetry Extractor (`opencode/extractor.go`)**:
+  - Implemented `ExtractSteeringTurns(db *sql.DB, threadIDs []string) (int64, error)` to derive SDLC iterations directly from human steering turns (`role == "user"`) recorded in the root session for the ticket.
 - **Backfill Engine (`backfill/engine.go`)**:
   - Updated `recomputeTicketFacts` to handle errors from `ComputeCodeFacts` without masking failures.
+  - Connected `ExtractSteeringTurns` during DB recomputation to populate `factLedger.Code.SDLCIterations`.
 
 ### Repository Configuration & CI Workflow
 - **Repository Configuration (`.agenticlens-config.yaml`)**:
@@ -39,34 +43,38 @@
   - Configured `fetch-depth: 0` on `actions/checkout@v4` in `backend-check` job, matching `build-binary`, ensuring remote tracking branches are available during CI test runs.
 
 ### CLI Layer (`backend/cmd/agentic-lens`)
+- **Steering Turns Integration (`main.go`)**: Extracted steering turns from session records via `opencode.ExtractSteeringTurns`, assigning `codeFacts.SDLCIterations = extractedSteeringTurns` when >= 1.
 - **Error Propagation (`main.go`)**: Updated `runGenerate` to catch errors returned by `git.ComputeCodeFacts`, print diagnostic guidance to `os.Stderr`, and exit with code 1.
 
 ### Testing & Invariants
 - **Unit & Boundary Tests**:
+  - `opencode/extractor_test.go`: Added `TestExtractSteeringTurns` verifying single/multiple user turns, case-insensitive role parsing, child session isolation, and resilient JSON error skipping.
   - `config/loader_test.go`: YAML and JSON unmarshaling, default fallback for `base_branch`, and root config loading verification.
-  - `git/analyzer_test.go`: Table-driven tests for `ResolveBaseBranch`, `ValidateSrcFolders`, `IsMonitoredSourcePath` (31 matrix cases), elimination of duplicate conditions, dynamic branch diffing, base branch validation via config, and explicit failure invariant assertions.
+  - `git/analyzer_test.go`: Table-driven tests for `ResolveBaseBranch`, `ValidateSrcFolders`, `IsMonitoredSourcePath` (31 matrix cases), elimination of duplicate conditions, dynamic branch diffing, base branch validation via config, and decoupled iterations.
   - `git/classifier_test.go`: Custom workspace directory classification tests with normalized boundaries.
-  - `git/inference_test.go`: Custom workspace directory iteration counting tests.
+  - `git/inference_test.go`: Decoupled `ComputeSDLCIterations` tests without filesystem directory fixtures.
+  - `cmd/agentic-lens/release_verification_test.go`: Removed non-source `TestYAMLFiles_SyntaxValidation`.
   - `cmd/agentic-lens/main_test.go`: CLI exit code 1 tests on unresolvable base branch, empty source folders, and deterministic `-b main` repo initialization.
 - **Architectural Gates**: Zero `any` or `interface{}` across Go code, zero emojis, zero race conditions (`go test -race ./...`), and zero skipped tests.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 4h 52m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 8
+- **Active Agent Duration:** 6h 0m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Orchestrator peak 168.2k tokens (84% of 200k healthy ceiling, 2 compactions) | Subagents peak 168.4k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 18.4%, Coder 41.7%, Tester 25.7%, Reviewer 14.3%
-- **Subagent Turn Velocity & Thrashing:** 49.3 avg turns/run (peak: 108 turns) | Planner 28.3, Coder 63.7, Tester 58.5, Reviewer 50.0
-- **Test-to-Production Code Ratio:** 4.0:1 (+1,172 test lines / +291 prod lines)
-- **Code Delivered:** +1,465 / -62 lines across 15 code files (excluding docs)
-- **Reasoning Effort:** 199,167 reasoning tokens (63.1% of generated output)
-- **Tool Health & Self-Correction:** 620 tool calls (13 self-corrections, 97.9% success rate)
+- **Role Effort Distribution (Subagents):** Planner 18.7%, Coder 44.5%, Tester 20.8%, Reviewer 16.1%
+- **Subagent Turn Velocity & Thrashing:** 49.5 avg turns/run (peak: 108 turns) | Planner 32.5, Coder 60.4, Tester 48.3, Reviewer 55.0
+- **Test-to-Production Code Ratio:** 3.5:1 (+1,207 test lines / +349 prod lines)
+- **Code Delivered:** +1,558 / -104 lines across 16 code files (excluding docs)
+- **Reasoning Effort:** 279,033 reasoning tokens (63.4% of generated output)
+- **Tool Health & Self-Correction:** 934 tool calls (18 self-corrections, 98.1% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 6 execution anomalies detected (4 CRITICAL, 2 WARNING).
+- **Status:** 7 execution anomalies detected (5 CRITICAL, 2 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.5k tokens) — Context tokens reached 163.5k in turn 34 (session: ses_ea5f7156bffe8KXEp1pZQvBjNx), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 52 (session: ses_ea5e9243effefZDhJYZILu0hkM), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+133.1k tokens) — Context tokens surged by 133.1k tokens in turn 80 (session: ses_ea6042444ffeLWtlfXPgcYq2PI, total: 133.1k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k in turn 85 (session: ses_ea6042444ffeLWtlfXPgcYq2PI), breaching 160k critical ceiling
+- [CRITICAL] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: mcp-gateway_mcp-exec (100.0%) — Tool 'mcp-gateway_mcp-exec' failed 5 out of 5 calls (100.0% failure rate, threshold: >=50%)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+40.9k tokens) — Context tokens surged by 40.9k tokens in turn 42 (session: ses_ea5f7156bffe8KXEp1pZQvBjNx, total: 40.9k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+55.3k tokens) — Context tokens surged by 55.3k tokens in turn 93 (session: ses_ea6042444ffeLWtlfXPgcYq2PI, total: 55.3k tokens, threshold: 40000)
 
@@ -77,15 +85,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 2,115,868 | 27,113 | 7,888,342 | 78.9% | 168.2k | ELEVATED | $2.37 |
-| **planner** | 3 | 646,870 | 21,399 | 3,423,940 | 84.1% | 103.9k | ELEVATED | $1.01 |
-| **coder** | 3 | 1,496,438 | 34,289 | 10,151,063 | 87.2% | 168.4k | ELEVATED | $2.28 |
-| **tester** | 2 | 790,775 | 25,452 | 8,010,698 | 91.0% | 163.5k | ELEVATED | $1.41 |
-| **reviewer** | 2 | 472,676 | 8,445 | 4,177,937 | 89.8% | 84.9k | HEALTHY | $0.78 |
-| **Total** | **11** | **5,522,627** | **116,698** | **33,651,980** | **85.9%** | **168.4k** | **ELEVATED** | **$7.85** |
+| **orchestrator** | 1 | 3,203,977 | 42,062 | 12,492,204 | 79.6% | 168.2k | ELEVATED | $3.64 |
+| **planner** | 4 | 882,822 | 27,118 | 5,441,490 | 86.0% | 103.9k | ELEVATED | $1.46 |
+| **coder** | 5 | 2,196,072 | 50,562 | 16,874,932 | 88.5% | 168.4k | ELEVATED | $3.47 |
+| **tester** | 3 | 925,926 | 28,048 | 9,225,629 | 90.9% | 163.5k | ELEVATED | $1.62 |
+| **reviewer** | 3 | 743,802 | 13,580 | 7,046,087 | 90.5% | 84.9k | HEALTHY | $1.26 |
+| **Total** | **16** | **7,952,599** | **161,370** | **51,080,342** | **86.5%** | **168.4k** | **ELEVATED** | **$11.45** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 11 | 5,522,627 | 116,698 | 33,651,980 | 85.9% | $7.85 |
-| **Total** | **11** | **5,522,627** | **116,698** | **33,651,980** | **85.9%** | **$7.85** |
+| **gemini-3.8-flash** | 16 | 7,952,599 | 161,370 | 51,080,342 | 86.5% | $11.45 |
+| **Total** | **16** | **7,952,599** | **161,370** | **51,080,342** | **86.5%** | **$11.45** |
