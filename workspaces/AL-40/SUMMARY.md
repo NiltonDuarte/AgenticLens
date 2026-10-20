@@ -11,7 +11,8 @@
   - Added `ProjectConfigDTO` to `ResponsePayload` type interface union and created typed `WriteProjectConfigResponse`.
   - Ensured nil slice normalization before JSON serialization to eliminate `null` arrays.
 - **REST API Endpoint (`config_handler.go`, `server.go`)**:
-  - Implemented `ConfigHandler` returning sanitized project parameters and build version while omitting sensitive internals (database paths, query timeouts, git mappings).
+  - Implemented `ConfigHandler` returning sanitized project parameters and build version directly from loaded configuration.
+  - Removed synthetic fallback defaults (no artificial defaulting of project name, prefixes, workspaces dir, or role orders), strictly reflecting what is configured in `domain.ProjectConfig`.
   - Extended `Server` with `projectConfig` and added `NewServerWithConfig` while preserving backwards compatibility in `NewServer`.
   - Registered route `GET /api/config` on server multiplexer.
 - **CLI Server Wiring (`cmd/agentic-lens/main.go`)**:
@@ -34,9 +35,9 @@
 
 ### Quality & Verification
 - **Go Unit & Boundary Tests (`server_test.go`)**:
-  - `TestConfigHandler_DefaultConfig`: Verified 200 OK, JSON content-type, and default field values.
+  - `TestConfigHandler_DefaultConfig`: Verified 200 OK, JSON content-type, and field values from `.agenticlens-config.yaml`.
   - `TestConfigHandler_CustomConfig`: Verified custom project name, prefixes, workspaces dir, and role order.
-  - `TestConfigHandler_EmptyFallbacks`: Verified default fallbacks when empty struct fields are supplied.
+  - `TestConfigHandler_EmptyConfigPreserved`: Verified that empty struct configurations preserve empty values without synthetic injection and serialize non-nil empty slices.
   - `TestConfigHandler_AdversarialEdgeCases`: Verified whitespace trimming, nil slice serialization, and rejection of non-GET methods.
 - **TypeScript Unit & Component Tests**:
   - `formatters.test.ts`: Verified combining, trimming, deduplication, case normalization, and fallback.
@@ -46,15 +47,15 @@
 - **Quality Gates**: All Go and TypeScript checks passed (`make check`, `make test`, `make build`) with zero `any` and zero emojis.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 1h 10m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 65.5k tokens (33% of 200k healthy ceiling, 0 compactions) | Subagents peak 159.9k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 13.4%, Coder 59.3%, Tester 15.7%, Reviewer 11.6%
-- **Subagent Turn Velocity & Thrashing:** 82.5 avg turns/run (peak: 169 turns) | Planner 51.0, Coder 169.0, Tester 53.0, Reviewer 57.0
-- **Test-to-Production Code Ratio:** 1.4:1 (+646 test lines / +453 prod lines)
-- **Code Delivered:** +1,099 / -184 lines across 29 code files (excluding docs)
-- **Reasoning Effort:** 53,729 reasoning tokens (46.3% of generated output)
-- **Tool Health & Self-Correction:** 376 tool calls (5 self-corrections, 98.7% success rate)
+- **Software Development Life Cycle Iterations:** 2
+- **Active Agent Duration:** 1h 49m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 131.6k tokens (66% of 200k healthy ceiling, 0 compactions) | Subagents peak 159.9k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 16.2%, Coder 55.1%, Tester 14.8%, Reviewer 13.9%
+- **Subagent Turn Velocity & Thrashing:** 54.3 avg turns/run (peak: 169 turns) | Planner 38.5, Coder 102.5, Tester 31.5, Reviewer 44.5
+- **Test-to-Production Code Ratio:** 1.5:1 (+671 test lines / +441 prod lines)
+- **Code Delivered:** +1,112 / -184 lines across 28 code files (excluding docs)
+- **Reasoning Effort:** 85,566 reasoning tokens (47.5% of generated output)
+- **Tool Health & Self-Correction:** 564 tool calls (7 self-corrections, 98.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -66,15 +67,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 270,327 | 8,958 | 2,424,223 | 90.0% | 90.9k | HEALTHY | $0.47 |
-| **coder** | 1 | 856,861 | 30,932 | 16,267,389 | 95.0% | 159.9k | ELEVATED | $2.06 |
-| **tester** | 1 | 332,636 | 5,210 | 3,329,429 | 90.9% | 94.1k | HEALTHY | $0.55 |
-| **reviewer** | 1 | 285,640 | 3,660 | 2,053,733 | 87.8% | 51.4k | HEALTHY | $0.40 |
-| **general** | 1 | 416,407 | 13,640 | 1,215,130 | 74.5% | 65.5k | HEALTHY | $0.47 |
-| **Total** | **5** | **2,161,871** | **62,400** | **25,289,904** | **92.1%** | **159.9k** | **ELEVATED** | **$3.95** |
+| **planner** | 2 | 462,426 | 13,328 | 3,108,928 | 87.1% | 90.9k | HEALTHY | $0.72 |
+| **coder** | 2 | 1,040,680 | 39,828 | 18,619,341 | 94.7% | 159.9k | ELEVATED | $2.44 |
+| **tester** | 2 | 433,624 | 6,167 | 3,708,544 | 89.5% | 94.1k | HEALTHY | $0.65 |
+| **reviewer** | 2 | 439,249 | 6,961 | 2,921,274 | 86.9% | 51.4k | HEALTHY | $0.61 |
+| **general** | 1 | 1,598,222 | 28,220 | 7,325,159 | 82.1% | 131.6k | ELEVATED | $1.90 |
+| **Total** | **9** | **3,974,201** | **94,504** | **35,683,246** | **90.0%** | **159.9k** | **ELEVATED** | **$6.33** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 5 | 2,161,871 | 62,400 | 25,289,904 | 92.1% | $3.95 |
-| **Total** | **5** | **2,161,871** | **62,400** | **25,289,904** | **92.1%** | **$3.95** |
+| **gemini-3.8-flash** | 9 | 3,974,201 | 94,504 | 35,683,246 | 90.0% | $6.33 |
+| **Total** | **9** | **3,974,201** | **94,504** | **35,683,246** | **90.0%** | **$6.33** |
