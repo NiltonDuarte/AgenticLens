@@ -112,7 +112,7 @@ describe('TraceWaterfall Component', () => {
     const allBtn = screen.getByRole('button', { name: 'All Events' });
     fireEvent.click(allBtn);
 
-    expect(screen.getByText('edit')).toBeInTheDocument();
+    expect(screen.getAllByText('edit').length).toBeGreaterThan(0);
     expect(screen.getByText('450ms')).toBeInTheDocument();
     expect(screen.getByText('1.25s')).toBeInTheDocument();
   });
@@ -564,6 +564,750 @@ describe('TraceWaterfall Component', () => {
         />
       );
       expect(emojiRegex.test(offlineContainer.textContent ?? '')).toBe(false);
+    });
+  });
+
+  describe('Adversarial Multi-dimensional Filtering', () => {
+    const adversarialEvents: readonly EventFact[] = [
+      {
+        timestamp: '2026-10-18T10:00:00Z',
+        session_id: 's-adv',
+        turn: 1,
+        role: 'orchestrator',
+        event_type: 'turn_message',
+        status: 'success',
+        context_tokens: 1500,
+        prompt_content: 'Coordinate decomposition and task assignment',
+      },
+      {
+        timestamp: '2026-10-18T10:01:00Z',
+        session_id: 's-adv',
+        turn: 2,
+        role: 'orchestrator',
+        event_type: 'tool_call',
+        tool_name: 'task',
+        status: 'success',
+        duration_ms: 1200,
+        context_tokens: 3000,
+        tool_input: '{"subagent": "coder"}',
+      },
+      {
+        timestamp: '2026-10-18T10:02:00Z',
+        session_id: 's-adv',
+        turn: 3,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'read',
+        status: 'success',
+        duration_ms: 250,
+        context_tokens: 4500,
+        tool_input: '{"path": "CONTRACT.md"}',
+      },
+      {
+        timestamp: '2026-10-18T10:03:00Z',
+        session_id: 's-adv',
+        turn: 4,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'bash',
+        status: 'error',
+        error_message: 'command exit code 1',
+        duration_ms: 800,
+        context_tokens: 6000,
+      },
+      {
+        timestamp: '2026-10-18T10:04:00Z',
+        session_id: 's-adv',
+        turn: 5,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'edit',
+        status: 'error',
+        error_message: 'oldString not found in content',
+        duration_ms: 150,
+        context_tokens: 18500,
+      },
+      {
+        timestamp: '2026-10-18T10:05:00Z',
+        session_id: 's-adv',
+        turn: 6,
+        role: 'tester',
+        event_type: 'tool_call',
+        tool_name: 'bash',
+        status: 'success',
+        duration_ms: 3200,
+        context_tokens: 19000,
+      },
+      {
+        timestamp: '2026-10-18T10:06:00Z',
+        session_id: 's-adv',
+        turn: 7,
+        role: 'reviewer',
+        event_type: 'tool_call',
+        tool_name: 'read',
+        status: 'success',
+        duration_ms: 400,
+        context_tokens: 19500,
+      },
+      {
+        timestamp: '2026-10-18T10:07:00Z',
+        session_id: 's-adv',
+        turn: 8,
+        role: 'reviewer',
+        event_type: 'compaction',
+        status: 'success',
+        context_tokens: 20000,
+      },
+      {
+        timestamp: '2026-10-18T10:08:00Z',
+        session_id: 's-adv',
+        turn: 9,
+        role: 'tester',
+        event_type: 'tool_call',
+        tool_name: null,
+        status: 'error',
+        error_message: 'unspecified execution fault',
+        context_tokens: 20500,
+      },
+      {
+        timestamp: '2026-10-18T10:09:00Z',
+        session_id: 's-adv',
+        turn: 10,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'edit',
+        status: 'error',
+        error_message: 'syntax error in patch',
+        duration_ms: 95,
+        context_tokens: 21000,
+      },
+    ];
+
+    const adversarialAnomalies: readonly Anomaly[] = [
+      {
+        rule_id: 'TOOL_RETRY_STREAK',
+        severity: 'WARNING',
+        title: 'Repeated Tool Failures',
+        description: 'Edit failed repeatedly.',
+        context: {
+          tool_name: 'edit',
+          turn: 5,
+          role: 'coder',
+        },
+      },
+      {
+        rule_id: 'CONTEXT_SATURATION_SPIKE',
+        severity: 'CRITICAL',
+        title: 'Context Saturation Spike',
+        description: 'Token count jumped abruptly.',
+        context: {
+          turn: 5,
+          session_id: 's-adv',
+        },
+      },
+      {
+        rule_id: 'TOOL_HIGH_FAILURE_RATE',
+        severity: 'WARNING',
+        title: 'High Failure Rate',
+        description: 'Bash failure rate exceeded threshold.',
+        context: {
+          tool_name: 'bash',
+          turn: 4,
+          role: 'coder',
+        },
+      },
+      {
+        rule_id: 'SUBAGENT_REWORK_LOOP',
+        severity: 'CRITICAL',
+        title: 'Subagent Rework Loop',
+        description: 'Tester called without progress.',
+        context: {
+          role: 'tester',
+          turn: 6,
+        },
+      },
+      {
+        rule_id: 'TOOL_RETRY_STREAK',
+        severity: 'WARNING',
+        title: 'Duplicate Retry Streak',
+        description: 'Another retry streak anomaly on turn 10.',
+        context: {
+          tool_name: 'edit',
+          turn: 10,
+          role: 'coder',
+        },
+      },
+    ];
+
+    describe('Tool Filter Invariants & Resilience', () => {
+      it('renders unique tools sorted alphabetically in dropdown and excludes null/empty entries', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        expect(toolSelect).toBeInTheDocument();
+        expect(toolSelect).toHaveAttribute('aria-label', 'Filter by tool');
+
+        const toolOptions = Array.from(toolSelect.querySelectorAll('option')).map(
+          (opt) => opt.value
+        );
+        expect(toolOptions).toEqual(['all', 'bash', 'edit', 'read', 'task']);
+      });
+
+      it('filters events by specific tool name across task, bash, read, edit and restores on all', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        // Switch to All Events mode so non-error tool calls are visible
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+
+        // Filter by 'task'
+        fireEvent.change(toolSelect, { target: { value: 'task' } });
+        expect(screen.getByText('Turn 2')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 3')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Filter by 'read'
+        fireEvent.change(toolSelect, { target: { value: 'read' } });
+        expect(screen.getByText('Turn 3')).toBeInTheDocument();
+        expect(screen.getByText('Turn 7')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 2')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // Filter by 'bash'
+        fireEvent.change(toolSelect, { target: { value: 'bash' } });
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 3')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // Filter by 'edit'
+        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // Restore to 'all'
+        fireEvent.change(toolSelect, { target: { value: 'all' } });
+        for (let turn = 1; turn <= 10; turn++) {
+          expect(screen.getByText(`Turn ${turn}`)).toBeInTheDocument();
+        }
+        expect(screen.getByText(/Showing 10 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('excludes events with null or undefined tool_name when specific tool is active and preserves them on all', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        fireEvent.change(toolSelect, { target: { value: 'bash' } });
+
+        // Turn 1 (turn_message, undefined tool), Turn 8 (compaction, undefined tool), Turn 9 (tool_call, null tool)
+        expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 8')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 9')).not.toBeInTheDocument();
+
+        // Revert to 'all'
+        fireEvent.change(toolSelect, { target: { value: 'all' } });
+        expect(screen.getByText('Turn 1')).toBeInTheDocument();
+        expect(screen.getByText('Turn 8')).toBeInTheDocument();
+        expect(screen.getByText('Turn 9')).toBeInTheDocument();
+      });
+
+      it('handles events where all tool names are null, undefined, or empty whitespace without crashing', () => {
+        const nonToolEvents: readonly EventFact[] = [
+          {
+            timestamp: '2026-10-18T10:00:00Z',
+            session_id: 's-none',
+            turn: 1,
+            role: 'orchestrator',
+            event_type: 'turn_message',
+            status: 'success',
+            context_tokens: 1000,
+          },
+          {
+            timestamp: '2026-10-18T10:01:00Z',
+            session_id: 's-none',
+            turn: 2,
+            role: 'coder',
+            event_type: 'tool_call',
+            tool_name: '   ',
+            status: 'success',
+            context_tokens: 1200,
+          },
+          {
+            timestamp: '2026-10-18T10:02:00Z',
+            session_id: 's-none',
+            turn: 3,
+            role: 'reviewer',
+            event_type: 'compaction',
+            status: 'success',
+            context_tokens: 1400,
+          },
+        ];
+
+        render(<TraceWaterfall events={nonToolEvents} anomalies={[]} />);
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const options = Array.from(toolSelect.querySelectorAll('option')).map((o) => o.value);
+        expect(options).toEqual(['all']);
+        expect(toolSelect).toHaveTextContent('All Tools');
+      });
+    });
+
+    describe('Anomaly Filter Invariants & Resilience', () => {
+      it('renders unique anomaly rule IDs sorted alphabetically and deduplicates whitespace variants', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        expect(anomalySelect).toBeInTheDocument();
+        expect(anomalySelect).toHaveAttribute('aria-label', 'Filter by anomaly rule');
+
+        const anomalyOptions = Array.from(anomalySelect.querySelectorAll('option')).map(
+          (opt) => opt.value
+        );
+        expect(anomalyOptions).toEqual([
+          'all',
+          'CONTEXT_SATURATION_SPIKE',
+          'SUBAGENT_REWORK_LOOP',
+          'TOOL_HIGH_FAILURE_RATE',
+          'TOOL_RETRY_STREAK',
+        ]);
+      });
+
+      it('filters events matching specific anomaly rule_id across tool, turn, and role correlation rules', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+
+        // 1. CONTEXT_SATURATION_SPIKE (matches Turn 5 by turn and session)
+        fireEvent.change(anomalySelect, { target: { value: 'CONTEXT_SATURATION_SPIKE' } });
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 10')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // 2. SUBAGENT_REWORK_LOOP (matches Turn 6 by role and turn)
+        fireEvent.change(anomalySelect, { target: { value: 'SUBAGENT_REWORK_LOOP' } });
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // 3. TOOL_HIGH_FAILURE_RATE (matches Turn 4 by tool and turn)
+        fireEvent.change(anomalySelect, { target: { value: 'TOOL_HIGH_FAILURE_RATE' } });
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // 4. TOOL_RETRY_STREAK (matches Turn 5 and Turn 10)
+        fireEvent.change(anomalySelect, { target: { value: 'TOOL_RETRY_STREAK' } });
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // 5. Restore to all
+        fireEvent.change(anomalySelect, { target: { value: 'all' } });
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.getByText('Turn 9')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 5 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('correctly matches event associated with multiple anomaly rules under each rule filter', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+
+        // Turn 5 matches both CONTEXT_SATURATION_SPIKE and TOOL_RETRY_STREAK
+        fireEvent.change(anomalySelect, { target: { value: 'CONTEXT_SATURATION_SPIKE' } });
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+
+        fireEvent.change(anomalySelect, { target: { value: 'TOOL_RETRY_STREAK' } });
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+
+        // But Turn 5 does not match SUBAGENT_REWORK_LOOP
+        fireEvent.change(anomalySelect, { target: { value: 'SUBAGENT_REWORK_LOOP' } });
+        expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
+      });
+
+      it('handles empty anomalies array and undefined anomalies prop defensively', () => {
+        const { rerender } = render(<TraceWaterfall events={adversarialEvents} anomalies={[]} />);
+
+        let anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        let options = Array.from(anomalySelect.querySelectorAll('option')).map((o) => o.value);
+        expect(options).toEqual(['all']);
+        expect(anomalySelect).toHaveTextContent('All Anomalies');
+
+        // Rerender with undefined anomalies
+        rerender(<TraceWaterfall events={adversarialEvents} anomalies={undefined} />);
+        anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        options = Array.from(anomalySelect.querySelectorAll('option')).map((o) => o.value);
+        expect(options).toEqual(['all']);
+      });
+
+      it('displays empty state and zero counter when selected anomaly rule matches no events in trace', () => {
+        const disjointAnomalies: readonly Anomaly[] = [
+          {
+            rule_id: 'CONTEXT_SATURATION_SPIKE',
+            severity: 'CRITICAL',
+            title: 'Uncorrelated Spike',
+            description: 'Uncorrelated anomaly on nonexistent turn 999.',
+            context: {
+              turn: 999,
+            },
+          },
+        ];
+
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={disjointAnomalies}
+          />
+        );
+
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        fireEvent.change(anomalySelect, { target: { value: 'CONTEXT_SATURATION_SPIKE' } });
+
+        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
+
+        // Recover on 'all'
+        fireEvent.change(anomalySelect, { target: { value: 'all' } });
+        expect(screen.queryByText('No events match the selected filters.')).not.toBeInTheDocument();
+        // In default errors_anomalies mode, plain errors 4, 5, 9, 10 are visible (4 events)
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+      });
+    });
+
+    describe('Multi-Filter Composition Engine', () => {
+      it('simultaneously composes filterMode, roleFilter, toolFilter, and anomalyFilter across positive and negative permutations', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const toolsBtn = screen.getByRole('button', { name: 'Tool Calls Only' });
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+
+        // Permutation 1: Tool Calls + Coder + bash + TOOL_HIGH_FAILURE_RATE -> exactly Turn 4
+        fireEvent.click(toolsBtn);
+        fireEvent.change(roleSelect, { target: { value: 'coder' } });
+        fireEvent.change(toolSelect, { target: { value: 'bash' } });
+        fireEvent.change(anomalySelect, { target: { value: 'TOOL_HIGH_FAILURE_RATE' } });
+
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Permutation 2: Orthogonal conflict between Tool and Anomaly:
+        // Coder + edit + TOOL_HIGH_FAILURE_RATE (failure rate anomaly is on bash, not edit)
+        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
+
+        // Permutation 3: Role vs Tool conflict:
+        // Switch to All Events mode, Reviewer role, 'task' tool (task was invoked by orchestrator)
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+        fireEvent.change(roleSelect, { target: { value: 'reviewer' } });
+        fireEvent.change(toolSelect, { target: { value: 'task' } });
+        fireEvent.change(anomalySelect, { target: { value: 'all' } });
+
+        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
+
+        // Permutation 4: Non-tool event under tool filter:
+        // Orchestrator role + task tool -> shows Turn 2 (task), excludes Turn 1 (turn_message)
+        fireEvent.change(roleSelect, { target: { value: 'orchestrator' } });
+        expect(screen.getByText('Turn 2')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Permutation 5: Errors & Anomalies mode + Tester role + bash tool + SUBAGENT_REWORK_LOOP
+        const errorsBtn = screen.getByRole('button', { name: 'Show only errors and anomalies' });
+        fireEvent.click(errorsBtn);
+        fireEvent.change(roleSelect, { target: { value: 'tester' } });
+        fireEvent.change(toolSelect, { target: { value: 'bash' } });
+        fireEvent.change(anomalySelect, { target: { value: 'SUBAGENT_REWORK_LOOP' } });
+
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 9')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('progressively narrows down events and incrementally restores them across all filter dimensions', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        const errorsBtn = screen.getByRole('button', { name: 'Show only errors and anomalies' });
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+
+        // Step 1: All Events -> 10 events
+        fireEvent.click(allBtn);
+        expect(screen.getByText(/Showing 10 of 10 events/)).toBeInTheDocument();
+
+        // Step 2: Restrict role to 'coder' -> 4 events (Turns 3, 4, 5, 10)
+        fireEvent.change(roleSelect, { target: { value: 'coder' } });
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+
+        // Step 3: Restrict tool to 'edit' -> 2 events (Turns 5, 10)
+        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // Step 4: Restrict anomaly to 'CONTEXT_SATURATION_SPIKE' -> 1 event (Turn 5)
+        fireEvent.change(anomalySelect, { target: { value: 'CONTEXT_SATURATION_SPIKE' } });
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Step 5: Switch to errors_anomalies mode -> Turn 5 is an error with spike -> still 1 event
+        fireEvent.click(errorsBtn);
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Step 6: Step-by-step relaxation:
+        // Relax anomaly to 'all' -> 2 events (Turns 5, 10)
+        fireEvent.change(anomalySelect, { target: { value: 'all' } });
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // Relax tool to 'all' -> 3 events in errors_anomalies mode (Turns 4, 5, 10 - Turn 3 is success without anomaly)
+        fireEvent.change(toolSelect, { target: { value: 'all' } });
+        expect(screen.getByText(/Showing 3 of 10 events/)).toBeInTheDocument();
+
+        // Switch to 'all' mode -> 4 events (Turns 3, 4, 5, 10)
+        fireEvent.click(allBtn);
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+
+        // Relax role to 'all' -> 10 events
+        fireEvent.change(roleSelect, { target: { value: 'all' } });
+        expect(screen.getByText(/Showing 10 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('dynamically toggles filterMode while tool and anomaly filters remain retained', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        const toolsBtn = screen.getByRole('button', { name: 'Tool Calls Only' });
+        const errorsBtn = screen.getByRole('button', { name: 'Show only errors and anomalies' });
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+
+        // Set tool to 'task'
+        fireEvent.change(toolSelect, { target: { value: 'task' } });
+
+        // Default mode is errors_anomalies: Turn 2 (task) succeeded with no anomaly -> 0 events
+        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
+
+        // Switch to All Events: Turn 2 becomes visible, tool select value remains 'task'
+        fireEvent.click(allBtn);
+        expect(screen.getByText('Turn 2')).toBeInTheDocument();
+        expect(toolSelect).toHaveValue('task');
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Switch to Tool Calls Only: Turn 2 is a tool call -> still visible, tool select remains 'task'
+        fireEvent.click(toolsBtn);
+        expect(screen.getByText('Turn 2')).toBeInTheDocument();
+        expect(toolSelect).toHaveValue('task');
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Switch back to errors_anomalies: returns to 0 matching events
+        fireEvent.click(errorsBtn);
+        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('dispatches onSelectEvent callback with filtered event and correlated anomaly when clicked in multi-filter view', () => {
+        const handleSelect = vi.fn();
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+            onSelectEvent={handleSelect}
+          />
+        );
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+
+        // Filter to tool 'edit' and anomaly 'TOOL_RETRY_STREAK'
+        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        fireEvent.change(anomalySelect, { target: { value: 'TOOL_RETRY_STREAK' } });
+
+        // Turn 5 and Turn 10 match
+        const turn5Item = screen.getByText('Turn 5');
+        fireEvent.click(turn5Item);
+
+        expect(handleSelect).toHaveBeenCalledTimes(1);
+        expect(handleSelect).toHaveBeenCalledWith(
+          expect.objectContaining({ turn: 5, tool_name: 'edit' }),
+          expect.objectContaining({ rule_id: 'TOOL_RETRY_STREAK' })
+        );
+      });
+    });
+
+    describe('Counter Accuracy and Denominator Invariance', () => {
+      it('maintains total event denominator invariance across arbitrary filter combinations', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const counter = screen.getByText(/Showing \d+ of \d+ events/);
+        expect(counter).toHaveTextContent('Showing 5 of 10 events');
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        expect(counter).toHaveTextContent('Showing 2 of 10 events');
+
+        fireEvent.change(toolSelect, { target: { value: 'task' } });
+        expect(counter).toHaveTextContent('Showing 0 of 10 events');
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+        fireEvent.change(toolSelect, { target: { value: 'all' } });
+        expect(counter).toHaveTextContent('Showing 10 of 10 events');
+      });
+
+      it('handles single-event array with accurate 1 of 1 and 0 of 1 counter', () => {
+        const singleEvent: readonly EventFact[] = [
+          {
+            timestamp: '2026-10-18T10:00:00Z',
+            session_id: 's-single',
+            turn: 1,
+            role: 'coder',
+            event_type: 'tool_call',
+            tool_name: 'bash',
+            status: 'error',
+            context_tokens: 500,
+          },
+        ];
+
+        render(<TraceWaterfall events={singleEvent} anomalies={[]} />);
+
+        expect(screen.getByText(/Showing 1 of 1 events/)).toBeInTheDocument();
+
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        fireEvent.change(roleSelect, { target: { value: 'tester' } });
+
+        expect(screen.getByText(/Showing 0 of 1 events/)).toBeInTheDocument();
+        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+      });
+    });
+
+    describe('Accessibility and Screen Reader Attributes', () => {
+      it('provides accessible labels, aria-labels, and semantic associations for all filter controls', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        // Tool filter accessibility
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        expect(toolSelect).toHaveAttribute('id', 'trace-tool-filter');
+        expect(toolSelect).toHaveAttribute('aria-label', 'Filter by tool');
+        expect(screen.getByLabelText('Tool:')).toBe(toolSelect);
+        expect(screen.getByRole('combobox', { name: 'Filter by tool' })).toBe(toolSelect);
+
+        // Anomaly filter accessibility
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        expect(anomalySelect).toHaveAttribute('id', 'trace-anomaly-filter');
+        expect(anomalySelect).toHaveAttribute('aria-label', 'Filter by anomaly rule');
+        expect(screen.getByLabelText('Anomaly:')).toBe(anomalySelect);
+        expect(screen.getByRole('combobox', { name: 'Filter by anomaly rule' })).toBe(anomalySelect);
+
+        // Role filter accessibility
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        expect(roleSelect).toHaveAttribute('id', 'trace-role-filter');
+        expect(roleSelect).toHaveAttribute('aria-label', 'Filter by subagent role');
+        expect(screen.getByLabelText('Role:')).toBe(roleSelect);
+
+        // Mode buttons group accessibility
+        const filterGroup = screen.getByRole('group', { name: 'Filter events by type' });
+        expect(filterGroup).toBeInTheDocument();
+      });
+    });
+
+    describe('Zero Emojis Invariant Across Multi-Filter States', () => {
+      it('maintains zero emojis across all multi-filter toolbar elements, dropdowns, and empty states', () => {
+        const { container } = render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
+        expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
+
+        // Trigger empty state
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        fireEvent.change(toolSelect, { target: { value: 'task' } });
+        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+        expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
+      });
     });
   });
 });

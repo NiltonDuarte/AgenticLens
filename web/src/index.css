@@ -2391,18 +2391,24 @@ body {
   color: #ffffff;
 }
 
-.role-filter-group {
+.role-filter-group,
+.tool-filter-group,
+.anomaly-filter-group {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.role-filter-label {
+.role-filter-label,
+.tool-filter-label,
+.anomaly-filter-label {
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
-.role-filter-select {
+.role-filter-select,
+.tool-filter-select,
+.anomaly-filter-select {
   background-color: var(--bg-surface-elevated);
   border: 1px solid var(--border-color);
   color: var(--text-primary);

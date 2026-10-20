@@ -105,6 +105,8 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 }) => {
   const [filterMode, setFilterMode] = useState<FilterMode>('errors_anomalies');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [toolFilter, setToolFilter] = useState<string>('all');
+  const [anomalyFilter, setAnomalyFilter] = useState<string>('all');
   const [localSelectedEvent, setLocalSelectedEvent] = useState<EventFact | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
 
@@ -143,31 +145,75 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         roleSet.add(e.role);
       }
     }
-    return Array.from(roleSet).sort();
+    return Array.from(roleSet).sort((a, b) => a.localeCompare(b));
   }, [events]);
+
+  // Unique tools for filter dropdown
+  const availableTools = useMemo(() => {
+    if (!events || events.length === 0) return [];
+    const toolSet = new Set<string>();
+    for (const e of events) {
+      if (e.tool_name && e.tool_name.trim().length > 0) {
+        toolSet.add(e.tool_name.trim());
+      }
+    }
+    return Array.from(toolSet).sort((a, b) => a.localeCompare(b));
+  }, [events]);
+
+  // Unique anomaly rule IDs for filter dropdown
+  const availableAnomalies = useMemo(() => {
+    if (!anomalies || anomalies.length === 0) return [];
+    const anomalySet = new Set<string>();
+    for (const a of anomalies) {
+      if (a.rule_id && a.rule_id.trim().length > 0) {
+        anomalySet.add(a.rule_id.trim());
+      }
+    }
+    return Array.from(anomalySet).sort((a, b) => a.localeCompare(b));
+  }, [anomalies]);
 
   // Filtered event list
   const filteredEvents = useMemo(() => {
+    const anomaliesForFilter =
+      anomalyFilter !== 'all' && anomalies
+        ? anomalies.filter((a) => a.rule_id.trim() === anomalyFilter)
+        : undefined;
+
     return sortedEvents.filter((e) => {
-      // Role filter
+      // 1. Role filter
       if (roleFilter !== 'all' && e.role !== roleFilter) {
         return false;
       }
 
-      // Filter mode
+      // 2. Filter mode
       if (filterMode === 'tools') {
-        return e.event_type === 'tool_call';
+        if (e.event_type !== 'tool_call') {
+          return false;
+        }
+      } else if (filterMode === 'errors_anomalies') {
+        const isError = e.status === 'error';
+        const hasAnomaly = Boolean(findMatchingAnomaly(e, anomalies));
+        if (!isError && !hasAnomaly) {
+          return false;
+        }
       }
 
-      if (filterMode === 'errors_anomalies') {
-        const isError = e.status === 'error';
-        const hasAnomaly = !!findMatchingAnomaly(e, anomalies);
-        return isError || hasAnomaly;
+      // 3. Tool filter
+      if (toolFilter !== 'all' && e.tool_name?.trim() !== toolFilter) {
+        return false;
+      }
+
+      // 4. Anomaly filter
+      if (anomalyFilter !== 'all') {
+        const hasMatchingRuleAnomaly = Boolean(findMatchingAnomaly(e, anomaliesForFilter));
+        if (!hasMatchingRuleAnomaly) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [sortedEvents, roleFilter, filterMode, anomalies]);
+  }, [sortedEvents, roleFilter, filterMode, toolFilter, anomalyFilter, anomalies]);
 
   if (!events || events.length === 0) {
     return (
@@ -240,6 +286,48 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
               {availableRoles.map((r) => (
                 <option key={r} value={r}>
                   {r}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="tool-filter-group">
+            <label htmlFor="trace-tool-filter" className="tool-filter-label">
+              Tool:
+            </label>
+            <select
+              id="trace-tool-filter"
+              data-testid="trace-tool-filter"
+              aria-label="Filter by tool"
+              className="tool-filter-select"
+              value={toolFilter}
+              onChange={(e) => setToolFilter(e.target.value)}
+            >
+              <option value="all">All Tools</option>
+              {availableTools.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="anomaly-filter-group">
+            <label htmlFor="trace-anomaly-filter" className="anomaly-filter-label">
+              Anomaly:
+            </label>
+            <select
+              id="trace-anomaly-filter"
+              data-testid="trace-anomaly-filter"
+              aria-label="Filter by anomaly rule"
+              className="anomaly-filter-select"
+              value={anomalyFilter}
+              onChange={(e) => setAnomalyFilter(e.target.value)}
+            >
+              <option value="all">All Anomalies</option>
+              {availableAnomalies.map((a) => (
+                <option key={a} value={a}>
+                  {a}
                 </option>
               ))}
             </select>
