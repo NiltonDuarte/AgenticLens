@@ -5,13 +5,14 @@ import type { ActiveTab, BuildInfo } from '../domain/types';
 import { mockBuildInfo } from '../api/mockData';
 
 describe('Navbar Component', () => {
-  it('renders all four operational navigation tabs', () => {
+  it('renders all five operational navigation tabs', () => {
     render(<Navbar isMock={false} activeTab="overview" versionInfo={mockBuildInfo} />);
 
     expect(screen.getByRole('button', { name: /fleet overview/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ticket deep dive/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /metric progression/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /comparisons/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /live observability/i })).toBeInTheDocument();
   });
 
   it('marks the active tab button with the active class', () => {
@@ -27,6 +28,23 @@ describe('Navbar Component', () => {
 
     rerender(<Navbar isMock={false} activeTab="comparisons" versionInfo={mockBuildInfo} />);
     expect(screen.getByRole('button', { name: /comparisons/i })).toHaveClass('active');
+
+    rerender(<Navbar isMock={false} activeTab="live" versionInfo={mockBuildInfo} />);
+    expect(screen.getByRole('button', { name: /live observability/i })).toHaveClass('active');
+  });
+
+  it('exclusively activates the live observability tab when activeTab is live while deactivating all other tabs', () => {
+    const { container } = render(<Navbar isMock={false} activeTab="live" versionInfo={mockBuildInfo} />);
+
+    expect(screen.getByRole('button', { name: /live observability/i })).toHaveClass('active');
+    expect(screen.getByRole('button', { name: /fleet overview/i })).not.toHaveClass('active');
+    expect(screen.getByRole('button', { name: /ticket deep dive/i })).not.toHaveClass('active');
+    expect(screen.getByRole('button', { name: /metric progression/i })).not.toHaveClass('active');
+    expect(screen.getByRole('button', { name: /comparisons/i })).not.toHaveClass('active');
+
+    const activeButtons = container.querySelectorAll('.nav-tab.active');
+    expect(activeButtons.length).toBe(1);
+    expect(activeButtons[0]).toHaveTextContent('Live Observability');
   });
 
   it('ensures zero navigation tabs have active class when activeTab is landing', () => {
@@ -36,6 +54,7 @@ describe('Navbar Component', () => {
     expect(screen.getByRole('button', { name: /ticket deep dive/i })).not.toHaveClass('active');
     expect(screen.getByRole('button', { name: /metric progression/i })).not.toHaveClass('active');
     expect(screen.getByRole('button', { name: /comparisons/i })).not.toHaveClass('active');
+    expect(screen.getByRole('button', { name: /live observability/i })).not.toHaveClass('active');
 
     const activeTabs = container.querySelectorAll('.nav-tab.active');
     expect(activeTabs.length).toBe(0);
@@ -123,6 +142,9 @@ describe('Navbar Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /comparisons/i }));
     expect(onSelectTab).toHaveBeenCalledWith('comparisons');
+
+    fireEvent.click(screen.getByRole('button', { name: /live observability/i }));
+    expect(onSelectTab).toHaveBeenCalledWith('live');
 
     fireEvent.click(screen.getByRole('button', { name: /fleet overview/i }));
     expect(onSelectTab).toHaveBeenCalledWith('overview');
@@ -254,7 +276,7 @@ describe('Navbar Component', () => {
   });
 
   it('contains zero emojis across all navigation states and modes', () => {
-    const tabs: readonly ActiveTab[] = ['landing', 'overview', 'deep-dive', 'progression', 'comparisons'];
+    const tabs: readonly ActiveTab[] = ['landing', 'overview', 'deep-dive', 'progression', 'comparisons', 'live'];
     const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F000}-\u{1F02F}\u{1FA00}-\u{1FAFF}]/u;
 
     for (const tab of tabs) {
@@ -262,11 +284,13 @@ describe('Navbar Component', () => {
         <Navbar isMock={false} activeTab={tab} versionInfo={mockBuildInfo} />
       );
       expect(emojiRegex.test(liveContainer.textContent ?? '')).toBe(false);
+      expect(emojiRegex.test(liveContainer.innerHTML)).toBe(false);
 
       const { container: mockContainer } = render(
         <Navbar isMock={true} activeTab={tab} versionInfo={mockBuildInfo} />
       );
       expect(emojiRegex.test(mockContainer.textContent ?? '')).toBe(false);
+      expect(emojiRegex.test(mockContainer.innerHTML)).toBe(false);
     }
   });
 });

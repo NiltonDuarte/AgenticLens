@@ -6,6 +6,7 @@ import { FleetOverview } from './views/FleetOverview';
 import { TicketDeepDive } from './views/TicketDeepDive';
 import { MetricProgression } from './views/MetricProgression';
 import { TicketComparisons } from './views/TicketComparisons';
+import { LiveObservability } from './views/LiveObservability';
 
 export const App: React.FC = () => {
   const [isMock, setIsMock] = useState(false);
@@ -52,6 +53,12 @@ export const App: React.FC = () => {
         )}
         {activeTab === 'comparisons' && (
           <TicketComparisons
+            onSelectTicket={handleSelectTicketFromList}
+            onMockChange={setIsMock}
+          />
+        )}
+        {activeTab === 'live' && (
+          <LiveObservability
             onSelectTicket={handleSelectTicketFromList}
             onMockChange={setIsMock}
           />

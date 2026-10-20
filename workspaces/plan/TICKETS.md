@@ -40,19 +40,19 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## In Progress
 
-(None)
+- **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
+  - **Subsystem**: Presentation / Web / Tests
+  - **Phase**: Phase 4
+  - **Status**: In Progress
+  - **Blocked by**: None (AL-17, AL-19 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 
 ---
 
 ## Ready
 
-- **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
-  - **Subsystem**: Presentation / Web / Tests
-  - **Phase**: Phase 4
-  - **Status**: Ready
-  - **Blocked by**: None (AL-17, AL-19 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
+(None)
 
 ---
 
