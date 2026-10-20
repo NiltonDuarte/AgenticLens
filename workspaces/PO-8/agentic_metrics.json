@@ -4,8 +4,8 @@
   "ticket_title": null,
   "ticket_type": "docs",
   "started_at": "2026-10-20T11:55:58.504000+00:00",
-  "completed_at": "2026-10-20T12:22:46.264000+00:00",
-  "updated_at": "2026-10-20T12:22:51.968321+00:00",
+  "completed_at": "2026-10-20T12:33:41.827000+00:00",
+  "updated_at": "2026-10-20T12:33:51.032398+00:00",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -24,35 +24,40 @@
       "model": "gemini-3.8-flash",
       "user": "Nilton Duarte",
       "started_at": "2026-10-20T11:55:58.904000+00:00",
-      "completed_at": "2026-10-20T12:22:46.264000+00:00",
-      "active_duration_seconds": 1119,
-      "turns": 135,
+      "completed_at": "2026-10-20T12:33:41.827000+00:00",
+      "active_duration_seconds": 1326,
+      "turns": 162,
       "tokens": {
-        "input": 1116511,
-        "output": 27764,
-        "cache_read": 11571213,
-        "reasoning": 28827,
-        "peak_context": 157213
+        "input": 1459605,
+        "output": 40354,
+        "cache_read": 13541696,
+        "reasoning": 36998,
+        "peak_context": 167222
       },
-      "cost_usd": 1.91744,
-      "compactions": 0
+      "cost_usd": 2.400401,
+      "compactions": 1
     }
   ],
   "tools": [
     {
       "name": "read",
-      "calls": 42,
+      "calls": 47,
       "errors": 0
     },
     {
       "name": "bash",
-      "calls": 29,
+      "calls": 37,
       "errors": 0
     },
     {
       "name": "edit",
-      "calls": 18,
+      "calls": 20,
       "errors": 2
+    },
+    {
+      "name": "write",
+      "calls": 13,
+      "errors": 0
     },
     {
       "name": "grep",
@@ -70,13 +75,8 @@
       "errors": 0
     },
     {
-      "name": "write",
-      "calls": 7,
-      "errors": 0
-    },
-    {
       "name": "t3-code_list_thread_pull_requests",
-      "calls": 2,
+      "calls": 3,
       "errors": 0
     },
     {
@@ -123,6 +123,35 @@
       "status": "error",
       "duration_ms": 12,
       "context_tokens": 131373
+    },
+    {
+      "timestamp": "2026-10-20T12:23:22.610000+00:00",
+      "session_id": "ses_ea6d4e957ffefp2aD5QW1wK0ya",
+      "turn": 138,
+      "role": "general",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 6766,
+      "context_tokens": 160032
+    },
+    {
+      "timestamp": "2026-10-20T12:32:05.492000+00:00",
+      "session_id": "ses_ea6d4e957ffefp2aD5QW1wK0ya",
+      "turn": 1,
+      "role": "general",
+      "event_type": "compaction",
+      "status": "completed",
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-20T12:32:05.507000+00:00",
+      "session_id": "ses_ea6d4e957ffefp2aD5QW1wK0ya",
+      "turn": 143,
+      "role": "general",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 21443,
+      "context_tokens": 79515
     }
   ]
 }
