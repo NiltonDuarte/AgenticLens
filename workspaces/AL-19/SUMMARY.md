@@ -40,30 +40,35 @@ Implement a high-performance, real-time live anomaly detection engine with deter
   - Initialized `ActiveAnomalies: []domain.LiveAnomalyAlert{}` on nil service fallback.
 - `live_handlers_test.go`:
   - Added tests for `LiveSessionsHandler_AnomaliesField`, `LiveTraceHandler_AnomaliesField`, and `LiveStreamHandler_AnomalyAlertBroadcast`.
+  - Hardened test assertions in Iteration 02 to eliminate untyped `interface{}` using concrete structs and `map[string]json.RawMessage`.
 
-### 4. Frontend Type Mirroring (`web/src/domain/`)
+### 4. Frontend Type Mirroring & Tests (`web/src/domain/`)
 - `live.ts`:
   - Created strict TypeScript interfaces for `LiveAnomalySeverity`, `LiveAnomalyRule`, `LiveAnomalyAlert`, `LivePartFact`, `LiveMessageFact`, `LiveTraceView`, `LiveSessionNode`, and `LiveSessionTree`.
+  - Reconciled model parity in Iteration 02: added `parent_id?: string | null` to `LiveSessionNode`, `output_snippet?: string` to `LivePartFact`, and `reasoning_content?: string | null` to `LiveMessageFact`.
 - `types.ts`:
   - Re-exported live types from `domain/types.ts`.
+- `live.test.ts`:
+  - Added dedicated Vitest suite (22 unit tests) covering all severity tiers, token math, hostile trigger strings, deep nesting, and boundary cases.
 
 ## Verification Status
-- `make check`: Passed (`go vet ./...`, `git diff --check`).
+- `make check`: Passed (`go vet ./...`, `tsc --noEmit`, ESLint, `git diff --check`).
 - `make test-backend`: Passed with race detector enabled (`go test -race ./...`).
-- `make test`: All test suites passed cleanly.
+- `make test-frontend`: Passed all 22 test suites (434 unit tests).
+- `make test`: All test suites passed cleanly with zero test skips.
 - `make build`: Binaries compiled successfully for linux-amd64, linux-arm64, darwin-amd64, darwin-arm64.
 - Zero emojis verified across all modified code, comments, DTOs, and schemas.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 2h 46m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 120.6k tokens (60% of 200k healthy ceiling, 2 compactions) | Subagents peak 183.2k (Tester)
-- **Role Effort Distribution (Subagents):** Planner 9.2%, Coder 51.0%, Tester 32.0%, Reviewer 7.8%
-- **Subagent Turn Velocity & Thrashing:** 95.3 avg turns/run (peak: 179 turns) | Planner 35.0, Coder 179.0, Tester 128.0, Reviewer 39.0
-- **Test-to-Production Code Ratio:** 2.8:1 (+2,170 test lines / +774 prod lines)
-- **Code Delivered:** +2,944 / -33 lines across 11 code files (excluding docs)
-- **Reasoning Effort:** 115,205 reasoning tokens (52.9% of generated output)
-- **Tool Health & Self-Correction:** 446 tool calls (13 self-corrections, 97.1% success rate)
+- **Software Development Life Cycle Iterations:** 2
+- **Active Agent Duration:** 4h 7m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 159.2k tokens (80% of 200k healthy ceiling, 2 compactions) | Subagents peak 183.2k (Tester)
+- **Role Effort Distribution (Subagents):** Planner 14.0%, Coder 45.4%, Tester 30.1%, Reviewer 10.5%
+- **Subagent Turn Velocity & Thrashing:** 70.1 avg turns/run (peak: 179 turns) | Planner 40.5, Coder 112.0, Tester 88.5, Reviewer 39.5
+- **Test-to-Production Code Ratio:** 3.8:1 (+2,966 test lines / +777 prod lines)
+- **Code Delivered:** +3,743 / -33 lines across 12 code files (excluding docs)
+- **Reasoning Effort:** 164,362 reasoning tokens (52.8% of generated output)
+- **Tool Health & Self-Correction:** 684 tool calls (16 self-corrections, 97.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 5 execution anomalies detected (2 CRITICAL, 3 WARNING).
@@ -80,15 +85,15 @@ Implement a high-performance, real-time live anomaly detection engine with deter
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 847,133 | 16,917 | 3,141,195 | 78.8% | 120.6k | ELEVATED | $0.97 |
-| **planner** | 1 | 359,986 | 21,834 | 1,846,928 | 83.7% | 100.7k | ELEVATED | $0.57 |
-| **coder** | 1 | 2,191,264 | 37,181 | 15,599,152 | 87.7% | 168.0k | ELEVATED | $3.15 |
-| **tester** | 1 | 1,692,432 | 22,429 | 7,362,981 | 81.3% | 183.2k | ELEVATED | $1.98 |
-| **reviewer** | 1 | 241,262 | 4,084 | 3,190,603 | 93.0% | 135.9k | ELEVATED | $0.48 |
-| **Total** | **5** | **5,332,077** | **102,445** | **31,140,859** | **85.4%** | **183.2k** | **ELEVATED** | **$7.15** |
+| **orchestrator** | 1 | 1,386,695 | 30,838 | 8,162,214 | 85.5% | 159.2k | ELEVATED | $1.83 |
+| **planner** | 2 | 719,105 | 29,152 | 4,360,887 | 85.8% | 100.7k | ELEVATED | $1.12 |
+| **coder** | 2 | 2,500,076 | 46,955 | 18,097,420 | 87.9% | 168.0k | ELEVATED | $3.64 |
+| **tester** | 2 | 1,966,833 | 31,207 | 9,547,694 | 82.9% | 183.2k | ELEVATED | $2.41 |
+| **reviewer** | 2 | 487,338 | 8,989 | 4,849,497 | 90.9% | 135.9k | ELEVATED | $0.84 |
+| **Total** | **9** | **7,060,047** | **147,141** | **45,017,712** | **86.4%** | **183.2k** | **ELEVATED** | **$9.84** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 5 | 5,332,077 | 102,445 | 31,140,859 | 85.4% | $7.15 |
-| **Total** | **5** | **5,332,077** | **102,445** | **31,140,859** | **85.4%** | **$7.15** |
+| **gemini-3.8-flash** | 9 | 7,060,047 | 147,141 | 45,017,712 | 86.4% | $9.84 |
+| **Total** | **9** | **7,060,047** | **147,141** | **45,017,712** | **86.4%** | **$9.84** |
