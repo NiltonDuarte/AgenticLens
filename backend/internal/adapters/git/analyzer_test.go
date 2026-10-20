@@ -104,9 +104,9 @@ func TestClassifyFile(t *testing.T) {
 }
 
 func TestInferenceOnActiveWorkspace(t *testing.T) {
-	createTestBranch(t, "feat/AL-11-ci-fixture")
-
-	ticketType := git.InferTicketType("AL-11")
+	// Test branch inference purely in memory without mutating disk branches
+	branchList := "  feat/AL-11-ci-fixture\n"
+	ticketType := git.InferTicketTypeFromBranchList(branchList, "AL-11")
 	if ticketType == nil || *ticketType != "feat" {
 		t.Errorf("expected feat ticket type for AL-11, got %v", ticketType)
 	}
