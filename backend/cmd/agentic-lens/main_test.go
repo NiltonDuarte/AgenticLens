@@ -3461,7 +3461,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		tempDir := t.TempDir()
 
 		// Initialize tempDir as an isolated git repository with a branch fix/AL-30-test
-		if err := exec.Command("git", "init", tempDir).Run(); err != nil {
+		if err := exec.Command("git", "init", "-b", "main", tempDir).Run(); err != nil {
 			t.Fatalf("git init failed: %v", err)
 		}
 		if err := exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run(); err != nil {
@@ -3520,7 +3520,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		tempDir := t.TempDir()
 
 		// Initialize tempDir as an isolated git repository with a commit and branch fix/AL-30-test
-		if err := exec.Command("git", "init", tempDir).Run(); err != nil {
+		if err := exec.Command("git", "init", "-b", "main", tempDir).Run(); err != nil {
 			t.Fatalf("git init failed: %v", err)
 		}
 		if err := exec.Command("git", "-C", tempDir, "config", "user.email", "test@agenticlens.local").Run(); err != nil {

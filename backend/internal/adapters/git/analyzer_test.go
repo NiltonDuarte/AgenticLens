@@ -857,6 +857,71 @@ func TestGetTicketNumstat_DynamicBranch(t *testing.T) {
 	}
 }
 
+func TestGetTicketNumstat_BaseBranchFromConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	initTestGitRepo(t, tempDir, "main")
+
+	runCmd := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tempDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v (output: %s)", args, err, string(out))
+		}
+	}
+
+	runCmd("checkout", "-b", "feat/AL-39-cfg-branch")
+	appFile := filepath.Join(tempDir, "app", "feature.go")
+	if err := os.MkdirAll(filepath.Dir(appFile), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(appFile, []byte("package app\nfunc Feature() {}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runCmd("add", "app/feature.go")
+	runCmd("commit", "-m", "feat(AL-39): test config base branch")
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(origDir)
+	})
+
+	t.Run("unresolvable base branch in config returns validation error", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{
+			BaseBranch: "nonexistent-branch",
+			SrcFolders: []string{"app"},
+		}
+		_, err := git.GetTicketNumstat("AL-39", "", []string{"app"}, cfg)
+		if err == nil {
+			t.Fatal("expected error for unresolvable base branch in config, got nil")
+		}
+		expectedPrompt := "configured base branch \"nonexistent-branch\" not found"
+		if !strings.Contains(err.Error(), expectedPrompt) {
+			t.Errorf("expected error to contain %q, got %q", expectedPrompt, err.Error())
+		}
+	})
+
+	t.Run("valid base branch in config resolves and succeeds", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{
+			BaseBranch: "main",
+			SrcFolders: []string{"app"},
+		}
+		entries, err := git.GetTicketNumstat("AL-39", "", []string{"app"}, cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(entries) == 0 {
+			t.Fatal("expected at least 1 entry for ticket AL-39 with config base branch, got 0")
+		}
+	})
+}
+
 func TestComputeCodeFacts_Invariants(t *testing.T) {
 	t.Run("empty src_folders returns explicit invariant error", func(t *testing.T) {
 		tempDir := t.TempDir()

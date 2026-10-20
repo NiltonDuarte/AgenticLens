@@ -177,12 +177,15 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 	}
 
 	if strings.TrimSpace(baseBranch) == "" {
+		var projCfg *domain.ProjectConfig
 		if cfg != nil && strings.TrimSpace(cfg.BaseBranch) != "" {
-			baseBranch = strings.TrimSpace(cfg.BaseBranch)
+			projCfg = &domain.ProjectConfig{
+				CodeMetrics: domain.CodeMetricsConfig{
+					BaseBranch: strings.TrimSpace(cfg.BaseBranch),
+				},
+			}
 		}
-	}
-	if strings.TrimSpace(baseBranch) == "" {
-		resolved, err := ResolveBaseBranch("", nil)
+		resolved, err := ResolveBaseBranch("", projCfg)
 		if err != nil {
 			return nil, err
 		}

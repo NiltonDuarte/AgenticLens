@@ -2122,3 +2122,35 @@ code_metrics:
 		}
 	})
 }
+
+func TestLoadFromFile(t *testing.T) {
+	t.Run("correctly loads base_branch from repo .agenticlens-config.yaml", func(t *testing.T) {
+		repoConfigPath := filepath.Join("..", "..", "..", "..", ".agenticlens-config.yaml")
+		cfg, err := config.LoadFromFile(repoConfigPath)
+		if err != nil {
+			t.Fatalf("failed to load root .agenticlens-config.yaml: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "origin/main" {
+			t.Errorf("expected base_branch %q, got %q", "origin/main", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+
+	t.Run("correctly loads custom base_branch from yaml file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		content := `
+code_metrics:
+  base_branch: "origin/release-2.0"
+`
+		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := config.LoadFromFile(cfgFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "origin/release-2.0" {
+			t.Errorf("expected base_branch %q, got %q", "origin/release-2.0", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+}
