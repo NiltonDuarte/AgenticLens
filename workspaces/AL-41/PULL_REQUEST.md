@@ -1,7 +1,11 @@
-# perf(tests): eliminate subprocess churn, artificial sleeps, and test execution bottlenecks
+# perf(tests): eliminate subprocess churn, artificial sleeps, and test execution bottlenecks (AL-41)
 
 ## Description
-This pull request addresses the test flakiness and performance bottlenecks identified in the audit report (AL-35):
+This pull request addresses the test flakiness and performance bottlenecks identified in the audit report (AL-35).
+
+See specifications and logs:
+- Baseline contract: [CONTRACT.md](workspaces/AL-41/CONTRACT.md)
+- Development summary and telemetry: [SUMMARY.md](workspaces/AL-41/SUMMARY.md)
 
 1. **Eliminate Artificial Sleeps**:
    - Replaced four `time.Sleep(10 * time.Millisecond)` server startup polling calls in `backend/cmd/agentic-lens/main_test.go` with a deterministic TCP dial probe `waitForServerReady` with exponential microsecond backoff.
