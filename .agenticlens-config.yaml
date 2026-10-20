@@ -19,6 +19,9 @@ ticket:
     - prefix: PO
       description: Product Owner specifications, requirements definitions, and roadmap breakdowns
       ticket_type: docs
+    - prefix: FIX
+      description: Bug fixes, defect remediation, and corrective patches
+      ticket_type: fix
   # Enable case-insensitive prefix parsing (e.g. al-21 -> AL-21).
   case_insensitive: true
   # Additional regex patterns to match unconventional ticket naming formats.
