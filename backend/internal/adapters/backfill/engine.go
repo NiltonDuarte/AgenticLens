@@ -289,6 +289,10 @@ func (e *BackfillEngine) processSingleWorkspace(
 			if resolvedSessionID != nil && strings.TrimSpace(*resolvedSessionID) != "" {
 				dbSessionFound = true
 				rootID := strings.TrimSpace(*resolvedSessionID)
+				turns, err := opencode.ExtractSteeringTurns(opencodeDB.DB(), []string{rootID})
+				if err == nil && turns >= 1 {
+					factLedger.Code.SDLCIterations = turns
+				}
 				invs, tools, events, stISO, endISO, err := opencode.ExtractFacts(
 					opencodeDB.DB(),
 					[]string{rootID},

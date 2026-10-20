@@ -113,8 +113,8 @@ func TestInferenceOnActiveWorkspace(t *testing.T) {
 	}
 
 	iters := git.ComputeSDLCIterations("AL-11")
-	if iters < 1 {
-		t.Errorf("expected sdlc iterations >= 1, got %d", iters)
+	if iters != 1 {
+		t.Errorf("expected sdlc iterations == 1, got %d", iters)
 	}
 
 	user := git.GetGitUser()
@@ -985,16 +985,6 @@ func TestComputeCodeFacts_Invariants(t *testing.T) {
 
 		customWs := "custom_tickets"
 		ticketID := "TICK-100"
-		iterDir := filepath.Join(tempDir, customWs, ticketID, "iterations")
-		if err := os.MkdirAll(filepath.Join(iterDir, "01"), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.MkdirAll(filepath.Join(iterDir, "02"), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.MkdirAll(filepath.Join(iterDir, "03"), 0755); err != nil {
-			t.Fatal(err)
-		}
 
 		origDir, err := os.Getwd()
 		if err != nil {
@@ -1015,8 +1005,21 @@ func TestComputeCodeFacts_Invariants(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if facts.SDLCIterations != 3 {
-			t.Errorf("expected 3 iterations from custom workspaces_dir, got %d", facts.SDLCIterations)
+		if facts.SDLCIterations != 1 {
+			t.Errorf("expected 1 iteration without filesystem lookup, got %d", facts.SDLCIterations)
+		}
+
+		fallback := &domain.CodeFacts{
+			LinesAdded:     10,
+			FilesChanged:   1,
+			SDLCIterations: 4,
+		}
+		factsWithFallback, err := git.ComputeCodeFacts(ticketID, cfg, fallback)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if factsWithFallback.SDLCIterations != 4 {
+			t.Errorf("expected 4 iterations preserved from fallback, got %d", factsWithFallback.SDLCIterations)
 		}
 	})
 }

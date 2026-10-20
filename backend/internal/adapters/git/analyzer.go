@@ -323,11 +323,6 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 
 // ComputeCodeFacts computes code changes, test/prod breakdown, and SDLC iterations from git diff.
 func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *domain.CodeFacts) (domain.CodeFacts, error) {
-	var wsDir string
-	if cfg != nil {
-		wsDir = cfg.WorkspacesDir
-	}
-
 	// 1. Return safe defaults or fallback if not in a git repository
 	_, gitErr := runGitCommand("rev-parse", "--show-toplevel")
 	if gitErr != nil {
@@ -342,7 +337,7 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 			ProdLinesAdded:   0,
 			ProdLinesDeleted: 0,
 			FilesChanged:     0,
-			SDLCIterations:   ComputeSDLCIterations(ticketID, wsDir),
+			SDLCIterations:   1,
 		}, nil
 	}
 
@@ -359,7 +354,7 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 			ProdLinesAdded:   0,
 			ProdLinesDeleted: 0,
 			FilesChanged:     0,
-			SDLCIterations:   ComputeSDLCIterations(ticketID, wsDir),
+			SDLCIterations:   1,
 		}, nil
 	}
 
@@ -421,7 +416,10 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 		}
 	}
 
-	sdlcIters := ComputeSDLCIterations(ticketID, cfg.WorkspacesDir)
+	sdlcIters := int64(1)
+	if fallback != nil && fallback.SDLCIterations > 0 {
+		sdlcIters = fallback.SDLCIterations
+	}
 
 	return domain.CodeFacts{
 		LinesAdded:       linesAdded,

@@ -1,8 +1,6 @@
 package git
 
 import (
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -22,57 +20,9 @@ func GetGitUser() string {
 	return "unknown"
 }
 
-func findWorkspaceDir(workspacesDir, ticketID, subDir string) (string, bool) {
-	wsDir := strings.Trim(strings.TrimSpace(workspacesDir), "/")
-	if wsDir == "" {
-		wsDir = "workspaces"
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", false
-	}
-	curr := cwd
-	for {
-		candidate := filepath.Join(curr, wsDir, ticketID, subDir)
-		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
-			return candidate, true
-		}
-		parent := filepath.Dir(curr)
-		if parent == curr {
-			break
-		}
-		curr = parent
-	}
-	return "", false
-}
-
-// ComputeSDLCIterations calculates iterations count from ticket workspace iterations directory.
+// ComputeSDLCIterations calculates iterations count.
+// Deprecated: SDLC iterations are telemetry-native from session steering turns. Returns 1.
 func ComputeSDLCIterations(ticketID string, workspacesDir ...string) int64 {
-	cleanTicket := strings.TrimSpace(ticketID)
-	if cleanTicket == "" {
-		return 1
-	}
-
-	wsDir := "workspaces"
-	if len(workspacesDir) > 0 && strings.Trim(strings.TrimSpace(workspacesDir[0]), "/") != "" {
-		wsDir = strings.Trim(strings.TrimSpace(workspacesDir[0]), "/")
-	}
-
-	if iterDir, ok := findWorkspaceDir(wsDir, cleanTicket, "iterations"); ok {
-		entries, err := os.ReadDir(iterDir)
-		if err == nil {
-			var count int64
-			for _, e := range entries {
-				if e.IsDir() {
-					count++
-				}
-			}
-			if count > 0 {
-				return count
-			}
-		}
-	}
-
 	return 1
 }
 

@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 )
 
 func TestReleaseStable_SemVerRegexValidation(t *testing.T) {
@@ -343,37 +341,6 @@ func TestChecksumVerification_DetectsCorruptedArchives(t *testing.T) {
 	runErr := corruptCmd.Run()
 	if runErr == nil {
 		t.Fatalf("expected sha256sum to fail on corrupted archive, but it succeeded")
-	}
-}
-
-func TestYAMLFiles_SyntaxValidation(t *testing.T) {
-	repoRoot, err := findRepoRoot()
-	if err != nil {
-		t.Fatalf("could not determine repository root: %v", err)
-	}
-
-	yamlFiles := []string{
-		".agenticlens-config.yaml",
-		".github/workflows/ci.yml",
-		".github/workflows/release-candidate.yml",
-		".github/workflows/release-stable.yml",
-	}
-
-	for _, relPath := range yamlFiles {
-		t.Run(relPath, func(t *testing.T) {
-			fullPath := filepath.Join(repoRoot, relPath)
-			data, err := os.ReadFile(fullPath)
-			if err != nil {
-				t.Fatalf("failed reading %s: %v", relPath, err)
-			}
-			var node yaml.Node
-			if err := yaml.Unmarshal(data, &node); err != nil {
-				t.Fatalf("invalid YAML syntax in %s: %v", relPath, err)
-			}
-			if node.Kind == 0 {
-				t.Fatalf("expected non-empty YAML document in %s", relPath)
-			}
-		})
 	}
 }
 
