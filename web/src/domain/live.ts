@@ -20,6 +20,7 @@ export interface LivePartFact {
   readonly type: string;
   readonly tool_name?: string | null;
   readonly input_snippet?: string;
+  readonly output_snippet?: string;
   readonly status: string;
   readonly is_error: boolean;
   readonly error_message?: string | null;
@@ -31,6 +32,7 @@ export interface LiveMessageFact {
   readonly role: string;
   readonly content: string;
   readonly timestamp: string;
+  readonly reasoning_content?: string | null;
   readonly parts: readonly LivePartFact[];
   readonly context_tokens: number;
   readonly input_tokens: number;
@@ -51,6 +53,7 @@ export interface LiveTraceView {
 
 export interface LiveSessionNode {
   readonly id: string;
+  readonly parent_id?: string | null;
   readonly agent: string;
   readonly role: string;
   readonly model: string;

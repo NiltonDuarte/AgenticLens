@@ -493,27 +493,38 @@ func TestLiveSessionsHandler_AnomaliesField(t *testing.T) {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
 	}
 
-	var raw map[string]interface{}
+	type sessionNodePayload struct {
+		ID        string                    `json:"id"`
+		Anomalies []domain.LiveAnomalyAlert `json:"anomalies"`
+	}
+	type sessionTreePayload struct {
+		ActiveAnomalies []domain.LiveAnomalyAlert `json:"active_anomalies"`
+		RootSessions    []sessionNodePayload      `json:"root_sessions"`
+	}
+
+	var raw sessionTreePayload
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		t.Fatalf("failed decoding json: %v", err)
 	}
 
-	activeAnomalies, ok := raw["active_anomalies"].([]interface{})
-	if !ok {
-		t.Fatalf("expected active_anomalies to be array, got %T", raw["active_anomalies"])
+	if len(raw.ActiveAnomalies) != 1 {
+		t.Fatalf("expected 1 active anomaly, got %d", len(raw.ActiveAnomalies))
 	}
-	if len(activeAnomalies) != 1 {
-		t.Errorf("expected 1 active anomaly, got %d", len(activeAnomalies))
+	if raw.ActiveAnomalies[0].RuleName != domain.RuleConsecutiveToolErrors {
+		t.Errorf("expected rule %s, got %s", domain.RuleConsecutiveToolErrors, raw.ActiveAnomalies[0].RuleName)
+	}
+	if raw.ActiveAnomalies[0].Severity != domain.LiveSeverityHigh {
+		t.Errorf("expected severity %s, got %s", domain.LiveSeverityHigh, raw.ActiveAnomalies[0].Severity)
 	}
 
-	rootSessions := raw["root_sessions"].([]interface{})
-	node := rootSessions[0].(map[string]interface{})
-	nodeAnomalies, ok := node["anomalies"].([]interface{})
-	if !ok {
-		t.Fatalf("expected node anomalies to be array, got %T", node["anomalies"])
+	if len(raw.RootSessions) != 1 {
+		t.Fatalf("expected 1 root session, got %d", len(raw.RootSessions))
 	}
-	if len(nodeAnomalies) != 1 {
-		t.Errorf("expected 1 node anomaly, got %d", len(nodeAnomalies))
+	if len(raw.RootSessions[0].Anomalies) != 1 {
+		t.Fatalf("expected 1 node anomaly, got %d", len(raw.RootSessions[0].Anomalies))
+	}
+	if raw.RootSessions[0].Anomalies[0].RuleName != domain.RuleConsecutiveToolErrors {
+		t.Errorf("expected node anomaly rule %s, got %s", domain.RuleConsecutiveToolErrors, raw.RootSessions[0].Anomalies[0].RuleName)
 	}
 }
 
@@ -679,16 +690,16 @@ func TestLiveHandlers_NilSlicesSerializeAsEmptyArrays(t *testing.T) {
 	}
 	defer respTree.Body.Close()
 
-	var rawTree map[string]interface{}
+	var rawTree map[string]json.RawMessage
 	if err := json.NewDecoder(respTree.Body).Decode(&rawTree); err != nil {
 		t.Fatalf("failed decoding tree: %v", err)
 	}
 
-	if rawTree["root_sessions"] == nil {
-		t.Errorf("expected root_sessions to be non-nil [] array, got nil")
+	if string(rawTree["root_sessions"]) != "[]" {
+		t.Errorf("expected root_sessions to serialize as [], got %s", string(rawTree["root_sessions"]))
 	}
-	if rawTree["active_anomalies"] == nil {
-		t.Errorf("expected active_anomalies to be non-nil [] array, got nil")
+	if string(rawTree["active_anomalies"]) != "[]" {
+		t.Errorf("expected active_anomalies to serialize as [], got %s", string(rawTree["active_anomalies"]))
 	}
 
 	// 2. Session trace endpoint
@@ -698,18 +709,18 @@ func TestLiveHandlers_NilSlicesSerializeAsEmptyArrays(t *testing.T) {
 	}
 	defer respTrace.Body.Close()
 
-	var rawTrace map[string]interface{}
+	var rawTrace map[string]json.RawMessage
 	if err := json.NewDecoder(respTrace.Body).Decode(&rawTrace); err != nil {
 		t.Fatalf("failed decoding trace: %v", err)
 	}
 
-	if rawTrace["messages"] == nil {
-		t.Errorf("expected messages to be non-nil [] array, got nil")
+	if string(rawTrace["messages"]) != "[]" {
+		t.Errorf("expected messages to serialize as [], got %s", string(rawTrace["messages"]))
 	}
-	if rawTrace["recent_errors"] == nil {
-		t.Errorf("expected recent_errors to be non-nil [] array, got nil")
+	if string(rawTrace["recent_errors"]) != "[]" {
+		t.Errorf("expected recent_errors to serialize as [], got %s", string(rawTrace["recent_errors"]))
 	}
-	if rawTrace["anomalies"] == nil {
-		t.Errorf("expected anomalies to be non-nil [] array, got nil")
+	if string(rawTrace["anomalies"]) != "[]" {
+		t.Errorf("expected anomalies to serialize as [], got %s", string(rawTrace["anomalies"]))
 	}
 }
