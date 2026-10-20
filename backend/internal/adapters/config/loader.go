@@ -113,6 +113,7 @@ type rawLiveConfig struct {
 }
 
 type rawCodeMetricsConfig struct {
+	BaseBranch   *string  `json:"base_branch" yaml:"base_branch"`
 	Include      []string `json:"include" yaml:"include"`
 	Exclude      []string `json:"exclude" yaml:"exclude"`
 	TestPatterns []string `json:"test_patterns" yaml:"test_patterns"`
@@ -239,6 +240,9 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	}
 
 	if dto.CodeMetrics != nil {
+		if dto.CodeMetrics.BaseBranch != nil && strings.TrimSpace(*dto.CodeMetrics.BaseBranch) != "" {
+			cfg.CodeMetrics.BaseBranch = strings.TrimSpace(*dto.CodeMetrics.BaseBranch)
+		}
 		if dto.CodeMetrics.Include != nil {
 			cfg.CodeMetrics.Include = dto.CodeMetrics.Include
 		}

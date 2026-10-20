@@ -232,8 +232,16 @@ func runGenerate(args []string) {
 		}
 	}
 
-	cfg, _ := git.LoadConfig("")
-	codeFacts := git.ComputeCodeFacts(activeTicketID, cfg, fallbackCode)
+	cfg, err := git.LoadConfig("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+		os.Exit(1)
+	}
+	codeFacts, err := git.ComputeCodeFacts(activeTicketID, cfg, fallbackCode)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 
 	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
 

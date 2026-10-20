@@ -1,7 +1,9 @@
 package git_test
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"agenticlens/internal/adapters/git"
@@ -518,4 +520,67 @@ func TestInferTicketType_AdversarialEdgeCases(t *testing.T) {
 
 func strPtr(s string) *string {
 	return &s
+}
+
+func TestComputeSDLCIterations_CustomWorkspacesDir(t *testing.T) {
+	tempDir := t.TempDir()
+	customWs := "my_custom_ws"
+	ticketID := "CUSTOM-1"
+	iterDir := filepath.Join(tempDir, customWs, ticketID, "iterations")
+	if err := os.MkdirAll(filepath.Join(iterDir, "01"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(iterDir, "02"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(iterDir, "03"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(iterDir, "04"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Adversarial: non-directory files inside iterations/ must not be counted
+	readmeFile := filepath.Join(iterDir, "README.md")
+	if err := os.WriteFile(readmeFile, []byte("iteration notes"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	gitkeepFile := filepath.Join(iterDir, ".gitkeep")
+	if err := os.WriteFile(gitkeepFile, []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(origDir)
+	})
+
+	iters := git.ComputeSDLCIterations(ticketID, customWs)
+	if iters != 4 {
+		t.Errorf("expected exactly 4 iterations (excluding files) in custom workspace, got %d", iters)
+	}
+
+	// Slashes and whitespace in workspacesDir argument must normalize correctly
+	itersNormalized := git.ComputeSDLCIterations(ticketID, "  /"+customWs+"/  ")
+	if itersNormalized != 4 {
+		t.Errorf("expected 4 iterations with normalized workspacesDir, got %d", itersNormalized)
+	}
+
+	// Default unconfigured workspace dir (which does not exist for CUSTOM-1) returns 1
+	defaultIters := git.ComputeSDLCIterations(ticketID)
+	if defaultIters != 1 {
+		t.Errorf("expected 1 iteration for unconfigured workspace dir (not found), got %d", defaultIters)
+	}
+
+	// Non-existent ticket returns 1
+	missingIters := git.ComputeSDLCIterations("NONEXISTENT-999", customWs)
+	if missingIters != 1 {
+		t.Errorf("expected 1 iteration for missing ticket, got %d", missingIters)
+	}
 }

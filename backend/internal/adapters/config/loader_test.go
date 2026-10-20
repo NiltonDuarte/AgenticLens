@@ -2066,3 +2066,59 @@ func TestLoad_CustomExtensionAndEmptyPathEdgeCases(t *testing.T) {
 		}
 	})
 }
+
+func TestLoad_CodeMetricsBaseBranch(t *testing.T) {
+	t.Run("unmarshals base_branch from yaml", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		content := `
+code_metrics:
+  base_branch: "release/v1.0"
+`
+		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.LoadFromFile(cfgFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "release/v1.0" {
+			t.Errorf("expected base_branch 'release/v1.0', got %q", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+
+	t.Run("unmarshals base_branch from json", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgFile := filepath.Join(tempDir, ".agenticlens-config.json")
+		content := `{"code_metrics": {"base_branch": "master"}}`
+		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.LoadFromFile(cfgFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "master" {
+			t.Errorf("expected base_branch 'master', got %q", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+
+	t.Run("defaults base_branch to empty string when omitted", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		content := `project_name: "TestProject"`
+		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.LoadFromFile(cfgFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "" {
+			t.Errorf("expected default base_branch '', got %q", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+}

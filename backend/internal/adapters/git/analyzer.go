@@ -2,7 +2,10 @@ package git
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,8 +47,11 @@ func ParseNumstatOutput(stdout string) []NumstatEntry {
 	return entries
 }
 
-func runGitCommand(args ...string) (string, error) {
+func runGitCommandInDir(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -55,11 +61,139 @@ func runGitCommand(args ...string) (string, error) {
 	return stdout.String(), nil
 }
 
-// GetTicketNumstat retrieves git diff numstat entries for a ticket.
-func GetTicketNumstat(ticketID string) []NumstatEntry {
+func runGitCommand(args ...string) (string, error) {
+	return runGitCommandInDir("", args...)
+}
+
+// ResolveBaseBranch resolves the upstream comparison branch using a 4-tier strategy.
+func ResolveBaseBranch(repoRoot string, cfg *domain.ProjectConfig) (string, error) {
+	// Tier 1: Explicit Configuration Tier
+	if cfg != nil {
+		configured := strings.TrimSpace(cfg.CodeMetrics.BaseBranch)
+		if configured != "" {
+			_, err := runGitCommandInDir(repoRoot, "rev-parse", "--verify", "--quiet", configured+"^{commit}")
+			if err == nil {
+				return configured, nil
+			}
+			return "", fmt.Errorf("configured base branch %q not found: cannot resolve upstream base branch in repository", configured)
+		}
+	}
+
+	// Tier 2: Symbolic Reference Remote Tracking Tier
+	symOut, err := runGitCommandInDir(repoRoot, "symbolic-ref", "refs/remotes/origin/HEAD")
+	if err == nil {
+		ref := strings.TrimSpace(symOut)
+		ref = strings.TrimPrefix(ref, "refs/remotes/")
+		if ref != "" {
+			_, err := runGitCommandInDir(repoRoot, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+			if err == nil {
+				return ref, nil
+			}
+		}
+	}
+
+	// Tier 3: Candidate Probing Tier
+	candidates := []string{
+		path.Join("origin", "main"),
+		"main",
+		path.Join("origin", "master"),
+		"master",
+	}
+	for _, candidate := range candidates {
+		_, err := runGitCommandInDir(repoRoot, "rev-parse", "--verify", "--quiet", candidate+"^{commit}")
+		if err == nil {
+			return candidate, nil
+		}
+	}
+
+	// Tier 4: Explicit Failure Invariant
+	return "", fmt.Errorf("unable to resolve upstream base branch: configure 'code_metrics.base_branch' in .agenticlens-config.yaml")
+}
+
+// ValidateSrcFolders verifies that workspaces.src_folders contains at least one non-empty source directory.
+func ValidateSrcFolders(srcFolders []string) error {
+	if len(srcFolders) == 0 {
+		return fmt.Errorf("workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml")
+	}
+	hasNonEmpty := false
+	for _, folder := range srcFolders {
+		if strings.TrimSpace(folder) != "" {
+			hasNonEmpty = true
+			break
+		}
+	}
+	if !hasNonEmpty {
+		return fmt.Errorf("workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml")
+	}
+	return nil
+}
+
+// IsMonitoredSourcePath reports whether a file path falls within configured source folders, include patterns, or production patterns.
+func IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool {
+	cleanPath := filepath.ToSlash(strings.TrimSpace(path))
+	cleanPath = strings.TrimPrefix(cleanPath, "./")
+	cleanPath = strings.TrimPrefix(cleanPath, "/")
+	if cleanPath == "" {
+		return false
+	}
+
+	for _, folder := range srcFolders {
+		normFolder := filepath.ToSlash(strings.TrimSpace(folder))
+		normFolder = strings.Trim(normFolder, "/")
+		if normFolder == "" {
+			continue
+		}
+		if cleanPath == normFolder || strings.HasPrefix(cleanPath, normFolder+"/") {
+			return true
+		}
+	}
+
+	if cfg != nil {
+		for _, pattern := range cfg.Include {
+			if matchPattern(pattern, cleanPath) {
+				return true
+			}
+		}
+		for _, pattern := range cfg.ProdPatterns {
+			if matchPattern(pattern, cleanPath) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// GetTicketNumstat retrieves git diff numstat entries for a ticket using dynamic base branch and source folder filters.
+func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, cfg *ClassificationConfig) ([]NumstatEntry, error) {
 	cleanTicket := strings.TrimSpace(ticketID)
 	if cleanTicket == "" {
-		return []NumstatEntry{}
+		return []NumstatEntry{}, nil
+	}
+
+	_, err := runGitCommand("rev-parse", "--show-toplevel")
+	if err != nil {
+		return []NumstatEntry{}, nil
+	}
+
+	if strings.TrimSpace(baseBranch) == "" {
+		if cfg != nil && strings.TrimSpace(cfg.BaseBranch) != "" {
+			baseBranch = strings.TrimSpace(cfg.BaseBranch)
+		}
+	}
+	if strings.TrimSpace(baseBranch) == "" {
+		resolved, err := ResolveBaseBranch("", nil)
+		if err != nil {
+			return nil, err
+		}
+		baseBranch = resolved
+	}
+
+	if len(srcFolders) == 0 && cfg != nil && len(cfg.SrcFolders) > 0 {
+		srcFolders = cfg.SrcFolders
+	}
+	if err := ValidateSrcFolders(srcFolders); err != nil {
+		return nil, err
 	}
 
 	excludeArgs := []string{
@@ -74,30 +208,30 @@ func GetTicketNumstat(ticketID string) []NumstatEntry {
 	if err == nil {
 		currBranch = strings.TrimSpace(currBranch)
 		if currBranch != "" && strings.Contains(strings.ToLower(currBranch), strings.ToLower(cleanTicket)) {
-			// Try merge-base with origin/main
-			args := append([]string{"diff", "--numstat", "origin/main...HEAD"}, excludeArgs...)
+			// Try merge-base with base branch
+			args := append([]string{"diff", "--numstat", baseBranch + "...HEAD"}, excludeArgs...)
 			out, err := runGitCommand(args...)
 			if err == nil {
 				parsed := ParseNumstatOutput(out)
 				if len(parsed) > 0 {
-					return parsed
+					return parsed, nil
 				}
 			}
 
-			// Try diff with origin/main directly including uncommitted work
-			argsDirect := append([]string{"diff", "--numstat", "origin/main"}, excludeArgs...)
+			// Try diff with base branch directly including uncommitted work
+			argsDirect := append([]string{"diff", "--numstat", baseBranch}, excludeArgs...)
 			outDirect, errDirect := runGitCommand(argsDirect...)
 			if errDirect == nil {
 				parsed := ParseNumstatOutput(outDirect)
 				if len(parsed) > 0 {
-					return parsed
+					return parsed, nil
 				}
 			}
 		}
 	}
 
-	// 2. Check merged commits on origin/main where ticket appears in subject line
-	logOut, err := runGitCommand("log", "origin/main", "--grep="+cleanTicket, "--format=%H\t%s", "-n", "25")
+	// 2. Check merged commits on base branch where ticket appears in subject line
+	logOut, err := runGitCommand("log", baseBranch, "--grep="+cleanTicket, "--format=%H\t%s", "-n", "25")
 	if err == nil {
 		lines := strings.Split(logOut, "\n")
 		ticketRegex, reErr := regexp.Compile(`(?i)\b` + regexp.QuoteMeta(cleanTicket) + `\b`)
@@ -112,7 +246,7 @@ func GetTicketNumstat(ticketID string) []NumstatEntry {
 					if err == nil {
 						parsed := ParseNumstatOutput(out)
 						if len(parsed) > 0 {
-							return parsed
+							return parsed, nil
 						}
 					}
 				}
@@ -126,19 +260,14 @@ func GetTicketNumstat(ticketID string) []NumstatEntry {
 		for _, b := range strings.Split(branchOut, "\n") {
 			bClean := strings.TrimSpace(strings.TrimLeft(b, "*+ "))
 			if bClean != "" && !strings.Contains(bClean, "HEAD") {
-				diffArgs := append([]string{"diff", "--numstat", "origin/main..." + bClean}, excludeArgs...)
+				diffArgs := append([]string{"diff", "--numstat", baseBranch + "..." + bClean}, excludeArgs...)
 				out, err := runGitCommand(diffArgs...)
 				if err == nil {
 					parsed := ParseNumstatOutput(out)
 					if len(parsed) > 0 {
 						for _, r := range parsed {
-							if strings.HasPrefix(r.Path, "src/") ||
-								strings.HasPrefix(r.Path, "backend/") ||
-								strings.HasPrefix(r.Path, "internal/") ||
-								strings.HasPrefix(r.Path, "cmd/") ||
-								strings.HasPrefix(r.Path, "web/") ||
-								strings.HasPrefix(r.Path, "tests/") {
-								return parsed
+							if IsMonitoredSourcePath(r.Path, srcFolders, cfg) {
+								return parsed, nil
 							}
 						}
 					}
@@ -164,13 +293,8 @@ func GetTicketNumstat(ticketID string) []NumstatEntry {
 					parsed := ParseNumstatOutput(out)
 					if len(parsed) > 0 {
 						for _, r := range parsed {
-							if strings.HasPrefix(r.Path, "src/") ||
-								strings.HasPrefix(r.Path, "backend/") ||
-								strings.HasPrefix(r.Path, "internal/") ||
-								strings.HasPrefix(r.Path, "cmd/") ||
-								strings.HasPrefix(r.Path, "web/") ||
-								strings.HasPrefix(r.Path, "tests/") {
-								return parsed
+							if IsMonitoredSourcePath(r.Path, srcFolders, cfg) {
+								return parsed, nil
 							}
 						}
 					}
@@ -186,19 +310,87 @@ func GetTicketNumstat(ticketID string) []NumstatEntry {
 		if err == nil {
 			parsed := ParseNumstatOutput(headOut)
 			if len(parsed) > 0 {
-				return parsed
+				return parsed, nil
 			}
 		}
 	}
 
-	return []NumstatEntry{}
+	return []NumstatEntry{}, nil
 }
 
 // ComputeCodeFacts computes code changes, test/prod breakdown, and SDLC iterations from git diff.
-func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *domain.CodeFacts) domain.CodeFacts {
-	numstat := GetTicketNumstat(ticketID)
+func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *domain.CodeFacts) (domain.CodeFacts, error) {
+	var wsDir string
+	if cfg != nil {
+		wsDir = cfg.WorkspacesDir
+	}
+
+	// 1. Return safe defaults or fallback if not in a git repository
+	_, gitErr := runGitCommand("rev-parse", "--show-toplevel")
+	if gitErr != nil {
+		if fallback != nil {
+			return *fallback, nil
+		}
+		return domain.CodeFacts{
+			LinesAdded:       0,
+			LinesDeleted:     0,
+			TestLinesAdded:   0,
+			TestLinesDeleted: 0,
+			ProdLinesAdded:   0,
+			ProdLinesDeleted: 0,
+			FilesChanged:     0,
+			SDLCIterations:   ComputeSDLCIterations(ticketID, wsDir),
+		}, nil
+	}
+
+	// 2. Return safe defaults or fallback if ticket ID is empty
+	if strings.TrimSpace(ticketID) == "" {
+		if fallback != nil {
+			return *fallback, nil
+		}
+		return domain.CodeFacts{
+			LinesAdded:       0,
+			LinesDeleted:     0,
+			TestLinesAdded:   0,
+			TestLinesDeleted: 0,
+			ProdLinesAdded:   0,
+			ProdLinesDeleted: 0,
+			FilesChanged:     0,
+			SDLCIterations:   ComputeSDLCIterations(ticketID, wsDir),
+		}, nil
+	}
+
+	if cfg == nil {
+		loaded, err := LoadConfig("")
+		if err == nil && loaded != nil {
+			cfg = loaded
+		} else {
+			cfg = &ClassificationConfig{
+				SrcFolders: []string{"backend", "internal", "cmd", "web"},
+			}
+		}
+	}
+
+	if err := ValidateSrcFolders(cfg.SrcFolders); err != nil {
+		return domain.CodeFacts{}, err
+	}
+
+	projCfg := &domain.ProjectConfig{
+		CodeMetrics: domain.CodeMetricsConfig{
+			BaseBranch: cfg.BaseBranch,
+		},
+	}
+	baseBranch, err := ResolveBaseBranch("", projCfg)
+	if err != nil {
+		return domain.CodeFacts{}, err
+	}
+
+	numstat, err := GetTicketNumstat(ticketID, baseBranch, cfg.SrcFolders, cfg)
+	if err != nil {
+		return domain.CodeFacts{}, err
+	}
 	if len(numstat) == 0 && fallback != nil {
-		return *fallback
+		return *fallback, nil
 	}
 
 	var linesAdded, linesDeleted int64
@@ -226,7 +418,7 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 		}
 	}
 
-	sdlcIters := ComputeSDLCIterations(ticketID)
+	sdlcIters := ComputeSDLCIterations(ticketID, cfg.WorkspacesDir)
 
 	return domain.CodeFacts{
 		LinesAdded:       linesAdded,
@@ -237,7 +429,7 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 		ProdLinesDeleted: prodLinesDeleted,
 		FilesChanged:     filesChanged,
 		SDLCIterations:   sdlcIters,
-	}
+	}, nil
 }
 
 // GetWorkspaceCommitTimeRange returns the minimum and maximum commit timestamps (in Unix seconds) for commits touching workspaceDir.

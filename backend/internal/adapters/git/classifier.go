@@ -7,12 +7,15 @@ import (
 	"agenticlens/internal/adapters/config"
 )
 
-// ClassificationConfig holds user-configured file glob patterns.
+// ClassificationConfig holds user-configured file glob patterns and workspace layout options.
 type ClassificationConfig struct {
-	Include      []string `json:"include"`
-	Exclude      []string `json:"exclude"`
-	TestPatterns []string `json:"test_patterns"`
-	ProdPatterns []string `json:"prod_patterns"`
+	Include       []string `json:"include"`
+	Exclude       []string `json:"exclude"`
+	TestPatterns  []string `json:"test_patterns"`
+	ProdPatterns  []string `json:"prod_patterns"`
+	BaseBranch    string   `json:"base_branch,omitempty"`
+	SrcFolders    []string `json:"src_folders,omitempty"`
+	WorkspacesDir string   `json:"workspaces_dir,omitempty"`
 }
 
 // LoadConfig attempts to load ClassificationConfig from repository configuration.
@@ -23,10 +26,13 @@ func LoadConfig(repoRoot string) (*ClassificationConfig, error) {
 	}
 
 	return &ClassificationConfig{
-		Include:      cfg.CodeMetrics.Include,
-		Exclude:      cfg.CodeMetrics.Exclude,
-		TestPatterns: cfg.CodeMetrics.TestPatterns,
-		ProdPatterns: cfg.CodeMetrics.ProdPatterns,
+		Include:       cfg.CodeMetrics.Include,
+		Exclude:       cfg.CodeMetrics.Exclude,
+		TestPatterns:  cfg.CodeMetrics.TestPatterns,
+		ProdPatterns:  cfg.CodeMetrics.ProdPatterns,
+		BaseBranch:    cfg.CodeMetrics.BaseBranch,
+		SrcFolders:    cfg.Workspaces.SrcFolders,
+		WorkspacesDir: cfg.Workspaces.Dir,
 	}, nil
 }
 
@@ -77,8 +83,19 @@ func matchPattern(pattern, path string) bool {
 // ClassifyFile classifies a repository file path as ignored, test, prod, or other.
 func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 	cleanPath := filepath.ToSlash(strings.TrimSpace(rawPath))
+	cleanPath = strings.TrimPrefix(cleanPath, "./")
+	cleanPath = strings.TrimPrefix(cleanPath, "/")
 	baseName := filepath.Base(cleanPath)
 	ext := strings.ToLower(filepath.Ext(cleanPath))
+
+	// 1. Workspace directory check - classify immediately as CategoryIgnored
+	wsDir := "workspaces"
+	if cfg != nil && strings.TrimSpace(cfg.WorkspacesDir) != "" {
+		wsDir = strings.Trim(strings.TrimSpace(cfg.WorkspacesDir), "/")
+	}
+	if cleanPath == wsDir || strings.HasPrefix(cleanPath, wsDir+"/") || strings.Contains(cleanPath, "/"+wsDir+"/") {
+		return CategoryIgnored
+	}
 
 	if cfg != nil {
 		for _, p := range cfg.Exclude {
@@ -103,10 +120,7 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 		}
 	}
 
-	// 1. Universal ignore rules
-	if strings.HasPrefix(cleanPath, "workspaces/") || strings.Contains(cleanPath, "/workspaces/") {
-		return CategoryIgnored
-	}
+	// 2. Universal ignore rules
 	if ext == ".md" || ext == ".json" || ext == ".lock" {
 		return CategoryIgnored
 	}

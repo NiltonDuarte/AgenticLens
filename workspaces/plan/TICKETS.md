@@ -47,7 +47,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## In Progress
 
-(None)
+- **AL-39**: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes
+  - **Subsystem**: Adapters / Git / Domain / Config / Tests
+  - **Phase**: Phase 7
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
 
 ---
 
@@ -60,14 +66,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None (AL-38 Done)
   - **Blocks**: AL-37
   - **File**: `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
-
-- **AL-39**: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes
-  - **Subsystem**: Adapters / Git / Domain / Config / Tests
-  - **Phase**: Phase 7
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
 
 - **AL-40**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
   - **Subsystem**: Adapters / HTTP / Presentation / Web / Domain / Tests

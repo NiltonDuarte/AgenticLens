@@ -3731,3 +3731,99 @@ workspaces:
 		}
 	})
 }
+
+func TestCLI_Invariants(t *testing.T) {
+	t.Run("fatal on unresolvable base branch", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// Set up repo with non-standard branch name and no origin remote
+		runCmd := func(args ...string) {
+			t.Helper()
+			cmd := exec.Command("git", args...)
+			cmd.Dir = tempDir
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("git %v failed: %v (%s)", args, err, string(out))
+			}
+		}
+		runCmd("init", "-b", "dev-feature")
+		runCmd("config", "user.name", "TestUser")
+		runCmd("config", "user.email", "[EMAIL_REDACTED]")
+		readmePath := filepath.Join(tempDir, "README.md")
+		if err := os.WriteFile(readmePath, []byte("# Test\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		runCmd("add", "README.md")
+		runCmd("commit", "-m", "initial commit")
+
+		outJSON := filepath.Join(tempDir, "facts.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "DEV-1",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate command to fail with unresolvable base branch, got exit code 0")
+		}
+
+		expectedPrompt := "unable to resolve upstream base branch: configure 'code_metrics.base_branch' in .agenticlens-config.yaml"
+		if !strings.Contains(stderr.String(), expectedPrompt) {
+			t.Errorf("expected stderr to contain %q, got %q", expectedPrompt, stderr.String())
+		}
+	})
+
+	t.Run("fatal on empty src_folders", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		runCmd := func(args ...string) {
+			t.Helper()
+			cmd := exec.Command("git", args...)
+			cmd.Dir = tempDir
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("git %v failed: %v (%s)", args, err, string(out))
+			}
+		}
+		runCmd("init", "-b", "main")
+		runCmd("config", "user.name", "TestUser")
+		runCmd("config", "user.email", "[EMAIL_REDACTED]")
+		readmePath := filepath.Join(tempDir, "README.md")
+		if err := os.WriteFile(readmePath, []byte("# Test\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		runCmd("add", "README.md")
+		runCmd("commit", "-m", "initial commit")
+
+		cfgContent := "workspaces:\n  src_folders: []\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		outJSON := filepath.Join(tempDir, "facts.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--ticket-id", "DEV-1",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected generate command to fail with empty src_folders, got exit code 0")
+		}
+
+		expectedPrompt := "workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml"
+		if !strings.Contains(stderr.String(), expectedPrompt) {
+			t.Errorf("expected stderr to contain %q, got %q", expectedPrompt, stderr.String())
+		}
+	})
+}

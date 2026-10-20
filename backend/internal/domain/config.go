@@ -125,6 +125,7 @@ type LiveConfig struct {
 
 // CodeMetricsConfig defines file classification glob patterns for git metrics.
 type CodeMetricsConfig struct {
+	BaseBranch   string   `json:"base_branch,omitempty" yaml:"base_branch,omitempty"`
 	Include      []string `json:"include" yaml:"include"`
 	Exclude      []string `json:"exclude" yaml:"exclude"`
 	TestPatterns []string `json:"test_patterns" yaml:"test_patterns"`
@@ -203,6 +204,7 @@ func DefaultProjectConfig() ProjectConfig {
 			},
 		},
 		CodeMetrics: CodeMetricsConfig{
+			BaseBranch:   "",
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: []string{},

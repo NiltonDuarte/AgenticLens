@@ -210,7 +210,11 @@ func (e *BackfillEngine) processSingleWorkspace(
 		if factLedger.Code.LinesAdded > 0 || factLedger.Code.FilesChanged > 0 {
 			fallbackCode = &factLedger.Code
 		}
-		newCode := git.ComputeCodeFacts(ticketID, classificationCfg, fallbackCode)
+		newCode, err := git.ComputeCodeFacts(ticketID, classificationCfg, fallbackCode)
+		if err != nil {
+			result.Error = fmt.Errorf("recomputing git facts for %s: %w", ticketID, err)
+			return result
+		}
 		factLedger.Code = newCode
 		gitSucceeded = true
 		result.GitUpdated = true

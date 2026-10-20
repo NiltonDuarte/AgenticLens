@@ -22,14 +22,18 @@ func GetGitUser() string {
 	return "unknown"
 }
 
-func findWorkspaceDir(ticketID, subDir string) (string, bool) {
+func findWorkspaceDir(workspacesDir, ticketID, subDir string) (string, bool) {
+	wsDir := strings.Trim(strings.TrimSpace(workspacesDir), "/")
+	if wsDir == "" {
+		wsDir = "workspaces"
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", false
 	}
 	curr := cwd
 	for {
-		candidate := filepath.Join(curr, "workspaces", ticketID, subDir)
+		candidate := filepath.Join(curr, wsDir, ticketID, subDir)
 		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
 			return candidate, true
 		}
@@ -43,13 +47,18 @@ func findWorkspaceDir(ticketID, subDir string) (string, bool) {
 }
 
 // ComputeSDLCIterations calculates iterations count from ticket workspace iterations directory.
-func ComputeSDLCIterations(ticketID string) int64 {
+func ComputeSDLCIterations(ticketID string, workspacesDir ...string) int64 {
 	cleanTicket := strings.TrimSpace(ticketID)
 	if cleanTicket == "" {
 		return 1
 	}
 
-	if iterDir, ok := findWorkspaceDir(cleanTicket, "iterations"); ok {
+	wsDir := "workspaces"
+	if len(workspacesDir) > 0 && strings.Trim(strings.TrimSpace(workspacesDir[0]), "/") != "" {
+		wsDir = strings.Trim(strings.TrimSpace(workspacesDir[0]), "/")
+	}
+
+	if iterDir, ok := findWorkspaceDir(wsDir, cleanTicket, "iterations"); ok {
 		entries, err := os.ReadDir(iterDir)
 		if err == nil {
 			var count int64
