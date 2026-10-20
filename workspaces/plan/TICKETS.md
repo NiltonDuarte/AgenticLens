@@ -40,7 +40,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## In Progress
 
-(None)
+- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
+  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 6
+  - **Status**: In Progress
+  - **Blocked by**: None (AL-17, AL-32 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
 ---
 
@@ -53,14 +59,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None (AL-17 Done)
   - **Blocks**: AL-20
   - **File**: `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
-
-- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
-  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 6
-  - **Status**: Ready
-  - **Blocked by**: None (AL-17, AL-32 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
 ---
 

@@ -1,6 +1,8 @@
 package http_test
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,7 +17,10 @@ import (
 	"time"
 
 	adaptershttp "agenticlens/internal/adapters/http"
+	"agenticlens/internal/adapters/live"
 	"agenticlens/internal/domain"
+
+	_ "modernc.org/sqlite"
 )
 
 func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, invocations int64) string {
@@ -1088,25 +1093,30 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 
 	t.Run("WriteEventsResponse writes valid JSON", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		events := []domain.EventFact{
-			{
-				SessionID: "ses-1",
-				Timestamp: "2026-10-18T10:00:00Z",
-				Turn:      1,
-				Role:      "coder",
-				EventType: domain.EventTypeToolCall,
-				Status:    "success",
+		events := domain.WorkspaceEventsResponse{
+			TicketID:   "TKT-1",
+			IsHydrated: false,
+			Events: []domain.EventFact{
+				{
+					SessionID: "ses-1",
+					Timestamp: "2026-10-18T10:00:00Z",
+					Turn:      1,
+					Role:      "coder",
+					EventType: domain.EventTypeToolCall,
+					Status:    "success",
+				},
 			},
+			DataSource: domain.DataSourceCommittedLedger,
 		}
 		adaptershttp.WriteEventsResponse(rec, events)
 		if rec.Code != http.StatusOK {
 			t.Errorf("expected 200, got %d", rec.Code)
 		}
-		var parsed []domain.EventFact
+		var parsed domain.WorkspaceEventsResponse
 		if err := json.NewDecoder(rec.Body).Decode(&parsed); err != nil {
 			t.Fatalf("failed decoding events response: %v", err)
 		}
-		if len(parsed) != 1 || parsed[0].SessionID != "ses-1" {
+		if len(parsed.Events) != 1 || parsed.Events[0].SessionID != "ses-1" {
 			t.Errorf("unexpected events parsed: %+v", parsed)
 		}
 	})
@@ -1395,15 +1405,24 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 
-		var events []domain.EventFact
-		if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
-			t.Fatalf("failed decoding events: %v", err)
+		var eventsResp domain.WorkspaceEventsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&eventsResp); err != nil {
+			t.Fatalf("failed decoding events response: %v", err)
 		}
-		if len(events) != 3 {
-			t.Fatalf("expected 3 events, got %d", len(events))
+		if eventsResp.TicketID != "AL-EVENT-1" {
+			t.Errorf("expected TicketID AL-EVENT-1, got %s", eventsResp.TicketID)
 		}
-		if events[0].Timestamp != "2026-10-18T10:00:00Z" || events[1].Timestamp != "2026-10-18T10:00:05Z" || events[2].Timestamp != "2026-10-18T10:00:10Z" {
-			t.Errorf("unexpected events order or content: %+v", events)
+		if eventsResp.IsHydrated {
+			t.Errorf("expected IsHydrated == false without live hook, got true")
+		}
+		if eventsResp.DataSource != domain.DataSourceCommittedLedger {
+			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, eventsResp.DataSource)
+		}
+		if len(eventsResp.Events) != 3 {
+			t.Fatalf("expected 3 events, got %d", len(eventsResp.Events))
+		}
+		if eventsResp.Events[0].Timestamp != "2026-10-18T10:00:00Z" || eventsResp.Events[1].Timestamp != "2026-10-18T10:00:05Z" || eventsResp.Events[2].Timestamp != "2026-10-18T10:00:10Z" {
+			t.Errorf("unexpected events order or content: %+v", eventsResp.Events)
 		}
 	})
 
@@ -1418,12 +1437,18 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatalf("failed reading body: %v", err)
+		var eventsResp domain.WorkspaceEventsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&eventsResp); err != nil {
+			t.Fatalf("failed decoding events response: %v", err)
 		}
-		if strings.TrimSpace(string(body)) != "[]" {
-			t.Fatalf("expected empty JSON array [], got: %s", string(body))
+		if eventsResp.TicketID != "AL-LEGACY" {
+			t.Errorf("expected TicketID AL-LEGACY, got %s", eventsResp.TicketID)
+		}
+		if eventsResp.IsHydrated {
+			t.Errorf("expected IsHydrated == false, got true")
+		}
+		if len(eventsResp.Events) != 0 {
+			t.Fatalf("expected 0 events, got %d", len(eventsResp.Events))
 		}
 	})
 
@@ -1461,16 +1486,16 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 
-		var events []domain.EventFact
-		if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
+		var eventsResp domain.WorkspaceEventsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&eventsResp); err != nil {
 			t.Fatalf("failed decoding events: %v", err)
 		}
-		if len(events) != 3 {
-			t.Fatalf("expected 3 events, got %d", len(events))
+		if len(eventsResp.Events) != 3 {
+			t.Fatalf("expected 3 events, got %d", len(eventsResp.Events))
 		}
-		if events[0].SessionID != "ses-early-t1" || events[1].SessionID != "ses-early-t2" || events[2].SessionID != "ses-late" {
+		if eventsResp.Events[0].SessionID != "ses-early-t1" || eventsResp.Events[1].SessionID != "ses-early-t2" || eventsResp.Events[2].SessionID != "ses-late" {
 			t.Errorf("expected sorted events [ses-early-t1, ses-early-t2, ses-late], got [%s, %s, %s]",
-				events[0].SessionID, events[1].SessionID, events[2].SessionID)
+				eventsResp.Events[0].SessionID, eventsResp.Events[1].SessionID, eventsResp.Events[2].SessionID)
 		}
 	})
 
@@ -1690,9 +1715,15 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected application/json content type, got %s", contentType)
 		}
 
-		body := strings.TrimSpace(rec.Body.String())
-		if body != "[]" {
-			t.Errorf("expected empty array '[]', got %q", body)
+		var eventsResp domain.WorkspaceEventsResponse
+		if err := json.NewDecoder(rec.Body).Decode(&eventsResp); err != nil {
+			t.Fatalf("failed decoding events response: %v", err)
+		}
+		if len(eventsResp.Events) != 0 {
+			t.Errorf("expected 0 events, got %d", len(eventsResp.Events))
+		}
+		if eventsResp.IsHydrated {
+			t.Errorf("expected IsHydrated == false, got true")
 		}
 	})
 
@@ -1707,17 +1738,396 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 			t.Fatalf("expected 200 OK for valid ticket despite corrupted sibling, got %d (body: %s)", rec.Code, rec.Body.String())
 		}
 
-		var events []domain.EventFact
-		if err := json.Unmarshal(rec.Body.Bytes(), &events); err != nil {
-			t.Fatalf("failed unmarshaling events: %v", err)
+		var eventsResp domain.WorkspaceEventsResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &eventsResp); err != nil {
+			t.Fatalf("failed unmarshaling events response: %v", err)
 		}
-		if len(events) != 2 {
-			t.Fatalf("expected 2 events, got %d", len(events))
+		if len(eventsResp.Events) != 2 {
+			t.Fatalf("expected 2 events, got %d", len(eventsResp.Events))
 		}
-		if events[0].SessionID != "ses-1" || events[1].SessionID != "ses-2" {
-			t.Errorf("expected events stably sorted: %+v", events)
+		if eventsResp.Events[0].SessionID != "ses-1" || eventsResp.Events[1].SessionID != "ses-2" {
+			t.Errorf("expected events stably sorted: %+v", eventsResp.Events)
 		}
 	})
+
+	t.Run("hydrator success returns hydrated events response with SQLite data source", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-TARGETED-VALID/events", nil)
+		req.SetPathValue("ticketId", "AL-TARGETED-VALID")
+		rec := httptest.NewRecorder()
+
+		prompt := "test prompt"
+		mockH := &mockHydrator{
+			resp: domain.WorkspaceEventsResponse{
+				TicketID:   "AL-TARGETED-VALID",
+				IsHydrated: true,
+				Events: []domain.EventFact{
+					{
+						SessionID:     "ses-1",
+						Timestamp:     "2026-10-18T10:00:00Z",
+						Turn:          1,
+						Role:          "coder",
+						EventType:     domain.EventTypeTurnMessage,
+						Status:        "success",
+						PromptContent: &prompt,
+					},
+				},
+				DataSource: domain.DataSourceLocalSQLite,
+			},
+		}
+
+		h := adaptershttp.WorkspaceEventsHandler(wsDir, mockH)
+		h.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", rec.Code)
+		}
+		var resp domain.WorkspaceEventsResponse
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed decoding response: %v", err)
+		}
+		if !resp.IsHydrated {
+			t.Errorf("expected IsHydrated == true")
+		}
+		if resp.DataSource != domain.DataSourceLocalSQLite {
+			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceLocalSQLite, resp.DataSource)
+		}
+		if len(resp.Events) != 1 || resp.Events[0].PromptContent == nil || *resp.Events[0].PromptContent != "test prompt" {
+			t.Errorf("unexpected hydrated events: %+v", resp.Events)
+		}
+	})
+
+	t.Run("hydrator failure gracefully falls back to committed ledger", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-TARGETED-VALID/events", nil)
+		req.SetPathValue("ticketId", "AL-TARGETED-VALID")
+		rec := httptest.NewRecorder()
+
+		mockH := &mockHydrator{
+			err: fmt.Errorf("sqlite database locked"),
+		}
+
+		h := adaptershttp.WorkspaceEventsHandler(wsDir, mockH)
+		h.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", rec.Code)
+		}
+		var resp domain.WorkspaceEventsResponse
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed decoding response: %v", err)
+		}
+		if resp.IsHydrated {
+			t.Errorf("expected IsHydrated == false on hydrator error")
+		}
+		if resp.DataSource != domain.DataSourceCommittedLedger {
+			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, resp.DataSource)
+		}
+		if len(resp.Events) != 2 {
+			t.Errorf("expected 2 fallback events from ledger, got %d", len(resp.Events))
+		}
+	})
+}
+
+type mockHydrator struct {
+	resp domain.WorkspaceEventsResponse
+	err  error
+}
+
+func (m *mockHydrator) HydrateWorkspaceEvents(ctx context.Context, ticketID string, ledger domain.AgenticMetricsLedger) (domain.WorkspaceEventsResponse, error) {
+	if m.err != nil {
+		return domain.WorkspaceEventsResponse{}, m.err
+	}
+	return m.resp, nil
+}
+
+func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing.T) {
+	// Setup temporary SQLite database
+	dbDir := t.TempDir()
+	dbPath := filepath.Join(dbDir, "test_events.db")
+
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+
+	if _, err := rwDB.Exec("PRAGMA journal_mode = WAL;"); err != nil {
+		rwDB.Close()
+		t.Fatalf("failed setting WAL mode: %v", err)
+	}
+
+	_, err = rwDB.Exec(`
+		CREATE TABLE session (
+			id TEXT PRIMARY KEY,
+			parent_id TEXT,
+			agent TEXT,
+			model TEXT,
+			title TEXT,
+			time_created INTEGER,
+			time_updated INTEGER
+		);
+		CREATE TABLE message (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		CREATE TABLE part (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			message_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+	`)
+	if err != nil {
+		rwDB.Close()
+		t.Fatalf("failed creating schema: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+
+	// Seed session ses_al33
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated)
+		VALUES ('ses_al33', NULL, 'orchestrator', 'gemini-3.8-flash', 'Feature AL-33 End-to-End', ?, ?);
+	`, now, now)
+	if err != nil {
+		rwDB.Close()
+		t.Fatalf("failed seeding session: %v", err)
+	}
+
+	// Seed user prompt and assistant response with reasoning and tokens
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES
+			('m_user_1', 'ses_al33', ?, ?, '{"role":"user","content":"Execute full dual-plane test"}'),
+			('m_asst_1', 'ses_al33', ?, ?, '{"role":"assistant","content":"Testing dual-plane","reasoning":"Verifying invariants","tokens":{"input":2000,"output":300,"cache":{"read":1000},"reasoning":80}}');
+	`, now+100, now+100, now+200, now+350)
+	if err != nil {
+		rwDB.Close()
+		t.Fatalf("failed seeding messages: %v", err)
+	}
+
+	// Seed tool call part
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES
+			('p_tool_1', 'ses_al33', 'm_asst_1', ?, ?, '{"type":"tool","tool":"test_runner","state":{"status":"completed","input":{"suite":"backend"},"output":"all tests passed"}}');
+	`, now+250, now+300)
+	if err != nil {
+		rwDB.Close()
+		t.Fatalf("failed seeding part: %v", err)
+	}
+	rwDB.Close()
+
+	// Setup workspaces directory
+	wsDir := t.TempDir()
+
+	// 1. Ticket AL-33 (mapped to ses_al33)
+	al33Dir := filepath.Join(wsDir, "AL-33")
+	if err := os.MkdirAll(al33Dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	al33JSON := `{
+		"ticket_id": "AL-33",
+		"ticket_title": "End-to-End Dual Plane",
+		"ticket_type": "feature",
+		"started_at": "2026-10-19T10:00:00Z",
+		"completed_at": "2026-10-19T11:00:00Z",
+		"updated_at": "2026-10-19T11:00:00Z",
+		"invocations": [
+			{"id": "ses_al33", "role": "orchestrator", "model": "gemini-3.8-flash"}
+		],
+		"events": [
+			{"session_id": "ses_al33", "timestamp": "2026-10-19T10:00:00Z", "turn": 1, "role": "orchestrator", "event_type": "turn_message", "status": "completed"}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(al33Dir, "agentic_metrics.json"), []byte(al33JSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Ticket AL-OFFLINE (mapped to a session not present in SQLite)
+	alOfflineDir := filepath.Join(wsDir, "AL-OFFLINE")
+	if err := os.MkdirAll(alOfflineDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	offlineJSON := `{
+		"ticket_id": "AL-OFFLINE",
+		"ticket_title": "Offline Ticket",
+		"ticket_type": "fix",
+		"started_at": "2026-10-19T09:00:00Z",
+		"completed_at": "2026-10-19T09:30:00Z",
+		"updated_at": "2026-10-19T09:30:00Z",
+		"invocations": [
+			{"id": "ses_missing_99", "role": "coder", "model": "gemini-3.8-flash"}
+		],
+		"events": [
+			{"session_id": "ses_missing_99", "timestamp": "2026-10-19T09:00:00Z", "turn": 1, "role": "coder", "event_type": "compaction", "status": "completed"}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(alOfflineDir, "agentic_metrics.json"), []byte(offlineJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	liveSvc := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	defer liveSvc.Close()
+
+	mockFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("<!DOCTYPE html><html><body>Root</body></html>")},
+	}
+
+	server := adaptershttp.NewServer(wsDir, mockFS, liveSvc)
+	ts := httptest.NewServer(server.Handler())
+	defer ts.Close()
+
+	// Snapshot directory state before any HTTP calls
+	beforeSnap, err := os.ReadDir(wsDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("GET /api/workspaces/AL-33/events returns hydrated response from SQLite", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/AL-33/events")
+		if err != nil {
+			t.Fatalf("request failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+		}
+
+		var eventResp domain.WorkspaceEventsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&eventResp); err != nil {
+			t.Fatalf("failed decoding json: %v", err)
+		}
+
+		if eventResp.TicketID != "AL-33" {
+			t.Errorf("expected TicketID AL-33, got %s", eventResp.TicketID)
+		}
+		if !eventResp.IsHydrated {
+			t.Errorf("expected IsHydrated == true")
+		}
+		if eventResp.DataSource != domain.DataSourceLocalSQLite {
+			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceLocalSQLite, eventResp.DataSource)
+		}
+		if len(eventResp.Events) < 2 {
+			t.Fatalf("expected at least 2 hydrated events, got %d", len(eventResp.Events))
+		}
+
+		// Verify rich diagnostic context
+		var foundTurnMsg, foundToolCall bool
+		for _, ev := range eventResp.Events {
+			if ev.EventType == domain.EventTypeTurnMessage {
+				foundTurnMsg = true
+				if ev.PromptContent == nil || *ev.PromptContent != "Execute full dual-plane test" {
+					t.Errorf("unexpected prompt content: %v", ev.PromptContent)
+				}
+				if ev.ReasoningContent == nil || *ev.ReasoningContent != "Verifying invariants" {
+					t.Errorf("unexpected reasoning content: %v", ev.ReasoningContent)
+				}
+				if ev.ContextTokens != 3000 { // 2000 input + 1000 cache
+					t.Errorf("expected 3000 tokens, got %d", ev.ContextTokens)
+				}
+			}
+			if ev.EventType == domain.EventTypeToolCall {
+				foundToolCall = true
+				if ev.ToolName == nil || *ev.ToolName != "test_runner" {
+					t.Errorf("unexpected tool name: %v", ev.ToolName)
+				}
+				if ev.ToolInput == nil || !strings.Contains(*ev.ToolInput, "backend") {
+					t.Errorf("unexpected tool input: %v", ev.ToolInput)
+				}
+				if ev.ToolOutput == nil || *ev.ToolOutput != "all tests passed" {
+					t.Errorf("unexpected tool output: %v", ev.ToolOutput)
+				}
+			}
+		}
+
+		if !foundTurnMsg {
+			t.Errorf("missing turn_message event")
+		}
+		if !foundToolCall {
+			t.Errorf("missing tool_call event")
+		}
+	})
+
+	t.Run("GET /api/workspaces/AL-OFFLINE/events gracefully falls back to committed ledger", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/api/workspaces/AL-OFFLINE/events")
+		if err != nil {
+			t.Fatalf("request failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+		}
+
+		var eventResp domain.WorkspaceEventsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&eventResp); err != nil {
+			t.Fatalf("failed decoding json: %v", err)
+		}
+
+		if eventResp.TicketID != "AL-OFFLINE" {
+			t.Errorf("expected TicketID AL-OFFLINE, got %s", eventResp.TicketID)
+		}
+		if eventResp.IsHydrated {
+			t.Errorf("expected IsHydrated == false for missing session")
+		}
+		if eventResp.DataSource != domain.DataSourceCommittedLedger {
+			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, eventResp.DataSource)
+		}
+		if len(eventResp.Events) != 1 {
+			t.Fatalf("expected 1 fallback event, got %d", len(eventResp.Events))
+		}
+		if eventResp.Events[0].EventType != domain.EventTypeCompaction {
+			t.Errorf("expected compaction event, got %s", eventResp.Events[0].EventType)
+		}
+	})
+
+	t.Run("GET /api/workspaces/{ticketId}/events rejects adversarial path traversal", func(t *testing.T) {
+		hostilePaths := []string{
+			"/api/workspaces/..%2F..%2Fetc%2Fpasswd/events",
+			"/api/workspaces/%2e%2e%2f%2e%2e%2fetc/events",
+			"/api/workspaces/..%5c..%5cwindows%5cwin.ini/events",
+			"/api/workspaces/../events",
+			"/api/workspaces/..../events",
+		}
+
+		for _, p := range hostilePaths {
+			req, err := http.NewRequest(http.MethodGet, ts.URL+p, nil)
+			if err != nil {
+				continue
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				continue
+			}
+			resp.Body.Close()
+
+			if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusNotFound {
+				t.Errorf("path %s returned unexpected status %d, expected 400 or 404", p, resp.StatusCode)
+			}
+		}
+	})
+
+	// Assert ZERO disk writes in workspaces directory during all hydration and fallback requests
+	afterSnap, err := os.ReadDir(wsDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(beforeSnap) != len(afterSnap) {
+		t.Errorf("zero disk persistence violation: workspace directory count changed from %d to %d", len(beforeSnap), len(afterSnap))
+	}
 }
 
 func setupMultiFilterWorkspaces(t *testing.T) string {

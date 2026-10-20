@@ -582,3 +582,500 @@ func TestLiveService_AdversarialSessionIDValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchSessionTraceMulti_And_ResolveChildSessionIDs(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	now := time.Now().UnixMilli()
+
+	// 1. Seed parent session and child session
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated)
+		VALUES
+			('s_parent', NULL, 'orchestrator', 'gemini-3.8-flash', 'Parent AL-33', ?, ?),
+			('s_child', 's_parent', 'coder', 'gemini-3.8-flash', 'Child AL-33', ?, ?);
+	`, now, now, now+1000, now+1000)
+	if err != nil {
+		t.Fatalf("seeding sessions: %v", err)
+	}
+
+	// 2. Seed messages and parts for both sessions
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES
+			('m_p1', 's_parent', ?, ?, '{"role":"assistant","content":"parent msg"}'),
+			('m_c1', 's_child', ?, ?, '{"role":"assistant","content":"child msg"}');
+	`, now+100, now+200, now+1100, now+1200)
+	if err != nil {
+		t.Fatalf("seeding messages: %v", err)
+	}
+
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES
+			('p_p1', 's_parent', 'm_p1', ?, ?, '{"type":"tool","tool":"read","state":{"status":"completed","input":"file.txt","output":"ok"}}'),
+			('p_c1', 's_child', 'm_c1', ?, ?, '{"type":"tool","tool":"edit","state":{"status":"completed","input":"file.go","output":"done"}}');
+	`, now+150, now+180, now+1150, now+1180)
+	if err != nil {
+		t.Fatalf("seeding parts: %v", err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	// Test ResolveChildSessionIDs
+	children, err := hook.ResolveChildSessionIDs([]string{"s_parent"})
+	if err != nil {
+		t.Fatalf("ResolveChildSessionIDs failed: %v", err)
+	}
+	if len(children) != 1 || children[0] != "s_child" {
+		t.Fatalf("expected ['s_child'], got %v", children)
+	}
+
+	// Test FetchSessionTraceMulti
+	msgs, parts, err := hook.FetchSessionTraceMulti([]string{"s_parent", "s_child"})
+	if err != nil {
+		t.Fatalf("FetchSessionTraceMulti failed: %v", err)
+	}
+	if len(msgs) != 2 {
+		t.Fatalf("expected 2 messages, got %d", len(msgs))
+	}
+	if len(parts) != 2 {
+		t.Fatalf("expected 2 parts, got %d", len(parts))
+	}
+	if msgs[0].ID != "m_p1" || msgs[1].ID != "m_c1" {
+		t.Errorf("messages not in chronological order: %+v", msgs)
+	}
+	if parts[0].ID != "p_p1" || parts[1].ID != "p_c1" {
+		t.Errorf("parts not in chronological order: %+v", parts)
+	}
+}
+
+func TestHydrateWorkspaceEvents_SuccessAndZeroDiskWrites(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	workspacesDir := t.TempDir()
+
+	now := time.Now().UnixMilli()
+
+	// Seed session
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated)
+		VALUES ('s_al33', NULL, 'orchestrator', 'gemini-3.8-flash', 'Feature AL-33 Event Hydration', ?, ?);
+	`, now, now)
+	if err != nil {
+		t.Fatalf("seeding session: %v", err)
+	}
+
+	// Seed user prompt followed by assistant message with reasoning and tokens
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES
+			('m_user', 's_al33', ?, ?, '{"role":"user","content":"Implement dual-plane waterfall"}'),
+			('m_asst', 's_al33', ?, ?, '{"role":"assistant","content":"Implementing now","reasoning":"Analyzing schema","tokens":{"input":1000,"output":200,"cache":{"read":500},"reasoning":50}}');
+	`, now+100, now+100, now+200, now+300)
+	if err != nil {
+		t.Fatalf("seeding messages: %v", err)
+	}
+
+	// Seed tool call and compaction parts
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES
+			('p_tool', 's_al33', 'm_asst', ?, ?, '{"type":"tool","tool":"write","state":{"status":"completed","input":{"path":"models.go"},"output":"file written"}}'),
+			('p_comp', 's_al33', 'm_asst', ?, ?, '{"type":"compaction"}');
+	`, now+220, now+250, now+260, now+260)
+	if err != nil {
+		t.Fatalf("seeding parts: %v", err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	defer service.Close()
+
+	ctx := context.Background()
+
+	ledger := domain.AgenticMetricsLedger{
+		Facts: domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:   "s_al33",
+					Role: "orchestrator",
+				},
+			},
+			Events: []domain.EventFact{
+				{
+					Timestamp: "2026-10-19T10:00:00Z",
+					SessionID: "s_al33",
+					Turn:      1,
+					Role:      "orchestrator",
+					EventType: domain.EventTypeCompaction,
+					Status:    "completed",
+				},
+			},
+		},
+	}
+
+	// Capture workspace directory files before hydration
+	beforeEntries, err := os.ReadDir(workspacesDir)
+	if err != nil {
+		t.Fatalf("reading workspaces dir: %v", err)
+	}
+
+	resp, err := service.HydrateWorkspaceEvents(ctx, "AL-33", ledger)
+	if err != nil {
+		t.Fatalf("HydrateWorkspaceEvents returned error: %v", err)
+	}
+
+	if !resp.IsHydrated {
+		t.Errorf("expected IsHydrated == true, got false")
+	}
+	if resp.DataSource != domain.DataSourceLocalSQLite {
+		t.Errorf("expected DataSource == %q, got %q", domain.DataSourceLocalSQLite, resp.DataSource)
+	}
+	if resp.TicketID != "AL-33" {
+		t.Errorf("expected TicketID == %q, got %q", "AL-33", resp.TicketID)
+	}
+
+	// Verify events
+	if len(resp.Events) < 3 {
+		t.Fatalf("expected at least 3 events, got %d: %+v", len(resp.Events), resp.Events)
+	}
+
+	// Find turn_message
+	var foundTurnMsg, foundToolCall, foundCompaction bool
+	for _, ev := range resp.Events {
+		if ev.EventType == domain.EventTypeTurnMessage {
+			foundTurnMsg = true
+			if ev.PromptContent == nil || *ev.PromptContent != "Implement dual-plane waterfall" {
+				t.Errorf("turn message prompt content mismatch: %v", ev.PromptContent)
+			}
+			if ev.ReasoningContent == nil || *ev.ReasoningContent != "Analyzing schema" {
+				t.Errorf("turn message reasoning content mismatch: %v", ev.ReasoningContent)
+			}
+			if ev.ContextTokens != 1500 { // 1000 input + 500 cache
+				t.Errorf("context tokens mismatch: expected 1500, got %d", ev.ContextTokens)
+			}
+		}
+		if ev.EventType == domain.EventTypeToolCall {
+			foundToolCall = true
+			if ev.ToolName == nil || *ev.ToolName != "write" {
+				t.Errorf("tool name mismatch: %v", ev.ToolName)
+			}
+			if ev.ToolInput == nil || !strings.Contains(*ev.ToolInput, "models.go") {
+				t.Errorf("tool input mismatch: %v", ev.ToolInput)
+			}
+			if ev.ToolOutput == nil || *ev.ToolOutput != "file written" {
+				t.Errorf("tool output mismatch: %v", ev.ToolOutput)
+			}
+		}
+		if ev.EventType == domain.EventTypeCompaction {
+			foundCompaction = true
+		}
+	}
+
+	if !foundTurnMsg {
+		t.Errorf("expected to find turn_message event")
+	}
+	if !foundToolCall {
+		t.Errorf("expected to find tool_call event")
+	}
+	if !foundCompaction {
+		t.Errorf("expected to find compaction event")
+	}
+
+	// Verify zero disk persistence in workspacesDir
+	afterEntries, err := os.ReadDir(workspacesDir)
+	if err != nil {
+		t.Fatalf("reading workspaces dir after: %v", err)
+	}
+	if len(beforeEntries) != len(afterEntries) {
+		t.Errorf("zero disk persistence violation: file count changed in workspaces dir (%d -> %d)", len(beforeEntries), len(afterEntries))
+	}
+}
+
+func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	defer service.Close()
+
+	ctx := context.Background()
+
+	ledger := domain.AgenticMetricsLedger{
+		Facts: domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{
+					ID:   "s_missing",
+					Role: "orchestrator",
+				},
+			},
+			Events: []domain.EventFact{
+				{
+					Timestamp: "2026-10-19T10:00:00Z",
+					SessionID: "s_missing",
+					Turn:      1,
+					Role:      "orchestrator",
+					EventType: domain.EventTypeCompaction,
+					Status:    "completed",
+				},
+			},
+		},
+	}
+
+	resp, err := service.HydrateWorkspaceEvents(ctx, "AL-UNKNOWN", ledger)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.IsHydrated {
+		t.Errorf("expected IsHydrated == false for missing session, got true")
+	}
+	if resp.DataSource != domain.DataSourceCommittedLedger {
+		t.Errorf("expected DataSource == %q, got %q", domain.DataSourceCommittedLedger, resp.DataSource)
+	}
+	if len(resp.Events) != 1 {
+		t.Fatalf("expected 1 fallback event, got %d", len(resp.Events))
+	}
+}
+
+func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) {
+	ctx := context.Background()
+	workspacesDir := t.TempDir()
+
+	ledgerWithFallback := domain.AgenticMetricsLedger{
+		Facts: domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "ses-hostile", Role: "coder"},
+			},
+			Events: []domain.EventFact{
+				{
+					Timestamp: "2026-10-19T10:00:00Z",
+					SessionID: "ses-hostile",
+					Turn:      1,
+					Role:      "coder",
+					EventType: domain.EventTypeCompaction,
+					Status:    "completed",
+				},
+			},
+		},
+	}
+
+	// 1. Nil LiveService returns fallback without panic
+	t.Run("nil LiveService returns fallback cleanly", func(t *testing.T) {
+		var nilService *live.LiveService
+		resp, err := nilService.HydrateWorkspaceEvents(ctx, "AL-NIL", ledgerWithFallback)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if resp.IsHydrated {
+			t.Errorf("expected IsHydrated == false")
+		}
+		if resp.DataSource != domain.DataSourceCommittedLedger {
+			t.Errorf("expected DataSource == %q, got %q", domain.DataSourceCommittedLedger, resp.DataSource)
+		}
+		if len(resp.Events) != 1 {
+			t.Errorf("expected 1 fallback event, got %d", len(resp.Events))
+		}
+	})
+
+	// 2. LiveService with nil hook
+	t.Run("LiveService with nil hook returns fallback cleanly", func(t *testing.T) {
+		service := live.NewLiveService(nil, domain.DefaultProjectConfig())
+		resp, err := service.HydrateWorkspaceEvents(ctx, "AL-NIL-HOOK", ledgerWithFallback)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if resp.IsHydrated {
+			t.Errorf("expected IsHydrated == false")
+		}
+		if resp.DataSource != domain.DataSourceCommittedLedger {
+			t.Errorf("expected DataSource == %q, got %q", domain.DataSourceCommittedLedger, resp.DataSource)
+		}
+	})
+
+	// 3. LiveService with closed DB handle
+	t.Run("LiveService with closed DB handle returns fallback cleanly", func(t *testing.T) {
+		dbPath := createTestDBFile(t)
+		hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+		if err != nil {
+			t.Fatalf("failed opening hook: %v", err)
+		}
+		service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+		// Close hook and DB
+		_ = hook.Close()
+
+		resp, err := service.HydrateWorkspaceEvents(ctx, "AL-CLOSED-DB", ledgerWithFallback)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if resp.IsHydrated {
+			t.Errorf("expected IsHydrated == false on closed db")
+		}
+		if resp.DataSource != domain.DataSourceCommittedLedger {
+			t.Errorf("expected DataSource == %q, got %q", domain.DataSourceCommittedLedger, resp.DataSource)
+		}
+	})
+
+	// 4. LiveService when database tables are missing or dropped
+	t.Run("LiveService when tables are dropped returns fallback cleanly", func(t *testing.T) {
+		dbPath := createTestDBFile(t)
+		rwDB, err := sql.Open("sqlite", dbPath)
+		if err != nil {
+			t.Fatalf("failed opening rw db: %v", err)
+		}
+
+		// Drop message and part tables
+		_, _ = rwDB.Exec("DROP TABLE IF EXISTS message; DROP TABLE IF EXISTS part;")
+		rwDB.Close()
+
+		hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+		if err != nil {
+			t.Fatalf("failed opening hook: %v", err)
+		}
+		defer hook.Close()
+
+		service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+		defer service.Close()
+
+		resp, err := service.HydrateWorkspaceEvents(ctx, "AL-DROPPED-TABLES", ledgerWithFallback)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if resp.IsHydrated {
+			t.Errorf("expected IsHydrated == false when tables dropped")
+		}
+		if resp.DataSource != domain.DataSourceCommittedLedger {
+			t.Errorf("expected DataSource == %q, got %q", domain.DataSourceCommittedLedger, resp.DataSource)
+		}
+	})
+
+	// 5. Corrupted / malformed JSON inside message and part records
+	t.Run("LiveService handles corrupted JSON in SQLite records gracefully", func(t *testing.T) {
+		dbPath := createTestDBFile(t)
+		rwDB, err := sql.Open("sqlite", dbPath)
+		if err != nil {
+			t.Fatalf("failed opening rw db: %v", err)
+		}
+		defer rwDB.Close()
+
+		now := time.Now().UnixMilli()
+
+		_, err = rwDB.Exec(`
+			INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated)
+			VALUES ('s_corrupt', NULL, 'coder', 'gemini-3.8-flash', 'Corrupted AL-33', ?, ?);
+		`, now, now)
+		if err != nil {
+			t.Fatalf("seeding session: %v", err)
+		}
+
+		// Seed malformed message JSON and malformed part JSON
+		_, err = rwDB.Exec(`
+			INSERT INTO message (id, session_id, time_created, time_updated, data)
+			VALUES ('m_corrupt', 's_corrupt', ?, ?, '{"role": "assistant", "content": [truncated');
+		`, now+100, now+150)
+		if err != nil {
+			t.Fatalf("seeding message: %v", err)
+		}
+
+		_, err = rwDB.Exec(`
+			INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+			VALUES ('p_corrupt', 's_corrupt', 'm_corrupt', ?, ?, '{"type": "tool", "state": corrupted json');
+		`, now+110, now+120)
+		if err != nil {
+			t.Fatalf("seeding part: %v", err)
+		}
+
+		hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+		if err != nil {
+			t.Fatalf("failed opening hook: %v", err)
+		}
+		defer hook.Close()
+
+		service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+		defer service.Close()
+
+		corruptLedger := domain.AgenticMetricsLedger{
+			Facts: domain.AgenticFactLedger{
+				Invocations: []domain.InvocationFact{
+					{ID: "s_corrupt", Role: "coder"},
+				},
+			},
+		}
+
+		// Must not panic, must produce valid response
+		resp, err := service.HydrateWorkspaceEvents(ctx, "AL-CORRUPT-RECORDS", corruptLedger)
+		if err != nil {
+			t.Fatalf("unexpected error on corrupted JSON records: %v", err)
+		}
+		if !resp.IsHydrated {
+			t.Errorf("expected IsHydrated == true because session exists and message record exists")
+		}
+		if len(resp.Events) == 0 {
+			t.Errorf("expected at least 1 turn_message event even with corrupted JSON data")
+		}
+	})
+
+	// 6. Completely empty ledger facts (no invocations, no events)
+	t.Run("empty ledger facts returns unhydrated empty slice", func(t *testing.T) {
+		dbPath := createTestDBFile(t)
+		hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+		if err != nil {
+			t.Fatalf("failed opening hook: %v", err)
+		}
+		defer hook.Close()
+
+		service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+		defer service.Close()
+
+		emptyLedger := domain.AgenticMetricsLedger{
+			Facts: domain.AgenticFactLedger{},
+		}
+
+		resp, err := service.HydrateWorkspaceEvents(ctx, "AL-EMPTY", emptyLedger)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resp.IsHydrated {
+			t.Errorf("expected IsHydrated == false for empty ledger")
+		}
+		if resp.Events == nil {
+			t.Errorf("expected non-nil events slice")
+		}
+		if len(resp.Events) != 0 {
+			t.Errorf("expected 0 events, got %d", len(resp.Events))
+		}
+	})
+
+	// 7. Verify zero disk writes to workspacesDir across all hostile tests
+	entries, err := os.ReadDir(workspacesDir)
+	if err != nil {
+		t.Fatalf("reading workspaces dir: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("zero disk persistence violation: files written to %s: %v", workspacesDir, entries)
+	}
+}

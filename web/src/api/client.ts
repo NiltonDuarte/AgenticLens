@@ -9,6 +9,7 @@ import type {
   TimeGranularity,
   TimeWindowPreset,
   WorkspaceDetail,
+  WorkspaceEventsResponse,
 } from '../domain/types';
 import {
   deriveTicketComparisonRows,
@@ -305,29 +306,82 @@ export async function fetchVersion(): Promise<ApiResponse<BuildInfo>> {
 
 export async function fetchWorkspaceEvents(
   ticketId: string
-): Promise<ApiResponse<readonly EventFact[]>> {
+): Promise<ApiResponse<WorkspaceEventsResponse>> {
   try {
     const res = await fetch(`/api/workspaces/${encodeURIComponent(ticketId)}/events`);
     if (!res.ok) {
       if (res.status === 404) {
         const fallbackLedger = mockAgenticMetricsLedgers[ticketId];
         if (fallbackLedger) {
-          return { data: fallbackLedger.facts?.events ?? [], isMock: true };
+          const fallbackEvents = fallbackLedger.facts?.events ?? [];
+          return {
+            data: {
+              ticket_id: ticketId,
+              is_hydrated: false,
+              events: fallbackEvents,
+              data_source: 'committed_ledger',
+            },
+            isMock: true,
+          };
         }
         throw new Error(`Workspace ${ticketId} not found`);
       }
       const fallbackEvents = mockAgenticMetricsLedgers[ticketId]?.facts?.events ?? [];
-      return { data: fallbackEvents, isMock: true };
+      return {
+        data: {
+          ticket_id: ticketId,
+          is_hydrated: false,
+          events: fallbackEvents,
+          data_source: 'committed_ledger',
+        },
+        isMock: true,
+      };
     }
-    const data = (await res.json()) as readonly EventFact[];
-    return { data, isMock: false };
+    const rawData = (await res.json()) as unknown;
+    if (
+      rawData !== null &&
+      typeof rawData === 'object' &&
+      !Array.isArray(rawData) &&
+      'is_hydrated' in rawData
+    ) {
+      const resp = rawData as WorkspaceEventsResponse;
+      return { data: resp, isMock: false };
+    }
+    if (Array.isArray(rawData)) {
+      return {
+        data: {
+          ticket_id: ticketId,
+          is_hydrated: false,
+          events: rawData as readonly EventFact[],
+          data_source: 'committed_ledger',
+        },
+        isMock: false,
+      };
+    }
+    return {
+      data: {
+        ticket_id: ticketId,
+        is_hydrated: false,
+        events: [],
+        data_source: 'committed_ledger',
+      },
+      isMock: false,
+    };
   } catch (err: unknown) {
     if (err instanceof Error && err.message === `Workspace ${ticketId} not found`) {
       throw err;
     }
     const fallbackLedger = mockAgenticMetricsLedgers[ticketId];
     if (fallbackLedger) {
-      return { data: fallbackLedger.facts?.events ?? [], isMock: true };
+      return {
+        data: {
+          ticket_id: ticketId,
+          is_hydrated: false,
+          events: fallbackLedger.facts?.events ?? [],
+          data_source: 'committed_ledger',
+        },
+        isMock: true,
+      };
     }
     const msg = err instanceof Error ? err.message : 'Unknown network failure';
     throw new Error(msg);

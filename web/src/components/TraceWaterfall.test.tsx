@@ -389,4 +389,181 @@ describe('TraceWaterfall Component', () => {
       screen.getByText('Click any error or anomaly to inspect failure details')
     ).toBeInTheDocument();
   });
+
+  describe('Dual-plane dynamic hydration and payload inspector', () => {
+    const hydratedEvents: readonly EventFact[] = [
+      {
+        timestamp: '2026-10-18T10:00:00Z',
+        session_id: 's-rich-1',
+        turn: 1,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'bash',
+        status: 'success',
+        duration_ms: 320,
+        context_tokens: 12000,
+        prompt_content: 'Please list files in repository root.',
+        reasoning_content: 'I need to check repo structure using bash ls.',
+        tool_input: 'ls -la',
+        tool_output: 'total 64\ndrwxr-xr-x 12 agent agent 4096 Oct 18 10:00 .',
+      },
+      {
+        timestamp: '2026-10-18T10:01:00Z',
+        session_id: 's-rich-1',
+        turn: 2,
+        role: 'tester',
+        event_type: 'turn_message',
+        status: 'success',
+        context_tokens: 15000,
+        prompt_content: 'Run unit test suite',
+      },
+    ];
+
+    it('renders offline banner and committed ledger badge when isHydrated is false', () => {
+      render(
+        <TraceWaterfall
+          events={sampleEvents}
+          isHydrated={false}
+          dataSource="committed_ledger"
+        />
+      );
+
+      const banner = screen.getByTestId('db-offline-banner');
+      expect(banner).toBeInTheDocument();
+      expect(
+        screen.getByText('Committed Git Ledger — Local Database Offline')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Local SQLite database was unavailable or not found\. Showing lightweight execution events recorded in the repository ledger without raw prompt, reasoning, or tool payloads\./i
+        )
+      ).toBeInTheDocument();
+
+      const sourceBadge = screen.getByTestId('waterfall-source-badge');
+      expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
+      expect(sourceBadge).toHaveClass('source-offline');
+    });
+
+    it('hides offline banner and renders local SQLite badge when isHydrated is true', () => {
+      render(
+        <TraceWaterfall
+          events={hydratedEvents}
+          isHydrated={true}
+          dataSource="local_sqlite"
+        />
+      );
+
+      expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
+      const sourceBadge = screen.getByTestId('waterfall-source-badge');
+      expect(sourceBadge).toHaveTextContent('Source: Local SQLite');
+      expect(sourceBadge).toHaveClass('source-hydrated');
+    });
+
+    it('renders and toggles rich payload details for hydrated events', () => {
+      render(
+        <TraceWaterfall
+          events={hydratedEvents}
+          isHydrated={true}
+          dataSource="local_sqlite"
+        />
+      );
+
+      // Switch to All Events
+      const allBtn = screen.getByRole('button', { name: 'All Events' });
+      fireEvent.click(allBtn);
+
+      const viewPayloadBtn = screen.getByRole('button', { name: 'View payload for turn 1' });
+      expect(viewPayloadBtn).toBeInTheDocument();
+      expect(screen.queryByTestId('payload-details-1')).not.toBeInTheDocument();
+
+      // Click to expand payload
+      fireEvent.click(viewPayloadBtn);
+      expect(screen.getByTestId('payload-details-1')).toBeInTheDocument();
+      expect(screen.getByTestId('prompt-payload-block')).toHaveTextContent(
+        'Please list files in repository root.'
+      );
+      expect(screen.getByTestId('reasoning-payload-block')).toHaveTextContent(
+        'I need to check repo structure using bash ls.'
+      );
+      expect(screen.getByTestId('tool-input-payload-block')).toHaveTextContent('ls -la');
+      expect(screen.getByTestId('tool-output-payload-block')).toHaveTextContent('total 64');
+
+      // Click to hide payload
+      const hidePayloadBtn = screen.getByRole('button', { name: 'Hide payload for turn 1' });
+      fireEvent.click(hidePayloadBtn);
+      expect(screen.queryByTestId('payload-details-1')).not.toBeInTheDocument();
+    });
+
+    it('renders unhydrated notice for events when database is offline', () => {
+      render(
+        <TraceWaterfall
+          events={sampleEvents}
+          isHydrated={false}
+          dataSource="committed_ledger"
+        />
+      );
+
+      // Turn 3 is visible under default filter
+      const viewPayloadBtn = screen.getByRole('button', { name: 'View payload for turn 3' });
+      fireEvent.click(viewPayloadBtn);
+
+      expect(screen.getByTestId('payload-details-3')).toBeInTheDocument();
+      expect(screen.getByTestId('unhydrated-notice')).toHaveTextContent(
+        'Full payload not captured in Git ledger'
+      );
+    });
+
+    it('renders zero payload captured notice when hydrated event has no payload fields', () => {
+      const bareHydratedEvents: readonly EventFact[] = [
+        {
+          timestamp: '2026-10-18T10:00:00Z',
+          session_id: 's-bare-1',
+          turn: 1,
+          role: 'coder',
+          event_type: 'turn_message',
+          status: 'success',
+          context_tokens: 1000,
+        },
+      ];
+
+      render(
+        <TraceWaterfall
+          events={bareHydratedEvents}
+          isHydrated={true}
+          dataSource="local_sqlite"
+        />
+      );
+
+      const allBtn = screen.getByRole('button', { name: 'All Events' });
+      fireEvent.click(allBtn);
+
+      const viewPayloadBtn = screen.getByRole('button', { name: 'View payload for turn 1' });
+      fireEvent.click(viewPayloadBtn);
+
+      expect(screen.getByTestId('payload-details-1')).toBeInTheDocument();
+      expect(screen.getByText('Zero payload data captured for this event')).toBeInTheDocument();
+    });
+
+    it('ensures zero emojis across all rendered waterfall components in both modes', () => {
+      const { container: hydratedContainer } = render(
+        <TraceWaterfall
+          events={hydratedEvents}
+          isHydrated={true}
+          dataSource="local_sqlite"
+        />
+      );
+
+      const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
+      expect(emojiRegex.test(hydratedContainer.textContent ?? '')).toBe(false);
+
+      const { container: offlineContainer } = render(
+        <TraceWaterfall
+          events={sampleEvents}
+          isHydrated={false}
+          dataSource="committed_ledger"
+        />
+      );
+      expect(emojiRegex.test(offlineContainer.textContent ?? '')).toBe(false);
+    });
+  });
 });
