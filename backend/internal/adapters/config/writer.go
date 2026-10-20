@@ -41,25 +41,35 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	// Project Name
 	projName := strings.TrimSpace(cfg.ProjectName)
 	if projName == "" {
-		projName = "AgenticLens"
+		return nil, fmt.Errorf("project_name cannot be empty")
 	}
 	b.WriteString("# Human-readable name of the project.\n")
 	b.WriteString(fmt.Sprintf("project_name: %s\n\n", projName))
 
 	// Ticket Settings
+	var cleanPrefixes []domain.TicketPrefix
+	for _, p := range cfg.Ticket.Prefixes {
+		cleanPrefix := strings.TrimSpace(p.Prefix)
+		if cleanPrefix != "" {
+			cleanPrefixes = append(cleanPrefixes, domain.TicketPrefix{
+				Prefix:      cleanPrefix,
+				Description: strings.TrimSpace(p.Description),
+				TicketType:  strings.TrimSpace(p.TicketType),
+			})
+		}
+	}
+	if len(cleanPrefixes) == 0 {
+		return nil, fmt.Errorf("ticket.prefixes cannot be empty")
+	}
+
 	b.WriteString("# Ticket identification and normalization settings.\n")
 	b.WriteString("ticket:\n")
 	b.WriteString("  # Supported ticket prefix identifiers for this repository.\n")
 	b.WriteString("  # Accepts structured mappings (prefix and description) or plain string scalars.\n")
 	b.WriteString("  prefixes:\n")
 
-	prefixes := cfg.Ticket.Prefixes
-	for _, p := range prefixes {
-		cleanPrefix := strings.TrimSpace(p.Prefix)
-		if cleanPrefix == "" {
-			continue
-		}
-		b.WriteString(fmt.Sprintf("    - prefix: %s\n", cleanPrefix))
+	for _, p := range cleanPrefixes {
+		b.WriteString(fmt.Sprintf("    - prefix: %s\n", p.Prefix))
 		if strings.TrimSpace(p.Description) != "" {
 			b.WriteString(fmt.Sprintf("      description: %s\n", strings.TrimSpace(p.Description)))
 		}
@@ -80,35 +90,47 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	if wsDir == "" {
 		wsDir = "workspaces"
 	}
+	var cleanSrcFolders []string
+	for _, sf := range cfg.Workspaces.SrcFolders {
+		clean := strings.TrimSpace(sf)
+		if clean != "" {
+			cleanSrcFolders = append(cleanSrcFolders, clean)
+		}
+	}
+	if len(cleanSrcFolders) == 0 {
+		return nil, fmt.Errorf("workspaces.src_folders cannot be empty")
+	}
+
 	b.WriteString("# Workspace storage and source folder definitions.\n")
 	b.WriteString("workspaces:\n")
 	b.WriteString("  # Directory where ticket artifacts and session telemetry ledgers are stored.\n")
 	b.WriteString(fmt.Sprintf("  dir: %s\n", wsDir))
 	b.WriteString("  # Monitored source code folders for project telemetry and change tracking.\n")
 	b.WriteString("  src_folders:")
-	formatStringList(&b, cfg.Workspaces.SrcFolders, "    ")
+	formatStringList(&b, cleanSrcFolders, "    ")
 	b.WriteString("  # Configured workspace documentation artifacts to read and render in dashboard.\n")
-	b.WriteString("  artifacts:\n")
 	artifacts := cfg.Workspaces.Artifacts
 	if len(artifacts) == 0 {
-		artifacts = DefaultWorkspaceArtifacts()
+		b.WriteString("  artifacts: []\n\n")
+	} else {
+		b.WriteString("  artifacts:\n")
+		for _, art := range artifacts {
+			cleanPath := strings.TrimSpace(art.Path)
+			cleanTitle := strings.TrimSpace(art.Title)
+			if cleanPath == "" {
+				continue
+			}
+			if cleanTitle == "" {
+				cleanTitle = filepath.Base(cleanPath)
+			}
+			b.WriteString(fmt.Sprintf("    - path: %s\n", cleanPath))
+			b.WriteString(fmt.Sprintf("      title: %s\n", cleanTitle))
+			if strings.TrimSpace(art.Description) != "" {
+				b.WriteString(fmt.Sprintf("      description: %s\n", strings.TrimSpace(art.Description)))
+			}
+		}
+		b.WriteString("\n")
 	}
-	for _, art := range artifacts {
-		cleanPath := strings.TrimSpace(art.Path)
-		cleanTitle := strings.TrimSpace(art.Title)
-		if cleanPath == "" {
-			continue
-		}
-		if cleanTitle == "" {
-			cleanTitle = filepath.Base(cleanPath)
-		}
-		b.WriteString(fmt.Sprintf("    - path: %s\n", cleanPath))
-		b.WriteString(fmt.Sprintf("      title: %s\n", cleanTitle))
-		if strings.TrimSpace(art.Description) != "" {
-			b.WriteString(fmt.Sprintf("      description: %s\n", strings.TrimSpace(art.Description)))
-		}
-	}
-	b.WriteString("\n")
 
 	// Database Settings
 	dbPath := strings.TrimSpace(cfg.Database.Path)
@@ -252,7 +274,7 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix, customArtifacts ...[]domain.WorkspaceArtifactConfig) ([]byte, error) {
 	projName := strings.TrimSpace(projectName)
 	if projName == "" {
-		projName = "AgenticLens"
+		return nil, fmt.Errorf("project name cannot be empty")
 	}
 	wsDir := strings.TrimSpace(workspacesDir)
 	if wsDir == "" {
@@ -270,28 +292,24 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 		}
 	}
 	if len(cleanFolders) == 0 {
-		cleanFolders = []string{"src"}
+		return nil, fmt.Errorf("source folders cannot be empty")
 	}
-	ticketPrefixes := prefixes
-	if len(ticketPrefixes) == 0 {
-		ticketPrefixes = []domain.TicketPrefix{
-			{
-				Prefix:      "AL",
-				Description: "Core AgenticLens development features, bugfixes, and technical initiatives",
-			},
-			{
-				Prefix:      "GEN",
-				Description: "General multi-agent engineering tasks and ad-hoc untracked work",
-				TicketType:  "chore",
-			},
-			{
-				Prefix:      "PO",
-				Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
-				TicketType:  "docs",
-			},
+	var cleanPrefixes []domain.TicketPrefix
+	for _, p := range prefixes {
+		trimmed := strings.TrimSpace(p.Prefix)
+		if trimmed != "" {
+			cleanPrefixes = append(cleanPrefixes, domain.TicketPrefix{
+				Prefix:      trimmed,
+				Description: strings.TrimSpace(p.Description),
+				TicketType:  strings.TrimSpace(p.TicketType),
+			})
 		}
 	}
-	artifacts := DefaultWorkspaceArtifacts()
+	if len(cleanPrefixes) == 0 {
+		return nil, fmt.Errorf("ticket prefixes cannot be empty")
+	}
+
+	var artifacts []domain.WorkspaceArtifactConfig
 	if len(customArtifacts) > 0 && len(customArtifacts[0]) > 0 {
 		artifacts = customArtifacts[0]
 	}
@@ -299,7 +317,7 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 	cfg := domain.ProjectConfig{
 		ProjectName: projName,
 		Ticket: domain.TicketConfig{
-			Prefixes:        ticketPrefixes,
+			Prefixes:        cleanPrefixes,
 			CaseInsensitive: true,
 			CustomPatterns:  []string{},
 		},

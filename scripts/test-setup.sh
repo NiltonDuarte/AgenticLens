@@ -85,7 +85,7 @@ mkdir -p "$SANDBOX_DIR"
 
 (cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init \
     --project-name "VerificationProject" \
-    --ticket-prefix "VERIFY" \
+    --ticket-prefixes "VERIFY,GEN,PO" \
     --workspaces "sandbox_workspaces" \
     --src-folders "core,adapters,ui" \
     --db-path "/tmp/test.db")
@@ -101,8 +101,8 @@ if ! grep -q "project_name: VerificationProject" "$CONFIG_FILE"; then
     echo "[FAIL] Configuration missing project_name override" >&2
     exit 1
 fi
-if ! grep -q "prefix: VERIFY" "$CONFIG_FILE"; then
-    echo "[FAIL] Configuration missing ticket prefix override" >&2
+if ! grep -q "prefix: VERIFY" "$CONFIG_FILE" || ! grep -q "prefix: GEN" "$CONFIG_FILE" || ! grep -q "prefix: PO" "$CONFIG_FILE"; then
+    echo "[FAIL] Configuration missing peer ticket prefixes override" >&2
     exit 1
 fi
 if ! grep -q "dir: sandbox_workspaces" "$CONFIG_FILE"; then
@@ -113,13 +113,17 @@ if ! grep -q "path: /tmp/test.db" "$CONFIG_FILE"; then
     echo "[FAIL] Configuration missing database path override" >&2
     exit 1
 fi
+if ! grep -q "artifacts: \[\]" "$CONFIG_FILE"; then
+    echo "[FAIL] Configuration missing zero default artifacts: []" >&2
+    exit 1
+fi
 
 # Test collision without force
 COLLISION_EXIT=0
 (cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init \
     --project-name "CollidingProject" \
     --src-folders "src" \
-    --ticket-prefix "COLLIDE") || COLLISION_EXIT=$?
+    --ticket-prefixes "COLLIDE") || COLLISION_EXIT=$?
 if [[ $COLLISION_EXIT -eq 0 ]]; then
     echo "[FAIL] Expected init to fail when file already exists without --force" >&2
     exit 1
@@ -129,7 +133,7 @@ fi
 (cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init \
     --project-name "ForcedOverwrite" \
     --src-folders "core,adapters,ui" \
-    --ticket-prefix "VERIFY" \
+    --ticket-prefixes "VERIFY" \
     --force)
 if ! grep -q "project_name: ForcedOverwrite" "$CONFIG_FILE"; then
     echo "[FAIL] Configuration was not updated after --force init" >&2
@@ -140,7 +144,7 @@ fi
 DRY_OUTPUT="$(cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init \
     --project-name "DryRunOutput" \
     --src-folders "core,adapters,ui" \
-    --ticket-prefix "VERIFY" \
+    --ticket-prefixes "VERIFY" \
     --dry-run)"
 if ! echo "$DRY_OUTPUT" | grep -q "project_name: DryRunOutput"; then
     echo "[FAIL] Dry-run output missing project_name" >&2
@@ -157,7 +161,7 @@ mkdir -p "$EDGE_DIR"
     --project-name "My Multi Word Project" \
     --workspaces "my custom workspaces" \
     --src-folders "edge_src,ui_src" \
-    --ticket-prefix "EDGE_PREFIX")
+    --ticket-prefixes "EDGE_PREFIX")
 
 EDGE_CONFIG="${EDGE_DIR}/.agenticlens-config.yaml"
 if [[ ! -f "$EDGE_CONFIG" ]]; then
@@ -202,7 +206,7 @@ if [[ $(id -u) -ne 0 ]]; then
     "${TEST_DEST}/agentic-lens" init \
         --project-name "Protected" \
         --src-folders "src" \
-        --ticket-prefix "PROT" \
+        --ticket-prefixes "PROT" \
         --output "${RO_DIR}/config.yaml" 2>/dev/null || PERM_EXIT=$?
     chmod 0755 "$RO_DIR"
     if [[ $PERM_EXIT -eq 0 ]]; then
@@ -212,21 +216,21 @@ if [[ $(id -u) -ne 0 ]]; then
 fi
 
 # Edge Case 5: Mandatory init flags enforcement (fails with exit code 1)
-MISSING_PN_OUT="$("${TEST_DEST}/agentic-lens" init --src-folders "src" --ticket-prefix "AL" 2>&1 || true)"
+MISSING_PN_OUT="$("${TEST_DEST}/agentic-lens" init --src-folders "src" --ticket-prefixes "AL" 2>&1 || true)"
 if ! echo "$MISSING_PN_OUT" | grep -q "Error: missing required flag --project-name"; then
     echo "[FAIL] Expected missing --project-name error message, got: $MISSING_PN_OUT" >&2
     exit 1
 fi
 
-MISSING_SF_OUT="$("${TEST_DEST}/agentic-lens" init --project-name "Acme" --ticket-prefix "AL" 2>&1 || true)"
+MISSING_SF_OUT="$("${TEST_DEST}/agentic-lens" init --project-name "Acme" --ticket-prefixes "AL" 2>&1 || true)"
 if ! echo "$MISSING_SF_OUT" | grep -q "Error: missing required flag --src-folders"; then
     echo "[FAIL] Expected missing --src-folders error message, got: $MISSING_SF_OUT" >&2
     exit 1
 fi
 
 MISSING_TP_OUT="$("${TEST_DEST}/agentic-lens" init --project-name "Acme" --src-folders "src" 2>&1 || true)"
-if ! echo "$MISSING_TP_OUT" | grep -q "Error: missing required flag --ticket-prefix"; then
-    echo "[FAIL] Expected missing --ticket-prefix error message, got: $MISSING_TP_OUT" >&2
+if ! echo "$MISSING_TP_OUT" | grep -q "missing required flag --ticket-prefixes"; then
+    echo "[FAIL] Expected missing --ticket-prefixes error message, got: $MISSING_TP_OUT" >&2
     exit 1
 fi
 

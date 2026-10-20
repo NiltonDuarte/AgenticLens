@@ -17,25 +17,55 @@ import (
 // ErrConfigNotFound indicates that .agenticlens-config.yaml was not found in the directory hierarchy.
 var ErrConfigNotFound = errors.New("configuration file not found")
 
-// DefaultWorkspaceArtifacts returns standard project documentation artifacts.
-func DefaultWorkspaceArtifacts() []domain.WorkspaceArtifactConfig {
-	return []domain.WorkspaceArtifactConfig{
-		{
-			Path:        "CONTRACT.md",
-			Title:       "Technical Contract",
-			Description: "Frozen architectural scope and invariants",
-		},
-		{
-			Path:        "SUMMARY.md",
-			Title:       "Work Summary",
-			Description: "Execution progress and delivery summary",
-		},
-		{
-			Path:        "PULL_REQUEST.md",
-			Title:       "Pull Request",
-			Description: "Pull request description and context",
-		},
+// ErrInvalidConfig indicates that the configuration is missing required parameters.
+var ErrInvalidConfig = errors.New("invalid configuration: missing required fields")
+
+// ConfigValidationError specifies missing mandatory fields in the configuration.
+type ConfigValidationError struct {
+	MissingFields []string
+}
+
+func (e *ConfigValidationError) Error() string {
+	return fmt.Sprintf("invalid configuration: missing required fields: %s", strings.Join(e.MissingFields, ", "))
+}
+
+func (e *ConfigValidationError) Is(target error) bool {
+	return target == ErrInvalidConfig
+}
+
+// ValidateConfig checks that mandatory configuration fields are present and non-empty.
+func ValidateConfig(cfg domain.ProjectConfig) error {
+	var missing []string
+	if strings.TrimSpace(cfg.ProjectName) == "" {
+		missing = append(missing, "project_name")
 	}
+
+	hasPrefix := false
+	for _, p := range cfg.Ticket.Prefixes {
+		if strings.TrimSpace(p.Prefix) != "" {
+			hasPrefix = true
+			break
+		}
+	}
+	if !hasPrefix {
+		missing = append(missing, "ticket.prefixes")
+	}
+
+	hasSrcFolder := false
+	for _, sf := range cfg.Workspaces.SrcFolders {
+		if strings.TrimSpace(sf) != "" {
+			hasSrcFolder = true
+			break
+		}
+	}
+	if !hasSrcFolder {
+		missing = append(missing, "workspaces.src_folders")
+	}
+
+	if len(missing) > 0 {
+		return &ConfigValidationError{MissingFields: missing}
+	}
+	return nil
 }
 
 type rawPrefixItem struct {
@@ -169,31 +199,15 @@ type rawProjectConfigDTO struct {
 
 func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	cfg := domain.ProjectConfig{
-		ProjectName: "AgenticLens",
 		Ticket: domain.TicketConfig{
-			Prefixes: []domain.TicketPrefix{
-				{
-					Prefix:      "AL",
-					Description: "Core AgenticLens development features, bugfixes, and technical initiatives",
-				},
-				{
-					Prefix:      "GEN",
-					Description: "General multi-agent engineering tasks and ad-hoc untracked work",
-					TicketType:  "chore",
-				},
-				{
-					Prefix:      "PO",
-					Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
-					TicketType:  "docs",
-				},
-			},
+			Prefixes:        []domain.TicketPrefix{},
 			CaseInsensitive: true,
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
 			Dir:        "workspaces",
-			SrcFolders: []string{"web", "backend"},
-			Artifacts:  DefaultWorkspaceArtifacts(),
+			SrcFolders: []string{},
+			Artifacts:  []domain.WorkspaceArtifactConfig{},
 		},
 		Database: domain.DatabaseConfig{
 			Path:           "~/.local/share/opencode/opencode.db",
@@ -280,7 +294,14 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 			cfg.Workspaces.Dir = strings.TrimSpace(*dto.Workspaces.Dir)
 		}
 		if dto.Workspaces.SrcFolders != nil {
-			cfg.Workspaces.SrcFolders = dto.Workspaces.SrcFolders
+			var cleanFolders []string
+			for _, f := range dto.Workspaces.SrcFolders {
+				t := strings.TrimSpace(f)
+				if t != "" {
+					cleanFolders = append(cleanFolders, t)
+				}
+			}
+			cfg.Workspaces.SrcFolders = cleanFolders
 		}
 		if len(dto.Workspaces.Artifacts) > 0 {
 			artifacts := make([]domain.WorkspaceArtifactConfig, 0, len(dto.Workspaces.Artifacts))
@@ -312,7 +333,14 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 
 	if len(dto.LegacySrcFolders) > 0 {
 		if dto.Workspaces == nil || dto.Workspaces.SrcFolders == nil {
-			cfg.Workspaces.SrcFolders = dto.LegacySrcFolders
+			var cleanFolders []string
+			for _, f := range dto.LegacySrcFolders {
+				t := strings.TrimSpace(f)
+				if t != "" {
+					cleanFolders = append(cleanFolders, t)
+				}
+			}
+			cfg.Workspaces.SrcFolders = cleanFolders
 		}
 	}
 
@@ -467,7 +495,11 @@ func LoadFromFile(filePath string) (domain.ProjectConfig, error) {
 		}
 	}
 
-	return mergeConfig(dto), nil
+	cfg := mergeConfig(dto)
+	if err := ValidateConfig(cfg); err != nil {
+		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", filePath, err)
+	}
+	return cfg, nil
 }
 
 // Load finds the configuration file traversing upwards from repoRoot and parses it.

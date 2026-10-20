@@ -262,20 +262,6 @@ func TestGenerateDefaultYAML_EdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name:        "empty strings fallback to defaults",
-			projectName: "   ",
-			wsDir:       "   ",
-			dbPath:      "   ",
-			srcFolders:  nil,
-			prefixes:    nil,
-			checkStrings: []string{
-				"project_name: AgenticLens",
-				"dir: workspaces",
-				"path: ~/.local/share/opencode/opencode.db",
-				"prefix: AL",
-			},
-		},
-		{
 			name:        "custom prefixes with special chars",
 			projectName: "Custom-App_V2",
 			wsDir:       "workspaces",
@@ -321,11 +307,91 @@ func TestGenerateDefaultYAML_EdgeCases(t *testing.T) {
 			if err != nil {
 				t.Fatalf("LoadFromFile failed on generated YAML: %v", err)
 			}
-			if tc.projectName != "   " && loaded.ProjectName != tc.projectName {
+			if loaded.ProjectName != tc.projectName {
 				t.Errorf("expected loaded ProjectName %q, got %q", tc.projectName, loaded.ProjectName)
 			}
 		})
 	}
+}
+
+func TestGenerateDefaultYAML_ValidationErrors(t *testing.T) {
+	t.Parallel()
+
+	validPrefixes := []domain.TicketPrefix{{Prefix: "AL"}}
+	validSrc := []string{"src"}
+
+	t.Run("empty project name returns error", func(t *testing.T) {
+		_, err := adaptersconfig.GenerateDefaultYAML("   ", "workspaces", "", validSrc, validPrefixes)
+		if err == nil {
+			t.Fatalf("expected error for empty project name, got nil")
+		}
+	})
+
+	t.Run("empty source folders returns error", func(t *testing.T) {
+		_, err := adaptersconfig.GenerateDefaultYAML("TestProj", "workspaces", "", nil, validPrefixes)
+		if err == nil {
+			t.Fatalf("expected error for empty source folders, got nil")
+		}
+		_, err = adaptersconfig.GenerateDefaultYAML("TestProj", "workspaces", "", []string{" ", ""}, validPrefixes)
+		if err == nil {
+			t.Fatalf("expected error for blank source folders, got nil")
+		}
+	})
+
+	t.Run("empty ticket prefixes returns error", func(t *testing.T) {
+		_, err := adaptersconfig.GenerateDefaultYAML("TestProj", "workspaces", "", validSrc, nil)
+		if err == nil {
+			t.Fatalf("expected error for empty ticket prefixes, got nil")
+		}
+		_, err = adaptersconfig.GenerateDefaultYAML("TestProj", "workspaces", "", validSrc, []domain.TicketPrefix{{Prefix: " "}})
+		if err == nil {
+			t.Fatalf("expected error for blank ticket prefixes, got nil")
+		}
+	})
+}
+
+func TestGenerateConfigYAML_ValidationErrors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty project name returns error", func(t *testing.T) {
+		cfg := testProjectConfig()
+		cfg.ProjectName = ""
+		_, err := adaptersconfig.GenerateConfigYAML(cfg)
+		if err == nil {
+			t.Fatalf("expected error for empty project name, got nil")
+		}
+	})
+
+	t.Run("empty prefixes returns error", func(t *testing.T) {
+		cfg := testProjectConfig()
+		cfg.Ticket.Prefixes = []domain.TicketPrefix{}
+		_, err := adaptersconfig.GenerateConfigYAML(cfg)
+		if err == nil {
+			t.Fatalf("expected error for empty prefixes, got nil")
+		}
+	})
+
+	t.Run("empty src folders returns error", func(t *testing.T) {
+		cfg := testProjectConfig()
+		cfg.Workspaces.SrcFolders = []string{}
+		_, err := adaptersconfig.GenerateConfigYAML(cfg)
+		if err == nil {
+			t.Fatalf("expected error for empty src folders, got nil")
+		}
+	})
+
+	t.Run("empty artifacts serializes empty list", func(t *testing.T) {
+		cfg := testProjectConfig()
+		cfg.Workspaces.Artifacts = []domain.WorkspaceArtifactConfig{}
+		data, err := adaptersconfig.GenerateConfigYAML(cfg)
+		if err != nil {
+			t.Fatalf("GenerateConfigYAML failed: %v", err)
+		}
+		content := string(data)
+		if !strings.Contains(content, "artifacts: []") {
+			t.Errorf("expected 'artifacts: []' in YAML, got:\n%s", content)
+		}
+	})
 }
 
 func TestGenerateConfigYAML_WorkspaceArtifacts(t *testing.T) {

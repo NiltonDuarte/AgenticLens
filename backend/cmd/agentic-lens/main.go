@@ -738,7 +738,7 @@ func runInit(args []string) {
 	workspacesFlag := initFlags.String("workspaces", "workspaces", "Directory where ticket artifacts and session telemetry ledgers are stored")
 	dbPathFlag := initFlags.String("db-path", "~/.local/share/opencode/opencode.db", "Path to local OpenCode SQLite database file")
 	srcFoldersFlag := initFlags.String("src-folders", "", "Comma-separated list of monitored source code directories (required, e.g. web,backend)")
-	ticketPrefixFlag := initFlags.String("ticket-prefix", "", "Primary ticket prefix identifier (required, e.g. AL, PROJ)")
+	ticketPrefixesFlag := initFlags.String("ticket-prefixes", "", "Comma-separated list of ticket prefix identifiers (required, e.g. AL,GEN,PO)")
 	outputFlag := initFlags.String("output", ".agenticlens-config.yaml", "Destination path for generated configuration file")
 	forceFlag := initFlags.Bool("force", false, "Overwrite existing configuration file without prompting")
 	dryRunFlag := initFlags.Bool("dry-run", false, "Print generated configuration YAML to stdout without writing")
@@ -774,27 +774,25 @@ func runInit(args []string) {
 		os.Exit(1)
 	}
 
-	ticketPrefix := strings.TrimSpace(*ticketPrefixFlag)
-	if ticketPrefix == "" {
-		fmt.Fprintln(os.Stderr, "Error: missing required flag --ticket-prefix")
-		os.Exit(1)
+	ticketPrefixesVal := strings.TrimSpace(*ticketPrefixesFlag)
+
+	var prefixes []domain.TicketPrefix
+	if ticketPrefixesVal != "" {
+		parts := strings.Split(ticketPrefixesVal, ",")
+		for _, p := range parts {
+			clean := strings.TrimSpace(p)
+			if clean != "" {
+				upper := strings.ToUpper(clean)
+				prefixes = append(prefixes, domain.TicketPrefix{
+					Prefix:      upper,
+					Description: fmt.Sprintf("%s project development features and bugfixes", upper),
+				})
+			}
+		}
 	}
-	primary := strings.ToUpper(ticketPrefix)
-	prefixes := []domain.TicketPrefix{
-		{
-			Prefix:      primary,
-			Description: fmt.Sprintf("%s project development features and bugfixes", primary),
-		},
-		{
-			Prefix:      "GEN",
-			Description: "General multi-agent engineering tasks and ad-hoc untracked work",
-			TicketType:  "chore",
-		},
-		{
-			Prefix:      "PO",
-			Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
-			TicketType:  "docs",
-		},
+	if len(prefixes) == 0 {
+		fmt.Fprintln(os.Stderr, "Error: missing required flag --ticket-prefixes")
+		os.Exit(1)
 	}
 
 	yamlData, err := adaptersconfig.GenerateDefaultYAML(projectName, *workspacesFlag, *dbPathFlag, srcFolders, prefixes)

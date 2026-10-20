@@ -43,9 +43,6 @@ func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.Projec
 	}
 
 	artifactConfigs := cfg.Workspaces.Artifacts
-	if len(artifactConfigs) == 0 {
-		artifactConfigs = config.DefaultWorkspaceArtifacts()
-	}
 
 	mux := http.NewServeMux()
 

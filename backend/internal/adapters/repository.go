@@ -173,12 +173,14 @@ func ReadTicketArtifacts(ticketID string, basePath string, configuredArtifacts .
 	if len(configuredArtifacts) > 0 && configuredArtifacts[0] != nil {
 		configs = configuredArtifacts[0]
 	} else {
-		// Try to load configured artifacts from project config, fallback to default
+		// Try to load configured artifacts from project config
 		if projCfg, err := config.Load(basePath); err == nil && len(projCfg.Workspaces.Artifacts) > 0 {
 			configs = projCfg.Workspaces.Artifacts
-		} else {
-			configs = config.DefaultWorkspaceArtifacts()
 		}
+	}
+
+	if len(configs) == 0 {
+		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
 	}
 
 	items := make([]domain.TicketArtifactItem, 0, len(configs))

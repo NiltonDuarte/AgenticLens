@@ -54,14 +54,14 @@ Prompt the developer or inspect the repository to collect configuration paramete
 1. Project Name:
    - Descriptive identifier for the repository.
    - Strictly mandatory flag (`--project-name`); no default is provided.
-2. Primary Ticket Prefix and Classification:
-   - Primary prefix for feature tickets (e.g. PROJ, APP).
-   - Strictly mandatory flag (`--ticket-prefix`); no default is provided. Standard secondary prefixes: `GEN` (generic) and `MISC`.
+2. Ticket Prefixes:
+   - Comma-separated list of recognized ticket prefixes (e.g. `PROJ,GEN,PO` or `AL,GEN,PO`). All configured prefixes are treated as equal peers.
+   - Strictly mandatory flag (`--ticket-prefixes`); no default or synthetic fallback is provided.
 3. Workspaces Directory:
    - Directory where ticket artifacts and session telemetry ledgers are stored.
    - Default: `workspaces`.
 4. Monitored Source Folders:
-   - Comma-separated list of source code directories to observe for git metrics and diff volume (e.g. `src`, `backend`, `web`, `lib`, `pkg`).
+   - Comma-separated list of source code directories to observe for git metrics and diff volume (e.g. `src,backend,web,lib,pkg`).
    - Strictly mandatory flag (`--src-folders`); no default is provided.
 5. OpenCode SQLite Database Path:
    - Path to local OpenCode database.
@@ -75,7 +75,7 @@ Run the CLI `init` command using the collected parameters:
 ```bash
 ./.opencode/skills/agentic-lens-setup/bin/agentic-lens init \
   --project-name "<PROJECT_NAME>" \
-  --ticket-prefix "<TICKET_PREFIX>" \
+  --ticket-prefixes "<TICKET_PREFIXES>" \
   --workspaces "<WORKSPACES_DIR>" \
   --src-folders "<SRC_FOLDERS>" \
   --db-path "<DB_PATH>"
@@ -86,7 +86,7 @@ Alternatively, review generated YAML with `--dry-run` before writing:
 ```bash
 ./.opencode/skills/agentic-lens-setup/bin/agentic-lens init \
   --project-name "<PROJECT_NAME>" \
-  --ticket-prefix "<TICKET_PREFIX>" \
+  --ticket-prefixes "<TICKET_PREFIXES>" \
   --src-folders "<SRC_FOLDERS>" \
   --dry-run
 ```

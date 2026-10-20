@@ -22,9 +22,12 @@ Additionally decouples ticket artifacts from hardcoded assumptions by introducin
 - Web: Refactored `ArtifactViewer` to dynamically render configured artifact tabs (`CONTRACT.md`, `SUMMARY.md`, `PULL_REQUEST.md`, and custom documents) with markdown/raw views, empty badges, and clipboard copy.
 
 ### CLI Application Layer (`backend/cmd/agentic-lens/`)
-- `init`: Strictly requires `--project-name`, `--src-folders`, and `--ticket-prefix`, terminating with code 1 if omitted.
+- `init`: Strictly requires `--project-name`, `--src-folders`, and `--ticket-prefixes`, terminating with code 1 if omitted.
+- Peer Ticket Prefixes: Parses comma-separated prefix list via `--ticket-prefixes` without any "primary" concept or automatic injection of `GEN`/`PO`.
+- Comma-Separated Source Folders: Accepts comma-separated directory paths via `--src-folders`.
 - Missing configuration guardrails: commands (`server`, `generate`, root scanner) check for configuration presence and exit 1 if absent, directing users to run `agentic-lens init`.
-- Eliminated `DefaultProjectConfig()` from production source code; test fixtures use dedicated test-scoped helpers.
+- Eliminated all hardcoded synthetic project defaults (`DefaultProjectConfig()`, `DefaultWorkspaceArtifacts()`) from production source code; test fixtures use dedicated test-scoped helpers.
+- Strict configuration validation on load: missing `project_name`, `ticket.prefixes`, or `workspaces.src_folders` returns `ConfigValidationError` wrapping `ErrInvalidConfig`.
 
 ### Quality & Verification
 - Unit and boundary tests passing across Go packages with race detector (`go test -race ./...`).

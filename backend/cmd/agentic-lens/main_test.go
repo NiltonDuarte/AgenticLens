@@ -3308,7 +3308,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3356,7 +3356,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3404,7 +3404,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3453,7 +3453,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3520,7 +3520,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3590,7 +3590,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
 		// Configure AL to map to docs in config.yaml
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3653,6 +3653,8 @@ ticket:
       ticket_type: "fix"
 workspaces:
   dir: "custom_root_ws"
+  src_folders:
+    - "src"
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config: %v", err)
@@ -3726,21 +3728,27 @@ workspaces:
 
 		// Root config maps ROOTPRIO to "feat" and dir to "root_ws"
 		rootCfg := `
+project_name: RootPriorityTest
 ticket:
   prefixes:
     - prefix: "ROOTPRIO"
       ticket_type: "feat"
 workspaces:
   dir: "root_ws"
+  src_folders:
+    - "src"
 `
 		// Legacy config maps ROOTPRIO to "chore" and dir to "legacy_ws"
 		legacyCfg := `
+project_name: LegacyPriorityTest
 ticket:
   prefixes:
     - prefix: "ROOTPRIO"
       ticket_type: "chore"
 workspaces:
   dir: "legacy_ws"
+  src_folders:
+    - "src"
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(rootCfg), 0644); err != nil {
 			t.Fatalf("failed writing root config: %v", err)
@@ -3785,9 +3793,9 @@ workspaces:
 func TestInitCommand(t *testing.T) {
 	t.Run("missing required flag --project-name fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
-			{"init", "--src-folders", "src", "--ticket-prefix", "AL"},
-			{"init", "--project-name", "", "--src-folders", "src", "--ticket-prefix", "AL"},
-			{"init", "--project-name", "   ", "--src-folders", "src", "--ticket-prefix", "AL"},
+			{"init", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "   ", "--src-folders", "src", "--ticket-prefixes", "AL"},
 		}
 
 		for _, args := range variations {
@@ -3816,9 +3824,9 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("missing required flag --src-folders fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
-			{"init", "--project-name", "Acme", "--ticket-prefix", "AL"},
-			{"init", "--project-name", "Acme", "--src-folders", "", "--ticket-prefix", "AL"},
-			{"init", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefix", "AL"},
+			{"init", "--project-name", "Acme", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "Acme", "--src-folders", "", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefixes", "AL"},
 		}
 
 		for _, args := range variations {
@@ -3845,11 +3853,11 @@ func TestInitCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("missing required flag --ticket-prefix fails with exit code 1", func(t *testing.T) {
+	t.Run("missing required flag --ticket-prefixes fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
 			{"init", "--project-name", "Acme", "--src-folders", "src"},
-			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", ""},
-			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "   "},
+			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", ""},
+			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "   "},
 		}
 
 		for _, args := range variations {
@@ -3861,7 +3869,7 @@ func TestInitCommand(t *testing.T) {
 
 			err := cmd.Run()
 			if err == nil {
-				t.Fatalf("expected init to fail without --ticket-prefix (args: %v), got nil error", args)
+				t.Fatalf("expected init to fail without --ticket-prefixes (args: %v), got nil error", args)
 			}
 			var exitErr *exec.ExitError
 			if !errors.As(err, &exitErr) {
@@ -3870,8 +3878,8 @@ func TestInitCommand(t *testing.T) {
 			if exitErr.ExitCode() != 1 {
 				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
 			}
-			if !strings.Contains(stderr.String(), "Error: missing required flag --ticket-prefix") {
-				t.Errorf("expected stderr to contain 'Error: missing required flag --ticket-prefix', got: %s", stderr.String())
+			if !strings.Contains(stderr.String(), "Error: missing required flag --ticket-prefixes") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --ticket-prefixes', got: %s", stderr.String())
 			}
 		}
 	})
@@ -3907,7 +3915,7 @@ func TestInitCommand(t *testing.T) {
 			"init",
 			"--project-name", "AcmeApp",
 			"--src-folders", "web,backend",
-			"--ticket-prefix", "ACME",
+			"--ticket-prefixes", "ACME",
 		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
@@ -3934,8 +3942,8 @@ func TestInitCommand(t *testing.T) {
 		if loaded.Workspaces.Dir != "workspaces" {
 			t.Errorf("expected workspaces.dir 'workspaces', got %q", loaded.Workspaces.Dir)
 		}
-		if len(loaded.Workspaces.Artifacts) == 0 {
-			t.Errorf("expected generated config to include default workspace artifacts")
+		if len(loaded.Workspaces.Artifacts) != 0 {
+			t.Errorf("expected generated config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
 		}
 	})
 
@@ -3950,7 +3958,7 @@ func TestInitCommand(t *testing.T) {
 			"--workspaces", "team_workspaces",
 			"--db-path", "/opt/opencode/data.db",
 			"--src-folders", "services,apps,packages",
-			"--ticket-prefix", "ACME",
+			"--ticket-prefixes", "ACME,OPS",
 			"--output", customOutput,
 		)
 		cmd.Dir = tempDir
@@ -3979,11 +3987,94 @@ func TestInitCommand(t *testing.T) {
 		if len(loaded.Workspaces.SrcFolders) != 3 || loaded.Workspaces.SrcFolders[0] != "services" {
 			t.Errorf("unexpected src_folders: %v", loaded.Workspaces.SrcFolders)
 		}
-		if len(loaded.Ticket.Prefixes) == 0 || loaded.Ticket.Prefixes[0].Prefix != "ACME" {
-			t.Errorf("expected ACME primary prefix, got %v", loaded.Ticket.Prefixes)
+		if len(loaded.Ticket.Prefixes) != 2 || loaded.Ticket.Prefixes[0].Prefix != "ACME" || loaded.Ticket.Prefixes[1].Prefix != "OPS" {
+			t.Errorf("expected ACME,OPS peer prefixes, got %v", loaded.Ticket.Prefixes)
 		}
-		if len(loaded.Workspaces.Artifacts) == 0 {
-			t.Errorf("expected generated custom config to include workspace artifacts")
+		if len(loaded.Workspaces.Artifacts) != 0 {
+			t.Errorf("expected generated custom config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
+		}
+	})
+
+	t.Run("comma-separated ticket-prefixes flag creates peer prefixes without injection", func(t *testing.T) {
+		tempDir := t.TempDir()
+		outConfig := filepath.Join(tempDir, ".agenticlens-config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", "core,cli",
+			"--ticket-prefixes", "ALPHA,BETA,GAMMA",
+			"--output", outConfig,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(outConfig)
+		if err != nil {
+			t.Fatalf("LoadFromFile failed: %v", err)
+		}
+
+		if len(loaded.Ticket.Prefixes) != 3 {
+			t.Fatalf("expected exactly 3 prefixes, got %d: %v", len(loaded.Ticket.Prefixes), loaded.Ticket.Prefixes)
+		}
+		expected := []string{"ALPHA", "BETA", "GAMMA"}
+		for i, exp := range expected {
+			if loaded.Ticket.Prefixes[i].Prefix != exp {
+				t.Errorf("prefix[%d]: expected %s, got %s", i, exp, loaded.Ticket.Prefixes[i].Prefix)
+			}
+		}
+	})
+
+	t.Run("empty ticket-prefixes fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", "core",
+			"--ticket-prefixes", " , , ",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected error for empty ticket-prefixes, but command succeeded")
+		}
+		if !strings.Contains(stderr.String(), "missing required flag --ticket-prefixes") {
+			t.Errorf("expected error message to mention --ticket-prefixes, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("empty src-folders fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", " , , ",
+			"--ticket-prefixes", "ALPHA",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected error for empty src-folders, but command succeeded")
+		}
+		if !strings.Contains(stderr.String(), "missing required flag --src-folders") {
+			t.Errorf("expected error message to mention --src-folders, got: %s", stderr.String())
 		}
 	})
 
@@ -3999,7 +4090,7 @@ func TestInitCommand(t *testing.T) {
 			"init",
 			"--project-name", "Original",
 			"--src-folders", "src",
-			"--ticket-prefix", "AL",
+			"--ticket-prefixes", "AL",
 		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
@@ -4034,7 +4125,7 @@ func TestInitCommand(t *testing.T) {
 			"init",
 			"--project-name", "Overwritten",
 			"--src-folders", "src",
-			"--ticket-prefix", "AL",
+			"--ticket-prefixes", "AL",
 			"--force",
 		)
 		cmd.Dir = tempDir
@@ -4064,7 +4155,7 @@ func TestInitCommand(t *testing.T) {
 			"--dry-run",
 			"--project-name", "DryRunTest",
 			"--src-folders", "src",
-			"--ticket-prefix", "DRY",
+			"--ticket-prefixes", "DRY",
 		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
@@ -4098,7 +4189,7 @@ func TestInitCommand(t *testing.T) {
 			"--project-name", projName,
 			"--workspaces", "team workspaces",
 			"--src-folders", "my web,my backend",
-			"--ticket-prefix", "SPECIAL",
+			"--ticket-prefixes", "SPECIAL",
 			"--output", customOutput,
 		)
 		cmd.Dir = tempDir
@@ -4139,6 +4230,23 @@ func TestInitCommand(t *testing.T) {
 		}
 	})
 
+	t.Run("passing deprecated or unknown --ticket-prefix flag fails as unknown flag", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init with --ticket-prefix to fail as unknown flag, got zero exit code")
+		}
+		if !strings.Contains(stderr.String(), "flag provided but not defined: -ticket-prefix") {
+			t.Errorf("expected stderr to contain 'flag provided but not defined: -ticket-prefix', got: %s", stderr.String())
+		}
+	})
+
 	t.Run("file collision error without force preserves original contents", func(t *testing.T) {
 		tempDir := t.TempDir()
 		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
@@ -4152,7 +4260,7 @@ func TestInitCommand(t *testing.T) {
 			"init",
 			"--project-name", "AttemptedOverwrite",
 			"--src-folders", "src",
-			"--ticket-prefix", "AL",
+			"--ticket-prefixes", "AL",
 		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
@@ -4194,7 +4302,7 @@ func TestInitCommand(t *testing.T) {
 			"init",
 			"--project-name", "Protected",
 			"--src-folders", "src",
-			"--ticket-prefix", "AL",
+			"--ticket-prefixes", "AL",
 			"--output", target,
 		)
 		cmd.Dir = tempDir
