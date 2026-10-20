@@ -81,7 +81,7 @@ PO session-specific deliverables live under `<WORKSPACES_DIR>/PO-#/`:
 Generate PO session metrics via:
 ```bash
 NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-./bin/agentic-lens generate --nonce $NONCE --ticket-id PO-# --ticket-type docs --json-output <WORKSPACES_DIR>/PO-#/agentic_metrics.json --append <WORKSPACES_DIR>/PO-#/SUMMARY.md
+./bin/agentic-lens generate --nonce $NONCE --ticket-id PO-# --ticket-type docs --ticket-title <TICKET_TITLE> --json-output <WORKSPACES_DIR>/PO-#/agentic_metrics.json --append <WORKSPACES_DIR>/PO-#/SUMMARY.md
 ```
 
 ---
