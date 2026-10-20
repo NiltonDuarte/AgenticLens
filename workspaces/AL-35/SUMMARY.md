@@ -30,14 +30,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 36m 23s (excludes user wait time)
+- **Active Agent Duration:** 38m 34s (excludes user wait time)
 - **Context Window Health:** ELEVATED — Orchestrator peak 168.1k tokens (84% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 20,612 reasoning tokens (39.2% of generated output)
-- **Tool Health & Self-Correction:** 166 tool calls (2 self-corrections, 98.8% success rate)
+- **Reasoning Effort:** 21,909 reasoning tokens (38.4% of generated output)
+- **Tool Health & Self-Correction:** 189 tool calls (2 self-corrections, 98.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -51,11 +51,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **general** | 1 | 1,521,951 | 32,000 | 13,364,934 | 89.8% | 168.1k | ELEVATED | $2.34 |
-| **Total** | **1** | **1,521,951** | **32,000** | **13,364,934** | **89.8%** | **168.1k** | **ELEVATED** | **$2.34** |
+| **general** | 1 | 1,646,051 | 35,144 | 14,380,284 | 89.7% | 168.1k | ELEVATED | $2.53 |
+| **Total** | **1** | **1,646,051** | **35,144** | **14,380,284** | **89.7%** | **168.1k** | **ELEVATED** | **$2.53** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 1,521,951 | 32,000 | 13,364,934 | 89.8% | $2.34 |
-| **Total** | **1** | **1,521,951** | **32,000** | **13,364,934** | **89.8%** | **$2.34** |
+| **gemini-3.8-flash** | 1 | 1,646,051 | 35,144 | 14,380,284 | 89.7% | $2.53 |
+| **Total** | **1** | **1,646,051** | **35,144** | **14,380,284** | **89.7%** | **$2.53** |
