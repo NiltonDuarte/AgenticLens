@@ -12,6 +12,10 @@ export interface MultiSelectDropdownProps {
   readonly selectedValues: readonly string[];
   readonly onChange: (selected: readonly string[]) => void;
   readonly placeholder?: string;
+  readonly allLabel?: string;
+  readonly ariaLabel?: string;
+  readonly testId?: string;
+  readonly className?: string;
 }
 
 export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
@@ -20,12 +24,22 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
   options,
   selectedValues,
   onChange,
-  placeholder = 'All',
+  placeholder,
+  allLabel,
+  ariaLabel,
+  testId,
+  className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const autoId = useId();
   const id = customId ?? autoId;
+
+  const resolvedAllLabel = allLabel ?? 'All';
+  const resolvedPlaceholder = placeholder ?? (allLabel ?? 'All');
+  const resolvedAriaLabel = ariaLabel ?? `${label} selector`;
+  const resolvedTestId = testId ?? (customId ?? autoId);
+  const allCheckboxAriaLabel = allLabel !== undefined ? allLabel : `Select all ${label}`;
 
   const isAllSelected =
     selectedValues.length === 0 ||
@@ -94,7 +108,7 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
 
   const displaySummary = (): string => {
     if (isAllSelected) {
-      return placeholder;
+      return resolvedPlaceholder;
     }
     if (selectedValues.length === 1) {
       const match = options.find((opt) => opt.value === selectedValues[0]);
@@ -110,8 +124,12 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
     return `${selectedValues.length} selected`;
   };
 
+  const containerClassName = className
+    ? `multiselect-container ${className}`
+    : 'multiselect-container';
+
   return (
-    <div className="multiselect-container" ref={containerRef} onKeyDown={handleKeyDown}>
+    <div className={containerClassName} ref={containerRef} onKeyDown={handleKeyDown}>
       <label htmlFor={`${id}-trigger`} className="multiselect-label">
         {label}:
       </label>
@@ -120,11 +138,12 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
           type="button"
           role="combobox"
           id={`${id}-trigger`}
+          data-testid={resolvedTestId}
           className="multiselect-trigger"
           onClick={toggleOpen}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
-          aria-label={`${label} selector`}
+          aria-label={resolvedAriaLabel}
         >
           <span className="multiselect-summary">{displaySummary()}</span>
           <span className="multiselect-arrow" aria-hidden="true">
@@ -144,9 +163,9 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
                 type="checkbox"
                 checked={isAllSelected}
                 onChange={handleSelectAll}
-                aria-label={`Select all ${label}`}
+                aria-label={allCheckboxAriaLabel}
               />
-              <span>All</span>
+              <span>{resolvedAllLabel}</span>
             </label>
             <div className="multiselect-divider" />
             {options.map((opt) => {

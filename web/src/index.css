@@ -2418,6 +2418,22 @@ body {
   cursor: pointer;
 }
 
+.waterfall-toolbar .multiselect-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.waterfall-toolbar .multiselect-trigger {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.waterfall-toolbar .multiselect-dropdown {
+  z-index: 150;
+}
+
 .trace-empty-state {
   padding: 32px;
   text-align: center;

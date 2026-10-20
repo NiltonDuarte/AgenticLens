@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { TraceWaterfall } from './TraceWaterfall';
 import type { EventFact, Anomaly } from '../domain/types';
 
@@ -193,11 +193,14 @@ describe('TraceWaterfall Component', () => {
     fireEvent.click(allBtn);
 
     const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
-    fireEvent.change(roleSelect, { target: { value: 'tester' } });
+    const roleContainer = roleSelect.closest('.multiselect-container')!;
+    fireEvent.click(roleSelect);
+    fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'tester' }));
 
     expect(screen.getByText('Turn 4')).toBeInTheDocument();
     expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
     expect(screen.queryByText('Turn 2')).not.toBeInTheDocument();
+    expect(screen.queryByText('Turn 3')).not.toBeInTheDocument();
   });
 
   it('filters events to tool calls only when tool calls filter is activated', () => {
@@ -751,11 +754,13 @@ describe('TraceWaterfall Component', () => {
         const toolSelect = screen.getByTestId('trace-tool-filter');
         expect(toolSelect).toBeInTheDocument();
         expect(toolSelect).toHaveAttribute('aria-label', 'Filter by tool');
+        expect(toolSelect.textContent).toContain('No filter');
 
-        const toolOptions = Array.from(toolSelect.querySelectorAll('option')).map(
-          (opt) => opt.value
-        );
-        expect(toolOptions).toEqual(['all', 'bash', 'edit', 'read', 'task']);
+        fireEvent.click(toolSelect);
+        const container = toolSelect.closest('.multiselect-container')!;
+        const checkboxes = within(container as HTMLElement).getAllByRole('checkbox');
+        const toolOptions = checkboxes.map((cb) => cb.getAttribute('aria-label'));
+        expect(toolOptions).toEqual(['No filter', 'bash', 'edit', 'read', 'task']);
       });
 
       it('filters events by specific tool name across task, bash, read, edit and restores on all', () => {
@@ -771,9 +776,11 @@ describe('TraceWaterfall Component', () => {
         fireEvent.click(allBtn);
 
         const toolSelect = screen.getByTestId('trace-tool-filter');
+        const container = toolSelect.closest('.multiselect-container')!;
 
         // Filter by 'task'
-        fireEvent.change(toolSelect, { target: { value: 'task' } });
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'task' }));
         expect(screen.getByText('Turn 2')).toBeInTheDocument();
         expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
         expect(screen.queryByText('Turn 3')).not.toBeInTheDocument();
@@ -781,30 +788,33 @@ describe('TraceWaterfall Component', () => {
         expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
 
-        // Filter by 'read'
-        fireEvent.change(toolSelect, { target: { value: 'read' } });
+        // Filter by 'read' (deselect task, select read)
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'task' }));
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'read' }));
         expect(screen.getByText('Turn 3')).toBeInTheDocument();
         expect(screen.getByText('Turn 7')).toBeInTheDocument();
         expect(screen.queryByText('Turn 2')).not.toBeInTheDocument();
         expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
         expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
 
-        // Filter by 'bash'
-        fireEvent.change(toolSelect, { target: { value: 'bash' } });
+        // Filter by 'bash' (deselect read, select bash)
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'read' }));
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'bash' }));
         expect(screen.getByText('Turn 4')).toBeInTheDocument();
         expect(screen.getByText('Turn 6')).toBeInTheDocument();
         expect(screen.queryByText('Turn 3')).not.toBeInTheDocument();
         expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
 
-        // Filter by 'edit'
-        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        // Filter by 'edit' (deselect bash, select edit)
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'edit' }));
         expect(screen.getByText('Turn 5')).toBeInTheDocument();
         expect(screen.getByText('Turn 10')).toBeInTheDocument();
         expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
         expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
 
-        // Restore to 'all'
-        fireEvent.change(toolSelect, { target: { value: 'all' } });
+        // Restore to 'all' via 'No filter'
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
         for (let turn = 1; turn <= 10; turn++) {
           expect(screen.getByText(`Turn ${turn}`)).toBeInTheDocument();
         }
@@ -823,15 +833,17 @@ describe('TraceWaterfall Component', () => {
         fireEvent.click(allBtn);
 
         const toolSelect = screen.getByTestId('trace-tool-filter');
-        fireEvent.change(toolSelect, { target: { value: 'bash' } });
+        const container = toolSelect.closest('.multiselect-container')!;
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'bash' }));
 
         // Turn 1 (turn_message, undefined tool), Turn 8 (compaction, undefined tool), Turn 9 (tool_call, null tool)
         expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
         expect(screen.queryByText('Turn 8')).not.toBeInTheDocument();
         expect(screen.queryByText('Turn 9')).not.toBeInTheDocument();
 
-        // Revert to 'all'
-        fireEvent.change(toolSelect, { target: { value: 'all' } });
+        // Revert to 'all' via 'No filter'
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
         expect(screen.getByText('Turn 1')).toBeInTheDocument();
         expect(screen.getByText('Turn 8')).toBeInTheDocument();
         expect(screen.getByText('Turn 9')).toBeInTheDocument();
@@ -872,9 +884,14 @@ describe('TraceWaterfall Component', () => {
         render(<TraceWaterfall events={nonToolEvents} anomalies={[]} />);
 
         const toolSelect = screen.getByTestId('trace-tool-filter');
-        const options = Array.from(toolSelect.querySelectorAll('option')).map((o) => o.value);
-        expect(options).toEqual(['all']);
-        expect(toolSelect).toHaveTextContent('All Tools');
+        expect(toolSelect).toHaveTextContent('No filter');
+
+        fireEvent.click(toolSelect);
+        const container = toolSelect.closest('.multiselect-container')!;
+        const options = within(container as HTMLElement)
+          .getAllByRole('checkbox')
+          .map((cb) => cb.getAttribute('aria-label'));
+        expect(options).toEqual(['No filter']);
       });
     });
 
@@ -890,12 +907,14 @@ describe('TraceWaterfall Component', () => {
         const anomalySelect = screen.getByTestId('trace-anomaly-filter');
         expect(anomalySelect).toBeInTheDocument();
         expect(anomalySelect).toHaveAttribute('aria-label', 'Filter by anomaly rule');
+        expect(anomalySelect).toHaveTextContent('No filter');
 
-        const anomalyOptions = Array.from(anomalySelect.querySelectorAll('option')).map(
-          (opt) => opt.value
-        );
+        fireEvent.click(anomalySelect);
+        const container = anomalySelect.closest('.multiselect-container')!;
+        const checkboxes = within(container as HTMLElement).getAllByRole('checkbox');
+        const anomalyOptions = checkboxes.map((cb) => cb.getAttribute('aria-label'));
         expect(anomalyOptions).toEqual([
-          'all',
+          'No filter',
           'CONTEXT_SATURATION_SPIKE',
           'SUBAGENT_REWORK_LOOP',
           'TOOL_HIGH_FAILURE_RATE',
@@ -912,9 +931,11 @@ describe('TraceWaterfall Component', () => {
         );
 
         const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        const container = anomalySelect.closest('.multiselect-container')!;
 
         // 1. CONTEXT_SATURATION_SPIKE (matches Turn 5 by turn and session)
-        fireEvent.change(anomalySelect, { target: { value: 'CONTEXT_SATURATION_SPIKE' } });
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'CONTEXT_SATURATION_SPIKE' }));
         expect(screen.getByText('Turn 5')).toBeInTheDocument();
         expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
         expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
@@ -922,29 +943,32 @@ describe('TraceWaterfall Component', () => {
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
 
         // 2. SUBAGENT_REWORK_LOOP (matches Turn 6 by role and turn)
-        fireEvent.change(anomalySelect, { target: { value: 'SUBAGENT_REWORK_LOOP' } });
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'CONTEXT_SATURATION_SPIKE' }));
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'SUBAGENT_REWORK_LOOP' }));
         expect(screen.getByText('Turn 6')).toBeInTheDocument();
         expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
         expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
 
         // 3. TOOL_HIGH_FAILURE_RATE (matches Turn 4 by tool and turn)
-        fireEvent.change(anomalySelect, { target: { value: 'TOOL_HIGH_FAILURE_RATE' } });
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'SUBAGENT_REWORK_LOOP' }));
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'TOOL_HIGH_FAILURE_RATE' }));
         expect(screen.getByText('Turn 4')).toBeInTheDocument();
         expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
         expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
 
         // 4. TOOL_RETRY_STREAK (matches Turn 5 and Turn 10)
-        fireEvent.change(anomalySelect, { target: { value: 'TOOL_RETRY_STREAK' } });
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'TOOL_HIGH_FAILURE_RATE' }));
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'TOOL_RETRY_STREAK' }));
         expect(screen.getByText('Turn 5')).toBeInTheDocument();
         expect(screen.getByText('Turn 10')).toBeInTheDocument();
         expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
         expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
         expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
 
-        // 5. Restore to all
-        fireEvent.change(anomalySelect, { target: { value: 'all' } });
+        // 5. Restore to all via No filter
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
         expect(screen.getByText('Turn 4')).toBeInTheDocument();
         expect(screen.getByText('Turn 5')).toBeInTheDocument();
         expect(screen.getByText('Turn 6')).toBeInTheDocument();
@@ -962,16 +986,20 @@ describe('TraceWaterfall Component', () => {
         );
 
         const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        const container = anomalySelect.closest('.multiselect-container')!;
 
         // Turn 5 matches both CONTEXT_SATURATION_SPIKE and TOOL_RETRY_STREAK
-        fireEvent.change(anomalySelect, { target: { value: 'CONTEXT_SATURATION_SPIKE' } });
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'CONTEXT_SATURATION_SPIKE' }));
         expect(screen.getByText('Turn 5')).toBeInTheDocument();
 
-        fireEvent.change(anomalySelect, { target: { value: 'TOOL_RETRY_STREAK' } });
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'CONTEXT_SATURATION_SPIKE' }));
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'TOOL_RETRY_STREAK' }));
         expect(screen.getByText('Turn 5')).toBeInTheDocument();
 
         // But Turn 5 does not match SUBAGENT_REWORK_LOOP
-        fireEvent.change(anomalySelect, { target: { value: 'SUBAGENT_REWORK_LOOP' } });
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'TOOL_RETRY_STREAK' }));
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'SUBAGENT_REWORK_LOOP' }));
         expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
       });
 
@@ -979,15 +1007,26 @@ describe('TraceWaterfall Component', () => {
         const { rerender } = render(<TraceWaterfall events={adversarialEvents} anomalies={[]} />);
 
         let anomalySelect = screen.getByTestId('trace-anomaly-filter');
-        let options = Array.from(anomalySelect.querySelectorAll('option')).map((o) => o.value);
-        expect(options).toEqual(['all']);
-        expect(anomalySelect).toHaveTextContent('All Anomalies');
+        expect(anomalySelect).toHaveTextContent('No filter');
+        fireEvent.click(anomalySelect);
+        let container = anomalySelect.closest('.multiselect-container')!;
+        let options = within(container as HTMLElement)
+          .getAllByRole('checkbox')
+          .map((cb) => cb.getAttribute('aria-label'));
+        expect(options).toEqual(['No filter']);
 
         // Rerender with undefined anomalies
         rerender(<TraceWaterfall events={adversarialEvents} anomalies={undefined} />);
         anomalySelect = screen.getByTestId('trace-anomaly-filter');
-        options = Array.from(anomalySelect.querySelectorAll('option')).map((o) => o.value);
-        expect(options).toEqual(['all']);
+        expect(anomalySelect).toHaveTextContent('No filter');
+        if (anomalySelect.getAttribute('aria-expanded') !== 'true') {
+          fireEvent.click(anomalySelect);
+        }
+        container = anomalySelect.closest('.multiselect-container')!;
+        options = within(container as HTMLElement)
+          .getAllByRole('checkbox')
+          .map((cb) => cb.getAttribute('aria-label'));
+        expect(options).toEqual(['No filter']);
       });
 
       it('displays empty state and zero counter when selected anomaly rule matches no events in trace', () => {
@@ -1011,13 +1050,15 @@ describe('TraceWaterfall Component', () => {
         );
 
         const anomalySelect = screen.getByTestId('trace-anomaly-filter');
-        fireEvent.change(anomalySelect, { target: { value: 'CONTEXT_SATURATION_SPIKE' } });
+        const container = anomalySelect.closest('.multiselect-container')!;
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'CONTEXT_SATURATION_SPIKE' }));
 
         expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
         expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
 
-        // Recover on 'all'
-        fireEvent.change(anomalySelect, { target: { value: 'all' } });
+        // Recover on 'all' via 'No filter'
+        fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
         expect(screen.queryByText('No events match the selected filters.')).not.toBeInTheDocument();
         // In default errors_anomalies mode, plain errors 4, 5, 9, 10 are visible (4 events)
         expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
@@ -1038,11 +1079,23 @@ describe('TraceWaterfall Component', () => {
         const toolSelect = screen.getByTestId('trace-tool-filter');
         const anomalySelect = screen.getByTestId('trace-anomaly-filter');
 
+        const roleContainer = roleSelect.closest('.multiselect-container')!;
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+        const anomalyContainer = anomalySelect.closest('.multiselect-container')!;
+
         // Permutation 1: Tool Calls + Coder + bash + TOOL_HIGH_FAILURE_RATE -> exactly Turn 4
         fireEvent.click(toolsBtn);
-        fireEvent.change(roleSelect, { target: { value: 'coder' } });
-        fireEvent.change(toolSelect, { target: { value: 'bash' } });
-        fireEvent.change(anomalySelect, { target: { value: 'TOOL_HIGH_FAILURE_RATE' } });
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(roleSelect);
+
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(toolSelect);
+
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'TOOL_HIGH_FAILURE_RATE' }));
+        fireEvent.click(anomalySelect);
 
         expect(screen.getByText('Turn 4')).toBeInTheDocument();
         expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
@@ -1051,7 +1104,11 @@ describe('TraceWaterfall Component', () => {
 
         // Permutation 2: Orthogonal conflict between Tool and Anomaly:
         // Coder + edit + TOOL_HIGH_FAILURE_RATE (failure rate anomaly is on bash, not edit)
-        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(toolSelect);
+
         expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
         expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
 
@@ -1059,16 +1116,31 @@ describe('TraceWaterfall Component', () => {
         // Switch to All Events mode, Reviewer role, 'task' tool (task was invoked by orchestrator)
         const allBtn = screen.getByRole('button', { name: 'All Events' });
         fireEvent.click(allBtn);
-        fireEvent.change(roleSelect, { target: { value: 'reviewer' } });
-        fireEvent.change(toolSelect, { target: { value: 'task' } });
-        fireEvent.change(anomalySelect, { target: { value: 'all' } });
+
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'reviewer' }));
+        fireEvent.click(roleSelect);
+
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'task' }));
+        fireEvent.click(toolSelect);
+
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(anomalySelect);
 
         expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
         expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
 
         // Permutation 4: Non-tool event under tool filter:
         // Orchestrator role + task tool -> shows Turn 2 (task), excludes Turn 1 (turn_message)
-        fireEvent.change(roleSelect, { target: { value: 'orchestrator' } });
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'reviewer' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'orchestrator' }));
+        fireEvent.click(roleSelect);
+
         expect(screen.getByText('Turn 2')).toBeInTheDocument();
         expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
@@ -1076,9 +1148,20 @@ describe('TraceWaterfall Component', () => {
         // Permutation 5: Errors & Anomalies mode + Tester role + bash tool + SUBAGENT_REWORK_LOOP
         const errorsBtn = screen.getByRole('button', { name: 'Show only errors and anomalies' });
         fireEvent.click(errorsBtn);
-        fireEvent.change(roleSelect, { target: { value: 'tester' } });
-        fireEvent.change(toolSelect, { target: { value: 'bash' } });
-        fireEvent.change(anomalySelect, { target: { value: 'SUBAGENT_REWORK_LOOP' } });
+
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'orchestrator' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'tester' }));
+        fireEvent.click(roleSelect);
+
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'task' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(toolSelect);
+
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'SUBAGENT_REWORK_LOOP' }));
+        fireEvent.click(anomalySelect);
 
         expect(screen.getByText('Turn 6')).toBeInTheDocument();
         expect(screen.queryByText('Turn 9')).not.toBeInTheDocument();
@@ -1099,20 +1182,30 @@ describe('TraceWaterfall Component', () => {
         const toolSelect = screen.getByTestId('trace-tool-filter');
         const anomalySelect = screen.getByTestId('trace-anomaly-filter');
 
+        const roleContainer = roleSelect.closest('.multiselect-container')!;
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+        const anomalyContainer = anomalySelect.closest('.multiselect-container')!;
+
         // Step 1: All Events -> 10 events
         fireEvent.click(allBtn);
         expect(screen.getByText(/Showing 10 of 10 events/)).toBeInTheDocument();
 
         // Step 2: Restrict role to 'coder' -> 4 events (Turns 3, 4, 5, 10)
-        fireEvent.change(roleSelect, { target: { value: 'coder' } });
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(roleSelect);
         expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
 
         // Step 3: Restrict tool to 'edit' -> 2 events (Turns 5, 10)
-        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(toolSelect);
         expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
 
         // Step 4: Restrict anomaly to 'CONTEXT_SATURATION_SPIKE' -> 1 event (Turn 5)
-        fireEvent.change(anomalySelect, { target: { value: 'CONTEXT_SATURATION_SPIKE' } });
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'CONTEXT_SATURATION_SPIKE' }));
+        fireEvent.click(anomalySelect);
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
 
         // Step 5: Switch to errors_anomalies mode -> Turn 5 is an error with spike -> still 1 event
@@ -1120,20 +1213,26 @@ describe('TraceWaterfall Component', () => {
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
 
         // Step 6: Step-by-step relaxation:
-        // Relax anomaly to 'all' -> 2 events (Turns 5, 10)
-        fireEvent.change(anomalySelect, { target: { value: 'all' } });
+        // Relax anomaly to 'No filter' -> 2 events (Turns 5, 10)
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(anomalySelect);
         expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
 
-        // Relax tool to 'all' -> 3 events in errors_anomalies mode (Turns 4, 5, 10 - Turn 3 is success without anomaly)
-        fireEvent.change(toolSelect, { target: { value: 'all' } });
+        // Relax tool to 'No filter' -> 3 events in errors_anomalies mode (Turns 4, 5, 10 - Turn 3 is success without anomaly)
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(toolSelect);
         expect(screen.getByText(/Showing 3 of 10 events/)).toBeInTheDocument();
 
         // Switch to 'all' mode -> 4 events (Turns 3, 4, 5, 10)
         fireEvent.click(allBtn);
         expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
 
-        // Relax role to 'all' -> 10 events
-        fireEvent.change(roleSelect, { target: { value: 'all' } });
+        // Relax role to 'No filter' -> 10 events
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(roleSelect);
         expect(screen.getByText(/Showing 10 of 10 events/)).toBeInTheDocument();
       });
 
@@ -1149,24 +1248,27 @@ describe('TraceWaterfall Component', () => {
         const toolsBtn = screen.getByRole('button', { name: 'Tool Calls Only' });
         const errorsBtn = screen.getByRole('button', { name: 'Show only errors and anomalies' });
         const toolSelect = screen.getByTestId('trace-tool-filter');
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
 
         // Set tool to 'task'
-        fireEvent.change(toolSelect, { target: { value: 'task' } });
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'task' }));
+        fireEvent.click(toolSelect);
 
         // Default mode is errors_anomalies: Turn 2 (task) succeeded with no anomaly -> 0 events
         expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
         expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
 
-        // Switch to All Events: Turn 2 becomes visible, tool select value remains 'task'
+        // Switch to All Events: Turn 2 becomes visible, tool select summary remains 'task'
         fireEvent.click(allBtn);
         expect(screen.getByText('Turn 2')).toBeInTheDocument();
-        expect(toolSelect).toHaveValue('task');
+        expect(toolSelect.textContent).toContain('task');
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
 
         // Switch to Tool Calls Only: Turn 2 is a tool call -> still visible, tool select remains 'task'
         fireEvent.click(toolsBtn);
         expect(screen.getByText('Turn 2')).toBeInTheDocument();
-        expect(toolSelect).toHaveValue('task');
+        expect(toolSelect.textContent).toContain('task');
         expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
 
         // Switch back to errors_anomalies: returns to 0 matching events
@@ -1187,10 +1289,17 @@ describe('TraceWaterfall Component', () => {
 
         const toolSelect = screen.getByTestId('trace-tool-filter');
         const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+        const anomalyContainer = anomalySelect.closest('.multiselect-container')!;
 
         // Filter to tool 'edit' and anomaly 'TOOL_RETRY_STREAK'
-        fireEvent.change(toolSelect, { target: { value: 'edit' } });
-        fireEvent.change(anomalySelect, { target: { value: 'TOOL_RETRY_STREAK' } });
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(toolSelect);
+
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'TOOL_RETRY_STREAK' }));
+        fireEvent.click(anomalySelect);
 
         // Turn 5 and Turn 10 match
         const turn5Item = screen.getByText('Turn 5');
@@ -1217,15 +1326,24 @@ describe('TraceWaterfall Component', () => {
         expect(counter).toHaveTextContent('Showing 5 of 10 events');
 
         const toolSelect = screen.getByTestId('trace-tool-filter');
-        fireEvent.change(toolSelect, { target: { value: 'edit' } });
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(toolSelect);
         expect(counter).toHaveTextContent('Showing 2 of 10 events');
 
-        fireEvent.change(toolSelect, { target: { value: 'task' } });
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'task' }));
+        fireEvent.click(toolSelect);
         expect(counter).toHaveTextContent('Showing 0 of 10 events');
 
         const allBtn = screen.getByRole('button', { name: 'All Events' });
         fireEvent.click(allBtn);
-        fireEvent.change(toolSelect, { target: { value: 'all' } });
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(toolSelect);
         expect(counter).toHaveTextContent('Showing 10 of 10 events');
       });
 
@@ -1236,8 +1354,7 @@ describe('TraceWaterfall Component', () => {
             session_id: 's-single',
             turn: 1,
             role: 'coder',
-            event_type: 'tool_call',
-            tool_name: 'bash',
+            event_type: 'turn_message',
             status: 'error',
             context_tokens: 500,
           },
@@ -1247,8 +1364,9 @@ describe('TraceWaterfall Component', () => {
 
         expect(screen.getByText(/Showing 1 of 1 events/)).toBeInTheDocument();
 
-        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
-        fireEvent.change(roleSelect, { target: { value: 'tester' } });
+        // Switch to Tool Calls Only -> Turn 1 is turn_message -> 0 of 1 events
+        const toolsBtn = screen.getByRole('button', { name: 'Tool Calls Only' });
+        fireEvent.click(toolsBtn);
 
         expect(screen.getByText(/Showing 0 of 1 events/)).toBeInTheDocument();
         expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
@@ -1266,21 +1384,21 @@ describe('TraceWaterfall Component', () => {
 
         // Tool filter accessibility
         const toolSelect = screen.getByTestId('trace-tool-filter');
-        expect(toolSelect).toHaveAttribute('id', 'trace-tool-filter');
+        expect(toolSelect).toHaveAttribute('id', 'trace-tool-filter-trigger');
         expect(toolSelect).toHaveAttribute('aria-label', 'Filter by tool');
         expect(screen.getByLabelText('Tool:')).toBe(toolSelect);
         expect(screen.getByRole('combobox', { name: 'Filter by tool' })).toBe(toolSelect);
 
         // Anomaly filter accessibility
         const anomalySelect = screen.getByTestId('trace-anomaly-filter');
-        expect(anomalySelect).toHaveAttribute('id', 'trace-anomaly-filter');
+        expect(anomalySelect).toHaveAttribute('id', 'trace-anomaly-filter-trigger');
         expect(anomalySelect).toHaveAttribute('aria-label', 'Filter by anomaly rule');
         expect(screen.getByLabelText('Anomaly:')).toBe(anomalySelect);
         expect(screen.getByRole('combobox', { name: 'Filter by anomaly rule' })).toBe(anomalySelect);
 
         // Role filter accessibility
         const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
-        expect(roleSelect).toHaveAttribute('id', 'trace-role-filter');
+        expect(roleSelect).toHaveAttribute('id', 'trace-role-filter-trigger');
         expect(roleSelect).toHaveAttribute('aria-label', 'Filter by subagent role');
         expect(screen.getByLabelText('Role:')).toBe(roleSelect);
 
@@ -1302,10 +1420,608 @@ describe('TraceWaterfall Component', () => {
         const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
         expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
 
-        // Trigger empty state
+        // Trigger empty state by filtering tool to task (which has no errors in default mode)
         const toolSelect = screen.getByTestId('trace-tool-filter');
-        fireEvent.change(toolSelect, { target: { value: 'task' } });
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'task' }));
+        fireEvent.click(toolSelect);
+
         expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+        expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
+      });
+    });
+
+    describe('Multi-Select & "No filter" Enhancements', () => {
+      it('initial mount displays "No filter" on Role, Tool, and Anomaly triggers and passes through all events in All Events mode', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+
+        expect(roleSelect.textContent).toContain('No filter');
+        expect(toolSelect.textContent).toContain('No filter');
+        expect(anomalySelect.textContent).toContain('No filter');
+
+        // Switch to All Events mode
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        // With "No filter" active on all 3, all events pass including non-tool events (Turns 1, 8, 9)
+        expect(screen.getByText('Turn 1')).toBeInTheDocument();
+        expect(screen.getByText('Turn 8')).toBeInTheDocument();
+        expect(screen.getByText('Turn 9')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 10 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('supports multi-tool selection (e.g. bash + edit) simultaneously', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+
+        // Select bash
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        // Select edit without closing
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(toolSelect);
+
+        expect(toolSelect.textContent).toContain('bash, edit');
+
+        // Turns 4, 6 (bash) and Turns 5, 10 (edit) are visible
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+
+        // Other tools and non-tool turns excluded
+        expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 2')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 3')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 7')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 8')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 9')).not.toBeInTheDocument();
+
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('supports multi-anomaly selection (e.g. TOOL_RETRY_STREAK + CONTEXT_SATURATION_SPIKE)', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        const anomalyContainer = anomalySelect.closest('.multiselect-container')!;
+
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'TOOL_RETRY_STREAK' }));
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'CONTEXT_SATURATION_SPIKE' }));
+        fireEvent.click(anomalySelect);
+
+        // Turn 5 (spike & retry) and Turn 10 (retry streak) match
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+
+        // Turn 4 (failure rate only) and Turn 6 (rework loop only) excluded
+        expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
+
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('supports multi-role selection (e.g. coder + tester)', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const roleContainer = roleSelect.closest('.multiselect-container')!;
+
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'tester' }));
+        fireEvent.click(roleSelect);
+
+        expect(roleSelect.textContent).toContain('coder, tester');
+
+        // Coder (Turns 3, 4, 5, 10) and Tester (Turns 6, 9)
+        expect(screen.getByText('Turn 3')).toBeInTheDocument();
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.getByText('Turn 9')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+
+        // Orchestrator (Turns 1, 2) and Reviewer (Turns 7, 8) excluded
+        expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 2')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 7')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 8')).not.toBeInTheDocument();
+
+        expect(screen.getByText(/Showing 6 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('displays count summary format when three or more options are selected', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'read' }));
+        fireEvent.click(toolSelect);
+
+        expect(toolSelect.textContent).toContain('3 selected');
+      });
+
+      it('toggling an option on and then off restores "No filter" pass-through', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+
+        // Select task
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'task' }));
+        fireEvent.click(toolSelect);
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Deselect task
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'task' }));
+        fireEvent.click(toolSelect);
+
+        // Reverted to No filter
+        expect(toolSelect.textContent).toContain('No filter');
+        expect(screen.getByText(/Showing 10 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('composes multi-tool and multi-role conjunction in errors_anomalies mode', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const roleContainer = roleSelect.closest('.multiselect-container')!;
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+
+        // Select coder
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(roleSelect);
+
+        // Select bash + edit
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(toolSelect);
+
+        // In default errors_anomalies mode:
+        // Turn 4 (coder, bash, error)
+        // Turn 5 (coder, edit, error)
+        // Turn 10 (coder, edit, error)
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+
+        expect(screen.queryByText('Turn 3')).not.toBeInTheDocument(); // coder read success
+        expect(screen.queryByText('Turn 6')).not.toBeInTheDocument(); // tester
+        expect(screen.queryByText('Turn 9')).not.toBeInTheDocument(); // tester null tool
+
+        expect(screen.getByText(/Showing 3 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('verifies non-tool event pass-through when Tool is "No filter" and exclusion when specific tool is active', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const roleContainer = roleSelect.closest('.multiselect-container')!;
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+
+        // Filter role to 'reviewer'
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'reviewer' }));
+        fireEvent.click(roleSelect);
+
+        // Reviewer has Turn 7 (tool_call: read) and Turn 8 (compaction: no tool)
+        // Since Tool filter is "No filter", Turn 8 passes through
+        expect(screen.getByText('Turn 7')).toBeInTheDocument();
+        expect(screen.getByText('Turn 8')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // Now restrict Tool to 'read'
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'read' }));
+        fireEvent.click(toolSelect);
+
+        // Turn 8 (compaction, no tool) is now excluded
+        expect(screen.getByText('Turn 7')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 8')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 1 of 10 events/)).toBeInTheDocument();
+
+        // Restore Tool to "No filter" via checkbox
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(toolSelect);
+
+        // Turn 8 immediately passes through again
+        expect(screen.getByText('Turn 7')).toBeInTheDocument();
+        expect(screen.getByText('Turn 8')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('verifies non-anomaly event pass-through when Anomaly is "No filter" and exclusion when specific anomaly is active', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        const roleContainer = roleSelect.closest('.multiselect-container')!;
+        const anomalyContainer = anomalySelect.closest('.multiselect-container')!;
+
+        // Filter role to 'coder'
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(roleSelect);
+
+        // Coder has Turn 3 (read, success, no anomaly), Turn 4 (bash, error, anomaly), Turn 5 (edit, error, anomaly), Turn 10 (edit, error, anomaly)
+        // With Anomaly filter at "No filter", all 4 turns pass through (including non-anomaly Turn 3)
+        expect(screen.getByText('Turn 3')).toBeInTheDocument();
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+
+        // Now filter Anomaly to 'TOOL_RETRY_STREAK'
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'TOOL_RETRY_STREAK' }));
+        fireEvent.click(anomalySelect);
+
+        // Non-anomaly Turn 3 and failure-rate Turn 4 are excluded
+        expect(screen.queryByText('Turn 3')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 4')).not.toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // Restore Anomaly to "No filter"
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(anomalySelect);
+
+        expect(screen.getByText('Turn 3')).toBeInTheDocument();
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('handles three-tool selection, step-down deselection, and return to "No filter"', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+
+        // Select bash, edit, and read
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'read' }));
+        fireEvent.click(toolSelect);
+
+        expect(toolSelect.textContent).toContain('3 selected');
+        // Turns 3, 7 (read), Turns 4, 6 (bash), Turns 5, 10 (edit) = 6 events
+        expect(screen.getByText('Turn 3')).toBeInTheDocument();
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.getByText('Turn 7')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 6 of 10 events/)).toBeInTheDocument();
+
+        // Deselect read -> 2 tools (bash, edit)
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'read' }));
+        fireEvent.click(toolSelect);
+
+        expect(toolSelect.textContent).toContain('bash, edit');
+        expect(screen.queryByText('Turn 3')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 7')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+
+        // Deselect edit -> 1 tool (bash)
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(toolSelect);
+
+        expect(toolSelect.textContent).toContain('bash');
+        expect(screen.queryByText('Turn 5')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 10')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 10 events/)).toBeInTheDocument();
+
+        // Deselect bash (last option) -> reverts to ['all'] ("No filter")
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(toolSelect);
+
+        expect(toolSelect.textContent).toContain('No filter');
+        expect(screen.getByText(/Showing 10 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('handles three-anomaly selection and excludes error turns lacking matching anomaly rule', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+        const anomalyContainer = anomalySelect.closest('.multiselect-container')!;
+
+        // Select 3 anomalies: TOOL_RETRY_STREAK, TOOL_HIGH_FAILURE_RATE, SUBAGENT_REWORK_LOOP
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'TOOL_RETRY_STREAK' }));
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'TOOL_HIGH_FAILURE_RATE' }));
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'SUBAGENT_REWORK_LOOP' }));
+        fireEvent.click(anomalySelect);
+
+        expect(anomalySelect.textContent).toContain('3 selected');
+
+        // Turns 4 (TOOL_HIGH_FAILURE_RATE), 5 (TOOL_RETRY_STREAK), 6 (SUBAGENT_REWORK_LOOP), 10 (TOOL_RETRY_STREAK)
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+
+        // Turn 9 is an error turn but has NO matching anomaly rule -> strictly excluded
+        expect(screen.queryByText('Turn 9')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('handles three-role selection and excludes unselected roles', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const allBtn = screen.getByRole('button', { name: 'All Events' });
+        fireEvent.click(allBtn);
+
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const roleContainer = roleSelect.closest('.multiselect-container')!;
+
+        // Select orchestrator, coder, reviewer
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'orchestrator' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'reviewer' }));
+        fireEvent.click(roleSelect);
+
+        expect(roleSelect.textContent).toContain('3 selected');
+
+        // Orchestrator (1, 2), Coder (3, 4, 5, 10), Reviewer (7, 8) -> 8 events
+        expect(screen.getByText('Turn 1')).toBeInTheDocument();
+        expect(screen.getByText('Turn 2')).toBeInTheDocument();
+        expect(screen.getByText('Turn 3')).toBeInTheDocument();
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 7')).toBeInTheDocument();
+        expect(screen.getByText('Turn 8')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+
+        // Tester turns (6, 9) excluded
+        expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
+        expect(screen.queryByText('Turn 9')).not.toBeInTheDocument();
+
+        expect(screen.getByText(/Showing 8 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('evaluates full 4-dimensional conjunction across filterMode, multi-role, multi-tool, and multi-anomaly', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        const toolsBtn = screen.getByRole('button', { name: 'Tool Calls Only' });
+        fireEvent.click(toolsBtn);
+
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const toolSelect = screen.getByTestId('trace-tool-filter');
+        const anomalySelect = screen.getByTestId('trace-anomaly-filter');
+
+        const roleContainer = roleSelect.closest('.multiselect-container')!;
+        const toolContainer = toolSelect.closest('.multiselect-container')!;
+        const anomalyContainer = anomalySelect.closest('.multiselect-container')!;
+
+        // 1. Roles: coder, tester
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'tester' }));
+        fireEvent.click(roleSelect);
+
+        // 2. Tools: bash, edit
+        fireEvent.click(toolSelect);
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' }));
+        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'edit' }));
+        fireEvent.click(toolSelect);
+
+        // 3. Anomalies: TOOL_RETRY_STREAK, TOOL_HIGH_FAILURE_RATE
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'TOOL_RETRY_STREAK' }));
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'TOOL_HIGH_FAILURE_RATE' }));
+        fireEvent.click(anomalySelect);
+
+        // Turn 4: coder, bash, tool_call, error, TOOL_HIGH_FAILURE_RATE -> matches
+        // Turn 5: coder, edit, tool_call, error, TOOL_RETRY_STREAK -> matches
+        // Turn 10: coder, edit, tool_call, error, TOOL_RETRY_STREAK -> matches
+        // Turn 6: tester, bash, tool_call, SUBAGENT_REWORK_LOOP -> excluded by anomaly filter
+        // Turn 3: coder, read -> excluded by tool filter
+        // Turn 9: tester, null tool -> excluded by tool filter
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.queryByText('Turn 6')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 3 of 10 events/)).toBeInTheDocument();
+
+        // Now add SUBAGENT_REWORK_LOOP to anomaly filter
+        fireEvent.click(anomalySelect);
+        fireEvent.click(within(anomalyContainer as HTMLElement).getByRole('checkbox', { name: 'SUBAGENT_REWORK_LOOP' }));
+        fireEvent.click(anomalySelect);
+
+        // Turn 6 now matches as well!
+        expect(screen.getByText('Turn 4')).toBeInTheDocument();
+        expect(screen.getByText('Turn 5')).toBeInTheDocument();
+        expect(screen.getByText('Turn 6')).toBeInTheDocument();
+        expect(screen.getByText('Turn 10')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+
+        // Conflict producing 0 events: set role to 'orchestrator' only
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'coder' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'tester' }));
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'orchestrator' }));
+        fireEvent.click(roleSelect);
+
+        // Orchestrator has no bash or edit tools -> 0 events
+        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
+        expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
+
+        // Recovery: toggle role back to "No filter"
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(roleSelect);
+
+        expect(screen.queryByText('No events match the selected filters.')).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 4 of 10 events/)).toBeInTheDocument();
+      });
+
+      it('closes dropdowns via keyboard Escape key and clicking outside', () => {
+        render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        // 1. Role dropdown: open and close via Escape on trigger
+        const roleTrigger = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        fireEvent.click(roleTrigger);
+        expect(roleTrigger).toHaveAttribute('aria-expanded', 'true');
+
+        fireEvent.keyDown(roleTrigger, { key: 'Escape' });
+        expect(roleTrigger).toHaveAttribute('aria-expanded', 'false');
+
+        // 2. Tool dropdown: open and close via Escape on a checkbox within the dropdown
+        const toolTrigger = screen.getByTestId('trace-tool-filter');
+        fireEvent.click(toolTrigger);
+        expect(toolTrigger).toHaveAttribute('aria-expanded', 'true');
+
+        const toolContainer = toolTrigger.closest('.multiselect-container')!;
+        const bashCheckbox = within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'bash' });
+        fireEvent.keyDown(bashCheckbox, { key: 'Escape' });
+        expect(toolTrigger).toHaveAttribute('aria-expanded', 'false');
+
+        // 3. Anomaly dropdown: open and close by clicking outside
+        const anomalyTrigger = screen.getByTestId('trace-anomaly-filter');
+        fireEvent.click(anomalyTrigger);
+        expect(anomalyTrigger).toHaveAttribute('aria-expanded', 'true');
+
+        // Click outside on the card header
+        const cardHeader = screen.getByText('Execution Trace Waterfall');
+        fireEvent.mouseDown(cardHeader);
+        expect(anomalyTrigger).toHaveAttribute('aria-expanded', 'false');
+      });
+
+      it('asserts zero emojis across all rendered elements and multi-select states', () => {
+        const { container } = render(
+          <TraceWaterfall
+            events={adversarialEvents}
+            anomalies={adversarialAnomalies}
+          />
+        );
+
+        // Open each dropdown to ensure options are also rendered in DOM
+        const roleTrigger = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const toolTrigger = screen.getByTestId('trace-tool-filter');
+        const anomalyTrigger = screen.getByTestId('trace-anomaly-filter');
+
+        fireEvent.click(roleTrigger);
+        fireEvent.click(toolTrigger);
+        fireEvent.click(anomalyTrigger);
+
+        const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
         expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
       });
     });

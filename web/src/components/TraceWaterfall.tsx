@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
 import { formatTokensK } from '../domain/formatters';
 import { AnomalyBadge } from './AnomalyBadge';
+import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
 
 export interface TraceWaterfallProps {
   readonly events: readonly EventFact[];
@@ -104,9 +105,9 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   dataSource = 'committed_ledger',
 }) => {
   const [filterMode, setFilterMode] = useState<FilterMode>('errors_anomalies');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [toolFilter, setToolFilter] = useState<string>('all');
-  const [anomalyFilter, setAnomalyFilter] = useState<string>('all');
+  const [selectedRoles, setSelectedRoles] = useState<readonly string[]>(['all']);
+  const [selectedTools, setSelectedTools] = useState<readonly string[]>(['all']);
+  const [selectedAnomalies, setSelectedAnomalies] = useState<readonly string[]>(['all']);
   const [localSelectedEvent, setLocalSelectedEvent] = useState<EventFact | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
 
@@ -138,15 +139,22 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
   // Unique roles for filter dropdown
   const availableRoles = useMemo(() => {
-    if (!events) return [];
+    if (!events || events.length === 0) return [];
     const roleSet = new Set<string>();
     for (const e of events) {
-      if (e.role) {
-        roleSet.add(e.role);
+      if (e.role && e.role.trim().length > 0) {
+        roleSet.add(e.role.trim());
       }
     }
     return Array.from(roleSet).sort((a, b) => a.localeCompare(b));
   }, [events]);
+
+  const roleOptions: readonly MultiSelectOption[] = useMemo(() => {
+    return availableRoles.map((role) => ({
+      value: role,
+      label: role,
+    }));
+  }, [availableRoles]);
 
   // Unique tools for filter dropdown
   const availableTools = useMemo(() => {
@@ -160,6 +168,13 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     return Array.from(toolSet).sort((a, b) => a.localeCompare(b));
   }, [events]);
 
+  const toolOptions: readonly MultiSelectOption[] = useMemo(() => {
+    return availableTools.map((tool) => ({
+      value: tool,
+      label: tool,
+    }));
+  }, [availableTools]);
+
   // Unique anomaly rule IDs for filter dropdown
   const availableAnomalies = useMemo(() => {
     if (!anomalies || anomalies.length === 0) return [];
@@ -172,17 +187,45 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     return Array.from(anomalySet).sort((a, b) => a.localeCompare(b));
   }, [anomalies]);
 
+  const anomalyOptions: readonly MultiSelectOption[] = useMemo(() => {
+    return availableAnomalies.map((ruleId) => ({
+      value: ruleId,
+      label: ruleId,
+    }));
+  }, [availableAnomalies]);
+
+  const isRoleFilterActive =
+    selectedRoles.length > 0 &&
+    !selectedRoles.includes('all') &&
+    !selectedRoles.includes('ALL');
+
+  const isToolFilterActive =
+    selectedTools.length > 0 &&
+    !selectedTools.includes('all') &&
+    !selectedTools.includes('ALL');
+
+  const isAnomalyFilterActive =
+    selectedAnomalies.length > 0 &&
+    !selectedAnomalies.includes('all') &&
+    !selectedAnomalies.includes('ALL');
+
+  const activeAnomalies = useMemo(() => {
+    if (!isAnomalyFilterActive || !anomalies || anomalies.length === 0) {
+      return undefined;
+    }
+    return anomalies.filter(
+      (a) => a.rule_id && selectedAnomalies.includes(a.rule_id.trim())
+    );
+  }, [anomalies, isAnomalyFilterActive, selectedAnomalies]);
+
   // Filtered event list
   const filteredEvents = useMemo(() => {
-    const anomaliesForFilter =
-      anomalyFilter !== 'all' && anomalies
-        ? anomalies.filter((a) => a.rule_id.trim() === anomalyFilter)
-        : undefined;
-
     return sortedEvents.filter((e) => {
       // 1. Role filter
-      if (roleFilter !== 'all' && e.role !== roleFilter) {
-        return false;
+      if (isRoleFilterActive) {
+        if (!e.role || !selectedRoles.includes(e.role.trim())) {
+          return false;
+        }
       }
 
       // 2. Filter mode
@@ -199,13 +242,19 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       }
 
       // 3. Tool filter
-      if (toolFilter !== 'all' && e.tool_name?.trim() !== toolFilter) {
-        return false;
+      if (isToolFilterActive) {
+        if (
+          !e.tool_name ||
+          e.tool_name.trim().length === 0 ||
+          !selectedTools.includes(e.tool_name.trim())
+        ) {
+          return false;
+        }
       }
 
       // 4. Anomaly filter
-      if (anomalyFilter !== 'all') {
-        const hasMatchingRuleAnomaly = Boolean(findMatchingAnomaly(e, anomaliesForFilter));
+      if (isAnomalyFilterActive) {
+        const hasMatchingRuleAnomaly = Boolean(findMatchingAnomaly(e, activeAnomalies));
         if (!hasMatchingRuleAnomaly) {
           return false;
         }
@@ -213,7 +262,17 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
       return true;
     });
-  }, [sortedEvents, roleFilter, filterMode, toolFilter, anomalyFilter, anomalies]);
+  }, [
+    sortedEvents,
+    isRoleFilterActive,
+    selectedRoles,
+    filterMode,
+    anomalies,
+    isToolFilterActive,
+    selectedTools,
+    isAnomalyFilterActive,
+    activeAnomalies,
+  ]);
 
   if (!events || events.length === 0) {
     return (
@@ -271,67 +330,41 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             </button>
           </div>
 
-          <div className="role-filter-group">
-            <label htmlFor="trace-role-filter" className="role-filter-label">
-              Role:
-            </label>
-            <select
-              id="trace-role-filter"
-              aria-label="Filter by subagent role"
-              className="role-filter-select"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-            >
-              <option value="all">All Roles</option>
-              {availableRoles.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            id="trace-role-filter"
+            testId="trace-role-filter"
+            label="Role"
+            allLabel="No filter"
+            ariaLabel="Filter by subagent role"
+            className="role-filter-group"
+            options={roleOptions}
+            selectedValues={selectedRoles}
+            onChange={setSelectedRoles}
+          />
 
-          <div className="tool-filter-group">
-            <label htmlFor="trace-tool-filter" className="tool-filter-label">
-              Tool:
-            </label>
-            <select
-              id="trace-tool-filter"
-              data-testid="trace-tool-filter"
-              aria-label="Filter by tool"
-              className="tool-filter-select"
-              value={toolFilter}
-              onChange={(e) => setToolFilter(e.target.value)}
-            >
-              <option value="all">All Tools</option>
-              {availableTools.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            id="trace-tool-filter"
+            testId="trace-tool-filter"
+            label="Tool"
+            allLabel="No filter"
+            ariaLabel="Filter by tool"
+            className="tool-filter-group"
+            options={toolOptions}
+            selectedValues={selectedTools}
+            onChange={setSelectedTools}
+          />
 
-          <div className="anomaly-filter-group">
-            <label htmlFor="trace-anomaly-filter" className="anomaly-filter-label">
-              Anomaly:
-            </label>
-            <select
-              id="trace-anomaly-filter"
-              data-testid="trace-anomaly-filter"
-              aria-label="Filter by anomaly rule"
-              className="anomaly-filter-select"
-              value={anomalyFilter}
-              onChange={(e) => setAnomalyFilter(e.target.value)}
-            >
-              <option value="all">All Anomalies</option>
-              {availableAnomalies.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            id="trace-anomaly-filter"
+            testId="trace-anomaly-filter"
+            label="Anomaly"
+            allLabel="No filter"
+            ariaLabel="Filter by anomaly rule"
+            className="anomaly-filter-group"
+            options={anomalyOptions}
+            selectedValues={selectedAnomalies}
+            onChange={setSelectedAnomalies}
+          />
         </div>
       </div>
 
