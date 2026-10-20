@@ -9,9 +9,9 @@ Acts as the Project Owner and Product Manager for the **AgenticLens** telemetry 
 
 ---
 
-## Configuration & Parametrization (`.agenticlens/config.yaml`)
+## Configuration & Parametrization (`.agenticlens-config.yaml`)
 
-At startup, inspect `.agenticlens/config.yaml` in the project root to load project parameters (falling back to defaults if not present):
+At startup, inspect `.agenticlens-config.yaml` in the project root to load project parameters (falling back to defaults if not present):
 - `ticket.prefixes`: Supported prefix identifiers and descriptions (defaults: `AL`, `GEN`, `PO`).
 - `workspaces.dir`: Directory for workspace artifacts (default: `"workspaces"`).
 - `project_name`: Project name (default: `"AgenticLens"`).
