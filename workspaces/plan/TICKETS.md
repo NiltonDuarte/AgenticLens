@@ -37,6 +37,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/to-do/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
 - `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 - `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
+- `workspaces/plan/to-do/AL2-1 agent anomaly debug prompt generator engine http endpoint and cli.md`
+- `workspaces/plan/to-do/AL2-2 interactive debug prompt drawer clipboard integration and waterfall actions in web dashboard.md`
+- `workspaces/plan/to-do/AL2-3 workspace archive cli engine date based compaction and interactive selection.md`
+- `workspaces/plan/to-do/AL2-4 transparent in memory archive ingestion in repository scanner server api and web ui.md`
+- `workspaces/plan/to-do/AL2-5 multi project configuration schema domain aggregations and multi folder scanner.md`
+- `workspaces/plan/to-do/AL2-6 remote git repository ingestion shallow cache manager and project management api.md`
+- `workspaces/plan/to-do/AL2-7 multi project web dashboard selector cross project fleet overview and comparative analytics.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
@@ -66,6 +73,30 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocks**: AL-36
   - **File**: `workspaces/plan/to-do/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
 
+- **AL2-1**: Agent Anomaly Debug Prompt Generator Engine, HTTP Endpoint, and CLI
+  - **Subsystem**: Domain / Adapters / HTTP / CLI / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL2-2
+  - **File**: `workspaces/plan/to-do/AL2-1 agent anomaly debug prompt generator engine http endpoint and cli.md`
+
+- **AL2-3**: Workspace Archive CLI Engine, Date-Based Compaction, and Interactive Selection
+  - **Subsystem**: Domain / Adapters / CLI / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL2-4
+  - **File**: `workspaces/plan/to-do/AL2-3 workspace archive cli engine date based compaction and interactive selection.md`
+
+- **AL2-5**: Multi-Project Configuration Schema, Domain Aggregations, and Multi-Folder Scanner
+  - **Subsystem**: Domain / Adapters / CLI / Config / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL2-6, AL2-7
+  - **File**: `workspaces/plan/to-do/AL2-5 multi project configuration schema domain aggregations and multi folder scanner.md`
+
 ---
 
 ## Pending
@@ -85,6 +116,38 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: AL-36
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
+
+- **AL2-2**: Interactive Debug Prompt Drawer, Clipboard Integration, and Waterfall Actions in Web Dashboard
+  - **Subsystem**: Presentation / Web / Components / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Pending
+  - **Blocked by**: AL2-1
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL2-2 interactive debug prompt drawer clipboard integration and waterfall actions in web dashboard.md`
+
+- **AL2-4**: Transparent In-Memory Archive Ingestion in Repository Scanner, Server API, and Web UI
+  - **Subsystem**: Adapters / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Pending
+  - **Blocked by**: AL2-3
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL2-4 transparent in memory archive ingestion in repository scanner server api and web ui.md`
+
+- **AL2-6**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
+  - **Subsystem**: Adapters / Git / HTTP / Server / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Pending
+  - **Blocked by**: AL2-5
+  - **Blocks**: AL2-7
+  - **File**: `workspaces/plan/to-do/AL2-6 remote git repository ingestion shallow cache manager and project management api.md`
+
+- **AL2-7**: Multi-Project Web Dashboard Selector, Cross-Project Fleet Overview, and Comparative Analytics
+  - **Subsystem**: Presentation / Web / Components / State / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Pending
+  - **Blocked by**: AL2-5, AL2-6
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL2-7 multi project web dashboard selector cross project fleet overview and comparative analytics.md`
 
 ---
 

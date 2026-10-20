@@ -13,6 +13,8 @@ ticket:
   prefixes:
     - prefix: AL
       description: Core AgenticLens development features, bugfixes, and technical initiatives
+    - prefix: AL2
+      description: Core AgenticLens v2 architecture, multi-project observability, and advanced debugging initiatives
     - prefix: GEN
       description: General multi-agent engineering tasks and ad-hoc untracked work
       ticket_type: chore
