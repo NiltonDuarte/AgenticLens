@@ -8,7 +8,7 @@ As AgenticLens approaches its v1.0.0 first public release, two critical capabili
    - AgenticLens was developed inside this specific repository, causing repo-specific assumptions to leak into source code and domain adapters.
    - In `backend/internal/adapters/git/analyzer.go` and `classifier.go`, source folder prefixes (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`), workspace paths (`workspaces/`), and the default branch (`origin/main`) are hardcoded instead of dynamically evaluating `ProjectConfig.Workspaces.SrcFolders`, `ProjectConfig.Workspaces.Dir`, and git configuration.
    - In `backend/internal/domain/config.go`, `DefaultProjectConfig()` hardcodes repository-specific values (`ProjectName: "AgenticLens"`, prefixes `AL`, `GEN`, `PO`, folders `web` and `backend`).
-   - In `backend/internal/adapters/http/`, there is no `/api/config` endpoint. The frontend dashboard (`web/src/components/Navbar.tsx`, `LandingPage.tsx`) statically hardcodes the brand string "AgenticLens" without dynamic project name binding or configured prefix awareness.
+   - In `backend/internal/adapters/http/`, there is no `/api/config` endpoint. The frontend dashboard (`web/src/components/Navbar.tsx`, `LandingPage.tsx`) lacks dynamic observed project awareness and configured prefix knowledge.
    - The test suite and codebase require a deep, structured audit using the `agentic-lens-review` skill to profile test execution times, eliminate dead code, enforce strict FCIS separation, and generate actionable follow-up tickets.
 
 2. **Absence of Cross-Project Onboarding Skill and Setup Manual**:
@@ -31,7 +31,7 @@ As AgenticLens approaches its v1.0.0 first public release, two critical capabili
 
 1. As an AI platform engineer, I want a complete code audit executed with `agentic-lens-review`, so that all architectural drift, test bottlenecks, and dead code are documented with concrete follow-up tasks.
 2. As an adopter running AgenticLens on a non-Go/TS codebase, I want all source paths, workspace directories, and git base branches to respect `.agenticlens/config.yaml`, so that git diff and code churn metrics accurately reflect my project's source tree.
-3. As a dashboard viewer, I want the web interface to query `/api/config` and display my configured project name and ticket prefixes, so that the dashboard reflects my actual project identity.
+3. As a dashboard viewer, I want the web interface to query `/api/config` and display the observed project name alongside the permanent AgenticLens platform branding, so that the dashboard clearly identifies both the AgenticLens platform and the specific repository being observed.
 4. As an AI agent invoked in a new repository, I want an `agentic-lens-setup` skill that downloads the platform binary for my operating system and architecture, so that I can install the executable without human manual compilation.
 5. As an agent operator, I want an interactive interview during setup, so that I can configure my project name, ticket prefixes, source folders, database path, and agent role mappings effortlessly.
 6. As an agent operator, I want the setup skill to explain CLI and dashboard capabilities, so that I understand how to run the server, inspect live sessions, and analyze ticket ledgers.
@@ -59,9 +59,11 @@ As AgenticLens approaches its v1.0.0 first public release, two critical capabili
     - Replace hardcoded `"workspaces/"` string in universal ignore rules with dynamic `cfg.Workspaces.Dir`.
   - `backend/internal/adapters/http/handlers.go` & `server.go`:
     - Add `GET /api/config` endpoint returning sanitized `ProjectConfig` (project name, ticket prefixes, workspaces dir, role mappings, role order, live thresholds).
-- **Dynamic Frontend Branding (TypeScript Web)**:
+- **Dynamic Observed Project Display (TypeScript Web)**:
   - Update `web/src/api/client.ts` with `fetchConfig()` calling `GET /api/config`.
-  - Update `web/src/components/Navbar.tsx` and `web/src/views/LandingPage.tsx` to display dynamic `config.project_name` (falling back to "AgenticLens" if unconfigured or offline).
+  - Preserve `AgenticLens` permanently as the core platform name across all views:
+    - `Navbar.tsx`: `AgenticLens` remains the primary platform brand. Render the configured `project_name` alongside the brand title (e.g. `AgenticLens` with an adjacent observed project pill `Observing: <project_name>` or subtitle). Never remove or replace the platform name `AgenticLens`.
+    - `LandingPage.tsx`: Hero title remains `AgenticLens Observability`, adding dynamic observed target project context.
 
 ### 2. Cross-Project Interactive Setup Skill & Artifact Downloader (AL-36)
 - **Skill Manifest & Workflow (`.opencode/skills/agentic-lens-setup/SKILL.md`)**:

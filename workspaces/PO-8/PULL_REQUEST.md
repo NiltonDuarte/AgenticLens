@@ -1,7 +1,7 @@
 # docs(plan): pre-release source code audit, cross-project setup skill, and integration manual (PO-8)
 
 ## Summary
-Defines the product specification, architectural contracts, and vertical tracer-bullet Jira tickets (AL-35, AL-36, AL-37) for Phase 7 in preparation for the v1.0.0 release: executing a multi-tier codebase audit with `agentic-lens-review`, purging project-specific configuration leaks, exposing `/api/config` for dynamic web frontend branding, building the autonomous `agentic-lens-setup` skill with automated binary downloader and interactive interview engine, and authoring the cross-project setup manual and portable skill suite.
+Defines the product specification, architectural contracts, and vertical tracer-bullet Jira tickets (AL-35, AL-36, AL-37) for Phase 7 in preparation for the v1.0.0 release: executing a multi-tier codebase audit with `agentic-lens-review`, purging project-specific configuration leaks, exposing `/api/config` for dynamic observed project display alongside permanent AgenticLens platform branding, building the autonomous `agentic-lens-setup` skill with automated binary downloader and interactive interview engine, and authoring the cross-project setup manual and portable skill suite.
 
 ## Initiatives Covered
 
@@ -10,7 +10,7 @@ Defines the product specification, architectural contracts, and vertical tracer-
    - Profiles test suite execution speed to diagnose all tests exceeding 100ms, removing artificial sleeps and enforcing microsecond domain execution.
    - Purges hardcoded repository paths (`workspaces/`), source folder prefixes (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`), and default branch (`origin/main`) from git analyzer and classifier adapters, binding dynamically to `.agenticlens/config.yaml`.
    - Exposes `GET /api/config` in Go HTTP server delivering sanitized `ProjectConfig`.
-   - Binds frontend branding (`Navbar.tsx`, `LandingPage.tsx`) dynamically to configured project name and ticket prefixes.
+   - Displays the observed project name dynamically in `Navbar.tsx` and `LandingPage.tsx` alongside permanent AgenticLens platform branding.
    - Generates formal audit report artifact (`workspaces/AL-35/AUDIT_REPORT.md`).
 
 2. **Cross-Project Interactive Setup Skill & Downloader (AL-36)**:

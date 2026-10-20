@@ -4,7 +4,7 @@
 - Elicited and structured product requirements for Phase 7 in preparation for the v1.0.0 first public release:
   1. Comprehensive multi-tier codebase audit using the `agentic-lens-review` skill, profiling tests exceeding 100ms, banishing artificial sleeps, and enforcing microsecond domain execution.
   2. Purged project-specific configuration leaks across backend adapters (`analyzer.go`, `classifier.go`), dynamically evaluating `cfg.Workspaces.SrcFolders`, `cfg.Workspaces.Dir`, and git base branches.
-  3. Added `GET /api/config` to Go HTTP server, enabling dynamic project branding in the TypeScript frontend dashboard (`Navbar.tsx`, `LandingPage.tsx`).
+  3. Added `GET /api/config` to Go HTTP server, enabling dynamic observed project display alongside permanent AgenticLens platform branding in the TypeScript frontend dashboard (`Navbar.tsx`, `LandingPage.tsx`).
   4. Specified the autonomous `agentic-lens-setup` skill in `.opencode/skills/agentic-lens-setup/SKILL.md` with multi-platform binary downloader from GitHub Releases (Linux/macOS amd64/arm64) and local compilation fallback.
   5. Formulated the interactive user interview engine to generate tailored `.agenticlens/config.yaml` manifests.
   6. Structured the agent guidelines inspection and injection logic for `AGENTS.md` enforcing single-ticket exclusivity and delayed telemetry extraction.
@@ -35,14 +35,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 12m 5s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 117.2k tokens (59% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Active Agent Duration:** 15m 37s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 136.8k tokens (68% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 21,053 reasoning tokens (61.9% of generated output)
-- **Tool Health & Self-Correction:** 74 tool calls (2 self-corrections, 97.3% success rate)
+- **Reasoning Effort:** 24,299 reasoning tokens (55.8% of generated output)
+- **Tool Health & Self-Correction:** 109 tool calls (3 self-corrections, 97.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -54,11 +54,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **general** | 1 | 491,594 | 12,954 | 4,714,421 | 90.6% | 117.2k | ELEVATED | $0.85 |
-| **Total** | **1** | **491,594** | **12,954** | **4,714,421** | **90.6%** | **117.2k** | **ELEVATED** | **$0.85** |
+| **general** | 1 | 760,968 | 19,222 | 8,986,979 | 92.2% | 136.8k | ELEVATED | $1.41 |
+| **Total** | **1** | **760,968** | **19,222** | **8,986,979** | **92.2%** | **136.8k** | **ELEVATED** | **$1.41** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 491,594 | 12,954 | 4,714,421 | 90.6% | $0.85 |
-| **Total** | **1** | **491,594** | **12,954** | **4,714,421** | **90.6%** | **$0.85** |
+| **gemini-3.8-flash** | 1 | 760,968 | 19,222 | 8,986,979 | 92.2% | $1.41 |
+| **Total** | **1** | **760,968** | **19,222** | **8,986,979** | **92.2%** | **$1.41** |
