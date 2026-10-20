@@ -698,6 +698,7 @@ func printRootUsage() {
 	fmt.Fprintln(out, "  agentic-lens [flags]")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Subcommands:")
+	fmt.Fprintln(out, "  init      Scaffold and generate a new .agenticlens-config.yaml configuration")
 	fmt.Fprintln(out, "  server    Start the HTTP dashboard server and API service")
 	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode SQLite DB and Git history")
 	fmt.Fprintln(out, "  backfill  Batch telemetry backfill, Git code facts recomputation, and schema upgrades")
@@ -713,6 +714,111 @@ func printRootUsage() {
 	fmt.Fprintln(out, "  --json-output <path>  Path to write computed metrics ledger as JSON")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Run 'agentic-lens <subcommand> --help' for subcommand-specific flags and options.")
+}
+
+func runInit(args []string) {
+	initFlags := flag.NewFlagSet("init", flag.ExitOnError)
+	projectNameFlag := initFlags.String("project-name", "", "Human-readable name of the project (defaults to directory name)")
+	workspacesFlag := initFlags.String("workspaces", "workspaces", "Directory where ticket artifacts and session telemetry ledgers are stored")
+	dbPathFlag := initFlags.String("db-path", "~/.local/share/opencode/opencode.db", "Path to local OpenCode SQLite database file")
+	srcFoldersFlag := initFlags.String("src-folders", "", "Comma-separated list of monitored source code directories (e.g. web,backend)")
+	ticketPrefixFlag := initFlags.String("ticket-prefix", "", "Primary ticket prefix identifier (e.g. AL, PROJ)")
+	outputFlag := initFlags.String("output", ".agenticlens-config.yaml", "Destination path for generated configuration file")
+	forceFlag := initFlags.Bool("force", false, "Overwrite existing configuration file without prompting")
+	dryRunFlag := initFlags.Bool("dry-run", false, "Print generated configuration YAML to stdout without writing")
+
+	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
+		initFlags.Usage()
+		return
+	}
+
+	if err := initFlags.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing init flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	projectName := strings.TrimSpace(*projectNameFlag)
+	if projectName == "" {
+		cwd, err := os.Getwd()
+		if err == nil {
+			projectName = filepath.Base(cwd)
+		}
+		if projectName == "" || projectName == "." || projectName == "/" {
+			projectName = "AgenticLens"
+		}
+	}
+
+	var srcFolders []string
+	if strings.TrimSpace(*srcFoldersFlag) != "" {
+		parts := strings.Split(*srcFoldersFlag, ",")
+		for _, p := range parts {
+			clean := strings.TrimSpace(p)
+			if clean != "" {
+				srcFolders = append(srcFolders, clean)
+			}
+		}
+	} else {
+		// Detect common source folders in cwd if present
+		candidates := []string{"src", "backend", "web", "cmd", "internal", "pkg", "lib"}
+		for _, cand := range candidates {
+			if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+				srcFolders = append(srcFolders, cand)
+			}
+		}
+		if len(srcFolders) == 0 {
+			srcFolders = []string{"src"}
+		}
+	}
+
+	var prefixes []domain.TicketPrefix
+	if strings.TrimSpace(*ticketPrefixFlag) != "" {
+		primary := strings.ToUpper(strings.TrimSpace(*ticketPrefixFlag))
+		prefixes = []domain.TicketPrefix{
+			{
+				Prefix:      primary,
+				Description: fmt.Sprintf("%s project development features and bugfixes", primary),
+			},
+			{
+				Prefix:      "GEN",
+				Description: "General multi-agent engineering tasks and ad-hoc untracked work",
+				TicketType:  "chore",
+			},
+			{
+				Prefix:      "PO",
+				Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
+				TicketType:  "docs",
+			},
+		}
+	} else {
+		prefixes = domain.DefaultProjectConfig().Ticket.Prefixes
+	}
+
+	yamlData, err := adaptersconfig.GenerateDefaultYAML(projectName, *workspacesFlag, *dbPathFlag, srcFolders, prefixes)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error generating configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	if *dryRunFlag {
+		fmt.Print(string(yamlData))
+		return
+	}
+
+	outputPath := *outputFlag
+	if strings.TrimSpace(outputPath) == "" {
+		outputPath = ".agenticlens-config.yaml"
+	}
+
+	if err := adaptersconfig.WriteConfigFile(outputPath, yamlData, *forceFlag); err != nil {
+		if errors.Is(err, adaptersconfig.ErrFileExists) {
+			fmt.Fprintf(os.Stderr, "Error: configuration file already exists at %s. Use --force to overwrite.\n", outputPath)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "Error writing configuration file %s: %v\n", outputPath, err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Successfully initialized AgenticLens configuration for '%s' at %s\n", projectName, outputPath)
 }
 
 func runVersion(args []string) {
@@ -751,6 +857,9 @@ func main() {
 		if arg == "help" || arg == "-h" || arg == "--help" || arg == "-help" {
 			if len(os.Args) > 2 {
 				switch os.Args[2] {
+				case "init":
+					runInit([]string{"--help"})
+					return
 				case "server":
 					runServer([]string{"--help"})
 					return
@@ -774,6 +883,9 @@ func main() {
 		}
 
 		switch arg {
+		case "init":
+			runInit(os.Args[2:])
+			return
 		case "version":
 			runVersion(os.Args[2:])
 			return

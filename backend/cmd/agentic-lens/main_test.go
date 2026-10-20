@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
 )
@@ -3728,6 +3729,275 @@ workspaces:
 
 		if parsed.TicketType == nil || *parsed.TicketType != "feat" {
 			t.Errorf("expected TicketType 'feat' from root config (overriding legacy chore), got %v", parsed.TicketType)
+		}
+	})
+}
+
+func TestInitCommand(t *testing.T) {
+	t.Run("default scaffolding creates valid configuration file", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		cmd := exec.Command(cliBinaryPath, "init")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if _, err := os.Stat(expectedPath); err != nil {
+			t.Fatalf("expected config file %s to exist: %v", expectedPath, err)
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(expectedPath)
+		if err != nil {
+			t.Fatalf("loading generated config failed: %v", err)
+		}
+
+		expectedProject := filepath.Base(tempDir)
+		if loaded.ProjectName != expectedProject {
+			t.Errorf("expected ProjectName %q, got %q", expectedProject, loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "workspaces" {
+			t.Errorf("expected workspaces.dir 'workspaces', got %q", loaded.Workspaces.Dir)
+		}
+	})
+
+	t.Run("custom flags customize generated configuration", func(t *testing.T) {
+		tempDir := t.TempDir()
+		customOutput := filepath.Join(tempDir, "custom-config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AcmePlatform",
+			"--workspaces", "team_workspaces",
+			"--db-path", "/opt/opencode/data.db",
+			"--src-folders", "services,apps,packages",
+			"--ticket-prefix", "ACME",
+			"--output", customOutput,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init with custom flags failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(customOutput)
+		if err != nil {
+			t.Fatalf("loading custom config failed: %v", err)
+		}
+
+		if loaded.ProjectName != "AcmePlatform" {
+			t.Errorf("expected ProjectName 'AcmePlatform', got %q", loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "team_workspaces" {
+			t.Errorf("expected workspaces.dir 'team_workspaces', got %q", loaded.Workspaces.Dir)
+		}
+		if loaded.Database.Path != "/opt/opencode/data.db" {
+			t.Errorf("expected database.path '/opt/opencode/data.db', got %q", loaded.Database.Path)
+		}
+		if len(loaded.Workspaces.SrcFolders) != 3 || loaded.Workspaces.SrcFolders[0] != "services" {
+			t.Errorf("unexpected src_folders: %v", loaded.Workspaces.SrcFolders)
+		}
+		if len(loaded.Ticket.Prefixes) == 0 || loaded.Ticket.Prefixes[0].Prefix != "ACME" {
+			t.Errorf("expected ACME primary prefix, got %v", loaded.Ticket.Prefixes)
+		}
+	})
+
+	t.Run("collision fails safely without force", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(target, []byte("project_name: Original\n"), 0644); err != nil {
+			t.Fatalf("writing initial config: %v", err)
+		}
+
+		cmd := exec.Command(cliBinaryPath, "init")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected init to fail when file exists and --force is omitted")
+		}
+
+		if !strings.Contains(stderr.String(), "already exists") {
+			t.Errorf("expected stderr to indicate file already exists, got: %s", stderr.String())
+		}
+
+		// Ensure file was not changed
+		content, _ := os.ReadFile(target)
+		if !strings.Contains(string(content), "Original") {
+			t.Errorf("expected original content retained, got %s", string(content))
+		}
+	})
+
+	t.Run("force overwrites existing file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(target, []byte("project_name: Original\n"), 0644); err != nil {
+			t.Fatalf("writing initial config: %v", err)
+		}
+
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Overwritten", "--force")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init --force failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(target)
+		if err != nil {
+			t.Fatalf("loading overwritten config: %v", err)
+		}
+		if loaded.ProjectName != "Overwritten" {
+			t.Errorf("expected project_name 'Overwritten', got %q", loaded.ProjectName)
+		}
+	})
+
+	t.Run("dry run prints YAML to stdout without creating file", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		cmd := exec.Command(cliBinaryPath, "init", "--dry-run", "--project-name", "DryRunTest")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init --dry-run failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		outStr := stdout.String()
+		if !strings.Contains(outStr, "project_name: DryRunTest") {
+			t.Errorf("expected stdout to contain 'project_name: DryRunTest', got: %s", outStr)
+		}
+
+		// Ensure no file was created
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if _, err := os.Stat(cfgPath); !os.IsNotExist(err) {
+			t.Errorf("expected %s not to exist after dry-run, but it exists", cfgPath)
+		}
+	})
+
+	t.Run("spaces in project name and directories", func(t *testing.T) {
+		tempDir := t.TempDir()
+		projName := "My Special Project"
+		customOutput := filepath.Join(tempDir, "nested dir", "app config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", projName,
+			"--workspaces", "team workspaces",
+			"--output", customOutput,
+			"--ticket-prefix", "SPECIAL",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init with spaces failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(customOutput)
+		if err != nil {
+			t.Fatalf("loading config with spaces failed: %v", err)
+		}
+		if loaded.ProjectName != projName {
+			t.Errorf("expected ProjectName %q, got %q", projName, loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "team workspaces" {
+			t.Errorf("expected Workspaces.Dir 'team workspaces', got %q", loaded.Workspaces.Dir)
+		}
+	})
+
+	t.Run("invalid or unknown flag returns error and exits non-zero", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init", "--invalid-nonexistent-flag=true")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init with invalid flag to fail, got zero exit code")
+		}
+		if !strings.Contains(stderr.String(), "flag provided but not defined") {
+			t.Errorf("expected stderr to contain 'flag provided but not defined', got: %s", stderr.String())
+		}
+	})
+
+	t.Run("file collision error without force preserves original contents", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		originalContent := "# Original uncorrupted file\nproject_name: Untouched\n"
+		if err := os.WriteFile(target, []byte(originalContent), 0644); err != nil {
+			t.Fatalf("writing target file: %v", err)
+		}
+
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "AttemptedOverwrite")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected colliding init without --force to fail")
+		}
+		if !strings.Contains(stderr.String(), "already exists") {
+			t.Errorf("expected stderr to indicate file already exists, got: %s", stderr.String())
+		}
+
+		readBack, err := os.ReadFile(target)
+		if err != nil {
+			t.Fatalf("reading target file: %v", err)
+		}
+		if string(readBack) != originalContent {
+			t.Errorf("expected target content to be preserved exactly, got: %s", string(readBack))
+		}
+	})
+
+	t.Run("permission error handling when output directory is not writable", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Log("running as root; skipping unprivileged permission error assertion")
+			return
+		}
+		tempDir := t.TempDir()
+		roDir := filepath.Join(tempDir, "protected")
+		if err := os.MkdirAll(roDir, 0555); err != nil {
+			t.Fatalf("creating roDir: %v", err)
+		}
+		defer os.Chmod(roDir, 0755)
+
+		target := filepath.Join(roDir, "config.yaml")
+		cmd := exec.Command(cliBinaryPath, "init", "--output", target)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init to non-writable directory to fail")
+		}
+		if !strings.Contains(stderr.String(), "Error writing configuration file") {
+			t.Errorf("expected error message in stderr, got: %s", stderr.String())
 		}
 	})
 }

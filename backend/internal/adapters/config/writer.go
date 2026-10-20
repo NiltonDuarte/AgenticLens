@@ -1,0 +1,331 @@
+package config
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+
+	"agenticlens/internal/domain"
+)
+
+// ErrFileExists is returned when target configuration file already exists and force is false.
+var ErrFileExists = errors.New("configuration file already exists")
+
+// FileExistsError is an explicit typed error containing the conflicting file path.
+type FileExistsError struct {
+	Path string
+}
+
+func (e *FileExistsError) Error() string {
+	return fmt.Sprintf("configuration file already exists: %s", e.Path)
+}
+
+func (e *FileExistsError) Is(target error) bool {
+	return target == ErrFileExists
+}
+
+// GenerateConfigYAML produces cleanly formatted, richly commented YAML bytes for a ProjectConfig.
+func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
+	var b strings.Builder
+
+	b.WriteString("# AgenticLens Global Configuration\n")
+	b.WriteString("# Defines project parameters, ticket identification patterns, workspace layout,\n")
+	b.WriteString("# database connectivity, live observability thresholds, code metrics classification,\n")
+	b.WriteString("# and agent-backend bridge role mappings.\n\n")
+
+	// Project Name
+	projName := strings.TrimSpace(cfg.ProjectName)
+	if projName == "" {
+		projName = "AgenticLens"
+	}
+	b.WriteString("# Human-readable name of the project.\n")
+	b.WriteString(fmt.Sprintf("project_name: %s\n\n", projName))
+
+	// Ticket Settings
+	b.WriteString("# Ticket identification and normalization settings.\n")
+	b.WriteString("ticket:\n")
+	b.WriteString("  # Supported ticket prefix identifiers for this repository.\n")
+	b.WriteString("  # Accepts structured mappings (prefix and description) or plain string scalars.\n")
+	b.WriteString("  prefixes:\n")
+
+	prefixes := cfg.Ticket.Prefixes
+	if len(prefixes) == 0 {
+		prefixes = domain.DefaultProjectConfig().Ticket.Prefixes
+	}
+	for _, p := range prefixes {
+		cleanPrefix := strings.TrimSpace(p.Prefix)
+		if cleanPrefix == "" {
+			continue
+		}
+		b.WriteString(fmt.Sprintf("    - prefix: %s\n", cleanPrefix))
+		if strings.TrimSpace(p.Description) != "" {
+			b.WriteString(fmt.Sprintf("      description: %s\n", strings.TrimSpace(p.Description)))
+		}
+		if strings.TrimSpace(p.TicketType) != "" {
+			b.WriteString(fmt.Sprintf("      ticket_type: %s\n", strings.TrimSpace(p.TicketType)))
+		}
+	}
+
+	b.WriteString("  # Enable case-insensitive prefix parsing (e.g. al-21 -> AL-21).\n")
+	b.WriteString(fmt.Sprintf("  case_insensitive: %t\n", cfg.Ticket.CaseInsensitive))
+	b.WriteString("  # Additional regex patterns to match unconventional ticket naming formats.\n")
+	b.WriteString("  custom_patterns:")
+	formatStringList(&b, cfg.Ticket.CustomPatterns, "    ")
+	b.WriteString("\n")
+
+	// Workspaces Settings
+	wsDir := strings.TrimSpace(cfg.Workspaces.Dir)
+	if wsDir == "" {
+		wsDir = "workspaces"
+	}
+	b.WriteString("# Workspace storage and source folder definitions.\n")
+	b.WriteString("workspaces:\n")
+	b.WriteString("  # Directory where ticket artifacts and session telemetry ledgers are stored.\n")
+	b.WriteString(fmt.Sprintf("  dir: %s\n", wsDir))
+	b.WriteString("  # Monitored source code folders for project telemetry and change tracking.\n")
+	b.WriteString("  src_folders:")
+	formatStringList(&b, cfg.Workspaces.SrcFolders, "    ")
+	b.WriteString("\n")
+
+	// Database Settings
+	dbPath := strings.TrimSpace(cfg.Database.Path)
+	if dbPath == "" {
+		dbPath = "~/.local/share/opencode/opencode.db"
+	}
+	queryTimeout := cfg.Database.QueryTimeoutMs
+	if queryTimeout <= 0 {
+		queryTimeout = 5000
+	}
+	busyTimeout := cfg.Database.BusyTimeoutMs
+	if busyTimeout <= 0 {
+		busyTimeout = 5000
+	}
+	b.WriteString("# OpenCode SQLite database connectivity and timeout parameters.\n")
+	b.WriteString("database:\n")
+	b.WriteString("  # Path to local OpenCode SQLite database file.\n")
+	b.WriteString(fmt.Sprintf("  path: %s\n", dbPath))
+	b.WriteString("  # Query execution timeout in milliseconds.\n")
+	b.WriteString(fmt.Sprintf("  query_timeout_ms: %d\n", queryTimeout))
+	b.WriteString("  # SQLite busy handler wait timeout in milliseconds.\n")
+	b.WriteString(fmt.Sprintf("  busy_timeout_ms: %d\n", busyTimeout))
+	b.WriteString("  # Enforce read-only connection to prevent unintended database mutations.\n")
+	b.WriteString(fmt.Sprintf("  read_only: %t\n\n", cfg.Database.ReadOnly))
+
+	// Live Settings
+	activeSec := cfg.Live.ActiveThresholdSeconds
+	if activeSec <= 0 {
+		activeSec = 300
+	}
+	pollMs := cfg.Live.PollIntervalMs
+	if pollMs <= 0 {
+		pollMs = 2000
+	}
+	maxTrace := cfg.Live.MaxTraceBufferMessages
+	if maxTrace <= 0 {
+		maxTrace = 500
+	}
+	stallSec := cfg.Live.AnomalyThresholds.StallThresholdSeconds
+	if stallSec <= 0 {
+		stallSec = 120
+	}
+	errorRate := cfg.Live.AnomalyThresholds.ErrorRateThreshold
+	if errorRate <= 0 {
+		errorRate = 0.25
+	}
+	contextPct := cfg.Live.AnomalyThresholds.ContextExhaustionPct
+	if contextPct <= 0 {
+		contextPct = 0.85
+	}
+
+	b.WriteString("# Live session observability and real-time streaming engine configuration.\n")
+	b.WriteString("live:\n")
+	b.WriteString("  # Window in seconds within which a session is considered actively running.\n")
+	b.WriteString(fmt.Sprintf("  active_threshold_seconds: %d\n", activeSec))
+	b.WriteString("  # SQLite polling interval in milliseconds for live session updates.\n")
+	b.WriteString(fmt.Sprintf("  poll_interval_ms: %d\n", pollMs))
+	b.WriteString("  # Maximum number of recent trace messages retained in memory buffer per session.\n")
+	b.WriteString(fmt.Sprintf("  max_trace_buffer_messages: %d\n", maxTrace))
+	b.WriteString("  # Numerical thresholds for automated anomaly detection rules.\n")
+	b.WriteString("  anomaly_thresholds:\n")
+	b.WriteString("    # Time in seconds without session turn activity before flagging a stall anomaly.\n")
+	b.WriteString(fmt.Sprintf("    stall_threshold_seconds: %d\n", stallSec))
+	b.WriteString("    # Ratio of tool errors to total invocations triggering a high failure anomaly.\n")
+	b.WriteString(fmt.Sprintf("    error_rate_threshold: %0.2f\n", errorRate))
+	b.WriteString("    # Token context window utilization percentage triggering saturation warnings.\n")
+	b.WriteString(fmt.Sprintf("    context_exhaustion_pct: %0.2f\n\n", contextPct))
+
+	// Code Metrics Settings
+	b.WriteString("# Git commit diff analysis and code classification glob patterns.\n")
+	b.WriteString("code_metrics:\n")
+	b.WriteString("  # Specific files or glob patterns explicitly included as production code.\n")
+	b.WriteString("  include:")
+	formatStringList(&b, cfg.CodeMetrics.Include, "    ")
+	b.WriteString("  # Files or directories excluded from code volume and diff calculations.\n")
+	b.WriteString("  exclude:")
+	formatStringList(&b, cfg.CodeMetrics.Exclude, "    ")
+	b.WriteString("  # Glob patterns identifying test files, test fixtures, and test utilities.\n")
+	b.WriteString("  test_patterns:")
+	formatStringList(&b, cfg.CodeMetrics.TestPatterns, "    ")
+	b.WriteString("  # Glob patterns identifying production runtime code.\n")
+	b.WriteString("  prod_patterns:")
+	formatStringList(&b, cfg.CodeMetrics.ProdPatterns, "    ")
+	b.WriteString("\n")
+
+	// Role Mappings
+	b.WriteString("# Bridge definitions mapping agent persona names to canonical AgentRole enums.\n")
+	b.WriteString("# Canonical domain roles: orchestrator, planner, coder, tester, reviewer.\n")
+	b.WriteString("role_mappings:\n")
+	mappings := cfg.RoleMappings
+	if len(mappings) == 0 {
+		mappings = domain.DefaultProjectConfig().RoleMappings
+	}
+	roleKeys := make([]string, 0, len(mappings))
+	for k := range mappings {
+		roleKeys = append(roleKeys, k)
+	}
+	sort.Strings(roleKeys)
+	for _, k := range roleKeys {
+		b.WriteString(fmt.Sprintf("  %s: %s\n", k, mappings[k]))
+	}
+	b.WriteString("\n")
+
+	// Role Order
+	b.WriteString("# Configurable sequence for sorting agent roles in CLI tables and metric cards.\n")
+	b.WriteString("# Roles appearing here are sorted first in this exact order; unlisted roles follow alphabetically.\n")
+	b.WriteString("role_order:\n")
+	roleOrder := cfg.RoleOrder
+	if len(roleOrder) == 0 {
+		roleOrder = domain.DefaultProjectConfig().RoleOrder
+	}
+	for _, r := range roleOrder {
+		b.WriteString(fmt.Sprintf("  - %s\n", r))
+	}
+
+	result := []byte(b.String())
+
+	// Validate output syntax with yaml parser
+	var validationNode yaml.Node
+	if err := yaml.Unmarshal(result, &validationNode); err != nil {
+		return nil, fmt.Errorf("validating generated yaml syntax: %w", err)
+	}
+
+	return result, nil
+}
+
+// GenerateDefaultYAML creates configuration YAML bytes initialized from default settings with overrides.
+func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix) ([]byte, error) {
+	cfg := domain.DefaultProjectConfig()
+
+	if strings.TrimSpace(projectName) != "" {
+		cfg.ProjectName = strings.TrimSpace(projectName)
+	}
+	if strings.TrimSpace(workspacesDir) != "" {
+		cfg.Workspaces.Dir = strings.TrimSpace(workspacesDir)
+	}
+	if strings.TrimSpace(dbPath) != "" {
+		cfg.Database.Path = strings.TrimSpace(dbPath)
+	}
+	if len(srcFolders) > 0 {
+		var cleanFolders []string
+		for _, f := range srcFolders {
+			trimmed := strings.TrimSpace(f)
+			if trimmed != "" {
+				cleanFolders = append(cleanFolders, trimmed)
+			}
+		}
+		if len(cleanFolders) > 0 {
+			cfg.Workspaces.SrcFolders = cleanFolders
+		}
+	}
+	if len(prefixes) > 0 {
+		cfg.Ticket.Prefixes = prefixes
+	}
+
+	return GenerateConfigYAML(cfg)
+}
+
+// WriteConfigFile writes configuration bytes to targetPath atomically with collision detection.
+// If the target file already exists and force is false, it returns a *FileExistsError.
+func WriteConfigFile(targetPath string, data []byte, force bool) error {
+	cleanPath := filepath.Clean(targetPath)
+
+	dir := filepath.Dir(cleanPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("creating parent directory %s: %w", dir, err)
+	}
+
+	if !force {
+		if _, err := os.Stat(cleanPath); err == nil {
+			return &FileExistsError{Path: cleanPath}
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("checking file existence %s: %w", cleanPath, err)
+		}
+	}
+
+	tempFile, err := os.CreateTemp(dir, ".agenticlens-config-*.tmp")
+	if err != nil {
+		return fmt.Errorf("creating temporary config file: %w", err)
+	}
+	tmpName := tempFile.Name()
+	cleaned := false
+	defer func() {
+		if !cleaned {
+			if removeErr := os.Remove(tmpName); removeErr != nil && !os.IsNotExist(removeErr) {
+				// Non-fatal cleanup
+			}
+		}
+	}()
+
+	if _, err := tempFile.Write(data); err != nil {
+		if closeErr := tempFile.Close(); closeErr != nil {
+			return fmt.Errorf("closing temp file after write error: %w", closeErr)
+		}
+		return fmt.Errorf("writing temporary config file %s: %w", tmpName, err)
+	}
+
+	if err := tempFile.Sync(); err != nil {
+		if closeErr := tempFile.Close(); closeErr != nil {
+			return fmt.Errorf("closing temp file after sync error: %w", closeErr)
+		}
+		return fmt.Errorf("syncing temporary config file %s: %w", tmpName, err)
+	}
+
+	if err := tempFile.Close(); err != nil {
+		return fmt.Errorf("closing temporary config file %s: %w", tmpName, err)
+	}
+
+	if err := os.Rename(tmpName, cleanPath); err != nil {
+		return fmt.Errorf("renaming %s to %s: %w", tmpName, cleanPath, err)
+	}
+
+	cleaned = true
+	return nil
+}
+
+// WriteConfig converts cfg to YAML and writes it atomically to targetPath.
+func WriteConfig(targetPath string, cfg domain.ProjectConfig, force bool) error {
+	data, err := GenerateConfigYAML(cfg)
+	if err != nil {
+		return fmt.Errorf("generating config yaml: %w", err)
+	}
+	return WriteConfigFile(targetPath, data, force)
+}
+
+func formatStringList(b *strings.Builder, items []string, indent string) {
+	if len(items) == 0 {
+		b.WriteString(" []\n")
+		return
+	}
+	b.WriteString("\n")
+	for _, item := range items {
+		clean := strings.TrimSpace(item)
+		if clean != "" {
+			b.WriteString(fmt.Sprintf("%s- %s\n", indent, clean))
+		}
+	}
+}

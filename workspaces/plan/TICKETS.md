@@ -47,19 +47,17 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## In Progress
 
-(None)
+- **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
+  - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests
+  - **Phase**: Phase 7
+  - **Status**: In Progress
+  - **Blocked by**: None (AL-38 Done)
+  - **Blocks**: AL-37
+  - **File**: `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 
 ---
 
 ## Ready
-
-- **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
-  - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests
-  - **Phase**: Phase 7
-  - **Status**: Ready
-  - **Blocked by**: None (AL-38 Done)
-  - **Blocks**: AL-37
-  - **File**: `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 
 - **AL-39**: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes
   - **Subsystem**: Adapters / Git / Domain / Config / Tests
