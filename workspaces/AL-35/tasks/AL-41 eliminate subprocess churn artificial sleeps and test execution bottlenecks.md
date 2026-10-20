@@ -2,6 +2,15 @@ h3. Title: AL-41: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execut
 
 *TARGET*: AgenticLens (tests | adapters | git | cli | http)
 
+*AUDIT REPORT REFERENCE*
+
+Fixes findings from `workspaces/AL-35/AUDIT_REPORT.md`:
+- Section 2: `Test Performance Findings & Concrete Patches` (Artificial Sleeps & Subprocess Git Invocations)
+- Section 3: `[High]: Subprocess Spawning Churn and Branch Mutation in Git Test Suite`
+- Section 3: `[Medium]: Artificial Sleeps in Test Suites`
+- Section 3: `[Medium]: Shallow Passthrough Functions in Formatters Adapter`
+- Section 4: Recommendation 3 (AL-41)
+
 *CONTEXT*
 
 The pre-release source code audit (AL-35) revealed severe execution bottlenecks across the automated test suites. In `backend/cmd/agentic-lens/main_test.go`, subtests in `TestCLITicketTypeClassification` take over 6.3 seconds each under `-race` concurrency because nearly 100 subprocess executions compete for live git branch lookups and host OpenCode SQLite database access. In `backend/internal/adapters/git/inference_test.go`, test helpers shell out to `git branch` and `git branch -D` on disk, creating physical branch churn in the host repository. Furthermore, 5 instances of `time.Sleep` exist in test loops (`main_test.go:393, 583, 628, 665` and `live_handlers_test.go:333`), adding non-deterministic latency. Finally, shallow passthrough functions in `backend/internal/adapters/formatters.go` (`FormatLeadTime`, `FormatTokens`) introduce unnecessary layers of indirection.

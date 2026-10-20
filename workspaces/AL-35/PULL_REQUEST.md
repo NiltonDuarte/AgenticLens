@@ -11,22 +11,22 @@ Maintains strict review-only discipline: zero modifications made to backend or w
 1. **Comprehensive Audit Report (`workspaces/AL-35/AUDIT_REPORT.md`)**:
    - Executive summary assessing FCIS compliance and pre-release readiness.
    - Test suite performance profiling diagnostics table identifying slow tests (> 100ms) and prescribing concrete fixes for 5 artificial `time.Sleep` instances and git branch disk mutations.
-   - Categorized architectural and configuration leakage findings (High / Medium / Low):
-     - High: Hardcoded `origin/main` upstream base branch in `analyzer.go`.
-     - High: Hardcoded folder prefix list (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`) in `analyzer.go`.
-     - High: Missing `GET /api/config` REST endpoint and static platform branding in frontend views.
-     - High: Subprocess spawning churn and host git branch mutation in test suites.
-     - Medium: Hardcoded `"workspaces/"` path references in `classifier.go`, `inference.go`, and `repository.go`.
-     - Medium: Artificial sleeps in test suites.
-     - Medium: Shallow forwarding wrappers in `formatters.go`.
-     - Low: Duplicated conditional chains in `analyzer.go`.
-     - Low: Frontend heavy DOM component mounting overhead in Vitest.
-   - Prioritized remediation roadmap.
+    - Categorized architectural and configuration leakage findings (High / Medium / Low):
+      - High: Hardcoded `origin/main` upstream base branch in `analyzer.go` (remediation mandates failing with explicit configuration prompt if no upstream branch is resolved, rather than falling back to `HEAD`).
+      - High: Hardcoded folder prefix list (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`) in `analyzer.go` (remediation mandates failing with explicit configuration prompt if `src_folders` is empty, rather than permitting unmonitored files).
+      - High: Missing `GET /api/config` REST endpoint and static platform branding in frontend views.
+      - High: Subprocess spawning churn and host git branch mutation in test suites.
+      - Medium: Hardcoded `"workspaces/"` path references in `classifier.go`, `inference.go`, and `repository.go`.
+      - Medium: Artificial sleeps in test suites.
+      - Medium: Shallow forwarding wrappers in `formatters.go`.
+      - Low: Duplicated conditional chains in `analyzer.go`.
+      - Low: Frontend heavy DOM component mounting overhead in Vitest.
+    - Prioritized remediation roadmap.
 
-2. **Follow-Up Task Specifications**:
-   - `AL-39`: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes.
-   - `AL-40`: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding.
-   - `AL-41`: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execution Bottlenecks.
+2. **Follow-Up Task Specifications (with Direct Audit Report Section Mapping)**:
+   - `AL-39`: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes (maps to Section 3 [High] base branch & folder prefixes, Section 3 [Medium] workspaces path, Section 3 [Low] duplicate conditions).
+   - `AL-40`: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding (maps to Section 3 [High] missing config endpoint).
+   - `AL-41`: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execution Bottlenecks (maps to Section 2 test patches, Section 3 [High] subprocess churn, Section 3 [Medium] sleeps & shallow wrappers).
 
 3. **Plan Lifecycle Synchronization**:
    - Moved `AL-35` specification from `workspaces/plan/to-do/` to `workspaces/plan/done/`.

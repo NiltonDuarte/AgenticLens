@@ -2,6 +2,12 @@ h3. Title: AL-40: Dynamic Configuration REST API Endpoint and Observability Dash
 
 *TARGET*: AgenticLens (adapters | http | presentation | web | domain | tests)
 
+*AUDIT REPORT REFERENCE*
+
+Fixes findings from `workspaces/AL-35/AUDIT_REPORT.md`:
+- Section 3: `[High]: Missing Dynamic /api/config REST Endpoint and Frontend Project Branding Exposure`
+- Section 4: Recommendation 2 (AL-40)
+
 *CONTEXT*
 
 The pre-release source code audit (AL-35) identified that the Go HTTP server exposes no route for project configuration. As a consequence, the web dashboard has no awareness of `ProjectConfig.ProjectName`, `Ticket.Prefixes`, or `Workspaces.Dir`. The frontend UI statically hardcodes "AgenticLens Telemetry", providing no mechanism to display the observed project's name or brand context. Additionally, multi-select prefix dropdowns across Fleet Overview, Ticket Comparisons, and Metric Progression rely solely on runtime ledger scraping (`extractDistinctPrefixes`), meaning configured prefixes for new or planned tickets do not appear in filters until at least one completed ledger has been committed.

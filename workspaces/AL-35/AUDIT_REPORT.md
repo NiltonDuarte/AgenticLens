@@ -109,13 +109,13 @@ case <-time.After(500 * time.Millisecond):
 - **Proposed Target Shape**:
   Introduce dynamic base branch resolution:
   ```go
-  func ResolveBaseBranch(repoRoot string, cfg *domain.ProjectConfig) string
+  func ResolveBaseBranch(repoRoot string, cfg *domain.ProjectConfig) (string, error)
   ```
   1. Check `cfg.CodeMetrics.BaseBranch` if configured.
   2. Query `git symbolic-ref refs/remotes/origin/HEAD` to detect default remote tracking branch.
-  3. Probe local branches: `origin/main`, `main`, `origin/master`, `master`.
-  4. Fall back to `HEAD` if no upstream is reachable.
-- **Benefits**: Makes AgenticLens universally compatible with any repository branch naming strategy.
+  3. Probe candidate upstream branches: `origin/main`, `main`, `origin/master`, `master`.
+  4. Explicit Failure Invariant: If no upstream base branch is reachable or resolved, fail execution immediately and output an explicit error message prompting the user or agent to configure `code_metrics.base_branch` in `.agenticlens-config.yaml`. Never silently fall back to `HEAD`.
+- **Benefits**: Eliminates silent fallbacks and makes AgenticLens deterministic and configurable across any repository branch naming strategy.
 - **Blast Radius**: `backend/internal/adapters/git/analyzer.go`.
 
 ---
@@ -137,8 +137,9 @@ case <-time.After(500 * time.Millisecond):
   This completely discards code changes in projects structured with `app/`, `pkg/`, `services/`, `client/`, `ui/`, `core/`, `lib/`, or root-level files (such as `main.py` or `Cargo.toml`). Furthermore, this check completely ignores `.agenticlens/config.yaml` (`workspaces.src_folders` and `code_metrics.include`).
 - **Subtraction Target**: Delete both duplicate 6-condition checks.
 - **Proposed Target Shape**:
-  Pass `ClassificationConfig` or `ProjectConfig.Workspaces.SrcFolders` into `GetTicketNumstat`. Validate paths against configured source folders and glob patterns. If `src_folders` is empty, treat all non-ignored files as relevant code.
-- **Benefits**: Prevents silent omission of git commit metrics in external repositories. Eliminates 12 lines of duplicate code.
+  Pass `ClassificationConfig` and `ProjectConfig.Workspaces.SrcFolders` into `GetTicketNumstat`. Validate paths against configured source folders and glob patterns.
+  Explicit Failure Invariant: If `src_folders` is empty or unconfigured, fail execution immediately and prompt the user or agent to configure `workspaces.src_folders` in `.agenticlens-config.yaml`. Never silently fall back or permit all files.
+- **Benefits**: Prevents silent omission of git commit metrics while enforcing explicit project boundary definitions. Eliminates 12 lines of duplicate code.
 - **Blast Radius**: `backend/internal/adapters/git/analyzer.go`, `inference.go`.
 
 ---
@@ -269,23 +270,19 @@ case <-time.After(500 * time.Millisecond):
 
 ## 4. Top Remediation Recommendations & Prioritized Roadmap
 
-1. **AL-38 (Already Scheduled)**: Migrate Configuration Manifest from `.agenticlens/config.yaml` to Root `.agenticlens-config.yaml`
-   - Relocate configuration file to project root.
-   - Update config loader with root priority and legacy fallback.
-
-2. **AL-39 (New Recommendation)**: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes
-   - Implement dynamic base branch detection (`origin/main`, `main`, `master`, `HEAD`, or configured `base_branch`).
-   - Replace hardcoded folder prefix list (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`) with dynamic inspection of `ProjectConfig.Workspaces.SrcFolders` and `ProjectConfig.CodeMetrics`.
+1. **AL-39 (New Recommendation)**: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes
+   - Implement dynamic base branch detection (`code_metrics.base_branch`, `refs/remotes/origin/HEAD`, `origin/main`, `main`, `origin/master`, `master`); if unresolved, fail immediately and prompt user/agent to configure `code_metrics.base_branch`.
+   - Replace hardcoded folder prefix list (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`) with dynamic inspection of `ProjectConfig.Workspaces.SrcFolders` and `ProjectConfig.CodeMetrics`; if `src_folders` is empty or unconfigured, fail immediately and prompt user/agent to configure `workspaces.src_folders`.
    - Remove duplicate 6-condition checks in `analyzer.go`.
    - Respect `ProjectConfig.Workspaces.Dir` in `classifier.go` and `inference.go`.
 
-3. **AL-40 (New Recommendation)**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
+2. **AL-40 (New Recommendation)**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
    - Implement `GET /api/config` in Go HTTP server returning sanitized `ProjectConfig`.
    - Add `fetchProjectConfig()` in `web/src/api/client.ts`.
    - Update `Navbar.tsx` to dynamically render observed project name alongside permanent `AgenticLens` platform branding.
    - Populate filter dropdowns with configured prefixes before ledgers exist.
 
-4. **AL-41 (New Recommendation)**: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execution Bottlenecks
+3. **AL-41 (New Recommendation)**: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execution Bottlenecks
    - Banish all 5 `time.Sleep` instances across `main_test.go` and `live_handlers_test.go`.
    - Refactor `inference_test.go` to use in-memory branch resolution instead of mutating git branches on disk.
    - Isolate CLI integration tests with dedicated temporary SQLite databases.
