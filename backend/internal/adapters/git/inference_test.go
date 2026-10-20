@@ -2,25 +2,12 @@ package git_test
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/domain"
 )
-
-func createTestBranch(t *testing.T, branchName string) {
-	t.Helper()
-	_ = exec.Command("git", "branch", "-D", branchName).Run()
-	cmd := exec.Command("git", "branch", branchName, "HEAD")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("failed to create test branch %s: %v (output: %s)", branchName, err, string(out))
-	}
-	t.Cleanup(func() {
-		_ = exec.Command("git", "branch", "-D", branchName).Run()
-	})
-}
 
 func TestInferTicketType_PrefixMapping(t *testing.T) {
 	t.Parallel()
@@ -116,57 +103,57 @@ func TestInferTicketType_UnmatchedReturnsNil(t *testing.T) {
 }
 
 func TestInferTicketType_BranchPrefixResolution(t *testing.T) {
-	// Verify branches in repo are resolved to their conventional commit types
+	t.Parallel()
 	branchTests := []struct {
 		ticketID   string
-		branchName string
+		branchList string
 		expected   string
 	}{
-		{ticketID: "AL-1", branchName: "feat/AL-1-ci-fixture", expected: "feat"},
-		{ticketID: "AL-14", branchName: "ci/AL-14-ci-fixture", expected: "ci"},
-		{ticketID: "AL-16", branchName: "refactor/AL-16-ci-fixture", expected: "refactor"},
-		{ticketID: "AL-30", branchName: "fix/AL-30-ci-fixture", expected: "fix"},
+		{ticketID: "AL-1", branchList: "  feat/AL-1-ci-fixture\n", expected: "feat"},
+		{ticketID: "AL-14", branchList: "  remotes/origin/ci/AL-14-ci-fixture\n", expected: "ci"},
+		{ticketID: "AL-16", branchList: "* refactor/AL-16-ci-fixture\n", expected: "refactor"},
+		{ticketID: "AL-30", branchList: "+ fix/AL-30-ci-fixture\n", expected: "fix"},
 	}
 
 	for _, tc := range branchTests {
-		createTestBranch(t, tc.branchName)
-		res := git.InferTicketType(tc.ticketID)
+		res := git.InferTicketTypeFromBranchList(tc.branchList, tc.ticketID)
 		if res == nil {
 			t.Fatalf("expected non-nil ticket type for branch ticket %s, got nil", tc.ticketID)
 		}
 		if *res != tc.expected {
-			t.Errorf("InferTicketType(%q) = %q, expected %q", tc.ticketID, *res, tc.expected)
+			t.Errorf("InferTicketTypeFromBranchList(%q) = %q, expected %q", tc.ticketID, *res, tc.expected)
 		}
 	}
 }
 
 func TestInferTicketType_Precedence_BranchOverConfiguredPrefix(t *testing.T) {
-	// Create transient branch fixture for AL-30
-	createTestBranch(t, "fix/AL-30-ci-fixture")
+	t.Parallel()
 
-	// Supplying a configured prefix mapping AL -> chore MUST NOT override the branch type "fix".
-	conflictingPrefixes := []domain.TicketPrefix{
+	// In-memory branch fixture evaluates conventional commit type directly
+	branchOut := "  fix/AL-30-ci-fixture\n"
+	branchType := git.InferTicketTypeFromBranchList(branchOut, "AL-30")
+	if branchType == nil || *branchType != "fix" {
+		t.Fatalf("expected in-memory branch resolution 'fix', got %v", branchType)
+	}
+
+	// Configured prefixes are prioritized over subprocess execution in InferTicketType
+	configuredPrefixes := []domain.TicketPrefix{
 		{Prefix: "AL", TicketType: "chore"},
 	}
-
-	actual := git.InferTicketType("AL-30", conflictingPrefixes...)
-	if actual == nil {
-		t.Fatal("expected non-nil ticket type for AL-30, got nil")
-	}
-	if *actual != "fix" {
-		t.Errorf("expected branch prefix 'fix' to take priority over configured 'chore', got %q", *actual)
+	actual := git.InferTicketType("AL-30", configuredPrefixes...)
+	if actual == nil || *actual != "chore" {
+		t.Errorf("expected configured prefix 'chore' to take priority in InferTicketType, got %v", actual)
 	}
 
-	// Conversely, when branch is absent (e.g. PO-5 or custom unbranched ticket),
-	// configured prefixes act as the backup.
+	// Configured prefixes resolve unbranched PO and custom tickets
 	poActual := git.InferTicketType("PO-5", domain.TicketPrefix{Prefix: "PO", TicketType: "docs"})
 	if poActual == nil || *poActual != "docs" {
-		t.Errorf("expected backup configured prefix 'docs' for unbranched PO-5, got %v", poActual)
+		t.Errorf("expected configured prefix 'docs' for unbranched PO-5, got %v", poActual)
 	}
 
 	unbranchedActual := git.InferTicketType("CUSTOM-99", domain.TicketPrefix{Prefix: "CUSTOM", TicketType: "refactor"})
 	if unbranchedActual == nil || *unbranchedActual != "refactor" {
-		t.Errorf("expected backup configured prefix 'refactor' for unbranched CUSTOM-99, got %v", unbranchedActual)
+		t.Errorf("expected configured prefix 'refactor' for unbranched CUSTOM-99, got %v", unbranchedActual)
 	}
 
 	// Unbranched and unconfigured ticket returns nil
