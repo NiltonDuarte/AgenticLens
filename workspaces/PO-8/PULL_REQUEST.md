@@ -1,17 +1,16 @@
 # docs(plan): pre-release source code audit, cross-project setup skill, and integration manual (PO-8)
 
 ## Summary
-Defines the product specification, architectural contracts, and vertical tracer-bullet Jira tickets (AL-35, AL-36, AL-37) for Phase 7 in preparation for the v1.0.0 release: executing a multi-tier codebase audit with `agentic-lens-review`, purging project-specific configuration leaks, exposing `/api/config` for dynamic observed project display alongside permanent AgenticLens platform branding, building the autonomous `agentic-lens-setup` skill with automated binary downloader and interactive interview engine, and authoring the cross-project setup manual and portable skill suite.
+Defines the product specification, architectural contracts, and vertical tracer-bullet Jira tickets (AL-35, AL-36, AL-37) for Phase 7 in preparation for the v1.0.0 release: executing a multi-tier codebase audit with `agentic-lens-review` focusing on configuration leakage and test suite profiling (generating review artifacts for follow-up implementation tickets), building the autonomous `agentic-lens-setup` skill with automated binary downloader and interactive interview engine, and authoring the cross-project setup manual and portable skill suite.
 
 ## Initiatives Covered
 
-1. **Pre-Release Code Review & Configuration Leakage Elimination (AL-35)**:
+1. **Pre-Release Code Review, Configuration Leakage Inspection & Review Artifact Generation (AL-35)**:
+   - Strictly read-only codebase audit with zero application code or test modifications.
    - Audits all Go backend packages and TypeScript views using `agentic-lens-review`.
-   - Profiles test suite execution speed to diagnose all tests exceeding 100ms, removing artificial sleeps and enforcing microsecond domain execution.
-   - Purges hardcoded repository paths (`workspaces/`), source folder prefixes (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`), and default branch (`origin/main`) from git analyzer and classifier adapters, binding dynamically to `.agenticlens/config.yaml`.
-   - Exposes `GET /api/config` in Go HTTP server delivering sanitized `ProjectConfig`.
-   - Displays the observed project name dynamically in `Navbar.tsx` and `LandingPage.tsx` alongside permanent AgenticLens platform branding.
-   - Generates formal audit report artifact (`workspaces/AL-35/AUDIT_REPORT.md`).
+   - Profiles test suite execution speed to diagnose all tests exceeding 100ms, locating artificial sleeps and test execution bottlenecks.
+   - Inspects for configuration leaks: hardcoded repository paths (`workspaces/`), source folder prefixes (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`), default branch (`origin/main`), and static brand assumptions.
+   - Generates formal audit report artifact (`workspaces/AL-35/AUDIT_REPORT.md`) and actionable task specifications for subsequent implementation tickets.
 
 2. **Cross-Project Interactive Setup Skill & Downloader (AL-36)**:
    - Packages `agentic-lens-setup` skill in `.opencode/skills/agentic-lens-setup/SKILL.md`.
@@ -28,15 +27,15 @@ Defines the product specification, architectural contracts, and vertical tracer-
    - Genericizes all skill manifests with repository-relative paths and configuration parameters.
 
 ## Ticket Breakdown
-- Ready: `AL-35: Pre-Release Source Code Audit, Configuration Leakage Elimination, and Follow-Up Artifact Generation` (Phase 7, Tier 1)
-- Pending: `AL-36: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator` (Phase 7, Tier 2, Blocked by AL-35)
-- Pending: `AL-37: Cross-Project Setup Manual, Skill Suite Usage Guide, and Distribution Packaging` (Phase 7, Tier 3, Blocked by AL-36)
+- Ready: `AL-35: Pre-Release Source Code Audit, Configuration Leakage Inspection, and Review Artifact Generation` (Phase 7, Tier 1 - Ready, unblocked)
+- Ready: `AL-36: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator` (Phase 7, Tier 1 - Ready, unblocked)
+- Pending: `AL-37: Cross-Project Setup Manual, Skill Suite Usage Guide, and Distribution Packaging` (Phase 7, Tier 2 - Pending, Blocked by AL-36)
 
 ## Pointers
 - Specification: `workspaces/PO-8/SPEC.md`
 - Shared Roadmap: `workspaces/plan/TICKETS.md`
 - Development Tickets:
-  - `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage elimination and follow-up artifact generation.md`
+  - `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
   - `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
   - `workspaces/plan/to-do/AL-37 cross-project setup manual skill suite usage guide and distribution packaging.md`
 - Session Summary: `workspaces/PO-8/SUMMARY.md`

@@ -42,28 +42,31 @@ As AgenticLens approaches its v1.0.0 first public release, two critical capabili
 
 ## Functional Requirements
 
-### 1. Pre-Release Code Review & Configuration Leakage Elimination (AL-35)
+### 1. Pre-Release Code Review, Configuration Leakage Inspection & Review Artifact Generation (AL-35)
+- **Review-Only Mandate**:
+  - Strictly read-only audit: zero application code, test files, runtime scripts, or configuration files are modified in AL-35.
+  - All findings, leakage points, and test bottlenecks are documented in a formal review report with concrete follow-up implementation tasks.
 - **Multi-Tier Audit with `agentic-lens-review`**:
   - Run test suite profiling to identify all test bottlenecks exceeding 100ms:
     ```bash
     go test -json ./... | jq -r 'select(.Action=="pass" or .Action=="fail") | select(.Test != null) | "\(.Elapsed)s \(.Package) \(.Test)"' | sort -nr | head -20
     ```
-  - Audit FCIS boundaries in `internal/domain` (zero I/O, zero clocks, microsecond execution SLA).
-  - Audit module depth and eliminate dead wrappers, unused structs, and speculative code.
-  - Produce formal audit report artifact (`workspaces/AL-35/AUDIT_REPORT.md`) containing test diagnostics, architectural findings by severity, subtraction targets, and concrete follow-up tickets.
-- **Configuration Leakage Purge (Backend & Adapters)**:
-  - `backend/internal/adapters/git/analyzer.go`:
-    - Replace hardcoded folder prefixes (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`) with dynamic evaluation of `cfg.Workspaces.SrcFolders`.
-    - Replace hardcoded `origin/main` with dynamic base branch detection (evaluate `git symbolic-ref refs/remotes/origin/HEAD`, check `origin/main`, `origin/master`, `main`, `master`, or fallback gracefully).
-  - `backend/internal/adapters/git/classifier.go`:
-    - Replace hardcoded `"workspaces/"` string in universal ignore rules with dynamic `cfg.Workspaces.Dir`.
-  - `backend/internal/adapters/http/handlers.go` & `server.go`:
-    - Add `GET /api/config` endpoint returning sanitized `ProjectConfig` (project name, ticket prefixes, workspaces dir, role mappings, role order, live thresholds).
-- **Dynamic Observed Project Display (TypeScript Web)**:
-  - Update `web/src/api/client.ts` with `fetchConfig()` calling `GET /api/config`.
-  - Preserve `AgenticLens` permanently as the core platform name across all views:
-    - `Navbar.tsx`: `AgenticLens` remains the primary platform brand. Render the configured `project_name` alongside the brand title (e.g. `AgenticLens` with an adjacent observed project pill `Observing: <project_name>` or subtitle). Never remove or replace the platform name `AgenticLens`.
-    - `LandingPage.tsx`: Hero title remains `AgenticLens Observability`, adding dynamic observed target project context.
+  - Audit FCIS boundaries in `internal/domain` (zero I/O imports, zero clocks, microsecond execution SLA).
+  - Audit module depth across adapters and CLI, identifying dead code, speculative abstractions, and subtraction targets.
+  - Audit Fowler code smells, primitive obsession, and domain modeling invariants.
+- **Configuration Leakage Inspection (Backend, Adapters & Web)**:
+  - Systematically audit backend adapters for hardcoded repository assumptions:
+    - `backend/internal/adapters/git/analyzer.go`: Inspect hardcoded folder prefixes (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`) and diff base branch (`origin/main`).
+    - `backend/internal/adapters/git/classifier.go`: Inspect hardcoded `"workspaces/"` string in universal ignore rules.
+    - `backend/internal/adapters/http/`: Inspect missing `/api/config` endpoint for dynamic project configuration exposure.
+    - `web/src/components/Navbar.tsx` & `LandingPage.tsx`: Inspect frontend brand display to verify `AgenticLens` is preserved permanently as the platform name while supporting observed project context alongside it.
+- **Review Deliverables & Follow-Up Artifacts**:
+  - Author comprehensive report at `workspaces/AL-35/AUDIT_REPORT.md`:
+    - Executive summary of audited codebase health.
+    - Test execution profiling diagnostics table.
+    - Architecture, code smell, and configuration leakage findings categorized by severity (High / Medium / Low) with affected files, concrete smell descriptions, subtraction targets, and proposed target shapes.
+    - Prioritized remediation roadmap.
+  - Author structured follow-up task artifacts defining subsequent implementation tickets (configuration leakage elimination, test speed optimizations, dynamic branding wiring).
 
 ### 2. Cross-Project Interactive Setup Skill & Artifact Downloader (AL-36)
 - **Skill Manifest & Workflow (`.opencode/skills/agentic-lens-setup/SKILL.md`)**:
@@ -139,6 +142,6 @@ As AgenticLens approaches its v1.0.0 first public release, two critical capabili
 
 ## Decomposition & Delivery Roadmap
 
-- [ ] **AL-35**: Pre-Release Source Code Audit, Configuration Leakage Elimination, and Follow-Up Artifact Generation *(Phase 7, Tier 1 - Ready, Unblocked)*
-- [ ] **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator *(Phase 7, Tier 2 - Pending, Blocked by AL-35)*
-- [ ] **AL-37**: Cross-Project Setup Manual, Skill Suite Usage Guide, and Distribution Packaging *(Phase 7, Tier 3 - Pending, Blocked by AL-36)*
+- [ ] **AL-35**: Pre-Release Source Code Audit, Configuration Leakage Inspection, and Review Artifact Generation *(Phase 7, Tier 1 - Ready, Unblocked)*
+- [ ] **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator *(Phase 7, Tier 1 - Ready, Unblocked)*
+- [ ] **AL-37**: Cross-Project Setup Manual, Skill Suite Usage Guide, and Distribution Packaging *(Phase 7, Tier 2 - Pending, Blocked by AL-36)*
