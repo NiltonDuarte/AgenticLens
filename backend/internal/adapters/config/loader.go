@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,30 @@ import (
 
 	"agenticlens/internal/domain"
 )
+
+// ErrConfigNotFound indicates that .agenticlens-config.yaml was not found in the directory hierarchy.
+var ErrConfigNotFound = errors.New("configuration file not found")
+
+// DefaultWorkspaceArtifacts returns standard project documentation artifacts.
+func DefaultWorkspaceArtifacts() []domain.WorkspaceArtifactConfig {
+	return []domain.WorkspaceArtifactConfig{
+		{
+			Path:        "CONTRACT.md",
+			Title:       "Technical Contract",
+			Description: "Frozen architectural scope and invariants",
+		},
+		{
+			Path:        "SUMMARY.md",
+			Title:       "Work Summary",
+			Description: "Execution progress and delivery summary",
+		},
+		{
+			Path:        "PULL_REQUEST.md",
+			Title:       "Pull Request",
+			Description: "Pull request description and context",
+		},
+	}
+}
 
 type rawPrefixItem struct {
 	Prefix      string `json:"prefix" yaml:"prefix"`
@@ -87,9 +112,16 @@ type rawTicketConfig struct {
 	CustomPatterns  []string        `json:"custom_patterns" yaml:"custom_patterns"`
 }
 
+type rawWorkspaceArtifactConfig struct {
+	Path        string `json:"path" yaml:"path"`
+	Title       string `json:"title" yaml:"title"`
+	Description string `json:"description" yaml:"description"`
+}
+
 type rawWorkspacesConfig struct {
-	Dir        *string  `json:"dir" yaml:"dir"`
-	SrcFolders []string `json:"src_folders" yaml:"src_folders"`
+	Dir        *string                      `json:"dir" yaml:"dir"`
+	SrcFolders []string                     `json:"src_folders" yaml:"src_folders"`
+	Artifacts  []rawWorkspaceArtifactConfig `json:"artifacts" yaml:"artifacts"`
 }
 
 type rawDatabaseConfig struct {
@@ -136,7 +168,71 @@ type rawProjectConfigDTO struct {
 }
 
 func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
-	cfg := domain.DefaultProjectConfig()
+	cfg := domain.ProjectConfig{
+		ProjectName: "AgenticLens",
+		Ticket: domain.TicketConfig{
+			Prefixes: []domain.TicketPrefix{
+				{
+					Prefix:      "AL",
+					Description: "Core AgenticLens development features, bugfixes, and technical initiatives",
+				},
+				{
+					Prefix:      "GEN",
+					Description: "General multi-agent engineering tasks and ad-hoc untracked work",
+					TicketType:  "chore",
+				},
+				{
+					Prefix:      "PO",
+					Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
+					TicketType:  "docs",
+				},
+			},
+			CaseInsensitive: true,
+			CustomPatterns:  []string{},
+		},
+		Workspaces: domain.WorkspacesConfig{
+			Dir:        "workspaces",
+			SrcFolders: []string{"web", "backend"},
+			Artifacts:  DefaultWorkspaceArtifacts(),
+		},
+		Database: domain.DatabaseConfig{
+			Path:           "~/.local/share/opencode/opencode.db",
+			QueryTimeoutMs: 5000,
+			BusyTimeoutMs:  5000,
+			ReadOnly:       true,
+		},
+		Live: domain.LiveConfig{
+			ActiveThresholdSeconds: 300,
+			PollIntervalMs:         2000,
+			MaxTraceBufferMessages: 500,
+			AnomalyThresholds: domain.AnomalyThresholdsConfig{
+				StallThresholdSeconds: 120,
+				ErrorRateThreshold:    0.25,
+				ContextExhaustionPct:  0.85,
+			},
+		},
+		CodeMetrics: domain.CodeMetricsConfig{
+			Include:      []string{},
+			Exclude:      []string{},
+			TestPatterns: []string{},
+			ProdPatterns: []string{},
+		},
+		RoleMappings: domain.RoleMappings{
+			"orchestrator": "orchestrator",
+			"build":        "orchestrator",
+			"planner":      "planner",
+			"coder":        "coder",
+			"tester":       "tester",
+			"reviewer":     "reviewer",
+		},
+		RoleOrder: []string{
+			"orchestrator",
+			"planner",
+			"coder",
+			"tester",
+			"reviewer",
+		},
+	}
 
 	if dto.ProjectName != nil && strings.TrimSpace(*dto.ProjectName) != "" {
 		cfg.ProjectName = strings.TrimSpace(*dto.ProjectName)
@@ -185,6 +281,26 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		}
 		if dto.Workspaces.SrcFolders != nil {
 			cfg.Workspaces.SrcFolders = dto.Workspaces.SrcFolders
+		}
+		if len(dto.Workspaces.Artifacts) > 0 {
+			artifacts := make([]domain.WorkspaceArtifactConfig, 0, len(dto.Workspaces.Artifacts))
+			for _, item := range dto.Workspaces.Artifacts {
+				cleanPath := strings.TrimSpace(item.Path)
+				cleanTitle := strings.TrimSpace(item.Title)
+				if cleanPath != "" {
+					if cleanTitle == "" {
+						cleanTitle = filepath.Base(cleanPath)
+					}
+					artifacts = append(artifacts, domain.WorkspaceArtifactConfig{
+						Path:        cleanPath,
+						Title:       cleanTitle,
+						Description: strings.TrimSpace(item.Description),
+					})
+				}
+			}
+			if len(artifacts) > 0 {
+				cfg.Workspaces.Artifacts = artifacts
+			}
 		}
 	}
 
@@ -355,14 +471,14 @@ func LoadFromFile(filePath string) (domain.ProjectConfig, error) {
 }
 
 // Load finds the configuration file traversing upwards from repoRoot and parses it.
-// If no configuration file is discovered, DefaultProjectConfig() is returned with a nil error.
+// If no configuration file is discovered, ErrConfigNotFound is returned.
 func Load(repoRoot string) (domain.ProjectConfig, error) {
 	cfgFile, err := FindConfigFile(repoRoot)
 	if err != nil {
-		return domain.DefaultProjectConfig(), err
+		return domain.ProjectConfig{}, err
 	}
 	if cfgFile == "" {
-		return domain.DefaultProjectConfig(), nil
+		return domain.ProjectConfig{}, ErrConfigNotFound
 	}
 	return LoadFromFile(cfgFile)
 }

@@ -439,6 +439,74 @@ func TestReadTicketArtifacts(t *testing.T) {
 		if art.SummaryContent == nil || *art.SummaryContent != "# Summary" {
 			t.Errorf("summary content mismatch: %v", art.SummaryContent)
 		}
+		if len(art.Items) == 0 {
+			t.Fatalf("expected non-empty Items slice, got %d", len(art.Items))
+		}
+		var foundContract, foundSummary bool
+		for _, item := range art.Items {
+			if item.Path == "CONTRACT.md" && item.Content != nil && *item.Content == "# Contract" {
+				foundContract = true
+			}
+			if item.Path == "SUMMARY.md" && item.Content != nil && *item.Content == "# Summary" {
+				foundSummary = true
+			}
+		}
+		if !foundContract || !foundSummary {
+			t.Errorf("expected Items to contain CONTRACT.md and SUMMARY.md, got %+v", art.Items)
+		}
+	})
+
+	t.Run("custom configured artifacts with nested paths and missing files", func(t *testing.T) {
+		iterDir := filepath.Join(ticketDir, "iterations", "01")
+		if err := os.MkdirAll(iterDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(iterDir, "PLAN.md"), []byte("# Iteration Plan"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		customConfigs := []domain.WorkspaceArtifactConfig{
+			{
+				Path:        "CONTRACT.md",
+				Title:       "Frozen Contract",
+				Description: "Specification boundaries",
+			},
+			{
+				Path:        "iterations/01/PLAN.md",
+				Title:       "Active Plan",
+				Description: "Iteration steps",
+			},
+			{
+				Path:        "NONEXISTENT.md",
+				Title:       "Missing Doc",
+				Description: "Should be nil content",
+			},
+			{
+				Path:        "../../../etc/passwd",
+				Title:       "Malicious Path",
+				Description: "Should be ignored",
+			},
+			{
+				Path:        "/etc/shadow",
+				Title:       "Absolute Path",
+				Description: "Should be ignored",
+			},
+		}
+
+		art := adapters.ReadTicketArtifacts("TICKET-10", tempDir, customConfigs)
+		if len(art.Items) != 3 {
+			t.Fatalf("expected exactly 3 valid items (traversals excluded), got %d", len(art.Items))
+		}
+
+		if art.Items[0].Title != "Frozen Contract" || art.Items[0].Content == nil || *art.Items[0].Content != "# Contract" {
+			t.Errorf("item 0 mismatch: %+v", art.Items[0])
+		}
+		if art.Items[1].Title != "Active Plan" || art.Items[1].Content == nil || *art.Items[1].Content != "# Iteration Plan" {
+			t.Errorf("item 1 mismatch: %+v", art.Items[1])
+		}
+		if art.Items[2].Title != "Missing Doc" || art.Items[2].Content != nil {
+			t.Errorf("item 2 should have nil content: %+v", art.Items[2])
+		}
 	})
 
 	t.Run("path traversal attack prevention", func(t *testing.T) {

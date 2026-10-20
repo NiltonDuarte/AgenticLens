@@ -807,4 +807,57 @@ Here is ~~obsolete text~~ and https://example.com/status
       expect(el.getAttribute('onmouseover')).toBeNull();
     });
   });
+
+  it('renders dynamic configured artifact tabs, displays descriptions, and allows switching', () => {
+    const customArtifacts = {
+      ticket_id: 'AL-36',
+      items: [
+        {
+          path: 'CONTRACT.md',
+          title: 'Technical Contract',
+          description: 'Technical constraints',
+          content: '# Contract Document\n\nContract rules here.',
+        },
+        {
+          path: 'iterations/01/PLAN.md',
+          title: 'Iteration Plan',
+          description: 'Step by step plan',
+          content: '# Plan Document\n\nPlan tasks here.',
+        },
+        {
+          path: 'iterations/01/REVIEW.md',
+          title: 'Code Review',
+          description: 'Audit feedback',
+          content: null,
+        },
+      ],
+    };
+
+    render(<ArtifactViewer artifacts={customArtifacts} />);
+
+    // Verify all 3 custom tabs rendered with appropriate labels and descriptions
+    const contractTab = screen.getByRole('button', { name: 'Technical Contract' });
+    expect(contractTab).toBeInTheDocument();
+    expect(contractTab).toHaveAttribute('title', 'Technical constraints');
+
+    const planTab = screen.getByRole('button', { name: 'Iteration Plan' });
+    expect(planTab).toBeInTheDocument();
+    expect(planTab).toHaveAttribute('title', 'Step by step plan');
+
+    const reviewTab = screen.getByRole('button', { name: /Code Review \(Empty\)/i });
+    expect(reviewTab).toBeInTheDocument();
+    expect(reviewTab).toHaveAttribute('title', 'Audit feedback');
+
+    // First tab content displayed by default
+    expect(screen.getByText('Contract rules here.')).toBeInTheDocument();
+
+    // Click second tab
+    fireEvent.click(planTab);
+    expect(screen.getByText('Plan tasks here.')).toBeInTheDocument();
+    expect(screen.queryByText('Contract rules here.')).not.toBeInTheDocument();
+
+    // Click empty tab
+    fireEvent.click(reviewTab);
+    expect(screen.getByText('No Code Review document found for this workspace.')).toBeInTheDocument();
+  });
 });

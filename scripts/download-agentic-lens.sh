@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-REPO="agenticlens/AgenticLens"
+REPO="NiltonDuarte/AgenticLens"
 DEST_DIR="${AGENTIC_LENS_BIN_DIR:-.opencode/skills/agentic-lens-setup/bin}"
 VERSION="${AGENTIC_LENS_VERSION:-latest}"
 LOCAL_BIN="${AGENTIC_LENS_LOCAL_BINARY:-}"

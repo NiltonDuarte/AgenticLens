@@ -5,10 +5,10 @@ description: Guided interactive setup skill to bootstrap AgenticLens in any repo
 
 # AgenticLens Cross-Project Interactive Setup Skill
 
-Guides autonomous bootstrapping and adoption of AgenticLens in any software repository.
+Guides autonomous bootstrapping and adoption of AgenticLens in any software repository using precompiled release artifacts from https://github.com/NiltonDuarte/AgenticLens/releases.
 
 ## Operational Mandates
-- Strict Release-Only Mandate: Never compile binaries from source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases.
+- Strict Release-Only Mandate: Never compile binaries from source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
 - Skill Co-Location Mandate: Download and store the precompiled binary inside this skill directory (`.opencode/skills/agentic-lens-setup/bin/agentic-lens`) alongside a protective `.gitignore` preventing accidental git tracking.
 - Mandatory User Confirmation Gate: Inspect existing agent instructions (`AGENTS.md`, `.opencode/agent/*.md`, `CLAUDE.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
@@ -18,6 +18,8 @@ Guides autonomous bootstrapping and adoption of AgenticLens in any software repo
 ## Step-by-Step Setup Workflow
 
 ### Step 1: Precompiled Release Retrieval
+
+Retrieve official precompiled release artifacts from the canonical release repository: https://github.com/NiltonDuarte/AgenticLens/releases.
 
 Execute the co-located artifact downloader script to detect the host operating system (Linux, macOS, Windows) and architecture (amd64, arm64), fetch the precompiled release binary, unpack it, and enforce executable permissions:
 
@@ -51,15 +53,16 @@ Prompt the developer or inspect the repository to collect configuration paramete
 
 1. Project Name:
    - Descriptive identifier for the repository.
-   - Default: current root directory name.
+   - Strictly mandatory flag (`--project-name`); no default is provided.
 2. Primary Ticket Prefix and Classification:
-   - Primary prefix for feature tickets (e.g. AL, PROJ, APP).
-   - Standard secondary prefixes: `GEN` (chore) and `PO` (docs).
+   - Primary prefix for feature tickets (e.g. PROJ, APP).
+   - Strictly mandatory flag (`--ticket-prefix`); no default is provided. Standard secondary prefixes: `GEN` (generic) and `MISC`.
 3. Workspaces Directory:
    - Directory where ticket artifacts and session telemetry ledgers are stored.
    - Default: `workspaces`.
 4. Monitored Source Folders:
    - Comma-separated list of source code directories to observe for git metrics and diff volume (e.g. `src`, `backend`, `web`, `lib`, `pkg`).
+   - Strictly mandatory flag (`--src-folders`); no default is provided.
 5. OpenCode SQLite Database Path:
    - Path to local OpenCode database.
    - Default: `~/.local/share/opencode/opencode.db`.
@@ -81,7 +84,11 @@ Run the CLI `init` command using the collected parameters:
 Alternatively, review generated YAML with `--dry-run` before writing:
 
 ```bash
-./.opencode/skills/agentic-lens-setup/bin/agentic-lens init --dry-run
+./.opencode/skills/agentic-lens-setup/bin/agentic-lens init \
+  --project-name "<PROJECT_NAME>" \
+  --ticket-prefix "<TICKET_PREFIX>" \
+  --src-folders "<SRC_FOLDERS>" \
+  --dry-run
 ```
 
 This writes a fully commented, valid `.agenticlens-config.yaml` file at the repository root.
@@ -148,7 +155,7 @@ When approved by the user, append the following standardized operational policie
 ## AgenticLens Operational Policies
 
 ### 1. Ticket Tracking Mandate (Zero Untracked Work)
-- Every task, feature, bugfix, or refactoring must be tracked by an explicit ticket identifier matching configured prefixes (e.g. `<PREFIX>-<ID>`, `GEN-<ID>`, `PO-<ID>`).
+- Every task, feature, bugfix, or refactoring must be tracked by an explicit ticket identifier matching configured prefixes (e.g. `<PREFIX>-<ID>`, `MISC-<ID>`, `APP-<ID>`).
 - Single-ticket exclusivity: Agents must never work on more than one ticket simultaneously.
 - Every subsequent prompt must be treated as steering feedback for the active ticket.
 

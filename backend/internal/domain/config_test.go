@@ -6,9 +6,114 @@ import (
 	"agenticlens/internal/domain"
 )
 
-func TestDefaultProjectConfig(t *testing.T) {
+func testProjectConfig() domain.ProjectConfig {
+	return domain.ProjectConfig{
+		ProjectName: "AgenticLens",
+		Ticket: domain.TicketConfig{
+			Prefixes: []domain.TicketPrefix{
+				{
+					Prefix:      "AL",
+					Description: "Core AgenticLens development features, bugfixes, and technical initiatives",
+				},
+				{
+					Prefix:      "GEN",
+					Description: "General multi-agent engineering tasks and ad-hoc untracked work",
+					TicketType:  "chore",
+				},
+				{
+					Prefix:      "PO",
+					Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
+					TicketType:  "docs",
+				},
+			},
+			CaseInsensitive: true,
+			CustomPatterns:  []string{},
+		},
+		Workspaces: domain.WorkspacesConfig{
+			Dir:        "workspaces",
+			SrcFolders: []string{"web", "backend"},
+			Artifacts: []domain.WorkspaceArtifactConfig{
+				{
+					Path:        "CONTRACT.md",
+					Title:       "Technical Contract",
+					Description: "Frozen architectural scope and invariants",
+				},
+				{
+					Path:        "SUMMARY.md",
+					Title:       "Work Summary",
+					Description: "Execution progress and delivery summary",
+				},
+				{
+					Path:        "PULL_REQUEST.md",
+					Title:       "Pull Request",
+					Description: "Pull request description and context",
+				},
+			},
+		},
+		Database: domain.DatabaseConfig{
+			Path:           "~/.local/share/opencode/opencode.db",
+			QueryTimeoutMs: 5000,
+			BusyTimeoutMs:  5000,
+			ReadOnly:       true,
+		},
+		Live: domain.LiveConfig{
+			ActiveThresholdSeconds: 300,
+			PollIntervalMs:         2000,
+			MaxTraceBufferMessages: 500,
+			AnomalyThresholds: domain.AnomalyThresholdsConfig{
+				StallThresholdSeconds: 120,
+				ErrorRateThreshold:    0.25,
+				ContextExhaustionPct:  0.85,
+			},
+		},
+		CodeMetrics: domain.CodeMetricsConfig{
+			Include:      []string{},
+			Exclude:      []string{},
+			TestPatterns: []string{},
+			ProdPatterns: []string{},
+		},
+		RoleMappings: domain.RoleMappings{
+			"orchestrator": "orchestrator",
+			"build":        "orchestrator",
+			"planner":      "planner",
+			"coder":        "coder",
+			"tester":       "tester",
+			"reviewer":     "reviewer",
+		},
+		RoleOrder: []string{
+			"orchestrator",
+			"planner",
+			"coder",
+			"tester",
+			"reviewer",
+		},
+	}
+}
+
+func TestWorkspaceArtifactConfig(t *testing.T) {
 	t.Parallel()
-	cfg := domain.DefaultProjectConfig()
+	cfg := domain.WorkspaceArtifactConfig{
+		Path:        "CONTRACT.md",
+		Title:       "Technical Contract",
+		Description: "Frozen contract",
+	}
+	if cfg.Path != "CONTRACT.md" || cfg.Title != "Technical Contract" || cfg.Description != "Frozen contract" {
+		t.Errorf("unexpected WorkspaceArtifactConfig values: %+v", cfg)
+	}
+
+	wsCfg := domain.WorkspacesConfig{
+		Dir:        "workspaces",
+		SrcFolders: []string{"backend"},
+		Artifacts:  []domain.WorkspaceArtifactConfig{cfg},
+	}
+	if len(wsCfg.Artifacts) != 1 || wsCfg.Artifacts[0].Path != "CONTRACT.md" {
+		t.Errorf("unexpected WorkspacesConfig artifacts: %+v", wsCfg.Artifacts)
+	}
+}
+
+func TestProjectConfig_HelperFixture(t *testing.T) {
+	t.Parallel()
+	cfg := testProjectConfig()
 
 	if cfg.ProjectName != "AgenticLens" {
 		t.Errorf("expected ProjectName AgenticLens, got %s", cfg.ProjectName)
@@ -98,7 +203,7 @@ func TestDefaultProjectConfig(t *testing.T) {
 
 func TestNormalizeTicketID_ExactMatches(t *testing.T) {
 	t.Parallel()
-	cfg := domain.DefaultProjectConfig().Ticket
+	cfg := testProjectConfig().Ticket
 
 	tests := []struct {
 		input    string
@@ -123,7 +228,7 @@ func TestNormalizeTicketID_ExactMatches(t *testing.T) {
 
 func TestNormalizeTicketID_CaseInsensitivity(t *testing.T) {
 	t.Parallel()
-	cfg := domain.DefaultProjectConfig().Ticket
+	cfg := testProjectConfig().Ticket
 
 	tests := []struct {
 		input    string
@@ -151,7 +256,7 @@ func TestNormalizeTicketID_CaseInsensitivity(t *testing.T) {
 
 func TestNormalizeTicketID_BranchAndTokenPatterns(t *testing.T) {
 	t.Parallel()
-	cfg := domain.DefaultProjectConfig().Ticket
+	cfg := testProjectConfig().Ticket
 
 	tests := []struct {
 		input    string
@@ -211,7 +316,7 @@ func TestNormalizeTicketID_CaseSensitiveMode(t *testing.T) {
 
 func TestNormalizeTicketID_NegativeCases(t *testing.T) {
 	t.Parallel()
-	cfg := domain.DefaultProjectConfig().Ticket
+	cfg := testProjectConfig().Ticket
 
 	tests := []string{
 		"PROJ-123",
@@ -275,7 +380,7 @@ func TestNormalizeTicketID_EmptyPrefixFallback(t *testing.T) {
 
 func TestRoleMappings_ResolveRole(t *testing.T) {
 	t.Parallel()
-	mappings := domain.DefaultProjectConfig().RoleMappings
+	mappings := testProjectConfig().RoleMappings
 
 	// Default role mappings
 	if mappings.ResolveRole("planner") != domain.RolePlanner {
@@ -335,7 +440,7 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 func TestNormalizeTicketID_AdversarialEdgeCases(t *testing.T) {
 	t.Parallel()
 	t.Run("mixed casing and leading zeros", func(t *testing.T) {
-		cfg := domain.DefaultProjectConfig().Ticket
+		cfg := testProjectConfig().Ticket
 		cases := []struct {
 			input    string
 			expected string
@@ -357,7 +462,7 @@ func TestNormalizeTicketID_AdversarialEdgeCases(t *testing.T) {
 	})
 
 	t.Run("surrounding whitespace and control characters", func(t *testing.T) {
-		cfg := domain.DefaultProjectConfig().Ticket
+		cfg := testProjectConfig().Ticket
 		cases := []struct {
 			input    string
 			expected string
@@ -427,7 +532,7 @@ func TestNormalizeTicketID_AdversarialEdgeCases(t *testing.T) {
 	})
 
 	t.Run("varied branch names and path expressions", func(t *testing.T) {
-		cfg := domain.DefaultProjectConfig().Ticket
+		cfg := testProjectConfig().Ticket
 		cases := []struct {
 			input    string
 			expected string
@@ -488,7 +593,7 @@ func TestNormalizeTicketID_AdversarialEdgeCases(t *testing.T) {
 	})
 
 	t.Run("hostile malformed inputs and non-matching numbers", func(t *testing.T) {
-		cfg := domain.DefaultProjectConfig().Ticket
+		cfg := testProjectConfig().Ticket
 		invalidInputs := []string{
 			"",
 			"   ",
@@ -610,7 +715,7 @@ func TestNormalizeTicketID_AdversarialEdgeCases(t *testing.T) {
 func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 	t.Parallel()
 	t.Run("casing and whitespace variations", func(t *testing.T) {
-		mappings := domain.DefaultProjectConfig().RoleMappings
+		mappings := testProjectConfig().RoleMappings
 
 		tests := []struct {
 			input    string
@@ -645,7 +750,7 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty and whitespace strings default to unassigned", func(t *testing.T) {
-		mappings := domain.DefaultProjectConfig().RoleMappings
+		mappings := testProjectConfig().RoleMappings
 
 		emptyInputs := []string{"", " ", "   ", "\t", "\n", "\r\n"}
 		for _, input := range emptyInputs {
@@ -711,7 +816,7 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 func TestInferTicketTypeFromPrefix(t *testing.T) {
 	t.Parallel()
 
-	defaultCfg := domain.DefaultProjectConfig().Ticket
+	defaultCfg := testProjectConfig().Ticket
 
 	tests := []struct {
 		name       string
@@ -981,7 +1086,7 @@ func TestRoleMappings_ResolveRole_AdversarialUnmappedAndWhitespace(t *testing.T)
 
 	t.Run("arbitrary unmapped roles resolve to lowercase cleaned AgentRole", func(t *testing.T) {
 		t.Parallel()
-		defaultMappings := domain.DefaultProjectConfig().RoleMappings
+		defaultMappings := testProjectConfig().RoleMappings
 
 		tests := []struct {
 			input    string
@@ -1040,7 +1145,7 @@ func TestRoleMappings_ResolveRole_AdversarialUnmappedAndWhitespace(t *testing.T)
 			name     string
 			mappings domain.RoleMappings
 		}{
-			{"default mappings", domain.DefaultProjectConfig().RoleMappings},
+			{"default mappings", testProjectConfig().RoleMappings},
 			{"nil mappings", nil},
 			{"empty mappings", domain.RoleMappings{}},
 			{"custom mappings", domain.RoleMappings{"custom": "coder"}},

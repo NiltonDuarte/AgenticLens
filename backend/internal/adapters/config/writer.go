@@ -54,9 +54,6 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("  prefixes:\n")
 
 	prefixes := cfg.Ticket.Prefixes
-	if len(prefixes) == 0 {
-		prefixes = domain.DefaultProjectConfig().Ticket.Prefixes
-	}
 	for _, p := range prefixes {
 		cleanPrefix := strings.TrimSpace(p.Prefix)
 		if cleanPrefix == "" {
@@ -90,6 +87,27 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("  # Monitored source code folders for project telemetry and change tracking.\n")
 	b.WriteString("  src_folders:")
 	formatStringList(&b, cfg.Workspaces.SrcFolders, "    ")
+	b.WriteString("  # Configured workspace documentation artifacts to read and render in dashboard.\n")
+	b.WriteString("  artifacts:\n")
+	artifacts := cfg.Workspaces.Artifacts
+	if len(artifacts) == 0 {
+		artifacts = DefaultWorkspaceArtifacts()
+	}
+	for _, art := range artifacts {
+		cleanPath := strings.TrimSpace(art.Path)
+		cleanTitle := strings.TrimSpace(art.Title)
+		if cleanPath == "" {
+			continue
+		}
+		if cleanTitle == "" {
+			cleanTitle = filepath.Base(cleanPath)
+		}
+		b.WriteString(fmt.Sprintf("    - path: %s\n", cleanPath))
+		b.WriteString(fmt.Sprintf("      title: %s\n", cleanTitle))
+		if strings.TrimSpace(art.Description) != "" {
+			b.WriteString(fmt.Sprintf("      description: %s\n", strings.TrimSpace(art.Description)))
+		}
+	}
 	b.WriteString("\n")
 
 	// Database Settings
@@ -182,7 +200,14 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("role_mappings:\n")
 	mappings := cfg.RoleMappings
 	if len(mappings) == 0 {
-		mappings = domain.DefaultProjectConfig().RoleMappings
+		mappings = domain.RoleMappings{
+			"orchestrator": "orchestrator",
+			"build":        "orchestrator",
+			"planner":      "planner",
+			"coder":        "coder",
+			"tester":       "tester",
+			"reviewer":     "reviewer",
+		}
 	}
 	roleKeys := make([]string, 0, len(mappings))
 	for k := range mappings {
@@ -200,7 +225,13 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("role_order:\n")
 	roleOrder := cfg.RoleOrder
 	if len(roleOrder) == 0 {
-		roleOrder = domain.DefaultProjectConfig().RoleOrder
+		roleOrder = []string{
+			"orchestrator",
+			"planner",
+			"coder",
+			"tester",
+			"reviewer",
+		}
 	}
 	for _, r := range roleOrder {
 		b.WriteString(fmt.Sprintf("  - %s\n", r))
@@ -218,32 +249,102 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 }
 
 // GenerateDefaultYAML creates configuration YAML bytes initialized from default settings with overrides.
-func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix) ([]byte, error) {
-	cfg := domain.DefaultProjectConfig()
+func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix, customArtifacts ...[]domain.WorkspaceArtifactConfig) ([]byte, error) {
+	projName := strings.TrimSpace(projectName)
+	if projName == "" {
+		projName = "AgenticLens"
+	}
+	wsDir := strings.TrimSpace(workspacesDir)
+	if wsDir == "" {
+		wsDir = "workspaces"
+	}
+	databasePath := strings.TrimSpace(dbPath)
+	if databasePath == "" {
+		databasePath = "~/.local/share/opencode/opencode.db"
+	}
+	var cleanFolders []string
+	for _, f := range srcFolders {
+		trimmed := strings.TrimSpace(f)
+		if trimmed != "" {
+			cleanFolders = append(cleanFolders, trimmed)
+		}
+	}
+	if len(cleanFolders) == 0 {
+		cleanFolders = []string{"src"}
+	}
+	ticketPrefixes := prefixes
+	if len(ticketPrefixes) == 0 {
+		ticketPrefixes = []domain.TicketPrefix{
+			{
+				Prefix:      "AL",
+				Description: "Core AgenticLens development features, bugfixes, and technical initiatives",
+			},
+			{
+				Prefix:      "GEN",
+				Description: "General multi-agent engineering tasks and ad-hoc untracked work",
+				TicketType:  "chore",
+			},
+			{
+				Prefix:      "PO",
+				Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
+				TicketType:  "docs",
+			},
+		}
+	}
+	artifacts := DefaultWorkspaceArtifacts()
+	if len(customArtifacts) > 0 && len(customArtifacts[0]) > 0 {
+		artifacts = customArtifacts[0]
+	}
 
-	if strings.TrimSpace(projectName) != "" {
-		cfg.ProjectName = strings.TrimSpace(projectName)
-	}
-	if strings.TrimSpace(workspacesDir) != "" {
-		cfg.Workspaces.Dir = strings.TrimSpace(workspacesDir)
-	}
-	if strings.TrimSpace(dbPath) != "" {
-		cfg.Database.Path = strings.TrimSpace(dbPath)
-	}
-	if len(srcFolders) > 0 {
-		var cleanFolders []string
-		for _, f := range srcFolders {
-			trimmed := strings.TrimSpace(f)
-			if trimmed != "" {
-				cleanFolders = append(cleanFolders, trimmed)
-			}
-		}
-		if len(cleanFolders) > 0 {
-			cfg.Workspaces.SrcFolders = cleanFolders
-		}
-	}
-	if len(prefixes) > 0 {
-		cfg.Ticket.Prefixes = prefixes
+	cfg := domain.ProjectConfig{
+		ProjectName: projName,
+		Ticket: domain.TicketConfig{
+			Prefixes:        ticketPrefixes,
+			CaseInsensitive: true,
+			CustomPatterns:  []string{},
+		},
+		Workspaces: domain.WorkspacesConfig{
+			Dir:        wsDir,
+			SrcFolders: cleanFolders,
+			Artifacts:  artifacts,
+		},
+		Database: domain.DatabaseConfig{
+			Path:           databasePath,
+			QueryTimeoutMs: 5000,
+			BusyTimeoutMs:  5000,
+			ReadOnly:       true,
+		},
+		Live: domain.LiveConfig{
+			ActiveThresholdSeconds: 300,
+			PollIntervalMs:         2000,
+			MaxTraceBufferMessages: 500,
+			AnomalyThresholds: domain.AnomalyThresholdsConfig{
+				StallThresholdSeconds: 120,
+				ErrorRateThreshold:    0.25,
+				ContextExhaustionPct:  0.85,
+			},
+		},
+		CodeMetrics: domain.CodeMetricsConfig{
+			Include:      []string{},
+			Exclude:      []string{},
+			TestPatterns: []string{},
+			ProdPatterns: []string{},
+		},
+		RoleMappings: domain.RoleMappings{
+			"orchestrator": "orchestrator",
+			"build":        "orchestrator",
+			"planner":      "planner",
+			"coder":        "coder",
+			"tester":       "tester",
+			"reviewer":     "reviewer",
+		},
+		RoleOrder: []string{
+			"orchestrator",
+			"planner",
+			"coder",
+			"tester",
+			"reviewer",
+		},
 	}
 
 	return GenerateConfigYAML(cfg)

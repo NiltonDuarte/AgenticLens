@@ -144,53 +144,99 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	}
 }
 
-// ReadTicketArtifacts safely reads CONTRACT.md and SUMMARY.md artifacts for a ticket workspace.
-func ReadTicketArtifacts(ticketID string, basePath string) domain.TicketArtifacts {
+// ReadTicketArtifacts safely reads configured documentation artifacts for a ticket workspace.
+func ReadTicketArtifacts(ticketID string, basePath string, configuredArtifacts ...[]domain.WorkspaceArtifactConfig) domain.TicketArtifacts {
 	targetDir := ResolveWorkspacesDir(basePath)
 	absTargetDir, err := filepath.Abs(targetDir)
 	if err != nil {
-		return domain.TicketArtifacts{TicketID: ticketID}
+		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
 	}
 
 	ticketDir := filepath.Join(absTargetDir, ticketID)
 	absTicketDir, err := filepath.Abs(ticketDir)
 	if err != nil {
-		return domain.TicketArtifacts{TicketID: ticketID}
+		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
 	}
 
 	// Verify path containment to prevent directory traversal
 	rel, err := filepath.Rel(absTargetDir, absTicketDir)
 	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
-		return domain.TicketArtifacts{TicketID: ticketID}
+		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
 	}
 
 	fi, err := os.Stat(absTicketDir)
 	if err != nil || !fi.IsDir() {
-		return domain.TicketArtifacts{TicketID: ticketID}
+		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
 	}
 
-	var contractContent *string
-	contractPath := filepath.Join(absTicketDir, "CONTRACT.md")
-	if cfi, err := os.Stat(contractPath); err == nil && !cfi.IsDir() {
-		if data, err := os.ReadFile(contractPath); err == nil {
-			s := string(data)
-			contractContent = &s
+	var configs []domain.WorkspaceArtifactConfig
+	if len(configuredArtifacts) > 0 && configuredArtifacts[0] != nil {
+		configs = configuredArtifacts[0]
+	} else {
+		// Try to load configured artifacts from project config, fallback to default
+		if projCfg, err := config.Load(basePath); err == nil && len(projCfg.Workspaces.Artifacts) > 0 {
+			configs = projCfg.Workspaces.Artifacts
+		} else {
+			configs = config.DefaultWorkspaceArtifacts()
 		}
 	}
 
-	var summaryContent *string
-	summaryPath := filepath.Join(absTicketDir, "SUMMARY.md")
-	if sfi, err := os.Stat(summaryPath); err == nil && !sfi.IsDir() {
-		if data, err := os.ReadFile(summaryPath); err == nil {
-			s := string(data)
-			summaryContent = &s
+	items := make([]domain.TicketArtifactItem, 0, len(configs))
+	var legacyContract *string
+	var legacySummary *string
+
+	for _, cfg := range configs {
+		cleanRelPath := filepath.Clean(strings.TrimSpace(cfg.Path))
+		if cleanRelPath == "" || filepath.IsAbs(cleanRelPath) || strings.HasPrefix(cleanRelPath, "..") || cleanRelPath == "." {
+			continue
+		}
+
+		fullArtifactPath := filepath.Join(absTicketDir, cleanRelPath)
+		absArtifactPath, err := filepath.Abs(fullArtifactPath)
+		if err != nil {
+			continue
+		}
+
+		// Ensure artifact file is inside ticket directory
+		artRel, err := filepath.Rel(absTicketDir, absArtifactPath)
+		if err != nil || strings.HasPrefix(artRel, "..") {
+			continue
+		}
+
+		var contentPtr *string
+		if afi, err := os.Stat(absArtifactPath); err == nil && !afi.IsDir() {
+			if data, err := os.ReadFile(absArtifactPath); err == nil {
+				s := string(data)
+				contentPtr = &s
+			}
+		}
+
+		title := strings.TrimSpace(cfg.Title)
+		if title == "" {
+			title = filepath.Base(cleanRelPath)
+		}
+
+		item := domain.TicketArtifactItem{
+			Path:        cleanRelPath,
+			Title:       title,
+			Description: strings.TrimSpace(cfg.Description),
+			Content:     contentPtr,
+		}
+		items = append(items, item)
+
+		if strings.EqualFold(cleanRelPath, "CONTRACT.md") && legacyContract == nil {
+			legacyContract = contentPtr
+		}
+		if strings.EqualFold(cleanRelPath, "SUMMARY.md") && legacySummary == nil {
+			legacySummary = contentPtr
 		}
 	}
 
 	return domain.TicketArtifacts{
 		TicketID:        ticketID,
-		ContractContent: contractContent,
-		SummaryContent:  summaryContent,
+		ContractContent: legacyContract,
+		SummaryContent:  legacySummary,
+		Items:           items,
 	}
 }
 

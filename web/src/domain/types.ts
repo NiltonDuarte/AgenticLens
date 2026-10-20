@@ -274,10 +274,18 @@ export interface TicketComparisonRow {
   readonly lead_duration_formatted: string;
 }
 
+export interface TicketArtifactItem {
+  readonly path: string;
+  readonly title: string;
+  readonly description: string;
+  readonly content: string | null;
+}
+
 export interface TicketArtifacts {
   readonly ticket_id: string;
-  readonly contract_content: string | null;
-  readonly summary_content: string | null;
+  readonly contract_content?: string | null;
+  readonly summary_content?: string | null;
+  readonly items?: readonly TicketArtifactItem[];
 }
 
 export interface WorkspaceDetail {

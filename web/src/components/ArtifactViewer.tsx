@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
-import type { TicketArtifacts } from '../domain/types';
+import type { TicketArtifacts, TicketArtifactItem } from '../domain/types';
 
-export type ArtifactTab = 'contract' | 'summary';
+export type ArtifactTab = string;
 export type ViewMode = 'rich' | 'raw';
 export type CopyStatus = 'Copy' | 'Copied';
 
@@ -70,7 +70,29 @@ const markdownComponents: Components = {
 };
 
 export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => {
-  const [activeArtifactTab, setActiveArtifactTab] = useState<ArtifactTab>('contract');
+  const resolvedItems: readonly TicketArtifactItem[] = useMemo(() => {
+    if (artifacts?.items && artifacts.items.length > 0) {
+      return artifacts.items;
+    }
+    return [
+      {
+        path: 'CONTRACT.md',
+        title: 'CONTRACT.md',
+        description: 'Frozen big-picture technical contract',
+        content: artifacts?.contract_content ?? null,
+      },
+      {
+        path: 'SUMMARY.md',
+        title: 'SUMMARY.md',
+        description: 'Implementation summary and verification log',
+        content: artifacts?.summary_content ?? null,
+      },
+    ];
+  }, [artifacts]);
+
+  const [activeItemPath, setActiveItemPath] = useState<string>(() => {
+    return resolvedItems.length > 0 ? resolvedItems[0].path : 'CONTRACT.md';
+  });
   const [viewMode, setViewMode] = useState<ViewMode>('rich');
   const [copyStatus, setCopyStatus] = useState<CopyStatus>('Copy');
 
@@ -84,18 +106,22 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => 
     };
   }, []);
 
-  const contractContent = artifacts?.contract_content ?? null;
-  const summaryContent = artifacts?.summary_content ?? null;
+  useEffect(() => {
+    if (resolvedItems.length > 0) {
+      if (!resolvedItems.some((item) => item.path === activeItemPath)) {
+        setActiveItemPath(resolvedItems[0].path);
+      }
+    }
+  }, [resolvedItems, activeItemPath]);
 
-  const currentContent = activeArtifactTab === 'contract' ? contractContent : summaryContent;
-  const currentTitle = activeArtifactTab === 'contract' ? 'CONTRACT.md' : 'SUMMARY.md';
+  const activeItem = resolvedItems.find((item) => item.path === activeItemPath) ?? (resolvedItems.length > 0 ? resolvedItems[0] : null);
 
-  const hasContractContent = Boolean(contractContent && contractContent.trim().length > 0);
-  const hasSummaryContent = Boolean(summaryContent && summaryContent.trim().length > 0);
+  const currentContent = activeItem?.content ?? null;
+  const currentTitle = activeItem?.title || activeItem?.path || 'document';
   const hasCurrentContent = Boolean(currentContent && currentContent.trim().length > 0);
 
-  const handleTabChange = (tab: ArtifactTab) => {
-    setActiveArtifactTab(tab);
+  const handleTabChange = (path: string) => {
+    setActiveItemPath(path);
     setCopyStatus('Copy');
     if (copyTimerRef.current !== null) {
       window.clearTimeout(copyTimerRef.current);
@@ -138,20 +164,22 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => 
         <h4 className="section-title">Workspace Artifacts</h4>
         <div className="artifact-toolbar">
           <div className="artifact-tabs">
-            <button
-              type="button"
-              className={`artifact-tab-btn ${activeArtifactTab === 'contract' ? 'active' : ''}`}
-              onClick={() => handleTabChange('contract')}
-            >
-              CONTRACT.md {hasContractContent ? '' : '(Empty)'}
-            </button>
-            <button
-              type="button"
-              className={`artifact-tab-btn ${activeArtifactTab === 'summary' ? 'active' : ''}`}
-              onClick={() => handleTabChange('summary')}
-            >
-              SUMMARY.md {hasSummaryContent ? '' : '(Empty)'}
-            </button>
+            {resolvedItems.map((item) => {
+              const isActive = activeItem?.path === item.path;
+              const hasContent = Boolean(item.content && item.content.trim().length > 0);
+              const label = item.title || item.path;
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  className={`artifact-tab-btn ${isActive ? 'active' : ''}`}
+                  onClick={() => handleTabChange(item.path)}
+                  title={item.description || label}
+                >
+                  {label} {hasContent ? '' : '(Empty)'}
+                </button>
+              );
+            })}
           </div>
           <div className="view-mode-toggle" role="group" aria-label="View Mode">
             <button

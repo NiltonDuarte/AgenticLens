@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,74 @@ import (
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
+
+func testProjectConfig() domain.ProjectConfig {
+	return domain.ProjectConfig{
+		ProjectName: "AgenticLens",
+		Ticket: domain.TicketConfig{
+			Prefixes: []domain.TicketPrefix{
+				{
+					Prefix:      "AL",
+					Description: "Core AgenticLens development features, bugfixes, and technical initiatives",
+				},
+				{
+					Prefix:      "GEN",
+					Description: "General multi-agent engineering tasks and ad-hoc untracked work",
+					TicketType:  "chore",
+				},
+				{
+					Prefix:      "PO",
+					Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
+					TicketType:  "docs",
+				},
+			},
+			CaseInsensitive: true,
+			CustomPatterns:  []string{},
+		},
+		Workspaces: domain.WorkspacesConfig{
+			Dir:        "workspaces",
+			SrcFolders: []string{"web", "backend"},
+			Artifacts:  config.DefaultWorkspaceArtifacts(),
+		},
+		Database: domain.DatabaseConfig{
+			Path:           "~/.local/share/opencode/opencode.db",
+			QueryTimeoutMs: 5000,
+			BusyTimeoutMs:  5000,
+			ReadOnly:       true,
+		},
+		Live: domain.LiveConfig{
+			ActiveThresholdSeconds: 300,
+			PollIntervalMs:         2000,
+			MaxTraceBufferMessages: 500,
+			AnomalyThresholds: domain.AnomalyThresholdsConfig{
+				StallThresholdSeconds: 120,
+				ErrorRateThreshold:    0.25,
+				ContextExhaustionPct:  0.85,
+			},
+		},
+		CodeMetrics: domain.CodeMetricsConfig{
+			Include:      []string{},
+			Exclude:      []string{},
+			TestPatterns: []string{},
+			ProdPatterns: []string{},
+		},
+		RoleMappings: domain.RoleMappings{
+			"orchestrator": "orchestrator",
+			"build":        "orchestrator",
+			"planner":      "planner",
+			"coder":        "coder",
+			"tester":       "tester",
+			"reviewer":     "reviewer",
+		},
+		RoleOrder: []string{
+			"orchestrator",
+			"planner",
+			"coder",
+			"tester",
+			"reviewer",
+		},
+	}
+}
 
 func TestLoad_YAMLConfigurationParsing(t *testing.T) {
 	tempDir := t.TempDir()
@@ -274,28 +343,15 @@ func TestLoad_LegacyJSONCompatibility(t *testing.T) {
 	}
 }
 
-func TestLoad_MissingConfigurationFileFallback(t *testing.T) {
+func TestLoad_MissingConfigurationReturnsErrConfigNotFound(t *testing.T) {
 	tempDir := t.TempDir()
 
-	cfg, err := config.Load(tempDir)
-	if err != nil {
-		t.Fatalf("expected nil error on missing config, got %v", err)
+	_, err := config.Load(tempDir)
+	if err == nil {
+		t.Fatalf("expected error on missing config, got nil")
 	}
-
-	defaultCfg := domain.DefaultProjectConfig()
-	if cfg.ProjectName != defaultCfg.ProjectName {
-		t.Errorf("expected default project name %s, got %s", defaultCfg.ProjectName, cfg.ProjectName)
-	}
-	if cfg.Workspaces.Dir != defaultCfg.Workspaces.Dir {
-		t.Errorf("expected default workspaces dir %s, got %s", defaultCfg.Workspaces.Dir, cfg.Workspaces.Dir)
-	}
-	if len(cfg.Ticket.Prefixes) != len(defaultCfg.Ticket.Prefixes) {
-		t.Errorf("expected default prefixes %v, got %v", defaultCfg.Ticket.Prefixes, cfg.Ticket.Prefixes)
-	}
-	for i, exp := range defaultCfg.Ticket.Prefixes {
-		if cfg.Ticket.Prefixes[i].TicketType != exp.TicketType {
-			t.Errorf("expected default prefix[%d] %q TicketType %q, got %q", i, exp.Prefix, exp.TicketType, cfg.Ticket.Prefixes[i].TicketType)
-		}
+	if !errors.Is(err, config.ErrConfigNotFound) {
+		t.Errorf("expected ErrConfigNotFound, got %v", err)
 	}
 }
 
@@ -518,7 +574,7 @@ func TestLoad_AdversarialErrorWrapping(t *testing.T) {
 }
 
 func TestLoad_AdversarialPartialConfigs(t *testing.T) {
-	defaults := domain.DefaultProjectConfig()
+	defaults := testProjectConfig()
 
 	t.Run("zero byte empty file preserves full defaults", func(t *testing.T) {
 		tempDir := t.TempDir()
@@ -694,17 +750,17 @@ func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
 }
 
 func TestLoad_AdversarialNonexistentPathsResilience(t *testing.T) {
-	t.Run("nonexistent directory returns defaults and nil error", func(t *testing.T) {
+	t.Run("nonexistent directory returns ErrConfigNotFound", func(t *testing.T) {
 		nonexistentDir := filepath.Join(os.TempDir(), "agenticlens_nonexistent_test_dir_12345")
 		_ = os.RemoveAll(nonexistentDir)
 
-		cfg, err := config.Load(nonexistentDir)
-		if err != nil {
-			t.Fatalf("expected nil error on nonexistent directory, got %v", err)
+		_, err := config.Load(nonexistentDir)
+		if err == nil {
+			t.Fatalf("expected error on nonexistent directory, got nil")
 		}
-
-		defaults := domain.DefaultProjectConfig()
-		assertConfigMatchesDefaults(t, cfg, defaults)
+		if !errors.Is(err, config.ErrConfigNotFound) {
+			t.Errorf("expected ErrConfigNotFound, got %v", err)
+		}
 	})
 
 	t.Run("FindConfigFile on nonexistent directory returns empty string and nil error", func(t *testing.T) {
@@ -1139,7 +1195,7 @@ ticket:
 func TestLoad_RoleOrderParsingAndFallback(t *testing.T) {
 	t.Parallel()
 
-	defaultOrder := domain.DefaultProjectConfig().RoleOrder
+	defaultOrder := testProjectConfig().RoleOrder
 
 	t.Run("role_order parsed accurately from JSON", func(t *testing.T) {
 		t.Parallel()
@@ -1264,22 +1320,16 @@ role_order:
 		}
 	})
 
-	t.Run("fallback to DefaultProjectConfig when config file completely absent", func(t *testing.T) {
+	t.Run("returns ErrConfigNotFound when config file completely absent", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error loading config from empty dir: %v", err)
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatalf("expected error loading config from empty dir, got nil")
 		}
-
-		if len(cfg.RoleOrder) != len(defaultOrder) {
-			t.Fatalf("expected default RoleOrder len %d, got %d: %v", len(defaultOrder), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-		for i, r := range defaultOrder {
-			if cfg.RoleOrder[i] != r {
-				t.Errorf("expected default RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
-			}
+		if !errors.Is(err, config.ErrConfigNotFound) {
+			t.Errorf("expected ErrConfigNotFound, got: %v", err)
 		}
 	})
 
@@ -1714,7 +1764,7 @@ func TestLoad_StrictSixTierCandidatePriorityElimination(t *testing.T) {
 		})
 	}
 
-	t.Run("Tier 7: Default fallback after all candidates removed", func(t *testing.T) {
+	t.Run("Tier 7: Default fallback after all candidates removed returns ErrConfigNotFound", func(t *testing.T) {
 		found, err := config.FindConfigFile(tempDir)
 		if err != nil {
 			t.Fatalf("unexpected error finding config: %v", err)
@@ -1723,13 +1773,12 @@ func TestLoad_StrictSixTierCandidatePriorityElimination(t *testing.T) {
 			t.Errorf("expected empty path, got %s", found)
 		}
 
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error loading fallback config: %v", err)
+		_, err = config.Load(tempDir)
+		if err == nil {
+			t.Fatalf("expected error loading absent config, got nil")
 		}
-		defaultCfg := domain.DefaultProjectConfig()
-		if cfg.ProjectName != defaultCfg.ProjectName {
-			t.Errorf("expected default project name %s, got %s", defaultCfg.ProjectName, cfg.ProjectName)
+		if !errors.Is(err, config.ErrConfigNotFound) {
+			t.Errorf("expected ErrConfigNotFound, got %v", err)
 		}
 	})
 }
@@ -1846,7 +1895,7 @@ func TestLoad_BoundaryAndCorruptedConfigs(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil error on empty file, got: %v", err)
 		}
-		defaultCfg := domain.DefaultProjectConfig()
+		defaultCfg := testProjectConfig()
 		if cfg.ProjectName != defaultCfg.ProjectName {
 			t.Errorf("expected default project name %s, got %s", defaultCfg.ProjectName, cfg.ProjectName)
 		}
@@ -1864,7 +1913,7 @@ func TestLoad_BoundaryAndCorruptedConfigs(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil error on whitespace file, got: %v", err)
 		}
-		defaultCfg := domain.DefaultProjectConfig()
+		defaultCfg := testProjectConfig()
 		if cfg.ProjectName != defaultCfg.ProjectName {
 			t.Errorf("expected default project name %s, got %s", defaultCfg.ProjectName, cfg.ProjectName)
 		}

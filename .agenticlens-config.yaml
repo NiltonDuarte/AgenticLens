@@ -32,6 +32,17 @@ workspaces:
   src_folders:
     - web
     - backend
+  # Configured documentation and process artifacts tracked inside ticket workspaces.
+  artifacts:
+    - path: CONTRACT.md
+      title: Technical Contract
+      description: Frozen technical contract and acceptance boundaries
+    - path: SUMMARY.md
+      title: Work Summary
+      description: Implementation summary log and verification records
+    - path: PULL_REQUEST.md
+      title: Pull Request
+      description: Pull request description and context
 
 # OpenCode SQLite database connectivity and timeout parameters.
 database:

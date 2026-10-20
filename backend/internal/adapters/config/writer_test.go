@@ -14,7 +14,7 @@ import (
 func TestGenerateConfigYAML_Default(t *testing.T) {
 	t.Parallel()
 
-	defaultCfg := domain.DefaultProjectConfig()
+	defaultCfg := testProjectConfig()
 	data, err := adaptersconfig.GenerateConfigYAML(defaultCfg)
 	if err != nil {
 		t.Fatalf("GenerateConfigYAML failed: %v", err)
@@ -79,7 +79,7 @@ func TestGenerateConfigYAML_RoundTrip(t *testing.T) {
 	tempDir := t.TempDir()
 	cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
 
-	defaultCfg := domain.DefaultProjectConfig()
+	defaultCfg := testProjectConfig()
 	data, err := adaptersconfig.GenerateConfigYAML(defaultCfg)
 	if err != nil {
 		t.Fatalf("GenerateConfigYAML failed: %v", err)
@@ -325,6 +325,46 @@ func TestGenerateDefaultYAML_EdgeCases(t *testing.T) {
 				t.Errorf("expected loaded ProjectName %q, got %q", tc.projectName, loaded.ProjectName)
 			}
 		})
+	}
+}
+
+func TestGenerateConfigYAML_WorkspaceArtifacts(t *testing.T) {
+	t.Parallel()
+
+	cfg := testProjectConfig()
+	cfg.Workspaces.Artifacts = []domain.WorkspaceArtifactConfig{
+		{
+			Path:        "DOC.md",
+			Title:       "Custom Documentation",
+			Description: "Custom documentation guide",
+		},
+	}
+
+	data, err := adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatalf("GenerateConfigYAML failed: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "- path: DOC.md") || !strings.Contains(content, "title: Custom Documentation") {
+		t.Errorf("expected artifacts in yaml, got: %s", content)
+	}
+
+	tempDir := t.TempDir()
+	cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+	if err := os.WriteFile(cfgPath, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := adaptersconfig.LoadFromFile(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadFromFile failed: %v", err)
+	}
+	if len(loaded.Workspaces.Artifacts) != 1 || loaded.Workspaces.Artifacts[0].Path != "DOC.md" {
+		t.Errorf("expected 1 artifact DOC.md, got: %+v", loaded.Workspaces.Artifacts)
+	}
+	if loaded.Workspaces.Artifacts[0].Title != "Custom Documentation" {
+		t.Errorf("expected title 'Custom Documentation', got %q", loaded.Workspaces.Artifacts[0].Title)
 	}
 }
 

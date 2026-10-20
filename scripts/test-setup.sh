@@ -116,21 +116,32 @@ fi
 
 # Test collision without force
 COLLISION_EXIT=0
-(cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init) || COLLISION_EXIT=$?
+(cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init \
+    --project-name "CollidingProject" \
+    --src-folders "src" \
+    --ticket-prefix "COLLIDE") || COLLISION_EXIT=$?
 if [[ $COLLISION_EXIT -eq 0 ]]; then
     echo "[FAIL] Expected init to fail when file already exists without --force" >&2
     exit 1
 fi
 
 # Test overwrite with force
-(cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init --project-name "ForcedOverwrite" --force)
+(cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init \
+    --project-name "ForcedOverwrite" \
+    --src-folders "core,adapters,ui" \
+    --ticket-prefix "VERIFY" \
+    --force)
 if ! grep -q "project_name: ForcedOverwrite" "$CONFIG_FILE"; then
     echo "[FAIL] Configuration was not updated after --force init" >&2
     exit 1
 fi
 
 # Test dry-run output
-DRY_OUTPUT="$(cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init --project-name "DryRunOutput" --dry-run)"
+DRY_OUTPUT="$(cd "$SANDBOX_DIR" && "${TEST_DEST}/agentic-lens" init \
+    --project-name "DryRunOutput" \
+    --src-folders "core,adapters,ui" \
+    --ticket-prefix "VERIFY" \
+    --dry-run)"
 if ! echo "$DRY_OUTPUT" | grep -q "project_name: DryRunOutput"; then
     echo "[FAIL] Dry-run output missing project_name" >&2
     exit 1
@@ -145,6 +156,7 @@ mkdir -p "$EDGE_DIR"
 (cd "$EDGE_DIR" && "${TEST_DEST}/agentic-lens" init \
     --project-name "My Multi Word Project" \
     --workspaces "my custom workspaces" \
+    --src-folders "edge_src,ui_src" \
     --ticket-prefix "EDGE_PREFIX")
 
 EDGE_CONFIG="${EDGE_DIR}/.agenticlens-config.yaml"
@@ -187,12 +199,57 @@ if [[ $(id -u) -ne 0 ]]; then
     mkdir -p "$RO_DIR"
     chmod 0555 "$RO_DIR"
     PERM_EXIT=0
-    "${TEST_DEST}/agentic-lens" init --output "${RO_DIR}/config.yaml" 2>/dev/null || PERM_EXIT=$?
+    "${TEST_DEST}/agentic-lens" init \
+        --project-name "Protected" \
+        --src-folders "src" \
+        --ticket-prefix "PROT" \
+        --output "${RO_DIR}/config.yaml" 2>/dev/null || PERM_EXIT=$?
     chmod 0755 "$RO_DIR"
     if [[ $PERM_EXIT -eq 0 ]]; then
         echo "[FAIL] Expected non-zero exit when writing to read-only directory" >&2
         exit 1
     fi
+fi
+
+# Edge Case 5: Mandatory init flags enforcement (fails with exit code 1)
+MISSING_PN_OUT="$("${TEST_DEST}/agentic-lens" init --src-folders "src" --ticket-prefix "AL" 2>&1 || true)"
+if ! echo "$MISSING_PN_OUT" | grep -q "Error: missing required flag --project-name"; then
+    echo "[FAIL] Expected missing --project-name error message, got: $MISSING_PN_OUT" >&2
+    exit 1
+fi
+
+MISSING_SF_OUT="$("${TEST_DEST}/agentic-lens" init --project-name "Acme" --ticket-prefix "AL" 2>&1 || true)"
+if ! echo "$MISSING_SF_OUT" | grep -q "Error: missing required flag --src-folders"; then
+    echo "[FAIL] Expected missing --src-folders error message, got: $MISSING_SF_OUT" >&2
+    exit 1
+fi
+
+MISSING_TP_OUT="$("${TEST_DEST}/agentic-lens" init --project-name "Acme" --src-folders "src" 2>&1 || true)"
+if ! echo "$MISSING_TP_OUT" | grep -q "Error: missing required flag --ticket-prefix"; then
+    echo "[FAIL] Expected missing --ticket-prefix error message, got: $MISSING_TP_OUT" >&2
+    exit 1
+fi
+
+# Edge Case 6: Missing config instructions for commands
+NOCONFIG_DIR="${TEMP_DIR}/empty_noconfig"
+mkdir -p "$NOCONFIG_DIR"
+
+CMD_ROOT_OUT="$(cd "$NOCONFIG_DIR" && "${TEST_DEST}/agentic-lens" --workspaces "$NOCONFIG_DIR" 2>&1 || true)"
+if ! echo "$CMD_ROOT_OUT" | grep -q "Project configuration not found. Please run 'agentic-lens init'"; then
+    echo "[FAIL] Expected missing config instruction for root command, got: $CMD_ROOT_OUT" >&2
+    exit 1
+fi
+
+CMD_SERVER_OUT="$(cd "$NOCONFIG_DIR" && "${TEST_DEST}/agentic-lens" server --port 29999 2>&1 || true)"
+if ! echo "$CMD_SERVER_OUT" | grep -q "Project configuration not found. Please run 'agentic-lens init'"; then
+    echo "[FAIL] Expected missing config instruction for server command, got: $CMD_SERVER_OUT" >&2
+    exit 1
+fi
+
+CMD_GEN_OUT="$(cd "$NOCONFIG_DIR" && "${TEST_DEST}/agentic-lens" generate --ticket-id "TEST-1" 2>&1 || true)"
+if ! echo "$CMD_GEN_OUT" | grep -q "Project configuration not found. Please run 'agentic-lens init'"; then
+    echo "[FAIL] Expected missing config instruction for generate command, got: $CMD_GEN_OUT" >&2
+    exit 1
 fi
 echo "[PASS] Edge cases (spaces in names, custom prefixes, invalid flags, missing binaries, permissions) passed."
 

@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-REPO="agenticlens/AgenticLens"
+REPO="NiltonDuarte/AgenticLens"
 DEST_DIR="${AGENTIC_LENS_BIN_DIR:-${SKILL_ROOT}/bin}"
 VERSION="${AGENTIC_LENS_VERSION:-latest}"
 LOCAL_BIN="${AGENTIC_LENS_LOCAL_BINARY:-}"

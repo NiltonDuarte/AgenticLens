@@ -3478,6 +3478,15 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("git checkout -b failed: %v", err)
 		}
 
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatalf("failed creating .agenticlens dir: %v", err)
+		}
+		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config.yaml: %v", err)
+		}
+
 		outJSON := filepath.Join(tempDir, "facts.json")
 
 		// AL-30 is on branch fix/AL-30-test. Passing --ticket-type chore MUST override the branch prefix "fix".
@@ -3734,10 +3743,132 @@ workspaces:
 }
 
 func TestInitCommand(t *testing.T) {
-	t.Run("default scaffolding creates valid configuration file", func(t *testing.T) {
+	t.Run("missing required flag --project-name fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--src-folders", "src", "--ticket-prefix", "AL"},
+			{"init", "--project-name", "", "--src-folders", "src", "--ticket-prefix", "AL"},
+			{"init", "--project-name", "   ", "--src-folders", "src", "--ticket-prefix", "AL"},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --project-name (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --project-name") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --project-name', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing required flag --src-folders fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--project-name", "Acme", "--ticket-prefix", "AL"},
+			{"init", "--project-name", "Acme", "--src-folders", "", "--ticket-prefix", "AL"},
+			{"init", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefix", "AL"},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --src-folders (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --src-folders") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --src-folders', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing required flag --ticket-prefix fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--project-name", "Acme", "--src-folders", "src"},
+			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", ""},
+			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "   "},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --ticket-prefix (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --ticket-prefix") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --ticket-prefix', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing all required flags fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init")
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init without any flags to fail, got nil error")
+		}
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) {
+			t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+		}
+		if exitErr.ExitCode() != 1 {
+			t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+		}
+		if !strings.Contains(stderr.String(), "Error: missing required flag") {
+			t.Errorf("expected stderr to contain missing flag error, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("valid required flags create valid configuration file", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		cmd := exec.Command(cliBinaryPath, "init")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AcmeApp",
+			"--src-folders", "web,backend",
+			"--ticket-prefix", "ACME",
+		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -3757,12 +3888,14 @@ func TestInitCommand(t *testing.T) {
 			t.Fatalf("loading generated config failed: %v", err)
 		}
 
-		expectedProject := filepath.Base(tempDir)
-		if loaded.ProjectName != expectedProject {
-			t.Errorf("expected ProjectName %q, got %q", expectedProject, loaded.ProjectName)
+		if loaded.ProjectName != "AcmeApp" {
+			t.Errorf("expected ProjectName 'AcmeApp', got %q", loaded.ProjectName)
 		}
 		if loaded.Workspaces.Dir != "workspaces" {
 			t.Errorf("expected workspaces.dir 'workspaces', got %q", loaded.Workspaces.Dir)
+		}
+		if len(loaded.Workspaces.Artifacts) == 0 {
+			t.Errorf("expected generated config to include default workspace artifacts")
 		}
 	})
 
@@ -3809,6 +3942,9 @@ func TestInitCommand(t *testing.T) {
 		if len(loaded.Ticket.Prefixes) == 0 || loaded.Ticket.Prefixes[0].Prefix != "ACME" {
 			t.Errorf("expected ACME primary prefix, got %v", loaded.Ticket.Prefixes)
 		}
+		if len(loaded.Workspaces.Artifacts) == 0 {
+			t.Errorf("expected generated custom config to include workspace artifacts")
+		}
 	})
 
 	t.Run("collision fails safely without force", func(t *testing.T) {
@@ -3818,7 +3954,13 @@ func TestInitCommand(t *testing.T) {
 			t.Fatalf("writing initial config: %v", err)
 		}
 
-		cmd := exec.Command(cliBinaryPath, "init")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Original",
+			"--src-folders", "src",
+			"--ticket-prefix", "AL",
+		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -3847,7 +3989,14 @@ func TestInitCommand(t *testing.T) {
 			t.Fatalf("writing initial config: %v", err)
 		}
 
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Overwritten", "--force")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Overwritten",
+			"--src-folders", "src",
+			"--ticket-prefix", "AL",
+			"--force",
+		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -3869,7 +4018,14 @@ func TestInitCommand(t *testing.T) {
 	t.Run("dry run prints YAML to stdout without creating file", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		cmd := exec.Command(cliBinaryPath, "init", "--dry-run", "--project-name", "DryRunTest")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--dry-run",
+			"--project-name", "DryRunTest",
+			"--src-folders", "src",
+			"--ticket-prefix", "DRY",
+		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -3901,8 +4057,9 @@ func TestInitCommand(t *testing.T) {
 			"init",
 			"--project-name", projName,
 			"--workspaces", "team workspaces",
-			"--output", customOutput,
+			"--src-folders", "my web,my backend",
 			"--ticket-prefix", "SPECIAL",
+			"--output", customOutput,
 		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
@@ -3950,7 +4107,13 @@ func TestInitCommand(t *testing.T) {
 			t.Fatalf("writing target file: %v", err)
 		}
 
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "AttemptedOverwrite")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AttemptedOverwrite",
+			"--src-folders", "src",
+			"--ticket-prefix", "AL",
+		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -3986,7 +4149,14 @@ func TestInitCommand(t *testing.T) {
 		defer os.Chmod(roDir, 0755)
 
 		target := filepath.Join(roDir, "config.yaml")
-		cmd := exec.Command(cliBinaryPath, "init", "--output", target)
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Protected",
+			"--src-folders", "src",
+			"--ticket-prefix", "AL",
+			"--output", target,
+		)
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -3998,6 +4168,70 @@ func TestInitCommand(t *testing.T) {
 		}
 		if !strings.Contains(stderr.String(), "Error writing configuration file") {
 			t.Errorf("expected error message in stderr, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("commands fail with helpful message when configuration is absent", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// Test root command in dir with no config
+		cmdRoot := exec.Command(cliBinaryPath, "--workspaces", tempDir)
+		cmdRoot.Dir = tempDir
+		var stderrRoot bytes.Buffer
+		cmdRoot.Stderr = &stderrRoot
+		if err := cmdRoot.Run(); err == nil {
+			t.Fatal("expected root command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrRoot.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrRoot.String())
+		}
+
+		// Test server command in dir with no config
+		cmdServer := exec.Command(cliBinaryPath, "server", "--port", "29199", "--workspaces", tempDir)
+		cmdServer.Dir = tempDir
+		var stderrServer bytes.Buffer
+		cmdServer.Stderr = &stderrServer
+		if err := cmdServer.Run(); err == nil {
+			t.Fatal("expected server command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrServer.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrServer.String())
+		}
+
+		// Test generate command in dir with no config
+		cmdGenerate := exec.Command(cliBinaryPath, "generate", "--ticket-id", "TEST-1", "--allow-empty")
+		cmdGenerate.Dir = tempDir
+		var stderrGen bytes.Buffer
+		cmdGenerate.Stderr = &stderrGen
+		if err := cmdGenerate.Run(); err == nil {
+			t.Fatal("expected generate command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrGen.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrGen.String())
 		}
 	})
 }
