@@ -32,7 +32,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 - `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
-- `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
+- `workspaces/plan/done/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
@@ -46,13 +46,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Ready
 
-- **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
-  - **Subsystem**: Presentation / Web / Tests
-  - **Phase**: Phase 4
-  - **Status**: Ready
-  - **Blocked by**: None (AL-17, AL-19 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
+(None)
 
 ---
 
@@ -63,6 +57,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
+  - **Subsystem**: Presentation / Web / Tests
+  - **Phase**: Phase 4
+  - **Status**: Done
+  - **Blocked by**: None (AL-17, AL-19 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 
 - **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
   - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests

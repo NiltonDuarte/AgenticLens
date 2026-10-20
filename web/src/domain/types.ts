@@ -292,7 +292,7 @@ export type TimeWindowPreset = '1d' | '7d' | '30d' | '90d' | 'all' | 'custom';
 
 export type AutopsySortMode = 'ticket_id' | 'completed_at';
 
-export type ActiveTab = 'landing' | 'overview' | 'deep-dive' | 'progression' | 'comparisons';
+export type ActiveTab = 'landing' | 'overview' | 'deep-dive' | 'progression' | 'comparisons' | 'live';
 
 export type ComparisonSortField =
   | 'completed_at'
