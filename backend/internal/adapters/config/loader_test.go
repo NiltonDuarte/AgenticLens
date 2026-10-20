@@ -2065,4 +2065,36 @@ func TestLoad_CustomExtensionAndEmptyPathEdgeCases(t *testing.T) {
 			t.Fatalf("expected error on invalid file, got nil")
 		}
 	})
+
+	t.Run("Root config file parses FIX prefix with fix ticket_type and infers correctly", func(t *testing.T) {
+		rootCfg, err := config.Load("../../..")
+		if err != nil {
+			t.Fatalf("failed to load root config: %v", err)
+		}
+		var foundFix bool
+		for _, p := range rootCfg.Ticket.Prefixes {
+			if p.Prefix == "FIX" {
+				foundFix = true
+				if p.TicketType != "fix" {
+					t.Errorf("expected FIX prefix to have ticket_type 'fix', got %q", p.TicketType)
+				}
+				if !strings.Contains(p.Description, "Bug fixes") {
+					t.Errorf("expected FIX prefix description to contain 'Bug fixes', got %q", p.Description)
+				}
+			}
+		}
+		if !foundFix {
+			t.Fatal("expected FIX prefix in root config prefixes")
+		}
+
+		// Test type inference for FIX prefix variants
+		tt, ok := rootCfg.Ticket.InferTicketType("FIX-1")
+		if !ok || tt != "fix" {
+			t.Errorf("expected InferTicketType('FIX-1') = ('fix', true), got (%q, %v)", tt, ok)
+		}
+		ttLower, okLower := rootCfg.Ticket.InferTicketType("fix-123")
+		if !okLower || ttLower != "fix" {
+			t.Errorf("expected InferTicketType('fix-123') = ('fix', true), got (%q, %v)", ttLower, okLower)
+		}
+	})
 }

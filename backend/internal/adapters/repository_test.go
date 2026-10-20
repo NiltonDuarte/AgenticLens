@@ -1336,12 +1336,61 @@ func TestSaveFactLedger(t *testing.T) {
 
 		// Attempting to create directory inside a regular file will fail
 		invalidPath := filepath.Join(blockingFile, "sub", "facts.json")
-		err := adapters.SaveFactLedger(invalidPath, domain.AgenticFactLedger{})
+		tid := "AL-ERR-1"
+		title := "Test Error Dir"
+		ledger := domain.AgenticFactLedger{
+			TicketID:    &tid,
+			TicketTitle: &title,
+		}
+		err := adapters.SaveFactLedger(invalidPath, ledger)
 		if err == nil {
 			t.Fatal("expected error when parent directory cannot be created, got nil")
 		}
 		if !strings.Contains(err.Error(), "failed to create directory") {
 			t.Errorf("expected 'failed to create directory' in error message, got: %v", err)
+		}
+	})
+
+	t.Run("fails defensive validation when TicketID or TicketTitle is missing or empty", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outPath := filepath.Join(tempDir, "facts.json")
+
+		validID := "AL-VALID"
+		validTitle := "Valid Title"
+		emptyStr := ""
+		whitespaceStr := "   \t\n"
+
+		cases := []struct {
+			name        string
+			ticketID    *string
+			ticketTitle *string
+			errContains string
+		}{
+			{"nil ticket ID", nil, &validTitle, "TicketID is required and cannot be empty"},
+			{"empty ticket ID", &emptyStr, &validTitle, "TicketID is required and cannot be empty"},
+			{"whitespace ticket ID", &whitespaceStr, &validTitle, "TicketID is required and cannot be empty"},
+			{"nil ticket title", &validID, nil, "TicketTitle is required and cannot be empty"},
+			{"empty ticket title", &validID, &emptyStr, "TicketTitle is required and cannot be empty"},
+			{"whitespace ticket title", &validID, &whitespaceStr, "TicketTitle is required and cannot be empty"},
+		}
+
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				ledger := domain.AgenticFactLedger{
+					TicketID:    tc.ticketID,
+					TicketTitle: tc.ticketTitle,
+				}
+				err := adapters.SaveFactLedger(outPath, ledger)
+				if err == nil {
+					t.Fatalf("expected error for %s, got nil", tc.name)
+				}
+				if !strings.Contains(err.Error(), tc.errContains) {
+					t.Errorf("expected error containing %q, got %q", tc.errContains, err.Error())
+				}
+			})
 		}
 	})
 }
@@ -1430,7 +1479,12 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err := adapters.SaveFactLedger(dirAsFile, domain.AgenticFactLedger{})
+		tid := "AL-ERR-DIR"
+		title := "Test Dir Failure"
+		err := adapters.SaveFactLedger(dirAsFile, domain.AgenticFactLedger{
+			TicketID:    &tid,
+			TicketTitle: &title,
+		})
 		if err == nil {
 			t.Fatal("expected error writing fact ledger to existing directory, got nil")
 		}
@@ -1463,7 +1517,9 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 
 		// First write: large payload
 		longTitle := strings.Repeat("Initial Large Payload Content ", 10)
+		tid := "AL-OVERWRITE-1"
 		firstLedger := domain.AgenticFactLedger{
+			TicketID:    &tid,
 			TicketTitle: &longTitle,
 		}
 		if err := adapters.SaveFactLedger(filePath, firstLedger); err != nil {
@@ -1473,6 +1529,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		// Second write: tiny payload
 		shortTitle := "Short"
 		secondLedger := domain.AgenticFactLedger{
+			TicketID:    &tid,
 			TicketTitle: &shortTitle,
 		}
 		if err := adapters.SaveFactLedger(filePath, secondLedger); err != nil {
@@ -1542,7 +1599,9 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		tempDir := t.TempDir()
 
 		factPath := filepath.Join(tempDir, "zero_facts.json")
-		if err := adapters.SaveFactLedger(factPath, domain.AgenticFactLedger{}); err != nil {
+		tid := "AL-ZERO"
+		title := "Zero Facts"
+		if err := adapters.SaveFactLedger(factPath, domain.AgenticFactLedger{TicketID: &tid, TicketTitle: &title}); err != nil {
 			t.Fatalf("saving zero fact ledger failed: %v", err)
 		}
 		factData, err := os.ReadFile(factPath)

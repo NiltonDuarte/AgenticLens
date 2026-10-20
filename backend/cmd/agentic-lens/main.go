@@ -66,13 +66,24 @@ func runGenerate(args []string) {
 	if activeTicketID == "" && cachedFacts != nil && cachedFacts.TicketID != nil {
 		activeTicketID = strings.TrimSpace(*cachedFacts.TicketID)
 	}
+	if activeTicketID == "" {
+		fmt.Fprintf(os.Stderr, "Error: missing ticket ID. Specify --ticket-id explicitly.\n")
+		os.Exit(1)
+	}
 
 	var activeTicketTitle *string
 	if strings.TrimSpace(*ticketTitleFlag) != "" {
 		clean := strings.TrimSpace(*ticketTitleFlag)
 		activeTicketTitle = &clean
 	} else if cachedFacts != nil && cachedFacts.TicketTitle != nil {
-		activeTicketTitle = cachedFacts.TicketTitle
+		clean := strings.TrimSpace(*cachedFacts.TicketTitle)
+		if clean != "" {
+			activeTicketTitle = &clean
+		}
+	}
+	if activeTicketTitle == nil || strings.TrimSpace(*activeTicketTitle) == "" {
+		fmt.Fprintf(os.Stderr, "Error: missing ticket title for ticket '%s'. Specify --ticket-title explicitly.\n", activeTicketID)
+		os.Exit(1)
 	}
 
 	var activeTicketType *string
@@ -100,10 +111,7 @@ func runGenerate(args []string) {
 	}
 
 	if activeTicketType == nil {
-		targetTicket := "UNKNOWN"
-		if activeTicketID != "" {
-			targetTicket = activeTicketID
-		}
+		targetTicket := activeTicketID
 		if *strictTypeFlag {
 			fmt.Fprintf(os.Stderr, "Error: missing ticket type for ticket '%s'. Specify --ticket-type explicitly.\n", targetTicket)
 			os.Exit(1)
@@ -192,12 +200,12 @@ func runGenerate(args []string) {
 	}
 
 	if len(knownThreadIDs) == 0 && len(invocations) == 0 && !*allowEmptyFlag {
-		targetTicket := "UNKNOWN"
-		if activeTicketID != "" {
-			targetTicket = activeTicketID
-		}
-		fmt.Fprintf(os.Stderr, "Error: unable to identify root session for ticket '%s'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted.\n", targetTicket)
+		fmt.Fprintf(os.Stderr, "Error: unable to identify root session for ticket '%s'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted.\n", activeTicketID)
 		os.Exit(1)
+	}
+
+	if len(invocations) == 0 {
+		fmt.Fprintf(os.Stderr, "WARNING: Zero invocations recorded for ticket %s. This is not expected.\n", activeTicketID)
 	}
 
 	if len(invocations) > 0 && strings.TrimSpace(*startedAtFlag) == "" {

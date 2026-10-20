@@ -454,6 +454,13 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 
 // SaveFactLedger writes an AgenticFactLedger to the specified file path, creating parent directories if needed.
 func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
+	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
+		return fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
+	}
+	if ledger.TicketTitle == nil || strings.TrimSpace(*ledger.TicketTitle) == "" {
+		return fmt.Errorf("cannot save fact ledger: TicketTitle is required and cannot be empty")
+	}
+
 	parentDir := filepath.Dir(path)
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
