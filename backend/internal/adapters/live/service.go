@@ -26,8 +26,9 @@ var (
 type LiveEventType string
 
 const (
-	LiveEventSessionTree LiveEventType = "session_tree"
-	LiveEventTraceUpdate LiveEventType = "trace_update"
+	LiveEventSessionTree   LiveEventType = "session_tree"
+	LiveEventTraceUpdate   LiveEventType = "trace_update"
+	LiveEventAnomalyAlert LiveEventType = "anomaly_alert"
 )
 
 // LiveEvent represents an event pushed to real-time stream subscribers.
@@ -38,15 +39,17 @@ type LiveEvent struct {
 
 // LiveService coordinates SQLite polling, tree reconstruction, and real-time streaming.
 type LiveService struct {
-	hook         *SQLiteHook
-	buffer       *TraceBuffer
-	cfg          domain.ProjectConfig
-	subscribers  map[chan LiveEvent]struct{}
-	subMu        sync.RWMutex
-	stopCh       chan struct{}
-	closeOnce    sync.Once
-	lastTreeJSON []byte
-	lastTreeMu   sync.Mutex
+	hook            *SQLiteHook
+	buffer          *TraceBuffer
+	cfg             domain.ProjectConfig
+	subscribers     map[chan LiveEvent]struct{}
+	subMu           sync.RWMutex
+	stopCh          chan struct{}
+	closeOnce       sync.Once
+	lastTreeJSON    []byte
+	lastTreeMu      sync.Mutex
+	seenAnomalies   map[string]bool
+	seenAnomaliesMu sync.Mutex
 }
 
 // NewLiveService constructs a new LiveService instance.
@@ -57,11 +60,12 @@ func NewLiveService(hook *SQLiteHook, cfg domain.ProjectConfig) *LiveService {
 	}
 
 	return &LiveService{
-		hook:        hook,
-		buffer:      NewTraceBuffer(maxBuffer),
-		cfg:         cfg,
-		subscribers: make(map[chan LiveEvent]struct{}),
-		stopCh:      make(chan struct{}),
+		hook:          hook,
+		buffer:        NewTraceBuffer(maxBuffer),
+		cfg:           cfg,
+		subscribers:   make(map[chan LiveEvent]struct{}),
+		stopCh:        make(chan struct{}),
+		seenAnomalies: make(map[string]bool),
 	}
 }
 
@@ -160,11 +164,40 @@ func (s *LiveService) pollAndBroadcast(ctx context.Context) {
 	}
 	s.lastTreeMu.Unlock()
 
+	s.checkAndBroadcastAnomalies(tree.ActiveAnomalies)
+
 	if changed {
 		s.broadcast(LiveEvent{
 			Type: LiveEventSessionTree,
 			Data: data,
 		})
+	}
+}
+
+func (s *LiveService) checkAndBroadcastAnomalies(anomalies []domain.LiveAnomalyAlert) {
+	s.seenAnomaliesMu.Lock()
+	defer s.seenAnomaliesMu.Unlock()
+
+	currentKeys := make(map[string]bool, len(anomalies))
+	for _, alert := range anomalies {
+		key := fmt.Sprintf("%s:%s:%s:%s", alert.SessionID, alert.RuleName, alert.Severity, alert.TriggerEvent)
+		currentKeys[key] = true
+		if !s.seenAnomalies[key] {
+			s.seenAnomalies[key] = true
+			alertData, err := json.Marshal(alert)
+			if err == nil {
+				s.broadcast(LiveEvent{
+					Type: LiveEventAnomalyAlert,
+					Data: alertData,
+				})
+			}
+		}
+	}
+
+	for key := range s.seenAnomalies {
+		if !currentKeys[key] {
+			delete(s.seenAnomalies, key)
+		}
 	}
 }
 
@@ -176,6 +209,7 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 			RootSessions:        []*domain.LiveSessionNode{},
 			LastRefreshedAt:     "",
 			TotalActiveSessions: 0,
+			ActiveAnomalies:     []domain.LiveAnomalyAlert{},
 		}, nil
 	}
 
@@ -222,6 +256,12 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 			}
 		}
 
+		sessionAnomalies := []domain.LiveAnomalyAlert{}
+		trace, err := s.GetSessionTrace(ctx, rec.ID)
+		if err == nil && len(trace.Anomalies) > 0 {
+			sessionAnomalies = trace.Anomalies
+		}
+
 		node := &domain.LiveSessionNode{
 			ID:               rec.ID,
 			ParentID:         rec.ParentID,
@@ -234,6 +274,7 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 			Status:           status,
 			GuessedTicketID:  guessedID,
 			TicketConfidence: confidence,
+			Anomalies:        sessionAnomalies,
 			SubSessions:      []*domain.LiveSessionNode{},
 		}
 		nodes = append(nodes, node)
@@ -243,10 +284,17 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 	totalActive := countTotalNodes(roots)
 	refreshedAt := formatEpochMilli(nowMs)
 
+	allActiveAnomalies := make([]domain.LiveAnomalyAlert, 0)
+	for _, n := range nodes {
+		allActiveAnomalies = append(allActiveAnomalies, n.Anomalies...)
+	}
+	domain.SortLiveAnomalies(allActiveAnomalies)
+
 	return domain.LiveSessionTree{
 		RootSessions:        roots,
 		LastRefreshedAt:     refreshedAt,
 		TotalActiveSessions: totalActive,
+		ActiveAnomalies:     allActiveAnomalies,
 	}, nil
 }
 
@@ -288,6 +336,7 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 		role := "assistant"
 		var contentStr string
 		var reasoningStr *string
+		var inputTokens, outputTokens, cacheReadTokens, reasoningTokens int64
 
 		if strings.TrimSpace(rm.Data) != "" {
 			var msgData struct {
@@ -295,6 +344,14 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 				Content          json.RawMessage `json:"content"`
 				Reasoning        *string         `json:"reasoning"`
 				ReasoningContent *string         `json:"reasoning_content"`
+				Tokens           *struct {
+					Input     *int64 `json:"input"`
+					Output    *int64 `json:"output"`
+					Cache     *struct {
+						Read *int64 `json:"read"`
+					} `json:"cache"`
+					Reasoning *int64 `json:"reasoning"`
+				} `json:"tokens"`
 			}
 			if err := json.Unmarshal([]byte(rm.Data), &msgData); err == nil {
 				if msgData.Role != nil && strings.TrimSpace(*msgData.Role) != "" {
@@ -305,6 +362,20 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 					reasoningStr = msgData.ReasoningContent
 				} else if msgData.Reasoning != nil && strings.TrimSpace(*msgData.Reasoning) != "" {
 					reasoningStr = msgData.Reasoning
+				}
+				if msgData.Tokens != nil {
+					if msgData.Tokens.Input != nil {
+						inputTokens = *msgData.Tokens.Input
+					}
+					if msgData.Tokens.Output != nil {
+						outputTokens = *msgData.Tokens.Output
+					}
+					if msgData.Tokens.Cache != nil && msgData.Tokens.Cache.Read != nil {
+						cacheReadTokens = *msgData.Tokens.Cache.Read
+					}
+					if msgData.Tokens.Reasoning != nil {
+						reasoningTokens = *msgData.Tokens.Reasoning
+					}
 				}
 			}
 		}
@@ -331,12 +402,21 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 			}
 		}
 
+		contextTokens := inputTokens + cacheReadTokens
+		totalTokens := inputTokens + outputTokens + cacheReadTokens
+
 		messages = append(messages, domain.LiveMessageFact{
 			ID:               rm.ID,
 			Role:             role,
 			Content:          contentStr,
 			Timestamp:        formatEpochMilli(rm.TimeCreated),
 			ReasoningContent: reasoningStr,
+			ContextTokens:    contextTokens,
+			InputTokens:      inputTokens,
+			OutputTokens:     outputTokens,
+			CacheReadTokens:  cacheReadTokens,
+			ReasoningTokens:  reasoningTokens,
+			TotalTokens:      totalTokens,
 			Parts:            parts,
 		})
 	}
@@ -349,13 +429,20 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 		recentErrors[i], recentErrors[j] = recentErrors[j], recentErrors[i]
 	}
 
-	return domain.LiveTraceView{
+	trace := domain.LiveTraceView{
 		SessionID:       sessionID,
 		Messages:        messages,
 		TotalToolCalls:  totalTools,
 		FailedToolCalls: failedTools,
 		RecentErrors:    recentErrors,
-	}, nil
+		Anomalies:       []domain.LiveAnomalyAlert{},
+	}
+	trace.Anomalies = domain.EvaluateLiveAnomalies(nil, &trace)
+	if trace.Anomalies == nil {
+		trace.Anomalies = []domain.LiveAnomalyAlert{}
+	}
+
+	return trace, nil
 }
 
 func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFact {
@@ -446,10 +533,18 @@ func validateSessionID(id string) error {
 	if clean == "" {
 		return errors.New("empty session id")
 	}
+	if len(id) != len(clean) {
+		return fmt.Errorf("session id contains whitespace: %q", id)
+	}
 	lower := strings.ToLower(clean)
 	if strings.Contains(clean, "..") || strings.Contains(clean, "/") || strings.Contains(clean, "\\") ||
 		strings.Contains(lower, "%2e") || strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c") {
 		return fmt.Errorf("session id contains path traversal characters: %s", clean)
+	}
+	for _, r := range clean {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '_' && r != '-' && r != ':' && r != '.' {
+			return fmt.Errorf("session id contains invalid character %q: %s", r, clean)
+		}
 	}
 	return nil
 }

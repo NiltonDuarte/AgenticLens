@@ -338,3 +338,14 @@ export interface BuildInfo {
   readonly commit: string;
   readonly build_date: string;
 }
+
+export type {
+  LiveAnomalySeverity,
+  LiveAnomalyRule,
+  LiveAnomalyAlert,
+  LivePartFact,
+  LiveMessageFact,
+  LiveTraceView,
+  LiveSessionNode,
+  LiveSessionTree,
+} from './live';

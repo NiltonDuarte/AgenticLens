@@ -30,8 +30,8 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-31 decouple root session structural hierarchy from persona roles.md`
 - `workspaces/plan/done/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
 - `workspaces/plan/done/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
-- `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
-- `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
+- `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
+- `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
@@ -40,43 +40,43 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## In Progress
 
-(None)
+- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
+  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 6
+  - **Status**: In Progress for Iteration 03
+  - **Blocked by**: None (AL-17, AL-32 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
 ---
 
 ## Ready
 
-- **AL-19**: Implement Live Anomaly Detection Engine and Realtime Session Health Rules
-  - **Subsystem**: Domain / Adapters / HTTP / Tests
-  - **Phase**: Phase 4
-  - **Status**: Ready
-  - **Blocked by**: None (AL-17 Done)
-  - **Blocks**: AL-20
-  - **File**: `workspaces/plan/to-do/AL-19 implement live anomaly detection engine and realtime session health rules.md`
-
----
-
-## Pending
-
 - **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
   - **Subsystem**: Presentation / Web / Tests
   - **Phase**: Phase 4
-  - **Status**: Pending
-  - **Blocked by**: AL-17, AL-19
+  - **Status**: Ready
+  - **Blocked by**: None (AL-17, AL-19 Done)
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 
 ---
 
+## Pending
+
+(None)
+
+---
+
 ## Done
 
-- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
-  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 6
+- **AL-19**: Implement Live Anomaly Detection Engine and Realtime Session Health Rules
+  - **Subsystem**: Domain / Adapters / HTTP / Tests
+  - **Phase**: Phase 4
   - **Status**: Done
-  - **Blocked by**: None (AL-17, AL-32 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
+  - **Blocked by**: None (AL-17 Done)
+  - **Blocks**: AL-20
+  - **File**: `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 
 - **AL-34**: Eliminate Cumulative Granularity and Implement Bi-Directional Code Churn Visualization
   - **Subsystem**: Domain / Adapters / Presentation / Tests
