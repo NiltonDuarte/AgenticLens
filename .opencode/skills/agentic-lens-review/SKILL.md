@@ -123,10 +123,3 @@ Prioritized list of the highest-leverage refactorings and performance improvemen
 ```
 
 ---
-
-## 4. Interactive Next Steps
-
-Prompt the user using the `question` tool to select how to proceed:
-1. **Execute Optimization/Refactor**: Hand off chosen findings directly to `agentic-lens-dev` for implementation in `workspaces/<TICKET_ID>/`.
-2. **Draft Jira Ticket**: Decompose finding into a vertical tracer-bullet ticket via `agentic-lens-po`.
-3. **Deepen Test Profiling**: Run targeted CPU/memory profiling (`go test -cpuprofile`) on a specific package.
