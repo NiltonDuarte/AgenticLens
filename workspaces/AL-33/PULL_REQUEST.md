@@ -2,7 +2,7 @@
 
 ## Summary of Changes
 
-Delivers an end-to-end vertical slice for dynamic local database event hydration and dual-plane waterfall visualization across the Go backend and TypeScript frontend for ticket AL-33:
+Delivers an end-to-end vertical slice for dynamic local database event hydration, dual-plane waterfall visualization, and multi-dimensional execution trace filtering across the Go backend and TypeScript frontend for ticket AL-33:
 
 1. **Domain Core**:
    - Added `WorkspaceEventsResponse` struct (`ticket_id`, `is_hydrated`, `events`, `data_source`) and extended `EventFact` with optional in-memory diagnostic pointers (`PromptContent`, `ReasoningContent`, `ToolInput`, `ToolOutput`).
@@ -18,6 +18,7 @@ Delivers an end-to-end vertical slice for dynamic local database event hydration
    - Defined `WorkspaceEventsResponse` and `DataSource` TypeScript types, extending `EventFact` with optional diagnostic fields.
    - Updated `api/client.ts` to parse dual-plane responses with backward-compatible normalization.
    - Enhanced `TraceWaterfall.tsx` to detect `is_hydrated`: rendering an informational offline banner ("Committed Git Ledger — Local Database Offline") and compact error timeline when unhydrated, and revealing interactive expandable payload drawers for user prompts, model reasoning, and tool execution parameters/results when hydrated.
+   - Added multi-dimensional trace filtering by tool name and anomaly rule identifier with 4-way filter conjunction, dynamic deduplication, denominator-invariant event counting, and accessible form controls in `TraceWaterfall.tsx` and `web/src/index.css`.
    - Threaded hydration state through `TicketDeepDive.tsx` and updated `AnomalyDrawer.tsx`.
 
 ## Architectural Invariants
