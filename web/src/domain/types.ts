@@ -65,6 +65,8 @@ export interface ToolFact {
 export type {
   EventType,
   EventFact,
+  DataSource,
+  WorkspaceEventsResponse,
   AnomalySeverity,
   AnomalyRuleID,
   AnomalyContext,

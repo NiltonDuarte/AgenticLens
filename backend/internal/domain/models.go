@@ -34,16 +34,28 @@ type ToolFact struct {
 
 // EventFact captures a single discrete, ordered lifecycle occurrence in an agent session.
 type EventFact struct {
-	Timestamp     string    `json:"timestamp"`
-	SessionID     string    `json:"session_id"`
-	Turn          int64     `json:"turn"`
-	Role          string    `json:"role"`
-	EventType     EventType `json:"event_type"`
-	ToolName      *string   `json:"tool_name,omitempty"`
-	Status        string    `json:"status"`
-	ErrorMessage  *string   `json:"error_message,omitempty"`
-	DurationMs    *int64    `json:"duration_ms,omitempty"`
-	ContextTokens int64     `json:"context_tokens"`
+	Timestamp        string    `json:"timestamp"`
+	SessionID        string    `json:"session_id"`
+	Turn             int64     `json:"turn"`
+	Role             string    `json:"role"`
+	EventType        EventType `json:"event_type"`
+	ToolName         *string   `json:"tool_name,omitempty"`
+	Status           string    `json:"status"`
+	ErrorMessage     *string   `json:"error_message,omitempty"`
+	DurationMs       *int64    `json:"duration_ms,omitempty"`
+	ContextTokens    int64     `json:"context_tokens"`
+	PromptContent    *string   `json:"prompt_content,omitempty"`
+	ReasoningContent *string   `json:"reasoning_content,omitempty"`
+	ToolInput        *string   `json:"tool_input,omitempty"`
+	ToolOutput       *string   `json:"tool_output,omitempty"`
+}
+
+// WorkspaceEventsResponse wraps execution events for a ticket workspace with hydration status and data source provenance.
+type WorkspaceEventsResponse struct {
+	TicketID   string      `json:"ticket_id"`
+	IsHydrated bool        `json:"is_hydrated"`
+	Events     []EventFact `json:"events"`
+	DataSource string      `json:"data_source"`
 }
 
 // CodeFacts stores lines of code modified and SDLC iteration counts.

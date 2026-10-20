@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	_ "modernc.org/sqlite"
@@ -309,6 +310,101 @@ func (h *SQLiteHook) FetchSessionTrace(sessionID string) ([]RawMessageRecord, []
 	}
 
 	return messages, parts, nil
+}
+
+// FetchSessionTraceMulti extracts chronological messages and parts across multiple session IDs.
+// Resulting messages and parts are stably ordered by TimeCreated ascending.
+func (h *SQLiteHook) FetchSessionTraceMulti(sessionIDs []string) ([]RawMessageRecord, []RawPartRecord, error) {
+	if h.db == nil {
+		return nil, nil, errors.New("database handle is nil")
+	}
+
+	cleanIDs := make([]string, 0, len(sessionIDs))
+	seen := make(map[string]bool)
+	for _, id := range sessionIDs {
+		trimmed := strings.TrimSpace(id)
+		if trimmed != "" && !seen[trimmed] {
+			seen[trimmed] = true
+			cleanIDs = append(cleanIDs, trimmed)
+		}
+	}
+
+	if len(cleanIDs) == 0 {
+		return []RawMessageRecord{}, []RawPartRecord{}, nil
+	}
+
+	var allMessages []RawMessageRecord
+	var allParts []RawPartRecord
+
+	for _, sID := range cleanIDs {
+		msgs, parts, err := h.FetchSessionTrace(sID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fetching trace for session %s: %w", sID, err)
+		}
+		allMessages = append(allMessages, msgs...)
+		allParts = append(allParts, parts...)
+	}
+
+	sort.SliceStable(allMessages, func(i, j int) bool {
+		return allMessages[i].TimeCreated < allMessages[j].TimeCreated
+	})
+
+	sort.SliceStable(allParts, func(i, j int) bool {
+		return allParts[i].TimeCreated < allParts[j].TimeCreated
+	})
+
+	return allMessages, allParts, nil
+}
+
+// ResolveChildSessionIDs queries child sub-session IDs where parent_id matches any of parentSessionIDs.
+func (h *SQLiteHook) ResolveChildSessionIDs(parentSessionIDs []string) ([]string, error) {
+	if h.db == nil {
+		return nil, errors.New("database handle is nil")
+	}
+
+	cleanIDs := make([]string, 0, len(parentSessionIDs))
+	seen := make(map[string]bool)
+	for _, id := range parentSessionIDs {
+		trimmed := strings.TrimSpace(id)
+		if trimmed != "" && !seen[trimmed] {
+			seen[trimmed] = true
+			cleanIDs = append(cleanIDs, trimmed)
+		}
+	}
+
+	if len(cleanIDs) == 0 {
+		return []string{}, nil
+	}
+
+	var childIDs []string
+	childSeen := make(map[string]bool)
+
+	for _, pID := range cleanIDs {
+		rows, err := h.db.Query("SELECT id FROM session WHERE parent_id = ? ORDER BY time_created ASC", pID)
+		if err != nil {
+			return nil, fmt.Errorf("querying child sessions for parent %s: %w", pID, err)
+		}
+
+		for rows.Next() {
+			var cid string
+			if err := rows.Scan(&cid); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("scanning child session row: %w", err)
+			}
+			trimmedCid := strings.TrimSpace(cid)
+			if trimmedCid != "" && !childSeen[trimmedCid] {
+				childSeen[trimmedCid] = true
+				childIDs = append(childIDs, trimmedCid)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("iterating child session rows: %w", err)
+		}
+		rows.Close()
+	}
+
+	return childIDs, nil
 }
 
 func tableHasColumn(db *sql.DB, tableName, columnName string) bool {

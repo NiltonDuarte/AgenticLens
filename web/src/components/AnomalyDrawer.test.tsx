@@ -287,4 +287,66 @@ describe('AnomalyDrawer Component', () => {
     expect(screen.getByText('320ms')).toBeInTheDocument();
     expect(screen.getByText('fatal: destination path already exists')).toBeInTheDocument();
   });
+
+  describe('Hydrated diagnostic payload sections', () => {
+    it('renders prompt, reasoning, tool input, and tool output sections when present on event', () => {
+      const hydratedEvent: EventFact = {
+        ...sampleEvent,
+        prompt_content: 'Investigate failure on branch',
+        reasoning_content: 'Examining git status output to understand conflict',
+        tool_input: 'git checkout main',
+        tool_output: 'error: Your local changes would be overwritten',
+      };
+
+      const { container } = render(
+        <AnomalyDrawer
+          isOpen={true}
+          onClose={vi.fn()}
+          anomaly={sampleAnomaly}
+          event={hydratedEvent}
+        />
+      );
+
+      const promptSection = screen.getByTestId('drawer-prompt-section');
+      expect(promptSection).toBeInTheDocument();
+      expect(screen.getByText('Prompt Payload')).toBeInTheDocument();
+      expect(screen.getByText('Investigate failure on branch')).toBeInTheDocument();
+
+      const reasoningSection = screen.getByTestId('drawer-reasoning-section');
+      expect(reasoningSection).toBeInTheDocument();
+      expect(screen.getByText('Model Reasoning')).toBeInTheDocument();
+      expect(screen.getByText('Examining git status output to understand conflict')).toBeInTheDocument();
+
+      const toolInputSection = screen.getByTestId('drawer-tool-input-section');
+      expect(toolInputSection).toBeInTheDocument();
+      expect(screen.getByText('Tool Input')).toBeInTheDocument();
+      expect(screen.getByText('git checkout main')).toBeInTheDocument();
+
+      const toolOutputSection = screen.getByTestId('drawer-tool-output-section');
+      expect(toolOutputSection).toBeInTheDocument();
+      expect(screen.getByText('Tool Output')).toBeInTheDocument();
+      expect(screen.getByText('error: Your local changes would be overwritten')).toBeInTheDocument();
+
+      // Zero emoji check
+      const text = container.textContent ?? '';
+      const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
+      expect(emojiRegex.test(text)).toBe(false);
+    });
+
+    it('omits diagnostic payload sections when event does not have payload fields', () => {
+      render(
+        <AnomalyDrawer
+          isOpen={true}
+          onClose={vi.fn()}
+          anomaly={sampleAnomaly}
+          event={sampleEvent}
+        />
+      );
+
+      expect(screen.queryByTestId('drawer-prompt-section')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('drawer-reasoning-section')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('drawer-tool-input-section')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('drawer-tool-output-section')).not.toBeInTheDocument();
+    });
+  });
 });

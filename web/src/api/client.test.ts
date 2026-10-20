@@ -332,7 +332,42 @@ describe('Boundary API Client', () => {
   });
 
   describe('fetchWorkspaceEvents', () => {
-    it('returns events on successful HTTP 200 response', async () => {
+    it('returns hydrated response on successful HTTP 200 response', async () => {
+      const mockResponse = {
+        ticket_id: 'AL-8',
+        is_hydrated: true,
+        events: [
+          {
+            timestamp: '2026-10-18T10:00:00Z',
+            session_id: 'ses-1',
+            turn: 1,
+            role: 'coder',
+            event_type: 'tool_call' as const,
+            tool_name: 'bash',
+            status: 'error',
+            context_tokens: 15000,
+            tool_input: 'echo test',
+            tool_output: 'error',
+          },
+        ],
+        data_source: 'local_sqlite' as const,
+      };
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      }));
+
+      const res = await fetchWorkspaceEvents('AL-8');
+      expect(res.isMock).toBe(false);
+      expect(res.data.is_hydrated).toBe(true);
+      expect(res.data.data_source).toBe('local_sqlite');
+      expect(res.data.events).toHaveLength(1);
+      expect(res.data.events[0]?.tool_name).toBe('bash');
+      expect(res.data.events[0]?.tool_input).toBe('echo test');
+    });
+
+    it('normalizes legacy raw array response into fallback WorkspaceEventsResponse', async () => {
       const mockEvents = [
         {
           timestamp: '2026-10-18T10:00:00Z',
@@ -353,8 +388,10 @@ describe('Boundary API Client', () => {
 
       const res = await fetchWorkspaceEvents('AL-8');
       expect(res.isMock).toBe(false);
-      expect(res.data).toHaveLength(1);
-      expect(res.data[0]?.tool_name).toBe('bash');
+      expect(res.data.is_hydrated).toBe(false);
+      expect(res.data.data_source).toBe('committed_ledger');
+      expect(res.data.events).toHaveLength(1);
+      expect(res.data.events[0]?.tool_name).toBe('bash');
     });
 
     it('falls back to mock ledger events on network failure', async () => {
@@ -362,7 +399,9 @@ describe('Boundary API Client', () => {
 
       const res = await fetchWorkspaceEvents('AL-1');
       expect(res.isMock).toBe(true);
-      expect(Array.isArray(res.data)).toBe(true);
+      expect(res.data.is_hydrated).toBe(false);
+      expect(res.data.data_source).toBe('committed_ledger');
+      expect(Array.isArray(res.data.events)).toBe(true);
     });
 
     it('falls back to mock events on 404 when ticket exists in mocks', async () => {
@@ -374,7 +413,9 @@ describe('Boundary API Client', () => {
 
       const res = await fetchWorkspaceEvents('AL-1');
       expect(res.isMock).toBe(true);
-      expect(Array.isArray(res.data)).toBe(true);
+      expect(res.data.is_hydrated).toBe(false);
+      expect(res.data.data_source).toBe('committed_ledger');
+      expect(Array.isArray(res.data.events)).toBe(true);
     });
 
     it('throws structured error when ticketId does not exist in backend nor mocks on 404', async () => {
@@ -407,7 +448,9 @@ describe('Boundary API Client', () => {
 
       const res = await fetchWorkspaceEvents('AL-1');
       expect(res.isMock).toBe(true);
-      expect(Array.isArray(res.data)).toBe(true);
+      expect(res.data.is_hydrated).toBe(false);
+      expect(res.data.data_source).toBe('committed_ledger');
+      expect(Array.isArray(res.data.events)).toBe(true);
     });
 
     it('returns empty array with isMock false when backend returns empty events stream', async () => {
@@ -418,7 +461,8 @@ describe('Boundary API Client', () => {
 
       const res = await fetchWorkspaceEvents('AL-1');
       expect(res.isMock).toBe(false);
-      expect(res.data).toEqual([]);
+      expect(res.data.events).toEqual([]);
+      expect(res.data.is_hydrated).toBe(false);
     });
   });
 

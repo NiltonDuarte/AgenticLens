@@ -31,8 +31,8 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
 - `workspaces/plan/done/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 - `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
+- `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-- `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
@@ -45,14 +45,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Ready
-
-- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
-  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 6
-  - **Status**: Ready
-  - **Blocked by**: None (AL-17, AL-32 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
 - **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
   - **Subsystem**: Presentation / Web / Tests
@@ -71,6 +63,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
+  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 6
+  - **Status**: Done
+  - **Blocked by**: None (AL-17, AL-32 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
 - **AL-19**: Implement Live Anomaly Detection Engine and Realtime Session Health Rules
   - **Subsystem**: Domain / Adapters / HTTP / Tests

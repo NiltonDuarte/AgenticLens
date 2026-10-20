@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -202,8 +203,18 @@ func WorkspaceDetailHandler(workspacesDir string) http.HandlerFunc {
 	}
 }
 
+// WorkspaceEventHydrator defines the contract for dynamic local event trace hydration.
+type WorkspaceEventHydrator interface {
+	HydrateWorkspaceEvents(ctx context.Context, ticketID string, ledger domain.AgenticMetricsLedger) (domain.WorkspaceEventsResponse, error)
+}
+
 // WorkspaceEventsHandler handles GET /api/workspaces/{ticketId}/events
-func WorkspaceEventsHandler(workspacesDir string) http.HandlerFunc {
+func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydrator) http.HandlerFunc {
+	var h WorkspaceEventHydrator
+	if len(hydrator) > 0 {
+		h = hydrator[0]
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		ticketID := r.PathValue("ticketId")
 		if ticketID == "" || strings.Contains(ticketID, "..") || strings.Contains(ticketID, "/") || strings.Contains(ticketID, "\\") {
@@ -217,8 +228,23 @@ func WorkspaceEventsHandler(workspacesDir string) http.HandlerFunc {
 			return
 		}
 
-		sortedEvents := domain.SortEvents(targetLedger.Facts.Events)
-		WriteEventsResponse(w, sortedEvents)
+		fallbackEvents := domain.SortEvents(targetLedger.Facts.Events)
+		fallbackResp := domain.WorkspaceEventsResponse{
+			TicketID:   ticketID,
+			IsHydrated: false,
+			Events:     fallbackEvents,
+			DataSource: domain.DataSourceCommittedLedger,
+		}
+
+		if h != nil {
+			hydratedResp, err := h.HydrateWorkspaceEvents(r.Context(), ticketID, *targetLedger)
+			if err == nil && hydratedResp.IsHydrated {
+				WriteEventsResponse(w, hydratedResp)
+				return
+			}
+		}
+
+		WriteEventsResponse(w, fallbackResp)
 	}
 }
 

@@ -2391,18 +2391,24 @@ body {
   color: #ffffff;
 }
 
-.role-filter-group {
+.role-filter-group,
+.tool-filter-group,
+.anomaly-filter-group {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.role-filter-label {
+.role-filter-label,
+.tool-filter-label,
+.anomaly-filter-label {
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
-.role-filter-select {
+.role-filter-select,
+.tool-filter-select,
+.anomaly-filter-select {
   background-color: var(--bg-surface-elevated);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
@@ -2410,6 +2416,22 @@ body {
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.waterfall-toolbar .multiselect-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.waterfall-toolbar .multiselect-trigger {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.waterfall-toolbar .multiselect-dropdown {
+  z-index: 150;
 }
 
 .trace-empty-state {
@@ -2667,6 +2689,137 @@ body {
   white-space: pre-wrap;
   max-height: 120px;
   overflow-y: auto;
+}
+
+/* Offline / Dynamic Hydration Banner & Badges */
+.db-offline-banner {
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.offline-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.offline-indicator-badge {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fbbf24;
+}
+
+.offline-banner-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.waterfall-source-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.waterfall-source-badge.source-hydrated {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.waterfall-source-badge.source-offline {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.btn-toggle-payload {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-toggle-payload:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+.payload-details-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 10px;
+}
+
+.payload-block {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.payload-block-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.payload-content {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.payload-unhydrated-notice {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.drawer-code-box {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.drawer-code-content {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
 }
 
 /* Anomaly Drawer */
