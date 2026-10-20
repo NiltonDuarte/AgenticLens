@@ -3187,21 +3187,26 @@ func TestConfigHandler_DefaultConfig(t *testing.T) {
 		t.Errorf("expected version %q, got %q", expectedBuildInfo.Version, dto.Version)
 	}
 
-	if len(dto.Prefixes) < 3 {
-		t.Fatalf("expected at least 3 default prefixes, got %d", len(dto.Prefixes))
+	if len(dto.Prefixes) < 5 {
+		t.Fatalf("expected at least 5 configured prefixes, got %d", len(dto.Prefixes))
 	}
 	prefixMap := make(map[string]domain.TicketPrefix)
 	for _, p := range dto.Prefixes {
 		prefixMap[p.Prefix] = p
 	}
-	if _, ok := prefixMap["AL"]; !ok {
-		t.Errorf("expected default prefix AL to be present")
+	for _, expectedPrefix := range []string{"AL", "AL2", "GEN", "PO", "FIX"} {
+		if _, ok := prefixMap[expectedPrefix]; !ok {
+			t.Errorf("expected configured prefix %s to be present", expectedPrefix)
+		}
 	}
 	if gen, ok := prefixMap["GEN"]; !ok || gen.TicketType != "chore" {
-		t.Errorf("expected default prefix GEN with chore ticket type, got %+v", gen)
+		t.Errorf("expected prefix GEN with chore ticket type, got %+v", gen)
 	}
 	if po, ok := prefixMap["PO"]; !ok || po.TicketType != "docs" {
-		t.Errorf("expected default prefix PO with docs ticket type, got %+v", po)
+		t.Errorf("expected prefix PO with docs ticket type, got %+v", po)
+	}
+	if fix, ok := prefixMap["FIX"]; !ok || fix.TicketType != "fix" {
+		t.Errorf("expected prefix FIX with fix ticket type, got %+v", fix)
 	}
 
 	if len(dto.RoleOrder) != 5 {
@@ -3284,7 +3289,7 @@ func TestConfigHandler_CustomConfig(t *testing.T) {
 	}
 }
 
-func TestConfigHandler_EmptyFallbacks(t *testing.T) {
+func TestConfigHandler_EmptyConfigPreserved(t *testing.T) {
 	staticFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
 	}
@@ -3315,20 +3320,34 @@ func TestConfigHandler_EmptyFallbacks(t *testing.T) {
 		t.Fatalf("failed unmarshaling config response: %v", err)
 	}
 
-	if dto.ProjectName != "AgenticLens" {
-		t.Errorf("expected fallback project_name 'AgenticLens', got %q", dto.ProjectName)
+	if dto.ProjectName != "" {
+		t.Errorf("expected empty project_name, got %q", dto.ProjectName)
 	}
 
-	if dto.WorkspacesDir != "workspaces" {
-		t.Errorf("expected fallback workspaces_dir 'workspaces', got %q", dto.WorkspacesDir)
+	if dto.WorkspacesDir != "" {
+		t.Errorf("expected empty workspaces_dir, got %q", dto.WorkspacesDir)
 	}
 
-	if len(dto.Prefixes) == 0 {
-		t.Errorf("expected default prefixes fallback, got empty slice")
+	if len(dto.Prefixes) != 0 || dto.Prefixes == nil {
+		t.Errorf("expected non-nil empty slice for prefixes, got len %d (nil: %v)", len(dto.Prefixes), dto.Prefixes == nil)
 	}
 
-	if len(dto.RoleOrder) == 0 {
-		t.Errorf("expected default role order fallback, got empty slice")
+	if len(dto.RoleOrder) != 0 || dto.RoleOrder == nil {
+		t.Errorf("expected non-nil empty slice for role order, got len %d (nil: %v)", len(dto.RoleOrder), dto.RoleOrder == nil)
+	}
+
+	rawJSON := rec.Body.String()
+	if !strings.Contains(rawJSON, `"prefixes":[]`) {
+		t.Errorf("expected raw JSON to contain '\"prefixes\":[]', got %s", rawJSON)
+	}
+	if !strings.Contains(rawJSON, `"role_order":[]`) {
+		t.Errorf("expected raw JSON to contain '\"role_order\":[]', got %s", rawJSON)
+	}
+	if strings.Contains(rawJSON, `"prefixes":null`) {
+		t.Errorf("raw JSON must not contain '\"prefixes\":null', got %s", rawJSON)
+	}
+	if strings.Contains(rawJSON, `"role_order":null`) {
+		t.Errorf("raw JSON must not contain '\"role_order\":null', got %s", rawJSON)
 	}
 }
 
@@ -3337,7 +3356,7 @@ func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
 		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
 	}
 
-	t.Run("whitespace-only fields fallback cleanly without panics", func(t *testing.T) {
+	t.Run("whitespace-only fields trim cleanly without panics", func(t *testing.T) {
 		hostileCfg := domain.ProjectConfig{
 			ProjectName: "   \t\r\n   ",
 			Ticket: domain.TicketConfig{
@@ -3349,7 +3368,7 @@ func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
 			RoleOrder: nil,
 		}
 
-		server := adaptershttp.NewServerWithConfig("   \r\n   ", staticFS, hostileCfg)
+		server := adaptershttp.NewServerWithConfig("", staticFS, hostileCfg)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
 		rec := httptest.NewRecorder()
@@ -3364,14 +3383,20 @@ func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
 			t.Fatalf("failed unmarshaling config response: %v", err)
 		}
 
-		if dto.ProjectName != "AgenticLens" {
-			t.Errorf("expected trimmed whitespace to fallback to 'AgenticLens', got %q", dto.ProjectName)
+		if dto.ProjectName != "" {
+			t.Errorf("expected trimmed whitespace project_name to be empty string, got %q", dto.ProjectName)
 		}
-		if dto.WorkspacesDir != "workspaces" {
-			t.Errorf("expected trimmed whitespace to fallback to 'workspaces', got %q", dto.WorkspacesDir)
+		if dto.WorkspacesDir != "" {
+			t.Errorf("expected trimmed whitespace workspaces_dir to be empty string, got %q", dto.WorkspacesDir)
 		}
 
 		rawJSON := rec.Body.String()
+		if !strings.Contains(rawJSON, `"prefixes":[]`) {
+			t.Errorf("expected JSON output to contain '\"prefixes\":[]', got: %s", rawJSON)
+		}
+		if !strings.Contains(rawJSON, `"role_order":[]`) {
+			t.Errorf("expected JSON output to contain '\"role_order\":[]', got: %s", rawJSON)
+		}
 		if strings.Contains(rawJSON, `"prefixes":null`) {
 			t.Errorf("JSON output must never contain 'prefixes:null', got: %s", rawJSON)
 		}
