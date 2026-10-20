@@ -598,7 +598,7 @@ func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string)
 func DeriveMetricsLedgerWithConfig(factLedger AgenticFactLedger, cfg ProjectConfig) AgenticMetricsLedger {
 	mappings := cfg.RoleMappings
 	if mappings == nil {
-		mappings = DefaultProjectConfig().RoleMappings
+		mappings = RoleMappings{}
 	}
 
 	mappedInvocations := make([]InvocationFact, len(factLedger.Invocations))
@@ -646,7 +646,15 @@ func DeriveMetricsLedgerWithConfig(factLedger AgenticFactLedger, cfg ProjectConf
 
 // DeriveMetricsLedger projects all aggregations from an atomic fact ledger.
 func DeriveMetricsLedger(factLedger AgenticFactLedger, roleMappings ...RoleMappings) AgenticMetricsLedger {
-	cfg := DefaultProjectConfig()
+	cfg := ProjectConfig{
+		RoleOrder: []string{
+			string(RoleOrchestrator),
+			string(RolePlanner),
+			string(RoleCoder),
+			string(RoleTester),
+			string(RoleReviewer),
+		},
+	}
 	if len(roleMappings) > 0 && roleMappings[0] != nil {
 		cfg.RoleMappings = roleMappings[0]
 	}

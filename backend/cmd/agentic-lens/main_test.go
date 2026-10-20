@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
 )
@@ -3340,7 +3341,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3389,7 +3390,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3438,7 +3439,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3488,7 +3489,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3550,6 +3551,15 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 		if err := exec.Command("git", "-C", tempDir, "checkout", "-b", "fix/AL-30-test").Run(); err != nil {
 			t.Fatalf("git checkout -b failed: %v", err)
+		}
+
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatalf("failed creating .agenticlens dir: %v", err)
+		}
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
@@ -3618,7 +3628,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
 		// Configure AL to map to docs in config.yaml
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3682,6 +3692,8 @@ ticket:
       ticket_type: "fix"
 workspaces:
   dir: "custom_root_ws"
+  src_folders:
+    - "src"
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config: %v", err)
@@ -3756,21 +3768,27 @@ workspaces:
 
 		// Root config maps ROOTPRIO to "feat" and dir to "root_ws"
 		rootCfg := `
+project_name: RootPriorityTest
 ticket:
   prefixes:
     - prefix: "ROOTPRIO"
       ticket_type: "feat"
 workspaces:
   dir: "root_ws"
+  src_folders:
+    - "src"
 `
 		// Legacy config maps ROOTPRIO to "chore" and dir to "legacy_ws"
 		legacyCfg := `
+project_name: LegacyPriorityTest
 ticket:
   prefixes:
     - prefix: "ROOTPRIO"
       ticket_type: "chore"
 workspaces:
   dir: "legacy_ws"
+  src_folders:
+    - "src"
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(rootCfg), 0644); err != nil {
 			t.Fatalf("failed writing root config: %v", err)
@@ -4128,6 +4146,600 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		}
 		if parsedL.TicketType == nil || *parsedL.TicketType != "fix" {
 			t.Errorf("expected TicketType 'fix' for fix-42, got %v", parsedL.TicketType)
+		}
+	})
+}
+
+func TestInitCommand(t *testing.T) {
+	t.Run("missing required flag --project-name fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "   ", "--src-folders", "src", "--ticket-prefixes", "AL"},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --project-name (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --project-name") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --project-name', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing required flag --src-folders fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--project-name", "Acme", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "Acme", "--src-folders", "", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefixes", "AL"},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --src-folders (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --src-folders") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --src-folders', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing required flag --ticket-prefixes fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--project-name", "Acme", "--src-folders", "src"},
+			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", ""},
+			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "   "},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --ticket-prefixes (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --ticket-prefixes") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --ticket-prefixes', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing all required flags fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init")
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init without any flags to fail, got nil error")
+		}
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) {
+			t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+		}
+		if exitErr.ExitCode() != 1 {
+			t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+		}
+		if !strings.Contains(stderr.String(), "Error: missing required flag") {
+			t.Errorf("expected stderr to contain missing flag error, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("valid required flags create valid configuration file", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AcmeApp",
+			"--src-folders", "web,backend",
+			"--ticket-prefixes", "ACME",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if _, err := os.Stat(expectedPath); err != nil {
+			t.Fatalf("expected config file %s to exist: %v", expectedPath, err)
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(expectedPath)
+		if err != nil {
+			t.Fatalf("loading generated config failed: %v", err)
+		}
+
+		if loaded.ProjectName != "AcmeApp" {
+			t.Errorf("expected ProjectName 'AcmeApp', got %q", loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "workspaces" {
+			t.Errorf("expected workspaces.dir 'workspaces', got %q", loaded.Workspaces.Dir)
+		}
+		if len(loaded.Workspaces.Artifacts) != 0 {
+			t.Errorf("expected generated config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
+		}
+	})
+
+	t.Run("custom flags customize generated configuration", func(t *testing.T) {
+		tempDir := t.TempDir()
+		customOutput := filepath.Join(tempDir, "custom-config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AcmePlatform",
+			"--workspaces", "team_workspaces",
+			"--db-path", "/opt/opencode/data.db",
+			"--src-folders", "services,apps,packages",
+			"--ticket-prefixes", "ACME,OPS",
+			"--output", customOutput,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init with custom flags failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(customOutput)
+		if err != nil {
+			t.Fatalf("loading custom config failed: %v", err)
+		}
+
+		if loaded.ProjectName != "AcmePlatform" {
+			t.Errorf("expected ProjectName 'AcmePlatform', got %q", loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "team_workspaces" {
+			t.Errorf("expected workspaces.dir 'team_workspaces', got %q", loaded.Workspaces.Dir)
+		}
+		if loaded.Database.Path != "/opt/opencode/data.db" {
+			t.Errorf("expected database.path '/opt/opencode/data.db', got %q", loaded.Database.Path)
+		}
+		if len(loaded.Workspaces.SrcFolders) != 3 || loaded.Workspaces.SrcFolders[0] != "services" {
+			t.Errorf("unexpected src_folders: %v", loaded.Workspaces.SrcFolders)
+		}
+		if len(loaded.Ticket.Prefixes) != 2 || loaded.Ticket.Prefixes[0].Prefix != "ACME" || loaded.Ticket.Prefixes[1].Prefix != "OPS" {
+			t.Errorf("expected ACME,OPS peer prefixes, got %v", loaded.Ticket.Prefixes)
+		}
+		if len(loaded.Workspaces.Artifacts) != 0 {
+			t.Errorf("expected generated custom config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
+		}
+	})
+
+	t.Run("comma-separated ticket-prefixes flag creates peer prefixes without injection", func(t *testing.T) {
+		tempDir := t.TempDir()
+		outConfig := filepath.Join(tempDir, ".agenticlens-config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", "core,cli",
+			"--ticket-prefixes", "ALPHA,BETA,GAMMA",
+			"--output", outConfig,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(outConfig)
+		if err != nil {
+			t.Fatalf("LoadFromFile failed: %v", err)
+		}
+
+		if len(loaded.Ticket.Prefixes) != 3 {
+			t.Fatalf("expected exactly 3 prefixes, got %d: %v", len(loaded.Ticket.Prefixes), loaded.Ticket.Prefixes)
+		}
+		expected := []string{"ALPHA", "BETA", "GAMMA"}
+		for i, exp := range expected {
+			if loaded.Ticket.Prefixes[i].Prefix != exp {
+				t.Errorf("prefix[%d]: expected %s, got %s", i, exp, loaded.Ticket.Prefixes[i].Prefix)
+			}
+		}
+	})
+
+	t.Run("empty ticket-prefixes fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", "core",
+			"--ticket-prefixes", " , , ",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected error for empty ticket-prefixes, but command succeeded")
+		}
+		if !strings.Contains(stderr.String(), "missing required flag --ticket-prefixes") {
+			t.Errorf("expected error message to mention --ticket-prefixes, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("empty src-folders fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", " , , ",
+			"--ticket-prefixes", "ALPHA",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected error for empty src-folders, but command succeeded")
+		}
+		if !strings.Contains(stderr.String(), "missing required flag --src-folders") {
+			t.Errorf("expected error message to mention --src-folders, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("collision fails safely without force", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(target, []byte("project_name: Original\n"), 0644); err != nil {
+			t.Fatalf("writing initial config: %v", err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Original",
+			"--src-folders", "src",
+			"--ticket-prefixes", "AL",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected init to fail when file exists and --force is omitted")
+		}
+
+		if !strings.Contains(stderr.String(), "already exists") {
+			t.Errorf("expected stderr to indicate file already exists, got: %s", stderr.String())
+		}
+
+		// Ensure file was not changed
+		content, _ := os.ReadFile(target)
+		if !strings.Contains(string(content), "Original") {
+			t.Errorf("expected original content retained, got %s", string(content))
+		}
+	})
+
+	t.Run("force overwrites existing file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(target, []byte("project_name: Original\n"), 0644); err != nil {
+			t.Fatalf("writing initial config: %v", err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Overwritten",
+			"--src-folders", "src",
+			"--ticket-prefixes", "AL",
+			"--force",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init --force failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(target)
+		if err != nil {
+			t.Fatalf("loading overwritten config: %v", err)
+		}
+		if loaded.ProjectName != "Overwritten" {
+			t.Errorf("expected project_name 'Overwritten', got %q", loaded.ProjectName)
+		}
+	})
+
+	t.Run("dry run prints YAML to stdout without creating file", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--dry-run",
+			"--project-name", "DryRunTest",
+			"--src-folders", "src",
+			"--ticket-prefixes", "DRY",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init --dry-run failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		outStr := stdout.String()
+		if !strings.Contains(outStr, "project_name: DryRunTest") {
+			t.Errorf("expected stdout to contain 'project_name: DryRunTest', got: %s", outStr)
+		}
+
+		// Ensure no file was created
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if _, err := os.Stat(cfgPath); !os.IsNotExist(err) {
+			t.Errorf("expected %s not to exist after dry-run, but it exists", cfgPath)
+		}
+	})
+
+	t.Run("spaces in project name and directories", func(t *testing.T) {
+		tempDir := t.TempDir()
+		projName := "My Special Project"
+		customOutput := filepath.Join(tempDir, "nested dir", "app config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", projName,
+			"--workspaces", "team workspaces",
+			"--src-folders", "my web,my backend",
+			"--ticket-prefixes", "SPECIAL",
+			"--output", customOutput,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init with spaces failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(customOutput)
+		if err != nil {
+			t.Fatalf("loading config with spaces failed: %v", err)
+		}
+		if loaded.ProjectName != projName {
+			t.Errorf("expected ProjectName %q, got %q", projName, loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "team workspaces" {
+			t.Errorf("expected Workspaces.Dir 'team workspaces', got %q", loaded.Workspaces.Dir)
+		}
+	})
+
+	t.Run("invalid or unknown flag returns error and exits non-zero", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init", "--invalid-nonexistent-flag=true")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init with invalid flag to fail, got zero exit code")
+		}
+		if !strings.Contains(stderr.String(), "flag provided but not defined") {
+			t.Errorf("expected stderr to contain 'flag provided but not defined', got: %s", stderr.String())
+		}
+	})
+
+	t.Run("passing deprecated or unknown --ticket-prefix flag fails as unknown flag", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init with --ticket-prefix to fail as unknown flag, got zero exit code")
+		}
+		if !strings.Contains(stderr.String(), "flag provided but not defined: -ticket-prefix") {
+			t.Errorf("expected stderr to contain 'flag provided but not defined: -ticket-prefix', got: %s", stderr.String())
+		}
+	})
+
+	t.Run("file collision error without force preserves original contents", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		originalContent := "# Original uncorrupted file\nproject_name: Untouched\n"
+		if err := os.WriteFile(target, []byte(originalContent), 0644); err != nil {
+			t.Fatalf("writing target file: %v", err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AttemptedOverwrite",
+			"--src-folders", "src",
+			"--ticket-prefixes", "AL",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected colliding init without --force to fail")
+		}
+		if !strings.Contains(stderr.String(), "already exists") {
+			t.Errorf("expected stderr to indicate file already exists, got: %s", stderr.String())
+		}
+
+		readBack, err := os.ReadFile(target)
+		if err != nil {
+			t.Fatalf("reading target file: %v", err)
+		}
+		if string(readBack) != originalContent {
+			t.Errorf("expected target content to be preserved exactly, got: %s", string(readBack))
+		}
+	})
+
+	t.Run("permission error handling when output directory is not writable", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Log("running as root; skipping unprivileged permission error assertion")
+			return
+		}
+		tempDir := t.TempDir()
+		roDir := filepath.Join(tempDir, "protected")
+		if err := os.MkdirAll(roDir, 0555); err != nil {
+			t.Fatalf("creating roDir: %v", err)
+		}
+		defer os.Chmod(roDir, 0755)
+
+		target := filepath.Join(roDir, "config.yaml")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Protected",
+			"--src-folders", "src",
+			"--ticket-prefixes", "AL",
+			"--output", target,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init to non-writable directory to fail")
+		}
+		if !strings.Contains(stderr.String(), "Error writing configuration file") {
+			t.Errorf("expected error message in stderr, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("commands fail with helpful message when configuration is absent", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// Test root command in dir with no config
+		cmdRoot := exec.Command(cliBinaryPath, "--workspaces", tempDir)
+		cmdRoot.Dir = tempDir
+		var stderrRoot bytes.Buffer
+		cmdRoot.Stderr = &stderrRoot
+		if err := cmdRoot.Run(); err == nil {
+			t.Fatal("expected root command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrRoot.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrRoot.String())
+		}
+
+		// Test server command in dir with no config
+		cmdServer := exec.Command(cliBinaryPath, "server", "--port", "29199", "--workspaces", tempDir)
+		cmdServer.Dir = tempDir
+		var stderrServer bytes.Buffer
+		cmdServer.Stderr = &stderrServer
+		if err := cmdServer.Run(); err == nil {
+			t.Fatal("expected server command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrServer.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrServer.String())
+		}
+
+		// Test generate command in dir with no config
+		cmdGenerate := exec.Command(cliBinaryPath, "generate", "--ticket-id", "TEST-1", "--allow-empty")
+		cmdGenerate.Dir = tempDir
+		var stderrGen bytes.Buffer
+		cmdGenerate.Stderr = &stderrGen
+		if err := cmdGenerate.Run(); err == nil {
+			t.Fatal("expected generate command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrGen.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrGen.String())
 		}
 	})
 }
