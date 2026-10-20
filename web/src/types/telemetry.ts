@@ -1,5 +1,7 @@
 export type EventType = 'tool_call' | 'turn_message' | 'compaction';
 
+export type DataSource = 'local_sqlite' | 'committed_ledger';
+
 export interface EventFact {
   readonly timestamp: string;
   readonly session_id: string;
@@ -11,6 +13,17 @@ export interface EventFact {
   readonly error_message?: string | null | undefined;
   readonly duration_ms?: number | null | undefined;
   readonly context_tokens: number;
+  readonly prompt_content?: string | null | undefined;
+  readonly reasoning_content?: string | null | undefined;
+  readonly tool_input?: string | null | undefined;
+  readonly tool_output?: string | null | undefined;
+}
+
+export interface WorkspaceEventsResponse {
+  readonly ticket_id: string;
+  readonly is_hydrated: boolean;
+  readonly events: readonly EventFact[];
+  readonly data_source: DataSource;
 }
 
 export type AnomalySeverity = 'WARNING' | 'CRITICAL';

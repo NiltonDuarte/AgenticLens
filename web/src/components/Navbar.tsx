@@ -106,6 +106,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           Comparisons
         </button>
+        <button
+          type="button"
+          className={`nav-tab ${activeTab === 'live' ? 'active' : ''}`}
+          onClick={() => onSelectTab?.('live')}
+        >
+          Live Observability
+        </button>
       </nav>
 
       <div className="navbar-actions">

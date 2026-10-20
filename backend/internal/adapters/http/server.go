@@ -23,13 +23,18 @@ func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceI
 		ls = liveService[0]
 	}
 
+	var hydrator WorkspaceEventHydrator
+	if h, ok := ls.(WorkspaceEventHydrator); ok {
+		hydrator = h
+	}
+
 	mux := http.NewServeMux()
 
 	// Register API endpoints
 	mux.HandleFunc("GET /api/version", VersionHandler())
 	mux.HandleFunc("GET /api/workspaces", WorkspacesHandler(workspacesDir))
 	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(workspacesDir))
-	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(workspacesDir))
+	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(workspacesDir, hydrator))
 	mux.HandleFunc("GET /api/fleet", FleetHandler(workspacesDir))
 	mux.HandleFunc("GET /api/comparison", ComparisonHandler(workspacesDir))
 	mux.HandleFunc("GET /api/progression", ProgressionHandler(workspacesDir))

@@ -30,7 +30,7 @@ type BuildInfoDTO struct {
 
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | BuildInfoDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | domain.WorkspaceEventsResponse | BuildInfoDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
@@ -88,12 +88,12 @@ func WriteVersionResponse(w http.ResponseWriter, info domain.BuildInfo) {
 	WriteJSON(w, http.StatusOK, dto)
 }
 
-// WriteEventsResponse writes a slice of EventFact as JSON.
-func WriteEventsResponse(w http.ResponseWriter, events []domain.EventFact) {
-	if events == nil {
-		events = []domain.EventFact{}
+// WriteEventsResponse writes a domain.WorkspaceEventsResponse as JSON.
+func WriteEventsResponse(w http.ResponseWriter, resp domain.WorkspaceEventsResponse) {
+	if resp.Events == nil {
+		resp.Events = []domain.EventFact{}
 	}
-	WriteJSON(w, http.StatusOK, events)
+	WriteJSON(w, http.StatusOK, resp)
 }
 
 // WriteComparisonResponse writes a slice of TicketComparisonRow as JSON.

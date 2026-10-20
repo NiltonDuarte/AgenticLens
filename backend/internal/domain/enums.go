@@ -214,6 +214,12 @@ const (
 	EventTypeCompaction  EventType = "compaction"
 )
 
+// Data source provenance constants for execution trace events.
+const (
+	DataSourceLocalSQLite     = "local_sqlite"
+	DataSourceCommittedLedger = "committed_ledger"
+)
+
 // AnomalySeverity defines the severity classification of a detected anomaly.
 type AnomalySeverity string
 

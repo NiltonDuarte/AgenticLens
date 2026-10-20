@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import type {
   AgenticMetricsLedger,
   Anomaly,
+  DataSource,
   EventFact,
   WorkspaceDetail,
 } from '../domain/types';
@@ -45,6 +46,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [detail, setDetail] = useState<WorkspaceDetail | null>(null);
   const [events, setEvents] = useState<readonly EventFact[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [dataSource, setDataSource] = useState<DataSource>('committed_ledger');
   const [selectedEvent, setSelectedEvent] = useState<EventFact | null>(null);
   const [selectedAnomaly, setSelectedAnomaly] = useState<Anomaly | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -91,19 +94,29 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 
         let loadedEvents: readonly EventFact[] = detailRes.data.ledger?.facts?.events ?? [];
         let isMockEvents = false;
+        let hydrated = false;
+        let source: DataSource = 'committed_ledger';
         try {
           const eventsRes = await fetchWorkspaceEvents(targetId);
-          loadedEvents = eventsRes.data && eventsRes.data.length > 0 ? eventsRes.data : loadedEvents;
+          if (eventsRes.data && eventsRes.data.events && eventsRes.data.events.length > 0) {
+            loadedEvents = eventsRes.data.events;
+          }
+          hydrated = eventsRes.data?.is_hydrated ?? false;
+          source = eventsRes.data?.data_source ?? 'committed_ledger';
           isMockEvents = eventsRes.isMock;
         } catch {
           // Gracefully keep events from detail.ledger.facts.events if fetch fails
         }
 
         setEvents(loadedEvents);
+        setIsHydrated(hydrated);
+        setDataSource(source);
         onMockChange?.(isMockFleet || detailRes.isMock || isMockEvents);
       } else {
         setDetail(null);
         setEvents([]);
+        setIsHydrated(false);
+        setDataSource('committed_ledger');
         onMockChange?.(isMockFleet);
       }
     } catch (err: unknown) {
@@ -593,6 +606,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       {events && events.length > 0 ? (
         <TraceWaterfall
           events={events}
+          isHydrated={isHydrated}
+          dataSource={dataSource}
           anomalies={detail.anomalies}
           selectedEvent={selectedEvent}
           onSelectEvent={handleSelectEvent}

@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -919,6 +920,339 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 			if tt.verify != nil {
 				tt.verify(t, pruned)
 			}
+		})
+	}
+}
+
+func TestWorkspaceEventsResponseSerialization(t *testing.T) {
+	t.Parallel()
+
+	prompt := "Write tests for events"
+	reasoning := "Need to ensure sanitization"
+	toolInput := `{"filePath": "events.go"}`
+	toolOutput := "file contents"
+	duration := int64(150)
+
+	tests := []struct {
+		name        string
+		input       domain.WorkspaceEventsResponse
+		expectedJSON string
+	}{
+		{
+			name: "hydrated local sqlite response with full diagnostic context",
+			input: domain.WorkspaceEventsResponse{
+				TicketID:   "AL-33",
+				IsHydrated: true,
+				Events: []domain.EventFact{
+					{
+						Timestamp:        "2026-10-19T10:00:00Z",
+						SessionID:        "ses-123",
+						Turn:             1,
+						Role:             "coder",
+						EventType:        domain.EventTypeToolCall,
+						ToolName:         func() *string { s := "edit"; return &s }(),
+						Status:           "completed",
+						DurationMs:       &duration,
+						ContextTokens:    4500,
+						PromptContent:    &prompt,
+						ReasoningContent: &reasoning,
+						ToolInput:        &toolInput,
+						ToolOutput:       &toolOutput,
+					},
+				},
+				DataSource: domain.DataSourceLocalSQLite,
+			},
+		},
+		{
+			name: "unhydrated committed ledger response with empty events",
+			input: domain.WorkspaceEventsResponse{
+				TicketID:   "AL-33",
+				IsHydrated: false,
+				Events:     []domain.EventFact{},
+				DataSource: domain.DataSourceCommittedLedger,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			data, err := json.Marshal(tt.input)
+			if err != nil {
+				t.Fatalf("failed to marshal WorkspaceEventsResponse: %v", err)
+			}
+
+			var decoded domain.WorkspaceEventsResponse
+			if err := json.Unmarshal(data, &decoded); err != nil {
+				t.Fatalf("failed to unmarshal WorkspaceEventsResponse: %v", err)
+			}
+
+			if decoded.TicketID != tt.input.TicketID {
+				t.Errorf("TicketID mismatch: expected %q, got %q", tt.input.TicketID, decoded.TicketID)
+			}
+			if decoded.IsHydrated != tt.input.IsHydrated {
+				t.Errorf("IsHydrated mismatch: expected %v, got %v", tt.input.IsHydrated, decoded.IsHydrated)
+			}
+			if decoded.DataSource != tt.input.DataSource {
+				t.Errorf("DataSource mismatch: expected %q, got %q", tt.input.DataSource, decoded.DataSource)
+			}
+			if len(decoded.Events) != len(tt.input.Events) {
+				t.Fatalf("Events count mismatch: expected %d, got %d", len(tt.input.Events), len(decoded.Events))
+			}
+			if len(decoded.Events) > 0 {
+				ev := decoded.Events[0]
+				if ev.PromptContent == nil || *ev.PromptContent != prompt {
+					t.Errorf("PromptContent mismatch: expected %q, got %v", prompt, ev.PromptContent)
+				}
+				if ev.ReasoningContent == nil || *ev.ReasoningContent != reasoning {
+					t.Errorf("ReasoningContent mismatch: expected %q, got %v", reasoning, ev.ReasoningContent)
+				}
+				if ev.ToolInput == nil || *ev.ToolInput != toolInput {
+					t.Errorf("ToolInput mismatch: expected %q, got %v", toolInput, ev.ToolInput)
+				}
+				if ev.ToolOutput == nil || *ev.ToolOutput != toolOutput {
+					t.Errorf("ToolOutput mismatch: expected %q, got %v", toolOutput, ev.ToolOutput)
+				}
+			}
+		})
+	}
+}
+
+func TestPruneEventsForPersistence_DiagnosticSanitization(t *testing.T) {
+	t.Parallel()
+
+	errMsg := "permission denied"
+	prompt := "Sensitive user prompt with credentials"
+	reasoning := "Internal secret reasoning thought"
+	toolIn := `{"secret_key": "abc123xyz"}`
+	toolOut := "DATABASE_PASSWORD=supersecret"
+
+	ledger := domain.AgenticFactLedger{
+		Events: []domain.EventFact{
+			{
+				Timestamp:        "2026-10-19T10:00:00Z",
+				SessionID:        "ses-1",
+				Turn:             1,
+				Role:             "coder",
+				EventType:        domain.EventTypeToolCall,
+				Status:           "error",
+				ErrorMessage:     &errMsg,
+				PromptContent:    &prompt,
+				ReasoningContent: &reasoning,
+				ToolInput:        &toolIn,
+				ToolOutput:       &toolOut,
+			},
+			{
+				Timestamp:        "2026-10-19T10:01:00Z",
+				SessionID:        "ses-1",
+				Turn:             2,
+				Role:             "orchestrator",
+				EventType:        domain.EventTypeCompaction,
+				Status:           "completed",
+				PromptContent:    &prompt,
+				ReasoningContent: &reasoning,
+			},
+		},
+	}
+
+	pruned := domain.PruneEventsForPersistence(ledger)
+	if len(pruned) != 2 {
+		t.Fatalf("expected 2 pruned events, got %d", len(pruned))
+	}
+
+	for i, ev := range pruned {
+		if ev.ErrorMessage != nil {
+			t.Errorf("event %d: ErrorMessage not nil: %q", i, *ev.ErrorMessage)
+		}
+		if ev.PromptContent != nil {
+			t.Errorf("event %d: PromptContent not nil: %q", i, *ev.PromptContent)
+		}
+		if ev.ReasoningContent != nil {
+			t.Errorf("event %d: ReasoningContent not nil: %q", i, *ev.ReasoningContent)
+		}
+		if ev.ToolInput != nil {
+			t.Errorf("event %d: ToolInput not nil: %q", i, *ev.ToolInput)
+		}
+		if ev.ToolOutput != nil {
+			t.Errorf("event %d: ToolOutput not nil: %q", i, *ev.ToolOutput)
+		}
+	}
+
+	// Verify original ledger is not mutated
+	if ledger.Events[0].PromptContent == nil || *ledger.Events[0].PromptContent != prompt {
+		t.Errorf("original ledger PromptContent was mutated")
+	}
+	if ledger.Events[0].ToolInput == nil || *ledger.Events[0].ToolInput != toolIn {
+		t.Errorf("original ledger ToolInput was mutated")
+	}
+}
+
+func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
+	t.Parallel()
+
+	// Assert canonical provenance constants
+	if domain.DataSourceLocalSQLite != "local_sqlite" {
+		t.Errorf("expected DataSourceLocalSQLite to be %q, got %q", "local_sqlite", domain.DataSourceLocalSQLite)
+	}
+	if domain.DataSourceCommittedLedger != "committed_ledger" {
+		t.Errorf("expected DataSourceCommittedLedger to be %q, got %q", "committed_ledger", domain.DataSourceCommittedLedger)
+	}
+
+	zeroDuration := int64(0)
+	negativeDuration := int64(-50)
+	largeDuration := int64(999999999)
+	emptyString := ""
+	unicodePayload := "Testing unicode: \u00e9\u00e0\u00fc \u4e16\u754c"
+
+	tests := []struct {
+		name     string
+		resp     domain.WorkspaceEventsResponse
+		validate func(t *testing.T, marshaled string, unmarshaled domain.WorkspaceEventsResponse)
+	}{
+		{
+			name: "zero tokens and zero duration boundary",
+			resp: domain.WorkspaceEventsResponse{
+				TicketID:   "AL-ZERO",
+				IsHydrated: true,
+				Events: []domain.EventFact{
+					{
+						Timestamp:     "2026-10-19T00:00:00Z",
+						SessionID:     "s-zero",
+						Turn:          0,
+						Role:          "coder",
+						EventType:     domain.EventTypeToolCall,
+						Status:        "completed",
+						DurationMs:    &zeroDuration,
+						ContextTokens: 0,
+					},
+				},
+				DataSource: domain.DataSourceLocalSQLite,
+			},
+			validate: func(t *testing.T, raw string, decoded domain.WorkspaceEventsResponse) {
+				if len(decoded.Events) != 1 {
+					t.Fatalf("expected 1 event, got %d", len(decoded.Events))
+				}
+				ev := decoded.Events[0]
+				if ev.ContextTokens != 0 {
+					t.Errorf("expected context tokens 0, got %d", ev.ContextTokens)
+				}
+				if ev.DurationMs == nil || *ev.DurationMs != 0 {
+					t.Errorf("expected duration 0, got %v", ev.DurationMs)
+				}
+				if ev.PromptContent != nil || ev.ReasoningContent != nil || ev.ToolInput != nil || ev.ToolOutput != nil {
+					t.Errorf("expected omitted pointer fields to decode as nil")
+				}
+			},
+		},
+		{
+			name: "negative duration and large context tokens",
+			resp: domain.WorkspaceEventsResponse{
+				TicketID:   "AL-EXTREME",
+				IsHydrated: false,
+				Events: []domain.EventFact{
+					{
+						Timestamp:        "2026-10-19T23:59:59Z",
+						SessionID:        "s-extreme",
+						Turn:             9999,
+						Role:             "tester",
+						EventType:        domain.EventTypeTurnMessage,
+						Status:           "completed",
+						DurationMs:       &negativeDuration,
+						ContextTokens:    2000000,
+						PromptContent:    &unicodePayload,
+						ReasoningContent: &emptyString,
+					},
+				},
+				DataSource: domain.DataSourceCommittedLedger,
+			},
+			validate: func(t *testing.T, raw string, decoded domain.WorkspaceEventsResponse) {
+				if len(decoded.Events) != 1 {
+					t.Fatalf("expected 1 event, got %d", len(decoded.Events))
+				}
+				ev := decoded.Events[0]
+				if ev.ContextTokens != 2000000 {
+					t.Errorf("expected 2000000 context tokens, got %d", ev.ContextTokens)
+				}
+				if ev.DurationMs == nil || *ev.DurationMs != -50 {
+					t.Errorf("expected duration -50, got %v", ev.DurationMs)
+				}
+				if ev.PromptContent == nil || *ev.PromptContent != unicodePayload {
+					t.Errorf("expected unicode payload, got %v", ev.PromptContent)
+				}
+				if ev.ReasoningContent == nil || *ev.ReasoningContent != "" {
+					t.Errorf("expected empty string reasoning content, got %v", ev.ReasoningContent)
+				}
+			},
+		},
+		{
+			name: "nil events slice marshals cleanly",
+			resp: domain.WorkspaceEventsResponse{
+				TicketID:   "AL-NIL-SLICE",
+				IsHydrated: false,
+				Events:     nil,
+				DataSource: domain.DataSourceCommittedLedger,
+			},
+			validate: func(t *testing.T, raw string, decoded domain.WorkspaceEventsResponse) {
+				if decoded.TicketID != "AL-NIL-SLICE" {
+					t.Errorf("expected ticket ID AL-NIL-SLICE, got %s", decoded.TicketID)
+				}
+				if decoded.IsHydrated {
+					t.Errorf("expected IsHydrated == false")
+				}
+			},
+		},
+		{
+			name: "large duration and compaction event fact",
+			resp: domain.WorkspaceEventsResponse{
+				TicketID:   "AL-COMPACTION",
+				IsHydrated: true,
+				Events: []domain.EventFact{
+					{
+						Timestamp:     "2026-10-19T12:00:00Z",
+						SessionID:     "s-comp",
+						Turn:          42,
+						Role:          "orchestrator",
+						EventType:     domain.EventTypeCompaction,
+						Status:        "completed",
+						DurationMs:    &largeDuration,
+						ContextTokens: 128000,
+					},
+				},
+				DataSource: domain.DataSourceLocalSQLite,
+			},
+			validate: func(t *testing.T, raw string, decoded domain.WorkspaceEventsResponse) {
+				if len(decoded.Events) != 1 {
+					t.Fatalf("expected 1 event, got %d", len(decoded.Events))
+				}
+				ev := decoded.Events[0]
+				if ev.EventType != domain.EventTypeCompaction {
+					t.Errorf("expected event type compaction, got %s", ev.EventType)
+				}
+				if ev.DurationMs == nil || *ev.DurationMs != largeDuration {
+					t.Errorf("expected large duration, got %v", ev.DurationMs)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			data, err := json.Marshal(tt.resp)
+			if err != nil {
+				t.Fatalf("marshaling failed: %v", err)
+			}
+
+			var decoded domain.WorkspaceEventsResponse
+			if err := json.Unmarshal(data, &decoded); err != nil {
+				t.Fatalf("unmarshaling failed: %v", err)
+			}
+
+			tt.validate(t, string(data), decoded)
 		})
 	}
 }

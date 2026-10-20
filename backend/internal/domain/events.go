@@ -28,7 +28,7 @@ func SortEvents(events []EventFact) []EventFact {
 
 // PruneEventsForPersistence filters out routine turn messages and successful tool calls,
 // retaining bare error events, context compaction events, and anomaly-associated events.
-// For all retained events, ErrorMessage is explicitly stripped to nil.
+// For all retained events, ErrorMessage, PromptContent, ReasoningContent, ToolInput, and ToolOutput are explicitly stripped to nil.
 // If ledger.Events is nil or empty, an allocated empty non-nil slice is returned.
 func PruneEventsForPersistence(ledger AgenticFactLedger) []EventFact {
 	if len(ledger.Events) == 0 {
@@ -63,6 +63,10 @@ func PruneEventsForPersistence(ledger AgenticFactLedger) []EventFact {
 		if isError || isCompaction || isAnomalyLinked {
 			sanitized := ev
 			sanitized.ErrorMessage = nil
+			sanitized.PromptContent = nil
+			sanitized.ReasoningContent = nil
+			sanitized.ToolInput = nil
+			sanitized.ToolOutput = nil
 			retained = append(retained, sanitized)
 		}
 	}

@@ -3,6 +3,7 @@ package live
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 )
 
@@ -627,4 +629,397 @@ func formatEpochMilli(ms int64) string {
 	}
 	t := time.UnixMilli(ms).UTC()
 	return t.Format("2006-01-02T15:04:05.000000+00:00")
+}
+
+// HydrateWorkspaceEvents dynamically hydrates full execution events from the local SQLite database.
+// If the database is missing, sessions are not found, or an error occurs, it gracefully falls back
+// to the committed ledger facts. Zero transient data is persisted to disk.
+func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID string, ledger domain.AgenticMetricsLedger) (domain.WorkspaceEventsResponse, error) {
+	fallbackResp := domain.WorkspaceEventsResponse{
+		TicketID:   ticketID,
+		IsHydrated: false,
+		Events:     domain.SortEvents(ledger.Facts.Events),
+		DataSource: domain.DataSourceCommittedLedger,
+	}
+
+	if s == nil || s.hook == nil || s.hook.DB() == nil {
+		return fallbackResp, nil
+	}
+
+	// 1. Collect session IDs from ledger invocations and events
+	sessionIDMap := make(map[string]bool)
+	for _, inv := range ledger.Facts.Invocations {
+		trimmed := strings.TrimSpace(inv.ID)
+		if trimmed != "" {
+			sessionIDMap[trimmed] = true
+		}
+	}
+	for _, ev := range ledger.Facts.Events {
+		trimmed := strings.TrimSpace(ev.SessionID)
+		if trimmed != "" {
+			sessionIDMap[trimmed] = true
+		}
+	}
+
+	// If no session IDs in ledger, attempt resolution via OpenCode resolver
+	if len(sessionIDMap) == 0 {
+		resolvedID, err := opencode.ResolveActiveRootSession(s.hook.DB(), "", ticketID, "")
+		if err == nil && resolvedID != nil && strings.TrimSpace(*resolvedID) != "" {
+			sessionIDMap[strings.TrimSpace(*resolvedID)] = true
+		}
+	}
+
+	if len(sessionIDMap) == 0 {
+		return fallbackResp, nil
+	}
+
+	// 2. Discover child sub-sessions to gather complete execution tree
+	var initialIDs []string
+	for sid := range sessionIDMap {
+		initialIDs = append(initialIDs, sid)
+	}
+
+	frontier := initialIDs
+	for len(frontier) > 0 {
+		children, err := s.hook.ResolveChildSessionIDs(frontier)
+		if err != nil {
+			break
+		}
+		var nextFrontier []string
+		for _, cid := range children {
+			if !sessionIDMap[cid] {
+				sessionIDMap[cid] = true
+				nextFrontier = append(nextFrontier, cid)
+			}
+		}
+		frontier = nextFrontier
+	}
+
+	// 3. Verify existence in SQLite
+	var verifiedSessions []string
+	for sid := range sessionIDMap {
+		exists, err := s.hook.SessionExists(sid)
+		if err == nil && exists {
+			verifiedSessions = append(verifiedSessions, sid)
+		}
+	}
+
+	if len(verifiedSessions) == 0 {
+		return fallbackResp, nil
+	}
+
+	// 4. Map session IDs to roles
+	sessionRoleMap := make(map[string]string)
+	for _, inv := range ledger.Facts.Invocations {
+		if inv.ID != "" && inv.Role != "" {
+			sessionRoleMap[inv.ID] = inv.Role
+		}
+	}
+	for _, sid := range verifiedSessions {
+		if _, exists := sessionRoleMap[sid]; !exists {
+			var agent, parentID sql.NullString
+			if err := s.hook.DB().QueryRow("SELECT agent, parent_id FROM session WHERE id = ?", sid).Scan(&agent, &parentID); err == nil {
+				if agent.Valid && strings.TrimSpace(agent.String) != "" {
+					sessionRoleMap[sid] = string(s.cfg.RoleMappings.ResolveRole(strings.TrimSpace(agent.String)))
+				} else if !parentID.Valid || strings.TrimSpace(parentID.String) == "" {
+					sessionRoleMap[sid] = "orchestrator"
+				} else {
+					sessionRoleMap[sid] = "unassigned"
+				}
+			} else {
+				sessionRoleMap[sid] = "coder"
+			}
+		}
+	}
+
+	// 5. Fetch all messages and parts ordered by time_created ASC
+	rawMsgs, rawParts, err := s.hook.FetchSessionTraceMulti(verifiedSessions)
+	if err != nil {
+		return fallbackResp, nil
+	}
+
+	if len(rawMsgs) == 0 && len(rawParts) == 0 {
+		return fallbackResp, nil
+	}
+
+	// Group parts by message ID
+	partsByMsg := make(map[string][]RawPartRecord)
+	orphanParts := make(map[string][]RawPartRecord)
+	for _, p := range rawParts {
+		if p.MessageID != "" {
+			partsByMsg[p.MessageID] = append(partsByMsg[p.MessageID], p)
+		} else {
+			orphanParts[p.SessionID] = append(orphanParts[p.SessionID], p)
+		}
+	}
+
+	var events []domain.EventFact
+	sessionTurns := make(map[string]int64)
+	lastUserPromptPerSession := make(map[string]string)
+
+	// Process messages per session
+	for _, rm := range rawMsgs {
+		role := sessionRoleMap[rm.SessionID]
+		if role == "" {
+			role = "coder"
+		}
+
+		var msgRole string
+		var contentStr string
+		var reasoningStr *string
+		var ctxTokens int64
+		var msgDurMs *int64
+
+		if strings.TrimSpace(rm.Data) != "" {
+			var rawMD struct {
+				Role             *string         `json:"role"`
+				Content          json.RawMessage `json:"content"`
+				Reasoning        *string         `json:"reasoning"`
+				ReasoningContent *string         `json:"reasoning_content"`
+				Tokens           *struct {
+					Input  *int64 `json:"input"`
+					Output *int64 `json:"output"`
+					Cache  *struct {
+						Read *int64 `json:"read"`
+					} `json:"cache"`
+					Reasoning *int64 `json:"reasoning"`
+				} `json:"tokens"`
+				Time *struct {
+					Created   *float64 `json:"created"`
+					Completed *float64 `json:"completed"`
+				} `json:"time"`
+			}
+			if err := json.Unmarshal([]byte(rm.Data), &rawMD); err == nil {
+				if rawMD.Role != nil {
+					msgRole = strings.TrimSpace(*rawMD.Role)
+				}
+				contentStr = extractMessageContent(rawMD.Content)
+				if rawMD.ReasoningContent != nil && strings.TrimSpace(*rawMD.ReasoningContent) != "" {
+					reasoningStr = rawMD.ReasoningContent
+				} else if rawMD.Reasoning != nil && strings.TrimSpace(*rawMD.Reasoning) != "" {
+					reasoningStr = rawMD.Reasoning
+				}
+				if rawMD.Tokens != nil {
+					var inp, cache int64
+					if rawMD.Tokens.Input != nil {
+						inp = *rawMD.Tokens.Input
+					}
+					if rawMD.Tokens.Cache != nil && rawMD.Tokens.Cache.Read != nil {
+						cache = *rawMD.Tokens.Cache.Read
+					}
+					ctxTokens = inp + cache
+				}
+				if rawMD.Time != nil && rawMD.Time.Created != nil && rawMD.Time.Completed != nil {
+					dur := int64(*rawMD.Time.Completed) - int64(*rawMD.Time.Created)
+					if dur >= 0 {
+						msgDurMs = &dur
+					}
+				}
+			}
+		}
+
+		if msgRole == "user" {
+			if contentStr != "" {
+				lastUserPromptPerSession[rm.SessionID] = contentStr
+			}
+			// User messages provide context for assistant turns
+			continue
+		}
+
+		if msgDurMs == nil && rm.TimeUpdated >= rm.TimeCreated && rm.TimeCreated > 0 {
+			dur := rm.TimeUpdated - rm.TimeCreated
+			msgDurMs = &dur
+		}
+
+		sessionTurns[rm.SessionID]++
+		turn := sessionTurns[rm.SessionID]
+
+		ts := formatEpochMilli(rm.TimeCreated)
+
+		// Check parts for this message
+		partRecords := partsByMsg[rm.ID]
+
+		// Inherit reasoning from part if not already on message
+		if reasoningStr == nil {
+			for _, pr := range partRecords {
+				var pCheck struct {
+					Type *string `json:"type"`
+					Text *string `json:"text"`
+				}
+				if json.Unmarshal([]byte(pr.Data), &pCheck) == nil {
+					if pCheck.Type != nil && *pCheck.Type == "reasoning" && pCheck.Text != nil && *pCheck.Text != "" {
+						t := strings.TrimSpace(*pCheck.Text)
+						reasoningStr = &t
+						break
+					}
+				}
+			}
+		}
+
+		var promptContentPtr *string
+		if userPrompt, ok := lastUserPromptPerSession[rm.SessionID]; ok && userPrompt != "" {
+			promptContentPtr = &userPrompt
+			delete(lastUserPromptPerSession, rm.SessionID)
+		} else if contentStr != "" {
+			promptContentPtr = &contentStr
+		}
+
+		// Append turn_message event
+		events = append(events, domain.EventFact{
+			Timestamp:        ts,
+			SessionID:        rm.SessionID,
+			Turn:             turn,
+			Role:             role,
+			EventType:        domain.EventTypeTurnMessage,
+			ToolName:         nil,
+			Status:           "completed",
+			DurationMs:       msgDurMs,
+			ContextTokens:    ctxTokens,
+			PromptContent:    promptContentPtr,
+			ReasoningContent: reasoningStr,
+		})
+
+		// Append parts for this message
+		consecutiveErrors := 0
+		for _, pr := range partRecords {
+			partEvent := convertPartToEventFact(pr, turn, role, ctxTokens, &consecutiveErrors)
+			if partEvent != nil {
+				events = append(events, *partEvent)
+			}
+		}
+	}
+
+	// Append any orphan parts that weren't tied to a specific message ID
+	for sid, parts := range orphanParts {
+		role := sessionRoleMap[sid]
+		if role == "" {
+			role = "coder"
+		}
+		turn := sessionTurns[sid]
+		if turn == 0 {
+			turn = 1
+		}
+		consecutiveErrors := 0
+		for _, pr := range parts {
+			partEvent := convertPartToEventFact(pr, turn, role, 0, &consecutiveErrors)
+			if partEvent != nil {
+				events = append(events, *partEvent)
+			}
+		}
+	}
+
+	if len(events) == 0 {
+		return fallbackResp, nil
+	}
+
+	return domain.WorkspaceEventsResponse{
+		TicketID:   ticketID,
+		IsHydrated: true,
+		Events:     domain.SortEvents(events),
+		DataSource: domain.DataSourceLocalSQLite,
+	}, nil
+}
+
+func convertPartToEventFact(pr RawPartRecord, turn int64, role string, ctxTokens int64, consecutiveErrors *int) *domain.EventFact {
+	ts := formatEpochMilli(pr.TimeCreated)
+
+	var pData struct {
+		Type  *string `json:"type"`
+		Tool  *string `json:"tool"`
+		Text  *string `json:"text"`
+		State *struct {
+			Status *string         `json:"status"`
+			Input  json.RawMessage `json:"input"`
+			Output json.RawMessage `json:"output"`
+		} `json:"state"`
+	}
+
+	partType := "tool"
+	var toolName *string
+	var inputStr, outputStr, status string
+
+	if strings.TrimSpace(pr.Data) != "" {
+		if err := json.Unmarshal([]byte(pr.Data), &pData); err == nil {
+			if pData.Type != nil && strings.TrimSpace(*pData.Type) != "" {
+				partType = strings.TrimSpace(*pData.Type)
+			}
+			if pData.Tool != nil && strings.TrimSpace(*pData.Tool) != "" {
+				toolName = pData.Tool
+			}
+			if pData.State != nil {
+				if pData.State.Status != nil {
+					status = strings.TrimSpace(*pData.State.Status)
+				}
+				inputStr = rawMessageToString(pData.State.Input)
+				outputStr = rawMessageToString(pData.State.Output)
+			}
+			if outputStr == "" && pData.Text != nil {
+				outputStr = strings.TrimSpace(*pData.Text)
+			}
+		}
+	}
+
+	if status == "" {
+		status = "completed"
+	}
+
+	var durMs *int64
+	if pr.TimeUpdated >= pr.TimeCreated && pr.TimeCreated > 0 {
+		dur := pr.TimeUpdated - pr.TimeCreated
+		durMs = &dur
+	}
+
+	if partType == "compaction" {
+		return &domain.EventFact{
+			Timestamp:     ts,
+			SessionID:     pr.SessionID,
+			Turn:          turn,
+			Role:          role,
+			EventType:     domain.EventTypeCompaction,
+			ToolName:      nil,
+			Status:        "completed",
+			DurationMs:    durMs,
+			ContextTokens: ctxTokens,
+		}
+	}
+
+	if partType == "tool" {
+		tName := "unknown"
+		if toolName != nil {
+			tName = *toolName
+		}
+		isError, _, errorMessage := domain.ClassifyToolFailure(tName, status, outputStr, *consecutiveErrors)
+		if isError {
+			*consecutiveErrors++
+			status = "error"
+		} else {
+			*consecutiveErrors = 0
+		}
+
+		var inputPtr *string
+		if inputStr != "" {
+			inputPtr = &inputStr
+		}
+		var outputPtr *string
+		if outputStr != "" {
+			outputPtr = &outputStr
+		}
+
+		return &domain.EventFact{
+			Timestamp:     ts,
+			SessionID:     pr.SessionID,
+			Turn:          turn,
+			Role:          role,
+			EventType:     domain.EventTypeToolCall,
+			ToolName:      toolName,
+			Status:        status,
+			ErrorMessage:  errorMessage,
+			DurationMs:    durMs,
+			ContextTokens: ctxTokens,
+			ToolInput:     inputPtr,
+			ToolOutput:    outputPtr,
+		}
+	}
+
+	return nil
 }

@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import type { EventFact, Anomaly } from '../types/telemetry';
+import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
 import { formatTokensK } from '../domain/formatters';
 import { AnomalyBadge } from './AnomalyBadge';
+import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
 
 export interface TraceWaterfallProps {
   readonly events: readonly EventFact[];
   readonly anomalies?: readonly Anomaly[] | undefined;
   readonly selectedEvent?: EventFact | null | undefined;
   readonly onSelectEvent?: ((event: EventFact, anomaly?: Anomaly | undefined) => void) | undefined;
+  readonly isHydrated?: boolean | undefined;
+  readonly dataSource?: DataSource | undefined;
 }
 
 type FilterMode = 'all' | 'tools' | 'errors_anomalies';
@@ -98,12 +101,25 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   anomalies,
   selectedEvent,
   onSelectEvent,
+  isHydrated = false,
+  dataSource = 'committed_ledger',
 }) => {
   const [filterMode, setFilterMode] = useState<FilterMode>('errors_anomalies');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [selectedRoles, setSelectedRoles] = useState<readonly string[]>(['all']);
+  const [selectedTools, setSelectedTools] = useState<readonly string[]>(['all']);
+  const [selectedAnomalies, setSelectedAnomalies] = useState<readonly string[]>(['all']);
   const [localSelectedEvent, setLocalSelectedEvent] = useState<EventFact | null>(null);
+  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
 
   const activeSelectedEvent = selectedEvent !== undefined ? selectedEvent : localSelectedEvent;
+
+  const toggleExpand = (key: string, e?: React.SyntheticEvent) => {
+    e?.stopPropagation();
+    setExpandedKeys((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const handleItemSelect = (ev: EventFact, matchingAnomaly?: Anomaly) => {
     setLocalSelectedEvent(ev);
@@ -123,38 +139,140 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
   // Unique roles for filter dropdown
   const availableRoles = useMemo(() => {
-    if (!events) return [];
+    if (!events || events.length === 0) return [];
     const roleSet = new Set<string>();
     for (const e of events) {
-      if (e.role) {
-        roleSet.add(e.role);
+      if (e.role && e.role.trim().length > 0) {
+        roleSet.add(e.role.trim());
       }
     }
-    return Array.from(roleSet).sort();
+    return Array.from(roleSet).sort((a, b) => a.localeCompare(b));
   }, [events]);
+
+  const roleOptions: readonly MultiSelectOption[] = useMemo(() => {
+    return availableRoles.map((role) => ({
+      value: role,
+      label: role,
+    }));
+  }, [availableRoles]);
+
+  // Unique tools for filter dropdown
+  const availableTools = useMemo(() => {
+    if (!events || events.length === 0) return [];
+    const toolSet = new Set<string>();
+    for (const e of events) {
+      if (e.tool_name && e.tool_name.trim().length > 0) {
+        toolSet.add(e.tool_name.trim());
+      }
+    }
+    return Array.from(toolSet).sort((a, b) => a.localeCompare(b));
+  }, [events]);
+
+  const toolOptions: readonly MultiSelectOption[] = useMemo(() => {
+    return availableTools.map((tool) => ({
+      value: tool,
+      label: tool,
+    }));
+  }, [availableTools]);
+
+  // Unique anomaly rule IDs for filter dropdown
+  const availableAnomalies = useMemo(() => {
+    if (!anomalies || anomalies.length === 0) return [];
+    const anomalySet = new Set<string>();
+    for (const a of anomalies) {
+      if (a.rule_id && a.rule_id.trim().length > 0) {
+        anomalySet.add(a.rule_id.trim());
+      }
+    }
+    return Array.from(anomalySet).sort((a, b) => a.localeCompare(b));
+  }, [anomalies]);
+
+  const anomalyOptions: readonly MultiSelectOption[] = useMemo(() => {
+    return availableAnomalies.map((ruleId) => ({
+      value: ruleId,
+      label: ruleId,
+    }));
+  }, [availableAnomalies]);
+
+  const isRoleFilterActive =
+    selectedRoles.length > 0 &&
+    !selectedRoles.includes('all') &&
+    !selectedRoles.includes('ALL');
+
+  const isToolFilterActive =
+    selectedTools.length > 0 &&
+    !selectedTools.includes('all') &&
+    !selectedTools.includes('ALL');
+
+  const isAnomalyFilterActive =
+    selectedAnomalies.length > 0 &&
+    !selectedAnomalies.includes('all') &&
+    !selectedAnomalies.includes('ALL');
+
+  const activeAnomalies = useMemo(() => {
+    if (!isAnomalyFilterActive || !anomalies || anomalies.length === 0) {
+      return undefined;
+    }
+    return anomalies.filter(
+      (a) => a.rule_id && selectedAnomalies.includes(a.rule_id.trim())
+    );
+  }, [anomalies, isAnomalyFilterActive, selectedAnomalies]);
 
   // Filtered event list
   const filteredEvents = useMemo(() => {
     return sortedEvents.filter((e) => {
-      // Role filter
-      if (roleFilter !== 'all' && e.role !== roleFilter) {
-        return false;
+      // 1. Role filter
+      if (isRoleFilterActive) {
+        if (!e.role || !selectedRoles.includes(e.role.trim())) {
+          return false;
+        }
       }
 
-      // Filter mode
+      // 2. Filter mode
       if (filterMode === 'tools') {
-        return e.event_type === 'tool_call';
+        if (e.event_type !== 'tool_call') {
+          return false;
+        }
+      } else if (filterMode === 'errors_anomalies') {
+        const isError = e.status === 'error';
+        const hasAnomaly = Boolean(findMatchingAnomaly(e, anomalies));
+        if (!isError && !hasAnomaly) {
+          return false;
+        }
       }
 
-      if (filterMode === 'errors_anomalies') {
-        const isError = e.status === 'error';
-        const hasAnomaly = !!findMatchingAnomaly(e, anomalies);
-        return isError || hasAnomaly;
+      // 3. Tool filter
+      if (isToolFilterActive) {
+        if (
+          !e.tool_name ||
+          e.tool_name.trim().length === 0 ||
+          !selectedTools.includes(e.tool_name.trim())
+        ) {
+          return false;
+        }
+      }
+
+      // 4. Anomaly filter
+      if (isAnomalyFilterActive) {
+        const hasMatchingRuleAnomaly = Boolean(findMatchingAnomaly(e, activeAnomalies));
+        if (!hasMatchingRuleAnomaly) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [sortedEvents, roleFilter, filterMode, anomalies]);
+  }, [
+    sortedEvents,
+    isRoleFilterActive,
+    selectedRoles,
+    filterMode,
+    anomalies,
+    isToolFilterActive,
+    selectedTools,
+    isAnomalyFilterActive,
+    activeAnomalies,
+  ]);
 
   if (!events || events.length === 0) {
     return (
@@ -171,6 +289,12 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       <div className="waterfall-header">
         <div className="waterfall-title-group">
           <h3 className="waterfall-title">Execution Trace Waterfall</h3>
+          <span
+            className={`waterfall-source-badge ${isHydrated ? 'source-hydrated' : 'source-offline'}`}
+            data-testid="waterfall-source-badge"
+          >
+            {isHydrated ? 'Source: Local SQLite' : 'Source: Committed Ledger'}
+          </span>
           <span className="waterfall-counter">
             Showing {filteredEvents.length} of {events.length} events
           </span>
@@ -206,27 +330,55 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             </button>
           </div>
 
-          <div className="role-filter-group">
-            <label htmlFor="trace-role-filter" className="role-filter-label">
-              Role:
-            </label>
-            <select
-              id="trace-role-filter"
-              aria-label="Filter by subagent role"
-              className="role-filter-select"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-            >
-              <option value="all">All Roles</option>
-              {availableRoles.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            id="trace-role-filter"
+            testId="trace-role-filter"
+            label="Role"
+            allLabel="No filter"
+            ariaLabel="Filter by subagent role"
+            className="role-filter-group"
+            options={roleOptions}
+            selectedValues={selectedRoles}
+            onChange={setSelectedRoles}
+          />
+
+          <MultiSelectDropdown
+            id="trace-tool-filter"
+            testId="trace-tool-filter"
+            label="Tool"
+            allLabel="No filter"
+            ariaLabel="Filter by tool"
+            className="tool-filter-group"
+            options={toolOptions}
+            selectedValues={selectedTools}
+            onChange={setSelectedTools}
+          />
+
+          <MultiSelectDropdown
+            id="trace-anomaly-filter"
+            testId="trace-anomaly-filter"
+            label="Anomaly"
+            allLabel="No filter"
+            ariaLabel="Filter by anomaly rule"
+            className="anomaly-filter-group"
+            options={anomalyOptions}
+            selectedValues={selectedAnomalies}
+            onChange={setSelectedAnomalies}
+          />
         </div>
       </div>
+
+      {/* Dynamic Hydration Fallback Banner */}
+      {(!isHydrated || dataSource === 'committed_ledger') && (
+        <div className="db-offline-banner" data-testid="db-offline-banner" role="status">
+          <div className="offline-banner-header">
+            <span className="offline-indicator-badge">Committed Git Ledger — Local Database Offline</span>
+          </div>
+          <p className="offline-banner-text">
+            Local SQLite database was unavailable or not found. Showing lightweight execution events recorded in the repository ledger without raw prompt, reasoning, or tool payloads.
+          </p>
+        </div>
+      )}
 
       {/* Waterfall Timeline Track */}
       {filteredEvents.length === 0 ? (
@@ -242,6 +394,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             const isIssue = ev.status === 'error' || Boolean(matchingAnomaly);
             const roleClass = `role-pill ${ev.role.toLowerCase()}`;
             const itemKey = `${ev.timestamp}-${ev.turn}-${ev.session_id}-${idx}`;
+            const isExpanded = Boolean(expandedKeys[itemKey]) || isSelected;
             const itemClasses = `timeline-item ${isSelected ? 'selected' : ''} ${hasError ? 'item-error' : ''} ${matchingAnomaly ? 'item-anomaly' : ''} ${isIssue ? 'item-interactive' : ''}`
               .replace(/\s+/g, ' ')
               .trim();
@@ -347,6 +500,15 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                         {formatTokensK(ev.context_tokens)} tokens
                       </span>
                     </div>
+
+                    <button
+                      type="button"
+                      className="btn-toggle-payload"
+                      aria-label={`${isExpanded ? 'Hide' : 'View'} payload for turn ${ev.turn}`}
+                      onClick={(e) => toggleExpand(itemKey, e)}
+                    >
+                      {isExpanded ? 'Hide Payload' : 'View Payload'}
+                    </button>
                   </div>
 
                   {ev.error_message && (
@@ -355,6 +517,46 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                       title="Click to open Tool Execution Failure window"
                     >
                       {ev.error_message}
+                    </div>
+                  )}
+
+                  {isExpanded && (
+                    <div className="payload-details-container" data-testid={`payload-details-${ev.turn}`}>
+                      {isHydrated ? (
+                        <>
+                          {ev.prompt_content && (
+                            <div className="payload-block prompt-block" data-testid="prompt-payload-block">
+                              <div className="payload-block-title">Prompt Payload</div>
+                              <pre className="mono payload-content">{ev.prompt_content}</pre>
+                            </div>
+                          )}
+                          {ev.reasoning_content && (
+                            <div className="payload-block reasoning-block" data-testid="reasoning-payload-block">
+                              <div className="payload-block-title">Model Reasoning</div>
+                              <pre className="mono payload-content">{ev.reasoning_content}</pre>
+                            </div>
+                          )}
+                          {ev.tool_input && (
+                            <div className="payload-block tool-input-block" data-testid="tool-input-payload-block">
+                              <div className="payload-block-title">Tool Input</div>
+                              <pre className="mono payload-content">{ev.tool_input}</pre>
+                            </div>
+                          )}
+                          {ev.tool_output && (
+                            <div className="payload-block tool-output-block" data-testid="tool-output-payload-block">
+                              <div className="payload-block-title">Tool Output</div>
+                              <pre className="mono payload-content">{ev.tool_output}</pre>
+                            </div>
+                          )}
+                          {!ev.prompt_content && !ev.reasoning_content && !ev.tool_input && !ev.tool_output && (
+                            <div className="payload-unhydrated-notice">Zero payload data captured for this event</div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="payload-unhydrated-notice" data-testid="unhydrated-notice">
+                          Full payload not captured in Git ledger
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

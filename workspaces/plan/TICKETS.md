@@ -31,8 +31,8 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
 - `workspaces/plan/done/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
 - `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
-- `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-- `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
+- `workspaces/plan/done/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
+- `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 - `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
 - `workspaces/plan/to-do/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
 - `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
@@ -66,22 +66,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocks**: AL-36
   - **File**: `workspaces/plan/to-do/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
 
-- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
-  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 6
-  - **Status**: Ready
-  - **Blocked by**: None (AL-17, AL-32 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
-
-- **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
-  - **Subsystem**: Presentation / Web / Tests
-  - **Phase**: Phase 4
-  - **Status**: Ready
-  - **Blocked by**: None (AL-17, AL-19 Done)
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-
 ---
 
 ## Pending
@@ -105,6 +89,22 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
+  - **Subsystem**: Presentation / Web / Tests
+  - **Phase**: Phase 4
+  - **Status**: Done
+  - **Blocked by**: None (AL-17, AL-19 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
+
+- **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
+  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 6
+  - **Status**: Done
+  - **Blocked by**: None (AL-17, AL-32 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 
 - **AL-19**: Implement Live Anomaly Detection Engine and Realtime Session Health Rules
   - **Subsystem**: Domain / Adapters / HTTP / Tests

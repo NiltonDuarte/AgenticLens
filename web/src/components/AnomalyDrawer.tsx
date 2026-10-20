@@ -200,6 +200,46 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
               </div>
             </section>
           )}
+
+          {/* Prompt Payload */}
+          {event?.prompt_content && (
+            <section className="drawer-section" data-testid="drawer-prompt-section">
+              <h4 className="drawer-section-title">Prompt Payload</h4>
+              <div className="drawer-code-box">
+                <pre className="drawer-code-content">{event.prompt_content}</pre>
+              </div>
+            </section>
+          )}
+
+          {/* Model Reasoning */}
+          {event?.reasoning_content && (
+            <section className="drawer-section" data-testid="drawer-reasoning-section">
+              <h4 className="drawer-section-title">Model Reasoning</h4>
+              <div className="drawer-code-box">
+                <pre className="drawer-code-content">{event.reasoning_content}</pre>
+              </div>
+            </section>
+          )}
+
+          {/* Tool Input */}
+          {event?.tool_input && (
+            <section className="drawer-section" data-testid="drawer-tool-input-section">
+              <h4 className="drawer-section-title">Tool Input</h4>
+              <div className="drawer-code-box">
+                <pre className="drawer-code-content">{event.tool_input}</pre>
+              </div>
+            </section>
+          )}
+
+          {/* Tool Output */}
+          {event?.tool_output && (
+            <section className="drawer-section" data-testid="drawer-tool-output-section">
+              <h4 className="drawer-section-title">Tool Output</h4>
+              <div className="drawer-code-box">
+                <pre className="drawer-code-content">{event.tool_output}</pre>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>

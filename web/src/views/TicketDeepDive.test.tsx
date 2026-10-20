@@ -916,7 +916,12 @@ describe('TicketDeepDive View Component', () => {
         isMock: true,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
-        data: [],
+        data: {
+          ticket_id: 'AL-1',
+          is_hydrated: false,
+          events: [],
+          data_source: 'committed_ledger',
+        },
         isMock: true,
       });
 
@@ -955,7 +960,12 @@ describe('TicketDeepDive View Component', () => {
         isMock: true,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
-        data: [],
+        data: {
+          ticket_id: 'AL-1',
+          is_hydrated: false,
+          events: [],
+          data_source: 'committed_ledger',
+        },
         isMock: true,
       });
 
@@ -986,7 +996,12 @@ describe('TicketDeepDive View Component', () => {
         isMock: true,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
-        data: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+        data: {
+          ticket_id: 'AL-2',
+          is_hydrated: false,
+          events: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+          data_source: 'committed_ledger',
+        },
         isMock: true,
       });
 
@@ -1009,7 +1024,12 @@ describe('TicketDeepDive View Component', () => {
         isMock: true,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
-        data: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+        data: {
+          ticket_id: 'AL-2',
+          is_hydrated: false,
+          events: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+          data_source: 'committed_ledger',
+        },
         isMock: true,
       });
 
@@ -1053,7 +1073,12 @@ describe('TicketDeepDive View Component', () => {
         isMock: true,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
-        data: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+        data: {
+          ticket_id: 'AL-2',
+          is_hydrated: false,
+          events: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+          data_source: 'committed_ledger',
+        },
         isMock: true,
       });
 
@@ -1091,7 +1116,12 @@ describe('TicketDeepDive View Component', () => {
         isMock: true,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
-        data: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+        data: {
+          ticket_id: 'AL-2',
+          is_hydrated: false,
+          events: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
+          data_source: 'committed_ledger',
+        },
         isMock: true,
       });
 
@@ -1160,7 +1190,12 @@ describe('TicketDeepDive View Component', () => {
         isMock: true,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
-        data: [plainErrorEvent],
+        data: {
+          ticket_id: 'AL-2',
+          is_hydrated: false,
+          events: [plainErrorEvent],
+          data_source: 'committed_ledger',
+        },
         isMock: true,
       });
 
@@ -1224,7 +1259,12 @@ describe('TicketDeepDive View Component', () => {
         isMock: true,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
-        data: [plainErrorEvent],
+        data: {
+          ticket_id: 'AL-2',
+          is_hydrated: false,
+          events: [plainErrorEvent],
+          data_source: 'committed_ledger',
+        },
         isMock: true,
       });
 
@@ -1243,6 +1283,128 @@ describe('TicketDeepDive View Component', () => {
 
       expect(screen.getByText('Tool Execution Failure')).toBeInTheDocument();
       expect(within(screen.getByRole('dialog')).getByText('exit status 2: command not found')).toBeInTheDocument();
+    });
+
+    it('renders hydrated waterfall without offline banner when is_hydrated is true', async () => {
+      const richEvents: EventFact[] = [
+        {
+          timestamp: '2026-10-18T10:00:00Z',
+          session_id: 's-rich-1',
+          turn: 1,
+          role: 'coder',
+          event_type: 'tool_call',
+          tool_name: 'bash',
+          status: 'error',
+          error_message: 'exit status 1',
+          duration_ms: 100,
+          context_tokens: 5000,
+          prompt_content: 'Check build status',
+          reasoning_content: 'Running build command',
+          tool_input: 'make build',
+          tool_output: 'error: syntax error',
+        },
+      ];
+
+      const richDetail = {
+        ...mockWorkspaceDetails['AL-2']!,
+        anomalies: [],
+        ledger: {
+          ...mockWorkspaceDetails['AL-2']!.ledger,
+          facts: {
+            ...mockWorkspaceDetails['AL-2']!.ledger.facts,
+            events: richEvents,
+          },
+        },
+      };
+
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: false,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: richDetail,
+        isMock: false,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: {
+          ticket_id: 'AL-2',
+          is_hydrated: true,
+          events: richEvents,
+          data_source: 'local_sqlite',
+        },
+        isMock: false,
+      });
+
+      const { container } = render(<TicketDeepDive selectedTicketId="AL-2" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      });
+
+      // Verify Local SQLite source badge is present and offline banner is NOT rendered
+      const sourceBadge = screen.getByTestId('waterfall-source-badge');
+      expect(sourceBadge).toHaveTextContent('Source: Local SQLite');
+      expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
+
+      // Zero emoji assertion
+      const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
+      expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
+    });
+
+    it('renders offline banner when is_hydrated is false', async () => {
+      const offlineEvents: EventFact[] = [
+        {
+          timestamp: '2026-10-18T10:00:00Z',
+          session_id: 's-off-1',
+          turn: 1,
+          role: 'coder',
+          event_type: 'tool_call',
+          tool_name: 'bash',
+          status: 'error',
+          error_message: 'failed',
+          context_tokens: 5000,
+        },
+      ];
+
+      const offlineDetail = {
+        ...mockWorkspaceDetails['AL-2']!,
+        anomalies: [],
+        ledger: {
+          ...mockWorkspaceDetails['AL-2']!.ledger,
+          facts: {
+            ...mockWorkspaceDetails['AL-2']!.ledger.facts,
+            events: offlineEvents,
+          },
+        },
+      };
+
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: false,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: offlineDetail,
+        isMock: false,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
+        data: {
+          ticket_id: 'AL-2',
+          is_hydrated: false,
+          events: offlineEvents,
+          data_source: 'committed_ledger',
+        },
+        isMock: false,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-2" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('db-offline-banner')).toBeInTheDocument();
+      const sourceBadge = screen.getByTestId('waterfall-source-badge');
+      expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
     });
   });
 });
