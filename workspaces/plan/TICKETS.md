@@ -33,10 +33,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/done/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
+- `workspaces/plan/done/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
 - `workspaces/plan/done/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
-- `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
+- `workspaces/plan/done/AL-41 eliminate subprocess churn artificial sleeps and test execution bottlenecks.md`
 - `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 - `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
+- `workspaces/plan/to-do/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
+- `workspaces/plan/to-do/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
 - `workspaces/plan/to-do/AL2-1 end-to-end agent anomaly debug prompt generator cli and interactive web drawer.md`
 - `workspaces/plan/to-do/AL2-2 end-to-end workspace archive engine cli compaction and in-memory decompression ingestion.md`
 - `workspaces/plan/to-do/AL2-3 multi project configuration schema domain aggregations and multi folder scanner.md`
@@ -55,14 +58,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Ready
 
-- **AL-35**: Pre-Release Source Code Audit, Configuration Leakage Inspection, and Review Artifact Generation
-  - **Subsystem**: Review / Domain / Adapters / Presentation / Tests
-  - **Phase**: Phase 7
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
-
 - **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
   - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests
   - **Phase**: Phase 7
@@ -70,6 +65,22 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None (AL-38 Done)
   - **Blocks**: AL-37
   - **File**: `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
+
+- **AL-39**: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes
+  - **Subsystem**: Adapters / Git / Domain / Config / Tests
+  - **Phase**: Phase 7
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
+
+- **AL-40**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
+  - **Subsystem**: Adapters / HTTP / Presentation / Web / Domain / Tests
+  - **Phase**: Phase 7
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
 
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
@@ -126,6 +137,22 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-41**: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execution Bottlenecks
+  - **Subsystem**: Tests / Adapters / Git / CLI / HTTP
+  - **Phase**: Phase 7
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-41 eliminate subprocess churn artificial sleeps and test execution bottlenecks.md`
+
+- **AL-35**: Pre-Release Source Code Audit, Configuration Leakage Inspection, and Review Artifact Generation
+  - **Subsystem**: Review / Domain / Adapters / Presentation / Tests
+  - **Phase**: Phase 7
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
 
 - **AL-38**: Migrate Configuration Manifest to Root .agenticlens-config.yaml
   - **Subsystem**: Adapters / CLI / Domain / Tests

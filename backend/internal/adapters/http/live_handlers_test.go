@@ -25,6 +25,7 @@ type mockLiveService struct {
 	events       chan live.LiveEvent
 	unsubMu      sync.Mutex
 	unsubscribed bool
+	unsubChan    chan struct{}
 }
 
 func (m *mockLiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTree, error) {
@@ -48,6 +49,13 @@ func (m *mockLiveService) Subscribe() (<-chan live.LiveEvent, func()) {
 	cleanup := func() {
 		m.unsubMu.Lock()
 		m.unsubscribed = true
+		if m.unsubChan != nil {
+			select {
+			case <-m.unsubChan:
+			default:
+				close(m.unsubChan)
+			}
+		}
 		m.unsubMu.Unlock()
 	}
 	return m.events, cleanup
@@ -261,7 +269,8 @@ func TestLiveStreamHandler_SSEProtocol(t *testing.T) {
 			LastRefreshedAt:     "2026-10-19T10:00:00Z",
 			TotalActiveSessions: 0,
 		},
-		events: eventsCh,
+		events:    eventsCh,
+		unsubChan: make(chan struct{}),
 	}
 
 	ts := setupLiveTestServer(mock)
@@ -330,7 +339,11 @@ func TestLiveStreamHandler_SSEProtocol(t *testing.T) {
 
 	// Cancel context and verify clean disconnection
 	cancel()
-	time.Sleep(50 * time.Millisecond)
+	select {
+	case <-mock.unsubChan:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timed out waiting for subscriber unsubscribe after client disconnect")
+	}
 
 	if !mock.isUnsubscribed() {
 		t.Error("expected subscriber to unsubscribe upon client disconnection")

@@ -107,26 +107,26 @@ func InferTicketTypeFromBranchList(branchOut, ticketID string) *string {
 	return nil
 }
 
-// InferTicketType infers ticket classification from git branch prefix or caller-supplied configured prefixes.
+// InferTicketType infers ticket classification from caller-supplied configured prefixes or git branch prefix.
 func InferTicketType(ticketID string, prefixes ...domain.TicketPrefix) *string {
 	cleanTicket := strings.TrimSpace(ticketID)
 	if cleanTicket == "" {
 		return nil
 	}
 
-	// 1. Search git branches (Tier 2)
-	branchOut, err := runGitCommand("branch", "-a", "--list", "*"+cleanTicket+"*")
-	if err == nil {
-		if res := InferTicketTypeFromBranchList(branchOut, cleanTicket); res != nil {
-			return res
-		}
-	}
-
-	// 2. Search configured ticket identifier prefix backup (Tier 3)
+	// 1. Evaluate configured ticket identifier prefixes first (shortcut avoiding subprocess forks)
 	if len(prefixes) > 0 {
 		if tt, ok := domain.InferTicketTypeFromPrefix(cleanTicket, prefixes); ok {
 			s := string(tt)
 			return &s
+		}
+	}
+
+	// 2. Search git branches if not resolved by configured prefixes
+	branchOut, err := runGitCommand("branch", "-a", "--list", "*"+cleanTicket+"*")
+	if err == nil {
+		if res := InferTicketTypeFromBranchList(branchOut, cleanTicket); res != nil {
+			return res
 		}
 	}
 
