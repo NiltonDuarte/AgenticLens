@@ -33,6 +33,9 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/to-do/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/to-do/AL-33 dynamic local database event hydration and fallback dual plane api.md`
+- `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage elimination and follow-up artifact generation.md`
+- `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
+- `workspaces/plan/to-do/AL-37 cross-project setup manual skill suite usage guide and distribution packaging.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
 - `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
 
@@ -45,6 +48,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Ready
+
+- **AL-35**: Pre-Release Source Code Audit, Configuration Leakage Elimination, and Follow-Up Artifact Generation
+  - **Subsystem**: Domain / Adapters / Presentation / CLI / Tests
+  - **Phase**: Phase 7
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-36
+  - **File**: `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage elimination and follow-up artifact generation.md`
 
 - **AL-33**: End-to-End Dynamic Local Database Event Hydration and Dual-Plane Waterfall
   - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
@@ -66,7 +77,21 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Pending
 
-(None)
+- **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
+  - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests
+  - **Phase**: Phase 7
+  - **Status**: Pending
+  - **Blocked by**: AL-35
+  - **Blocks**: AL-37
+  - **File**: `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
+
+- **AL-37**: Cross-Project Setup Manual, Skill Suite Usage Guide, and Distribution Packaging
+  - **Subsystem**: Docs / Packaging / Skills / CLI
+  - **Phase**: Phase 7
+  - **Status**: Pending
+  - **Blocked by**: AL-36
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-37 cross-project setup manual skill suite usage guide and distribution packaging.md`
 
 ---
 
