@@ -28,7 +28,6 @@ type LiveSessionNode struct {
 	Status           string             `json:"status"`
 	GuessedTicketID  *string            `json:"guessed_ticket_id,omitempty"`
 	TicketConfidence float64            `json:"ticket_confidence"`
-	Anomalies        []LiveAnomalyAlert `json:"anomalies"`
 	SubSessions      []*LiveSessionNode `json:"sub_sessions"`
 }
 
@@ -37,20 +36,19 @@ type LiveSessionTree struct {
 	RootSessions        []*LiveSessionNode `json:"root_sessions"`
 	LastRefreshedAt     string             `json:"last_refreshed_at"`
 	TotalActiveSessions int                `json:"total_active_sessions"`
-	ActiveAnomalies     []LiveAnomalyAlert `json:"active_anomalies"`
 }
 
 // LivePartFact captures a granular execution part (tool invocation, reasoning block, or compaction).
 type LivePartFact struct {
-	ID            string  `json:"id"`
-	Type          string  `json:"type"`
-	ToolName      *string `json:"tool_name,omitempty"`
-	InputSnippet  string  `json:"input_snippet"`
-	OutputSnippet string  `json:"output_snippet"`
-	Status        string  `json:"status"`
-	IsError       bool    `json:"is_error"`
-	ErrorMessage  *string `json:"error_message,omitempty"`
-	Severity      string  `json:"severity"`
+	ID           string  `json:"id"`
+	Type         string  `json:"type"`
+	ToolName     *string `json:"tool_name,omitempty"`
+	InputSnippet string  `json:"input_snippet"`
+	OutputSnippet string `json:"output_snippet"`
+	Status       string  `json:"status"`
+	IsError      bool    `json:"is_error"`
+	ErrorMessage *string `json:"error_message,omitempty"`
+	Severity     string  `json:"severity"`
 }
 
 // LiveMessageFact captures a chat message turn with associated execution parts.
@@ -60,23 +58,16 @@ type LiveMessageFact struct {
 	Content          string         `json:"content"`
 	Timestamp        string         `json:"timestamp"`
 	ReasoningContent *string        `json:"reasoning_content,omitempty"`
-	ContextTokens    int64          `json:"context_tokens"`
-	InputTokens      int64          `json:"input_tokens"`
-	OutputTokens     int64          `json:"output_tokens"`
-	CacheReadTokens  int64          `json:"cache_read_tokens"`
-	ReasoningTokens  int64          `json:"reasoning_tokens"`
-	TotalTokens      int64          `json:"total_tokens"`
 	Parts            []LivePartFact `json:"parts"`
 }
 
 // LiveTraceView captures the full chronological execution trace and error summary for a target session.
 type LiveTraceView struct {
-	SessionID       string             `json:"session_id"`
-	Messages        []LiveMessageFact  `json:"messages"`
-	TotalToolCalls  int                `json:"total_tool_calls"`
-	FailedToolCalls int                `json:"failed_tool_calls"`
-	RecentErrors    []LivePartFact     `json:"recent_errors"`
-	Anomalies       []LiveAnomalyAlert `json:"anomalies"`
+	SessionID       string            `json:"session_id"`
+	Messages        []LiveMessageFact `json:"messages"`
+	TotalToolCalls  int               `json:"total_tool_calls"`
+	FailedToolCalls int               `json:"failed_tool_calls"`
+	RecentErrors    []LivePartFact    `json:"recent_errors"`
 }
 
 // ClassifyToolFailure categorizes a tool execution failure into severity tiers (high, medium, low, none)
@@ -200,9 +191,6 @@ func BuildSessionTree(nodes []*LiveSessionNode) []*LiveSessionNode {
 		}
 		clone := *n
 		clone.SubSessions = make([]*LiveSessionNode, 0)
-		if clone.Anomalies == nil {
-			clone.Anomalies = make([]LiveAnomalyAlert, 0)
-		}
 		nodeMap[n.ID] = &clone
 	}
 

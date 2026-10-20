@@ -30,7 +30,7 @@ type BuildInfoDTO struct {
 
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | BuildInfoDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | BuildInfoDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
@@ -114,38 +114,10 @@ func WriteProgressionResponse(w http.ResponseWriter, metrics []domain.TimeBucket
 
 // WriteLiveSessionTreeResponse writes a domain.LiveSessionTree as JSON.
 func WriteLiveSessionTreeResponse(w http.ResponseWriter, tree domain.LiveSessionTree) {
-	if tree.RootSessions == nil {
-		tree.RootSessions = []*domain.LiveSessionNode{}
-	}
-	if tree.ActiveAnomalies == nil {
-		tree.ActiveAnomalies = []domain.LiveAnomalyAlert{}
-	}
 	WriteJSON(w, http.StatusOK, tree)
 }
 
 // WriteLiveTraceResponse writes a domain.LiveTraceView as JSON.
 func WriteLiveTraceResponse(w http.ResponseWriter, trace domain.LiveTraceView) {
-	if trace.Messages == nil {
-		trace.Messages = []domain.LiveMessageFact{}
-	}
-	if trace.RecentErrors == nil {
-		trace.RecentErrors = []domain.LivePartFact{}
-	}
-	if trace.Anomalies == nil {
-		trace.Anomalies = []domain.LiveAnomalyAlert{}
-	}
 	WriteJSON(w, http.StatusOK, trace)
-}
-
-// WriteLiveAnomalyAlertResponse writes a domain.LiveAnomalyAlert as JSON.
-func WriteLiveAnomalyAlertResponse(w http.ResponseWriter, alert domain.LiveAnomalyAlert) {
-	WriteJSON(w, http.StatusOK, alert)
-}
-
-// WriteLiveAnomalyAlertsResponse writes a slice of domain.LiveAnomalyAlert as JSON.
-func WriteLiveAnomalyAlertsResponse(w http.ResponseWriter, alerts []domain.LiveAnomalyAlert) {
-	if alerts == nil {
-		alerts = []domain.LiveAnomalyAlert{}
-	}
-	WriteJSON(w, http.StatusOK, alerts)
 }

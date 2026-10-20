@@ -28,7 +28,6 @@ func LiveSessionsHandler(service LiveServiceInterface) http.HandlerFunc {
 				RootSessions:        []*domain.LiveSessionNode{},
 				LastRefreshedAt:     "",
 				TotalActiveSessions: 0,
-				ActiveAnomalies:     []domain.LiveAnomalyAlert{},
 			})
 			return
 		}
