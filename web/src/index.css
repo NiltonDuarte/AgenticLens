@@ -3768,6 +3768,57 @@ th.num-col .th-content {
   color: #60a5fa;
 }
 
+/* Live Server Connection Failure Banner */
+.live-connection-error-banner {
+  background-color: rgba(239, 68, 68, 0.12);
+  border: 1px solid var(--status-red);
+  border-radius: 8px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.live-connection-error-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.live-connection-error-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--status-red);
+  line-height: 1.4;
+}
+
+.live-retry-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--status-red);
+  background-color: var(--status-red);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.live-retry-btn:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
+.live-retry-btn:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
 /* Live Anomaly Banner */
 .live-anomaly-banner {
   border-radius: 8px;

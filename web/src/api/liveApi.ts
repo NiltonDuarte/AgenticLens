@@ -4,12 +4,6 @@ import type {
   LiveSessionTree,
   LiveTraceView,
 } from '../domain/live';
-import {
-  mockLiveAnomalyAlerts,
-  mockLiveSessionTree,
-  mockLiveTraceView,
-  mockLiveTraceViews,
-} from './mockData';
 
 export type ConnectionStatus =
   | 'connecting'
@@ -87,68 +81,49 @@ export function parseLiveTraceView(data: unknown, fallbackSessionId: string): Li
   };
 }
 
-export async function fetchLiveSessionTree(isMock = false): Promise<LiveSessionTree> {
-  if (isMock) {
-    return mockLiveSessionTree;
-  }
+export async function fetchLiveSessionTree(): Promise<LiveSessionTree> {
   try {
     const res = await fetch('/api/live/sessions');
     if (!res.ok) {
-      return mockLiveSessionTree;
+      throw new Error(`HTTP ${res.status}: Failed to fetch live sessions`);
     }
     const data: unknown = await res.json();
     return parseLiveSessionTree(data);
-  } catch {
-    return mockLiveSessionTree;
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      throw err;
+    }
+    throw new Error(String(err));
   }
 }
 
-export async function fetchLiveTrace(
-  sessionId: string,
-  isMock = false
-): Promise<LiveTraceView> {
+export async function fetchLiveTrace(sessionId: string): Promise<LiveTraceView> {
   const cleanId = sessionId.trim();
-  if (isMock) {
-    return (
-      mockLiveTraceViews[cleanId] ?? {
-        ...mockLiveTraceView,
-        session_id: cleanId,
-      }
-    );
-  }
+  const encoded = encodeURIComponent(cleanId);
   try {
-    const encoded = encodeURIComponent(cleanId);
     const res = await fetch(`/api/live/sessions/${encoded}/trace`);
     if (!res.ok) {
-      return (
-        mockLiveTraceViews[cleanId] ?? {
-          ...mockLiveTraceView,
-          session_id: cleanId,
-        }
-      );
+      throw new Error(`HTTP ${res.status}: Failed to fetch live trace for session ${cleanId}`);
     }
     const data: unknown = await res.json();
     return parseLiveTraceView(data, cleanId);
-  } catch {
-    return (
-      mockLiveTraceViews[cleanId] ?? {
-        ...mockLiveTraceView,
-        session_id: cleanId,
-      }
-    );
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      throw err;
+    }
+    throw new Error(String(err));
   }
 }
 
-export function subscribeToLiveStream(
-  callbacks: LiveStreamCallbacks,
-  isMock = false
-): () => void {
+export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => void {
   let isClosed = false;
   let eventSource: EventSource | null = null;
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let consecutiveErrors = 0;
+  let sseConsecutiveErrors = 0;
+  let pollingConsecutiveErrors = 0;
   let reconnectDelayMs = 1000;
+  let sseDirectlyFailed = false;
 
   const teardown = () => {
     isClosed = true;
@@ -166,24 +141,6 @@ export function subscribeToLiveStream(
     }
   };
 
-  if (isMock) {
-    callbacks.onStatusChange?.('connected');
-    callbacks.onSessionTree(mockLiveSessionTree);
-    for (const alert of mockLiveAnomalyAlerts) {
-      callbacks.onAnomalyAlert?.(alert);
-    }
-
-    pollingTimer = setInterval(() => {
-      if (isClosed) return;
-      callbacks.onSessionTree({
-        ...mockLiveSessionTree,
-        last_refreshed_at: new Date().toISOString(),
-      });
-    }, 2000);
-
-    return teardown;
-  }
-
   const startFallbackPolling = () => {
     if (isClosed) return;
     if (eventSource !== null) {
@@ -200,14 +157,27 @@ export function subscribeToLiveStream(
     const poll = async () => {
       if (isClosed) return;
       try {
-        const tree = await fetchLiveSessionTree(false);
+        const tree = await fetchLiveSessionTree();
         if (!isClosed) {
-          callbacks.onSessionTree(tree);
+          pollingConsecutiveErrors = 0;
+          try {
+            callbacks.onSessionTree(tree);
+          } catch (callbackErr: unknown) {
+            const error =
+              callbackErr instanceof Error
+                ? callbackErr
+                : new Error(String(callbackErr));
+            callbacks.onError?.(error);
+          }
         }
       } catch (err: unknown) {
         if (!isClosed) {
+          pollingConsecutiveErrors++;
           const error = err instanceof Error ? err : new Error(String(err));
           callbacks.onError?.(error);
+          if (sseDirectlyFailed || pollingConsecutiveErrors >= 2) {
+            callbacks.onStatusChange?.('error');
+          }
         }
       }
     };
@@ -223,6 +193,9 @@ export function subscribeToLiveStream(
   const connectSSE = () => {
     if (isClosed) return;
     if (typeof EventSource === 'undefined') {
+      sseDirectlyFailed = true;
+      const error = new Error('EventSource is not supported in this environment');
+      callbacks.onError?.(error);
       startFallbackPolling();
       return;
     }
@@ -232,7 +205,7 @@ export function subscribeToLiveStream(
     try {
       eventSource = new EventSource('/api/live/stream');
     } catch (err: unknown) {
-      consecutiveErrors++;
+      sseDirectlyFailed = true;
       const error = err instanceof Error ? err : new Error(String(err));
       callbacks.onError?.(error);
       startFallbackPolling();
@@ -241,7 +214,7 @@ export function subscribeToLiveStream(
 
     eventSource.onopen = () => {
       if (isClosed) return;
-      consecutiveErrors = 0;
+      sseConsecutiveErrors = 0;
       reconnectDelayMs = 1000;
       callbacks.onStatusChange?.('connected');
     };
@@ -281,7 +254,7 @@ export function subscribeToLiveStream(
 
     eventSource.onerror = () => {
       if (isClosed) return;
-      consecutiveErrors++;
+      sseConsecutiveErrors++;
       const error = new Error('SSE connection error');
       callbacks.onError?.(error);
 
@@ -290,7 +263,7 @@ export function subscribeToLiveStream(
         eventSource = null;
       }
 
-      if (consecutiveErrors >= 3) {
+      if (sseConsecutiveErrors >= 3) {
         startFallbackPolling();
         return;
       }

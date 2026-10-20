@@ -11,14 +11,12 @@ import {
   fetchLiveTrace,
   subscribeToLiveStream,
 } from '../api/liveApi';
-import { mockLiveSessionTree } from '../api/mockData';
 import { LiveSessionTree } from '../components/LiveSessionTree';
 import { LiveTraceInspector } from '../components/LiveTraceInspector';
 import { LiveAnomalyBanner } from '../components/LiveAnomalyBanner';
 
 export interface LiveObservabilityProps {
   readonly onSelectTicket: (ticketId: string) => void;
-  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
 }
 
 const EMPTY_TREE: LiveSessionTreeType = {
@@ -48,9 +46,7 @@ function findSessionNode(
 
 export const LiveObservability: React.FC<LiveObservabilityProps> = ({
   onSelectTicket,
-  onMockChange,
 }) => {
-  const [isMock, setIsMock] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [sessionTree, setSessionTree] = useState<LiveSessionTreeType>(EMPTY_TREE);
@@ -58,30 +54,29 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
   const [traceView, setTraceView] = useState<LiveTraceView | null>(null);
   const [loadingTrace, setLoadingTrace] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const handleSelectSession = useCallback((sessionId: string) => {
     setSelectedSessionId(sessionId);
   }, []);
 
-  const handleToggleMock = () => {
-    setIsMock((prev) => {
-      const next = !prev;
-      onMockChange?.(next);
-      return next;
-    });
-  };
-
   const handleTogglePause = () => {
     setIsPaused((prev) => !prev);
   };
 
+  const handleRetryConnection = useCallback(() => {
+    setErrorMessage(null);
+    setConnectionStatus('connecting');
+    setRetryCount((prev) => prev + 1);
+  }, []);
+
   const handleManualRefresh = useCallback(async () => {
     try {
-      const tree = await fetchLiveSessionTree(isMock);
+      const tree = await fetchLiveSessionTree();
       setSessionTree(tree);
       if (selectedSessionId) {
         setLoadingTrace(true);
-        const trace = await fetchLiveTrace(selectedSessionId, isMock);
+        const trace = await fetchLiveTrace(selectedSessionId);
         setTraceView(trace);
         setLoadingTrace(false);
       }
@@ -91,7 +86,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
       setErrorMessage(errObj.message);
       setLoadingTrace(false);
     }
-  }, [isMock, selectedSessionId]);
+  }, [selectedSessionId]);
 
   // Load trace when selected session changes
   useEffect(() => {
@@ -103,7 +98,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
 
     let isSubscribed = true;
     setLoadingTrace(true);
-    void fetchLiveTrace(selectedSessionId, isMock)
+    void fetchLiveTrace(selectedSessionId)
       .then((trace) => {
         if (isSubscribed) {
           setTraceView(trace);
@@ -121,7 +116,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
     return () => {
       isSubscribed = false;
     };
-  }, [selectedSessionId, isMock]);
+  }, [selectedSessionId]);
 
   // Reactive streaming lifecycle
   useEffect(() => {
@@ -130,55 +125,45 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
       return;
     }
 
-    const unsubscribe = subscribeToLiveStream(
-      {
-        onSessionTree: (tree) => {
-          setSessionTree(tree);
-          setErrorMessage(null);
-        },
-        onAnomalyAlert: (alert: LiveAnomalyAlert) => {
-          setSessionTree((prev) => {
-            const alreadyExists = prev.active_anomalies.some(
-              (a) => a.session_id === alert.session_id && a.rule_name === alert.rule_name
-            );
-            if (alreadyExists) {
-              return prev;
-            }
-            return {
-              ...prev,
-              active_anomalies: [alert, ...prev.active_anomalies],
-            };
-          });
-        },
-        onTraceUpdate: (trace: LiveTraceView) => {
-          setSelectedSessionId((currentId) => {
-            if (currentId === trace.session_id) {
-              setTraceView(trace);
-            }
-            return currentId;
-          });
-        },
-        onStatusChange: (status) => {
-          setConnectionStatus(status);
-        },
-        onError: (err) => {
-          setErrorMessage(err.message);
-        },
+    const unsubscribe = subscribeToLiveStream({
+      onSessionTree: (tree) => {
+        setSessionTree(tree);
+        setErrorMessage(null);
       },
-      isMock
-    );
+      onAnomalyAlert: (alert: LiveAnomalyAlert) => {
+        setSessionTree((prev) => {
+          const alreadyExists = prev.active_anomalies.some(
+            (a) => a.session_id === alert.session_id && a.rule_name === alert.rule_name
+          );
+          if (alreadyExists) {
+            return prev;
+          }
+          return {
+            ...prev,
+            active_anomalies: [alert, ...prev.active_anomalies],
+          };
+        });
+      },
+      onTraceUpdate: (trace: LiveTraceView) => {
+        setSelectedSessionId((currentId) => {
+          if (currentId === trace.session_id) {
+            setTraceView(trace);
+          }
+          return currentId;
+        });
+      },
+      onStatusChange: (status) => {
+        setConnectionStatus(status);
+      },
+      onError: (err) => {
+        setErrorMessage(err.message);
+      },
+    });
 
     return () => {
       unsubscribe();
     };
-  }, [isMock, isPaused]);
-
-  // If in mock mode, seed with initial mock data if empty
-  useEffect(() => {
-    if (isMock && sessionTree.root_sessions.length === 0) {
-      setSessionTree(mockLiveSessionTree);
-    }
-  }, [isMock, sessionTree.root_sessions.length]);
+  }, [isPaused, retryCount]);
 
   const selectedNode = selectedSessionId
     ? findSessionNode(sessionTree.root_sessions, selectedSessionId)
@@ -211,7 +196,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
             </span>
           )}
 
-          {errorMessage && (
+          {errorMessage && connectionStatus !== 'error' && (
             <span className="status-bar-error" role="alert">
               Error: {errorMessage}
             </span>
@@ -234,16 +219,29 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
           >
             Manual Refresh
           </button>
-
-          <button
-            type="button"
-            className={`action-btn mock-btn ${isMock ? 'active' : ''}`}
-            onClick={handleToggleMock}
-          >
-            {isMock ? 'Mock Mode: ON' : 'Mock Mode: OFF'}
-          </button>
         </div>
       </header>
+
+      {connectionStatus === 'error' && (
+        <div
+          className="live-connection-error-banner"
+          role="alert"
+          data-testid="live-connection-error-banner"
+        >
+          <div className="live-connection-error-content">
+            <span className="live-connection-error-text">
+              Unable to connect to live AgenticLens server. Ensure ./bin/agentic-lens server is running.
+            </span>
+            <button
+              type="button"
+              className="live-retry-btn"
+              onClick={handleRetryConnection}
+            >
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      )}
 
       {sessionTree.active_anomalies && sessionTree.active_anomalies.length > 0 && (
         <LiveAnomalyBanner

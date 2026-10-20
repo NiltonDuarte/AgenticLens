@@ -60,7 +60,6 @@ export const App: React.FC = () => {
         {activeTab === 'live' && (
           <LiveObservability
             onSelectTicket={handleSelectTicketFromList}
-            onMockChange={setIsMock}
           />
         )}
       </main>

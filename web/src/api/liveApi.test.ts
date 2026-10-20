@@ -147,34 +147,6 @@ describe('liveApi Streaming and Boundary Layer', () => {
     });
   });
 
-  describe('subscribeToLiveStream in Mock Mode', () => {
-    it('emits mock tree and mock anomalies synchronously without creating EventSource', () => {
-      const onSessionTree = vi.fn();
-      const onAnomalyAlert = vi.fn();
-      const onStatusChange = vi.fn();
-
-      const callbacks: LiveStreamCallbacks = {
-        onSessionTree,
-        onAnomalyAlert,
-        onStatusChange,
-      };
-
-      const unsubscribe = subscribeToLiveStream(callbacks, true);
-      expect(MockEventSource.instances).toHaveLength(0);
-      expect(onStatusChange).toHaveBeenCalledWith('connected');
-      expect(onSessionTree).toHaveBeenCalledWith(mockLiveSessionTree);
-      expect(onAnomalyAlert).toHaveBeenCalledTimes(mockLiveAnomalyAlerts.length);
-
-      // Fast-forward interval timer to verify periodic tick
-      vi.advanceTimersByTime(2000);
-      expect(onSessionTree).toHaveBeenCalledTimes(2);
-
-      unsubscribe();
-      vi.advanceTimersByTime(4000);
-      expect(onSessionTree).toHaveBeenCalledTimes(2);
-    });
-  });
-
   describe('subscribeToLiveStream in Live SSE Mode', () => {
     it('initializes EventSource with /api/live/stream and routes SSE events to callbacks', () => {
       const onSessionTree = vi.fn();
@@ -189,7 +161,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onStatusChange,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks, false);
+      const unsubscribe = subscribeToLiveStream(callbacks);
       expect(MockEventSource.instances).toHaveLength(1);
       const es = MockEventSource.instances[0]!;
       expect(es.url).toBe('/api/live/stream');
@@ -231,7 +203,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks, false);
+      const unsubscribe = subscribeToLiveStream(callbacks);
       const es = MockEventSource.instances[0]!;
       es.onopen?.();
 
@@ -275,7 +247,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks, false);
+      const unsubscribe = subscribeToLiveStream(callbacks);
       expect(onError).toHaveBeenCalledTimes(1);
       expect(onError.mock.calls[0]![0].message).toContain('Blocked by Content Security Policy');
       expect(onStatusChange).toHaveBeenCalledWith('fallback-polling');
@@ -293,7 +265,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onStatusChange,
       };
 
-      subscribeToLiveStream(callbacks, false);
+      subscribeToLiveStream(callbacks);
       const es1 = MockEventSource.instances[0]!;
 
       // 1st error
@@ -319,7 +291,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onSessionTree: vi.fn(),
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks, false);
+      const unsubscribe = subscribeToLiveStream(callbacks);
       const es1 = MockEventSource.instances[0]!;
 
       // Trigger error, scheduling reconnect timer
@@ -359,7 +331,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks, false);
+      const unsubscribe = subscribeToLiveStream(callbacks);
 
       // Trigger 3 consecutive errors to enter fallback polling
       MockEventSource.instances[0]!.onerror?.();
@@ -374,18 +346,55 @@ describe('liveApi Streaming and Boundary Layer', () => {
       await vi.advanceTimersByTimeAsync(10);
       expect(onSessionTree).toHaveBeenCalledTimes(1);
 
-      // Poll 2: 2000ms later fetch fails, but fetchLiveSessionTree falls back to mock tree
+      // Poll 2: 2000ms later fetch fails, error routed to onError
       await vi.advanceTimersByTimeAsync(2000);
-      expect(onSessionTree).toHaveBeenCalledTimes(2);
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Network offline during poll' })
+      );
+      expect(onSessionTree).toHaveBeenCalledTimes(1);
 
       // Poll 3: 2000ms later succeeds again
       await vi.advanceTimersByTimeAsync(2000);
-      expect(onSessionTree).toHaveBeenCalledTimes(3);
+      expect(onSessionTree).toHaveBeenCalledTimes(2);
 
       // Unsubscribe and verify polling halts
       unsubscribe();
       await vi.advanceTimersByTimeAsync(4000);
-      expect(onSessionTree).toHaveBeenCalledTimes(3);
+      expect(onSessionTree).toHaveBeenCalledTimes(2);
+    });
+
+    it('transitions to error status on persistent fallback polling network failure', async () => {
+      const onStatusChange = vi.fn();
+      const onError = vi.fn();
+      const mockFetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+      vi.stubGlobal('fetch', mockFetch);
+
+      const callbacks: LiveStreamCallbacks = {
+        onSessionTree: vi.fn(),
+        onStatusChange,
+        onError,
+      };
+
+      const unsubscribe = subscribeToLiveStream(callbacks);
+
+      // 3 consecutive SSE errors -> transitions to fallback-polling
+      MockEventSource.instances[0]!.onerror?.();
+      vi.advanceTimersByTime(1000);
+      MockEventSource.instances[1]!.onerror?.();
+      vi.advanceTimersByTime(2000);
+      MockEventSource.instances[2]!.onerror?.();
+
+      expect(onStatusChange).toHaveBeenCalledWith('fallback-polling');
+
+      // 1st poll at t=0 fails
+      await vi.advanceTimersByTimeAsync(10);
+      expect(onError).toHaveBeenCalled();
+
+      // 2nd poll at t=2000 fails -> consecutive failures >= 2 -> error status
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(onStatusChange).toHaveBeenCalledWith('error');
+
+      unsubscribe();
     });
 
     it('routes polling callback exception to onError handler', async () => {
@@ -407,7 +416,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks, false);
+      const unsubscribe = subscribeToLiveStream(callbacks);
 
       // Trigger 3 errors to start fallback polling
       MockEventSource.instances[0]!.onerror?.();
@@ -433,7 +442,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      subscribeToLiveStream(callbacks, false);
+      subscribeToLiveStream(callbacks);
       const es1 = MockEventSource.instances[0]!;
 
       // Simulate error
@@ -462,7 +471,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onStatusChange,
       };
 
-      subscribeToLiveStream(callbacks, false);
+      subscribeToLiveStream(callbacks);
 
       // 1st error
       MockEventSource.instances[0]!.onerror?.();
@@ -496,7 +505,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onStatusChange,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks, false);
+      const unsubscribe = subscribeToLiveStream(callbacks);
       expect(onStatusChange).toHaveBeenCalledWith('fallback-polling');
 
       await vi.advanceTimersByTimeAsync(10);
@@ -507,15 +516,6 @@ describe('liveApi Streaming and Boundary Layer', () => {
   });
 
   describe('fetchLiveSessionTree REST helper', () => {
-    it('returns mock tree when isMock is true without network call', async () => {
-      const mockFetch = vi.fn();
-      vi.stubGlobal('fetch', mockFetch);
-
-      const tree = await fetchLiveSessionTree(true);
-      expect(tree).toEqual(mockLiveSessionTree);
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-
     it('fetches /api/live/sessions and parses response', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -523,41 +523,43 @@ describe('liveApi Streaming and Boundary Layer', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const tree = await fetchLiveSessionTree(false);
+      const tree = await fetchLiveSessionTree();
       expect(tree.total_active_sessions).toBe(mockLiveSessionTree.total_active_sessions);
       expect(mockFetch).toHaveBeenCalledWith('/api/live/sessions');
     });
 
-    it('falls back to mock data if fetch fails', async () => {
-      const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    it('rejects with typed Error when fetch rejects with network error', async () => {
+      const mockFetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
       vi.stubGlobal('fetch', mockFetch);
 
-      const tree = await fetchLiveSessionTree(false);
-      expect(tree).toEqual(mockLiveSessionTree);
+      await expect(fetchLiveSessionTree()).rejects.toBeInstanceOf(Error);
+      await expect(fetchLiveSessionTree()).rejects.toThrow('Failed to fetch');
     });
 
-    it('falls back to mock tree when server returns 500 internal server error', async () => {
+    it('rejects with typed Error when server returns HTTP 500 error', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
+        statusText: 'Internal Server Error',
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const tree = await fetchLiveSessionTree(false);
-      expect(tree).toEqual(mockLiveSessionTree);
+      await expect(fetchLiveSessionTree()).rejects.toThrow(/HTTP 500/i);
+    });
+
+    it('rejects with typed Error when server returns HTTP 404 error', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      await expect(fetchLiveSessionTree()).rejects.toThrow(/HTTP 404/i);
     });
   });
 
   describe('fetchLiveTrace REST helper', () => {
-    it('returns mock trace when isMock is true', async () => {
-      const mockFetch = vi.fn();
-      vi.stubGlobal('fetch', mockFetch);
-
-      const trace = await fetchLiveTrace('ses-al20-coder', true);
-      expect(trace.session_id).toBe('ses-al20-coder');
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-
     it('fetches /api/live/sessions/{id}/trace and parses response', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -565,20 +567,20 @@ describe('liveApi Streaming and Boundary Layer', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const trace = await fetchLiveTrace('ses-al20-coder', false);
+      const trace = await fetchLiveTrace('ses-al20-coder');
       expect(trace.session_id).toBe('ses-al20-coder');
       expect(mockFetch).toHaveBeenCalledWith('/api/live/sessions/ses-al20-coder/trace');
     });
 
     it('encodes path traversal sequences, slashes, and query characters in sessionId', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
+        ok: true,
+        json: async () => ({ ...mockLiveTraceView, session_id: 'clean' }),
       });
       vi.stubGlobal('fetch', mockFetch);
 
       const maliciousId = '../../etc/passwd?param=1&inject=true';
-      await fetchLiveTrace(maliciousId, false);
+      await fetchLiveTrace(maliciousId);
 
       const encoded = encodeURIComponent(maliciousId);
       expect(mockFetch).toHaveBeenCalledWith(`/api/live/sessions/${encoded}/trace`);
@@ -591,44 +593,41 @@ describe('liveApi Streaming and Boundary Layer', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const trace = await fetchLiveTrace('   ses-trimmed   ', false);
+      const trace = await fetchLiveTrace('   ses-trimmed   ');
       expect(mockFetch).toHaveBeenCalledWith('/api/live/sessions/ses-trimmed/trace');
       expect(trace.session_id).toBe('ses-trimmed');
     });
 
-    it('handles non-ok response gracefully without throwing', async () => {
+    it('rejects with typed Error mentioning sessionId and HTTP 404 status', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
+        statusText: 'Not Found',
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const trace = await fetchLiveTrace('ses-non-existent', false);
-      expect(trace.session_id).toBe('ses-non-existent');
+      await expect(fetchLiveTrace('ses-missing')).rejects.toThrow(/HTTP 404.*ses-missing/i);
     });
 
-    it('handles server 500 status and returns fallback trace without throwing', async () => {
+    it('rejects with typed Error on server HTTP 500 error', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
+        statusText: 'Internal Server Error',
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const trace = await fetchLiveTrace('ses-error-500', false);
-      expect(trace.session_id).toBe('ses-error-500');
-      expect(trace.messages).toBeDefined();
+      await expect(fetchLiveTrace('ses-error-500')).rejects.toThrow(/HTTP 500/i);
     });
 
-    it('handles network rejection (TypeError / drop) gracefully without throwing', async () => {
+    it('rejects with typed Error on network failure', async () => {
       const mockFetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
       vi.stubGlobal('fetch', mockFetch);
 
-      const trace = await fetchLiveTrace('ses-network-drop', false);
-      expect(trace.session_id).toBe('ses-network-drop');
-      expect(trace.messages).toBeDefined();
+      await expect(fetchLiveTrace('ses-network-drop')).rejects.toThrow('Failed to fetch');
     });
 
-    it('handles malformed JSON response body gracefully without throwing', async () => {
+    it('rejects with typed Error when response body contains malformed JSON', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => {
@@ -637,9 +636,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const trace = await fetchLiveTrace('ses-malformed-json', false);
-      expect(trace.session_id).toBe('ses-malformed-json');
-      expect(trace.messages).toBeDefined();
+      await expect(fetchLiveTrace('ses-malformed-json')).rejects.toThrow(/Unexpected token/i);
     });
   });
 });

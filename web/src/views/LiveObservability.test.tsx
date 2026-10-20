@@ -44,9 +44,17 @@ describe('LiveObservability View Integration', () => {
   beforeEach(() => {
     MockEventSource.instances = [];
     vi.stubGlobal('EventSource', MockEventSource);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockLiveTraceView,
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/trace')) {
+        return {
+          ok: true,
+          json: async () => mockLiveTraceView,
+        };
+      }
+      return {
+        ok: true,
+        json: async () => mockLiveSessionTree,
+      };
     }));
   });
 
@@ -145,26 +153,82 @@ describe('LiveObservability View Integration', () => {
     });
   });
 
-  it('toggles mock mode on and off invoking onMockChange callback', async () => {
+  it('displays connection error banner with retry button when stream and fallback polling fail to connect', async () => {
+    class FailingEventSource {
+      constructor() {
+        throw new Error('Connection refused');
+      }
+    }
+    vi.stubGlobal('EventSource', FailingEventSource);
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
     const onSelectTicket = vi.fn();
-    const onMockChange = vi.fn();
+    render(<LiveObservability onSelectTicket={onSelectTicket} />);
 
-    render(<LiveObservability onSelectTicket={onSelectTicket} onMockChange={onMockChange} />);
-
-    const mockBtn = screen.getByRole('button', { name: /mock mode: off/i });
-    fireEvent.click(mockBtn);
-
-    expect(onMockChange).toHaveBeenCalledWith(true);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /mock mode: on/i })).toBeInTheDocument();
+      expect(screen.getByTestId('live-connection-error-banner')).toBeInTheDocument();
     });
 
-    // Clicking again disables mock mode
-    fireEvent.click(screen.getByRole('button', { name: /mock mode: on/i }));
-    expect(onMockChange).toHaveBeenCalledWith(false);
+    const banner = screen.getByTestId('live-connection-error-banner');
+    expect(banner).toHaveAttribute('role', 'alert');
+    expect(
+      within(banner).getByText(
+        'Unable to connect to live AgenticLens server. Ensure ./bin/agentic-lens server is running.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(banner).getByRole('button', { name: /retry connection/i })
+    ).toBeInTheDocument();
+  });
+
+  it('attempts reconnection and dismisses error banner when retry connection button is clicked', async () => {
+    class FailingEventSource {
+      constructor() {
+        throw new Error('Connection refused');
+      }
+    }
+    vi.stubGlobal('EventSource', FailingEventSource);
+    const mockFetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', mockFetch);
+
+    const onSelectTicket = vi.fn();
+    render(<LiveObservability onSelectTicket={onSelectTicket} />);
+
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /mock mode: off/i })).toBeInTheDocument();
+      expect(screen.getByTestId('live-connection-error-banner')).toBeInTheDocument();
     });
+
+    // Now restore EventSource and fetch to succeed
+    vi.stubGlobal('EventSource', MockEventSource);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => mockLiveSessionTree,
+    });
+
+    const retryBtn = screen.getByRole('button', { name: /retry connection/i });
+    fireEvent.click(retryBtn);
+
+    // EventSource connects
+    await waitFor(() => {
+      expect(MockEventSource.instances.length).toBeGreaterThan(0);
+    });
+    const es = MockEventSource.instances[0]!;
+    act(() => {
+      es.onopen?.();
+      es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Connected (SSE)')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('live-connection-error-banner')).not.toBeInTheDocument();
+  });
+
+  it('does not render any mock mode controls in the UI', () => {
+    const onSelectTicket = vi.fn();
+    render(<LiveObservability onSelectTicket={onSelectTicket} />);
+
+    expect(screen.queryByRole('button', { name: /mock mode/i })).not.toBeInTheDocument();
   });
 
   it('navigates to ticket autopsy when guessed ticket badge is clicked', async () => {
@@ -404,8 +468,42 @@ describe('LiveObservability View Integration', () => {
     });
 
     await waitFor(() => {
+      expect(screen.getByText('Connected (SSE)')).toBeInTheDocument();
       expect(screen.getByTestId('live-session-tree-empty')).toBeInTheDocument();
     });
     expect(screen.getByText('No Active Sessions')).toBeInTheDocument();
+    expect(screen.queryByTestId('live-connection-error-banner')).not.toBeInTheDocument();
+  });
+
+  it('renders empty tree state when fallback polling connects and backend returns zero active sessions', async () => {
+    vi.stubGlobal('EventSource', undefined);
+    const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/api/live/sessions')) {
+        return {
+          ok: true,
+          json: async () => ({
+            root_sessions: [],
+            total_active_sessions: 0,
+            active_anomalies: [],
+            last_refreshed_at: '2026-10-20T12:00:00Z',
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => mockLiveTraceView,
+      };
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const onSelectTicket = vi.fn();
+    render(<LiveObservability onSelectTicket={onSelectTicket} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Fallback Polling (REST)')).toBeInTheDocument();
+      expect(screen.getByTestId('live-session-tree-empty')).toBeInTheDocument();
+    });
+    expect(screen.getByText('No Active Sessions')).toBeInTheDocument();
+    expect(screen.queryByTestId('live-connection-error-banner')).not.toBeInTheDocument();
   });
 });
