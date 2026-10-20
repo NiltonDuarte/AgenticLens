@@ -1,10 +1,10 @@
-h3. Title: AL2-6: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
+h3. Title: AL2-4: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
 
 *TARGET*: AgenticLens (adapters | git | http | server | tests)
 
 *CONTEXT*
  
-While AL2-5 enables multi-project scanning of local directories, engineering managers also need to monitor remote git repositories directly (e.g. `https://github.com/myorg/billing-service.git`) without requiring developers to pre-clone every project manually. To support this safely and efficiently, AgenticLens requires a dedicated git cache manager performing shallow clones, background synchronization, and a project registry REST API enabling live project discovery and on-demand syncing.
+While AL2-3 enables multi-project scanning of local directories, engineering managers also need to monitor remote git repositories directly (e.g. `https://github.com/myorg/billing-service.git`) without requiring developers to pre-clone every project manually. To support this safely and efficiently, AgenticLens requires a dedicated git cache manager performing shallow clones, background synchronization, and a project registry REST API enabling live project discovery and on-demand syncing.
 
 *GOAL*
  

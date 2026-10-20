@@ -1,4 +1,4 @@
-h3. Title: AL2-5: Multi-Project Configuration Schema, Domain Aggregations, and Multi-Folder Scanner
+h3. Title: AL2-3: Multi-Project Configuration Schema, Domain Aggregations, and Multi-Folder Scanner
 
 *TARGET*: AgenticLens (domain | adapters | cli | config | tests)
 

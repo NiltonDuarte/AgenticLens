@@ -1,10 +1,10 @@
-h3. Title: AL2-7: Multi-Project Web Dashboard Selector, Cross-Project Fleet Overview, and Comparative Analytics
+h3. Title: AL2-5: Multi-Project Web Dashboard Selector, Cross-Project Fleet Overview, and Comparative Analytics
 
 *TARGET*: AgenticLens (presentation | web | components | state | tests)
 
 *CONTEXT*
  
-With backend multi-project ingestion and REST endpoints in place (AL2-5, AL2-6), web dashboard users need an intuitive visual interface to view, filter, and compare data across projects. Project managers and leads must be able to switch between individual projects or select multiple projects simultaneously to evaluate cross-project agent velocity, compare financial expenditures, and inspect multi-repo health in a single dashboard view.
+With backend multi-project ingestion and REST endpoints in place (AL2-3, AL2-4), web dashboard users need an intuitive visual interface to view, filter, and compare data across projects. Project managers and leads must be able to switch between individual projects or select multiple projects simultaneously to evaluate cross-project agent velocity, compare financial expenditures, and inspect multi-repo health in a single dashboard view.
 
 *GOAL*
  

@@ -43,7 +43,7 @@ As multi-agent development scales across engineering teams, three major operatio
 
 ## Functional Scope & Layer Architecture
 
-### 1. Agent Anomaly & Tool Error Debug Prompt Generator (AL2-1, AL2-2)
+### 1. Agent Anomaly & Tool Error Debug Prompt Generator (AL2-1)
 
 #### Domain Core (`internal/domain`)
 - **Domain Models**:
@@ -78,7 +78,7 @@ As multi-agent development scales across engineering teams, three major operatio
 
 ---
 
-### 2. Multi-Project Workspace Observability & Remote Ingestion (AL2-5, AL2-6, AL2-7)
+### 2. Multi-Project Workspace Observability & Remote Ingestion (AL2-3, AL2-4, AL2-5)
 
 #### Domain Core (`internal/domain`)
 - **Multi-Project Models**:
@@ -132,7 +132,7 @@ As multi-agent development scales across engineering teams, three major operatio
 
 ---
 
-### 3. Workspace Archive Command & Compressed Ingestion (AL2-3, AL2-4)
+### 3. Workspace Archive Command & Compressed Ingestion (AL2-2)
 
 #### Domain Core (`internal/domain`)
 - **Archive Invariants & Models**:
@@ -190,32 +190,30 @@ As multi-agent development scales across engineering teams, three major operatio
 
 ## Decomposition & Delivery Roadmap (Phase 8: AL2 Prefix)
 
-The initiative is decomposed into 7 vertical tracer-bullet development tickets structured across 3 execution tiers:
+The initiative is decomposed into 5 vertical tracer-bullet development tickets structured across 3 execution tiers:
 
 ### Tier 1 (Ready - Unblocked)
-- **AL2-1**: Agent Anomaly Debug Prompt Generator Engine, HTTP Endpoint, and CLI
-  - *Subsystem*: Domain / Adapters / CLI / HTTP / Tests
-  - *Blocks*: AL2-2
-- **AL2-3**: Workspace Archive CLI Engine, Date-Based Compaction, and Interactive Selection
-  - *Subsystem*: Domain / Adapters / CLI / Tests
-  - *Blocks*: AL2-4
-- **AL2-5**: Multi-Project Configuration Schema, Domain Aggregations, and Multi-Folder Scanner
+- **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
+  - *Subsystem*: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
+  - *Blocked by*: None
+  - *Blocks*: None
+- **AL2-2**: End-to-End Workspace Archive Engine, CLI Compaction, and In-Memory Decompression Ingestion
+  - *Subsystem*: Domain / Adapters / CLI / HTTP / Presentation / Web / Tests
+  - *Blocked by*: None
+  - *Blocks*: None
+- **AL2-3**: Multi-Project Configuration Schema, Domain Aggregations, and Multi-Folder Scanner
   - *Subsystem*: Domain / Adapters / CLI / Config / Tests
-  - *Blocks*: AL2-6, AL2-7
+  - *Blocked by*: None
+  - *Blocks*: AL2-4, AL2-5
 
 ### Tier 2 (Pending - Blocked by Tier 1)
-- **AL2-2**: Interactive Debug Prompt Drawer, Clipboard Integration, and Waterfall Actions in Web Dashboard
-  - *Subsystem*: Presentation / Web / Components / Tests
-  - *Blocked by*: AL2-1
-- **AL2-4**: Transparent In-Memory Archive Ingestion in Repository Scanner, Server API, and Web UI
-  - *Subsystem*: Adapters / HTTP / Presentation / Web / Tests
-  - *Blocked by*: AL2-3
-- **AL2-6**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
+- **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - *Subsystem*: Adapters / Git / HTTP / Server / Tests
-  - *Blocked by*: AL2-5
-  - *Blocks*: AL2-7
+  - *Blocked by*: AL2-3
+  - *Blocks*: AL2-5
 
 ### Tier 3 (Pending - Blocked by Tier 2)
-- **AL2-7**: Multi-Project Web Dashboard Selector, Cross-Project Fleet Overview, and Comparative Analytics
+- **AL2-5**: Multi-Project Web Dashboard Selector, Cross-Project Fleet Overview, and Comparative Analytics
   - *Subsystem*: Presentation / Web / Components / State / Tests
-  - *Blocked by*: AL2-5, AL2-6
+  - *Blocked by*: AL2-3, AL2-4
+  - *Blocks*: None
