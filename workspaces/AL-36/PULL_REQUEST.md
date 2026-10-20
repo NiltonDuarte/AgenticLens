@@ -18,7 +18,7 @@ Additionally decouples ticket artifacts from hardcoded assumptions by introducin
 
 ### Dynamic Workspace Artifacts (`backend/internal/domain/`, `backend/internal/adapters/`, `web/`)
 - Domain: Declared `WorkspaceArtifactConfig` and `TicketArtifactItem`. Updated `WorkspacesConfig.Artifacts` and `TicketArtifacts.Items`.
-- Adapters: Updated configuration loader and writer to serialize and deserialize `workspaces.artifacts`. Updated `ReadTicketArtifacts` with path containment checks preventing directory traversal exploits. Wired artifacts into HTTP detail endpoint.
+- Adapters: Updated configuration loader and writer to serialize and deserialize `workspaces.artifacts`. Completely excised legacy root fields (`LegacyTicketPrefix`, `LegacyWorkspacesDir`, `LegacySrcFolders`) from loader DTO and merge logic. Updated `ReadTicketArtifacts` with path containment checks preventing directory traversal exploits. Wired artifacts into HTTP detail endpoint.
 - Web: Refactored `ArtifactViewer` to dynamically render configured artifact tabs (`CONTRACT.md`, `SUMMARY.md`, `PULL_REQUEST.md`, and custom documents) with markdown/raw views, empty badges, and clipboard copy.
 
 ### CLI Application Layer (`backend/cmd/agentic-lens/`)

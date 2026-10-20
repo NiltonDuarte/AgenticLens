@@ -190,11 +190,6 @@ type rawProjectConfigDTO struct {
 	CodeMetrics  *rawCodeMetricsConfig `json:"code_metrics" yaml:"code_metrics"`
 	RoleMappings map[string]string     `json:"role_mappings" yaml:"role_mappings"`
 	RoleOrder    []string              `json:"role_order" yaml:"role_order"`
-
-	// Legacy root-level fields from config.json
-	LegacyTicketPrefix  *string  `json:"ticket_prefix" yaml:"ticket_prefix"`
-	LegacyWorkspacesDir *string  `json:"workspaces_dir" yaml:"workspaces_dir"`
-	LegacySrcFolders    []string `json:"src_folders" yaml:"src_folders"`
 }
 
 func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
@@ -252,7 +247,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		cfg.ProjectName = strings.TrimSpace(*dto.ProjectName)
 	}
 
-	hasModernPrefixes := false
 	if dto.Ticket != nil && len(dto.Ticket.Prefixes) > 0 {
 		prefixes := make([]domain.TicketPrefix, 0, len(dto.Ticket.Prefixes))
 		for _, item := range dto.Ticket.Prefixes {
@@ -267,7 +261,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		}
 		if len(prefixes) > 0 {
 			cfg.Ticket.Prefixes = prefixes
-			hasModernPrefixes = true
 		}
 	}
 
@@ -277,15 +270,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		}
 		if dto.Ticket.CustomPatterns != nil {
 			cfg.Ticket.CustomPatterns = dto.Ticket.CustomPatterns
-		}
-	}
-
-	if !hasModernPrefixes && dto.LegacyTicketPrefix != nil && strings.TrimSpace(*dto.LegacyTicketPrefix) != "" {
-		cfg.Ticket.Prefixes = []domain.TicketPrefix{
-			{
-				Prefix:      strings.TrimSpace(*dto.LegacyTicketPrefix),
-				Description: "",
-			},
 		}
 	}
 
@@ -322,25 +306,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 			if len(artifacts) > 0 {
 				cfg.Workspaces.Artifacts = artifacts
 			}
-		}
-	}
-
-	if dto.LegacyWorkspacesDir != nil && strings.TrimSpace(*dto.LegacyWorkspacesDir) != "" {
-		if dto.Workspaces == nil || dto.Workspaces.Dir == nil || strings.TrimSpace(*dto.Workspaces.Dir) == "" {
-			cfg.Workspaces.Dir = strings.TrimSpace(*dto.LegacyWorkspacesDir)
-		}
-	}
-
-	if len(dto.LegacySrcFolders) > 0 {
-		if dto.Workspaces == nil || dto.Workspaces.SrcFolders == nil {
-			var cleanFolders []string
-			for _, f := range dto.LegacySrcFolders {
-				t := strings.TrimSpace(f)
-				if t != "" {
-					cleanFolders = append(cleanFolders, t)
-				}
-			}
-			cfg.Workspaces.SrcFolders = cleanFolders
 		}
 	}
 

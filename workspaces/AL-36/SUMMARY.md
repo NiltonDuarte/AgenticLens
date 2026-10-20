@@ -9,6 +9,7 @@
 
 ### Adapters & Boundary Shell Layer (`backend/internal/adapters`)
 - **Configuration Loader (`backend/internal/adapters/config/loader.go`)**:
+  - Excised all legacy root-level fallback fields (`LegacyTicketPrefix`, `LegacyWorkspacesDir`, `LegacySrcFolders`) from `rawProjectConfigDTO` and `mergeConfig`.
   - Removed inlined synthetic defaults from `mergeConfig`.
   - Added strict configuration validation enforcing mandatory non-empty `project_name`, `ticket.prefixes`, and `workspaces.src_folders`. Returns `ConfigValidationError` wrapping `ErrInvalidConfig`.
   - Defined `ErrConfigNotFound` returned when no configuration manifest exists in the repository tree.
@@ -66,16 +67,17 @@
 - Zero `any` or `interface{}` across Go and TypeScript.
 - Zero emojis across all source code, comments, docstrings, shell scripts, CLI output, and markdown artifacts.
 
+
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 5h 4m (excludes user wait time)
+- **Active Agent Duration:** 5h 12m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Orchestrator peak 166.4k tokens (83% of 200k healthy ceiling, 4 compactions) | Subagents peak 169.1k (Coder)
 - **Role Effort Distribution (Subagents):** Planner 7.5%, Coder 65.8%, Tester 12.7%, Reviewer 14.0%
 - **Subagent Turn Velocity & Thrashing:** 69.0 avg turns/run (peak: 251 turns) | Planner 38.7, Coder 127.0, Tester 45.5, Reviewer 42.8
-- **Test-to-Production Code Ratio:** 0.8:1 (+1,389 test lines / +1,639 prod lines)
-- **Code Delivered:** +3,042 / -244 lines across 26 code files (excluding docs)
-- **Reasoning Effort:** 234,412 reasoning tokens (47.8% of generated output)
-- **Tool Health & Self-Correction:** 1,250 tool calls (20 self-corrections, 98.4% success rate)
+- **Test-to-Production Code Ratio:** 1.1:1 (+1,810 test lines / +1,692 prod lines)
+- **Code Delivered:** +3,516 / -345 lines across 27 code files (excluding docs)
+- **Reasoning Effort:** 245,786 reasoning tokens (47.9% of generated output)
+- **Tool Health & Self-Correction:** 1,339 tool calls (21 self-corrections, 98.4% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 9 execution anomalies detected (5 CRITICAL, 4 WARNING).
@@ -100,11 +102,11 @@
 | **coder** | 5 | 4,664,717 | 148,100 | 48,198,824 | 91.2% | 169.1k | ELEVATED | $8.15 |
 | **tester** | 4 | 1,026,167 | 25,743 | 8,653,380 | 89.4% | 101.7k | ELEVATED | $1.57 |
 | **reviewer** | 4 | 1,162,953 | 18,012 | 8,889,791 | 88.4% | 113.5k | ELEVATED | $1.74 |
-| **general** | 1 | 3,382,322 | 40,504 | 8,104,638 | 70.6% | 166.4k | ELEVATED | $3.36 |
-| **Total** | **17** | **10,794,332** | **256,057** | **77,492,387** | **87.8%** | **169.1k** | **ELEVATED** | **$15.75** |
+| **general** | 1 | 3,993,520 | 51,464 | 14,572,631 | 78.5% | 166.4k | ELEVATED | $4.38 |
+| **Total** | **17** | **11,405,530** | **267,017** | **83,960,380** | **88.0%** | **169.1k** | **ELEVATED** | **$16.77** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 17 | 10,794,332 | 256,057 | 77,492,387 | 87.8% | $15.75 |
-| **Total** | **17** | **10,794,332** | **256,057** | **77,492,387** | **87.8%** | **$15.75** |
+| **gemini-3.8-flash** | 17 | 11,405,530 | 267,017 | 83,960,380 | 88.0% | $16.77 |
+| **Total** | **17** | **11,405,530** | **267,017** | **83,960,380** | **88.0%** | **$16.77** |

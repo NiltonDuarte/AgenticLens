@@ -301,7 +301,7 @@ func TestLoad_FilePriorityResolution(t *testing.T) {
 	})
 }
 
-func TestLoad_LegacyJSONCompatibility(t *testing.T) {
+func TestLoad_LegacyJSONRejected(t *testing.T) {
 	tempDir := t.TempDir()
 	cfgDir := filepath.Join(tempDir, ".agenticlens")
 	if err := os.MkdirAll(cfgDir, 0755); err != nil {
@@ -318,33 +318,12 @@ func TestLoad_LegacyJSONCompatibility(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg, err := config.Load(tempDir)
-	if err != nil {
-		t.Fatalf("unexpected error loading legacy json: %v", err)
+	_, err := config.Load(tempDir)
+	if err == nil {
+		t.Fatalf("expected error loading legacy json without canonical sections, got nil")
 	}
-
-	if cfg.ProjectName != "LegacyProject" {
-		t.Errorf("expected LegacyProject, got %s", cfg.ProjectName)
-	}
-	if len(cfg.Ticket.Prefixes) != 1 || cfg.Ticket.Prefixes[0].Prefix != "LEG" {
-		t.Errorf("expected prefixes [LEG], got %v", cfg.Ticket.Prefixes)
-	}
-	if cfg.Ticket.Prefixes[0].Description != "" {
-		t.Errorf("expected empty description for legacy prefix, got %q", cfg.Ticket.Prefixes[0].Description)
-	}
-	if cfg.Workspaces.Dir != "custom_workspaces_dir" {
-		t.Errorf("expected custom_workspaces_dir, got %s", cfg.Workspaces.Dir)
-	}
-	if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "api" || cfg.Workspaces.SrcFolders[1] != "ui" {
-		t.Errorf("expected src_folders [api, ui], got %v", cfg.Workspaces.SrcFolders)
-	}
-
-	// Sane defaults preserved for other fields
-	if cfg.Database.QueryTimeoutMs != 5000 {
-		t.Errorf("expected default database timeout 5000, got %d", cfg.Database.QueryTimeoutMs)
-	}
-	if cfg.Live.ActiveThresholdSeconds != 300 {
-		t.Errorf("expected default live active threshold 300, got %d", cfg.Live.ActiveThresholdSeconds)
+	if !errors.Is(err, config.ErrInvalidConfig) {
+		t.Errorf("expected ErrInvalidConfig, got %v", err)
 	}
 }
 
@@ -1082,7 +1061,7 @@ workspaces:
 		}
 	})
 
-	t.Run("legacy flat JSON with PO prefix", func(t *testing.T) {
+	t.Run("legacy flat JSON with PO prefix rejected", func(t *testing.T) {
 		tempDir := t.TempDir()
 		cfgDir := filepath.Join(tempDir, ".agenticlens")
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
@@ -1094,16 +1073,12 @@ workspaces:
 			t.Fatal(err)
 		}
 
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatalf("expected error for legacy flat ticket_prefix without canonical section, got nil")
 		}
-
-		if len(cfg.Ticket.Prefixes) != 1 || cfg.Ticket.Prefixes[0].Prefix != "PO" {
-			t.Errorf("expected [PO] prefix, got %+v", cfg.Ticket.Prefixes)
-		}
-		if cfg.Ticket.Prefixes[0].Description != "" {
-			t.Errorf("expected empty description for legacy prefix, got %q", cfg.Ticket.Prefixes[0].Description)
+		if !errors.Is(err, config.ErrInvalidConfig) {
+			t.Errorf("expected ErrInvalidConfig, got %v", err)
 		}
 	})
 
@@ -2124,7 +2099,7 @@ ticket:
 		}
 	})
 
-	t.Run("legacy subfolder .agenticlens/config.json with legacy root fields parses correctly", func(t *testing.T) {
+	t.Run("legacy subfolder .agenticlens/config.json with legacy root fields is rejected", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		legacyDir := filepath.Join(tempDir, ".agenticlens")
@@ -2142,18 +2117,12 @@ ticket:
 			t.Fatal(err)
 		}
 
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatalf("expected error loading legacy json without canonical sections, got nil")
 		}
-		if len(cfg.Ticket.Prefixes) != 1 || cfg.Ticket.Prefixes[0].Prefix != "LEGACYPREFIX" {
-			t.Errorf("unexpected legacy prefix: %+v", cfg.Ticket.Prefixes)
-		}
-		if cfg.Workspaces.Dir != "legacy_workspaces_dir" {
-			t.Errorf("expected legacy_workspaces_dir, got %s", cfg.Workspaces.Dir)
-		}
-		if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "src_legacy_1" {
-			t.Errorf("unexpected src_folders: %+v", cfg.Workspaces.SrcFolders)
+		if !errors.Is(err, config.ErrInvalidConfig) {
+			t.Errorf("expected ErrInvalidConfig, got %v", err)
 		}
 	})
 }
