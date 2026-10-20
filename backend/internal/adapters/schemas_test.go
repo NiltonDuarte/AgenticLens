@@ -780,3 +780,202 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 		}
 	})
 }
+
+func TestLiveSchema_AnomalyAlertSerializationAndParsing(t *testing.T) {
+	t.Run("valid alert JSON unmarshals and roundtrips cleanly", func(t *testing.T) {
+		payload := `{
+			"session_id": "ses_test_1",
+			"rule_name": "ConsecutiveToolErrors",
+			"severity": "HIGH",
+			"message": "Tool execution error streak reached 3 consecutive failures without recovery (last failing tool: bash).",
+			"timestamp": "2026-10-19T10:00:00Z",
+			"trigger_event": "part_3: exit status 1"
+		}`
+
+		var alert domain.LiveAnomalyAlert
+		if err := json.Unmarshal([]byte(payload), &alert); err != nil {
+			t.Fatalf("failed unmarshaling valid alert: %v", err)
+		}
+
+		if alert.SessionID != "ses_test_1" {
+			t.Errorf("expected session_id ses_test_1, got %s", alert.SessionID)
+		}
+		if alert.RuleName != domain.RuleConsecutiveToolErrors {
+			t.Errorf("expected rule %s, got %s", domain.RuleConsecutiveToolErrors, alert.RuleName)
+		}
+		if alert.Severity != domain.LiveSeverityHigh {
+			t.Errorf("expected severity HIGH, got %s", alert.Severity)
+		}
+
+		marshaled, err := json.Marshal(alert)
+		if err != nil {
+			t.Fatalf("failed marshaling alert: %v", err)
+		}
+		if !strings.Contains(string(marshaled), `"rule_name":"ConsecutiveToolErrors"`) {
+			t.Errorf("expected rule_name in marshaled JSON, got %s", string(marshaled))
+		}
+	})
+
+	t.Run("malformed alert JSON fails with descriptive error", func(t *testing.T) {
+		corrupted := `{ "session_id": "s1", "rule_name": `
+		var alert domain.LiveAnomalyAlert
+		if err := json.Unmarshal([]byte(corrupted), &alert); err == nil {
+			t.Fatal("expected unmarshaling error for truncated json, got nil")
+		}
+	})
+
+	t.Run("alert with unexpected field types fails cleanly", func(t *testing.T) {
+		badType := `{ "session_id": 12345, "rule_name": "ConsecutiveToolErrors" }`
+		var alert domain.LiveAnomalyAlert
+		if err := json.Unmarshal([]byte(badType), &alert); err == nil {
+			t.Fatal("expected unmarshaling error for integer session_id, got nil")
+		}
+	})
+}
+
+func TestLiveSchema_LiveTraceViewBoundary(t *testing.T) {
+	t.Run("empty slice fields serialize as empty array [] and not null", func(t *testing.T) {
+		trace := domain.LiveTraceView{
+			SessionID:       "s_empty",
+			Messages:        []domain.LiveMessageFact{},
+			TotalToolCalls:  0,
+			FailedToolCalls: 0,
+			RecentErrors:    []domain.LivePartFact{},
+			Anomalies:       []domain.LiveAnomalyAlert{},
+		}
+
+		data, err := json.Marshal(trace)
+		if err != nil {
+			t.Fatalf("failed marshaling trace view: %v", err)
+		}
+
+		str := string(data)
+		if strings.Contains(str, `"messages":null`) {
+			t.Errorf("messages serialized as null instead of []: %s", str)
+		}
+		if strings.Contains(str, `"recent_errors":null`) {
+			t.Errorf("recent_errors serialized as null instead of []: %s", str)
+		}
+		if strings.Contains(str, `"anomalies":null`) {
+			t.Errorf("anomalies serialized as null instead of []: %s", str)
+		}
+	})
+
+	t.Run("unmarshaling handles negative and extreme token values without panic", func(t *testing.T) {
+		payload := `{
+			"session_id": "s_extreme",
+			"messages": [
+				{
+					"id": "m1",
+					"role": "assistant",
+					"content": "extreme test",
+					"timestamp": "2026-10-19T10:00:00Z",
+					"context_tokens": 9223372036854775807,
+					"input_tokens": 1000,
+					"output_tokens": 500,
+					"cache_read_tokens": 0,
+					"reasoning_tokens": 0,
+					"total_tokens": 1500,
+					"parts": []
+				}
+			],
+			"total_tool_calls": 0,
+			"failed_tool_calls": 0,
+			"recent_errors": [],
+			"anomalies": []
+		}`
+
+		var trace domain.LiveTraceView
+		if err := json.Unmarshal([]byte(payload), &trace); err != nil {
+			t.Fatalf("failed unmarshaling extreme token values: %v", err)
+		}
+
+		if len(trace.Messages) != 1 {
+			t.Fatalf("expected 1 message, got %d", len(trace.Messages))
+		}
+		if trace.Messages[0].ContextTokens != 9223372036854775807 {
+			t.Errorf("expected max int64 context tokens, got %d", trace.Messages[0].ContextTokens)
+		}
+	})
+}
+
+func TestLiveSchema_LiveSessionTreeBoundary(t *testing.T) {
+	t.Run("empty slice fields serialize as empty array [] and not null", func(t *testing.T) {
+		tree := domain.LiveSessionTree{
+			RootSessions:        []*domain.LiveSessionNode{},
+			LastRefreshedAt:     "2026-10-19T10:00:00Z",
+			TotalActiveSessions: 0,
+			ActiveAnomalies:     []domain.LiveAnomalyAlert{},
+		}
+
+		data, err := json.Marshal(tree)
+		if err != nil {
+			t.Fatalf("failed marshaling session tree: %v", err)
+		}
+
+		str := string(data)
+		if strings.Contains(str, `"root_sessions":null`) {
+			t.Errorf("root_sessions serialized as null instead of []: %s", str)
+		}
+		if strings.Contains(str, `"active_anomalies":null`) {
+			t.Errorf("active_anomalies serialized as null instead of []: %s", str)
+		}
+	})
+
+	t.Run("nested sessions roundtrip correctly", func(t *testing.T) {
+		parentID := "ses_parent"
+		child := &domain.LiveSessionNode{
+			ID:               "ses_child",
+			ParentID:         &parentID,
+			Agent:            "coder",
+			Role:             domain.RoleCoder,
+			Model:            "gemini-3.8-flash",
+			Title:            "Child session",
+			TimeCreated:      "2026-10-19T10:05:00Z",
+			TimeUpdated:      "2026-10-19T10:10:00Z",
+			Status:           "running",
+			TicketConfidence: 1.0,
+			Anomalies:        []domain.LiveAnomalyAlert{},
+			SubSessions:      []*domain.LiveSessionNode{},
+		}
+		root := &domain.LiveSessionNode{
+			ID:               parentID,
+			Agent:            "build",
+			Role:             domain.RoleOrchestrator,
+			Model:            "gemini-3.8-flash",
+			Title:            "Root session",
+			TimeCreated:      "2026-10-19T10:00:00Z",
+			TimeUpdated:      "2026-10-19T10:15:00Z",
+			Status:           "running",
+			TicketConfidence: 1.0,
+			Anomalies:        []domain.LiveAnomalyAlert{},
+			SubSessions:      []*domain.LiveSessionNode{child},
+		}
+		tree := domain.LiveSessionTree{
+			RootSessions:        []*domain.LiveSessionNode{root},
+			LastRefreshedAt:     "2026-10-19T10:15:01Z",
+			TotalActiveSessions: 2,
+			ActiveAnomalies:     []domain.LiveAnomalyAlert{},
+		}
+
+		data, err := json.Marshal(tree)
+		if err != nil {
+			t.Fatalf("failed marshaling nested tree: %v", err)
+		}
+
+		var roundTrip domain.LiveSessionTree
+		if err := json.Unmarshal(data, &roundTrip); err != nil {
+			t.Fatalf("failed unmarshaling nested tree: %v", err)
+		}
+
+		if len(roundTrip.RootSessions) != 1 {
+			t.Fatalf("expected 1 root session, got %d", len(roundTrip.RootSessions))
+		}
+		if len(roundTrip.RootSessions[0].SubSessions) != 1 {
+			t.Fatalf("expected 1 sub-session, got %d", len(roundTrip.RootSessions[0].SubSessions))
+		}
+		if roundTrip.RootSessions[0].SubSessions[0].ID != "ses_child" {
+			t.Errorf("expected child ID ses_child, got %s", roundTrip.RootSessions[0].SubSessions[0].ID)
+		}
+	})
+}
