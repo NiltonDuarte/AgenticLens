@@ -1,7 +1,7 @@
 # Work Summary: AL-33 Dynamic Local Database Event Hydration and Dual-Plane Waterfall
 
 ## Overview
-Ticket AL-33 delivers an end-to-end vertical slice for dynamic local database event hydration, dual-plane waterfall visualization, and multi-dimensional execution trace filtering across the Go backend and TypeScript frontend dashboard. When running against an accessible local OpenCode SQLite database, rich execution traces (user prompts, model reasoning thought blocks, tool input arguments, and tool outputs) are dynamically hydrated in memory. When running in offline or remote environments (CI runners, Docker containers, remote clones without database access), the system gracefully degrades to reading committed bare event facts. Iteration 03 adds multi-dimensional filtering by tool and anomaly rule directly into the Execution Trace Waterfall.
+Ticket AL-33 delivers an end-to-end vertical slice for dynamic local database event hydration, dual-plane waterfall visualization, and multi-dimensional execution trace filtering across the Go backend and TypeScript frontend dashboard. When running against an accessible local OpenCode SQLite database, rich execution traces (user prompts, model reasoning thought blocks, tool input arguments, and tool outputs) are dynamically hydrated in memory. When running in offline or remote environments (CI runners, Docker containers, remote clones without database access), the system gracefully degrades to reading committed bare event facts. Iterations 03 and 04 introduce multi-dimensional, multi-select filtering across tools, anomaly rules, and agent roles in the Execution Trace Waterfall with explicit "No filter" pass-through semantics.
 
 ## Changes by Layer
 
@@ -21,44 +21,46 @@ Ticket AL-33 delivers an end-to-end vertical slice for dynamic local database ev
 - Added end-to-end integration tests verifying hydrated responses, offline fallbacks, hostile degradation modes, and path traversal rejection.
 
 ### Presentation & Web Dashboard (`web/src/`)
-- `types/telemetry.ts` & `domain/types.ts`: Defined `WorkspaceEventsResponse`, `DataSource`, and extended `EventFact` with optional diagnostic fields.
-- `api/client.ts`: Updated `fetchWorkspaceEvents` to parse and return `WorkspaceEventsResponse`, normalizing legacy array formats into fallback objects with zero `any`.
+- `components/MultiSelectDropdown.tsx`:
+  - Extended props interface with optional `allLabel`, `placeholder`, `ariaLabel`, `testId`, and `className`.
+  - Configured top option to render `allLabel` (defaulting to `'All'`), allowing callers to specify custom unselected labels such as `"No filter"`.
+  - Preserved 100% backward compatibility for existing usages across `FleetOverview`, `MetricProgression`, and `TicketComparisons`.
 - `components/TraceWaterfall.tsx`:
-  - When `is_hydrated: false`: renders an informational offline banner ("Committed Git Ledger — Local Database Offline") and a compact bare error timeline.
-  - When `is_hydrated: true`: suppresses the banner and provides interactive expandable drawers for prompt payloads, model reasoning, tool inputs, and tool outputs.
-  - Added multi-dimensional trace filtering by tool (`toolFilter`) and anomaly rule (`anomalyFilter`) with conjunction logic across role, mode, tool, and anomaly dimensions.
-  - Dynamic extraction and deduplication of available tools and anomaly rules.
-  - Accurate event counter with denominator invariance and defensive empty-state handling.
-  - Accessible form controls with dedicated labels and aria tags.
-- `web/src/index.css`: Added responsive toolbar group and select styles for tool and anomaly filters matching design tokens.
+  - Migrated single-select dropdowns to `MultiSelectDropdown` for Role, Tool, and Anomaly dimensions with `allLabel="No filter"`.
+  - Implemented explicit "No filter" semantics: unselected filters pass through events without tools (`turn_message`, `compaction`) or without anomalies.
+  - Implemented multi-selection support: users can select multiple tools (e.g., `bash` and `edit`), multiple anomaly rules (e.g., `TOOL_RETRY_STREAK` and `CONTEXT_SATURATION_SPIKE`), and multiple roles (`coder` and `tester`).
+  - 4-dimensional conjunction engine simultaneously evaluates `role && mode && tool && anomaly` without state clobbering.
+  - Maintained denominator invariance (`Showing X of Y events`) with graceful zero-match empty state.
+- `web/src/index.css`: Added responsive toolbar flex-wrap, gap spacing, and elevated z-index for multi-select dropdown menus.
 - `views/TicketDeepDive.tsx`: Updated event loading to store hydration status and pass it to `TraceWaterfall`.
 - `components/AnomalyDrawer.tsx`: Added rich payload preview sections when hydrated diagnostic context is present.
 
 ## Verification Status
 - Go Backend Test Suite: 11 of 11 packages passed cleanly with race detection enabled (`go test -race ./...`).
 - TypeScript Static Checks: Clean execution of `npm run typecheck` with zero type errors and zero `any` leaks.
-- Frontend Test Suite: All 462 Vitest component and unit tests across 22 test files passed cleanly with zero skips.
+- Frontend Test Suite: All 492 Vitest component and unit tests across 22 test files passed cleanly with zero skips.
 - Frontend Linting: Clean execution of `eslint "src/**/*.{ts,tsx}" --max-warnings 0` with zero warnings and zero errors.
 - Single Binary Build: `make build` compiled multi-platform binaries with embedded web assets successfully.
 - Code Standards: Strict compliance with FCIS boundaries, zero `any` or `interface{}`, and zero emojis across all code, tests, and UI components.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 6h 12m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 169.9k tokens (85% of 200k healthy ceiling, 2 compactions) | Subagents peak 168.5k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 15.5%, Coder 49.0%, Tester 20.3%, Reviewer 15.1%
-- **Subagent Turn Velocity & Thrashing:** 75.0 avg turns/run (peak: 279 turns) | Planner 47.7, Coder 131.3, Tester 65.0, Reviewer 56.0
-- **Test-to-Production Code Ratio:** 2.2:1 (+2,486 test lines / +1,142 prod lines)
-- **Code Delivered:** +3,629 / -223 lines across 26 code files (excluding docs)
-- **Reasoning Effort:** 251,560 reasoning tokens (54.3% of generated output)
-- **Tool Health & Self-Correction:** 1,081 tool calls (17 self-corrections, 98.4% success rate)
+- **Software Development Life Cycle Iterations:** 4
+- **Active Agent Duration:** 7h 20m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 169.9k tokens (85% of 200k healthy ceiling, 3 compactions) | Subagents peak 168.5k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 14.5%, Coder 47.7%, Tester 20.5%, Reviewer 17.2%
+- **Subagent Turn Velocity & Thrashing:** 64.1 avg turns/run (peak: 279 turns) | Planner 40.5, Coder 116.3, Tester 59.3, Reviewer 45.2
+- **Test-to-Production Code Ratio:** 2.9:1 (+3,554 test lines / +1,241 prod lines)
+- **Code Delivered:** +4,796 / -257 lines across 28 code files (excluding docs)
+- **Reasoning Effort:** 373,337 reasoning tokens (57.1% of generated output)
+- **Tool Health & Self-Correction:** 1,319 tool calls (20 self-corrections, 98.5% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 4 execution anomalies detected (4 CRITICAL).
+- **Status:** 5 execution anomalies detected (4 CRITICAL, 1 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k in turn 133 (session: ses_ea993e78cffe2hJgbgLAqR6JlB), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+87.0k tokens) — Context tokens surged by 87.0k tokens in turn 142 (session: ses_ea993e78cffe2hJgbgLAqR6JlB, total: 87.0k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.9k tokens) — Context tokens reached 161.9k in turn 146 (session: ses_ea9b1e5a9ffeRLAKu7DajE7i4e), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+82.9k tokens) — Context tokens surged by 82.9k tokens in turn 153 (session: ses_ea9b1e5a9ffeRLAKu7DajE7i4e, total: 82.9k tokens, threshold: 80000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+70.9k tokens) — Context tokens surged by 70.9k tokens in turn 48 (session: ses_ea6e5184effejMwAicl0HJee7a, total: 70.9k tokens, threshold: 40000)
 
 ### Agentic Execution Metrics
 
@@ -67,15 +69,15 @@ Ticket AL-33 delivers an end-to-end vertical slice for dynamic local database ev
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 3,341,018 | 52,630 | 12,674,669 | 79.1% | 169.9k | ELEVATED | $3.74 |
-| **planner** | 3 | 1,256,137 | 28,253 | 7,413,650 | 85.5% | 143.8k | ELEVATED | $1.79 |
-| **coder** | 3 | 3,607,643 | 69,491 | 31,344,759 | 89.7% | 168.5k | ELEVATED | $5.67 |
-| **tester** | 3 | 1,361,117 | 41,827 | 12,853,533 | 90.4% | 122.6k | ELEVATED | $2.35 |
-| **reviewer** | 3 | 1,021,589 | 19,113 | 10,865,965 | 91.4% | 117.1k | ELEVATED | $1.75 |
-| **Total** | **13** | **10,587,504** | **211,314** | **75,152,576** | **87.7%** | **169.9k** | **ELEVATED** | **$15.31** |
+| **orchestrator** | 1 | 4,037,923 | 68,213 | 14,747,374 | 78.5% | 169.9k | ELEVATED | $4.50 |
+| **planner** | 4 | 1,411,421 | 33,202 | 7,969,056 | 85.0% | 143.8k | ELEVATED | $2.05 |
+| **coder** | 4 | 4,160,760 | 101,157 | 35,105,935 | 89.4% | 168.5k | ELEVATED | $6.72 |
+| **tester** | 4 | 1,669,531 | 53,011 | 15,610,600 | 90.3% | 122.6k | ELEVATED | $2.89 |
+| **reviewer** | 5 | 1,449,951 | 25,415 | 14,339,545 | 90.8% | 117.1k | ELEVATED | $2.42 |
+| **Total** | **18** | **12,729,586** | **280,998** | **87,772,510** | **87.3%** | **169.9k** | **ELEVATED** | **$18.58** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 13 | 10,587,504 | 211,314 | 75,152,576 | 87.7% | $15.31 |
-| **Total** | **13** | **10,587,504** | **211,314** | **75,152,576** | **87.7%** | **$15.31** |
+| **gemini-3.8-flash** | 18 | 12,729,586 | 280,998 | 87,772,510 | 87.3% | $18.58 |
+| **Total** | **18** | **12,729,586** | **280,998** | **87,772,510** | **87.3%** | **$18.58** |
