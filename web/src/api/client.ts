@@ -4,6 +4,7 @@ import type {
   BuildInfo,
   EventFact,
   FleetSummary,
+  ProjectConfigResponse,
   TicketComparisonRow,
   TimeBucketMetric,
   TimeGranularity,
@@ -24,6 +25,7 @@ import {
   mockAgenticMetricsLedgers,
   mockWorkspaceDetails,
   mockBuildInfo,
+  mockProjectConfig,
 } from './mockData';
 
 export interface ApiResponse<T> {
@@ -301,6 +303,19 @@ export async function fetchVersion(): Promise<ApiResponse<BuildInfo>> {
     return { data, isMock: false };
   } catch {
     return { data: mockBuildInfo, isMock: true };
+  }
+}
+
+export async function fetchProjectConfig(): Promise<ApiResponse<ProjectConfigResponse>> {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) {
+      return { data: mockProjectConfig, isMock: true };
+    }
+    const data = (await res.json()) as ProjectConfigResponse;
+    return { data, isMock: false };
+  } catch {
+    return { data: mockProjectConfig, isMock: true };
   }
 }
 

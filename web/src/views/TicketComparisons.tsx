@@ -6,6 +6,7 @@ import type {
 } from '../domain/types';
 import { fetchWorkspaceLedgers } from '../api/client';
 import {
+  combineDistinctPrefixes,
   deriveTicketComparisonRows,
   extractTicketPrefix,
   filterLedgersByPrefixes,
@@ -33,13 +34,15 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 ];
 
 export interface TicketComparisonsProps {
-  readonly onSelectTicket?: (ticketId: string) => void;
-  readonly onMockChange?: (isMock: boolean) => void;
+  readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
+  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
+  readonly configuredPrefixes?: readonly string[] | undefined;
 }
 
 export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   onSelectTicket,
   onMockChange,
+  configuredPrefixes,
 }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
@@ -104,9 +107,9 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   }, [ledgers]);
 
   const prefixOptions: readonly MultiSelectOption[] = useMemo(() => {
-    const list = knownPrefixes.length > 0 ? knownPrefixes : ['AL', 'GEN', 'PO'];
-    return list.map((p) => ({ value: p, label: p }));
-  }, [knownPrefixes]);
+    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes);
+    return combined.map((p) => ({ value: p, label: p }));
+  }, [knownPrefixes, configuredPrefixes]);
 
   const filteredLedgers = useMemo(() => {
     let list = ledgers;

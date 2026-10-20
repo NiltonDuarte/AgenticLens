@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import type { ActiveTab, BuildInfo } from '../domain/types';
-import { fetchVersion } from '../api/client';
+import type { ActiveTab, BuildInfo, ProjectConfigResponse } from '../domain/types';
+import { fetchVersion, fetchProjectConfig } from '../api/client';
 
 export interface NavbarProps {
   readonly isMock: boolean;
   readonly activeTab: ActiveTab;
-  readonly onSelectTab?: (tab: ActiveTab) => void;
-  readonly versionInfo?: BuildInfo;
+  readonly onSelectTab?: ((tab: ActiveTab) => void) | undefined;
+  readonly versionInfo?: BuildInfo | undefined;
+  readonly projectConfig?: ProjectConfigResponse | undefined;
+  readonly projectName?: string | undefined;
 }
 
 const DEFAULT_BUILD_INFO: BuildInfo = {
@@ -20,8 +22,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onSelectTab,
   versionInfo,
+  projectConfig,
+  projectName,
 }) => {
   const [internalVersion, setInternalVersion] = useState<BuildInfo | null>(versionInfo ?? null);
+  const [internalConfig, setInternalConfig] = useState<ProjectConfigResponse | null>(
+    projectConfig ?? null
+  );
 
   useEffect(() => {
     if (versionInfo) {
@@ -39,7 +46,27 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, [versionInfo]);
 
+  useEffect(() => {
+    if (projectConfig) {
+      setInternalConfig(projectConfig);
+      return;
+    }
+    if (projectName !== undefined) {
+      return;
+    }
+    let mounted = true;
+    void fetchProjectConfig().then((resp) => {
+      if (mounted) {
+        setInternalConfig(resp.data);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [projectConfig, projectName]);
+
   const displayVersion = internalVersion ?? DEFAULT_BUILD_INFO;
+  const observedProject = (projectName ?? internalConfig?.project_name ?? '').trim();
 
   const handleBrandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -74,6 +101,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div>
           <span className="brand-title">AgenticLens</span>
           <span className="brand-subtitle">Telemetry</span>
+          {observedProject ? (
+            <span
+              className="project-badge"
+              title={`Observed Project: ${observedProject}`}
+            >
+              {observedProject}
+            </span>
+          ) : null}
         </div>
       </div>
 

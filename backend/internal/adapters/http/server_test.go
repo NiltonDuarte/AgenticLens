@@ -3148,3 +3148,275 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
 		}
 	})
 }
+
+func TestConfigHandler_DefaultConfig(t *testing.T) {
+	wsDir := setupFixtureWorkspaces(t)
+	staticFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
+	}
+	server := adaptershttp.NewServer(wsDir, staticFS)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 OK, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+
+	contentType := rec.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "application/json") {
+		t.Errorf("expected Content-Type application/json, got %s", contentType)
+	}
+
+	var dto adaptershttp.ProjectConfigDTO
+	if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+		t.Fatalf("failed unmarshaling config response: %v", err)
+	}
+
+	if dto.ProjectName != "AgenticLens" {
+		t.Errorf("expected default project_name 'AgenticLens', got %q", dto.ProjectName)
+	}
+
+	if dto.WorkspacesDir != wsDir {
+		t.Errorf("expected workspaces_dir %q, got %q", wsDir, dto.WorkspacesDir)
+	}
+
+	expectedBuildInfo := domain.GetBuildInfo()
+	if dto.Version != expectedBuildInfo.Version {
+		t.Errorf("expected version %q, got %q", expectedBuildInfo.Version, dto.Version)
+	}
+
+	if len(dto.Prefixes) < 5 {
+		t.Fatalf("expected at least 5 configured prefixes, got %d", len(dto.Prefixes))
+	}
+	prefixMap := make(map[string]domain.TicketPrefix)
+	for _, p := range dto.Prefixes {
+		prefixMap[p.Prefix] = p
+	}
+	for _, expectedPrefix := range []string{"AL", "AL2", "GEN", "PO", "FIX"} {
+		if _, ok := prefixMap[expectedPrefix]; !ok {
+			t.Errorf("expected configured prefix %s to be present", expectedPrefix)
+		}
+	}
+	if gen, ok := prefixMap["GEN"]; !ok || gen.TicketType != "chore" {
+		t.Errorf("expected prefix GEN with chore ticket type, got %+v", gen)
+	}
+	if po, ok := prefixMap["PO"]; !ok || po.TicketType != "docs" {
+		t.Errorf("expected prefix PO with docs ticket type, got %+v", po)
+	}
+	if fix, ok := prefixMap["FIX"]; !ok || fix.TicketType != "fix" {
+		t.Errorf("expected prefix FIX with fix ticket type, got %+v", fix)
+	}
+
+	if len(dto.RoleOrder) != 5 {
+		t.Fatalf("expected 5 canonical roles, got %d", len(dto.RoleOrder))
+	}
+	expectedRoles := []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
+	for i, r := range expectedRoles {
+		if dto.RoleOrder[i] != r {
+			t.Errorf("expected role at index %d to be %q, got %q", i, r, dto.RoleOrder[i])
+		}
+	}
+}
+
+func TestConfigHandler_CustomConfig(t *testing.T) {
+	wsDir := setupFixtureWorkspaces(t)
+	staticFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
+	}
+
+	customCfg := domain.ProjectConfig{
+		ProjectName: "CustomObservabilityRepo",
+		Ticket: domain.TicketConfig{
+			Prefixes: []domain.TicketPrefix{
+				{
+					Prefix:      "FEAT",
+					Description: "Custom feature tickets",
+					TicketType:  "feat",
+				},
+				{
+					Prefix:      "BUG",
+					Description: "Bug fixes",
+					TicketType:  "fix",
+				},
+			},
+		},
+		Workspaces: domain.WorkspacesConfig{
+			Dir: "custom_workspaces",
+		},
+		RoleOrder: []string{"planner", "coder", "reviewer"},
+	}
+
+	server := adaptershttp.NewServerWithConfig(wsDir, staticFS, customCfg)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 OK, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+
+	var dto adaptershttp.ProjectConfigDTO
+	if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+		t.Fatalf("failed unmarshaling config response: %v", err)
+	}
+
+	if dto.ProjectName != "CustomObservabilityRepo" {
+		t.Errorf("expected project_name 'CustomObservabilityRepo', got %q", dto.ProjectName)
+	}
+
+	if dto.WorkspacesDir != wsDir {
+		t.Errorf("expected workspaces_dir %q, got %q", wsDir, dto.WorkspacesDir)
+	}
+
+	if len(dto.Prefixes) != 2 {
+		t.Fatalf("expected 2 custom prefixes, got %d", len(dto.Prefixes))
+	}
+	if dto.Prefixes[0].Prefix != "FEAT" || dto.Prefixes[0].TicketType != "feat" {
+		t.Errorf("expected FEAT prefix, got %+v", dto.Prefixes[0])
+	}
+	if dto.Prefixes[1].Prefix != "BUG" || dto.Prefixes[1].TicketType != "fix" {
+		t.Errorf("expected BUG prefix, got %+v", dto.Prefixes[1])
+	}
+
+	if len(dto.RoleOrder) != 3 {
+		t.Fatalf("expected 3 custom roles, got %d", len(dto.RoleOrder))
+	}
+	if dto.RoleOrder[0] != "planner" || dto.RoleOrder[1] != "coder" || dto.RoleOrder[2] != "reviewer" {
+		t.Errorf("unexpected role order: %+v", dto.RoleOrder)
+	}
+}
+
+func TestConfigHandler_EmptyConfigPreserved(t *testing.T) {
+	staticFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
+	}
+
+	emptyCfg := domain.ProjectConfig{
+		ProjectName: "",
+		Ticket: domain.TicketConfig{
+			Prefixes: nil,
+		},
+		Workspaces: domain.WorkspacesConfig{
+			Dir: "",
+		},
+		RoleOrder: nil,
+	}
+
+	server := adaptershttp.NewServerWithConfig("", staticFS, emptyCfg)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 OK, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+
+	var dto adaptershttp.ProjectConfigDTO
+	if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+		t.Fatalf("failed unmarshaling config response: %v", err)
+	}
+
+	if dto.ProjectName != "" {
+		t.Errorf("expected empty project_name, got %q", dto.ProjectName)
+	}
+
+	if dto.WorkspacesDir != "" {
+		t.Errorf("expected empty workspaces_dir, got %q", dto.WorkspacesDir)
+	}
+
+	if len(dto.Prefixes) != 0 || dto.Prefixes == nil {
+		t.Errorf("expected non-nil empty slice for prefixes, got len %d (nil: %v)", len(dto.Prefixes), dto.Prefixes == nil)
+	}
+
+	if len(dto.RoleOrder) != 0 || dto.RoleOrder == nil {
+		t.Errorf("expected non-nil empty slice for role order, got len %d (nil: %v)", len(dto.RoleOrder), dto.RoleOrder == nil)
+	}
+
+	rawJSON := rec.Body.String()
+	if !strings.Contains(rawJSON, `"prefixes":[]`) {
+		t.Errorf("expected raw JSON to contain '\"prefixes\":[]', got %s", rawJSON)
+	}
+	if !strings.Contains(rawJSON, `"role_order":[]`) {
+		t.Errorf("expected raw JSON to contain '\"role_order\":[]', got %s", rawJSON)
+	}
+	if strings.Contains(rawJSON, `"prefixes":null`) {
+		t.Errorf("raw JSON must not contain '\"prefixes\":null', got %s", rawJSON)
+	}
+	if strings.Contains(rawJSON, `"role_order":null`) {
+		t.Errorf("raw JSON must not contain '\"role_order\":null', got %s", rawJSON)
+	}
+}
+
+func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
+	staticFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
+	}
+
+	t.Run("whitespace-only fields trim cleanly without panics", func(t *testing.T) {
+		hostileCfg := domain.ProjectConfig{
+			ProjectName: "   \t\r\n   ",
+			Ticket: domain.TicketConfig{
+				Prefixes: nil,
+			},
+			Workspaces: domain.WorkspacesConfig{
+				Dir: "   \n\t   ",
+			},
+			RoleOrder: nil,
+		}
+
+		server := adaptershttp.NewServerWithConfig("", staticFS, hostileCfg)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d (body: %s)", rec.Code, rec.Body.String())
+		}
+
+		var dto adaptershttp.ProjectConfigDTO
+		if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+			t.Fatalf("failed unmarshaling config response: %v", err)
+		}
+
+		if dto.ProjectName != "" {
+			t.Errorf("expected trimmed whitespace project_name to be empty string, got %q", dto.ProjectName)
+		}
+		if dto.WorkspacesDir != "" {
+			t.Errorf("expected trimmed whitespace workspaces_dir to be empty string, got %q", dto.WorkspacesDir)
+		}
+
+		rawJSON := rec.Body.String()
+		if !strings.Contains(rawJSON, `"prefixes":[]`) {
+			t.Errorf("expected JSON output to contain '\"prefixes\":[]', got: %s", rawJSON)
+		}
+		if !strings.Contains(rawJSON, `"role_order":[]`) {
+			t.Errorf("expected JSON output to contain '\"role_order\":[]', got: %s", rawJSON)
+		}
+		if strings.Contains(rawJSON, `"prefixes":null`) {
+			t.Errorf("JSON output must never contain 'prefixes:null', got: %s", rawJSON)
+		}
+		if strings.Contains(rawJSON, `"role_order":null`) {
+			t.Errorf("JSON output must never contain 'role_order:null', got: %s", rawJSON)
+		}
+	})
+
+	t.Run("non-GET HTTP methods return method not allowed or not found", func(t *testing.T) {
+		server := adaptershttp.NewServer("workspaces", staticFS)
+
+		disallowedMethods := []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch}
+		for _, method := range disallowedMethods {
+			req := httptest.NewRequest(method, "/api/config", nil)
+			rec := httptest.NewRecorder()
+			server.Handler().ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusMethodNotAllowed && rec.Code != http.StatusNotFound {
+				t.Errorf("expected status 405 Method Not Allowed or 404 Not Found for %s /api/config, got %d", method, rec.Code)
+			}
+		}
+	})
+}

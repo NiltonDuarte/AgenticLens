@@ -5,6 +5,7 @@ import {
   formatPercentage,
   formatTokensK,
   extractTicketPrefix,
+  combineDistinctPrefixes,
 } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { KPICard } from '../components/KPICard';
@@ -27,13 +28,15 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 ];
 
 export interface FleetOverviewProps {
-  readonly onMockChange?: (isMock: boolean) => void;
-  readonly onSelectTicket?: (ticketId: string) => void;
+  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
+  readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
+  readonly configuredPrefixes?: readonly string[] | undefined;
 }
 
 export const FleetOverview: React.FC<FleetOverviewProps> = ({
   onMockChange,
   onSelectTicket,
+  configuredPrefixes,
 }) => {
   const [summary, setSummary] = useState<FleetSummary | null>(null);
   const [workspaces, setWorkspaces] = useState<TicketComparisonRow[]>([]);
@@ -61,9 +64,9 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
   }, [workspaces]);
 
   const prefixOptions = useMemo(() => {
-    const list = knownPrefixes.length > 0 ? knownPrefixes : ['AL', 'GEN', 'PO'];
-    return list.map((p) => ({ value: p, label: p }));
-  }, [knownPrefixes]);
+    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes);
+    return combined.map((p) => ({ value: p, label: p }));
+  }, [knownPrefixes, configuredPrefixes]);
 
   const loadData = useCallback(async () => {
     setLoading(true);

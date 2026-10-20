@@ -3,6 +3,7 @@ import type { AgenticMetricsLedger, TimeGranularity, TimeWindowPreset } from '..
 import { fetchWorkspaceLedgers } from '../api/client';
 import { aggregateMetricsOverTime } from '../domain/progression';
 import {
+  combineDistinctPrefixes,
   extractTicketPrefix,
   filterLedgersByPrefixes,
   filterLedgersByTicketTypes,
@@ -31,10 +32,14 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 ];
 
 export interface MetricProgressionProps {
-  readonly onMockChange?: (isMock: boolean) => void;
+  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
+  readonly configuredPrefixes?: readonly string[] | undefined;
 }
 
-export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChange }) => {
+export const MetricProgression: React.FC<MetricProgressionProps> = ({
+  onMockChange,
+  configuredPrefixes,
+}) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
   const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
@@ -100,9 +105,9 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({ onMockChan
   }, [ledgers]);
 
   const prefixOptions: readonly MultiSelectOption[] = useMemo(() => {
-    const list = knownPrefixes.length > 0 ? knownPrefixes : ['AL', 'GEN', 'PO'];
-    return list.map((p) => ({ value: p, label: p }));
-  }, [knownPrefixes]);
+    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes);
+    return combined.map((p) => ({ value: p, label: p }));
+  }, [knownPrefixes, configuredPrefixes]);
 
   // Apply pure domain filtering across selected types and prefixes
   const filteredLedgers = useMemo(() => {

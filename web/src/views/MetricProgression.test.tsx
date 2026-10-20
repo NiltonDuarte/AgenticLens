@@ -661,4 +661,23 @@ describe('MetricProgression View Component', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(fetchSpy).toHaveBeenLastCalledWith('all', undefined, undefined, undefined, ['AL']);
   });
+
+  it('renders configured prefixes in prefix dropdown even when no ledgers for those prefixes exist', async () => {
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: [],
+      isMock: false,
+    });
+
+    render(<MetricProgression configuredPrefixes={['INITIATIVE', 'CORE']} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Progression Telemetry Available')).toBeInTheDocument();
+    });
+
+    const prefixTrigger = screen.getByRole('combobox', { name: 'Prefix selector' });
+    fireEvent.click(prefixTrigger);
+
+    expect(screen.getByRole('checkbox', { name: 'INITIATIVE' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'CORE' })).toBeInTheDocument();
+  });
 });

@@ -347,6 +347,20 @@ export interface BuildInfo {
   readonly build_date: string;
 }
 
+export interface TicketPrefixConfig {
+  readonly prefix: string;
+  readonly description: string;
+  readonly ticket_type?: string;
+}
+
+export interface ProjectConfigResponse {
+  readonly project_name: string;
+  readonly prefixes: readonly TicketPrefixConfig[];
+  readonly workspaces_dir: string;
+  readonly role_order: readonly string[];
+  readonly version: string;
+}
+
 export type {
   LiveAnomalySeverity,
   LiveAnomalyRule,

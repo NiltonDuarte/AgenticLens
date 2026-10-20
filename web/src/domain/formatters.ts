@@ -460,6 +460,41 @@ export function extractDistinctPrefixes(ledgers: readonly AgenticMetricsLedger[]
 }
 
 /**
+ * Combines discovered ticket prefixes with configured prefixes, deduplicates,
+ * trims tokens, normalizes to uppercase, sorts ascending alphabetically,
+ * and falls back to canonical defaults ['AL', 'GEN', 'PO'] if empty.
+ */
+export function combineDistinctPrefixes(
+  discovered: readonly string[],
+  configured?: readonly string[]
+): readonly string[] {
+  const prefixSet = new Set<string>();
+
+  const addToken = (token: string) => {
+    const clean = token.replace(/^[\s-_]+|[\s-_]+$/g, '');
+    if (clean) {
+      prefixSet.add(clean.toUpperCase());
+    }
+  };
+
+  for (const item of discovered) {
+    addToken(item);
+  }
+
+  if (configured) {
+    for (const item of configured) {
+      addToken(item);
+    }
+  }
+
+  if (prefixSet.size === 0) {
+    return ['AL', 'GEN', 'PO'];
+  }
+
+  return Array.from(prefixSet).sort((a, b) => a.localeCompare(b));
+}
+
+/**
  * Filters ledgers by ticket types supporting canonical alias matching.
  * Returns all ledgers if types is empty or contains 'all'.
  */
