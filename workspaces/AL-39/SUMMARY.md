@@ -28,37 +28,47 @@
   - Implemented pure helper `IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool` matching configured source folders, `cfg.Include`, and `cfg.ProdPatterns`.
   - Eliminated duplicate 6-condition checks at lines 135-140 and lines 167-172 of `analyzer.go`.
   - Updated `ComputeCodeFacts` signature to return `(domain.CodeFacts, error)`, validating source folders and resolving base branch dynamically.
+  - Refactored `GetTicketNumstat` fallback resolution to validate `cfg.BaseBranch` against git commit objects using `ResolveBaseBranch`.
 - **Backfill Engine (`backfill/engine.go`)**:
   - Updated `recomputeTicketFacts` to handle errors from `ComputeCodeFacts` without masking failures.
+
+### Repository Configuration & CI Workflow
+- **Repository Configuration (`.agenticlens-config.yaml`)**:
+  - Added `base_branch: origin/main` under `code_metrics:` with explanatory comments detailing the upstream comparison base branch and dynamic fallback probe sequence.
+- **Continuous Integration (`.github/workflows/ci.yml`)**:
+  - Configured `fetch-depth: 0` on `actions/checkout@v4` in `backend-check` job, matching `build-binary`, ensuring remote tracking branches are available during CI test runs.
 
 ### CLI Layer (`backend/cmd/agentic-lens`)
 - **Error Propagation (`main.go`)**: Updated `runGenerate` to catch errors returned by `git.ComputeCodeFacts`, print diagnostic guidance to `os.Stderr`, and exit with code 1.
 
 ### Testing & Invariants
 - **Unit & Boundary Tests**:
-  - `config/loader_test.go`: YAML and JSON unmarshaling and default fallback for `base_branch`.
-  - `git/analyzer_test.go`: Table-driven tests for `ResolveBaseBranch`, `ValidateSrcFolders`, `IsMonitoredSourcePath` (31 matrix cases), elimination of duplicate conditions, dynamic branch diffing, and explicit failure invariant assertions.
+  - `config/loader_test.go`: YAML and JSON unmarshaling, default fallback for `base_branch`, and root config loading verification.
+  - `git/analyzer_test.go`: Table-driven tests for `ResolveBaseBranch`, `ValidateSrcFolders`, `IsMonitoredSourcePath` (31 matrix cases), elimination of duplicate conditions, dynamic branch diffing, base branch validation via config, and explicit failure invariant assertions.
   - `git/classifier_test.go`: Custom workspace directory classification tests with normalized boundaries.
   - `git/inference_test.go`: Custom workspace directory iteration counting tests.
-  - `cmd/agentic-lens/main_test.go`: CLI exit code 1 tests on unresolvable base branch and empty source folders.
+  - `cmd/agentic-lens/main_test.go`: CLI exit code 1 tests on unresolvable base branch, empty source folders, and deterministic `-b main` repo initialization.
 - **Architectural Gates**: Zero `any` or `interface{}` across Go code, zero emojis, zero race conditions (`go test -race ./...`), and zero skipped tests.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 1h 21m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 123.2k tokens (62% of 200k healthy ceiling, 1 compactions) | Subagents peak 168.4k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 17.0%, Coder 44.0%, Tester 26.7%, Reviewer 12.3%
-- **Subagent Turn Velocity & Thrashing:** 66.0 avg turns/run (peak: 108 turns) | Planner 44.0, Coder 108.0, Tester 60.0, Reviewer 52.0
-- **Test-to-Production Code Ratio:** 3.6:1 (+1,040 test lines / +288 prod lines)
-- **Code Delivered:** +1,328 / -60 lines across 13 code files (excluding docs)
-- **Reasoning Effort:** 136,264 reasoning tokens (61.2% of generated output)
-- **Tool Health & Self-Correction:** 329 tool calls (6 self-corrections, 98.2% success rate)
+- **Software Development Life Cycle Iterations:** 2
+- **Active Agent Duration:** 4h 52m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 168.2k tokens (84% of 200k healthy ceiling, 2 compactions) | Subagents peak 168.4k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 18.4%, Coder 41.7%, Tester 25.7%, Reviewer 14.3%
+- **Subagent Turn Velocity & Thrashing:** 49.3 avg turns/run (peak: 108 turns) | Planner 28.3, Coder 63.7, Tester 58.5, Reviewer 50.0
+- **Test-to-Production Code Ratio:** 4.0:1 (+1,172 test lines / +291 prod lines)
+- **Code Delivered:** +1,465 / -62 lines across 15 code files (excluding docs)
+- **Reasoning Effort:** 199,167 reasoning tokens (63.1% of generated output)
+- **Tool Health & Self-Correction:** 620 tool calls (13 self-corrections, 97.9% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 3 execution anomalies detected (2 CRITICAL, 1 WARNING).
+- **Status:** 6 execution anomalies detected (4 CRITICAL, 2 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.5k tokens) — Context tokens reached 163.5k in turn 34 (session: ses_ea5f7156bffe8KXEp1pZQvBjNx), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 52 (session: ses_ea5e9243effefZDhJYZILu0hkM), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+133.1k tokens) — Context tokens surged by 133.1k tokens in turn 80 (session: ses_ea6042444ffeLWtlfXPgcYq2PI, total: 133.1k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k in turn 85 (session: ses_ea6042444ffeLWtlfXPgcYq2PI), breaching 160k critical ceiling
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+40.9k tokens) — Context tokens surged by 40.9k tokens in turn 42 (session: ses_ea5f7156bffe8KXEp1pZQvBjNx, total: 40.9k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+55.3k tokens) — Context tokens surged by 55.3k tokens in turn 93 (session: ses_ea6042444ffeLWtlfXPgcYq2PI, total: 55.3k tokens, threshold: 40000)
 
 ### Agentic Execution Metrics
 
@@ -67,15 +77,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 1,038,233 | 18,207 | 4,236,367 | 80.3% | 123.2k | ELEVATED | $1.21 |
-| **planner** | 1 | 369,677 | 17,105 | 2,072,304 | 84.9% | 103.9k | ELEVATED | $0.61 |
-| **coder** | 1 | 951,901 | 26,289 | 7,403,197 | 88.6% | 168.4k | ELEVATED | $1.59 |
-| **tester** | 1 | 522,762 | 20,471 | 5,381,420 | 91.1% | 163.5k | ELEVATED | $0.96 |
-| **reviewer** | 1 | 263,426 | 4,484 | 2,425,176 | 90.2% | 84.9k | HEALTHY | $0.44 |
-| **Total** | **5** | **3,145,999** | **86,556** | **21,518,464** | **87.2%** | **168.4k** | **ELEVATED** | **$4.81** |
+| **orchestrator** | 1 | 2,115,868 | 27,113 | 7,888,342 | 78.9% | 168.2k | ELEVATED | $2.37 |
+| **planner** | 3 | 646,870 | 21,399 | 3,423,940 | 84.1% | 103.9k | ELEVATED | $1.01 |
+| **coder** | 3 | 1,496,438 | 34,289 | 10,151,063 | 87.2% | 168.4k | ELEVATED | $2.28 |
+| **tester** | 2 | 790,775 | 25,452 | 8,010,698 | 91.0% | 163.5k | ELEVATED | $1.41 |
+| **reviewer** | 2 | 472,676 | 8,445 | 4,177,937 | 89.8% | 84.9k | HEALTHY | $0.78 |
+| **Total** | **11** | **5,522,627** | **116,698** | **33,651,980** | **85.9%** | **168.4k** | **ELEVATED** | **$7.85** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 5 | 3,145,999 | 86,556 | 21,518,464 | 87.2% | $4.81 |
-| **Total** | **5** | **3,145,999** | **86,556** | **21,518,464** | **87.2%** | **$4.81** |
+| **gemini-3.8-flash** | 11 | 5,522,627 | 116,698 | 33,651,980 | 85.9% | $7.85 |
+| **Total** | **11** | **5,522,627** | **116,698** | **33,651,980** | **85.9%** | **$7.85** |

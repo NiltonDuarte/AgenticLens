@@ -22,7 +22,12 @@ Decouples the AgenticLens Git analyzer and repository adapters from hardcoded br
   - Implemented `ValidateSrcFolders(srcFolders []string) error`, failing explicitly if empty or whitespace-only.
   - Implemented `IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool` and eliminated duplicate 6-condition checks.
   - Updated `ComputeCodeFacts` signature to return `(domain.CodeFacts, error)` and pass dynamic `WorkspacesDir` to iteration counting.
+  - Refactored `GetTicketNumstat` fallback resolution to validate `cfg.BaseBranch` through `ResolveBaseBranch`.
 - `backfill/engine.go`: Handled errors from `ComputeCodeFacts` without masking failures.
+
+### Configuration & CI Workflows
+- `.agenticlens-config.yaml`: Added `code_metrics.base_branch: origin/main` with explanatory comments.
+- `.github/workflows/ci.yml`: Added `fetch-depth: 0` to `backend-check` checkout step to ensure remote branch refs are available in CI test runs.
 
 ### CLI Layer (`backend/cmd/agentic-lens/`)
 - `main.go`: Updated `runGenerate` to catch errors from `git.ComputeCodeFacts`, log diagnostic prompts to stderr, and exit with status 1.
