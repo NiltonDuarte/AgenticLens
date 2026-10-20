@@ -322,6 +322,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		// Seed an existing JSON ledger with high failure rate
 		seedJSON := `{
 			"ticket_id": "AL-GEN-ANOM",
+			"ticket_title": "Test Fixture Ticket",
 			"tools": [
 				{"name": "bash", "calls": 8, "errors": 6}
 			]
@@ -335,6 +336,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 			"--ticket-id", "AL-GEN-ANOM",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--anomalies",
 			"--allow-empty",
@@ -366,6 +368,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 			"--ticket-id", "AL-GEN-CLEAN",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--anomalies",
 			"--allow-empty",
@@ -900,6 +903,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"generate",
 		"--db-path", dbPath,
 		"--ticket-id", "AL-999",
+		"--ticket-title", "Test Fixture Ticket",
 		"--nonce", "nonce_test_999",
 		"--json-output", outJSON,
 		"--append", summaryMD,
@@ -959,6 +963,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"generate",
 		"--db-path", dbPath,
 		"--ticket-id", "AL-999",
+		"--ticket-title", "Test Fixture Ticket",
 		"--nonce", "nonce_test_999",
 		"--json-output", outJSON,
 		"--append", summaryMD,
@@ -1042,6 +1047,7 @@ func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
 		"generate",
 		"--db-path", dbPath,
 		"--ticket-id", "AL-888",
+		"--ticket-title", "Test Fixture Ticket",
 		"--nonce", "nonce_test_888",
 		"--json-output", outJSON,
 		"--append", summaryMD,
@@ -1135,6 +1141,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"generate",
 			"--db-path", nonExistentDB,
 			"--ticket-id", "AL-FALLBACK",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
@@ -1178,6 +1185,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "none.db"),
 			"--ticket-id", "AL-RECOVER",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
@@ -1231,6 +1239,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"generate",
 			"--db-path", dbPath,
 			"--ticket-id", "AL-ZERO",
+			"--ticket-title", "Test Fixture Ticket",
 			"--session-id", "ses_zero",
 			"--append", summaryMD,
 		)
@@ -1287,6 +1296,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "NON_EXISTENT",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", targetJSON,
 			"--append", targetMD,
 		)
@@ -1351,6 +1361,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "NON_EXISTENT_2",
+			"--ticket-title", "Test Fixture Ticket",
 			"--append", summaryMD,
 		)
 		var stdout, stderr bytes.Buffer
@@ -1379,6 +1390,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 			"--ticket-id", "AL-ALLOW-EMPTY",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
@@ -1431,6 +1443,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", dbPath,
 			"--ticket-id", "AL-VALID",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--append", summaryMD,
 		)
@@ -1466,7 +1479,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected failure without root session or ticket id")
 		}
-		expectedErr := "Error: unable to identify root session for ticket 'UNKNOWN'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted."
+		expectedErr := "Error: missing ticket ID. Specify --ticket-id explicitly."
 		if !strings.Contains(stderr.String(), expectedErr) {
 			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
 		}
@@ -1503,6 +1516,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "AL-CACHED-INV",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 			"--append", summaryMD,
 		)
@@ -1550,7 +1564,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
-		initialJSON := `{"schema_version":2,"ticket_id":"AL-CACHED-NO-INV","invocations":[]}`
+		initialJSON := `{"schema_version":2,"ticket_id":"AL-CACHED-NO-INV","ticket_title":"Test Fixture Ticket","invocations":[]}`
 		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1560,6 +1574,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "AL-CACHED-NO-INV",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 		)
 		var stdout, stderr bytes.Buffer
@@ -1614,7 +1629,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_empty.json")
-		initialJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY-BOTH","invocations":[]}`
+		initialJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY-BOTH","ticket_title":"Test Fixture Ticket","invocations":[]}`
 		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1624,6 +1639,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "AL-EMPTY-BOTH",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 			"--allow-empty",
 		)
@@ -1676,6 +1692,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", brokenDB,
 			"--ticket-id", "AL-DB-ERR",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", targetJSON,
 		)
 		var stdout, stderr bytes.Buffer
@@ -2611,6 +2628,7 @@ func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
 		"generate",
 		"--db-path", dbPath,
 		"--ticket-id", "AL-24",
+		"--ticket-title", "Test Fixture Ticket",
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
@@ -2666,6 +2684,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "feature",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2706,6 +2725,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "invalid-type",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2748,6 +2768,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "PO-5",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -2787,6 +2808,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GEN-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -2826,6 +2848,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -2872,6 +2895,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-title", "Test Fixture Ticket",
 			"--strict-type",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2913,6 +2937,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		legacyJSON := `{
 			"schema_version": 2,
 			"ticket_id": "AL-29",
+			"ticket_title": "Test Fixture Ticket",
 			"ticket_type": "feature",
 			"code": {
 				"lines_added": 10,
@@ -2933,6 +2958,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -2988,6 +3014,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 					"generate",
 					"--db-path", setupIsolatedEmptyDB(t),
 					"--ticket-id", "AL-29",
+					"--ticket-title", "Test Fixture Ticket",
 					"--ticket-type", tc.input,
 					"--allow-empty",
 					"--json-output", outJSON,
@@ -3031,6 +3058,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "POD-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3071,6 +3099,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "POD-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--strict-type",
 			"--allow-empty",
 			"--json-output", strictJSON,
@@ -3110,6 +3139,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GENTLE-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3150,6 +3180,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GENTLE-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--strict-type",
 			"--allow-empty",
 			"--json-output", strictJSON,
@@ -3205,7 +3236,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("expected exec.ExitError, got %v", err)
 		}
 
-		expectedErr := "Error: missing ticket type for ticket 'UNKNOWN'. Specify --ticket-type explicitly."
+		expectedErr := "Error: missing ticket ID. Specify --ticket-id explicitly."
 		if !strings.Contains(stderr.String(), expectedErr) {
 			t.Fatalf("expected strict error:\n%s\ngot:\n%s", expectedErr, stderr.String())
 		}
@@ -3218,6 +3249,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "   \t",
 			"--strict-type",
 			"--allow-empty",
@@ -3256,6 +3288,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "feat",
 			"--strict-type",
 			"--allow-empty",
@@ -3319,6 +3352,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "CUSTOM-101",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3367,6 +3401,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "PO-88",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3415,6 +3450,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "CUSTOM-101",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "chore",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3464,6 +3500,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "HOTFIX-77",
+			"--ticket-title", "Test Fixture Ticket",
 			"--strict-type",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3533,6 +3570,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-30",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "chore",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3602,6 +3640,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-30",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3665,6 +3704,7 @@ workspaces:
 			cliBinaryPath,
 			"generate",
 			"--ticket-id", "MYROOT-5",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3762,6 +3802,7 @@ workspaces:
 			cliBinaryPath,
 			"generate",
 			"--ticket-id", "ROOTPRIO-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3786,6 +3827,325 @@ workspaces:
 
 		if parsed.TicketType == nil || *parsed.TicketType != "feat" {
 			t.Errorf("expected TicketType 'feat' from root config (overriding legacy chore), got %v", parsed.TicketType)
+		}
+	})
+}
+
+func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("fails with exit code 1 when ticket-id is missing or whitespace", func(t *testing.T) {
+		t.Parallel()
+
+		// Case 1: Flag omitted entirely
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-title", "Test Fixture Ticket",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected failure on missing ticket-id")
+		}
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+		}
+		if !strings.Contains(stderr.String(), "Error: missing ticket ID. Specify --ticket-id explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr.String())
+		}
+
+		// Case 2: Whitespace only
+		cmd2 := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "   \t",
+			"--ticket-title", "Test Fixture Ticket",
+			"--allow-empty",
+		)
+		var stderr2 bytes.Buffer
+		cmd2.Stderr = &stderr2
+		err2 := cmd2.Run()
+		if err2 == nil {
+			t.Fatal("expected failure on whitespace ticket-id")
+		}
+		var exitErr2 *exec.ExitError
+		if errors.As(err2, &exitErr2) && exitErr2.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr2.ExitCode())
+		}
+		if !strings.Contains(stderr2.String(), "Error: missing ticket ID. Specify --ticket-id explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr2.String())
+		}
+	})
+
+	t.Run("fails with exit code 1 when ticket-title is missing or whitespace", func(t *testing.T) {
+		t.Parallel()
+
+		// Case 1: Flag omitted entirely
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-TITLE-REQ",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected failure on missing ticket-title")
+		}
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+		}
+		if !strings.Contains(stderr.String(), "Error: missing ticket title for ticket 'AL-TITLE-REQ'. Specify --ticket-title explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr.String())
+		}
+
+		// Case 2: Whitespace only
+		cmd2 := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-TITLE-REQ",
+			"--ticket-title", "   \n\t",
+			"--allow-empty",
+		)
+		var stderr2 bytes.Buffer
+		cmd2.Stderr = &stderr2
+		err2 := cmd2.Run()
+		if err2 == nil {
+			t.Fatal("expected failure on whitespace ticket-title")
+		}
+		var exitErr2 *exec.ExitError
+		if errors.As(err2, &exitErr2) && exitErr2.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr2.ExitCode())
+		}
+		if !strings.Contains(stderr2.String(), "Error: missing ticket title for ticket 'AL-TITLE-REQ'. Specify --ticket-title explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr2.String())
+		}
+
+		// Case 3: Cached facts has whitespace-only title and flag omitted
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts_ws_title.json")
+		wsCachedJSON := `{
+			"schema_version": 3,
+			"ticket_id": "AL-CACHED-WS-TITLE",
+			"ticket_title": "   \t\n",
+			"invocations": []
+		}`
+		if err := os.WriteFile(outJSON, []byte(wsCachedJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+		cmd3 := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-CACHED-WS-TITLE",
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		var stderr3 bytes.Buffer
+		cmd3.Stderr = &stderr3
+		err3 := cmd3.Run()
+		if err3 == nil {
+			t.Fatal("expected failure when cached title is whitespace only")
+		}
+		var exitErr3 *exec.ExitError
+		if errors.As(err3, &exitErr3) && exitErr3.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr3.ExitCode())
+		}
+		if !strings.Contains(stderr3.String(), "Error: missing ticket title for ticket 'AL-CACHED-WS-TITLE'. Specify --ticket-title explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr3.String())
+		}
+	})
+
+	t.Run("cached title fallback succeeds when ticket-title flag is omitted", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+		cachedJSON := `{
+			"schema_version": 3,
+			"ticket_id": "AL-CACHED-TITLE",
+			"ticket_title": "Cached Fixture Title",
+			"invocations": []
+		}`
+		if err := os.WriteFile(outJSON, []byte(cachedJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-CACHED-TITLE",
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected cached title fallback to succeed, got: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatal(err)
+		}
+		if parsed.TicketTitle == nil || *parsed.TicketTitle != "Cached Fixture Title" {
+			t.Fatalf("expected cached title 'Cached Fixture Title', got %v", parsed.TicketTitle)
+		}
+
+		// Also verify explicit --ticket-title flag overrides the cached title
+		cmdOverride := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-CACHED-TITLE",
+			"--ticket-title", "Overridden Ticket Title",
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		var stdoutO, stderrO bytes.Buffer
+		cmdOverride.Stdout = &stdoutO
+		cmdOverride.Stderr = &stderrO
+		if err := cmdOverride.Run(); err != nil {
+			t.Fatalf("expected explicit title override to succeed, got: %v, stderr: %s", err, stderrO.String())
+		}
+		dataO, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsedO domain.AgenticFactLedger
+		if err := json.Unmarshal(dataO, &parsedO); err != nil {
+			t.Fatal(err)
+		}
+		if parsedO.TicketTitle == nil || *parsedO.TicketTitle != "Overridden Ticket Title" {
+			t.Fatalf("expected overridden title 'Overridden Ticket Title', got %v", parsedO.TicketTitle)
+		}
+	})
+
+	t.Run("ticket-type warning issued on stderr for unmatched ticket in non-strict mode", func(t *testing.T) {
+		t.Parallel()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "UNMATCHED-WARNING",
+			"--ticket-title", "Test Fixture Ticket",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected command to exit 0 in non-strict mode, got: %v, stderr: %s", err, stderr.String())
+		}
+		expectedWarn := "WARNING: Missing ticket type for ticket UNMATCHED-WARNING. Specify --ticket-type explicitly."
+		if !strings.Contains(stderr.String(), expectedWarn) {
+			t.Fatalf("expected warning on stderr:\n%s\ngot:\n%s", expectedWarn, stderr.String())
+		}
+	})
+
+	t.Run("empty invocations warning issued on stderr when invocations count is zero", func(t *testing.T) {
+		t.Parallel()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-EMPTY-INV",
+			"--ticket-title", "Test Fixture Ticket",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected generate with --allow-empty to succeed, got: %v, stderr: %s", err, stderr.String())
+		}
+		expectedWarn := "WARNING: Zero invocations recorded for ticket AL-EMPTY-INV. This is not expected."
+		if !strings.Contains(stderr.String(), expectedWarn) {
+			t.Fatalf("expected warning on stderr:\n%s\ngot:\n%s", expectedWarn, stderr.String())
+		}
+	})
+
+	t.Run("FIX prefix infers ticket_type fix from root .agenticlens-config.yaml", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "FIX-1",
+			"--ticket-title", "Bug Fix Telemetry Metadata",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed for FIX-1: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatal(err)
+		}
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for FIX-1, got nil")
+		}
+		if *parsed.TicketType != "fix" {
+			t.Errorf("expected TicketType 'fix' for FIX-1, got %q", *parsed.TicketType)
+		}
+
+		// Also verify case-insensitive prefix inference for lowercase fix-42
+		outJSONLower := filepath.Join(tempDir, "facts_lower.json")
+		cmdLower := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "fix-42",
+			"--ticket-title", "Lowercase Fix Title",
+			"--allow-empty",
+			"--json-output", outJSONLower,
+		)
+		var stdoutL, stderrL bytes.Buffer
+		cmdLower.Stdout = &stdoutL
+		cmdLower.Stderr = &stderrL
+		if err := cmdLower.Run(); err != nil {
+			t.Fatalf("generate failed for fix-42: %v, stderr: %s", err, stderrL.String())
+		}
+		dataL, err := os.ReadFile(outJSONLower)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsedL domain.AgenticFactLedger
+		if err := json.Unmarshal(dataL, &parsedL); err != nil {
+			t.Fatal(err)
+		}
+		if parsedL.TicketType == nil || *parsedL.TicketType != "fix" {
+			t.Errorf("expected TicketType 'fix' for fix-42, got %v", parsedL.TicketType)
 		}
 	})
 }

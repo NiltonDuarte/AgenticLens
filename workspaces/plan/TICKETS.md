@@ -1,47 +1,6 @@
 # Decomposed Jira Tickets for AgenticLens
 
-Individual ticket definitions are located in `workspaces/plan/done/`, `workspaces/plan/to-do/`, and `workspaces/plan/discarded/`:
-- `workspaces/plan/done/AL-1 go domain aggregations scanner cli.md`
-- `workspaces/plan/done/AL-2 go embedded http server and api.md`
-- `workspaces/plan/done/AL-3 typescript spa shell and fleet overview.md`
-- `workspaces/plan/done/AL-4 typescript ticket deep dive and progression.md`
-- `workspaces/plan/done/AL-5 single binary integration parity and deprecation.md`
-- `workspaces/plan/done/AL-6 versioned schema migration and chronological event extraction.md`
-- `workspaces/plan/done/AL-7 domain anomaly detection and rule engine.md`
-- `workspaces/plan/done/AL-8 anomaly api endpoints and fleet health aggregation.md`
-- `workspaces/plan/done/AL-9 visual trace waterfall and anomaly inspector.md`
-- `workspaces/plan/done/AL-11 implement native go telemetry extractor and session generation.md`
-- `workspaces/plan/done/AL-12 implement go telemetry backfill engine and schema migration.md`
-- `workspaces/plan/done/AL-13 implement semantic versioning and automated ci for pull requests and main merges.md`
-- `workspaces/plan/done/AL-14 implement automated github release workflows for release candidates and stable versions.md`
-- `workspaces/plan/done/AL-15 implement universal multiversion schema migration engine for telemetry ledgers.md`
-- `workspaces/plan/done/AL-16 execute codebase and skills refactoring with provided review skill.md`
-- `workspaces/plan/done/AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md`
-- `workspaces/plan/done/AL-22 render rich markdown for workspace summary and contract artifacts.md`
-- `workspaces/plan/done/AL-23 natural ticket identifier ordering and sortable tables.md`
-- `workspaces/plan/done/AL-24 dynamic role and model aggregations and presentation.md`
-- `workspaces/plan/done/AL-25 contextual hover information icons for cards and tables.md`
-- `workspaces/plan/done/AL-26 fleet overview completion date filtering and autopsy date sorting.md`
-- `workspaces/plan/done/AL-27 metric progression custom window one-day range and hourly granularity.md`
-- `workspaces/plan/done/AL-28 multidimensional filtering by ticket type and workspace prefix.md`
-- `workspaces/plan/done/AL-29 conventional commit ticket type classification in telemetry engine.md`
-- `workspaces/plan/done/AL-30 fail telemetry generation on missing root session.md`
-- `workspaces/plan/done/AL-17 implement nonlocking live database hook session tree engine and ticket inference.md`
-- `workspaces/plan/done/AL-31 decouple root session structural hierarchy from persona roles.md`
-- `workspaces/plan/done/AL-32 telemetry event pruning database message stripping and ledger backfill.md`
-- `workspaces/plan/done/AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md`
-- `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
-- `workspaces/plan/done/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
-- `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
-- `workspaces/plan/done/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
-- `workspaces/plan/done/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
-- `workspaces/plan/done/AL-41 eliminate subprocess churn artificial sleeps and test execution bottlenecks.md`
-- `workspaces/plan/done/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
-- `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
-- `workspaces/plan/to-do/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
-- `workspaces/plan/to-do/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
-- `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
-- `workspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
+Individual ticket definitions are located in `workspaces/plan/done/`, `workspaces/plan/to-do/`, and `workspaces/plan/discarded/`.
 
 ---
 
@@ -77,11 +36,51 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
 
+- **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
+  - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL2-1 end-to-end agent anomaly debug prompt generator cli and interactive web drawer.md`
+
+- **AL2-2**: End-to-End Workspace Archive Engine, CLI Compaction, and In-Memory Decompression Ingestion
+  - **Subsystem**: Domain / Adapters / CLI / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL2-2 end-to-end workspace archive engine cli compaction and in-memory decompression ingestion.md`
+
+- **AL2-3**: Multi-Project Configuration Schema, Domain Aggregations, and Multi-Folder Scanner
+  - **Subsystem**: Domain / Adapters / CLI / Config / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL2-4, AL2-5
+  - **File**: `workspaces/plan/to-do/AL2-3 multi project configuration schema domain aggregations and multi folder scanner.md`
+
 ---
 
 ## Pending
 
 (None)
+
+- **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
+  - **Subsystem**: Adapters / Git / HTTP / Server / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Pending
+  - **Blocked by**: AL2-3
+  - **Blocks**: AL2-5
+  - **File**: `workspaces/plan/to-do/AL2-4 remote git repository ingestion shallow cache manager and project management api.md`
+
+- **AL2-5**: Multi-Project Web Dashboard Selector, Cross-Project Fleet Overview, and Comparative Analytics
+  - **Subsystem**: Presentation / Web / Components / State / Tests
+  - **Phase**: Phase 8 (v2 Phase 2)
+  - **Status**: Pending
+  - **Blocked by**: AL2-3, AL2-4
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL2-5 multi project web dashboard selector cross project fleet overview and comparative analytics.md`
 
 ---
 
