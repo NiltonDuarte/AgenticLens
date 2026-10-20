@@ -35,9 +35,9 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
 - `workspaces/plan/done/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
 - `workspaces/plan/done/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
+- `workspaces/plan/done/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
 - `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 - `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
-- `workspaces/plan/to-do/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
 - `workspaces/plan/to-do/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
 - `workspaces/plan/to-do/AL-41 eliminate subprocess churn artificial sleeps and test execution bottlenecks.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
@@ -47,13 +47,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## In Progress
 
-- **AL-39**: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes
-  - **Subsystem**: Adapters / Git / Domain / Config / Tests
-  - **Phase**: Phase 7
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
+(None)
 
 ---
 
@@ -98,6 +92,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-39**: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes
+  - **Subsystem**: Adapters / Git / Domain / Config / Tests
+  - **Phase**: Phase 7
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
 
 - **AL-35**: Pre-Release Source Code Audit, Configuration Leakage Inspection, and Review Artifact Generation
   - **Subsystem**: Review / Domain / Adapters / Presentation / Tests
