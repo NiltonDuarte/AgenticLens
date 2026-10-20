@@ -2589,16 +2589,16 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			},
 		}
 
-		// Omitted variadic: uses DefaultProjectConfig().RoleMappings where build -> orchestrator
+		// Omitted variadic: with DefaultProjectConfig removed, raw roles are preserved
 		derivedDefault := domain.DeriveMetricsLedger(ledger)
-		if len(derivedDefault.Roles) != 2 || derivedDefault.Roles[0].Role != "orchestrator" {
-			t.Errorf("expected default mapping to map build to orchestrator, got: %+v", derivedDefault.Roles)
+		if len(derivedDefault.Roles) != 2 || (derivedDefault.Roles[0].Role != "build" && derivedDefault.Roles[1].Role != "build") {
+			t.Errorf("expected omitted mapping to preserve raw roles, got: %+v", derivedDefault.Roles)
 		}
 
-		// Nil mapping: also falls back to DefaultProjectConfig().RoleMappings
+		// Nil mapping: also preserves raw roles
 		derivedNil := domain.DeriveMetricsLedger(ledger, nil)
-		if len(derivedNil.Roles) != 2 || derivedNil.Roles[0].Role != "orchestrator" {
-			t.Errorf("expected nil mapping to fallback to default, got: %+v", derivedNil.Roles)
+		if len(derivedNil.Roles) != 2 || (derivedNil.Roles[0].Role != "build" && derivedNil.Roles[1].Role != "build") {
+			t.Errorf("expected nil mapping to preserve raw roles, got: %+v", derivedNil.Roles)
 		}
 
 		// Custom mapping overriding default build: maps build to custom-builder

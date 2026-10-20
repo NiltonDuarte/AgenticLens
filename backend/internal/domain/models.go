@@ -321,11 +321,20 @@ type ScanReport struct {
 	Errors  []string               `json:"errors"`
 }
 
+// TicketArtifactItem represents a single resolved documentation artifact inside a ticket workspace.
+type TicketArtifactItem struct {
+	Path        string  `json:"path"`
+	Title       string  `json:"title"`
+	Description string  `json:"description,omitempty"`
+	Content     *string `json:"content"`
+}
+
 // TicketArtifacts represents markdown documentation artifacts for a ticket workspace.
 type TicketArtifacts struct {
-	TicketID        string  `json:"ticket_id"`
-	ContractContent *string `json:"contract_content"`
-	SummaryContent  *string `json:"summary_content"`
+	TicketID        string               `json:"ticket_id"`
+	ContractContent *string              `json:"contract_content,omitempty"`
+	SummaryContent  *string              `json:"summary_content,omitempty"`
+	Items           []TicketArtifactItem `json:"items"`
 }
 
 // WorkspaceDetail combines an AgenticMetricsLedger with its associated TicketArtifacts.

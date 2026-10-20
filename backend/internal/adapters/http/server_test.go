@@ -47,7 +47,7 @@ func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, 
 				"role": "orchestrator",
 				"model": "claude-3-sonnet",
 				"user": "tester",
-				"active_duration_seconds": ` + string(rune(duration)) + `,
+				"active_duration_seconds": ` + fmt.Sprintf("%d", duration) + `,
 				"turns": 6,
 				"tokens": {
 					"input": 5000,
@@ -519,6 +519,95 @@ func TestGetWorkspaceDetail(t *testing.T) {
 		}
 		if detail.Artifacts.SummaryContent == nil || *detail.Artifacts.SummaryContent != "# AL-1 Summary Content" {
 			t.Errorf("expected summary content matching fixture")
+		}
+	})
+
+	t.Run("dynamic custom workspace artifacts configuration in detail endpoint", func(t *testing.T) {
+		tempDir := t.TempDir()
+		wsDir := filepath.Join(tempDir, "workspaces")
+		tDir := filepath.Join(wsDir, "AL-CUSTOM")
+		if err := os.MkdirAll(tDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tDir, "agentic_metrics.json"), []byte(sampleTestLedgerJSON("AL-CUSTOM", "Custom Ticket", 100, 1.0, 2)), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tDir, "DESIGN.md"), []byte("# Architectural Design Doc"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tDir, "AUDIT.md"), []byte("# Security Audit Log"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		customCfg := domain.ProjectConfig{
+			ProjectName: "CustomProject",
+			Workspaces: domain.WorkspacesConfig{
+				Dir: wsDir,
+				Artifacts: []domain.WorkspaceArtifactConfig{
+					{
+						Path:        "DESIGN.md",
+						Title:       "Design Specification",
+						Description: "High-level architecture design doc",
+					},
+					{
+						Path:        "AUDIT.md",
+						Title:       "Security Audit",
+						Description: "Threat model and audit review",
+					},
+					{
+						Path:        "MISSING.md",
+						Title:       "Missing Report",
+						Description: "Report not yet created",
+					},
+				},
+			},
+		}
+
+		customSrv := adaptershttp.NewServerWithConfig(wsDir, fstest.MapFS{}, customCfg)
+		customTS := httptest.NewServer(customSrv.Handler())
+		defer customTS.Close()
+
+		resp, err := http.Get(customTS.URL + "/api/workspaces/AL-CUSTOM")
+		if err != nil {
+			t.Fatalf("failed GET: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
+		}
+
+		var detail adaptershttp.WorkspaceDetailResponse
+		if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+			t.Fatalf("failed decoding detail: %v", err)
+		}
+
+		if len(detail.Artifacts.Items) != 3 {
+			t.Fatalf("expected 3 artifact items, got %d", len(detail.Artifacts.Items))
+		}
+
+		// Item 0: DESIGN.md
+		if detail.Artifacts.Items[0].Path != "DESIGN.md" || detail.Artifacts.Items[0].Title != "Design Specification" {
+			t.Errorf("item 0 mismatch: %+v", detail.Artifacts.Items[0])
+		}
+		if detail.Artifacts.Items[0].Content == nil || *detail.Artifacts.Items[0].Content != "# Architectural Design Doc" {
+			t.Errorf("expected DESIGN.md content, got %v", detail.Artifacts.Items[0].Content)
+		}
+
+		// Item 1: AUDIT.md
+		if detail.Artifacts.Items[1].Path != "AUDIT.md" || detail.Artifacts.Items[1].Title != "Security Audit" {
+			t.Errorf("item 1 mismatch: %+v", detail.Artifacts.Items[1])
+		}
+		if detail.Artifacts.Items[1].Content == nil || *detail.Artifacts.Items[1].Content != "# Security Audit Log" {
+			t.Errorf("expected AUDIT.md content, got %v", detail.Artifacts.Items[1].Content)
+		}
+
+		// Item 2: MISSING.md
+		if detail.Artifacts.Items[2].Path != "MISSING.md" || detail.Artifacts.Items[2].Title != "Missing Report" {
+			t.Errorf("item 2 mismatch: %+v", detail.Artifacts.Items[2])
+		}
+		if detail.Artifacts.Items[2].Content != nil {
+			t.Errorf("expected nil content for missing file, got %v", detail.Artifacts.Items[2].Content)
 		}
 	})
 
@@ -1978,7 +2067,7 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 	}
 	defer hook.Close()
 
-	liveSvc := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	liveSvc := live.NewLiveService(hook, domain.ProjectConfig{})
 	defer liveSvc.Close()
 
 	mockFS := fstest.MapFS{

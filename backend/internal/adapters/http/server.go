@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -21,7 +22,13 @@ type Server struct {
 
 // NewServer creates a new HTTP Server instance configured with API routes, default configuration, and SPA static serving.
 func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceInterface) *Server {
-	return NewServerWithConfig(workspacesDir, staticFS, domain.DefaultProjectConfig(), liveService...)
+	var cfg domain.ProjectConfig
+	if loaded, err := config.Load(workspacesDir); err == nil {
+		cfg = loaded
+	} else if loaded, err := config.Load(""); err == nil {
+		cfg = loaded
+	}
+	return NewServerWithConfig(workspacesDir, staticFS, cfg, liveService...)
 }
 
 // NewServerWithConfig creates a new HTTP Server instance configured with custom ProjectConfig, API routes, and SPA static serving.
@@ -36,13 +43,15 @@ func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.Projec
 		hydrator = h
 	}
 
+	artifactConfigs := cfg.Workspaces.Artifacts
+
 	mux := http.NewServeMux()
 
 	// Register API endpoints
 	mux.HandleFunc("GET /api/version", VersionHandler())
 	mux.HandleFunc("GET /api/config", ConfigHandler(cfg, workspacesDir))
 	mux.HandleFunc("GET /api/workspaces", WorkspacesHandler(workspacesDir))
-	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(workspacesDir))
+	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(workspacesDir, artifactConfigs))
 	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(workspacesDir, hydrator))
 	mux.HandleFunc("GET /api/fleet", FleetHandler(workspacesDir))
 	mux.HandleFunc("GET /api/comparison", ComparisonHandler(workspacesDir))

@@ -26,11 +26,6 @@ func FormatISODatetime(ts *string) string {
 	return dt.UTC().Format("2006-01-02 15:04 UTC")
 }
 
-// FormatLeadTime formats elapsed lead time in seconds into human-readable duration.
-func FormatLeadTime(seconds *int64) string {
-	return domain.FormatLeadTime(seconds)
-}
-
 // FormatCurrency formats USD currency amount.
 func FormatCurrency(amount float64) string {
 	if amount < 10.0 {
@@ -42,11 +37,6 @@ func FormatCurrency(amount float64) string {
 // FormatPercentage formats percentage value.
 func FormatPercentage(pct float64) string {
 	return fmt.Sprintf("%.1f%%", pct)
-}
-
-// FormatTokens formats token count with abbreviation.
-func FormatTokens(tokens int64) string {
-	return domain.FormatTokensK(tokens)
 }
 
 // FormatDuration formats duration in seconds into human-readable hours and minutes or minutes and seconds.

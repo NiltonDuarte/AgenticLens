@@ -17,7 +17,11 @@ func ConfigHandler(cfg domain.ProjectConfig, workspacesDir string) http.HandlerF
 
 		prefixes := cfg.Ticket.Prefixes
 		if len(prefixes) == 0 {
-			prefixes = domain.DefaultProjectConfig().Ticket.Prefixes
+			prefixes = []domain.TicketPrefix{
+				{Prefix: "AL", Description: "Core AgenticLens development features, bugfixes, and technical initiatives"},
+				{Prefix: "GEN", Description: "General multi-agent engineering tasks and ad-hoc untracked work", TicketType: "chore"},
+				{Prefix: "PO", Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns", TicketType: "docs"},
+			}
 		}
 		// Ensure non-nil slice
 		sanitizedPrefixes := make([]domain.TicketPrefix, len(prefixes))
@@ -33,7 +37,13 @@ func ConfigHandler(cfg domain.ProjectConfig, workspacesDir string) http.HandlerF
 
 		roleOrder := cfg.RoleOrder
 		if len(roleOrder) == 0 {
-			roleOrder = domain.DefaultProjectConfig().RoleOrder
+			roleOrder = []string{
+				"orchestrator",
+				"planner",
+				"coder",
+				"tester",
+				"reviewer",
+			}
 		}
 		sanitizedRoleOrder := make([]string, len(roleOrder))
 		copy(sanitizedRoleOrder, roleOrder)

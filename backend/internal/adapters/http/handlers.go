@@ -172,7 +172,7 @@ func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 }
 
 // WorkspaceDetailHandler handles GET /api/workspaces/{ticketId}
-func WorkspaceDetailHandler(workspacesDir string) http.HandlerFunc {
+func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.WorkspaceArtifactConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ticketID := r.PathValue("ticketId")
 		if ticketID == "" || strings.Contains(ticketID, "..") || strings.Contains(ticketID, "/") || strings.Contains(ticketID, "\\") {
@@ -186,7 +186,12 @@ func WorkspaceDetailHandler(workspacesDir string) http.HandlerFunc {
 			return
 		}
 
-		artifacts := adapters.ReadTicketArtifacts(ticketID, workspacesDir)
+		var artifacts domain.TicketArtifacts
+		if len(artifactConfigs) > 0 && artifactConfigs[0] != nil {
+			artifacts = adapters.ReadTicketArtifacts(ticketID, workspacesDir, artifactConfigs[0])
+		} else {
+			artifacts = adapters.ReadTicketArtifacts(ticketID, workspacesDir)
+		}
 
 		anomalies := targetLedger.Anomalies
 		if anomalies == nil {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
 )
@@ -134,6 +136,65 @@ func setupTestWorkspace(t *testing.T) string {
 	}
 
 	return wsDir
+}
+
+func waitForServerReady(t *testing.T, targetURL string, timeout time.Duration) *http.Response {
+	t.Helper()
+	u, err := url.Parse(targetURL)
+	if err != nil {
+		t.Fatalf("invalid target url: %v", err)
+	}
+	host := u.Host
+	if !strings.Contains(host, ":") {
+		host = net.JoinHostPort(host, "80")
+	}
+
+	deadline := time.Now().Add(timeout)
+	delay := 100 * time.Microsecond
+	maxDelay := 5 * time.Millisecond
+
+	for {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for server at %s after %v", targetURL, timeout)
+		}
+
+		conn, dialErr := net.DialTimeout("tcp", host, 10*time.Millisecond)
+		if dialErr == nil {
+			_ = conn.Close()
+			resp, httpErr := http.Get(targetURL)
+			if httpErr == nil {
+				return resp
+			}
+		}
+
+		select {
+		case <-time.After(delay):
+		}
+		delay *= 2
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+	}
+}
+
+func setupIsolatedEmptyDB(t *testing.T) string {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "isolated_empty_opencode.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed to open isolated test db: %v", err)
+	}
+	defer db.Close()
+
+	schema := `
+		CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+		CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+	`
+	if _, err := db.Exec(schema); err != nil {
+		t.Fatalf("failed creating schema in isolated test db: %v", err)
+	}
+	return dbPath
 }
 
 func TestCLIListCommand(t *testing.T) {
@@ -261,6 +322,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		// Seed an existing JSON ledger with high failure rate
 		seedJSON := `{
 			"ticket_id": "AL-GEN-ANOM",
+			"ticket_title": "Test Fixture Ticket",
 			"tools": [
 				{"name": "bash", "calls": 8, "errors": 6}
 			]
@@ -274,6 +336,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 			"--ticket-id", "AL-GEN-ANOM",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--anomalies",
 			"--allow-empty",
@@ -305,6 +368,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 			"--ticket-id", "AL-GEN-CLEAN",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--anomalies",
 			"--allow-empty",
@@ -382,19 +446,8 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 			}
 		}()
 
-		// Wait briefly for server startup
-		var resp *http.Response
-		var err error
-		for i := 0; i < 100; i++ {
-			resp, err = http.Get("http://localhost:19090/api/fleet")
-			if err == nil {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-		if err != nil {
-			t.Fatalf("failed querying server: %v", err)
-		}
+		// Wait for server readiness
+		resp := waitForServerReady(t, "http://localhost:19090/api/fleet", 2*time.Second)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -574,17 +627,7 @@ func TestCLIServerPortEnvironment(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	var resp *http.Response
-	for i := 0; i < 100; i++ {
-		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", port))
-		if err == nil {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if err != nil {
-		t.Fatalf("failed querying server on PORT env port %d: %v", port, err)
-	}
+	resp := waitForServerReady(t, fmt.Sprintf("http://localhost:%d/api/fleet", port), 2*time.Second)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -619,17 +662,7 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 			_ = cmd.Wait()
 		}()
 
-		var resp *http.Response
-		for i := 0; i < 100; i++ {
-			resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", flagPort))
-			if err == nil {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-		if err != nil {
-			t.Fatalf("failed querying server on flag port %d: %v", flagPort, err)
-		}
+		resp := waitForServerReady(t, fmt.Sprintf("http://localhost:%d/api/fleet", flagPort), 2*time.Second)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -656,17 +689,7 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 			_ = cmd.Wait()
 		}()
 
-		var resp *http.Response
-		for i := 0; i < 100; i++ {
-			resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", flagPort))
-			if err == nil {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-		if err != nil {
-			t.Fatalf("failed querying server on flag port %d overriding invalid PORT env: %v", flagPort, err)
-		}
+		resp := waitForServerReady(t, fmt.Sprintf("http://localhost:%d/api/fleet", flagPort), 2*time.Second)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -880,6 +903,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"generate",
 		"--db-path", dbPath,
 		"--ticket-id", "AL-999",
+		"--ticket-title", "Test Fixture Ticket",
 		"--nonce", "nonce_test_999",
 		"--json-output", outJSON,
 		"--append", summaryMD,
@@ -939,6 +963,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"generate",
 		"--db-path", dbPath,
 		"--ticket-id", "AL-999",
+		"--ticket-title", "Test Fixture Ticket",
 		"--nonce", "nonce_test_999",
 		"--json-output", outJSON,
 		"--append", summaryMD,
@@ -1022,6 +1047,7 @@ func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
 		"generate",
 		"--db-path", dbPath,
 		"--ticket-id", "AL-888",
+		"--ticket-title", "Test Fixture Ticket",
 		"--nonce", "nonce_test_888",
 		"--json-output", outJSON,
 		"--append", summaryMD,
@@ -1115,6 +1141,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"generate",
 			"--db-path", nonExistentDB,
 			"--ticket-id", "AL-FALLBACK",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
@@ -1158,6 +1185,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "none.db"),
 			"--ticket-id", "AL-RECOVER",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
@@ -1211,6 +1239,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"generate",
 			"--db-path", dbPath,
 			"--ticket-id", "AL-ZERO",
+			"--ticket-title", "Test Fixture Ticket",
 			"--session-id", "ses_zero",
 			"--append", summaryMD,
 		)
@@ -1267,6 +1296,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "NON_EXISTENT",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", targetJSON,
 			"--append", targetMD,
 		)
@@ -1331,6 +1361,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "NON_EXISTENT_2",
+			"--ticket-title", "Test Fixture Ticket",
 			"--append", summaryMD,
 		)
 		var stdout, stderr bytes.Buffer
@@ -1359,6 +1390,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 			"--ticket-id", "AL-ALLOW-EMPTY",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
@@ -1411,6 +1443,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", dbPath,
 			"--ticket-id", "AL-VALID",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
 			"--append", summaryMD,
 		)
@@ -1446,7 +1479,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected failure without root session or ticket id")
 		}
-		expectedErr := "Error: unable to identify root session for ticket 'UNKNOWN'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted."
+		expectedErr := "Error: missing ticket ID. Specify --ticket-id explicitly."
 		if !strings.Contains(stderr.String(), expectedErr) {
 			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
 		}
@@ -1483,6 +1516,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "AL-CACHED-INV",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 			"--append", summaryMD,
 		)
@@ -1530,7 +1564,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
-		initialJSON := `{"schema_version":2,"ticket_id":"AL-CACHED-NO-INV","invocations":[]}`
+		initialJSON := `{"schema_version":2,"ticket_id":"AL-CACHED-NO-INV","ticket_title":"Test Fixture Ticket","invocations":[]}`
 		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1540,6 +1574,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "AL-CACHED-NO-INV",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 		)
 		var stdout, stderr bytes.Buffer
@@ -1594,7 +1629,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_empty.json")
-		initialJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY-BOTH","invocations":[]}`
+		initialJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY-BOTH","ticket_title":"Test Fixture Ticket","invocations":[]}`
 		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1604,6 +1639,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", emptyDB,
 			"--ticket-id", "AL-EMPTY-BOTH",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 			"--allow-empty",
 		)
@@ -1656,6 +1692,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", brokenDB,
 			"--ticket-id", "AL-DB-ERR",
+			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", targetJSON,
 		)
 		var stdout, stderr bytes.Buffer
@@ -2591,6 +2628,7 @@ func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
 		"generate",
 		"--db-path", dbPath,
 		"--ticket-id", "AL-24",
+		"--ticket-title", "Test Fixture Ticket",
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
@@ -2644,7 +2682,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "feature",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2683,7 +2723,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "invalid-type",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2724,7 +2766,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "PO-5",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -2762,7 +2806,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GEN-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -2800,7 +2846,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -2845,7 +2893,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-title", "Test Fixture Ticket",
 			"--strict-type",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2887,6 +2937,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		legacyJSON := `{
 			"schema_version": 2,
 			"ticket_id": "AL-29",
+			"ticket_title": "Test Fixture Ticket",
 			"ticket_type": "feature",
 			"code": {
 				"lines_added": 10,
@@ -2905,7 +2956,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -2959,7 +3012,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 				cmd := exec.Command(
 					cliBinaryPath,
 					"generate",
+					"--db-path", setupIsolatedEmptyDB(t),
 					"--ticket-id", "AL-29",
+					"--ticket-title", "Test Fixture Ticket",
 					"--ticket-type", tc.input,
 					"--allow-empty",
 					"--json-output", outJSON,
@@ -3001,7 +3056,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "POD-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3040,7 +3097,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		strictCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "POD-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--strict-type",
 			"--allow-empty",
 			"--json-output", strictJSON,
@@ -3078,7 +3137,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GENTLE-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3117,7 +3178,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		strictCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GENTLE-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--strict-type",
 			"--allow-empty",
 			"--json-output", strictJSON,
@@ -3151,6 +3214,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--strict-type",
 			"--allow-empty",
 		)
@@ -3172,7 +3236,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("expected exec.ExitError, got %v", err)
 		}
 
-		expectedErr := "Error: missing ticket type for ticket 'UNKNOWN'. Specify --ticket-type explicitly."
+		expectedErr := "Error: missing ticket ID. Specify --ticket-id explicitly."
 		if !strings.Contains(stderr.String(), expectedErr) {
 			t.Fatalf("expected strict error:\n%s\ngot:\n%s", expectedErr, stderr.String())
 		}
@@ -3183,7 +3247,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "   \t",
 			"--strict-type",
 			"--allow-empty",
@@ -3220,7 +3286,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "feat",
 			"--strict-type",
 			"--allow-empty",
@@ -3273,7 +3341,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3282,7 +3350,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "CUSTOM-101",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3320,7 +3390,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3329,7 +3399,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "PO-88",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3367,7 +3439,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3376,7 +3448,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "CUSTOM-101",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "chore",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3415,7 +3489,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
@@ -3424,7 +3498,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "HOTFIX-77",
+			"--ticket-title", "Test Fixture Ticket",
 			"--strict-type",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3477,13 +3553,24 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("git checkout -b failed: %v", err)
 		}
 
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatalf("failed creating .agenticlens dir: %v", err)
+		}
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config.yaml: %v", err)
+		}
+
 		outJSON := filepath.Join(tempDir, "facts.json")
 
 		// AL-30 is on branch fix/AL-30-test. Passing --ticket-type chore MUST override the branch prefix "fix".
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-30",
+			"--ticket-title", "Test Fixture Ticket",
 			"--ticket-type", "chore",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3515,7 +3602,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 	})
 
-	t.Run("Tier 2 git branch prefix overrides Tier 3 project config prefix", func(t *testing.T) {
+	t.Run("configured project prefix overrides git branch prefix", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 
@@ -3523,7 +3610,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := exec.Command("git", "init", tempDir).Run(); err != nil {
 			t.Fatalf("git init failed: %v", err)
 		}
-		if err := exec.Command("git", "-C", tempDir, "config", "user.email", "test@agenticlens.local").Run(); err != nil {
+		if err := exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run(); err != nil {
 			t.Fatalf("git config user.email failed: %v", err)
 		}
 		if err := exec.Command("git", "-C", tempDir, "config", "user.name", "Test Agent").Run(); err != nil {
@@ -3540,18 +3627,20 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		// Configure AL to map to docs in config.yaml (Tier 3)
-		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\n"
+		// Configure AL to map to docs in config.yaml
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
-		// Branch prefix "fix" (Tier 2) MUST take precedence over config prefix "docs" (Tier 3).
+		// Config prefix "docs" takes precedence over branch prefix "fix".
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-30",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3577,8 +3666,8 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if parsed.TicketType == nil {
 			t.Fatal("expected non-nil TicketType for AL-30, got nil")
 		}
-		if *parsed.TicketType != "fix" {
-			t.Errorf("expected branch prefix 'fix' to override config prefix 'docs', got %q", *parsed.TicketType)
+		if *parsed.TicketType != "docs" {
+			t.Errorf("expected configured prefix 'docs' to override branch prefix 'fix', got %q", *parsed.TicketType)
 		}
 	})
 }
@@ -3603,6 +3692,8 @@ ticket:
       ticket_type: "fix"
 workspaces:
   dir: "custom_root_ws"
+  src_folders:
+    - "src"
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config: %v", err)
@@ -3613,6 +3704,7 @@ workspaces:
 			cliBinaryPath,
 			"generate",
 			"--ticket-id", "MYROOT-5",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3676,21 +3768,27 @@ workspaces:
 
 		// Root config maps ROOTPRIO to "feat" and dir to "root_ws"
 		rootCfg := `
+project_name: RootPriorityTest
 ticket:
   prefixes:
     - prefix: "ROOTPRIO"
       ticket_type: "feat"
 workspaces:
   dir: "root_ws"
+  src_folders:
+    - "src"
 `
 		// Legacy config maps ROOTPRIO to "chore" and dir to "legacy_ws"
 		legacyCfg := `
+project_name: LegacyPriorityTest
 ticket:
   prefixes:
     - prefix: "ROOTPRIO"
       ticket_type: "chore"
 workspaces:
   dir: "legacy_ws"
+  src_folders:
+    - "src"
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(rootCfg), 0644); err != nil {
 			t.Fatalf("failed writing root config: %v", err)
@@ -3704,6 +3802,7 @@ workspaces:
 			cliBinaryPath,
 			"generate",
 			"--ticket-id", "ROOTPRIO-1",
+			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
@@ -3728,6 +3827,919 @@ workspaces:
 
 		if parsed.TicketType == nil || *parsed.TicketType != "feat" {
 			t.Errorf("expected TicketType 'feat' from root config (overriding legacy chore), got %v", parsed.TicketType)
+		}
+	})
+}
+
+func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("fails with exit code 1 when ticket-id is missing or whitespace", func(t *testing.T) {
+		t.Parallel()
+
+		// Case 1: Flag omitted entirely
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-title", "Test Fixture Ticket",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected failure on missing ticket-id")
+		}
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+		}
+		if !strings.Contains(stderr.String(), "Error: missing ticket ID. Specify --ticket-id explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr.String())
+		}
+
+		// Case 2: Whitespace only
+		cmd2 := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "   \t",
+			"--ticket-title", "Test Fixture Ticket",
+			"--allow-empty",
+		)
+		var stderr2 bytes.Buffer
+		cmd2.Stderr = &stderr2
+		err2 := cmd2.Run()
+		if err2 == nil {
+			t.Fatal("expected failure on whitespace ticket-id")
+		}
+		var exitErr2 *exec.ExitError
+		if errors.As(err2, &exitErr2) && exitErr2.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr2.ExitCode())
+		}
+		if !strings.Contains(stderr2.String(), "Error: missing ticket ID. Specify --ticket-id explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr2.String())
+		}
+	})
+
+	t.Run("fails with exit code 1 when ticket-title is missing or whitespace", func(t *testing.T) {
+		t.Parallel()
+
+		// Case 1: Flag omitted entirely
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-TITLE-REQ",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected failure on missing ticket-title")
+		}
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
+		}
+		if !strings.Contains(stderr.String(), "Error: missing ticket title for ticket 'AL-TITLE-REQ'. Specify --ticket-title explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr.String())
+		}
+
+		// Case 2: Whitespace only
+		cmd2 := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-TITLE-REQ",
+			"--ticket-title", "   \n\t",
+			"--allow-empty",
+		)
+		var stderr2 bytes.Buffer
+		cmd2.Stderr = &stderr2
+		err2 := cmd2.Run()
+		if err2 == nil {
+			t.Fatal("expected failure on whitespace ticket-title")
+		}
+		var exitErr2 *exec.ExitError
+		if errors.As(err2, &exitErr2) && exitErr2.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr2.ExitCode())
+		}
+		if !strings.Contains(stderr2.String(), "Error: missing ticket title for ticket 'AL-TITLE-REQ'. Specify --ticket-title explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr2.String())
+		}
+
+		// Case 3: Cached facts has whitespace-only title and flag omitted
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts_ws_title.json")
+		wsCachedJSON := `{
+			"schema_version": 3,
+			"ticket_id": "AL-CACHED-WS-TITLE",
+			"ticket_title": "   \t\n",
+			"invocations": []
+		}`
+		if err := os.WriteFile(outJSON, []byte(wsCachedJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+		cmd3 := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-CACHED-WS-TITLE",
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		var stderr3 bytes.Buffer
+		cmd3.Stderr = &stderr3
+		err3 := cmd3.Run()
+		if err3 == nil {
+			t.Fatal("expected failure when cached title is whitespace only")
+		}
+		var exitErr3 *exec.ExitError
+		if errors.As(err3, &exitErr3) && exitErr3.ExitCode() != 1 {
+			t.Fatalf("expected exit code 1, got %d", exitErr3.ExitCode())
+		}
+		if !strings.Contains(stderr3.String(), "Error: missing ticket title for ticket 'AL-CACHED-WS-TITLE'. Specify --ticket-title explicitly.") {
+			t.Fatalf("unexpected stderr: %s", stderr3.String())
+		}
+	})
+
+	t.Run("cached title fallback succeeds when ticket-title flag is omitted", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+		cachedJSON := `{
+			"schema_version": 3,
+			"ticket_id": "AL-CACHED-TITLE",
+			"ticket_title": "Cached Fixture Title",
+			"invocations": []
+		}`
+		if err := os.WriteFile(outJSON, []byte(cachedJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-CACHED-TITLE",
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected cached title fallback to succeed, got: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatal(err)
+		}
+		if parsed.TicketTitle == nil || *parsed.TicketTitle != "Cached Fixture Title" {
+			t.Fatalf("expected cached title 'Cached Fixture Title', got %v", parsed.TicketTitle)
+		}
+
+		// Also verify explicit --ticket-title flag overrides the cached title
+		cmdOverride := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-CACHED-TITLE",
+			"--ticket-title", "Overridden Ticket Title",
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		var stdoutO, stderrO bytes.Buffer
+		cmdOverride.Stdout = &stdoutO
+		cmdOverride.Stderr = &stderrO
+		if err := cmdOverride.Run(); err != nil {
+			t.Fatalf("expected explicit title override to succeed, got: %v, stderr: %s", err, stderrO.String())
+		}
+		dataO, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsedO domain.AgenticFactLedger
+		if err := json.Unmarshal(dataO, &parsedO); err != nil {
+			t.Fatal(err)
+		}
+		if parsedO.TicketTitle == nil || *parsedO.TicketTitle != "Overridden Ticket Title" {
+			t.Fatalf("expected overridden title 'Overridden Ticket Title', got %v", parsedO.TicketTitle)
+		}
+	})
+
+	t.Run("ticket-type warning issued on stderr for unmatched ticket in non-strict mode", func(t *testing.T) {
+		t.Parallel()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "UNMATCHED-WARNING",
+			"--ticket-title", "Test Fixture Ticket",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected command to exit 0 in non-strict mode, got: %v, stderr: %s", err, stderr.String())
+		}
+		expectedWarn := "WARNING: Missing ticket type for ticket UNMATCHED-WARNING. Specify --ticket-type explicitly."
+		if !strings.Contains(stderr.String(), expectedWarn) {
+			t.Fatalf("expected warning on stderr:\n%s\ngot:\n%s", expectedWarn, stderr.String())
+		}
+	})
+
+	t.Run("empty invocations warning issued on stderr when invocations count is zero", func(t *testing.T) {
+		t.Parallel()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "AL-EMPTY-INV",
+			"--ticket-title", "Test Fixture Ticket",
+			"--allow-empty",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected generate with --allow-empty to succeed, got: %v, stderr: %s", err, stderr.String())
+		}
+		expectedWarn := "WARNING: Zero invocations recorded for ticket AL-EMPTY-INV. This is not expected."
+		if !strings.Contains(stderr.String(), expectedWarn) {
+			t.Fatalf("expected warning on stderr:\n%s\ngot:\n%s", expectedWarn, stderr.String())
+		}
+	})
+
+	t.Run("FIX prefix infers ticket_type fix from root .agenticlens-config.yaml", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "facts.json")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "FIX-1",
+			"--ticket-title", "Bug Fix Telemetry Metadata",
+			"--allow-empty",
+			"--json-output", outJSON,
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed for FIX-1: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsed domain.AgenticFactLedger
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatal(err)
+		}
+		if parsed.TicketType == nil {
+			t.Fatal("expected non-nil TicketType for FIX-1, got nil")
+		}
+		if *parsed.TicketType != "fix" {
+			t.Errorf("expected TicketType 'fix' for FIX-1, got %q", *parsed.TicketType)
+		}
+
+		// Also verify case-insensitive prefix inference for lowercase fix-42
+		outJSONLower := filepath.Join(tempDir, "facts_lower.json")
+		cmdLower := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
+			"--ticket-id", "fix-42",
+			"--ticket-title", "Lowercase Fix Title",
+			"--allow-empty",
+			"--json-output", outJSONLower,
+		)
+		var stdoutL, stderrL bytes.Buffer
+		cmdLower.Stdout = &stdoutL
+		cmdLower.Stderr = &stderrL
+		if err := cmdLower.Run(); err != nil {
+			t.Fatalf("generate failed for fix-42: %v, stderr: %s", err, stderrL.String())
+		}
+		dataL, err := os.ReadFile(outJSONLower)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsedL domain.AgenticFactLedger
+		if err := json.Unmarshal(dataL, &parsedL); err != nil {
+			t.Fatal(err)
+		}
+		if parsedL.TicketType == nil || *parsedL.TicketType != "fix" {
+			t.Errorf("expected TicketType 'fix' for fix-42, got %v", parsedL.TicketType)
+		}
+	})
+}
+
+func TestInitCommand(t *testing.T) {
+	t.Run("missing required flag --project-name fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "   ", "--src-folders", "src", "--ticket-prefixes", "AL"},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --project-name (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --project-name") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --project-name', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing required flag --src-folders fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--project-name", "Acme", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "Acme", "--src-folders", "", "--ticket-prefixes", "AL"},
+			{"init", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefixes", "AL"},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --src-folders (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --src-folders") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --src-folders', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing required flag --ticket-prefixes fails with exit code 1", func(t *testing.T) {
+		variations := [][]string{
+			{"init", "--project-name", "Acme", "--src-folders", "src"},
+			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", ""},
+			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "   "},
+		}
+
+		for _, args := range variations {
+			tempDir := t.TempDir()
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err == nil {
+				t.Fatalf("expected init to fail without --ticket-prefixes (args: %v), got nil error", args)
+			}
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d for args: %v", exitErr.ExitCode(), args)
+			}
+			if !strings.Contains(stderr.String(), "Error: missing required flag --ticket-prefixes") {
+				t.Errorf("expected stderr to contain 'Error: missing required flag --ticket-prefixes', got: %s", stderr.String())
+			}
+		}
+	})
+
+	t.Run("missing all required flags fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init")
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init without any flags to fail, got nil error")
+		}
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) {
+			t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+		}
+		if exitErr.ExitCode() != 1 {
+			t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+		}
+		if !strings.Contains(stderr.String(), "Error: missing required flag") {
+			t.Errorf("expected stderr to contain missing flag error, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("valid required flags create valid configuration file", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AcmeApp",
+			"--src-folders", "web,backend",
+			"--ticket-prefixes", "ACME",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if _, err := os.Stat(expectedPath); err != nil {
+			t.Fatalf("expected config file %s to exist: %v", expectedPath, err)
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(expectedPath)
+		if err != nil {
+			t.Fatalf("loading generated config failed: %v", err)
+		}
+
+		if loaded.ProjectName != "AcmeApp" {
+			t.Errorf("expected ProjectName 'AcmeApp', got %q", loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "workspaces" {
+			t.Errorf("expected workspaces.dir 'workspaces', got %q", loaded.Workspaces.Dir)
+		}
+		if len(loaded.Workspaces.Artifacts) != 0 {
+			t.Errorf("expected generated config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
+		}
+	})
+
+	t.Run("custom flags customize generated configuration", func(t *testing.T) {
+		tempDir := t.TempDir()
+		customOutput := filepath.Join(tempDir, "custom-config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AcmePlatform",
+			"--workspaces", "team_workspaces",
+			"--db-path", "/opt/opencode/data.db",
+			"--src-folders", "services,apps,packages",
+			"--ticket-prefixes", "ACME,OPS",
+			"--output", customOutput,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init with custom flags failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(customOutput)
+		if err != nil {
+			t.Fatalf("loading custom config failed: %v", err)
+		}
+
+		if loaded.ProjectName != "AcmePlatform" {
+			t.Errorf("expected ProjectName 'AcmePlatform', got %q", loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "team_workspaces" {
+			t.Errorf("expected workspaces.dir 'team_workspaces', got %q", loaded.Workspaces.Dir)
+		}
+		if loaded.Database.Path != "/opt/opencode/data.db" {
+			t.Errorf("expected database.path '/opt/opencode/data.db', got %q", loaded.Database.Path)
+		}
+		if len(loaded.Workspaces.SrcFolders) != 3 || loaded.Workspaces.SrcFolders[0] != "services" {
+			t.Errorf("unexpected src_folders: %v", loaded.Workspaces.SrcFolders)
+		}
+		if len(loaded.Ticket.Prefixes) != 2 || loaded.Ticket.Prefixes[0].Prefix != "ACME" || loaded.Ticket.Prefixes[1].Prefix != "OPS" {
+			t.Errorf("expected ACME,OPS peer prefixes, got %v", loaded.Ticket.Prefixes)
+		}
+		if len(loaded.Workspaces.Artifacts) != 0 {
+			t.Errorf("expected generated custom config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
+		}
+	})
+
+	t.Run("comma-separated ticket-prefixes flag creates peer prefixes without injection", func(t *testing.T) {
+		tempDir := t.TempDir()
+		outConfig := filepath.Join(tempDir, ".agenticlens-config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", "core,cli",
+			"--ticket-prefixes", "ALPHA,BETA,GAMMA",
+			"--output", outConfig,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(outConfig)
+		if err != nil {
+			t.Fatalf("LoadFromFile failed: %v", err)
+		}
+
+		if len(loaded.Ticket.Prefixes) != 3 {
+			t.Fatalf("expected exactly 3 prefixes, got %d: %v", len(loaded.Ticket.Prefixes), loaded.Ticket.Prefixes)
+		}
+		expected := []string{"ALPHA", "BETA", "GAMMA"}
+		for i, exp := range expected {
+			if loaded.Ticket.Prefixes[i].Prefix != exp {
+				t.Errorf("prefix[%d]: expected %s, got %s", i, exp, loaded.Ticket.Prefixes[i].Prefix)
+			}
+		}
+	})
+
+	t.Run("empty ticket-prefixes fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", "core",
+			"--ticket-prefixes", " , , ",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected error for empty ticket-prefixes, but command succeeded")
+		}
+		if !strings.Contains(stderr.String(), "missing required flag --ticket-prefixes") {
+			t.Errorf("expected error message to mention --ticket-prefixes, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("empty src-folders fails with exit code 1", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "PeerTest",
+			"--src-folders", " , , ",
+			"--ticket-prefixes", "ALPHA",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected error for empty src-folders, but command succeeded")
+		}
+		if !strings.Contains(stderr.String(), "missing required flag --src-folders") {
+			t.Errorf("expected error message to mention --src-folders, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("collision fails safely without force", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(target, []byte("project_name: Original\n"), 0644); err != nil {
+			t.Fatalf("writing initial config: %v", err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Original",
+			"--src-folders", "src",
+			"--ticket-prefixes", "AL",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected init to fail when file exists and --force is omitted")
+		}
+
+		if !strings.Contains(stderr.String(), "already exists") {
+			t.Errorf("expected stderr to indicate file already exists, got: %s", stderr.String())
+		}
+
+		// Ensure file was not changed
+		content, _ := os.ReadFile(target)
+		if !strings.Contains(string(content), "Original") {
+			t.Errorf("expected original content retained, got %s", string(content))
+		}
+	})
+
+	t.Run("force overwrites existing file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(target, []byte("project_name: Original\n"), 0644); err != nil {
+			t.Fatalf("writing initial config: %v", err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Overwritten",
+			"--src-folders", "src",
+			"--ticket-prefixes", "AL",
+			"--force",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init --force failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(target)
+		if err != nil {
+			t.Fatalf("loading overwritten config: %v", err)
+		}
+		if loaded.ProjectName != "Overwritten" {
+			t.Errorf("expected project_name 'Overwritten', got %q", loaded.ProjectName)
+		}
+	})
+
+	t.Run("dry run prints YAML to stdout without creating file", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--dry-run",
+			"--project-name", "DryRunTest",
+			"--src-folders", "src",
+			"--ticket-prefixes", "DRY",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("init --dry-run failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		outStr := stdout.String()
+		if !strings.Contains(outStr, "project_name: DryRunTest") {
+			t.Errorf("expected stdout to contain 'project_name: DryRunTest', got: %s", outStr)
+		}
+
+		// Ensure no file was created
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if _, err := os.Stat(cfgPath); !os.IsNotExist(err) {
+			t.Errorf("expected %s not to exist after dry-run, but it exists", cfgPath)
+		}
+	})
+
+	t.Run("spaces in project name and directories", func(t *testing.T) {
+		tempDir := t.TempDir()
+		projName := "My Special Project"
+		customOutput := filepath.Join(tempDir, "nested dir", "app config.yaml")
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", projName,
+			"--workspaces", "team workspaces",
+			"--src-folders", "my web,my backend",
+			"--ticket-prefixes", "SPECIAL",
+			"--output", customOutput,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("agentic-lens init with spaces failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(customOutput)
+		if err != nil {
+			t.Fatalf("loading config with spaces failed: %v", err)
+		}
+		if loaded.ProjectName != projName {
+			t.Errorf("expected ProjectName %q, got %q", projName, loaded.ProjectName)
+		}
+		if loaded.Workspaces.Dir != "team workspaces" {
+			t.Errorf("expected Workspaces.Dir 'team workspaces', got %q", loaded.Workspaces.Dir)
+		}
+	})
+
+	t.Run("invalid or unknown flag returns error and exits non-zero", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init", "--invalid-nonexistent-flag=true")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init with invalid flag to fail, got zero exit code")
+		}
+		if !strings.Contains(stderr.String(), "flag provided but not defined") {
+			t.Errorf("expected stderr to contain 'flag provided but not defined', got: %s", stderr.String())
+		}
+	})
+
+	t.Run("passing deprecated or unknown --ticket-prefix flag fails as unknown flag", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init with --ticket-prefix to fail as unknown flag, got zero exit code")
+		}
+		if !strings.Contains(stderr.String(), "flag provided but not defined: -ticket-prefix") {
+			t.Errorf("expected stderr to contain 'flag provided but not defined: -ticket-prefix', got: %s", stderr.String())
+		}
+	})
+
+	t.Run("file collision error without force preserves original contents", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		originalContent := "# Original uncorrupted file\nproject_name: Untouched\n"
+		if err := os.WriteFile(target, []byte(originalContent), 0644); err != nil {
+			t.Fatalf("writing target file: %v", err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "AttemptedOverwrite",
+			"--src-folders", "src",
+			"--ticket-prefixes", "AL",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected colliding init without --force to fail")
+		}
+		if !strings.Contains(stderr.String(), "already exists") {
+			t.Errorf("expected stderr to indicate file already exists, got: %s", stderr.String())
+		}
+
+		readBack, err := os.ReadFile(target)
+		if err != nil {
+			t.Fatalf("reading target file: %v", err)
+		}
+		if string(readBack) != originalContent {
+			t.Errorf("expected target content to be preserved exactly, got: %s", string(readBack))
+		}
+	})
+
+	t.Run("permission error handling when output directory is not writable", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Log("running as root; skipping unprivileged permission error assertion")
+			return
+		}
+		tempDir := t.TempDir()
+		roDir := filepath.Join(tempDir, "protected")
+		if err := os.MkdirAll(roDir, 0555); err != nil {
+			t.Fatalf("creating roDir: %v", err)
+		}
+		defer os.Chmod(roDir, 0755)
+
+		target := filepath.Join(roDir, "config.yaml")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"init",
+			"--project-name", "Protected",
+			"--src-folders", "src",
+			"--ticket-prefixes", "AL",
+			"--output", target,
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			t.Fatalf("expected init to non-writable directory to fail")
+		}
+		if !strings.Contains(stderr.String(), "Error writing configuration file") {
+			t.Errorf("expected error message in stderr, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("commands fail with helpful message when configuration is absent", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// Test root command in dir with no config
+		cmdRoot := exec.Command(cliBinaryPath, "--workspaces", tempDir)
+		cmdRoot.Dir = tempDir
+		var stderrRoot bytes.Buffer
+		cmdRoot.Stderr = &stderrRoot
+		if err := cmdRoot.Run(); err == nil {
+			t.Fatal("expected root command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrRoot.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrRoot.String())
+		}
+
+		// Test server command in dir with no config
+		cmdServer := exec.Command(cliBinaryPath, "server", "--port", "29199", "--workspaces", tempDir)
+		cmdServer.Dir = tempDir
+		var stderrServer bytes.Buffer
+		cmdServer.Stderr = &stderrServer
+		if err := cmdServer.Run(); err == nil {
+			t.Fatal("expected server command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrServer.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrServer.String())
+		}
+
+		// Test generate command in dir with no config
+		cmdGenerate := exec.Command(cliBinaryPath, "generate", "--ticket-id", "TEST-1", "--allow-empty")
+		cmdGenerate.Dir = tempDir
+		var stderrGen bytes.Buffer
+		cmdGenerate.Stderr = &stderrGen
+		if err := cmdGenerate.Run(); err == nil {
+			t.Fatal("expected generate command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrGen.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrGen.String())
 		}
 	})
 }
