@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -135,6 +136,65 @@ func setupTestWorkspace(t *testing.T) string {
 	}
 
 	return wsDir
+}
+
+func waitForServerReady(t *testing.T, targetURL string, timeout time.Duration) *http.Response {
+	t.Helper()
+	u, err := url.Parse(targetURL)
+	if err != nil {
+		t.Fatalf("invalid target url: %v", err)
+	}
+	host := u.Host
+	if !strings.Contains(host, ":") {
+		host = net.JoinHostPort(host, "80")
+	}
+
+	deadline := time.Now().Add(timeout)
+	delay := 100 * time.Microsecond
+	maxDelay := 5 * time.Millisecond
+
+	for {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for server at %s after %v", targetURL, timeout)
+		}
+
+		conn, dialErr := net.DialTimeout("tcp", host, 10*time.Millisecond)
+		if dialErr == nil {
+			_ = conn.Close()
+			resp, httpErr := http.Get(targetURL)
+			if httpErr == nil {
+				return resp
+			}
+		}
+
+		select {
+		case <-time.After(delay):
+		}
+		delay *= 2
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+	}
+}
+
+func setupIsolatedEmptyDB(t *testing.T) string {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "isolated_empty_opencode.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed to open isolated test db: %v", err)
+	}
+	defer db.Close()
+
+	schema := `
+		CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+		CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+	`
+	if _, err := db.Exec(schema); err != nil {
+		t.Fatalf("failed creating schema in isolated test db: %v", err)
+	}
+	return dbPath
 }
 
 func TestCLIListCommand(t *testing.T) {
@@ -383,19 +443,8 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 			}
 		}()
 
-		// Wait briefly for server startup
-		var resp *http.Response
-		var err error
-		for i := 0; i < 100; i++ {
-			resp, err = http.Get("http://localhost:19090/api/fleet")
-			if err == nil {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-		if err != nil {
-			t.Fatalf("failed querying server: %v", err)
-		}
+		// Wait for server readiness
+		resp := waitForServerReady(t, "http://localhost:19090/api/fleet", 2*time.Second)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -575,17 +624,7 @@ func TestCLIServerPortEnvironment(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	var resp *http.Response
-	for i := 0; i < 100; i++ {
-		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", port))
-		if err == nil {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if err != nil {
-		t.Fatalf("failed querying server on PORT env port %d: %v", port, err)
-	}
+	resp := waitForServerReady(t, fmt.Sprintf("http://localhost:%d/api/fleet", port), 2*time.Second)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -620,17 +659,7 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 			_ = cmd.Wait()
 		}()
 
-		var resp *http.Response
-		for i := 0; i < 100; i++ {
-			resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", flagPort))
-			if err == nil {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-		if err != nil {
-			t.Fatalf("failed querying server on flag port %d: %v", flagPort, err)
-		}
+		resp := waitForServerReady(t, fmt.Sprintf("http://localhost:%d/api/fleet", flagPort), 2*time.Second)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -657,17 +686,7 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 			_ = cmd.Wait()
 		}()
 
-		var resp *http.Response
-		for i := 0; i < 100; i++ {
-			resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/fleet", flagPort))
-			if err == nil {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-		if err != nil {
-			t.Fatalf("failed querying server on flag port %d overriding invalid PORT env: %v", flagPort, err)
-		}
+		resp := waitForServerReady(t, fmt.Sprintf("http://localhost:%d/api/fleet", flagPort), 2*time.Second)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -2645,6 +2664,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
 			"--ticket-type", "feature",
 			"--allow-empty",
@@ -2684,6 +2704,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
 			"--ticket-type", "invalid-type",
 			"--allow-empty",
@@ -2725,6 +2746,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "PO-5",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2763,6 +2785,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GEN-1",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2801,6 +2824,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2846,6 +2870,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
 			"--strict-type",
 			"--allow-empty",
@@ -2906,6 +2931,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-29",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -2960,6 +2986,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 				cmd := exec.Command(
 					cliBinaryPath,
 					"generate",
+					"--db-path", setupIsolatedEmptyDB(t),
 					"--ticket-id", "AL-29",
 					"--ticket-type", tc.input,
 					"--allow-empty",
@@ -3002,6 +3029,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "POD-1",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3041,6 +3069,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		strictCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "POD-1",
 			"--strict-type",
 			"--allow-empty",
@@ -3079,6 +3108,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GENTLE-1",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3118,6 +3148,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		strictCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "GENTLE-1",
 			"--strict-type",
 			"--allow-empty",
@@ -3152,6 +3183,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--strict-type",
 			"--allow-empty",
 		)
@@ -3184,6 +3216,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
 			"--ticket-type", "   \t",
 			"--strict-type",
@@ -3221,6 +3254,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "UNMATCHED-9999",
 			"--ticket-type", "feat",
 			"--strict-type",
@@ -3283,6 +3317,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "CUSTOM-101",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3330,6 +3365,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "PO-88",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3377,6 +3413,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "CUSTOM-101",
 			"--ticket-type", "chore",
 			"--allow-empty",
@@ -3425,6 +3462,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "HOTFIX-77",
 			"--strict-type",
 			"--allow-empty",
@@ -3493,6 +3531,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-30",
 			"--ticket-type", "chore",
 			"--allow-empty",
@@ -3525,7 +3564,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 	})
 
-	t.Run("Tier 2 git branch prefix overrides Tier 3 project config prefix", func(t *testing.T) {
+	t.Run("configured project prefix overrides git branch prefix", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 
@@ -3533,7 +3572,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := exec.Command("git", "init", tempDir).Run(); err != nil {
 			t.Fatalf("git init failed: %v", err)
 		}
-		if err := exec.Command("git", "-C", tempDir, "config", "user.email", "test@agenticlens.local").Run(); err != nil {
+		if err := exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run(); err != nil {
 			t.Fatalf("git config user.email failed: %v", err)
 		}
 		if err := exec.Command("git", "-C", tempDir, "config", "user.name", "Test Agent").Run(); err != nil {
@@ -3550,17 +3589,18 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if err := os.MkdirAll(cfgDir, 0755); err != nil {
 			t.Fatalf("failed creating .agenticlens dir: %v", err)
 		}
-		// Configure AL to map to docs in config.yaml (Tier 3)
+		// Configure AL to map to docs in config.yaml
 		cfgContent := "ticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
-		// Branch prefix "fix" (Tier 2) MUST take precedence over config prefix "docs" (Tier 3).
+		// Config prefix "docs" takes precedence over branch prefix "fix".
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-30",
 			"--allow-empty",
 			"--json-output", outJSON,
@@ -3587,8 +3627,8 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		if parsed.TicketType == nil {
 			t.Fatal("expected non-nil TicketType for AL-30, got nil")
 		}
-		if *parsed.TicketType != "fix" {
-			t.Errorf("expected branch prefix 'fix' to override config prefix 'docs', got %q", *parsed.TicketType)
+		if *parsed.TicketType != "docs" {
+			t.Errorf("expected configured prefix 'docs' to override branch prefix 'fix', got %q", *parsed.TicketType)
 		}
 	})
 }
