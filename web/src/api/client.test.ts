@@ -7,6 +7,7 @@ import {
   fetchWorkspaceEvents,
   fetchWorkspaceAnomalies,
   fetchVersion,
+  fetchProjectConfig,
   fetchComparisonRows,
   fetchProgressionLedgers,
   fetchProgressionMetrics,
@@ -17,6 +18,7 @@ import {
   mockWorkspaceDetails,
   mockAgenticMetricsLedgers,
   mockBuildInfo,
+  mockProjectConfig,
 } from './mockData';
 
 describe('Boundary API Client', () => {
@@ -599,6 +601,86 @@ describe('Boundary API Client', () => {
       const res = await fetchVersion();
       expect(res.isMock).toBe(true);
       expect(res.data).toEqual(mockBuildInfo);
+    });
+  });
+
+  describe('fetchProjectConfig', () => {
+    it('returns live project config on successful HTTP 200 response', async () => {
+      const liveConfig = {
+        project_name: 'CustomObserver',
+        prefixes: [
+          { prefix: 'FEAT', description: 'Feature tickets', ticket_type: 'feat' },
+        ],
+        workspaces_dir: 'custom_workspaces',
+        role_order: ['planner', 'coder'],
+        version: 'v1.0.0',
+      };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => liveConfig,
+      }));
+
+      const res = await fetchProjectConfig();
+      expect(res.isMock).toBe(false);
+      expect(res.data.project_name).toBe('CustomObserver');
+      expect(res.data.prefixes).toHaveLength(1);
+      expect(res.data.prefixes[0]?.prefix).toBe('FEAT');
+      expect(res.data.workspaces_dir).toBe('custom_workspaces');
+      expect(res.data.role_order).toEqual(['planner', 'coder']);
+      expect(res.data.version).toBe('v1.0.0');
+    });
+
+    it('falls back to mockProjectConfig on network error', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+
+      const res = await fetchProjectConfig();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockProjectConfig);
+    });
+
+    it('falls back to mockProjectConfig on 500 error response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Server Error',
+      }));
+
+      const res = await fetchProjectConfig();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockProjectConfig);
+    });
+
+    it('falls back to mockProjectConfig on 404 not found response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      }));
+
+      const res = await fetchProjectConfig();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockProjectConfig);
+    });
+
+    it('falls back to mockProjectConfig on DOMException abort/timeout', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('The operation was aborted', 'AbortError')));
+
+      const res = await fetchProjectConfig();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockProjectConfig);
+    });
+
+    it('falls back to mockProjectConfig on invalid JSON response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error('Malformed JSON');
+        },
+      }));
+
+      const res = await fetchProjectConfig();
+      expect(res.isMock).toBe(true);
+      expect(res.data).toEqual(mockProjectConfig);
     });
   });
 

@@ -734,4 +734,85 @@ describe('LandingPage View Component', () => {
     fireEvent.click(iterationsTooltipBtn);
     expect(getRowTickets()).toEqual(['AL-1', 'AL-2', 'AL-10']);
   });
+
+  it('renders observed project name in hero section when projectName is provided', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+      data: mockFleetSummary,
+      isMock: true,
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+      data: [...mockTicketComparisonRows],
+      isMock: true,
+    });
+
+    render(
+      <LandingPage
+        onNavigate={vi.fn()}
+        onSelectTicket={vi.fn()}
+        projectName="CustomObservedApp"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('landing-project-context')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Observed Project:')).toBeInTheDocument();
+    expect(screen.getByText('CustomObservedApp')).toBeInTheDocument();
+  });
+
+  it('renders observed project name in hero section when projectConfig is provided', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+      data: mockFleetSummary,
+      isMock: true,
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+      data: [...mockTicketComparisonRows],
+      isMock: true,
+    });
+
+    render(
+      <LandingPage
+        onNavigate={vi.fn()}
+        onSelectTicket={vi.fn()}
+        projectConfig={{
+          project_name: 'ConfiguredTarget',
+          prefixes: [],
+          workspaces_dir: 'workspaces',
+          role_order: [],
+          version: 'v1.0.0',
+        }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('landing-project-context')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('ConfiguredTarget')).toBeInTheDocument();
+  });
+
+  it('omits observed project context when project name is empty or omitted', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+      data: mockFleetSummary,
+      isMock: true,
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+      data: [...mockTicketComparisonRows],
+      isMock: true,
+    });
+
+    render(
+      <LandingPage
+        onNavigate={vi.fn()}
+        onSelectTicket={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('AgenticLens Observability')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('landing-project-context')).toBeNull();
+  });
 });

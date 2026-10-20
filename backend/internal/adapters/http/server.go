@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"net/http"
 	"time"
+
+	"agenticlens/internal/domain"
 )
 
 // Server wraps the HTTP multiplexer, server configuration, and filesystem access.
@@ -14,10 +16,16 @@ type Server struct {
 	workspacesDir string
 	staticFS      fs.FS
 	liveService   LiveServiceInterface
+	projectConfig domain.ProjectConfig
 }
 
-// NewServer creates a new HTTP Server instance configured with API routes and SPA static serving.
+// NewServer creates a new HTTP Server instance configured with API routes, default configuration, and SPA static serving.
 func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceInterface) *Server {
+	return NewServerWithConfig(workspacesDir, staticFS, domain.DefaultProjectConfig(), liveService...)
+}
+
+// NewServerWithConfig creates a new HTTP Server instance configured with custom ProjectConfig, API routes, and SPA static serving.
+func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.ProjectConfig, liveService ...LiveServiceInterface) *Server {
 	var ls LiveServiceInterface
 	if len(liveService) > 0 {
 		ls = liveService[0]
@@ -32,6 +40,7 @@ func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceI
 
 	// Register API endpoints
 	mux.HandleFunc("GET /api/version", VersionHandler())
+	mux.HandleFunc("GET /api/config", ConfigHandler(cfg, workspacesDir))
 	mux.HandleFunc("GET /api/workspaces", WorkspacesHandler(workspacesDir))
 	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(workspacesDir))
 	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(workspacesDir, hydrator))
@@ -55,6 +64,7 @@ func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceI
 		workspacesDir: workspacesDir,
 		staticFS:      staticFS,
 		liveService:   ls,
+		projectConfig: cfg,
 	}
 
 	s.httpServer = &http.Server{

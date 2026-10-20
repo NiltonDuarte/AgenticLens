@@ -363,7 +363,7 @@ func runServer(args []string) {
 		}
 	}
 
-	srv := adaptershttp.NewServer(workspacesDir, staticFS, liveService)
+	srv := adaptershttp.NewServerWithConfig(workspacesDir, staticFS, projCfg, liveService)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)

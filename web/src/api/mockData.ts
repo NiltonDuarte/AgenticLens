@@ -4,9 +4,11 @@ import type {
   BuildInfo,
   EventFact,
   FleetSummary,
+  ProjectConfigResponse,
   TicketComparisonRow,
   WorkspaceDetail,
 } from '../domain/types';
+import { CANONICAL_ROLE_ORDER } from '../domain/types';
 import type {
   LiveAnomalyAlert,
   LiveMessageFact,
@@ -18,6 +20,29 @@ export const mockBuildInfo: BuildInfo = {
   version: 'v0.1.0-dev',
   commit: 'abcdef1',
   build_date: '2026-10-18T10:00:00Z',
+};
+
+export const mockProjectConfig: ProjectConfigResponse = {
+  project_name: 'AgenticLens',
+  prefixes: [
+    {
+      prefix: 'AL',
+      description: 'Core AgenticLens development features, bugfixes, and technical initiatives',
+    },
+    {
+      prefix: 'GEN',
+      description: 'General multi-agent engineering tasks and ad-hoc untracked work',
+      ticket_type: 'chore',
+    },
+    {
+      prefix: 'PO',
+      description: 'Product Owner specifications, requirements definitions, and roadmap breakdowns',
+      ticket_type: 'docs',
+    },
+  ],
+  workspaces_dir: 'workspaces',
+  role_order: CANONICAL_ROLE_ORDER,
+  version: 'v0.1.0-dev',
 };
 
 export const mockAL2Anomalies: readonly Anomaly[] = [

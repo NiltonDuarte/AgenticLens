@@ -47,7 +47,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## In Progress
 
-(None)
+- **AL-40**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
+  - **Subsystem**: Adapters / HTTP / Presentation / Web / Domain / Tests
+  - **Phase**: Phase 7
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
 
 ---
 
@@ -68,14 +74,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
-
-- **AL-40**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
-  - **Subsystem**: Adapters / HTTP / Presentation / Web / Domain / Tests
-  - **Phase**: Phase 7
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
 
 - **AL-41**: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execution Bottlenecks
   - **Subsystem**: Tests / Adapters / Git / CLI / HTTP

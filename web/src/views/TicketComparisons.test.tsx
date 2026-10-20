@@ -429,4 +429,23 @@ describe('TicketComparisons View Component', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(fetchSpy).toHaveBeenLastCalledWith('all', undefined, undefined, undefined, ['AL']);
   });
+
+  it('renders configured prefixes in prefix dropdown even when no ledgers for those prefixes exist', async () => {
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: [],
+      isMock: false,
+    });
+
+    render(<TicketComparisons configuredPrefixes={['NEWFEATURE', 'PLATFORM']} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zero Comparison Workspaces Available')).toBeInTheDocument();
+    });
+
+    const prefixTrigger = screen.getByRole('combobox', { name: 'Prefix selector' });
+    fireEvent.click(prefixTrigger);
+
+    expect(screen.getByRole('checkbox', { name: 'NEWFEATURE' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'PLATFORM' })).toBeInTheDocument();
+  });
 });
