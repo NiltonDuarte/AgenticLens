@@ -531,10 +531,18 @@ func validateSessionID(id string) error {
 	if clean == "" {
 		return errors.New("empty session id")
 	}
+	if len(id) != len(clean) {
+		return fmt.Errorf("session id contains whitespace: %q", id)
+	}
 	lower := strings.ToLower(clean)
 	if strings.Contains(clean, "..") || strings.Contains(clean, "/") || strings.Contains(clean, "\\") ||
 		strings.Contains(lower, "%2e") || strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c") {
 		return fmt.Errorf("session id contains path traversal characters: %s", clean)
+	}
+	for _, r := range clean {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '_' && r != '-' && r != ':' && r != '.' {
+			return fmt.Errorf("session id contains invalid character %q: %s", r, clean)
+		}
 	}
 	return nil
 }

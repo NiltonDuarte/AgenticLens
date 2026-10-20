@@ -785,3 +785,226 @@ func TestLiveService_AnomalyAlertBroadcastStream(t *testing.T) {
 		}
 	}
 }
+
+func TestLiveService_CorruptedJSONAndMalformedPayloads(t *testing.T) {
+	dbPath := createTestDBFile(t)
+
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	now := time.Now().UnixMilli()
+
+	// Seed session
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, title, agent, model, time_created, time_updated)
+		VALUES ('s_corrupt_1', 'Corrupted payloads test', 'coder', 'gemini-3.8-flash', ?, ?)
+	`, now-10000, now-1000)
+	if err != nil {
+		t.Fatalf("seeding session: %v", err)
+	}
+
+	// 1. Message with invalid JSON syntax
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_bad_json', 's_corrupt_1', ?, ?, ?)
+	`, now-9000, now-9000, `{"role": "assistant", "tokens": {broken syntax`)
+	if err != nil {
+		t.Fatalf("seeding bad json message: %v", err)
+	}
+
+	// 2. Message with null tokens
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_null_tokens', 's_corrupt_1', ?, ?, ?)
+	`, now-8000, now-8000, `{"role": "assistant", "tokens": null}`)
+	if err != nil {
+		t.Fatalf("seeding null tokens message: %v", err)
+	}
+
+	// 3. Message with non-numeric tokens
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_str_tokens', 's_corrupt_1', ?, ?, ?)
+	`, now-7000, now-7000, `{"role": "assistant", "tokens": "invalid string type"}`)
+	if err != nil {
+		t.Fatalf("seeding string tokens message: %v", err)
+	}
+
+	// 4. Message with partial tokens (input only)
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_partial_tokens', 's_corrupt_1', ?, ?, ?)
+	`, now-6000, now-6000, `{"role": "assistant", "tokens": {"input": 45000}}`)
+	if err != nil {
+		t.Fatalf("seeding partial tokens message: %v", err)
+	}
+
+	// 5. Part with broken JSON syntax
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_bad_part', 's_corrupt_1', 'm_partial_tokens', ?, ?, ?)
+	`, now-5000, now-5000, `{"type": "tool", state:`)
+	if err != nil {
+		t.Fatalf("seeding bad part json: %v", err)
+	}
+
+	// 6. Part with null state
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_null_state', 's_corrupt_1', 'm_partial_tokens', ?, ?, ?)
+	`, now-4000, now-4000, `{"type": "tool", "tool": "bash", "state": null}`)
+	if err != nil {
+		t.Fatalf("seeding null state part: %v", err)
+	}
+
+	// 7. Part with missing fields
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_empty_part', 's_corrupt_1', 'm_partial_tokens', ?, ?, ?)
+	`, now-3000, now-3000, `{}`)
+	if err != nil {
+		t.Fatalf("seeding empty part: %v", err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 2000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	defer service.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Execution must not panic and must safely parse messages
+	trace, err := service.GetSessionTrace(ctx, "s_corrupt_1")
+	if err != nil {
+		t.Fatalf("GetSessionTrace failed on corrupted data: %v", err)
+	}
+
+	if len(trace.Messages) != 4 {
+		t.Fatalf("expected 4 messages, got %d", len(trace.Messages))
+	}
+
+	// Verify partial tokens message: input 45000 -> context 45000, total 45000
+	partialMsg := trace.Messages[3]
+	if partialMsg.InputTokens != 45000 {
+		t.Errorf("expected 45000 input tokens, got %d", partialMsg.InputTokens)
+	}
+	if partialMsg.ContextTokens != 45000 {
+		t.Errorf("expected 45000 context tokens, got %d", partialMsg.ContextTokens)
+	}
+	if partialMsg.TotalTokens != 45000 {
+		t.Errorf("expected 45000 total tokens, got %d", partialMsg.TotalTokens)
+	}
+
+	// Verify that anomalies were evaluated safely
+	if trace.Anomalies == nil {
+		t.Errorf("expected non-nil anomalies slice")
+	}
+}
+
+func TestLiveService_PathTraversalAndMaliciousSessionIDs(t *testing.T) {
+	dbPath := createTestDBFile(t)
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 2000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	defer service.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	hostileIDs := []string{
+		"../../etc/passwd",
+		"../../../var/log",
+		"s1/../../etc/shadow",
+		"s1/../s2",
+		"/etc/passwd",
+		"\\Windows\\System32",
+		"s1\x00inject",
+		"s1\nnewline",
+		"s1\rreturn",
+		"s1\tTab",
+		"' OR '1'='1",
+		"'; DROP TABLE session; --",
+		"\" OR \"1\"=\"1",
+		"",
+		"   ",
+	}
+
+	for _, hostileID := range hostileIDs {
+		t.Run("hostile_id_"+hostileID, func(t *testing.T) {
+			_, err := service.GetSessionTrace(ctx, hostileID)
+			if err == nil {
+				t.Fatalf("expected error for hostile session ID %q, but got nil", hostileID)
+			}
+			if !strings.Contains(err.Error(), "invalid session id") {
+				t.Errorf("expected invalid session id error for %q, got: %v", hostileID, err)
+			}
+		})
+	}
+}
+
+func TestLiveService_ZeroTokensAndZeroParts(t *testing.T) {
+	dbPath := createTestDBFile(t)
+
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	now := time.Now().UnixMilli()
+
+	// Seed session without messages or parts
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, title, agent, model, time_created, time_updated)
+		VALUES ('s_empty_1', 'Zero parts session', 'coder', 'gemini-3.8-flash', ?, ?)
+	`, now-5000, now-5000)
+	if err != nil {
+		t.Fatalf("seeding session: %v", err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 2000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	defer service.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	trace, err := service.GetSessionTrace(ctx, "s_empty_1")
+	if err != nil {
+		t.Fatalf("GetSessionTrace failed on empty session: %v", err)
+	}
+
+	if trace.TotalToolCalls != 0 {
+		t.Errorf("expected 0 total tool calls, got %d", trace.TotalToolCalls)
+	}
+	if trace.FailedToolCalls != 0 {
+		t.Errorf("expected 0 failed tool calls, got %d", trace.FailedToolCalls)
+	}
+	if len(trace.Messages) != 0 {
+		t.Errorf("expected 0 messages, got %d", len(trace.Messages))
+	}
+	if len(trace.RecentErrors) != 0 {
+		t.Errorf("expected 0 recent errors, got %d", len(trace.RecentErrors))
+	}
+	if len(trace.Anomalies) != 0 {
+		t.Errorf("expected 0 anomalies, got %d", len(trace.Anomalies))
+	}
+}

@@ -687,3 +687,583 @@ func TestCompositeEvaluateLiveAnomalies(t *testing.T) {
 		}
 	})
 }
+
+func TestConsecutiveToolErrorsRule_Adversarial(t *testing.T) {
+	t.Run("non-tool parts interleaved between tool errors do not break error streak", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_interleaved",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID:        "m1",
+					Role:      "assistant",
+					Timestamp: "2026-10-19T10:00:00Z",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p2", Type: "text", OutputSnippet: "thinking about next step"},
+						{ID: "p3", Type: "reasoning", OutputSnippet: "let me analyze the error"},
+						{ID: "p4", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p5", Type: "subtask", InputSnippet: "subtask info"},
+						{ID: "p6", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert despite non-tool parts in streak, got %d", len(alerts))
+		}
+		if alerts[0].Severity != domain.LiveSeverityHigh {
+			t.Errorf("expected HIGH severity, got %s", alerts[0].Severity)
+		}
+	})
+
+	t.Run("nil or whitespace tool name defaults safely to unknown", func(t *testing.T) {
+		emptyTool := "   "
+		trace := &domain.LiveTraceView{
+			SessionID: "s_nil_tool",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID:        "m1",
+					Role:      "assistant",
+					Timestamp: "2026-10-19T10:00:00Z",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: nil, IsError: true},
+						{ID: "p2", Type: "tool", ToolName: &emptyTool, IsError: true},
+						{ID: "p3", Type: "tool", ToolName: nil, IsError: true},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert, got %d", len(alerts))
+		}
+		if !strings.Contains(alerts[0].Message, "last failing tool: unknown") {
+			t.Errorf("expected message to mention unknown tool, got %s", alerts[0].Message)
+		}
+	})
+
+	t.Run("long error message is truncated to 256 characters in trigger event", func(t *testing.T) {
+		hugeError := strings.Repeat("F", 500)
+		trace := &domain.LiveTraceView{
+			SessionID: "s_long_err",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID:        "m1",
+					Role:      "assistant",
+					Timestamp: "2026-10-19T10:00:00Z",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p2", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p3", Type: "tool", ToolName: strPtr("bash"), IsError: true, ErrorMessage: &hugeError},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert, got %d", len(alerts))
+		}
+		// trigger_event format is "p3: <snippet up to 256 chars>"
+		expectedPrefix := "p3: "
+		if !strings.HasPrefix(alerts[0].TriggerEvent, expectedPrefix) {
+			t.Errorf("expected prefix %q, got %s", expectedPrefix, alerts[0].TriggerEvent)
+		}
+		snippet := strings.TrimPrefix(alerts[0].TriggerEvent, expectedPrefix)
+		if len(snippet) > 256 {
+			t.Errorf("expected snippet length <= 256, got %d", len(snippet))
+		}
+	})
+
+	t.Run("consecutive errors across multiple messages", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_multi_msg",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID:        "m1",
+					Role:      "assistant",
+					Timestamp: "2026-10-19T10:00:00Z",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p2", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+					},
+				},
+				{
+					ID:        "m2",
+					Role:      "assistant",
+					Timestamp: "2026-10-19T10:01:00Z",
+					Parts: []domain.LivePartFact{
+						{ID: "p3", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert across messages, got %d", len(alerts))
+		}
+		if alerts[0].Timestamp != "2026-10-19T10:01:00Z" {
+			t.Errorf("expected timestamp of latest failing message, got %s", alerts[0].Timestamp)
+		}
+	})
+
+	t.Run("post recovery single failure after streak reset does not alert", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_post_rec",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID: "m1",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p2", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p3", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p4", Type: "tool", ToolName: strPtr("bash"), IsError: false}, // recovery
+						{ID: "p5", Type: "tool", ToolName: strPtr("bash"), IsError: true},  // streak = 1
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		if len(alerts) != 0 {
+			t.Fatalf("expected 0 alerts after streak was reset by recovery, got %d", len(alerts))
+		}
+	})
+}
+
+func TestContextCeilingApproachRule_Adversarial(t *testing.T) {
+	t.Run("exact boundary: 159999 tokens on 200k ceiling produces 0 alerts", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_boundary",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 159_999},
+			},
+		}
+		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		if len(alerts) != 0 {
+			t.Fatalf("expected 0 alerts for 159999 tokens, got %d", len(alerts))
+		}
+	})
+
+	t.Run("exact boundary: 160000 tokens on 200k ceiling produces WARNING", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_boundary",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 160_000},
+			},
+		}
+		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert for 160000 tokens, got %d", len(alerts))
+		}
+		if alerts[0].Severity != domain.LiveSeverityWarning {
+			t.Errorf("expected WARNING, got %s", alerts[0].Severity)
+		}
+	})
+
+	t.Run("exact boundary: 199999 tokens on 200k ceiling produces WARNING", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_boundary",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 199_999},
+			},
+		}
+		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert, got %d", len(alerts))
+		}
+		if alerts[0].Severity != domain.LiveSeverityWarning {
+			t.Errorf("expected WARNING, got %s", alerts[0].Severity)
+		}
+	})
+
+	t.Run("exact boundary: 200000 tokens on 200k ceiling produces CRITICAL", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_boundary",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 200_000},
+			},
+		}
+		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert, got %d", len(alerts))
+		}
+		if alerts[0].Severity != domain.LiveSeverityCritical {
+			t.Errorf("expected CRITICAL, got %s", alerts[0].Severity)
+		}
+	})
+
+	t.Run("negative ceiling tokens safely falls back to default 200k ceiling", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_neg_ceil",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 160_000},
+			},
+		}
+		alerts := domain.EvaluateContextCeilingApproach(trace, -50_000)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert with fallback ceiling, got %d", len(alerts))
+		}
+		if alerts[0].Severity != domain.LiveSeverityWarning {
+			t.Errorf("expected WARNING with fallback ceiling, got %s", alerts[0].Severity)
+		}
+	})
+
+	t.Run("first breach message is selected for timestamp and triggerEvent", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_first_breach",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Timestamp: "2026-10-19T10:00:00Z", ContextTokens: 100_000},
+				{ID: "m2", Timestamp: "2026-10-19T10:05:00Z", ContextTokens: 170_000}, // First breach of 160k
+				{ID: "m3", Timestamp: "2026-10-19T10:10:00Z", ContextTokens: 190_000}, // Peak
+			},
+		}
+		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert, got %d", len(alerts))
+		}
+		if alerts[0].TriggerEvent != "m2" {
+			t.Errorf("expected trigger event m2 (first breach), got %s", alerts[0].TriggerEvent)
+		}
+		if alerts[0].Timestamp != "2026-10-19T10:05:00Z" {
+			t.Errorf("expected timestamp of first breach m2, got %s", alerts[0].Timestamp)
+		}
+	})
+}
+
+func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
+	t.Run("exact boundary for total tokens: 30000 produces 0 alerts, 30001 produces WARNING", func(t *testing.T) {
+		trace30k := &domain.LiveTraceView{
+			SessionID: "s_vel_b",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", TotalTokens: 30_000},
+			},
+		}
+		alerts30k := domain.EvaluateTokenVelocityRunaway(trace30k, 0, 0)
+		if len(alerts30k) != 0 {
+			t.Fatalf("expected 0 alerts for exactly 30000 tokens, got %d", len(alerts30k))
+		}
+
+		trace30k1 := &domain.LiveTraceView{
+			SessionID: "s_vel_b",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", TotalTokens: 30_001},
+			},
+		}
+		alerts30k1 := domain.EvaluateTokenVelocityRunaway(trace30k1, 0, 0)
+		if len(alerts30k1) != 1 {
+			t.Fatalf("expected 1 alert for 30001 tokens, got %d", len(alerts30k1))
+		}
+		if alerts30k1[0].Severity != domain.LiveSeverityWarning {
+			t.Errorf("expected WARNING, got %s", alerts30k1[0].Severity)
+		}
+	})
+
+	t.Run("exact boundary for total tokens: 60000 produces WARNING, 60001 produces CRITICAL", func(t *testing.T) {
+		trace60k := &domain.LiveTraceView{
+			SessionID: "s_vel_b",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", TotalTokens: 60_000},
+			},
+		}
+		alerts60k := domain.EvaluateTokenVelocityRunaway(trace60k, 0, 0)
+		if len(alerts60k) != 1 || alerts60k[0].Severity != domain.LiveSeverityWarning {
+			t.Fatalf("expected WARNING for exactly 60000 tokens, got %+v", alerts60k)
+		}
+
+		trace60k1 := &domain.LiveTraceView{
+			SessionID: "s_vel_b",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", TotalTokens: 60_001},
+			},
+		}
+		alerts60k1 := domain.EvaluateTokenVelocityRunaway(trace60k1, 0, 0)
+		if len(alerts60k1) != 1 || alerts60k1[0].Severity != domain.LiveSeverityCritical {
+			t.Fatalf("expected CRITICAL for 60001 tokens, got %+v", alerts60k1)
+		}
+	})
+
+	t.Run("exact boundary for context delta: 40000 produces 0 alerts, 40001 produces WARNING", func(t *testing.T) {
+		trace40k := &domain.LiveTraceView{
+			SessionID: "s_vel_d",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 10_000, TotalTokens: 5_000},
+				{ID: "m2", Role: "assistant", ContextTokens: 50_000, TotalTokens: 5_000}, // delta 40k
+			},
+		}
+		alerts40k := domain.EvaluateTokenVelocityRunaway(trace40k, 0, 0)
+		if len(alerts40k) != 0 {
+			t.Fatalf("expected 0 alerts for exactly 40k delta, got %d", len(alerts40k))
+		}
+
+		trace40k1 := &domain.LiveTraceView{
+			SessionID: "s_vel_d",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 10_000, TotalTokens: 5_000},
+				{ID: "m2", Role: "assistant", ContextTokens: 50_001, TotalTokens: 5_000}, // delta 40001
+			},
+		}
+		alerts40k1 := domain.EvaluateTokenVelocityRunaway(trace40k1, 0, 0)
+		if len(alerts40k1) != 1 {
+			t.Fatalf("expected 1 alert for 40001 delta, got %d", len(alerts40k1))
+		}
+		if alerts40k1[0].Severity != domain.LiveSeverityWarning {
+			t.Errorf("expected WARNING, got %s", alerts40k1[0].Severity)
+		}
+	})
+
+	t.Run("exact boundary for context delta: 80000 produces WARNING, 80001 produces CRITICAL", func(t *testing.T) {
+		trace80k := &domain.LiveTraceView{
+			SessionID: "s_vel_d",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 10_000, TotalTokens: 5_000},
+				{ID: "m2", Role: "assistant", ContextTokens: 90_000, TotalTokens: 5_000}, // delta 80k
+			},
+		}
+		alerts80k := domain.EvaluateTokenVelocityRunaway(trace80k, 0, 0)
+		if len(alerts80k) != 1 || alerts80k[0].Severity != domain.LiveSeverityWarning {
+			t.Fatalf("expected WARNING for 80k delta, got %+v", alerts80k)
+		}
+
+		trace80k1 := &domain.LiveTraceView{
+			SessionID: "s_vel_d",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m1", Role: "assistant", ContextTokens: 10_000, TotalTokens: 5_000},
+				{ID: "m2", Role: "assistant", ContextTokens: 90_001, TotalTokens: 5_000}, // delta 80001
+			},
+		}
+		alerts80k1 := domain.EvaluateTokenVelocityRunaway(trace80k1, 0, 0)
+		if len(alerts80k1) != 1 || alerts80k1[0].Severity != domain.LiveSeverityCritical {
+			t.Fatalf("expected CRITICAL for 80001 delta, got %+v", alerts80k1)
+		}
+	})
+
+	t.Run("user and system messages are ignored for velocity checks", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_roles",
+			Messages: []domain.LiveMessageFact{
+				{ID: "m_user", Role: "user", TotalTokens: 100_000, ContextTokens: 100_000},
+				{ID: "m_sys", Role: "system", TotalTokens: 100_000, ContextTokens: 100_000},
+			},
+		}
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		if len(alerts) != 0 {
+			t.Fatalf("expected 0 alerts for non-assistant roles, got %d", len(alerts))
+		}
+	})
+}
+
+func TestToolThrashingRule_Adversarial(t *testing.T) {
+	t.Run("two distinct tools thrashing simultaneously are sorted alphabetically", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_dual_thrash",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID: "m1",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("read"), IsError: true},
+						{ID: "p2", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p3", Type: "tool", ToolName: strPtr("read"), IsError: true},
+						{ID: "p4", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p5", Type: "tool", ToolName: strPtr("read"), IsError: true},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateToolThrashing(trace)
+		// "read" has 3 failures in 5 calls (WARNING)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert for read thrashing, got %d", len(alerts))
+		}
+		if alerts[0].RuleName != domain.RuleToolThrashing {
+			t.Errorf("expected ToolThrashing, got %s", alerts[0].RuleName)
+		}
+		if !strings.Contains(alerts[0].Message, "tool read") {
+			t.Errorf("expected message to mention tool read, got %s", alerts[0].Message)
+		}
+	})
+
+	t.Run("nil tool name in thrashing trace defaults to unknown", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_nil_thrash",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID: "m1",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: nil, IsError: true},
+						{ID: "p2", Type: "tool", ToolName: nil, IsError: true},
+						{ID: "p3", Type: "tool", ToolName: nil, IsError: true},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateToolThrashing(trace)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert for unknown tool thrashing, got %d", len(alerts))
+		}
+		if !strings.Contains(alerts[0].Message, "unknown") {
+			t.Errorf("expected message to identify unknown tool, got %s", alerts[0].Message)
+		}
+	})
+
+	t.Run("fewer than 3 tool calls total produces 0 alerts", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_few_calls",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID: "m1",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p2", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateToolThrashing(trace)
+		if len(alerts) != 0 {
+			t.Fatalf("expected 0 alerts for 2 calls, got %d", len(alerts))
+		}
+	})
+}
+
+func TestSortLiveAnomalies_MultiKeyOrdering(t *testing.T) {
+	alerts := []domain.LiveAnomalyAlert{
+		{
+			SessionID:    "ses_b",
+			RuleName:     domain.RuleTokenVelocityRunaway,
+			Severity:     domain.LiveSeverityWarning,
+			Timestamp:    "2026-10-19T10:00:00Z",
+			TriggerEvent: "turn 1",
+		},
+		{
+			SessionID:    "ses_a",
+			RuleName:     domain.RuleConsecutiveToolErrors,
+			Severity:     domain.LiveSeverityCritical,
+			Timestamp:    "2026-10-19T10:01:00Z",
+			TriggerEvent: "part 1",
+		},
+		{
+			SessionID:    "ses_c",
+			RuleName:     domain.RuleContextCeilingApproach,
+			Severity:     domain.LiveSeverityHigh,
+			Timestamp:    "2026-10-19T10:02:00Z",
+			TriggerEvent: "turn 2",
+		},
+		{
+			SessionID:    "ses_d",
+			RuleName:     domain.RuleConsecutiveToolErrors,
+			Severity:     domain.LiveSeverityWarning,
+			Timestamp:    "2026-10-19T10:00:00Z",
+			TriggerEvent: "part 2",
+		},
+		{
+			SessionID:    "ses_a",
+			RuleName:     domain.RuleConsecutiveToolErrors,
+			Severity:     domain.LiveSeverityWarning,
+			Timestamp:    "2026-10-19T10:05:00Z", // Newer timestamp
+			TriggerEvent: "part 3",
+		},
+	}
+
+	domain.SortLiveAnomalies(alerts)
+
+	// 1. First alert must be CRITICAL
+	if alerts[0].Severity != domain.LiveSeverityCritical {
+		t.Fatalf("expected alerts[0] to be CRITICAL, got %s", alerts[0].Severity)
+	}
+
+	// 2. Second alert must be HIGH
+	if alerts[1].Severity != domain.LiveSeverityHigh {
+		t.Fatalf("expected alerts[1] to be HIGH, got %s", alerts[1].Severity)
+	}
+
+	// 3. Third alert must be WARNING with RuleConsecutiveToolErrors and newer timestamp (10:05:00Z)
+	if alerts[2].Severity != domain.LiveSeverityWarning || alerts[2].Timestamp != "2026-10-19T10:05:00Z" {
+		t.Errorf("expected alerts[2] to be WARNING with newer timestamp, got %+v", alerts[2])
+	}
+
+	// 4. Fourth alert must be WARNING with RuleConsecutiveToolErrors (10:00:00Z)
+	if alerts[3].RuleName != domain.RuleConsecutiveToolErrors {
+		t.Errorf("expected alerts[3] to be ConsecutiveToolErrors, got %s", alerts[3].RuleName)
+	}
+
+	// 5. Fifth alert must be TokenVelocityRunaway (RuleName ascending after ConsecutiveToolErrors)
+	if alerts[4].RuleName != domain.RuleTokenVelocityRunaway {
+		t.Errorf("expected alerts[4] to be TokenVelocityRunaway, got %s", alerts[4].RuleName)
+	}
+}
+
+func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing.T) {
+	t.Run("nested sub-sessions anomalies are collected recursively", func(t *testing.T) {
+		grandchild := &domain.LiveSessionNode{
+			ID: "ses_gc",
+			Anomalies: []domain.LiveAnomalyAlert{
+				{SessionID: "ses_gc", RuleName: "GCRule", Severity: domain.LiveSeverityWarning, Timestamp: "2026-10-19T10:00:00Z"},
+			},
+		}
+		child := &domain.LiveSessionNode{
+			ID: "ses_child",
+			Anomalies: []domain.LiveAnomalyAlert{
+				{SessionID: "ses_child", RuleName: "ChildRule", Severity: domain.LiveSeverityHigh, Timestamp: "2026-10-19T10:01:00Z"},
+			},
+			SubSessions: []*domain.LiveSessionNode{grandchild, nil},
+		}
+		root := &domain.LiveSessionNode{
+			ID: "ses_root",
+			Anomalies: []domain.LiveAnomalyAlert{
+				{SessionID: "ses_root", RuleName: "RootRule", Severity: domain.LiveSeverityCritical, Timestamp: "2026-10-19T10:02:00Z"},
+			},
+			SubSessions: []*domain.LiveSessionNode{child},
+		}
+
+		tree := &domain.LiveSessionTree{
+			RootSessions: []*domain.LiveSessionNode{root, nil},
+		}
+
+		alerts := domain.EvaluateLiveAnomalies(tree, nil)
+		if len(alerts) != 3 {
+			t.Fatalf("expected 3 alerts collected recursively, got %d", len(alerts))
+		}
+		if alerts[0].Severity != domain.LiveSeverityCritical {
+			t.Errorf("expected CRITICAL first, got %s", alerts[0].Severity)
+		}
+		if alerts[1].Severity != domain.LiveSeverityHigh {
+			t.Errorf("expected HIGH second, got %s", alerts[1].Severity)
+		}
+		if alerts[2].Severity != domain.LiveSeverityWarning {
+			t.Errorf("expected WARNING third, got %s", alerts[2].Severity)
+		}
+	})
+
+	t.Run("exact duplicate alerts are deduplicated", func(t *testing.T) {
+		dupAlert := domain.LiveAnomalyAlert{
+			SessionID:    "s_dup",
+			RuleName:     domain.RuleContextCeilingApproach,
+			Severity:     domain.LiveSeverityCritical,
+			Timestamp:    "2026-10-19T10:00:00Z",
+			TriggerEvent: "m1",
+		}
+
+		tree := &domain.LiveSessionTree{
+			ActiveAnomalies: []domain.LiveAnomalyAlert{dupAlert, dupAlert},
+			RootSessions: []*domain.LiveSessionNode{
+				{
+					ID:        "s_dup",
+					Anomalies: []domain.LiveAnomalyAlert{dupAlert},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateLiveAnomalies(tree, nil)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 deduplicated alert, got %d", len(alerts))
+		}
+	})
+}

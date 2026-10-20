@@ -114,11 +114,26 @@ func WriteProgressionResponse(w http.ResponseWriter, metrics []domain.TimeBucket
 
 // WriteLiveSessionTreeResponse writes a domain.LiveSessionTree as JSON.
 func WriteLiveSessionTreeResponse(w http.ResponseWriter, tree domain.LiveSessionTree) {
+	if tree.RootSessions == nil {
+		tree.RootSessions = []*domain.LiveSessionNode{}
+	}
+	if tree.ActiveAnomalies == nil {
+		tree.ActiveAnomalies = []domain.LiveAnomalyAlert{}
+	}
 	WriteJSON(w, http.StatusOK, tree)
 }
 
 // WriteLiveTraceResponse writes a domain.LiveTraceView as JSON.
 func WriteLiveTraceResponse(w http.ResponseWriter, trace domain.LiveTraceView) {
+	if trace.Messages == nil {
+		trace.Messages = []domain.LiveMessageFact{}
+	}
+	if trace.RecentErrors == nil {
+		trace.RecentErrors = []domain.LivePartFact{}
+	}
+	if trace.Anomalies == nil {
+		trace.Anomalies = []domain.LiveAnomalyAlert{}
+	}
 	WriteJSON(w, http.StatusOK, trace)
 }
 

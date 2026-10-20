@@ -651,3 +651,65 @@ func TestLiveStreamHandler_AnomalyAlertBroadcast(t *testing.T) {
 		t.Error("expected to receive event: anomaly_alert")
 	}
 }
+
+func TestLiveHandlers_NilSlicesSerializeAsEmptyArrays(t *testing.T) {
+	// Service returns uninitialized nil slices
+	mock := &mockLiveService{
+		tree: domain.LiveSessionTree{
+			RootSessions:        nil,
+			ActiveAnomalies:     nil,
+			TotalActiveSessions: 0,
+		},
+		trace: domain.LiveTraceView{
+			SessionID:    "s_nil_slices",
+			Messages:     nil,
+			RecentErrors: nil,
+			Anomalies:    nil,
+		},
+		events: make(chan live.LiveEvent, 1),
+	}
+
+	ts := setupLiveTestServer(mock)
+	defer ts.Close()
+
+	// 1. Session tree endpoint
+	respTree, err := http.Get(ts.URL + "/api/live/sessions")
+	if err != nil {
+		t.Fatalf("sessions request failed: %v", err)
+	}
+	defer respTree.Body.Close()
+
+	var rawTree map[string]interface{}
+	if err := json.NewDecoder(respTree.Body).Decode(&rawTree); err != nil {
+		t.Fatalf("failed decoding tree: %v", err)
+	}
+
+	if rawTree["root_sessions"] == nil {
+		t.Errorf("expected root_sessions to be non-nil [] array, got nil")
+	}
+	if rawTree["active_anomalies"] == nil {
+		t.Errorf("expected active_anomalies to be non-nil [] array, got nil")
+	}
+
+	// 2. Session trace endpoint
+	respTrace, err := http.Get(ts.URL + "/api/live/sessions/s_nil_slices/trace")
+	if err != nil {
+		t.Fatalf("trace request failed: %v", err)
+	}
+	defer respTrace.Body.Close()
+
+	var rawTrace map[string]interface{}
+	if err := json.NewDecoder(respTrace.Body).Decode(&rawTrace); err != nil {
+		t.Fatalf("failed decoding trace: %v", err)
+	}
+
+	if rawTrace["messages"] == nil {
+		t.Errorf("expected messages to be non-nil [] array, got nil")
+	}
+	if rawTrace["recent_errors"] == nil {
+		t.Errorf("expected recent_errors to be non-nil [] array, got nil")
+	}
+	if rawTrace["anomalies"] == nil {
+		t.Errorf("expected anomalies to be non-nil [] array, got nil")
+	}
+}
