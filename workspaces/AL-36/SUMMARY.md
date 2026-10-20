@@ -3,67 +3,76 @@
 ## Summary of Completed Work
 
 ### Domain Core Layer (`backend/internal/domain`)
-- **FCIS Purity Maintained**: Retained strict isolation in `backend/internal/domain/config.go` with zero disk traversal, zero imports of filesystem or outer adapters, and zero knowledge of storage layers.
-- **Value Semantics**: Domain configuration models (`ProjectConfig`, `TicketPrefix`, `TicketConfig`, `WorkspacesConfig`, `DatabaseConfig`, `LiveConfig`, `AnomalyThresholdsConfig`, `CodeMetricsConfig`, `RoleMappings`) serve as the typed foundation for configuration generation.
+- **Eliminated Production `DefaultProjectConfig`**: Excised `DefaultProjectConfig()` completely from production Go domain and adapters. The application no longer relies on hardcoded domain defaults in production; if configuration is absent, it directs users to run `agentic-lens init`. Test suites retain isolated test configuration helpers.
+- **Dynamic Workspace Artifact Models**: Added `WorkspaceArtifactConfig` (`Path`, `Title`, `Description`) to `WorkspacesConfig`. Added `TicketArtifactItem` (`Path`, `Title`, `Description`, `Content`) and updated `TicketArtifacts.Items` to allow dynamic discovery and rendering of any configured workspace documents while retaining backward-compatible pointer fields.
+- **Value Semantics & FCIS Isolation**: Maintained pure mathematical models in `internal/domain` with zero disk, network, or clock side effects.
 
 ### Adapters & Boundary Shell Layer (`backend/internal/adapters`)
+- **Configuration Loader (`backend/internal/adapters/config/loader.go`)**:
+  - Added support for loading `workspaces.artifacts` lists from `.agenticlens-config.yaml`.
+  - Defined `ErrConfigNotFound` returned when no configuration manifest exists in the repository tree.
 - **Configuration Writer Adapter (`backend/internal/adapters/config/writer.go`)**:
-  - Implemented `GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error)` producing cleanly formatted and commented `.agenticlens-config.yaml` manifests matching repo standards.
-  - Implemented `GenerateDefaultYAML` merging flag overrides onto standard domain defaults.
-  - Implemented `WriteConfigFile` ensuring atomic writes via temporary file and atomic rename, with typed collision detection returning `*FileExistsError` wrapping `ErrFileExists` when `--force` is omitted.
-  - Implemented `WriteConfig` convenience helper.
+  - Added YAML formatting for `workspaces.artifacts` with descriptive comments.
+  - Generates atomic configuration files with collision detection.
+- **Filesystem Repository Reader (`backend/internal/adapters/repository.go`)**:
+  - Updated `ReadTicketArtifacts` to accept configured artifact definitions.
+  - Implemented strict relative path containment checks preventing directory traversal attacks.
+- **HTTP Server & Detail Handler (`backend/internal/adapters/http/`)**:
+  - Wired configured artifact definitions through `Server` and `WorkspaceDetailHandler`.
+  - `GET /api/workspaces/{ticketId}` delivers dynamically populated artifact items.
 
 ### CLI Application Layer (`backend/cmd/agentic-lens`)
-- **CLI `init` Subcommand (`backend/cmd/agentic-lens/main.go`)**:
-  - Added `init` subcommand parsing `--project-name`, `--workspaces`, `--db-path`, `--src-folders`, `--ticket-prefix`, `--output`, `--force`, and `--dry-run`.
-  - Wired `init` into usage text and help commands.
-  - Returns informative error when configuration exists and `--force` is omitted; prints configuration preview when `--dry-run` is active.
+- **Strict CLI `init` Subcommand**:
+  - Required explicit flags `--project-name`, `--src-folders`, and `--ticket-prefix` with no silent fallbacks.
+  - Terminating with exit code 1 if any required flags are omitted.
+  - Added `--force` overwrite and `--dry-run` inspection flags.
+- **Missing Configuration Guardrails**:
+  - Commands (`server`, `generate`, root scanner) check for configuration presence and fail cleanly with exit code 1 when missing, instructing the user:
+    `Project configuration not found. Please run 'agentic-lens init' to initialize the project.`
 
-### Shell Automation & Downloader Engine (`scripts/`)
-- **Automated Artifact Downloader (`scripts/download-agentic-lens.sh`)**:
-  - Implemented POSIX shell script detecting host OS (`linux`, `darwin`, `windows`) and architecture (`amd64`, `arm64`).
-  - Downloads precompiled release archives from GitHub Releases via `gh` CLI or `curl`/`wget` fallbacks.
-  - Strict release-only mandate: zero source compilation or local build toolchains required in target repositories.
-  - Unpacks binary into target destination directory, sets executable permissions (`chmod +x`), and enforces a protective `.gitignore` (`*` and `!.gitignore`) to prevent accidental git tracking of downloaded executables.
-  - Supports `--local-bin` for local testing and `--dry-run` for environment checks.
+### Setup Skill & Shell Automation (`.opencode/skills/agentic-lens-setup`, `scripts/`)
+- **Skill Specification (`SKILL.md`)**:
+  - Authored complete four-step setup skill with precompiled binary retrieval, interactive interview, capability explainer, and agent guidelines review.
+  - Enforced Mandatory User Confirmation Gate before modifying `AGENTS.md`.
+  - Configured canonical release repository: `https://github.com/NiltonDuarte/AgenticLens/releases`.
+  - Documented strict `init` flag requirements and updated `--dry-run` examples.
+- **Artifact Downloader Script (`scripts/download-agentic-lens.sh` & `download.sh`)**:
+  - Detects OS (`linux`, `darwin`, `windows`) and architecture (`amd64`, `arm64`).
+  - Downloads precompiled binaries from `https://github.com/NiltonDuarte/AgenticLens/releases`.
+  - Strict release-only mandate: zero source compilation or build toolchains required.
+  - Co-locates protective `.gitignore` (`*` and `!.gitignore`) in destination binary directory.
 - **Automated Verification Suite (`scripts/test-setup.sh`)**:
-  - Validates OS/arch resolution, artifact extraction, protective `.gitignore` presence, binary version JSON output, configuration generation, collision prevention, dry-run mode, and zero emojis compliance.
+  - Automated tests covering platform detection, binary extraction, protective `.gitignore`, binary self-test (`version --json`), strict `init` flags, and zero emojis.
 
-### Setup Skill & Agent Integration (`.opencode/skills/agentic-lens-setup`)
-- **Skill Manifest (`SKILL.md`)**:
-  - Authoring structured four-step onboarding workflow: precompiled release retrieval, interactive parameter interview, platform capability overview, and agent guidelines review.
-  - Documents CLI commands (`init`, `generate`, `scan`, `server`, `version`), live observability, and web dashboard features.
-  - Enforces Mandatory User Confirmation Gate before modifying `AGENTS.md` or any instruction files.
-- **Co-Located Scripts & Gitignore**:
-  - Co-located executable script `scripts/download.sh`.
-  - Co-located protective `bin/.gitignore`.
+### Presentation Layer (`web/`)
+- **Dynamic Artifact Tabs (`web/src/components/ArtifactViewer.tsx`)**:
+  - Replaced static contract/summary union with dynamic tabs driven by `artifacts.items`.
+  - Displays artifact title, empty badge for unpopulated files, Rich Document (markdown) and Raw Source views, and clipboard copy action.
+  - Preserved fallback support for legacy workspaces.
 
 ### Quality & Verification
-- **Unit & Boundary Tests**:
-  - `backend/internal/adapters/config/writer_test.go`: Default YAML generation, round-trip unmarshaling, flag overrides, collision detection, permission handling, and edge cases (whitespace, special chars).
-  - `backend/cmd/agentic-lens/main_test.go`: CLI `init` tests covering defaults, custom flags, collision safety, `--force`, `--dry-run`, paths with spaces, invalid flags, and read-only directories.
-- **Integration Test Script**:
-  - `scripts/test-setup.sh` passing all 6 test stages and edge cases.
-- **Quality Gates**:
-  - `make check`: PASS (`go vet` and git diff check clean).
-  - `make test`: PASS (race detector clean across backend and all frontend tests passing).
-  - `make build`: PASS (frontend bundle and multi-platform Go binaries compiled).
-  - Zero `any` or `interface{}` across Go backend.
-  - Zero emojis across all code, tests, scripts, and documentation.
+- Unit and boundary tests passing across backend packages with race detector (`go test -race ./...`).
+- Frontend test suite passing across 28 test files and 579 unit tests (`npm test`).
+- Automated setup verification script passing all stages (`scripts/test-setup.sh`).
+- Zero `any` or `interface{}` across Go and TypeScript.
+- Zero emojis across all source code, comments, docstrings, shell scripts, CLI output, and markdown artifacts.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 42m 55s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 73.2k tokens (37% of 200k healthy ceiling, 0 compactions) | Subagents peak 125.8k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 18.0%, Coder 54.5%, Tester 13.9%, Reviewer 13.5%
-- **Subagent Turn Velocity & Thrashing:** 44.0 avg turns/run (peak: 66 turns) | Planner 46.0, Coder 66.0, Tester 36.0, Reviewer 28.0
-- **Test-to-Production Code Ratio:** 0.5:1 (+600 test lines / +1,151 prod lines)
-- **Code Delivered:** +1,751 / -0 lines across 7 code files (excluding docs)
-- **Reasoning Effort:** 46,896 reasoning tokens (44.8% of generated output)
-- **Tool Health & Self-Correction:** 237 tool calls (4 self-corrections, 98.3% success rate)
+- **Software Development Life Cycle Iterations:** 2
+- **Active Agent Duration:** 3h 32m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 125.2k tokens (63% of 200k healthy ceiling, 1 compactions) | Subagents peak 167.8k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 9.2%, Coder 58.7%, Tester 16.2%, Reviewer 15.9%
+- **Subagent Turn Velocity & Thrashing:** 63.8 avg turns/run (peak: 251 turns) | Planner 45.5, Coder 114.0, Tester 45.7, Reviewer 44.0
+- **Test-to-Production Code Ratio:** 0.8:1 (+1,389 test lines / +1,639 prod lines)
+- **Code Delivered:** +3,042 / -244 lines across 26 code files (excluding docs)
+- **Reasoning Effort:** 154,337 reasoning tokens (50.8% of generated output)
+- **Tool Health & Self-Correction:** 813 tool calls (11 self-corrections, 98.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 3 execution anomalies detected (1 CRITICAL, 2 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.6k tokens) — Context tokens reached 160.6k in turn 123 (session: ses_ea55a7c26ffeUTDz3pxCpRk3FO), breaching 160k critical ceiling
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+78.8k tokens) — Context tokens surged by 78.8k tokens in turn 58 (session: ses_ea6034119ffeePRUW9tfGAJJFN, total: 78.8k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+73.4k tokens) — Context tokens surged by 73.4k tokens in turn 139 (session: ses_ea55a7c26ffeUTDz3pxCpRk3FO, total: 73.4k tokens, threshold: 40000)
 
 ### Agentic Execution Metrics
 
@@ -72,15 +81,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 189,387 | 12,774 | 1,301,008 | 87.3% | 61.0k | HEALTHY | $0.34 |
-| **coder** | 1 | 659,460 | 22,201 | 5,090,821 | 88.5% | 125.8k | ELEVATED | $1.04 |
-| **tester** | 1 | 200,517 | 5,844 | 1,241,607 | 86.1% | 60.7k | HEALTHY | $0.27 |
-| **reviewer** | 1 | 201,409 | 3,953 | 909,737 | 81.9% | 65.4k | HEALTHY | $0.26 |
-| **general** | 1 | 415,993 | 13,109 | 1,773,099 | 81.0% | 73.2k | HEALTHY | $0.51 |
-| **Total** | **5** | **1,666,766** | **57,881** | **10,316,272** | **86.1%** | **125.8k** | **ELEVATED** | **$2.42** |
+| **planner** | 2 | 435,716 | 18,700 | 2,747,991 | 86.3% | 61.0k | HEALTHY | $0.71 |
+| **coder** | 3 | 2,495,486 | 69,473 | 27,603,374 | 91.7% | 167.8k | ELEVATED | $4.49 |
+| **tester** | 3 | 786,802 | 22,334 | 6,982,349 | 89.9% | 101.7k | ELEVATED | $1.24 |
+| **reviewer** | 3 | 818,812 | 12,993 | 6,043,501 | 88.1% | 97.2k | HEALTHY | $1.22 |
+| **general** | 1 | 1,872,625 | 26,222 | 5,154,525 | 73.4% | 125.2k | ELEVATED | $1.93 |
+| **Total** | **12** | **6,409,441** | **149,722** | **48,531,740** | **88.3%** | **167.8k** | **ELEVATED** | **$9.59** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 5 | 1,666,766 | 57,881 | 10,316,272 | 86.1% | $2.42 |
-| **Total** | **5** | **1,666,766** | **57,881** | **10,316,272** | **86.1%** | **$2.42** |
+| **gemini-3.8-flash** | 12 | 6,409,441 | 149,722 | 48,531,740 | 88.3% | $9.59 |
+| **Total** | **12** | **6,409,441** | **149,722** | **48,531,740** | **88.3%** | **$9.59** |
