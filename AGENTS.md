@@ -11,7 +11,7 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
 ### Rules
 1. **Mandatory Ticket Identifier**:
    - A ticket ID is strictly required before starting any work. Agents must never begin work without it.
-   - If missing from the initial request, the agent must prompt the user or immediately generate a `GEN-#` ticket (using configured prefixes from `.agenticlens/config.yaml`, fallback: `GEN`). Formats: `<PREFIX>-<ID>` (e.g. `AL-42`, `GEN-42`, or `PO-2`).
+   - If missing from the initial request, the agent must prompt the user or immediately generate a `GEN-#` ticket (using configured prefixes from `.agenticlens-config.yaml`, fallback: `GEN`). Formats: `<PREFIX>-<ID>` (e.g. `AL-42`, `GEN-42`, or `PO-2`).
 2. **Single-Ticket Exclusivity**:
    - Agents are strictly prohibited from working on more than one ticket at a time.
    - Once work begins on a ticket, the agent is locked to that ticket. Agents must refuse any request to switch to another ticket or work on multiple tickets simultaneously within the same session.

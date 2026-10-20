@@ -72,6 +72,170 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Errorf("expected %s, got %s", wsDir, resolved)
 		}
 	})
+
+	t.Run("root yaml config file resolution", func(t *testing.T) {
+		tempDir := t.TempDir()
+		wsDir := filepath.Join(tempDir, "root_yaml_workspaces")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		cfgContent := "workspaces:\n  dir: root_yaml_workspaces\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != wsDir {
+			t.Errorf("expected %s, got %s", wsDir, resolved)
+		}
+	})
+
+	t.Run("root yml config file resolution", func(t *testing.T) {
+		tempDir := t.TempDir()
+		wsDir := filepath.Join(tempDir, "root_yml_workspaces")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		cfgContent := "workspaces:\n  dir: root_yml_workspaces\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != wsDir {
+			t.Errorf("expected %s, got %s", wsDir, resolved)
+		}
+	})
+
+	t.Run("root json config file resolution", func(t *testing.T) {
+		tempDir := t.TempDir()
+		wsDir := filepath.Join(tempDir, "root_json_workspaces")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		cfgContent := `{"workspaces": {"dir": "root_json_workspaces"}}`
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != wsDir {
+			t.Errorf("expected %s, got %s", wsDir, resolved)
+		}
+	})
+
+	t.Run("nested execution ascends to root config file resolution", func(t *testing.T) {
+		tempDir := t.TempDir()
+		wsDir := filepath.Join(tempDir, "deep_root_ws")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		cfgContent := "workspaces:\n  dir: deep_root_ws\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		nestedDir := filepath.Join(tempDir, "sub1", "sub2", "sub3")
+		if err := os.MkdirAll(nestedDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(nestedDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != wsDir {
+			t.Errorf("expected %s, got %s", wsDir, resolved)
+		}
+	})
+
+	t.Run("nested execution ascends to legacy config file resolution", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		wsDir := filepath.Join(tempDir, "deep_legacy_ws")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		cfgContent := "workspaces:\n  dir: deep_legacy_ws\n"
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		nestedDir := filepath.Join(tempDir, "sub1", "sub2", "sub3")
+		if err := os.MkdirAll(nestedDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(nestedDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != wsDir {
+			t.Errorf("expected %s, got %s", wsDir, resolved)
+		}
+	})
+
+	t.Run("root config workspaces dir overrides legacy config workspaces dir", func(t *testing.T) {
+		tempDir := t.TempDir()
+		legacyDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(legacyDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		rootWsDir := filepath.Join(tempDir, "prio_root_ws")
+		legacyWsDir := filepath.Join(tempDir, "prio_legacy_ws")
+		if err := os.MkdirAll(rootWsDir, 0755); err != nil || os.MkdirAll(legacyWsDir, 0755) != nil {
+			t.Fatal("failed creating workspaces dirs")
+		}
+
+		rootCfg := "workspaces:\n  dir: prio_root_ws\n"
+		legacyCfg := "workspaces:\n  dir: prio_legacy_ws\n"
+
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(rootCfg), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(legacyDir, "config.yaml"), []byte(legacyCfg), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != rootWsDir {
+			t.Errorf("expected root ws dir %s, got %s", rootWsDir, resolved)
+		}
+	})
 }
 
 func TestScanWorkspaces(t *testing.T) {
@@ -1511,6 +1675,83 @@ role_mappings:
 			t.Errorf("expected raw role build in Facts, got %s", scanned.Facts.Invocations[0].Role)
 		}
 	})
+}
+
+func TestWorkspaceLoad_ConfiguredRoleMappings_RootConfig(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// 1. Create root .agenticlens-config.yaml with custom role mappings
+	cfgContent := `
+workspaces:
+  dir: root_workspaces
+role_mappings:
+  sys-engineer: coder
+  lead-tester: tester
+`
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Create workspace with agentic_metrics.json containing raw roles 'sys-engineer' and 'lead-tester'
+	wsDir := filepath.Join(tempDir, "root_workspaces", "AL-38")
+	if err := os.MkdirAll(wsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	factJSON := `{
+		"ticket_id": "AL-38",
+		"ticket_title": "Root Config Role Mapping Test",
+		"updated_at": "2026-10-20T12:00:00Z",
+		"invocations": [
+			{
+				"id": "ses-eng",
+				"role": "sys-engineer",
+				"model": "claude-3-sonnet",
+				"cost_usd": 1.50,
+				"duration_seconds": 120
+			},
+			{
+				"id": "ses-test",
+				"role": "lead-tester",
+				"model": "gpt-4o",
+				"cost_usd": 0.80,
+				"duration_seconds": 60
+			}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatal(err)
+	}
+
+	workspacesRoot := adapters.ResolveWorkspacesDir("")
+	if workspacesRoot != filepath.Join(tempDir, "root_workspaces") {
+		t.Fatalf("expected workspacesRoot %s, got %s", filepath.Join(tempDir, "root_workspaces"), workspacesRoot)
+	}
+
+	report := adapters.ScanWorkspaces(workspacesRoot)
+	if len(report.Errors) > 0 {
+		t.Fatalf("unexpected scan errors: %v", report.Errors)
+	}
+	if len(report.Ledgers) != 1 {
+		t.Fatalf("expected 1 ledger, got %d", len(report.Ledgers))
+	}
+
+	scanned := report.Ledgers[0]
+	if len(scanned.Roles) != 2 {
+		t.Fatalf("expected 2 roles, got %d", len(scanned.Roles))
+	}
+	if scanned.Roles[0].Role != "coder" || scanned.Roles[1].Role != "tester" {
+		t.Errorf("expected coder and tester, got %+v", scanned.Roles)
+	}
+	if scanned.Facts.Invocations[0].Role != "sys-engineer" {
+		t.Errorf("expected raw role sys-engineer in Facts, got %s", scanned.Facts.Invocations[0].Role)
+	}
 }
 
 func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {

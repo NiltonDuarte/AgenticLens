@@ -277,8 +277,14 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	return cfg
 }
 
-// FindConfigFile traverses upwards from startDir looking for .agenticlens configuration files
-// in order of priority: config.yaml, config.yml, config.json.
+// FindConfigFile traverses upwards from startDir looking for AgenticLens configuration files.
+// At each directory level, candidates are evaluated in priority order:
+// 1. .agenticlens-config.yaml (root)
+// 2. .agenticlens-config.yml (root)
+// 3. .agenticlens-config.json (root)
+// 4. .agenticlens/config.yaml (legacy subfolder)
+// 5. .agenticlens/config.yml (legacy subfolder)
+// 6. .agenticlens/config.json (legacy subfolder)
 func FindConfigFile(startDir string) (string, error) {
 	curr := strings.TrimSpace(startDir)
 	if curr == "" {
@@ -294,11 +300,17 @@ func FindConfigFile(startDir string) (string, error) {
 		return "", fmt.Errorf("resolving absolute path for %s: %w", curr, err)
 	}
 
-	candidateNames := []string{"config.yaml", "config.yml", "config.json"}
 	curr = absDir
 	for {
-		for _, name := range candidateNames {
-			cfgPath := filepath.Join(curr, ".agenticlens", name)
+		candidates := []string{
+			filepath.Join(curr, ".agenticlens-config.yaml"),
+			filepath.Join(curr, ".agenticlens-config.yml"),
+			filepath.Join(curr, ".agenticlens-config.json"),
+			filepath.Join(curr, ".agenticlens", "config.yaml"),
+			filepath.Join(curr, ".agenticlens", "config.yml"),
+			filepath.Join(curr, ".agenticlens", "config.json"),
+		}
+		for _, cfgPath := range candidates {
 			if fi, err := os.Stat(cfgPath); err == nil && !fi.IsDir() {
 				return cfgPath, nil
 			}

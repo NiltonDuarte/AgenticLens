@@ -9,8 +9,8 @@ Coordinates autonomous development in the standalone **AgenticLens** project acr
 
 The skill itself uses the AgenticLens CLI application to parse, validate, and render developer telemetry and lifecycle metrics for every development iteration.
 
-## Configuration & Parametrization (`.agenticlens/config.yaml`)
-At startup, inspect `.agenticlens/config.yaml` in the project root to load parameters (falling back to defaults if not present):
+## Configuration & Parametrization (`.agenticlens-config.yaml`)
+At startup, inspect `.agenticlens-config.yaml` in the project root to load parameters (falling back to defaults if not present):
 - `ticket.prefixes`: Supported prefix identifiers and descriptions (defaults: `AL`, `GEN`, `PO`). If a numeric ID is passed (e.g. `42`), format as `<ticket_prefix>-<ID>` (e.g. `AL-42`, `GEN-42`, or `PO-2`).
 - `workspaces.dir`: Directory for workspace artifacts (default: `"workspaces"`).
 - `project_name`: Project name (default: `"AgenticLens"`).
@@ -45,7 +45,7 @@ Throughout this workflow:
   task(
       subagent_type="planner",
       description="Ground, contract & plan iteration 01",
-      prompt="Ticket: <TICKET_ID>. Request: <USER_REQUEST>. Config: .agenticlens/config.yaml. Ground against existing AgenticLens layers (Go backend in backend/internal/domain, backend/internal/adapters, backend/cmd/ and TypeScript frontend in web/) and TECHNICAL_GUIDELINES.md. Write <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md and <WORKSPACES_DIR>/<TICKET_ID>/iterations/01/PLAN.md. Zero code blocks.",
+      prompt="Ticket: <TICKET_ID>. Request: <USER_REQUEST>. Config: .agenticlens-config.yaml. Ground against existing AgenticLens layers (Go backend in backend/internal/domain, backend/internal/adapters, backend/cmd/ and TypeScript frontend in web/) and TECHNICAL_GUIDELINES.md. Write <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md and <WORKSPACES_DIR>/<TICKET_ID>/iterations/01/PLAN.md. Zero code blocks.",
   )
   ```
 - **Iteration > 01**:
@@ -53,7 +53,7 @@ Throughout this workflow:
   task(
       subagent_type="planner",
       description="Plan iteration delta",
-      prompt="Ticket: <TICKET_ID>. Follow-up: <USER_REQUEST>. Config: .agenticlens/config.yaml. Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md and prior iterations. Write delta plan to <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md.",
+      prompt="Ticket: <TICKET_ID>. Follow-up: <USER_REQUEST>. Config: .agenticlens-config.yaml. Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md and prior iterations. Write delta plan to <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md.",
   )
   ```
 

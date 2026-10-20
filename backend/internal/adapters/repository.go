@@ -33,7 +33,11 @@ func ResolveWorkspacesDir(overridePath string) string {
 	}
 
 	if cfgPath != "" {
-		baseDir := filepath.Dir(filepath.Dir(cfgPath))
+		parentDir := filepath.Dir(cfgPath)
+		baseDir := parentDir
+		if filepath.Base(parentDir) == ".agenticlens" {
+			baseDir = filepath.Dir(parentDir)
+		}
 		candidate := filepath.Join(baseDir, wsDir)
 		if cfi, err := os.Stat(candidate); err == nil && cfi.IsDir() {
 			return candidate
