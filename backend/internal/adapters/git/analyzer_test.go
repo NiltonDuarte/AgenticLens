@@ -245,6 +245,13 @@ func TestLoadConfig_CentralizedIntegration(t *testing.T) {
 	}
 
 	yamlContent := `
+project_name: GitAnalyzerTest
+ticket:
+  prefixes:
+    - prefix: AL
+workspaces:
+  src_folders:
+    - src
 code_metrics:
   include:
     - "custom/include/**"

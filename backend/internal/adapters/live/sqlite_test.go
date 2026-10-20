@@ -17,6 +17,55 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+func testProjectConfig() domain.ProjectConfig {
+	return domain.ProjectConfig{
+		ProjectName: "AgenticLens",
+		Ticket: domain.TicketConfig{
+			Prefixes: []domain.TicketPrefix{
+				{Prefix: "AL", Description: "Core AgenticLens development"},
+				{Prefix: "GEN", Description: "General tasks", TicketType: "chore"},
+				{Prefix: "PO", Description: "Product Owner specs", TicketType: "docs"},
+			},
+			CaseInsensitive: true,
+			CustomPatterns:  []string{},
+		},
+		Workspaces: domain.WorkspacesConfig{
+			Dir:        "workspaces",
+			SrcFolders: []string{"web", "backend"},
+		},
+		Database: domain.DatabaseConfig{
+			Path:           "~/.local/share/opencode/opencode.db",
+			QueryTimeoutMs: 5000,
+			BusyTimeoutMs:  5000,
+			ReadOnly:       true,
+		},
+		Live: domain.LiveConfig{
+			ActiveThresholdSeconds: 300,
+			PollIntervalMs:         2000,
+			MaxTraceBufferMessages: 500,
+			AnomalyThresholds: domain.AnomalyThresholdsConfig{
+				StallThresholdSeconds: 120,
+				ErrorRateThreshold:    0.25,
+				ContextExhaustionPct:  0.85,
+			},
+		},
+		RoleMappings: domain.RoleMappings{
+			"orchestrator": "orchestrator",
+			"planner":      "planner",
+			"coder":        "coder",
+			"tester":       "tester",
+			"reviewer":     "reviewer",
+		},
+		RoleOrder: []string{
+			"orchestrator",
+			"planner",
+			"coder",
+			"tester",
+			"reviewer",
+		},
+	}
+}
+
 func createTestDBFile(t *testing.T) string {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -240,7 +289,7 @@ func TestZeroDiskPersistenceVerification(t *testing.T) {
 		})
 	}
 
-	cfg := domain.DefaultProjectConfig()
+	cfg := testProjectConfig()
 	service := live.NewLiveService(hook, cfg)
 	defer service.Close()
 
@@ -318,7 +367,7 @@ func TestConcurrentReadsAndSubscriptions(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	const numGoroutines = 10
@@ -460,7 +509,7 @@ func TestFetchSessionTrace_MalformedJSONPartsFallback(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -551,7 +600,7 @@ func TestLiveService_AdversarialSessionIDValidation(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -710,7 +759,7 @@ func TestHydrateWorkspaceEvents_SuccessAndZeroDiskWrites(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	ctx := context.Background()
@@ -822,7 +871,7 @@ func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	ctx := context.Background()
@@ -906,7 +955,7 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 
 	// 2. LiveService with nil hook
 	t.Run("LiveService with nil hook returns fallback cleanly", func(t *testing.T) {
-		service := live.NewLiveService(nil, domain.DefaultProjectConfig())
+		service := live.NewLiveService(nil, testProjectConfig())
 		resp, err := service.HydrateWorkspaceEvents(ctx, "AL-NIL-HOOK", ledgerWithFallback)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
@@ -926,7 +975,7 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		if err != nil {
 			t.Fatalf("failed opening hook: %v", err)
 		}
-		service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+		service := live.NewLiveService(hook, testProjectConfig())
 		// Close hook and DB
 		_ = hook.Close()
 
@@ -960,7 +1009,7 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		}
 		defer hook.Close()
 
-		service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+		service := live.NewLiveService(hook, testProjectConfig())
 		defer service.Close()
 
 		resp, err := service.HydrateWorkspaceEvents(ctx, "AL-DROPPED-TABLES", ledgerWithFallback)
@@ -1017,7 +1066,7 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		}
 		defer hook.Close()
 
-		service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+		service := live.NewLiveService(hook, testProjectConfig())
 		defer service.Close()
 
 		corruptLedger := domain.AgenticMetricsLedger{
@@ -1050,7 +1099,7 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		}
 		defer hook.Close()
 
-		service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+		service := live.NewLiveService(hook, testProjectConfig())
 		defer service.Close()
 
 		emptyLedger := domain.AgenticMetricsLedger{
@@ -1134,7 +1183,7 @@ func TestLiveService_TokenExtractionAndAnomalyDetection(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -1245,7 +1294,7 @@ func TestLiveService_AnomalyAlertBroadcastStream(t *testing.T) {
 	}
 	defer hook.Close()
 
-	cfg := domain.DefaultProjectConfig()
+	cfg := testProjectConfig()
 	cfg.Live.PollIntervalMs = 50
 
 	service := live.NewLiveService(hook, cfg)
@@ -1374,7 +1423,7 @@ func TestLiveService_CorruptedJSONAndMalformedPayloads(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -1417,7 +1466,7 @@ func TestLiveService_PathTraversalAndMaliciousSessionIDs(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -1480,7 +1529,7 @@ func TestLiveService_ZeroTokensAndZeroParts(t *testing.T) {
 	}
 	defer hook.Close()
 
-	service := live.NewLiveService(hook, domain.DefaultProjectConfig())
+	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

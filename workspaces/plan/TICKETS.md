@@ -12,13 +12,13 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Ready
 
-- **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
-  - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests
+- **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
+  - **Subsystem**: Docs / Packaging / CLI
   - **Phase**: Phase 7
   - **Status**: Ready
-  - **Blocked by**: None (AL-38 Done)
-  - **Blocks**: AL-37
-  - **File**: `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
+  - **Blocked by**: None (AL-36 Done)
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
 
 - **AL-40**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
   - **Subsystem**: Adapters / HTTP / Presentation / Web / Domain / Tests
@@ -56,13 +56,7 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Blocked
 
-- **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
-  - **Subsystem**: Docs / Packaging / CLI
-  - **Phase**: Phase 7
-  - **Status**: Pending
-  - **Blocked by**: AL-36
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
+(None)
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests
@@ -91,6 +85,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/done/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
+
+- **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
+  - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests
+  - **Phase**: Phase 7
+  - **Status**: Done
+  - **Blocked by**: None (AL-38 Done)
+  - **Blocks**: AL-37
+  - **File**: `workspaces/plan/done/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 
 - **AL-41**: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execution Bottlenecks
   - **Subsystem**: Tests / Adapters / Git / CLI / HTTP

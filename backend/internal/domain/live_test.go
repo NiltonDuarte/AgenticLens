@@ -7,8 +7,19 @@ import (
 	"agenticlens/internal/domain"
 )
 
+func testTicketConfig() domain.TicketConfig {
+	return domain.TicketConfig{
+		Prefixes: []domain.TicketPrefix{
+			{Prefix: "AL", Description: "Core development"},
+			{Prefix: "GEN", Description: "General tasks", TicketType: "chore"},
+			{Prefix: "PO", Description: "Product owner", TicketType: "docs"},
+		},
+		CaseInsensitive: true,
+	}
+}
+
 func TestInferTicketID(t *testing.T) {
-	cfg := domain.DefaultProjectConfig().Ticket
+	cfg := testTicketConfig()
 
 	tests := []struct {
 		name           string
@@ -93,7 +104,7 @@ func TestInferTicketID(t *testing.T) {
 }
 
 func TestInferTicketID_AdversarialSuite(t *testing.T) {
-	cfg := domain.DefaultProjectConfig().Ticket
+	cfg := testTicketConfig()
 
 	tests := []struct {
 		name           string

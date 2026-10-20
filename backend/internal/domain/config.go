@@ -94,10 +94,18 @@ func InferTicketTypeFromPrefix(ticketID string, prefixes []TicketPrefix) (Conven
 	return "", false
 }
 
-// WorkspacesConfig defines filesystem paths for ticket workspaces and source repositories.
+// WorkspaceArtifactConfig defines a project-level documentation artifact inside ticket workspaces.
+type WorkspaceArtifactConfig struct {
+	Path        string `json:"path" yaml:"path"`
+	Title       string `json:"title" yaml:"title"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+}
+
+// WorkspacesConfig defines filesystem paths for ticket workspaces, source repositories, and artifacts.
 type WorkspacesConfig struct {
-	Dir        string   `json:"dir" yaml:"dir"`
-	SrcFolders []string `json:"src_folders" yaml:"src_folders"`
+	Dir        string                    `json:"dir" yaml:"dir"`
+	SrcFolders []string                  `json:"src_folders" yaml:"src_folders"`
+	Artifacts  []WorkspaceArtifactConfig `json:"artifacts,omitempty" yaml:"artifacts,omitempty"`
 }
 
 // DatabaseConfig specifies SQLite database connection and query execution parameters.
@@ -157,75 +165,6 @@ func (m RoleMappings) ResolveRole(rawAgent string) AgentRole {
 	}
 
 	return AgentRole(cleaned)
-}
-
-// DefaultProjectConfig returns the standard baseline configuration with domain defaults.
-func DefaultProjectConfig() ProjectConfig {
-	return ProjectConfig{
-		ProjectName: "AgenticLens",
-		Ticket: TicketConfig{
-			Prefixes: []TicketPrefix{
-				{
-					Prefix:      "AL",
-					Description: "Core AgenticLens development features, bugfixes, and technical initiatives",
-				},
-				{
-					Prefix:      "GEN",
-					Description: "General multi-agent engineering tasks and ad-hoc untracked work",
-					TicketType:  "chore",
-				},
-				{
-					Prefix:      "PO",
-					Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
-					TicketType:  "docs",
-				},
-			},
-			CaseInsensitive: true,
-			CustomPatterns:  []string{},
-		},
-		Workspaces: WorkspacesConfig{
-			Dir:        "workspaces",
-			SrcFolders: []string{"web", "backend"},
-		},
-		Database: DatabaseConfig{
-			Path:           "~/.local/share/opencode/opencode.db",
-			QueryTimeoutMs: 5000,
-			BusyTimeoutMs:  5000,
-			ReadOnly:       true,
-		},
-		Live: LiveConfig{
-			ActiveThresholdSeconds: 300,
-			PollIntervalMs:         2000,
-			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
-		},
-		CodeMetrics: CodeMetricsConfig{
-			BaseBranch:   "",
-			Include:      []string{},
-			Exclude:      []string{},
-			TestPatterns: []string{},
-			ProdPatterns: []string{},
-		},
-		RoleMappings: RoleMappings{
-			"orchestrator": "orchestrator",
-			"build":        "orchestrator",
-			"planner":      "planner",
-			"coder":        "coder",
-			"tester":       "tester",
-			"reviewer":     "reviewer",
-		},
-		RoleOrder: []string{
-			"orchestrator",
-			"planner",
-			"coder",
-			"tester",
-			"reviewer",
-		},
-	}
 }
 
 // NormalizeTicketID extracts and normalizes a ticket identifier according to configuration rules.

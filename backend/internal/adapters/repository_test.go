@@ -29,7 +29,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := `{"workspaces_dir": "custom_workspaces"}`
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}, "workspaces": {"dir": "custom_workspaces", "src_folders": ["src"]}}`
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -56,7 +56,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "workspaces:\n  dir: yaml_workspaces\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: yaml_workspaces\n  src_folders:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -79,7 +79,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "workspaces:\n  dir: root_yaml_workspaces\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yaml_workspaces\n  src_folders:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -102,7 +102,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "workspaces:\n  dir: root_yml_workspaces\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yml_workspaces\n  src_folders:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -125,7 +125,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := `{"workspaces": {"dir": "root_json_workspaces"}}`
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}, "workspaces": {"dir": "root_json_workspaces", "src_folders": ["src"]}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -148,7 +148,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "workspaces:\n  dir: deep_root_ws\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: deep_root_ws\n  src_folders:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -180,7 +180,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "workspaces:\n  dir: deep_legacy_ws\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: deep_legacy_ws\n  src_folders:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -215,8 +215,8 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal("failed creating workspaces dirs")
 		}
 
-		rootCfg := "workspaces:\n  dir: prio_root_ws\n"
-		legacyCfg := "workspaces:\n  dir: prio_legacy_ws\n"
+		rootCfg := "project_name: RootTest\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: prio_root_ws\n  src_folders:\n    - src\n"
+		legacyCfg := "project_name: LegacyTest\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: prio_legacy_ws\n  src_folders:\n    - src\n"
 
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(rootCfg), 0644); err != nil {
 			t.Fatal(err)
@@ -431,13 +431,98 @@ func TestReadTicketArtifacts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Run("valid read", func(t *testing.T) {
+	t.Run("valid read with zero artifact defaults", func(t *testing.T) {
 		art := adapters.ReadTicketArtifacts("TICKET-10", tempDir)
+		if art.ContractContent != nil {
+			t.Errorf("expected nil ContractContent without configured artifacts, got: %v", art.ContractContent)
+		}
+		if art.SummaryContent != nil {
+			t.Errorf("expected nil SummaryContent without configured artifacts, got: %v", art.SummaryContent)
+		}
+		if len(art.Items) != 0 {
+			t.Fatalf("expected empty Items slice without configured artifacts, got %d", len(art.Items))
+		}
+	})
+
+	t.Run("valid read with explicit configured artifacts", func(t *testing.T) {
+		cfgArtifacts := []domain.WorkspaceArtifactConfig{
+			{Path: "CONTRACT.md", Title: "Contract", Description: "Contract file"},
+			{Path: "SUMMARY.md", Title: "Summary", Description: "Summary file"},
+		}
+		art := adapters.ReadTicketArtifacts("TICKET-10", tempDir, cfgArtifacts)
 		if art.ContractContent == nil || *art.ContractContent != "# Contract" {
 			t.Errorf("contract content mismatch: %v", art.ContractContent)
 		}
 		if art.SummaryContent == nil || *art.SummaryContent != "# Summary" {
 			t.Errorf("summary content mismatch: %v", art.SummaryContent)
+		}
+		if len(art.Items) != 2 {
+			t.Fatalf("expected 2 Items, got %d", len(art.Items))
+		}
+		var foundContract, foundSummary bool
+		for _, item := range art.Items {
+			if item.Path == "CONTRACT.md" && item.Content != nil && *item.Content == "# Contract" {
+				foundContract = true
+			}
+			if item.Path == "SUMMARY.md" && item.Content != nil && *item.Content == "# Summary" {
+				foundSummary = true
+			}
+		}
+		if !foundContract || !foundSummary {
+			t.Errorf("expected Items to contain CONTRACT.md and SUMMARY.md, got %+v", art.Items)
+		}
+	})
+
+	t.Run("custom configured artifacts with nested paths and missing files", func(t *testing.T) {
+		iterDir := filepath.Join(ticketDir, "iterations", "01")
+		if err := os.MkdirAll(iterDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(iterDir, "PLAN.md"), []byte("# Iteration Plan"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		customConfigs := []domain.WorkspaceArtifactConfig{
+			{
+				Path:        "CONTRACT.md",
+				Title:       "Frozen Contract",
+				Description: "Specification boundaries",
+			},
+			{
+				Path:        "iterations/01/PLAN.md",
+				Title:       "Active Plan",
+				Description: "Iteration steps",
+			},
+			{
+				Path:        "NONEXISTENT.md",
+				Title:       "Missing Doc",
+				Description: "Should be nil content",
+			},
+			{
+				Path:        "../../../etc/passwd",
+				Title:       "Malicious Path",
+				Description: "Should be ignored",
+			},
+			{
+				Path:        "/etc/shadow",
+				Title:       "Absolute Path",
+				Description: "Should be ignored",
+			},
+		}
+
+		art := adapters.ReadTicketArtifacts("TICKET-10", tempDir, customConfigs)
+		if len(art.Items) != 3 {
+			t.Fatalf("expected exactly 3 valid items (traversals excluded), got %d", len(art.Items))
+		}
+
+		if art.Items[0].Title != "Frozen Contract" || art.Items[0].Content == nil || *art.Items[0].Content != "# Contract" {
+			t.Errorf("item 0 mismatch: %+v", art.Items[0])
+		}
+		if art.Items[1].Title != "Active Plan" || art.Items[1].Content == nil || *art.Items[1].Content != "# Iteration Plan" {
+			t.Errorf("item 1 mismatch: %+v", art.Items[1])
+		}
+		if art.Items[2].Title != "Missing Doc" || art.Items[2].Content != nil {
+			t.Errorf("item 2 should have nil content: %+v", art.Items[2])
 		}
 	})
 
@@ -1635,8 +1720,14 @@ func TestWorkspaceLoad_ConfiguredRoleMappings(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfgContent := `
+project_name: TestProject
+ticket:
+  prefixes:
+    - prefix: AL
 workspaces:
   dir: workspaces
+  src_folders:
+    - src
 role_mappings:
   build: orchestrator
   qa-bot: tester
@@ -1741,8 +1832,14 @@ func TestWorkspaceLoad_ConfiguredRoleMappings_RootConfig(t *testing.T) {
 
 	// 1. Create root .agenticlens-config.yaml with custom role mappings
 	cfgContent := `
+project_name: RootTestProject
+ticket:
+  prefixes:
+    - prefix: AL
 workspaces:
   dir: root_workspaces
+  src_folders:
+    - src
 role_mappings:
   sys-engineer: coder
   lead-tester: tester
