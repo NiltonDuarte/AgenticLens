@@ -33,8 +33,8 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 - `workspaces/plan/done/AL-19 implement live anomaly detection engine and realtime session health rules.md`
 - `workspaces/plan/done/AL-20 build typescript live observability dashboard and multiroot session inspector.md`
 - `workspaces/plan/done/AL-33 dynamic local database event hydration and fallback dual plane api.md`
+- `workspaces/plan/done/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
 - `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
-- `workspaces/plan/to-do/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
 - `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 - `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
 - `workspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`
@@ -58,25 +58,17 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-35 pre-release source code audit configuration leakage inspection and review artifact generation.md`
 
-- **AL-38**: Migrate Configuration Manifest to Root .agenticlens-config.yaml
-  - **Subsystem**: Adapters / CLI / Domain / Tests
+- **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
+  - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests
   - **Phase**: Phase 7
   - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-36
-  - **File**: `workspaces/plan/to-do/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
+  - **Blocked by**: None (AL-38 Done)
+  - **Blocks**: AL-37
+  - **File**: `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 
 ---
 
 ## Pending
-
-- **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
-  - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests
-  - **Phase**: Phase 7
-  - **Status**: Pending
-  - **Blocked by**: AL-38
-  - **Blocks**: AL-37
-  - **File**: `workspaces/plan/to-do/AL-36 cross-project interactive setup skill automated artifact downloader and agent workflow integrator.md`
 
 - **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
   - **Subsystem**: Docs / Packaging / CLI
@@ -89,6 +81,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Done
+
+- **AL-38**: Migrate Configuration Manifest to Root .agenticlens-config.yaml
+  - **Subsystem**: Adapters / CLI / Domain / Tests
+  - **Phase**: Phase 7
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: AL-36
+  - **File**: `workspaces/plan/done/AL-38 migrate configuration manifest to root agenticlens-config-yaml.md`
 
 - **AL-20**: Build TypeScript Live Observability Dashboard and Multi-Root Session Inspector
   - **Subsystem**: Presentation / Web / Tests

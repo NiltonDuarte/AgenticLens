@@ -33,7 +33,7 @@ Subagent Delegation Roster:
 
 Workflow Execution Loop:
 1. Kickoff & Parametrization:
-   - Inspect `.agenticlens/config.yaml` (fallback ticket prefixes: `AL`, `GEN`, `PO`, `workspaces_dir="workspaces"`).
+   - Inspect `.agenticlens-config.yaml` (fallback ticket prefixes: `AL`, `GEN`, `PO`, `workspaces_dir="workspaces"`).
    - Identify or prompt for ticket ID (`<TICKET_ID>`), ensuring prefix matches configured ticket prefixes (e.g. `AL-XXXXX`, `GEN-XXXXX`, or `PO-XXXXX`).
    - Check if `<workspaces_dir>/<TICKET_ID>/CONTRACT.md` exists. If so, this is a resumed ticket: skip kickoff, detect highest iteration, and start `iterations/<NN+1>/`.
    - Create and switch to ticket branch: `git checkout -b <type>/<TICKET_ID>-<slug>` derived from the user request.
