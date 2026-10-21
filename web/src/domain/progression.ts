@@ -168,10 +168,7 @@ export function aggregateMetricsOverTime(
     for (const inv of invocations) {
       const invDate =
         parseIsoDateToUtc(inv.completed_at) ??
-        parseIsoDateToUtc(inv.started_at) ??
-        parseIsoDateToUtc(ledger.completed_at) ??
-        parseIsoDateToUtc(ledger.started_at) ??
-        parseIsoDateToUtc(ledger.updated_at);
+        parseIsoDateToUtc(ledger.completed_at);
 
       if (!invDate) {
         continue;
@@ -198,10 +195,7 @@ export function aggregateMetricsOverTime(
       }
     }
 
-    const codeDate =
-      parseIsoDateToUtc(ledger.completed_at) ??
-      parseIsoDateToUtc(ledger.started_at) ??
-      parseIsoDateToUtc(ledger.updated_at);
+    const codeDate = parseIsoDateToUtc(ledger.completed_at);
 
     if (codeDate) {
       let inRange = true;

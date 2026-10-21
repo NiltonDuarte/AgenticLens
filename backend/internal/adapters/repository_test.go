@@ -2,6 +2,7 @@ package adapters_test
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +14,10 @@ import (
 
 func TestResolveWorkspacesDir(t *testing.T) {
 	t.Run("explicit override", func(t *testing.T) {
-		got := adapters.ResolveWorkspacesDir("/custom/path")
+		got, err := adapters.ResolveWorkspacesDir("/custom/path")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if got != "/custom/path" {
 			t.Errorf("expected /custom/path, got %s", got)
 		}
@@ -32,9 +36,12 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		resolved := adapters.ResolveWorkspacesDir("")
+		resolved, err := adapters.ResolveWorkspacesDir("")
 		if resolved != "" {
 			t.Errorf("expected empty string when workspaces.dir is unconfigured, got %q", resolved)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 		}
 	})
 
@@ -46,9 +53,12 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		resolved := adapters.ResolveWorkspacesDir("")
+		resolved, err := adapters.ResolveWorkspacesDir("")
 		if resolved != "" {
 			t.Errorf("expected empty string when unconfigured, got %s", resolved)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 		}
 	})
 
@@ -65,9 +75,12 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		resolved := adapters.ResolveWorkspacesDir("")
+		resolved, err := adapters.ResolveWorkspacesDir("")
 		if resolved != "" {
 			t.Errorf("expected empty string when workspaces.dir is unconfigured, got %s", resolved)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 		}
 	})
 
@@ -87,9 +100,12 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		}
 
 		// 1. Without config file
-		resolvedNoCfg := adapters.ResolveWorkspacesDir("")
+		resolvedNoCfg, err := adapters.ResolveWorkspacesDir("")
 		if resolvedNoCfg != "" {
 			t.Errorf("expected empty string when unconfigured even if ./workspaces exists, got %s", resolvedNoCfg)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 		}
 
 		// 2. With config file but missing workspaces.dir
@@ -97,9 +113,12 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
-		resolvedEmptyWs := adapters.ResolveWorkspacesDir("")
+		resolvedEmptyWs, err := adapters.ResolveWorkspacesDir("")
 		if resolvedEmptyWs != "" {
 			t.Errorf("expected empty string when workspaces.dir unconfigured even if ./workspaces exists, got %s", resolvedEmptyWs)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 		}
 	})
 
@@ -120,9 +139,12 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		resolved := adapters.ResolveWorkspacesDir("")
-		if resolved != wsDir {
-			t.Errorf("expected %s, got %s", wsDir, resolved)
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resolved != "root_yaml_workspaces" {
+			t.Errorf("expected root_yaml_workspaces, got %s", resolved)
 		}
 	})
 
@@ -143,9 +165,12 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		resolved := adapters.ResolveWorkspacesDir("")
-		if resolved != wsDir {
-			t.Errorf("expected %s, got %s", wsDir, resolved)
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resolved != "root_yml_workspaces" {
+			t.Errorf("expected root_yml_workspaces, got %s", resolved)
 		}
 	})
 
@@ -166,9 +191,12 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		resolved := adapters.ResolveWorkspacesDir("")
-		if resolved != wsDir {
-			t.Errorf("expected %s, got %s", wsDir, resolved)
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resolved != "root_json_workspaces" {
+			t.Errorf("expected root_json_workspaces, got %s", resolved)
 		}
 	})
 
@@ -194,9 +222,198 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		resolved := adapters.ResolveWorkspacesDir("")
-		if resolved != wsDir {
-			t.Errorf("expected %s, got %s", wsDir, resolved)
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resolved != "deep_root_ws" {
+			t.Errorf("expected deep_root_ws, got %s", resolved)
+		}
+	})
+	t.Run("precedence between override and config", func(t *testing.T) {
+		tempDir := t.TempDir()
+		wsDir := filepath.Join(tempDir, "precedence_workspaces")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		// Also create a default workspaces directory in the same root
+		defaultWsDir := filepath.Join(tempDir, "workspaces")
+		if err := os.MkdirAll(defaultWsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		cfgContent := "project_name: TestPrecedence\nticket:\n  prefixes:\n    - prefix: PREC\nworkspaces:\n  dir: precedence_workspaces\n  src_folders:\n    - src\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		// Configured workspaces directory takes precedence over default workspaces
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resolved != "precedence_workspaces" {
+			t.Errorf("expected precedence_workspaces, got %s", resolved)
+		}
+
+		// Explicit override takes precedence over configured workspaces directory
+		overridePath := filepath.Join(tempDir, "explicit_override")
+		resolvedOverride, err := adapters.ResolveWorkspacesDir(overridePath)
+		if err != nil {
+			t.Fatalf("unexpected error on override: %v", err)
+		}
+		if resolvedOverride != overridePath {
+			t.Errorf("expected override %s, got %s", overridePath, resolvedOverride)
+		}
+	})
+
+	t.Run("fails fast when no command flag and no config exists", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cwdWs := filepath.Join(tempDir, "workspaces")
+		if err := os.MkdirAll(cwdWs, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if resolved != "" {
+			t.Errorf("expected empty string, got %s", resolved)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
+		}
+	})
+
+	t.Run("fails fast when config exists but workspaces dir is empty", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgContent := "project_name: TestEmptyWS\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: \"\"\n  src_folders:\n    - src\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if resolved != "" {
+			t.Errorf("expected empty string, got %s", resolved)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
+		}
+	})
+
+	t.Run("parent traversal workspaces directory is never searched or selected", func(t *testing.T) {
+		parentDir := t.TempDir()
+		parentWs := filepath.Join(parentDir, "workspaces")
+		if err := os.MkdirAll(parentWs, 0755); err != nil {
+			t.Fatal(err)
+		}
+		childDir := filepath.Join(parentDir, "subproject", "nested")
+		if err := os.MkdirAll(childDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(childDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if resolved != "" {
+			t.Errorf("expected empty string, got %s", resolved)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
+		}
+	})
+
+	t.Run("container path is never selected when unconfigured", func(t *testing.T) {
+		tempDir := t.TempDir()
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved, err := adapters.ResolveWorkspacesDir("")
+		if resolved != "" {
+			t.Errorf("expected empty string, got %s", resolved)
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
+		}
+	})
+
+	t.Run("ScanWorkspaces returns error in scan report when unconfigured", func(t *testing.T) {
+		tempDir := t.TempDir()
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		report := adapters.ScanWorkspaces("")
+		if len(report.Ledgers) != 0 {
+			t.Errorf("expected 0 ledgers, got %d", len(report.Ledgers))
+		}
+		if len(report.Errors) == 0 {
+			t.Fatal("expected error in report, got none")
+		}
+		if !strings.Contains(report.Errors[0], "workspaces directory not found") {
+			t.Errorf("expected 'workspaces directory not found' in error, got: %s", report.Errors[0])
+		}
+	})
+
+	t.Run("LoadTicketWorkspace fails with wrapped error when unconfigured", func(t *testing.T) {
+		tempDir := t.TempDir()
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		ledger, err := adapters.LoadTicketWorkspace("AL-1", "")
+		if ledger != nil {
+			t.Errorf("expected nil ledger, got %+v", ledger)
+		}
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
+		}
+	})
+
+	t.Run("ReadTicketArtifacts returns empty artifacts when unconfigured", func(t *testing.T) {
+		tempDir := t.TempDir()
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		artifacts := adapters.ReadTicketArtifacts("AL-1", "")
+		if artifacts.TicketID != "AL-1" {
+			t.Errorf("expected TicketID AL-1, got %s", artifacts.TicketID)
+		}
+		if len(artifacts.Items) != 0 {
+			t.Errorf("expected 0 items, got %d", len(artifacts.Items))
 		}
 	})
 }
@@ -1915,9 +2132,12 @@ role_mappings:
 		t.Fatal(err)
 	}
 
-	workspacesRoot := adapters.ResolveWorkspacesDir("")
-	if workspacesRoot != filepath.Join(tempDir, "root_workspaces") {
-		t.Fatalf("expected workspacesRoot %s, got %s", filepath.Join(tempDir, "root_workspaces"), workspacesRoot)
+	workspacesRoot, err := adapters.ResolveWorkspacesDir("")
+	if err != nil {
+		t.Fatalf("unexpected error resolving workspaces: %v", err)
+	}
+	if workspacesRoot != "root_workspaces" {
+		t.Fatalf("expected workspacesRoot root_workspaces, got %s", workspacesRoot)
 	}
 
 	report := adapters.ScanWorkspaces(workspacesRoot)

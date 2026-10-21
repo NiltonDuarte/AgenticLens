@@ -178,13 +178,11 @@ export interface TicketDateComparable {
 }
 
 export function getEffectiveCompletionDateMs(item: TicketDateComparable): number | null {
-  const candidates = [item.completed_at, item.updated_at, item.started_at];
-  for (const candidate of candidates) {
-    if (candidate && typeof candidate === 'string' && candidate.trim().length > 0) {
-      const ms = Date.parse(candidate.trim());
-      if (!Number.isNaN(ms)) {
-        return ms;
-      }
+  const candidate = item.completed_at;
+  if (candidate && typeof candidate === 'string' && candidate.trim().length > 0) {
+    const ms = Date.parse(candidate.trim());
+    if (!Number.isNaN(ms)) {
+      return ms;
     }
   }
   return null;

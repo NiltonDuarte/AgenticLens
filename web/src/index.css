@@ -671,6 +671,12 @@ body {
   border-radius: 4px;
 }
 
+.ticket-type-pill.unclassified {
+  color: var(--text-muted);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
 .workspace-title {
   font-size: 1.25rem;
   font-weight: 600;

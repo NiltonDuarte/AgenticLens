@@ -1302,6 +1302,145 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected 0.0%% cache hit rate / reasoning ratio on zero tokens")
 		}
 	})
+
+	t.Run("generate enforces mandatory non-zero completed_at in JSON output", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		dbPath := filepath.Join(tempDir, "completed_test.db")
+
+		db, err := sql.Open("sqlite", dbPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			INSERT INTO session VALUES ('ses_comp', NULL, 'build', 'default_model', 'Completed At Test', 1000, 1000);
+			INSERT INTO message VALUES ('msg_comp', 'ses_comp', 1000, 1000, '{"role":"assistant","tokens":{"input":10,"output":5},"cost":0.01}');
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", dbPath,
+			"--ticket-id", "AL-COMPLETED",
+			"--ticket-title", "Completed At Title",
+			"--session-id", "ses_comp",
+			"--json-output", outJSON,
+		)
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatalf("failed reading output JSON: %v", err)
+		}
+
+		var fact domain.AgenticFactLedger
+		if err := json.Unmarshal(data, &fact); err != nil {
+			t.Fatalf("failed unmarshaling fact ledger: %v", err)
+		}
+
+		if fact.CompletedAt == nil || strings.TrimSpace(*fact.CompletedAt) == "" {
+			t.Fatalf("expected non-nil non-empty CompletedAt, got %v", fact.CompletedAt)
+		}
+	})
+
+	t.Run("generate respects explicit valid completed_at flag and sanitizes whitespace", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		dbPath := filepath.Join(tempDir, "explicit_completed.db")
+
+		db, err := sql.Open("sqlite", dbPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			INSERT INTO session VALUES ('ses_explicit', NULL, 'build', 'default_model', 'Explicit Test', 1000, 1000);
+			INSERT INTO message VALUES ('msg_explicit', 'ses_explicit', 1000, 1000, '{"role":"assistant","tokens":{"input":5,"output":2},"cost":0.005}');
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		explicitTS := "2026-10-21T15:00:00.000000+00:00"
+		outJSON := filepath.Join(tempDir, "agentic_metrics_explicit.json")
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", dbPath,
+			"--ticket-id", "AL-EXPLICIT-COMPLETED",
+			"--ticket-title", "Explicit Title",
+			"--session-id", "ses_explicit",
+			"--completed-at", explicitTS,
+			"--json-output", outJSON,
+		)
+
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate with explicit completed-at failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var fact domain.AgenticFactLedger
+		if err := json.Unmarshal(data, &fact); err != nil {
+			t.Fatal(err)
+		}
+		if fact.CompletedAt == nil || *fact.CompletedAt != explicitTS {
+			t.Errorf("expected completed_at %s, got %v", explicitTS, fact.CompletedAt)
+		}
+
+		// Also verify whitespace-only completed-at falls back to non-zero ISO timestamp
+		outJSONWhitespace := filepath.Join(tempDir, "agentic_metrics_ws.json")
+		cmdWS := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", dbPath,
+			"--ticket-id", "AL-WS-COMPLETED",
+			"--ticket-title", "WS Title",
+			"--session-id", "ses_explicit",
+			"--completed-at", "   ",
+			"--json-output", outJSONWhitespace,
+		)
+		var stderrWS bytes.Buffer
+		cmdWS.Stderr = &stderrWS
+		if err := cmdWS.Run(); err != nil {
+			t.Fatalf("generate with whitespace completed-at failed: %v, stderr: %s", err, stderrWS.String())
+		}
+		dataWS, err := os.ReadFile(outJSONWhitespace)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var factWS domain.AgenticFactLedger
+		if err := json.Unmarshal(dataWS, &factWS); err != nil {
+			t.Fatal(err)
+		}
+		if factWS.CompletedAt == nil || strings.TrimSpace(*factWS.CompletedAt) == "" {
+			t.Errorf("expected non-empty resolved completed_at on whitespace flag, got %v", factWS.CompletedAt)
+		}
+	})
 }
 
 func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
@@ -4899,6 +5038,90 @@ func TestInitCommand(t *testing.T) {
 		}
 		if !strings.Contains(stderrGen.String(), "Project configuration not found. Please run 'agentic-lens init'") {
 			t.Errorf("expected prompt to run init, got: %s", stderrGen.String())
+		}
+	})
+
+	t.Run("commands fail fast without panic when workspaces directory and config are absent", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// 1. Root command without --workspaces and without config
+		cmdRoot := exec.Command(cliBinaryPath, "--list")
+		cmdRoot.Dir = tempDir
+		var stderrRoot bytes.Buffer
+		cmdRoot.Stderr = &stderrRoot
+		if err := cmdRoot.Run(); err == nil {
+			t.Fatal("expected root list command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got error: %v", err)
+			}
+		}
+		if !strings.Contains(stderrRoot.String(), "workspaces directory not found") && !strings.Contains(stderrRoot.String(), "Project configuration not found") {
+			t.Errorf("expected 'workspaces directory not found' or 'Project configuration not found' in stderr, got: %s", stderrRoot.String())
+		}
+		if strings.Contains(stderrRoot.String(), "panic:") {
+			t.Errorf("expected clean exit without panic, got: %s", stderrRoot.String())
+		}
+
+		// 2. Server command without --workspaces and without config
+		cmdServer := exec.Command(cliBinaryPath, "server", "--port", "29199")
+		cmdServer.Dir = tempDir
+		var stderrServer bytes.Buffer
+		cmdServer.Stderr = &stderrServer
+		if err := cmdServer.Run(); err == nil {
+			t.Fatal("expected server command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got error: %v", err)
+			}
+		}
+		if !strings.Contains(stderrServer.String(), "workspaces directory not found") && !strings.Contains(stderrServer.String(), "Project configuration not found") {
+			t.Errorf("expected 'workspaces directory not found' or 'Project configuration not found' in stderr, got: %s", stderrServer.String())
+		}
+		if strings.Contains(stderrServer.String(), "panic:") {
+			t.Errorf("expected clean exit without panic, got: %s", stderrServer.String())
+		}
+
+		// 3. Backfill command without --workspaces and without config
+		cmdBackfill := exec.Command(cliBinaryPath, "backfill")
+		cmdBackfill.Dir = tempDir
+		var stderrBackfill bytes.Buffer
+		cmdBackfill.Stderr = &stderrBackfill
+		if err := cmdBackfill.Run(); err == nil {
+			t.Fatal("expected backfill command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got error: %v", err)
+			}
+		}
+		if !strings.Contains(stderrBackfill.String(), "workspaces directory not found") {
+			t.Errorf("expected 'workspaces directory not found' in stderr, got: %s", stderrBackfill.String())
+		}
+		if strings.Contains(stderrBackfill.String(), "panic:") {
+			t.Errorf("expected clean exit without panic, got: %s", stderrBackfill.String())
+		}
+
+		// 4. Migrate command without --workspaces and without config
+		cmdMigrate := exec.Command(cliBinaryPath, "migrate")
+		cmdMigrate.Dir = tempDir
+		var stderrMigrate bytes.Buffer
+		cmdMigrate.Stderr = &stderrMigrate
+		if err := cmdMigrate.Run(); err == nil {
+			t.Fatal("expected migrate command without config to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+				t.Fatalf("expected exit code 1, got error: %v", err)
+			}
+		}
+		if !strings.Contains(stderrMigrate.String(), "workspaces directory not found") {
+			t.Errorf("expected 'workspaces directory not found' in stderr, got: %s", stderrMigrate.String())
+		}
+		if strings.Contains(stderrMigrate.String(), "panic:") {
+			t.Errorf("expected clean exit without panic, got: %s", stderrMigrate.String())
 		}
 	})
 }

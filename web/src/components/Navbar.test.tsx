@@ -245,7 +245,7 @@ describe('Navbar Component', () => {
 
     render(<Navbar activeTab="overview" projectConfig={mockProjectConfig} />);
 
-    const badge = await screen.findByText('v0.1.0-dev');
+    const badge = await screen.findByText('v0.0.0-dev');
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveClass('version-badge');
 
@@ -287,7 +287,7 @@ describe('Navbar Component', () => {
     expect(badge).toHaveAttribute('title', 'Commit: abcdef0 | Built: 2026-10-18T19:45:00.123Z');
   });
 
-  it('displays fallback v0.1.0-dev immediately prior to async resolution and updates upon resolve', async () => {
+  it('displays fallback v0.0.0-dev immediately prior to async resolution and updates upon resolve', async () => {
     let resolvePromise: (value: { ok: boolean; json: () => Promise<BuildInfo> }) => void = () => {};
     const pendingPromise = new Promise<{ ok: boolean; json: () => Promise<BuildInfo> }>((resolve) => {
       resolvePromise = resolve;
@@ -298,7 +298,7 @@ describe('Navbar Component', () => {
     render(<Navbar activeTab="overview" projectConfig={mockProjectConfig} />);
 
     // Prior to resolution, fallback is immediately visible
-    expect(screen.getByText('v0.1.0-dev')).toBeInTheDocument();
+    expect(screen.getByText('v0.0.0-dev')).toBeInTheDocument();
 
     // Resolve promise wrapped in act
     await act(async () => {

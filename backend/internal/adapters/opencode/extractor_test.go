@@ -2,6 +2,7 @@ package opencode_test
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -108,8 +109,8 @@ func TestResolveActiveRootSession(t *testing.T) {
 		}
 	})
 
-	// Test Priority 4: Fallback to latest message
-	t.Run("Priority 4 Latest Message Fallback", func(t *testing.T) {
+	// Test that Priority 4 is deleted: fails fast without falling back to latest message
+	t.Run("Fails Fast Without Tier 4 Fallback When Neither Nonce Nor Ticket ID Supplied", func(t *testing.T) {
 		_, err := db.Exec(`
 			INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
 			('msg_latest', 'ses_child_1', 5000, 5000, '{"role":"assistant"}');
@@ -119,11 +120,14 @@ func TestResolveActiveRootSession(t *testing.T) {
 		}
 
 		res, err := opencode.ResolveActiveRootSession(db, "", "", "")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		if err == nil {
+			t.Fatal("expected error when neither nonce nor ticket ID is supplied, got nil")
 		}
-		if res == nil || *res != "ses_root_1" {
-			t.Fatalf("expected ses_root_1 as parent of latest message session, got %v", res)
+		if !errors.Is(err, opencode.ErrSessionNotFound) {
+			t.Fatalf("expected ErrSessionNotFound, got %v", err)
+		}
+		if res != nil {
+			t.Fatalf("expected nil session ID, got %v", res)
 		}
 	})
 
@@ -149,13 +153,57 @@ func TestResolveActiveRootSession(t *testing.T) {
 		}
 	})
 
-	t.Run("Unresolved Ticket Returns Nil", func(t *testing.T) {
+	t.Run("Unresolved Ticket Returns ErrSessionNotFound", func(t *testing.T) {
 		res, err := opencode.ResolveActiveRootSession(db, "", "AL-NON-EXISTENT", "")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		if err == nil {
+			t.Fatal("expected error for non-existent ticket, got nil")
+		}
+		if !errors.Is(err, opencode.ErrSessionNotFound) {
+			t.Fatalf("expected ErrSessionNotFound, got %v", err)
 		}
 		if res != nil {
 			t.Fatalf("expected nil for non-existent ticket, got %v", *res)
+		}
+	})
+
+	t.Run("Tier 4 is dead: foreign session with latest message is never captured when Tiers 1-3 fail", func(t *testing.T) {
+		// Insert a foreign session and the latest message in the entire DB
+		_, err := db.Exec(`
+			INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+			('ses_foreign_root', NULL, 'build', 'default_model', 'Foreign Root Session', 90000, 90000),
+			('ses_foreign_child', 'ses_foreign_root', 'coder', 'default_model', NULL, 90001, 90001);
+			INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+			('msg_foreign_latest', 'ses_foreign_child', 9999999, 9999999, '{"role":"assistant","content":"foreign message"}');
+		`)
+		if err != nil {
+			t.Fatalf("failed inserting foreign session and message: %v", err)
+		}
+
+		scenarios := []struct {
+			name        string
+			nonce       string
+			ticketID    string
+			sessionID   string
+		}{
+			{name: "unmatched nonce and ticket", nonce: "non-existent-nonce", ticketID: "AL-FOREIGN-GHOST", sessionID: ""},
+			{name: "empty nonce and unmatched ticket", nonce: "", ticketID: "AL-FOREIGN-GHOST", sessionID: ""},
+			{name: "unmatched nonce and empty ticket", nonce: "non-existent-nonce", ticketID: "", sessionID: ""},
+			{name: "all empty parameters", nonce: "", ticketID: "", sessionID: ""},
+		}
+
+		for _, sc := range scenarios {
+			t.Run(sc.name, func(t *testing.T) {
+				res, err := opencode.ResolveActiveRootSession(db, sc.nonce, sc.ticketID, sc.sessionID)
+				if err == nil {
+					t.Fatalf("[%s] expected ErrSessionNotFound, got nil error and session %v", sc.name, res)
+				}
+				if !errors.Is(err, opencode.ErrSessionNotFound) {
+					t.Fatalf("[%s] expected error wrapping ErrSessionNotFound, got: %v", sc.name, err)
+				}
+				if res != nil {
+					t.Fatalf("[%s] expected nil session result, got: %v", sc.name, *res)
+				}
+			})
 		}
 	})
 

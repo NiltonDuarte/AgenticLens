@@ -346,20 +346,24 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 
 	ledgers := []domain.AgenticMetricsLedger{
 		{
-			TicketID:  ptr("T-7D"),
-			UpdatedAt: dateIn7D,
+			TicketID:    ptr("T-7D"),
+			CompletedAt: &dateIn7D,
+			UpdatedAt:   dateIn7D,
 		},
 		{
-			TicketID:  ptr("T-30D"),
-			UpdatedAt: dateIn30D,
+			TicketID:    ptr("T-30D"),
+			CompletedAt: &dateIn30D,
+			UpdatedAt:   dateIn30D,
 		},
 		{
-			TicketID:  ptr("T-90D"),
-			UpdatedAt: dateIn90D,
+			TicketID:    ptr("T-90D"),
+			CompletedAt: &dateIn90D,
+			UpdatedAt:   dateIn90D,
 		},
 		{
-			TicketID:  ptr("T-OLD"),
-			UpdatedAt: dateOld,
+			TicketID:    ptr("T-OLD"),
+			CompletedAt: &dateOld,
+			UpdatedAt:   dateOld,
 		},
 	}
 
@@ -398,8 +402,8 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 		dateWithin24h := "2026-10-17T02:00:00Z"
 		dateOlderThan24h := "2026-10-16T10:00:00Z"
 		oneDayLedgers := []domain.AgenticMetricsLedger{
-			{TicketID: ptr("T-RECENT"), UpdatedAt: dateWithin24h},
-			{TicketID: ptr("T-OLD-24H"), UpdatedAt: dateOlderThan24h},
+			{TicketID: ptr("T-RECENT"), CompletedAt: &dateWithin24h, UpdatedAt: dateWithin24h},
+			{TicketID: ptr("T-OLD-24H"), CompletedAt: &dateOlderThan24h, UpdatedAt: dateOlderThan24h},
 		}
 		res := domain.FilterLedgersByTimeWindow(oneDayLedgers, domain.TimeWindow1D, ref)
 		if len(res) != 1 {
@@ -414,6 +418,32 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 		res := domain.FilterLedgersByTimeWindow(nil, domain.TimeWindow7D, ref)
 		if len(res) != 0 {
 			t.Errorf("expected 0 ledgers, got %d", len(res))
+		}
+	})
+
+	t.Run("strictly excludes tickets without valid completed_at even if updated_at or started_at are within window", func(t *testing.T) {
+		t.Parallel()
+		dateWithin24h := "2026-10-17T02:00:00Z"
+		emptyStr := ""
+		wsStr := "   "
+		corruptStr := "not-a-valid-date"
+
+		testLedgers := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("T-NIL"), CompletedAt: nil, UpdatedAt: dateWithin24h, StartedAt: &dateWithin24h},
+			{TicketID: ptr("T-EMPTY"), CompletedAt: &emptyStr, UpdatedAt: dateWithin24h, StartedAt: &dateWithin24h},
+			{TicketID: ptr("T-WHITESPACE"), CompletedAt: &wsStr, UpdatedAt: dateWithin24h, StartedAt: &dateWithin24h},
+			{TicketID: ptr("T-CORRUPT"), CompletedAt: &corruptStr, UpdatedAt: dateWithin24h, StartedAt: &dateWithin24h},
+			{TicketID: ptr("T-VALID"), CompletedAt: &dateWithin24h, UpdatedAt: dateWithin24h, StartedAt: &dateWithin24h},
+		}
+
+		for _, window := range []domain.TimeWindow{domain.TimeWindow1D, domain.TimeWindow7D, domain.TimeWindow30D, domain.TimeWindow90D} {
+			filtered := domain.FilterLedgersByTimeWindow(testLedgers, window, ref)
+			if len(filtered) != 1 {
+				t.Fatalf("expected exactly 1 valid ledger for window %s, got %d", window, len(filtered))
+			}
+			if *filtered[0].TicketID != "T-VALID" {
+				t.Errorf("expected T-VALID for window %s, got %s", window, *filtered[0].TicketID)
+			}
 		}
 	})
 }
@@ -779,11 +809,11 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 		tsInvalid := "invalid-timestamp-string"
 
 		boundaryLedgers := []domain.AgenticMetricsLedger{
-			{TicketID: ptr("T-START-EXACT"), UpdatedAt: tsStartExact},
-			{TicketID: ptr("T-START-BEFORE"), UpdatedAt: tsStartBefore},
-			{TicketID: ptr("T-END-EXACT"), UpdatedAt: tsEndExact},
-			{TicketID: ptr("T-END-FUTURE"), UpdatedAt: tsEndFuture},
-			{TicketID: ptr("T-INVALID"), UpdatedAt: tsInvalid},
+			{TicketID: ptr("T-START-EXACT"), CompletedAt: &tsStartExact, UpdatedAt: tsStartExact},
+			{TicketID: ptr("T-START-BEFORE"), CompletedAt: &tsStartBefore, UpdatedAt: tsStartBefore},
+			{TicketID: ptr("T-END-EXACT"), CompletedAt: &tsEndExact, UpdatedAt: tsEndExact},
+			{TicketID: ptr("T-END-FUTURE"), CompletedAt: &tsEndFuture, UpdatedAt: tsEndFuture},
+			{TicketID: ptr("T-INVALID"), CompletedAt: &tsInvalid, UpdatedAt: tsInvalid},
 		}
 
 		filtered := domain.FilterLedgersByTimeWindow(boundaryLedgers, domain.TimeWindow7D, ref)
@@ -2822,7 +2852,7 @@ func TestGetLedgerCompletionDate(t *testing.T) {
 		}
 	})
 
-	t.Run("falls back to updated_at when completed_at is nil", func(t *testing.T) {
+	t.Run("returns false when completed_at is nil even if updated_at is present", func(t *testing.T) {
 		t.Parallel()
 		updated := "2026-03-09T10:00:00Z"
 		started := "2026-03-08T08:00:00Z"
@@ -2832,16 +2862,15 @@ func TestGetLedgerCompletionDate(t *testing.T) {
 			StartedAt:   &started,
 		}
 		got, ok := domain.GetLedgerCompletionDate(ledger)
-		if !ok {
-			t.Fatal("expected ok = true")
+		if ok {
+			t.Errorf("expected ok = false, got true with %v", got)
 		}
-		expected, _ := time.Parse(time.RFC3339, updated)
-		if !got.Equal(expected) {
-			t.Errorf("expected %v, got %v", expected, got)
+		if !got.IsZero() {
+			t.Errorf("expected zero time, got %v", got)
 		}
 	})
 
-	t.Run("falls back to started_at when completed_at and updated_at are absent", func(t *testing.T) {
+	t.Run("returns false when completed_at is nil even if started_at is present", func(t *testing.T) {
 		t.Parallel()
 		started := "2026-03-08T08:00:00Z"
 		ledger := domain.AgenticMetricsLedger{
@@ -2850,12 +2879,27 @@ func TestGetLedgerCompletionDate(t *testing.T) {
 			StartedAt:   &started,
 		}
 		got, ok := domain.GetLedgerCompletionDate(ledger)
-		if !ok {
-			t.Fatal("expected ok = true")
+		if ok {
+			t.Errorf("expected ok = false, got true with %v", got)
 		}
-		expected, _ := time.Parse(time.RFC3339, started)
-		if !got.Equal(expected) {
-			t.Errorf("expected %v, got %v", expected, got)
+		if !got.IsZero() {
+			t.Errorf("expected zero time, got %v", got)
+		}
+	})
+
+	t.Run("returns false when completed_at is whitespace only", func(t *testing.T) {
+		t.Parallel()
+		ws := "   "
+		ledger := domain.AgenticMetricsLedger{
+			CompletedAt: &ws,
+			UpdatedAt:   "2026-03-09T10:00:00Z",
+		}
+		got, ok := domain.GetLedgerCompletionDate(ledger)
+		if ok {
+			t.Errorf("expected ok = false for whitespace completed_at, got %v", got)
+		}
+		if !got.IsZero() {
+			t.Errorf("expected zero time, got %v", got)
 		}
 	})
 
@@ -2873,6 +2917,181 @@ func TestGetLedgerCompletionDate(t *testing.T) {
 		}
 		if !got.IsZero() {
 			t.Errorf("expected zero time, got %v", got)
+		}
+	})
+
+	t.Run("adversarial table of nil, empty, whitespace, and corrupt completed_at with valid fallbacks", func(t *testing.T) {
+		t.Parallel()
+		validUpdated := "2026-03-09T10:00:00Z"
+		validStarted := "2026-03-08T08:00:00Z"
+
+		cases := []struct {
+			name        string
+			completedAt *string
+		}{
+			{name: "nil completed_at", completedAt: nil},
+			{name: "empty string completed_at", completedAt: ptr("")},
+			{name: "whitespace completed_at", completedAt: ptr("   ")},
+			{name: "invalid format", completedAt: ptr("garbage-date")},
+			{name: "out of range month", completedAt: ptr("2026-13-01T00:00:00Z")},
+			{name: "out of range day", completedAt: ptr("2026-02-31T00:00:00Z")},
+			{name: "partial date without time or proper ISO", completedAt: ptr("not-a-date")},
+		}
+
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				ledger := domain.AgenticMetricsLedger{
+					CompletedAt: tc.completedAt,
+					UpdatedAt:   validUpdated,
+					StartedAt:   &validStarted,
+				}
+				got, ok := domain.GetLedgerCompletionDate(ledger)
+				if ok {
+					t.Errorf("[%s] expected ok = false, got true with %v", tc.name, got)
+				}
+				if !got.IsZero() {
+					t.Errorf("[%s] expected zero time, got %v", tc.name, got)
+				}
+			})
+		}
+	})
+}
+
+func TestGetTicketEffectiveDate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("parses valid completed_at", func(t *testing.T) {
+		t.Parallel()
+		completed := "2026-03-10T15:30:00Z"
+		started := "2026-03-08T08:00:00Z"
+		updated := "2026-03-09T10:00:00Z"
+
+		got, ok := domain.GetTicketEffectiveDate(&completed, &started, updated)
+		if !ok {
+			t.Fatalf("expected ok = true")
+		}
+		expected, _ := time.Parse("2006-01-02", "2026-03-10")
+		if !got.Equal(expected) {
+			t.Errorf("expected %v, got %v", expected, got)
+		}
+	})
+
+	t.Run("returns false when completed_at is nil even if started_at and updated_at are valid", func(t *testing.T) {
+		t.Parallel()
+		started := "2026-03-08T08:00:00Z"
+		updated := "2026-03-09T10:00:00Z"
+
+		got, ok := domain.GetTicketEffectiveDate(nil, &started, updated)
+		if ok {
+			t.Errorf("expected ok = false, got true with %v", got)
+		}
+		if !got.IsZero() {
+			t.Errorf("expected zero time, got %v", got)
+		}
+	})
+
+	t.Run("returns false when completed_at is empty or unparseable", func(t *testing.T) {
+		t.Parallel()
+		emptyStr := ""
+		badStr := "invalid"
+		started := "2026-03-08T08:00:00Z"
+		updated := "2026-03-09T10:00:00Z"
+
+		got1, ok1 := domain.GetTicketEffectiveDate(&emptyStr, &started, updated)
+		if ok1 || !got1.IsZero() {
+			t.Errorf("expected ok=false and zero time for empty completed_at, got %v, %v", ok1, got1)
+		}
+
+		got2, ok2 := domain.GetTicketEffectiveDate(&badStr, &started, updated)
+		if ok2 || !got2.IsZero() {
+			t.Errorf("expected ok=false and zero time for bad completed_at, got %v, %v", ok2, got2)
+		}
+	})
+
+	t.Run("adversarial table of nil, empty, whitespace, and corrupt completed_at with valid fallbacks", func(t *testing.T) {
+		t.Parallel()
+		validStarted := "2026-03-08T08:00:00Z"
+		validUpdated := "2026-03-09T10:00:00Z"
+
+		cases := []struct {
+			name        string
+			completedAt *string
+		}{
+			{name: "nil completed_at", completedAt: nil},
+			{name: "empty completed_at", completedAt: ptr("")},
+			{name: "whitespace completed_at", completedAt: ptr("   ")},
+			{name: "invalid timestamp format", completedAt: ptr("not-a-timestamp")},
+			{name: "invalid calendar date", completedAt: ptr("2026-99-99")},
+			{name: "corrupted iso", completedAt: ptr("2026-02-31T12:00:00Z")},
+		}
+
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				got, ok := domain.GetTicketEffectiveDate(tc.completedAt, &validStarted, validUpdated)
+				if ok {
+					t.Errorf("[%s] expected ok = false, got true with %v", tc.name, got)
+				}
+				if !got.IsZero() {
+					t.Errorf("[%s] expected zero time, got %v", tc.name, got)
+				}
+			})
+		}
+	})
+}
+
+func TestFilterLedgersByDateRange(t *testing.T) {
+	t.Parallel()
+
+	d1 := "2026-03-01T10:00:00Z"
+	d2 := "2026-03-15T10:00:00Z"
+	d3 := "2026-03-30T10:00:00Z"
+
+	ledgers := []domain.AgenticMetricsLedger{
+		{TicketID: ptr("T-1"), CompletedAt: &d1},
+		{TicketID: ptr("T-2"), CompletedAt: &d2},
+		{TicketID: ptr("T-3"), CompletedAt: &d3},
+		{TicketID: ptr("T-NIL"), CompletedAt: nil, StartedAt: &d1, UpdatedAt: d1},
+	}
+
+	start, _ := time.Parse("2006-01-02", "2026-03-10")
+	end, _ := time.Parse("2006-01-02", "2026-03-20")
+
+	filtered := domain.FilterLedgersByDateRange(ledgers, &start, &end)
+	if len(filtered) != 1 {
+		t.Fatalf("expected 1 ledger, got %d", len(filtered))
+	}
+	if *filtered[0].TicketID != "T-2" {
+		t.Errorf("expected T-2, got %s", *filtered[0].TicketID)
+	}
+
+	t.Run("strictly excludes ledgers lacking valid completed_at even if started_at and updated_at match range", func(t *testing.T) {
+		t.Parallel()
+		midRange := "2026-03-15T12:00:00Z"
+		emptyStr := ""
+		wsStr := "   "
+		corruptStr := "corrupted-date-value"
+
+		testLedgers := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("T-NIL"), CompletedAt: nil, StartedAt: &midRange, UpdatedAt: midRange},
+			{TicketID: ptr("T-EMPTY"), CompletedAt: &emptyStr, StartedAt: &midRange, UpdatedAt: midRange},
+			{TicketID: ptr("T-WHITESPACE"), CompletedAt: &wsStr, StartedAt: &midRange, UpdatedAt: midRange},
+			{TicketID: ptr("T-CORRUPT"), CompletedAt: &corruptStr, StartedAt: &midRange, UpdatedAt: midRange},
+			{TicketID: ptr("T-VALID"), CompletedAt: &midRange, StartedAt: &midRange, UpdatedAt: midRange},
+		}
+
+		startDate, _ := time.Parse("2006-01-02", "2026-03-10")
+		endDate, _ := time.Parse("2006-01-02", "2026-03-20")
+
+		res := domain.FilterLedgersByDateRange(testLedgers, &startDate, &endDate)
+		if len(res) != 1 {
+			t.Fatalf("expected exactly 1 valid ledger, got %d", len(res))
+		}
+		if *res[0].TicketID != "T-VALID" {
+			t.Errorf("expected T-VALID, got %s", *res[0].TicketID)
 		}
 	})
 }
@@ -3085,7 +3304,7 @@ func TestGetLedgerCompletionDate_AdversarialTimezonesAndLeapYears(t *testing.T) 
 		}
 	})
 
-	t.Run("secondary fallback to started_at when completed_at and updated_at are malformed", func(t *testing.T) {
+	t.Run("does not fall back to started_at when completed_at is malformed", func(t *testing.T) {
 		t.Parallel()
 		bad1 := "garbage-completed"
 		bad2 := "garbage-updated"
@@ -3098,12 +3317,11 @@ func TestGetLedgerCompletionDate_AdversarialTimezonesAndLeapYears(t *testing.T) 
 		}
 
 		tGot, ok := domain.GetLedgerCompletionDate(ledger)
-		if !ok {
-			t.Fatalf("expected fallback to valid started_at")
+		if ok {
+			t.Fatalf("expected ok = false when completed_at is malformed, got %v", tGot)
 		}
-		expected, _ := time.Parse(time.RFC3339, validStarted)
-		if !tGot.Equal(expected) {
-			t.Errorf("expected %v, got %v", expected, tGot)
+		if !tGot.IsZero() {
+			t.Errorf("expected zero time, got %v", tGot)
 		}
 	})
 }
@@ -3221,7 +3439,7 @@ func TestFilterLedgersByCompletionDate_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("fallback hierarchy: updated_at, started_at, and all-null exclusion", func(t *testing.T) {
+	t.Run("zero fallback: updated_at and started_at are not used and dateless ledgers are excluded", func(t *testing.T) {
 		t.Parallel()
 		validDate := "2026-06-01T12:00:00Z"
 		badStr := "invalid-date"
@@ -3235,14 +3453,16 @@ func TestFilterLedgersByCompletionDate_AdversarialEdgeCases(t *testing.T) {
 			{TicketID: ptr("ALL-NULL"), CompletedAt: nil, UpdatedAt: "", StartedAt: nil},
 			// Ledger 4: all invalid
 			{TicketID: ptr("ALL-INVALID"), CompletedAt: &badStr, UpdatedAt: badStr, StartedAt: &badStr},
+			// Ledger 5: valid completed_at
+			{TicketID: ptr("VALID-COMPLETED"), CompletedAt: &validDate, UpdatedAt: ""},
 		}
 
 		filtered := domain.FilterLedgersByCompletionDate(items, &sinceUTC, &untilUTC)
-		if len(filtered) != 2 {
-			t.Fatalf("expected 2 fallbacks included and 2 dateless excluded, got %d", len(filtered))
+		if len(filtered) != 1 {
+			t.Fatalf("expected 1 completed ledger included and others excluded, got %d", len(filtered))
 		}
-		if *filtered[0].TicketID != "FALLBACK-UPDATED" || *filtered[1].TicketID != "FALLBACK-STARTED" {
-			t.Errorf("unexpected filtered ledgers: %v, %v", *filtered[0].TicketID, *filtered[1].TicketID)
+		if *filtered[0].TicketID != "VALID-COMPLETED" {
+			t.Errorf("unexpected filtered ledger: %v", *filtered[0].TicketID)
 		}
 	})
 
@@ -3319,7 +3539,7 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("fallback timestamps across completed_at, updated_at, and started_at sort accurately", func(t *testing.T) {
+	t.Run("ledgers with nil completed_at sort last regardless of updated_at or started_at", func(t *testing.T) {
 		t.Parallel()
 		items := []domain.AgenticMetricsLedger{
 			{TicketID: ptr("EARLY-COMPLETED"), CompletedAt: &dEarly},
@@ -3328,7 +3548,7 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		sortedDesc := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
-		expectedIDs := []string{"LATE-STARTED", "MID-UPDATED", "EARLY-COMPLETED"}
+		expectedIDs := []string{"EARLY-COMPLETED", "LATE-STARTED", "MID-UPDATED"}
 		for i, exp := range expectedIDs {
 			if *sortedDesc[i].TicketID != exp {
 				t.Errorf("index %d: expected %s, got %s", i, exp, *sortedDesc[i].TicketID)

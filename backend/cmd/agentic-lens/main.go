@@ -283,6 +283,18 @@ func runGenerate(args []string) {
 
 	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
 
+	if activeCompletedAt == nil || strings.TrimSpace(*activeCompletedAt) == "" {
+		activeCompletedAt = &updatedAtISO
+	} else {
+		clean := strings.TrimSpace(*activeCompletedAt)
+		activeCompletedAt = &clean
+	}
+
+	if activeCompletedAt == nil || strings.TrimSpace(*activeCompletedAt) == "" {
+		fmt.Fprintf(os.Stderr, "Error: mandatory completed_at timestamp could not be resolved\n")
+		os.Exit(1)
+	}
+
 	var ticketIDPtr *string
 	if activeTicketID != "" {
 		ticketIDPtr = &activeTicketID
@@ -374,33 +386,22 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	var workspacesDir string
+	workspacesDir, err := adapters.ResolveWorkspacesDir(*workspacesFlag)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag. Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Server cannot start without this information.\n")
+		os.Exit(1)
+	}
+
 	rawFlag := strings.TrimSpace(*workspacesFlag)
 	if rawFlag != "" {
-		workspacesDir = rawFlag
 		projCfg.Workspaces.Dir = workspacesDir
-	} else {
-		configuredDir := strings.TrimSpace(projCfg.Workspaces.Dir)
-		if configuredDir == "" {
-			fmt.Fprintf(os.Stderr, "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag. Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Server cannot start without this information.\n")
-			os.Exit(1)
-		}
-		if filepath.IsAbs(configuredDir) {
-			workspacesDir = configuredDir
-		} else {
-			cfgPath, _ := adaptersconfig.FindConfigFile("")
-			baseDir := ""
-			if cfgPath != "" {
-				baseDir = filepath.Dir(cfgPath)
-			} else {
-				if cwd, err := os.Getwd(); err == nil {
-					baseDir = cwd
-				}
-			}
-			if baseDir != "" {
-				workspacesDir = filepath.Join(baseDir, configuredDir)
-			} else {
-				workspacesDir = configuredDir
+	} else if !filepath.IsAbs(workspacesDir) {
+		cfgPath, _ := adaptersconfig.FindConfigFile("")
+		if cfgPath != "" {
+			baseDir := filepath.Dir(cfgPath)
+			candidate := filepath.Join(baseDir, workspacesDir)
+			if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
+				workspacesDir = candidate
 			}
 		}
 	}
@@ -547,7 +548,11 @@ func runBackfill(args []string) {
 		os.Exit(1)
 	}
 
-	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
+		os.Exit(1)
+	}
 	modeStr := "EXECUTION"
 	if opts.DryRun {
 		modeStr = "DRY-RUN PREVIEW"
@@ -679,7 +684,11 @@ func runMigrate(args []string) {
 		os.Exit(1)
 	}
 
-	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
+		os.Exit(1)
+	}
 	modeStr := "EXECUTION"
 	if opts.DryRun {
 		modeStr = "DRY-RUN PREVIEW"
@@ -1014,19 +1023,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	rawWorkspacesDir := strings.TrimSpace(*workspacesFlag)
-	if rawWorkspacesDir == "" {
-		rawWorkspacesDir = strings.TrimSpace(projCfg.Workspaces.Dir)
-	}
-	if rawWorkspacesDir == "" {
+	workspacesDir, err := adapters.ResolveWorkspacesDir(*workspacesFlag)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag\n")
 		os.Exit(1)
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
-	if workspacesDir == "" {
-		workspacesDir = rawWorkspacesDir
+	rawWorkspacesDir := strings.TrimSpace(*workspacesFlag)
+	if rawWorkspacesDir == "" {
+		rawWorkspacesDir = strings.TrimSpace(projCfg.Workspaces.Dir)
 	}
+
+	if !filepath.IsAbs(workspacesDir) {
+		cfgPath, _ := adaptersconfig.FindConfigFile("")
+		if cfgPath != "" {
+			baseDir := filepath.Dir(cfgPath)
+			candidate := filepath.Join(baseDir, workspacesDir)
+			if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
+				workspacesDir = candidate
+			}
+		}
+	}
+
 	fi, err := os.Stat(workspacesDir)
 	if err != nil || !fi.IsDir() {
 		fmt.Fprintf(os.Stderr, "Error: workspaces directory %q does not exist. Cannot proceed.\n", rawWorkspacesDir)
