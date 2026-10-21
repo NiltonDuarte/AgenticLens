@@ -15,8 +15,8 @@ This pull request resolves the critical fallback cascades identified in `alspace
 3. **Session Resolver Tier 4 Deletion & Fail-Fast Sentinel**:
    - `backend/internal/adapters/opencode/resolver.go`: Deleted Priority Tier 4 database fallback (`SELECT ... ORDER BY time_created DESC LIMIT 1`). When Tiers 1-3 fail, `ResolveActiveRootSession` immediately returns `ErrSessionNotFound`, eliminating foreign session cross-contamination in concurrent multi-agent executions.
 
-4. **Workspaces Directory Precedence**:
-   - `backend/internal/adapters/repository.go`: `ResolveWorkspacesDir` prioritizes explicit CLI overrides and configured project directory (`cfg.Workspaces.Dir`) before checking `/app/workspaces`, preventing container paths from hijacking host project configurations.
+4. **Workspaces Directory Zero Fallbacks & Fast Failure**:
+   - `backend/internal/adapters/repository.go`: Refactored `ResolveWorkspacesDir(overridePath string) (string, error)`. Completely excised runtime panics and all heuristic directory fallbacks (`/app/workspaces`, `./workspaces`, parent traversals, fallback `"workspaces"`). Workspaces directory is resolved strictly via explicit command flag or project configuration file (`cfg.Workspaces.Dir`), returning typed `ErrWorkspacesDirNotFound` and failing cleanly with exit code 1 otherwise.
 
 5. **Elimination of Silent UI Ticket Classification**:
    - `web/src/views/TicketDeepDive.tsx`: Replaced `{ledger.ticket_type ?? 'feature'}` with `{ledger.ticket_type ?? 'unclassified'}`.
