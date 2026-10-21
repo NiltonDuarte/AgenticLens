@@ -569,7 +569,7 @@ describe('Domain Pure Formatters', () => {
   });
 
   describe('Completion Date Parsing, Comparison, and Filtering', () => {
-    it('resolves effective completion date adhering to fallback hierarchy', () => {
+    it('resolves effective completion date adhering strictly to completed_at with zero fallback', () => {
       // completed_at present
       expect(
         getEffectiveCompletionDateMs({
@@ -579,30 +579,47 @@ describe('Domain Pure Formatters', () => {
         })
       ).toBe(new Date('2026-03-10T12:00:00Z').getTime());
 
-      // fallback to updated_at
+      // returns null when completed_at is null, even if updated_at is present
       expect(
         getEffectiveCompletionDateMs({
           completed_at: null,
           updated_at: '2026-03-09T12:00:00Z',
           started_at: '2026-03-08T12:00:00Z',
         })
-      ).toBe(new Date('2026-03-09T12:00:00Z').getTime());
+      ).toBeNull();
 
-      // fallback to started_at
+      // returns null when completed_at is undefined, even if started_at is present
       expect(
         getEffectiveCompletionDateMs({
-          completed_at: null,
+          completed_at: undefined,
           updated_at: undefined,
           started_at: '2026-03-08T12:00:00Z',
         })
-      ).toBe(new Date('2026-03-08T12:00:00Z').getTime());
+      ).toBeNull();
 
       // invalid date strings return null
       expect(
         getEffectiveCompletionDateMs({
           completed_at: 'not-a-date',
-          updated_at: 'bad-date',
-          started_at: '',
+          updated_at: '2026-03-09T12:00:00Z',
+          started_at: '2026-03-08T12:00:00Z',
+        })
+      ).toBeNull();
+
+      // empty or whitespace completed_at returns null
+      expect(
+        getEffectiveCompletionDateMs({
+          completed_at: '',
+          updated_at: '2026-03-09T12:00:00Z',
+          started_at: '2026-03-08T12:00:00Z',
+        })
+      ).toBeNull();
+
+      expect(
+        getEffectiveCompletionDateMs({
+          completed_at: '   ',
+          updated_at: '2026-03-09T12:00:00Z',
+          started_at: '2026-03-08T12:00:00Z',
         })
       ).toBeNull();
     });

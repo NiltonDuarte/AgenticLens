@@ -3,6 +3,7 @@ package backfill
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -360,5 +361,28 @@ func TestBackfillEngine_CorruptedFileResilience(t *testing.T) {
 		if loaded.Migration != nil {
 			t.Errorf("expected migration object to be omitted on completed status for %s, got %v", goodTid, loaded.Migration)
 		}
+	}
+}
+
+func TestBackfillEngine_MissingWorkspacesDir(t *testing.T) {
+	tempDir := t.TempDir()
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine()
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: "",
+	})
+	if report != nil {
+		t.Errorf("expected nil report, got %+v", report)
+	}
+	if err == nil {
+		t.Fatal("expected error when workspaces dir cannot be resolved, got nil")
+	}
+	if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+		t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 	}
 }

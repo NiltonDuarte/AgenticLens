@@ -106,7 +106,7 @@ func TestFormatBuildInfo_TableDriven(t *testing.T) {
 				GitCommit: "",
 				BuildDate: "",
 			},
-			expected: "agentic-lens version v0.1.0-dev (commit: unknown, built: unknown)",
+			expected: "agentic-lens version v0.0.0-dev (commit: unknown, built: unknown)",
 		},
 		{
 			name: "partial empty fields",

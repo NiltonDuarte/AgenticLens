@@ -32,7 +32,7 @@ ticket:
 # Workspace storage and source folder definitions.
 workspaces:
   # Directory where ticket artifacts and session telemetry ledgers are stored.
-  dir: workspaces
+  dir: alspaces
   # Monitored source code folders for project telemetry and change tracking.
   src_folders:
     - web
@@ -45,9 +45,6 @@ workspaces:
     - path: SUMMARY.md
       title: Work Summary
       description: Implementation summary log and verification records
-    - path: PULL_REQUEST.md
-      title: Pull Request
-      description: Pull request description and context
 
 # OpenCode SQLite database connectivity and timeout parameters.
 database:

@@ -11,7 +11,7 @@ export interface NavbarProps {
 }
 
 const DEFAULT_BUILD_INFO: BuildInfo = {
-  version: 'v0.1.0-dev',
+  version: 'v0.0.0-dev',
   commit: 'unknown',
   build_date: 'unknown',
 };
