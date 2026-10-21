@@ -969,10 +969,17 @@ func convertPartToEventFact(pr RawPartRecord, turn int64, role string, ctxTokens
 		durMs = &dur
 	}
 
+	var msgIDPtr *string
+	if pr.MessageID != "" {
+		mID := pr.MessageID
+		msgIDPtr = &mID
+	}
+
 	if partType == "compaction" {
 		return &domain.EventFact{
 			Timestamp:     ts,
 			SessionID:     pr.SessionID,
+			MessageID:     msgIDPtr,
 			Turn:          turn,
 			Role:          role,
 			EventType:     domain.EventTypeCompaction,
@@ -1008,6 +1015,7 @@ func convertPartToEventFact(pr RawPartRecord, turn int64, role string, ctxTokens
 		return &domain.EventFact{
 			Timestamp:     ts,
 			SessionID:     pr.SessionID,
+			MessageID:     msgIDPtr,
 			Turn:          turn,
 			Role:          role,
 			EventType:     domain.EventTypeToolCall,

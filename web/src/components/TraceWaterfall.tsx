@@ -3,6 +3,7 @@ import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
 import { formatTokensK } from '../domain/formatters';
 import { AnomalyBadge } from './AnomalyBadge';
 import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 export interface TraceWaterfallProps {
   readonly events: readonly EventFact[];
@@ -11,11 +12,72 @@ export interface TraceWaterfallProps {
   readonly onSelectEvent?: ((event: EventFact, anomaly?: Anomaly | undefined) => void) | undefined;
   readonly isHydrated?: boolean | undefined;
   readonly dataSource?: DataSource | undefined;
+  readonly defaultExpanded?: boolean | undefined;
 }
 
 type FilterMode = 'all' | 'tools' | 'errors_anomalies';
 
-const findMatchingAnomaly = (
+const isToolFailureAnomalyRule = (ruleId: string): boolean => {
+  return (
+    ruleId === 'TOOL_RETRY_STREAK' ||
+    ruleId === 'TOOL_HIGH_FAILURE_RATE' ||
+    ruleId.startsWith('TOOL_') ||
+    ruleId.includes('TOOL_FAILURE')
+  );
+};
+
+export const matchesAnomaly = (event: EventFact, anomaly: Anomaly): boolean => {
+  const ctx = anomaly.context;
+
+  // Strict Session ID Guard: if both context and event specify session_id, they must match
+  if (ctx.session_id && event.session_id && ctx.session_id !== event.session_id) {
+    return false;
+  }
+
+  // Tool Failure Anomaly Status Criterion:
+  // If anomaly is a tool failure rule, only match if the event is an error
+  if (isToolFailureAnomalyRule(anomaly.rule_id)) {
+    if (event.status !== 'error') {
+      return false;
+    }
+  }
+
+  // 1. Tool call match: tool_name matches
+  if (
+    ctx.tool_name &&
+    event.tool_name &&
+    ctx.tool_name.toLowerCase() === event.tool_name.toLowerCase()
+  ) {
+    if (ctx.turn !== undefined && event.turn !== undefined) {
+      return ctx.turn === event.turn;
+    }
+    return true;
+  }
+
+  // 2. Turn and session match (e.g. context saturation spike)
+  if (ctx.turn !== undefined && ctx.turn === event.turn) {
+    if (ctx.session_id && event.session_id) {
+      return ctx.session_id === event.session_id;
+    }
+    return true;
+  }
+
+  // 3. Role match
+  if (
+    ctx.role &&
+    event.role &&
+    (ctx.role.toLowerCase() === event.role.toLowerCase() ||
+      ctx.secondary_role?.toLowerCase() === event.role.toLowerCase())
+  ) {
+    if (ctx.turn !== undefined) {
+      return ctx.turn === event.turn;
+    }
+  }
+
+  return false;
+};
+
+export const findMatchingAnomaly = (
   event: EventFact,
   anomalies?: readonly Anomaly[]
 ): Anomaly | undefined => {
@@ -23,45 +85,7 @@ const findMatchingAnomaly = (
     return undefined;
   }
 
-  return anomalies.find((a) => {
-    const ctx = a.context;
-    // 1. Tool call match: tool_name matches and turn or session_id matches
-    if (
-      ctx.tool_name &&
-      event.tool_name &&
-      ctx.tool_name.toLowerCase() === event.tool_name.toLowerCase()
-    ) {
-      if (ctx.turn !== undefined && event.turn !== undefined) {
-        return ctx.turn === event.turn;
-      }
-      if (ctx.session_id && event.session_id) {
-        return ctx.session_id === event.session_id;
-      }
-      return true;
-    }
-
-    // 2. Turn and session match (e.g. context saturation spike)
-    if (ctx.turn !== undefined && ctx.turn === event.turn) {
-      if (ctx.session_id && event.session_id) {
-        return ctx.session_id === event.session_id;
-      }
-      return true;
-    }
-
-    // 3. Role match
-    if (
-      ctx.role &&
-      event.role &&
-      (ctx.role.toLowerCase() === event.role.toLowerCase() ||
-        ctx.secondary_role?.toLowerCase() === event.role.toLowerCase())
-    ) {
-      if (ctx.turn !== undefined) {
-        return ctx.turn === event.turn;
-      }
-    }
-
-    return false;
-  });
+  return anomalies.find((a) => matchesAnomaly(event, a));
 };
 
 const formatDurationMs = (ms: number): string => {
@@ -103,15 +127,31 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   onSelectEvent,
   isHydrated = false,
   dataSource = 'committed_ledger',
+  defaultExpanded = false,
 }) => {
+  const [isWaterfallExpanded, setIsWaterfallExpanded] = useState<boolean>(defaultExpanded);
   const [filterMode, setFilterMode] = useState<FilterMode>('errors_anomalies');
   const [selectedRoles, setSelectedRoles] = useState<readonly string[]>(['all']);
   const [selectedTools, setSelectedTools] = useState<readonly string[]>(['all']);
   const [selectedAnomalies, setSelectedAnomalies] = useState<readonly string[]>(['all']);
   const [localSelectedEvent, setLocalSelectedEvent] = useState<EventFact | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const activeSelectedEvent = selectedEvent !== undefined ? selectedEvent : localSelectedEvent;
+
+  const handleCopyIdentifier = async (
+    idText: string,
+    key: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    await copyTextToClipboard(idText);
+    setCopiedId(key);
+    window.setTimeout(() => {
+      setCopiedId((current) => (current === key ? null : current));
+    }, 2000);
+  };
 
   const toggleExpand = (key: string, e?: React.SyntheticEvent) => {
     e?.stopPropagation();
@@ -175,87 +215,64 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     }));
   }, [availableTools]);
 
-  // Unique anomaly rule IDs for filter dropdown
-  const availableAnomalies = useMemo(() => {
+  // Unique anomaly rules for filter dropdown
+  const activeAnomalies = useMemo(() => {
     if (!anomalies || anomalies.length === 0) return [];
-    const anomalySet = new Set<string>();
+    const ruleSet = new Set<string>();
     for (const a of anomalies) {
       if (a.rule_id && a.rule_id.trim().length > 0) {
-        anomalySet.add(a.rule_id.trim());
+        ruleSet.add(a.rule_id.trim());
       }
     }
-    return Array.from(anomalySet).sort((a, b) => a.localeCompare(b));
+    return Array.from(ruleSet).sort((a, b) => a.localeCompare(b));
   }, [anomalies]);
 
   const anomalyOptions: readonly MultiSelectOption[] = useMemo(() => {
-    return availableAnomalies.map((ruleId) => ({
-      value: ruleId,
-      label: ruleId,
+    return activeAnomalies.map((rule) => ({
+      value: rule,
+      label: rule,
     }));
-  }, [availableAnomalies]);
+  }, [activeAnomalies]);
 
-  const isRoleFilterActive =
-    selectedRoles.length > 0 &&
-    !selectedRoles.includes('all') &&
-    !selectedRoles.includes('ALL');
+  const isRoleFilterActive = !selectedRoles.includes('all') && selectedRoles.length > 0;
+  const isToolFilterActive = !selectedTools.includes('all') && selectedTools.length > 0;
+  const isAnomalyFilterActive = !selectedAnomalies.includes('all') && selectedAnomalies.length > 0;
 
-  const isToolFilterActive =
-    selectedTools.length > 0 &&
-    !selectedTools.includes('all') &&
-    !selectedTools.includes('ALL');
-
-  const isAnomalyFilterActive =
-    selectedAnomalies.length > 0 &&
-    !selectedAnomalies.includes('all') &&
-    !selectedAnomalies.includes('ALL');
-
-  const activeAnomalies = useMemo(() => {
-    if (!isAnomalyFilterActive || !anomalies || anomalies.length === 0) {
-      return undefined;
-    }
-    return anomalies.filter(
-      (a) => a.rule_id && selectedAnomalies.includes(a.rule_id.trim())
-    );
-  }, [anomalies, isAnomalyFilterActive, selectedAnomalies]);
-
-  // Filtered event list
+  // Filtered events
   const filteredEvents = useMemo(() => {
-    return sortedEvents.filter((e) => {
-      // 1. Role filter
+    return sortedEvents.filter((ev) => {
+      // 1. FilterMode condition
+      if (filterMode === 'tools' && ev.event_type !== 'tool_call') {
+        return false;
+      }
+      if (filterMode === 'errors_anomalies') {
+        const hasErr = ev.status === 'error';
+        const hasAnomaly = Boolean(findMatchingAnomaly(ev, anomalies));
+        if (!hasErr && !hasAnomaly) {
+          return false;
+        }
+      }
+
+      // 2. Multi-role filter
       if (isRoleFilterActive) {
-        if (!e.role || !selectedRoles.includes(e.role.trim())) {
+        if (!ev.role || !selectedRoles.includes(ev.role.trim())) {
           return false;
         }
       }
 
-      // 2. Filter mode
-      if (filterMode === 'tools') {
-        if (e.event_type !== 'tool_call') {
-          return false;
-        }
-      } else if (filterMode === 'errors_anomalies') {
-        const isError = e.status === 'error';
-        const hasAnomaly = Boolean(findMatchingAnomaly(e, anomalies));
-        if (!isError && !hasAnomaly) {
-          return false;
-        }
-      }
-
-      // 3. Tool filter
+      // 3. Multi-tool filter
       if (isToolFilterActive) {
-        if (
-          !e.tool_name ||
-          e.tool_name.trim().length === 0 ||
-          !selectedTools.includes(e.tool_name.trim())
-        ) {
+        if (!ev.tool_name || !selectedTools.includes(ev.tool_name.trim())) {
           return false;
         }
       }
 
-      // 4. Anomaly filter
+      // 4. Multi-anomaly filter
       if (isAnomalyFilterActive) {
-        const hasMatchingRuleAnomaly = Boolean(findMatchingAnomaly(e, activeAnomalies));
-        if (!hasMatchingRuleAnomaly) {
+        const hasSelectedAnomaly = anomalies?.some(
+          (a) => selectedAnomalies.includes(a.rule_id) && matchesAnomaly(ev, a)
+        );
+        if (!hasSelectedAnomaly) {
           return false;
         }
       }
@@ -264,14 +281,14 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     });
   }, [
     sortedEvents,
+    filterMode,
     isRoleFilterActive,
     selectedRoles,
-    filterMode,
     anomalies,
     isToolFilterActive,
     selectedTools,
     isAnomalyFilterActive,
-    activeAnomalies,
+    selectedAnomalies,
   ]);
 
   if (!events || events.length === 0) {
@@ -284,8 +301,68 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     );
   }
 
+  // Summary statistics for collapsed bar and header
+  const totalEventsCount = events.length;
+  const totalErrorsCount = events.filter((ev) => ev.status === 'error').length;
+  const totalAnomaliesCount = anomalies ? anomalies.length : 0;
+
+  const issuesSummaryText =
+    totalErrorsCount === 0 && totalAnomaliesCount === 0
+      ? 'Clean Execution'
+      : `${totalErrorsCount === 0 ? 'Zero' : totalErrorsCount} ${
+          totalErrorsCount === 1 ? 'Error' : 'Errors'
+        }, ${totalAnomaliesCount === 0 ? 'Zero' : totalAnomaliesCount} ${
+          totalAnomaliesCount === 1 ? 'Anomaly' : 'Anomalies'
+        }`;
+
+  // Collapsed View
+  if (!isWaterfallExpanded) {
+    return (
+      <div className="trace-waterfall-card trace-waterfall-collapsed" data-testid="trace-waterfall-collapsed">
+        <div className="waterfall-summary-bar">
+          <div className="waterfall-summary-left">
+            <h3 className="waterfall-title">Execution Trace Waterfall</h3>
+            <span
+              className={`waterfall-source-badge ${isHydrated ? 'source-hydrated' : 'source-offline'}`}
+              data-testid="waterfall-source-badge"
+            >
+              {isHydrated ? 'Source: Local SQLite' : 'Source: Committed Ledger'}
+            </span>
+          </div>
+
+          <div className="waterfall-summary-metrics">
+            <span className="waterfall-summary-stat mono" data-testid="waterfall-event-count">
+              {totalEventsCount} Events Recorded
+            </span>
+            <span
+              className={`waterfall-summary-issues ${
+                totalErrorsCount > 0 || totalAnomaliesCount > 0 ? 'issues-flagged' : 'issues-clean'
+              }`}
+              data-testid="waterfall-issues-summary"
+            >
+              {issuesSummaryText}
+            </span>
+          </div>
+
+          <div className="waterfall-summary-right">
+            <button
+              type="button"
+              className="waterfall-toggle-btn"
+              data-testid="waterfall-expand-btn"
+              aria-expanded="false"
+              onClick={() => setIsWaterfallExpanded(true)}
+            >
+              Expand Trace Waterfall
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded Full View
   return (
-    <div className="trace-waterfall-card">
+    <div className="trace-waterfall-card" data-testid="trace-waterfall-card">
       <div className="waterfall-header">
         <div className="waterfall-title-group">
           <h3 className="waterfall-title">Execution Trace Waterfall</h3>
@@ -301,6 +378,15 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
           <span className="waterfall-hint">
             Click any error or anomaly to inspect failure details
           </span>
+          <button
+            type="button"
+            className="waterfall-toggle-btn"
+            data-testid="waterfall-collapse-btn"
+            aria-expanded="true"
+            onClick={() => setIsWaterfallExpanded(false)}
+          >
+            Collapse Trace Waterfall
+          </button>
         </div>
 
         {/* Filter Toolbar */}
@@ -399,6 +485,10 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
               .replace(/\s+/g, ' ')
               .trim();
 
+            const turnDebugId = `turn-${ev.turn}`;
+            const copyKey = `item-id-${itemKey}`;
+            const isCopied = copiedId === copyKey;
+
             return (
               <div
                 key={itemKey}
@@ -428,6 +518,27 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                       {formatEventTypeLabel(ev.event_type)}
                     </span>
                     <span className="timeline-timestamp mono">{ev.timestamp}</span>
+
+                    {/* Concrete Debug Identifier Badge with Copy Button */}
+                    <div className="timeline-id-badge" onClick={(e) => e.stopPropagation()}>
+                      <span className="timeline-id-label mono" title={`Session: ${ev.session_id}${ev.message_id ? ` | Message: ${ev.message_id}` : ''}`}>
+                        {ev.message_id ? `${ev.session_id.slice(0, 8)}...:${ev.message_id.slice(0, 8)}` : ev.session_id}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-copy-id"
+                        aria-label={`Copy debug identifier for turn ${ev.turn}`}
+                        onClick={(e) =>
+                          handleCopyIdentifier(
+                            ev.message_id ?? ev.session_id ?? turnDebugId,
+                            copyKey,
+                            e
+                          )
+                        }
+                      >
+                        {isCopied ? 'Copied' : 'Copy ID'}
+                      </button>
+                    </div>
 
                     {matchingAnomaly && (
                       <AnomalyBadge
@@ -524,6 +635,22 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                     <div className="payload-details-container" data-testid={`payload-details-${ev.turn}`}>
                       {isHydrated ? (
                         <>
+                          {ev.message_id && (
+                            <div className="payload-id-row">
+                              <span className="drawer-label">Message ID:</span>
+                              <span className="drawer-val mono">{ev.message_id}</span>
+                              <button
+                                type="button"
+                                className="btn-copy-id"
+                                aria-label="Copy Message ID"
+                                onClick={(e) =>
+                                  handleCopyIdentifier(ev.message_id!, `msg-${itemKey}`, e)
+                                }
+                              >
+                                {copiedId === `msg-${itemKey}` ? 'Copied' : 'Copy'}
+                              </button>
+                            </div>
+                          )}
                           {ev.prompt_content && (
                             <div className="payload-block prompt-block" data-testid="prompt-payload-block">
                               <div className="payload-block-title">Prompt Payload</div>

@@ -36,6 +36,7 @@ type ToolFact struct {
 type EventFact struct {
 	Timestamp        string    `json:"timestamp"`
 	SessionID        string    `json:"session_id"`
+	MessageID        *string   `json:"message_id,omitempty"`
 	Turn             int64     `json:"turn"`
 	Role             string    `json:"role"`
 	EventType        EventType `json:"event_type"`

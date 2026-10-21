@@ -5,6 +5,7 @@ export type DataSource = 'local_sqlite' | 'committed_ledger';
 export interface EventFact {
   readonly timestamp: string;
   readonly session_id: string;
+  readonly message_id?: string | null | undefined;
   readonly turn: number;
   readonly role: string;
   readonly event_type: EventType;
