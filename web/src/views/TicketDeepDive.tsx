@@ -35,13 +35,11 @@ import { InfoTooltip } from '../components/InfoTooltip';
 export interface TicketDeepDiveProps {
   readonly selectedTicketId?: string | null;
   readonly onSelectTicket?: (ticketId: string) => void;
-  readonly onMockChange?: (isMock: boolean) => void;
 }
 
 export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   selectedTicketId,
   onSelectTicket,
-  onMockChange,
 }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [detail, setDetail] = useState<WorkspaceDetail | null>(null);
@@ -56,7 +54,6 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const ledgersRef = useRef<readonly AgenticMetricsLedger[]>([]);
-  const isMockFleetRef = useRef(false);
 
   // Sync activeTicketId when parent prop changes
   useEffect(() => {
@@ -70,15 +67,12 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     setError(null);
     try {
       let currentLedgers = ledgersRef.current;
-      let isMockFleet = isMockFleetRef.current;
 
       // Only fetch fleet catalog if in-memory cache is empty or explicitly forced
       if (forceReloadFleet || currentLedgers.length === 0) {
         const ledgersRes = await fetchWorkspaceLedgers('all');
         currentLedgers = ledgersRes.data;
-        isMockFleet = ledgersRes.isMock;
         ledgersRef.current = currentLedgers;
-        isMockFleetRef.current = isMockFleet;
         setLedgers(currentLedgers);
       }
 
@@ -93,7 +87,6 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         setDetail(detailRes.data);
 
         let loadedEvents: readonly EventFact[] = detailRes.data.ledger?.facts?.events ?? [];
-        let isMockEvents = false;
         let hydrated = false;
         let source: DataSource = 'committed_ledger';
         try {
@@ -103,7 +96,6 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           }
           hydrated = eventsRes.data?.is_hydrated ?? false;
           source = eventsRes.data?.data_source ?? 'committed_ledger';
-          isMockEvents = eventsRes.isMock;
         } catch {
           // Gracefully keep events from detail.ledger.facts.events if fetch fails
         }
@@ -111,13 +103,11 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         setEvents(loadedEvents);
         setIsHydrated(hydrated);
         setDataSource(source);
-        onMockChange?.(isMockFleet || detailRes.isMock || isMockEvents);
       } else {
         setDetail(null);
         setEvents([]);
         setIsHydrated(false);
         setDataSource('committed_ledger');
-        onMockChange?.(isMockFleet);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to load ticket details';
@@ -125,7 +115,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [activeTicketId, onMockChange]);
+  }, [activeTicketId]);
 
   useEffect(() => {
     loadData(false);
@@ -218,7 +208,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         <div className="header-meta-row">
           <div className="header-left">
             <span className="ticket-id-tag">{ledger.ticket_id ?? 'UNKNOWN'}</span>
-            <span className="ticket-type-pill">{ledger.ticket_type ?? 'feature'}</span>
+            <span className={`ticket-type-pill ${ledger.ticket_type ? '' : 'unclassified'}`.trim()}>{ledger.ticket_type ?? 'unclassified'}</span>
             <h2 className="workspace-title">{ledger.ticket_title ?? 'Untitled Workspace'}</h2>
           </div>
           <div className="header-right">

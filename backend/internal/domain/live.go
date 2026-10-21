@@ -87,6 +87,14 @@ func ClassifyToolFailure(toolName string, status string, output string, consecut
 	cleanStatus := strings.ToLower(strings.TrimSpace(status))
 	cleanTool := strings.ToLower(strings.TrimSpace(toolName))
 
+	// Content inspection tools that complete successfully should never be flagged as errors.
+	if cleanStatus == "completed" {
+		switch cleanTool {
+		case "read", "grep", "glob", "webfetch":
+			return false, string(SeverityNone), nil
+		}
+	}
+
 	// High severity signatures: tracebacks, crash panics, compilation faults, memory faults
 	isTraceback := strings.Contains(output, "Traceback (most recent call last)") ||
 		strings.Contains(output, "panic:") ||

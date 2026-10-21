@@ -7,11 +7,14 @@ import (
 	"strings"
 )
 
+// ErrSessionNotFound is returned when an OpenCode root session cannot be resolved through nonce, explicit ID, or ticket identifiers.
+var ErrSessionNotFound = errors.New("opencode root session not found")
+
 // ResolveActiveRootSession resolves the active root session identifier using prioritized matching strategies:
 // Priority 1: Exact Nonce matching against the part table data.
 // Priority 2: Explicit session ID passed directly as parameter.
 // Priority 3: Ticket ID matching against root session titles. If title matching yields no rows, falls back to workspace path matching via ResolveSessionByWorkspacePath.
-// Priority 4: Fallback to the most recent message session parent or ID when neither nonce nor ticket ID is supplied.
+// If all strategies fail, returns nil and an error wrapping ErrSessionNotFound.
 func ResolveActiveRootSession(db *sql.DB, nonce string, ticketID string, explicitSessionID string) (*string, error) {
 	if db == nil {
 		return nil, errors.New("database connection is nil")
@@ -71,30 +74,7 @@ func ResolveActiveRootSession(db *sql.DB, nonce string, ticketID string, explici
 		}
 	}
 
-	// Priority 4: Most recent message fallback only if neither nonce nor ticket ID was specified
-	if cleanNonce == "" && cleanTicket == "" {
-		query := `
-			SELECT s.id, s.parent_id
-			FROM message m
-			JOIN session s ON m.session_id = s.id
-			ORDER BY m.time_created DESC LIMIT 1
-		`
-		var sid string
-		var parentID sql.NullString
-		err := db.QueryRow(query).Scan(&sid, &parentID)
-		if err == nil {
-			if parentID.Valid && strings.TrimSpace(parentID.String) != "" {
-				res := strings.TrimSpace(parentID.String)
-				return &res, nil
-			}
-			return &sid, nil
-		}
-		if !errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("resolving session by most recent message: %w", err)
-		}
-	}
-
-	return nil, nil
+	return nil, fmt.Errorf("%w: unable to resolve OpenCode session for ticket %q; specify --session-id or use --nonce", ErrSessionNotFound, cleanTicket)
 }
 
 // ResolveSessionByWorkspacePath searches for root sessions whose parts reference the workspace directory,

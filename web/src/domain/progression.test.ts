@@ -1026,7 +1026,7 @@ describe('Domain Progression Aggregator', () => {
       expect(buckets).toEqual([]);
     });
 
-    it('uses fallback chain when invocation completed_at is null', () => {
+    it('does not allocate to time buckets when completed_at is null on invocation and ledger', () => {
       const fallbackInv: InvocationFact = {
         id: 'fb-inv',
         parent_id: null,
@@ -1129,11 +1129,205 @@ describe('Domain Progression Aggregator', () => {
       };
 
       const buckets = aggregateMetricsOverTime([ledger], 'daily');
+      expect(buckets).toHaveLength(0);
+    });
+
+    it('falls back to ledger completed_at when invocation completed_at is null but ledger is completed', () => {
+      const fallbackInv: InvocationFact = {
+        id: 'fb-inv-2',
+        parent_id: null,
+        role: 'coder',
+        model: 'test',
+        user: 'dev',
+        started_at: '2026-10-11T10:00:00Z',
+        completed_at: null, // missing
+        active_duration_seconds: 30,
+        turns: 1,
+        tokens: {
+          input: 100,
+          output: 50,
+          cache_read: 200,
+          reasoning: 0,
+          peak_context: 500,
+        },
+        cost_usd: 0.05,
+        compactions: 0,
+      };
+
+      const ledger: AgenticMetricsLedger = {
+        ticket_id: 'FB-2',
+        ticket_title: 'Fallback completed test',
+        ticket_type: 'task',
+        started_at: '2026-10-11T10:00:00Z',
+        completed_at: '2026-10-11T10:30:00Z',
+        updated_at: '2026-10-11T10:30:00Z',
+        facts: {
+          ticket_id: 'FB-2',
+          ticket_title: 'Fallback completed test',
+          ticket_type: 'task',
+          started_at: '2026-10-11T10:00:00Z',
+          completed_at: '2026-10-11T10:30:00Z',
+          updated_at: '2026-10-11T10:30:00Z',
+          code: {
+            lines_added: 10,
+            lines_deleted: 2,
+            test_lines_added: 5,
+            test_lines_deleted: 0,
+            prod_lines_added: 5,
+            prod_lines_deleted: 2,
+            files_changed: 1,
+            sdlc_iterations: 1,
+          },
+          invocations: [fallbackInv],
+          tools: [],
+        },
+        workflow_efficiency: {
+          sdlc_iterations: 1,
+          active_duration_seconds: 30,
+          active_duration_formatted: '30s',
+          role_effort_distribution_pct: {},
+          subagent_turn_velocity: {
+            avg_turns_per_invocation: 1,
+            peak_turns: 1,
+            by_role: {},
+          },
+          test_to_production_ratio: {
+            ratio: '1.0:1',
+            test_lines_added: 5,
+            prod_lines_added: 5,
+          },
+          reasoning_tokens: 0,
+          reasoning_ratio_pct: 0,
+          code_delivered: {
+            lines_added: 10,
+            lines_deleted: 2,
+            files_changed: 1,
+          },
+          tool_execution: {
+            total_calls: 1,
+            errors_and_corrections: 0,
+            success_rate_pct: 100,
+          },
+          context_window_health: {
+            healthy_ceiling_tokens: 200000,
+            status: 'HEALTHY',
+            orchestrator_peak_tokens: 500,
+            orchestrator_saturation_pct: 0.25,
+            subagents_peak_tokens: 0,
+            subagents_peak_role: 'none',
+            compactions: 0,
+            peak_by_role: {},
+          },
+        },
+        threads: [],
+        totals: {
+          invocations: 1,
+          input_tokens: 100,
+          output_tokens: 50,
+          cache_read_tokens: 200,
+          cache_hit_rate_pct: 66.7,
+          cost_usd: 0.05,
+          peak_context_tokens: 500,
+          context_health: 'HEALTHY',
+        },
+        roles: [],
+        models: [],
+      };
+
+      const buckets = aggregateMetricsOverTime([ledger], 'daily');
       expect(buckets).toHaveLength(1);
       expect(buckets[0]?.bucket_date).toBe('2026-10-11');
       expect(buckets[0]?.invocations).toBe(1);
       expect(buckets[0]?.lines_added).toBe(10);
       expect(buckets[0]?.net_lines_added).toBe(8);
+    });
+
+    it('adversarial: ignores tickets with empty, whitespace, or corrupt completed_at even if started_at and updated_at are populated', () => {
+      const invalidCompletedValues = ['', '   ', 'not-a-valid-date', '2026-99-99', null];
+
+      for (const invalidCompleted of invalidCompletedValues) {
+        const invWithoutCompleted: InvocationFact = {
+          id: 'inv-no-completed',
+          parent_id: null,
+          role: 'coder',
+          model: 'test',
+          user: 'dev',
+          started_at: '2026-10-15T10:00:00Z',
+          completed_at: null,
+          active_duration_seconds: 30,
+          turns: 1,
+          tokens: { input: 100, output: 50, cache_read: 0, reasoning: 0, peak_context: 500 },
+          cost_usd: 0.05,
+          compactions: 0,
+        };
+
+        const ledger: AgenticMetricsLedger = {
+          ticket_id: 'ADV-1',
+          ticket_title: 'Adversarial invalid completed_at test',
+          ticket_type: 'task',
+          started_at: '2026-10-15T10:00:00Z',
+          completed_at: invalidCompleted as string | null,
+          updated_at: '2026-10-15T10:30:00Z',
+          facts: {
+            ticket_id: 'ADV-1',
+            ticket_title: 'Adversarial invalid completed_at test',
+            ticket_type: 'task',
+            started_at: '2026-10-15T10:00:00Z',
+            completed_at: invalidCompleted as string | null,
+            updated_at: '2026-10-15T10:30:00Z',
+            code: {
+              lines_added: 50,
+              lines_deleted: 10,
+              test_lines_added: 20,
+              test_lines_deleted: 0,
+              prod_lines_added: 30,
+              prod_lines_deleted: 10,
+              files_changed: 2,
+              sdlc_iterations: 1,
+            },
+            invocations: [invWithoutCompleted],
+            tools: [],
+          },
+          workflow_efficiency: {
+            sdlc_iterations: 1,
+            active_duration_seconds: 30,
+            active_duration_formatted: '30s',
+            role_effort_distribution_pct: {},
+            subagent_turn_velocity: { avg_turns_per_invocation: 1, peak_turns: 1, by_role: {} },
+            test_to_production_ratio: { ratio: '1.0:1', test_lines_added: 20, prod_lines_added: 30 },
+            reasoning_tokens: 0,
+            reasoning_ratio_pct: 0,
+            code_delivered: { lines_added: 50, lines_deleted: 10, files_changed: 2 },
+            tool_execution: { total_calls: 1, errors_and_corrections: 0, success_rate_pct: 100 },
+            context_window_health: {
+              healthy_ceiling_tokens: 200000,
+              status: 'HEALTHY',
+              orchestrator_peak_tokens: 500,
+              orchestrator_saturation_pct: 0.25,
+              subagents_peak_tokens: 0,
+              subagents_peak_role: 'none',
+              compactions: 0,
+              peak_by_role: {},
+            },
+          },
+          threads: [],
+          totals: {
+            invocations: 1,
+            input_tokens: 100,
+            output_tokens: 50,
+            cache_read_tokens: 0,
+            cache_hit_rate_pct: 0,
+            cost_usd: 0.05,
+            peak_context_tokens: 500,
+            context_health: 'HEALTHY',
+          },
+          roles: [],
+          models: [],
+        };
+
+        const buckets = aggregateMetricsOverTime([ledger], 'daily');
+        expect(buckets).toHaveLength(0);
+      }
     });
 
     it('adversarial: handles midnight transitions, timezone offsets, and empty inputs', () => {

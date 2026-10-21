@@ -43,7 +43,8 @@ func float64Ptr(f float64) *float64 {
 	return &f
 }
 
-// detectToolRetryStreaks detects consecutive execution failures of the same tool in the event stream.
+// detectToolRetryStreaks detects consecutive execution failures of the same tool in the event stream,
+// strictly scoped per session ID.
 func detectToolRetryStreaks(events []EventFact) []Anomaly {
 	if len(events) == 0 {
 		return nil
@@ -51,12 +52,12 @@ func detectToolRetryStreaks(events []EventFact) []Anomaly {
 
 	var anomalies []Anomaly
 	var activeTool string
+	var activeSessionID string
 	var consecutiveErrors int64
-	var lastSessionID string
 	var lastTurn int64
 
 	emitStreak := func() {
-		if consecutiveErrors >= 3 && activeTool != "" {
+		if consecutiveErrors >= 3 && activeTool != "" && activeSessionID != "" {
 			sev := SeverityWarning
 			thresholdStr := "3"
 			if consecutiveErrors >= 5 {
@@ -68,11 +69,11 @@ func detectToolRetryStreaks(events []EventFact) []Anomaly {
 				Severity: sev,
 				Title:    fmt.Sprintf("Tool retry streak: %s (%d consecutive errors)", activeTool, consecutiveErrors),
 				Description: fmt.Sprintf("Tool '%s' encountered %d consecutive execution failures (session: %s, turn: %d)",
-					activeTool, consecutiveErrors, lastSessionID, lastTurn),
+					activeTool, consecutiveErrors, activeSessionID, lastTurn),
 				Context: AnomalyContext{
 					ToolName:  strPtr(activeTool),
 					Count:     int64Ptr(consecutiveErrors),
-					SessionID: strPtr(lastSessionID),
+					SessionID: strPtr(activeSessionID),
 					Turn:      int64Ptr(lastTurn),
 					Threshold: strPtr(thresholdStr),
 				},
@@ -89,21 +90,21 @@ func detectToolRetryStreaks(events []EventFact) []Anomaly {
 		tool := *event.ToolName
 
 		if event.Status == "error" {
-			if tool == activeTool {
+			if tool == activeTool && event.SessionID == activeSessionID {
 				consecutiveErrors++
-				lastSessionID = event.SessionID
 				lastTurn = event.Turn
 			} else {
 				emitStreak()
 				activeTool = tool
+				activeSessionID = event.SessionID
 				consecutiveErrors = 1
-				lastSessionID = event.SessionID
 				lastTurn = event.Turn
 			}
 		} else {
 			// Status is completed or non-error
 			emitStreak()
 			activeTool = ""
+			activeSessionID = ""
 			consecutiveErrors = 0
 		}
 	}

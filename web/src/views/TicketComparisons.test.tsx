@@ -13,7 +13,6 @@ describe('TicketComparisons View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<TicketComparisons />);
@@ -40,7 +39,6 @@ describe('TicketComparisons View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<TicketComparisons />);
@@ -77,7 +75,6 @@ describe('TicketComparisons View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     const { container } = render(<TicketComparisons />);
@@ -130,7 +127,6 @@ describe('TicketComparisons View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     const onSelectTicket = vi.fn();
@@ -154,7 +150,6 @@ describe('TicketComparisons View Component', () => {
   it('renders zero telemetry state when no ledgers exist', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
-      isMock: true,
     });
 
     render(<TicketComparisons />);
@@ -177,7 +172,6 @@ describe('TicketComparisons View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValueOnce({
       data: Object.values(mockAgenticMetricsLedgers),
-      isMock: true,
     });
 
     const retryBtn = screen.getByRole('button', { name: /retry connection/i });
@@ -192,7 +186,6 @@ describe('TicketComparisons View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<TicketComparisons />);
@@ -236,7 +229,6 @@ describe('TicketComparisons View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     const { container } = render(<TicketComparisons />);
@@ -254,7 +246,6 @@ describe('TicketComparisons View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<TicketComparisons />);
@@ -337,7 +328,6 @@ describe('TicketComparisons View Component', () => {
   it('keeps table controls bar visible and interactive when zero ledgers match filters', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
-      isMock: true,
     });
 
     const { container } = render(<TicketComparisons />);
@@ -359,16 +349,13 @@ describe('TicketComparisons View Component', () => {
     const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
       .mockResolvedValueOnce({
         data: ledgers,
-        isMock: true,
-      })
+        })
       .mockResolvedValueOnce({
         data: [],
-        isMock: true,
-      })
+        })
       .mockResolvedValueOnce({
         data: ledgers,
-        isMock: true,
-      });
+        });
 
     const { container } = render(<TicketComparisons />);
 
@@ -400,12 +387,10 @@ describe('TicketComparisons View Component', () => {
     const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
       .mockResolvedValueOnce({
         data: [],
-        isMock: true,
-      })
+        })
       .mockResolvedValueOnce({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
 
     const { container } = render(<TicketComparisons />);
 
@@ -433,7 +418,6 @@ describe('TicketComparisons View Component', () => {
   it('renders configured prefixes in prefix dropdown even when no ledgers for those prefixes exist', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
-      isMock: false,
     });
 
     render(<TicketComparisons configuredPrefixes={['NEWFEATURE', 'PLATFORM']} />);

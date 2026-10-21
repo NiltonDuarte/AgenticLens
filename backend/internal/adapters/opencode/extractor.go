@@ -338,9 +338,16 @@ func ExtractFacts(
 				}
 			}
 
+			var msgIDPtr *string
+			if mid != "" {
+				mIDVal := mid
+				msgIDPtr = &mIDVal
+			}
+
 			events = append(events, domain.EventFact{
 				Timestamp:     msgTS,
 				SessionID:     s.id,
+				MessageID:     msgIDPtr,
 				Turn:          turn,
 				Role:          role,
 				EventType:     domain.EventTypeTurnMessage,
@@ -490,11 +497,18 @@ func ExtractFacts(
 			ts = formatEpochMilli(0)
 		}
 
+		var msgIDPtr *string
+		if mID != "" {
+			mIDVal := mID
+			msgIDPtr = &mIDVal
+		}
+
 		if *rawPD.Type == "compaction" {
 			compMap[sID]++
 			events = append(events, domain.EventFact{
 				Timestamp:     ts,
 				SessionID:     sID,
+				MessageID:     msgIDPtr,
 				Turn:          turn,
 				Role:          role,
 				EventType:     domain.EventTypeCompaction,
@@ -537,7 +551,16 @@ func ExtractFacts(
 			}
 
 			trimmedOut := strings.TrimSpace(out)
-			isError := stat == "error" || strings.Contains(out, "Traceback") || strings.HasPrefix(trimmedOut, "Error:") || strings.Contains(outPrefix, "Error:")
+			cleanStat := strings.ToLower(strings.TrimSpace(stat))
+			cleanTool := strings.ToLower(toolName)
+
+			var isError bool
+			if (cleanTool == "read" || cleanTool == "grep" || cleanTool == "glob" || cleanTool == "webfetch") && cleanStat == "completed" {
+				isError = false
+			} else {
+				isError = stat == "error" || strings.Contains(out, "Traceback") || strings.HasPrefix(trimmedOut, "Error:") || strings.Contains(outPrefix, "Error:")
+			}
+
 			if isError {
 				tAcc.errors++
 			}
@@ -557,6 +580,7 @@ func ExtractFacts(
 			events = append(events, domain.EventFact{
 				Timestamp:     ts,
 				SessionID:     sID,
+				MessageID:     msgIDPtr,
 				Turn:          turn,
 				Role:          role,
 				EventType:     domain.EventTypeToolCall,

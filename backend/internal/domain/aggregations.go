@@ -594,8 +594,8 @@ func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string)
 	return records
 }
 
-// DeriveMetricsLedgerWithConfig projects all aggregations from an atomic fact ledger using full project configuration.
-func DeriveMetricsLedgerWithConfig(factLedger AgenticFactLedger, cfg ProjectConfig) AgenticMetricsLedger {
+// DeriveMetricsLedger projects all aggregations from an atomic fact ledger using full project configuration.
+func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) AgenticMetricsLedger {
 	mappings := cfg.RoleMappings
 	if mappings == nil {
 		mappings = RoleMappings{}
@@ -642,23 +642,6 @@ func DeriveMetricsLedgerWithConfig(factLedger AgenticFactLedger, cfg ProjectConf
 		Models:             models,
 		Anomalies:          anomalies,
 	}
-}
-
-// DeriveMetricsLedger projects all aggregations from an atomic fact ledger.
-func DeriveMetricsLedger(factLedger AgenticFactLedger, roleMappings ...RoleMappings) AgenticMetricsLedger {
-	cfg := ProjectConfig{
-		RoleOrder: []string{
-			string(RoleOrchestrator),
-			string(RolePlanner),
-			string(RoleCoder),
-			string(RoleTester),
-			string(RoleReviewer),
-		},
-	}
-	if len(roleMappings) > 0 && roleMappings[0] != nil {
-		cfg.RoleMappings = roleMappings[0]
-	}
-	return DeriveMetricsLedgerWithConfig(factLedger, cfg)
 }
 
 // CalculateFleetSummary aggregates high-level metrics across multiple ledgers.
@@ -959,17 +942,10 @@ func parseTimestamp(ts *string) (time.Time, bool) {
 }
 
 // GetLedgerCompletionDate resolves the effective completion date for a ledger.
-// Fallback order: completed_at -> updated_at -> started_at.
+// It strictly parses completed_at; if nil, empty, or unparseable, it returns a zero time.Time and false.
+// It never falls back to updated_at or started_at.
 func GetLedgerCompletionDate(ledger AgenticMetricsLedger) (time.Time, bool) {
 	if t, ok := parseTimestamp(ledger.CompletedAt); ok {
-		return t, true
-	}
-	if ledger.UpdatedAt != "" {
-		if t, ok := parseTimestamp(&ledger.UpdatedAt); ok {
-			return t, true
-		}
-	}
-	if t, ok := parseTimestamp(ledger.StartedAt); ok {
 		return t, true
 	}
 	return time.Time{}, false
@@ -1229,15 +1205,11 @@ func parseISODate(ts *string) (time.Time, bool) {
 	return t, true
 }
 
-// GetTicketEffectiveDate resolves the effective date for a ticket (completed_at -> started_at -> updated_at).
+// GetTicketEffectiveDate resolves the effective date for a ticket strictly based on completed_at.
+// If completed_at is nil, empty, or unparseable, it returns a zero time.Time and false.
+// It never falls back to started_at or updated_at.
 func GetTicketEffectiveDate(completedAt, startedAt *string, updatedAt string) (time.Time, bool) {
-	if t, ok := parseISODate(completedAt); ok {
-		return t, true
-	}
-	if t, ok := parseISODate(startedAt); ok {
-		return t, true
-	}
-	return parseISODate(&updatedAt)
+	return parseISODate(completedAt)
 }
 
 // ResolveDatePreset resolves preset string into start and end dates.

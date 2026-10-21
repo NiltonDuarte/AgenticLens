@@ -6,7 +6,7 @@ import (
 
 // Default build metadata constants applied when compilation linker flags are omitted.
 const (
-	DefaultVersion   = "v0.1.0-dev"
+	DefaultVersion   = "v0.0.0-dev"
 	DefaultGitCommit = "unknown"
 	DefaultBuildDate = "unknown"
 )

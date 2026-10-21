@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -13,68 +14,33 @@ import (
 	"agenticlens/internal/domain"
 )
 
-// ResolveWorkspacesDir resolves workspaces directory from argument, environment, config, or parent lookup.
-func ResolveWorkspacesDir(overridePath string) string {
-	if overridePath != "" {
-		return overridePath
+// ErrWorkspacesDirNotFound is returned when no workspaces directory is specified via argument/flag or project configuration.
+var ErrWorkspacesDirNotFound = errors.New("workspaces directory not found")
+
+// ResolveWorkspacesDir resolves workspaces directory from argument, config.
+// Prioritizes explicit overrides, followed by configured project paths.
+func ResolveWorkspacesDir(overridePath string) (string, error) {
+	if trimmed := strings.TrimSpace(overridePath); trimmed != "" {
+		return trimmed, nil
 	}
 
-	// 1. Container volume mount path
-	if fi, err := os.Stat("/app/workspaces"); err == nil && fi.IsDir() {
-		return "/app/workspaces"
-	}
-
-	// 2. Configured workspace dir from centralized config loader
+	// 1. Configured workspace dir from centralized config loader
 	cfg, err := config.Load("")
-	cfgPath, _ := config.FindConfigFile("")
-	wsDir := "workspaces"
-	if err == nil && cfg.Workspaces.Dir != "" {
-		wsDir = cfg.Workspaces.Dir
+	if err == nil && strings.TrimSpace(cfg.Workspaces.Dir) != "" {
+		return strings.TrimSpace(cfg.Workspaces.Dir), nil
 	}
-
-	if cfgPath != "" {
-		parentDir := filepath.Dir(cfgPath)
-		baseDir := parentDir
-		if filepath.Base(parentDir) == ".agenticlens" {
-			baseDir = filepath.Dir(parentDir)
-		}
-		candidate := filepath.Join(baseDir, wsDir)
-		if cfi, err := os.Stat(candidate); err == nil && cfi.IsDir() {
-			return candidate
-		}
-	}
-
-	// 3. Current working directory ./workspaces
-	cwd, err := os.Getwd()
-	if cwd != "" && err == nil {
-		candidate := filepath.Join(cwd, wsDir)
-		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
-			return candidate
-		}
-	}
-
-	// 4. Parent traversal (e.g. running from a nested subfolder)
-	if cwd != "" && err == nil {
-		curr := cwd
-		for {
-			parent := filepath.Dir(curr)
-			if parent == curr {
-				break
-			}
-			candidate := filepath.Join(parent, wsDir)
-			if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
-				return candidate
-			}
-			curr = parent
-		}
-	}
-
-	return wsDir
+	return "", ErrWorkspacesDirNotFound
 }
 
 // ScanWorkspaces scans target workspaces directory for all agentic_metrics.json ledgers.
 func ScanWorkspaces(basePath string) domain.ScanReport {
-	targetDir := ResolveWorkspacesDir(basePath)
+	targetDir, err := ResolveWorkspacesDir(basePath)
+	if err != nil {
+		return domain.ScanReport{
+			Ledgers: []domain.AgenticMetricsLedger{},
+			Errors:  []string{fmt.Sprintf("Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Workspaces directory is unconfigured or not found: %v", err)},
+		}
+	}
 
 	fi, err := os.Stat(targetDir)
 	if err != nil || !fi.IsDir() {
@@ -132,7 +98,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			}
 		}
 
-		ledger := domain.DeriveMetricsLedgerWithConfig(factLedger, cfg)
+		ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 		ledgers = append(ledgers, ledger)
 	}
 
@@ -146,7 +112,10 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 
 // ReadTicketArtifacts safely reads configured documentation artifacts for a ticket workspace.
 func ReadTicketArtifacts(ticketID string, basePath string, configuredArtifacts ...[]domain.WorkspaceArtifactConfig) domain.TicketArtifacts {
-	targetDir := ResolveWorkspacesDir(basePath)
+	targetDir, err := ResolveWorkspacesDir(basePath)
+	if err != nil {
+		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
+	}
 	absTargetDir, err := filepath.Abs(targetDir)
 	if err != nil {
 		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
@@ -249,7 +218,10 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 		return nil, fmt.Errorf("invalid ticket ID: %q", ticketID)
 	}
 
-	targetDir := ResolveWorkspacesDir(basePath)
+	targetDir, err := ResolveWorkspacesDir(basePath)
+	if err != nil {
+		return nil, fmt.Errorf("workspaces directory is not configured: %w", err)
+	}
 	absTargetDir, err := filepath.Abs(targetDir)
 	if err != nil {
 		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
@@ -284,7 +256,7 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	}
 
 	cfg, _ := config.Load(basePath)
-	ledger := domain.DeriveMetricsLedgerWithConfig(factLedger, cfg)
+	ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 	return &ledger, nil
 }
 

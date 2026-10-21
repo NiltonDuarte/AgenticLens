@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Anomaly, EventFact } from '../types/telemetry';
 import { AnomalyBadge } from './AnomalyBadge';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 export interface AnomalyDrawerProps {
   readonly isOpen: boolean;
@@ -15,6 +16,8 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   anomaly,
   event,
 }) => {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -36,6 +39,14 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
     return null;
   }
 
+  const handleCopy = async (text: string, key: string) => {
+    await copyTextToClipboard(text);
+    setCopiedKey(key);
+    window.setTimeout(() => {
+      setCopiedKey((curr) => (curr === key ? null : curr));
+    }, 2000);
+  };
+
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -50,6 +61,7 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   const ctx = anomaly?.context;
   const turn = ctx?.turn ?? event?.turn;
   const sessionId = ctx?.session_id ?? event?.session_id;
+  const messageId = event?.message_id;
   const toolName = ctx?.tool_name ?? event?.tool_name;
   const role = ctx?.role ?? event?.role;
   const secondaryRole = ctx?.secondary_role;
@@ -61,6 +73,8 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   const failureRatePct = ctx?.failure_rate_pct;
   const durationMs = event?.duration_ms;
   const timestamp = event?.timestamp;
+
+  const turnDebugId = turn !== undefined ? (sessionId ? `${sessionId}:turn:${turn}` : `turn-${turn}`) : undefined;
 
   return (
     <div
@@ -116,10 +130,52 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
                   <span className="drawer-val mono">Turn {turn}</span>
                 </div>
               )}
+              {turnDebugId && (
+                <div className="drawer-meta-item drawer-meta-item-with-action">
+                  <div className="drawer-meta-item-content">
+                    <span className="drawer-label">Turn Debug ID</span>
+                    <span className="drawer-val mono">{turnDebugId}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-copy-id"
+                    aria-label="Copy Turn Debug ID"
+                    onClick={() => handleCopy(turnDebugId, 'turn-debug-id')}
+                  >
+                    {copiedKey === 'turn-debug-id' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              )}
               {sessionId && (
-                <div className="drawer-meta-item">
-                  <span className="drawer-label">Session ID</span>
-                  <span className="drawer-val mono">{sessionId}</span>
+                <div className="drawer-meta-item drawer-meta-item-with-action">
+                  <div className="drawer-meta-item-content">
+                    <span className="drawer-label">Session ID</span>
+                    <span className="drawer-val mono">{sessionId}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-copy-id"
+                    aria-label="Copy Session ID"
+                    onClick={() => handleCopy(sessionId, 'session-id')}
+                  >
+                    {copiedKey === 'session-id' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              )}
+              {messageId && (
+                <div className="drawer-meta-item drawer-meta-item-with-action">
+                  <div className="drawer-meta-item-content">
+                    <span className="drawer-label">Message ID</span>
+                    <span className="drawer-val mono">{messageId}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-copy-id"
+                    aria-label="Copy Message ID"
+                    onClick={() => handleCopy(messageId, 'message-id')}
+                  >
+                    {copiedKey === 'message-id' ? 'Copied' : 'Copy'}
+                  </button>
                 </div>
               )}
               {toolName && (

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"agenticlens/internal/adapters"
@@ -79,23 +81,28 @@ func almostEqual(a, b, tol float64) bool {
 	return math.Abs(a-b) <= tol
 }
 
-func findWorkspacesDir() string {
+func findParityWorkspacesDir() string {
+	if _, currentFile, _, ok := runtime.Caller(0); ok {
+		candidate := filepath.Clean(filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "testdata", "parity_workspaces"))
+		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
+			return candidate
+		}
+	}
 	candidates := []string{
-		"../../workspaces",
-		"../../../workspaces",
-		"workspaces",
-		"../workspaces",
+		filepath.Join("..", "..", "..", "testdata", "parity_workspaces"),
+		filepath.Join("..", "..", "testdata", "parity_workspaces"),
+		filepath.Join("testdata", "parity_workspaces"),
 	}
 	for _, c := range candidates {
 		if fi, err := os.Stat(c); err == nil && fi.IsDir() {
 			return c
 		}
 	}
-	return "workspaces"
+	return filepath.Join("..", "..", "..", "testdata", "parity_workspaces")
 }
 
 func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
-	workspacesDir := findWorkspacesDir()
+	workspacesDir := findParityWorkspacesDir()
 
 	report := adapters.ScanWorkspaces(workspacesDir)
 	if len(report.Errors) > 0 {
@@ -982,7 +989,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
 }
 
 func TestFleetSummaryAndComparisonParity(t *testing.T) {
-	workspacesDir := findWorkspacesDir()
+	workspacesDir := findParityWorkspacesDir()
 
 	report := adapters.ScanWorkspaces(workspacesDir)
 	referenceTickets := map[string]bool{
@@ -1064,7 +1071,7 @@ func TestFleetSummaryAndComparisonParity(t *testing.T) {
 }
 
 func TestStructuralClassificationParityOnWorkspaces(t *testing.T) {
-	workspacesDir := findWorkspacesDir()
+	workspacesDir := findParityWorkspacesDir()
 	report := adapters.ScanWorkspaces(workspacesDir)
 	if len(report.Ledgers) == 0 {
 		t.Fatalf("expected ledgers in %s, got 0", workspacesDir)

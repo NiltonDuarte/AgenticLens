@@ -4,24 +4,37 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
 
+	"agenticlens/internal/adapters/config"
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/adapters/live"
 	"agenticlens/internal/domain"
 
 	_ "modernc.org/sqlite"
 )
+
+func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveService ...adaptershttp.LiveServiceInterface) *adaptershttp.Server {
+	t.Helper()
+	server, err := adaptershttp.NewServer(workspacesDir, staticFS, liveService...)
+	if err != nil {
+		t.Fatalf("mustNewServer failed: %v", err)
+	}
+	return server
+}
 
 func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, invocations int64) string {
 	return `{
@@ -162,7 +175,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, string) {
 		},
 	}
 
-	server := adaptershttp.NewServer(wsDir, mockFS)
+	server := mustNewServer(t, wsDir, mockFS)
 	ts := httptest.NewServer(server.Handler())
 	t.Cleanup(func() {
 		ts.Close()
@@ -236,7 +249,7 @@ func TestGetWorkspaces(t *testing.T) {
 		mockFS := fstest.MapFS{
 			"index.html": &fstest.MapFile{Data: []byte("<html></html>")},
 		}
-		server := adaptershttp.NewServer(wsDir, mockFS)
+		server := mustNewServer(t, wsDir, mockFS)
 		srv := httptest.NewServer(server.Handler())
 		defer srv.Close()
 
@@ -847,7 +860,7 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 
 	t.Run("empty workspaces directory handling", func(t *testing.T) {
 		emptyDir := t.TempDir()
-		srv := adaptershttp.NewServer(emptyDir, mockFS)
+		srv := mustNewServer(t, emptyDir, mockFS)
 		ts := httptest.NewServer(srv.Handler())
 		defer ts.Close()
 
@@ -947,7 +960,7 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		srv := adaptershttp.NewServer(zeroDir, mockFS)
+		srv := mustNewServer(t, zeroDir, mockFS)
 		ts := httptest.NewServer(srv.Handler())
 		defer ts.Close()
 
@@ -1479,7 +1492,7 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 			Data: []byte("<!DOCTYPE html><html><head><title>AgenticLens</title></head><body>Root</body></html>"),
 		},
 	}
-	server := adaptershttp.NewServer(wsDir, mockFS)
+	server := mustNewServer(t, wsDir, mockFS)
 	ts := httptest.NewServer(server.Handler())
 	t.Cleanup(func() { ts.Close() })
 
@@ -2074,7 +2087,7 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		"index.html": &fstest.MapFile{Data: []byte("<!DOCTYPE html><html><body>Root</body></html>")},
 	}
 
-	server := adaptershttp.NewServer(wsDir, mockFS, liveSvc)
+	server := mustNewServer(t, wsDir, mockFS, liveSvc)
 	ts := httptest.NewServer(server.Handler())
 	defer ts.Close()
 
@@ -2282,7 +2295,7 @@ func TestMultiFilterEndpoints(t *testing.T) {
 	mockFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html>OK</html>")},
 	}
-	server := adaptershttp.NewServer(wsDir, mockFS)
+	server := mustNewServer(t, wsDir, mockFS)
 	ts := httptest.NewServer(server.Handler())
 	t.Cleanup(func() { ts.Close() })
 
@@ -2483,7 +2496,7 @@ func TestMultiFilterEndpoints_AdversarialEdgeCases(t *testing.T) {
 	mockFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html>OK</html>")},
 	}
-	server := adaptershttp.NewServer(wsDir, mockFS)
+	server := mustNewServer(t, wsDir, mockFS)
 	ts := httptest.NewServer(server.Handler())
 	t.Cleanup(func() { ts.Close() })
 
@@ -2734,7 +2747,7 @@ func TestMultiFilterEndpoints_AdversarialEdgeCases(t *testing.T) {
 
 func TestProgressionHandler(t *testing.T) {
 	wsDir := setupFixtureWorkspaces(t)
-	server := adaptershttp.NewServer(wsDir, fstest.MapFS{})
+	server := mustNewServer(t, wsDir, fstest.MapFS{})
 
 	t.Run("default progression returns 200 with daily buckets", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/progression", nil)
@@ -2938,7 +2951,7 @@ func TestProgressionHandler(t *testing.T) {
 		}`, oldTS, oldTS, oldTS, oldTS, oldTS)
 		_ = os.WriteFile(filepath.Join(tOldDir, "agentic_metrics.json"), []byte(oldJSON), 0644)
 
-		s := adaptershttp.NewServer(wsDir, fstest.MapFS{})
+		s := mustNewServer(t, wsDir, fstest.MapFS{})
 
 		req := httptest.NewRequest(http.MethodGet, "/api/progression?window=1d&granularity=hourly", nil)
 		rec := httptest.NewRecorder()
@@ -2984,7 +2997,7 @@ func TestProgressionHandler(t *testing.T) {
 
 	t.Run("empty workspace returns 200 OK with empty slice", func(t *testing.T) {
 		emptyWs := t.TempDir()
-		s := adaptershttp.NewServer(emptyWs, fstest.MapFS{})
+		s := mustNewServer(t, emptyWs, fstest.MapFS{})
 		req := httptest.NewRequest(http.MethodGet, "/api/progression", nil)
 		rec := httptest.NewRecorder()
 		s.Handler().ServeHTTP(rec, req)
@@ -3056,7 +3069,7 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
 		t.Fatalf("failed writing test metrics: %v", err)
 	}
 
-	server := adaptershttp.NewServer(tempDir, fstest.MapFS{})
+	server := mustNewServer(t, tempDir, fstest.MapFS{})
 
 	t.Run("hostile granularity inputs rejecting cumulative and arbitrary strings with HTTP 400", func(t *testing.T) {
 		hostileGranularities := []string{
@@ -3154,7 +3167,7 @@ func TestConfigHandler_DefaultConfig(t *testing.T) {
 	staticFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
 	}
-	server := adaptershttp.NewServer(wsDir, staticFS)
+	server := mustNewServer(t, wsDir, staticFS)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
 	rec := httptest.NewRecorder()
@@ -3351,6 +3364,38 @@ func TestConfigHandler_EmptyConfigPreserved(t *testing.T) {
 	}
 }
 
+func TestConfigHandler_DefaultProjectConfig(t *testing.T) {
+	staticFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
+	}
+	server := adaptershttp.NewServerWithConfig("workspaces", staticFS, domain.DefaultProjectConfig())
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 OK, got %d", rec.Code)
+	}
+
+	var dto adaptershttp.ProjectConfigDTO
+	if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+		t.Fatalf("failed unmarshaling /api/config: %v", err)
+	}
+
+	if len(dto.RoleOrder) != 0 || dto.RoleOrder == nil {
+		t.Errorf("expected empty non-nil role_order, got len %d (nil: %v)", len(dto.RoleOrder), dto.RoleOrder == nil)
+	}
+
+	rawJSON := rec.Body.String()
+	if !strings.Contains(rawJSON, `"role_order":[]`) {
+		t.Errorf("expected raw JSON to contain '\"role_order\":[]', got %s", rawJSON)
+	}
+	if strings.Contains(rawJSON, `"role_order":null`) {
+		t.Errorf("raw JSON must not contain '\"role_order\":null', got %s", rawJSON)
+	}
+}
+
 func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
 	staticFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
@@ -3406,7 +3451,7 @@ func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
 	})
 
 	t.Run("non-GET HTTP methods return method not allowed or not found", func(t *testing.T) {
-		server := adaptershttp.NewServer("workspaces", staticFS)
+		server := mustNewServer(t, "workspaces", staticFS)
 
 		disallowedMethods := []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch}
 		for _, method := range disallowedMethods {
@@ -3427,7 +3472,7 @@ func TestServerWithTestDataWorkspaces(t *testing.T) {
 		t.Fatalf("testdata/workspaces directory not found at %s: %v", testdataDir, err)
 	}
 
-	server := adaptershttp.NewServer(testdataDir, fstest.MapFS{})
+	server := mustNewServer(t, testdataDir, fstest.MapFS{})
 	handler := server.Handler()
 
 	t.Run("discovers all 5 test workspaces via /api/workspaces", func(t *testing.T) {
@@ -3587,15 +3632,21 @@ func TestServerWithTestDataWorkspaces(t *testing.T) {
 }
 
 func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testing.T) {
-	prodWorkspacesDir := filepath.Join("..", "..", "..", "..", "workspaces")
-	if _, err := os.Stat(prodWorkspacesDir); err != nil {
-		t.Fatalf("production workspaces directory not found at %s: %v", prodWorkspacesDir, err)
+	parityWorkspacesDir := filepath.Join("..", "..", "..", "..", "testdata", "parity_workspaces")
+	if _, currentFile, _, ok := runtime.Caller(0); ok {
+		candidate := filepath.Clean(filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "..", "testdata", "parity_workspaces"))
+		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
+			parityWorkspacesDir = candidate
+		}
+	}
+	if _, err := os.Stat(parityWorkspacesDir); err != nil {
+		t.Fatalf("parity workspaces directory not found at %s: %v", parityWorkspacesDir, err)
 	}
 
-	server := adaptershttp.NewServer(prodWorkspacesDir, fstest.MapFS{})
+	server := mustNewServer(t, parityWorkspacesDir, fstest.MapFS{})
 	handler := server.Handler()
 
-	t.Run("reports production workspaces dir and does not reference testdata in /api/config", func(t *testing.T) {
+	t.Run("reports parity workspaces dir and does not reference testdata/workspaces in /api/config", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -3609,12 +3660,15 @@ func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testin
 			t.Fatalf("failed unmarshaling /api/config: %v", err)
 		}
 
-		if strings.Contains(cfg.WorkspacesDir, "testdata") {
-			t.Errorf("expected workspaces_dir to not contain testdata, got: %s", cfg.WorkspacesDir)
+		if strings.HasSuffix(cfg.WorkspacesDir, "testdata/workspaces") || strings.HasSuffix(cfg.WorkspacesDir, filepath.Join("testdata", "workspaces")) {
+			t.Errorf("expected workspaces_dir to not be testdata/workspaces, got: %s", cfg.WorkspacesDir)
+		}
+		if !strings.Contains(cfg.WorkspacesDir, "parity_workspaces") {
+			t.Errorf("expected workspaces_dir to contain parity_workspaces, got: %s", cfg.WorkspacesDir)
 		}
 	})
 
-	t.Run("serves production workspaces exclusively without testdata contamination", func(t *testing.T) {
+	t.Run("serves parity workspaces exclusively without testdata contamination", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -3629,7 +3683,7 @@ func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testin
 		}
 
 		if len(ledgers) <= 5 {
-			t.Fatalf("expected > 5 ledgers from production workspaces, got %d", len(ledgers))
+			t.Fatalf("expected > 5 ledgers from parity workspaces, got %d", len(ledgers))
 		}
 
 		var al1Ledger *domain.AgenticMetricsLedger
@@ -3641,12 +3695,12 @@ func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testin
 		}
 
 		if al1Ledger == nil {
-			t.Fatal("expected AL-1 in production workspaces")
+			t.Fatal("expected AL-1 in parity workspaces")
 		}
 
 		testdataTitle := "Core Go domain models and aggregations engine"
 		if al1Ledger.TicketTitle != nil && *al1Ledger.TicketTitle == testdataTitle {
-			t.Errorf("expected production AL-1 title, but got testdata title: %s", *al1Ledger.TicketTitle)
+			t.Errorf("expected parity AL-1 title, but got testdata title: %s", *al1Ledger.TicketTitle)
 		}
 
 		foundAL10 := false
@@ -3657,17 +3711,170 @@ func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testin
 			}
 		}
 		if !foundAL10 {
-			t.Errorf("expected AL-10 to be discovered in production workspaces")
+			t.Errorf("expected AL-10 to be discovered in parity workspaces")
 		}
 	})
 
-	t.Run("serves AL-10 workspace detail successfully from production", func(t *testing.T) {
+	t.Run("serves AL-10 workspace detail successfully from parity", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-10", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
 		if rec.Code != http.StatusOK {
-			t.Errorf("expected status 200 OK for AL-10 in production workspaces, got %d", rec.Code)
+			t.Errorf("expected status 200 OK for AL-10 in parity workspaces, got %d", rec.Code)
 		}
 	})
+}
+
+func TestServerWorkspaceDirConfigSynchronization(t *testing.T) {
+	tempDir := t.TempDir()
+
+	cfgSpaceDir := filepath.Join(tempDir, "config_spaces")
+	if err := os.MkdirAll(filepath.Join(cfgSpaceDir, "CFG-1"), 0755); err != nil {
+		t.Fatalf("failed creating dir: %v", err)
+	}
+	sampleCFG := sampleTestLedgerJSON("CFG-1", "Config Feature", 10, 0.10, 1)
+	if err := os.WriteFile(filepath.Join(cfgSpaceDir, "CFG-1", "agentic_metrics.json"), []byte(sampleCFG), 0644); err != nil {
+		t.Fatalf("failed writing ledger: %v", err)
+	}
+
+	overrideSpaceDir := filepath.Join(tempDir, "override_spaces")
+	if err := os.MkdirAll(filepath.Join(overrideSpaceDir, "OVR-1"), 0755); err != nil {
+		t.Fatalf("failed creating dir: %v", err)
+	}
+	sampleOVR := sampleTestLedgerJSON("OVR-1", "Override Feature", 20, 0.20, 1)
+	if err := os.WriteFile(filepath.Join(overrideSpaceDir, "OVR-1", "agentic_metrics.json"), []byte(sampleOVR), 0644); err != nil {
+		t.Fatalf("failed writing ledger: %v", err)
+	}
+
+	t.Run("resolves workspaces dir from ProjectConfig when workspacesDir argument is empty", func(t *testing.T) {
+		cfg := domain.ProjectConfig{
+			ProjectName: "AutoResolveTest",
+			Workspaces: domain.WorkspacesConfig{
+				Dir: cfgSpaceDir,
+			},
+		}
+
+		server := adaptershttp.NewServerWithConfig("", fstest.MapFS{}, cfg)
+		handler := server.Handler()
+
+		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/config, got %d", rec.Code)
+		}
+
+		var dto adaptershttp.ProjectConfigDTO
+		if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+			t.Fatalf("failed unmarshaling /api/config: %v", err)
+		}
+
+		if dto.WorkspacesDir != cfgSpaceDir {
+			t.Errorf("expected workspaces_dir %q, got %q", cfgSpaceDir, dto.WorkspacesDir)
+		}
+
+		wsReq := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
+		wsRec := httptest.NewRecorder()
+		handler.ServeHTTP(wsRec, wsReq)
+
+		if wsRec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/workspaces, got %d", wsRec.Code)
+		}
+
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.Unmarshal(wsRec.Body.Bytes(), &ledgers); err != nil {
+			t.Fatalf("failed unmarshaling /api/workspaces: %v", err)
+		}
+
+		if len(ledgers) != 1 || *ledgers[0].TicketID != "CFG-1" {
+			t.Errorf("expected 1 ledger CFG-1, got %v", ledgers)
+		}
+	})
+
+	t.Run("prioritizes explicit workspacesDir argument over ProjectConfig", func(t *testing.T) {
+		cfg := domain.ProjectConfig{
+			ProjectName: "OverrideTest",
+			Workspaces: domain.WorkspacesConfig{
+				Dir: cfgSpaceDir,
+			},
+		}
+
+		server := adaptershttp.NewServerWithConfig(overrideSpaceDir, fstest.MapFS{}, cfg)
+		handler := server.Handler()
+
+		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/config, got %d", rec.Code)
+		}
+
+		var dto adaptershttp.ProjectConfigDTO
+		if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+			t.Fatalf("failed unmarshaling /api/config: %v", err)
+		}
+
+		if dto.WorkspacesDir != overrideSpaceDir {
+			t.Errorf("expected workspaces_dir %q, got %q", overrideSpaceDir, dto.WorkspacesDir)
+		}
+
+		wsReq := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
+		wsRec := httptest.NewRecorder()
+		handler.ServeHTTP(wsRec, wsReq)
+
+		if wsRec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/workspaces, got %d", wsRec.Code)
+		}
+
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.Unmarshal(wsRec.Body.Bytes(), &ledgers); err != nil {
+			t.Fatalf("failed unmarshaling /api/workspaces: %v", err)
+		}
+
+		if len(ledgers) != 1 || *ledgers[0].TicketID != "OVR-1" {
+			t.Errorf("expected 1 ledger OVR-1, got %v", ledgers)
+		}
+	})
+
+	t.Run("NewServer constructor synchronizes explicit workspacesDir to config", func(t *testing.T) {
+		server := mustNewServer(t, overrideSpaceDir, fstest.MapFS{})
+		handler := server.Handler()
+
+		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/config, got %d", rec.Code)
+		}
+
+		var dto adaptershttp.ProjectConfigDTO
+		if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+			t.Fatalf("failed unmarshaling /api/config: %v", err)
+		}
+
+		if dto.WorkspacesDir != overrideSpaceDir {
+			t.Errorf("expected workspaces_dir %q, got %q", overrideSpaceDir, dto.WorkspacesDir)
+		}
+	})
+}
+
+func TestNewServer_MissingConfigFailsFast(t *testing.T) {
+	tempDir := t.TempDir()
+	t.Chdir(tempDir)
+
+	wsDir := filepath.Join(tempDir, "workspaces")
+	srv, err := adaptershttp.NewServer(wsDir, fstest.MapFS{})
+	if srv != nil {
+		t.Fatalf("expected nil server when config is missing, got: %+v", srv)
+	}
+	if err == nil {
+		t.Fatal("expected non-nil error when config is missing, got nil")
+	}
+	if !errors.Is(err, config.ErrConfigNotFound) {
+		t.Fatalf("expected error wrapping ErrConfigNotFound, got: %v", err)
+	}
 }

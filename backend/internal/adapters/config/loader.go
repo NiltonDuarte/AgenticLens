@@ -194,55 +194,7 @@ type rawProjectConfigDTO struct {
 }
 
 func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
-	cfg := domain.ProjectConfig{
-		Ticket: domain.TicketConfig{
-			Prefixes:        []domain.TicketPrefix{},
-			CaseInsensitive: true,
-			CustomPatterns:  []string{},
-		},
-		Workspaces: domain.WorkspacesConfig{
-			Dir:        "workspaces",
-			SrcFolders: []string{},
-			Artifacts:  []domain.WorkspaceArtifactConfig{},
-		},
-		Database: domain.DatabaseConfig{
-			Path:           "~/.local/share/opencode/opencode.db",
-			QueryTimeoutMs: 5000,
-			BusyTimeoutMs:  5000,
-			ReadOnly:       true,
-		},
-		Live: domain.LiveConfig{
-			ActiveThresholdSeconds: 300,
-			PollIntervalMs:         2000,
-			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
-		},
-		CodeMetrics: domain.CodeMetricsConfig{
-			Include:      []string{},
-			Exclude:      []string{},
-			TestPatterns: []string{},
-			ProdPatterns: []string{},
-		},
-		RoleMappings: domain.RoleMappings{
-			"orchestrator": "orchestrator",
-			"build":        "orchestrator",
-			"planner":      "planner",
-			"coder":        "coder",
-			"tester":       "tester",
-			"reviewer":     "reviewer",
-		},
-		RoleOrder: []string{
-			"orchestrator",
-			"planner",
-			"coder",
-			"tester",
-			"reviewer",
-		},
-	}
+	cfg := domain.DefaultProjectConfig()
 
 	if dto.ProjectName != nil && strings.TrimSpace(*dto.ProjectName) != "" {
 		cfg.ProjectName = strings.TrimSpace(*dto.ProjectName)
@@ -275,7 +227,7 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	}
 
 	if dto.Workspaces != nil {
-		if dto.Workspaces.Dir != nil && strings.TrimSpace(*dto.Workspaces.Dir) != "" {
+		if dto.Workspaces.Dir != nil {
 			cfg.Workspaces.Dir = strings.TrimSpace(*dto.Workspaces.Dir)
 		}
 		if dto.Workspaces.SrcFolders != nil {
@@ -395,9 +347,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 // 1. .agenticlens-config.yaml (root)
 // 2. .agenticlens-config.yml (root)
 // 3. .agenticlens-config.json (root)
-// 4. .agenticlens/config.yaml (legacy subfolder)
-// 5. .agenticlens/config.yml (legacy subfolder)
-// 6. .agenticlens/config.json (legacy subfolder)
 func FindConfigFile(startDir string) (string, error) {
 	curr := strings.TrimSpace(startDir)
 	if curr == "" {
@@ -419,9 +368,6 @@ func FindConfigFile(startDir string) (string, error) {
 			filepath.Join(curr, ".agenticlens-config.yaml"),
 			filepath.Join(curr, ".agenticlens-config.yml"),
 			filepath.Join(curr, ".agenticlens-config.json"),
-			filepath.Join(curr, ".agenticlens", "config.yaml"),
-			filepath.Join(curr, ".agenticlens", "config.yml"),
-			filepath.Join(curr, ".agenticlens", "config.json"),
 		}
 		for _, cfgPath := range candidates {
 			if fi, err := os.Stat(cfgPath); err == nil && !fi.IsDir() {

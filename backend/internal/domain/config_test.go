@@ -90,6 +90,117 @@ func testProjectConfig() domain.ProjectConfig {
 	}
 }
 
+func TestDefaultProjectConfig(t *testing.T) {
+	t.Parallel()
+	cfg := domain.DefaultProjectConfig()
+
+	if cfg.ProjectName != "" {
+		t.Errorf("expected empty ProjectName, got %q", cfg.ProjectName)
+	}
+	if cfg.Workspaces.Dir != "" {
+		t.Errorf("expected empty Workspaces.Dir, got %q", cfg.Workspaces.Dir)
+	}
+	if len(cfg.Workspaces.SrcFolders) != 0 || cfg.Workspaces.SrcFolders == nil {
+		t.Errorf("expected non-nil empty Workspaces.SrcFolders, got %v", cfg.Workspaces.SrcFolders)
+	}
+	if len(cfg.Workspaces.Artifacts) != 0 || cfg.Workspaces.Artifacts == nil {
+		t.Errorf("expected non-nil empty Workspaces.Artifacts, got %v", cfg.Workspaces.Artifacts)
+	}
+	if len(cfg.Ticket.Prefixes) != 0 || cfg.Ticket.Prefixes == nil {
+		t.Errorf("expected non-nil empty Ticket.Prefixes, got %v", cfg.Ticket.Prefixes)
+	}
+	if !cfg.Ticket.CaseInsensitive {
+		t.Errorf("expected Ticket.CaseInsensitive to be true")
+	}
+	if len(cfg.Ticket.CustomPatterns) != 0 || cfg.Ticket.CustomPatterns == nil {
+		t.Errorf("expected non-nil empty Ticket.CustomPatterns, got %v", cfg.Ticket.CustomPatterns)
+	}
+	if cfg.Database.Path != "~/.local/share/opencode/opencode.db" {
+		t.Errorf("expected Database.Path '~/.local/share/opencode/opencode.db', got %q", cfg.Database.Path)
+	}
+	if cfg.Database.QueryTimeoutMs != 5000 {
+		t.Errorf("expected Database.QueryTimeoutMs 5000, got %d", cfg.Database.QueryTimeoutMs)
+	}
+	if cfg.Database.BusyTimeoutMs != 5000 {
+		t.Errorf("expected Database.BusyTimeoutMs 5000, got %d", cfg.Database.BusyTimeoutMs)
+	}
+	if !cfg.Database.ReadOnly {
+		t.Errorf("expected Database.ReadOnly to be true")
+	}
+	if cfg.Live.ActiveThresholdSeconds != 300 {
+		t.Errorf("expected Live.ActiveThresholdSeconds 300, got %d", cfg.Live.ActiveThresholdSeconds)
+	}
+	if cfg.Live.PollIntervalMs != 2000 {
+		t.Errorf("expected Live.PollIntervalMs 2000, got %d", cfg.Live.PollIntervalMs)
+	}
+	if cfg.Live.MaxTraceBufferMessages != 500 {
+		t.Errorf("expected Live.MaxTraceBufferMessages 500, got %d", cfg.Live.MaxTraceBufferMessages)
+	}
+	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 120 {
+		t.Errorf("expected Live.AnomalyThresholds.StallThresholdSeconds 120, got %d", cfg.Live.AnomalyThresholds.StallThresholdSeconds)
+	}
+	if cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.25 {
+		t.Errorf("expected Live.AnomalyThresholds.ErrorRateThreshold 0.25, got %f", cfg.Live.AnomalyThresholds.ErrorRateThreshold)
+	}
+	if cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
+		t.Errorf("expected Live.AnomalyThresholds.ContextExhaustionPct 0.85, got %f", cfg.Live.AnomalyThresholds.ContextExhaustionPct)
+	}
+	if cfg.CodeMetrics.BaseBranch != "" {
+		t.Errorf("expected empty CodeMetrics.BaseBranch, got %q", cfg.CodeMetrics.BaseBranch)
+	}
+	if len(cfg.CodeMetrics.Include) != 0 || cfg.CodeMetrics.Include == nil {
+		t.Errorf("expected non-nil empty CodeMetrics.Include, got %v", cfg.CodeMetrics.Include)
+	}
+	if len(cfg.CodeMetrics.Exclude) != 0 || cfg.CodeMetrics.Exclude == nil {
+		t.Errorf("expected non-nil empty CodeMetrics.Exclude, got %v", cfg.CodeMetrics.Exclude)
+	}
+	if len(cfg.CodeMetrics.TestPatterns) != 0 || cfg.CodeMetrics.TestPatterns == nil {
+		t.Errorf("expected non-nil empty CodeMetrics.TestPatterns, got %v", cfg.CodeMetrics.TestPatterns)
+	}
+	if len(cfg.CodeMetrics.ProdPatterns) != 0 || cfg.CodeMetrics.ProdPatterns == nil {
+		t.Errorf("expected non-nil empty CodeMetrics.ProdPatterns, got %v", cfg.CodeMetrics.ProdPatterns)
+	}
+	if len(cfg.RoleMappings) != 0 || cfg.RoleMappings == nil {
+		t.Errorf("expected non-nil empty RoleMappings, got %v", cfg.RoleMappings)
+	}
+	if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
+		t.Errorf("expected non-nil empty RoleOrder, got %v", cfg.RoleOrder)
+	}
+
+	t.Run("mutation isolation", func(t *testing.T) {
+		cfg1 := domain.DefaultProjectConfig()
+		cfg1.RoleMappings["custom"] = "coder"
+		cfg1.RoleOrder = append(cfg1.RoleOrder, "custom")
+		cfg1.Workspaces.SrcFolders = append(cfg1.Workspaces.SrcFolders, "test")
+
+		cfg2 := domain.DefaultProjectConfig()
+		if len(cfg2.RoleMappings) != 0 {
+			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: RoleMappings len %d", len(cfg2.RoleMappings))
+		}
+		if len(cfg2.RoleOrder) != 0 {
+			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: RoleOrder len %d", len(cfg2.RoleOrder))
+		}
+		if len(cfg2.Workspaces.SrcFolders) != 0 {
+			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: SrcFolders len %d", len(cfg2.Workspaces.SrcFolders))
+		}
+	})
+
+	t.Run("order roles integration with default role order", func(t *testing.T) {
+		defaultCfg := domain.DefaultProjectConfig()
+		roles := []string{"tester", "coder", "architect", "builder"}
+		ordered := domain.OrderRoles(roles, defaultCfg.RoleOrder)
+		expected := []string{"architect", "builder", "coder", "tester"}
+		if len(ordered) != len(expected) {
+			t.Fatalf("expected len %d, got %d", len(expected), len(ordered))
+		}
+		for i, r := range expected {
+			if ordered[i] != r {
+				t.Errorf("expected role at index %d to be %q, got %q", i, r, ordered[i])
+			}
+		}
+	})
+}
+
 func TestWorkspaceArtifactConfig(t *testing.T) {
 	t.Parallel()
 	cfg := domain.WorkspaceArtifactConfig{

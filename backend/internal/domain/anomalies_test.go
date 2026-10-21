@@ -316,6 +316,148 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 		}
 	})
 
+	t.Run("consecutive errors split across sessions do not combine into single streak", func(t *testing.T) {
+		// 2 consecutive errors in session 1, then 2 consecutive errors in session 2 (neither reaches threshold 3)
+		ledger := domain.AgenticFactLedger{
+			Events: []domain.EventFact{
+				{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s2", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s2", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleToolRetryStreak {
+				t.Fatalf("expected no streak anomaly across separate sessions, got: %+v", a)
+			}
+		}
+	})
+
+	t.Run("2 errors in session A and 1 error in session B should NOT trigger 3-streak", func(t *testing.T) {
+		// Adversarial verification of session boundary streak reset:
+		// Total errors = 3, but 2 in session A and 1 in session B -> neither reaches threshold 3
+		ledger := domain.AgenticFactLedger{
+			Events: []domain.EventFact{
+				{SessionID: "sessionA", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionA", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionB", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleToolRetryStreak {
+				t.Fatalf("expected no TOOL_RETRY_STREAK anomaly across session transition (2 in A, 1 in B), got: %+v", a)
+			}
+		}
+	})
+
+	t.Run("3 errors in session A and 1 error in session B should trigger 1 streak for session A", func(t *testing.T) {
+		// 3 errors in session A triggers streak for A with count=3; session B transition resets and has only 1 error
+		ledger := domain.AgenticFactLedger{
+			Events: []domain.EventFact{
+				{SessionID: "sessionA", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionA", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionA", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionB", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var streaks []domain.Anomaly
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleToolRetryStreak {
+				streaks = append(streaks, a)
+			}
+		}
+		if len(streaks) != 1 {
+			t.Fatalf("expected exactly 1 streak anomaly, got %d: %+v", len(streaks), streaks)
+		}
+		st := streaks[0]
+		if st.Context.SessionID == nil || *st.Context.SessionID != "sessionA" {
+			t.Errorf("expected streak attributed to sessionA, got %v", st.Context.SessionID)
+		}
+		if st.Context.Count == nil || *st.Context.Count != 3 {
+			t.Errorf("expected streak count=3, got %v", st.Context.Count)
+		}
+		if st.Context.Turn == nil || *st.Context.Turn != 3 {
+			t.Errorf("expected streak turn=3, got %v", st.Context.Turn)
+		}
+	})
+
+	t.Run("multiple session transitions correctly isolate streaks per session", func(t *testing.T) {
+		// Session A (3 errors) -> Session B (1 error) -> Session C (4 errors) -> Session D (2 errors)
+		// Should produce exactly 2 streaks: Session A (count 3) and Session C (count 4)
+		ledger := domain.AgenticFactLedger{
+			Events: []domain.EventFact{
+				// Session A
+				{SessionID: "ses-A", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-A", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-A", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				// Session B
+				{SessionID: "ses-B", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				// Session C
+				{SessionID: "ses-C", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-C", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-C", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-C", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				// Session D
+				{SessionID: "ses-D", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-D", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var streaks []domain.Anomaly
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleToolRetryStreak {
+				streaks = append(streaks, a)
+			}
+		}
+		if len(streaks) != 2 {
+			t.Fatalf("expected exactly 2 streaks across 4 sessions, got %d: %+v", len(streaks), streaks)
+		}
+		if *streaks[0].Context.SessionID != "ses-A" || *streaks[0].Context.Count != 3 {
+			t.Errorf("expected first streak on ses-A count 3, got: %+v", streaks[0].Context)
+		}
+		if *streaks[1].Context.SessionID != "ses-C" || *streaks[1].Context.Count != 4 {
+			t.Errorf("expected second streak on ses-C count 4, got: %+v", streaks[1].Context)
+		}
+	})
+
+	t.Run("streak in session 1 emits even when session 2 follows", func(t *testing.T) {
+		// 3 errors in session 1, followed by 2 errors in session 2
+		ledger := domain.AgenticFactLedger{
+			Events: []domain.EventFact{
+				{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s2", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s2", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			},
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		var streakCount int
+		var foundSession string
+		for _, a := range anomalies {
+			if a.RuleID == domain.RuleToolRetryStreak {
+				streakCount++
+				if a.Context.SessionID != nil {
+					foundSession = *a.Context.SessionID
+				}
+			}
+		}
+		if streakCount != 1 {
+			t.Fatalf("expected exactly 1 streak anomaly, got %d", streakCount)
+		}
+		if foundSession != "s1" {
+			t.Errorf("expected streak to be attributed to session s1, got %s", foundSession)
+		}
+	})
+
 	t.Run("v1 fallback returns empty for tool retry streak", func(t *testing.T) {
 		// Even if ToolFact has many errors, v1 cannot determine consecutive streak
 		ledger := domain.AgenticFactLedger{
@@ -1746,7 +1888,7 @@ func TestDeriveMetricsLedger_IntegratesAnomalies(t *testing.T) {
 		},
 	}
 
-	metrics := domain.DeriveMetricsLedger(factLedger)
+	metrics := domain.DeriveMetricsLedger(factLedger, domain.DefaultProjectConfig())
 	if len(metrics.Anomalies) != 1 {
 		t.Fatalf("expected DeriveMetricsLedger to populate Anomalies with 1 entry, got %d", len(metrics.Anomalies))
 	}

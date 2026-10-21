@@ -212,6 +212,32 @@ body {
   border-color: rgba(245, 158, 11, 0.25);
 }
 
+.status-pill.workspace-pill {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  background-color: var(--bg-surface-elevated, rgba(255, 255, 255, 0.05));
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-pill.workspace-pill .status-dot {
+  background-color: var(--status-green, #10b981);
+  flex-shrink: 0;
+}
+
+.status-pill.workspace-pill.loading {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.status-pill.workspace-pill.loading .status-dot {
+  background-color: var(--text-muted);
+  opacity: 0.6;
+}
+
 .status-dot {
   width: 6px;
   height: 6px;
@@ -643,6 +669,12 @@ body {
   background-color: var(--bg-surface-elevated);
   padding: 4px 8px;
   border-radius: 4px;
+}
+
+.ticket-type-pill.unclassified {
+  color: var(--text-muted);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
 .workspace-title {
@@ -2351,6 +2383,156 @@ body {
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 0.9em;
+}
+
+/* Trace Waterfall Collapsed Summary Bar */
+.trace-waterfall-card.trace-waterfall-collapsed {
+  padding: 16px 20px;
+}
+
+.waterfall-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.waterfall-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.waterfall-summary-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.waterfall-summary-stat {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background-color: var(--bg-surface-elevated);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+}
+
+.waterfall-summary-issues {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.waterfall-summary-issues.issues-clean {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.waterfall-summary-issues.issues-flagged {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.waterfall-toggle-btn {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.waterfall-toggle-btn:hover {
+  background-color: var(--bg-surface-hover);
+  border-color: var(--accent-blue);
+  color: #ffffff;
+}
+
+/* Timeline and Diagnostics Copy Buttons */
+.timeline-id-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.timeline-id-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.btn-copy-id {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-copy-id:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+.drawer-meta-item-with-action {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-meta-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.drawer-meta-item-content .drawer-val {
+  word-break: break-all;
+}
+
+.payload-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  background-color: var(--bg-surface-elevated);
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.failed-tool-id-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+
+.failed-tool-id {
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }
 
 /* Trace Waterfall */

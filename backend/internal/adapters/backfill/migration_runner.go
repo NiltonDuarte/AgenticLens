@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	"agenticlens/internal/domain/migration"
 )
@@ -36,10 +37,18 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 		targetVer = domain.CurrentSchemaVersion
 	}
 
-	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
+	}
 	fi, err := os.Stat(targetDir)
 	if err != nil || !fi.IsDir() {
 		return nil, fmt.Errorf("workspaces directory not found: %s", targetDir)
+	}
+
+	cfg, err := config.Load(targetDir)
+	if err != nil {
+		cfg, _ = config.Load("")
 	}
 
 	var metricFiles []string
@@ -180,8 +189,8 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 
 		if opts.UpdateSummaries {
 			summaryPath := filepath.Join(wsDir, "SUMMARY.md")
-			derivedLedger := domain.DeriveMetricsLedger(migrated)
-			tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger)
+			derivedLedger := domain.DeriveMetricsLedger(migrated, cfg)
+			tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 			if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
 				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: updating summary: %v", metricPath, err))
 			}

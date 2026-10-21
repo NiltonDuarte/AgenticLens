@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import { TraceWaterfall } from './TraceWaterfall';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { TraceWaterfall, matchesAnomaly, findMatchingAnomaly } from './TraceWaterfall';
 import type { EventFact, Anomaly } from '../domain/types';
 
 describe('TraceWaterfall Component', () => {
@@ -72,8 +72,41 @@ describe('TraceWaterfall Component', () => {
     ).toBeInTheDocument();
   });
 
-  it('defaults to Errors and Anomalies Only filter mode on initial render', () => {
+  it('renders collapsed summary bar by default with counts and expands when clicked', () => {
     render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} />);
+    expect(screen.getByTestId('trace-waterfall-collapsed')).toBeInTheDocument();
+    expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+    expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('4 Events Recorded');
+    expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('1 Error, 1 Anomaly');
+
+    const expandBtn = screen.getByTestId('waterfall-expand-btn');
+    expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(expandBtn).toHaveTextContent('Expand Trace Waterfall');
+
+    // Click to expand
+    fireEvent.click(expandBtn);
+    expect(screen.queryByTestId('trace-waterfall-collapsed')).not.toBeInTheDocument();
+    expect(screen.getByTestId('waterfall-collapse-btn')).toBeInTheDocument();
+  });
+
+  it('renders clean execution badge in collapsed view when no errors or anomalies exist', () => {
+    const cleanEvents: readonly EventFact[] = [
+      {
+        timestamp: '2026-10-18T10:00:00Z',
+        session_id: 's1',
+        turn: 1,
+        role: 'coder',
+        event_type: 'turn_message',
+        status: 'success',
+        context_tokens: 1000,
+      },
+    ];
+    render(<TraceWaterfall events={cleanEvents} anomalies={[]} />);
+    expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('Clean Execution');
+  });
+
+  it('defaults to Errors and Anomalies Only filter mode when expanded', () => {
+    render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} defaultExpanded={true} />);
     expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
 
     const errorsToggle = screen.getByRole('button', { name: 'Show only errors and anomalies' });
@@ -87,7 +120,7 @@ describe('TraceWaterfall Component', () => {
   });
 
   it('renders chronological sequence of all events when All Events tab is clicked', () => {
-    render(<TraceWaterfall events={sampleEvents} />);
+    render(<TraceWaterfall events={sampleEvents} defaultExpanded={true} />);
     const allBtn = screen.getByRole('button', { name: 'All Events' });
     fireEvent.click(allBtn);
 
@@ -98,7 +131,7 @@ describe('TraceWaterfall Component', () => {
   });
 
   it('displays role pills with proper role names when all events are shown', () => {
-    render(<TraceWaterfall events={sampleEvents} />);
+    render(<TraceWaterfall events={sampleEvents} defaultExpanded={true} />);
     const allBtn = screen.getByRole('button', { name: 'All Events' });
     fireEvent.click(allBtn);
 
@@ -108,7 +141,7 @@ describe('TraceWaterfall Component', () => {
   });
 
   it('displays tool name, formatted duration, and status indicator for tool calls', () => {
-    render(<TraceWaterfall events={sampleEvents} />);
+    render(<TraceWaterfall events={sampleEvents} defaultExpanded={true} />);
     const allBtn = screen.getByRole('button', { name: 'All Events' });
     fireEvent.click(allBtn);
 
@@ -118,7 +151,7 @@ describe('TraceWaterfall Component', () => {
   });
 
   it('correlates anomaly by turn/tool name and renders AnomalyBadge on corresponding turn item', () => {
-    render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} />);
+    render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} defaultExpanded={true} />);
     const warningBadge = screen.getByText('WARNING');
     expect(warningBadge).toBeInTheDocument();
   });
@@ -130,6 +163,7 @@ describe('TraceWaterfall Component', () => {
         events={sampleEvents}
         anomalies={sampleAnomalies}
         onSelectEvent={handleSelect}
+        defaultExpanded={true}
       />
     );
 
@@ -150,6 +184,7 @@ describe('TraceWaterfall Component', () => {
         events={sampleEvents}
         anomalies={sampleAnomalies}
         onSelectEvent={handleSelect}
+        defaultExpanded={true}
       />
     );
 
@@ -174,6 +209,7 @@ describe('TraceWaterfall Component', () => {
         events={sampleEvents}
         anomalies={sampleAnomalies}
         onSelectEvent={handleSelect}
+        defaultExpanded={true}
       />
     );
 
@@ -188,7 +224,7 @@ describe('TraceWaterfall Component', () => {
   });
 
   it('filters events by role when role filter is changed', () => {
-    render(<TraceWaterfall events={sampleEvents} />);
+    render(<TraceWaterfall events={sampleEvents} defaultExpanded={true} />);
     const allBtn = screen.getByRole('button', { name: 'All Events' });
     fireEvent.click(allBtn);
 
@@ -204,7 +240,7 @@ describe('TraceWaterfall Component', () => {
   });
 
   it('filters events to tool calls only when tool calls filter is activated', () => {
-    render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} />);
+    render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} defaultExpanded={true} />);
     const toolsBtn = screen.getByRole('button', { name: 'Tool Calls Only' });
     fireEvent.click(toolsBtn);
 
@@ -220,6 +256,7 @@ describe('TraceWaterfall Component', () => {
         events={sampleEvents}
         anomalies={sampleAnomalies}
         selectedEvent={sampleEvents[2]}
+        defaultExpanded={true}
       />
     );
 
@@ -228,7 +265,7 @@ describe('TraceWaterfall Component', () => {
   });
 
   it('provides standalone local selection highlight when selectedEvent prop is undefined', () => {
-    render(<TraceWaterfall events={sampleEvents} />);
+    render(<TraceWaterfall events={sampleEvents} defaultExpanded={true} />);
     const allBtn = screen.getByRole('button', { name: 'All Events' });
     fireEvent.click(allBtn);
 
@@ -253,7 +290,7 @@ describe('TraceWaterfall Component', () => {
       context_tokens: 500,
     };
 
-    render(<TraceWaterfall events={[minimalEvent]} />);
+    render(<TraceWaterfall events={[minimalEvent]} defaultExpanded={true} />);
     const allBtn = screen.getByRole('button', { name: 'All Events' });
     fireEvent.click(allBtn);
 
@@ -293,7 +330,7 @@ describe('TraceWaterfall Component', () => {
       },
     ];
 
-    render(<TraceWaterfall events={events} anomalies={anomaliesWithMissingContext} />);
+    render(<TraceWaterfall events={events} anomalies={anomaliesWithMissingContext} defaultExpanded={true} />);
     // Turn 1 matches the second anomaly by turn
     expect(screen.getByText('WARNING')).toBeInTheDocument();
     // The first anomaly with empty context does not crash or falsely match
@@ -306,6 +343,7 @@ describe('TraceWaterfall Component', () => {
       <TraceWaterfall
         events={sampleEvents}
         onSelectEvent={handleSelect}
+        defaultExpanded={true}
       />
     );
 
@@ -334,7 +372,7 @@ describe('TraceWaterfall Component', () => {
       },
     ];
 
-    render(<TraceWaterfall events={sampleEvents} anomalies={anomalyOnlyList} />);
+    render(<TraceWaterfall events={sampleEvents} anomalies={anomalyOnlyList} defaultExpanded={true} />);
     const allBtn = screen.getByRole('button', { name: 'All Events' });
     fireEvent.click(allBtn);
 
@@ -363,6 +401,7 @@ describe('TraceWaterfall Component', () => {
         events={sampleEvents}
         anomalies={sampleAnomalies}
         onSelectEvent={handleSelect}
+        defaultExpanded={true}
       />
     );
 
@@ -381,13 +420,13 @@ describe('TraceWaterfall Component', () => {
   });
 
   it('renders AnomalyBadge with title tooltip affordance on anomalous turns', () => {
-    render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} />);
+    render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} defaultExpanded={true} />);
     const badge = screen.getByRole('button', { name: 'WARNING' });
     expect(badge).toHaveAttribute('title', 'Click to open Anomaly Inspector');
   });
 
   it('renders guidance hint in waterfall toolbar header', () => {
-    render(<TraceWaterfall events={sampleEvents} />);
+    render(<TraceWaterfall events={sampleEvents} defaultExpanded={true} />);
     expect(
       screen.getByText('Click any error or anomaly to inspect failure details')
     ).toBeInTheDocument();
@@ -428,6 +467,7 @@ describe('TraceWaterfall Component', () => {
           events={sampleEvents}
           isHydrated={false}
           dataSource="committed_ledger"
+          defaultExpanded={true}
         />
       );
 
@@ -453,6 +493,7 @@ describe('TraceWaterfall Component', () => {
           events={hydratedEvents}
           isHydrated={true}
           dataSource="local_sqlite"
+          defaultExpanded={true}
         />
       );
 
@@ -468,6 +509,7 @@ describe('TraceWaterfall Component', () => {
           events={hydratedEvents}
           isHydrated={true}
           dataSource="local_sqlite"
+          defaultExpanded={true}
         />
       );
 
@@ -503,6 +545,7 @@ describe('TraceWaterfall Component', () => {
           events={sampleEvents}
           isHydrated={false}
           dataSource="committed_ledger"
+          defaultExpanded={true}
         />
       );
 
@@ -534,6 +577,7 @@ describe('TraceWaterfall Component', () => {
           events={bareHydratedEvents}
           isHydrated={true}
           dataSource="local_sqlite"
+          defaultExpanded={true}
         />
       );
 
@@ -553,6 +597,7 @@ describe('TraceWaterfall Component', () => {
           events={hydratedEvents}
           isHydrated={true}
           dataSource="local_sqlite"
+          defaultExpanded={true}
         />
       );
 
@@ -564,6 +609,7 @@ describe('TraceWaterfall Component', () => {
           events={sampleEvents}
           isHydrated={false}
           dataSource="committed_ledger"
+          defaultExpanded={true}
         />
       );
       expect(emojiRegex.test(offlineContainer.textContent ?? '')).toBe(false);
@@ -747,6 +793,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -767,6 +814,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -825,6 +873,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -881,7 +930,7 @@ describe('TraceWaterfall Component', () => {
           },
         ];
 
-        render(<TraceWaterfall events={nonToolEvents} anomalies={[]} />);
+        render(<TraceWaterfall events={nonToolEvents} anomalies={[]} defaultExpanded={true} />);
 
         const toolSelect = screen.getByTestId('trace-tool-filter');
         expect(toolSelect).toHaveTextContent('No filter');
@@ -900,6 +949,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -926,6 +976,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -981,6 +1032,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1004,7 +1056,7 @@ describe('TraceWaterfall Component', () => {
       });
 
       it('handles empty anomalies array and undefined anomalies prop defensively', () => {
-        const { rerender } = render(<TraceWaterfall events={adversarialEvents} anomalies={[]} />);
+        const { rerender } = render(<TraceWaterfall events={adversarialEvents} anomalies={[]} defaultExpanded={true} />);
 
         let anomalySelect = screen.getByTestId('trace-anomaly-filter');
         expect(anomalySelect).toHaveTextContent('No filter');
@@ -1016,7 +1068,7 @@ describe('TraceWaterfall Component', () => {
         expect(options).toEqual(['No filter']);
 
         // Rerender with undefined anomalies
-        rerender(<TraceWaterfall events={adversarialEvents} anomalies={undefined} />);
+        rerender(<TraceWaterfall events={adversarialEvents} anomalies={undefined} defaultExpanded={true} />);
         anomalySelect = screen.getByTestId('trace-anomaly-filter');
         expect(anomalySelect).toHaveTextContent('No filter');
         if (anomalySelect.getAttribute('aria-expanded') !== 'true') {
@@ -1045,6 +1097,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={disjointAnomalies}
           />
         );
@@ -1070,6 +1123,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1172,6 +1226,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1240,6 +1295,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1282,6 +1338,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
             onSelectEvent={handleSelect}
           />
@@ -1318,6 +1375,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1360,7 +1418,7 @@ describe('TraceWaterfall Component', () => {
           },
         ];
 
-        render(<TraceWaterfall events={singleEvent} anomalies={[]} />);
+        render(<TraceWaterfall events={singleEvent} anomalies={[]} defaultExpanded={true} />);
 
         expect(screen.getByText(/Showing 1 of 1 events/)).toBeInTheDocument();
 
@@ -1378,6 +1436,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1413,6 +1472,7 @@ describe('TraceWaterfall Component', () => {
         const { container } = render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1437,6 +1497,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1464,6 +1525,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1504,6 +1566,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1531,6 +1594,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1569,6 +1633,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1589,6 +1654,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1619,6 +1685,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1658,6 +1725,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1706,6 +1774,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1759,6 +1828,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1819,6 +1889,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1850,6 +1921,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1890,6 +1962,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -1971,6 +2044,7 @@ describe('TraceWaterfall Component', () => {
         render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -2008,6 +2082,7 @@ describe('TraceWaterfall Component', () => {
         const { container } = render(
           <TraceWaterfall
             events={adversarialEvents}
+            defaultExpanded={true}
             anomalies={adversarialAnomalies}
           />
         );
@@ -2024,6 +2099,270 @@ describe('TraceWaterfall Component', () => {
         const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
         expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
       });
+    });
+  });
+
+  describe('FIX-3 Verification: Collapsibility, Anomaly Matching, and Debug Identifiers', () => {
+    it('collapsible by default: initial mount renders only summary bar and expand button', () => {
+      render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} />);
+
+      // Summary bar is present
+      expect(screen.getByTestId('trace-waterfall-collapsed')).toBeInTheDocument();
+      expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
+      expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('4 Events Recorded');
+      expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('1 Error, 1 Anomaly');
+
+      // Expand button is present
+      const expandBtn = screen.getByTestId('waterfall-expand-btn');
+      expect(expandBtn).toBeInTheDocument();
+      expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+
+      // Filters and timeline elements must NOT be rendered while collapsed
+      expect(screen.queryByRole('button', { name: 'All Events' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Tool Calls Only' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show only errors and anomalies' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: 'Filter by subagent role' })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('trace-tool-filter')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('trace-anomaly-filter')).not.toBeInTheDocument();
+      expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
+    });
+
+    it('expanding reveals filters and timeline; collapsing hides them', () => {
+      render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} />);
+
+      // 1. Initially collapsed
+      expect(screen.getByTestId('trace-waterfall-collapsed')).toBeInTheDocument();
+      expect(screen.queryByTestId('waterfall-collapse-btn')).not.toBeInTheDocument();
+
+      // 2. Expand
+      const expandBtn = screen.getByTestId('waterfall-expand-btn');
+      fireEvent.click(expandBtn);
+
+      // Collapsed summary gone; full waterfall revealed
+      expect(screen.queryByTestId('trace-waterfall-collapsed')).not.toBeInTheDocument();
+      const collapseBtn = screen.getByTestId('waterfall-collapse-btn');
+      expect(collapseBtn).toBeInTheDocument();
+      expect(collapseBtn).toHaveAttribute('aria-expanded', 'true');
+
+      // Filter toolbar is visible
+      expect(screen.getByRole('button', { name: 'All Events' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Show only errors and anomalies' })).toBeInTheDocument();
+
+      // Switch to All Events to reveal all timeline turns
+      fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+      expect(screen.getByText('Turn 1')).toBeInTheDocument();
+      expect(screen.getByText('Turn 2')).toBeInTheDocument();
+
+      // 3. Collapse again
+      fireEvent.click(collapseBtn);
+
+      // Full view hidden; collapsed summary restored
+      expect(screen.getByTestId('trace-waterfall-collapsed')).toBeInTheDocument();
+      expect(screen.queryByTestId('waterfall-collapse-btn')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'All Events' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
+    });
+
+    it('anomaly matching: TOOL_RETRY_STREAK must NOT match a completed event', () => {
+      const streakAnomaly: Anomaly = {
+        rule_id: 'TOOL_RETRY_STREAK',
+        severity: 'WARNING',
+        title: 'Tool retry streak',
+        description: 'Tool read encountered failures',
+        context: {
+          tool_name: 'read',
+          turn: 5,
+          session_id: 'ses-1',
+        },
+      };
+
+      const completedEvent: EventFact = {
+        timestamp: '2026-10-18T10:05:00Z',
+        session_id: 'ses-1',
+        turn: 5,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'read',
+        status: 'completed',
+        context_tokens: 2000,
+      };
+
+      const successEvent: EventFact = {
+        ...completedEvent,
+        status: 'success',
+      };
+
+      const errorEvent: EventFact = {
+        ...completedEvent,
+        status: 'error',
+        error_message: 'file not found',
+      };
+
+      // Pure matching function assertions
+      expect(matchesAnomaly(completedEvent, streakAnomaly)).toBe(false);
+      expect(matchesAnomaly(successEvent, streakAnomaly)).toBe(false);
+      expect(matchesAnomaly(errorEvent, streakAnomaly)).toBe(true);
+
+      expect(findMatchingAnomaly(completedEvent, [streakAnomaly])).toBeUndefined();
+      expect(findMatchingAnomaly(successEvent, [streakAnomaly])).toBeUndefined();
+      expect(findMatchingAnomaly(errorEvent, [streakAnomaly])).toEqual(streakAnomaly);
+
+      // Component rendering assertion: completed event does NOT get AnomalyBadge
+      const { container: container1, unmount: unmount1 } = render(
+        <TraceWaterfall
+          events={[completedEvent]}
+          anomalies={[streakAnomaly]}
+          defaultExpanded={true}
+          isHydrated={true}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+      expect(screen.getByText('Turn 5')).toBeInTheDocument();
+      expect(container1.querySelector('.anomaly-badge')).not.toBeInTheDocument();
+      unmount1();
+
+      // Rendering with error event DOES show AnomalyBadge
+      const { container: container2 } = render(
+        <TraceWaterfall
+          events={[errorEvent]}
+          anomalies={[streakAnomaly]}
+          defaultExpanded={true}
+          isHydrated={true}
+        />
+      );
+
+      expect(screen.getByText('Turn 5')).toBeInTheDocument();
+      const badge = container2.querySelector('.anomaly-badge');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('WARNING');
+    });
+
+    it('anomaly matching: anomaly with session_id must NOT match event with different session_id even if turn is equal', () => {
+      const anomalySessionA: Anomaly = {
+        rule_id: 'TOOL_RETRY_STREAK',
+        severity: 'CRITICAL',
+        title: 'Tool retry streak in Session A',
+        description: 'Failures in session A',
+        context: {
+          session_id: 'ses-A',
+          tool_name: 'bash',
+          turn: 7,
+        },
+      };
+
+      const eventSessionB: EventFact = {
+        timestamp: '2026-10-18T10:07:00Z',
+        session_id: 'ses-B',
+        turn: 7,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'bash',
+        status: 'error',
+        error_message: 'exit status 1',
+        context_tokens: 5000,
+      };
+
+      const eventSessionA: EventFact = {
+        ...eventSessionB,
+        session_id: 'ses-A',
+      };
+
+      // Pure function assertions
+      expect(matchesAnomaly(eventSessionB, anomalySessionA)).toBe(false);
+      expect(matchesAnomaly(eventSessionA, anomalySessionA)).toBe(true);
+
+      expect(findMatchingAnomaly(eventSessionB, [anomalySessionA])).toBeUndefined();
+      expect(findMatchingAnomaly(eventSessionA, [anomalySessionA])).toEqual(anomalySessionA);
+
+      // Component rendering assertion: event in session B does NOT receive anomaly badge
+      const { container: containerA, unmount: unmountA } = render(
+        <TraceWaterfall
+          events={[eventSessionB]}
+          anomalies={[anomalySessionA]}
+          defaultExpanded={true}
+          isHydrated={true}
+        />
+      );
+
+      // In errors_anomalies mode, eventSessionB has error, so it shows up, but must NOT have anomaly badge
+      expect(screen.getByText('Turn 7')).toBeInTheDocument();
+      expect(containerA.querySelector('.anomaly-badge')).not.toBeInTheDocument();
+      unmountA();
+
+      // Event in session A DOES receive anomaly badge
+      const { container: containerB } = render(
+        <TraceWaterfall
+          events={[eventSessionA]}
+          anomalies={[anomalySessionA]}
+          defaultExpanded={true}
+          isHydrated={true}
+        />
+      );
+
+      expect(screen.getByText('Turn 7')).toBeInTheDocument();
+      const badge = containerB.querySelector('.anomaly-badge');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('CRITICAL');
+    });
+
+    it('copy ID button copies debug identifier and shows Copied feedback', async () => {
+      vi.useFakeTimers();
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      const eventWithMsgID: EventFact = {
+        timestamp: '2026-10-18T10:00:00Z',
+        session_id: 'ses-uuid-12345678',
+        message_id: 'msg-uuid-87654321',
+        turn: 1,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'bash',
+        status: 'success',
+        duration_ms: 100,
+        context_tokens: 1200,
+      };
+
+      render(
+        <TraceWaterfall
+          events={[eventWithMsgID]}
+          defaultExpanded={true}
+        />
+      );
+
+      // Switch to All Events to view the turn
+      fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+
+      // Find the Copy ID button for turn 1
+      const copyBtn = screen.getByRole('button', { name: 'Copy debug identifier for turn 1' });
+      expect(copyBtn).toBeInTheDocument();
+      expect(copyBtn).toHaveTextContent('Copy ID');
+
+      // Click Copy ID
+      await act(async () => {
+        fireEvent.click(copyBtn);
+      });
+
+      // Verifies clipboard was invoked with message_id (or debug ID)
+      expect(writeTextMock).toHaveBeenCalledWith('msg-uuid-87654321');
+
+      // State changes to "Copied"
+      expect(copyBtn).toHaveTextContent('Copied');
+
+      // Fast-forward 2000ms
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      // Reverts back to "Copy ID"
+      expect(copyBtn).toHaveTextContent('Copy ID');
+
+      vi.useRealTimers();
     });
   });
 });
