@@ -1367,3 +1367,111 @@ func TestExtractSteeringTurns(t *testing.T) {
 		}
 	})
 }
+
+func TestExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	_, err := db.Exec(`
+		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
+		('ses_insp', NULL, 'build', 'default_model', 'AL-Inspection', 1000, 10000);
+		INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m_insp_1', 'ses_insp', 1760000001000, 1760000001500, '{"role":"assistant","tokens":{"input":100}}'),
+		('m_insp_2', 'ses_insp', 1760000005000, 1760000005500, '{"role":"assistant","tokens":{"input":200}}');
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
+		('p_read_syntax', 'ses_insp', 'm_insp_1', 1760000002000, 1760000002100, '{"type":"tool","tool":"read","state":{"status":"completed","output":"def main():\n  syntax error: unexpected EOF while parsing"}}'),
+		('p_read_tb', 'ses_insp', 'm_insp_1', 1760000003000, 1760000003100, '{"type":"tool","tool":"read","state":{"status":"completed","output":"# Troubleshooting\nTraceback (most recent call last):\n  File run.py, line 5\nZeroDivisionError"}}'),
+		('p_grep_err', 'ses_insp', 'm_insp_1', 1760000004000, 1760000004100, '{"type":"tool","tool":"grep","state":{"status":"completed","output":"Error: log pattern matched in syslog"}}'),
+		('p_glob_panic', 'ses_insp', 'm_insp_1', 1760000004500, 1760000004600, '{"type":"tool","tool":"glob","state":{"status":"completed","output":"panic: runtime error in search target"}}'),
+		('p_webfetch_err', 'ses_insp', 'm_insp_1', 1760000004700, 1760000004800, '{"type":"tool","tool":"webfetch","state":{"status":"completed","output":"Error: remote service temporarily unavailable"}}'),
+		('p_read_real_err', 'ses_insp', 'm_insp_2', 1760000006000, 1760000006100, '{"type":"tool","tool":"read","state":{"status":"error","output":"file not found: /etc/missing.conf"}}'),
+		('p_bash_err', 'ses_insp', 'm_insp_2', 1760000007000, 1760000007100, '{"type":"tool","tool":"bash","state":{"status":"completed","output":"Error: command execution failed with non-zero code"}}');
+	`)
+	if err != nil {
+		t.Fatalf("failed inserting inspection test data: %v", err)
+	}
+
+	_, tools, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_insp"}, "user", nil)
+	if err != nil {
+		t.Fatalf("ExtractFacts failed: %v", err)
+	}
+
+	toolMap := make(map[string]domain.ToolFact)
+	for _, tool := range tools {
+		toolMap[tool.Name] = tool
+	}
+
+	// read: 3 calls: 2 completed with syntax error / Traceback (0 errors), 1 error with file not found (1 error)
+	readTool, ok := toolMap["read"]
+	if !ok {
+		t.Fatalf("expected read tool in extracted facts")
+	}
+	if readTool.Calls != 3 {
+		t.Errorf("expected read calls=3, got %d", readTool.Calls)
+	}
+	if readTool.Errors != 1 {
+		t.Errorf("expected read errors=1 (only from status error part), got %d", readTool.Errors)
+	}
+
+	// grep: 1 call completed -> 0 errors despite "Error:" in output
+	grepTool, ok := toolMap["grep"]
+	if !ok || grepTool.Errors != 0 {
+		t.Errorf("expected grep errors=0, got %+v", grepTool)
+	}
+
+	// glob: 1 call completed -> 0 errors despite "panic:" in output
+	globTool, ok := toolMap["glob"]
+	if !ok || globTool.Errors != 0 {
+		t.Errorf("expected glob errors=0, got %+v", globTool)
+	}
+
+	// webfetch: 1 call completed -> 0 errors despite "Error:" in output
+	webfetchTool, ok := toolMap["webfetch"]
+	if !ok || webfetchTool.Errors != 0 {
+		t.Errorf("expected webfetch errors=0, got %+v", webfetchTool)
+	}
+
+	// bash: 1 call completed with "syntax error" -> non-inspection tool, so it MUST flag as error
+	bashTool, ok := toolMap["bash"]
+	if !ok || bashTool.Errors != 1 {
+		t.Errorf("expected bash errors=1 (syntax error on non-inspection tool), got %+v", bashTool)
+	}
+
+	// Verify EventFact message_id propagation and statuses
+	for _, ev := range events {
+		switch ev.EventType {
+		case domain.EventTypeTurnMessage:
+			if ev.MessageID == nil {
+				t.Errorf("expected non-nil MessageID on turn message event: %+v", ev)
+			} else if *ev.MessageID != "m_insp_1" && *ev.MessageID != "m_insp_2" {
+				t.Errorf("unexpected MessageID on turn message: %s", *ev.MessageID)
+			}
+		case domain.EventTypeToolCall:
+			if ev.ToolName == nil {
+				continue
+			}
+			switch *ev.ToolName {
+			case "read":
+				if ev.MessageID == nil {
+					t.Errorf("expected non-nil MessageID on read tool call event")
+				}
+				if *ev.MessageID == "m_insp_1" {
+					if ev.Status != "completed" {
+						t.Errorf("expected completed status for read tool on m_insp_1, got %s", ev.Status)
+					}
+				} else if *ev.MessageID == "m_insp_2" {
+					if ev.Status != "error" {
+						t.Errorf("expected error status for read tool on m_insp_2 with file not found, got %s", ev.Status)
+					}
+				}
+			case "grep", "glob", "webfetch":
+				if ev.Status != "completed" {
+					t.Errorf("expected completed status for %s, got %s", *ev.ToolName, ev.Status)
+				}
+				if ev.MessageID == nil || *ev.MessageID != "m_insp_1" {
+					t.Errorf("expected MessageID m_insp_1 for %s, got %v", *ev.ToolName, ev.MessageID)
+				}
+			}
+		}
+	}
+}

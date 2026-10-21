@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { LivePartFact } from '../domain/live';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 export interface FailedToolAlertCardProps {
   readonly part: LivePartFact;
@@ -13,6 +14,7 @@ export const FailedToolAlertCard: React.FC<FailedToolAlertCardProps> = ({
   onInspect,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const rawSeverity = (part.severity || 'HIGH').toUpperCase();
   const severityClass = rawSeverity.toLowerCase();
@@ -20,6 +22,15 @@ export const FailedToolAlertCard: React.FC<FailedToolAlertCardProps> = ({
   const errorMessage = part.output_snippet || part.error_message || 'Execution error without output message';
   const isLong = errorMessage.length > 200;
   const displayError = !expanded && isLong ? `${errorMessage.slice(0, 200)}...` : errorMessage;
+
+  const handleCopyId = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await copyTextToClipboard(part.id);
+    setIsCopied(true);
+    window.setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
+  };
 
   return (
     <div
@@ -35,6 +46,19 @@ export const FailedToolAlertCard: React.FC<FailedToolAlertCardProps> = ({
             <span className="failed-tool-streak">
               {consecutiveErrors} Consecutive Failures
             </span>
+          )}
+          {part.id && (
+            <div className="failed-tool-id-group">
+              <span className="failed-tool-id mono">{part.id}</span>
+              <button
+                type="button"
+                className="btn-copy-id"
+                aria-label={`Copy Part ID ${part.id}`}
+                onClick={handleCopyId}
+              >
+                {isCopied ? 'Copied' : 'Copy ID'}
+              </button>
+            </div>
           )}
         </div>
         {onInspect && (
