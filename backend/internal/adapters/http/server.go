@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"strings"
 	"time"
 
 	"agenticlens/internal/adapters/config"
@@ -28,11 +29,26 @@ func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceI
 	} else if loaded, err := config.Load(""); err == nil {
 		cfg = loaded
 	}
-	return NewServerWithConfig(workspacesDir, staticFS, cfg, liveService...)
+
+	cleanWsDir := strings.TrimSpace(workspacesDir)
+	if cleanWsDir != "" {
+		cfg.Workspaces.Dir = cleanWsDir
+	} else if cfg.Workspaces.Dir != "" {
+		cleanWsDir = cfg.Workspaces.Dir
+	}
+
+	return NewServerWithConfig(cleanWsDir, staticFS, cfg, liveService...)
 }
 
 // NewServerWithConfig creates a new HTTP Server instance configured with custom ProjectConfig, API routes, and SPA static serving.
 func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.ProjectConfig, liveService ...LiveServiceInterface) *Server {
+	cleanWsDir := strings.TrimSpace(workspacesDir)
+	if cleanWsDir != "" {
+		cfg.Workspaces.Dir = cleanWsDir
+	} else if cfg.Workspaces.Dir != "" {
+		cleanWsDir = cfg.Workspaces.Dir
+	}
+
 	var ls LiveServiceInterface
 	if len(liveService) > 0 {
 		ls = liveService[0]
@@ -49,13 +65,13 @@ func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.Projec
 
 	// Register API endpoints
 	mux.HandleFunc("GET /api/version", VersionHandler())
-	mux.HandleFunc("GET /api/config", ConfigHandler(cfg, workspacesDir))
-	mux.HandleFunc("GET /api/workspaces", WorkspacesHandler(workspacesDir))
-	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(workspacesDir, artifactConfigs))
-	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(workspacesDir, hydrator))
-	mux.HandleFunc("GET /api/fleet", FleetHandler(workspacesDir))
-	mux.HandleFunc("GET /api/comparison", ComparisonHandler(workspacesDir))
-	mux.HandleFunc("GET /api/progression", ProgressionHandler(workspacesDir))
+	mux.HandleFunc("GET /api/config", ConfigHandler(cfg, cleanWsDir))
+	mux.HandleFunc("GET /api/workspaces", WorkspacesHandler(cleanWsDir))
+	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(cleanWsDir, artifactConfigs))
+	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(cleanWsDir, hydrator))
+	mux.HandleFunc("GET /api/fleet", FleetHandler(cleanWsDir))
+	mux.HandleFunc("GET /api/comparison", ComparisonHandler(cleanWsDir))
+	mux.HandleFunc("GET /api/progression", ProgressionHandler(cleanWsDir))
 
 	// Register Live API endpoints
 	mux.HandleFunc("GET /api/live/sessions", LiveSessionsHandler(ls))
@@ -70,7 +86,7 @@ func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.Projec
 	handler := CORSMiddleware(mux)
 
 	s := &Server{
-		workspacesDir: workspacesDir,
+		workspacesDir: cleanWsDir,
 		staticFS:      staticFS,
 		liveService:   ls,
 		projectConfig: cfg,

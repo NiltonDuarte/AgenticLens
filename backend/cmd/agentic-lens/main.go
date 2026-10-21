@@ -364,14 +364,6 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
-
-	staticFS, err := web.GetFS()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error initializing embedded web filesystem: %v\n", err)
-		os.Exit(1)
-	}
-
 	projCfg, err := adaptersconfig.Load("")
 	if err != nil {
 		if errors.Is(err, adaptersconfig.ErrConfigNotFound) {
@@ -379,6 +371,46 @@ func runServer(args []string) {
 		} else {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		}
+		os.Exit(1)
+	}
+
+	var workspacesDir string
+	rawFlag := strings.TrimSpace(*workspacesFlag)
+	if rawFlag != "" {
+		workspacesDir = rawFlag
+		projCfg.Workspaces.Dir = workspacesDir
+	} else {
+		configuredDir := strings.TrimSpace(projCfg.Workspaces.Dir)
+		if configuredDir == "" {
+			configuredDir = "workspaces"
+		}
+		if filepath.IsAbs(configuredDir) {
+			workspacesDir = configuredDir
+		} else {
+			cfgPath, _ := adaptersconfig.FindConfigFile("")
+			baseDir := ""
+			if cfgPath != "" {
+				parentDir := filepath.Dir(cfgPath)
+				baseDir = parentDir
+				if filepath.Base(parentDir) == ".agenticlens" {
+					baseDir = filepath.Dir(parentDir)
+				}
+			} else {
+				if cwd, err := os.Getwd(); err == nil {
+					baseDir = cwd
+				}
+			}
+			if baseDir != "" {
+				workspacesDir = filepath.Join(baseDir, configuredDir)
+			} else {
+				workspacesDir = configuredDir
+			}
+		}
+	}
+
+	staticFS, err := web.GetFS()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing embedded web filesystem: %v\n", err)
 		os.Exit(1)
 	}
 
