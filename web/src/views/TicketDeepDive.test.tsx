@@ -1039,6 +1039,12 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
       });
 
+      // Expand the waterfall if collapsed
+      const expandBtn = screen.queryByTestId('waterfall-expand-btn');
+      if (expandBtn) {
+        fireEvent.click(expandBtn);
+      }
+
       // Anomaly drawer is initially not present
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
@@ -1088,6 +1094,12 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
       });
 
+      // Expand the waterfall if collapsed
+      const expandBtn = screen.queryByTestId('waterfall-expand-btn');
+      if (expandBtn) {
+        fireEvent.click(expandBtn);
+      }
+
       // Switch to All Events to access Turn 1
       const allBtn = screen.getByRole('button', { name: 'All Events' });
       fireEvent.click(allBtn);
@@ -1131,13 +1143,19 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
       });
 
+      // Expand the waterfall if collapsed
+      const expandBtn = screen.queryByTestId('waterfall-expand-btn');
+      if (expandBtn) {
+        fireEvent.click(expandBtn);
+      }
+
       // Switch to All Events
       const allBtn = screen.getByRole('button', { name: 'All Events' });
       fireEvent.click(allBtn);
 
-      // Click flagged item (turn 4 error item)
+      // Click flagged item (turn 4 error item - find the one with error)
       const turn4Items = screen.getAllByTestId('timeline-item-4');
-      const flaggedNode = turn4Items[0]!;
+      const flaggedNode = turn4Items.find((item) => item.classList.contains('item-error')) ?? turn4Items[1]!;
       fireEvent.click(flaggedNode);
 
       // Drawer opens
@@ -1204,6 +1222,12 @@ describe('TicketDeepDive View Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
       });
+
+      // Expand the waterfall if collapsed
+      const expandBtn = screen.queryByTestId('waterfall-expand-btn');
+      if (expandBtn) {
+        fireEvent.click(expandBtn);
+      }
 
       // Click error item (visible under default Errors and Anomalies Only)
       const errItem = screen.getByTestId('timeline-item-1');
@@ -1273,6 +1297,12 @@ describe('TicketDeepDive View Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
       });
+
+      // Expand the waterfall if collapsed
+      const expandBtn = screen.queryByTestId('waterfall-expand-btn');
+      if (expandBtn) {
+        fireEvent.click(expandBtn);
+      }
 
       const inspectBtn = screen.getByRole('button', { name: 'Inspect failure for turn 1' });
       fireEvent.click(inspectBtn);
@@ -1401,6 +1431,12 @@ describe('TicketDeepDive View Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
       });
+
+      // Expand the waterfall if collapsed
+      const expandBtn = screen.queryByTestId('waterfall-expand-btn');
+      if (expandBtn) {
+        fireEvent.click(expandBtn);
+      }
 
       expect(screen.getByTestId('db-offline-banner')).toBeInTheDocument();
       const sourceBadge = screen.getByTestId('waterfall-source-badge');

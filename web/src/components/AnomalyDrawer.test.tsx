@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AnomalyDrawer } from './AnomalyDrawer';
 import type { Anomaly, EventFact } from '../domain/types';
 
@@ -347,6 +347,146 @@ describe('AnomalyDrawer Component', () => {
       expect(screen.queryByTestId('drawer-reasoning-section')).not.toBeInTheDocument();
       expect(screen.queryByTestId('drawer-tool-input-section')).not.toBeInTheDocument();
       expect(screen.queryByTestId('drawer-tool-output-section')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('FIX-3 Debug Identifiers and Clipboard Actions', () => {
+    it('renders Session ID, Message ID (when present), Turn Debug ID, and copy buttons work', async () => {
+      vi.useFakeTimers();
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      const fix3Anomaly: Anomaly = {
+        ...sampleAnomaly,
+        context: {
+          ...sampleAnomaly.context,
+          session_id: 'session-fix3-test',
+        },
+      };
+
+      const eventWithMessageId: EventFact = {
+        ...sampleEvent,
+        session_id: 'session-fix3-test',
+        message_id: 'msg-fix3-test-id',
+        turn: 4,
+      };
+
+      render(
+        <AnomalyDrawer
+          isOpen={true}
+          onClose={vi.fn()}
+          anomaly={fix3Anomaly}
+          event={eventWithMessageId}
+        />
+      );
+
+      // Verify Session ID and copy button
+      expect(screen.getByText('Session ID')).toBeInTheDocument();
+      expect(screen.getByText('session-fix3-test')).toBeInTheDocument();
+      const copySessionBtn = screen.getByRole('button', { name: 'Copy Session ID' });
+      expect(copySessionBtn).toBeInTheDocument();
+      expect(copySessionBtn).toHaveTextContent('Copy');
+
+      // Verify Message ID and copy button
+      expect(screen.getByText('Message ID')).toBeInTheDocument();
+      expect(screen.getByText('msg-fix3-test-id')).toBeInTheDocument();
+      const copyMessageBtn = screen.getByRole('button', { name: 'Copy Message ID' });
+      expect(copyMessageBtn).toBeInTheDocument();
+      expect(copyMessageBtn).toHaveTextContent('Copy');
+
+      // Verify Turn Debug ID and copy button
+      expect(screen.getByText('Turn Debug ID')).toBeInTheDocument();
+      expect(screen.getByText('session-fix3-test:turn:4')).toBeInTheDocument();
+      const copyTurnDebugBtn = screen.getByRole('button', { name: 'Copy Turn Debug ID' });
+      expect(copyTurnDebugBtn).toBeInTheDocument();
+      expect(copyTurnDebugBtn).toHaveTextContent('Copy');
+
+      // Test Copy Session ID interaction
+      await act(async () => {
+        fireEvent.click(copySessionBtn);
+      });
+      expect(writeTextMock).toHaveBeenCalledWith('session-fix3-test');
+      expect(copySessionBtn).toHaveTextContent('Copied');
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(copySessionBtn).toHaveTextContent('Copy');
+
+      // Test Copy Message ID interaction
+      await act(async () => {
+        fireEvent.click(copyMessageBtn);
+      });
+      expect(writeTextMock).toHaveBeenCalledWith('msg-fix3-test-id');
+      expect(copyMessageBtn).toHaveTextContent('Copied');
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(copyMessageBtn).toHaveTextContent('Copy');
+
+      // Test Copy Turn Debug ID interaction
+      await act(async () => {
+        fireEvent.click(copyTurnDebugBtn);
+      });
+      expect(writeTextMock).toHaveBeenCalledWith('session-fix3-test:turn:4');
+      expect(copyTurnDebugBtn).toHaveTextContent('Copied');
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(copyTurnDebugBtn).toHaveTextContent('Copy');
+
+      vi.useRealTimers();
+    });
+
+    it('omits Message ID when not present on event, while preserving Session ID and Turn Debug ID', () => {
+      const eventWithoutMsgId: EventFact = {
+        ...sampleEvent,
+        session_id: 'session-no-msg',
+        message_id: undefined,
+        turn: 2,
+      };
+
+      render(
+        <AnomalyDrawer
+          isOpen={true}
+          onClose={vi.fn()}
+          event={eventWithoutMsgId}
+        />
+      );
+
+      expect(screen.queryByText('Message ID')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Copy Message ID' })).not.toBeInTheDocument();
+
+      expect(screen.getByText('Session ID')).toBeInTheDocument();
+      expect(screen.getByText('session-no-msg')).toBeInTheDocument();
+      expect(screen.getByText('Turn Debug ID')).toBeInTheDocument();
+      expect(screen.getByText('session-no-msg:turn:2')).toBeInTheDocument();
+    });
+
+    it('formats Turn Debug ID as turn-N when session ID is absent', () => {
+      const eventNoSession: EventFact = {
+        timestamp: '2026-10-18T10:00:00Z',
+        session_id: '',
+        turn: 9,
+        role: 'coder',
+        event_type: 'tool_call',
+        status: 'error',
+        context_tokens: 1500,
+      };
+
+      render(
+        <AnomalyDrawer
+          isOpen={true}
+          onClose={vi.fn()}
+          event={eventNoSession}
+        />
+      );
+
+      expect(screen.getByText('Turn Debug ID')).toBeInTheDocument();
+      expect(screen.getByText('turn-9')).toBeInTheDocument();
     });
   });
 });

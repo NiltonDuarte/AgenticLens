@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -368,9 +369,9 @@ func TestClassifyToolFailure(t *testing.T) {
 			status:            "completed",
 			output:            "no matches found",
 			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "low",
-			expectNilMsg:      false,
+			expectedIsError:   false,
+			expectedSeverity:  "none",
+			expectNilMsg:      true,
 		},
 		{
 			name:              "successful execution returns none severity",
@@ -381,6 +382,56 @@ func TestClassifyToolFailure(t *testing.T) {
 			expectedIsError:   false,
 			expectedSeverity:  "none",
 			expectNilMsg:      true,
+		},
+		{
+			name:              "read tool with status completed containing syntax error is not error",
+			toolName:          "read",
+			status:            "completed",
+			output:            "syntax error: unexpected token in documentation example",
+			consecutiveErrors: 0,
+			expectedIsError:   false,
+			expectedSeverity:  "none",
+			expectNilMsg:      true,
+		},
+		{
+			name:              "read tool reading markdown with traceback and panic is not error",
+			toolName:          "read",
+			status:            "completed",
+			output:            "# Error Guide\nTraceback (most recent call last):\npanic: runtime error\nbuild failed\nError: something broke",
+			consecutiveErrors: 0,
+			expectedIsError:   false,
+			expectedSeverity:  "none",
+			expectNilMsg:      true,
+		},
+		{
+			name:              "webfetch with status completed containing error text is not error",
+			toolName:          "webfetch",
+			status:            "completed",
+			output:            "HTTP 200 OK - Content: Error: file not found on remote wiki",
+			consecutiveErrors: 0,
+			expectedIsError:   false,
+			expectedSeverity:  "none",
+			expectNilMsg:      true,
+		},
+		{
+			name:              "read tool with status error and missing file is error",
+			toolName:          "read",
+			status:            "error",
+			output:            "no such file or directory",
+			consecutiveErrors: 0,
+			expectedIsError:   true,
+			expectedSeverity:  "medium",
+			expectNilMsg:      false,
+		},
+		{
+			name:              "read tool with status error and file not found is error",
+			toolName:          "read",
+			status:            "error",
+			output:            "file not found: /workspace/docs/missing.md",
+			consecutiveErrors: 0,
+			expectedIsError:   true,
+			expectedSeverity:  "medium",
+			expectNilMsg:      false,
 		},
 	}
 
@@ -405,6 +456,77 @@ func TestClassifyToolFailure(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClassifyToolFailure_ContentInspectionTools_CompletedStatusBypassesContentErrors(t *testing.T) {
+	t.Parallel()
+
+	tools := []string{"read", "grep", "glob", "webfetch", "READ", "Grep", "GLOB", "WebFetch"}
+	statuses := []string{"completed", "Completed", "COMPLETED", "  completed  "}
+	errorOutputs := []struct {
+		name    string
+		content string
+	}{
+		{"syntax error signature", "syntax error: unexpected token < in expression"},
+		{"panic signature", "panic: runtime error: index out of range [5] with length 2"},
+		{"build failed signature", "cargo build: build failed with exit status 1"},
+		{"traceback signature", "Traceback (most recent call last):\n  File 'parser.py', line 12\nKeyError: 'token'"},
+		{"permission denied signature", "sh: /usr/local/bin/curl: permission denied"},
+		{"error prefix signature", "Error: failed to fetch remote repository manifest"},
+		{"multiline combined error document", "# Troubleshooting Guide\nError: compilation failed\nsyntax error: invalid syntax\npanic: nil pointer dereference\nbuild failed\nTraceback (most recent call last):\npermission denied"},
+	}
+
+	for _, tool := range tools {
+		for _, status := range statuses {
+			for _, eo := range errorOutputs {
+				testName := fmt.Sprintf("tool=%s/status=%s/output=%s", tool, strings.TrimSpace(status), eo.name)
+				t.Run(testName, func(t *testing.T) {
+					isErr, sev, errMsg := domain.ClassifyToolFailure(tool, status, eo.content, 0)
+					if isErr {
+						t.Errorf("expected isError=false for %s with status completed, got true", tool)
+					}
+					if sev != string(domain.SeverityNone) {
+						t.Errorf("expected severity=none, got %s", sev)
+					}
+					if errMsg != nil {
+						t.Errorf("expected nil error message, got %v", *errMsg)
+					}
+				})
+			}
+		}
+	}
+
+	// Adversarial: Verify that status="error" or status="failed" does NOT bypass error classification for inspection tools
+	t.Run("inspection tools with status error still return isError=true", func(t *testing.T) {
+		errorCases := []struct {
+			tool     string
+			status   string
+			output   string
+			expected string
+		}{
+			{"read", "error", "file not found", "file not found"},
+			{"read", "failed", "no such file or directory", "no such file or directory"},
+			{"read", "error", "permission denied: cannot open file", "permission denied"},
+			{"grep", "error", "command failed: exit status 2", "command failed"},
+			{"glob", "error", "path does not exist", "path does not exist"},
+			{"webfetch", "error", "connection refused", "connection refused"},
+		}
+
+		for _, tc := range errorCases {
+			t.Run(fmt.Sprintf("%s_%s_%s", tc.tool, tc.status, tc.expected), func(t *testing.T) {
+				isErr, sev, errMsg := domain.ClassifyToolFailure(tc.tool, tc.status, tc.output, 0)
+				if !isErr {
+					t.Errorf("expected isError=true for %s with status=%s, got false", tc.tool, tc.status)
+				}
+				if sev == string(domain.SeverityNone) {
+					t.Errorf("expected severity != none for tool error, got %s", sev)
+				}
+				if errMsg == nil {
+					t.Errorf("expected non-nil error message for %s with status=%s", tc.tool, tc.status)
+				}
+			})
+		}
+	})
 }
 
 func TestClassifyToolFailure_AdversarialSuite(t *testing.T) {
@@ -592,9 +714,9 @@ func TestClassifyToolFailure_AdversarialSuite(t *testing.T) {
 			status:            "completed",
 			output:            "0 matches found across files",
 			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "low",
-			assertMsgContains: "0 matches",
+			expectedIsError:   false,
+			expectedSeverity:  "none",
+			assertMsgContains: "",
 		},
 		{
 			name:              "glob no matching files triggers low severity",
@@ -602,9 +724,9 @@ func TestClassifyToolFailure_AdversarialSuite(t *testing.T) {
 			status:            "completed",
 			output:            "no matching files in search directory",
 			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "low",
-			assertMsgContains: "no matching files",
+			expectedIsError:   false,
+			expectedSeverity:  "none",
+			assertMsgContains: "",
 		},
 		// Clean / Success outputs with innocent words
 		{
