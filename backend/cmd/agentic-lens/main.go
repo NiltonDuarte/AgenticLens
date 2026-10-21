@@ -303,7 +303,7 @@ func runGenerate(args []string) {
 		Events:        events,
 	}
 
-	metricsLedger := domain.DeriveMetricsLedgerWithConfig(factLedger, projCfg)
+	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 
 	if *jsonOutputFlag != "" {

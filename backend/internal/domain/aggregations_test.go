@@ -1005,7 +1005,7 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 		ledgerNilEvents := baseLedger
 		ledgerNilEvents.Events = nil
 
-		metrics := domain.DeriveMetricsLedger(ledgerNilEvents)
+		metrics := domain.DeriveMetricsLedger(ledgerNilEvents, domain.DefaultProjectConfig())
 		if metrics.Facts.Events != nil {
 			t.Errorf("expected nil Facts.Events, got %+v", metrics.Facts.Events)
 		}
@@ -1021,7 +1021,7 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 		ledgerEmptyEvents := baseLedger
 		ledgerEmptyEvents.Events = []domain.EventFact{}
 
-		metrics := domain.DeriveMetricsLedger(ledgerEmptyEvents)
+		metrics := domain.DeriveMetricsLedger(ledgerEmptyEvents, domain.DefaultProjectConfig())
 		if metrics.Facts.Events == nil {
 			t.Fatal("expected non-nil empty Events slice")
 		}
@@ -1071,8 +1071,8 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 		ledgerWithEvents := baseLedger
 		ledgerWithEvents.Events = events
 
-		metricsWithEvents := domain.DeriveMetricsLedger(ledgerWithEvents)
-		metricsWithoutEvents := domain.DeriveMetricsLedger(baseLedger)
+		metricsWithEvents := domain.DeriveMetricsLedger(ledgerWithEvents, domain.DefaultProjectConfig())
+		metricsWithoutEvents := domain.DeriveMetricsLedger(baseLedger, domain.DefaultProjectConfig())
 
 		if len(metricsWithEvents.Facts.Events) != 3 {
 			t.Fatalf("expected 3 events in Facts, got %d", len(metricsWithEvents.Facts.Events))
@@ -1107,7 +1107,7 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 
 	t.Run("zero division on completely empty fact ledger", func(t *testing.T) {
 		emptyLedger := domain.AgenticFactLedger{}
-		metrics := domain.DeriveMetricsLedger(emptyLedger)
+		metrics := domain.DeriveMetricsLedger(emptyLedger, domain.DefaultProjectConfig())
 
 		if metrics.Totals.Invocations != 0 {
 			t.Errorf("expected 0 invocations, got %d", metrics.Totals.Invocations)
@@ -2126,7 +2126,9 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 			"orchestrator": "orchestrator",
 		}
 
-		metrics := domain.DeriveMetricsLedger(factLedger, customMappings)
+		cfg := domain.DefaultProjectConfig()
+		cfg.RoleMappings = customMappings
+		metrics := domain.DeriveMetricsLedger(factLedger, cfg)
 
 		// 1. Roles contains exactly one entry for orchestrator
 		if len(metrics.Roles) != 1 {
@@ -2200,14 +2202,16 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 			"custom-qa": "tester",
 		}
 
-		metrics := domain.DeriveMetricsLedger(factLedger, customMappings)
+		cfg := domain.DefaultProjectConfig()
+		cfg.RoleMappings = customMappings
+		metrics := domain.DeriveMetricsLedger(factLedger, cfg)
 
-		// Derived roles should be orchestrator, coder, tester
+		// Derived roles should be coder, orchestrator, tester (alphabetical order when RoleOrder is empty)
 		roleNames := make([]string, len(metrics.Roles))
 		for i, r := range metrics.Roles {
 			roleNames[i] = r.Role
 		}
-		expectedRoles := []string{"orchestrator", "coder", "tester"}
+		expectedRoles := []string{"coder", "orchestrator", "tester"}
 		if len(roleNames) != len(expectedRoles) {
 			t.Fatalf("expected roles %+v, got %+v", expectedRoles, roleNames)
 		}
@@ -2242,6 +2246,60 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 	})
 }
 
+func TestDeriveMetricsLedger_RoleOrder(t *testing.T) {
+	t.Parallel()
+
+	ticketID := "FIX-2"
+	factLedger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Invocations: []domain.InvocationFact{
+			{ID: "inv-1", Role: "orchestrator", Model: "gpt-4o", CostUSD: 0.10, ActiveDurationSeconds: 10},
+			{ID: "inv-2", Role: "coder", Model: "gpt-4o", CostUSD: 0.20, ActiveDurationSeconds: 20},
+			{ID: "inv-3", Role: "tester", Model: "gpt-4o", CostUSD: 0.15, ActiveDurationSeconds: 15},
+			{ID: "inv-4", Role: "architect", Model: "gpt-4o", CostUSD: 0.05, ActiveDurationSeconds: 5},
+		},
+	}
+
+	t.Run("empty role order defaults strictly to alphabetical sorting", func(t *testing.T) {
+		cfg := domain.DefaultProjectConfig()
+		metrics := domain.DeriveMetricsLedger(factLedger, cfg)
+
+		roleNames := make([]string, len(metrics.Roles))
+		for i, r := range metrics.Roles {
+			roleNames[i] = r.Role
+		}
+		expectedRoles := []string{"architect", "coder", "orchestrator", "tester"}
+		if len(roleNames) != len(expectedRoles) {
+			t.Fatalf("expected roles %+v, got %+v", expectedRoles, roleNames)
+		}
+		for i, exp := range expectedRoles {
+			if roleNames[i] != exp {
+				t.Errorf("at index %d: expected role %q, got %q", i, exp, roleNames[i])
+			}
+		}
+	})
+
+	t.Run("custom role order prioritizes specified sequence then alphabetical remainder", func(t *testing.T) {
+		cfg := domain.DefaultProjectConfig()
+		cfg.RoleOrder = []string{"tester", "orchestrator"}
+		metrics := domain.DeriveMetricsLedger(factLedger, cfg)
+
+		roleNames := make([]string, len(metrics.Roles))
+		for i, r := range metrics.Roles {
+			roleNames[i] = r.Role
+		}
+		expectedRoles := []string{"tester", "orchestrator", "architect", "coder"}
+		if len(roleNames) != len(expectedRoles) {
+			t.Fatalf("expected roles %+v, got %+v", expectedRoles, roleNames)
+		}
+		for i, exp := range expectedRoles {
+			if roleNames[i] != exp {
+				t.Errorf("at index %d: expected role %q, got %q", i, exp, roleNames[i])
+			}
+		}
+	})
+}
+
 func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T) {
 	t.Parallel()
 
@@ -2270,7 +2328,9 @@ func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T
 		mappings := domain.RoleMappings{
 			"custom-bot": "orchestrator",
 		}
-		metrics := domain.DeriveMetricsLedger(baseLedger, mappings)
+		cfg := domain.DefaultProjectConfig()
+		cfg.RoleMappings = mappings
+		metrics := domain.DeriveMetricsLedger(baseLedger, cfg)
 
 		eff := metrics.WorkflowEfficiency.RoleEffortDistributionPct
 		if eff["orchestrator"] != 100.0 {
@@ -2287,7 +2347,9 @@ func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T
 		mappings := domain.RoleMappings{
 			"custom-bot": "coder",
 		}
-		metrics := domain.DeriveMetricsLedger(baseLedger, mappings)
+		cfg := domain.DefaultProjectConfig()
+		cfg.RoleMappings = mappings
+		metrics := domain.DeriveMetricsLedger(baseLedger, cfg)
 
 		eff := metrics.WorkflowEfficiency.RoleEffortDistributionPct
 		if eff["coder"] != 100.0 {
@@ -2308,7 +2370,9 @@ func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T
 			"orchestrator": "orchestrator",
 			"build":        "orchestrator",
 		}
-		metrics := domain.DeriveMetricsLedger(baseLedger, mappings)
+		cfg := domain.DefaultProjectConfig()
+		cfg.RoleMappings = mappings
+		metrics := domain.DeriveMetricsLedger(baseLedger, cfg)
 
 		eff := metrics.WorkflowEfficiency.RoleEffortDistributionPct
 		if eff["custom-bot"] != 100.0 {
@@ -2412,7 +2476,9 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			"custom-qa": "tester",
 		}
 
-		derived := domain.DeriveMetricsLedger(factLedger, mappings)
+		cfg := domain.DefaultProjectConfig()
+		cfg.RoleMappings = mappings
+		derived := domain.DeriveMetricsLedger(factLedger, cfg)
 
 		// 1. Assert input factLedger was not mutated in place
 		if factLedger.Invocations[0].Role != invBefore0Role || invBefore0Role != "build" {
@@ -2499,7 +2565,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 
 		// Case A: completely empty fact ledger
 		emptyLedger := domain.AgenticFactLedger{}
-		derivedEmpty := domain.DeriveMetricsLedger(emptyLedger)
+		derivedEmpty := domain.DeriveMetricsLedger(emptyLedger, domain.DefaultProjectConfig())
 
 		if derivedEmpty.Totals.Invocations != 0 {
 			t.Errorf("expected 0 invocations, got %d", derivedEmpty.Totals.Invocations)
@@ -2557,7 +2623,9 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 
 		mappings := domain.RoleMappings{"build": "orchestrator"}
-		derivedZero := domain.DeriveMetricsLedger(zeroInvLedger, mappings)
+		cfg := domain.DefaultProjectConfig()
+		cfg.RoleMappings = mappings
+		derivedZero := domain.DeriveMetricsLedger(zeroInvLedger, cfg)
 
 		if derivedZero.Totals.Invocations != 2 {
 			t.Errorf("expected 2 invocations, got %d", derivedZero.Totals.Invocations)
@@ -2579,7 +2647,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 	})
 
-	t.Run("variadic role mappings handling: nil, empty, and omitted mappings", func(t *testing.T) {
+	t.Run("role mappings configuration handling: default, nil, custom override, and empty mappings", func(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-root"
 		ledger := domain.AgenticFactLedger{
@@ -2589,31 +2657,38 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			},
 		}
 
-		// Omitted variadic: with DefaultProjectConfig removed, raw roles are preserved
-		derivedDefault := domain.DeriveMetricsLedger(ledger)
+		// Default configuration: with empty RoleMappings, raw roles are preserved
+		cfgDefault := domain.DefaultProjectConfig()
+		derivedDefault := domain.DeriveMetricsLedger(ledger, cfgDefault)
 		if len(derivedDefault.Roles) != 2 || (derivedDefault.Roles[0].Role != "build" && derivedDefault.Roles[1].Role != "build") {
-			t.Errorf("expected omitted mapping to preserve raw roles, got: %+v", derivedDefault.Roles)
+			t.Errorf("expected default config to preserve raw roles, got: %+v", derivedDefault.Roles)
 		}
 
 		// Nil mapping: also preserves raw roles
-		derivedNil := domain.DeriveMetricsLedger(ledger, nil)
+		cfgNil := domain.DefaultProjectConfig()
+		cfgNil.RoleMappings = nil
+		derivedNil := domain.DeriveMetricsLedger(ledger, cfgNil)
 		if len(derivedNil.Roles) != 2 || (derivedNil.Roles[0].Role != "build" && derivedNil.Roles[1].Role != "build") {
 			t.Errorf("expected nil mapping to preserve raw roles, got: %+v", derivedNil.Roles)
 		}
 
 		// Custom mapping overriding default build: maps build to custom-builder
-		derivedOverride := domain.DeriveMetricsLedger(ledger, domain.RoleMappings{"build": "custom-builder"})
+		cfgOverride := domain.DefaultProjectConfig()
+		cfgOverride.RoleMappings = domain.RoleMappings{"build": "custom-builder"}
+		derivedOverride := domain.DeriveMetricsLedger(ledger, cfgOverride)
 		if len(derivedOverride.Roles) != 2 || derivedOverride.Roles[1].Role != "custom-builder" {
 			t.Errorf("expected custom mapping to override build to 'custom-builder', got: %+v", derivedOverride.Roles)
 		}
 
-		// Empty mapping: build resolves via domain default to orchestrator, while unmapped custom role retains raw name
+		// Empty mapping: unmapped custom role retains raw name
 		ledgerWithCustom := domain.AgenticFactLedger{
 			Invocations: []domain.InvocationFact{
 				{ID: "ses-custom", Role: "specialist-agent", CostUSD: 3.0},
 			},
 		}
-		derivedEmptyMap := domain.DeriveMetricsLedger(ledgerWithCustom, domain.RoleMappings{})
+		cfgEmptyMap := domain.DefaultProjectConfig()
+		cfgEmptyMap.RoleMappings = domain.RoleMappings{}
+		derivedEmptyMap := domain.DeriveMetricsLedger(ledgerWithCustom, cfgEmptyMap)
 		if len(derivedEmptyMap.Roles) != 1 || derivedEmptyMap.Roles[0].Role != "specialist-agent" {
 			t.Errorf("expected empty mapping to preserve unmapped custom role 'specialist-agent', got: %+v", derivedEmptyMap.Roles)
 		}
@@ -2694,7 +2769,9 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 				mappings := domain.RoleMappings{
 					tc.rawRole: string(tc.targetRole),
 				}
-				metrics := domain.DeriveMetricsLedger(factLedger, mappings)
+				cfg := domain.DefaultProjectConfig()
+				cfg.RoleMappings = mappings
+				metrics := domain.DeriveMetricsLedger(factLedger, cfg)
 
 				targetStr := string(tc.targetRole)
 				_, hasSubCost := metrics.WorkflowEfficiency.RoleEffortDistributionPct[targetStr]

@@ -1746,7 +1746,7 @@ func TestDeriveMetricsLedger_IntegratesAnomalies(t *testing.T) {
 		},
 	}
 
-	metrics := domain.DeriveMetricsLedger(factLedger)
+	metrics := domain.DeriveMetricsLedger(factLedger, domain.DefaultProjectConfig())
 	if len(metrics.Anomalies) != 1 {
 		t.Fatalf("expected DeriveMetricsLedger to populate Anomalies with 1 entry, got %d", len(metrics.Anomalies))
 	}

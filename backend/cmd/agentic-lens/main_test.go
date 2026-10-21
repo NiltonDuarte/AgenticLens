@@ -4445,6 +4445,23 @@ func TestInitCommand(t *testing.T) {
 		if len(loaded.Workspaces.Artifacts) != 0 {
 			t.Errorf("expected generated config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
 		}
+		if len(loaded.RoleMappings) != 0 {
+			t.Errorf("expected generated config to have zero role mappings, got %v", loaded.RoleMappings)
+		}
+		if len(loaded.RoleOrder) != 0 {
+			t.Errorf("expected generated config to have zero role order, got %v", loaded.RoleOrder)
+		}
+		rawYAML, err := os.ReadFile(expectedPath)
+		if err != nil {
+			t.Fatalf("reading generated config: %v", err)
+		}
+		content := string(rawYAML)
+		if !strings.Contains(content, "role_mappings: {}") {
+			t.Errorf("expected 'role_mappings: {}' in yaml, got:\n%s", content)
+		}
+		if !strings.Contains(content, "role_order: []") {
+			t.Errorf("expected 'role_order: []' in yaml, got:\n%s", content)
+		}
 	})
 
 	t.Run("custom flags customize generated configuration", func(t *testing.T) {
@@ -4492,6 +4509,12 @@ func TestInitCommand(t *testing.T) {
 		}
 		if len(loaded.Workspaces.Artifacts) != 0 {
 			t.Errorf("expected generated custom config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
+		}
+		if len(loaded.RoleMappings) != 0 {
+			t.Errorf("expected generated custom config to have zero role mappings, got %v", loaded.RoleMappings)
+		}
+		if len(loaded.RoleOrder) != 0 {
+			t.Errorf("expected generated custom config to have zero role order, got %v", loaded.RoleOrder)
 		}
 	})
 

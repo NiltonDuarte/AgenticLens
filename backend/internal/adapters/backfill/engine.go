@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
@@ -32,6 +33,11 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	fi, err := os.Stat(targetDir)
 	if err != nil || !fi.IsDir() {
 		return nil, fmt.Errorf("workspaces directory not found: %s", targetDir)
+	}
+
+	cfg, err := config.Load(targetDir)
+	if err != nil {
+		cfg, _ = config.Load("")
 	}
 
 	report := &BackfillReport{
@@ -121,6 +127,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 			gitUser,
 			classificationCfg,
 			nowISO,
+			cfg,
 		)
 
 		if ticketResult.Error != nil {
@@ -151,6 +158,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	gitUser string,
 	classificationCfg *git.ClassificationConfig,
 	nowISO string,
+	cfg domain.ProjectConfig,
 ) TicketMigrationResult {
 	workspaceDir := filepath.Dir(metricPath)
 	workspaceName := filepath.Base(workspaceDir)
@@ -387,8 +395,8 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// 5. Update Markdown Summary if requested
 	if opts.UpdateSummaries {
 		summaryPath := filepath.Join(workspaceDir, "SUMMARY.md")
-		derivedLedger := domain.DeriveMetricsLedger(factLedger)
-		tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger)
+		derivedLedger := domain.DeriveMetricsLedger(factLedger, cfg)
+		tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 		if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
 			result.Error = fmt.Errorf("updating summary file %s: %w", summaryPath, err)
 			return result

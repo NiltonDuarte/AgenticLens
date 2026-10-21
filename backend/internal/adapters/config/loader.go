@@ -194,55 +194,7 @@ type rawProjectConfigDTO struct {
 }
 
 func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
-	cfg := domain.ProjectConfig{
-		Ticket: domain.TicketConfig{
-			Prefixes:        []domain.TicketPrefix{},
-			CaseInsensitive: true,
-			CustomPatterns:  []string{},
-		},
-		Workspaces: domain.WorkspacesConfig{
-			Dir:        "",
-			SrcFolders: []string{},
-			Artifacts:  []domain.WorkspaceArtifactConfig{},
-		},
-		Database: domain.DatabaseConfig{
-			Path:           "~/.local/share/opencode/opencode.db",
-			QueryTimeoutMs: 5000,
-			BusyTimeoutMs:  5000,
-			ReadOnly:       true,
-		},
-		Live: domain.LiveConfig{
-			ActiveThresholdSeconds: 300,
-			PollIntervalMs:         2000,
-			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
-		},
-		CodeMetrics: domain.CodeMetricsConfig{
-			Include:      []string{},
-			Exclude:      []string{},
-			TestPatterns: []string{},
-			ProdPatterns: []string{},
-		},
-		RoleMappings: domain.RoleMappings{
-			"orchestrator": "orchestrator",
-			"build":        "orchestrator",
-			"planner":      "planner",
-			"coder":        "coder",
-			"tester":       "tester",
-			"reviewer":     "reviewer",
-		},
-		RoleOrder: []string{
-			"orchestrator",
-			"planner",
-			"coder",
-			"tester",
-			"reviewer",
-		},
-	}
+	cfg := domain.DefaultProjectConfig()
 
 	if dto.ProjectName != nil && strings.TrimSpace(*dto.ProjectName) != "" {
 		cfg.ProjectName = strings.TrimSpace(*dto.ProjectName)
