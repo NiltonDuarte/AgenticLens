@@ -28,11 +28,6 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const isMock = useMemo(() => {
-    const wsDir = projectConfig?.workspaces_dir?.toLowerCase() ?? '';
-    return wsDir.includes('testdata') || wsDir.includes('mock');
-  }, [projectConfig]);
-
   const configuredPrefixes = useMemo(() => {
     if (!projectConfig?.prefixes) return [];
     return projectConfig.prefixes.map((p) => p.prefix);
@@ -43,14 +38,9 @@ export const App: React.FC = () => {
     setActiveTab('deep-dive');
   };
 
-  const handleMockChange = (_mock: boolean) => {
-    // Mock mode is derived exclusively from projectConfig.workspaces_dir
-  };
-
   return (
     <div className="app-container">
       <Navbar
-        isMock={isMock}
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         projectConfig={projectConfig ?? undefined}
@@ -61,14 +51,12 @@ export const App: React.FC = () => {
           <LandingPage
             onNavigate={(tab) => setActiveTab(tab)}
             onSelectTicket={handleSelectTicketFromList}
-            onMockChange={handleMockChange}
             projectConfig={projectConfig}
             projectName={projectConfig?.project_name}
           />
         )}
         {activeTab === 'overview' && (
           <FleetOverview
-            onMockChange={handleMockChange}
             onSelectTicket={handleSelectTicketFromList}
             configuredPrefixes={configuredPrefixes}
           />
@@ -77,19 +65,16 @@ export const App: React.FC = () => {
           <TicketDeepDive
             selectedTicketId={selectedTicketId}
             onSelectTicket={setSelectedTicketId}
-            onMockChange={handleMockChange}
           />
         )}
         {activeTab === 'progression' && (
           <MetricProgression
-            onMockChange={handleMockChange}
             configuredPrefixes={configuredPrefixes}
           />
         )}
         {activeTab === 'comparisons' && (
           <TicketComparisons
             onSelectTicket={handleSelectTicketFromList}
-            onMockChange={handleMockChange}
             configuredPrefixes={configuredPrefixes}
           />
         )}

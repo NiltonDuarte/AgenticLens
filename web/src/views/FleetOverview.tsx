@@ -28,13 +28,11 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 ];
 
 export interface FleetOverviewProps {
-  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
   readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
   readonly configuredPrefixes?: readonly string[] | undefined;
 }
 
 export const FleetOverview: React.FC<FleetOverviewProps> = ({
-  onMockChange,
   onSelectTicket,
   configuredPrefixes,
 }) => {
@@ -96,15 +94,13 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
 
       setSummary(fleetRes.data);
       setWorkspaces(workspacesRes.data);
-      const isAnyMock = fleetRes.isMock || workspacesRes.isMock;
-      onMockChange?.(isAnyMock);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to retrieve telemetry data';
       setErrorMessage(msg);
     } finally {
       setLoading(false);
     }
-  }, [windowPreset, customSince, customUntil, selectedTicketTypes, selectedPrefixes, onMockChange]);
+  }, [windowPreset, customSince, customUntil, selectedTicketTypes, selectedPrefixes]);
 
   useEffect(() => {
     void loadData();

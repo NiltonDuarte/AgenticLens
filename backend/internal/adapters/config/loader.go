@@ -201,7 +201,7 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir:        "workspaces",
+			Dir:        "",
 			SrcFolders: []string{},
 			Artifacts:  []domain.WorkspaceArtifactConfig{},
 		},

@@ -13,7 +13,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -55,7 +54,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     const { container } = render(<MetricProgression />);
@@ -108,7 +106,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     const { container } = render(<MetricProgression />);
@@ -167,7 +164,6 @@ describe('MetricProgression View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [undatedLedger],
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -185,7 +181,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -217,7 +212,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -246,7 +240,6 @@ describe('MetricProgression View Component', () => {
   it('renders zero telemetry state when no ledgers exist', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -269,7 +262,6 @@ describe('MetricProgression View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValueOnce({
       data: Object.values(mockAgenticMetricsLedgers),
-      isMock: true,
     });
 
     const retryBtn = screen.getByRole('button', { name: /retry connection/i });
@@ -284,7 +276,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -358,7 +349,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -387,7 +377,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     const { container } = render(<MetricProgression />);
@@ -405,7 +394,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -456,7 +444,6 @@ describe('MetricProgression View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -512,7 +499,6 @@ describe('MetricProgression View Component', () => {
   it('renders gracefully with zero ledgers displaying empty state without runtime errors', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
-      isMock: true,
     });
 
     render(<MetricProgression />);
@@ -529,7 +515,6 @@ describe('MetricProgression View Component', () => {
   it('keeps progression controls bar visible and interactive when zero ledgers match filters', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
-      isMock: true,
     });
 
     const { container } = render(<MetricProgression />);
@@ -552,16 +537,13 @@ describe('MetricProgression View Component', () => {
     const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
       .mockResolvedValueOnce({
         data: ledgers,
-        isMock: true,
-      })
+        })
       .mockResolvedValueOnce({
         data: [],
-        isMock: true,
-      })
+        })
       .mockResolvedValueOnce({
         data: ledgers,
-        isMock: true,
-      });
+        });
 
     const { container } = render(<MetricProgression />);
 
@@ -593,7 +575,6 @@ describe('MetricProgression View Component', () => {
     const singleLedger = [mockAgenticMetricsLedgers['AL-1']!];
     const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: singleLedger,
-      isMock: true,
     });
 
     const { container } = render(<MetricProgression />);
@@ -634,12 +615,10 @@ describe('MetricProgression View Component', () => {
     const fetchSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
       .mockResolvedValueOnce({
         data: [],
-        isMock: true,
-      })
+        })
       .mockResolvedValueOnce({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
 
     const { container } = render(<MetricProgression />);
 
@@ -665,7 +644,6 @@ describe('MetricProgression View Component', () => {
   it('renders configured prefixes in prefix dropdown even when no ledgers for those prefixes exist', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
-      isMock: false,
     });
 
     render(<MetricProgression configuredPrefixes={['INITIATIVE', 'CORE']} />);

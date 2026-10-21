@@ -373,21 +373,37 @@ describe('Presentation Components Boundary Tests', () => {
       build_date: 'unknown',
     };
 
-    it('renders Live Server status pill when isMock is false', () => {
-      render(<Navbar isMock={false} activeTab="overview" versionInfo={dummyVersion} projectName="" />);
-      expect(screen.getByText('Live Server')).toBeInTheDocument();
+    it('renders workspace pill when workspaces directory is configured', () => {
+      render(
+        <Navbar
+          activeTab="overview"
+          versionInfo={dummyVersion}
+          projectName=""
+          projectConfig={{
+            project_name: 'TestProject',
+            prefixes: [],
+            workspaces_dir: 'custom/workspaces',
+            role_order: [],
+            version: 'v1.0.0',
+          }}
+        />
+      );
+      expect(screen.getByText('custom/workspaces')).toBeInTheDocument();
+      expect(screen.queryByText('Live Server')).not.toBeInTheDocument();
       expect(screen.queryByText('Mock Mode')).not.toBeInTheDocument();
     });
 
-    it('renders Mock Mode status pill when isMock is true', () => {
-      render(<Navbar isMock={true} activeTab="overview" versionInfo={dummyVersion} projectName="" />);
-      expect(screen.getByText('Mock Mode')).toBeInTheDocument();
+    it('renders loading state and does not default to workspaces when configuration is missing or empty', () => {
+      render(<Navbar activeTab="overview" versionInfo={dummyVersion} projectName="" />);
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(screen.queryByText('workspaces')).not.toBeInTheDocument();
       expect(screen.queryByText('Live Server')).not.toBeInTheDocument();
+      expect(screen.queryByText('Mock Mode')).not.toBeInTheDocument();
     });
 
     it('dispatches onSelectTab when tab is clicked', () => {
       const onSelect = vi.fn();
-      render(<Navbar isMock={false} activeTab="overview" onSelectTab={onSelect} versionInfo={dummyVersion} projectName="" />);
+      render(<Navbar activeTab="overview" onSelectTab={onSelect} versionInfo={dummyVersion} projectName="" />);
 
       const overviewBtn = screen.getByRole('button', { name: 'Fleet Overview' });
       fireEvent.click(overviewBtn);

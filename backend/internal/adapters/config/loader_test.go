@@ -373,9 +373,9 @@ database:
 		t.Errorf("expected /custom/path/db.sqlite, got %s", cfg.Database.Path)
 	}
 
-	// Unspecified operational sections retain defaults
-	if cfg.Workspaces.Dir != "workspaces" {
-		t.Errorf("expected default workspaces dir, got %s", cfg.Workspaces.Dir)
+	// Unspecified workspaces.dir retains empty string without silent defaulting
+	if cfg.Workspaces.Dir != "" {
+		t.Errorf("expected empty workspaces dir when omitted, got %s", cfg.Workspaces.Dir)
 	}
 	if len(cfg.Workspaces.Artifacts) != 0 {
 		t.Errorf("expected empty artifacts, got %v", cfg.Workspaces.Artifacts)

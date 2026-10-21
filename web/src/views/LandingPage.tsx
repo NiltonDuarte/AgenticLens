@@ -17,7 +17,6 @@ export type QuickLaunchSortOrder = 'asc' | 'desc';
 export interface LandingPageProps {
   readonly onNavigate: (tab: ActiveTab) => void;
   readonly onSelectTicket: (ticketId: string) => void;
-  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
   readonly projectConfig?: ProjectConfigResponse | null | undefined;
   readonly projectName?: string | undefined;
 }
@@ -25,7 +24,6 @@ export interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigate,
   onSelectTicket,
-  onMockChange,
   projectConfig,
   projectName,
 }) => {
@@ -87,15 +85,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       ]);
       setSummary(fleetRes.data);
       setWorkspaces(workspacesRes.data);
-      const isAnyMock = fleetRes.isMock || workspacesRes.isMock;
-      onMockChange?.(isAnyMock);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to retrieve telemetry data';
       setErrorMessage(msg);
     } finally {
       setLoading(false);
     }
-  }, [onMockChange]);
+  }, []);
 
   useEffect(() => {
     void loadData();

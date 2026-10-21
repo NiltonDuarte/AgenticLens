@@ -606,6 +606,44 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 	})
 }
 
+func TestServer_FailsWithoutWorkspacesConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  src_folders:\n    - src\n"
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(cliBinaryPath, "server")
+	cmd.Dir = tempDir
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		t.Fatal("expected server to fail when workspaces config is missing, got nil")
+	}
+
+	expectedErr := "Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Server cannot start without this information."
+	if !strings.Contains(stderr.String(), expectedErr) {
+		t.Errorf("expected stderr to contain %q, got: %s", expectedErr, stderr.String())
+	}
+}
+
+func TestServer_FailsWhenWorkspacesDirDoesNotExist(t *testing.T) {
+	nonExistentPath := "/nonexistent/workspaces/dir/xyz"
+	cmd := exec.Command(cliBinaryPath, "server", "--workspaces", nonExistentPath)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		t.Fatal("expected server to fail when workspaces dir does not exist, got nil")
+	}
+
+	expectedErr := fmt.Sprintf("Error: workspaces directory %q does not exist. Server cannot start.", nonExistentPath)
+	if !strings.Contains(stderr.String(), expectedErr) {
+		t.Errorf("expected stderr to contain %q, got: %s", expectedErr, stderr.String())
+	}
+}
+
 func TestCLIServerPortEnvironment(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 

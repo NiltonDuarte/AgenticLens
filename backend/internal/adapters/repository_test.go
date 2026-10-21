@@ -19,6 +19,25 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		}
 	})
 
+	t.Run("empty configuration returns empty string without defaulting", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}}`
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != "" {
+			t.Errorf("expected empty string when workspaces.dir is unconfigured, got %q", resolved)
+		}
+	})
+
 	t.Run("config file resolution", func(t *testing.T) {
 		tempDir := t.TempDir()
 		cfgDir := filepath.Join(tempDir, ".agenticlens")
@@ -558,6 +577,28 @@ func TestReadTicketArtifacts(t *testing.T) {
 }
 
 func TestScanWorkspacesResilience(t *testing.T) {
+	t.Run("unconfigured workspaces directory returns clear error", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}}`
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		report := adapters.ScanWorkspaces("")
+		if len(report.Ledgers) != 0 {
+			t.Errorf("expected 0 ledgers, got %d", len(report.Ledgers))
+		}
+		if len(report.Errors) != 1 || !strings.Contains(report.Errors[0], "Workspaces directory must be configured") {
+			t.Errorf("expected configuration error message, got: %v", report.Errors)
+		}
+	})
+
 	t.Run("non-existent directory", func(t *testing.T) {
 		report := adapters.ScanWorkspaces("/non/existent/path/for/sure")
 		if len(report.Ledgers) != 0 {
@@ -1192,6 +1233,28 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		ledger, err := adapters.LoadTicketWorkspace("NON-EXISTENT", tempDir)
 		if err == nil {
 			t.Fatal("expected error for non-existent ticket workspace, got nil")
+		}
+		if ledger != nil {
+			t.Errorf("expected nil ledger, got %+v", ledger)
+		}
+	})
+
+	t.Run("unconfigured workspaces directory returns error", func(t *testing.T) {
+		noCfgDir := t.TempDir()
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}}`
+		if err := os.WriteFile(filepath.Join(noCfgDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(noCfgDir); err != nil {
+			t.Fatal(err)
+		}
+
+		ledger, err := adapters.LoadTicketWorkspace("TEST-1", "")
+		if err == nil || !strings.Contains(err.Error(), "workspaces directory is not configured") {
+			t.Fatalf("expected 'workspaces directory is not configured' error, got %v", err)
 		}
 		if ledger != nil {
 			t.Errorf("expected nil ledger, got %+v", ledger)
