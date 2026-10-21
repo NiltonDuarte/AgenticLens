@@ -11,40 +11,54 @@
 - Removed `web/src/api/mockData.ts` (2,114 lines of synthetic fixtures) completely from the production source tree.
 - Relocated and isolated mock fixtures into `web/src/test/fixtures/mockData.ts` strictly for Vitest unit test suites.
 - Refactored `web/src/api/client.ts` to eliminate all mock data imports, delete the `getFilteredMockLedgers` helper, and remove all silent fallback branches.
-- Every API endpoint function (`fetchFleetSummary`, `fetchWorkspaceLedgers`, `fetchWorkspaces`, `fetchComparisonRows`, `fetchProgressionLedgers`, `fetchWorkspaceById`, `fetchVersion`, `fetchProjectConfig`, `fetchWorkspaceEvents`, `fetchWorkspaceAnomalies`, `fetchProgressionMetrics`) now returns `{ data, isMock: false }` on success and throws typed, descriptive `Error` instances on network failures, 404s, or 500s.
+- Completely eliminated `isMock` from `ApiResponse<T>`, `AsyncState<T>`, `ApiConfig`, and `ApiError`. All API methods now return `{ data }` on success and throw typed `Error` instances on failure.
 - Created dedicated filesystem test data harness under `testdata/workspaces/` containing valid schema v3 test workspaces (`AL-1`, `AL-2`, `AL-3`, `PO-1`, `GEN-1`) with `agentic_metrics.json`, `CONTRACT.md`, and `SUMMARY.md`.
-- Added HTTP server integration tests in `backend/internal/adapters/http/server_test.go` (`TestServerWithTestDataWorkspaces` and `TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces`) verifying strict filesystem isolation between test workspaces and production workspaces.
+- Enforced mandatory `workspaces.dir` in `backend/cmd/agentic-lens/main.go` (`runServer` and root inspection commands): the server fails fast with exit code 1 if `workspaces.dir` is not configured and `--workspaces` flag is omitted, or if the specified directory does not exist on disk.
+- Updated `ResolveWorkspacesDir` in `backend/internal/adapters/repository.go` to return empty string `""` when neither overridePath nor config is set, eliminating any implicit fallback or guessing of `"workspaces"`.
+- Added HTTP server integration tests in `backend/internal/adapters/http/server_test.go` and CLI tests in `backend/cmd/agentic-lens/main_test.go` verifying directory existence validation, fail-fast startup, and testdata isolation.
 
 ### Presentation & Application Layer (`backend/cmd/`, `web/src/`)
-- In `web/src/App.tsx`, derived `isMock` dynamically from `projectConfig?.workspaces_dir` (inspecting whether the path targets `testdata` or `mock`), passing the resulting state to `Navbar`.
-- In `web/src/components/Navbar.tsx`, preserved Live Server vs. Mock Mode indicators reflecting the actual server workspaces configuration.
-- Added CLI integration tests in `backend/cmd/agentic-lens/main_test.go` (`TestCLIWithTestDataWorkspaces`) validating that pointing `--workspaces` to `testdata/workspaces` discovers test workspaces and anomalies without touching production data.
-- Updated all 13 frontend test files to import fixtures from `../test/fixtures/mockData`.
-- Rewrote `web/src/api/client.test.ts` to assert explicit error rejections on HTTP and network failures.
-- Rebuilt production assets into `web/dist/` and synchronized to `backend/internal/adapters/web/dist/`, reducing bundle size from ~620 kB to 446 kB with zero mock data bundled.
+- Completely removed `isMock` state and `handleMockChange` from `web/src/App.tsx`.
+- Completely removed `onMockChange` prop, tracking refs, and callbacks across all view components (`LandingPage`, `FleetOverview`, `TicketDeepDive`, `MetricProgression`, `TicketComparisons`).
+- In `web/src/components/Navbar.tsx`: eliminated "Live Server" and "Mock Mode" branching. Replaced with an active workspace directory pill (`.status-pill.workspace-pill`) displaying the exact `workspaces_dir` from `projectConfig`. If missing or loading, renders a `.status-pill.workspace-pill.loading` placeholder showing `"Loading..."`. Never guesses `"workspaces"`.
+- Updated stylesheet in `web/src/index.css` for monospace workspace pill and loading state.
+- Updated all frontend test files: removed all `isMock` and `onMockChange` assertions; added tests verifying exact workspace directory rendering and loading state in Navbar.
+- Rebuilt production assets into `web/dist/` and synchronized to `backend/internal/adapters/web/dist/`, producing a clean bundle with zero mock data and zero mock mode strings.
 
 ## Verification
 - Verified `make check`: `go vet ./...`, `npm run typecheck`, and `npm run lint` passed with 0 errors and 0 warnings.
-- Verified `make test`: all backend packages passed with `-race` (1,668 test cases), and all 28 frontend test suites passed (610 tests).
+- Verified `make test`: all backend packages passed with `-race` (1,879 Go test executions), and all 28 frontend test suites passed (609 tests).
 - Verified `make build`: multi-platform binaries built cleanly.
-- Verified production bundle purity: zero mock fixture strings found in `web/dist/assets/*.js`.
+- Verified production bundle purity: zero mock fixture strings, zero `isMock`, zero `Live Server`, and zero `Mock Mode` in `web/dist/assets/*.js`.
 - Verified zero emojis across all code files, comments, tests, and documentation.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 6h 15m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 113.8k tokens (57% of 200k healthy ceiling, 1 compactions) | Subagents peak 170.0k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 23.7%, Coder 63.8%, Tester 7.5%, Reviewer 5.0%
-- **Subagent Turn Velocity & Thrashing:** 105.8 avg turns/run (peak: 233 turns) | Planner 71.0, Coder 233.0, Tester 87.0, Reviewer 67.0
-- **Test-to-Production Code Ratio:** 2.1:1 (+563 test lines / +265 prod lines)
-- **Code Delivered:** +828 / -583 lines across 22 code files (excluding docs)
-- **Reasoning Effort:** 146,349 reasoning tokens (59.3% of generated output)
-- **Tool Health & Self-Correction:** 599 tool calls (6 self-corrections, 99.0% success rate)
+- **Software Development Life Cycle Iterations:** 14
+- **Active Agent Duration:** 11h 46m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 173.5k tokens (87% of 200k healthy ceiling, 7 compactions) | Subagents peak 170.0k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 21.8%, Coder 60.2%, Tester 9.1%, Reviewer 8.9%
+- **Subagent Turn Velocity & Thrashing:** 91.0 avg turns/run (peak: 243 turns) | Planner 64.8, Coder 188.8, Tester 62.8, Reviewer 60.8
+- **Test-to-Production Code Ratio:** 2.5:1 (+760 test lines / +299 prod lines)
+- **Code Delivered:** +1,059 / -700 lines across 42 code files (excluding docs)
+- **Reasoning Effort:** 421,111 reasoning tokens (57.4% of generated output)
+- **Tool Health & Self-Correction:** 1,874 tool calls (25 self-corrections, 98.7% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (2 CRITICAL).
+- **Status:** 14 execution anomalies detected (9 CRITICAL, 5 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.3k tokens) — Context tokens reached 160.3k in turn 62 (session: ses_ea1c9818effeBs0UnfYpHgwW7T), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.7k tokens) — Context tokens reached 160.7k in turn 85 (session: ses_ea17acc3dffeTtBhv56B36Yq3y), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 99 (session: ses_ea2bc9723ffezORazL93nLY0Zh), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 108 (session: ses_ea169e7deffekB60MBueM5RFLY), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.0k tokens) — Context tokens reached 160.0k in turn 129 (session: ses_ea27a59deffeznUtxRWbFfglIm), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+83.7k tokens) — Context tokens surged by 83.7k tokens in turn 145 (session: ses_ea27a59deffeznUtxRWbFfglIm, total: 83.7k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+86.5k tokens) — Context tokens surged by 86.5k tokens in turn 226 (session: ses_ea1c9818effeBs0UnfYpHgwW7T, total: 86.5k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+80.9k tokens) — Context tokens surged by 80.9k tokens in turn 230 (session: ses_ea2bc9723ffezORazL93nLY0Zh, total: 80.9k tokens, threshold: 80000)
+- [CRITICAL] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: mcp-gateway_mcp-exec (100.0%) — Tool 'mcp-gateway_mcp-exec' failed 6 out of 6 calls (100.0% failure rate, threshold: >=50%)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+50.8k tokens) — Context tokens surged by 50.8k tokens in turn 69 (session: ses_ea1c9818effeBs0UnfYpHgwW7T, total: 50.8k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+53.1k tokens) — Context tokens surged by 53.1k tokens in turn 86 (session: ses_ea17acc3dffeTtBhv56B36Yq3y, total: 53.1k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+74.8k tokens) — Context tokens surged by 74.8k tokens in turn 107 (session: ses_ea2bc9723ffezORazL93nLY0Zh, total: 74.8k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.7k tokens) — Context tokens surged by 72.7k tokens in turn 112 (session: ses_ea169e7deffekB60MBueM5RFLY, total: 72.7k tokens, threshold: 40000)
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: mcp-gateway_mcp-exec (4 consecutive errors) — Tool 'mcp-gateway_mcp-exec' encountered 4 consecutive execution failures (session: ses_ea17acc3dffeTtBhv56B36Yq3y, turn: 106)
 
 ### Agentic Execution Metrics
 
@@ -53,15 +67,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 537,538 | 17,692 | 3,846,872 | 87.7% | 113.8k | ELEVATED | $0.80 |
-| **planner** | 2 | 2,739,497 | 19,878 | 5,875,419 | 68.2% | 113.6k | ELEVATED | $2.77 |
-| **coder** | 1 | 8,054,601 | 45,531 | 13,594,104 | 62.8% | 170.0k | ELEVATED | $7.45 |
-| **tester** | 1 | 523,743 | 11,160 | 5,126,553 | 90.7% | 99.3k | HEALTHY | $0.87 |
-| **reviewer** | 1 | 373,062 | 6,085 | 3,316,430 | 89.9% | 83.5k | HEALTHY | $0.59 |
-| **Total** | **6** | **12,228,441** | **100,346** | **31,759,378** | **72.2%** | **170.0k** | **ELEVATED** | **$12.48** |
+| **planner** | 6 | 4,163,520 | 58,352 | 19,858,611 | 82.7% | 160.7k | ELEVATED | $5.35 |
+| **coder** | 4 | 11,966,005 | 129,999 | 62,558,090 | 83.9% | 170.0k | ELEVATED | $14.77 |
+| **tester** | 4 | 1,364,487 | 28,390 | 12,998,510 | 90.5% | 99.3k | HEALTHY | $2.23 |
+| **reviewer** | 4 | 1,460,094 | 22,249 | 11,546,351 | 88.8% | 99.7k | HEALTHY | $2.19 |
+| **general** | 1 | 2,936,373 | 73,465 | 19,499,093 | 86.9% | 173.5k | ELEVATED | $4.12 |
+| **Total** | **19** | **21,890,479** | **312,455** | **126,460,655** | **85.2%** | **173.5k** | **ELEVATED** | **$28.65** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 6 | 12,228,441 | 100,346 | 31,759,378 | 72.2% | $12.48 |
-| **Total** | **6** | **12,228,441** | **100,346** | **31,759,378** | **72.2%** | **$12.48** |
+| **gemini-3.8-flash** | 19 | 21,890,479 | 312,455 | 126,460,655 | 85.2% | $28.65 |
+| **Total** | **19** | **21,890,479** | **312,455** | **126,460,655** | **85.2%** | **$28.65** |

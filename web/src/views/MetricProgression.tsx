@@ -32,12 +32,10 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 ];
 
 export interface MetricProgressionProps {
-  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
   readonly configuredPrefixes?: readonly string[] | undefined;
 }
 
 export const MetricProgression: React.FC<MetricProgressionProps> = ({
-  onMockChange,
   configuredPrefixes,
 }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
@@ -75,14 +73,13 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
           : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
       hasLoadedRef.current = true;
-      onMockChange?.(res.isMock);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch telemetry ledgers';
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [onMockChange, selectedTicketTypes, selectedPrefixes, preset]);
+  }, [selectedTicketTypes, selectedPrefixes, preset]);
 
   useEffect(() => {
     loadLedgers();
