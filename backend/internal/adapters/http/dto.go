@@ -28,9 +28,18 @@ type BuildInfoDTO struct {
 	BuildDate string `json:"build_date"`
 }
 
+// ProjectConfigDTO represents the sanitized project configuration payload.
+type ProjectConfigDTO struct {
+	ProjectName   string                `json:"project_name"`
+	Prefixes      []domain.TicketPrefix `json:"prefixes"`
+	WorkspacesDir string                `json:"workspaces_dir"`
+	RoleOrder     []string              `json:"role_order"`
+	Version       string                `json:"version"`
+}
+
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | domain.WorkspaceEventsResponse | BuildInfoDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | domain.WorkspaceEventsResponse | BuildInfoDTO | ProjectConfigDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
@@ -84,6 +93,17 @@ func WriteVersionResponse(w http.ResponseWriter, info domain.BuildInfo) {
 		Version:   info.Version,
 		Commit:    info.GitCommit,
 		BuildDate: info.BuildDate,
+	}
+	WriteJSON(w, http.StatusOK, dto)
+}
+
+// WriteProjectConfigResponse writes a ProjectConfigDTO as JSON.
+func WriteProjectConfigResponse(w http.ResponseWriter, dto ProjectConfigDTO) {
+	if dto.Prefixes == nil {
+		dto.Prefixes = []domain.TicketPrefix{}
+	}
+	if dto.RoleOrder == nil {
+		dto.RoleOrder = []string{}
 	}
 	WriteJSON(w, http.StatusOK, dto)
 }

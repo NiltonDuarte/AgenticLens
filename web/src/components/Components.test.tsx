@@ -374,20 +374,20 @@ describe('Presentation Components Boundary Tests', () => {
     };
 
     it('renders Live Server status pill when isMock is false', () => {
-      render(<Navbar isMock={false} activeTab="overview" versionInfo={dummyVersion} />);
+      render(<Navbar isMock={false} activeTab="overview" versionInfo={dummyVersion} projectName="" />);
       expect(screen.getByText('Live Server')).toBeInTheDocument();
       expect(screen.queryByText('Mock Mode')).not.toBeInTheDocument();
     });
 
     it('renders Mock Mode status pill when isMock is true', () => {
-      render(<Navbar isMock={true} activeTab="overview" versionInfo={dummyVersion} />);
+      render(<Navbar isMock={true} activeTab="overview" versionInfo={dummyVersion} projectName="" />);
       expect(screen.getByText('Mock Mode')).toBeInTheDocument();
       expect(screen.queryByText('Live Server')).not.toBeInTheDocument();
     });
 
     it('dispatches onSelectTab when tab is clicked', () => {
       const onSelect = vi.fn();
-      render(<Navbar isMock={false} activeTab="overview" onSelectTab={onSelect} versionInfo={dummyVersion} />);
+      render(<Navbar isMock={false} activeTab="overview" onSelectTab={onSelect} versionInfo={dummyVersion} projectName="" />);
 
       const overviewBtn = screen.getByRole('button', { name: 'Fleet Overview' });
       fireEvent.click(overviewBtn);

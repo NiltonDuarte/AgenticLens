@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import type { ActiveTab, FleetSummary, TicketComparisonRow } from '../domain/types';
+import type { ActiveTab, FleetSummary, ProjectConfigResponse, TicketComparisonRow } from '../domain/types';
 import { compareTicketIds, formatCurrencyUSD, formatPercentage } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { EmptyState } from '../components/EmptyState';
@@ -17,13 +17,17 @@ export type QuickLaunchSortOrder = 'asc' | 'desc';
 export interface LandingPageProps {
   readonly onNavigate: (tab: ActiveTab) => void;
   readonly onSelectTicket: (ticketId: string) => void;
-  readonly onMockChange?: (isMock: boolean) => void;
+  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
+  readonly projectConfig?: ProjectConfigResponse | null | undefined;
+  readonly projectName?: string | undefined;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigate,
   onSelectTicket,
   onMockChange,
+  projectConfig,
+  projectName,
 }) => {
   const [summary, setSummary] = useState<FleetSummary | null>(null);
   const [workspaces, setWorkspaces] = useState<readonly TicketComparisonRow[]>([]);
@@ -127,6 +131,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const cacheHitEfficiency = summary
     ? formatPercentage(summary.overall_cache_hit_rate_pct)
     : '0.0%';
+  const observedProject = (projectName ?? projectConfig?.project_name ?? '').trim();
 
   return (
     <div className="landing-container">
@@ -134,6 +139,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="landing-hero" aria-label="Observability Platform Overview">
         <div className="hero-badge">Autonomous Multi-Agent Telemetry</div>
         <h1 className="hero-title">AgenticLens Observability</h1>
+        {observedProject ? (
+          <div className="hero-project-context" data-testid="landing-project-context">
+            <span className="hero-project-label">Observed Project:</span>{' '}
+            <span className="hero-project-name">{observedProject}</span>
+          </div>
+        ) : null}
         <p className="hero-subtitle">
           Real-time telemetry, context health tracking, and unit economics for autonomous multi-agent software engineering fleets.
         </p>

@@ -304,5 +304,28 @@ describe('FleetOverview View Component', () => {
         expect(fetchWorkspacesSpy).toHaveBeenCalledWith('all', '', '', undefined, undefined, ['bug'], undefined);
       });
     });
+
+    it('renders configured prefixes in prefix dropdown even when no matching workspaces exist', async () => {
+      vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+        data: mockFleetSummary,
+        isMock: false,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+        data: [],
+        isMock: false,
+      });
+
+      render(<FleetOverview configuredPrefixes={['NEWINITIATIVE', 'INFRA']} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Total Cost')).toBeInTheDocument();
+      });
+
+      const prefixTrigger = screen.getByRole('combobox', { name: 'Prefix selector' });
+      fireEvent.click(prefixTrigger);
+
+      expect(screen.getByRole('checkbox', { name: 'NEWINITIATIVE' })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: 'INFRA' })).toBeInTheDocument();
+    });
   });
 });

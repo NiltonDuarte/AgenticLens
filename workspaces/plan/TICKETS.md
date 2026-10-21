@@ -20,14 +20,6 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocks**: None
   - **File**: `workspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
 
-- **AL-40**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
-  - **Subsystem**: Adapters / HTTP / Presentation / Web / Domain / Tests
-  - **Phase**: Phase 7
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `workspaces/plan/to-do/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
-
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
   - **Phase**: Phase 8 (v2 Phase 2)
@@ -85,6 +77,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `workspaces/plan/done/AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md`
+
+- **AL-40**: Dynamic Configuration REST API Endpoint and Observability Dashboard Branding
+  - **Subsystem**: Adapters / HTTP / Presentation / Web / Domain / Tests
+  - **Phase**: Phase 7
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `workspaces/plan/done/AL-40 dynamic configuration rest api endpoint and observability dashboard branding.md`
 
 - **AL-36**: Cross-Project Interactive Setup Skill, Automated Artifact Downloader, and Agent Workflow Integrator
   - **Subsystem**: Skills / CLI / Adapters / Scripts / Tests

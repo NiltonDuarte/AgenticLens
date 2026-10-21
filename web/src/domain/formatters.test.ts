@@ -17,6 +17,7 @@ import {
   canonicalTicketType,
   extractTicketPrefix,
   extractDistinctPrefixes,
+  combineDistinctPrefixes,
   filterLedgersByTicketTypes,
   filterLedgersByPrefixes,
   filterComparisonRows,
@@ -751,6 +752,48 @@ describe('Domain Pure Formatters', () => {
         { ...base, ticket_id: '123' },
       ];
       expect(extractDistinctPrefixes(ledgers)).toEqual(['AL', 'GEN', 'PO']);
+    });
+  });
+
+  describe('combineDistinctPrefixes', () => {
+    it('returns canonical fallback when both discovered and configured are empty', () => {
+      expect(combineDistinctPrefixes([])).toEqual(['AL', 'GEN', 'PO']);
+      expect(combineDistinctPrefixes([], [])).toEqual(['AL', 'GEN', 'PO']);
+      expect(combineDistinctPrefixes(['', '   '], ['  '])).toEqual(['AL', 'GEN', 'PO']);
+    });
+
+    it('returns canonical fallback when all tokens resolve to empty after trimming hyphens and underscores', () => {
+      expect(combineDistinctPrefixes(['---', '___', ' - _ '])).toEqual(['AL', 'GEN', 'PO']);
+      expect(combineDistinctPrefixes(['---'], ['___', '   '])).toEqual(['AL', 'GEN', 'PO']);
+    });
+
+    it('combines configured prefixes with empty discovered prefixes', () => {
+      expect(combineDistinctPrefixes([], ['FEAT', 'BUG'])).toEqual(['BUG', 'FEAT']);
+      expect(combineDistinctPrefixes([], ['CUSTOM'])).toEqual(['CUSTOM']);
+    });
+
+    it('merges overlapping configured and discovered prefixes without duplicates', () => {
+      const discovered = ['AL', 'GEN', 'CUSTOM'];
+      const configured = ['GEN', 'PO', 'CUSTOM', 'INFRA'];
+      expect(combineDistinctPrefixes(discovered, configured)).toEqual([
+        'AL',
+        'CUSTOM',
+        'GEN',
+        'INFRA',
+        'PO',
+      ]);
+    });
+
+    it('handles case differences, whitespace trimming, trailing hyphens, and alphabetical sort', () => {
+      const discovered = ['  al  ', 'feat-', 'infra_'];
+      const configured = ['AL', 'FEAT', 'bug'];
+      expect(combineDistinctPrefixes(discovered, configured)).toEqual(['AL', 'BUG', 'FEAT', 'INFRA']);
+    });
+
+    it('preserves interior hyphens and numbers while deduplicating hostile variations', () => {
+      const discovered = ['  proj-x--  ', 'CORE-1_'];
+      const configured = ['proj-x', 'CORE-1', 'api-v2'];
+      expect(combineDistinctPrefixes(discovered, configured)).toEqual(['API-V2', 'CORE-1', 'PROJ-X']);
     });
   });
 
