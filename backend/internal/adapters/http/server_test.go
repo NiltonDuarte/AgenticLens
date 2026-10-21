@@ -3420,3 +3420,254 @@ func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 }
+
+func TestServerWithTestDataWorkspaces(t *testing.T) {
+	testdataDir := filepath.Join("..", "..", "..", "..", "testdata", "workspaces")
+	if _, err := os.Stat(testdataDir); err != nil {
+		t.Fatalf("testdata/workspaces directory not found at %s: %v", testdataDir, err)
+	}
+
+	server := adaptershttp.NewServer(testdataDir, fstest.MapFS{})
+	handler := server.Handler()
+
+	t.Run("discovers all 5 test workspaces via /api/workspaces", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d (body: %s)", rec.Code, rec.Body.String())
+		}
+
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.Unmarshal(rec.Body.Bytes(), &ledgers); err != nil {
+			t.Fatalf("failed unmarshaling /api/workspaces: %v", err)
+		}
+
+		if len(ledgers) != 5 {
+			t.Fatalf("expected 5 ledgers from testdata/workspaces, got %d", len(ledgers))
+		}
+
+		ticketIDs := make(map[string]bool)
+		for _, l := range ledgers {
+			if l.TicketID != nil {
+				ticketIDs[*l.TicketID] = true
+			}
+		}
+
+		expectedTickets := []string{"AL-1", "AL-2", "AL-3", "PO-1", "GEN-1"}
+		for _, id := range expectedTickets {
+			if !ticketIDs[id] {
+				t.Errorf("expected workspace %s to be discovered, but was missing", id)
+			}
+		}
+	})
+
+	t.Run("aggregates fleet summary from testdata/workspaces via /api/fleet", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/fleet", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d", rec.Code)
+		}
+
+		var summary domain.FleetSummary
+		if err := json.Unmarshal(rec.Body.Bytes(), &summary); err != nil {
+			t.Fatalf("failed unmarshaling /api/fleet: %v", err)
+		}
+
+		if summary.TotalTickets != 5 {
+			t.Errorf("expected 5 total tickets in fleet summary, got %d", summary.TotalTickets)
+		}
+	})
+
+	t.Run("detects TOOL_RETRY_STREAK anomaly on AL-2 workspace detail", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-2", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d", rec.Code)
+		}
+
+		var detail adaptershttp.WorkspaceDetailResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+			t.Fatalf("failed unmarshaling /api/workspaces/AL-2: %v", err)
+		}
+
+		found := false
+		for _, a := range detail.Anomalies {
+			if a.RuleID == "TOOL_RETRY_STREAK" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected TOOL_RETRY_STREAK anomaly in AL-2 detail, found anomalies: %+v", detail.Anomalies)
+		}
+	})
+
+	t.Run("detects CONTEXT_SATURATION_SPIKE anomaly on GEN-1 workspace detail", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/GEN-1", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d", rec.Code)
+		}
+
+		var detail adaptershttp.WorkspaceDetailResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+			t.Fatalf("failed unmarshaling /api/workspaces/GEN-1: %v", err)
+		}
+
+		found := false
+		for _, a := range detail.Anomalies {
+			if a.RuleID == "CONTEXT_SATURATION_SPIKE" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected CONTEXT_SATURATION_SPIKE anomaly in GEN-1 detail, found anomalies: %+v", detail.Anomalies)
+		}
+	})
+
+	t.Run("serves markdown artifacts for AL-1 workspace", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-1", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d", rec.Code)
+		}
+
+		var detail adaptershttp.WorkspaceDetailResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+			t.Fatalf("failed unmarshaling /api/workspaces/AL-1: %v", err)
+		}
+
+		if detail.Artifacts.ContractContent == nil || !strings.Contains(*detail.Artifacts.ContractContent, "AL-1") {
+			t.Errorf("expected contract content to contain 'AL-1'")
+		}
+		if detail.Artifacts.SummaryContent == nil || !strings.Contains(*detail.Artifacts.SummaryContent, "AL-1") {
+			t.Errorf("expected summary content to contain 'AL-1'")
+		}
+	})
+
+	t.Run("reports testdata workspaces dir via /api/config", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d", rec.Code)
+		}
+
+		var cfg adaptershttp.ProjectConfigDTO
+		if err := json.Unmarshal(rec.Body.Bytes(), &cfg); err != nil {
+			t.Fatalf("failed unmarshaling /api/config: %v", err)
+		}
+
+		if !strings.Contains(cfg.WorkspacesDir, "testdata/workspaces") && !strings.Contains(cfg.WorkspacesDir, filepath.Join("testdata", "workspaces")) {
+			t.Errorf("expected workspaces_dir to contain testdata/workspaces, got: %s", cfg.WorkspacesDir)
+		}
+	})
+
+	t.Run("returns 404 for tickets not present in testdata", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-10", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("expected status 404 Not Found for AL-10 in testdata workspaces, got %d", rec.Code)
+		}
+	})
+}
+
+func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testing.T) {
+	prodWorkspacesDir := filepath.Join("..", "..", "..", "..", "workspaces")
+	if _, err := os.Stat(prodWorkspacesDir); err != nil {
+		t.Fatalf("production workspaces directory not found at %s: %v", prodWorkspacesDir, err)
+	}
+
+	server := adaptershttp.NewServer(prodWorkspacesDir, fstest.MapFS{})
+	handler := server.Handler()
+
+	t.Run("reports production workspaces dir and does not reference testdata in /api/config", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d", rec.Code)
+		}
+
+		var cfg adaptershttp.ProjectConfigDTO
+		if err := json.Unmarshal(rec.Body.Bytes(), &cfg); err != nil {
+			t.Fatalf("failed unmarshaling /api/config: %v", err)
+		}
+
+		if strings.Contains(cfg.WorkspacesDir, "testdata") {
+			t.Errorf("expected workspaces_dir to not contain testdata, got: %s", cfg.WorkspacesDir)
+		}
+	})
+
+	t.Run("serves production workspaces exclusively without testdata contamination", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected status 200 OK, got %d", rec.Code)
+		}
+
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.Unmarshal(rec.Body.Bytes(), &ledgers); err != nil {
+			t.Fatalf("failed unmarshaling /api/workspaces: %v", err)
+		}
+
+		if len(ledgers) <= 5 {
+			t.Fatalf("expected > 5 ledgers from production workspaces, got %d", len(ledgers))
+		}
+
+		var al1Ledger *domain.AgenticMetricsLedger
+		for i := range ledgers {
+			if ledgers[i].TicketID != nil && *ledgers[i].TicketID == "AL-1" {
+				al1Ledger = &ledgers[i]
+				break
+			}
+		}
+
+		if al1Ledger == nil {
+			t.Fatal("expected AL-1 in production workspaces")
+		}
+
+		testdataTitle := "Core Go domain models and aggregations engine"
+		if al1Ledger.TicketTitle != nil && *al1Ledger.TicketTitle == testdataTitle {
+			t.Errorf("expected production AL-1 title, but got testdata title: %s", *al1Ledger.TicketTitle)
+		}
+
+		foundAL10 := false
+		for _, l := range ledgers {
+			if l.TicketID != nil && *l.TicketID == "AL-10" {
+				foundAL10 = true
+				break
+			}
+		}
+		if !foundAL10 {
+			t.Errorf("expected AL-10 to be discovered in production workspaces")
+		}
+	})
+
+	t.Run("serves AL-10 workspace detail successfully from production", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-10", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("expected status 200 OK for AL-10 in production workspaces, got %d", rec.Code)
+		}
+	})
+}

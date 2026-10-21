@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { LiveTraceInspector } from './LiveTraceInspector';
 import type { LiveSessionNode, LiveTraceView } from '../domain/live';
-import { mockLiveTraceView } from '../api/mockData';
+import { mockLiveTraceView } from '../test/fixtures/mockData';
 
 describe('LiveTraceInspector Component', () => {
   const mockNode: LiveSessionNode = {

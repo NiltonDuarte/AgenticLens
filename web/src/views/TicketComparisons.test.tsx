@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { TicketComparisons } from './TicketComparisons';
 import * as apiClient from '../api/client';
-import { mockAgenticMetricsLedgers } from '../api/mockData';
+import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 
 describe('TicketComparisons View Component', () => {
   beforeEach(() => {

@@ -11,7 +11,7 @@ import type {
   LiveAnomalyAlert,
   LiveTraceView,
 } from '../domain/live';
-import { mockLiveSessionTree, mockLiveAnomalyAlerts, mockLiveTraceView } from './mockData';
+import { mockLiveSessionTree, mockLiveAnomalyAlerts, mockLiveTraceView } from '../test/fixtures/mockData';
 
 class MockEventSource {
   static instances: MockEventSource[] = [];
