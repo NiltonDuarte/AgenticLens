@@ -44,6 +44,7 @@ type LiveAnomalyAlert struct {
 	Message      string `json:"message"`
 	Timestamp    string `json:"timestamp"`
 	TriggerEvent string `json:"trigger_event"`
+	Count        *int64 `json:"count,omitempty"`
 }
 
 type toolCallRecord struct {
@@ -113,6 +114,7 @@ func EvaluateConsecutiveToolErrors(trace *LiveTraceView) []LiveAnomalyAlert {
 		triggerEvent = fmt.Sprintf("%s: %s", lastFailingPart.ID, errSnippet)
 	}
 
+	streakCount := int64(streak)
 	return []LiveAnomalyAlert{
 		{
 			SessionID:    trace.SessionID,
@@ -121,6 +123,7 @@ func EvaluateConsecutiveToolErrors(trace *LiveTraceView) []LiveAnomalyAlert {
 			Message:      msg,
 			Timestamp:    lastFailingTimestamp,
 			TriggerEvent: triggerEvent,
+			Count:        &streakCount,
 		},
 	}
 }
@@ -421,6 +424,7 @@ func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
 
 		msg := fmt.Sprintf("Tool thrashing detected on tool %s with %d failing invocations without progress.", cand.toolName, cand.failCount)
 		trigger := fmt.Sprintf("%s: %s", cand.toolName, strings.Join(cand.partIDs, ", "))
+		failCount := int64(cand.failCount)
 
 		alerts = append(alerts, LiveAnomalyAlert{
 			SessionID:    trace.SessionID,
@@ -429,6 +433,7 @@ func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
 			Message:      msg,
 			Timestamp:    cand.timestamp,
 			TriggerEvent: trigger,
+			Count:        &failCount,
 		})
 	}
 

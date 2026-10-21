@@ -4,6 +4,14 @@ import { formatTokensK } from '../domain/formatters';
 import { AnomalyBadge } from './AnomalyBadge';
 import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
 import { copyTextToClipboard } from '../utils/clipboard';
+import {
+  isToolFailureAnomalyRule,
+  matchesAnomaly,
+  findMatchingAnomaly,
+} from '../domain/anomalies';
+
+// Re-export domain anomaly matching utilities for backwards compatibility
+export { isToolFailureAnomalyRule, matchesAnomaly, findMatchingAnomaly };
 
 export interface TraceWaterfallProps {
   readonly events: readonly EventFact[];
@@ -16,77 +24,6 @@ export interface TraceWaterfallProps {
 }
 
 type FilterMode = 'all' | 'tools' | 'errors_anomalies';
-
-const isToolFailureAnomalyRule = (ruleId: string): boolean => {
-  return (
-    ruleId === 'TOOL_RETRY_STREAK' ||
-    ruleId === 'TOOL_HIGH_FAILURE_RATE' ||
-    ruleId.startsWith('TOOL_') ||
-    ruleId.includes('TOOL_FAILURE')
-  );
-};
-
-export const matchesAnomaly = (event: EventFact, anomaly: Anomaly): boolean => {
-  const ctx = anomaly.context;
-
-  // Strict Session ID Guard: if both context and event specify session_id, they must match
-  if (ctx.session_id && event.session_id && ctx.session_id !== event.session_id) {
-    return false;
-  }
-
-  // Tool Failure Anomaly Status Criterion:
-  // If anomaly is a tool failure rule, only match if the event is an error
-  if (isToolFailureAnomalyRule(anomaly.rule_id)) {
-    if (event.status !== 'error') {
-      return false;
-    }
-  }
-
-  // 1. Tool call match: tool_name matches
-  if (
-    ctx.tool_name &&
-    event.tool_name &&
-    ctx.tool_name.toLowerCase() === event.tool_name.toLowerCase()
-  ) {
-    if (ctx.turn !== undefined && event.turn !== undefined) {
-      return ctx.turn === event.turn;
-    }
-    return true;
-  }
-
-  // 2. Turn and session match (e.g. context saturation spike)
-  if (ctx.turn !== undefined && ctx.turn === event.turn) {
-    if (ctx.session_id && event.session_id) {
-      return ctx.session_id === event.session_id;
-    }
-    return true;
-  }
-
-  // 3. Role match
-  if (
-    ctx.role &&
-    event.role &&
-    (ctx.role.toLowerCase() === event.role.toLowerCase() ||
-      ctx.secondary_role?.toLowerCase() === event.role.toLowerCase())
-  ) {
-    if (ctx.turn !== undefined) {
-      return ctx.turn === event.turn;
-    }
-  }
-
-  return false;
-};
-
-export const findMatchingAnomaly = (
-  event: EventFact,
-  anomalies?: readonly Anomaly[]
-): Anomaly | undefined => {
-  if (!anomalies || anomalies.length === 0) {
-    return undefined;
-  }
-
-  return anomalies.find((a) => matchesAnomaly(event, a));
-};
 
 const formatDurationMs = (ms: number): string => {
   if (ms < 1000) {

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import type { LiveMessageFact, LiveSessionNode, LiveTraceView } from '../domain/live';
+import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact } from '../domain/live';
 import { formatTokensK } from '../domain/formatters';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
+import { copyTextToClipboard } from '../utils/clipboard';
+import { findMatchingLiveAlert, extractStreakCount } from '../domain/anomalies';
 
 export interface LiveTraceInspectorProps {
   readonly sessionNode: LiveSessionNode | null;
@@ -15,7 +17,65 @@ interface MessageTurnProps {
   readonly turnIndex: number;
 }
 
+const LiveMessagePartItem: React.FC<{ readonly part: LivePartFact }> = ({ part }) => {
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyPartId = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!part.id) return;
+    await copyTextToClipboard(part.id);
+    setIsCopied(true);
+    window.setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
+  };
+
+  return (
+    <div className={`trace-part-item ${part.is_error ? 'part-error' : 'part-normal'}`}>
+      <div className="part-header">
+        <span className="part-type-badge">{part.type}</span>
+        {part.tool_name && (
+          <span className="part-tool-name">{part.tool_name}</span>
+        )}
+        <span className={`part-status-badge status-${part.status.toLowerCase()}`}>
+          {part.status}
+        </span>
+        {part.id && (
+          <div className="debug-id-token-group">
+            <span className="debug-id-token mono">{part.id}</span>
+            <button
+              type="button"
+              className="btn-copy-id"
+              aria-label={`Copy Part ID ${part.id}`}
+              onClick={handleCopyPartId}
+            >
+              {isCopied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        )}
+      </div>
+      {part.input_snippet && (
+        <div className="part-snippet input">
+          <span className="part-snippet-label">Input:</span>
+          <pre className="part-code">{part.input_snippet}</pre>
+        </div>
+      )}
+      {part.output_snippet && (
+        <div className="part-snippet output">
+          <span className="part-snippet-label">
+            {part.is_error ? 'Error Output:' : 'Output:'}
+          </span>
+          <pre className={`part-code ${part.is_error ? 'error' : ''}`}>
+            {part.output_snippet}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({ message, turnIndex }) => {
+  const [isCopied, setIsCopied] = useState(false);
   const reasoning = message.reasoning_content;
   const isReasoningLong = (reasoning?.length ?? 0) > 300;
   const [showReasoning, setShowReasoning] = useState(!isReasoningLong);
@@ -24,14 +84,37 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({ message, turnIndex })
     ? `${reasoning.slice(0, 160)}...`
     : reasoning;
 
+  const handleCopyMessageId = async () => {
+    if (!message.id) return;
+    await copyTextToClipboard(message.id);
+    setIsCopied(true);
+    window.setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
+  };
+
   return (
     <div className={`trace-message-turn role-${message.role.toLowerCase()}`} data-testid={`message-turn-${turnIndex}`}>
       <div className="message-turn-header">
         <div className="message-turn-meta">
+          <span className="turn-number-badge">Turn {turnIndex + 1}</span>
           <span className={`turn-role-pill role-${message.role.toLowerCase()}`}>
             {message.role.toUpperCase()}
           </span>
           <span className="turn-timestamp">{message.timestamp}</span>
+          {message.id && (
+            <div className="debug-id-token-group">
+              <span className="debug-id-token mono">{message.id}</span>
+              <button
+                type="button"
+                className="btn-copy-id"
+                aria-label={`Copy Message ID ${message.id}`}
+                onClick={handleCopyMessageId}
+              >
+                {isCopied ? 'Copied' : 'Copy ID'}
+              </button>
+            </div>
+          )}
         </div>
         <div className="turn-token-chips">
           {message.total_tokens > 0 && (
@@ -85,36 +168,7 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({ message, turnIndex })
       {message.parts && message.parts.length > 0 && (
         <div className="message-parts-container">
           {message.parts.map((part) => (
-            <div
-              key={part.id}
-              className={`trace-part-item ${part.is_error ? 'part-error' : 'part-normal'}`}
-            >
-              <div className="part-header">
-                <span className="part-type-badge">{part.type}</span>
-                {part.tool_name && (
-                  <span className="part-tool-name">{part.tool_name}</span>
-                )}
-                <span className={`part-status-badge status-${part.status.toLowerCase()}`}>
-                  {part.status}
-                </span>
-              </div>
-              {part.input_snippet && (
-                <div className="part-snippet input">
-                  <span className="part-snippet-label">Input:</span>
-                  <pre className="part-code">{part.input_snippet}</pre>
-                </div>
-              )}
-              {part.output_snippet && (
-                <div className="part-snippet output">
-                  <span className="part-snippet-label">
-                    {part.is_error ? 'Error Output:' : 'Output:'}
-                  </span>
-                  <pre className={`part-code ${part.is_error ? 'error' : ''}`}>
-                    {part.output_snippet}
-                  </pre>
-                </div>
-              )}
-            </div>
+            <LiveMessagePartItem key={part.id} part={part} />
           ))}
         </div>
       )}
@@ -128,6 +182,8 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   loading,
   onClose,
 }) => {
+  const [isSessionCopied, setIsSessionCopied] = useState(false);
+
   if (!sessionNode) {
     return (
       <div className="live-trace-inspector-placeholder" data-testid="live-trace-inspector-placeholder">
@@ -139,6 +195,14 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
     );
   }
 
+  const handleCopySessionId = async () => {
+    await copyTextToClipboard(sessionNode.id);
+    setIsSessionCopied(true);
+    window.setTimeout(() => {
+      setIsSessionCopied(false);
+    }, 2000);
+  };
+
   const hasFailedTools =
     (trace && trace.failed_tool_calls > 0) ||
     (trace && trace.recent_errors && trace.recent_errors.length > 0);
@@ -149,6 +213,14 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
         <div className="inspector-title-group">
           <div className="inspector-session-row">
             <span className="inspector-session-id">Session: {sessionNode.id}</span>
+            <button
+              type="button"
+              className="btn-copy-id"
+              aria-label={`Copy Session ID ${sessionNode.id}`}
+              onClick={handleCopySessionId}
+            >
+              {isSessionCopied ? 'Copied' : 'Copy'}
+            </button>
             <span className={`node-role-badge role-${sessionNode.role.toLowerCase()}`}>
               {sessionNode.role}
             </span>
@@ -195,15 +267,17 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
             Failed Tool Calls ({trace.failed_tool_calls})
           </h4>
           <div className="failed-tools-cards-list">
-            {trace.recent_errors.map((errorPart, idx) => (
-              <FailedToolAlertCard
-                key={errorPart.id || `err-${idx}`}
-                part={errorPart}
-                consecutiveErrors={
-                  trace.recent_errors.length > 1 ? trace.recent_errors.length : undefined
-                }
-              />
-            ))}
+            {trace.recent_errors.map((errorPart, idx) => {
+              const matchedAlert = findMatchingLiveAlert(errorPart, trace.anomalies);
+              const streakCount = extractStreakCount(matchedAlert);
+              return (
+                <FailedToolAlertCard
+                  key={errorPart.id || `err-${idx}`}
+                  part={errorPart}
+                  consecutiveErrors={streakCount && streakCount > 1 ? streakCount : undefined}
+                />
+              );
+            })}
           </div>
         </section>
       )}

@@ -756,6 +756,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	var events []domain.EventFact
 	sessionTurns := make(map[string]int64)
 	lastUserPromptPerSession := make(map[string]string)
+	sessionConsecutiveErrors := make(map[string]int)
 
 	// Process messages per session
 	for _, rm := range rawMsgs {
@@ -880,13 +881,14 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		})
 
 		// Append parts for this message
-		consecutiveErrors := 0
+		consecutiveErrors := sessionConsecutiveErrors[rm.SessionID]
 		for _, pr := range partRecords {
 			partEvent := convertPartToEventFact(pr, turn, role, ctxTokens, &consecutiveErrors)
 			if partEvent != nil {
 				events = append(events, *partEvent)
 			}
 		}
+		sessionConsecutiveErrors[rm.SessionID] = consecutiveErrors
 	}
 
 	// Append any orphan parts that weren't tied to a specific message ID
@@ -899,13 +901,14 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		if turn == 0 {
 			turn = 1
 		}
-		consecutiveErrors := 0
+		consecutiveErrors := sessionConsecutiveErrors[sid]
 		for _, pr := range parts {
 			partEvent := convertPartToEventFact(pr, turn, role, 0, &consecutiveErrors)
 			if partEvent != nil {
 				events = append(events, *partEvent)
 			}
 		}
+		sessionConsecutiveErrors[sid] = consecutiveErrors
 	}
 
 	if len(events) == 0 {

@@ -89,6 +89,9 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 		if !strings.Contains(alert.TriggerEvent, "p3") {
 			t.Errorf("expected trigger event to contain part ID p3, got %s", alert.TriggerEvent)
 		}
+		if alert.Count == nil || *alert.Count != 3 {
+			t.Errorf("expected alert Count to be 3, got %v", alert.Count)
+		}
 	})
 
 	t.Run("4 consecutive tool errors trigger HIGH alert", func(t *testing.T) {
@@ -115,6 +118,9 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 		}
 		if alerts[0].Severity != domain.LiveSeverityHigh {
 			t.Errorf("expected severity HIGH for 4 errors, got %s", alerts[0].Severity)
+		}
+		if alerts[0].Count == nil || *alerts[0].Count != 4 {
+			t.Errorf("expected alert Count to be 4, got %v", alerts[0].Count)
 		}
 	})
 
@@ -143,6 +149,9 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 		}
 		if alerts[0].Severity != domain.LiveSeverityCritical {
 			t.Errorf("expected severity CRITICAL for 5 errors, got %s", alerts[0].Severity)
+		}
+		if alerts[0].Count == nil || *alerts[0].Count != 5 {
+			t.Errorf("expected alert Count to be 5, got %v", alerts[0].Count)
 		}
 	})
 
@@ -197,6 +206,39 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 		}
 		if !strings.Contains(alerts[0].Message, "edit") {
 			t.Errorf("expected last failing tool 'edit' in message, got %s", alerts[0].Message)
+		}
+		if alerts[0].Count == nil || *alerts[0].Count != 3 {
+			t.Errorf("expected alert Count to be 3 across different tools, got %v", alerts[0].Count)
+		}
+	})
+
+	t.Run("consecutive tool errors span multiple messages and record total count", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s-multi-msg",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID: "m1",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p2", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+					},
+				},
+				{
+					ID: "m2",
+					Parts: []domain.LivePartFact{
+						{ID: "p3", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p4", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert spanning 2 messages, got %d", len(alerts))
+		}
+		if alerts[0].Count == nil || *alerts[0].Count != 4 {
+			t.Errorf("expected alert Count to be 4 across messages, got %v", alerts[0].Count)
 		}
 	})
 
@@ -589,6 +631,34 @@ func TestToolThrashingRule(t *testing.T) {
 		}
 		if alerts[0].Severity != domain.LiveSeverityWarning {
 			t.Errorf("expected WARNING severity, got %s", alerts[0].Severity)
+		}
+		if alerts[0].Count == nil || *alerts[0].Count != 3 {
+			t.Errorf("expected alert Count to be 3, got %v", alerts[0].Count)
+		}
+	})
+
+	t.Run("tool fails 4 times without progress triggers alert with count 4", func(t *testing.T) {
+		trace := &domain.LiveTraceView{
+			SessionID: "s_thrash_4",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID: "m1",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p2", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p3", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p4", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+					},
+				},
+			},
+		}
+
+		alerts := domain.EvaluateToolThrashing(trace)
+		if len(alerts) != 1 {
+			t.Fatalf("expected 1 alert for 4 thrashing failures, got %d", len(alerts))
+		}
+		if alerts[0].Count == nil || *alerts[0].Count != 4 {
+			t.Errorf("expected alert Count to be 4, got %v", alerts[0].Count)
 		}
 	})
 }

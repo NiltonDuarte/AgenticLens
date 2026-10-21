@@ -1227,6 +1227,16 @@ func TestLiveService_TokenExtractionAndAnomalyDetection(t *testing.T) {
 	ruleNames := make(map[string]bool)
 	for _, a := range trace.Anomalies {
 		ruleNames[a.RuleName] = true
+		if a.RuleName == domain.RuleConsecutiveToolErrors {
+			if a.Count == nil || *a.Count != 3 {
+				t.Errorf("expected ConsecutiveToolErrors Count to be 3, got %v", a.Count)
+			}
+		}
+		if a.RuleName == domain.RuleToolThrashing {
+			if a.Count == nil || *a.Count != 3 {
+				t.Errorf("expected ToolThrashing Count to be 3, got %v", a.Count)
+			}
+		}
 	}
 	if !ruleNames[domain.RuleConsecutiveToolErrors] {
 		t.Errorf("expected ConsecutiveToolErrors anomaly to be present")
@@ -1554,5 +1564,228 @@ func TestLiveService_ZeroTokensAndZeroParts(t *testing.T) {
 	}
 	if len(trace.Anomalies) != 0 {
 		t.Errorf("expected 0 anomalies, got %d", len(trace.Anomalies))
+	}
+}
+
+func TestHydrateWorkspaceEvents_ConsecutiveErrorsSpansTurns(t *testing.T) {
+	dbPath := createTestDBFile(t)
+
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	now := time.Now().UnixMilli()
+
+	// Seed session
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, title, agent, model, time_created, time_updated)
+		VALUES ('s_span_1', 'Spanning Consecutive Errors', 'coder', 'gemini-3.8-flash', ?, ?)
+	`, now-10000, now-1000)
+	if err != nil {
+		t.Fatalf("seeding session: %v", err)
+	}
+
+	// Turn 1 message with 1 error
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_span_1', 's_span_1', ?, ?, '{"role":"assistant"}')
+	`, now-8000, now-8000)
+	if err != nil {
+		t.Fatalf("seeding message 1: %v", err)
+	}
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_span_1', 's_span_1', 'm_span_1', ?, ?, '{"type":"tool","tool":"bash","state":{"status":"error","output":"failed command 1"}}')
+	`, now-7900, now-7900)
+	if err != nil {
+		t.Fatalf("seeding part 1: %v", err)
+	}
+
+	// Turn 2 message with 2 errors
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_span_2', 's_span_1', ?, ?, '{"role":"assistant"}')
+	`, now-7000, now-7000)
+	if err != nil {
+		t.Fatalf("seeding message 2: %v", err)
+	}
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_span_2', 's_span_1', 'm_span_2', ?, ?, '{"type":"tool","tool":"bash","state":{"status":"error","output":"failed command 2"}}')
+	`, now-6900, now-6900)
+	if err != nil {
+		t.Fatalf("seeding part 2: %v", err)
+	}
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_span_3', 's_span_1', 'm_span_2', ?, ?, '{"type":"tool","tool":"bash","state":{"status":"error","output":"failed command 3"}}')
+	`, now-6800, now-6800)
+	if err != nil {
+		t.Fatalf("seeding part 3: %v", err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 2000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, testProjectConfig())
+	defer service.Close()
+
+	ctx := context.Background()
+	ledger := domain.AgenticMetricsLedger{
+		Facts: domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "s_span_1", Role: "coder"},
+			},
+		},
+	}
+
+	resp, err := service.HydrateWorkspaceEvents(ctx, "SPAN-1", ledger)
+	if err != nil {
+		t.Fatalf("HydrateWorkspaceEvents failed: %v", err)
+	}
+
+	// Filter tool call events
+	var toolEvents []domain.EventFact
+	for _, ev := range resp.Events {
+		if ev.EventType == domain.EventTypeToolCall {
+			toolEvents = append(toolEvents, ev)
+		}
+	}
+
+	if len(toolEvents) != 3 {
+		t.Fatalf("expected 3 tool events, got %d", len(toolEvents))
+	}
+	for i, te := range toolEvents {
+		if te.Status != "error" {
+			t.Errorf("expected tool event %d to have status error, got %s", i, te.Status)
+		}
+	}
+}
+
+func TestHydrateWorkspaceEvents_MultiSessionIsolationAndStreakReset(t *testing.T) {
+	dbPath := createTestDBFile(t)
+
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	now := time.Now().UnixMilli()
+
+	// Seed session A and session B
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, title, agent, model, time_created, time_updated)
+		VALUES
+			('s_iso_A', 'Session A', 'coder', 'gemini-3.8-flash', ?, ?),
+			('s_iso_B', 'Session B', 'coder', 'gemini-3.8-flash', ?, ?)
+	`, now-20000, now-1000, now-20000, now-1000)
+	if err != nil {
+		t.Fatalf("seeding sessions: %v", err)
+	}
+
+	// Session A Turn 1: 1 error
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_A_1', 's_iso_A', ?, ?, '{"role":"assistant"}')
+	`, now-18000, now-18000)
+	if err != nil {
+		t.Fatalf("seeding msg A1: %v", err)
+	}
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_A_1', 's_iso_A', 'm_A_1', ?, ?, '{"type":"tool","tool":"bash","state":{"status":"error","output":"command failure 1"}}')
+	`, now-17900, now-17900)
+	if err != nil {
+		t.Fatalf("seeding part A1: %v", err)
+	}
+
+	// Session B Turn 1: 1 success (read tool)
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_B_1', 's_iso_B', ?, ?, '{"role":"assistant"}')
+	`, now-16000, now-16000)
+	if err != nil {
+		t.Fatalf("seeding msg B1: %v", err)
+	}
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_B_1', 's_iso_B', 'm_B_1', ?, ?, '{"type":"tool","tool":"read","state":{"status":"completed","output":"ok file content"}}')
+	`, now-15900, now-15900)
+	if err != nil {
+		t.Fatalf("seeding part B1: %v", err)
+	}
+
+	// Session A Turn 2: 1 success (resets session A streak)
+	_, err = rwDB.Exec(`
+		INSERT INTO message (id, session_id, time_created, time_updated, data)
+		VALUES ('m_A_2', 's_iso_A', ?, ?, '{"role":"assistant"}')
+	`, now-14000, now-14000)
+	if err != nil {
+		t.Fatalf("seeding msg A2: %v", err)
+	}
+	_, err = rwDB.Exec(`
+		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+		VALUES ('p_A_2', 's_iso_A', 'm_A_2', ?, ?, '{"type":"tool","tool":"read","state":{"status":"completed","output":"read succeeded"}}')
+	`, now-13900, now-13900)
+	if err != nil {
+		t.Fatalf("seeding part A2: %v", err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 2000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, testProjectConfig())
+	defer service.Close()
+
+	ctx := context.Background()
+	ledger := domain.AgenticMetricsLedger{
+		Facts: domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "s_iso_A", Role: "coder"},
+				{ID: "s_iso_B", Role: "coder"},
+			},
+		},
+	}
+
+	resp, err := service.HydrateWorkspaceEvents(ctx, "ISO-1", ledger)
+	if err != nil {
+		t.Fatalf("HydrateWorkspaceEvents failed: %v", err)
+	}
+
+	var sessATools, sessBTools []domain.EventFact
+	for _, ev := range resp.Events {
+		if ev.EventType == domain.EventTypeToolCall {
+			if ev.SessionID == "s_iso_A" {
+				sessATools = append(sessATools, ev)
+			} else if ev.SessionID == "s_iso_B" {
+				sessBTools = append(sessBTools, ev)
+			}
+		}
+	}
+
+	if len(sessATools) != 2 {
+		t.Fatalf("expected 2 tool events for session A, got %d", len(sessATools))
+	}
+	if sessATools[0].Status != "error" {
+		t.Errorf("expected session A first tool call to be error, got %s", sessATools[0].Status)
+	}
+	if sessATools[1].Status != "completed" {
+		t.Errorf("expected session A second tool call to be completed, got %s", sessATools[1].Status)
+	}
+
+	if len(sessBTools) != 1 {
+		t.Fatalf("expected 1 tool event for session B, got %d", len(sessBTools))
+	}
+	if sessBTools[0].Status != "completed" {
+		t.Errorf("expected session B tool call to be completed, got %s", sessBTools[0].Status)
 	}
 }

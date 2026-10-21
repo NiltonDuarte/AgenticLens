@@ -13,6 +13,7 @@ export interface LiveAnomalyAlert {
   readonly message: string;
   readonly trigger_event: string;
   readonly timestamp: string;
+  readonly count?: number | null;
 }
 
 export interface LivePartFact {

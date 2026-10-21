@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { LiveTraceInspector } from './LiveTraceInspector';
 import type { LiveSessionNode, LiveTraceView } from '../domain/live';
 import { mockLiveTraceView } from '../test/fixtures/mockData';
@@ -450,5 +450,251 @@ describe('LiveTraceInspector Component', () => {
 
     const errorPart = screen.getByText('cat missing.txt').closest('.trace-part-item');
     expect(errorPart).toHaveClass('part-error');
+  });
+
+  it('renders copy buttons for session ID, message turn ID, and part ID with temporary copied feedback', async () => {
+    vi.useFakeTimers();
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const debugTrace: LiveTraceView = {
+      session_id: 'ses-debug-1',
+      messages: [
+        {
+          id: 'msg-debug-101',
+          role: 'assistant',
+          content: 'Debugging turn',
+          timestamp: '2026-10-20T12:00:00Z',
+          parts: [
+            {
+              id: 'part-debug-202',
+              type: 'tool',
+              tool_name: 'bash',
+              status: 'completed',
+              is_error: false,
+              severity: 'NONE',
+              input_snippet: 'echo hello',
+              output_snippet: 'hello',
+            },
+          ],
+          total_tokens: 100,
+          input_tokens: 100,
+          output_tokens: 0,
+          cache_read_tokens: 0,
+          reasoning_tokens: 0,
+          context_tokens: 100,
+        },
+      ],
+      total_tool_calls: 1,
+      failed_tool_calls: 0,
+      recent_errors: [],
+      anomalies: [],
+    };
+
+    render(
+      <LiveTraceInspector
+        sessionNode={{ ...mockNode, id: 'ses-debug-1' }}
+        trace={debugTrace}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    // 1. Session ID Copy Button
+    const sessionCopyBtn = screen.getByRole('button', { name: /copy session id ses-debug-1/i });
+    expect(sessionCopyBtn).toHaveTextContent('Copy');
+    await act(async () => {
+      fireEvent.click(sessionCopyBtn);
+    });
+    expect(writeTextMock).toHaveBeenCalledWith('ses-debug-1');
+    expect(sessionCopyBtn).toHaveTextContent('Copied');
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(sessionCopyBtn).toHaveTextContent('Copy');
+
+    // 2. Message ID Copy Button and Turn Token
+    expect(screen.getByText('Turn 1')).toBeInTheDocument();
+    const msgCopyBtn = screen.getByRole('button', { name: /copy message id msg-debug-101/i });
+    expect(msgCopyBtn).toHaveTextContent('Copy ID');
+    await act(async () => {
+      fireEvent.click(msgCopyBtn);
+    });
+    expect(writeTextMock).toHaveBeenCalledWith('msg-debug-101');
+    expect(msgCopyBtn).toHaveTextContent('Copied');
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(msgCopyBtn).toHaveTextContent('Copy ID');
+
+    // 3. Part ID Copy Button
+    const partCopyBtn = screen.getByRole('button', { name: /copy part id part-debug-202/i });
+    expect(partCopyBtn).toHaveTextContent('Copy');
+    await act(async () => {
+      fireEvent.click(partCopyBtn);
+    });
+    expect(writeTextMock).toHaveBeenCalledWith('part-debug-202');
+    expect(partCopyBtn).toHaveTextContent('Copied');
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(partCopyBtn).toHaveTextContent('Copy');
+
+    vi.useRealTimers();
+  });
+
+  it('omits copy buttons when message ID or part ID is absent', () => {
+    const traceWithoutIds: LiveTraceView = {
+      session_id: 'ses-no-ids',
+      messages: [
+        {
+          id: '',
+          role: 'assistant',
+          content: 'No IDs turn',
+          timestamp: '2026-10-20T12:00:00Z',
+          parts: [
+            {
+              id: '',
+              type: 'tool',
+              tool_name: 'bash',
+              status: 'completed',
+              is_error: false,
+              severity: 'NONE',
+            },
+          ],
+          total_tokens: 50,
+          input_tokens: 50,
+          output_tokens: 0,
+          cache_read_tokens: 0,
+          reasoning_tokens: 0,
+          context_tokens: 50,
+        },
+      ],
+      total_tool_calls: 1,
+      failed_tool_calls: 0,
+      recent_errors: [],
+      anomalies: [],
+    };
+
+    render(
+      <LiveTraceInspector
+        sessionNode={{ ...mockNode, id: 'ses-no-ids' }}
+        trace={traceWithoutIds}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Turn 1')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /copy message id/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /copy part id/i })).toBeNull();
+  });
+
+  it('does not display streak badge when anomaly count is 1 or missing', () => {
+    const errorPart = {
+      id: 'part-fail-single',
+      type: 'tool',
+      tool_name: 'bash',
+      status: 'error',
+      is_error: true,
+      severity: 'WARNING',
+      input_snippet: 'cat foo.txt',
+      output_snippet: 'not found',
+    };
+
+    const traceSingleError: LiveTraceView = {
+      session_id: 'ses-single',
+      messages: [
+        {
+          id: 'msg-s-1',
+          role: 'assistant',
+          content: 'Single failure',
+          timestamp: '2026-10-20T12:00:00Z',
+          parts: [errorPart],
+          total_tokens: 100,
+          input_tokens: 100,
+          output_tokens: 0,
+          cache_read_tokens: 0,
+          reasoning_tokens: 0,
+          context_tokens: 100,
+        },
+      ],
+      total_tool_calls: 1,
+      failed_tool_calls: 1,
+      recent_errors: [errorPart],
+      anomalies: [],
+    };
+
+    render(
+      <LiveTraceInspector
+        sessionNode={{ ...mockNode, id: 'ses-single' }}
+        trace={traceSingleError}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText(/consecutive failures/i)).toBeNull();
+  });
+
+  it('wires exact anomaly streak count to FailedToolAlertCard', () => {
+    const errorPart = {
+      id: 'part-fail-streak',
+      type: 'tool',
+      tool_name: 'bash',
+      status: 'error',
+      is_error: true,
+      severity: 'CRITICAL',
+      input_snippet: 'make test',
+      output_snippet: 'exit status 2',
+    };
+
+    const traceWithStreak: LiveTraceView = {
+      session_id: 'ses-streak',
+      messages: [
+        {
+          id: 'msg-streak-1',
+          role: 'assistant',
+          content: 'Error',
+          timestamp: '2026-10-20T12:00:00Z',
+          parts: [errorPart],
+          total_tokens: 100,
+          input_tokens: 100,
+          output_tokens: 0,
+          cache_read_tokens: 0,
+          reasoning_tokens: 0,
+          context_tokens: 100,
+        },
+      ],
+      total_tool_calls: 1,
+      failed_tool_calls: 1,
+      recent_errors: [errorPart],
+      anomalies: [
+        {
+          session_id: 'ses-streak',
+          rule_name: 'ConsecutiveToolErrors',
+          severity: 'CRITICAL',
+          message: 'Tool execution error streak reached 4 consecutive failures on bash',
+          trigger_event: 'part-fail-streak: exit status 2',
+          timestamp: '2026-10-20T12:00:00Z',
+          count: 4,
+        },
+      ],
+    };
+
+    render(
+      <LiveTraceInspector
+        sessionNode={{ ...mockNode, id: 'ses-streak' }}
+        trace={traceWithStreak}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('4 Consecutive Failures')).toBeInTheDocument();
   });
 });

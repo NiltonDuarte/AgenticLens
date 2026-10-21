@@ -4913,3 +4913,33 @@ th.num-col .th-content {
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.3);
 }
+
+.debug-id-token-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 1px 4px 1px 6px;
+}
+
+.debug-id-token {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.debug-id-token.mono {
+  font-family: var(--font-mono);
+}
+
+.turn-number-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
