@@ -1,8 +1,6 @@
 package git
 
 import (
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -20,51 +18,6 @@ func GetGitUser() string {
 	}
 
 	return "unknown"
-}
-
-func findWorkspaceDir(ticketID, subDir string) (string, bool) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", false
-	}
-	curr := cwd
-	for {
-		candidate := filepath.Join(curr, "workspaces", ticketID, subDir)
-		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
-			return candidate, true
-		}
-		parent := filepath.Dir(curr)
-		if parent == curr {
-			break
-		}
-		curr = parent
-	}
-	return "", false
-}
-
-// ComputeSDLCIterations calculates iterations count from ticket workspace iterations directory.
-func ComputeSDLCIterations(ticketID string) int64 {
-	cleanTicket := strings.TrimSpace(ticketID)
-	if cleanTicket == "" {
-		return 1
-	}
-
-	if iterDir, ok := findWorkspaceDir(cleanTicket, "iterations"); ok {
-		entries, err := os.ReadDir(iterDir)
-		if err == nil {
-			var count int64
-			for _, e := range entries {
-				if e.IsDir() {
-					count++
-				}
-			}
-			if count > 0 {
-				return count
-			}
-		}
-	}
-
-	return 1
 }
 
 // InferTicketTypeFromBranchList parses git branch list output to resolve conventional commit type.

@@ -2196,3 +2196,91 @@ func TestLoad_CustomExtensionAndEmptyPathEdgeCases(t *testing.T) {
 		}
 	})
 }
+
+func TestLoad_CodeMetricsBaseBranch(t *testing.T) {
+	t.Run("unmarshals base_branch from yaml", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		content := `project_name: "TestProject"` + testValidSuffixYAML + `
+code_metrics:
+  base_branch: "release/v1.0"
+`
+		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.LoadFromFile(cfgFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "release/v1.0" {
+			t.Errorf("expected base_branch 'release/v1.0', got %q", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+
+	t.Run("unmarshals base_branch from json", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgFile := filepath.Join(tempDir, ".agenticlens-config.json")
+		content := `{"project_name": "TestProject", "code_metrics": {"base_branch": "master"}` + testValidSuffixJSON
+		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.LoadFromFile(cfgFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "master" {
+			t.Errorf("expected base_branch 'master', got %q", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+
+	t.Run("defaults base_branch to empty string when omitted", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		content := `project_name: "TestProject"` + testValidSuffixYAML
+		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.LoadFromFile(cfgFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "" {
+			t.Errorf("expected default base_branch '', got %q", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+}
+
+func TestLoadFromFile(t *testing.T) {
+	t.Run("correctly loads base_branch from repo .agenticlens-config.yaml", func(t *testing.T) {
+		repoConfigPath := filepath.Join("..", "..", "..", "..", ".agenticlens-config.yaml")
+		cfg, err := config.LoadFromFile(repoConfigPath)
+		if err != nil {
+			t.Fatalf("failed to load root .agenticlens-config.yaml: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "origin/main" {
+			t.Errorf("expected base_branch %q, got %q", "origin/main", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+
+	t.Run("correctly loads custom base_branch from yaml file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		content := `project_name: "TestProject"` + testValidSuffixYAML + `
+code_metrics:
+  base_branch: "origin/release-2.0"
+`
+		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := config.LoadFromFile(cfgFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.CodeMetrics.BaseBranch != "origin/release-2.0" {
+			t.Errorf("expected base_branch %q, got %q", "origin/release-2.0", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+}
