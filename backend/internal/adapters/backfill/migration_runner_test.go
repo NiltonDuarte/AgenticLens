@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -722,5 +723,29 @@ func TestMigrationRunner_BatchV3(t *testing.T) {
 				t.Errorf("workspace %s event[%d] has non-nil ErrorMessage: %s", tid, i, *ev.ErrorMessage)
 			}
 		}
+	}
+}
+
+func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
+	tempDir := t.TempDir()
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatal(err)
+	}
+
+	runner := backfill.NewMigrationRunner(nil)
+	report, err := runner.Run(backfill.MigrationOptions{
+		WorkspacesDir: "",
+		TargetVersion: 2,
+	})
+	if report != nil {
+		t.Errorf("expected nil report, got %+v", report)
+	}
+	if err == nil {
+		t.Fatal("expected error when workspaces dir cannot be resolved, got nil")
+	}
+	if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+		t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 	}
 }

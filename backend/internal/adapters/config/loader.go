@@ -275,7 +275,7 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	}
 
 	if dto.Workspaces != nil {
-		if dto.Workspaces.Dir != nil && strings.TrimSpace(*dto.Workspaces.Dir) != "" {
+		if dto.Workspaces.Dir != nil {
 			cfg.Workspaces.Dir = strings.TrimSpace(*dto.Workspaces.Dir)
 		}
 		if dto.Workspaces.SrcFolders != nil {

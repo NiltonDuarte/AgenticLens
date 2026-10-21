@@ -27,7 +27,10 @@ func NewEngine() *BackfillEngine {
 
 // Execute runs the backfill and migration workflow across target workspaces.
 func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) {
-	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
+	}
 
 	fi, err := os.Stat(targetDir)
 	if err != nil || !fi.IsDir() {

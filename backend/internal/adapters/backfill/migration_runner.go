@@ -36,7 +36,10 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 		targetVer = domain.CurrentSchemaVersion
 	}
 
-	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
+	}
 	fi, err := os.Stat(targetDir)
 	if err != nil || !fi.IsDir() {
 		return nil, fmt.Errorf("workspaces directory not found: %s", targetDir)

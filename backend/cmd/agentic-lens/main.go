@@ -376,7 +376,11 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
+	workspacesDir, err := adapters.ResolveWorkspacesDir(*workspacesFlag)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
+		os.Exit(1)
+	}
 
 	staticFS, err := web.GetFS()
 	if err != nil {
@@ -520,7 +524,11 @@ func runBackfill(args []string) {
 		os.Exit(1)
 	}
 
-	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
+		os.Exit(1)
+	}
 	modeStr := "EXECUTION"
 	if opts.DryRun {
 		modeStr = "DRY-RUN PREVIEW"
@@ -652,7 +660,11 @@ func runMigrate(args []string) {
 		os.Exit(1)
 	}
 
-	targetDir := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
+		os.Exit(1)
+	}
 	modeStr := "EXECUTION"
 	if opts.DryRun {
 		modeStr = "DRY-RUN PREVIEW"
@@ -977,7 +989,11 @@ func main() {
 		return
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
+	workspacesDir, err := adapters.ResolveWorkspacesDir(*workspacesFlag)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
+		os.Exit(1)
+	}
 	projCfg, err := adaptersconfig.Load("")
 	if err != nil {
 		if errors.Is(err, adaptersconfig.ErrConfigNotFound) {
