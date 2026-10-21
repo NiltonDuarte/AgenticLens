@@ -382,7 +382,8 @@ func runServer(args []string) {
 	} else {
 		configuredDir := strings.TrimSpace(projCfg.Workspaces.Dir)
 		if configuredDir == "" {
-			configuredDir = "workspaces"
+			fmt.Fprintf(os.Stderr, "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag\n")
+			os.Exit(1)
 		}
 		if filepath.IsAbs(configuredDir) {
 			workspacesDir = configuredDir
@@ -390,11 +391,7 @@ func runServer(args []string) {
 			cfgPath, _ := adaptersconfig.FindConfigFile("")
 			baseDir := ""
 			if cfgPath != "" {
-				parentDir := filepath.Dir(cfgPath)
-				baseDir = parentDir
-				if filepath.Base(parentDir) == ".agenticlens" {
-					baseDir = filepath.Dir(parentDir)
-				}
+				baseDir = filepath.Dir(cfgPath)
 			} else {
 				if cwd, err := os.Getwd(); err == nil {
 					baseDir = cwd
@@ -997,7 +994,6 @@ func main() {
 		return
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
 	projCfg, err := adaptersconfig.Load("")
 	if err != nil {
 		if errors.Is(err, adaptersconfig.ErrConfigNotFound) {
@@ -1007,6 +1003,13 @@ func main() {
 		}
 		os.Exit(1)
 	}
+
+	if strings.TrimSpace(*workspacesFlag) == "" && strings.TrimSpace(projCfg.Workspaces.Dir) == "" {
+		fmt.Fprintf(os.Stderr, "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag\n")
+		os.Exit(1)
+	}
+
+	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
 	report := adapters.ScanWorkspaces(workspacesDir)
 
 	if len(report.Ledgers) == 0 {

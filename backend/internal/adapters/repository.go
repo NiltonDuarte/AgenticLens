@@ -19,32 +19,35 @@ func ResolveWorkspacesDir(overridePath string) string {
 		return overridePath
 	}
 
-	// 1. Container volume mount path
-	if fi, err := os.Stat("/app/workspaces"); err == nil && fi.IsDir() {
-		return "/app/workspaces"
-	}
-
-	// 2. Configured workspace dir from centralized config loader
+	// 1. Configured workspace dir from centralized config loader
 	cfg, err := config.Load("")
-	cfgPath, _ := config.FindConfigFile("")
-	wsDir := "workspaces"
-	if err == nil && cfg.Workspaces.Dir != "" {
-		wsDir = cfg.Workspaces.Dir
+	if err != nil || strings.TrimSpace(cfg.Workspaces.Dir) == "" {
+		return ""
+	}
+	wsDir := strings.TrimSpace(cfg.Workspaces.Dir)
+
+	if filepath.IsAbs(wsDir) {
+		return wsDir
 	}
 
+	cfgPath, _ := config.FindConfigFile("")
+	baseDir := ""
 	if cfgPath != "" {
-		parentDir := filepath.Dir(cfgPath)
-		baseDir := parentDir
-		if filepath.Base(parentDir) == ".agenticlens" {
-			baseDir = filepath.Dir(parentDir)
+		baseDir = filepath.Dir(cfgPath)
+	} else {
+		if cwd, err := os.Getwd(); err == nil {
+			baseDir = cwd
 		}
+	}
+
+	if baseDir != "" {
 		candidate := filepath.Join(baseDir, wsDir)
 		if cfi, err := os.Stat(candidate); err == nil && cfi.IsDir() {
 			return candidate
 		}
 	}
 
-	// 3. Current working directory ./workspaces
+	// 2. Current working directory
 	cwd, err := os.Getwd()
 	if cwd != "" && err == nil {
 		candidate := filepath.Join(cwd, wsDir)
@@ -53,7 +56,7 @@ func ResolveWorkspacesDir(overridePath string) string {
 		}
 	}
 
-	// 4. Parent traversal (e.g. running from a nested subfolder)
+	// 3. Parent traversal (e.g. running from a nested subfolder)
 	if cwd != "" && err == nil {
 		curr := cwd
 		for {
@@ -69,12 +72,21 @@ func ResolveWorkspacesDir(overridePath string) string {
 		}
 	}
 
+	if baseDir != "" {
+		return filepath.Join(baseDir, wsDir)
+	}
 	return wsDir
 }
 
 // ScanWorkspaces scans target workspaces directory for all agentic_metrics.json ledgers.
 func ScanWorkspaces(basePath string) domain.ScanReport {
 	targetDir := ResolveWorkspacesDir(basePath)
+	if targetDir == "" {
+		return domain.ScanReport{
+			Ledgers: []domain.AgenticMetricsLedger{},
+			Errors:  []string{"Workspaces directory is unconfigured or not found"},
+		}
+	}
 
 	fi, err := os.Stat(targetDir)
 	if err != nil || !fi.IsDir() {

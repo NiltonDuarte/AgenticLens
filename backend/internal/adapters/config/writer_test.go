@@ -33,7 +33,6 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"      ticket_type: docs",
 		"  case_insensitive: true",
 		"workspaces:",
-		"  dir: workspaces",
 		"  src_folders:",
 		"    - web",
 		"    - backend",

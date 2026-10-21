@@ -87,9 +87,6 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 
 	// Workspaces Settings
 	wsDir := strings.TrimSpace(cfg.Workspaces.Dir)
-	if wsDir == "" {
-		wsDir = "workspaces"
-	}
 	var cleanSrcFolders []string
 	for _, sf := range cfg.Workspaces.SrcFolders {
 		clean := strings.TrimSpace(sf)
@@ -104,7 +101,9 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("# Workspace storage and source folder definitions.\n")
 	b.WriteString("workspaces:\n")
 	b.WriteString("  # Directory where ticket artifacts and session telemetry ledgers are stored.\n")
-	b.WriteString(fmt.Sprintf("  dir: %s\n", wsDir))
+	if wsDir != "" {
+		b.WriteString(fmt.Sprintf("  dir: %s\n", wsDir))
+	}
 	b.WriteString("  # Monitored source code folders for project telemetry and change tracking.\n")
 	b.WriteString("  src_folders:")
 	formatStringList(&b, cleanSrcFolders, "    ")
