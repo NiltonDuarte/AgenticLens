@@ -371,3 +371,8 @@ export type {
   LiveSessionNode,
   LiveSessionTree,
 } from './live';
+
+export type {
+  AnomalyRule,
+  ToolFailureAnomalyRule,
+} from './anomalies';

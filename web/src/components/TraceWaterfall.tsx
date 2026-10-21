@@ -12,10 +12,18 @@ import {
   isToolFailureAnomalyRule,
   matchesAnomaly,
   findMatchingAnomaly,
+  type AnomalyRule,
+  type ToolFailureAnomalyRule,
 } from '../domain/anomalies';
 
 // Re-export domain anomaly matching utilities for backwards compatibility
-export { isToolFailureAnomalyRule, matchesAnomaly, findMatchingAnomaly };
+export {
+  isToolFailureAnomalyRule,
+  matchesAnomaly,
+  findMatchingAnomaly,
+  type AnomalyRule,
+  type ToolFailureAnomalyRule,
+};
 
 export interface TraceWaterfallProps {
   readonly events: readonly EventFact[];

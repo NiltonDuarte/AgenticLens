@@ -1336,4 +1336,39 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 			t.Fatalf("expected 1 deduplicated alert, got %d", len(alerts))
 		}
 	})
+
+	t.Run("LiveAnomalyRuleName typed constants and struct field verification", func(t *testing.T) {
+		canonicalRules := []domain.LiveAnomalyRuleName{
+			domain.RuleConsecutiveToolErrors,
+			domain.RuleContextCeilingApproach,
+			domain.RuleTokenVelocityRunaway,
+			domain.RuleToolThrashing,
+		}
+
+		expectedValues := []string{
+			"ConsecutiveToolErrors",
+			"ContextCeilingApproach",
+			"TokenVelocityRunaway",
+			"ToolThrashing",
+		}
+
+		for i, rule := range canonicalRules {
+			if string(rule) != expectedValues[i] {
+				t.Errorf("expected rule value %q, got %q", expectedValues[i], string(rule))
+			}
+		}
+
+		alert := domain.LiveAnomalyAlert{
+			SessionID:    "s1",
+			RuleName:     domain.RuleConsecutiveToolErrors,
+			Severity:     domain.LiveSeverityHigh,
+			Message:      "test",
+			TriggerEvent: "p1",
+		}
+
+		var typedRule domain.LiveAnomalyRuleName = alert.RuleName
+		if typedRule != domain.RuleConsecutiveToolErrors {
+			t.Errorf("expected alert.RuleName to have type LiveAnomalyRuleName with value %s", domain.RuleConsecutiveToolErrors)
+		}
+	})
 }

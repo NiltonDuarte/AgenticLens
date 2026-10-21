@@ -44,18 +44,18 @@ describe('Live Domain Models and Serialization Contracts', () => {
       }
     });
 
-    it('supports custom rule identifier strings', () => {
+    it('deserializes alert with canonical live anomaly rule', () => {
       const payload = JSON.stringify({
-        session_id: 'ses_custom_rule',
-        rule_name: 'CustomHeuristicRule',
+        session_id: 'ses_canonical_rule',
+        rule_name: 'ConsecutiveToolErrors',
         severity: 'WARNING',
-        message: 'Custom rule alert triggered',
+        message: 'Consecutive tool errors alert triggered',
         trigger_event: 'custom_hook_01',
         timestamp: '2026-10-20T12:05:00Z',
       });
 
       const alert: LiveAnomalyAlert = JSON.parse(payload) as LiveAnomalyAlert;
-      expect(alert.rule_name).toBe('CustomHeuristicRule');
+      expect(alert.rule_name).toBe('ConsecutiveToolErrors');
       expect(alert.severity).toBe('WARNING');
     });
 

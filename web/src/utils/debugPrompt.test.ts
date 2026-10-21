@@ -7,6 +7,9 @@ import {
   stripInternalIdentifiers,
   translateRuleToPlainEnglish,
   sanitizeTextForPrompt,
+  type ToolExecutionPromptParams,
+  type ExecutionIssuePromptParams,
+  type MessageTurnPromptParams,
 } from './debugPrompt';
 
 describe('debugPrompt Utility Module', () => {
@@ -137,6 +140,7 @@ describe('debugPrompt Utility Module', () => {
       expect(prompt).toContain(
         'During turn 4 of session `ses-12345` (message `msg-67890`, part `part-abcde`), the agent executed `bash` and it failed with 4 consecutive failures on this tool.'
       );
+      expect(prompt).toContain('This data was extracted from the OpenCode database.');
       expect(prompt).toContain('### Input');
       expect(prompt).toContain('npm test');
       expect(prompt).toContain('### Output');
@@ -258,6 +262,7 @@ describe('debugPrompt Utility Module', () => {
       expect(prompt).toContain(
         'During turn 5 of session `ses-alpha` (agent `coder` running `gemini-3.8-flash`), command failed repeatedly due to exit status 2. The last failure was triggered by part `part-err-99`.'
       );
+      expect(prompt).toContain('This data was extracted from the OpenCode database.');
       expect(prompt).toContain('### Error Details');
       expect(prompt).toContain('gcc: error: no such file or directory');
       expect(prompt).toContain('### What to check');
@@ -322,6 +327,7 @@ describe('debugPrompt Utility Module', () => {
       expect(prompt).toContain(
         'In turn 3 of session `ses-100` (message `msg-200`), the agent deliberated and executed tools.'
       );
+      expect(prompt).toContain('This data was extracted from the OpenCode database.');
       expect(prompt).toContain('### Model Deliberation');
       expect(prompt).toContain('> I need to check the files first.');
       expect(prompt).toContain('> Then edit them.');
@@ -388,6 +394,7 @@ describe('debugPrompt Utility Module', () => {
       expect(prompt).toContain(
         'Session `ses-sub-1` is a `coder` subagent running `gemini-3.8-flash` (parent session: `ses-root-0`). The session is currently **running** after 8 turns and 15 tool executions (3 failed).'
       );
+      expect(prompt).toContain('This data was extracted from the OpenCode database.');
       expect(prompt).toContain('### Flagged Issues');
       expect(prompt).toContain('- Consecutive tool failures on `bash`');
       expect(prompt).toContain('- Context window saturation approach');
@@ -753,6 +760,276 @@ describe('debugPrompt Utility Module', () => {
         });
 
         expect(prompt).toContain('No flagged issues or anomalies recorded for this session.');
+      });
+    });
+
+    describe('OpenCode database provenance attribution', () => {
+      const EXPECTED_PROVENANCE = 'This data was extracted from the OpenCode database.';
+
+      describe('Layer 1: generateToolExecutionPrompt parameter combinations', () => {
+        it('includes provenance attribution with full parameters (turn, messageId, partId, consecutive errors)', () => {
+          const prompt = generateToolExecutionPrompt({
+            toolName: 'bash',
+            sessionId: 'ses-prov-full',
+            turn: 5,
+            messageId: 'msg-prov-5',
+            partId: 'part-prov-5',
+            status: 'error',
+            consecutiveErrors: 4,
+            input: 'cat /tmp/test',
+            output: 'No such file',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          const lines = prompt.split('\n');
+          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
+          expect(lines[1]).toContain('During turn 5 of session `ses-prov-full`');
+        });
+
+        it('includes provenance attribution without turn (in session prefix)', () => {
+          const prompt = generateToolExecutionPrompt({
+            toolName: 'read',
+            sessionId: 'ses-no-turn',
+            status: 'completed',
+            messageId: 'msg-1',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          const lines = prompt.split('\n');
+          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
+          expect(lines[1]).toContain('In session `ses-no-turn`');
+        });
+
+        it('includes provenance attribution without sessionId (falls back to unknown-session)', () => {
+          const prompt = generateToolExecutionPrompt({
+            toolName: 'edit',
+            sessionId: '',
+            status: 'completed',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In session `unknown-session`');
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+
+          // Runtime boundary check: completely omitted sessionId
+          const runtimePrompt = generateToolExecutionPrompt({
+            toolName: 'edit',
+            status: 'completed',
+          } as unknown as ToolExecutionPromptParams);
+          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
+          expect(runtimePrompt).toContain('In session `unknown-session`');
+        });
+
+        it('includes provenance attribution with empty payloads and error status', () => {
+          const prompt = generateToolExecutionPrompt({
+            toolName: '',
+            sessionId: '',
+            status: 'error',
+            input: '',
+            output: '',
+            errorMessage: '',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In session `unknown-session`, the agent executed `unknown_tool` and it failed with an execution error. This data was extracted from the OpenCode database.');
+        });
+      });
+
+      describe('Layer 2: generateExecutionIssuePrompt parameter combinations', () => {
+        it('includes provenance attribution with full parameters (turn, role, model, partId)', () => {
+          const prompt = generateExecutionIssuePrompt({
+            summary: 'Thrashing detected',
+            sessionId: 'ses-issue-full',
+            turn: 3,
+            role: 'coder',
+            model: 'gemini-3.8-flash',
+            partId: 'part-issue-3',
+            description: 'Repeated failing edits.',
+            errorDetails: 'conflict on line 42',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          const lines = prompt.split('\n');
+          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
+          expect(lines[1]).toContain('During turn 3 of session `ses-issue-full` (agent `coder` running `gemini-3.8-flash`), repeated failing edits. The last failure was triggered by part `part-issue-3`. This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution without turn', () => {
+          const prompt = generateExecutionIssuePrompt({
+            summary: 'Session anomaly',
+            sessionId: 'ses-issue-noturn',
+            description: 'High failure rate.',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In session `ses-issue-noturn`, high failure rate. This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution without sessionId and with role only', () => {
+          const prompt = generateExecutionIssuePrompt({
+            summary: 'Role issue',
+            sessionId: '',
+            role: 'planner',
+            description: 'Contract mismatch.',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In session `unknown-session` (agent `planner`), contract mismatch. This data was extracted from the OpenCode database.');
+
+          // Runtime boundary check: omitted sessionId
+          const runtimePrompt = generateExecutionIssuePrompt({
+            summary: 'Role issue',
+            role: 'planner',
+            description: 'Contract mismatch.',
+          } as unknown as ExecutionIssuePromptParams);
+          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
+          expect(runtimePrompt).toContain('In session `unknown-session` (agent `planner`), contract mismatch. This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution with model only and without partId', () => {
+          const prompt = generateExecutionIssuePrompt({
+            summary: 'Model issue',
+            sessionId: 'ses-model-only',
+            model: 'gemini-3.8-flash',
+            description: 'Token runaway.',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In session `ses-model-only` (running `gemini-3.8-flash`), token runaway. This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution with minimal empty payload', () => {
+          const prompt = generateExecutionIssuePrompt({
+            summary: '',
+            sessionId: '',
+            description: '',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In session `unknown-session`, an execution issue occurred. This data was extracted from the OpenCode database.');
+
+          // Runtime boundary check: completely omitted properties
+          const runtimePrompt = generateExecutionIssuePrompt({} as unknown as ExecutionIssuePromptParams);
+          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
+          expect(runtimePrompt).toContain('In session `unknown-session`, an execution issue occurred. This data was extracted from the OpenCode database.');
+        });
+      });
+
+      describe('Layer 3: generateMessageTurnPrompt parameter combinations', () => {
+        it('includes provenance attribution with full parameters (messageId, role, model, deliberations, tools)', () => {
+          const prompt = generateMessageTurnPrompt({
+            turn: 7,
+            sessionId: 'ses-turn-full',
+            messageId: 'msg-turn-7',
+            role: 'tester',
+            model: 'gemini-3.8-flash',
+            reasoningContent: 'Running adversarial tests.',
+            messageContent: 'Executing vitest.',
+            toolsExecuted: [{ toolName: 'bash', status: 'completed', partId: 'part-b1' }],
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          const lines = prompt.split('\n');
+          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
+          expect(lines[1]).toContain('In turn 7 of session `ses-turn-full` (message `msg-turn-7`), the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution without messageId', () => {
+          const prompt = generateMessageTurnPrompt({
+            turn: 2,
+            sessionId: 'ses-no-msg',
+            role: 'coder',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In turn 2 of session `ses-no-msg`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution without sessionId and without model', () => {
+          const prompt = generateMessageTurnPrompt({
+            turn: 1,
+            sessionId: '',
+            role: 'orchestrator',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In turn 1 of session `unknown-session`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
+
+          // Runtime boundary check: omitted sessionId
+          const runtimePrompt = generateMessageTurnPrompt({
+            turn: 1,
+            role: 'orchestrator',
+          } as unknown as MessageTurnPromptParams);
+          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
+          expect(runtimePrompt).toContain('In turn 1 of session `unknown-session`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution with minimal empty turn payload', () => {
+          const prompt = generateMessageTurnPrompt({
+            turn: 0,
+            sessionId: '',
+            role: '',
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('In turn 0 of session `unknown-session`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
+
+          // Runtime boundary check: turn only
+          const runtimePrompt = generateMessageTurnPrompt({
+            turn: 0,
+          } as unknown as MessageTurnPromptParams);
+          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
+          expect(runtimePrompt).toContain('In turn 0 of session `unknown-session`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
+        });
+      });
+
+      describe('Layer 4: generateSessionOverviewPrompt parameter combinations', () => {
+        it('includes provenance attribution with parent session ID', () => {
+          const prompt = generateSessionOverviewPrompt({
+            sessionId: 'ses-child-1',
+            parentId: 'ses-parent-0',
+            role: 'coder',
+            model: 'gemini-3.8-flash',
+            status: 'running',
+            turnCount: 4,
+            totalToolCalls: 10,
+            failedToolCalls: 2,
+            flaggedIssues: ['Tool retry streak'],
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          const lines = prompt.split('\n');
+          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
+          expect(lines[1]).toContain('Session `ses-child-1` is a `coder` subagent running `gemini-3.8-flash` (parent session: `ses-parent-0`). The session is currently **running** after 4 turns and 10 tool executions (2 failed). This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution without parent session ID', () => {
+          const prompt = generateSessionOverviewPrompt({
+            sessionId: 'ses-root-standalone',
+            role: 'orchestrator',
+            model: 'gemini-3.8-flash',
+            status: 'completed',
+            turnCount: 12,
+            totalToolCalls: 25,
+            failedToolCalls: 1,
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('Session `ses-root-standalone` is a `orchestrator` subagent running `gemini-3.8-flash`. The session is currently **completed** after 12 turns and 25 tool executions (1 failed). This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution with zero counts (0 turns, 0 tools, 0 failures)', () => {
+          const prompt = generateSessionOverviewPrompt({
+            sessionId: 'ses-zero-counts',
+            role: 'planner',
+            model: 'gemini-3.8-flash',
+            status: 'initialized',
+            turnCount: 0,
+            totalToolCalls: 0,
+            failedToolCalls: 0,
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('Session `ses-zero-counts` is a `planner` subagent running `gemini-3.8-flash`. The session is currently **initialized** after 0 turns and 0 tool executions (0 failed). This data was extracted from the OpenCode database.');
+        });
+
+        it('includes provenance attribution with empty/omitted optional parameters', () => {
+          const prompt = generateSessionOverviewPrompt({
+            sessionId: '',
+            role: '',
+            model: '',
+            status: '',
+            turnCount: 0,
+            totalToolCalls: 0,
+            failedToolCalls: 0,
+          });
+          expect(prompt).toContain(EXPECTED_PROVENANCE);
+          expect(prompt).toContain('Session `unknown-session` is a `agent` subagent running `unknown-model`. The session is currently **unknown** after 0 turns and 0 tool executions (0 failed). This data was extracted from the OpenCode database.');
+        });
       });
     });
   });

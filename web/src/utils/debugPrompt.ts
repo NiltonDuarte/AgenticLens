@@ -5,6 +5,8 @@
  * git branches, internal severity tiers, or raw rule constants.
  */
 
+import type { AnomalyRule } from '../domain/anomalies';
+
 export interface ToolExecutionPromptParams {
   readonly toolName: string;
   readonly turn?: number | undefined;
@@ -110,7 +112,7 @@ function cleanSeverityTiers(text: string): string {
 /**
  * Translates known internal anomaly rule identifiers into plain English descriptions.
  */
-export function translateRuleToPlainEnglish(ruleId: string, toolName?: string): string {
+export function translateRuleToPlainEnglish(ruleId: AnomalyRule | string, toolName?: string): string {
   const cleanTool = toolName ? toolName.trim() : '';
 
   switch (ruleId) {
@@ -233,7 +235,7 @@ export function generateToolExecutionPrompt(params: ToolExecutionPromptParams): 
     ? `During turn ${params.turn} of session \`${sessionId}\``
     : `In session \`${sessionId}\``;
 
-  const provenanceSentence = `${turnPrefix}${provenanceSuffix}, the agent executed \`${cleanTool}\` and it ${outcome}.`;
+  const provenanceSentence = `${turnPrefix}${provenanceSuffix}, the agent executed \`${cleanTool}\` and it ${outcome}. This data was extracted from the OpenCode database.`;
 
   const rawInput = params.input ? params.input.trim() : '';
   const sanitizedInput = rawInput.length > 0 ? sanitizeTextForPrompt(rawInput) : '';
@@ -314,7 +316,7 @@ export function generateExecutionIssuePrompt(params: ExecutionIssuePromptParams)
     ? ` The last failure was triggered by part \`${params.partId.trim()}\`.`
     : '';
 
-  const provenanceSentence = `${turnPrefix}${agentDetails}, ${cleanDesc}${partTrigger}`;
+  const provenanceSentence = `${turnPrefix}${agentDetails}, ${cleanDesc}${partTrigger} This data was extracted from the OpenCode database.`;
 
   const rawError = params.errorDetails ? params.errorDetails.trim() : '';
   const sanitizedError = rawError.length > 0 ? sanitizeTextForPrompt(rawError) : '';
@@ -351,7 +353,7 @@ export function generateMessageTurnPrompt(params: MessageTurnPromptParams): stri
   const msgProv = params.messageId && params.messageId.trim().length > 0
     ? ` (message \`${params.messageId.trim()}\`)`
     : '';
-  const provenanceSentence = `In turn ${params.turn} of session \`${sessionId}\`${msgProv}, the agent deliberated and executed tools.`;
+  const provenanceSentence = `In turn ${params.turn} of session \`${sessionId}\`${msgProv}, the agent deliberated and executed tools. This data was extracted from the OpenCode database.`;
 
   const rawReasoning = params.reasoningContent ? params.reasoningContent.trim() : '';
   const sanitizedReasoning = rawReasoning.length > 0 ? sanitizeTextForPrompt(rawReasoning) : '';
@@ -415,7 +417,7 @@ export function generateSessionOverviewPrompt(params: SessionOverviewPromptParam
     ? ` (parent session: \`${params.parentId.trim()}\`)`
     : '';
 
-  const provenanceSentence = `Session \`${sessionId}\` is a \`${role}\` subagent running \`${model}\`${parentNote}. The session is currently **${status}** after ${params.turnCount} turns and ${params.totalToolCalls} tool executions (${params.failedToolCalls} failed).`;
+  const provenanceSentence = `Session \`${sessionId}\` is a \`${role}\` subagent running \`${model}\`${parentNote}. The session is currently **${status}** after ${params.turnCount} turns and ${params.totalToolCalls} tool executions (${params.failedToolCalls} failed). This data was extracted from the OpenCode database.`;
 
   let issuesBody = 'No flagged issues or anomalies recorded for this session.';
   if (params.flaggedIssues && params.flaggedIssues.length > 0) {

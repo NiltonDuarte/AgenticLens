@@ -49,6 +49,16 @@
   - `AnomalyDrawer.tsx`: Header contains "Copy Prompt" button wired to copy Layer 2 prompts.
   - `TraceWaterfall.tsx`: Timeline row button copies Layer 1 for `tool_call` events and Layer 3 for message turns.
 
+### Iteration 04
+- **Strong Anomaly Rule Typing**:
+  - Defined named type `LiveAnomalyRuleName string` in `backend/internal/domain/live_anomaly.go` and typed canonical rule constants and `LiveAnomalyAlert.RuleName`.
+  - Exported `type AnomalyRule = AnomalyRuleID | LiveAnomalyRule` and `type ToolFailureAnomalyRule` in `web/src/domain/anomalies.ts`.
+  - Refactored `isToolFailureAnomalyRule(ruleId: AnomalyRule | string): ruleId is ToolFailureAnomalyRule` with strict equality matching against the 4 canonical tool failure rules, eliminating heuristic `.startsWith('TOOL_')` and `.includes('TOOL_FAILURE')` checks.
+  - Typed `LiveAnomalyAlert.rule_name` strictly as `LiveAnomalyRule`.
+  - Re-exported `AnomalyRule` and `ToolFailureAnomalyRule` from `web/src/domain/types.ts` and `web/src/components/TraceWaterfall.tsx`.
+- **OpenCode Database Telemetry Provenance Attribution**:
+  - Updated all 4 debug prompt generators in `web/src/utils/debugPrompt.ts` (`generateToolExecutionPrompt`, `generateExecutionIssuePrompt`, `generateMessageTurnPrompt`, `generateSessionOverviewPrompt`) to explicitly declare: `This data was extracted from the OpenCode database.` in their narrative provenance paragraph.
+
 ---
 
 ## Verification & Test Results

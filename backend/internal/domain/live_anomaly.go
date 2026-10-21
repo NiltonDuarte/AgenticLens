@@ -7,12 +7,15 @@ import (
 	"strings"
 )
 
+// LiveAnomalyRuleName defines the unique identifier for a live anomaly rule.
+type LiveAnomalyRuleName string
+
 // Canonical live anomaly rule names.
 const (
-	RuleConsecutiveToolErrors  = "ConsecutiveToolErrors"
-	RuleContextCeilingApproach = "ContextCeilingApproach"
-	RuleTokenVelocityRunaway   = "TokenVelocityRunaway"
-	RuleToolThrashing          = "ToolThrashing"
+	RuleConsecutiveToolErrors  LiveAnomalyRuleName = "ConsecutiveToolErrors"
+	RuleContextCeilingApproach LiveAnomalyRuleName = "ContextCeilingApproach"
+	RuleTokenVelocityRunaway   LiveAnomalyRuleName = "TokenVelocityRunaway"
+	RuleToolThrashing          LiveAnomalyRuleName = "ToolThrashing"
 )
 
 // Live anomaly severity tiers.
@@ -38,13 +41,13 @@ const (
 
 // LiveAnomalyAlert represents an active health degradation or operational failure alert in a live session.
 type LiveAnomalyAlert struct {
-	SessionID    string `json:"session_id"`
-	RuleName     string `json:"rule_name"`
-	Severity     string `json:"severity"`
-	Message      string `json:"message"`
-	Timestamp    string `json:"timestamp"`
-	TriggerEvent string `json:"trigger_event"`
-	Count        *int64 `json:"count,omitempty"`
+	SessionID    string              `json:"session_id"`
+	RuleName     LiveAnomalyRuleName `json:"rule_name"`
+	Severity     string              `json:"severity"`
+	Message      string              `json:"message"`
+	Timestamp    string              `json:"timestamp"`
+	TriggerEvent string              `json:"trigger_event"`
+	Count        *int64              `json:"count,omitempty"`
 }
 
 type toolCallRecord struct {

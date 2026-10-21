@@ -1,18 +1,32 @@
-import type { EventFact, Anomaly } from '../types/telemetry';
-import type { LivePartFact, LiveAnomalyAlert } from './live';
+import type { EventFact, Anomaly, AnomalyRuleID } from '../types/telemetry';
+import type { LivePartFact, LiveAnomalyAlert, LiveAnomalyRule } from './live';
+
+/**
+ * Union of domain and live anomaly rule identifiers.
+ */
+export type AnomalyRule = AnomalyRuleID | LiveAnomalyRule;
+
+/**
+ * Anomaly rules specifically attributed to tool call failures and thrashing.
+ */
+export type ToolFailureAnomalyRule =
+  | 'TOOL_RETRY_STREAK'
+  | 'TOOL_HIGH_FAILURE_RATE'
+  | 'ConsecutiveToolErrors'
+  | 'ToolThrashing';
 
 /**
  * Checks whether an anomaly rule identifier matches tool failure anomaly patterns
  * (retries, high failure rates, consecutive errors, thrashing).
  */
-export function isToolFailureAnomalyRule(ruleId: string): boolean {
+export function isToolFailureAnomalyRule(
+  ruleId: AnomalyRule | string
+): ruleId is ToolFailureAnomalyRule {
   return (
     ruleId === 'TOOL_RETRY_STREAK' ||
     ruleId === 'TOOL_HIGH_FAILURE_RATE' ||
     ruleId === 'ConsecutiveToolErrors' ||
-    ruleId === 'ToolThrashing' ||
-    ruleId.startsWith('TOOL_') ||
-    ruleId.includes('TOOL_FAILURE')
+    ruleId === 'ToolThrashing'
   );
 }
 

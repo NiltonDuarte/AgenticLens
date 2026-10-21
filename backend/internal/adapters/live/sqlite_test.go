@@ -1224,7 +1224,7 @@ func TestLiveService_TokenExtractionAndAnomalyDetection(t *testing.T) {
 	}
 
 	// Verify that ConsecutiveToolErrors, ContextCeilingApproach, TokenVelocityRunaway, and ToolThrashing were evaluated
-	ruleNames := make(map[string]bool)
+	ruleNames := make(map[domain.LiveAnomalyRuleName]bool)
 	for _, a := range trace.Anomalies {
 		ruleNames[a.RuleName] = true
 		if a.RuleName == domain.RuleConsecutiveToolErrors {

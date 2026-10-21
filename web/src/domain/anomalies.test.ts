@@ -7,26 +7,134 @@ import {
   findMatchingAnomaly,
   extractStreakCount,
   findMatchingLiveAlert,
+  type AnomalyRule,
+  type ToolFailureAnomalyRule,
 } from './anomalies';
 
 describe('Domain Anomalies Logic', () => {
   describe('isToolFailureAnomalyRule', () => {
-    it('returns true for known tool failure anomaly rule IDs', () => {
+    it('returns true for all four tool failure anomaly rule IDs', () => {
       expect(isToolFailureAnomalyRule('TOOL_RETRY_STREAK')).toBe(true);
       expect(isToolFailureAnomalyRule('TOOL_HIGH_FAILURE_RATE')).toBe(true);
       expect(isToolFailureAnomalyRule('ConsecutiveToolErrors')).toBe(true);
       expect(isToolFailureAnomalyRule('ToolThrashing')).toBe(true);
-      expect(isToolFailureAnomalyRule('TOOL_TIMEOUT')).toBe(true);
-      expect(isToolFailureAnomalyRule('CUSTOM_TOOL_FAILURE_RULE')).toBe(true);
     });
 
     it('returns false for non-tool anomaly rule IDs', () => {
-      expect(isToolFailureAnomalyRule('')).toBe(false);
       expect(isToolFailureAnomalyRule('CONTEXT_SATURATION_SPIKE')).toBe(false);
       expect(isToolFailureAnomalyRule('SUBAGENT_REWORK_LOOP')).toBe(false);
       expect(isToolFailureAnomalyRule('ContextCeilingApproach')).toBe(false);
       expect(isToolFailureAnomalyRule('TokenVelocityRunaway')).toBe(false);
+    });
+
+    it('returns false for adversarial inputs including empty strings, random strings, prefix spoofing, substrings, and lowercased names', () => {
+      // Empty and whitespace strings
+      expect(isToolFailureAnomalyRule('')).toBe(false);
+      expect(isToolFailureAnomalyRule('   ')).toBe(false);
+      expect(isToolFailureAnomalyRule('\t\n')).toBe(false);
+
+      // Random strings and identifiers
       expect(isToolFailureAnomalyRule('UNKNOWN_RULE')).toBe(false);
+      expect(isToolFailureAnomalyRule('foobar')).toBe(false);
+      expect(isToolFailureAnomalyRule('12345')).toBe(false);
+      expect(isToolFailureAnomalyRule('!@#$%^&*()')).toBe(false);
+      expect(isToolFailureAnomalyRule('true')).toBe(false);
+      expect(isToolFailureAnomalyRule('null')).toBe(false);
+      expect(isToolFailureAnomalyRule('undefined')).toBe(false);
+
+      // Prefix spoofing (previously matched by startsWith('TOOL_'))
+      expect(isToolFailureAnomalyRule('TOOL_')).toBe(false);
+      expect(isToolFailureAnomalyRule('TOOL_SUCCESS')).toBe(false);
+      expect(isToolFailureAnomalyRule('TOOL_INFO')).toBe(false);
+      expect(isToolFailureAnomalyRule('TOOL_FAILURE_FOO')).toBe(false);
+      expect(isToolFailureAnomalyRule('TOOL_ANYTHING')).toBe(false);
+      expect(isToolFailureAnomalyRule('TOOL_TIMEOUT')).toBe(false);
+      expect(isToolFailureAnomalyRule('TOOL_RETRY')).toBe(false);
+      expect(isToolFailureAnomalyRule('TOOL_HIGH_FAILURE')).toBe(false);
+      expect(isToolFailureAnomalyRule('CUSTOM_TOOL_FAILURE_RULE')).toBe(false);
+      expect(isToolFailureAnomalyRule('ConsecutiveTool')).toBe(false);
+      expect(isToolFailureAnomalyRule('Tool')).toBe(false);
+
+      // Substrings of valid rules
+      expect(isToolFailureAnomalyRule('RETRY_STREAK')).toBe(false);
+      expect(isToolFailureAnomalyRule('HIGH_FAILURE_RATE')).toBe(false);
+      expect(isToolFailureAnomalyRule('Errors')).toBe(false);
+      expect(isToolFailureAnomalyRule('Thrashing')).toBe(false);
+
+      // Lowercased or mixed-case rule names
+      expect(isToolFailureAnomalyRule('tool_retry_streak')).toBe(false);
+      expect(isToolFailureAnomalyRule('tool_high_failure_rate')).toBe(false);
+      expect(isToolFailureAnomalyRule('consecutivetoolerrors')).toBe(false);
+      expect(isToolFailureAnomalyRule('toolthrashing')).toBe(false);
+      expect(isToolFailureAnomalyRule('Tool_Retry_Streak')).toBe(false);
+
+      // Suffix spoofing and extensions
+      expect(isToolFailureAnomalyRule('TOOL_RETRY_STREAK_EXTRA')).toBe(false);
+      expect(isToolFailureAnomalyRule('ToolThrashing2')).toBe(false);
+      expect(isToolFailureAnomalyRule(' TOOL_RETRY_STREAK ')).toBe(false);
+      expect(isToolFailureAnomalyRule('ConsecutiveToolErrors\n')).toBe(false);
+    });
+
+    it('narrows candidate to ToolFailureAnomalyRule via type guard across all valid members', () => {
+      const canonicalFailures: readonly string[] = [
+        'TOOL_RETRY_STREAK',
+        'TOOL_HIGH_FAILURE_RATE',
+        'ConsecutiveToolErrors',
+        'ToolThrashing',
+      ];
+
+      for (const rule of canonicalFailures) {
+        const candidate: AnomalyRule | string = rule;
+        if (isToolFailureAnomalyRule(candidate)) {
+          const narrowed: ToolFailureAnomalyRule = candidate;
+          expect(narrowed).toBe(rule);
+        } else {
+          throw new Error(`Expected candidate ${rule} to be narrowed to ToolFailureAnomalyRule`);
+        }
+      }
+
+      const nonToolCandidate: AnomalyRule | string = 'CONTEXT_SATURATION_SPIKE';
+      if (isToolFailureAnomalyRule(nonToolCandidate)) {
+        throw new Error('Non-tool candidate should not pass type guard');
+      } else {
+        expect(nonToolCandidate).toBe('CONTEXT_SATURATION_SPIKE');
+      }
+    });
+
+    it('strictly enforces LiveAnomalyAlert.rule_name type safety', () => {
+      const validAlert: LiveAnomalyAlert = {
+        session_id: 'ses-1',
+        rule_name: 'ConsecutiveToolErrors',
+        severity: 'WARNING',
+        message: 'consecutive errors',
+        trigger_event: 'p1',
+        timestamp: '2026-10-21T10:00:00Z',
+      };
+      expect(validAlert.rule_name).toBe('ConsecutiveToolErrors');
+
+      // Compile-time type check: arbitrary string rejected
+      const invalidAlertString: LiveAnomalyAlert = {
+        session_id: 'ses-1',
+        // @ts-expect-error - rule_name strictly accepts LiveAnomalyRule, not arbitrary string
+        rule_name: 'ArbitraryRuleString',
+        severity: 'WARNING',
+        message: 'arbitrary',
+        trigger_event: 'p1',
+        timestamp: '2026-10-21T10:00:00Z',
+      };
+      expect(invalidAlertString.session_id).toBe('ses-1');
+
+      // Compile-time type check: domain AnomalyRuleID rejected in LiveAnomalyAlert
+      const invalidAlertDomainRule: LiveAnomalyAlert = {
+        session_id: 'ses-1',
+        // @ts-expect-error - rule_name strictly accepts LiveAnomalyRule, not AnomalyRuleID
+        rule_name: 'TOOL_RETRY_STREAK',
+        severity: 'WARNING',
+        message: 'domain rule in live alert',
+        trigger_event: 'p1',
+        timestamp: '2026-10-21T10:00:00Z',
+      };
+      expect(invalidAlertDomainRule.session_id).toBe('ses-1');
     });
   });
 

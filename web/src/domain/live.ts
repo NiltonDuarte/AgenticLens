@@ -8,7 +8,7 @@ export type LiveAnomalyRule =
 
 export interface LiveAnomalyAlert {
   readonly session_id: string;
-  readonly rule_name: LiveAnomalyRule | string;
+  readonly rule_name: LiveAnomalyRule;
   readonly severity: LiveAnomalySeverity;
   readonly message: string;
   readonly trigger_event: string;

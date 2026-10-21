@@ -33,11 +33,18 @@ Extends and unifies anomaly detection, metric consistency, and debug actions acr
    - Wired `AnomalyDrawer.tsx` (header copy button -> Layer 2 prompt with trigger event details while retaining discrete ID tokens).
    - Wired `TraceWaterfall.tsx` (timeline row button -> Layer 1 for tool calls, Layer 3 for message turns).
 
+5. **Strong Anomaly Rule Typing and OpenCode DB Provenance**:
+   - Introduced named type `LiveAnomalyRuleName` in Go domain and typed canonical constants and `LiveAnomalyAlert.RuleName`.
+   - Exported `AnomalyRule = AnomalyRuleID | LiveAnomalyRule` and `ToolFailureAnomalyRule` in `web/src/domain/anomalies.ts`.
+   - Replaced content heuristic checks (`startsWith('TOOL_')`, `includes('TOOL_FAILURE')`) in `isToolFailureAnomalyRule` with strict equality matching against canonical tool failure rules.
+   - Typed `LiveAnomalyAlert.rule_name` strictly as `LiveAnomalyRule`.
+   - Added explicit OpenCode database provenance statement (`This data was extracted from the OpenCode database.`) across all 4 prompt generator layers.
+
 ## Testing & Verification
 - `go test -race -count=1 ./...` (All Go backend tests passed cleanly)
 - `go vet ./...` (Zero warnings)
 - `npm run typecheck` (Zero TypeScript errors)
 - `npm run lint` (Zero ESLint warnings/errors)
-- `npm test` (All 701 frontend tests passed across 30 test suites)
+- `npm test` (All 725 frontend tests passed across 30 test suites)
 - `make build` (Production binary build and asset embedding clean)
 - Zero emojis across all modified code, tests, and markdown artifacts.
