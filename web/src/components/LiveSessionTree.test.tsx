@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { LiveSessionTree } from './LiveSessionTree';
 import type { LiveSessionTree as LiveSessionTreeType } from '../domain/live';
-import { mockLiveSessionTree } from '../api/mockData';
+import { mockLiveSessionTree } from '../test/fixtures/mockData';
 
 describe('LiveSessionTree Component', () => {
   it('renders informative empty state when root_sessions is empty', () => {

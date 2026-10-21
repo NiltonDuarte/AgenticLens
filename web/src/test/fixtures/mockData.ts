@@ -7,14 +7,14 @@ import type {
   ProjectConfigResponse,
   TicketComparisonRow,
   WorkspaceDetail,
-} from '../domain/types';
-import { CANONICAL_ROLE_ORDER } from '../domain/types';
+} from '../../domain/types';
+import { CANONICAL_ROLE_ORDER } from '../../domain/types';
 import type {
   LiveAnomalyAlert,
   LiveMessageFact,
   LiveSessionTree,
   LiveTraceView,
-} from '../domain/live';
+} from '../../domain/live';
 
 export const mockBuildInfo: BuildInfo = {
   version: 'v0.1.0-dev',

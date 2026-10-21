@@ -1,0 +1,283 @@
+{
+  "schema_version": 3,
+  "migration": {
+    "schema_version": 3,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v3_sanitized"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
+    "last_migrated_by": "universal-migration-engine",
+    "notes": "Sanitized event telemetry migration from v2 to v3"
+  },
+  "ticket_id": "AL-2",
+  "ticket_title": "Go HTTP REST API and embedded filesystem server",
+  "ticket_type": "feature",
+  "started_at": "2026-10-16T12:00:00Z",
+  "completed_at": "2026-10-16T16:00:00Z",
+  "updated_at": "2026-10-16T16:15:00Z",
+  "code": {
+    "lines_added": 890,
+    "lines_deleted": 110,
+    "test_lines_added": 490,
+    "test_lines_deleted": 20,
+    "prod_lines_added": 400,
+    "prod_lines_deleted": 90,
+    "files_changed": 10,
+    "sdlc_iterations": 2
+  },
+  "invocations": [
+    {
+      "id": "inv-al2-01",
+      "parent_id": null,
+      "role": "orchestrator",
+      "model": "gpt-4o",
+      "user": "developer",
+      "started_at": "2026-10-16T12:00:00Z",
+      "completed_at": "2026-10-16T12:30:00Z",
+      "active_duration_seconds": 520,
+      "turns": 5,
+      "tokens": {
+        "input": 210000,
+        "output": 22000,
+        "cache_read": 820000,
+        "reasoning": 0,
+        "peak_context": 128000
+      },
+      "cost_usd": 1.42,
+      "compactions": 0
+    },
+    {
+      "id": "inv-al2-02",
+      "parent_id": "inv-al2-01",
+      "role": "coder",
+      "model": "gpt-4o",
+      "user": "developer",
+      "started_at": "2026-10-16T12:35:00Z",
+      "completed_at": "2026-10-16T14:30:00Z",
+      "active_duration_seconds": 880,
+      "turns": 7,
+      "tokens": {
+        "input": 380000,
+        "output": 45000,
+        "cache_read": 1450000,
+        "reasoning": 0,
+        "peak_context": 115000
+      },
+      "cost_usd": 1.68,
+      "compactions": 0
+    },
+    {
+      "id": "inv-al2-03",
+      "parent_id": "inv-al2-01",
+      "role": "tester",
+      "model": "gpt-4o",
+      "user": "developer",
+      "started_at": "2026-10-16T14:35:00Z",
+      "completed_at": "2026-10-16T16:00:00Z",
+      "active_duration_seconds": 580,
+      "turns": 4,
+      "tokens": {
+        "input": 190000,
+        "output": 19000,
+        "cache_read": 730000,
+        "reasoning": 0,
+        "peak_context": 92000
+      },
+      "cost_usd": 0.742,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    { "name": "read", "calls": 48, "errors": 0 },
+    { "name": "write", "calls": 18, "errors": 0 },
+    { "name": "edit", "calls": 22, "errors": 2 },
+    { "name": "bash", "calls": 32, "errors": 1 }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-16T12:00:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 1,
+      "role": "orchestrator",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 850,
+      "context_tokens": 18000
+    },
+    {
+      "timestamp": "2026-10-16T12:01:30Z",
+      "session_id": "ses-al2-root",
+      "turn": 1,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "success",
+      "duration_ms": 320,
+      "context_tokens": 22000
+    },
+    {
+      "timestamp": "2026-10-16T12:05:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 2,
+      "role": "planner",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 1400,
+      "context_tokens": 34000
+    },
+    {
+      "timestamp": "2026-10-16T12:07:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 2,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "success",
+      "duration_ms": 410,
+      "context_tokens": 38000
+    },
+    {
+      "timestamp": "2026-10-16T12:35:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 3,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 1100,
+      "context_tokens": 52000
+    },
+    {
+      "timestamp": "2026-10-16T12:38:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 3,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "write",
+      "status": "success",
+      "duration_ms": 540,
+      "context_tokens": 61000
+    },
+    {
+      "timestamp": "2026-10-16T12:42:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 3,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "edit",
+      "status": "success",
+      "duration_ms": 480,
+      "context_tokens": 72000
+    },
+    {
+      "timestamp": "2026-10-16T13:10:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 4,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 1200,
+      "context_tokens": 88000
+    },
+    {
+      "timestamp": "2026-10-16T13:11:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 4,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "error",
+      "error_message": "exit status 1: go test ./... - undefined: Server",
+      "duration_ms": 950,
+      "context_tokens": 89000
+    },
+    {
+      "timestamp": "2026-10-16T13:12:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 4,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "error",
+      "error_message": "exit status 1: go test ./... - cannot find package",
+      "duration_ms": 820,
+      "context_tokens": 90000
+    },
+    {
+      "timestamp": "2026-10-16T13:13:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 4,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "error",
+      "error_message": "exit status 1: go test ./... - build failed",
+      "duration_ms": 890,
+      "context_tokens": 91000
+    },
+    {
+      "timestamp": "2026-10-16T13:14:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 4,
+      "role": "coder",
+      "event_type": "compaction",
+      "status": "completed",
+      "duration_ms": 250,
+      "context_tokens": 65000
+    },
+    {
+      "timestamp": "2026-10-16T13:20:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 5,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 920,
+      "context_tokens": 74000
+    },
+    {
+      "timestamp": "2026-10-16T13:22:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 5,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "edit",
+      "status": "success",
+      "duration_ms": 390,
+      "context_tokens": 78000
+    },
+    {
+      "timestamp": "2026-10-16T13:25:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 5,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "success",
+      "duration_ms": 1650,
+      "context_tokens": 84000
+    },
+    {
+      "timestamp": "2026-10-16T14:35:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 6,
+      "role": "tester",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 1300,
+      "context_tokens": 92000
+    },
+    {
+      "timestamp": "2026-10-16T14:40:00Z",
+      "session_id": "ses-al2-root",
+      "turn": 6,
+      "role": "tester",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "success",
+      "duration_ms": 2400,
+      "context_tokens": 96000
+    }
+  ]
+}

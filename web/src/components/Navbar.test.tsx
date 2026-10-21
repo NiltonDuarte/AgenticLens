@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Navbar } from './Navbar';
 import type { ActiveTab, BuildInfo } from '../domain/types';
-import { mockBuildInfo, mockProjectConfig } from '../api/mockData';
+import { mockBuildInfo, mockProjectConfig } from '../test/fixtures/mockData';
 
 describe('Navbar Component', () => {
   it('renders all five operational navigation tabs', () => {

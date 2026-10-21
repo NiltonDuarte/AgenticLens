@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { LiveObservability } from './LiveObservability';
-import { mockLiveSessionTree, mockLiveTraceView } from '../api/mockData';
+import { mockLiveSessionTree, mockLiveTraceView } from '../test/fixtures/mockData';
 
 class MockEventSource {
   static instances: MockEventSource[] = [];

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { LandingPage } from './LandingPage';
 import * as apiClient from '../api/client';
-import { mockFleetSummary, mockTicketComparisonRows } from '../api/mockData';
+import { mockFleetSummary, mockTicketComparisonRows } from '../test/fixtures/mockData';
 
 describe('LandingPage View Component', () => {
   beforeEach(() => {

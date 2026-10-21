@@ -17,9 +17,7 @@ import {
   mockTicketComparisonRows,
   mockWorkspaceDetails,
   mockAgenticMetricsLedgers,
-  mockBuildInfo,
-  mockProjectConfig,
-} from './mockData';
+} from '../test/fixtures/mockData';
 
 describe('Boundary API Client', () => {
   beforeEach(() => {
@@ -49,28 +47,23 @@ describe('Boundary API Client', () => {
       expect(res.data.total_cost_usd).toBe(99.5);
     });
 
-    it('falls back seamlessly to mockFleetSummary on network exception', async () => {
+    it('rejects on network exception', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
-      const res = await fetchFleetSummary('all');
-      expect(res.isMock).toBe(true);
-      expect(res.data.total_tickets).toBe(mockFleetSummary.total_tickets);
-      expect(res.data.total_cost_usd).toBe(mockFleetSummary.total_cost_usd);
+      await expect(fetchFleetSummary('all')).rejects.toThrow('Network error');
     });
 
-    it('falls back to mockFleetSummary on HTTP 500 response', async () => {
+    it('rejects on HTTP 500 response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
       }));
 
-      const res = await fetchFleetSummary('7d');
-      expect(res.isMock).toBe(true);
-      expect(res.data.total_invocations).toBe(mockFleetSummary.total_invocations);
+      await expect(fetchFleetSummary('7d')).rejects.toThrow(/HTTP error 500/);
     });
 
-    it('falls back to mockFleetSummary when response body has malformed JSON', async () => {
+    it('rejects when response body has malformed JSON', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: async () => {
@@ -78,18 +71,14 @@ describe('Boundary API Client', () => {
         },
       }));
 
-      const res = await fetchFleetSummary('all');
-      expect(res.isMock).toBe(true);
-      expect(res.data.total_tickets).toBe(mockFleetSummary.total_tickets);
+      await expect(fetchFleetSummary('all')).rejects.toThrow(SyntaxError);
     });
 
-    it('falls back to mockFleetSummary when fetch is aborted or timed out', async () => {
+    it('rejects when fetch is aborted or timed out', async () => {
       const abortError = new DOMException('The operation was aborted', 'AbortError');
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError));
 
-      const res = await fetchFleetSummary('30d');
-      expect(res.isMock).toBe(true);
-      expect(res.data.total_cost_usd).toBe(mockFleetSummary.total_cost_usd);
+      await expect(fetchFleetSummary('30d')).rejects.toThrow('The operation was aborted');
     });
   });
 
@@ -190,16 +179,13 @@ describe('Boundary API Client', () => {
       expect(fetchSpy).toHaveBeenCalledWith('/api/workspaces?window=7d&sort=cost_usd&order=desc');
     });
 
-    it('falls back to mockTicketComparisonRows on fetch rejection', async () => {
+    it('rejects on fetch rejection', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Failed to fetch')));
 
-      const res = await fetchWorkspaces('all');
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBe(mockTicketComparisonRows.length);
-      expect(res.data[0]?.ticket_id).toBe(mockTicketComparisonRows[0]?.ticket_id);
+      await expect(fetchWorkspaces('all')).rejects.toThrow('Failed to fetch');
     });
 
-    it('falls back to mockTicketComparisonRows on malformed JSON response', async () => {
+    it('rejects on malformed JSON response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: async () => {
@@ -207,21 +193,17 @@ describe('Boundary API Client', () => {
         },
       }));
 
-      const res = await fetchWorkspaces('all');
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBe(mockTicketComparisonRows.length);
+      await expect(fetchWorkspaces('all')).rejects.toThrow(SyntaxError);
     });
 
-    it('falls back to mockTicketComparisonRows on non-200 HTTP status', async () => {
+    it('rejects on non-200 HTTP status', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 502,
         statusText: 'Bad Gateway',
       }));
 
-      const res = await fetchWorkspaces('all');
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBe(mockTicketComparisonRows.length);
+      await expect(fetchWorkspaces('all')).rejects.toThrow(/HTTP error 502/);
     });
   });
 
@@ -238,36 +220,31 @@ describe('Boundary API Client', () => {
       expect(res.data.artifacts.ticket_id).toBe('AL-1');
     });
 
-    it('falls back to mockWorkspaceDetails when available on 404 or 500', async () => {
+    it('throws structured error on 404 response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
+        statusText: 'Not Found',
       }));
 
-      const res = await fetchWorkspaceById('AL-1');
-      expect(res.isMock).toBe(true);
-      expect(res.data.artifacts.ticket_id).toBe('AL-1');
-      expect(res.data.artifacts.contract_content).toContain('Contract: AL-1');
+      await expect(fetchWorkspaceById('AL-1')).rejects.toThrow('Workspace AL-1 not found');
     });
 
-    it('falls back to mockAgenticMetricsLedgers if only ledger exists in mock fixtures', async () => {
-      // Temporarily mock an entry in mockAgenticMetricsLedgers that is not in mockWorkspaceDetails
-      const customLedger = mockAgenticMetricsLedgers['AL-1']!;
+    it('throws HTTP error on 500 response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
+        statusText: 'Internal Server Error',
       }));
 
-      // AL-1 has both, but test fallback branch by asserting on AL-1 artifacts
-      const res = await fetchWorkspaceById('AL-1');
-      expect(res.isMock).toBe(true);
-      expect(res.data.ledger.ticket_id).toBe(customLedger.ticket_id);
+      await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/HTTP error 500/);
     });
 
-    it('throws structured error when ticketId does not exist in backend nor mocks', async () => {
+    it('throws structured error when ticketId does not exist on 404', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
+        statusText: 'Not Found',
       }));
 
       await expect(fetchWorkspaceById('NONEXISTENT-999')).rejects.toThrow(
@@ -275,7 +252,7 @@ describe('Boundary API Client', () => {
       );
     });
 
-    it('throws structured error on network rejection when ticketId not in mocks', async () => {
+    it('throws error on network rejection', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
 
       await expect(fetchWorkspaceById('UNKNOWN-TICKET')).rejects.toThrow(
@@ -298,38 +275,31 @@ describe('Boundary API Client', () => {
       expect(res.data[0]?.ticket_id).toBe('AL-1');
     });
 
-    it('falls back to mockAgenticMetricsLedgers on network error', async () => {
+    it('rejects on network error', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')));
 
-      const res = await fetchWorkspaceLedgers();
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBeGreaterThan(0);
-      expect(res.data.some((l) => l.ticket_id === 'AL-1')).toBe(true);
+      await expect(fetchWorkspaceLedgers()).rejects.toThrow('Connection refused');
     });
 
-    it('falls back to mockAgenticMetricsLedgers on 500 error response', async () => {
+    it('rejects on 500 error response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Server Error',
       }));
 
-      const res = await fetchWorkspaceLedgers();
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBeGreaterThan(0);
+      await expect(fetchWorkspaceLedgers()).rejects.toThrow(/HTTP error 500/);
     });
 
-    it('falls back to mockAgenticMetricsLedgers on invalid JSON response', async () => {
+    it('rejects on invalid JSON response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: async () => {
-          throw new Error('Malformed JSON');
+          throw new SyntaxError('Malformed JSON');
         },
       }));
 
-      const res = await fetchWorkspaceLedgers();
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBeGreaterThan(0);
+      await expect(fetchWorkspaceLedgers()).rejects.toThrow(SyntaxError);
     });
   });
 
@@ -396,51 +366,33 @@ describe('Boundary API Client', () => {
       expect(res.data.events[0]?.tool_name).toBe('bash');
     });
 
-    it('falls back to mock ledger events on network failure', async () => {
+    it('rejects on network failure', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
-      const res = await fetchWorkspaceEvents('AL-1');
-      expect(res.isMock).toBe(true);
-      expect(res.data.is_hydrated).toBe(false);
-      expect(res.data.data_source).toBe('committed_ledger');
-      expect(Array.isArray(res.data.events)).toBe(true);
+      await expect(fetchWorkspaceEvents('AL-1')).rejects.toThrow('Network error');
     });
 
-    it('falls back to mock events on 404 when ticket exists in mocks', async () => {
+    it('throws structured error on 404', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',
       }));
 
-      const res = await fetchWorkspaceEvents('AL-1');
-      expect(res.isMock).toBe(true);
-      expect(res.data.is_hydrated).toBe(false);
-      expect(res.data.data_source).toBe('committed_ledger');
-      expect(Array.isArray(res.data.events)).toBe(true);
+      await expect(fetchWorkspaceEvents('AL-1')).rejects.toThrow('Workspace AL-1 not found');
     });
 
-    it('throws structured error when ticketId does not exist in backend nor mocks on 404', async () => {
+    it('rejects on HTTP 500 server error', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
-        status: 404,
-        statusText: 'Not Found',
+        status: 500,
+        statusText: 'Internal Server Error',
       }));
 
-      await expect(fetchWorkspaceEvents('NON-EXISTENT')).rejects.toThrow(
-        'Workspace NON-EXISTENT not found'
-      );
+      await expect(fetchWorkspaceEvents('AL-1')).rejects.toThrow(/HTTP error 500/);
     });
 
-    it('throws structured error on network failure when ticketId not in mocks', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-
-      await expect(fetchWorkspaceEvents('UNKNOWN-TICKET')).rejects.toThrow(
-        'Failed to fetch'
-      );
-    });
-
-    it('falls back to mock ledger events on malformed JSON response', async () => {
+    it('rejects on malformed JSON response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: async () => {
@@ -448,11 +400,7 @@ describe('Boundary API Client', () => {
         },
       }));
 
-      const res = await fetchWorkspaceEvents('AL-1');
-      expect(res.isMock).toBe(true);
-      expect(res.data.is_hydrated).toBe(false);
-      expect(res.data.data_source).toBe('committed_ledger');
-      expect(Array.isArray(res.data.events)).toBe(true);
+      await expect(fetchWorkspaceEvents('AL-1')).rejects.toThrow(SyntaxError);
     });
 
     it('returns empty array with isMock false when backend returns empty events stream', async () => {
@@ -510,16 +458,13 @@ describe('Boundary API Client', () => {
       expect(res.data).toEqual([]);
     });
 
-    it('falls back to mock anomalies when workspace detail fetch fails', async () => {
+    it('rejects when workspace detail fetch fails', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
-      const res = await fetchWorkspaceAnomalies('AL-2');
-      expect(res.isMock).toBe(true);
-      expect(Array.isArray(res.data)).toBe(true);
-      expect(res.data.length).toBeGreaterThan(0);
+      await expect(fetchWorkspaceAnomalies('AL-2')).rejects.toThrow('Network error');
     });
 
-    it('throws structured error when workspace does not exist in backend nor mocks', async () => {
+    it('throws structured error when workspace does not exist on 404', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
@@ -528,6 +473,16 @@ describe('Boundary API Client', () => {
       await expect(fetchWorkspaceAnomalies('UNKNOWN-NONEXISTENT')).rejects.toThrow(
         'Workspace UNKNOWN-NONEXISTENT not found'
       );
+    });
+
+    it('rejects on HTTP 500 server error', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      }));
+
+      await expect(fetchWorkspaceAnomalies('AL-2')).rejects.toThrow(/HTTP error 500/);
     });
   });
 
@@ -550,57 +505,47 @@ describe('Boundary API Client', () => {
       expect(res.data.build_date).toBe('2026-10-18T12:00:00Z');
     });
 
-    it('falls back to mockBuildInfo on network error', async () => {
+    it('rejects on network error', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
-      const res = await fetchVersion();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockBuildInfo);
+      await expect(fetchVersion()).rejects.toThrow('Network error');
     });
 
-    it('falls back to mockBuildInfo on 500 error response', async () => {
+    it('rejects on 500 error response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Server Error',
       }));
 
-      const res = await fetchVersion();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockBuildInfo);
+      await expect(fetchVersion()).rejects.toThrow(/HTTP error 500/);
     });
 
-    it('falls back to mockBuildInfo on 404 not found response', async () => {
+    it('rejects on 404 not found response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',
       }));
 
-      const res = await fetchVersion();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockBuildInfo);
+      await expect(fetchVersion()).rejects.toThrow(/HTTP error 404/);
     });
 
-    it('falls back to mockBuildInfo on DOMException abort/timeout', async () => {
+    it('rejects on DOMException abort/timeout', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('The operation was aborted', 'AbortError')));
 
-      const res = await fetchVersion();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockBuildInfo);
+      await expect(fetchVersion()).rejects.toThrow('The operation was aborted');
     });
 
-    it('falls back to mockBuildInfo on invalid JSON response', async () => {
+    it('rejects on invalid JSON response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: async () => {
-          throw new Error('Malformed JSON');
+          throw new SyntaxError('Malformed JSON');
         },
       }));
 
-      const res = await fetchVersion();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockBuildInfo);
+      await expect(fetchVersion()).rejects.toThrow(SyntaxError);
     });
   });
 
@@ -630,57 +575,47 @@ describe('Boundary API Client', () => {
       expect(res.data.version).toBe('v1.0.0');
     });
 
-    it('falls back to mockProjectConfig on network error', async () => {
+    it('rejects on network error', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
-      const res = await fetchProjectConfig();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockProjectConfig);
+      await expect(fetchProjectConfig()).rejects.toThrow('Network error');
     });
 
-    it('falls back to mockProjectConfig on 500 error response', async () => {
+    it('rejects on 500 error response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Server Error',
       }));
 
-      const res = await fetchProjectConfig();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockProjectConfig);
+      await expect(fetchProjectConfig()).rejects.toThrow(/HTTP error 500/);
     });
 
-    it('falls back to mockProjectConfig on 404 not found response', async () => {
+    it('rejects on 404 not found response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',
       }));
 
-      const res = await fetchProjectConfig();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockProjectConfig);
+      await expect(fetchProjectConfig()).rejects.toThrow(/HTTP error 404/);
     });
 
-    it('falls back to mockProjectConfig on DOMException abort/timeout', async () => {
+    it('rejects on DOMException abort/timeout', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('The operation was aborted', 'AbortError')));
 
-      const res = await fetchProjectConfig();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockProjectConfig);
+      await expect(fetchProjectConfig()).rejects.toThrow('The operation was aborted');
     });
 
-    it('falls back to mockProjectConfig on invalid JSON response', async () => {
+    it('rejects on invalid JSON response', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: async () => {
-          throw new Error('Malformed JSON');
+          throw new SyntaxError('Malformed JSON');
         },
       }));
 
-      const res = await fetchProjectConfig();
-      expect(res.isMock).toBe(true);
-      expect(res.data).toEqual(mockProjectConfig);
+      await expect(fetchProjectConfig()).rejects.toThrow(SyntaxError);
     });
   });
 
@@ -704,15 +639,30 @@ describe('Boundary API Client', () => {
       expect(calledUrl).toContain('prefix=PO');
     });
 
-    it('falls back to filtered mock data on /api/comparison failure', async () => {
+    it('rejects on /api/comparison failure', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
-      const res = await fetchComparisonRows('all', undefined, undefined, ['feature'], ['AL']);
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBeGreaterThan(0);
-      for (const row of res.data) {
-        expect(row.ticket_id.startsWith('AL')).toBe(true);
-      }
+      await expect(fetchComparisonRows('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow('Network error');
+    });
+
+    it('rejects on /api/comparison HTTP 500 status', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      }));
+
+      await expect(fetchComparisonRows('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow(/HTTP error 500/);
+    });
+
+    it('rejects on /api/comparison HTTP 404 status', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      }));
+
+      await expect(fetchComparisonRows('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow(/HTTP error 404/);
     });
 
     it('appends ticket_type and prefix multi-parameters to /api/progression', async () => {
@@ -731,18 +681,30 @@ describe('Boundary API Client', () => {
       expect(calledUrl).toContain('prefix=GEN');
     });
 
-    it('falls back to filtered mock ledgers on /api/progression failure', async () => {
+    it('rejects on /api/progression failure', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
+        statusText: 'Internal Server Error',
       }));
 
-      const res = await fetchProgressionLedgers('all', undefined, undefined, ['feature'], ['AL']);
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBeGreaterThan(0);
-      for (const ledger of res.data) {
-        expect(ledger.ticket_id?.startsWith('AL')).toBe(true);
-      }
+      await expect(fetchProgressionLedgers('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow(/HTTP error 500/);
+    });
+
+    it('rejects on /api/progression network error', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection reset')));
+
+      await expect(fetchProgressionLedgers('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow('Connection reset');
+    });
+
+    it('rejects on /api/progression HTTP 404 status', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      }));
+
+      await expect(fetchProgressionLedgers('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow(/HTTP error 404/);
     });
 
     it('appends multi-parameters to fetchFleetSummary and omits all', async () => {
@@ -770,7 +732,7 @@ describe('Boundary API Client', () => {
     it('appends multi-parameters to fetchWorkspaces and omits all', async () => {
       const fetchSpy = vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => mockTicketComparisonRows,
+        json: async () => Object.values(mockAgenticMetricsLedgers),
       });
       vi.stubGlobal('fetch', fetchSpy);
 
@@ -832,31 +794,59 @@ describe('Boundary API Client', () => {
       );
     });
 
-    it('falls back to local aggregateMetricsOverTime on network failure', async () => {
+    it('rejects on network failure', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')));
 
-      const res = await fetchProgressionMetrics({
+      await expect(fetchProgressionMetrics({
         window: 'all',
         granularity: 'daily',
-      });
-
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBeGreaterThan(0);
+      })).rejects.toThrow('Connection refused');
     });
 
-    it('falls back to local aggregateMetricsOverTime on non-200 HTTP status', async () => {
+    it('rejects on non-200 HTTP status', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
+        statusText: 'Internal Server Error',
       }));
 
-      const res = await fetchProgressionMetrics({
+      await expect(fetchProgressionMetrics({
         window: '7d',
         granularity: 'weekly',
-      });
+      })).rejects.toThrow(/HTTP error 500/);
+    });
 
-      expect(res.isMock).toBe(true);
-      expect(res.data.length).toBeGreaterThan(0);
+    it('rejects on HTTP 404 status', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      }));
+
+      await expect(fetchProgressionMetrics({
+        window: 'all',
+        granularity: 'daily',
+      })).rejects.toThrow(/HTTP error 404/);
+    });
+  });
+
+  describe('adversarial error shapes handled by rethrowError', () => {
+    it('handles non-Error objects with message property', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue({ message: 'Custom object error' }));
+
+      await expect(fetchFleetSummary('all')).rejects.toThrow('Custom object error');
+    });
+
+    it('handles primitive string thrown by fetch', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue('raw string thrown'));
+
+      await expect(fetchWorkspaceLedgers('all')).rejects.toThrow('Failed to fetch workspace ledgers');
+    });
+
+    it('handles null thrown by fetch', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(null));
+
+      await expect(fetchWorkspaces('all')).rejects.toThrow('Failed to fetch workspaces');
     });
   });
 });

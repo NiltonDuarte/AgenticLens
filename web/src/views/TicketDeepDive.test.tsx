@@ -8,7 +8,7 @@ import { EventFact } from '../types/telemetry';
 import {
   mockAgenticMetricsLedgers,
   mockWorkspaceDetails,
-} from '../api/mockData';
+} from '../test/fixtures/mockData';
 
 describe('TicketDeepDive View Component', () => {
   beforeEach(() => {
