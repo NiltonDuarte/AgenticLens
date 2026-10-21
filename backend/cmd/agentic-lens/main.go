@@ -65,6 +65,15 @@ func runGenerate(args []string) {
 		if errors.Is(err, adaptersconfig.ErrConfigNotFound) {
 			fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
 		} else {
+			var valErr *adaptersconfig.ConfigValidationError
+			if errors.As(err, &valErr) {
+				for _, f := range valErr.MissingFields {
+					if f == "workspaces.src_folders" {
+						fmt.Fprintf(os.Stderr, "Error: workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml\n")
+						os.Exit(1)
+					}
+				}
+			}
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		}
 		os.Exit(1)
@@ -151,6 +160,7 @@ func runGenerate(args []string) {
 	var tools []domain.ToolFact
 	var events []domain.EventFact
 	var fallbackCode *domain.CodeFacts
+	var extractedSteeringTurns int64
 
 	if cachedFacts != nil {
 		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
@@ -204,6 +214,10 @@ func runGenerate(args []string) {
 					activeCompletedAt = dbCompleted
 				}
 			}
+
+			if turns, err := opencode.ExtractSteeringTurns(dbClient.DB(), knownThreadIDs); err == nil && turns > 0 {
+				extractedSteeringTurns = turns
+			}
 		}
 	}
 
@@ -248,8 +262,24 @@ func runGenerate(args []string) {
 		}
 	}
 
-	cfg, _ := git.LoadConfig("")
-	codeFacts := git.ComputeCodeFacts(activeTicketID, cfg, fallbackCode)
+	cfg, err := git.LoadConfig("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+		os.Exit(1)
+	}
+	codeFacts, err := git.ComputeCodeFacts(activeTicketID, cfg, fallbackCode)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if extractedSteeringTurns >= 1 {
+		codeFacts.SDLCIterations = extractedSteeringTurns
+	} else if fallbackCode != nil && fallbackCode.SDLCIterations > 0 {
+		codeFacts.SDLCIterations = fallbackCode.SDLCIterations
+	} else if codeFacts.SDLCIterations <= 0 {
+		codeFacts.SDLCIterations = 1
+	}
 
 	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
 

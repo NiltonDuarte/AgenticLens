@@ -1259,3 +1259,111 @@ func stringsContains(s, substr string) bool {
 	return false
 }
 
+func TestExtractSteeringTurns(t *testing.T) {
+	t.Run("nil database returns error", func(t *testing.T) {
+		count, err := opencode.ExtractSteeringTurns(nil, []string{"ses_1"})
+		if err == nil {
+			t.Errorf("expected error for nil db, got nil")
+		}
+		if count != 0 {
+			t.Errorf("expected count 0, got %d", count)
+		}
+	})
+
+	t.Run("empty thread IDs returns zero with nil error", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		count, err := opencode.ExtractSteeringTurns(db, []string{})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("expected count 0, got %d", count)
+		}
+	})
+
+	t.Run("invalid session id returns validation error", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		count, err := opencode.ExtractSteeringTurns(db, []string{"bad session; drop table message;"})
+		if err == nil {
+			t.Errorf("expected error for invalid session id, got nil")
+		}
+		if count != 0 {
+			t.Errorf("expected count 0, got %d", count)
+		}
+	})
+
+	t.Run("single and multiple user turns counted accurately", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		_, err := db.Exec(`
+			INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES
+			('ses_root', NULL, 'build', '{"id":"claude-3-opus"}', 1000, 5000),
+			('ses_child', 'ses_root', 'coder', '{"id":"claude-3-opus"}', 1100, 4000);
+		`)
+		if err != nil {
+			t.Fatalf("failed inserting test sessions: %v", err)
+		}
+
+		_, err = db.Exec(`
+			INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+			('m1', 'ses_root', 1010, 1010, '{"role":"user","tokens":{"input":10}}'),
+			('m2', 'ses_root', 1020, 1020, '{"role":"assistant","tokens":{"output":20}}'),
+			('m3', 'ses_root', 1030, 1030, '{"role":"User","tokens":{"input":15}}'),
+			('m4', 'ses_root', 1040, 1040, '{"role":"USER ","tokens":{"input":12}}'),
+			('m5', 'ses_child', 1050, 1050, '{"role":"user","tokens":{"input":8}}'),
+			('m6', 'ses_root', 1060, 1060, '{"role":"system","tokens":{"input":5}}'),
+			('m7', 'ses_root', 1070, 1070, 'invalid json content'),
+			('m8', 'ses_root', 1080, 1080, NULL);
+		`)
+		if err != nil {
+			t.Fatalf("failed inserting test messages: %v", err)
+		}
+
+		// When querying root session: 3 user turns ('user', 'User', 'USER '), child message ignored, invalid JSON ignored
+		count, err := opencode.ExtractSteeringTurns(db, []string{"ses_root"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if count != 3 {
+			t.Errorf("expected 3 steering turns for ses_root, got %d", count)
+		}
+
+		// When querying child session
+		childCount, err := opencode.ExtractSteeringTurns(db, []string{"ses_child"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if childCount != 1 {
+			t.Errorf("expected 1 steering turn for ses_child, got %d", childCount)
+		}
+	})
+
+	t.Run("only assistant messages returns zero turns", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		_, err := db.Exec(`
+			INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES
+			('ses_asst', NULL, 'build', '{"id":"claude-3-opus"}', 1000, 2000);
+			INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+			('m1', 'ses_asst', 1010, 1010, '{"role":"assistant"}'),
+			('m2', 'ses_asst', 1020, 1020, '{"role":"assistant"}');
+		`)
+		if err != nil {
+			t.Fatalf("failed setting up assistant-only messages: %v", err)
+		}
+
+		count, err := opencode.ExtractSteeringTurns(db, []string{"ses_asst"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("expected 0 steering turns, got %d", count)
+		}
+	})
+}

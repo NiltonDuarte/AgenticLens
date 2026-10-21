@@ -187,6 +187,9 @@ func TestProjectConfig_HelperFixture(t *testing.T) {
 	if cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
 		t.Errorf("expected ContextExhaustionPct 0.85, got %f", cfg.Live.AnomalyThresholds.ContextExhaustionPct)
 	}
+	if cfg.CodeMetrics.BaseBranch != "" {
+		t.Errorf("expected CodeMetrics.BaseBranch to be empty, got %s", cfg.CodeMetrics.BaseBranch)
+	}
 	if len(cfg.RoleMappings) == 0 {
 		t.Errorf("expected non-empty RoleMappings")
 	}

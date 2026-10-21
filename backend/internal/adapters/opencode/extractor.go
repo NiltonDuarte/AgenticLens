@@ -680,3 +680,56 @@ func ExtractFacts(
 
 	return invocations, tools, events, startedAtISO, completedAtISO, nil
 }
+
+// ExtractSteeringTurns calculates human steering turns from message records for given root threads.
+func ExtractSteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
+	if db == nil {
+		return 0, errors.New("database connection is nil")
+	}
+	if len(threadIDs) == 0 {
+		return 0, nil
+	}
+
+	quotedList, err := buildQuotedIDList(threadIDs)
+	if err != nil {
+		return 0, fmt.Errorf("validating thread ids: %w", err)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT m.data
+		FROM message m
+		WHERE m.session_id IN (%s)
+		ORDER BY m.time_created ASC
+	`, quotedList)
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return 0, fmt.Errorf("querying steering turns: %w", err)
+	}
+	defer rows.Close()
+
+	var count int64
+	for rows.Next() {
+		var mData sql.NullString
+		if err := rows.Scan(&mData); err != nil {
+			return 0, fmt.Errorf("scanning message data: %w", err)
+		}
+		if !mData.Valid || strings.TrimSpace(mData.String) == "" {
+			continue
+		}
+
+		var rawMD rawMessageData
+		if err := json.Unmarshal([]byte(mData.String), &rawMD); err != nil {
+			continue
+		}
+
+		if rawMD.Role != nil && strings.EqualFold(strings.TrimSpace(*rawMD.Role), "user") {
+			count++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("iterating message rows: %w", err)
+	}
+
+	return count, nil
+}

@@ -79,6 +79,9 @@ live:
 
 # Git commit diff analysis and code classification glob patterns.
 code_metrics:
+  # Upstream comparison base branch for commit diff extraction (e.g. origin/main or main).
+  # If left empty, resolution automatically probes origin/HEAD, origin/main, main, origin/master, and master.
+  base_branch: origin/main
   # Specific files or glob patterns explicitly included as production code.
   include: []
   # Files or directories excluded from code volume and diff calculations.
