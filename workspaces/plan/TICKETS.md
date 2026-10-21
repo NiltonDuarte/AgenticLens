@@ -12,6 +12,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 
 ## Ready
 
+- **AL-42**: Unify Tool Execution Error Classification and Offline-Live Pipeline Parity
+  - **Subsystem**: Domain / Adapters / Live / OpenCode / Tests
+  - **Phase**: Phase 7 (v1 Defect Remediation)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-43
+  - **File**: `workspaces/plan/to-do/AL-42 unify tool execution error classification and offline live pipeline parity.md`
+
 - **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
   - **Subsystem**: Docs / Packaging / CLI
   - **Phase**: Phase 7
@@ -47,6 +55,14 @@ Individual ticket definitions are located in `workspaces/plan/done/`, `workspace
 ---
 
 ## Blocked
+
+- **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
+  - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
+  - **Phase**: Phase 7 (v1 Feature / Observability)
+  - **Status**: Pending
+  - **Blocked by**: AL-42
+  - **Blocks**: None
+  - **File**: `workspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests
