@@ -42,7 +42,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchFleetSummary('all');
-      expect(res.isMock).toBe(false);
       expect(res.data.total_tickets).toBe(10);
       expect(res.data.total_cost_usd).toBe(99.5);
     });
@@ -173,7 +172,6 @@ describe('Boundary API Client', () => {
       vi.stubGlobal('fetch', fetchSpy);
 
       const res = await fetchWorkspaces('7d', 'cost_usd', 'desc');
-      expect(res.isMock).toBe(false);
       expect(res.data).toHaveLength(1);
       expect(res.data[0]?.ticket_id).toBe('TEST-1');
       expect(fetchSpy).toHaveBeenCalledWith('/api/workspaces?window=7d&sort=cost_usd&order=desc');
@@ -216,7 +214,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchWorkspaceById('AL-1');
-      expect(res.isMock).toBe(false);
       expect(res.data.artifacts.ticket_id).toBe('AL-1');
     });
 
@@ -270,7 +267,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchWorkspaceLedgers();
-      expect(res.isMock).toBe(false);
       expect(res.data).toHaveLength(1);
       expect(res.data[0]?.ticket_id).toBe('AL-1');
     });
@@ -331,7 +327,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchWorkspaceEvents('AL-8');
-      expect(res.isMock).toBe(false);
       expect(res.data.is_hydrated).toBe(true);
       expect(res.data.data_source).toBe('local_sqlite');
       expect(res.data.events).toHaveLength(1);
@@ -359,7 +354,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchWorkspaceEvents('AL-8');
-      expect(res.isMock).toBe(false);
       expect(res.data.is_hydrated).toBe(false);
       expect(res.data.data_source).toBe('committed_ledger');
       expect(res.data.events).toHaveLength(1);
@@ -403,14 +397,13 @@ describe('Boundary API Client', () => {
       await expect(fetchWorkspaceEvents('AL-1')).rejects.toThrow(SyntaxError);
     });
 
-    it('returns empty array with isMock false when backend returns empty events stream', async () => {
+    it('returns empty array when backend returns empty events stream', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: async () => [],
       }));
 
       const res = await fetchWorkspaceEvents('AL-1');
-      expect(res.isMock).toBe(false);
       expect(res.data.events).toEqual([]);
       expect(res.data.is_hydrated).toBe(false);
     });
@@ -437,7 +430,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchWorkspaceAnomalies('AL-2');
-      expect(res.isMock).toBe(false);
       expect(res.data).toHaveLength(1);
       expect(res.data[0]?.rule_id).toBe('TOOL_RETRY_STREAK');
     });
@@ -454,7 +446,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchWorkspaceAnomalies('AL-1');
-      expect(res.isMock).toBe(false);
       expect(res.data).toEqual([]);
     });
 
@@ -499,7 +490,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchVersion();
-      expect(res.isMock).toBe(false);
       expect(res.data.version).toBe('v1.2.3');
       expect(res.data.commit).toBe('1234567');
       expect(res.data.build_date).toBe('2026-10-18T12:00:00Z');
@@ -566,7 +556,6 @@ describe('Boundary API Client', () => {
       }));
 
       const res = await fetchProjectConfig();
-      expect(res.isMock).toBe(false);
       expect(res.data.project_name).toBe('CustomObserver');
       expect(res.data.prefixes).toHaveLength(1);
       expect(res.data.prefixes[0]?.prefix).toBe('FEAT');
@@ -628,7 +617,7 @@ describe('Boundary API Client', () => {
       vi.stubGlobal('fetch', fetchSpy);
 
       const res = await fetchComparisonRows('30d', undefined, undefined, ['feature', 'bug'], ['AL', 'PO']);
-      expect(res.isMock).toBe(false);
+      expect(res.data).toHaveLength(mockTicketComparisonRows.length);
       expect(fetchSpy).toHaveBeenCalled();
       const calledUrl = fetchSpy.mock.calls[0]![0] as string;
       expect(calledUrl).toContain('/api/comparison?');
@@ -673,7 +662,7 @@ describe('Boundary API Client', () => {
       vi.stubGlobal('fetch', fetchSpy);
 
       const res = await fetchProgressionLedgers('all', undefined, undefined, ['chore'], ['GEN']);
-      expect(res.isMock).toBe(false);
+      expect(res.data).toHaveLength(Object.values(mockAgenticMetricsLedgers).length);
       expect(fetchSpy).toHaveBeenCalled();
       const calledUrl = fetchSpy.mock.calls[0]![0] as string;
       expect(calledUrl).toContain('/api/progression?');
@@ -786,7 +775,6 @@ describe('Boundary API Client', () => {
         endDate: '2026-10-19T23:59',
       });
 
-      expect(res.isMock).toBe(false);
       expect(res.data).toHaveLength(1);
       expect(res.data[0]?.bucket_key).toBe('2026-10-19T14:00:00Z');
       expect(fetchSpy).toHaveBeenCalledWith(

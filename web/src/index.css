@@ -212,6 +212,32 @@ body {
   border-color: rgba(245, 158, 11, 0.25);
 }
 
+.status-pill.workspace-pill {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  background-color: var(--bg-surface-elevated, rgba(255, 255, 255, 0.05));
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-pill.workspace-pill .status-dot {
+  background-color: var(--status-green, #10b981);
+  flex-shrink: 0;
+}
+
+.status-pill.workspace-pill.loading {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.status-pill.workspace-pill.loading .status-dot {
+  background-color: var(--text-muted);
+  opacity: 0.6;
+}
+
 .status-dot {
   width: 6px;
   height: 6px;

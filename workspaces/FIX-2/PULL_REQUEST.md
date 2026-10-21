@@ -1,29 +1,32 @@
-# fix(web,api): remove mockData from source and establish testdata workspaces harness (FIX-2)
+# fix(web,api): eliminate isMock branching and enforce mandatory workspaces dir configuration (FIX-2)
 
 ## Overview
-Eliminates over 2,100 lines of hardcoded synthetic mock fixtures from the frontend production source tree (`web/src/api/mockData.ts`) and removes silent mock fallback logic from `web/src/api/client.ts`. Previously, API failures silently returned synthetic fixtures tagged with `isMock: true`, masking operational failures and bundling mock fixtures directly into production binaries.
+Eliminates synthetic mock mode branching and the `isMock` boolean flag across the entire web application and API client, enforces mandatory workspace directory configuration in the Go server with zero fallback guessing, and displays the active workspace directory directly in the navigation bar.
 
-This PR establishes a dedicated filesystem test harness under `testdata/workspaces/` (for running the Go server in test/mock mode via `--workspaces testdata/workspaces`), relocates test fixtures strictly to `web/src/test/fixtures/mockData.ts` for Vitest, and enforces strict isolation: when pointing to production `workspaces.dir`, mock data is never loaded under any circumstances.
+The platform operates identically regardless of whether the configured workspace directory points to production (`workspaces`) or test data (`testdata/workspaces`), treating both uniformly as standard workspace directories without platform-level awareness or branching between mock and real data.
 
 - Contract: [workspaces/FIX-2/CONTRACT.md](workspaces/FIX-2/CONTRACT.md)
 - Summary: [workspaces/FIX-2/SUMMARY.md](workspaces/FIX-2/SUMMARY.md)
 
 ## Summary of Changes
 
-### Boundary Adapters Layer (`web/src/api/`, `backend/internal/adapters/`)
-- Deleted `web/src/api/mockData.ts` completely from the production source tree.
-- Relocated static test fixtures to `web/src/test/fixtures/mockData.ts` for unit test suites.
-- Refactored `web/src/api/client.ts`: removed all mock data imports, eliminated `getFilteredMockLedgers`, and converted all silent fallback returns into typed `Error` rejections (`HTTP error <status>: <statusText>` or structured domain errors).
-- Created dedicated filesystem test data harness under `testdata/workspaces/` with valid schema v3 ledgers, contracts, and summaries for `AL-1`, `AL-2`, `AL-3`, `PO-1`, and `GEN-1`.
-- Added HTTP server integration tests in `backend/internal/adapters/http/server_test.go` verifying strict filesystem isolation between test workspaces and production workspaces.
+### Go Backend & CLI Layer (`backend/cmd/`, `backend/internal/adapters/`)
+- Enforced mandatory `workspaces.dir` configuration on server startup: `runServer` exits immediately with code 1 if `workspaces.dir` is omitted and `--workspaces` is not provided, or if the specified directory does not exist on disk.
+- Updated `ResolveWorkspacesDir` in `repository.go`: returns `""` when neither flag nor config is set, eliminating implicit fallback guessing to `"workspaces"`.
+- Updated `ScanWorkspaces`, `LoadTicketWorkspace`, and `ReadTicketArtifacts` to return explicit errors when the workspaces directory is unconfigured.
+- Added CLI integration tests in `main_test.go` and unit tests in `repository_test.go` validating fail-fast startup and existence checks.
 
-### Presentation & Application Layer (`web/src/`, `backend/cmd/`)
-- In `web/src/App.tsx`, derived `isMock` from `projectConfig?.workspaces_dir` (inspecting whether the configured workspace path targets `testdata` or `mock`).
-- In `web/src/components/Navbar.tsx`, retained Live Server vs. Mock Mode indicator accurately reflecting backend server configuration.
-- Added CLI integration tests in `backend/cmd/agentic-lens/main_test.go` validating that `--workspaces testdata/workspaces` scans test workspaces and detects anomalies without touching production data.
-- Updated all 13 frontend test files to import fixtures from `../test/fixtures/mockData`.
-- Rewrote `web/src/api/client.test.ts` to assert explicit error rejections on network drop, HTTP 500, HTTP 404, and aborted requests.
-- Rebuilt embedded frontend bundle (`web/dist/`), dropping bundle size from ~620 kB to 446 kB with zero mock fixture bytes.
+### Boundary Adapters & API Client (`web/src/api/`)
+- Deleted `web/src/api/mockData.ts` and relocated test fixtures strictly to `web/src/test/fixtures/mockData.ts` for Vitest test suites.
+- Removed `isMock` from `ApiResponse<T>`, `AsyncState<T>`, `ApiConfig`, and `ApiError`. All API methods return `{ data }` directly.
+- All 11 endpoint functions throw typed `Error` instances on HTTP errors or network drops without silent synthetic fallbacks.
+
+### Presentation & Application Layer (`web/src/`, `web/src/components/`, `web/src/views/`)
+- Completely removed `isMock` state, `useMemo` calculation, and `handleMockChange` callback from `App.tsx`.
+- Completely removed `onMockChange` prop and mock tracking references across `LandingPage`, `FleetOverview`, `TicketDeepDive`, `MetricProgression`, and `TicketComparisons`.
+- Updated `Navbar.tsx`: removed "Live Server" and "Mock Mode" status pills. Displays the active workspace directory in a monospace workspace pill directly from `projectConfig.workspaces_dir`. Displays `"Loading..."` when missing or pending without guessing defaults.
+- Updated styling in `web/src/index.css` for `.status-pill.workspace-pill` and loading state.
+- Rebuilt embedded frontend bundle (`web/dist/`) with zero mock data and zero mock mode strings.
 
 ### Standards & Quality
 - Adheres strictly to FCIS (Functional Core, Imperative Shell).

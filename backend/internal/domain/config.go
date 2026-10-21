@@ -19,6 +19,47 @@ type ProjectConfig struct {
 	RoleOrder    []string                `json:"role_order" yaml:"role_order"`
 }
 
+// DefaultProjectConfig returns a baseline ProjectConfig with pure defaults.
+func DefaultProjectConfig() ProjectConfig {
+	return ProjectConfig{
+		ProjectName: "",
+		Ticket: TicketConfig{
+			Prefixes:        []TicketPrefix{},
+			CaseInsensitive: true,
+			CustomPatterns:  []string{},
+		},
+		Workspaces: WorkspacesConfig{
+			Dir:        "",
+			SrcFolders: []string{},
+			Artifacts:  []WorkspaceArtifactConfig{},
+		},
+		Database: DatabaseConfig{
+			Path:           "~/.local/share/opencode/opencode.db",
+			QueryTimeoutMs: 5000,
+			BusyTimeoutMs:  5000,
+			ReadOnly:       true,
+		},
+		Live: LiveConfig{
+			ActiveThresholdSeconds: 300,
+			PollIntervalMs:         2000,
+			MaxTraceBufferMessages: 500,
+			AnomalyThresholds: AnomalyThresholdsConfig{
+				StallThresholdSeconds: 120,
+				ErrorRateThreshold:    0.25,
+				ContextExhaustionPct:  0.85,
+			},
+		},
+		CodeMetrics: CodeMetricsConfig{
+			Include:      []string{},
+			Exclude:      []string{},
+			TestPatterns: []string{},
+			ProdPatterns: []string{},
+		},
+		RoleMappings: RoleMappings{},
+		RoleOrder:    []string{},
+	}
+}
+
 // TicketPrefix represents a configured ticket identifier prefix and its operational description.
 type TicketPrefix struct {
 	Prefix      string `json:"prefix" yaml:"prefix"`

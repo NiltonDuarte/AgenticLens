@@ -606,6 +606,44 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 	})
 }
 
+func TestServer_FailsWithoutWorkspacesConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  src_folders:\n    - src\n"
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(cliBinaryPath, "server")
+	cmd.Dir = tempDir
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		t.Fatal("expected server to fail when workspaces config is missing, got nil")
+	}
+
+	expectedErr := "Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Server cannot start without this information."
+	if !strings.Contains(stderr.String(), expectedErr) {
+		t.Errorf("expected stderr to contain %q, got: %s", expectedErr, stderr.String())
+	}
+}
+
+func TestServer_FailsWhenWorkspacesDirDoesNotExist(t *testing.T) {
+	nonExistentPath := "/nonexistent/workspaces/dir/xyz"
+	cmd := exec.Command(cliBinaryPath, "server", "--workspaces", nonExistentPath)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		t.Fatal("expected server to fail when workspaces dir does not exist, got nil")
+	}
+
+	expectedErr := fmt.Sprintf("Error: workspaces directory %q does not exist. Server cannot start.", nonExistentPath)
+	if !strings.Contains(stderr.String(), expectedErr) {
+		t.Errorf("expected stderr to contain %q, got: %s", expectedErr, stderr.String())
+	}
+}
+
 func TestCLIServerPortEnvironment(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 
@@ -4407,6 +4445,23 @@ func TestInitCommand(t *testing.T) {
 		if len(loaded.Workspaces.Artifacts) != 0 {
 			t.Errorf("expected generated config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
 		}
+		if len(loaded.RoleMappings) != 0 {
+			t.Errorf("expected generated config to have zero role mappings, got %v", loaded.RoleMappings)
+		}
+		if len(loaded.RoleOrder) != 0 {
+			t.Errorf("expected generated config to have zero role order, got %v", loaded.RoleOrder)
+		}
+		rawYAML, err := os.ReadFile(expectedPath)
+		if err != nil {
+			t.Fatalf("reading generated config: %v", err)
+		}
+		content := string(rawYAML)
+		if !strings.Contains(content, "role_mappings: {}") {
+			t.Errorf("expected 'role_mappings: {}' in yaml, got:\n%s", content)
+		}
+		if !strings.Contains(content, "role_order: []") {
+			t.Errorf("expected 'role_order: []' in yaml, got:\n%s", content)
+		}
 	})
 
 	t.Run("custom flags customize generated configuration", func(t *testing.T) {
@@ -4454,6 +4509,12 @@ func TestInitCommand(t *testing.T) {
 		}
 		if len(loaded.Workspaces.Artifacts) != 0 {
 			t.Errorf("expected generated custom config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
+		}
+		if len(loaded.RoleMappings) != 0 {
+			t.Errorf("expected generated custom config to have zero role mappings, got %v", loaded.RoleMappings)
+		}
+		if len(loaded.RoleOrder) != 0 {
+			t.Errorf("expected generated custom config to have zero role order, got %v", loaded.RoleOrder)
 		}
 	})
 

@@ -303,7 +303,7 @@ func runGenerate(args []string) {
 		Events:        events,
 	}
 
-	metricsLedger := domain.DeriveMetricsLedgerWithConfig(factLedger, projCfg)
+	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 
 	if *jsonOutputFlag != "" {
@@ -364,14 +364,6 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
-
-	staticFS, err := web.GetFS()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error initializing embedded web filesystem: %v\n", err)
-		os.Exit(1)
-	}
-
 	projCfg, err := adaptersconfig.Load("")
 	if err != nil {
 		if errors.Is(err, adaptersconfig.ErrConfigNotFound) {
@@ -379,6 +371,28 @@ func runServer(args []string) {
 		} else {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		}
+		os.Exit(1)
+	}
+
+	rawWorkspacesDir := strings.TrimSpace(*workspacesFlag)
+	if rawWorkspacesDir == "" {
+		rawWorkspacesDir = strings.TrimSpace(projCfg.Workspaces.Dir)
+	}
+	if rawWorkspacesDir == "" {
+		fmt.Fprintln(os.Stderr, "Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Server cannot start without this information.")
+		os.Exit(1)
+	}
+
+	workspacesDir := adapters.ResolveWorkspacesDir(rawWorkspacesDir)
+	fi, err := os.Stat(workspacesDir)
+	if err != nil || !fi.IsDir() {
+		fmt.Fprintf(os.Stderr, "Error: workspaces directory %q does not exist. Server cannot start.\n", rawWorkspacesDir)
+		os.Exit(1)
+	}
+
+	staticFS, err := web.GetFS()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing embedded web filesystem: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -965,7 +979,6 @@ func main() {
 		return
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
 	projCfg, err := adaptersconfig.Load("")
 	if err != nil {
 		if errors.Is(err, adaptersconfig.ErrConfigNotFound) {
@@ -975,6 +988,23 @@ func main() {
 		}
 		os.Exit(1)
 	}
+
+	rawWorkspacesDir := strings.TrimSpace(*workspacesFlag)
+	if rawWorkspacesDir == "" {
+		rawWorkspacesDir = strings.TrimSpace(projCfg.Workspaces.Dir)
+	}
+	if rawWorkspacesDir == "" {
+		fmt.Fprintln(os.Stderr, "Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Cannot proceed without this information.")
+		os.Exit(1)
+	}
+
+	workspacesDir := adapters.ResolveWorkspacesDir(rawWorkspacesDir)
+	fi, err := os.Stat(workspacesDir)
+	if err != nil || !fi.IsDir() {
+		fmt.Fprintf(os.Stderr, "Error: workspaces directory %q does not exist. Cannot proceed.\n", rawWorkspacesDir)
+		os.Exit(1)
+	}
+
 	report := adapters.ScanWorkspaces(workspacesDir)
 
 	if len(report.Ledgers) == 0 {
