@@ -1,0 +1,331 @@
+{
+  "schema_version": 3,
+  "ticket_id": "FIX-2",
+  "ticket_title": "Remove mockData from source code and establish testdata workspaces harness",
+  "ticket_type": "fix",
+  "started_at": "2026-10-21T07:01:01.276000+00:00",
+  "completed_at": "2026-10-21T10:13:50.441000+00:00",
+  "updated_at": "2026-10-21T10:13:56.871053+00:00",
+  "code": {
+    "lines_added": 828,
+    "lines_deleted": 583,
+    "test_lines_added": 563,
+    "test_lines_deleted": 179,
+    "prod_lines_added": 265,
+    "prod_lines_deleted": 404,
+    "files_changed": 22,
+    "sdlc_iterations": 1
+  },
+  "invocations": [
+    {
+      "id": "ses_ea2bc9723ffezORazL93nLY0Zh",
+      "parent_id": null,
+      "role": "orchestrator",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-21T07:01:01.824000+00:00",
+      "completed_at": "2026-10-21T10:13:50.441000+00:00",
+      "active_duration_seconds": 11568,
+      "turns": 71,
+      "tokens": {
+        "input": 537538,
+        "output": 17692,
+        "cache_read": 3846872,
+        "reasoning": 11695,
+        "peak_context": 113774
+      },
+      "cost_usd": 0.80187,
+      "compactions": 0
+    },
+    {
+      "id": "ses_ea2b7cdfaffekgr9qlYVI5KHY3",
+      "parent_id": "ses_ea2bc9723ffezORazL93nLY0Zh",
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-21T07:06:14.945000+00:00",
+      "completed_at": "2026-10-21T07:37:53.771000+00:00",
+      "active_duration_seconds": 1899,
+      "turns": 67,
+      "tokens": {
+        "input": 865327,
+        "output": 10066,
+        "cache_read": 3412011,
+        "reasoning": 29310,
+        "peak_context": 113580
+      },
+      "cost_usd": 1.052556,
+      "compactions": 0
+    },
+    {
+      "id": "ses_ea29ab68affeTKjFVjtPFrpblJ",
+      "parent_id": "ses_ea2bc9723ffezORazL93nLY0Zh",
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-21T07:38:01.474000+00:00",
+      "completed_at": "2026-10-21T08:10:33.789000+00:00",
+      "active_duration_seconds": 1952,
+      "turns": 75,
+      "tokens": {
+        "input": 1874170,
+        "output": 9812,
+        "cache_read": 2463408,
+        "reasoning": 22899,
+        "peak_context": 104100
+      },
+      "cost_usd": 1.713049,
+      "compactions": 0
+    },
+    {
+      "id": "ses_ea27a59deffeznUtxRWbFfglIm",
+      "parent_id": "ses_ea2bc9723ffezORazL93nLY0Zh",
+      "role": "coder",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-21T08:13:22.357000+00:00",
+      "completed_at": "2026-10-21T09:48:08.977000+00:00",
+      "active_duration_seconds": 5685,
+      "turns": 233,
+      "tokens": {
+        "input": 8054601,
+        "output": 45531,
+        "cache_read": 13594104,
+        "reasoning": 58681,
+        "peak_context": 169985
+      },
+      "cost_usd": 7.451304,
+      "compactions": 1
+    },
+    {
+      "id": "ses_ea22377a6ffe7ZwN91jbjwT4Nu",
+      "parent_id": "ses_ea2bc9723ffezORazL93nLY0Zh",
+      "role": "tester",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-21T09:48:16.358000+00:00",
+      "completed_at": "2026-10-21T09:57:02.300000+00:00",
+      "active_duration_seconds": 526,
+      "turns": 87,
+      "tokens": {
+        "input": 523743,
+        "output": 11160,
+        "cache_read": 5126553,
+        "reasoning": 14001,
+        "peak_context": 99253
+      },
+      "cost_usd": 0.871652,
+      "compactions": 0
+    },
+    {
+      "id": "ses_ea21b530afferpdNIN0iX1bKUH",
+      "parent_id": "ses_ea2bc9723ffezORazL93nLY0Zh",
+      "role": "reviewer",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-21T09:57:10.053000+00:00",
+      "completed_at": "2026-10-21T10:12:00.189000+00:00",
+      "active_duration_seconds": 890,
+      "turns": 67,
+      "tokens": {
+        "input": 373062,
+        "output": 6085,
+        "cache_read": 3316430,
+        "reasoning": 9763,
+        "peak_context": 83485
+      },
+      "cost_usd": 0.587959,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "calls": 274,
+      "errors": 1
+    },
+    {
+      "name": "bash",
+      "calls": 91,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 89,
+      "errors": 3
+    },
+    {
+      "name": "edit",
+      "calls": 49,
+      "errors": 1
+    },
+    {
+      "name": "glob",
+      "calls": 45,
+      "errors": 0
+    },
+    {
+      "name": "write",
+      "calls": 23,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_mcp-find",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "task",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "todowrite",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "skill",
+      "calls": 3,
+      "errors": 0
+    },
+    {
+      "name": "list_mcp_resource_templates",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "list_mcp_resources",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_code-mode",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_mcp-exec",
+      "calls": 1,
+      "errors": 1
+    },
+    {
+      "name": "question",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "t3-code_list_thread_pull_requests",
+      "calls": 1,
+      "errors": 0
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-21T07:03:12.464000+00:00",
+      "session_id": "ses_ea2bc9723ffezORazL93nLY0Zh",
+      "turn": 16,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "grep",
+      "status": "error",
+      "duration_ms": 24,
+      "context_tokens": 37213
+    },
+    {
+      "timestamp": "2026-10-21T07:26:23.788000+00:00",
+      "session_id": "ses_ea2b7cdfaffekgr9qlYVI5KHY3",
+      "turn": 46,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "grep",
+      "status": "error",
+      "duration_ms": 12,
+      "context_tokens": 83268
+    },
+    {
+      "timestamp": "2026-10-21T07:42:04.659000+00:00",
+      "session_id": "ses_ea29ab68affeTKjFVjtPFrpblJ",
+      "turn": 10,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 5,
+      "context_tokens": 19369
+    },
+    {
+      "timestamp": "2026-10-21T07:47:56.659000+00:00",
+      "session_id": "ses_ea29ab68affeTKjFVjtPFrpblJ",
+      "turn": 25,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "mcp-gateway_mcp-exec",
+      "status": "error",
+      "duration_ms": 10,
+      "context_tokens": 42545
+    },
+    {
+      "timestamp": "2026-10-21T09:09:37.382000+00:00",
+      "session_id": "ses_ea27a59deffeznUtxRWbFfglIm",
+      "turn": 129,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 16669,
+      "context_tokens": 160011
+    },
+    {
+      "timestamp": "2026-10-21T09:09:53.716000+00:00",
+      "session_id": "ses_ea27a59deffeznUtxRWbFfglIm",
+      "turn": 129,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "completed",
+      "duration_ms": 27,
+      "context_tokens": 160011
+    },
+    {
+      "timestamp": "2026-10-21T09:17:10.010000+00:00",
+      "session_id": "ses_ea27a59deffeznUtxRWbFfglIm",
+      "turn": 1,
+      "role": "coder",
+      "event_type": "compaction",
+      "status": "completed",
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-21T09:17:10.131000+00:00",
+      "session_id": "ses_ea27a59deffeznUtxRWbFfglIm",
+      "turn": 145,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 12421,
+      "context_tokens": 83650
+    },
+    {
+      "timestamp": "2026-10-21T09:54:26.825000+00:00",
+      "session_id": "ses_ea22377a6ffe7ZwN91jbjwT4Nu",
+      "turn": 64,
+      "role": "tester",
+      "event_type": "tool_call",
+      "tool_name": "edit",
+      "status": "error",
+      "duration_ms": 11,
+      "context_tokens": 89327
+    },
+    {
+      "timestamp": "2026-10-21T10:04:50.681000+00:00",
+      "session_id": "ses_ea21b530afferpdNIN0iX1bKUH",
+      "turn": 38,
+      "role": "reviewer",
+      "event_type": "tool_call",
+      "tool_name": "grep",
+      "status": "error",
+      "duration_ms": 21,
+      "context_tokens": 62452
+    }
+  ]
+}
