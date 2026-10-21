@@ -4743,3 +4743,146 @@ func TestInitCommand(t *testing.T) {
 		}
 	})
 }
+
+func TestCLIWithTestDataWorkspaces(t *testing.T) {
+	t.Parallel()
+	testdataDir := filepath.Join("..", "..", "..", "testdata", "workspaces")
+	absTestdataDir, err := filepath.Abs(testdataDir)
+	if err != nil {
+		t.Fatalf("failed getting abs path for %s: %v", testdataDir, err)
+	}
+	if _, err := os.Stat(absTestdataDir); err != nil {
+		t.Fatalf("testdata/workspaces directory not found at %s: %v", absTestdataDir, err)
+	}
+
+	t.Run("list command finds all 5 workspaces and anomalies", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "--workspaces", absTestdataDir, "--list")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("CLI list failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		out := stdout.String()
+		if !strings.Contains(out, "Found 5 ticket workspaces") {
+			t.Errorf("expected 'Found 5 ticket workspaces', got: %s", out)
+		}
+		expectedTickets := []string{"AL-1", "AL-2", "AL-3", "PO-1", "GEN-1"}
+		for _, ticket := range expectedTickets {
+			if !strings.Contains(out, ticket) {
+				t.Errorf("expected ticket %s in list output, got: %s", ticket, out)
+			}
+		}
+		if !strings.Contains(out, "1 warn") {
+			t.Errorf("expected '1 warn' anomaly summary for AL-2 in list output, got: %s", out)
+		}
+		if !strings.Contains(out, "1 crit") {
+			t.Errorf("expected '1 crit' anomaly summary for GEN-1 in list output, got: %s", out)
+		}
+	})
+
+	t.Run("anomalies command lists identified anomalies in test workspaces", func(t *testing.T) {
+		// Test AL-2 anomaly detection
+		cmdAL2 := exec.Command(cliBinaryPath, "--workspaces", absTestdataDir, "--ticket-id", "AL-2", "--anomalies")
+		var stdoutAL2, stderrAL2 bytes.Buffer
+		cmdAL2.Stdout = &stdoutAL2
+		cmdAL2.Stderr = &stderrAL2
+
+		if err := cmdAL2.Run(); err != nil {
+			t.Fatalf("CLI anomalies for AL-2 failed: %v, stderr: %s", err, stderrAL2.String())
+		}
+
+		outAL2 := stdoutAL2.String()
+		if !strings.Contains(outAL2, "TOOL_RETRY_STREAK") {
+			t.Errorf("expected TOOL_RETRY_STREAK in AL-2 anomalies output, got: %s", outAL2)
+		}
+
+		// Test GEN-1 anomaly detection
+		cmdGEN1 := exec.Command(cliBinaryPath, "--workspaces", absTestdataDir, "--ticket-id", "GEN-1", "--anomalies")
+		var stdoutGEN1, stderrGEN1 bytes.Buffer
+		cmdGEN1.Stdout = &stdoutGEN1
+		cmdGEN1.Stderr = &stderrGEN1
+
+		if err := cmdGEN1.Run(); err != nil {
+			t.Fatalf("CLI anomalies for GEN-1 failed: %v, stderr: %s", err, stderrGEN1.String())
+		}
+
+		outGEN1 := stdoutGEN1.String()
+		if !strings.Contains(outGEN1, "CONTEXT_SATURATION_SPIKE") {
+			t.Errorf("expected CONTEXT_SATURATION_SPIKE in GEN-1 anomalies output, got: %s", outGEN1)
+		}
+
+		// Test clean ticket AL-1
+		cmdAL1 := exec.Command(cliBinaryPath, "--workspaces", absTestdataDir, "--ticket-id", "AL-1", "--anomalies")
+		var stdoutAL1, stderrAL1 bytes.Buffer
+		cmdAL1.Stdout = &stdoutAL1
+		cmdAL1.Stderr = &stderrAL1
+
+		if err := cmdAL1.Run(); err != nil {
+			t.Fatalf("CLI anomalies for AL-1 failed: %v, stderr: %s", err, stderrAL1.String())
+		}
+
+		outAL1 := stdoutAL1.String()
+		if !strings.Contains(outAL1, "No anomalies detected for ticket AL-1.") {
+			t.Errorf("expected 'No anomalies detected for ticket AL-1.', got: %s", outAL1)
+		}
+	})
+
+	t.Run("server subcommand starts with testdata workspaces and serves test data via HTTP", func(t *testing.T) {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("failed to reserve test port: %v", err)
+		}
+		port := ln.Addr().(*net.TCPAddr).Port
+		_ = ln.Close()
+
+		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port), "--workspaces", absTestdataDir)
+		if err := cmd.Start(); err != nil {
+			t.Fatalf("failed starting server subcommand: %v", err)
+		}
+		defer func() {
+			if killErr := cmd.Process.Kill(); killErr != nil {
+				// Process might have terminated
+			}
+			_ = cmd.Wait()
+		}()
+
+		baseURL := fmt.Sprintf("http://localhost:%d", port)
+		resp := waitForServerReady(t, baseURL+"/api/config", 3*time.Second)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/config, got %d", resp.StatusCode)
+		}
+
+		var cfg struct {
+			WorkspacesDir string `json:"workspaces_dir"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
+			t.Fatalf("failed decoding /api/config: %v", err)
+		}
+		if !strings.Contains(cfg.WorkspacesDir, "testdata") {
+			t.Errorf("expected workspaces_dir in config to contain testdata, got: %s", cfg.WorkspacesDir)
+		}
+
+		wsResp, err := http.Get(baseURL + "/api/workspaces")
+		if err != nil {
+			t.Fatalf("failed fetching /api/workspaces: %v", err)
+		}
+		defer wsResp.Body.Close()
+
+		if wsResp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/workspaces, got %d", wsResp.StatusCode)
+		}
+
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(wsResp.Body).Decode(&ledgers); err != nil {
+			t.Fatalf("failed decoding /api/workspaces: %v", err)
+		}
+		if len(ledgers) != 5 {
+			t.Errorf("expected 5 ledgers from testdata/workspaces, got %d", len(ledgers))
+		}
+	})
+}

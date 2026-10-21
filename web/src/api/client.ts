@@ -12,21 +12,7 @@ import type {
   WorkspaceDetail,
   WorkspaceEventsResponse,
 } from '../domain/types';
-import {
-  deriveTicketComparisonRows,
-  filterLedgersByCompletionDate,
-  filterLedgersByTicketTypes,
-  filterLedgersByPrefixes,
-} from '../domain/formatters';
-import { aggregateMetricsOverTime } from '../domain/progression';
-import {
-  mockFleetSummary,
-  mockTicketComparisonRows,
-  mockAgenticMetricsLedgers,
-  mockWorkspaceDetails,
-  mockBuildInfo,
-  mockProjectConfig,
-} from './mockData';
+import { deriveTicketComparisonRows } from '../domain/formatters';
 
 export interface ApiResponse<T> {
   readonly data: T;
@@ -42,23 +28,14 @@ function appendMultiParams(params: URLSearchParams, key: string, values?: readon
   }
 }
 
-function getFilteredMockLedgers(
-  sinceParam?: string,
-  untilParam?: string,
-  ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
-): readonly AgenticMetricsLedger[] {
-  let list: readonly AgenticMetricsLedger[] = Object.values(mockAgenticMetricsLedgers);
-  if (sinceParam || untilParam) {
-    list = filterLedgersByCompletionDate(list, sinceParam, untilParam);
+function rethrowError(err: unknown, fallbackMessage: string): never {
+  if (err instanceof Error) {
+    throw err;
   }
-  if (ticketTypes && ticketTypes.length > 0) {
-    list = filterLedgersByTicketTypes(list, ticketTypes);
+  if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+    throw err as Error;
   }
-  if (prefixes && prefixes.length > 0) {
-    list = filterLedgersByPrefixes(list, prefixes);
-  }
-  return list;
+  throw new Error(fallbackMessage);
 }
 
 export async function fetchFleetSummary(
@@ -68,29 +45,31 @@ export async function fetchFleetSummary(
   ticketTypes?: readonly string[],
   prefixes?: readonly string[]
 ): Promise<ApiResponse<FleetSummary>> {
-  try {
-    const params = new URLSearchParams();
-    if (windowParam && windowParam !== 'all') {
-      params.set('window', windowParam);
-    }
-    if (sinceParam) {
-      params.set('since', sinceParam);
-    }
-    if (untilParam) {
-      params.set('until', untilParam);
-    }
-    appendMultiParams(params, 'ticket_type', ticketTypes);
-    appendMultiParams(params, 'prefix', prefixes);
+  const params = new URLSearchParams();
+  if (windowParam && windowParam !== 'all') {
+    params.set('window', windowParam);
+  }
+  if (sinceParam) {
+    params.set('since', sinceParam);
+  }
+  if (untilParam) {
+    params.set('until', untilParam);
+  }
+  appendMultiParams(params, 'ticket_type', ticketTypes);
+  appendMultiParams(params, 'prefix', prefixes);
 
-    const query = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/fleet${query}`);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const url = `/api/fleet${query}`;
+
+  try {
+    const res = await fetch(url);
     if (!res.ok) {
-      return { data: mockFleetSummary, isMock: true };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch fleet summary'}`);
     }
     const data = (await res.json()) as FleetSummary;
     return { data, isMock: false };
-  } catch {
-    return { data: mockFleetSummary, isMock: true };
+  } catch (err: unknown) {
+    rethrowError(err, 'Failed to fetch fleet summary');
   }
 }
 
@@ -101,29 +80,31 @@ export async function fetchWorkspaceLedgers(
   ticketTypes?: readonly string[],
   prefixes?: readonly string[]
 ): Promise<ApiResponse<readonly AgenticMetricsLedger[]>> {
-  try {
-    const params = new URLSearchParams();
-    if (windowParam && windowParam !== 'all') {
-      params.set('window', windowParam);
-    }
-    if (sinceParam) {
-      params.set('since', sinceParam);
-    }
-    if (untilParam) {
-      params.set('until', untilParam);
-    }
-    appendMultiParams(params, 'ticket_type', ticketTypes);
-    appendMultiParams(params, 'prefix', prefixes);
+  const params = new URLSearchParams();
+  if (windowParam && windowParam !== 'all') {
+    params.set('window', windowParam);
+  }
+  if (sinceParam) {
+    params.set('since', sinceParam);
+  }
+  if (untilParam) {
+    params.set('until', untilParam);
+  }
+  appendMultiParams(params, 'ticket_type', ticketTypes);
+  appendMultiParams(params, 'prefix', prefixes);
 
-    const query = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/workspaces${query}`);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const url = `/api/workspaces${query}`;
+
+  try {
+    const res = await fetch(url);
     if (!res.ok) {
-      return { data: getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes), isMock: true };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace ledgers'}`);
     }
-    const ledgers = (await res.json()) as AgenticMetricsLedger[];
+    const ledgers = (await res.json()) as readonly AgenticMetricsLedger[];
     return { data: ledgers, isMock: false };
-  } catch {
-    return { data: getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes), isMock: true };
+  } catch (err: unknown) {
+    rethrowError(err, 'Failed to fetch workspace ledgers');
   }
 }
 
@@ -136,44 +117,38 @@ export async function fetchWorkspaces(
   ticketTypes?: readonly string[],
   prefixes?: readonly string[]
 ): Promise<ApiResponse<TicketComparisonRow[]>> {
-  try {
-    const params = new URLSearchParams();
-    if (windowParam && windowParam !== 'all') {
-      params.set('window', windowParam);
-    }
-    if (sortParam) {
-      params.set('sort', sortParam);
-    }
-    if (orderParam) {
-      params.set('order', orderParam);
-    }
-    if (sinceParam) {
-      params.set('since', sinceParam);
-    }
-    if (untilParam) {
-      params.set('until', untilParam);
-    }
-    appendMultiParams(params, 'ticket_type', ticketTypes);
-    appendMultiParams(params, 'prefix', prefixes);
+  const params = new URLSearchParams();
+  if (windowParam && windowParam !== 'all') {
+    params.set('window', windowParam);
+  }
+  if (sortParam) {
+    params.set('sort', sortParam);
+  }
+  if (orderParam) {
+    params.set('order', orderParam);
+  }
+  if (sinceParam) {
+    params.set('since', sinceParam);
+  }
+  if (untilParam) {
+    params.set('until', untilParam);
+  }
+  appendMultiParams(params, 'ticket_type', ticketTypes);
+  appendMultiParams(params, 'prefix', prefixes);
 
-    const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/workspaces${qs}`);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const url = `/api/workspaces${qs}`;
+
+  try {
+    const res = await fetch(url);
     if (!res.ok) {
-      const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
-      if (sinceParam || untilParam || (ticketTypes && ticketTypes.length > 0) || (prefixes && prefixes.length > 0)) {
-        return { data: deriveTicketComparisonRows(filtered), isMock: true };
-      }
-      return { data: [...mockTicketComparisonRows], isMock: true };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspaces'}`);
     }
     const ledgers = (await res.json()) as AgenticMetricsLedger[];
     const rows = deriveTicketComparisonRows(ledgers);
     return { data: rows, isMock: false };
-  } catch {
-    const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
-    if (sinceParam || untilParam || (ticketTypes && ticketTypes.length > 0) || (prefixes && prefixes.length > 0)) {
-      return { data: deriveTicketComparisonRows(filtered), isMock: true };
-    }
-    return { data: [...mockTicketComparisonRows], isMock: true };
+  } catch (err: unknown) {
+    rethrowError(err, 'Failed to fetch workspaces');
   }
 }
 
@@ -184,31 +159,31 @@ export async function fetchComparisonRows(
   ticketTypes?: readonly string[],
   prefixes?: readonly string[]
 ): Promise<ApiResponse<readonly TicketComparisonRow[]>> {
-  try {
-    const params = new URLSearchParams();
-    if (windowParam && windowParam !== 'all') {
-      params.set('window', windowParam);
-    }
-    if (sinceParam) {
-      params.set('since', sinceParam);
-    }
-    if (untilParam) {
-      params.set('until', untilParam);
-    }
-    appendMultiParams(params, 'ticket_type', ticketTypes);
-    appendMultiParams(params, 'prefix', prefixes);
+  const params = new URLSearchParams();
+  if (windowParam && windowParam !== 'all') {
+    params.set('window', windowParam);
+  }
+  if (sinceParam) {
+    params.set('since', sinceParam);
+  }
+  if (untilParam) {
+    params.set('until', untilParam);
+  }
+  appendMultiParams(params, 'ticket_type', ticketTypes);
+  appendMultiParams(params, 'prefix', prefixes);
 
-    const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/comparison${qs}`);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const url = `/api/comparison${qs}`;
+
+  try {
+    const res = await fetch(url);
     if (!res.ok) {
-      const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
-      return { data: deriveTicketComparisonRows(filtered), isMock: true };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch comparison rows'}`);
     }
     const rows = (await res.json()) as readonly TicketComparisonRow[];
     return { data: rows, isMock: false };
-  } catch {
-    const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
-    return { data: deriveTicketComparisonRows(filtered), isMock: true };
+  } catch (err: unknown) {
+    rethrowError(err, 'Failed to fetch comparison rows');
   }
 }
 
@@ -219,77 +194,50 @@ export async function fetchProgressionLedgers(
   ticketTypes?: readonly string[],
   prefixes?: readonly string[]
 ): Promise<ApiResponse<readonly AgenticMetricsLedger[]>> {
-  try {
-    const params = new URLSearchParams();
-    if (windowParam && windowParam !== 'all') {
-      params.set('window', windowParam);
-    }
-    if (sinceParam) {
-      params.set('since', sinceParam);
-    }
-    if (untilParam) {
-      params.set('until', untilParam);
-    }
-    appendMultiParams(params, 'ticket_type', ticketTypes);
-    appendMultiParams(params, 'prefix', prefixes);
+  const params = new URLSearchParams();
+  if (windowParam && windowParam !== 'all') {
+    params.set('window', windowParam);
+  }
+  if (sinceParam) {
+    params.set('since', sinceParam);
+  }
+  if (untilParam) {
+    params.set('until', untilParam);
+  }
+  appendMultiParams(params, 'ticket_type', ticketTypes);
+  appendMultiParams(params, 'prefix', prefixes);
 
-    const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/progression${qs}`);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const url = `/api/progression${qs}`;
+
+  try {
+    const res = await fetch(url);
     if (!res.ok) {
-      const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
-      return { data: filtered, isMock: true };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression ledgers'}`);
     }
     const ledgers = (await res.json()) as readonly AgenticMetricsLedger[];
     return { data: ledgers, isMock: false };
-  } catch {
-    const filtered = getFilteredMockLedgers(sinceParam, untilParam, ticketTypes, prefixes);
-    return { data: filtered, isMock: true };
+  } catch (err: unknown) {
+    rethrowError(err, 'Failed to fetch progression ledgers');
   }
 }
 
 export async function fetchWorkspaceById(
   ticketId: string
 ): Promise<ApiResponse<WorkspaceDetail>> {
+  const url = `/api/workspaces/${encodeURIComponent(ticketId)}`;
   try {
-    const res = await fetch(`/api/workspaces/${encodeURIComponent(ticketId)}`);
+    const res = await fetch(url);
     if (!res.ok) {
-      const fallback = mockWorkspaceDetails[ticketId];
-      if (fallback) {
-        return { data: fallback, isMock: true };
+      if (res.status === 404) {
+        throw new Error(`Workspace ${ticketId} not found`);
       }
-      const ledgerFallback = mockAgenticMetricsLedgers[ticketId];
-      if (ledgerFallback) {
-        return {
-          data: {
-            ledger: ledgerFallback,
-            artifacts: { ticket_id: ticketId, contract_content: null, summary_content: null },
-            anomalies: ledgerFallback.anomalies ?? [],
-          },
-          isMock: true,
-        };
-      }
-      throw new Error(`Workspace ${ticketId} not found`);
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace'}`);
     }
     const data = (await res.json()) as WorkspaceDetail;
     return { data, isMock: false };
   } catch (err: unknown) {
-    const fallback = mockWorkspaceDetails[ticketId];
-    if (fallback) {
-      return { data: fallback, isMock: true };
-    }
-    const ledgerFallback = mockAgenticMetricsLedgers[ticketId];
-    if (ledgerFallback) {
-      return {
-        data: {
-          ledger: ledgerFallback,
-          artifacts: { ticket_id: ticketId, contract_content: null, summary_content: null },
-          anomalies: ledgerFallback.anomalies ?? [],
-        },
-        isMock: true,
-      };
-    }
-    const msg = err instanceof Error ? err.message : 'Unknown network failure';
-    throw new Error(msg);
+    rethrowError(err, `Failed to fetch workspace ${ticketId}`);
   }
 }
 
@@ -297,12 +245,12 @@ export async function fetchVersion(): Promise<ApiResponse<BuildInfo>> {
   try {
     const res = await fetch('/api/version');
     if (!res.ok) {
-      return { data: mockBuildInfo, isMock: true };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch build version info'}`);
     }
     const data = (await res.json()) as BuildInfo;
     return { data, isMock: false };
-  } catch {
-    return { data: mockBuildInfo, isMock: true };
+  } catch (err: unknown) {
+    rethrowError(err, 'Failed to fetch build version info');
   }
 }
 
@@ -310,47 +258,26 @@ export async function fetchProjectConfig(): Promise<ApiResponse<ProjectConfigRes
   try {
     const res = await fetch('/api/config');
     if (!res.ok) {
-      return { data: mockProjectConfig, isMock: true };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch project configuration'}`);
     }
     const data = (await res.json()) as ProjectConfigResponse;
     return { data, isMock: false };
-  } catch {
-    return { data: mockProjectConfig, isMock: true };
+  } catch (err: unknown) {
+    rethrowError(err, 'Failed to fetch project configuration');
   }
 }
 
 export async function fetchWorkspaceEvents(
   ticketId: string
 ): Promise<ApiResponse<WorkspaceEventsResponse>> {
+  const url = `/api/workspaces/${encodeURIComponent(ticketId)}/events`;
   try {
-    const res = await fetch(`/api/workspaces/${encodeURIComponent(ticketId)}/events`);
+    const res = await fetch(url);
     if (!res.ok) {
       if (res.status === 404) {
-        const fallbackLedger = mockAgenticMetricsLedgers[ticketId];
-        if (fallbackLedger) {
-          const fallbackEvents = fallbackLedger.facts?.events ?? [];
-          return {
-            data: {
-              ticket_id: ticketId,
-              is_hydrated: false,
-              events: fallbackEvents,
-              data_source: 'committed_ledger',
-            },
-            isMock: true,
-          };
-        }
         throw new Error(`Workspace ${ticketId} not found`);
       }
-      const fallbackEvents = mockAgenticMetricsLedgers[ticketId]?.facts?.events ?? [];
-      return {
-        data: {
-          ticket_id: ticketId,
-          is_hydrated: false,
-          events: fallbackEvents,
-          data_source: 'committed_ledger',
-        },
-        isMock: true,
-      };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace events'}`);
     }
     const rawData = (await res.json()) as unknown;
     if (
@@ -383,23 +310,7 @@ export async function fetchWorkspaceEvents(
       isMock: false,
     };
   } catch (err: unknown) {
-    if (err instanceof Error && err.message === `Workspace ${ticketId} not found`) {
-      throw err;
-    }
-    const fallbackLedger = mockAgenticMetricsLedgers[ticketId];
-    if (fallbackLedger) {
-      return {
-        data: {
-          ticket_id: ticketId,
-          is_hydrated: false,
-          events: fallbackLedger.facts?.events ?? [],
-          data_source: 'committed_ledger',
-        },
-        isMock: true,
-      };
-    }
-    const msg = err instanceof Error ? err.message : 'Unknown network failure';
-    throw new Error(msg);
+    rethrowError(err, `Failed to fetch workspace events for ${ticketId}`);
   }
 }
 
@@ -410,11 +321,10 @@ export async function fetchWorkspaceAnomalies(
     const detailRes = await fetchWorkspaceById(ticketId);
     return {
       data: detailRes.data.anomalies ?? [],
-      isMock: detailRes.isMock,
+      isMock: false,
     };
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Unknown network failure';
-    throw new Error(msg);
+    rethrowError(err, `Failed to fetch workspace anomalies for ${ticketId}`);
   }
 }
 
@@ -433,47 +343,33 @@ export async function fetchProgressionMetrics(params?: {
   const ticketTypes = params?.ticketTypes;
   const prefixes = params?.prefixes;
 
-  const fallback = (): readonly TimeBucketMetric[] => {
-    let mockList: readonly AgenticMetricsLedger[] = Object.values(mockAgenticMetricsLedgers);
-    if (ticketTypes && ticketTypes.length > 0) {
-      mockList = filterLedgersByTicketTypes(mockList, ticketTypes);
-    }
-    if (prefixes && prefixes.length > 0) {
-      mockList = filterLedgersByPrefixes(mockList, prefixes);
-    }
-    return aggregateMetricsOverTime(
-      mockList,
-      granularityParam,
-      startDateParam,
-      endDateParam
-    );
-  };
+  const query = new URLSearchParams();
+  if (windowParam && windowParam !== 'all') {
+    query.set('window', windowParam);
+  }
+  if (granularityParam) {
+    query.set('granularity', granularityParam);
+  }
+  if (startDateParam) {
+    query.set('startDate', startDateParam);
+  }
+  if (endDateParam) {
+    query.set('endDate', endDateParam);
+  }
+  appendMultiParams(query, 'ticket_type', ticketTypes);
+  appendMultiParams(query, 'prefix', prefixes);
+
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  const url = `/api/progression${qs}`;
 
   try {
-    const query = new URLSearchParams();
-    if (windowParam && windowParam !== 'all') {
-      query.set('window', windowParam);
-    }
-    if (granularityParam) {
-      query.set('granularity', granularityParam);
-    }
-    if (startDateParam) {
-      query.set('startDate', startDateParam);
-    }
-    if (endDateParam) {
-      query.set('endDate', endDateParam);
-    }
-    appendMultiParams(query, 'ticket_type', ticketTypes);
-    appendMultiParams(query, 'prefix', prefixes);
-
-    const qs = query.toString() ? `?${query.toString()}` : '';
-    const res = await fetch(`/api/progression${qs}`);
+    const res = await fetch(url);
     if (!res.ok) {
-      return { data: fallback(), isMock: true };
+      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression metrics'}`);
     }
     const data = (await res.json()) as readonly TimeBucketMetric[];
     return { data, isMock: false };
-  } catch {
-    return { data: fallback(), isMock: true };
+  } catch (err: unknown) {
+    rethrowError(err, 'Failed to fetch progression metrics');
   }
 }

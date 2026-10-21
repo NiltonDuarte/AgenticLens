@@ -6,7 +6,7 @@ import {
   aggregateMetricsOverTime,
 } from './progression';
 import type { AgenticMetricsLedger, InvocationFact } from './types';
-import { mockAgenticMetricsLedgers } from '../api/mockData';
+import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 
 describe('Domain Progression Aggregator', () => {
   describe('parseIsoDateToUtc', () => {

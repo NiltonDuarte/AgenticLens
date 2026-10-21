@@ -25,7 +25,7 @@ import {
   formatCompactCount,
   formatLinesCompact,
 } from './formatters';
-import { mockAgenticMetricsLedgers } from '../api/mockData';
+import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 import type { AgenticMetricsLedger, TicketComparisonRow } from './types';
 
 describe('Domain Pure Formatters', () => {

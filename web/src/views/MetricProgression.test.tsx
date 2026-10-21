@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { MetricProgression } from './MetricProgression';
 import * as apiClient from '../api/client';
-import { mockAgenticMetricsLedgers } from '../api/mockData';
+import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 
 describe('MetricProgression View Component', () => {
   beforeEach(() => {

@@ -10,7 +10,6 @@ import { TicketComparisons } from './views/TicketComparisons';
 import { LiveObservability } from './views/LiveObservability';
 
 export const App: React.FC = () => {
-  const [isMock, setIsMock] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('landing');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>('AL-1');
   const [projectConfig, setProjectConfig] = useState<ProjectConfigResponse | null>(null);
@@ -21,11 +20,18 @@ export const App: React.FC = () => {
       if (mounted) {
         setProjectConfig(resp.data);
       }
+    }).catch(() => {
+      // Ignore network failure on startup; keep default state
     });
     return () => {
       mounted = false;
     };
   }, []);
+
+  const isMock = useMemo(() => {
+    const wsDir = projectConfig?.workspaces_dir?.toLowerCase() ?? '';
+    return wsDir.includes('testdata') || wsDir.includes('mock');
+  }, [projectConfig]);
 
   const configuredPrefixes = useMemo(() => {
     if (!projectConfig?.prefixes) return [];
@@ -35,6 +41,10 @@ export const App: React.FC = () => {
   const handleSelectTicketFromList = (ticketId: string) => {
     setSelectedTicketId(ticketId);
     setActiveTab('deep-dive');
+  };
+
+  const handleMockChange = (_mock: boolean) => {
+    // Mock mode is derived exclusively from projectConfig.workspaces_dir
   };
 
   return (
@@ -51,14 +61,14 @@ export const App: React.FC = () => {
           <LandingPage
             onNavigate={(tab) => setActiveTab(tab)}
             onSelectTicket={handleSelectTicketFromList}
-            onMockChange={setIsMock}
+            onMockChange={handleMockChange}
             projectConfig={projectConfig}
             projectName={projectConfig?.project_name}
           />
         )}
         {activeTab === 'overview' && (
           <FleetOverview
-            onMockChange={setIsMock}
+            onMockChange={handleMockChange}
             onSelectTicket={handleSelectTicketFromList}
             configuredPrefixes={configuredPrefixes}
           />
@@ -67,19 +77,19 @@ export const App: React.FC = () => {
           <TicketDeepDive
             selectedTicketId={selectedTicketId}
             onSelectTicket={setSelectedTicketId}
-            onMockChange={setIsMock}
+            onMockChange={handleMockChange}
           />
         )}
         {activeTab === 'progression' && (
           <MetricProgression
-            onMockChange={setIsMock}
+            onMockChange={handleMockChange}
             configuredPrefixes={configuredPrefixes}
           />
         )}
         {activeTab === 'comparisons' && (
           <TicketComparisons
             onSelectTicket={handleSelectTicketFromList}
-            onMockChange={setIsMock}
+            onMockChange={handleMockChange}
             configuredPrefixes={configuredPrefixes}
           />
         )}

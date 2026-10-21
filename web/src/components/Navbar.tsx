@@ -36,11 +36,15 @@ export const Navbar: React.FC<NavbarProps> = ({
       return;
     }
     let mounted = true;
-    void fetchVersion().then((resp) => {
-      if (mounted) {
-        setInternalVersion(resp.data);
-      }
-    });
+    void fetchVersion()
+      .then((resp) => {
+        if (mounted) {
+          setInternalVersion(resp.data);
+        }
+      })
+      .catch(() => {
+        // Keep default build info on failure
+      });
     return () => {
       mounted = false;
     };
@@ -55,11 +59,15 @@ export const Navbar: React.FC<NavbarProps> = ({
       return;
     }
     let mounted = true;
-    void fetchProjectConfig().then((resp) => {
-      if (mounted) {
-        setInternalConfig(resp.data);
-      }
-    });
+    void fetchProjectConfig()
+      .then((resp) => {
+        if (mounted) {
+          setInternalConfig(resp.data);
+        }
+      })
+      .catch(() => {
+        // Keep default config on failure
+      });
     return () => {
       mounted = false;
     };
@@ -158,7 +166,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {displayVersion.version}
         </span>
         {isMock ? (
-          <span className="status-pill mock" title="Running with local deterministic mock fixtures">
+          <span
+            className="status-pill mock"
+            title={`Running with test data folder (${projectConfig?.workspaces_dir ?? internalConfig?.workspaces_dir ?? 'testdata/workspaces'})`}
+          >
             <span className="status-dot" />
             Mock Mode
           </span>
