@@ -89,12 +89,11 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 	ext := strings.ToLower(filepath.Ext(cleanPath))
 
 	// 1. Workspace directory check - classify immediately as CategoryIgnored
-	wsDir := "workspaces"
 	if cfg != nil && strings.TrimSpace(cfg.WorkspacesDir) != "" {
-		wsDir = strings.Trim(strings.TrimSpace(cfg.WorkspacesDir), "/")
-	}
-	if cleanPath == wsDir || strings.HasPrefix(cleanPath, wsDir+"/") || strings.Contains(cleanPath, "/"+wsDir+"/") {
-		return CategoryIgnored
+		wsDir := strings.Trim(strings.TrimSpace(cfg.WorkspacesDir), "/")
+		if cleanPath == wsDir || strings.HasPrefix(cleanPath, wsDir+"/") || strings.Contains(cleanPath, "/"+wsDir+"/") {
+			return CategoryIgnored
+		}
 	}
 
 	if cfg != nil {
@@ -120,10 +119,7 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 		}
 	}
 
-	// 2. Universal ignore rules
-	if ext == ".md" || ext == ".json" || ext == ".lock" {
-		return CategoryIgnored
-	}
+	// 2. Specific lockfiles and dotfiles ignored
 	if baseName == "go.sum" || baseName == "package-lock.json" || baseName == "pnpm-lock.yaml" || baseName == "yarn.lock" {
 		return CategoryIgnored
 	}

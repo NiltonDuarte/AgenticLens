@@ -20,12 +20,6 @@ func GetGitUser() string {
 	return "unknown"
 }
 
-// ComputeSDLCIterations calculates iterations count.
-// Deprecated: SDLC iterations are telemetry-native from session steering turns. Returns 1.
-func ComputeSDLCIterations(ticketID string, workspacesDir ...string) int64 {
-	return 1
-}
-
 // InferTicketTypeFromBranchList parses git branch list output to resolve conventional commit type.
 func InferTicketTypeFromBranchList(branchOut, ticketID string) *string {
 	cleanTicket := strings.TrimSpace(ticketID)

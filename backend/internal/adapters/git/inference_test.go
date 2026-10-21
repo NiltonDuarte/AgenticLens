@@ -1,6 +1,12 @@
 package git_test
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/git"
@@ -507,20 +513,78 @@ func strPtr(s string) *string {
 	return &s
 }
 
-func TestComputeSDLCIterations_CustomWorkspacesDir(t *testing.T) {
-	if iters := git.ComputeSDLCIterations("CUSTOM-1", "my_custom_ws"); iters != 1 {
-		t.Errorf("expected 1 iteration in custom workspace, got %d", iters)
-	}
-	if iters := git.ComputeSDLCIterations("AL-39"); iters != 1 {
-		t.Errorf("expected 1 iteration, got %d", iters)
-	}
-	if iters := git.ComputeSDLCIterations(""); iters != 1 {
-		t.Errorf("expected 1 iteration for empty ticket ID, got %d", iters)
-	}
-}
+func TestComputeSDLCIterations_ZeroCallSitesOrExports(t *testing.T) {
+	t.Parallel()
 
-func TestComputeSDLCIterations_Decoupled(t *testing.T) {
-	if iters := git.ComputeSDLCIterations("AL-39"); iters != 1 {
-		t.Errorf("expected 1 iteration without filesystem inspection, got %d", iters)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed resolving cwd: %v", err)
+	}
+
+	backendDir := cwd
+	for {
+		if filepath.Base(backendDir) == "backend" {
+			break
+		}
+		cand := filepath.Join(backendDir, "backend")
+		if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+			backendDir = cand
+			break
+		}
+		parent := filepath.Dir(backendDir)
+		if parent == backendDir {
+			t.Fatalf("could not locate backend directory starting from %s", cwd)
+		}
+		backendDir = parent
+	}
+
+	fset := token.NewFileSet()
+	var violations []string
+
+	err = filepath.Walk(backendDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") {
+			return nil
+		}
+
+		node, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if parseErr != nil {
+			return parseErr
+		}
+
+		ast.Inspect(node, func(n ast.Node) bool {
+			switch x := n.(type) {
+			case *ast.FuncDecl:
+				if x.Name.Name == "ComputeSDLCIterations" {
+					violations = append(violations, "declaration: "+path+":"+fset.Position(x.Pos()).String())
+				}
+			case *ast.CallExpr:
+				if sel, ok := x.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "ComputeSDLCIterations" {
+					violations = append(violations, "call: "+path+":"+fset.Position(sel.Pos()).String())
+				} else if ident, ok := x.Fun.(*ast.Ident); ok && ident.Name == "ComputeSDLCIterations" {
+					violations = append(violations, "call: "+path+":"+fset.Position(ident.Pos()).String())
+				}
+			case *ast.SelectorExpr:
+				if x.Sel.Name == "ComputeSDLCIterations" {
+					violations = append(violations, "selector: "+path+":"+fset.Position(x.Pos()).String())
+				}
+			}
+			return true
+		})
+
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("walking backend failed: %v", err)
+	}
+
+	if len(violations) > 0 {
+		t.Fatalf("invariant violation: ComputeSDLCIterations must have zero call sites or exports, found: %v", violations)
 	}
 }

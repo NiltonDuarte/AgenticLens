@@ -199,21 +199,13 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 		return nil, err
 	}
 
-	excludeArgs := []string{
-		"--",
-		":(exclude)*.md",
-		":(exclude)*.json",
-		":(exclude)*.lock",
-	}
-
 	// 1. Check if active branch is working on this ticket
 	currBranch, err := runGitCommand("branch", "--show-current")
 	if err == nil {
 		currBranch = strings.TrimSpace(currBranch)
 		if currBranch != "" && strings.Contains(strings.ToLower(currBranch), strings.ToLower(cleanTicket)) {
 			// Try merge-base with base branch
-			args := append([]string{"diff", "--numstat", baseBranch + "...HEAD"}, excludeArgs...)
-			out, err := runGitCommand(args...)
+			out, err := runGitCommand("diff", "--numstat", baseBranch+"...HEAD")
 			if err == nil {
 				parsed := ParseNumstatOutput(out)
 				if len(parsed) > 0 {
@@ -222,8 +214,7 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 			}
 
 			// Try diff with base branch directly including uncommitted work
-			argsDirect := append([]string{"diff", "--numstat", baseBranch}, excludeArgs...)
-			outDirect, errDirect := runGitCommand(argsDirect...)
+			outDirect, errDirect := runGitCommand("diff", "--numstat", baseBranch)
 			if errDirect == nil {
 				parsed := ParseNumstatOutput(outDirect)
 				if len(parsed) > 0 {
@@ -244,8 +235,7 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 				sha := parts[0]
 				subject := parts[1]
 				if reErr == nil && ticketRegex.MatchString(subject) {
-					diffArgs := append([]string{"diff", "--numstat", sha + "^1", sha}, excludeArgs...)
-					out, err := runGitCommand(diffArgs...)
+					out, err := runGitCommand("diff", "--numstat", sha+"^1", sha)
 					if err == nil {
 						parsed := ParseNumstatOutput(out)
 						if len(parsed) > 0 {
@@ -263,8 +253,7 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 		for _, b := range strings.Split(branchOut, "\n") {
 			bClean := strings.TrimSpace(strings.TrimLeft(b, "*+ "))
 			if bClean != "" && !strings.Contains(bClean, "HEAD") {
-				diffArgs := append([]string{"diff", "--numstat", baseBranch + "..." + bClean}, excludeArgs...)
-				out, err := runGitCommand(diffArgs...)
+				out, err := runGitCommand("diff", "--numstat", baseBranch+"..."+bClean)
 				if err == nil {
 					parsed := ParseNumstatOutput(out)
 					if len(parsed) > 0 {
@@ -290,8 +279,7 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 				if metricsRegex.MatchString(subject) {
 					continue
 				}
-				diffArgs := append([]string{"diff", "--numstat", sha + "^1", sha}, excludeArgs...)
-				out, err := runGitCommand(diffArgs...)
+				out, err := runGitCommand("diff", "--numstat", sha+"^1", sha)
 				if err == nil {
 					parsed := ParseNumstatOutput(out)
 					if len(parsed) > 0 {
@@ -308,8 +296,7 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 
 	// 5. Fallback for active ticket working tree: if working directory has changes and matches active branch
 	if currBranch != "" && strings.Contains(strings.ToLower(currBranch), strings.ToLower(cleanTicket)) {
-		headDiffArgs := append([]string{"diff", "--numstat", "HEAD"}, excludeArgs...)
-		headOut, err := runGitCommand(headDiffArgs...)
+		headOut, err := runGitCommand("diff", "--numstat", "HEAD")
 		if err == nil {
 			parsed := ParseNumstatOutput(headOut)
 			if len(parsed) > 0 {
@@ -362,15 +349,23 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 		loaded, err := LoadConfig("")
 		if err == nil && loaded != nil {
 			cfg = loaded
-		} else {
-			cfg = &ClassificationConfig{
-				SrcFolders: []string{"backend", "internal", "cmd", "web"},
-			}
 		}
 	}
 
-	if err := ValidateSrcFolders(cfg.SrcFolders); err != nil {
-		return domain.CodeFacts{}, err
+	if cfg == nil || len(cfg.SrcFolders) == 0 || ValidateSrcFolders(cfg.SrcFolders) != nil {
+		if fallback != nil {
+			return *fallback, nil
+		}
+		return domain.CodeFacts{
+			LinesAdded:       0,
+			LinesDeleted:     0,
+			TestLinesAdded:   0,
+			TestLinesDeleted: 0,
+			ProdLinesAdded:   0,
+			ProdLinesDeleted: 0,
+			FilesChanged:     0,
+			SDLCIterations:   1,
+		}, nil
 	}
 
 	projCfg := &domain.ProjectConfig{

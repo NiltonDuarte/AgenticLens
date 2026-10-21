@@ -44,15 +44,25 @@ func TestClassifyFile_WorkspacesDir(t *testing.T) {
 		}
 	})
 
-	t.Run("default workspaces directory is ignored when unconfigured", func(t *testing.T) {
+	t.Run("workspaces directory without configuration falls through", func(t *testing.T) {
 		category := git.ClassifyFile("workspaces/AL-39/CONTRACT.md", nil)
-		if category != git.CategoryIgnored {
-			t.Errorf("expected CategoryIgnored for default workspaces directory, got %v", category)
+		if category != git.CategoryOther {
+			t.Errorf("expected CategoryOther for unconfigured workspaces markdown, got %v", category)
 		}
 
 		categoryCode := git.ClassifyFile("workspaces/AL-39/main.go", nil)
-		if categoryCode != git.CategoryIgnored {
-			t.Errorf("expected CategoryIgnored for code inside default workspaces, got %v", categoryCode)
+		if categoryCode != git.CategoryProd {
+			t.Errorf("expected CategoryProd for code inside unconfigured workspaces, got %v", categoryCode)
+		}
+
+		cfgWs := &git.ClassificationConfig{
+			WorkspacesDir: "workspaces",
+		}
+		if cat := git.ClassifyFile("workspaces/AL-39/CONTRACT.md", cfgWs); cat != git.CategoryIgnored {
+			t.Errorf("expected CategoryIgnored for configured workspaces dir, got %v", cat)
+		}
+		if cat := git.ClassifyFile("workspaces/AL-39/main.go", cfgWs); cat != git.CategoryIgnored {
+			t.Errorf("expected CategoryIgnored for code inside configured workspaces dir, got %v", cat)
 		}
 	})
 
@@ -78,8 +88,11 @@ func TestClassifyFile_WorkspacesDir(t *testing.T) {
 		if cat := git.ClassifyFile("tickets-component.tsx", cfg); cat == git.CategoryIgnored {
 			t.Errorf("prohibition violation: tickets-component.tsx falsely classified as ignored")
 		}
-		// File named workspaces_archive.go with default workspaces
-		if cat := git.ClassifyFile("workspaces_archive.go", nil); cat == git.CategoryIgnored {
+		// File named workspaces_archive.go with configured workspaces
+		cfgWs := &git.ClassificationConfig{
+			WorkspacesDir: "workspaces",
+		}
+		if cat := git.ClassifyFile("workspaces_archive.go", cfgWs); cat == git.CategoryIgnored {
 			t.Errorf("prohibition violation: workspaces_archive.go falsely classified as ignored")
 		}
 	})
@@ -117,9 +130,17 @@ func TestClassifyFile_TestAndProd(t *testing.T) {
 			expected: git.CategoryTest,
 		},
 		{
-			name:     "markdown doc is ignored",
+			name:     "markdown doc is other when unconfigured",
 			path:     "docs/README.md",
 			cfg:      nil,
+			expected: git.CategoryOther,
+		},
+		{
+			name: "markdown doc is ignored when explicitly excluded",
+			path: "docs/README.md",
+			cfg: &git.ClassificationConfig{
+				Exclude: []string{"docs/**"},
+			},
 			expected: git.CategoryIgnored,
 		},
 	}
@@ -132,4 +153,59 @@ func TestClassifyFile_TestAndProd(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClassifyFile_AdversarialBoundaries(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unconfigured workspaces directory classifies prod and markdown separately", func(t *testing.T) {
+		t.Parallel()
+		if cat := git.ClassifyFile("workspaces/file.go", nil); cat != git.CategoryProd {
+			t.Errorf("expected CategoryProd for workspaces/file.go with nil config, got %v", cat)
+		}
+		if cat := git.ClassifyFile("workspaces/spec.md", nil); cat != git.CategoryOther {
+			t.Errorf("expected CategoryOther for workspaces/spec.md with nil config, got %v", cat)
+		}
+	})
+
+	t.Run("configured workspaces directory classifies both as CategoryIgnored", func(t *testing.T) {
+		t.Parallel()
+		cfg := &git.ClassificationConfig{WorkspacesDir: "workspaces"}
+		if cat := git.ClassifyFile("workspaces/file.go", cfg); cat != git.CategoryIgnored {
+			t.Errorf("expected CategoryIgnored for workspaces/file.go with configured WorkspacesDir, got %v", cat)
+		}
+		if cat := git.ClassifyFile("workspaces/spec.md", cfg); cat != git.CategoryIgnored {
+			t.Errorf("expected CategoryIgnored for workspaces/spec.md with configured WorkspacesDir, got %v", cat)
+		}
+	})
+
+	t.Run("removal of universal md json lock ignore rules classifies them as CategoryOther", func(t *testing.T) {
+		t.Parallel()
+		files := []string{"test.md", "data.json", "tool.lock"}
+		for _, f := range files {
+			if cat := git.ClassifyFile(f, nil); cat != git.CategoryOther {
+				t.Errorf("expected CategoryOther for %s with nil config, got %v", f, cat)
+			}
+		}
+	})
+
+	t.Run("specific lockfiles return CategoryIgnored", func(t *testing.T) {
+		t.Parallel()
+		lockfiles := []string{"go.sum", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
+		for _, lf := range lockfiles {
+			if cat := git.ClassifyFile(lf, nil); cat != git.CategoryIgnored {
+				t.Errorf("expected CategoryIgnored for %s with nil config, got %v", lf, cat)
+			}
+		}
+	})
+
+	t.Run("dotfiles return CategoryIgnored", func(t *testing.T) {
+		t.Parallel()
+		dotfiles := []string{".gitignore", ".env"}
+		for _, df := range dotfiles {
+			if cat := git.ClassifyFile(df, nil); cat != git.CategoryIgnored {
+				t.Errorf("expected CategoryIgnored for %s with nil config, got %v", df, cat)
+			}
+		}
+	})
 }

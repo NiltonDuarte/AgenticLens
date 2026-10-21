@@ -42,16 +42,28 @@ func TestClassifyFile(t *testing.T) {
 		cfg      *git.ClassificationConfig
 		expected git.FileCategory
 	}{
-		// Ignored files
-		{"README.md", nil, git.CategoryIgnored},
-		{"docs/ARCH.md", nil, git.CategoryIgnored},
-		{"package.json", nil, git.CategoryIgnored},
+		// Ignored files: lockfiles, dotfiles, and configured workspaces
 		{"go.sum", nil, git.CategoryIgnored},
 		{"package-lock.json", nil, git.CategoryIgnored},
 		{"pnpm-lock.yaml", nil, git.CategoryIgnored},
-		{"workspaces/AL-11/CONTRACT.md", nil, git.CategoryIgnored},
-		{"workspaces/AL-11/agentic_metrics.json", nil, git.CategoryIgnored},
+		{"yarn.lock", nil, git.CategoryIgnored},
 		{".gitignore", nil, git.CategoryIgnored},
+		{".env", nil, git.CategoryIgnored},
+		{"workspaces/AL-11/CONTRACT.md", &git.ClassificationConfig{WorkspacesDir: "workspaces"}, git.CategoryIgnored},
+		{"workspaces/AL-11/agentic_metrics.json", &git.ClassificationConfig{WorkspacesDir: "workspaces"}, git.CategoryIgnored},
+		{"workspaces/file.go", &git.ClassificationConfig{WorkspacesDir: "workspaces"}, git.CategoryIgnored},
+		{"workspaces/spec.md", &git.ClassificationConfig{WorkspacesDir: "workspaces"}, git.CategoryIgnored},
+
+		// Other files: markdown, json, lock without specific lockfile names, or workspaces with nil config
+		{"README.md", nil, git.CategoryOther},
+		{"docs/ARCH.md", nil, git.CategoryOther},
+		{"package.json", nil, git.CategoryOther},
+		{"test.md", nil, git.CategoryOther},
+		{"data.json", nil, git.CategoryOther},
+		{"tool.lock", nil, git.CategoryOther},
+		{"workspaces/AL-11/CONTRACT.md", nil, git.CategoryOther},
+		{"workspaces/AL-11/agentic_metrics.json", nil, git.CategoryOther},
+		{"workspaces/spec.md", nil, git.CategoryOther},
 
 		// Test files
 		{"internal/adapters/git/analyzer_test.go", nil, git.CategoryTest},
@@ -63,6 +75,7 @@ func TestClassifyFile(t *testing.T) {
 
 		// Production files
 		{"internal/domain/models.go", nil, git.CategoryProd},
+		{"workspaces/file.go", nil, git.CategoryProd},
 		{"cmd/agentic-lens/main.go", nil, git.CategoryProd},
 		{"web/src/App.tsx", nil, git.CategoryProd},
 		{"web/src/main.ts", nil, git.CategoryProd},
@@ -112,11 +125,6 @@ func TestInferenceOnActiveWorkspace(t *testing.T) {
 		t.Errorf("expected feat ticket type for AL-11, got %v", ticketType)
 	}
 
-	iters := git.ComputeSDLCIterations("AL-11")
-	if iters != 1 {
-		t.Errorf("expected sdlc iterations == 1, got %d", iters)
-	}
-
 	user := git.GetGitUser()
 	if user == "" {
 		t.Errorf("expected non-empty git user")
@@ -147,11 +155,6 @@ func TestGitAnalyzer_AdversarialEdgeCases(t *testing.T) {
 		tType := git.InferTicketType("")
 		if tType != nil {
 			t.Errorf("expected nil type for empty ticket ID, got %v", tType)
-		}
-
-		iters := git.ComputeSDLCIterations("")
-		if iters != 1 {
-			t.Errorf("expected 1 iteration for empty ticket ID, got %d", iters)
 		}
 	})
 
@@ -930,7 +933,7 @@ func TestGetTicketNumstat_BaseBranchFromConfig(t *testing.T) {
 }
 
 func TestComputeCodeFacts_Invariants(t *testing.T) {
-	t.Run("empty src_folders returns explicit invariant error", func(t *testing.T) {
+	t.Run("empty src_folders returns zeroes or fallback with nil error", func(t *testing.T) {
 		tempDir := t.TempDir()
 		initTestGitRepo(t, tempDir, "main")
 
@@ -948,13 +951,118 @@ func TestComputeCodeFacts_Invariants(t *testing.T) {
 		cfg := &git.ClassificationConfig{
 			SrcFolders: []string{},
 		}
-		_, err = git.ComputeCodeFacts("TICK-1", cfg, nil)
-		if err == nil {
-			t.Fatal("expected error for empty src_folders, got nil")
+		zeroFacts, err := git.ComputeCodeFacts("TICK-1", cfg, nil)
+		if err != nil {
+			t.Fatalf("expected nil error for empty src_folders, got %v", err)
 		}
-		expectedMsg := "workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml"
-		if !strings.Contains(err.Error(), expectedMsg) {
-			t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
+		if zeroFacts.LinesAdded != 0 || zeroFacts.LinesDeleted != 0 || zeroFacts.FilesChanged != 0 {
+			t.Errorf("expected zero code facts, got %+v", zeroFacts)
+		}
+		if zeroFacts.SDLCIterations != 1 {
+			t.Errorf("expected 1 iteration for zero facts, got %d", zeroFacts.SDLCIterations)
+		}
+
+		fallback := &domain.CodeFacts{
+			LinesAdded:     50,
+			LinesDeleted:   10,
+			FilesChanged:   2,
+			SDLCIterations: 3,
+		}
+		fallbackFacts, err := git.ComputeCodeFacts("TICK-1", cfg, fallback)
+		if err != nil {
+			t.Fatalf("expected nil error with fallback, got %v", err)
+		}
+		if fallbackFacts.LinesAdded != 50 || fallbackFacts.FilesChanged != 2 || fallbackFacts.SDLCIterations != 3 {
+			t.Errorf("expected fallback code facts preserved, got %+v", fallbackFacts)
+		}
+
+		// Also verify whitespace-only src_folders slice
+		wsCfg := &git.ClassificationConfig{
+			SrcFolders: []string{"   ", "\t"},
+		}
+		wsFacts, err := git.ComputeCodeFacts("TICK-1", wsCfg, nil)
+		if err != nil {
+			t.Fatalf("expected nil error for whitespace-only src_folders, got %v", err)
+		}
+		if wsFacts.LinesAdded != 0 || wsFacts.LinesDeleted != 0 || wsFacts.FilesChanged != 0 {
+			t.Errorf("expected zero code facts for whitespace src_folders, got %+v", wsFacts)
+		}
+		wsFbFacts, err := git.ComputeCodeFacts("TICK-1", wsCfg, fallback)
+		if err != nil {
+			t.Fatalf("expected nil error for whitespace src_folders with fallback, got %v", err)
+		}
+		if wsFbFacts.LinesAdded != 50 || wsFbFacts.FilesChanged != 2 || wsFbFacts.SDLCIterations != 3 {
+			t.Errorf("expected fallback facts preserved for whitespace src_folders, got %+v", wsFbFacts)
+		}
+	})
+
+	t.Run("absence of fallback: nil config in unconfigured repo returns zeroes or fallback without falling back to hardcoded directories", func(t *testing.T) {
+		tempDir := t.TempDir()
+		initTestGitRepo(t, tempDir, "main")
+
+		runCmd := func(args ...string) {
+			t.Helper()
+			cmd := exec.Command("git", args...)
+			cmd.Dir = tempDir
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("git %v failed: %v (output: %s)", args, err, string(out))
+			}
+		}
+
+		runCmd("checkout", "-b", "feat/AL-39-no-hardcoded-fallback")
+		dirs := []string{"backend", "internal", "cmd", "web"}
+		for _, d := range dirs {
+			filePath := filepath.Join(tempDir, d, "sample.go")
+			if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filePath, []byte("package sample\nfunc Sample() int { return 42 }\n"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			runCmd("add", filepath.Join(d, "sample.go"))
+		}
+		runCmd("commit", "-m", "feat(AL-39): add changes in backend internal cmd web")
+
+		origDir, err := os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			_ = os.Chdir(origDir)
+		})
+
+		// Unconfigured repo: LoadConfig("") fails to find config, cfg remains nil.
+		// Must return zeroes or fallback without falling back to backend, internal, cmd, web.
+		facts, err := git.ComputeCodeFacts("AL-39", nil, nil)
+		if err != nil {
+			t.Fatalf("expected nil error for nil config in unconfigured repo, got %v", err)
+		}
+		if facts.LinesAdded != 0 || facts.LinesDeleted != 0 || facts.FilesChanged != 0 {
+			t.Errorf("prohibition violation: ComputeCodeFacts fell back to hardcoded directories, got %+v", facts)
+		}
+		if facts.SDLCIterations != 1 {
+			t.Errorf("expected SDLCIterations = 1, got %d", facts.SDLCIterations)
+		}
+
+		fallback := &domain.CodeFacts{
+			LinesAdded:       77,
+			LinesDeleted:     13,
+			TestLinesAdded:   20,
+			TestLinesDeleted: 5,
+			ProdLinesAdded:   57,
+			ProdLinesDeleted: 8,
+			FilesChanged:     4,
+			SDLCIterations:   5,
+		}
+		fbFacts, err := git.ComputeCodeFacts("AL-39", nil, fallback)
+		if err != nil {
+			t.Fatalf("expected nil error with fallback in unconfigured repo, got %v", err)
+		}
+		if fbFacts.LinesAdded != 77 || fbFacts.FilesChanged != 4 || fbFacts.SDLCIterations != 5 {
+			t.Errorf("expected fallback code facts preserved, got %+v", fbFacts)
 		}
 	})
 
@@ -1029,4 +1137,94 @@ func TestComputeCodeFacts_Invariants(t *testing.T) {
 			t.Errorf("expected 4 iterations preserved from fallback, got %d", factsWithFallback.SDLCIterations)
 		}
 	})
+}
+
+func TestGetTicketNumstat_IncludesMarkdownAndJSON(t *testing.T) {
+	tempDir := t.TempDir()
+	initTestGitRepo(t, tempDir, "main")
+
+	runCmd := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tempDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v (output: %s)", args, err, string(out))
+		}
+	}
+
+	runCmd("checkout", "-b", "feat/AL-39-docs-json")
+
+	srcDir := filepath.Join(tempDir, "src")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	files := map[string]string{
+		"src/guide.md":    "# Guide\nLine 1\nLine 2\nLine 3\n",
+		"src/config.json": "{\n  \"key\": \"value\",\n  \"active\": true\n}\n",
+		"src/custom.lock": "lock-id-12345\nhash:abcdef\n",
+		"src/service.go":  "package src\n\nfunc Handle() string {\n\treturn \"ok\"\n}\n",
+	}
+
+	for relPath, content := range files {
+		fullPath := filepath.Join(tempDir, relPath)
+		if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		runCmd("add", relPath)
+	}
+	runCmd("commit", "-m", "feat(AL-39): include markdown json and lock files")
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(origDir)
+	})
+
+	entries, err := git.GetTicketNumstat("AL-39", "main", []string{"src"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error calling GetTicketNumstat: %v", err)
+	}
+
+	if len(entries) == 0 {
+		t.Fatal("expected non-empty numstat entries, got 0")
+	}
+
+	entryMap := make(map[string]git.NumstatEntry)
+	for _, e := range entries {
+		entryMap[e.Path] = e
+	}
+
+	mdEntry, hasMd := entryMap["src/guide.md"]
+	if !hasMd {
+		t.Errorf("expected src/guide.md in numstat entries, but it was excluded. Entries: %+v", entries)
+	} else if mdEntry.Added <= 0 {
+		t.Errorf("expected src/guide.md Added > 0, got %d", mdEntry.Added)
+	}
+
+	jsonEntry, hasJSON := entryMap["src/config.json"]
+	if !hasJSON {
+		t.Errorf("expected src/config.json in numstat entries, but it was excluded. Entries: %+v", entries)
+	} else if jsonEntry.Added <= 0 {
+		t.Errorf("expected src/config.json Added > 0, got %d", jsonEntry.Added)
+	}
+
+	lockEntry, hasLock := entryMap["src/custom.lock"]
+	if !hasLock {
+		t.Errorf("expected src/custom.lock in numstat entries, but it was excluded. Entries: %+v", entries)
+	} else if lockEntry.Added <= 0 {
+		t.Errorf("expected src/custom.lock Added > 0, got %d", lockEntry.Added)
+	}
+
+	goEntry, hasGo := entryMap["src/service.go"]
+	if !hasGo {
+		t.Errorf("expected src/service.go in numstat entries, but it was excluded. Entries: %+v", entries)
+	} else if goEntry.Added <= 0 {
+		t.Errorf("expected src/service.go Added > 0, got %d", goEntry.Added)
+	}
 }
