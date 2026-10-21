@@ -374,19 +374,44 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	rawWorkspacesDir := strings.TrimSpace(*workspacesFlag)
-	if rawWorkspacesDir == "" {
-		rawWorkspacesDir = strings.TrimSpace(projCfg.Workspaces.Dir)
-	}
-	if rawWorkspacesDir == "" {
-		fmt.Fprintln(os.Stderr, "Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Server cannot start without this information.")
-		os.Exit(1)
+	var workspacesDir string
+	rawFlag := strings.TrimSpace(*workspacesFlag)
+	if rawFlag != "" {
+		workspacesDir = rawFlag
+		projCfg.Workspaces.Dir = workspacesDir
+	} else {
+		configuredDir := strings.TrimSpace(projCfg.Workspaces.Dir)
+		if configuredDir == "" {
+			fmt.Fprintf(os.Stderr, "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag. Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Server cannot start without this information.\n")
+			os.Exit(1)
+		}
+		if filepath.IsAbs(configuredDir) {
+			workspacesDir = configuredDir
+		} else {
+			cfgPath, _ := adaptersconfig.FindConfigFile("")
+			baseDir := ""
+			if cfgPath != "" {
+				baseDir = filepath.Dir(cfgPath)
+			} else {
+				if cwd, err := os.Getwd(); err == nil {
+					baseDir = cwd
+				}
+			}
+			if baseDir != "" {
+				workspacesDir = filepath.Join(baseDir, configuredDir)
+			} else {
+				workspacesDir = configuredDir
+			}
+		}
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(rawWorkspacesDir)
 	fi, err := os.Stat(workspacesDir)
 	if err != nil || !fi.IsDir() {
-		fmt.Fprintf(os.Stderr, "Error: workspaces directory %q does not exist. Server cannot start.\n", rawWorkspacesDir)
+		rawDir := strings.TrimSpace(*workspacesFlag)
+		if rawDir == "" {
+			rawDir = strings.TrimSpace(projCfg.Workspaces.Dir)
+		}
+		fmt.Fprintf(os.Stderr, "Error: workspaces directory %q does not exist. Server cannot start.\n", rawDir)
 		os.Exit(1)
 	}
 
@@ -994,17 +1019,19 @@ func main() {
 		rawWorkspacesDir = strings.TrimSpace(projCfg.Workspaces.Dir)
 	}
 	if rawWorkspacesDir == "" {
-		fmt.Fprintln(os.Stderr, "Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Cannot proceed without this information.")
+		fmt.Fprintf(os.Stderr, "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag\n")
 		os.Exit(1)
 	}
 
-	workspacesDir := adapters.ResolveWorkspacesDir(rawWorkspacesDir)
+	workspacesDir := adapters.ResolveWorkspacesDir(*workspacesFlag)
+	if workspacesDir == "" {
+		workspacesDir = rawWorkspacesDir
+	}
 	fi, err := os.Stat(workspacesDir)
 	if err != nil || !fi.IsDir() {
 		fmt.Fprintf(os.Stderr, "Error: workspaces directory %q does not exist. Cannot proceed.\n", rawWorkspacesDir)
 		os.Exit(1)
 	}
-
 	report := adapters.ScanWorkspaces(workspacesDir)
 
 	if len(report.Ledgers) == 0 {

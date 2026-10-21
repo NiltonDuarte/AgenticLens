@@ -347,9 +347,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 // 1. .agenticlens-config.yaml (root)
 // 2. .agenticlens-config.yml (root)
 // 3. .agenticlens-config.json (root)
-// 4. .agenticlens/config.yaml (legacy subfolder)
-// 5. .agenticlens/config.yml (legacy subfolder)
-// 6. .agenticlens/config.json (legacy subfolder)
 func FindConfigFile(startDir string) (string, error) {
 	curr := strings.TrimSpace(startDir)
 	if curr == "" {
@@ -371,9 +368,6 @@ func FindConfigFile(startDir string) (string, error) {
 			filepath.Join(curr, ".agenticlens-config.yaml"),
 			filepath.Join(curr, ".agenticlens-config.yml"),
 			filepath.Join(curr, ".agenticlens-config.json"),
-			filepath.Join(curr, ".agenticlens", "config.yaml"),
-			filepath.Join(curr, ".agenticlens", "config.yml"),
-			filepath.Join(curr, ".agenticlens", "config.json"),
 		}
 		for _, cfgPath := range candidates {
 			if fi, err := os.Stat(cfgPath); err == nil && !fi.IsDir() {

@@ -27,6 +27,10 @@ func ResolveWorkspacesDir(overridePath string) string {
 
 	wsDir := strings.TrimSpace(cfg.Workspaces.Dir)
 
+	if filepath.IsAbs(wsDir) {
+		return wsDir
+	}
+
 	// 1. Container volume mount path (/app/<dir>)
 	containerCandidate := filepath.Join("/app", wsDir)
 	if fi, err := os.Stat(containerCandidate); err == nil && fi.IsDir() {
@@ -36,12 +40,16 @@ func ResolveWorkspacesDir(overridePath string) string {
 	// 2. Configured workspace dir relative to configuration file directory
 	cfgPath, _ := config.FindConfigFile("")
 	var configCandidate string
+	baseDir := ""
 	if cfgPath != "" {
-		parentDir := filepath.Dir(cfgPath)
-		baseDir := parentDir
-		if filepath.Base(parentDir) == ".agenticlens" {
-			baseDir = filepath.Dir(parentDir)
+		baseDir = filepath.Dir(cfgPath)
+	} else {
+		if cwd, err := os.Getwd(); err == nil {
+			baseDir = cwd
 		}
+	}
+
+	if baseDir != "" {
 		configCandidate = filepath.Join(baseDir, wsDir)
 		if cfi, err := os.Stat(configCandidate); err == nil && cfi.IsDir() {
 			return configCandidate
@@ -76,7 +84,9 @@ func ResolveWorkspacesDir(overridePath string) string {
 	if configCandidate != "" {
 		return configCandidate
 	}
-
+	if baseDir != "" {
+		return filepath.Join(baseDir, wsDir)
+	}
 	return wsDir
 }
 
@@ -86,7 +96,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	if targetDir == "" {
 		return domain.ScanReport{
 			Ledgers: []domain.AgenticMetricsLedger{},
-			Errors:  []string{"Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag."},
+			Errors:  []string{"Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Workspaces directory is unconfigured or not found."},
 		}
 	}
 

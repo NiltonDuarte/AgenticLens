@@ -38,21 +38,8 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		}
 	})
 
-	t.Run("config file resolution", func(t *testing.T) {
+	t.Run("empty override with no config returns empty string", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		wsDir := filepath.Join(tempDir, "custom_workspaces")
-		if err := os.MkdirAll(wsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}, "workspaces": {"dir": "custom_workspaces", "src_folders": ["src"]}}`
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
 		origDir, _ := os.Getwd()
 		defer os.Chdir(origDir)
 		if err := os.Chdir(tempDir); err != nil {
@@ -60,23 +47,15 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		}
 
 		resolved := adapters.ResolveWorkspacesDir("")
-		if resolved != wsDir {
-			t.Errorf("expected %s, got %s", wsDir, resolved)
+		if resolved != "" {
+			t.Errorf("expected empty string when unconfigured, got %s", resolved)
 		}
 	})
 
-	t.Run("yaml config file resolution", func(t *testing.T) {
+	t.Run("empty override with config missing workspaces.dir returns empty string", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		wsDir := filepath.Join(tempDir, "yaml_workspaces")
-		if err := os.MkdirAll(wsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: yaml_workspaces\n  src_folders:\n    - src\n"
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  src_folders:\n    - src\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -87,8 +66,40 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		}
 
 		resolved := adapters.ResolveWorkspacesDir("")
-		if resolved != wsDir {
-			t.Errorf("expected %s, got %s", wsDir, resolved)
+		if resolved != "" {
+			t.Errorf("expected empty string when workspaces.dir is unconfigured, got %s", resolved)
+		}
+	})
+
+	t.Run("does not fall back to existing workspaces directory when unconfigured", func(t *testing.T) {
+		tempDir := t.TempDir()
+		// Hostile scenario: a physical ./workspaces directory exists on disk,
+		// but configuration has empty workspaces.dir or does not exist.
+		existingWs := filepath.Join(tempDir, "workspaces")
+		if err := os.MkdirAll(existingWs, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		// 1. Without config file
+		resolvedNoCfg := adapters.ResolveWorkspacesDir("")
+		if resolvedNoCfg != "" {
+			t.Errorf("expected empty string when unconfigured even if ./workspaces exists, got %s", resolvedNoCfg)
+		}
+
+		// 2. With config file but missing workspaces.dir
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  src_folders:\n    - src\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		resolvedEmptyWs := adapters.ResolveWorkspacesDir("")
+		if resolvedEmptyWs != "" {
+			t.Errorf("expected empty string when workspaces.dir unconfigured even if ./workspaces exists, got %s", resolvedEmptyWs)
 		}
 	})
 
@@ -188,73 +199,6 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Errorf("expected %s, got %s", wsDir, resolved)
 		}
 	})
-
-	t.Run("nested execution ascends to legacy config file resolution", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		wsDir := filepath.Join(tempDir, "deep_legacy_ws")
-		if err := os.MkdirAll(wsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: deep_legacy_ws\n  src_folders:\n    - src\n"
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		nestedDir := filepath.Join(tempDir, "sub1", "sub2", "sub3")
-		if err := os.MkdirAll(nestedDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(nestedDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved := adapters.ResolveWorkspacesDir("")
-		if resolved != wsDir {
-			t.Errorf("expected %s, got %s", wsDir, resolved)
-		}
-	})
-
-	t.Run("root config workspaces dir overrides legacy config workspaces dir", func(t *testing.T) {
-		tempDir := t.TempDir()
-		legacyDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(legacyDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		rootWsDir := filepath.Join(tempDir, "prio_root_ws")
-		legacyWsDir := filepath.Join(tempDir, "prio_legacy_ws")
-		if err := os.MkdirAll(rootWsDir, 0755); err != nil || os.MkdirAll(legacyWsDir, 0755) != nil {
-			t.Fatal("failed creating workspaces dirs")
-		}
-
-		rootCfg := "project_name: RootTest\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: prio_root_ws\n  src_folders:\n    - src\n"
-		legacyCfg := "project_name: LegacyTest\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: prio_legacy_ws\n  src_folders:\n    - src\n"
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(rootCfg), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(legacyDir, "config.yaml"), []byte(legacyCfg), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved := adapters.ResolveWorkspacesDir("")
-		if resolved != rootWsDir {
-			t.Errorf("expected root ws dir %s, got %s", rootWsDir, resolved)
-		}
-	})
 }
 
 func TestScanWorkspaces(t *testing.T) {
@@ -333,6 +277,33 @@ func TestScanWorkspaces(t *testing.T) {
 	if !strings.Contains(report.Errors[0], "CORRUPT-1") {
 		t.Errorf("expected error to mention CORRUPT-1, got %s", report.Errors[0])
 	}
+
+	t.Run("unconfigured workspaces returns empty ledgers with descriptive error", func(t *testing.T) {
+		tempDir := t.TempDir()
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		report := adapters.ScanWorkspaces("")
+		if len(report.Ledgers) != 0 {
+			t.Fatalf("expected 0 ledgers when workspaces unconfigured, got %d", len(report.Ledgers))
+		}
+		if len(report.Errors) == 0 {
+			t.Fatalf("expected at least 1 error in scan report when workspaces unconfigured")
+		}
+		foundExpected := false
+		for _, e := range report.Errors {
+			if strings.Contains(e, "Workspaces directory is unconfigured or not found") {
+				foundExpected = true
+				break
+			}
+		}
+		if !foundExpected {
+			t.Errorf("expected error containing 'Workspaces directory is unconfigured or not found', got: %v", report.Errors)
+		}
+	})
 }
 
 func TestScanWorkspaces_NaturalOrdering(t *testing.T) {
@@ -1777,11 +1748,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 func TestWorkspaceLoad_ConfiguredRoleMappings(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// 1. Create .agenticlens/config.yaml with custom role mappings
-	cfgDir := filepath.Join(tempDir, ".agenticlens")
-	if err := os.MkdirAll(cfgDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	// 1. Create root .agenticlens-config.yaml with custom role mappings
 	cfgContent := `
 project_name: TestProject
 ticket:
@@ -1795,7 +1762,7 @@ role_mappings:
   build: orchestrator
   qa-bot: tester
 `
-	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
