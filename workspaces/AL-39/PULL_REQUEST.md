@@ -2,7 +2,7 @@
 
 ## Overview
 
-Decouples the AgenticLens Git analyzer and repository adapters from hardcoded branch names (`origin/main`), static folder prefix lists (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`), duplicated boolean conditional checks, and fragile filesystem iterations crawling (`workspaces/<TICKET>/iterations/`). Upstream base branches are now dynamically resolved across four priority tiers with an explicit failure invariant if unresolvable. Monitored source code folders are dynamically validated against user configuration (`workspaces.src_folders`, `code_metrics.include`, and `code_metrics.prod_patterns`), preventing silent omission of code churn across non-standard repository topologies. SDLC iterations are now derived natively from human steering turns in session records.
+Decouples the AgenticLens Git analyzer and repository adapters from hardcoded branch names (`origin/main`), static folder prefix lists (`src/`, `backend/`, `internal/`, `cmd/`, `web/`, `tests/`), duplicated boolean conditional checks, and fragile filesystem iterations crawling (`workspaces/<TICKET>/iterations/`). Upstream base branches are dynamically resolved across four priority tiers with an explicit failure invariant if unresolvable. Monitored source code folders are dynamically validated against user configuration (`workspaces.src_folders`, `code_metrics.include`, and `code_metrics.prod_patterns`), preventing silent omission of code churn across non-standard repository topologies. SDLC iterations are derived natively from human steering turns in session records.
 
 - Contract: [workspaces/AL-39/CONTRACT.md](workspaces/AL-39/CONTRACT.md)
 - Telemetry: [workspaces/AL-39/SUMMARY.md](workspaces/AL-39/SUMMARY.md)
@@ -14,14 +14,14 @@ Decouples the AgenticLens Git analyzer and repository adapters from hardcoded br
 
 ### Boundary Adapters (`backend/internal/adapters/`)
 - `config/loader.go`: Added `BaseBranch *string` to `rawCodeMetricsConfig` and updated `mergeConfig` to merge configured `base_branch` into `ProjectConfig.CodeMetrics`.
-- `git/classifier.go`: Enriched `ClassificationConfig` with `BaseBranch`, `SrcFolders`, and `WorkspacesDir`. Decoupled `ClassifyFile` to prioritize `cfg.WorkspacesDir` (fallback `"workspaces"`).
-- `git/inference.go`: Removed fragile `findWorkspaceDir` filesystem crawling. Deprecated `ComputeSDLCIterations` to return default count 1 without filesystem traversal.
+- `git/classifier.go`: Enriched `ClassificationConfig` with `BaseBranch`, `SrcFolders`, and `WorkspacesDir`. Decoupled `ClassifyFile` to inspect `cfg.WorkspacesDir` strictly when configured (removed invalid `"workspaces"` default). Removed universal ignore rules for `.md`, `.json`, and `.lock` while preserving specific lockfiles (`go.sum`, `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) and dotfiles.
+- `git/inference.go`: Removed fragile `findWorkspaceDir` filesystem crawling. Completely deleted deprecated `ComputeSDLCIterations` function.
 - `git/analyzer.go`:
   - Implemented `ResolveBaseBranch(repoRoot string, cfg *domain.ProjectConfig) (string, error)` evaluating configured branch, symbolic reference (`refs/remotes/origin/HEAD`), and candidate probes (`origin/main` > `main` > `origin/master` > `master`). Fails explicitly prompting configuration if unresolved; never falls back to `HEAD`.
-  - Replaced all four hardcoded `"origin/main"` references in `GetTicketNumstat` with dynamic `baseBranch`.
+  - Replaced all hardcoded `"origin/main"` references in `GetTicketNumstat` with dynamic `baseBranch`. Removed hardcoded pathspec exclusions (`:(exclude)*.md`, `:(exclude)*.json`, `:(exclude)*.lock`).
   - Implemented `ValidateSrcFolders(srcFolders []string) error`, failing explicitly if empty or whitespace-only.
   - Implemented `IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool` and eliminated duplicate 6-condition checks.
-  - Updated `ComputeCodeFacts` signature to return `(domain.CodeFacts, error)` and decoupled it from filesystem iteration directories.
+  - In `ComputeCodeFacts`, removed fallback to hardcoded `backend`, `internal`, `cmd`, `web` directories. If configuration or source folders are unconfigured or missing, returns zeroes or caller fallback without error.
 - `opencode/extractor.go`: Implemented `ExtractSteeringTurns` to extract human steering turns (`role == "user"`) from the root session.
 - `backfill/engine.go`: Handled errors from `ComputeCodeFacts` without masking failures and populated `SDLCIterations` from extracted steering turns.
 
@@ -33,5 +33,5 @@ Decouples the AgenticLens Git analyzer and repository adapters from hardcoded br
 - `main.go`: Updated `runGenerate` to catch errors from `git.ComputeCodeFacts` and populate `SDLCIterations` from extracted steering turns. Removed non-source `TestYAMLFiles_SyntaxValidation` in `release_verification_test.go`.
 
 ### Testing & Verification
-- Unit and boundary tests covering base branch resolution tiers, empty source folder prompt, custom repository folder layouts, steering turns extraction, and CLI exit code handling.
-- Zero `any` types, zero emojis, and zero skipped tests.
+- Unit and boundary tests covering base branch resolution tiers, empty source folder prompt, custom repository folder layouts, steering turns extraction, CLI exit code handling, and AST verification enforcing zero call sites or exports for `ComputeSDLCIterations`.
+- Zero `any` types, zero emojis, zero race conditions, and zero skipped tests.
