@@ -24,9 +24,9 @@ Defines the product specification, architectural contracts, risk analysis, and 2
 - Pending: `AL-43: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations` (Phase 7 - Pending, blocked by AL-42)
 
 ## Pointers
-- Specification: `workspaces/PO-10/SPEC.md`
-- Shared Roadmap: `workspaces/plan/TICKETS.md`
+- Specification: `alspaces/PO-10/SPEC.md`
+- Shared Roadmap: `alspaces/plan/TICKETS.md`
 - Development Tickets:
-  - `workspaces/plan/to-do/AL-42 unify tool execution error classification and offline live pipeline parity.md`
-  - `workspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
-- Session Summary: `workspaces/PO-10/SUMMARY.md`
+  - `alspaces/plan/to-do/AL-42 unify tool execution error classification and offline live pipeline parity.md`
+  - `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
+- Session Summary: `alspaces/PO-10/SUMMARY.md`

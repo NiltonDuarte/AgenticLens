@@ -2,20 +2,27 @@
 
 ## Problem Statement
 
-In the current AgenticLens architecture, tool failure detection suffers from two critical architectural defects:
+In the current AgenticLens architecture, tool failure detection suffers from two critical architectural defects that were only partially mitigated by temporary heuristic whitelists:
 
 1. **Conflation of Execution Failures and Semantic Content Errors**:
    Currently, `domain.ClassifyToolFailure` inspects tool output text strings for error keywords (`Traceback`, `panic:`, `fatal error:`, `cannot find package`, `syntax error`, `Error:`) alongside process exit indicators (`exit status`, `cleanStatus == "error"`).
    If any string match succeeds, the tool invocation is labeled as an error (`isError = true`), and callers overwrite the invocation status to `"error"`.
-   This conflates two fundamentally different failure modes:
-   - **Hard Tool Execution Failures**: The tool command itself failed to execute, returned an error exit code, crashed with an OS signal, timed out, or had invalid parameters.
-   - **Semantic Content Errors in Successful Tool Calls**: The tool process executed cleanly and returned exit code 0 (`status: "completed"`), but its standard output payload contains compilation errors, stack traces, test failures, or lint warnings.
-   Furthermore, benign operations such as `grep` or `glob` returning 0 matches (which POSIX grep signals with exit code 1) are explicitly classified as errors (`isEmptySearch`), causing normal search operations to artificially elevate failure counts and trigger false-alarm tool retry streaks.
+   While commit `22dd699` (PR #21) added an initial whitelist for content inspection tools (`read`, `grep`, `glob`, `webfetch`) when `status == "completed"`, this heuristic is brittle and incomplete:
+   - Execution tools like `bash`, `python`, `edit`, `task`, and `mcp-*` still have their output scanned for error keywords even when exiting with code 0 (`status: "completed"`). For example, running `git log`, `git diff`, or a test suite whose output mentions "error" or "Traceback" converts a successful bash invocation into an execution crash (`status = "error"`).
+   - This conflates two fundamentally different failure modes:
+     - **Hard Tool Execution Failures**: The tool command itself failed to execute, returned an error exit code, crashed with an OS signal, timed out, or had invalid parameters.
+     - **Semantic Content Errors in Successful Tool Calls**: The tool process executed cleanly and returned exit code 0 (`status: "completed"`), but its standard output payload contains compilation errors, stack traces, test failures, or lint warnings.
+   - Furthermore, benign operations such as `grep` or `glob` returning 0 matches (which POSIX grep signals with exit code 1) have historically been classified as errors (`isEmptySearch`), causing normal search operations to artificially elevate failure counts and trigger false-alarm tool retry streaks.
 
 2. **Divergence Between Offline and Live Classification Pipelines**:
-   The offline telemetry extraction engine (`internal/adapters/opencode/extractor.go`) does not use `domain.ClassifyToolFailure` at all. Instead, it relies on an ad-hoc inline conditional:
+   The offline telemetry extraction engine (`internal/adapters/opencode/extractor.go`) does not use `domain.ClassifyToolFailure`. Instead, it maintains duplicated, ad-hoc inline conditional logic:
    ```go
-   isError := stat == "error" || strings.Contains(out, "Traceback") || strings.HasPrefix(trimmedOut, "Error:") || strings.Contains(outPrefix, "Error:")
+   var isError bool
+   if (cleanTool == "read" || cleanTool == "grep" || cleanTool == "glob" || cleanTool == "webfetch") && cleanStat == "completed" {
+       isError = false
+   } else {
+       isError = stat == "error" || strings.Contains(out, "Traceback") || strings.HasPrefix(trimmedOut, "Error:") || strings.Contains(outPrefix, "Error:")
+   }
    ```
    Meanwhile, the live observability engine (`internal/adapters/live/service.go`) calls `domain.ClassifyToolFailure`.
    This divergence causes identical agent sessions to report different tool error counts, failure rates, and anomaly states depending on whether they are inspected via real-time live streaming or post-hoc generated workspace telemetry.
@@ -157,7 +164,7 @@ func ClassifyToolContent(toolName string, output string) ToolContentResult
    - *Mitigation*: The domain execution classifier must explicitly handle standard search tools (`grep`, `glob`, `find`) where exit status 1 with empty output represents 0 matches rather than an execution crash.
 
 2. **Schema Migration & Backward Compatibility**:
-   - `workspaces/*/agentic_metrics.json` contains existing serialized `Tools` records without `content_errors`.
+   - `alspaces/*/agentic_metrics.json` contains existing serialized `Tools` records without `content_errors`.
    - *Risk*: Strict JSON unmarshaling or invariant verification during schema migrations could fail on missing keys.
    - *Mitigation*: Ensure `content_errors` uses `omitempty` in Go DTOs and defaults to 0 when parsing older schema versions (v1-v6).
 
