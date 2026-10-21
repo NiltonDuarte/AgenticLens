@@ -2,7 +2,7 @@
 
 ## 1. Problem Statement
 
-A system-wide audit cataloged in `workspaces/REV-1/REVIEW_REPORT.md` identified architectural risks arising from permissive fallback cascades across the Go backend and TypeScript web frontend. These cascades compromise data determinism, falsify engineering metrics, and risk cross-ticket data contamination:
+A system-wide audit cataloged in `alspaces/REV-1/REVIEW_REPORT.md` identified architectural risks arising from permissive fallback cascades across the Go backend and TypeScript web frontend. These cascades compromise data determinism, falsify engineering metrics, and risk cross-ticket data contamination:
 
 1. **Temporal Metrics Falsification (Date Fallback Cascades)**:
    In `backend/internal/domain/aggregations.go` (`GetLedgerCompletionDate`, `GetTicketEffectiveDate`), `web/src/domain/formatters.ts` (`getEffectiveCompletionDateMs`), and `web/src/domain/progression.ts`, missing completion dates cascade into `updated_at` or `started_at`. In-progress tickets are consequently treated as completed, distorting lead times, time-window aggregations, and progression trends. Furthermore, telemetry generation in `backend/cmd/agentic-lens/main.go` permits missing or zero `completed_at` timestamps.

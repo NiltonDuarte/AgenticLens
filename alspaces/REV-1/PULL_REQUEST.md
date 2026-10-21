@@ -2,7 +2,7 @@
 
 ## Summary of Changes
 
-This pull request resolves the critical fallback cascades identified in `workspaces/REV-1/REVIEW_REPORT.md` across the Go backend and TypeScript web dashboard, replacing ad-hoc fallback chains with deterministic invariants, fail-fast error boundaries, and strict type safety:
+This pull request resolves the critical fallback cascades identified in `alspaces/REV-1/REVIEW_REPORT.md` across the Go backend and TypeScript web dashboard, replacing ad-hoc fallback chains with deterministic invariants, fail-fast error boundaries, and strict type safety:
 
 1. **Mandatory Telemetry Completion Timestamp**:
    - `backend/cmd/agentic-lens/main.go`: `generateCmd` now enforces a valid, non-empty ISO-8601 UTC `completed_at` timestamp on every generated fact ledger.
@@ -28,8 +28,10 @@ This pull request resolves the critical fallback cascades identified in `workspa
 ---
 
 ## Artifact Pointers
-- **Contract & Architecture Boundaries**: [CONTRACT.md](workspaces/REV-1/CONTRACT.md)
-- **Comprehensive Audit**: [REVIEW_REPORT.md](workspaces/REV-1/REVIEW_REPORT.md)
-- **Detailed Execution Summary**: [SUMMARY.md](workspaces/REV-1/SUMMARY.md)
-- **Iteration 01 Plan**: [PLAN.md](workspaces/REV-1/iterations/01/PLAN.md)
-- **Iteration 01 Review**: [REVIEW.md](workspaces/REV-1/iterations/01/REVIEW.md)
+- **Contract & Architecture Boundaries**: [CONTRACT.md](alspaces/REV-1/CONTRACT.md)
+- **Comprehensive Audit**: [REVIEW_REPORT.md](alspaces/REV-1/REVIEW_REPORT.md)
+- **Detailed Execution Summary**: [SUMMARY.md](alspaces/REV-1/SUMMARY.md)
+- **Iteration 01 Plan**: [PLAN.md](alspaces/REV-1/iterations/01/PLAN.md)
+- **Iteration 01 Review**: [REVIEW.md](alspaces/REV-1/iterations/01/REVIEW.md)
+- **Iteration 02 Plan**: [PLAN.md](alspaces/REV-1/iterations/02/PLAN.md)
+- **Iteration 02 Review**: [REVIEW.md](alspaces/REV-1/iterations/02/REVIEW.md)

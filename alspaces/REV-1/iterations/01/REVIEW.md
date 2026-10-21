@@ -1,6 +1,6 @@
 # Code Review Report: Ticket REV-1 Iteration 01
 
-Audit against `workspaces/REV-1/CONTRACT.md`, `workspaces/REV-1/iterations/01/PLAN.md`, and `TECHNICAL_GUIDELINES.md`.
+Audit against `alspaces/REV-1/CONTRACT.md`, `alspaces/REV-1/iterations/01/PLAN.md`, and `TECHNICAL_GUIDELINES.md`.
 
 ---
 

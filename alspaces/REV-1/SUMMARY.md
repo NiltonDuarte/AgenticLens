@@ -52,24 +52,29 @@ Dismantled brittle and permissive fallback cascades across AgenticLens, replacin
 - **TypeScript Lint (`npm run lint`)**: PASS (0 warnings).
 - **Single Binary Pipeline (`make`)**: PASS (clean multi-platform compilation with embedded production web bundle).
 
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 6
-- **Active Agent Duration:** 2h 18m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 168.3k tokens (84% of 200k healthy ceiling, 2 compactions) | Subagents peak 168.2k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 17.0%, Coder 51.1%, Tester 20.3%, Reviewer 11.6%
-- **Subagent Turn Velocity & Thrashing:** 90.6 avg turns/run (peak: 187 turns) | Planner 83.0, Coder 118.5, Tester 82.0, Reviewer 51.0
-- **Test-to-Production Code Ratio:** 15.1:1 (+801 test lines / +53 prod lines)
-- **Code Delivered:** +868 / -148 lines across 24 code files (excluding docs)
-- **Reasoning Effort:** 108,371 reasoning tokens (52.2% of generated output)
-- **Tool Health & Self-Correction:** 598 tool calls (7 self-corrections, 98.8% success rate)
+- **Software Development Life Cycle Iterations:** 7
+- **Active Agent Duration:** 6h 29m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 168.3k tokens (84% of 200k healthy ceiling, 4 compactions) | Subagents peak 168.2k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 12.5%, Coder 62.3%, Tester 15.4%, Reviewer 9.8%
+- **Subagent Turn Velocity & Thrashing:** 87.1 avg turns/run (peak: 187 turns) | Planner 61.0, Coder 130.0, Tester 64.0, Reviewer 50.5
+- **Test-to-Production Code Ratio:** 10.0:1 (+1,111 test lines / +111 prod lines)
+- **Code Delivered:** +2,612 / -272 lines across 38 code files (excluding docs)
+- **Reasoning Effort:** 236,018 reasoning tokens (58.8% of generated output)
+- **Tool Health & Self-Correction:** 1,037 tool calls (12 self-corrections, 98.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 5 execution anomalies detected (3 CRITICAL, 2 WARNING).
+- **Status:** 9 execution anomalies detected (5 CRITICAL, 4 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k in turn 56 (session: ses_ea062d95cffeSOtl8kODc5qIf8), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k in turn 79 (session: ses_ea1a4b28affeowyXAPpI4V07XM), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.1k tokens) — Context tokens reached 162.1k in turn 112 (session: ses_ea0792dbfffeEhkwbTIQ6z2X1E), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k in turn 158 (session: ses_ea1699b13ffeeKDYzCAellSCs3), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+97.6k tokens) — Context tokens surged by 97.6k tokens in turn 171 (session: ses_ea1699b13ffeeKDYzCAellSCs3, total: 97.6k tokens, threshold: 80000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+40.5k tokens) — Context tokens surged by 40.5k tokens in turn 62 (session: ses_ea062d95cffeSOtl8kODc5qIf8, total: 40.5k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+55.5k tokens) — Context tokens surged by 55.5k tokens in turn 89 (session: ses_ea1a4b28affeowyXAPpI4V07XM, total: 55.5k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+64.3k tokens) — Context tokens surged by 64.3k tokens in turn 109 (session: ses_ea1a4b28affeowyXAPpI4V07XM, total: 64.3k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+57.0k tokens) — Context tokens surged by 57.0k tokens in turn 128 (session: ses_ea062d95cffeSOtl8kODc5qIf8, total: 57.0k tokens, threshold: 40000)
 
 ### Agentic Execution Metrics
 
@@ -78,15 +83,15 @@ Dismantled brittle and permissive fallback cascades across AgenticLens, replacin
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 1,855,376 | 31,860 | 10,753,970 | 85.3% | 168.3k | ELEVATED | $2.39 |
-| **planner** | 1 | 422,695 | 15,576 | 4,796,211 | 91.9% | 119.8k | ELEVATED | $0.83 |
-| **coder** | 2 | 1,247,918 | 31,398 | 17,646,230 | 93.4% | 168.2k | ELEVATED | $2.50 |
-| **tester** | 1 | 434,993 | 16,034 | 7,132,878 | 94.3% | 127.9k | ELEVATED | $1.00 |
-| **reviewer** | 1 | 463,899 | 4,540 | 2,155,059 | 82.3% | 77.8k | HEALTHY | $0.57 |
-| **Total** | **6** | **4,424,881** | **99,408** | **42,484,348** | **90.6%** | **168.3k** | **ELEVATED** | **$7.28** |
+| **orchestrator** | 1 | 2,904,445 | 40,016 | 12,817,526 | 81.5% | 168.3k | ELEVATED | $3.38 |
+| **planner** | 2 | 628,193 | 20,735 | 6,062,294 | 90.6% | 119.8k | ELEVATED | $1.17 |
+| **coder** | 4 | 2,677,093 | 75,551 | 41,391,953 | 93.9% | 168.2k | ELEVATED | $5.82 |
+| **tester** | 2 | 657,709 | 20,869 | 10,046,635 | 93.9% | 127.9k | ELEVATED | $1.44 |
+| **reviewer** | 2 | 668,444 | 8,463 | 4,042,064 | 85.8% | 77.8k | HEALTHY | $0.92 |
+| **Total** | **11** | **7,535,884** | **165,634** | **74,360,472** | **90.8%** | **168.3k** | **ELEVATED** | **$12.74** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 6 | 4,424,881 | 99,408 | 42,484,348 | 90.6% | $7.28 |
-| **Total** | **6** | **4,424,881** | **99,408** | **42,484,348** | **90.6%** | **$7.28** |
+| **gemini-3.8-flash** | 11 | 7,535,884 | 165,634 | 74,360,472 | 90.8% | $12.74 |
+| **Total** | **11** | **7,535,884** | **165,634** | **74,360,472** | **90.8%** | **$12.74** |
