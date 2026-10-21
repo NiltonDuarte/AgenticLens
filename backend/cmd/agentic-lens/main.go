@@ -283,6 +283,18 @@ func runGenerate(args []string) {
 
 	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
 
+	if activeCompletedAt == nil || strings.TrimSpace(*activeCompletedAt) == "" {
+		activeCompletedAt = &updatedAtISO
+	} else {
+		clean := strings.TrimSpace(*activeCompletedAt)
+		activeCompletedAt = &clean
+	}
+
+	if activeCompletedAt == nil || strings.TrimSpace(*activeCompletedAt) == "" {
+		fmt.Fprintf(os.Stderr, "Error: mandatory completed_at timestamp could not be resolved\n")
+		os.Exit(1)
+	}
+
 	var ticketIDPtr *string
 	if activeTicketID != "" {
 		ticketIDPtr = &activeTicketID

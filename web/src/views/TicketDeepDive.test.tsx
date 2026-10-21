@@ -1406,5 +1406,66 @@ describe('TicketDeepDive View Component', () => {
       const sourceBadge = screen.getByTestId('waterfall-source-badge');
       expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
     });
+
+    it('renders unclassified pill and does not render feature when ticket_type is null or undefined', async () => {
+      const unclassifiedDetail = {
+        ...mockWorkspaceDetails['AL-1']!,
+        ledger: {
+          ...mockWorkspaceDetails['AL-1']!.ledger,
+          ticket_type: null,
+        },
+      };
+
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: false,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: unclassifiedDetail,
+        isMock: false,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('SDLC Iterations')).toBeInTheDocument();
+      });
+
+      const pill = screen.getByText('unclassified');
+      expect(pill).toBeInTheDocument();
+      expect(pill).toHaveClass('ticket-type-pill');
+      expect(pill).toHaveClass('unclassified');
+      expect(screen.queryByText('feature')).not.toBeInTheDocument();
+    });
+
+    it('renders unclassified badge when ticket_type is undefined and never renders feature', async () => {
+      const ledgerWithoutType = { ...mockWorkspaceDetails['AL-1']!.ledger };
+      delete (ledgerWithoutType as { ticket_type?: unknown }).ticket_type;
+      const unclassifiedDetail = {
+        ...mockWorkspaceDetails['AL-1']!,
+        ledger: ledgerWithoutType as typeof mockWorkspaceDetails['AL-1']['ledger'],
+      };
+
+      vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+        data: Object.values(mockAgenticMetricsLedgers),
+        isMock: false,
+      });
+      vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+        data: unclassifiedDetail,
+        isMock: false,
+      });
+
+      render(<TicketDeepDive selectedTicketId="AL-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('SDLC Iterations')).toBeInTheDocument();
+      });
+
+      const pill = screen.getByText('unclassified');
+      expect(pill).toBeInTheDocument();
+      expect(pill).toHaveClass('ticket-type-pill');
+      expect(pill).toHaveClass('unclassified');
+      expect(screen.queryByText('feature')).not.toBeInTheDocument();
+    });
   });
 });

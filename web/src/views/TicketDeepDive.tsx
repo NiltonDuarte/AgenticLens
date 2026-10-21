@@ -218,7 +218,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         <div className="header-meta-row">
           <div className="header-left">
             <span className="ticket-id-tag">{ledger.ticket_id ?? 'UNKNOWN'}</span>
-            <span className="ticket-type-pill">{ledger.ticket_type ?? 'feature'}</span>
+            <span className={`ticket-type-pill ${ledger.ticket_type ? '' : 'unclassified'}`.trim()}>{ledger.ticket_type ?? 'unclassified'}</span>
             <h2 className="workspace-title">{ledger.ticket_title ?? 'Untitled Workspace'}</h2>
           </div>
           <div className="header-right">

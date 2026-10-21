@@ -236,6 +236,66 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Errorf("expected root ws dir %s, got %s", rootWsDir, resolved)
 		}
 	})
+
+	t.Run("configured workspaces directory takes precedence before container fallback", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgDir := filepath.Join(tempDir, ".agenticlens")
+		if err := os.MkdirAll(cfgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		wsDir := filepath.Join(tempDir, "precedence_workspaces")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		// Also create a default workspaces directory in the same root
+		defaultWsDir := filepath.Join(tempDir, "workspaces")
+		if err := os.MkdirAll(defaultWsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		cfgContent := `{"project_name": "TestPrecedence", "ticket": {"prefixes": [{"prefix": "PREC"}]}, "workspaces": {"dir": "precedence_workspaces", "src_folders": ["src"]}}`
+		if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		// Configured workspaces directory takes precedence over default workspaces
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != wsDir {
+			t.Errorf("expected %s, got %s", wsDir, resolved)
+		}
+
+		// Explicit override takes precedence over configured workspaces directory
+		overridePath := filepath.Join(tempDir, "explicit_override")
+		resolvedOverride := adapters.ResolveWorkspacesDir(overridePath)
+		if resolvedOverride != overridePath {
+			t.Errorf("expected override %s, got %s", overridePath, resolvedOverride)
+		}
+	})
+
+	t.Run("falls back to cwd workspaces when no config file exists", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cwdWs := filepath.Join(tempDir, "workspaces")
+		if err := os.MkdirAll(cwdWs, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		origDir, _ := os.Getwd()
+		defer os.Chdir(origDir)
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+
+		resolved := adapters.ResolveWorkspacesDir("")
+		if resolved != cwdWs {
+			t.Errorf("expected cwd workspaces %s, got %s", cwdWs, resolved)
+		}
+	})
 }
 
 func TestScanWorkspaces(t *testing.T) {
