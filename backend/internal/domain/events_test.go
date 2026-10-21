@@ -608,8 +608,8 @@ func TestPruneEventsForPersistence(t *testing.T) {
 		}
 
 		// 6. DeriveMetricsLedger parity
-		derivedUnpruned := domain.DeriveMetricsLedger(ledgerUnpruned)
-		derivedPruned := domain.DeriveMetricsLedger(ledgerPruned)
+		derivedUnpruned := domain.DeriveMetricsLedger(ledgerUnpruned, domain.DefaultProjectConfig())
+		derivedPruned := domain.DeriveMetricsLedger(ledgerPruned, domain.DefaultProjectConfig())
 
 		// Derived metrics totals and workflow efficiency must be bit-identical
 		if !reflect.DeepEqual(derivedUnpruned.Totals, derivedPruned.Totals) {

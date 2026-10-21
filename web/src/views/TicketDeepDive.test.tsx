@@ -19,11 +19,9 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: mockWorkspaceDetails['AL-1']!,
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -98,7 +96,6 @@ describe('TicketDeepDive View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [elevatedLedger],
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: {
@@ -106,7 +103,6 @@ describe('TicketDeepDive View Component', () => {
         artifacts: { ticket_id: 'AL-1', contract_content: null, summary_content: null },
         anomalies: [],
       },
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -142,7 +138,6 @@ describe('TicketDeepDive View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [criticalLedger],
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: {
@@ -150,7 +145,6 @@ describe('TicketDeepDive View Component', () => {
         artifacts: { ticket_id: 'AL-CRIT', contract_content: null, summary_content: null },
         anomalies: [],
       },
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-CRIT" />);
@@ -165,7 +159,6 @@ describe('TicketDeepDive View Component', () => {
   it('renders graceful empty state when workspace detail has missing or null ledger', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: Object.values(mockAgenticMetricsLedgers),
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: {
@@ -173,7 +166,6 @@ describe('TicketDeepDive View Component', () => {
         artifacts: { ticket_id: 'MISSING', contract_content: null, summary_content: null },
         anomalies: [],
       },
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="MISSING" />);
@@ -187,14 +179,13 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation(async (id) => {
       const detail = mockWorkspaceDetails[id] ?? {
         ledger: mockAgenticMetricsLedgers[id]!,
         artifacts: { ticket_id: id, contract_content: null, summary_content: null },
       };
-      return { data: detail, isMock: true };
+      return { data: detail };
     });
 
     const { rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -225,7 +216,6 @@ describe('TicketDeepDive View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [noTurnsLedger],
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: {
@@ -233,7 +223,6 @@ describe('TicketDeepDive View Component', () => {
         artifacts: { ticket_id: 'AL-1', contract_content: null, summary_content: null },
         anomalies: [],
       },
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -247,11 +236,9 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: mockWorkspaceDetails['AL-1']!,
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -270,14 +257,13 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation(async (id) => {
       const detail = mockWorkspaceDetails[id] ?? {
         ledger: mockAgenticMetricsLedgers[id]!,
         artifacts: { ticket_id: id, contract_content: null, summary_content: null },
       };
-      return { data: detail, isMock: true };
+      return { data: detail };
     });
 
     const onSelectTicket = vi.fn();
@@ -301,14 +287,13 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     const fetchLedgersSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation(async (id) => {
       const detail = mockWorkspaceDetails[id] ?? {
         ledger: mockAgenticMetricsLedgers[id]!,
         artifacts: { ticket_id: id, contract_content: null, summary_content: null },
       };
-      return { data: detail, isMock: true };
+      return { data: detail };
     });
 
     const onSelectTicket = vi.fn();
@@ -337,7 +322,6 @@ describe('TicketDeepDive View Component', () => {
   it('renders empty state when no workspaces are returned', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
-      isMock: true,
     });
 
     render(<TicketDeepDive />);
@@ -360,11 +344,9 @@ describe('TicketDeepDive View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValueOnce({
       data: Object.values(mockAgenticMetricsLedgers),
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValueOnce({
       data: mockWorkspaceDetails['AL-1']!,
-      isMock: true,
     });
 
     const retryBtn = screen.getByRole('button', { name: /retry connection/i });
@@ -379,11 +361,9 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: mockWorkspaceDetails['AL-1']!,
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -533,11 +513,9 @@ describe('TicketDeepDive View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [emptyLedger],
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: emptyWorkspace,
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-EMPTY" />);
@@ -624,11 +602,9 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: mockWorkspaceDetails['AL-1']!,
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -718,11 +694,9 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: mockWorkspaceDetails['AL-1']!,
-      isMock: true,
     });
 
     const { container } = render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -769,11 +743,9 @@ describe('TicketDeepDive View Component', () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: mockWorkspaceDetails['AL-1']!,
-      isMock: true,
     });
 
     const { container } = render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -879,7 +851,6 @@ describe('TicketDeepDive View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [customRoleLedger],
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
       data: {
@@ -887,7 +858,6 @@ describe('TicketDeepDive View Component', () => {
         artifacts: { ticket_id: 'AL-CUSTOM', contract_content: null, summary_content: null },
         anomalies: [],
       },
-      isMock: true,
     });
 
     render(<TicketDeepDive selectedTicketId="AL-CUSTOM" />);
@@ -909,12 +879,10 @@ describe('TicketDeepDive View Component', () => {
     it('renders legacy v1 fallback banner when viewing a ticket whose events array is empty', async () => {
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: mockWorkspaceDetails['AL-1']!,
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
           ticket_id: 'AL-1',
@@ -922,8 +890,7 @@ describe('TicketDeepDive View Component', () => {
           events: [],
           data_source: 'committed_ledger',
         },
-        isMock: true,
-      });
+        });
 
       render(<TicketDeepDive selectedTicketId="AL-1" />);
 
@@ -953,12 +920,10 @@ describe('TicketDeepDive View Component', () => {
 
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: v1WithAnomalies,
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
           ticket_id: 'AL-1',
@@ -966,8 +931,7 @@ describe('TicketDeepDive View Component', () => {
           events: [],
           data_source: 'committed_ledger',
         },
-        isMock: true,
-      });
+        });
 
       render(<TicketDeepDive selectedTicketId="AL-1" />);
 
@@ -989,12 +953,10 @@ describe('TicketDeepDive View Component', () => {
     it('renders TraceWaterfall component when viewing a ticket with populated events', async () => {
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: mockWorkspaceDetails['AL-2']!,
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
           ticket_id: 'AL-2',
@@ -1002,8 +964,7 @@ describe('TicketDeepDive View Component', () => {
           events: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
           data_source: 'committed_ledger',
         },
-        isMock: true,
-      });
+        });
 
       render(<TicketDeepDive selectedTicketId="AL-2" />);
 
@@ -1017,12 +978,10 @@ describe('TicketDeepDive View Component', () => {
     it('clicking an anomalous event in the waterfall opens AnomalyDrawer and closing restores state', async () => {
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: mockWorkspaceDetails['AL-2']!,
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
           ticket_id: 'AL-2',
@@ -1030,8 +989,7 @@ describe('TicketDeepDive View Component', () => {
           events: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
           data_source: 'committed_ledger',
         },
-        isMock: true,
-      });
+        });
 
       render(<TicketDeepDive selectedTicketId="AL-2" />);
 
@@ -1072,12 +1030,10 @@ describe('TicketDeepDive View Component', () => {
     it('clicking an unflagged timeline node highlights it without opening the AnomalyDrawer', async () => {
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: mockWorkspaceDetails['AL-2']!,
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
           ticket_id: 'AL-2',
@@ -1085,8 +1041,7 @@ describe('TicketDeepDive View Component', () => {
           events: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
           data_source: 'committed_ledger',
         },
-        isMock: true,
-      });
+        });
 
       render(<TicketDeepDive selectedTicketId="AL-2" />);
 
@@ -1121,12 +1076,10 @@ describe('TicketDeepDive View Component', () => {
     it('clicking an unflagged node closes the drawer if previously opened by a flagged node', async () => {
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: mockWorkspaceDetails['AL-2']!,
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
           ticket_id: 'AL-2',
@@ -1134,8 +1087,7 @@ describe('TicketDeepDive View Component', () => {
           events: mockWorkspaceDetails['AL-2']!.ledger.facts.events ?? [],
           data_source: 'committed_ledger',
         },
-        isMock: true,
-      });
+        });
 
       render(<TicketDeepDive selectedTicketId="AL-2" />);
 
@@ -1201,12 +1153,10 @@ describe('TicketDeepDive View Component', () => {
 
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: plainDetail,
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
           ticket_id: 'AL-2',
@@ -1214,8 +1164,7 @@ describe('TicketDeepDive View Component', () => {
           events: [plainErrorEvent],
           data_source: 'committed_ledger',
         },
-        isMock: true,
-      });
+        });
 
       render(<TicketDeepDive selectedTicketId="AL-2" />);
 
@@ -1276,12 +1225,10 @@ describe('TicketDeepDive View Component', () => {
 
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: plainDetail,
-        isMock: true,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
           ticket_id: 'AL-2',
@@ -1289,8 +1236,7 @@ describe('TicketDeepDive View Component', () => {
           events: [plainErrorEvent],
           data_source: 'committed_ledger',
         },
-        isMock: true,
-      });
+        });
 
       render(<TicketDeepDive selectedTicketId="AL-2" />);
 
@@ -1349,11 +1295,9 @@ describe('TicketDeepDive View Component', () => {
 
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: false,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: richDetail,
-        isMock: false,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
@@ -1362,7 +1306,6 @@ describe('TicketDeepDive View Component', () => {
           events: richEvents,
           data_source: 'local_sqlite',
         },
-        isMock: false,
       });
 
       const { container } = render(<TicketDeepDive selectedTicketId="AL-2" />);
@@ -1410,11 +1353,9 @@ describe('TicketDeepDive View Component', () => {
 
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: false,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: offlineDetail,
-        isMock: false,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
         data: {
@@ -1423,7 +1364,6 @@ describe('TicketDeepDive View Component', () => {
           events: offlineEvents,
           data_source: 'committed_ledger',
         },
-        isMock: false,
       });
 
       render(<TicketDeepDive selectedTicketId="AL-2" />);
@@ -1454,11 +1394,9 @@ describe('TicketDeepDive View Component', () => {
 
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: false,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: unclassifiedDetail,
-        isMock: false,
       });
 
       render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -1484,11 +1422,9 @@ describe('TicketDeepDive View Component', () => {
 
       vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
         data: Object.values(mockAgenticMetricsLedgers),
-        isMock: false,
       });
       vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
         data: unclassifiedDetail,
-        isMock: false,
       });
 
       render(<TicketDeepDive selectedTicketId="AL-1" />);

@@ -12,11 +12,9 @@ describe('LandingPage View Component', () => {
   it('renders loading indicator initially then displays hero banner and descriptions', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     const onNavigate = vi.fn();
@@ -47,11 +45,9 @@ describe('LandingPage View Component', () => {
   it('renders all four feature navigation cards with titles and action buttons', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     const onNavigate = vi.fn();
@@ -82,11 +78,9 @@ describe('LandingPage View Component', () => {
   it('triggers onNavigate with the expected tab identifier when clicking feature cards', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     const onNavigate = vi.fn();
@@ -119,11 +113,9 @@ describe('LandingPage View Component', () => {
   it('correctly calculates and renders pulse metrics without NaN or null', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     const { container } = render(
@@ -181,11 +173,9 @@ describe('LandingPage View Component', () => {
           brittle_tools: [],
         },
       },
-      isMock: false,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [],
-      isMock: false,
     });
 
     const { container } = render(
@@ -212,7 +202,6 @@ describe('LandingPage View Component', () => {
   it('renders pulse metrics with fallback calculations when summary is null and handles non-finite iteration counts', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: null as unknown as typeof mockFleetSummary,
-      isMock: false,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [
@@ -261,7 +250,6 @@ describe('LandingPage View Component', () => {
           context_health_status: 'HEALTHY',
         },
       ],
-      isMock: false,
     });
 
     const { container } = render(
@@ -293,11 +281,9 @@ describe('LandingPage View Component', () => {
   it('renders quick-launch workspace list and triggers onSelectTicket on click', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     const onSelectTicket = vi.fn();
@@ -327,37 +313,10 @@ describe('LandingPage View Component', () => {
     expect(onSelectTicket).toHaveBeenCalledTimes(2);
   });
 
-  it('notifies onMockChange callback with true when either endpoint falls back to mock', async () => {
-    const onMockChange = vi.fn();
-    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
-      data: mockFleetSummary,
-      isMock: true,
-    });
-    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
-      data: [...mockTicketComparisonRows],
-      isMock: false,
-    });
-
-    render(
-      <LandingPage
-        onNavigate={vi.fn()}
-        onSelectTicket={vi.fn()}
-        onMockChange={onMockChange}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('AgenticLens Observability')).toBeInTheDocument();
-    });
-
-    expect(onMockChange).toHaveBeenCalledWith(true);
-  });
-
   it('renders error banner and recovers on retry', async () => {
     const fetchSpy = vi.spyOn(apiClient, 'fetchFleetSummary').mockRejectedValueOnce(new Error('Network failure'));
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     render(
@@ -376,7 +335,6 @@ describe('LandingPage View Component', () => {
 
     fetchSpy.mockResolvedValueOnce({
       data: mockFleetSummary,
-      isMock: true,
     });
 
     fireEvent.click(retryBtn);
@@ -390,7 +348,6 @@ describe('LandingPage View Component', () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockRejectedValueOnce('raw-timeout-string');
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     render(
@@ -410,11 +367,9 @@ describe('LandingPage View Component', () => {
   it('renders empty state notice when zero workspaces are returned', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: { ...mockFleetSummary, total_tickets: 0 },
-      isMock: false,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [],
-      isMock: false,
     });
 
     render(
@@ -432,7 +387,6 @@ describe('LandingPage View Component', () => {
   it('handles unexpected context health status with fallback class without throwing', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [
@@ -442,7 +396,6 @@ describe('LandingPage View Component', () => {
           context_health_status: 'UNRECOGNIZED_STATUS' as unknown as 'HEALTHY',
         },
       ],
-      isMock: true,
     });
 
     const { container } = render(
@@ -468,7 +421,6 @@ describe('LandingPage View Component', () => {
 
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     render(
@@ -496,11 +448,9 @@ describe('LandingPage View Component', () => {
   it('contains zero emojis in the rendered document body', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     const { container } = render(
@@ -543,11 +493,9 @@ describe('LandingPage View Component', () => {
 
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: customRows,
-      isMock: true,
     });
 
     render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
@@ -626,11 +574,9 @@ describe('LandingPage View Component', () => {
 
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: identicalRows,
-      isMock: true,
     });
 
     render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
@@ -658,11 +604,9 @@ describe('LandingPage View Component', () => {
   it('renders graceful empty state when workspaces array is empty', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [],
-      isMock: true,
     });
 
     render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
@@ -696,11 +640,9 @@ describe('LandingPage View Component', () => {
 
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: customRows,
-      isMock: true,
     });
 
     render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
@@ -738,11 +680,9 @@ describe('LandingPage View Component', () => {
   it('renders observed project name in hero section when projectName is provided', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     render(
@@ -764,11 +704,9 @@ describe('LandingPage View Component', () => {
   it('renders observed project name in hero section when projectConfig is provided', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     render(
@@ -795,11 +733,9 @@ describe('LandingPage View Component', () => {
   it('omits observed project context when project name is empty or omitted', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     render(

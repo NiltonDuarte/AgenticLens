@@ -3,7 +3,6 @@ import type { ActiveTab, BuildInfo, ProjectConfigResponse } from '../domain/type
 import { fetchVersion, fetchProjectConfig } from '../api/client';
 
 export interface NavbarProps {
-  readonly isMock: boolean;
   readonly activeTab: ActiveTab;
   readonly onSelectTab?: ((tab: ActiveTab) => void) | undefined;
   readonly versionInfo?: BuildInfo | undefined;
@@ -18,7 +17,6 @@ const DEFAULT_BUILD_INFO: BuildInfo = {
 };
 
 export const Navbar: React.FC<NavbarProps> = ({
-  isMock,
   activeTab,
   onSelectTab,
   versionInfo,
@@ -75,6 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const displayVersion = internalVersion ?? DEFAULT_BUILD_INFO;
   const observedProject = (projectName ?? internalConfig?.project_name ?? '').trim();
+  const rawWorkspacesDir = (projectConfig?.workspaces_dir ?? internalConfig?.workspaces_dir ?? '').trim();
 
   const handleBrandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -165,18 +164,23 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           {displayVersion.version}
         </span>
-        {isMock ? (
+        {rawWorkspacesDir ? (
           <span
-            className="status-pill mock"
-            title={`Running with test data folder (${projectConfig?.workspaces_dir ?? internalConfig?.workspaces_dir ?? 'testdata/workspaces'})`}
+            className="status-pill workspace-pill"
+            title={`Active Workspaces Directory: ${rawWorkspacesDir}`}
+            aria-label={`Active Workspaces Directory: ${rawWorkspacesDir}`}
           >
             <span className="status-dot" />
-            Mock Mode
+            {rawWorkspacesDir}
           </span>
         ) : (
-          <span className="status-pill live" title="Connected to live AgenticLens Go HTTP server">
-            <span className="status-dot" />
-            Live Server
+          <span
+            className="status-pill workspace-pill loading"
+            title="Loading workspaces configuration"
+            aria-label="Loading workspaces configuration"
+          >
+            <span className="status-dot loading" />
+            Loading...
           </span>
         )}
       </div>

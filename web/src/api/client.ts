@@ -16,7 +16,6 @@ import { deriveTicketComparisonRows } from '../domain/formatters';
 
 export interface ApiResponse<T> {
   readonly data: T;
-  readonly isMock: boolean;
 }
 
 function appendMultiParams(params: URLSearchParams, key: string, values?: readonly string[]): void {
@@ -67,7 +66,7 @@ export async function fetchFleetSummary(
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch fleet summary'}`);
     }
     const data = (await res.json()) as FleetSummary;
-    return { data, isMock: false };
+    return { data };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch fleet summary');
   }
@@ -102,7 +101,7 @@ export async function fetchWorkspaceLedgers(
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace ledgers'}`);
     }
     const ledgers = (await res.json()) as readonly AgenticMetricsLedger[];
-    return { data: ledgers, isMock: false };
+    return { data: ledgers };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch workspace ledgers');
   }
@@ -146,7 +145,7 @@ export async function fetchWorkspaces(
     }
     const ledgers = (await res.json()) as AgenticMetricsLedger[];
     const rows = deriveTicketComparisonRows(ledgers);
-    return { data: rows, isMock: false };
+    return { data: rows };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch workspaces');
   }
@@ -181,7 +180,7 @@ export async function fetchComparisonRows(
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch comparison rows'}`);
     }
     const rows = (await res.json()) as readonly TicketComparisonRow[];
-    return { data: rows, isMock: false };
+    return { data: rows };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch comparison rows');
   }
@@ -216,7 +215,7 @@ export async function fetchProgressionLedgers(
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression ledgers'}`);
     }
     const ledgers = (await res.json()) as readonly AgenticMetricsLedger[];
-    return { data: ledgers, isMock: false };
+    return { data: ledgers };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch progression ledgers');
   }
@@ -235,7 +234,7 @@ export async function fetchWorkspaceById(
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace'}`);
     }
     const data = (await res.json()) as WorkspaceDetail;
-    return { data, isMock: false };
+    return { data };
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace ${ticketId}`);
   }
@@ -248,7 +247,7 @@ export async function fetchVersion(): Promise<ApiResponse<BuildInfo>> {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch build version info'}`);
     }
     const data = (await res.json()) as BuildInfo;
-    return { data, isMock: false };
+    return { data };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch build version info');
   }
@@ -261,7 +260,7 @@ export async function fetchProjectConfig(): Promise<ApiResponse<ProjectConfigRes
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch project configuration'}`);
     }
     const data = (await res.json()) as ProjectConfigResponse;
-    return { data, isMock: false };
+    return { data };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch project configuration');
   }
@@ -287,7 +286,7 @@ export async function fetchWorkspaceEvents(
       'is_hydrated' in rawData
     ) {
       const resp = rawData as WorkspaceEventsResponse;
-      return { data: resp, isMock: false };
+      return { data: resp };
     }
     if (Array.isArray(rawData)) {
       return {
@@ -297,7 +296,6 @@ export async function fetchWorkspaceEvents(
           events: rawData as readonly EventFact[],
           data_source: 'committed_ledger',
         },
-        isMock: false,
       };
     }
     return {
@@ -307,7 +305,6 @@ export async function fetchWorkspaceEvents(
         events: [],
         data_source: 'committed_ledger',
       },
-      isMock: false,
     };
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace events for ${ticketId}`);
@@ -321,7 +318,6 @@ export async function fetchWorkspaceAnomalies(
     const detailRes = await fetchWorkspaceById(ticketId);
     return {
       data: detailRes.data.anomalies ?? [],
-      isMock: false,
     };
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace anomalies for ${ticketId}`);
@@ -368,7 +364,7 @@ export async function fetchProgressionMetrics(params?: {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression metrics'}`);
     }
     const data = (await res.json()) as readonly TimeBucketMetric[];
-    return { data, isMock: false };
+    return { data };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch progression metrics');
   }

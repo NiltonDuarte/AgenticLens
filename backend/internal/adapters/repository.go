@@ -20,14 +20,14 @@ var ErrWorkspacesDirNotFound = errors.New("workspaces directory not found")
 // ResolveWorkspacesDir resolves workspaces directory from argument, config.
 // Prioritizes explicit overrides, followed by configured project paths.
 func ResolveWorkspacesDir(overridePath string) (string, error) {
-	if overridePath != "" {
-		return overridePath, nil
+	if trimmed := strings.TrimSpace(overridePath); trimmed != "" {
+		return trimmed, nil
 	}
 
 	// 1. Configured workspace dir from centralized config loader
 	cfg, err := config.Load("")
-	if err == nil && cfg.Workspaces.Dir != "" {
-		return cfg.Workspaces.Dir, nil
+	if err == nil && strings.TrimSpace(cfg.Workspaces.Dir) != "" {
+		return strings.TrimSpace(cfg.Workspaces.Dir), nil
 	}
 	return "", ErrWorkspacesDirNotFound
 }
@@ -38,7 +38,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	if err != nil {
 		return domain.ScanReport{
 			Ledgers: []domain.AgenticMetricsLedger{},
-			Errors:  []string{fmt.Sprintf("Workspaces directory not found: %v", err)},
+			Errors:  []string{fmt.Sprintf("Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Workspaces directory is unconfigured or not found: %v", err)},
 		}
 	}
 
@@ -98,7 +98,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			}
 		}
 
-		ledger := domain.DeriveMetricsLedgerWithConfig(factLedger, cfg)
+		ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 		ledgers = append(ledgers, ledger)
 	}
 
@@ -220,7 +220,7 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 
 	targetDir, err := ResolveWorkspacesDir(basePath)
 	if err != nil {
-		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
+		return nil, fmt.Errorf("workspaces directory is not configured: %w", err)
 	}
 	absTargetDir, err := filepath.Abs(targetDir)
 	if err != nil {
@@ -256,7 +256,7 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	}
 
 	cfg, _ := config.Load(basePath)
-	ledger := domain.DeriveMetricsLedgerWithConfig(factLedger, cfg)
+	ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 	return &ledger, nil
 }
 

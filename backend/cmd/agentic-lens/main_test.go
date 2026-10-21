@@ -606,6 +606,44 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 	})
 }
 
+func TestServer_FailsWithoutWorkspacesConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  src_folders:\n    - src\n"
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(cliBinaryPath, "server")
+	cmd.Dir = tempDir
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		t.Fatal("expected server to fail when workspaces config is missing, got nil")
+	}
+
+	expectedErr := "Error: workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Server cannot start without this information."
+	if !strings.Contains(stderr.String(), expectedErr) {
+		t.Errorf("expected stderr to contain %q, got: %s", expectedErr, stderr.String())
+	}
+}
+
+func TestServer_FailsWhenWorkspacesDirDoesNotExist(t *testing.T) {
+	nonExistentPath := "/nonexistent/workspaces/dir/xyz"
+	cmd := exec.Command(cliBinaryPath, "server", "--workspaces", nonExistentPath)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		t.Fatal("expected server to fail when workspaces dir does not exist, got nil")
+	}
+
+	expectedErr := fmt.Sprintf("Error: workspaces directory %q does not exist. Server cannot start.", nonExistentPath)
+	if !strings.Contains(stderr.String(), expectedErr) {
+		t.Errorf("expected stderr to contain %q, got: %s", expectedErr, stderr.String())
+	}
+}
+
 func TestCLIServerPortEnvironment(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 
@@ -3476,13 +3514,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("custom prefix resolves automatically from project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatalf("failed creating .agenticlens dir: %v", err)
-		}
 		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatalf("failed writing config.yaml: %v", err)
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
@@ -3525,13 +3559,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("configured prefix overrides default prefix mapping", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatalf("failed creating .agenticlens dir: %v", err)
-		}
 		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatalf("failed writing config.yaml: %v", err)
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
@@ -3574,13 +3604,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("explicit CLI ticket-type flag overrides configured prefix", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatalf("failed creating .agenticlens dir: %v", err)
-		}
 		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatalf("failed writing config.yaml: %v", err)
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
@@ -3624,13 +3650,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("strict-type succeeds when custom prefix matches in project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatalf("failed creating .agenticlens dir: %v", err)
-		}
 		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatalf("failed writing config.yaml: %v", err)
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
@@ -3692,13 +3714,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("git checkout -b failed: %v", err)
 		}
 
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatalf("failed creating .agenticlens dir: %v", err)
-		}
 		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatalf("failed writing config.yaml: %v", err)
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
@@ -3762,14 +3780,10 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("git checkout -b failed: %v", err)
 		}
 
-		cfgDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(cfgDir, 0755); err != nil {
-			t.Fatalf("failed creating .agenticlens dir: %v", err)
-		}
-		// Configure AL to map to docs in config.yaml
+		// Configure AL to map to docs in .agenticlens-config.yaml
 		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
-		if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatalf("failed writing config.yaml: %v", err)
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
 		outJSON := filepath.Join(tempDir, "facts.json")
@@ -4546,6 +4560,23 @@ func TestInitCommand(t *testing.T) {
 		if len(loaded.Workspaces.Artifacts) != 0 {
 			t.Errorf("expected generated config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
 		}
+		if len(loaded.RoleMappings) != 0 {
+			t.Errorf("expected generated config to have zero role mappings, got %v", loaded.RoleMappings)
+		}
+		if len(loaded.RoleOrder) != 0 {
+			t.Errorf("expected generated config to have zero role order, got %v", loaded.RoleOrder)
+		}
+		rawYAML, err := os.ReadFile(expectedPath)
+		if err != nil {
+			t.Fatalf("reading generated config: %v", err)
+		}
+		content := string(rawYAML)
+		if !strings.Contains(content, "role_mappings: {}") {
+			t.Errorf("expected 'role_mappings: {}' in yaml, got:\n%s", content)
+		}
+		if !strings.Contains(content, "role_order: []") {
+			t.Errorf("expected 'role_order: []' in yaml, got:\n%s", content)
+		}
 	})
 
 	t.Run("custom flags customize generated configuration", func(t *testing.T) {
@@ -4593,6 +4624,12 @@ func TestInitCommand(t *testing.T) {
 		}
 		if len(loaded.Workspaces.Artifacts) != 0 {
 			t.Errorf("expected generated custom config to have zero workspace artifacts by default, got %d", len(loaded.Workspaces.Artifacts))
+		}
+		if len(loaded.RoleMappings) != 0 {
+			t.Errorf("expected generated custom config to have zero role mappings, got %v", loaded.RoleMappings)
+		}
+		if len(loaded.RoleOrder) != 0 {
+			t.Errorf("expected generated custom config to have zero role order, got %v", loaded.RoleOrder)
 		}
 	})
 
@@ -4963,6 +5000,26 @@ func TestInitCommand(t *testing.T) {
 			t.Errorf("expected prompt to run init, got: %s", stderrServer.String())
 		}
 
+		// Test server command in dir with no config and no workspaces flag
+		cmdServerNoFlag := exec.Command(cliBinaryPath, "server", "--port", "29198")
+		cmdServerNoFlag.Dir = tempDir
+		var stderrServerNoFlag bytes.Buffer
+		cmdServerNoFlag.Stderr = &stderrServerNoFlag
+		if err := cmdServerNoFlag.Run(); err == nil {
+			t.Fatal("expected server command without config and without workspaces flag to fail, got zero exit code")
+		} else {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+			}
+			if exitErr.ExitCode() != 1 {
+				t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+			}
+		}
+		if !strings.Contains(stderrServerNoFlag.String(), "Project configuration not found. Please run 'agentic-lens init'") {
+			t.Errorf("expected prompt to run init, got: %s", stderrServerNoFlag.String())
+		}
+
 		// Test generate command in dir with no config
 		cmdGenerate := exec.Command(cliBinaryPath, "generate", "--ticket-id", "TEST-1", "--allow-empty")
 		cmdGenerate.Dir = tempDir
@@ -5000,8 +5057,8 @@ func TestInitCommand(t *testing.T) {
 				t.Fatalf("expected exit code 1, got error: %v", err)
 			}
 		}
-		if !strings.Contains(stderrRoot.String(), "workspaces directory not found") {
-			t.Errorf("expected 'workspaces directory not found' in stderr, got: %s", stderrRoot.String())
+		if !strings.Contains(stderrRoot.String(), "workspaces directory not found") && !strings.Contains(stderrRoot.String(), "Project configuration not found") {
+			t.Errorf("expected 'workspaces directory not found' or 'Project configuration not found' in stderr, got: %s", stderrRoot.String())
 		}
 		if strings.Contains(stderrRoot.String(), "panic:") {
 			t.Errorf("expected clean exit without panic, got: %s", stderrRoot.String())
@@ -5020,8 +5077,8 @@ func TestInitCommand(t *testing.T) {
 				t.Fatalf("expected exit code 1, got error: %v", err)
 			}
 		}
-		if !strings.Contains(stderrServer.String(), "workspaces directory not found") {
-			t.Errorf("expected 'workspaces directory not found' in stderr, got: %s", stderrServer.String())
+		if !strings.Contains(stderrServer.String(), "workspaces directory not found") && !strings.Contains(stderrServer.String(), "Project configuration not found") {
+			t.Errorf("expected 'workspaces directory not found' or 'Project configuration not found' in stderr, got: %s", stderrServer.String())
 		}
 		if strings.Contains(stderrServer.String(), "panic:") {
 			t.Errorf("expected clean exit without panic, got: %s", stderrServer.String())
@@ -5208,6 +5265,277 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 		}
 		if len(ledgers) != 5 {
 			t.Errorf("expected 5 ledgers from testdata/workspaces, got %d", len(ledgers))
+		}
+	})
+}
+
+func TestCLIServerConfigurationResolution(t *testing.T) {
+	tempDir := t.TempDir()
+
+	cfgContent := `project_name: ConfigTest
+ticket:
+  prefixes:
+    - prefix: TST
+workspaces:
+  dir: custom_spaces
+  src_folders:
+    - src
+`
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatalf("failed writing test config: %v", err)
+	}
+
+	customDir := filepath.Join(tempDir, "custom_spaces", "TST-1")
+	if err := os.MkdirAll(customDir, 0755); err != nil {
+		t.Fatalf("failed creating custom spaces dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(customDir, "agentic_metrics.json"), []byte(sampleFactJSON("TST-1", "Custom Space Feature", 60, 0.50)), 0644); err != nil {
+		t.Fatalf("failed writing custom ledger: %v", err)
+	}
+
+	overrideDir := filepath.Join(tempDir, "override_spaces", "TST-2")
+	if err := os.MkdirAll(overrideDir, 0755); err != nil {
+		t.Fatalf("failed creating override spaces dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(overrideDir, "agentic_metrics.json"), []byte(sampleFactJSON("TST-2", "Override Space Feature", 120, 1.50)), 0644); err != nil {
+		t.Fatalf("failed writing override ledger: %v", err)
+	}
+
+	t.Run("starts server without workspaces flag and reads workspaces from config", func(t *testing.T) {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("failed finding free port: %v", err)
+		}
+		port := ln.Addr().(*net.TCPAddr).Port
+		_ = ln.Close()
+
+		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port))
+		cmd.Dir = tempDir
+		if err := cmd.Start(); err != nil {
+			t.Fatalf("failed starting server subcommand without workspaces flag: %v", err)
+		}
+		defer func() {
+			if killErr := cmd.Process.Kill(); killErr != nil {
+				// Process might have terminated
+			}
+			_ = cmd.Wait()
+		}()
+
+		baseURL := fmt.Sprintf("http://localhost:%d", port)
+		resp := waitForServerReady(t, baseURL+"/api/config", 3*time.Second)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/config, got %d", resp.StatusCode)
+		}
+
+		var cfg struct {
+			WorkspacesDir string `json:"workspaces_dir"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
+			t.Fatalf("failed decoding /api/config: %v", err)
+		}
+		if !strings.Contains(cfg.WorkspacesDir, "custom_spaces") {
+			t.Errorf("expected workspaces_dir to contain custom_spaces, got: %s", cfg.WorkspacesDir)
+		}
+
+		wsResp, err := http.Get(baseURL + "/api/workspaces")
+		if err != nil {
+			t.Fatalf("failed fetching /api/workspaces: %v", err)
+		}
+		defer wsResp.Body.Close()
+
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(wsResp.Body).Decode(&ledgers); err != nil {
+			t.Fatalf("failed decoding /api/workspaces: %v", err)
+		}
+		if len(ledgers) != 1 || *ledgers[0].TicketID != "TST-1" {
+			t.Fatalf("expected 1 ledger TST-1 from custom_spaces, got: %v", ledgers)
+		}
+	})
+
+	t.Run("starts server with explicit workspaces flag and overrides config workspaces dir", func(t *testing.T) {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("failed finding free port: %v", err)
+		}
+		port := ln.Addr().(*net.TCPAddr).Port
+		_ = ln.Close()
+
+		absOverrideDir := filepath.Join(tempDir, "override_spaces")
+		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port), "--workspaces", absOverrideDir)
+		cmd.Dir = tempDir
+		if err := cmd.Start(); err != nil {
+			t.Fatalf("failed starting server subcommand with override workspaces flag: %v", err)
+		}
+		defer func() {
+			if killErr := cmd.Process.Kill(); killErr != nil {
+				// Process might have terminated
+			}
+			_ = cmd.Wait()
+		}()
+
+		baseURL := fmt.Sprintf("http://localhost:%d", port)
+		resp := waitForServerReady(t, baseURL+"/api/config", 3*time.Second)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/config, got %d", resp.StatusCode)
+		}
+
+		var cfg struct {
+			WorkspacesDir string `json:"workspaces_dir"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
+			t.Fatalf("failed decoding /api/config: %v", err)
+		}
+		if !strings.Contains(cfg.WorkspacesDir, "override_spaces") {
+			t.Errorf("expected workspaces_dir to contain override_spaces, got: %s", cfg.WorkspacesDir)
+		}
+
+		wsResp, err := http.Get(baseURL + "/api/workspaces")
+		if err != nil {
+			t.Fatalf("failed fetching /api/workspaces: %v", err)
+		}
+		defer wsResp.Body.Close()
+
+		var ledgers []domain.AgenticMetricsLedger
+		if err := json.NewDecoder(wsResp.Body).Decode(&ledgers); err != nil {
+			t.Fatalf("failed decoding /api/workspaces: %v", err)
+		}
+		if len(ledgers) != 1 || *ledgers[0].TicketID != "TST-2" {
+			t.Fatalf("expected 1 ledger TST-2 from override_spaces, got: %v", ledgers)
+		}
+	})
+
+	t.Run("fails server startup when workspaces.dir is unconfigured and flag omitted", func(t *testing.T) {
+		emptyWsDir := t.TempDir()
+		cfgWithoutWs := `project_name: NoWsTest
+ticket:
+  prefixes:
+    - prefix: TST
+workspaces:
+  src_folders:
+    - src
+`
+		if err := os.WriteFile(filepath.Join(emptyWsDir, ".agenticlens-config.yaml"), []byte(cfgWithoutWs), 0644); err != nil {
+			t.Fatalf("failed writing test config: %v", err)
+		}
+
+		cmd := exec.Command(cliBinaryPath, "server")
+		cmd.Dir = emptyWsDir
+		out, err := cmd.CombinedOutput()
+		if err == nil {
+			t.Fatalf("expected server command to exit with error when workspaces.dir is unconfigured, got success: %s", string(out))
+		}
+
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+		if exitErr.ExitCode() != 1 {
+			t.Errorf("expected exit status 1, got %d", exitErr.ExitCode())
+		}
+
+		expectedErrMsg := "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag"
+		if !strings.Contains(string(out), expectedErrMsg) {
+			t.Errorf("expected output to contain %q, got %q", expectedErrMsg, string(out))
+		}
+	})
+
+	t.Run("fails root execution when workspaces.dir is unconfigured and flag omitted", func(t *testing.T) {
+		emptyWsDir := t.TempDir()
+		cfgWithoutWs := `project_name: NoWsTest
+ticket:
+  prefixes:
+    - prefix: TST
+workspaces:
+  src_folders:
+    - src
+`
+		if err := os.WriteFile(filepath.Join(emptyWsDir, ".agenticlens-config.yaml"), []byte(cfgWithoutWs), 0644); err != nil {
+			t.Fatalf("failed writing test config: %v", err)
+		}
+
+		cmd := exec.Command(cliBinaryPath)
+		cmd.Dir = emptyWsDir
+		out, err := cmd.CombinedOutput()
+		if err == nil {
+			t.Fatalf("expected root command to exit with error when workspaces.dir is unconfigured, got success: %s", string(out))
+		}
+
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) {
+			t.Fatalf("expected exec.ExitError, got %v", err)
+		}
+		if exitErr.ExitCode() != 1 {
+			t.Errorf("expected exit status 1, got %d", exitErr.ExitCode())
+		}
+
+		expectedErrMsg := "Error: workspaces.dir is empty or unconfigured: configure 'workspaces.dir' in .agenticlens-config.yaml or provide --workspaces flag"
+		if !strings.Contains(string(out), expectedErrMsg) {
+			t.Errorf("expected output to contain %q, got %q", expectedErrMsg, string(out))
+		}
+	})
+
+	t.Run("starts server when workspaces.dir unconfigured in config but --workspaces flag provided", func(t *testing.T) {
+		emptyWsDir := t.TempDir()
+		cfgWithoutWs := `project_name: FlagSuppliedTest
+ticket:
+  prefixes:
+    - prefix: TST
+workspaces:
+  src_folders:
+    - src
+`
+		if err := os.WriteFile(filepath.Join(emptyWsDir, ".agenticlens-config.yaml"), []byte(cfgWithoutWs), 0644); err != nil {
+			t.Fatalf("failed writing test config: %v", err)
+		}
+
+		flagWsDir := filepath.Join(emptyWsDir, "flag_spaces")
+		ticketDir := filepath.Join(flagWsDir, "TST-99")
+		if err := os.MkdirAll(ticketDir, 0755); err != nil {
+			t.Fatalf("failed creating flag spaces dir: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(sampleFactJSON("TST-99", "Flag Space Feature", 45, 0.25)), 0644); err != nil {
+			t.Fatalf("failed writing flag ledger: %v", err)
+		}
+
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("failed finding free port: %v", err)
+		}
+		port := ln.Addr().(*net.TCPAddr).Port
+		_ = ln.Close()
+
+		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port), "--workspaces", flagWsDir)
+		cmd.Dir = emptyWsDir
+		if err := cmd.Start(); err != nil {
+			t.Fatalf("failed starting server with --workspaces flag: %v", err)
+		}
+		defer func() {
+			if killErr := cmd.Process.Kill(); killErr != nil {
+				// Process might have terminated
+			}
+			_ = cmd.Wait()
+		}()
+
+		baseURL := fmt.Sprintf("http://localhost:%d", port)
+		resp := waitForServerReady(t, baseURL+"/api/config", 3*time.Second)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 OK from /api/config, got %d", resp.StatusCode)
+		}
+
+		var cfg struct {
+			WorkspacesDir string `json:"workspaces_dir"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
+			t.Fatalf("failed decoding /api/config: %v", err)
+		}
+		if !strings.Contains(cfg.WorkspacesDir, "flag_spaces") {
+			t.Errorf("expected workspaces_dir to contain flag_spaces, got: %s", cfg.WorkspacesDir)
 		}
 	})
 }

@@ -15,6 +15,8 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 	t.Parallel()
 
 	defaultCfg := testProjectConfig()
+	defaultCfg.RoleMappings = domain.RoleMappings{}
+	defaultCfg.RoleOrder = []string{}
 	data, err := adaptersconfig.GenerateConfigYAML(defaultCfg)
 	if err != nil {
 		t.Fatalf("GenerateConfigYAML failed: %v", err)
@@ -33,7 +35,6 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"      ticket_type: docs",
 		"  case_insensitive: true",
 		"workspaces:",
-		"  dir: workspaces",
 		"  src_folders:",
 		"    - web",
 		"    - backend",
@@ -55,6 +56,39 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"  exclude: []",
 		"  test_patterns: []",
 		"  prod_patterns: []",
+		"role_mappings: {}",
+		"role_order: []",
+	}
+
+	for _, sub := range expectedSubstrings {
+		if !strings.Contains(content, sub) {
+			t.Errorf("expected generated YAML to contain %q", sub)
+		}
+	}
+
+	unexpectedSubstrings := []string{
+		"orchestrator: orchestrator",
+		"planner: planner",
+		"- orchestrator",
+	}
+	for _, sub := range unexpectedSubstrings {
+		if strings.Contains(content, sub) {
+			t.Errorf("expected generated YAML to NOT contain %q", sub)
+		}
+	}
+}
+
+func TestGenerateConfigYAML_CustomRoles(t *testing.T) {
+	t.Parallel()
+
+	cfg := testProjectConfig()
+	data, err := adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatalf("GenerateConfigYAML failed: %v", err)
+	}
+
+	content := string(data)
+	expectedSubstrings := []string{
 		"role_mappings:",
 		"  coder: coder",
 		"  orchestrator: orchestrator",
@@ -65,7 +99,6 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"  - tester",
 		"  - reviewer",
 	}
-
 	for _, sub := range expectedSubstrings {
 		if !strings.Contains(content, sub) {
 			t.Errorf("expected generated YAML to contain %q", sub)
@@ -76,42 +109,81 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 func TestGenerateConfigYAML_RoundTrip(t *testing.T) {
 	t.Parallel()
 
-	tempDir := t.TempDir()
-	cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+	t.Run("with populated roles", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
 
-	defaultCfg := testProjectConfig()
-	data, err := adaptersconfig.GenerateConfigYAML(defaultCfg)
-	if err != nil {
-		t.Fatalf("GenerateConfigYAML failed: %v", err)
-	}
+		defaultCfg := testProjectConfig()
+		data, err := adaptersconfig.GenerateConfigYAML(defaultCfg)
+		if err != nil {
+			t.Fatalf("GenerateConfigYAML failed: %v", err)
+		}
 
-	if err := os.WriteFile(cfgPath, data, 0644); err != nil {
-		t.Fatalf("writing temp config file: %v", err)
-	}
+		if err := os.WriteFile(cfgPath, data, 0644); err != nil {
+			t.Fatalf("writing temp config file: %v", err)
+		}
 
-	loaded, err := adaptersconfig.LoadFromFile(cfgPath)
-	if err != nil {
-		t.Fatalf("LoadFromFile failed on generated config: %v", err)
-	}
+		loaded, err := adaptersconfig.LoadFromFile(cfgPath)
+		if err != nil {
+			t.Fatalf("LoadFromFile failed on generated config: %v", err)
+		}
 
-	if loaded.ProjectName != defaultCfg.ProjectName {
-		t.Errorf("expected project_name %q, got %q", defaultCfg.ProjectName, loaded.ProjectName)
-	}
-	if len(loaded.Ticket.Prefixes) != len(defaultCfg.Ticket.Prefixes) {
-		t.Fatalf("expected %d prefixes, got %d", len(defaultCfg.Ticket.Prefixes), len(loaded.Ticket.Prefixes))
-	}
-	if loaded.Workspaces.Dir != defaultCfg.Workspaces.Dir {
-		t.Errorf("expected workspaces.dir %q, got %q", defaultCfg.Workspaces.Dir, loaded.Workspaces.Dir)
-	}
-	if len(loaded.Workspaces.SrcFolders) != len(defaultCfg.Workspaces.SrcFolders) {
-		t.Errorf("expected %d src_folders, got %d", len(defaultCfg.Workspaces.SrcFolders), len(loaded.Workspaces.SrcFolders))
-	}
-	if loaded.Database.Path != defaultCfg.Database.Path {
-		t.Errorf("expected database.path %q, got %q", defaultCfg.Database.Path, loaded.Database.Path)
-	}
-	if loaded.Live.ActiveThresholdSeconds != defaultCfg.Live.ActiveThresholdSeconds {
-		t.Errorf("expected live.active_threshold_seconds %d, got %d", defaultCfg.Live.ActiveThresholdSeconds, loaded.Live.ActiveThresholdSeconds)
-	}
+		if loaded.ProjectName != defaultCfg.ProjectName {
+			t.Errorf("expected project_name %q, got %q", defaultCfg.ProjectName, loaded.ProjectName)
+		}
+		if len(loaded.Ticket.Prefixes) != len(defaultCfg.Ticket.Prefixes) {
+			t.Fatalf("expected %d prefixes, got %d", len(defaultCfg.Ticket.Prefixes), len(loaded.Ticket.Prefixes))
+		}
+		if loaded.Workspaces.Dir != defaultCfg.Workspaces.Dir {
+			t.Errorf("expected workspaces.dir %q, got %q", defaultCfg.Workspaces.Dir, loaded.Workspaces.Dir)
+		}
+		if len(loaded.Workspaces.SrcFolders) != len(defaultCfg.Workspaces.SrcFolders) {
+			t.Errorf("expected %d src_folders, got %d", len(defaultCfg.Workspaces.SrcFolders), len(loaded.Workspaces.SrcFolders))
+		}
+		if loaded.Database.Path != defaultCfg.Database.Path {
+			t.Errorf("expected database.path %q, got %q", defaultCfg.Database.Path, loaded.Database.Path)
+		}
+		if loaded.Live.ActiveThresholdSeconds != defaultCfg.Live.ActiveThresholdSeconds {
+			t.Errorf("expected live.active_threshold_seconds %d, got %d", defaultCfg.Live.ActiveThresholdSeconds, loaded.Live.ActiveThresholdSeconds)
+		}
+		if len(loaded.RoleMappings) != len(defaultCfg.RoleMappings) {
+			t.Errorf("expected %d role mappings, got %d", len(defaultCfg.RoleMappings), len(loaded.RoleMappings))
+		}
+		if len(loaded.RoleOrder) != len(defaultCfg.RoleOrder) {
+			t.Errorf("expected %d role order, got %d", len(defaultCfg.RoleOrder), len(loaded.RoleOrder))
+		}
+	})
+
+	t.Run("with empty roles preserves empty collections round trip", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+
+		emptyCfg := domain.DefaultProjectConfig()
+		emptyCfg.ProjectName = "EmptyRolesProject"
+		emptyCfg.Ticket.Prefixes = []domain.TicketPrefix{{Prefix: "EMPTY"}}
+		emptyCfg.Workspaces.SrcFolders = []string{"src"}
+
+		data, err := adaptersconfig.GenerateConfigYAML(emptyCfg)
+		if err != nil {
+			t.Fatalf("GenerateConfigYAML failed: %v", err)
+		}
+
+		if err := os.WriteFile(cfgPath, data, 0644); err != nil {
+			t.Fatalf("writing temp config file: %v", err)
+		}
+
+		loaded, err := adaptersconfig.LoadFromFile(cfgPath)
+		if err != nil {
+			t.Fatalf("LoadFromFile failed on generated config: %v", err)
+		}
+
+		if len(loaded.RoleMappings) != 0 || loaded.RoleMappings == nil {
+			t.Errorf("expected empty non-nil RoleMappings, got %v", loaded.RoleMappings)
+		}
+		if len(loaded.RoleOrder) != 0 || loaded.RoleOrder == nil {
+			t.Errorf("expected empty non-nil RoleOrder, got %v", loaded.RoleOrder)
+		}
+	})
 }
 
 func TestGenerateDefaultYAML_Overrides(t *testing.T) {
@@ -153,6 +225,43 @@ func TestGenerateDefaultYAML_Overrides(t *testing.T) {
 	}
 	if len(loaded.Ticket.Prefixes) != 2 || loaded.Ticket.Prefixes[0].Prefix != "MYAPP" {
 		t.Errorf("unexpected prefixes: %v", loaded.Ticket.Prefixes)
+	}
+	if len(loaded.RoleMappings) != 0 {
+		t.Errorf("expected empty RoleMappings, got %v", loaded.RoleMappings)
+	}
+	if len(loaded.RoleOrder) != 0 {
+		t.Errorf("expected empty RoleOrder, got %v", loaded.RoleOrder)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "role_mappings: {}") {
+		t.Errorf("expected role_mappings: {} in generated default YAML, got:\n%s", content)
+	}
+	if !strings.Contains(content, "role_order: []") {
+		t.Errorf("expected role_order: [] in generated default YAML, got:\n%s", content)
+	}
+}
+
+func TestGenerateDefaultConfigYAML(t *testing.T) {
+	t.Parallel()
+
+	prefixes := []domain.TicketPrefix{
+		{Prefix: "DEMO", Description: "Demo prefix", TicketType: "feat"},
+	}
+	srcFolders := []string{"src", "pkg"}
+
+	data1, err1 := adaptersconfig.GenerateDefaultYAML("DemoProject", "workspaces", "/var/db/demo.db", srcFolders, prefixes)
+	if err1 != nil {
+		t.Fatalf("GenerateDefaultYAML failed: %v", err1)
+	}
+
+	data2, err2 := adaptersconfig.GenerateDefaultConfigYAML("DemoProject", "workspaces", "/var/db/demo.db", srcFolders, prefixes)
+	if err2 != nil {
+		t.Fatalf("GenerateDefaultConfigYAML failed: %v", err2)
+	}
+
+	if string(data1) != string(data2) {
+		t.Errorf("GenerateDefaultConfigYAML output does not match GenerateDefaultYAML output.\nGot:\n%s\nExpected:\n%s", string(data2), string(data1))
 	}
 }
 

@@ -242,10 +242,6 @@ not_a_number	not_a_number	file.go
 func TestLoadConfig_CentralizedIntegration(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
-	cfgDir := filepath.Join(tempDir, ".agenticlens")
-	if err := os.MkdirAll(cfgDir, 0755); err != nil {
-		t.Fatal(err)
-	}
 
 	yamlContent := `
 project_name: GitAnalyzerTest
@@ -265,7 +261,7 @@ code_metrics:
   prod_patterns:
     - "*.custom_prod"
 `
-	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(yamlContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
