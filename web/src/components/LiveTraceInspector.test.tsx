@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { LiveTraceInspector } from './LiveTraceInspector';
-import type { LiveSessionNode, LiveTraceView } from '../domain/live';
+import type { LiveSessionNode, LiveTraceView, LivePartFact } from '../domain/live';
 import { mockLiveTraceView } from '../test/fixtures/mockData';
 
 describe('LiveTraceInspector Component', () => {
@@ -504,45 +504,56 @@ describe('LiveTraceInspector Component', () => {
       />
     );
 
-    // 1. Session ID Copy Button
-    const sessionCopyBtn = screen.getByRole('button', { name: /copy session id ses-debug-1/i });
-    expect(sessionCopyBtn).toHaveTextContent('Copy');
+    // 1. Session Overview Prompt Copy Button
+    const sessionCopyBtn = screen.getByRole('button', { name: /copy session overview debug prompt/i });
+    expect(sessionCopyBtn).toHaveTextContent('Copy Prompt');
     await act(async () => {
       fireEvent.click(sessionCopyBtn);
     });
-    expect(writeTextMock).toHaveBeenCalledWith('ses-debug-1');
+    expect(writeTextMock).toHaveBeenCalledTimes(1);
+    expect(writeTextMock.mock.calls[0][0]).toContain('# Session Overview: `ses-debug-1`');
     expect(sessionCopyBtn).toHaveTextContent('Copied');
     act(() => {
       vi.advanceTimersByTime(2000);
     });
-    expect(sessionCopyBtn).toHaveTextContent('Copy');
+    expect(sessionCopyBtn).toHaveTextContent('Copy Prompt');
 
-    // 2. Message ID Copy Button and Turn Token
+    // 2. Message Turn Prompt Copy Button
     expect(screen.getByText('Turn 1')).toBeInTheDocument();
-    const msgCopyBtn = screen.getByRole('button', { name: /copy message id msg-debug-101/i });
-    expect(msgCopyBtn).toHaveTextContent('Copy ID');
+    const msgCopyBtn = screen.getByRole('button', { name: /copy turn 1 debug prompt/i });
+    expect(msgCopyBtn).toHaveTextContent('Copy Prompt');
     await act(async () => {
       fireEvent.click(msgCopyBtn);
     });
-    expect(writeTextMock).toHaveBeenCalledWith('msg-debug-101');
+    expect(writeTextMock).toHaveBeenCalledTimes(2);
+    expect(writeTextMock.mock.calls[1][0]).toContain('# Turn 1 Review (`assistant` / `gemini-3.8-flash`)');
+    expect(writeTextMock.mock.calls[1][0]).toContain(
+      'In turn 1 of session `ses-debug-1` (message `msg-debug-101`), the agent deliberated and executed tools.'
+    );
     expect(msgCopyBtn).toHaveTextContent('Copied');
     act(() => {
       vi.advanceTimersByTime(2000);
     });
-    expect(msgCopyBtn).toHaveTextContent('Copy ID');
+    expect(msgCopyBtn).toHaveTextContent('Copy Prompt');
 
-    // 3. Part ID Copy Button
-    const partCopyBtn = screen.getByRole('button', { name: /copy part id part-debug-202/i });
-    expect(partCopyBtn).toHaveTextContent('Copy');
+    // 3. Tool Execution Part Prompt Copy Button
+    const partCopyBtn = screen.getByRole('button', {
+      name: /copy tool execution debug prompt for part part-debug-202/i,
+    });
+    expect(partCopyBtn).toHaveTextContent('Copy Prompt');
     await act(async () => {
       fireEvent.click(partCopyBtn);
     });
-    expect(writeTextMock).toHaveBeenCalledWith('part-debug-202');
+    expect(writeTextMock).toHaveBeenCalledTimes(3);
+    expect(writeTextMock.mock.calls[2][0]).toContain('# Tool Execution: `bash`');
+    expect(writeTextMock.mock.calls[2][0]).toContain(
+      'During turn 1 of session `ses-debug-1` (message `msg-debug-101`, part `part-debug-202`), the agent executed `bash` and it completed successfully.'
+    );
     expect(partCopyBtn).toHaveTextContent('Copied');
     act(() => {
       vi.advanceTimersByTime(2000);
     });
-    expect(partCopyBtn).toHaveTextContent('Copy');
+    expect(partCopyBtn).toHaveTextContent('Copy Prompt');
 
     vi.useRealTimers();
   });
@@ -590,8 +601,8 @@ describe('LiveTraceInspector Component', () => {
     );
 
     expect(screen.getByText('Turn 1')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /copy message id/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /copy part id/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /copy turn 1 debug prompt/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /copy tool execution debug prompt/i })).toBeNull();
   });
 
   it('does not display streak badge when anomaly count is 1 or missing', () => {
@@ -696,5 +707,171 @@ describe('LiveTraceInspector Component', () => {
     );
 
     expect(screen.getByText('4 Consecutive Failures')).toBeInTheDocument();
+  });
+
+  it('adversarially tests all 4 layer copy buttons and 2000ms feedback states with streak and error details', async () => {
+    vi.useFakeTimers();
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const errorPart: LivePartFact = {
+      id: 'part-adv-404',
+      type: 'tool',
+      tool_name: 'bash',
+      status: 'error',
+      is_error: true,
+      severity: 'CRITICAL',
+      input_snippet: 'cargo test --all',
+      output_snippet: 'error[E0432]: unresolved import',
+      error_message: 'compilation failed',
+    };
+
+    const advTrace: LiveTraceView = {
+      session_id: 'ses-adv-live',
+      messages: [
+        {
+          id: 'msg-adv-1',
+          role: 'assistant',
+          content: 'Executing build verification step.',
+          timestamp: '2026-10-20T12:00:00Z',
+          reasoning_content: 'Let me compile the packages and examine failures.',
+          parts: [errorPart],
+          total_tokens: 150,
+          input_tokens: 100,
+          output_tokens: 50,
+          cache_read_tokens: 0,
+          reasoning_tokens: 20,
+          context_tokens: 150,
+        },
+      ],
+      total_tool_calls: 3,
+      failed_tool_calls: 3,
+      recent_errors: [errorPart],
+      anomalies: [
+        {
+          session_id: 'ses-adv-live',
+          rule_name: 'ConsecutiveToolErrors',
+          severity: 'CRITICAL',
+          message: 'Tool execution error streak reached 5 consecutive failures on bash',
+          trigger_event: 'part-adv-404: unresolved import',
+          timestamp: '2026-10-20T12:00:00Z',
+          count: 5,
+        },
+      ],
+    };
+
+    render(
+      <LiveTraceInspector
+        sessionNode={{ ...mockNode, id: 'ses-adv-live', role: 'coder', model: 'gemini-3.8-flash', status: 'running' }}
+        trace={advTrace}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    // 1. Session Overview Copy Button (Layer 4)
+    const sessionCopyBtn = screen.getByRole('button', { name: 'Copy session overview debug prompt' });
+    expect(sessionCopyBtn).toBeInTheDocument();
+    expect(sessionCopyBtn).toHaveTextContent('Copy Prompt');
+
+    await act(async () => {
+      fireEvent.click(sessionCopyBtn);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(1);
+    const sessionPrompt = writeTextMock.mock.calls[0][0];
+    expect(sessionPrompt).toContain('# Session Overview: `ses-adv-live`');
+    expect(sessionPrompt).toContain('Session `ses-adv-live` is a `coder` subagent running `gemini-3.8-flash`');
+    expect(sessionPrompt).toContain('**running** after 1 turns and 3 tool executions (3 failed)');
+    expect(sessionPrompt).toContain('### Flagged Issues');
+    expect(sessionPrompt).toContain('Consecutive tool failure streak');
+    expect(sessionCopyBtn).toHaveTextContent('Copied');
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(sessionCopyBtn).toHaveTextContent('Copy Prompt');
+
+    // 2. Turn Copy Button (Layer 3)
+    const turnCopyBtn = screen.getByRole('button', { name: 'Copy turn 1 debug prompt' });
+    expect(turnCopyBtn).toBeInTheDocument();
+    expect(turnCopyBtn).toHaveTextContent('Copy Prompt');
+
+    await act(async () => {
+      fireEvent.click(turnCopyBtn);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(2);
+    const turnPrompt = writeTextMock.mock.calls[1][0];
+    expect(turnPrompt).toContain('# Turn 1 Review (`assistant` / `gemini-3.8-flash`)');
+    expect(turnPrompt).toContain('In turn 1 of session `ses-adv-live` (message `msg-adv-1`)');
+    expect(turnPrompt).toContain('> Let me compile the packages and examine failures.');
+    expect(turnPrompt).toContain('Executing build verification step.');
+    expect(turnPrompt).toContain('- `bash` (`part-adv-404`): error');
+    expect(turnCopyBtn).toHaveTextContent('Copied');
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(turnCopyBtn).toHaveTextContent('Copy Prompt');
+
+    // 3. Part Copy Button in Part Header (Layer 1)
+    const partCopyBtn = screen.getByRole('button', {
+      name: 'Copy tool execution debug prompt for part part-adv-404',
+    });
+    expect(partCopyBtn).toBeInTheDocument();
+    expect(partCopyBtn).toHaveTextContent('Copy Prompt');
+
+    await act(async () => {
+      fireEvent.click(partCopyBtn);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(3);
+    const partPrompt = writeTextMock.mock.calls[2][0];
+    expect(partPrompt).toContain('# Tool Execution Failure: `bash`');
+    expect(partPrompt).toContain(
+      'During turn 1 of session `ses-adv-live` (message `msg-adv-1`, part `part-adv-404`), the agent executed `bash` and it failed with 5 consecutive failures on this tool.'
+    );
+    expect(partPrompt).toContain('cargo test --all');
+    expect(partPrompt).toContain('error[E0432]: unresolved import');
+    expect(partCopyBtn).toHaveTextContent('Copied');
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(partCopyBtn).toHaveTextContent('Copy Prompt');
+
+    // 4. Failed Tool Alert Card Copy Button (Layer 2)
+    const failedCardCopyBtn = screen.getByRole('button', {
+      name: 'Copy execution issue debug prompt for bash',
+    });
+    expect(failedCardCopyBtn).toBeInTheDocument();
+    expect(failedCardCopyBtn).toHaveTextContent('Copy Prompt');
+
+    await act(async () => {
+      fireEvent.click(failedCardCopyBtn);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(4);
+    const issuePrompt = writeTextMock.mock.calls[3][0];
+    expect(issuePrompt).toContain('# Agent Execution Issue: Consecutive failures on `bash`');
+    expect(issuePrompt).toContain(
+      'During turn 1 of session `ses-adv-live` (agent `assistant` running `gemini-3.8-flash`), the agent experienced 5 consecutive failures while executing `bash`.'
+    );
+    expect(issuePrompt).toContain('part `part-adv-404`');
+    expect(issuePrompt).toContain('### Error Details');
+    expect(issuePrompt).toContain('error[E0432]: unresolved import');
+    expect(failedCardCopyBtn).toHaveTextContent('Copied');
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(failedCardCopyBtn).toHaveTextContent('Copy Prompt');
+
+    vi.useRealTimers();
   });
 });

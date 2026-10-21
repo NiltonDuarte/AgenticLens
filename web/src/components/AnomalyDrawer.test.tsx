@@ -488,5 +488,100 @@ describe('AnomalyDrawer Component', () => {
       expect(screen.getByText('Turn Debug ID')).toBeInTheDocument();
       expect(screen.getByText('turn-9')).toBeInTheDocument();
     });
+
+    it('renders Copy Prompt button in drawer header and copies Layer 2 execution issue prompt', async () => {
+      vi.useFakeTimers();
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      render(
+        <AnomalyDrawer
+          isOpen={true}
+          onClose={vi.fn()}
+          anomaly={sampleAnomaly}
+          event={sampleEvent}
+        />
+      );
+
+      const copyPromptBtn = screen.getByRole('button', { name: 'Copy execution issue debug prompt' });
+      expect(copyPromptBtn).toBeInTheDocument();
+      expect(copyPromptBtn).toHaveTextContent('Copy Prompt');
+
+      await act(async () => {
+        fireEvent.click(copyPromptBtn);
+      });
+
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      const copiedText = writeTextMock.mock.calls[0][0];
+      expect(copiedText).toContain('# Agent Execution Issue: Repeated Tool Failures');
+      expect(copiedText).toContain('During turn 4 of session `session-123`');
+      expect(copiedText).toContain('tool git failed 3 consecutive times');
+      expect(copiedText).toContain('### Error Details');
+      expect(copiedText).toContain('fatal: destination path already exists');
+      expect(copyPromptBtn).toHaveTextContent('Copied');
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(copyPromptBtn).toHaveTextContent('Copy Prompt');
+
+      vi.useRealTimers();
+    });
+
+    it('copies Layer 2 prompt with trigger event details when anomaly is omitted', async () => {
+      vi.useFakeTimers();
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      const cleanEvent: EventFact = {
+        timestamp: '2026-10-18T10:15:30Z',
+        session_id: 'session-only-event',
+        turn: 7,
+        role: 'tester',
+        event_type: 'tool_call',
+        tool_name: 'pytest',
+        status: 'error',
+        error_message: 'tests failed: 2 errors',
+        duration_ms: 500,
+        context_tokens: 3000,
+      };
+
+      render(
+        <AnomalyDrawer
+          isOpen={true}
+          onClose={vi.fn()}
+          event={cleanEvent}
+        />
+      );
+
+      const copyPromptBtn = screen.getByRole('button', { name: 'Copy execution issue debug prompt' });
+      await act(async () => {
+        fireEvent.click(copyPromptBtn);
+      });
+
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      const copiedText = writeTextMock.mock.calls[0][0];
+      expect(copiedText).toContain('# Agent Execution Issue: Tool Execution Failure');
+      expect(copiedText).toContain('During turn 7 of session `session-only-event` (agent `tester`)');
+      expect(copiedText).toContain('execution error: tests failed: 2 errors');
+      expect(copiedText).toContain('tests failed: 2 errors');
+      expect(copyPromptBtn).toHaveTextContent('Copied');
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(copyPromptBtn).toHaveTextContent('Copy Prompt');
+
+      vi.useRealTimers();
+    });
   });
 });

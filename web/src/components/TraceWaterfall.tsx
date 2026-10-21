@@ -5,6 +5,10 @@ import { AnomalyBadge } from './AnomalyBadge';
 import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
 import { copyTextToClipboard } from '../utils/clipboard';
 import {
+  generateToolExecutionPrompt,
+  generateMessageTurnPrompt,
+} from '../utils/debugPrompt';
+import {
   isToolFailureAnomalyRule,
   matchesAnomaly,
   findMatchingAnomaly,
@@ -84,6 +88,45 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   ) => {
     e.stopPropagation();
     await copyTextToClipboard(idText);
+    setCopiedId(key);
+    window.setTimeout(() => {
+      setCopiedId((current) => (current === key ? null : current));
+    }, 2000);
+  };
+
+  const handleCopyTimelinePrompt = async (
+    ev: EventFact,
+    key: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    let prompt: string;
+    if (ev.event_type === 'tool_call') {
+      const matched = findMatchingAnomaly(ev, anomalies);
+      const streakCount = matched?.context?.count;
+      prompt = generateToolExecutionPrompt({
+        toolName: ev.tool_name || 'unknown_tool',
+        turn: ev.turn,
+        sessionId: ev.session_id,
+        messageId: ev.message_id ?? undefined,
+        status: ev.status,
+        consecutiveErrors: typeof streakCount === 'number' && streakCount > 1 ? streakCount : undefined,
+        input: ev.tool_input ?? undefined,
+        output: ev.tool_output ?? undefined,
+        errorMessage: ev.error_message ?? undefined,
+      });
+    } else {
+      prompt = generateMessageTurnPrompt({
+        turn: ev.turn,
+        role: ev.role,
+        sessionId: ev.session_id,
+        messageId: ev.message_id ?? undefined,
+        reasoningContent: ev.reasoning_content ?? undefined,
+        messageContent: ev.prompt_content ?? undefined,
+        toolsExecuted: [],
+      });
+    }
+    await copyTextToClipboard(prompt);
     setCopiedId(key);
     window.setTimeout(() => {
       setCopiedId((current) => (current === key ? null : current));
@@ -422,7 +465,6 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
               .replace(/\s+/g, ' ')
               .trim();
 
-            const turnDebugId = `turn-${ev.turn}`;
             const copyKey = `item-id-${itemKey}`;
             const isCopied = copiedId === copyKey;
 
@@ -464,16 +506,10 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                       <button
                         type="button"
                         className="btn-copy-id"
-                        aria-label={`Copy debug identifier for turn ${ev.turn}`}
-                        onClick={(e) =>
-                          handleCopyIdentifier(
-                            ev.message_id ?? ev.session_id ?? turnDebugId,
-                            copyKey,
-                            e
-                          )
-                        }
+                        aria-label={`Copy debug prompt for turn ${ev.turn}`}
+                        onClick={(e) => handleCopyTimelinePrompt(ev, copyKey, e)}
                       >
-                        {isCopied ? 'Copied' : 'Copy ID'}
+                        {isCopied ? 'Copied' : 'Copy Prompt'}
                       </button>
                     </div>
 

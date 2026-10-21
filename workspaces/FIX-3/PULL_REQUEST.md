@@ -1,4 +1,4 @@
-# fix: centralize anomaly detection and add live debug identifiers (FIX-3)
+# fix: centralize anomaly detection, live debug identifiers, and AI debug prompts (FIX-3)
 
 ## Summary
 
@@ -14,18 +14,30 @@ Extends and unifies anomaly detection, metric consistency, and debug actions acr
    - Centralized anomaly matching predicates and helpers into `web/src/domain/anomalies.ts`: `isToolFailureAnomalyRule`, `matchesAnomaly`, `findMatchingAnomaly`, `extractStreakCount`, and `findMatchingLiveAlert`.
    - Refactored `TraceWaterfall.tsx` to consume these domain helpers and re-export them for backwards compatibility.
 
-3. **Live Section Debug Identifiers with One-Click Copy**:
-   - In `LiveTraceInspector.tsx`:
-     - Added Copy button beside Session ID in the inspector header with 2000ms temporary "Copied" feedback.
-     - Added Turn token (`Turn X`), Message ID debug token, and Copy ID button with 2000ms feedback to `LiveMessageTurnItem`.
-     - Added Part ID debug token and Copy button in `LiveMessagePartItem` part headers.
-     - Wired `FailedToolAlertCard` consecutive errors to exact streak count from matching anomaly rules via `findMatchingLiveAlert` and `extractStreakCount` instead of raw `trace.recent_errors.length`.
+3. **Multi-Layer Fluent AI Debug Prompts & Generic Agent Abstraction (`web/src/utils/debugPrompt.ts`)**:
+   - Developed 4-layer Markdown debug prompt generators tailored for external AI reasoning without internal project leakages:
+     - **Layer 1 (Tool Call / Part Execution)**: Heading `# Tool Execution Failure: <tool>`, narrative provenance, fenced inputs and outputs, and targeted diagnostic checks.
+     - **Layer 2 (Execution Issue / Anomaly Card)**: Heading `# Agent Execution Issue: <Sanitized Summary>`, subagent role/model/part provenance, error details block, and loop-recovery diagnostic checks.
+     - **Layer 3 (Message Turn Review)**: Heading `# Turn <N> Review (<role> / <model>)`, model deliberation blockquotes, message text body, executed tools listing, and intent vs outcome checks.
+     - **Layer 4 (Session Overview)**: Heading `# Session Overview: <session_id>`, subagent role/model/parent narrative, turn/tool counts, plain English flagged issues, and session-level checks.
+   - Applied strict sanitization filters:
+     - Stripped internal ticket identifiers (`AL-*`, `FIX-*`, `GEN-*`, `PO-*`).
+     - Removed git branch patterns (`feat/*`, `fix/*`).
+     - Translated internal anomaly rule codes into human-readable plain English descriptions.
+     - Purged internal severity tags (`[CRITICAL]`, `[WARNING]`, `[HIGH]`).
+
+4. **Interactive UI Integration with Temporary Feedback**:
+   - Unified all copy actions to `"Copy Prompt"` with a deterministic 2000ms `"Copied"` feedback state.
+   - Wired `LiveTraceInspector.tsx` (session header -> Layer 4; turn headers -> Layer 3; part rows -> Layer 1; failed tool cards -> Layer 2).
+   - Wired `FailedToolAlertCard.tsx` (header copy button -> Layer 2 prompt with contextual error details).
+   - Wired `AnomalyDrawer.tsx` (header copy button -> Layer 2 prompt with trigger event details while retaining discrete ID tokens).
+   - Wired `TraceWaterfall.tsx` (timeline row button -> Layer 1 for tool calls, Layer 3 for message turns).
 
 ## Testing & Verification
 - `go test -race -count=1 ./...` (All Go backend tests passed cleanly)
 - `go vet ./...` (Zero warnings)
 - `npm run typecheck` (Zero TypeScript errors)
 - `npm run lint` (Zero ESLint warnings/errors)
-- `npm test` (All 648 frontend tests passed across 29 test suites)
+- `npm test` (All 701 frontend tests passed across 30 test suites)
 - `make build` (Production binary build and asset embedding clean)
 - Zero emojis across all modified code, tests, and markdown artifacts.
