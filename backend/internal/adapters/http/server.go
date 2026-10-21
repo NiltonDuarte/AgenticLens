@@ -21,15 +21,16 @@ type Server struct {
 	projectConfig domain.ProjectConfig
 }
 
-// NewServer creates a new HTTP Server instance configured with API routes, default configuration, and SPA static serving.
-func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceInterface) *Server {
-	var cfg domain.ProjectConfig
-	if loaded, err := config.Load(workspacesDir); err == nil {
-		cfg = loaded
-	} else if loaded, err := config.Load(""); err == nil {
-		cfg = loaded
+// NewServer creates a new HTTP Server instance configured with API routes, discovered configuration, and SPA static serving.
+// It fails fast if project configuration cannot be discovered from workspacesDir or the current working directory.
+func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceInterface) (*Server, error) {
+	cfg, err := config.Load(workspacesDir)
+	if err != nil {
+		cfg, err = config.Load("")
+		if err != nil {
+			return nil, fmt.Errorf("loading project configuration for server: %w", err)
+		}
 	}
-
 	cleanWsDir := strings.TrimSpace(workspacesDir)
 	if cleanWsDir != "" {
 		cfg.Workspaces.Dir = cleanWsDir
@@ -37,7 +38,7 @@ func NewServer(workspacesDir string, staticFS fs.FS, liveService ...LiveServiceI
 		cleanWsDir = cfg.Workspaces.Dir
 	}
 
-	return NewServerWithConfig(cleanWsDir, staticFS, cfg, liveService...)
+	return NewServerWithConfig(cleanWsDir, staticFS, cfg, liveService...), nil
 }
 
 // NewServerWithConfig creates a new HTTP Server instance configured with custom ProjectConfig, API routes, and SPA static serving.

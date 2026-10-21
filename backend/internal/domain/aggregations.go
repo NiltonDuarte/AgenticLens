@@ -594,8 +594,8 @@ func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string)
 	return records
 }
 
-// DeriveMetricsLedgerWithConfig projects all aggregations from an atomic fact ledger using full project configuration.
-func DeriveMetricsLedgerWithConfig(factLedger AgenticFactLedger, cfg ProjectConfig) AgenticMetricsLedger {
+// DeriveMetricsLedger projects all aggregations from an atomic fact ledger using full project configuration.
+func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) AgenticMetricsLedger {
 	mappings := cfg.RoleMappings
 	if mappings == nil {
 		mappings = RoleMappings{}
@@ -642,23 +642,6 @@ func DeriveMetricsLedgerWithConfig(factLedger AgenticFactLedger, cfg ProjectConf
 		Models:             models,
 		Anomalies:          anomalies,
 	}
-}
-
-// DeriveMetricsLedger projects all aggregations from an atomic fact ledger.
-func DeriveMetricsLedger(factLedger AgenticFactLedger, roleMappings ...RoleMappings) AgenticMetricsLedger {
-	cfg := ProjectConfig{
-		RoleOrder: []string{
-			string(RoleOrchestrator),
-			string(RolePlanner),
-			string(RoleCoder),
-			string(RoleTester),
-			string(RoleReviewer),
-		},
-	}
-	if len(roleMappings) > 0 && roleMappings[0] != nil {
-		cfg.RoleMappings = roleMappings[0]
-	}
-	return DeriveMetricsLedgerWithConfig(factLedger, cfg)
 }
 
 // CalculateFleetSummary aggregates high-level metrics across multiple ledgers.

@@ -35,13 +35,11 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 
 export interface TicketComparisonsProps {
   readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
-  readonly onMockChange?: ((isMock: boolean) => void) | undefined;
   readonly configuredPrefixes?: readonly string[] | undefined;
 }
 
 export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   onSelectTicket,
-  onMockChange,
   configuredPrefixes,
 }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
@@ -77,14 +75,13 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
       hasLoadedRef.current = true;
-      onMockChange?.(res.isMock);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch comparison workspaces';
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [onMockChange, selectedTicketTypes, selectedPrefixes]);
+  }, [selectedTicketTypes, selectedPrefixes]);
 
   useEffect(() => {
     loadLedgers();

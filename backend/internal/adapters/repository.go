@@ -14,23 +14,32 @@ import (
 )
 
 // ResolveWorkspacesDir resolves workspaces directory from argument, environment, config, or parent lookup.
+// Returns an empty string if neither overridePath nor project configuration specifies a workspaces directory.
 func ResolveWorkspacesDir(overridePath string) string {
-	if overridePath != "" {
-		return overridePath
+	if trimmed := strings.TrimSpace(overridePath); trimmed != "" {
+		return filepath.Clean(trimmed)
 	}
 
-	// 1. Configured workspace dir from centralized config loader
 	cfg, err := config.Load("")
 	if err != nil || strings.TrimSpace(cfg.Workspaces.Dir) == "" {
 		return ""
 	}
+
 	wsDir := strings.TrimSpace(cfg.Workspaces.Dir)
 
 	if filepath.IsAbs(wsDir) {
 		return wsDir
 	}
 
+	// 1. Container volume mount path (/app/<dir>)
+	containerCandidate := filepath.Join("/app", wsDir)
+	if fi, err := os.Stat(containerCandidate); err == nil && fi.IsDir() {
+		return containerCandidate
+	}
+
+	// 2. Configured workspace dir relative to configuration file directory
 	cfgPath, _ := config.FindConfigFile("")
+	var configCandidate string
 	baseDir := ""
 	if cfgPath != "" {
 		baseDir = filepath.Dir(cfgPath)
@@ -41,13 +50,13 @@ func ResolveWorkspacesDir(overridePath string) string {
 	}
 
 	if baseDir != "" {
-		candidate := filepath.Join(baseDir, wsDir)
-		if cfi, err := os.Stat(candidate); err == nil && cfi.IsDir() {
-			return candidate
+		configCandidate = filepath.Join(baseDir, wsDir)
+		if cfi, err := os.Stat(configCandidate); err == nil && cfi.IsDir() {
+			return configCandidate
 		}
 	}
 
-	// 2. Current working directory
+	// 3. Current working directory ./<wsDir>
 	cwd, err := os.Getwd()
 	if cwd != "" && err == nil {
 		candidate := filepath.Join(cwd, wsDir)
@@ -56,7 +65,7 @@ func ResolveWorkspacesDir(overridePath string) string {
 		}
 	}
 
-	// 3. Parent traversal (e.g. running from a nested subfolder)
+	// 4. Parent traversal (e.g. running from a nested subfolder)
 	if cwd != "" && err == nil {
 		curr := cwd
 		for {
@@ -72,6 +81,9 @@ func ResolveWorkspacesDir(overridePath string) string {
 		}
 	}
 
+	if configCandidate != "" {
+		return configCandidate
+	}
 	if baseDir != "" {
 		return filepath.Join(baseDir, wsDir)
 	}
@@ -84,7 +96,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	if targetDir == "" {
 		return domain.ScanReport{
 			Ledgers: []domain.AgenticMetricsLedger{},
-			Errors:  []string{"Workspaces directory is unconfigured or not found"},
+			Errors:  []string{"Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Workspaces directory is unconfigured or not found."},
 		}
 	}
 
@@ -144,7 +156,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			}
 		}
 
-		ledger := domain.DeriveMetricsLedgerWithConfig(factLedger, cfg)
+		ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 		ledgers = append(ledgers, ledger)
 	}
 
@@ -159,6 +171,9 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 // ReadTicketArtifacts safely reads configured documentation artifacts for a ticket workspace.
 func ReadTicketArtifacts(ticketID string, basePath string, configuredArtifacts ...[]domain.WorkspaceArtifactConfig) domain.TicketArtifacts {
 	targetDir := ResolveWorkspacesDir(basePath)
+	if targetDir == "" {
+		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
+	}
 	absTargetDir, err := filepath.Abs(targetDir)
 	if err != nil {
 		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
@@ -262,6 +277,9 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	}
 
 	targetDir := ResolveWorkspacesDir(basePath)
+	if targetDir == "" {
+		return nil, fmt.Errorf("workspaces directory is not configured")
+	}
 	absTargetDir, err := filepath.Abs(targetDir)
 	if err != nil {
 		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
@@ -296,7 +314,7 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	}
 
 	cfg, _ := config.Load(basePath)
-	ledger := domain.DeriveMetricsLedgerWithConfig(factLedger, cfg)
+	ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 	return &ledger, nil
 }
 

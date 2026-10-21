@@ -218,44 +218,33 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	// Role Mappings
 	b.WriteString("# Bridge definitions mapping agent persona names to canonical AgentRole enums.\n")
 	b.WriteString("# Canonical domain roles: orchestrator, planner, coder, tester, reviewer.\n")
-	b.WriteString("role_mappings:\n")
 	mappings := cfg.RoleMappings
 	if len(mappings) == 0 {
-		mappings = domain.RoleMappings{
-			"orchestrator": "orchestrator",
-			"build":        "orchestrator",
-			"planner":      "planner",
-			"coder":        "coder",
-			"tester":       "tester",
-			"reviewer":     "reviewer",
+		b.WriteString("role_mappings: {}\n\n")
+	} else {
+		b.WriteString("role_mappings:\n")
+		roleKeys := make([]string, 0, len(mappings))
+		for k := range mappings {
+			roleKeys = append(roleKeys, k)
 		}
+		sort.Strings(roleKeys)
+		for _, k := range roleKeys {
+			b.WriteString(fmt.Sprintf("  %s: %s\n", k, mappings[k]))
+		}
+		b.WriteString("\n")
 	}
-	roleKeys := make([]string, 0, len(mappings))
-	for k := range mappings {
-		roleKeys = append(roleKeys, k)
-	}
-	sort.Strings(roleKeys)
-	for _, k := range roleKeys {
-		b.WriteString(fmt.Sprintf("  %s: %s\n", k, mappings[k]))
-	}
-	b.WriteString("\n")
 
 	// Role Order
 	b.WriteString("# Configurable sequence for sorting agent roles in CLI tables and metric cards.\n")
 	b.WriteString("# Roles appearing here are sorted first in this exact order; unlisted roles follow alphabetically.\n")
-	b.WriteString("role_order:\n")
 	roleOrder := cfg.RoleOrder
 	if len(roleOrder) == 0 {
-		roleOrder = []string{
-			"orchestrator",
-			"planner",
-			"coder",
-			"tester",
-			"reviewer",
+		b.WriteString("role_order: []\n")
+	} else {
+		b.WriteString("role_order:\n")
+		for _, r := range roleOrder {
+			b.WriteString(fmt.Sprintf("  - %s\n", r))
 		}
-	}
-	for _, r := range roleOrder {
-		b.WriteString(fmt.Sprintf("  - %s\n", r))
 	}
 
 	result := []byte(b.String())
@@ -347,24 +336,16 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 			TestPatterns: []string{},
 			ProdPatterns: []string{},
 		},
-		RoleMappings: domain.RoleMappings{
-			"orchestrator": "orchestrator",
-			"build":        "orchestrator",
-			"planner":      "planner",
-			"coder":        "coder",
-			"tester":       "tester",
-			"reviewer":     "reviewer",
-		},
-		RoleOrder: []string{
-			"orchestrator",
-			"planner",
-			"coder",
-			"tester",
-			"reviewer",
-		},
+		RoleMappings: domain.RoleMappings{},
+		RoleOrder:    []string{},
 	}
 
 	return GenerateConfigYAML(cfg)
+}
+
+// GenerateDefaultConfigYAML creates configuration YAML bytes initialized from default settings with overrides.
+func GenerateDefaultConfigYAML(projectName string, workspacesDir string, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix, customArtifacts ...[]domain.WorkspaceArtifactConfig) ([]byte, error) {
+	return GenerateDefaultYAML(projectName, workspacesDir, dbPath, srcFolders, prefixes, customArtifacts...)
 }
 
 // WriteConfigFile writes configuration bytes to targetPath atomically with collision detection.

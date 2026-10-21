@@ -345,9 +345,9 @@ database:
 		t.Errorf("expected /custom/path/db.sqlite, got %s", cfg.Database.Path)
 	}
 
-	// Unspecified operational sections retain defaults
+	// Unspecified workspaces.dir retains empty string without silent defaulting
 	if cfg.Workspaces.Dir != "" {
-		t.Errorf("expected empty workspaces dir by default, got %s", cfg.Workspaces.Dir)
+		t.Errorf("expected empty workspaces dir when omitted, got %s", cfg.Workspaces.Dir)
 	}
 	if len(cfg.Workspaces.Artifacts) != 0 {
 		t.Errorf("expected empty artifacts, got %v", cfg.Workspaces.Artifacts)
@@ -357,6 +357,12 @@ database:
 	}
 	if cfg.Live.ActiveThresholdSeconds != 300 {
 		t.Errorf("expected default active threshold 300, got %d", cfg.Live.ActiveThresholdSeconds)
+	}
+	if len(cfg.RoleMappings) != 0 || cfg.RoleMappings == nil {
+		t.Errorf("expected empty non-nil RoleMappings, got %v", cfg.RoleMappings)
+	}
+	if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
+		t.Errorf("expected empty non-nil RoleOrder, got %v", cfg.RoleOrder)
 	}
 }
 
@@ -1161,7 +1167,7 @@ workspaces:
 func TestLoad_RoleOrderParsingAndFallback(t *testing.T) {
 	t.Parallel()
 
-	defaultOrder := testProjectConfig().RoleOrder
+	defaultOrder := domain.DefaultProjectConfig().RoleOrder
 
 	t.Run("role_order parsed accurately from JSON", func(t *testing.T) {
 		t.Parallel()
@@ -1244,13 +1250,11 @@ role_order:
 			t.Fatalf("unexpected error loading config: %v", err)
 		}
 
+		if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
+			t.Fatalf("expected empty non-nil RoleOrder, got %v", cfg.RoleOrder)
+		}
 		if len(cfg.RoleOrder) != len(defaultOrder) {
 			t.Fatalf("expected default RoleOrder len %d, got %d: %v", len(defaultOrder), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-		for i, r := range defaultOrder {
-			if cfg.RoleOrder[i] != r {
-				t.Errorf("expected default RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
-			}
 		}
 	})
 
@@ -1268,13 +1272,11 @@ role_order:
 			t.Fatalf("unexpected error loading config: %v", err)
 		}
 
+		if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
+			t.Fatalf("expected empty non-nil RoleOrder, got %v", cfg.RoleOrder)
+		}
 		if len(cfg.RoleOrder) != len(defaultOrder) {
 			t.Fatalf("expected default RoleOrder len %d, got %d: %v", len(defaultOrder), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-		for i, r := range defaultOrder {
-			if cfg.RoleOrder[i] != r {
-				t.Errorf("expected default RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
-			}
 		}
 	})
 
@@ -1357,6 +1359,37 @@ role_order:
 			if cfg.RoleOrder[i] != r {
 				t.Errorf("at index %d: expected %q, got %q", i, r, cfg.RoleOrder[i])
 			}
+		}
+	})
+
+	t.Run("role_order containing only whitespace items collapses to empty non-nil slice", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+
+		yamlContent := `
+project_name: WhitespaceRoles
+ticket:
+  prefixes:
+    - prefix: AL
+workspaces:
+  src_folders:
+    - src
+role_order:
+  - "   "
+  - "\t"
+  - "\n"
+`
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
+			t.Fatalf("expected empty non-nil RoleOrder, got %v", cfg.RoleOrder)
 		}
 	})
 }

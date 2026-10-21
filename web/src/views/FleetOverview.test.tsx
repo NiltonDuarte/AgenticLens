@@ -12,11 +12,9 @@ describe('FleetOverview View Component', () => {
   it('renders loading indicator initially then displays KPI values and tables', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     render(<FleetOverview />);
@@ -44,11 +42,9 @@ describe('FleetOverview View Component', () => {
   it('filters rows when user enters query in ticket table search', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     render(<FleetOverview />);
@@ -72,11 +68,9 @@ describe('FleetOverview View Component', () => {
         total_tickets: 0,
         total_cost_usd: 0,
       },
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [],
-      isMock: true,
     });
 
     render(<FleetOverview />);
@@ -89,11 +83,9 @@ describe('FleetOverview View Component', () => {
   it('contains zero emojis in the rendered document body', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,
-      isMock: true,
     });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
       data: [...mockTicketComparisonRows],
-      isMock: true,
     });
 
     const { container } = render(<FleetOverview />);
@@ -114,12 +106,10 @@ describe('FleetOverview View Component', () => {
         .mockRejectedValueOnce(new Error('Fatal API crash'))
         .mockResolvedValueOnce({
           data: mockFleetSummary,
-          isMock: false,
-        });
+            });
       vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
         data: [...mockTicketComparisonRows],
-        isMock: false,
-      });
+        });
 
       render(<FleetOverview />);
 
@@ -142,12 +132,10 @@ describe('FleetOverview View Component', () => {
           ...mockFleetSummary,
           total_tickets: 0,
         },
-        isMock: false,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
         data: [],
-        isMock: false,
-      });
+        });
 
       render(<FleetOverview />);
 
@@ -157,36 +145,14 @@ describe('FleetOverview View Component', () => {
       expect(screen.getByRole('button', { name: /refresh data/i })).toBeInTheDocument();
     });
 
-    it('notifies onMockChange callback with true if either summary or workspaces is mock', async () => {
-      const onMockChange = vi.fn();
-      vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
-        data: mockFleetSummary,
-        isMock: false,
-      });
-      vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
-        data: [...mockTicketComparisonRows],
-        isMock: true,
-      });
-
-      render(<FleetOverview onMockChange={onMockChange} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Total Cost')).toBeInTheDocument();
-      });
-
-      expect(onMockChange).toHaveBeenCalledWith(true);
-    });
-
     it('invokes onSelectTicket when a ticket row is clicked', async () => {
       const onSelectTicket = vi.fn();
       vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
         data: mockFleetSummary,
-        isMock: false,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
         data: [...mockTicketComparisonRows],
-        isMock: false,
-      });
+        });
 
       render(<FleetOverview onSelectTicket={onSelectTicket} />);
 
@@ -201,12 +167,10 @@ describe('FleetOverview View Component', () => {
     it('renders FleetAnomalyCard in the fleet overview layout with anomaly metrics', async () => {
       vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
         data: mockFleetSummary,
-        isMock: false,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
         data: [...mockTicketComparisonRows],
-        isMock: false,
-      });
+        });
 
       render(<FleetOverview />);
 
@@ -223,12 +187,10 @@ describe('FleetOverview View Component', () => {
     it('triggers refetch with preset window when date range preset changes', async () => {
       const fetchFleetSpy = vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
         data: mockFleetSummary,
-        isMock: false,
-      });
+        });
       const fetchWorkspacesSpy = vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
         data: [...mockTicketComparisonRows],
-        isMock: false,
-      });
+        });
 
       render(<FleetOverview />);
 
@@ -248,12 +210,10 @@ describe('FleetOverview View Component', () => {
     it('displays custom date pickers and passes since/until when custom preset is selected', async () => {
       const fetchFleetSpy = vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
         data: mockFleetSummary,
-        isMock: false,
-      });
+        });
       const fetchWorkspacesSpy = vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
         data: [...mockTicketComparisonRows],
-        isMock: false,
-      });
+        });
 
       render(<FleetOverview />);
 
@@ -279,12 +239,10 @@ describe('FleetOverview View Component', () => {
     it('triggers refetch when ticket type and prefix filters change', async () => {
       const fetchFleetSpy = vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
         data: mockFleetSummary,
-        isMock: false,
-      });
+        });
       const fetchWorkspacesSpy = vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
         data: [...mockTicketComparisonRows],
-        isMock: false,
-      });
+        });
 
       render(<FleetOverview />);
 
@@ -308,12 +266,10 @@ describe('FleetOverview View Component', () => {
     it('renders configured prefixes in prefix dropdown even when no matching workspaces exist', async () => {
       vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
         data: mockFleetSummary,
-        isMock: false,
-      });
+        });
       vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
         data: [],
-        isMock: false,
-      });
+        });
 
       render(<FleetOverview configuredPrefixes={['NEWINITIATIVE', 'INFRA']} />);
 
