@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
 import type { LivePartFact } from '../domain/live';
 
@@ -193,5 +193,57 @@ describe('FailedToolAlertCard Component', () => {
     expect(screen.getByText('<script>alert("xss")</script> && cargo check')).toBeInTheDocument();
     expect(screen.getByText(/FATAL ERROR/)).toBeInTheDocument();
     expect(screen.getByText(/Vec<Option<&str>>/)).toBeInTheDocument();
+  });
+
+  describe('FIX-3 Concrete Debug Identifier Copy Action', () => {
+    it('renders Copy ID button on part identifier and copies ID to clipboard with temporary feedback', async () => {
+      vi.useFakeTimers();
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      render(<FailedToolAlertCard part={basePart} />);
+
+      // Verify Part ID display
+      expect(screen.getByText('part-err-01')).toBeInTheDocument();
+
+      // Verify Copy ID button
+      const copyBtn = screen.getByRole('button', { name: 'Copy Part ID part-err-01' });
+      expect(copyBtn).toBeInTheDocument();
+      expect(copyBtn).toHaveTextContent('Copy ID');
+
+      // Click Copy ID button
+      await act(async () => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      expect(writeTextMock).toHaveBeenCalledWith('part-err-01');
+      expect(copyBtn).toHaveTextContent('Copied');
+
+      // Fast-forward 2000ms
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(copyBtn).toHaveTextContent('Copy ID');
+
+      vi.useRealTimers();
+    });
+
+    it('omits Part ID badge and Copy ID button when part.id is empty or absent', () => {
+      const partWithoutId: LivePartFact = {
+        ...basePart,
+        id: '',
+      };
+
+      render(<FailedToolAlertCard part={partWithoutId} />);
+
+      expect(screen.queryByRole('button', { name: /Copy Part ID/i })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('failed-tool-id')).not.toBeInTheDocument();
+    });
   });
 });
