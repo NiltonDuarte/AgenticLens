@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/NiltonDuarte/AgenticLens/compare/v1.0.0...v1.0.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* **web,scripts:** direct binary download and dynamic initial ticket selection (FIX-7) ([#32](https://github.com/NiltonDuarte/AgenticLens/issues/32)) ([3e97ab4](https://github.com/NiltonDuarte/AgenticLens/commit/3e97ab4290c006dbbb7e70b428a29cf0e1a995dd))
+
 ## [1.0.0](https://github.com/NiltonDuarte/AgenticLens/compare/v1.0.0...v1.0.0) (2026-10-22)
 
 
