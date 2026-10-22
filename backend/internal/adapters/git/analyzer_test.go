@@ -118,6 +118,20 @@ func TestClassifyFile(t *testing.T) {
 }
 
 func TestInferenceOnActiveWorkspace(t *testing.T) {
+	tempDir := t.TempDir()
+	initTestGitRepo(t, tempDir, "main")
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(origDir)
+	})
+
 	// Test branch inference purely in memory without mutating disk branches
 	branchList := "  feat/AL-11-ci-fixture\n"
 	ticketType := git.InferTicketTypeFromBranchList(branchList, "AL-11")
@@ -132,9 +146,46 @@ func TestInferenceOnActiveWorkspace(t *testing.T) {
 	if strings.Contains(user, "@") {
 		t.Errorf("expected git user not to leak full email domain, got: %s", user)
 	}
+	if user != "TestUser" {
+		t.Errorf("expected git user 'TestUser' from isolated config, got: %s", user)
+	}
 }
 
 func TestGitAnalyzer_AdversarialEdgeCases(t *testing.T) {
+	tempDir := t.TempDir()
+	initTestGitRepo(t, tempDir, "main")
+
+	runCmd := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tempDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v (%s)", args, err, string(out))
+		}
+	}
+
+	// Create test workspace files and commit them into isolated repository for GetWorkspaceCommitTimeRange
+	wsFile := filepath.Join(tempDir, "workspaces", "PO-3", "SUMMARY.md")
+	if err := os.MkdirAll(filepath.Dir(wsFile), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(wsFile, []byte("# Summary\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runCmd("add", "workspaces/PO-3/SUMMARY.md")
+	runCmd("commit", "-m", "docs(PO-3): add test fixture summary")
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(origDir)
+	})
+
 	t.Run("empty or whitespace ticket ID returns empty numstats and safe defaults", func(t *testing.T) {
 		entries, err := git.GetTicketNumstat("", "main", []string{"backend"}, nil)
 		if err != nil {
@@ -230,6 +281,11 @@ not_a_number	not_a_number	file.go
 		minTs, maxTs, found := git.GetWorkspaceCommitTimeRange("")
 		if found || minTs != 0 || maxTs != 0 {
 			t.Errorf("expected not found for empty workspace, got found=%v", found)
+		}
+
+		minTs, maxTs, found = git.GetWorkspaceCommitTimeRange("workspaces/NON-EXISTENT-WORKSPACE-XYZ")
+		if found || minTs != 0 || maxTs != 0 {
+			t.Errorf("expected not found for non-existent workspace, got found=%v min=%d max=%d", found, minTs, maxTs)
 		}
 
 		minTs, maxTs, found = git.GetWorkspaceCommitTimeRange("workspaces/PO-3")
