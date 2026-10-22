@@ -1,0 +1,280 @@
+{
+  "schema_version": 3,
+  "migration": {
+    "schema_version": 3,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v3_sanitized"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
+    "last_migrated_by": "universal-migration-engine",
+    "notes": "Sanitized event telemetry migration from v2 to v3"
+  },
+  "ticket_id": "AL-23",
+  "ticket_title": "Workspace Natural Ticket Identifier Ordering and Sortable Tables",
+  "ticket_type": "feat",
+  "started_at": "2026-10-18T18:48:43.336000+00:00",
+  "completed_at": "2026-10-18T19:37:44.281000+00:00",
+  "updated_at": "2026-10-19T13:00:13.241024505Z",
+  "code": {
+    "lines_added": 1103,
+    "lines_deleted": 148,
+    "test_lines_added": 845,
+    "test_lines_deleted": 1,
+    "prod_lines_added": 258,
+    "prod_lines_deleted": 147,
+    "files_changed": 19,
+    "sdlc_iterations": 1
+  },
+  "invocations": [
+    {
+      "id": "ses_eafa7bfb7ffeTNhHdANyu7EdHs",
+      "parent_id": null,
+      "role": "orchestrator",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T18:48:43.730000+00:00",
+      "completed_at": "2026-10-18T19:37:44.281000+00:00",
+      "active_duration_seconds": 2302,
+      "turns": 73,
+      "tokens": {
+        "input": 619494,
+        "output": 18453,
+        "cache_read": 3818633,
+        "reasoning": 12551,
+        "peak_context": 95457
+      },
+      "cost_usd": 0.867283,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eafa719ffffenR1MN4Rw7yiTws",
+      "parent_id": "ses_eafa7bfb7ffeTNhHdANyu7EdHs",
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T18:49:25.771000+00:00",
+      "completed_at": "2026-10-18T18:56:01.339000+00:00",
+      "active_duration_seconds": 384,
+      "turns": 61,
+      "tokens": {
+        "input": 319358,
+        "output": 13974,
+        "cache_read": 2967600,
+        "reasoning": 18377,
+        "peak_context": 100640
+      },
+      "cost_usd": 0.583405,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eafa00c74ffei46CYWiWOD9HwA",
+      "parent_id": "ses_eafa7bfb7ffeTNhHdANyu7EdHs",
+      "role": "coder",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T18:57:07.987000+00:00",
+      "completed_at": "2026-10-18T19:09:40.855000+00:00",
+      "active_duration_seconds": 752,
+      "turns": 131,
+      "tokens": {
+        "input": 1020477,
+        "output": 23850,
+        "cache_read": 9430914,
+        "reasoning": 37598,
+        "peak_context": 168241
+      },
+      "cost_usd": 1.703106,
+      "compactions": 1
+    },
+    {
+      "id": "ses_eaf946fa2ffeGVJwsDuw8xBtCS",
+      "parent_id": "ses_eafa7bfb7ffeTNhHdANyu7EdHs",
+      "role": "tester",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T19:09:49.030000+00:00",
+      "completed_at": "2026-10-18T19:18:12.872000+00:00",
+      "active_duration_seconds": 504,
+      "turns": 76,
+      "tokens": {
+        "input": 478397,
+        "output": 16095,
+        "cache_read": 7332449,
+        "reasoning": 24843,
+        "peak_context": 152496
+      },
+      "cost_usd": 1.062249,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eaf8ca9e5ffe6HG7I3yphLBCLY",
+      "parent_id": "ses_eafa7bfb7ffeTNhHdANyu7EdHs",
+      "role": "reviewer",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T19:18:18.404000+00:00",
+      "completed_at": "2026-10-18T19:22:33.443000+00:00",
+      "active_duration_seconds": 255,
+      "turns": 58,
+      "tokens": {
+        "input": 264333,
+        "output": 4540,
+        "cache_read": 2584726,
+        "reasoning": 11035,
+        "peak_context": 72170
+      },
+      "cost_usd": 0.45051,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "calls": 178,
+      "errors": 3
+    },
+    {
+      "name": "bash",
+      "calls": 87,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 47,
+      "errors": 0
+    },
+    {
+      "name": "edit",
+      "calls": 39,
+      "errors": 0
+    },
+    {
+      "name": "glob",
+      "calls": 18,
+      "errors": 1
+    },
+    {
+      "name": "write",
+      "calls": 8,
+      "errors": 0
+    },
+    {
+      "name": "todowrite",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_mcp-find",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "task",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "skill",
+      "calls": 3,
+      "errors": 0
+    },
+    {
+      "name": "list_mcp_resources",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "question",
+      "calls": 1,
+      "errors": 0
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-18T18:49:10.487000+00:00",
+      "session_id": "ses_eafa7bfb7ffeTNhHdANyu7EdHs",
+      "turn": 8,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "glob",
+      "status": "error",
+      "duration_ms": 21,
+      "context_tokens": 24463
+    },
+    {
+      "timestamp": "2026-10-18T18:54:55.371000+00:00",
+      "session_id": "ses_eafa7bfb7ffeTNhHdANyu7EdHs",
+      "turn": 12,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 6,
+      "context_tokens": 32219
+    },
+    {
+      "timestamp": "2026-10-18T19:03:34.600000+00:00",
+      "session_id": "ses_eafa00c74ffei46CYWiWOD9HwA",
+      "turn": 53,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 8313,
+      "context_tokens": 161231
+    },
+    {
+      "timestamp": "2026-10-18T19:03:42.736000+00:00",
+      "session_id": "ses_eafa00c74ffei46CYWiWOD9HwA",
+      "turn": 53,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "edit",
+      "status": "completed",
+      "duration_ms": 12,
+      "context_tokens": 161231
+    },
+    {
+      "timestamp": "2026-10-18T19:04:20.911000+00:00",
+      "session_id": "ses_eafa00c74ffei46CYWiWOD9HwA",
+      "turn": 1,
+      "role": "coder",
+      "event_type": "compaction",
+      "status": "completed",
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-18T19:04:20.947000+00:00",
+      "session_id": "ses_eafa00c74ffei46CYWiWOD9HwA",
+      "turn": 60,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 9491,
+      "context_tokens": 41294
+    },
+    {
+      "timestamp": "2026-10-18T19:18:45.176000+00:00",
+      "session_id": "ses_eaf8ca9e5ffe6HG7I3yphLBCLY",
+      "turn": 6,
+      "role": "reviewer",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 5,
+      "context_tokens": 24685
+    },
+    {
+      "timestamp": "2026-10-18T19:22:37.543000+00:00",
+      "session_id": "ses_eafa7bfb7ffeTNhHdANyu7EdHs",
+      "turn": 24,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 10,
+      "context_tokens": 54548
+    }
+  ]
+}

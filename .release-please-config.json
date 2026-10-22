@@ -1,0 +1,12 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "package-name": "agentic-lens",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        "web/package.json"
+      ]
+    }
+  }
+}

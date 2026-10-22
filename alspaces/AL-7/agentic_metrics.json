@@ -1,0 +1,497 @@
+{
+  "schema_version": 3,
+  "migration": {
+    "schema_version": 3,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v3_sanitized"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
+    "last_migrated_by": "universal-migration-engine",
+    "notes": "Sanitized event telemetry migration from v2 to v3"
+  },
+  "ticket_id": "AL-7",
+  "ticket_title": "Domain Anomaly Detection and Rule Engine",
+  "ticket_type": "feature",
+  "started_at": "2026-10-18T09:29:15.692000+00:00",
+  "completed_at": "2026-10-18T12:33:43.263000+00:00",
+  "updated_at": "2026-10-19T13:00:13.241024505Z",
+  "code": {
+    "lines_added": 1412,
+    "lines_deleted": 168,
+    "test_lines_added": 934,
+    "test_lines_deleted": 9,
+    "prod_lines_added": 478,
+    "prod_lines_deleted": 159,
+    "files_changed": 13,
+    "sdlc_iterations": 1
+  },
+  "invocations": [
+    {
+      "id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "parent_id": null,
+      "role": "orchestrator",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T09:29:16.056000+00:00",
+      "completed_at": "2026-10-18T12:33:43.263000+00:00",
+      "active_duration_seconds": 4343,
+      "turns": 91,
+      "tokens": {
+        "input": 867721,
+        "output": 25530,
+        "cache_read": 5057260,
+        "reasoning": 13185,
+        "peak_context": 111737
+      },
+      "cost_usd": 1.175266,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eb19fe224ffeHDZBPwa1woE6w1",
+      "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T09:38:04.398000+00:00",
+      "completed_at": "2026-10-18T09:42:46.418000+00:00",
+      "active_duration_seconds": 282,
+      "turns": 39,
+      "tokens": {
+        "input": 235444,
+        "output": 8979,
+        "cache_read": 1744476,
+        "reasoning": 18968,
+        "peak_context": 91141
+      },
+      "cost_usd": 0.41222,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T09:42:57.265000+00:00",
+      "completed_at": "2026-10-18T09:47:14.270000+00:00",
+      "active_duration_seconds": 257,
+      "turns": 37,
+      "tokens": {
+        "input": 216318,
+        "output": 8059,
+        "cache_read": 1184609,
+        "reasoning": 14841,
+        "peak_context": 72887
+      },
+      "cost_usd": 0.336959,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eb18741bdffeB86InRZ5cqbZZK",
+      "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T10:04:58.314000+00:00",
+      "completed_at": "2026-10-18T10:06:23.751000+00:00",
+      "active_duration_seconds": 85,
+      "turns": 9,
+      "tokens": {
+        "input": 43498,
+        "output": 7565,
+        "cache_read": 131459,
+        "reasoning": 5820,
+        "peak_context": 27916
+      },
+      "cost_usd": 0.092677,
+      "compactions": 0
+    },
+    {
+      "id": "ses_eb183cc93ffeqoQN9Hlevo3825",
+      "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "role": "coder",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T10:08:44.930000+00:00",
+      "completed_at": "2026-10-18T10:22:10.495000+00:00",
+      "active_duration_seconds": 805,
+      "turns": 97,
+      "tokens": {
+        "input": 613678,
+        "output": 26581,
+        "cache_read": 6011114,
+        "reasoning": 39988,
+        "peak_context": 166711
+      },
+      "cost_usd": 1.160726,
+      "compactions": 1
+    },
+    {
+      "id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
+      "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "role": "tester",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T10:22:19.438000+00:00",
+      "completed_at": "2026-10-18T10:39:46.088000+00:00",
+      "active_duration_seconds": 1046,
+      "turns": 123,
+      "tokens": {
+        "input": 848707,
+        "output": 33369,
+        "cache_read": 8539614,
+        "reasoning": 21086,
+        "peak_context": 166180
+      },
+      "cost_usd": 1.481208,
+      "compactions": 1
+    },
+    {
+      "id": "ses_eb1674d57ffer3yZnHLhOY7oku",
+      "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "role": "reviewer",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-18T10:39:52.497000+00:00",
+      "completed_at": "2026-10-18T10:45:00.359000+00:00",
+      "active_duration_seconds": 308,
+      "turns": 46,
+      "tokens": {
+        "input": 514026,
+        "output": 5391,
+        "cache_read": 2976575,
+        "reasoning": 20358,
+        "peak_context": 168054
+      },
+      "cost_usd": 0.705321,
+      "compactions": 1
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "calls": 172,
+      "errors": 7
+    },
+    {
+      "name": "bash",
+      "calls": 140,
+      "errors": 0
+    },
+    {
+      "name": "glob",
+      "calls": 28,
+      "errors": 0
+    },
+    {
+      "name": "edit",
+      "calls": 24,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 23,
+      "errors": 1
+    },
+    {
+      "name": "write",
+      "calls": 12,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_mcp-find",
+      "calls": 10,
+      "errors": 0
+    },
+    {
+      "name": "task",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "todowrite",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "list_mcp_resources",
+      "calls": 4,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_code-mode",
+      "calls": 4,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_mcp-exec",
+      "calls": 4,
+      "errors": 4
+    },
+    {
+      "name": "skill",
+      "calls": 4,
+      "errors": 0
+    },
+    {
+      "name": "question",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "list_mcp_resource_templates",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "t3-code_list_thread_pull_requests",
+      "calls": 1,
+      "errors": 0
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-18T09:38:09.261000+00:00",
+      "session_id": "ses_eb19fe224ffeHDZBPwa1woE6w1",
+      "turn": 1,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 9,
+      "context_tokens": 8616
+    },
+    {
+      "timestamp": "2026-10-18T09:39:40.502000+00:00",
+      "session_id": "ses_eb19fe224ffeHDZBPwa1woE6w1",
+      "turn": 25,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 8,
+      "context_tokens": 60742
+    },
+    {
+      "timestamp": "2026-10-18T09:43:49.500000+00:00",
+      "session_id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "turn": 14,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 7,
+      "context_tokens": 29724
+    },
+    {
+      "timestamp": "2026-10-18T09:43:52.329000+00:00",
+      "session_id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "turn": 15,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 9,
+      "context_tokens": 33390
+    },
+    {
+      "timestamp": "2026-10-18T09:44:02.523000+00:00",
+      "session_id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "turn": 17,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "grep",
+      "status": "error",
+      "duration_ms": 10,
+      "context_tokens": 37600
+    },
+    {
+      "timestamp": "2026-10-18T09:44:17.930000+00:00",
+      "session_id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "turn": 21,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "mcp-gateway_mcp-exec",
+      "status": "error",
+      "duration_ms": 10,
+      "context_tokens": 45858
+    },
+    {
+      "timestamp": "2026-10-18T09:44:21.899000+00:00",
+      "session_id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "turn": 22,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "mcp-gateway_mcp-exec",
+      "status": "error",
+      "duration_ms": 7,
+      "context_tokens": 46456
+    },
+    {
+      "timestamp": "2026-10-18T09:44:25.747000+00:00",
+      "session_id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "turn": 23,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "mcp-gateway_mcp-exec",
+      "status": "error",
+      "duration_ms": 6,
+      "context_tokens": 46526
+    },
+    {
+      "timestamp": "2026-10-18T09:44:25.905000+00:00",
+      "session_id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "turn": 24,
+      "role": "planner",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 30212,
+      "context_tokens": 46573
+    },
+    {
+      "timestamp": "2026-10-18T09:44:55.899000+00:00",
+      "session_id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
+      "turn": 24,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "mcp-gateway_mcp-exec",
+      "status": "error",
+      "duration_ms": 10,
+      "context_tokens": 46573
+    },
+    {
+      "timestamp": "2026-10-18T10:17:00.848000+00:00",
+      "session_id": "ses_eb183cc93ffeqoQN9Hlevo3825",
+      "turn": 41,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 12600,
+      "context_tokens": 160985
+    },
+    {
+      "timestamp": "2026-10-18T10:17:13.340000+00:00",
+      "session_id": "ses_eb183cc93ffeqoQN9Hlevo3825",
+      "turn": 41,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "edit",
+      "status": "completed",
+      "duration_ms": 24,
+      "context_tokens": 160985
+    },
+    {
+      "timestamp": "2026-10-18T10:17:55.257000+00:00",
+      "session_id": "ses_eb183cc93ffeqoQN9Hlevo3825",
+      "turn": 1,
+      "role": "coder",
+      "event_type": "compaction",
+      "status": "completed",
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-18T10:17:55.293000+00:00",
+      "session_id": "ses_eb183cc93ffeqoQN9Hlevo3825",
+      "turn": 47,
+      "role": "coder",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 17432,
+      "context_tokens": 45267
+    },
+    {
+      "timestamp": "2026-10-18T10:34:34.441000+00:00",
+      "session_id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
+      "turn": 65,
+      "role": "tester",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 5834,
+      "context_tokens": 160511
+    },
+    {
+      "timestamp": "2026-10-18T10:34:39.841000+00:00",
+      "session_id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
+      "turn": 65,
+      "role": "tester",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 38,
+      "context_tokens": 160511
+    },
+    {
+      "timestamp": "2026-10-18T10:35:26.462000+00:00",
+      "session_id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
+      "turn": 1,
+      "role": "tester",
+      "event_type": "compaction",
+      "status": "completed",
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-18T10:35:26.498000+00:00",
+      "session_id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
+      "turn": 71,
+      "role": "tester",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 16946,
+      "context_tokens": 66032
+    },
+    {
+      "timestamp": "2026-10-18T10:43:04.893000+00:00",
+      "session_id": "ses_eb1674d57ffer3yZnHLhOY7oku",
+      "turn": 29,
+      "role": "reviewer",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 4882,
+      "context_tokens": 160997
+    },
+    {
+      "timestamp": "2026-10-18T10:43:09.706000+00:00",
+      "session_id": "ses_eb1674d57ffer3yZnHLhOY7oku",
+      "turn": 29,
+      "role": "reviewer",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 5,
+      "context_tokens": 160997
+    },
+    {
+      "timestamp": "2026-10-18T10:43:55.796000+00:00",
+      "session_id": "ses_eb1674d57ffer3yZnHLhOY7oku",
+      "turn": 1,
+      "role": "reviewer",
+      "event_type": "compaction",
+      "status": "completed",
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-18T10:44:27.929000+00:00",
+      "session_id": "ses_eb1674d57ffer3yZnHLhOY7oku",
+      "turn": 39,
+      "role": "reviewer",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 5,
+      "context_tokens": 16584
+    },
+    {
+      "timestamp": "2026-10-18T10:45:04.604000+00:00",
+      "session_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "turn": 53,
+      "role": "orchestrator",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 4,
+      "context_tokens": 88311
+    }
+  ]
+}

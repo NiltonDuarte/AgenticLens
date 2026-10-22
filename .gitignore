@@ -1,0 +1,54 @@
+.venv/
+.ruff_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+dist/
+!backend/internal/adapters/web/dist/
+!backend/internal/adapters/web/dist/**
+build/
+*.egg-info/
+bin/
+
+web/node_modules
+web/node_modules/
+web/node_modules/**
+
+# Environment and sensitive credential files
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+
+# Local databases and SQLite artifacts
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Operating System and IDEs
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs and coverage
+*.log
+coverage.out
+coverage.html
