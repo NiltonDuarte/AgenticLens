@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      force_tag:
+        description: 'Force build and attach assets to existing tag (e.g. agentic-lens-v1.0.0 or v1.0.0)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -15,8 +21,105 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Release Please Action
+        id: release
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Check out repository
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go 1.23
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Node.js 20
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        working-directory: web
+        run: npm ci
+
+      - name: Static Analysis
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        run: make check
+
+      - name: Run Test Suite
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        run: make test
+
+      - name: Compute Release Metadata
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        run: |
+          RAW_TAG="${{ steps.release.outputs.tag_name || steps.release.outputs['agentic-lens--tag_name'] || inputs.force_tag }}"
+          if [ -z "$RAW_TAG" ]; then
+            RAW_TAG="agentic-lens-v1.0.0"
+          fi
+          CLEAN_VERSION="${RAW_TAG#agentic-lens-}"
+          if [[ ! "$CLEAN_VERSION" =~ ^v ]]; then
+            CLEAN_VERSION="v${CLEAN_VERSION}"
+          fi
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "RELEASE_TAG=${RAW_TAG}" >> $GITHUB_ENV
+          echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+          echo "GIT_COMMIT=${SHORT_SHA}" >> $GITHUB_ENV
+          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_ENV
+          echo "Release tag: ${RAW_TAG}, Version: ${CLEAN_VERSION}"
+
+      - name: Cross-Compile Release Binaries
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        run: make release-build VERSION="${VERSION}" GIT_COMMIT="${GIT_COMMIT}" BUILD_DATE="${BUILD_DATE}"
+
+      - name: Package Release Archives
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        run: make release-package VERSION="${VERSION}"
+
+      - name: Verify Release Artifacts
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        run: make release-verify
+
+      - name: Upload Release Artifacts
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: |
+            dist/bin/agentic-lens-*
+            dist/agentic-lens-*.tar.gz
+            dist/agentic-lens-*.zip
+            dist/SHA256SUMS
+
+      - name: Update Floating Latest Tag
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa latest -m "Release ${RELEASE_TAG}"
+          git push -f origin latest
+
+      - name: Sweep All Stale Release Candidates
+        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RCS=$(gh release list --limit 100 --exclude-drafts --json tagName,isPrerelease --jq '.[] | select(.isPrerelease == true and (.tagName | test("-rc\\."))) | .tagName')
+          for tag in $RCS; do
+            echo "Purging candidate: $tag"
+            gh release delete "$tag" --yes --cleanup-tag || true
+          done
