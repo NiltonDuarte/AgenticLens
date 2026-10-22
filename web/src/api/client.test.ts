@@ -141,8 +141,8 @@ describe('Boundary API Client', () => {
             context_window_health: {
               healthy_ceiling_tokens: 200000,
               status: 'HEALTHY',
-              orchestrator_peak_tokens: 50000,
-              orchestrator_saturation_pct: 25,
+              root_peak_tokens: 50000,
+              root_saturation_pct: 25,
               subagents_peak_tokens: 40000,
               subagents_peak_role: 'coder',
               compactions: 0,

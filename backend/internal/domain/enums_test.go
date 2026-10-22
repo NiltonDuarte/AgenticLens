@@ -417,3 +417,64 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialComprehensive(t *testing.T
 		})
 	}
 }
+
+func TestOrderRoles_GenericAgentRoleType(t *testing.T) {
+	t.Parallel()
+
+	input := []domain.AgentRole{
+		domain.AgentRole("tester"),
+		domain.AgentRole("architect"),
+		domain.AgentRole("coder"),
+		domain.AgentRole("security-auditor"),
+		domain.AgentRole("planner"),
+		domain.AgentRole("orchestrator"),
+	}
+
+	customOrder := []domain.AgentRole{
+		domain.AgentRole("orchestrator"),
+		domain.AgentRole("planner"),
+		domain.AgentRole("coder"),
+		domain.AgentRole("tester"),
+	}
+
+	ordered := domain.OrderRoles(input, customOrder)
+	expected := []domain.AgentRole{
+		domain.AgentRole("orchestrator"),
+		domain.AgentRole("planner"),
+		domain.AgentRole("coder"),
+		domain.AgentRole("tester"),
+		domain.AgentRole("architect"),
+		domain.AgentRole("security-auditor"),
+	}
+
+	if len(ordered) != len(expected) {
+		t.Fatalf("expected len %d, got %d: %v", len(expected), len(ordered), ordered)
+	}
+	for i := range expected {
+		if ordered[i] != expected[i] {
+			t.Errorf("at index %d: expected %s, got %s", i, expected[i], ordered[i])
+		}
+	}
+
+	// Subagent ordering with AgentRole
+	subOrdered := domain.OrderSubagentRoles(input, customOrder)
+	if len(subOrdered) != len(expected) {
+		t.Fatalf("expected subagent len %d, got %d: %v", len(expected), len(subOrdered), subOrdered)
+	}
+	for i := range expected {
+		if subOrdered[i] != expected[i] {
+			t.Errorf("subagent at index %d: expected %s, got %s", i, expected[i], subOrdered[i])
+		}
+	}
+}
+
+func TestAgentRole_FallbackConstants(t *testing.T) {
+	t.Parallel()
+
+	if domain.RoleRootAgent != "RootAgent" {
+		t.Errorf("expected RoleRootAgent to be 'RootAgent', got %q", domain.RoleRootAgent)
+	}
+	if domain.RoleUnassignedSubAgent != "UnassignedSubAgent" {
+		t.Errorf("expected RoleUnassignedSubAgent to be 'UnassignedSubAgent', got %q", domain.RoleUnassignedSubAgent)
+	}
+}

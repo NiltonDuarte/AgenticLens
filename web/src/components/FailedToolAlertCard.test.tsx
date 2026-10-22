@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
-import type { LivePartFact } from '../domain/live';
+import type { FailureSeverity, LivePartFact } from '../domain/live';
 
 describe('FailedToolAlertCard Component', () => {
   const basePart: LivePartFact = {
@@ -13,7 +13,7 @@ describe('FailedToolAlertCard Component', () => {
     status: 'error',
     is_error: true,
     error_message: 'Compilation failure in workspace crate',
-    severity: 'HIGH',
+    severity: 'high',
   };
 
   it('renders tool name, failed status badge, and high severity tag with red accent styling', () => {
@@ -84,8 +84,8 @@ describe('FailedToolAlertCard Component', () => {
     expect(onInspect).toHaveBeenCalledTimes(1);
   });
 
-  it('renders all severity levels (CRITICAL, HIGH, MEDIUM, LOW) and defaults to HIGH when omitted', () => {
-    const severities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
+  it('renders all severity levels (high, medium, low, none) and defaults to high when omitted', () => {
+    const severities: readonly FailureSeverity[] = ['high', 'medium', 'low', 'none'];
 
     for (const sev of severities) {
       const partWithSev: LivePartFact = {
@@ -95,8 +95,8 @@ describe('FailedToolAlertCard Component', () => {
 
       const { unmount } = render(<FailedToolAlertCard part={partWithSev} />);
       const card = screen.getByTestId('failed-tool-alert-card');
-      expect(card).toHaveClass(`severity-${sev.toLowerCase()}`);
-      expect(screen.getByText(sev)).toBeInTheDocument();
+      expect(card).toHaveClass(`severity-${sev}`);
+      expect(screen.getByText(sev.toUpperCase())).toBeInTheDocument();
       unmount();
     }
 
@@ -106,7 +106,6 @@ describe('FailedToolAlertCard Component', () => {
       type: 'tool',
       status: 'error',
       is_error: true,
-      severity: '',
     };
     render(<FailedToolAlertCard part={omittedSevPart} />);
     const card = screen.getByTestId('failed-tool-alert-card');
@@ -146,7 +145,7 @@ describe('FailedToolAlertCard Component', () => {
       type: 'tool',
       status: 'error',
       is_error: true,
-      severity: 'HIGH',
+      severity: 'high',
       error_message: 'Explicit error reason',
     };
 
@@ -159,7 +158,7 @@ describe('FailedToolAlertCard Component', () => {
       type: 'tool',
       status: 'error',
       is_error: true,
-      severity: 'HIGH',
+      severity: 'high',
     };
 
     render(<FailedToolAlertCard part={noSnippetPart} />);
@@ -172,7 +171,7 @@ describe('FailedToolAlertCard Component', () => {
       type: 'tool',
       status: 'error',
       is_error: true,
-      severity: 'HIGH',
+      severity: 'high',
     };
 
     render(<FailedToolAlertCard part={missingFieldsPart} />);
@@ -196,7 +195,7 @@ describe('FailedToolAlertCard Component', () => {
   });
 
   describe('FIX-3 Concrete Debug Identifier Copy Action', () => {
-    it('renders Copy ID button on part identifier and copies ID to clipboard with temporary feedback', async () => {
+    it('renders Copy Prompt button on part identifier and copies Layer 2 debug prompt to clipboard with temporary feedback', async () => {
       vi.useFakeTimers();
       const writeTextMock = vi.fn().mockResolvedValue(undefined);
       Object.assign(navigator, {
@@ -205,23 +204,36 @@ describe('FailedToolAlertCard Component', () => {
         },
       });
 
-      render(<FailedToolAlertCard part={basePart} />);
+      render(
+        <FailedToolAlertCard
+          part={basePart}
+          sessionId="ses-card-test"
+          turn={3}
+          role="coder"
+          model="gemini-3.8-flash"
+          consecutiveErrors={4}
+        />
+      );
 
       // Verify Part ID display
       expect(screen.getByText('part-err-01')).toBeInTheDocument();
 
-      // Verify Copy ID button
-      const copyBtn = screen.getByRole('button', { name: 'Copy Part ID part-err-01' });
+      // Verify Copy Prompt button
+      const copyBtn = screen.getByRole('button', { name: 'Copy execution issue debug prompt for bash' });
       expect(copyBtn).toBeInTheDocument();
-      expect(copyBtn).toHaveTextContent('Copy ID');
+      expect(copyBtn).toHaveTextContent('Copy Prompt');
 
-      // Click Copy ID button
+      // Click Copy Prompt button
       await act(async () => {
         fireEvent.click(copyBtn);
       });
 
       expect(writeTextMock).toHaveBeenCalledTimes(1);
-      expect(writeTextMock).toHaveBeenCalledWith('part-err-01');
+      const copiedText = writeTextMock.mock.calls[0][0];
+      expect(copiedText).toContain('# Agent Execution Issue: Consecutive failures on `bash`');
+      expect(copiedText).toContain('During turn 3 of session `ses-card-test` (agent `coder` running `gemini-3.8-flash`)');
+      expect(copiedText).toContain('part `part-err-01`');
+      expect(copiedText).toContain('### Error Details');
       expect(copyBtn).toHaveTextContent('Copied');
 
       // Fast-forward 2000ms
@@ -229,12 +241,12 @@ describe('FailedToolAlertCard Component', () => {
         vi.advanceTimersByTime(2000);
       });
 
-      expect(copyBtn).toHaveTextContent('Copy ID');
+      expect(copyBtn).toHaveTextContent('Copy Prompt');
 
       vi.useRealTimers();
     });
 
-    it('omits Part ID badge and Copy ID button when part.id is empty or absent', () => {
+    it('omits Part ID badge and Copy Prompt button when part.id is empty or absent', () => {
       const partWithoutId: LivePartFact = {
         ...basePart,
         id: '',
@@ -242,8 +254,60 @@ describe('FailedToolAlertCard Component', () => {
 
       render(<FailedToolAlertCard part={partWithoutId} />);
 
-      expect(screen.queryByRole('button', { name: /Copy Part ID/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Copy execution issue debug prompt/i })).not.toBeInTheDocument();
       expect(screen.queryByTestId('failed-tool-id')).not.toBeInTheDocument();
+    });
+
+    it('copies Layer 2 prompt with single failure wording when consecutiveErrors is 1 or undefined', async () => {
+      vi.useFakeTimers();
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      const singleFailPart: LivePartFact = {
+        id: 'part-single-02',
+        type: 'tool',
+        tool_name: 'git',
+        status: 'error',
+        is_error: true,
+        severity: 'medium',
+        error_message: 'fatal: repository not found',
+      };
+
+      render(
+        <FailedToolAlertCard
+          part={singleFailPart}
+          consecutiveErrors={1}
+          turn={5}
+        />
+      );
+
+      const copyBtn = screen.getByRole('button', { name: 'Copy execution issue debug prompt for git' });
+      expect(copyBtn).toHaveTextContent('Copy Prompt');
+
+      await act(async () => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      const copiedText = writeTextMock.mock.calls[0][0];
+      expect(copiedText).toContain('# Agent Execution Issue: Tool execution failure on `git`');
+      expect(copiedText).toContain('During turn 5 of session `unknown-session`');
+      expect(copiedText).toContain('the agent encountered an execution failure while invoking `git`');
+      expect(copiedText).toContain('part `part-single-02`');
+      expect(copiedText).toContain('fatal: repository not found');
+      expect(copyBtn).toHaveTextContent('Copied');
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(copyBtn).toHaveTextContent('Copy Prompt');
+
+      vi.useRealTimers();
     });
   });
 });

@@ -333,7 +333,7 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 	consecutiveErrors := 0
 
 	for _, rm := range rawMsgs {
-		role := "assistant"
+		role := domain.AgentRole("assistant")
 		var contentStr string
 		var reasoningStr *string
 		var inputTokens, outputTokens, cacheReadTokens, reasoningTokens int64
@@ -355,7 +355,7 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 			}
 			if err := json.Unmarshal([]byte(rm.Data), &msgData); err == nil {
 				if msgData.Role != nil && strings.TrimSpace(*msgData.Role) != "" {
-					role = strings.TrimSpace(*msgData.Role)
+					role = domain.AgentRole(strings.TrimSpace(*msgData.Role))
 				}
 				contentStr = extractMessageContent(msgData.Content)
 				if msgData.ReasoningContent != nil && strings.TrimSpace(*msgData.ReasoningContent) != "" {
@@ -486,7 +486,7 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 	}
 
 	var isError bool
-	var severity string
+	var severity domain.FailureSeverity
 	var errorMessage *string
 
 	if partType == "tool" {
@@ -504,7 +504,7 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 			*consecutiveErrors = 0
 		}
 	} else {
-		severity = string(domain.SeverityNone)
+		severity = domain.SeverityNone
 	}
 
 	// Bound snippets
@@ -709,7 +709,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	}
 
 	// 4. Map session IDs to roles
-	sessionRoleMap := make(map[string]string)
+	sessionRoleMap := make(map[string]domain.AgentRole)
 	for _, inv := range ledger.Facts.Invocations {
 		if inv.ID != "" && inv.Role != "" {
 			sessionRoleMap[inv.ID] = inv.Role
@@ -720,14 +720,14 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 			var agent, parentID sql.NullString
 			if err := s.hook.DB().QueryRow("SELECT agent, parent_id FROM session WHERE id = ?", sid).Scan(&agent, &parentID); err == nil {
 				if agent.Valid && strings.TrimSpace(agent.String) != "" {
-					sessionRoleMap[sid] = string(s.cfg.RoleMappings.ResolveRole(strings.TrimSpace(agent.String)))
+					sessionRoleMap[sid] = s.cfg.RoleMappings.ResolveRole(strings.TrimSpace(agent.String))
 				} else if !parentID.Valid || strings.TrimSpace(parentID.String) == "" {
-					sessionRoleMap[sid] = "orchestrator"
+					sessionRoleMap[sid] = domain.RoleRootAgent
 				} else {
-					sessionRoleMap[sid] = "unassigned"
+					sessionRoleMap[sid] = domain.RoleUnassignedSubAgent
 				}
 			} else {
-				sessionRoleMap[sid] = "coder"
+				sessionRoleMap[sid] = domain.RoleUnassignedSubAgent
 			}
 		}
 	}
@@ -756,12 +756,13 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	var events []domain.EventFact
 	sessionTurns := make(map[string]int64)
 	lastUserPromptPerSession := make(map[string]string)
+	sessionConsecutiveErrors := make(map[string]int)
 
 	// Process messages per session
 	for _, rm := range rawMsgs {
 		role := sessionRoleMap[rm.SessionID]
 		if role == "" {
-			role = "coder"
+			role = domain.RoleUnassignedSubAgent
 		}
 
 		var msgRole string
@@ -880,32 +881,34 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		})
 
 		// Append parts for this message
-		consecutiveErrors := 0
+		consecutiveErrors := sessionConsecutiveErrors[rm.SessionID]
 		for _, pr := range partRecords {
 			partEvent := convertPartToEventFact(pr, turn, role, ctxTokens, &consecutiveErrors)
 			if partEvent != nil {
 				events = append(events, *partEvent)
 			}
 		}
+		sessionConsecutiveErrors[rm.SessionID] = consecutiveErrors
 	}
 
 	// Append any orphan parts that weren't tied to a specific message ID
 	for sid, parts := range orphanParts {
 		role := sessionRoleMap[sid]
 		if role == "" {
-			role = "coder"
+			role = domain.RoleUnassignedSubAgent
 		}
 		turn := sessionTurns[sid]
 		if turn == 0 {
 			turn = 1
 		}
-		consecutiveErrors := 0
+		consecutiveErrors := sessionConsecutiveErrors[sid]
 		for _, pr := range parts {
 			partEvent := convertPartToEventFact(pr, turn, role, 0, &consecutiveErrors)
 			if partEvent != nil {
 				events = append(events, *partEvent)
 			}
 		}
+		sessionConsecutiveErrors[sid] = consecutiveErrors
 	}
 
 	if len(events) == 0 {
@@ -920,7 +923,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	}, nil
 }
 
-func convertPartToEventFact(pr RawPartRecord, turn int64, role string, ctxTokens int64, consecutiveErrors *int) *domain.EventFact {
+func convertPartToEventFact(pr RawPartRecord, turn int64, role domain.AgentRole, ctxTokens int64, consecutiveErrors *int) *domain.EventFact {
 	ts := formatEpochMilli(pr.TimeCreated)
 
 	var pData struct {

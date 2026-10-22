@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import type { Anomaly, EventFact } from '../types/telemetry';
 import { AnomalyBadge } from './AnomalyBadge';
 import { copyTextToClipboard } from '../utils/clipboard';
+import {
+  generateExecutionIssuePrompt,
+  translateRuleToPlainEnglish,
+} from '../utils/debugPrompt';
 
 export interface AnomalyDrawerProps {
   readonly isOpen: boolean;
@@ -17,6 +21,7 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   event,
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isPromptCopied, setIsPromptCopied] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -76,6 +81,39 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
 
   const turnDebugId = turn !== undefined ? (sessionId ? `${sessionId}:turn:${turn}` : `turn-${turn}`) : undefined;
 
+  const handleCopyPrompt = async () => {
+    const summary = anomaly?.title
+      ? anomaly.title
+      : anomaly?.rule_id
+        ? translateRuleToPlainEnglish(anomaly.rule_id, toolName ?? undefined)
+        : title;
+
+    const description =
+      anomaly?.description ||
+      (errorMessage ? `Execution error: ${errorMessage}` : 'An execution anomaly was detected.');
+
+    const errorDetails =
+      errorMessage ||
+      event?.tool_output ||
+      (event ? `Trigger event: ${event.event_type}${event.tool_name ? ` (${event.tool_name})` : ''}` : undefined);
+
+    const prompt = generateExecutionIssuePrompt({
+      summary,
+      turn,
+      sessionId: sessionId || 'unknown-session',
+      role,
+      description,
+      partId: undefined,
+      errorDetails,
+    });
+
+    await copyTextToClipboard(prompt);
+    setIsPromptCopied(true);
+    window.setTimeout(() => {
+      setIsPromptCopied(false);
+    }, 2000);
+  };
+
   return (
     <div
       className="anomaly-drawer-backdrop"
@@ -94,6 +132,14 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
             {anomaly && (
               <AnomalyBadge severity={anomaly.severity} size="sm" />
             )}
+            <button
+              type="button"
+              className="btn-copy-id btn-copy-prompt"
+              aria-label="Copy execution issue debug prompt"
+              onClick={handleCopyPrompt}
+            >
+              {isPromptCopied ? 'Copied' : 'Copy Prompt'}
+            </button>
           </div>
           <button
             type="button"

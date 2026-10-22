@@ -103,7 +103,7 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 
-	var activeTicketType *string
+	var activeTicketType *domain.ConventionalTicketType
 	if strings.TrimSpace(*ticketTypeFlag) != "" {
 		normalized, ok := domain.NormalizeTicketType(*ticketTypeFlag)
 		if !ok {
@@ -114,12 +114,12 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error: invalid ticket type '%s'. Must be one of: %s\n", *ticketTypeFlag, strings.Join(names, ", "))
 			os.Exit(1)
 		}
-		s := string(normalized)
-		activeTicketType = &s
+		activeTicketType = &normalized
 	} else if cachedFacts != nil && cachedFacts.TicketType != nil {
-		if normalized, ok := domain.NormalizeTicketType(*cachedFacts.TicketType); ok {
-			s := string(normalized)
-			activeTicketType = &s
+		if normalized, ok := domain.NormalizeTicketType(string(*cachedFacts.TicketType)); ok {
+			activeTicketType = &normalized
+		} else {
+			activeTicketType = cachedFacts.TicketType
 		}
 	}
 

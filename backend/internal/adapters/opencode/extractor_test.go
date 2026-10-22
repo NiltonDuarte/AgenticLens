@@ -1192,19 +1192,19 @@ func TestExtractFacts_RawPersonaPreservation(t *testing.T) {
 			}
 		}
 
-		if rootInv == nil || rootInv.Role != "orchestrator" {
-			t.Fatalf("expected root invocation fallback role 'orchestrator', got: %+v", rootInv)
+		if rootInv == nil || rootInv.Role != domain.RoleRootAgent {
+			t.Fatalf("expected root invocation fallback role %q, got: %+v", domain.RoleRootAgent, rootInv)
 		}
-		if childInv == nil || childInv.Role != "unassigned" {
-			t.Fatalf("expected child invocation fallback role 'unassigned', got: %+v", childInv)
+		if childInv == nil || childInv.Role != domain.RoleUnassignedSubAgent {
+			t.Fatalf("expected child invocation fallback role %q, got: %+v", domain.RoleUnassignedSubAgent, childInv)
 		}
 
 		for _, ev := range events {
-			if ev.SessionID == "ses_root_empty" && ev.Role != "orchestrator" {
-				t.Errorf("expected root event role 'orchestrator', got: %s", ev.Role)
+			if ev.SessionID == "ses_root_empty" && ev.Role != domain.RoleRootAgent {
+				t.Errorf("expected root event role %q, got: %s", domain.RoleRootAgent, ev.Role)
 			}
-			if ev.SessionID == "ses_child_empty" && ev.Role != "unassigned" {
-				t.Errorf("expected child event role 'unassigned', got: %s", ev.Role)
+			if ev.SessionID == "ses_child_empty" && ev.Role != domain.RoleUnassignedSubAgent {
+				t.Errorf("expected child event role %q, got: %s", domain.RoleUnassignedSubAgent, ev.Role)
 			}
 		}
 	})

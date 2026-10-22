@@ -26,7 +26,16 @@ import {
   formatLinesCompact,
 } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
-import type { AgenticMetricsLedger, TicketComparisonRow } from './types';
+import type {
+  AgenticMetricsLedger,
+  ContextHealthStatus,
+  ConventionalTicketType,
+  TicketComparisonRow,
+  AgentRole,
+  StandardTicketType,
+  TicketType,
+  FailureSeverity,
+} from './types';
 
 describe('Domain Pure Formatters', () => {
   describe('formatTokensK', () => {
@@ -236,9 +245,9 @@ describe('Domain Pure Formatters', () => {
           },
           context_window_health: {
             healthy_ceiling_tokens: 200000,
-            status: 'HEALTHY',
-            orchestrator_peak_tokens: 0,
-            orchestrator_saturation_pct: 0,
+            status: 'HEALTHY' as ContextHealthStatus,
+            root_peak_tokens: 0,
+            root_saturation_pct: 0,
             subagents_peak_tokens: 0,
             subagents_peak_role: 'none',
             compactions: 0,
@@ -254,7 +263,7 @@ describe('Domain Pure Formatters', () => {
           cache_hit_rate_pct: 0,
           cost_usd: 0,
           peak_context_tokens: 0,
-          context_health: 'HEALTHY',
+          context_health: 'HEALTHY' as ContextHealthStatus,
         },
         roles: [],
         models: [],
@@ -271,7 +280,7 @@ describe('Domain Pure Formatters', () => {
       const migratedLedger = {
         ticket_id: 'AL-12',
         ticket_title: 'Telemetry Backfill Engine',
-        ticket_type: 'feature',
+        ticket_type: 'feat' as ConventionalTicketType,
         started_at: '2026-10-17T10:00:00Z',
         completed_at: '2026-10-17T11:00:00Z',
         updated_at: '2026-10-17T11:00:00Z',
@@ -287,7 +296,7 @@ describe('Domain Pure Formatters', () => {
           },
           ticket_id: 'AL-12',
           ticket_title: 'Telemetry Backfill Engine',
-          ticket_type: 'feature',
+          ticket_type: 'feat' as ConventionalTicketType,
           started_at: '2026-10-17T10:00:00Z',
           completed_at: '2026-10-17T11:00:00Z',
           updated_at: '2026-10-17T11:00:00Z',
@@ -333,9 +342,9 @@ describe('Domain Pure Formatters', () => {
           },
           context_window_health: {
             healthy_ceiling_tokens: 200000,
-            status: 'HEALTHY',
-            orchestrator_peak_tokens: 0,
-            orchestrator_saturation_pct: 0,
+            status: 'HEALTHY' as ContextHealthStatus,
+            root_peak_tokens: 0,
+            root_saturation_pct: 0,
             subagents_peak_tokens: 0,
             subagents_peak_role: 'none',
             compactions: 0,
@@ -351,7 +360,7 @@ describe('Domain Pure Formatters', () => {
           cache_hit_rate_pct: 0,
           cost_usd: 0,
           peak_context_tokens: 0,
-          context_health: 'HEALTHY',
+          context_health: 'HEALTHY' as ContextHealthStatus,
         },
         roles: [],
         models: [],
@@ -816,12 +825,12 @@ describe('Domain Pure Formatters', () => {
 
   describe('filterLedgersByTicketTypes', () => {
     const baseLedger = Object.values(mockAgenticMetricsLedgers)[0]!;
-    const featLedger = { ...baseLedger, ticket_id: 'AL-1', ticket_type: 'feature' };
-    const aliasFeatLedger = { ...baseLedger, ticket_id: 'AL-2', ticket_type: 'feat' };
-    const bugLedger = { ...baseLedger, ticket_id: 'AL-3', ticket_type: 'bug' };
-    const choreLedger = { ...baseLedger, ticket_id: 'AL-4', ticket_type: 'chore' };
-    const nullTypeLedger = { ...baseLedger, ticket_id: 'AL-5', ticket_type: null };
-    const all = [featLedger, aliasFeatLedger, bugLedger, choreLedger, nullTypeLedger];
+    const featLedger: AgenticMetricsLedger = { ...baseLedger, ticket_id: 'AL-1', ticket_type: 'feature' as ConventionalTicketType };
+    const aliasFeatLedger: AgenticMetricsLedger = { ...baseLedger, ticket_id: 'AL-2', ticket_type: 'feat' };
+    const bugLedger: AgenticMetricsLedger = { ...baseLedger, ticket_id: 'AL-3', ticket_type: 'bug' as ConventionalTicketType };
+    const choreLedger: AgenticMetricsLedger = { ...baseLedger, ticket_id: 'AL-4', ticket_type: 'chore' };
+    const nullTypeLedger: AgenticMetricsLedger = { ...baseLedger, ticket_id: 'AL-5', ticket_type: null };
+    const all: readonly AgenticMetricsLedger[] = [featLedger, aliasFeatLedger, bugLedger, choreLedger, nullTypeLedger];
 
     it('returns all ledgers if types is empty or contains all', () => {
       expect(filterLedgersByTicketTypes(all, [])).toEqual(all);
@@ -867,7 +876,7 @@ describe('Domain Pure Formatters', () => {
     const rows: readonly TicketComparisonRow[] = [
       {
         ticket_id: 'AL-1',
-        ticket_type: 'feature',
+        ticket_type: 'feat',
         updated_at: '2026-10-15T11:00:00Z',
         sdlc_iterations: 1,
         active_duration_seconds: 60,
@@ -880,7 +889,7 @@ describe('Domain Pure Formatters', () => {
         files_changed: 1,
         tool_success_rate_pct: 100,
         context_health_status: 'HEALTHY',
-        orchestrator_saturation_pct: 10,
+        root_saturation_pct: 10,
         peak_context_tokens: 1000,
         ticket_title: 'Title 1',
         started_at: '2026-10-15T10:00:00Z',
@@ -890,7 +899,7 @@ describe('Domain Pure Formatters', () => {
       },
       {
         ticket_id: 'AL-2',
-        ticket_type: 'bug',
+        ticket_type: 'fix',
         updated_at: '2026-10-16T11:00:00Z',
         sdlc_iterations: 1,
         active_duration_seconds: 60,
@@ -903,7 +912,7 @@ describe('Domain Pure Formatters', () => {
         files_changed: 1,
         tool_success_rate_pct: 100,
         context_health_status: 'HEALTHY',
-        orchestrator_saturation_pct: 10,
+        root_saturation_pct: 10,
         peak_context_tokens: 1000,
         ticket_title: 'Title 2',
         started_at: '2026-10-16T10:00:00Z',
@@ -926,7 +935,7 @@ describe('Domain Pure Formatters', () => {
         files_changed: 1,
         tool_success_rate_pct: 100,
         context_health_status: 'HEALTHY',
-        orchestrator_saturation_pct: 10,
+        root_saturation_pct: 10,
         peak_context_tokens: 1000,
         ticket_title: 'Title 3',
         started_at: '2026-10-17T10:00:00Z',
@@ -949,7 +958,7 @@ describe('Domain Pure Formatters', () => {
         files_changed: 1,
         tool_success_rate_pct: 100,
         context_health_status: 'HEALTHY',
-        orchestrator_saturation_pct: 10,
+        root_saturation_pct: 10,
         peak_context_tokens: 1000,
         ticket_title: 'Title 4',
         started_at: '2026-10-18T10:00:00Z',
@@ -984,7 +993,7 @@ describe('Domain Pure Formatters', () => {
         {
           ...rows[0]!,
           ticket_id: 'AL-1',
-          ticket_type: 'feature',
+          ticket_type: 'feat',
         },
       ];
 
@@ -1006,8 +1015,8 @@ describe('Domain Pure Formatters', () => {
   describe('Adversarial Multi-Dimensional Filtering Edge Cases', () => {
     it('handles empty arrays, whitespace tokens, and disjoint queries', () => {
       const base = Object.values(mockAgenticMetricsLedgers)[0]!;
-      const ledgers = [
-        { ...base, ticket_id: 'AL-1', ticket_type: 'feature' },
+      const ledgers: readonly AgenticMetricsLedger[] = [
+        { ...base, ticket_id: 'AL-1', ticket_type: 'feat' },
         { ...base, ticket_id: 'PO-1', ticket_type: 'docs' },
       ];
 
@@ -1026,13 +1035,13 @@ describe('Domain Pure Formatters', () => {
 
     it('verifies symmetrical alias matching across all conventional pairs', () => {
       const base = Object.values(mockAgenticMetricsLedgers)[0]!;
-      const aliasLedgers = [
+      const aliasLedgers: readonly AgenticMetricsLedger[] = [
         { ...base, ticket_id: 'T-1', ticket_type: 'feat' },
-        { ...base, ticket_id: 'T-2', ticket_type: 'feature' },
-        { ...base, ticket_id: 'T-3', ticket_type: 'bug' },
+        { ...base, ticket_id: 'T-2', ticket_type: 'feature' as ConventionalTicketType },
+        { ...base, ticket_id: 'T-3', ticket_type: 'bug' as ConventionalTicketType },
         { ...base, ticket_id: 'T-4', ticket_type: 'fix' },
-        { ...base, ticket_id: 'T-5', ticket_type: 'bugfix' },
-        { ...base, ticket_id: 'T-6', ticket_type: 'doc' },
+        { ...base, ticket_id: 'T-5', ticket_type: 'bugfix' as ConventionalTicketType },
+        { ...base, ticket_id: 'T-6', ticket_type: 'doc' as ConventionalTicketType },
         { ...base, ticket_id: 'T-7', ticket_type: 'docs' },
       ];
 
@@ -1135,6 +1144,70 @@ describe('Domain Pure Formatters', () => {
     it('handles non-finite values defensively', () => {
       expect(formatLinesCompact(NaN)).toBe('0');
       expect(formatLinesCompact(Infinity)).toBe('0');
+    });
+  });
+
+  describe('Domain Enums and Primitive Obsession Remediation', () => {
+    describe('AgentRole Autocomplete and Custom Persona Extension', () => {
+      it('accepts arbitrary role strings under AgentRole', () => {
+        const coderRole: AgentRole = 'coder';
+        const customRole: AgentRole = 'architect';
+        const dynamicRoles: readonly AgentRole[] = [
+          coderRole,
+          customRole,
+          'security-auditor',
+          'orchestrator',
+        ];
+        expect(dynamicRoles).toHaveLength(4);
+        expect(dynamicRoles[0]).toBe('coder');
+        expect(dynamicRoles[1]).toBe('architect');
+      });
+    });
+
+    describe('FailureSeverity Domain Contract', () => {
+      it('accepts all 4 valid severity values', () => {
+        const validSeverities: readonly FailureSeverity[] = ['none', 'low', 'medium', 'high'];
+        expect(validSeverities).toHaveLength(4);
+        for (const sev of validSeverities) {
+          expect(['none', 'low', 'medium', 'high']).toContain(sev);
+        }
+      });
+    });
+
+    describe('ContextHealthStatus Classification', () => {
+      it('accepts all 4 health status values', () => {
+        const validStatuses: readonly ContextHealthStatus[] = [
+          'HEALTHY',
+          'ELEVATED',
+          'BLOATED',
+          'CRITICAL',
+        ];
+        expect(validStatuses).toHaveLength(4);
+      });
+    });
+
+    describe('ConventionalTicketType and TicketType Extension', () => {
+      it('supports canonical conventional commit types and custom ticket types', () => {
+        const canonicalTypes: readonly StandardTicketType[] = [
+          'feat',
+          'fix',
+          'feature',
+          'bug',
+          'chore',
+          'docs',
+          'refactor',
+          'test',
+          'ci',
+          'perf',
+          'build',
+        ];
+        expect(canonicalTypes.length).toBeGreaterThan(0);
+
+        const customTicketType: TicketType = 'custom-subsystem';
+        const standardType: TicketType = 'feat';
+        expect(customTicketType).toBe('custom-subsystem');
+        expect(standardType).toBe('feat');
+      });
     });
   });
 });

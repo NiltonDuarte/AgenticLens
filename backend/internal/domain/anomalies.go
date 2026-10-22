@@ -9,17 +9,17 @@ import (
 
 // AnomalyContext captures rule-specific parameters, thresholds, and execution context.
 type AnomalyContext struct {
-	ToolName       *string  `json:"tool_name,omitempty"`
-	SessionID      *string  `json:"session_id,omitempty"`
-	Turn           *int64   `json:"turn,omitempty"`
-	Role           *string  `json:"role,omitempty"`
-	SecondaryRole  *string  `json:"secondary_role,omitempty"`
-	Count          *int64   `json:"count,omitempty"`
-	TotalCalls     *int64   `json:"total_calls,omitempty"`
-	TokenDelta     *int64   `json:"token_delta,omitempty"`
-	ContextTokens  *int64   `json:"context_tokens,omitempty"`
-	Threshold      *string  `json:"threshold,omitempty"`
-	FailureRatePct *float64 `json:"failure_rate_pct,omitempty"`
+	ToolName       *string    `json:"tool_name,omitempty"`
+	SessionID      *string    `json:"session_id,omitempty"`
+	Turn           *int64     `json:"turn,omitempty"`
+	Role           *AgentRole `json:"role,omitempty"`
+	SecondaryRole  *AgentRole `json:"secondary_role,omitempty"`
+	Count          *int64     `json:"count,omitempty"`
+	TotalCalls     *int64     `json:"total_calls,omitempty"`
+	TokenDelta     *int64     `json:"token_delta,omitempty"`
+	ContextTokens  *int64     `json:"context_tokens,omitempty"`
+	Threshold      *string    `json:"threshold,omitempty"`
+	FailureRatePct *float64   `json:"failure_rate_pct,omitempty"`
 }
 
 // Anomaly represents a single detected execution health issue or operational degradation.
@@ -33,6 +33,10 @@ type Anomaly struct {
 
 func strPtr(s string) *string {
 	return &s
+}
+
+func agentRolePtr(r AgentRole) *AgentRole {
+	return &r
 }
 
 func int64Ptr(i int64) *int64 {
@@ -284,7 +288,7 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 						FormatTokensK(inv.Tokens.PeakContext), inv.Role, inv.ID),
 					Context: AnomalyContext{
 						SessionID:     strPtr(inv.ID),
-						Role:          strPtr(inv.Role),
+						Role:          agentRolePtr(AgentRole(inv.Role)),
 						ContextTokens: int64Ptr(inv.Tokens.PeakContext),
 						Threshold:     strPtr("160000"),
 					},
@@ -311,7 +315,7 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 	if len(ledger.Events) > 0 {
 		for _, e := range ledger.Events {
 			if isChildSession[e.SessionID] {
-				r := strings.ToLower(strings.TrimSpace(e.Role))
+				r := strings.ToLower(strings.TrimSpace(string(e.Role)))
 				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
 					roles = append(roles, r)
 				}
@@ -322,7 +326,7 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 	if len(roles) == 0 {
 		for _, inv := range ledger.Invocations {
 			if inv.ParentID != nil {
-				r := strings.ToLower(strings.TrimSpace(inv.Role))
+				r := strings.ToLower(strings.TrimSpace(string(inv.Role)))
 				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
 					roles = append(roles, r)
 				}
@@ -362,8 +366,8 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 				Description: fmt.Sprintf("Subagent roles '%s' and '%s' alternated for %d consecutive cycles indicating thrashing",
 					a, b, cycles),
 				Context: AnomalyContext{
-					Role:          strPtr(a),
-					SecondaryRole: strPtr(b),
+					Role:          agentRolePtr(AgentRole(a)),
+					SecondaryRole: agentRolePtr(AgentRole(b)),
 					Count:         int64Ptr(int64(cycles)),
 					Threshold:     strPtr(thresh),
 				},

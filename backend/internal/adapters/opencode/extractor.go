@@ -237,7 +237,7 @@ func ExtractFacts(
 
 	msgLookup := make(map[string]msgMeta)
 	var events []domain.EventFact
-	sessionRoleMap := make(map[string]string)
+	sessionRoleMap := make(map[string]domain.AgentRole)
 	sessionModels := make(map[string]map[string]*sessionModelAccumulator)
 	sessionModelOrders := make(map[string][]string)
 	sessionTurns := make(map[string]int64)
@@ -245,13 +245,13 @@ func ExtractFacts(
 	// 3. Process messages per session
 	for _, s := range sessions {
 		cleanAgent := strings.TrimSpace(s.agent)
-		var role string
+		var role domain.AgentRole
 		if cleanAgent != "" {
-			role = cleanAgent
+			role = domain.AgentRole(cleanAgent)
 		} else if s.parentID == nil {
-			role = "orchestrator"
+			role = domain.RoleRootAgent
 		} else {
-			role = "unassigned"
+			role = domain.RoleUnassignedSubAgent
 		}
 		sessionRoleMap[s.id] = role
 
@@ -476,7 +476,7 @@ func ExtractFacts(
 			mID = mid.String
 		}
 
-		role := "orchestrator"
+		role := domain.RoleRootAgent
 		if r, ok := sessionRoleMap[sID]; ok {
 			role = r
 		}

@@ -124,11 +124,11 @@ func ComputeTotals(invocations []InvocationFact) GroupedMetric {
 			CacheHitRatePct:   0.0,
 			CostUSD:           0.0,
 			PeakContextTokens: 0,
-			ContextHealth:     string(ContextHealthHealthy),
+			ContextHealth:     ContextHealthHealthy,
 		}
 	}
 
-	byRole := make(map[string][]InvocationFact)
+	byRole := make(map[AgentRole][]InvocationFact)
 	for _, inv := range invocations {
 		byRole[inv.Role] = append(byRole[inv.Role], inv)
 	}
@@ -149,7 +149,7 @@ func ComputeTotals(invocations []InvocationFact) GroupedMetric {
 		CacheHitRatePct:   acc.cacheHitRatePct,
 		CostUSD:           acc.costUSD,
 		PeakContextTokens: acc.peakContextTokens,
-		ContextHealth:     string(healthStatus),
+		ContextHealth:     healthStatus,
 	}
 }
 
@@ -161,15 +161,15 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 
 	var activeDurationSeconds int64
 	var totReasoning, totOutput, totCompactions int64
-	rolePeaks := make(map[string]int64)
+	rolePeaks := make(map[AgentRole]int64)
 
 	var rootPeak int64
 	var hasRoot bool
 
 	subCosts := make(map[string]float64)
 	var totSubCost float64
-	subPeaks := make(map[string]int64)
-	roleTurns := make(map[string][]int64)
+	subPeaks := make(map[AgentRole]int64)
+	roleTurns := make(map[AgentRole][]int64)
 
 	for _, inv := range invs {
 		activeDurationSeconds += inv.ActiveDurationSeconds
@@ -187,11 +187,11 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 			}
 			hasRoot = true
 		} else {
-			role := strings.TrimSpace(inv.Role)
-			if role == "" {
-				role = "unassigned"
+			role := inv.Role
+			if strings.TrimSpace(string(role)) == "" {
+				role = RoleUnassignedSubAgent
 			}
-			subCosts[role] += inv.CostUSD
+			subCosts[string(role)] += inv.CostUSD
 			totSubCost += inv.CostUSD
 			if curr, exists := subPeaks[role]; !exists || inv.Tokens.PeakContext > curr {
 				subPeaks[role] = inv.Tokens.PeakContext
@@ -221,20 +221,35 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 		}
 	}
 
+	var customOrder []AgentRole
+	if len(roleOrder) > 0 && len(roleOrder[0]) > 0 {
+		customOrder = make([]AgentRole, len(roleOrder[0]))
+		for i, r := range roleOrder[0] {
+			customOrder[i] = AgentRole(r)
+		}
+	}
+
 	var allSubTurns []int64
-	var subTurnRoles []string
+	var subTurnRoles []AgentRole
 	for r := range roleTurns {
 		subTurnRoles = append(subTurnRoles, r)
 	}
-	orderedRolesForTurns := OrderSubagentRoles(subTurnRoles, roleOrder...)
-	orderedSet := make(map[string]struct{}, len(orderedRolesForTurns))
+	var orderedRolesForTurns []AgentRole
+	if len(customOrder) > 0 {
+		orderedRolesForTurns = OrderSubagentRoles(subTurnRoles, customOrder)
+	} else {
+		orderedRolesForTurns = OrderSubagentRoles(subTurnRoles)
+	}
+	orderedSet := make(map[AgentRole]struct{}, len(orderedRolesForTurns))
 	for _, r := range orderedRolesForTurns {
 		orderedSet[r] = struct{}{}
 		if turns, ok := roleTurns[r]; ok {
 			allSubTurns = append(allSubTurns, turns...)
 		}
 	}
-	sort.Strings(subTurnRoles)
+	sort.Slice(subTurnRoles, func(i, j int) bool {
+		return subTurnRoles[i] < subTurnRoles[j]
+	})
 	for _, r := range subTurnRoles {
 		if _, ok := orderedSet[r]; !ok {
 			allSubTurns = append(allSubTurns, roleTurns[r]...)
@@ -254,7 +269,7 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 		avgSubTurns = math.Round(float64(sumSubTurns)/float64(len(allSubTurns))*10.0) / 10.0
 	}
 
-	velByRole := make(map[string]float64)
+	velByRole := make(map[AgentRole]float64)
 	for r, turns := range roleTurns {
 		if len(turns) > 0 {
 			var rSum int64
@@ -313,25 +328,30 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 		SuccessRatePct:       toolSuccessRate,
 	}
 
-	var orchPeak int64
+	var rootPeakVal int64
 	if hasRoot {
-		orchPeak = rootPeak
+		rootPeakVal = rootPeak
 	}
-	var orchSatPct float64
+	var rootSatPct float64
 	if HealthyCeilingTokens > 0 {
-		orchSatPct = math.Round(float64(orchPeak)/float64(HealthyCeilingTokens)*1000.0) / 10.0
+		rootSatPct = math.Round(float64(rootPeakVal)/float64(HealthyCeilingTokens)*1000.0) / 10.0
 	}
 
 	var subPeak int64
-	subRoleStr := "none"
+	subRoleStr := AgentRole("none")
 	var foundSubRole bool
 
 	if len(subPeaks) > 0 {
-		var candidateSubRoles []string
+		var candidateSubRoles []AgentRole
 		for r := range subPeaks {
 			candidateSubRoles = append(candidateSubRoles, r)
 		}
-		orderedCandidateRoles := OrderSubagentRoles(candidateSubRoles, roleOrder...)
+		var orderedCandidateRoles []AgentRole
+		if len(customOrder) > 0 {
+			orderedCandidateRoles = OrderSubagentRoles(candidateSubRoles, customOrder)
+		} else {
+			orderedCandidateRoles = OrderSubagentRoles(candidateSubRoles)
+		}
 		for _, r := range orderedCandidateRoles {
 			peak := subPeaks[r]
 			if !foundSubRole || peak > subPeak {
@@ -341,7 +361,9 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 			}
 		}
 		if !foundSubRole {
-			sort.Strings(candidateSubRoles)
+			sort.Slice(candidateSubRoles, func(i, j int) bool {
+				return candidateSubRoles[i] < candidateSubRoles[j]
+			})
 			for _, r := range candidateSubRoles {
 				peak := subPeaks[r]
 				if !foundSubRole || peak > subPeak {
@@ -353,21 +375,21 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 		}
 	}
 
-	overallPeak := orchPeak
+	overallPeak := rootPeakVal
 	if subPeak > overallPeak {
 		overallPeak = subPeak
 	}
 	cwhStatus := GetBaseHealthStatus(overallPeak, HealthyCeilingTokens)
 
 	contextWindowHealth := ContextWindowHealth{
-		HealthyCeilingTokens:      HealthyCeilingTokens,
-		Status:                    string(cwhStatus),
-		OrchestratorPeakTokens:    orchPeak,
-		OrchestratorSaturationPct: orchSatPct,
-		SubagentsPeakTokens:       subPeak,
-		SubagentsPeakRole:         subRoleStr,
-		Compactions:               totCompactions,
-		PeakByRole:                rolePeaks,
+		HealthyCeilingTokens: HealthyCeilingTokens,
+		Status:               cwhStatus,
+		RootPeakTokens:       rootPeakVal,
+		RootSaturationPct:    rootSatPct,
+		SubagentsPeakTokens:  subPeak,
+		SubagentsPeakRole:    subRoleStr,
+		Compactions:          totCompactions,
+		PeakByRole:           rolePeaks,
 	}
 
 	return WorkflowEfficiency{
@@ -387,21 +409,35 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 
 // ComputeRoleMetrics calculates aggregated metrics grouped by agent role.
 func ComputeRoleMetrics(invocations []InvocationFact, roleOrder ...[]string) []RoleMetric {
-	byRole := make(map[string][]InvocationFact)
+	byRole := make(map[AgentRole][]InvocationFact)
 	for _, inv := range invocations {
 		byRole[inv.Role] = append(byRole[inv.Role], inv)
 	}
 
-	var roles []string
+	var roles []AgentRole
 	for r := range byRole {
 		roles = append(roles, r)
 	}
-	orderedRoles := OrderRoles(roles, roleOrder...)
+
+	var customOrder []AgentRole
+	if len(roleOrder) > 0 && len(roleOrder[0]) > 0 {
+		customOrder = make([]AgentRole, len(roleOrder[0]))
+		for i, r := range roleOrder[0] {
+			customOrder[i] = AgentRole(r)
+		}
+	}
+
+	var orderedRoles []AgentRole
+	if len(customOrder) > 0 {
+		orderedRoles = OrderRoles(roles, customOrder)
+	} else {
+		orderedRoles = OrderRoles(roles)
+	}
 
 	var metrics []RoleMetric
 	for _, role := range orderedRoles {
 		acc := accumulateInvocations(byRole[role])
-		health := GetHealthLabel(acc.peakContextTokens, HealthyCeilingTokens)
+		health := GetBaseHealthStatus(acc.peakContextTokens, HealthyCeilingTokens)
 
 		metrics = append(metrics, RoleMetric{
 			Role:              role,
@@ -430,7 +466,7 @@ func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
 	var metrics []ModelMetric
 	for model, mInvs := range byModel {
 		acc := accumulateInvocations(mInvs)
-		health := GetHealthLabel(acc.peakContextTokens, HealthyCeilingTokens)
+		health := GetBaseHealthStatus(acc.peakContextTokens, HealthyCeilingTokens)
 
 		metrics = append(metrics, ModelMetric{
 			Model:             model,
@@ -508,17 +544,31 @@ func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string)
 		}
 
 		var compactions int64
-		byRole := make(map[string][]InvocationFact)
+		byRole := make(map[AgentRole][]InvocationFact)
 		for _, inv := range threadInvs {
 			compactions += inv.Compactions
 			byRole[inv.Role] = append(byRole[inv.Role], inv)
 		}
 
-		var threadRoles []string
+		var threadRoles []AgentRole
 		for r := range byRole {
 			threadRoles = append(threadRoles, r)
 		}
-		orderedRoles := OrderRoles(threadRoles, roleOrder...)
+
+		var customOrder []AgentRole
+		if len(roleOrder) > 0 && len(roleOrder[0]) > 0 {
+			customOrder = make([]AgentRole, len(roleOrder[0]))
+			for i, r := range roleOrder[0] {
+				customOrder[i] = AgentRole(r)
+			}
+		}
+
+		var orderedRoles []AgentRole
+		if len(customOrder) > 0 {
+			orderedRoles = OrderRoles(threadRoles, customOrder)
+		} else {
+			orderedRoles = OrderRoles(threadRoles)
+		}
 
 		var roleMetrics []ThreadRoleMetric
 		for _, role := range orderedRoles {
@@ -551,7 +601,7 @@ func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string)
 				if totTok > 0 {
 					hitPct = math.Round(float64(cache)/float64(totTok)*1000.0) / 10.0
 				}
-				health := GetHealthLabel(peak, HealthyCeilingTokens)
+				health := GetBaseHealthStatus(peak, HealthyCeilingTokens)
 
 				modelMetrics = append(modelMetrics, ModelMetric{
 					Model:             model,
@@ -604,7 +654,7 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	mappedInvocations := make([]InvocationFact, len(factLedger.Invocations))
 	for i, inv := range factLedger.Invocations {
 		mappedInvocations[i] = inv
-		mappedInvocations[i].Role = string(mappings.ResolveRole(inv.Role))
+		mappedInvocations[i].Role = mappings.ResolveRole(string(inv.Role))
 	}
 
 	var mappedEvents []EventFact
@@ -612,7 +662,7 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		mappedEvents = make([]EventFact, len(factLedger.Events))
 		for i, ev := range factLedger.Events {
 			mappedEvents[i] = ev
-			mappedEvents[i].Role = string(mappings.ResolveRole(ev.Role))
+			mappedEvents[i].Role = mappings.ResolveRole(string(ev.Role))
 		}
 	}
 
@@ -663,7 +713,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 			TotalFilesChanged:        0,
 			TotalReasoningTokens:     0,
 			OverallReasoningRatioPct: 0.0,
-			RoleCosts:                make(map[string]float64),
+			RoleCosts:                make(map[AgentRole]float64),
 			ModelCosts:               make(map[string]float64),
 			AnomalySummary:           ComputeFleetAnomalies(nil),
 		}
@@ -673,7 +723,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	var totalInvocations, totalInputTokens, totalOutputTokens, totalCacheReadTokens int64
 	var totalDurationSeconds, totalLinesAdded, totalLinesDeleted, totalFilesChanged, totalReasoningTokens int64
 
-	roleCosts := make(map[string]float64)
+	roleCosts := make(map[AgentRole]float64)
 	modelCosts := make(map[string]float64)
 
 	factLedgers := make([]AgenticFactLedger, len(ledgers))
@@ -824,8 +874,8 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 			FilesChanged:              eff.CodeDelivered.FilesChanged,
 			ToolSuccessRatePct:        eff.ToolExecution.SuccessRatePct,
 			ContextHealthStatus:       cwh.Status,
-			OrchestratorSaturationPct: cwh.OrchestratorSaturationPct,
-			PeakContextTokens:         cwh.OrchestratorPeakTokens,
+			RootSaturationPct:         cwh.RootSaturationPct,
+			PeakContextTokens:         cwh.RootPeakTokens,
 			TicketTitle:               title,
 			TicketType:                ledger.TicketType,
 			StartedAt:                 ledger.StartedAt,
@@ -885,7 +935,7 @@ func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger) map[string]Groupe
 	rollup := make(map[string]GroupedMetric)
 	for _, ledger := range ledgers {
 		for _, r := range ledger.Roles {
-			curr := rollup[r.Role]
+			curr := rollup[string(r.Role)]
 			curr.Invocations += r.Invocations
 			curr.InputTokens += r.InputTokens
 			curr.OutputTokens += r.OutputTokens
@@ -894,7 +944,7 @@ func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger) map[string]Groupe
 			if r.PeakContextTokens > curr.PeakContextTokens {
 				curr.PeakContextTokens = r.PeakContextTokens
 			}
-			rollup[r.Role] = curr
+			rollup[string(r.Role)] = curr
 		}
 	}
 
@@ -903,7 +953,7 @@ func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger) map[string]Groupe
 		if totTok > 0 {
 			m.CacheHitRatePct = math.Round(float64(m.CacheReadTokens)/float64(totTok)*1000.0) / 10.0
 		}
-		m.ContextHealth = GetHealthLabel(m.PeakContextTokens, HealthyCeilingTokens)
+		m.ContextHealth = GetBaseHealthStatus(m.PeakContextTokens, HealthyCeilingTokens)
 		rollup[role] = m
 	}
 
@@ -1006,7 +1056,7 @@ func FilterLedgersByTicketTypes(ledgers []AgenticMetricsLedger, ticketTypes []st
 	filtered := make([]AgenticMetricsLedger, 0, len(ledgers))
 	for _, ledger := range ledgers {
 		if ledger.TicketType != nil {
-			canon := CanonicalTicketType(*ledger.TicketType)
+			canon := CanonicalTicketType(string(*ledger.TicketType))
 			if _, ok := targetSet[canon]; ok {
 				filtered = append(filtered, ledger)
 			}

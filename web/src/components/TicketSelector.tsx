@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import type { AutopsySortMode } from '../domain/types';
+import type { AutopsySortMode, ContextHealthStatus } from '../domain/types';
 import { compareTicketIds, compareTicketCompletionDate } from '../domain/formatters';
 
 export interface TicketSelectorOption {
   readonly ticket_id: string;
   readonly ticket_title?: string | null;
-  readonly context_health_status?: string;
+  readonly context_health_status?: ContextHealthStatus;
   readonly completed_at?: string | null;
   readonly updated_at?: string;
   readonly started_at?: string | null;

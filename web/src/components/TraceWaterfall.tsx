@@ -4,6 +4,26 @@ import { formatTokensK } from '../domain/formatters';
 import { AnomalyBadge } from './AnomalyBadge';
 import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
 import { copyTextToClipboard } from '../utils/clipboard';
+import {
+  generateToolExecutionPrompt,
+  generateMessageTurnPrompt,
+} from '../utils/debugPrompt';
+import {
+  isToolFailureAnomalyRule,
+  matchesAnomaly,
+  findMatchingAnomaly,
+  type AnomalyRule,
+  type ToolFailureAnomalyRule,
+} from '../domain/anomalies';
+
+// Re-export domain anomaly matching utilities for backwards compatibility
+export {
+  isToolFailureAnomalyRule,
+  matchesAnomaly,
+  findMatchingAnomaly,
+  type AnomalyRule,
+  type ToolFailureAnomalyRule,
+};
 
 export interface TraceWaterfallProps {
   readonly events: readonly EventFact[];
@@ -16,77 +36,6 @@ export interface TraceWaterfallProps {
 }
 
 type FilterMode = 'all' | 'tools' | 'errors_anomalies';
-
-const isToolFailureAnomalyRule = (ruleId: string): boolean => {
-  return (
-    ruleId === 'TOOL_RETRY_STREAK' ||
-    ruleId === 'TOOL_HIGH_FAILURE_RATE' ||
-    ruleId.startsWith('TOOL_') ||
-    ruleId.includes('TOOL_FAILURE')
-  );
-};
-
-export const matchesAnomaly = (event: EventFact, anomaly: Anomaly): boolean => {
-  const ctx = anomaly.context;
-
-  // Strict Session ID Guard: if both context and event specify session_id, they must match
-  if (ctx.session_id && event.session_id && ctx.session_id !== event.session_id) {
-    return false;
-  }
-
-  // Tool Failure Anomaly Status Criterion:
-  // If anomaly is a tool failure rule, only match if the event is an error
-  if (isToolFailureAnomalyRule(anomaly.rule_id)) {
-    if (event.status !== 'error') {
-      return false;
-    }
-  }
-
-  // 1. Tool call match: tool_name matches
-  if (
-    ctx.tool_name &&
-    event.tool_name &&
-    ctx.tool_name.toLowerCase() === event.tool_name.toLowerCase()
-  ) {
-    if (ctx.turn !== undefined && event.turn !== undefined) {
-      return ctx.turn === event.turn;
-    }
-    return true;
-  }
-
-  // 2. Turn and session match (e.g. context saturation spike)
-  if (ctx.turn !== undefined && ctx.turn === event.turn) {
-    if (ctx.session_id && event.session_id) {
-      return ctx.session_id === event.session_id;
-    }
-    return true;
-  }
-
-  // 3. Role match
-  if (
-    ctx.role &&
-    event.role &&
-    (ctx.role.toLowerCase() === event.role.toLowerCase() ||
-      ctx.secondary_role?.toLowerCase() === event.role.toLowerCase())
-  ) {
-    if (ctx.turn !== undefined) {
-      return ctx.turn === event.turn;
-    }
-  }
-
-  return false;
-};
-
-export const findMatchingAnomaly = (
-  event: EventFact,
-  anomalies?: readonly Anomaly[]
-): Anomaly | undefined => {
-  if (!anomalies || anomalies.length === 0) {
-    return undefined;
-  }
-
-  return anomalies.find((a) => matchesAnomaly(event, a));
-};
 
 const formatDurationMs = (ms: number): string => {
   if (ms < 1000) {
@@ -147,6 +96,45 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   ) => {
     e.stopPropagation();
     await copyTextToClipboard(idText);
+    setCopiedId(key);
+    window.setTimeout(() => {
+      setCopiedId((current) => (current === key ? null : current));
+    }, 2000);
+  };
+
+  const handleCopyTimelinePrompt = async (
+    ev: EventFact,
+    key: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    let prompt: string;
+    if (ev.event_type === 'tool_call') {
+      const matched = findMatchingAnomaly(ev, anomalies);
+      const streakCount = matched?.context?.count;
+      prompt = generateToolExecutionPrompt({
+        toolName: ev.tool_name || 'unknown_tool',
+        turn: ev.turn,
+        sessionId: ev.session_id,
+        messageId: ev.message_id ?? undefined,
+        status: ev.status,
+        consecutiveErrors: typeof streakCount === 'number' && streakCount > 1 ? streakCount : undefined,
+        input: ev.tool_input ?? undefined,
+        output: ev.tool_output ?? undefined,
+        errorMessage: ev.error_message ?? undefined,
+      });
+    } else {
+      prompt = generateMessageTurnPrompt({
+        turn: ev.turn,
+        role: ev.role,
+        sessionId: ev.session_id,
+        messageId: ev.message_id ?? undefined,
+        reasoningContent: ev.reasoning_content ?? undefined,
+        messageContent: ev.prompt_content ?? undefined,
+        toolsExecuted: [],
+      });
+    }
+    await copyTextToClipboard(prompt);
     setCopiedId(key);
     window.setTimeout(() => {
       setCopiedId((current) => (current === key ? null : current));
@@ -485,7 +473,6 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
               .replace(/\s+/g, ' ')
               .trim();
 
-            const turnDebugId = `turn-${ev.turn}`;
             const copyKey = `item-id-${itemKey}`;
             const isCopied = copiedId === copyKey;
 
@@ -527,16 +514,10 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                       <button
                         type="button"
                         className="btn-copy-id"
-                        aria-label={`Copy debug identifier for turn ${ev.turn}`}
-                        onClick={(e) =>
-                          handleCopyIdentifier(
-                            ev.message_id ?? ev.session_id ?? turnDebugId,
-                            copyKey,
-                            e
-                          )
-                        }
+                        aria-label={`Copy debug prompt for turn ${ev.turn}`}
+                        onClick={(e) => handleCopyTimelinePrompt(ev, copyKey, e)}
                       >
-                        {isCopied ? 'Copied' : 'Copy ID'}
+                        {isCopied ? 'Copied' : 'Copy Prompt'}
                       </button>
                     </div>
 

@@ -289,8 +289,8 @@ export function deriveTicketComparisonRows(
       files_changed: eff.code_delivered.files_changed,
       tool_success_rate_pct: eff.tool_execution.success_rate_pct,
       context_health_status: cwh.status,
-      orchestrator_saturation_pct: cwh.orchestrator_saturation_pct,
-      peak_context_tokens: cwh.orchestrator_peak_tokens,
+      root_saturation_pct: cwh.root_saturation_pct,
+      peak_context_tokens: cwh.root_peak_tokens,
       ticket_title: title,
       started_at: ledger.started_at,
       completed_at: ledger.completed_at,
@@ -374,8 +374,8 @@ export function deriveTicketComparisonRows(
       case 'lines_added':
         cmp = a.lines_added - b.lines_added;
         break;
-      case 'orchestrator_saturation_pct':
-        cmp = a.orchestrator_saturation_pct - b.orchestrator_saturation_pct;
+      case 'root_saturation_pct':
+        cmp = a.root_saturation_pct - b.root_saturation_pct;
         break;
     }
 

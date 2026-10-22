@@ -4,7 +4,6 @@ import {
   THEME_COLORS,
   STATUS_COLORS,
   CHART_COLORS,
-  CANONICAL_ROLE_COLORS,
   DYNAMIC_PALETTE,
   getHealthStatusColor,
   getRoleColor,
@@ -26,10 +25,6 @@ describe('Theme and Design Tokens', () => {
 
     for (const [key, color] of Object.entries(CHART_COLORS)) {
       expect(color, `CHART_COLORS.${key}`).toMatch(hexRegex);
-    }
-
-    for (const [key, color] of Object.entries(CANONICAL_ROLE_COLORS)) {
-      expect(color, `CANONICAL_ROLE_COLORS.${key}`).toMatch(hexRegex);
     }
 
     for (const color of DYNAMIC_PALETTE) {
@@ -57,17 +52,9 @@ describe('Theme and Design Tokens', () => {
   });
 
   describe('Dynamic Role and Model Color Hashing', () => {
-    it('returns canonical theme tokens for canonical roles', () => {
-      expect(getRoleColor('orchestrator')).toBe(THEME_COLORS.purple);
-      expect(getRoleColor('planner')).toBe(THEME_COLORS.cyan);
-      expect(getRoleColor('coder')).toBe(THEME_COLORS.green);
-      expect(getRoleColor('tester')).toBe(THEME_COLORS.yellow);
-      expect(getRoleColor('reviewer')).toBe(THEME_COLORS.blue);
-    });
-
-    it('handles canonical roles case-insensitively with whitespace trimming', () => {
-      expect(getRoleColor('  ORCHESTRATOR  ')).toBe(THEME_COLORS.purple);
-      expect(getRoleColor('Coder')).toBe(THEME_COLORS.green);
+    it('handles roles case-insensitively with whitespace trimming', () => {
+      expect(getRoleColor('  ORCHESTRATOR  ')).toBe(getRoleColor('orchestrator'));
+      expect(getRoleColor('Coder')).toBe(getRoleColor('coder'));
     });
 
     it('returns deterministic hex colors for custom roles', () => {

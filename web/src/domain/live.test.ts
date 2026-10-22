@@ -44,18 +44,18 @@ describe('Live Domain Models and Serialization Contracts', () => {
       }
     });
 
-    it('supports custom rule identifier strings', () => {
+    it('deserializes alert with canonical live anomaly rule', () => {
       const payload = JSON.stringify({
-        session_id: 'ses_custom_rule',
-        rule_name: 'CustomHeuristicRule',
+        session_id: 'ses_canonical_rule',
+        rule_name: 'ConsecutiveToolErrors',
         severity: 'WARNING',
-        message: 'Custom rule alert triggered',
+        message: 'Consecutive tool errors alert triggered',
         trigger_event: 'custom_hook_01',
         timestamp: '2026-10-20T12:05:00Z',
       });
 
       const alert: LiveAnomalyAlert = JSON.parse(payload) as LiveAnomalyAlert;
-      expect(alert.rule_name).toBe('CustomHeuristicRule');
+      expect(alert.rule_name).toBe('ConsecutiveToolErrors');
       expect(alert.severity).toBe('WARNING');
     });
 
@@ -749,7 +749,7 @@ describe('Live Domain Models and Serialization Contracts', () => {
             status: 'error',
             is_error: true,
             error_message: 'segmentation fault (core dumped)',
-            severity: 'critical',
+            severity: 'high',
           },
           {
             id: 'err_4',
@@ -758,7 +758,7 @@ describe('Live Domain Models and Serialization Contracts', () => {
             status: 'error',
             is_error: true,
             error_message: 'process killed: OOM',
-            severity: 'critical',
+            severity: 'high',
           },
         ],
         anomalies: [
@@ -777,7 +777,7 @@ describe('Live Domain Models and Serialization Contracts', () => {
       expect(trace.total_tool_calls).toBe(5);
       expect(trace.failed_tool_calls).toBe(5);
       expect(trace.recent_errors).toHaveLength(2);
-      expect(trace.recent_errors[0].severity).toBe('critical');
+      expect(trace.recent_errors[0].severity).toBe('high');
       expect(trace.anomalies).toHaveLength(1);
       expect(trace.anomalies[0].severity).toBe('CRITICAL');
     });

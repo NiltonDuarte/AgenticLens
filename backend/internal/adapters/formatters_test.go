@@ -63,7 +63,7 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 			SubagentTurnVelocity: domain.SubagentTurnVelocity{
 				AvgTurnsPerInvocation: 3.0,
 				PeakTurns:             3,
-				ByRole:                map[string]float64{"coder": 3.0},
+				ByRole:                map[domain.AgentRole]float64{domain.AgentRole("coder"): 3.0},
 			},
 			TestToProductionRatio: domain.TestToCodeRatio{
 				Ratio:          "1.0:1",
@@ -83,12 +83,12 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 				SuccessRatePct:       100.0,
 			},
 			ContextWindowHealth: domain.ContextWindowHealth{
-				Status:                    "ELEVATED",
-				OrchestratorPeakTokens:    50000,
-				OrchestratorSaturationPct: 25.0,
-				SubagentsPeakTokens:       120000,
-				SubagentsPeakRole:         "coder",
-				Compactions:               0,
+				Status:              "ELEVATED",
+				RootPeakTokens:      50000,
+				RootSaturationPct:   25.0,
+				SubagentsPeakTokens: 120000,
+				SubagentsPeakRole:   "coder",
+				Compactions:         0,
 			},
 		},
 		Totals: domain.GroupedMetric{
@@ -302,7 +302,7 @@ func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {
 			SubagentTurnVelocity: domain.SubagentTurnVelocity{
 				AvgTurnsPerInvocation: 6.0,
 				PeakTurns:             8,
-				ByRole: map[string]float64{
+				ByRole: map[domain.AgentRole]float64{
 					"advisor": 4.0,
 					"po":      8.0,
 				},
@@ -343,7 +343,7 @@ func TestFormatMarkdownMetricsTable_MixedCanonicalAndCustomSubagentsPrecedence(t
 			SubagentTurnVelocity: domain.SubagentTurnVelocity{
 				AvgTurnsPerInvocation: 4.2,
 				PeakTurns:             8,
-				ByRole: map[string]float64{
+				ByRole: map[domain.AgentRole]float64{
 					"po":      5.0,
 					"coder":   6.0,
 					"advisor": 4.0,
@@ -476,15 +476,15 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 			SubagentTurnVelocity: domain.SubagentTurnVelocity{
 				AvgTurnsPerInvocation: 0.0,
 				PeakTurns:             0,
-				ByRole:                map[string]float64{},
+				ByRole:                map[domain.AgentRole]float64{},
 			},
 			ContextWindowHealth: domain.ContextWindowHealth{
-				Status:                    "HEALTHY",
-				OrchestratorPeakTokens:    60000,
-				OrchestratorSaturationPct: 30.0,
-				SubagentsPeakTokens:       0,
-				SubagentsPeakRole:         "none",
-				Compactions:               0,
+				Status:              "HEALTHY",
+				RootPeakTokens:      60000,
+				RootSaturationPct:   30.0,
+				SubagentsPeakTokens: 0,
+				SubagentsPeakRole:   "none",
+				Compactions:         0,
 			},
 		},
 		Totals: domain.GroupedMetric{
@@ -495,7 +495,7 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 
 	tableMD := adapters.FormatMarkdownMetricsTable(ledger)
 
-	expectedHealth := "- **Context Window Health:** HEALTHY — Orchestrator peak 60k tokens (30% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)"
+	expectedHealth := "- **Context Window Health:** HEALTHY — Root agent peak 60k tokens (30% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)"
 	if !strings.Contains(tableMD, expectedHealth) {
 		t.Errorf("expected clean zero-subagents health format:\nwant: %s\ngot:\n%s", expectedHealth, tableMD)
 	}

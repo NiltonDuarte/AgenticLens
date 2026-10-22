@@ -13,14 +13,14 @@ import (
 )
 
 type expectedTotals struct {
-	Invocations       int64   `json:"invocations"`
-	InputTokens       int64   `json:"input_tokens"`
-	OutputTokens      int64   `json:"output_tokens"`
-	CacheReadTokens   int64   `json:"cache_read_tokens"`
-	CacheHitRatePct   float64 `json:"cache_hit_rate_pct"`
-	CostUSD           float64 `json:"cost_usd"`
-	PeakContextTokens int64   `json:"peak_context_tokens"`
-	ContextHealth     string  `json:"context_health"`
+	Invocations       int64                      `json:"invocations"`
+	InputTokens       int64                      `json:"input_tokens"`
+	OutputTokens      int64                      `json:"output_tokens"`
+	CacheReadTokens   int64                      `json:"cache_read_tokens"`
+	CacheHitRatePct   float64                    `json:"cache_hit_rate_pct"`
+	CostUSD           float64                    `json:"cost_usd"`
+	PeakContextTokens int64                      `json:"peak_context_tokens"`
+	ContextHealth     domain.ContextHealthStatus `json:"context_health"`
 }
 
 type expectedSubagentTurnVelocity struct {
@@ -42,11 +42,11 @@ type expectedToolExecution struct {
 }
 
 type expectedContextWindowHealth struct {
-	HealthyCeilingTokens      int64            `json:"healthy_ceiling_tokens"`
-	Status                    string           `json:"status"`
-	OrchestratorPeakTokens    int64            `json:"orchestrator_peak_tokens"`
-	OrchestratorSaturationPct float64          `json:"orchestrator_saturation_pct"`
-	SubagentsPeakTokens       int64            `json:"subagents_peak_tokens"`
+	HealthyCeilingTokens int64                      `json:"healthy_ceiling_tokens"`
+	Status               domain.ContextHealthStatus `json:"status"`
+	RootPeakTokens       int64                      `json:"root_peak_tokens"`
+	RootSaturationPct    float64                    `json:"root_saturation_pct"`
+	SubagentsPeakTokens  int64                      `json:"subagents_peak_tokens"`
 	SubagentsPeakRole         string           `json:"subagents_peak_role"`
 	Compactions               int64            `json:"compactions"`
 	PeakByRole                map[string]int64 `json:"peak_by_role"`
@@ -156,8 +156,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "ELEVATED",
-        "orchestrator_peak_tokens": 123350,
-        "orchestrator_saturation_pct": 61.7,
+        "root_peak_tokens": 123350,
+        "root_saturation_pct": 61.7,
         "subagents_peak_tokens": 85656,
         "subagents_peak_role": "coder",
         "compactions": 0,
@@ -220,8 +220,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "HEALTHY",
-        "orchestrator_peak_tokens": 77899,
-        "orchestrator_saturation_pct": 38.9,
+        "root_peak_tokens": 77899,
+        "root_saturation_pct": 38.9,
         "subagents_peak_tokens": 87045,
         "subagents_peak_role": "planner",
         "compactions": 0,
@@ -282,8 +282,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "ELEVATED",
-        "orchestrator_peak_tokens": 142662,
-        "orchestrator_saturation_pct": 71.3,
+        "root_peak_tokens": 142662,
+        "root_saturation_pct": 71.3,
         "subagents_peak_tokens": 179717,
         "subagents_peak_role": "coder",
         "compactions": 0,
@@ -348,8 +348,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "ELEVATED",
-        "orchestrator_peak_tokens": 168532,
-        "orchestrator_saturation_pct": 84.3,
+        "root_peak_tokens": 168532,
+        "root_saturation_pct": 84.3,
         "subagents_peak_tokens": 105014,
         "subagents_peak_role": "coder",
         "compactions": 0,
@@ -414,8 +414,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "ELEVATED",
-        "orchestrator_peak_tokens": 91319,
-        "orchestrator_saturation_pct": 45.7,
+        "root_peak_tokens": 91319,
+        "root_saturation_pct": 45.7,
         "subagents_peak_tokens": 119146,
         "subagents_peak_role": "tester",
         "compactions": 0,
@@ -480,8 +480,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "ELEVATED",
-        "orchestrator_peak_tokens": 147223,
-        "orchestrator_saturation_pct": 73.6,
+        "root_peak_tokens": 147223,
+        "root_saturation_pct": 73.6,
         "subagents_peak_tokens": 84526,
         "subagents_peak_role": "reviewer",
         "compactions": 0,
@@ -546,8 +546,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "ELEVATED",
-        "orchestrator_peak_tokens": 172386,
-        "orchestrator_saturation_pct": 86.2,
+        "root_peak_tokens": 172386,
+        "root_saturation_pct": 86.2,
         "subagents_peak_tokens": 181811,
         "subagents_peak_role": "coder",
         "compactions": 0,
@@ -607,8 +607,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "HEALTHY",
-        "orchestrator_peak_tokens": 26252,
-        "orchestrator_saturation_pct": 13.1,
+        "root_peak_tokens": 26252,
+        "root_saturation_pct": 13.1,
         "subagents_peak_tokens": 0,
         "subagents_peak_role": "none",
         "compactions": 0,
@@ -659,8 +659,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "HEALTHY",
-        "orchestrator_peak_tokens": 29125,
-        "orchestrator_saturation_pct": 14.6,
+        "root_peak_tokens": 29125,
+        "root_saturation_pct": 14.6,
         "subagents_peak_tokens": 0,
         "subagents_peak_role": "none",
         "compactions": 0,
@@ -711,8 +711,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "ELEVATED",
-        "orchestrator_peak_tokens": 113824,
-        "orchestrator_saturation_pct": 56.9,
+        "root_peak_tokens": 113824,
+        "root_saturation_pct": 56.9,
         "subagents_peak_tokens": 0,
         "subagents_peak_role": "none",
         "compactions": 0,
@@ -763,8 +763,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "HEALTHY",
-        "orchestrator_peak_tokens": 88541,
-        "orchestrator_saturation_pct": 44.3,
+        "root_peak_tokens": 88541,
+        "root_saturation_pct": 44.3,
         "subagents_peak_tokens": 0,
         "subagents_peak_role": "none",
         "compactions": 0,
@@ -815,8 +815,8 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
       "context_window_health": {
         "healthy_ceiling_tokens": 200000,
         "status": "HEALTHY",
-        "orchestrator_peak_tokens": 86075,
-        "orchestrator_saturation_pct": 43.0,
+        "root_peak_tokens": 86075,
+        "root_saturation_pct": 43.0,
         "subagents_peak_tokens": 0,
         "subagents_peak_role": "none",
         "compactions": 0,
@@ -907,7 +907,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
 				t.Errorf("[%s] PeakTurns: expected %d, got %d", ticketID, expSatv.PeakTurns, satv.PeakTurns)
 			}
 			for role, expVal := range expSatv.ByRole {
-				gotVal, ok := satv.ByRole[role]
+				gotVal, ok := satv.ByRole[domain.AgentRole(role)]
 				if !ok || !almostEqual(gotVal, expVal, 0.05) {
 					t.Errorf("[%s] ByRole[%s]: expected %f, got %f", ticketID, role, expVal, gotVal)
 				}
@@ -945,20 +945,20 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
 			if cwh.Status != expCwh.Status {
 				t.Errorf("[%s] CWH Status: expected %s, got %s", ticketID, expCwh.Status, cwh.Status)
 			}
-			if cwh.OrchestratorPeakTokens != expCwh.OrchestratorPeakTokens {
-				t.Errorf("[%s] OrchestratorPeakTokens: expected %d, got %d", ticketID, expCwh.OrchestratorPeakTokens, cwh.OrchestratorPeakTokens)
+			if cwh.RootPeakTokens != expCwh.RootPeakTokens {
+				t.Errorf("[%s] RootPeakTokens: expected %d, got %d", ticketID, expCwh.RootPeakTokens, cwh.RootPeakTokens)
 			}
-			if !almostEqual(cwh.OrchestratorSaturationPct, expCwh.OrchestratorSaturationPct, 0.05) {
-				t.Errorf("[%s] OrchestratorSaturationPct: expected %f, got %f", ticketID, expCwh.OrchestratorSaturationPct, cwh.OrchestratorSaturationPct)
+			if !almostEqual(cwh.RootSaturationPct, expCwh.RootSaturationPct, 0.05) {
+				t.Errorf("[%s] RootSaturationPct: expected %f, got %f", ticketID, expCwh.RootSaturationPct, cwh.RootSaturationPct)
 			}
 			if cwh.SubagentsPeakTokens != expCwh.SubagentsPeakTokens {
 				t.Errorf("[%s] SubagentsPeakTokens: expected %d, got %d", ticketID, expCwh.SubagentsPeakTokens, cwh.SubagentsPeakTokens)
 			}
-			if cwh.SubagentsPeakRole != expCwh.SubagentsPeakRole {
+			if string(cwh.SubagentsPeakRole) != expCwh.SubagentsPeakRole {
 				t.Errorf("[%s] SubagentsPeakRole: expected %s, got %s", ticketID, expCwh.SubagentsPeakRole, cwh.SubagentsPeakRole)
 			}
 			for role, expPeak := range expCwh.PeakByRole {
-				gotPeak, ok := cwh.PeakByRole[role]
+				gotPeak, ok := cwh.PeakByRole[domain.AgentRole(role)]
 				if !ok || gotPeak != expPeak {
 					t.Errorf("[%s] PeakByRole[%s]: expected %d, got %d", ticketID, role, expPeak, gotPeak)
 				}
@@ -1058,7 +1058,7 @@ func TestFleetSummaryAndComparisonParity(t *testing.T) {
 		"reviewer":     2.5671,
 	}
 	for role, expCost := range expectedRoleCosts {
-		gotCost, ok := fleet.RoleCosts[role]
+		gotCost, ok := fleet.RoleCosts[domain.AgentRole(role)]
 		if !ok || !almostEqual(gotCost, expCost, 0.0001) {
 			t.Errorf("RoleCost[%s]: expected %f, got %f", role, expCost, gotCost)
 		}
@@ -1105,12 +1105,12 @@ func TestStructuralClassificationParityOnWorkspaces(t *testing.T) {
 
 			cwh := ledger.WorkflowEfficiency.ContextWindowHealth
 			if hasRoot {
-				if cwh.OrchestratorPeakTokens != expRootPeak {
-					t.Errorf("[%s] OrchestratorPeakTokens: expected %d, got %d", ticketID, expRootPeak, cwh.OrchestratorPeakTokens)
+				if cwh.RootPeakTokens != expRootPeak {
+					t.Errorf("[%s] RootPeakTokens: expected %d, got %d", ticketID, expRootPeak, cwh.RootPeakTokens)
 				}
 			} else {
-				if cwh.OrchestratorPeakTokens != 0 {
-					t.Errorf("[%s] OrchestratorPeakTokens: expected 0, got %d", ticketID, cwh.OrchestratorPeakTokens)
+				if cwh.RootPeakTokens != 0 {
+					t.Errorf("[%s] RootPeakTokens: expected 0, got %d", ticketID, cwh.RootPeakTokens)
 				}
 			}
 

@@ -185,10 +185,10 @@ role_order:
 	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "services/**" {
 		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
 	}
-	if cfg.RoleMappings.ResolveRole("architect") != domain.RolePlanner {
+	if cfg.RoleMappings.ResolveRole("architect") != domain.AgentRole("planner") {
 		t.Errorf("expected RolePlanner for architect, got %s", cfg.RoleMappings.ResolveRole("architect"))
 	}
-	if cfg.RoleMappings.ResolveRole("qa") != domain.RoleTester {
+	if cfg.RoleMappings.ResolveRole("qa") != domain.AgentRole("tester") {
 		t.Errorf("expected RoleTester for qa, got %s", cfg.RoleMappings.ResolveRole("qa"))
 	}
 	if len(cfg.RoleOrder) != 3 || cfg.RoleOrder[0] != "tester" || cfg.RoleOrder[1] != "planner" || cfg.RoleOrder[2] != "coder" {
@@ -1491,7 +1491,7 @@ role_order:
 	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "backend/**" {
 		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
 	}
-	if cfg.RoleMappings.ResolveRole("architect") != domain.RolePlanner {
+	if cfg.RoleMappings.ResolveRole("architect") != domain.AgentRole("planner") {
 		t.Errorf("expected RolePlanner for architect, got %s", cfg.RoleMappings.ResolveRole("architect"))
 	}
 	if len(cfg.RoleOrder) != 3 || cfg.RoleOrder[0] != "orchestrator" || cfg.RoleOrder[1] != "planner" || cfg.RoleOrder[2] != "coder" {

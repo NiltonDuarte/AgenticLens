@@ -2338,18 +2338,23 @@ describe('TraceWaterfall Component', () => {
       // Switch to All Events to view the turn
       fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
 
-      // Find the Copy ID button for turn 1
-      const copyBtn = screen.getByRole('button', { name: 'Copy debug identifier for turn 1' });
+      // Find the Copy Prompt button for turn 1
+      const copyBtn = screen.getByRole('button', { name: 'Copy debug prompt for turn 1' });
       expect(copyBtn).toBeInTheDocument();
-      expect(copyBtn).toHaveTextContent('Copy ID');
+      expect(copyBtn).toHaveTextContent('Copy Prompt');
 
-      // Click Copy ID
+      // Click Copy Prompt
       await act(async () => {
         fireEvent.click(copyBtn);
       });
 
-      // Verifies clipboard was invoked with message_id (or debug ID)
-      expect(writeTextMock).toHaveBeenCalledWith('msg-uuid-87654321');
+      // Verifies clipboard was invoked with Layer 1 debug prompt
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      const copiedText = writeTextMock.mock.calls[0][0];
+      expect(copiedText).toContain('# Tool Execution: `bash`');
+      expect(copiedText).toContain(
+        'During turn 1 of session `ses-uuid-12345678` (message `msg-uuid-87654321`), the agent executed `bash` and it completed successfully.'
+      );
 
       // State changes to "Copied"
       expect(copyBtn).toHaveTextContent('Copied');
@@ -2359,8 +2364,130 @@ describe('TraceWaterfall Component', () => {
         vi.advanceTimersByTime(2000);
       });
 
-      // Reverts back to "Copy ID"
-      expect(copyBtn).toHaveTextContent('Copy ID');
+      // Reverts back to "Copy Prompt"
+      expect(copyBtn).toHaveTextContent('Copy Prompt');
+
+      vi.useRealTimers();
+    });
+
+    it('copies Layer 3 message turn prompt when non-tool_call event is copied', async () => {
+      vi.useFakeTimers();
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      const messageEvent: EventFact = {
+        timestamp: '2026-10-18T10:05:00Z',
+        session_id: 'ses-msg-turn',
+        message_id: 'msg-uuid-turn-9',
+        turn: 2,
+        role: 'assistant',
+        event_type: 'turn_message',
+        status: 'success',
+        context_tokens: 2500,
+        prompt_content: 'Let us start the execution plan.',
+        reasoning_content: 'Analyzing requirements carefully.',
+      };
+
+      render(
+        <TraceWaterfall
+          events={[messageEvent]}
+          defaultExpanded={true}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+
+      const copyBtn = screen.getByRole('button', { name: 'Copy debug prompt for turn 2' });
+      expect(copyBtn).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      const copiedText = writeTextMock.mock.calls[0][0];
+      expect(copiedText).toContain('# Turn 2 Review (`assistant`)');
+      expect(copiedText).toContain('In turn 2 of session `ses-msg-turn` (message `msg-uuid-turn-9`)');
+      expect(copiedText).toContain('> Analyzing requirements carefully.');
+      expect(copiedText).toContain('Let us start the execution plan.');
+
+      vi.useRealTimers();
+    });
+
+    it('copies Layer 1 prompt with streak details for tool_call events with associated retry anomaly', async () => {
+      vi.useFakeTimers();
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      const failedToolEvent: EventFact = {
+        timestamp: '2026-10-18T10:10:00Z',
+        session_id: 'ses-wf-streak',
+        message_id: 'msg-wf-88',
+        turn: 4,
+        role: 'coder',
+        event_type: 'tool_call',
+        tool_name: 'bash',
+        status: 'error',
+        tool_input: 'make test',
+        tool_output: 'exit status 2',
+        error_message: 'process exited with error',
+        context_tokens: 3500,
+      };
+
+      const streakAnomaly: Anomaly = {
+        rule_id: 'TOOL_RETRY_STREAK',
+        severity: 'CRITICAL',
+        title: 'Repeated Tool Failures',
+        description: 'Consecutive failures on bash',
+        context: {
+          session_id: 'ses-wf-streak',
+          tool_name: 'bash',
+          turn: 4,
+          count: 5,
+        },
+      };
+
+      render(
+        <TraceWaterfall
+          events={[failedToolEvent]}
+          anomalies={[streakAnomaly]}
+          defaultExpanded={true}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+
+      const copyBtn = screen.getByRole('button', { name: 'Copy debug prompt for turn 4' });
+      expect(copyBtn).toBeInTheDocument();
+      expect(copyBtn).toHaveTextContent('Copy Prompt');
+
+      await act(async () => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      const copiedText = writeTextMock.mock.calls[0][0];
+      expect(copiedText).toContain('# Tool Execution Failure: `bash`');
+      expect(copiedText).toContain(
+        'During turn 4 of session `ses-wf-streak` (message `msg-wf-88`), the agent executed `bash` and it failed with 5 consecutive failures on this tool.'
+      );
+      expect(copiedText).toContain('make test');
+      expect(copiedText).toContain('exit status 2');
+      expect(copyBtn).toHaveTextContent('Copied');
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(copyBtn).toHaveTextContent('Copy Prompt');
 
       vi.useRealTimers();
     });

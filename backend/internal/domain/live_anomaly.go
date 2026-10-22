@@ -7,19 +7,25 @@ import (
 	"strings"
 )
 
+// LiveAnomalyRuleName defines the unique identifier for a live anomaly rule.
+type LiveAnomalyRuleName string
+
 // Canonical live anomaly rule names.
 const (
-	RuleConsecutiveToolErrors  = "ConsecutiveToolErrors"
-	RuleContextCeilingApproach = "ContextCeilingApproach"
-	RuleTokenVelocityRunaway   = "TokenVelocityRunaway"
-	RuleToolThrashing          = "ToolThrashing"
+	RuleConsecutiveToolErrors  LiveAnomalyRuleName = "ConsecutiveToolErrors"
+	RuleContextCeilingApproach LiveAnomalyRuleName = "ContextCeilingApproach"
+	RuleTokenVelocityRunaway   LiveAnomalyRuleName = "TokenVelocityRunaway"
+	RuleToolThrashing          LiveAnomalyRuleName = "ToolThrashing"
 )
+
+// LiveAnomalySeverity defines the severity tier of a live anomaly alert.
+type LiveAnomalySeverity string
 
 // Live anomaly severity tiers.
 const (
-	LiveSeverityWarning  = "WARNING"
-	LiveSeverityHigh     = "HIGH"
-	LiveSeverityCritical = "CRITICAL"
+	LiveSeverityWarning  LiveAnomalySeverity = "WARNING"
+	LiveSeverityHigh     LiveAnomalySeverity = "HIGH"
+	LiveSeverityCritical LiveAnomalySeverity = "CRITICAL"
 )
 
 // Default thresholds for live anomaly detection rules.
@@ -38,12 +44,13 @@ const (
 
 // LiveAnomalyAlert represents an active health degradation or operational failure alert in a live session.
 type LiveAnomalyAlert struct {
-	SessionID    string `json:"session_id"`
-	RuleName     string `json:"rule_name"`
-	Severity     string `json:"severity"`
-	Message      string `json:"message"`
-	Timestamp    string `json:"timestamp"`
-	TriggerEvent string `json:"trigger_event"`
+	SessionID    string              `json:"session_id"`
+	RuleName     LiveAnomalyRuleName `json:"rule_name"`
+	Severity     LiveAnomalySeverity `json:"severity"`
+	Message      string              `json:"message"`
+	Timestamp    string              `json:"timestamp"`
+	TriggerEvent string              `json:"trigger_event"`
+	Count        *int64              `json:"count,omitempty"`
 }
 
 type toolCallRecord struct {
@@ -113,6 +120,7 @@ func EvaluateConsecutiveToolErrors(trace *LiveTraceView) []LiveAnomalyAlert {
 		triggerEvent = fmt.Sprintf("%s: %s", lastFailingPart.ID, errSnippet)
 	}
 
+	streakCount := int64(streak)
 	return []LiveAnomalyAlert{
 		{
 			SessionID:    trace.SessionID,
@@ -121,6 +129,7 @@ func EvaluateConsecutiveToolErrors(trace *LiveTraceView) []LiveAnomalyAlert {
 			Message:      msg,
 			Timestamp:    lastFailingTimestamp,
 			TriggerEvent: triggerEvent,
+			Count:        &streakCount,
 		},
 	}
 }
@@ -232,7 +241,7 @@ func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, 
 			}
 		}
 
-		var severity string
+		var severity LiveAnomalySeverity
 		var surgingTokens int64
 		var thresholdUsed int64
 
@@ -421,6 +430,7 @@ func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
 
 		msg := fmt.Sprintf("Tool thrashing detected on tool %s with %d failing invocations without progress.", cand.toolName, cand.failCount)
 		trigger := fmt.Sprintf("%s: %s", cand.toolName, strings.Join(cand.partIDs, ", "))
+		failCount := int64(cand.failCount)
 
 		alerts = append(alerts, LiveAnomalyAlert{
 			SessionID:    trace.SessionID,
@@ -429,13 +439,14 @@ func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
 			Message:      msg,
 			Timestamp:    cand.timestamp,
 			TriggerEvent: trigger,
+			Count:        &failCount,
 		})
 	}
 
 	return alerts
 }
 
-func liveSeverityRank(sev string) int {
+func liveSeverityRank(sev LiveAnomalySeverity) int {
 	switch sev {
 	case LiveSeverityCritical:
 		return 3

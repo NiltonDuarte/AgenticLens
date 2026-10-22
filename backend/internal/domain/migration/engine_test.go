@@ -22,11 +22,15 @@ func int64Ptr(i int64) *int64 {
 	return &i
 }
 
+func ticketTypePtr(tt domain.ConventionalTicketType) *domain.ConventionalTicketType {
+	return &tt
+}
+
 func sampleFactLedger() domain.AgenticFactLedger {
 	return domain.AgenticFactLedger{
 		TicketID:    stringPtr("AL-100"),
 		TicketTitle: stringPtr("Sample Ticket"),
-		TicketType:  stringPtr("feature"),
+		TicketType:  ticketTypePtr(domain.TicketTypeFeat),
 		StartedAt:   stringPtr("2026-10-18T10:00:00Z"),
 		CompletedAt: stringPtr("2026-10-18T11:00:00Z"),
 		UpdatedAt:   "2026-10-18T11:00:00Z",
@@ -595,7 +599,7 @@ func TestInvariantValidator(t *testing.T) {
 
 	t.Run("ticket type mutations fail", func(t *testing.T) {
 		m1 := base
-		m1.TicketType = stringPtr("bugfix")
+		m1.TicketType = ticketTypePtr(domain.TicketTypeFix)
 		if err := validator.Validate(base, m1, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for changed ticket_type, got %v", err)
 		}
