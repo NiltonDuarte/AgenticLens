@@ -1,8 +1,10 @@
 # AgenticLens Platform Setup Manual and Telemetry Integration Guide
 
-AgenticLens is a developer telemetry and observability platform designed specifically for agentic software engineering workflows. It provides real-time monitoring, longitudinal cost and token tracking, automated anomaly detection, and context window health diagnostics across autonomous coding agents.
+AgenticLens is a developer telemetry and observability platform built specifically for OpenCode workflows. It provides real-time monitoring, longitudinal cost and token tracking, automated anomaly detection, and context window health diagnostics across autonomous coding agents running in OpenCode.
 
-This manual serves as the comprehensive, authoritative guide for engineering teams, platform architects, and autonomous coding agents integrating AgenticLens into any software repository.
+AgenticLens operates by extracting execution traces directly from OpenCode's local SQLite database (`~/.local/share/opencode/opencode.db`), specifically querying the `session`, `message`, and `part` tables. Consequently, AgenticLens strictly requires an active OpenCode installation and its local SQLite database; it cannot function without OpenCode and does not support alternative agent harnesses.
+
+This manual serves as the comprehensive, authoritative guide for engineering teams, platform architects, and autonomous coding agents adopting AgenticLens in OpenCode projects.
 
 ---
 
@@ -15,7 +17,7 @@ AgenticLens offers two primary setup pathways: an autonomous agentic setup via a
 In modern agentic workflows, autonomous agents consume skills natively through Markdown instruction manifests (`SKILL.md`) accessed directly via shared repository links or raw URLs. No archive packaging, zip files, or custom unpacking scripts are required.
 
 #### Step 1: Share Skill Reference with Your Agent
-Provide your autonomous coding agent (in OpenCode, Claude Code, Cursor, or similar harnesses) with the reference to the AgenticLens setup skill. You can either:
+Provide your autonomous coding agent in OpenCode with the reference to the AgenticLens setup skill. You can either:
 - Point the agent directly to the canonical remote URL:
   `https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.opencode/skills/agentic-lens-setup/SKILL.md`
 - Or copy `.opencode/skills/agentic-lens-setup/SKILL.md` into your repository.
@@ -100,7 +102,7 @@ The agent runs `init` to write `.agenticlens-config.yaml`:
 ```
 
 #### Step 5: Mandatory User Confirmation Gate
-Before updating or creating any agent policy files (`AGENTS.md`, `CLAUDE.md`, or `.opencode/agent/*.md`), the agent must present the exact policy text to the user and receive explicit approval.
+Before updating or creating any OpenCode agent policy files (`AGENTS.md` or `.opencode/agent/*.md`), the agent must present the exact policy text to the user and receive explicit approval.
 
 ---
 
@@ -162,23 +164,24 @@ Open `http://localhost:8085` in your browser to view the Fleet Overview and Live
 
 ---
 
-## 2. Agnostic Adoption for External Projects
+## 2. Agnostic Adoption for OpenCode Projects
 
-AgenticLens is engineered from first principles as an agnostic telemetry ingestion, aggregation, and visualization engine. It imposes zero methodology constraints on adopting organizations.
+AgenticLens is engineered specifically for OpenCode environments. It is hardwired to OpenCode internals: its telemetry ingestion engine, session resolver, and live SSE streaming service directly query OpenCode's local SQLite database (`session`, `message`, and `part` tables). It cannot function without an active OpenCode installation and does not support alternative agent harnesses.
 
-### 2.1 Complete Workflow Neutrality
-Every software team operates with distinct development lifecycles, branching strategies, and agent harnesses. AgenticLens accommodates any way of working:
-- **Harness Agnostic**: Fully compatible with OpenCode, Claude Code, Cursor, Aider, GitHub Copilot, custom Python/Node scripts, or proprietary orchestration harnesses.
-- **Workflow Topology Agnostic**: Operates equally well with single-agent prompt loops, human developers, hierarchical multi-agent swarms, or CI/CD automated maintenance pipelines.
+While tightly coupled to OpenCode at the platform layer, AgenticLens imposes zero engineering methodology constraints on adopting teams. Within OpenCode, it is completely agnostic to how teams structure their development workflows.
+
+### 2.1 Complete Methodology Neutrality within OpenCode
+Every engineering team operating in OpenCode has distinct development lifecycles, branching strategies, and agent configurations. AgenticLens accommodates any way of working:
+- **Workflow Topology Agnostic**: Operates equally well with single-agent prompt loops, human-in-the-loop interactions, hierarchical multi-agent delegations, or automated CI/CD maintenance pipelines running inside OpenCode.
+- **Decoupled from Maintainer Personas**: Adopters do not inherit this repository's internal maintainer personas (`agentic-lens-dev`, `agentic-lens-po`, `agentic-lens-review`). Teams configure their own agents or subagents freely.
 - **Review and QA Independence**: Adopters define their own testing standards, linting gates, and code review criteria. AgenticLens records what occurred during execution without prescribing how development must be managed.
-- **Zero Maintainer Coupling**: Adopters do not inherit internal development skills, internal maintainer personas, or internal repository conventions.
 
 ### 2.2 Custom Conventions and Taxonomy
-External repositories configure AgenticLens to align with their existing organizational standards:
+Adopting repositories configure AgenticLens to align with their existing organizational standards:
 - **Custom Ticket Prefixes**: Support for any ticketing taxonomy (e.g. `JIRA-`, `ISSUE-`, `FEAT-`, `BUG-`, `CORE-`, `PAY-`, `DEVOPS-`). Multiple prefixes are treated as equal peers.
 - **Custom Workspace Hierarchies**: Telemetry can be housed in `workspaces/`, `alspaces/`, `.tasks/`, `specs/`, or any custom repository path.
 - **Custom Git Branching**: Operates seamlessly with trunk-based development, GitFlow, GitHub flow, or short-lived feature branches.
-- **Custom Persona Mappings**: Arbitrary agent identifiers emitted by custom harnesses can be mapped into canonical reporting roles or tracked as bespoke domains.
+- **Custom Persona Role Mapping**: Arbitrary agent persona strings configured in OpenCode can be mapped into canonical reporting roles via `role_mappings` in `.agenticlens-config.yaml` or tracked as standalone custom roles.
 
 ---
 
@@ -320,7 +323,7 @@ Maps raw agent persona strings recorded in OpenCode traces to canonical role cat
 
 ---
 
-## 4. Agnostic Agent Workflow Integration Guide
+## 4. OpenCode Agent Workflow Integration Guide
 
 Integrating AgenticLens into your repository requires zero changes to agent reasoning loops, model selection, or coding styles. Integration is achieved through a single command invocation at the conclusion of each task.
 
@@ -336,21 +339,25 @@ The most critical operational principle for accurate telemetry is the **Delayed 
 
 ### 4.2 Nonce Generation and Ingestion Command (`generate`)
 
-To guarantee deterministic session resolution across concurrent agents or subagent delegations, generate a unique execution nonce and pass it to the `generate` command:
+To guarantee deterministic session resolution across concurrent agents or subagent delegations, pass a unique execution nonce directly to the `generate` command:
 
 ```bash
-NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
 ./bin/agentic-lens generate \
-  --nonce "$NONCE" \
+  --nonce <GENERATED_NONCE> \
   --ticket-id "<TICKET_ID>" \
   --ticket-type "<CONVENTIONAL_TYPE>" \
   --json-output "workspaces/<TICKET_ID>/agentic_metrics.json" \
   --append "workspaces/<TICKET_ID>/SUMMARY.md"
 ```
 
+#### Literal Nonce Mandate (FIX-5)
+The executing agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and supply the concrete literal token in the command.
+
+**Important**: Shell variable expansions (`$NONCE`) or command substitutions (`$(...)`) must never be used. OpenCode records tool input arguments verbatim into its SQLite database before shell variable expansion or subshell execution occurs. If an agent executes a command containing `$NONCE` or `$(...)`, OpenCode records the literal string `"$NONCE"` in the database part record. Subsequent database lookups matching the runtime expanded token against the database will fail to find a match. Always supply the literal nonce value directly.
+
 #### Command Flags Breakdown:
 - `--ticket-id <ID>` (Required): The active ticket or issue identifier (e.g. `PAY-42`, `SEC-101`).
-- `--nonce <STRING>` (Recommended): A unique execution nonce used to correlate concurrent subagent sessions and resolve the precise execution window.
+- `--nonce <STRING>` (Recommended): A unique execution nonce used to correlate concurrent subagent sessions and resolve the precise execution window. Must be passed as a literal string without shell variable expansion.
 - `--ticket-type <TYPE>` (Required): Conventional commit classification (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
 - `--json-output <PATH>`: Destination path for the immutable JSON telemetry ledger.
 - `--append <PATH>`: Destination path for appending an idempotent Markdown verification table.
@@ -387,7 +394,7 @@ When AgenticLens processes execution traces, it automatically aggregates tokens,
 
 ### 4.5 Standard Repository Agent Guidelines Policy Block
 
-Below is the standard policy block that can be added to your repository's agent instructions file (`AGENTS.md`, `CLAUDE.md`, or `.opencode/agent/*.md`):
+Below is the standard policy block that can be added to your repository's OpenCode agent instructions file (`AGENTS.md` or `.opencode/agent/*.md`):
 
 ```markdown
 ## AgenticLens Telemetry Guidelines
@@ -401,10 +408,10 @@ Below is the standard policy block that can be added to your repository's agent 
    - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log).
 
 3. Delayed Telemetry Ingestion:
-   - Ingest telemetry as the very final command before committing code:
-     NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
+   - Ingest telemetry as the very final command before committing code.
+   - The agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token. Do not use shell variables (`$NONCE`) because OpenCode records tool inputs into SQLite before subshell expansion occurs:
      ./bin/agentic-lens generate \
-       --nonce "$NONCE" \
+       --nonce <GENERATED_NONCE> \
        --ticket-id "<TICKET_ID>" \
        --ticket-type "<CONVENTIONAL_TYPE>" \
        --json-output "workspaces/<TICKET_ID>/agentic_metrics.json" \
@@ -433,11 +440,11 @@ Scaffolds and writes `.agenticlens-config.yaml` at the repository root.
   - `--dry-run` (Optional): Print generated configuration YAML to stdout without writing to disk.
 
 #### `agentic-lens generate`
-Ingests session telemetry from SQLite and git commit history into a workspace ledger.
+Ingests session telemetry from OpenCode's SQLite database and git commit history into a workspace ledger.
 - Flags:
   - `--ticket-id <ID>` (Required): Active ticket identifier.
   - `--ticket-type <TYPE>` (Required): Conventional commit classification.
-  - `--nonce <STRING>` (Optional): Unique execution nonce for session resolution.
+  - `--nonce <STRING>` (Optional): Unique execution nonce for OpenCode session resolution. Must be passed as a directly generated literal token; shell variables (`$NONCE`) must not be used.
   - `--session-id <ID>` (Optional): Explicit OpenCode session ID override.
   - `--ticket-title <TITLE>` (Optional): Title of the ticket.
   - `--strict-type` (Optional): Fail with error if ticket type does not match conventional taxonomy.
@@ -588,7 +595,7 @@ AgenticLens is constructed around the Functional Core, Imperative Shell (FCIS) p
 
 The architecture strictly separates pure domain computations from side-effecting operations:
 - **Functional Core (`backend/internal/domain/`)**: Contains pure value objects, cost models, statistical anomaly calculation formulas, and context window health algorithms. The functional core contains zero file I/O, zero network dependencies, and zero system clocks. All calculations are completely deterministic and easily verified via unit tests.
-- **Imperative Shell (`backend/internal/adapters/` and `backend/cmd/agentic-lens/`)**: Manages external interactions including SQLite database querying, git repository diff extraction, configuration file parsing, HTTP server lifecycle management, and CLI argument binding.
+- **Imperative Shell (`backend/internal/adapters/` and `backend/cmd/agentic-lens/`)**: Manages external interactions including OpenCode SQLite database querying, git repository diff extraction, configuration file parsing, HTTP server lifecycle management, and CLI argument binding.
 
 ### A.2 Single Binary Zero-Dependency Model
 

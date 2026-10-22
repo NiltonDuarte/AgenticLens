@@ -1,18 +1,20 @@
 ---
 name: agentic-lens-setup
-description: Autonomous setup skill to bootstrap AgenticLens in any repository, downloading precompiled release binaries, configuring project parameters, explaining telemetry features, and reviewing agent guidelines with mandatory user confirmation.
+description: Autonomous setup skill to bootstrap AgenticLens in OpenCode repositories, downloading precompiled release binaries, configuring project parameters, explaining telemetry features, and reviewing agent guidelines with mandatory user confirmation.
 ---
 
 # AgenticLens Cross-Project Autonomous Setup Skill
 
-Guides autonomous bootstrapping and adoption of AgenticLens in any software repository using precompiled release artifacts from GitHub Releases (https://github.com/NiltonDuarte/AgenticLens/releases).
+Guides autonomous bootstrapping and adoption of AgenticLens in OpenCode software repositories using precompiled release artifacts from GitHub Releases (https://github.com/NiltonDuarte/AgenticLens/releases).
+
+AgenticLens is an observability and developer telemetry platform built specifically for OpenCode workflows. It operates by extracting execution traces directly from OpenCode's local SQLite database (`~/.local/share/opencode/opencode.db`), specifically querying the `session`, `message`, and `part` tables. An active OpenCode installation and its local SQLite database are strictly required. AgenticLens does not support alternative agent harnesses.
 
 This skill follows the autonomous agentic distribution model: it is completely self-contained and executable by any autonomous coding agent reading this manifest directly via shared repository URL or local path.
 
 ## Operational Mandates
 - Strict Release-Only Mandate: Never compile binaries from Go/TypeScript source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
 - Binary Placement and Git Protection: Store the precompiled binary inside `.opencode/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) alongside a protective `.gitignore` containing `*` and `!/.gitignore` to prevent committing compiled binaries to version control.
-- Mandatory User Confirmation Gate: Inspect existing agent instructions (`AGENTS.md`, `.opencode/agent/*.md`, `CLAUDE.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
+- Mandatory User Confirmation Gate: Inspect existing OpenCode agent instructions (`AGENTS.md` or `.opencode/agent/*.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
 
 ---
@@ -189,10 +191,9 @@ Present an overview of AgenticLens features to the user:
 
 ### Step 4: Agent Guidelines Review and Mandatory Confirmation Gate
 
-Inspect the repository for existing agent instructions:
+Inspect the repository for existing OpenCode agent instructions:
 - `AGENTS.md`
 - `.opencode/agent/*.md`
-- `CLAUDE.md`
 
 #### Mandatory User Confirmation Gate (HARD STOP)
 Before making any modifications or creating new files, formulate the exact proposed markdown section and present it to the user. Ask for explicit approval using the `question` tool or user prompt.
