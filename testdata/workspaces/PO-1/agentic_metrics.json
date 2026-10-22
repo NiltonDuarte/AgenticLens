@@ -1,0 +1,57 @@
+{
+  "schema_version": 3,
+  "migration": {
+    "schema_version": 3,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v3_sanitized"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
+    "last_migrated_by": "universal-migration-engine",
+    "notes": "Sanitized event telemetry migration from v2 to v3"
+  },
+  "ticket_id": "PO-1",
+  "ticket_title": "Product requirements decomposition and spec drafting",
+  "ticket_type": "docs",
+  "started_at": "2026-10-14T09:00:00Z",
+  "completed_at": "2026-10-14T11:15:00Z",
+  "updated_at": "2026-10-14T11:20:00Z",
+  "code": {
+    "lines_added": 420,
+    "lines_deleted": 40,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 420,
+    "prod_lines_deleted": 40,
+    "files_changed": 5,
+    "sdlc_iterations": 1
+  },
+  "invocations": [
+    {
+      "id": "inv-po1-01",
+      "parent_id": null,
+      "role": "planner",
+      "model": "claude-3-5-sonnet",
+      "user": "product-owner",
+      "started_at": "2026-10-14T09:00:00Z",
+      "completed_at": "2026-10-14T11:15:00Z",
+      "active_duration_seconds": 1120,
+      "turns": 3,
+      "tokens": {
+        "input": 180000,
+        "output": 32000,
+        "cache_read": 540000,
+        "reasoning": 0,
+        "peak_context": 70400
+      },
+      "cost_usd": 2.145,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    { "name": "read", "calls": 35, "errors": 0 },
+    { "name": "write", "calls": 8, "errors": 0 }
+  ],
+  "events": []
+}

@@ -1,0 +1,171 @@
+package http
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"agenticlens/internal/domain"
+)
+
+// ErrorResponse represents a structured error response payload.
+type ErrorResponse struct {
+	Error      string `json:"error"`
+	Message    string `json:"message"`
+	StatusCode int    `json:"status_code"`
+}
+
+// WorkspaceDetailResponse represents the serialized workspace detail payload.
+type WorkspaceDetailResponse struct {
+	Ledger    domain.AgenticMetricsLedger `json:"ledger"`
+	Artifacts domain.TicketArtifacts      `json:"artifacts"`
+	Anomalies []domain.Anomaly            `json:"anomalies"`
+}
+
+// BuildInfoDTO represents the serialized build information payload.
+type BuildInfoDTO struct {
+	Version   string `json:"version"`
+	Commit    string `json:"commit"`
+	BuildDate string `json:"build_date"`
+}
+
+// ProjectConfigDTO represents the sanitized project configuration payload.
+type ProjectConfigDTO struct {
+	ProjectName   string                `json:"project_name"`
+	Prefixes      []domain.TicketPrefix `json:"prefixes"`
+	WorkspacesDir string                `json:"workspaces_dir"`
+	RoleOrder     []string              `json:"role_order"`
+	Version       string                `json:"version"`
+}
+
+// ResponsePayload defines the permitted concrete types for JSON responses.
+type ResponsePayload interface {
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | domain.WorkspaceEventsResponse | BuildInfoDTO | ProjectConfigDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
+}
+
+// WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
+func WriteJSON[T ResponsePayload](w http.ResponseWriter, statusCode int, data T) {
+	payload, err := json.Marshal(data)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusInternalServerError)
+		errFallback := []byte(`{"error":"internal_error","message":"failed to encode response","status_code":500}`)
+		if _, writeErr := w.Write(errFallback); writeErr != nil {
+			return
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(statusCode)
+	if _, err := w.Write(payload); err != nil {
+		return
+	}
+}
+
+// WriteError writes a structured ErrorResponse with status code.
+func WriteError(w http.ResponseWriter, statusCode int, errCode string, message string) {
+	resp := ErrorResponse{
+		Error:      errCode,
+		Message:    message,
+		StatusCode: statusCode,
+	}
+	WriteJSON(w, statusCode, resp)
+}
+
+// WriteWorkspacesResponse writes a slice of ledgers as JSON.
+func WriteWorkspacesResponse(w http.ResponseWriter, ledgers []domain.AgenticMetricsLedger) {
+	WriteJSON(w, http.StatusOK, ledgers)
+}
+
+// WriteWorkspaceDetailResponse writes a WorkspaceDetailResponse as JSON.
+func WriteWorkspaceDetailResponse(w http.ResponseWriter, detail WorkspaceDetailResponse) {
+	WriteJSON(w, http.StatusOK, detail)
+}
+
+// WriteFleetResponse writes a domain.FleetSummary as JSON.
+func WriteFleetResponse(w http.ResponseWriter, summary domain.FleetSummary) {
+	WriteJSON(w, http.StatusOK, summary)
+}
+
+// WriteVersionResponse writes a domain.BuildInfo as JSON.
+func WriteVersionResponse(w http.ResponseWriter, info domain.BuildInfo) {
+	dto := BuildInfoDTO{
+		Version:   info.Version,
+		Commit:    info.GitCommit,
+		BuildDate: info.BuildDate,
+	}
+	WriteJSON(w, http.StatusOK, dto)
+}
+
+// WriteProjectConfigResponse writes a ProjectConfigDTO as JSON.
+func WriteProjectConfigResponse(w http.ResponseWriter, dto ProjectConfigDTO) {
+	if dto.Prefixes == nil {
+		dto.Prefixes = []domain.TicketPrefix{}
+	}
+	if dto.RoleOrder == nil {
+		dto.RoleOrder = []string{}
+	}
+	WriteJSON(w, http.StatusOK, dto)
+}
+
+// WriteEventsResponse writes a domain.WorkspaceEventsResponse as JSON.
+func WriteEventsResponse(w http.ResponseWriter, resp domain.WorkspaceEventsResponse) {
+	if resp.Events == nil {
+		resp.Events = []domain.EventFact{}
+	}
+	WriteJSON(w, http.StatusOK, resp)
+}
+
+// WriteComparisonResponse writes a slice of TicketComparisonRow as JSON.
+func WriteComparisonResponse(w http.ResponseWriter, rows []domain.TicketComparisonRow) {
+	if rows == nil {
+		rows = []domain.TicketComparisonRow{}
+	}
+	WriteJSON(w, http.StatusOK, rows)
+}
+
+// WriteProgressionResponse writes a slice of TimeBucketMetric as JSON.
+func WriteProgressionResponse(w http.ResponseWriter, metrics []domain.TimeBucketMetric) {
+	if metrics == nil {
+		metrics = []domain.TimeBucketMetric{}
+	}
+	WriteJSON(w, http.StatusOK, metrics)
+}
+
+// WriteLiveSessionTreeResponse writes a domain.LiveSessionTree as JSON.
+func WriteLiveSessionTreeResponse(w http.ResponseWriter, tree domain.LiveSessionTree) {
+	if tree.RootSessions == nil {
+		tree.RootSessions = []*domain.LiveSessionNode{}
+	}
+	if tree.ActiveAnomalies == nil {
+		tree.ActiveAnomalies = []domain.LiveAnomalyAlert{}
+	}
+	WriteJSON(w, http.StatusOK, tree)
+}
+
+// WriteLiveTraceResponse writes a domain.LiveTraceView as JSON.
+func WriteLiveTraceResponse(w http.ResponseWriter, trace domain.LiveTraceView) {
+	if trace.Messages == nil {
+		trace.Messages = []domain.LiveMessageFact{}
+	}
+	if trace.RecentErrors == nil {
+		trace.RecentErrors = []domain.LivePartFact{}
+	}
+	if trace.Anomalies == nil {
+		trace.Anomalies = []domain.LiveAnomalyAlert{}
+	}
+	WriteJSON(w, http.StatusOK, trace)
+}
+
+// WriteLiveAnomalyAlertResponse writes a domain.LiveAnomalyAlert as JSON.
+func WriteLiveAnomalyAlertResponse(w http.ResponseWriter, alert domain.LiveAnomalyAlert) {
+	WriteJSON(w, http.StatusOK, alert)
+}
+
+// WriteLiveAnomalyAlertsResponse writes a slice of domain.LiveAnomalyAlert as JSON.
+func WriteLiveAnomalyAlertsResponse(w http.ResponseWriter, alerts []domain.LiveAnomalyAlert) {
+	if alerts == nil {
+		alerts = []domain.LiveAnomalyAlert{}
+	}
+	WriteJSON(w, http.StatusOK, alerts)
+}

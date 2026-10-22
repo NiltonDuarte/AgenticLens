@@ -1,0 +1,108 @@
+# AgenticLens Global Configuration
+# Defines project parameters, ticket identification patterns, workspace layout,
+# database connectivity, live observability thresholds, code metrics classification,
+# and agent-backend bridge role mappings.
+
+# Human-readable name of the project.
+project_name: AgenticLens
+
+# Ticket identification and normalization settings.
+ticket:
+  # Supported ticket prefix identifiers for this repository.
+  # Accepts structured mappings (prefix and description) or plain string scalars.
+  prefixes:
+    - prefix: AL
+      description: Core AgenticLens development features, bugfixes, and technical initiatives
+    - prefix: AL2
+      description: Core AgenticLens v2 architecture, multi-project observability, and advanced debugging initiatives
+    - prefix: GEN
+      description: General multi-agent engineering tasks and ad-hoc untracked work
+      ticket_type: chore
+    - prefix: PO
+      description: Product Owner specifications, requirements definitions, and roadmap breakdowns
+      ticket_type: docs
+    - prefix: FIX
+      description: Bug fixes, defect remediation, and corrective patches
+      ticket_type: fix
+  # Enable case-insensitive prefix parsing (e.g. al-21 -> AL-21).
+  case_insensitive: true
+  # Additional regex patterns to match unconventional ticket naming formats.
+  custom_patterns: []
+
+# Workspace storage and source folder definitions.
+workspaces:
+  # Directory where ticket artifacts and session telemetry ledgers are stored.
+  dir: alspaces
+  # Monitored source code folders for project telemetry and change tracking.
+  src_folders:
+    - web
+    - backend
+  # Configured documentation and process artifacts tracked inside ticket workspaces.
+  artifacts:
+    - path: CONTRACT.md
+      title: Technical Contract
+      description: Frozen technical contract and acceptance boundaries
+    - path: SUMMARY.md
+      title: Work Summary
+      description: Implementation summary log and verification records
+
+# OpenCode SQLite database connectivity and timeout parameters.
+database:
+  # Path to local OpenCode SQLite database file.
+  path: ~/.local/share/opencode/opencode.db
+  # Query execution timeout in milliseconds.
+  query_timeout_ms: 5000
+  # SQLite busy handler wait timeout in milliseconds.
+  busy_timeout_ms: 5000
+  # Enforce read-only connection to prevent unintended database mutations.
+  read_only: true
+
+# Live session observability and real-time streaming engine configuration.
+live:
+  # Window in seconds within which a session is considered actively running.
+  active_threshold_seconds: 300
+  # SQLite polling interval in milliseconds for live session updates.
+  poll_interval_ms: 2000
+  # Maximum number of recent trace messages retained in memory buffer per session.
+  max_trace_buffer_messages: 500
+  # Numerical thresholds for automated anomaly detection rules.
+  anomaly_thresholds:
+    # Time in seconds without session turn activity before flagging a stall anomaly.
+    stall_threshold_seconds: 120
+    # Ratio of tool errors to total invocations triggering a high failure anomaly.
+    error_rate_threshold: 0.25
+    # Token context window utilization percentage triggering saturation warnings.
+    context_exhaustion_pct: 0.85
+
+# Git commit diff analysis and code classification glob patterns.
+code_metrics:
+  # Upstream comparison base branch for commit diff extraction (e.g. origin/main or main).
+  # If left empty, resolution automatically probes origin/HEAD, origin/main, main, origin/master, and master.
+  base_branch: origin/main
+  # Specific files or glob patterns explicitly included as production code.
+  include: []
+  # Files or directories excluded from code volume and diff calculations.
+  exclude: []
+  # Glob patterns identifying test files, test fixtures, and test utilities.
+  test_patterns: []
+  # Glob patterns identifying production runtime code.
+  prod_patterns: []
+
+# Bridge definitions mapping agent persona names to canonical AgentRole enums.
+# Canonical domain roles: orchestrator, planner, coder, tester, reviewer.
+role_mappings:
+  orchestrator: orchestrator
+  build: orchestrator
+  planner: planner
+  coder: coder
+  tester: tester
+  reviewer: reviewer
+
+# Configurable sequence for sorting agent roles in CLI tables and metric cards.
+# Roles appearing here are sorted first in this exact order; unlisted roles follow alphabetically.
+role_order:
+  - orchestrator
+  - planner
+  - coder
+  - tester
+  - reviewer

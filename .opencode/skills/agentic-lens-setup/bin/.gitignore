@@ -1,0 +1,4 @@
+# Prevent accidental git tracking of precompiled binaries
+*
+!.gitignore
+!/.gitignore

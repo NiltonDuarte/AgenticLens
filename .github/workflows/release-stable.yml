@@ -1,0 +1,100 @@
+name: Stable Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release-stable:
+    name: Build and Publish Stable Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Semantic Versioning
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Tag '$TAG' does not conform to semantic versioning format ^v[0-9]+\.[0-9]+\.[0-9]+$" >&2
+            exit 1
+          fi
+          echo "Tag '$TAG' is a valid semantic version."
+
+      - name: Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Static Analysis
+        run: make check
+
+      - name: Run Test Suite
+        run: make test
+
+      - name: Compute Release Metadata
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "GIT_COMMIT=${SHORT_SHA}" >> $GITHUB_ENV
+          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_ENV
+          echo "Stable release version: ${{ github.ref_name }}"
+
+      - name: Cross-Compile Release Binaries
+        run: make release-build VERSION="${VERSION}" GIT_COMMIT="${GIT_COMMIT}" BUILD_DATE="${BUILD_DATE}"
+
+      - name: Package Release Archives
+        run: make release-package VERSION="${VERSION}"
+
+      - name: Verify Release Artifacts
+        run: make release-verify
+
+      - name: Publish Stable GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          prerelease: false
+          make_latest: true
+          generate_release_notes: true
+          files: |
+            dist/bin/agentic-lens-*
+            dist/agentic-lens-*.tar.gz
+            dist/agentic-lens-*.zip
+            dist/SHA256SUMS
+
+      - name: Update Floating Latest Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa latest -m "Release ${{ github.ref_name }}"
+          git push -f origin latest
+
+      - name: Sweep All Stale Release Candidates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RCS=$(gh release list --limit 100 --exclude-drafts --json tagName,isPrerelease --jq '.[] | select(.isPrerelease == true and (.tagName | test("-rc\\."))) | .tagName')
+          for tag in $RCS; do
+            echo "Purging candidate: $tag"
+            gh release delete "$tag" --yes --cleanup-tag || true
+          done

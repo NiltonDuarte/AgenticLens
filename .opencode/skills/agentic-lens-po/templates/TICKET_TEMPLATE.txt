@@ -1,0 +1,32 @@
+h3. Title: <PREFIX>-XXXXX: <Short, action-oriented title>
+
+*TARGET*: AgenticLens (<Component: domain | adapters | presentation | cli | tests>)
+
+*CONTEXT*
+ 
+<Clear, brief problem statement or telemetry capability needed in AgenticLens. Why is this slice needed?>
+
+*GOAL*
+ 
+<Single concise paragraph defining what this vertical slice delivers end-to-end.>
+
+*VERTICAL SLICE SCOPE*
+ 
+* Domain Core: <Pure model/rollup changes in internal/domain/>
+* Boundary Adapter: <Parsing/schema/filesystem changes in internal/adapters/>
+* Presentation: <UI integration in web/ or CLI in cmd/agentic-lens/>
+* Quality: <Go table-driven tests and TypeScript unit tests with zero mocks in domain logic>
+
+*ACCEPTANCE CRITERIA*
+ 
+* <Specific functional behavior 1>
+* <Specific functional behavior 2>
+* <CLI or Web dashboard presentation verification>
+* <Go vet/test and TypeScript typecheck passes with zero errors>
+
+*DEFINITION OF DONE*
+ 
+* Code and tests merged to target branch.
+* Quality gates passing (`make check`, `make test`, or `make`).
+* Go and TypeScript type checking clean with zero any.
+* Telemetry tested with `agentic-lens` CLI.
