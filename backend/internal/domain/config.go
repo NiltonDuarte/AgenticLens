@@ -181,14 +181,14 @@ type CodeMetricsConfig struct {
 	ProdPatterns []string `json:"prod_patterns" yaml:"prod_patterns"`
 }
 
-// RoleMappings maps agent persona names to canonical AgentRole enums.
+// RoleMappings maps agent persona names to AgentRole enums.
 type RoleMappings map[string]string
 
-// ResolveRole resolves an agent persona name to a canonical AgentRole enum.
+// ResolveRole resolves an agent persona name to an AgentRole enum.
 func (m RoleMappings) ResolveRole(rawAgent string) AgentRole {
 	cleaned := strings.ToLower(strings.TrimSpace(rawAgent))
 	if cleaned == "" {
-		return RoleUnassigned
+		return RoleUnassignedSubAgent
 	}
 
 	if m != nil {

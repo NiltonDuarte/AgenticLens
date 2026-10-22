@@ -61,7 +61,7 @@ export interface SessionOverviewPromptParams {
 }
 
 /**
- * Strips internal ticket identifiers (e.g. AL-20, FIX-3, GEN-42) and git branch patterns.
+ * Strips internal ticket identifiers (e.g. PROJ-123, ISSUE-42) and git branch patterns.
  */
 export function stripInternalIdentifiers(text: string): string {
   if (!text || !text.trim()) {
@@ -74,7 +74,7 @@ export function stripInternalIdentifiers(text: string): string {
     ''
   );
   sanitized = sanitized.replace(
-    /\s*\(\s*(?:tickets?\s+)?(?:AL|FIX|GEN|PO|[A-Z]{2,10})-\d+\s*\)/gi,
+    /\s*\(\s*(?:tickets?\s+)?[A-Z]{2,10}-\d+\s*\)/gi,
     ''
   );
 
@@ -84,9 +84,9 @@ export function stripInternalIdentifiers(text: string): string {
     ''
   );
 
-  // Strip ticket patterns such as AL-20, FIX-3, GEN-42, PO-2, including optional "tickets" prefix
+  // Strip ticket patterns including optional "tickets" prefix
   sanitized = sanitized.replace(
-    /\b(?:on\s+|in\s+|for\s+)?(?:tickets?\s+)?(?:AL|FIX|GEN|PO|[A-Z]{2,10})-\d+\b/gi,
+    /\b(?:on\s+|in\s+|for\s+)?(?:tickets?\s+)?[A-Z]{2,10}-\d+\b/gi,
     ''
   );
 

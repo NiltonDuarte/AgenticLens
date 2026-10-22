@@ -26,8 +26,8 @@ func TestAnomalyContextDTO_BidirectionalMapping(t *testing.T) {
 		tool := "bash"
 		sess := "ses-10"
 		turn := int64(4)
-		role := domain.RoleCoder
-		secRole := domain.RoleTester
+		role := domain.AgentRole("coder")
+		secRole := domain.AgentRole("tester")
 		count := int64(5)
 		totalCalls := int64(10)
 		delta := int64(45000)
@@ -929,7 +929,7 @@ func TestLiveSchema_LiveSessionTreeBoundary(t *testing.T) {
 			ID:               "ses_child",
 			ParentID:         &parentID,
 			Agent:            "coder",
-			Role:             domain.RoleCoder,
+			Role:             domain.AgentRole("coder"),
 			Model:            "gemini-3.8-flash",
 			Title:            "Child session",
 			TimeCreated:      "2026-10-19T10:05:00Z",
@@ -942,7 +942,7 @@ func TestLiveSchema_LiveSessionTreeBoundary(t *testing.T) {
 		root := &domain.LiveSessionNode{
 			ID:               parentID,
 			Agent:            "build",
-			Role:             domain.RoleOrchestrator,
+			Role:             domain.AgentRole("orchestrator"),
 			Model:            "gemini-3.8-flash",
 			Title:            "Root session",
 			TimeCreated:      "2026-10-19T10:00:00Z",

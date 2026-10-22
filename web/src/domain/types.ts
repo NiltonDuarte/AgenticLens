@@ -1,12 +1,10 @@
 export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL';
 
 export type {
-  CanonicalAgentRole,
   AgentRole,
 } from '../types/telemetry';
 
 import type {
-  CanonicalAgentRole,
   AgentRole,
 } from '../types/telemetry';
 
@@ -37,24 +35,6 @@ export interface MigrationInfo {
   readonly notes?: string;
 }
 
-export const CANONICAL_ROLE_ORDER: readonly CanonicalAgentRole[] = [
-  'orchestrator',
-  'planner',
-  'coder',
-  'tester',
-  'reviewer',
-];
-
-export const SUBAGENT_ROLE_ORDER: readonly CanonicalAgentRole[] = [
-  'planner',
-  'coder',
-  'tester',
-  'reviewer',
-];
-
-export function isCanonicalRole(role: string): role is CanonicalAgentRole {
-  return (CANONICAL_ROLE_ORDER as readonly string[]).includes(role.toLowerCase().trim());
-}
 
 export interface InvocationTokens {
   readonly input: number;
@@ -169,8 +149,8 @@ export interface ToolExecutionHealth {
 export interface ContextWindowHealth {
   readonly healthy_ceiling_tokens: number;
   readonly status: ContextHealthStatus;
-  readonly orchestrator_peak_tokens: number;
-  readonly orchestrator_saturation_pct: number;
+  readonly root_peak_tokens: number;
+  readonly root_saturation_pct: number;
   readonly subagents_peak_tokens: number;
   readonly subagents_peak_role: AgentRole;
   readonly compactions: number;
@@ -278,7 +258,7 @@ export interface TicketComparisonRow {
   readonly files_changed: number;
   readonly tool_success_rate_pct: number;
   readonly context_health_status: ContextHealthStatus;
-  readonly orchestrator_saturation_pct: number;
+  readonly root_saturation_pct: number;
   readonly peak_context_tokens: number;
   readonly ticket_title: string;
   readonly started_at: string | null;
@@ -325,7 +305,7 @@ export type ComparisonSortField =
   | 'cache_hit_rate_pct'
   | 'tool_success_rate_pct'
   | 'lines_added'
-  | 'orchestrator_saturation_pct';
+  | 'root_saturation_pct';
 
 export type ComparisonSortOrder = 'asc' | 'desc';
 

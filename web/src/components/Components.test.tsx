@@ -632,8 +632,8 @@ describe('Presentation Components Boundary Tests', () => {
           contextHealth={{
             healthy_ceiling_tokens: 200000,
             status: 'HEALTHY',
-            orchestrator_peak_tokens: 50000,
-            orchestrator_saturation_pct: 25.0,
+            root_peak_tokens: 50000,
+            root_saturation_pct: 25.0,
             subagents_peak_tokens: 30000,
             subagents_peak_role: 'coder',
             compactions: 0,
@@ -653,7 +653,7 @@ describe('Presentation Components Boundary Tests', () => {
         screen.getByRole('button', { name: 'Information about Context Window Saturation' })
       ).toBeInTheDocument();
       expect(screen.getByRole('tooltip')).toHaveTextContent(
-        'Context window utilization of the orchestrator and subagents evaluated against the 200,000 token healthy operating ceiling.'
+        'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.'
       );
     });
 
@@ -663,8 +663,8 @@ describe('Presentation Components Boundary Tests', () => {
           contextHealth={{
             healthy_ceiling_tokens: 200000,
             status: 'HEALTHY',
-            orchestrator_peak_tokens: 10000,
-            orchestrator_saturation_pct: 5.0,
+            root_peak_tokens: 10000,
+            root_saturation_pct: 5.0,
             subagents_peak_tokens: 5000,
             subagents_peak_role: 'none',
             compactions: 0,
@@ -685,8 +685,8 @@ describe('Presentation Components Boundary Tests', () => {
           contextHealth={{
             healthy_ceiling_tokens: 200000,
             status: 'HEALTHY',
-            orchestrator_peak_tokens: 50000,
-            orchestrator_saturation_pct: 25.0,
+            root_peak_tokens: 50000,
+            root_saturation_pct: 25.0,
             subagents_peak_tokens: 180000,
             subagents_peak_role: 'advisor',
             compactions: 0,
@@ -715,8 +715,8 @@ describe('Presentation Components Boundary Tests', () => {
           contextHealth={{
             healthy_ceiling_tokens: 200000,
             status: 'CRITICAL',
-            orchestrator_peak_tokens: 210000,
-            orchestrator_saturation_pct: 105.0,
+            root_peak_tokens: 210000,
+            root_saturation_pct: 105.0,
             subagents_peak_tokens: 40000,
             subagents_peak_role: 'coder',
             compactions: 2,
@@ -736,8 +736,8 @@ describe('Presentation Components Boundary Tests', () => {
           contextHealth={{
             healthy_ceiling_tokens: 0,
             status: 'HEALTHY',
-            orchestrator_peak_tokens: 0,
-            orchestrator_saturation_pct: 0.0,
+            root_peak_tokens: 0,
+            root_saturation_pct: 0.0,
             subagents_peak_tokens: 0,
             subagents_peak_role: 'none',
             compactions: 0,
@@ -762,8 +762,8 @@ describe('Presentation Components Boundary Tests', () => {
           contextHealth={{
             healthy_ceiling_tokens: 200000,
             status: 'ELEVATED',
-            orchestrator_peak_tokens: 150000,
-            orchestrator_saturation_pct: 75.0,
+            root_peak_tokens: 150000,
+            root_saturation_pct: 75.0,
             subagents_peak_tokens: 20000,
             subagents_peak_role: 'coder',
             compactions: 1,

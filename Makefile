@@ -5,7 +5,6 @@ BINARY := $(BIN_DIR)/agentic-lens
 WEB_DIR := web
 BACKEND_DIR := backend
 PORT ?= 8085
-WORKSPACES ?= workspaces
 RELEASE_DIR ?= dist
 PLATFORMS ?= linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 
@@ -38,7 +37,7 @@ help:
 	@echo "  release-package  - Package release archives and generate SHA256SUMS"
 	@echo "  release-verify   - Verify release checksums and host binary execution"
 	@echo "  release-clean    - Remove release distribution artifacts"
-	@echo "  server           - Build and run HTTP server (PORT=$(PORT) WORKSPACES=$(WORKSPACES))"
+	@echo "  server           - Build and run HTTP server (PORT=$(PORT))"
 	@echo "  serve            - Alias for server target"
 	@echo "  clean            - Remove build and release artifacts"
 
@@ -92,7 +91,7 @@ build:
 	@chmod +x $(BINARY)
 
 server: build
-	./$(BINARY) server --port $(PORT) --workspaces $(WORKSPACES)
+	./$(BINARY) server --port $(PORT)
 
 serve: server
 

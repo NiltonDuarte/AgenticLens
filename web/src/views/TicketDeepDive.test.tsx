@@ -82,8 +82,8 @@ describe('TicketDeepDive View Component', () => {
         context_window_health: {
           healthy_ceiling_tokens: 200000,
           status: 'ELEVATED' as const,
-          orchestrator_peak_tokens: 165000,
-          orchestrator_saturation_pct: 82.5,
+          root_peak_tokens: 165000,
+          root_saturation_pct: 82.5,
           subagents_peak_tokens: 140000,
           subagents_peak_role: 'coder',
           compactions: 2,
@@ -124,8 +124,8 @@ describe('TicketDeepDive View Component', () => {
         context_window_health: {
           healthy_ceiling_tokens: 200000,
           status: 'CRITICAL' as const,
-          orchestrator_peak_tokens: 240000,
-          orchestrator_saturation_pct: 120.0,
+          root_peak_tokens: 240000,
+          root_saturation_pct: 120.0,
           subagents_peak_tokens: 220000,
           subagents_peak_role: 'coder',
           compactions: 5,
@@ -777,8 +777,8 @@ describe('TicketDeepDive View Component', () => {
         context_window_health: {
           healthy_ceiling_tokens: 200000,
           status: 'HEALTHY' as const,
-          orchestrator_peak_tokens: 60000,
-          orchestrator_saturation_pct: 30.0,
+          root_peak_tokens: 60000,
+          root_saturation_pct: 30.0,
           subagents_peak_tokens: 150000,
           subagents_peak_role: 'advisor',
           compactions: 0,

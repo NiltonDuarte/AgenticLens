@@ -1789,3 +1789,101 @@ func TestHydrateWorkspaceEvents_MultiSessionIsolationAndStreakReset(t *testing.T
 		t.Errorf("expected session B tool call to be completed, got %s", sessBTools[0].Status)
 	}
 }
+
+func TestHydrateWorkspaceEvents_FallbackRoleBehaviorForNamelessSessions(t *testing.T) {
+	dbPath := createTestDBFile(t)
+
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening rw db: %v", err)
+	}
+	defer rwDB.Close()
+
+	now := time.Now().UnixMilli()
+
+	// 1. Root session with NULL agent and NULL parent_id
+	// 2. Root session with whitespace agent ("   ") and NULL parent_id
+	// 3. Child session with NULL agent and non-null parent_id
+	// 4. Child session with whitespace agent (" \t ") and non-null parent_id
+	_, err = rwDB.Exec(`
+		INSERT INTO session (id, title, agent, parent_id, model, time_created, time_updated) VALUES
+		('s_root_null', 'Root Null Agent', NULL, NULL, 'claude-3-7-sonnet', ?, ?),
+		('s_root_ws', 'Root Whitespace Agent', '   ', NULL, 'claude-3-7-sonnet', ?, ?),
+		('s_child_null', 'Child Null Agent', NULL, 's_root_null', 'gemini-3.8-flash', ?, ?),
+		('s_child_ws', 'Child Whitespace Agent', '   ', 's_root_null', 'gemini-3.8-flash', ?, ?)
+	`, now-10000, now-9000, now-8000, now-7000, now-6000, now-5000, now-4000, now-3000)
+	if err != nil {
+		t.Fatalf("seeding sessions: %v", err)
+	}
+
+	// Insert messages and tool parts for each session
+	sessions := []string{"s_root_null", "s_root_ws", "s_child_null", "s_child_ws"}
+	for i, sid := range sessions {
+		msgID := fmt.Sprintf("m_fallback_%d", i)
+		partID := fmt.Sprintf("p_fallback_%d", i)
+		tMsg := now - int64(1000*(10-i))
+
+		_, err = rwDB.Exec(`
+			INSERT INTO message (id, session_id, time_created, time_updated, data)
+			VALUES (?, ?, ?, ?, '{"role":"assistant"}')
+		`, msgID, sid, tMsg, tMsg)
+		if err != nil {
+			t.Fatalf("seeding message for %s: %v", sid, err)
+		}
+
+		_, err = rwDB.Exec(`
+			INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+			VALUES (?, ?, ?, ?, ?, '{"type":"tool","tool":"read","state":{"status":"completed","output":"test content"}}')
+		`, partID, sid, msgID, tMsg+10, tMsg+10)
+		if err != nil {
+			t.Fatalf("seeding part for %s: %v", sid, err)
+		}
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 2000)
+	if err != nil {
+		t.Fatalf("OpenReadOnlyHook failed: %v", err)
+	}
+	defer hook.Close()
+
+	service := live.NewLiveService(hook, testProjectConfig())
+	defer service.Close()
+
+	ctx := context.Background()
+	ledger := domain.AgenticMetricsLedger{
+		Facts: domain.AgenticFactLedger{
+			Invocations: []domain.InvocationFact{
+				{ID: "s_root_null"},
+				{ID: "s_root_ws"},
+				{ID: "s_child_null"},
+				{ID: "s_child_ws"},
+			},
+		},
+	}
+
+	resp, err := service.HydrateWorkspaceEvents(ctx, "NAMELESS-1", ledger)
+	if err != nil {
+		t.Fatalf("HydrateWorkspaceEvents failed: %v", err)
+	}
+
+	sessionRoles := make(map[string]domain.AgentRole)
+	for _, ev := range resp.Events {
+		sessionRoles[ev.SessionID] = ev.Role
+	}
+
+	// Root nameless sessions must resolve to RoleRootAgent ("RootAgent")
+	if r, ok := sessionRoles["s_root_null"]; !ok || r != domain.RoleRootAgent {
+		t.Errorf("s_root_null: expected %q, got %q (found=%v)", domain.RoleRootAgent, r, ok)
+	}
+	if r, ok := sessionRoles["s_root_ws"]; !ok || r != domain.RoleRootAgent {
+		t.Errorf("s_root_ws: expected %q, got %q (found=%v)", domain.RoleRootAgent, r, ok)
+	}
+
+	// Child nameless sessions must resolve to RoleUnassignedSubAgent ("UnassignedSubAgent")
+	if r, ok := sessionRoles["s_child_null"]; !ok || r != domain.RoleUnassignedSubAgent {
+		t.Errorf("s_child_null: expected %q, got %q (found=%v)", domain.RoleUnassignedSubAgent, r, ok)
+	}
+	if r, ok := sessionRoles["s_child_ws"]; !ok || r != domain.RoleUnassignedSubAgent {
+		t.Errorf("s_child_ws: expected %q, got %q (found=%v)", domain.RoleUnassignedSubAgent, r, ok)
+	}
+}

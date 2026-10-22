@@ -16,12 +16,12 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
   tooltip,
 }) => {
   const ceiling = healthyCeilingTokens > 0 ? healthyCeilingTokens : HEALTHY_CEILING_TOKENS;
-  const orchTokens = contextHealth.orchestrator_peak_tokens;
-  const satPct = contextHealth.orchestrator_saturation_pct;
+  const rootTokens = contextHealth.root_peak_tokens;
+  const satPct = contextHealth.root_saturation_pct;
   const status = contextHealth.status;
 
-  const maxScaleTokens = Math.max(ceiling, orchTokens, contextHealth.subagents_peak_tokens);
-  const fillPct = maxScaleTokens > 0 ? Math.min(100, (orchTokens / maxScaleTokens) * 100) : 0;
+  const maxScaleTokens = Math.max(ceiling, rootTokens, contextHealth.subagents_peak_tokens);
+  const fillPct = maxScaleTokens > 0 ? Math.min(100, (rootTokens / maxScaleTokens) * 100) : 0;
   const ceilingMarkerPct = maxScaleTokens > 0 ? (ceiling / maxScaleTokens) * 100 : 100;
 
   const statusColor = getHealthStatusColor(status);
@@ -37,7 +37,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
           <InfoTooltip
             content={
               tooltip ??
-              'Context window utilization of the orchestrator and subagents evaluated against the 200,000 token healthy operating ceiling.'
+              'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.'
             }
             ariaLabel="Information about Context Window Saturation"
           />
@@ -51,8 +51,8 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
 
       <div className="saturation-metric-row">
         <div className="saturation-metric">
-          <span className="metric-label">Orchestrator Peak</span>
-          <span className="metric-val">{formatTokensK(orchTokens)} tokens</span>
+          <span className="metric-label">Root Agent Peak</span>
+          <span className="metric-val">{formatTokensK(rootTokens)} tokens</span>
           <span className="metric-sub">({satPct.toFixed(1)}% of ceiling)</span>
         </div>
         <div className="saturation-metric">

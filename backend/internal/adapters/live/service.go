@@ -722,12 +722,12 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 				if agent.Valid && strings.TrimSpace(agent.String) != "" {
 					sessionRoleMap[sid] = s.cfg.RoleMappings.ResolveRole(strings.TrimSpace(agent.String))
 				} else if !parentID.Valid || strings.TrimSpace(parentID.String) == "" {
-					sessionRoleMap[sid] = domain.RoleOrchestrator
+					sessionRoleMap[sid] = domain.RoleRootAgent
 				} else {
-					sessionRoleMap[sid] = domain.RoleUnassigned
+					sessionRoleMap[sid] = domain.RoleUnassignedSubAgent
 				}
 			} else {
-				sessionRoleMap[sid] = domain.RoleCoder
+				sessionRoleMap[sid] = domain.RoleUnassignedSubAgent
 			}
 		}
 	}
@@ -762,7 +762,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	for _, rm := range rawMsgs {
 		role := sessionRoleMap[rm.SessionID]
 		if role == "" {
-			role = domain.RoleCoder
+			role = domain.RoleUnassignedSubAgent
 		}
 
 		var msgRole string
@@ -895,7 +895,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	for sid, parts := range orphanParts {
 		role := sessionRoleMap[sid]
 		if role == "" {
-			role = domain.RoleCoder
+			role = domain.RoleUnassignedSubAgent
 		}
 		turn := sessionTurns[sid]
 		if turn == 0 {

@@ -140,14 +140,14 @@ type ToolExecutionHealth struct {
 
 // ContextWindowHealth captures context saturation, ceiling thresholds, and peak token tracking.
 type ContextWindowHealth struct {
-	HealthyCeilingTokens      int64               `json:"healthy_ceiling_tokens"`
-	Status                    ContextHealthStatus `json:"status"`
-	OrchestratorPeakTokens    int64               `json:"orchestrator_peak_tokens"`
-	OrchestratorSaturationPct float64             `json:"orchestrator_saturation_pct"`
-	SubagentsPeakTokens       int64               `json:"subagents_peak_tokens"`
-	SubagentsPeakRole         AgentRole           `json:"subagents_peak_role"`
-	Compactions               int64               `json:"compactions"`
-	PeakByRole                map[AgentRole]int64 `json:"peak_by_role"`
+	HealthyCeilingTokens int64               `json:"healthy_ceiling_tokens"`
+	Status               ContextHealthStatus `json:"status"`
+	RootPeakTokens       int64               `json:"root_peak_tokens"`
+	RootSaturationPct    float64             `json:"root_saturation_pct"`
+	SubagentsPeakTokens  int64               `json:"subagents_peak_tokens"`
+	SubagentsPeakRole    AgentRole           `json:"subagents_peak_role"`
+	Compactions          int64               `json:"compactions"`
+	PeakByRole           map[AgentRole]int64 `json:"peak_by_role"`
 }
 
 // WorkflowEfficiency aggregates SDLC duration, code delivery, and operational health metrics.
@@ -306,7 +306,7 @@ type TicketComparisonRow struct {
 	FilesChanged              int64                   `json:"files_changed"`
 	ToolSuccessRatePct        float64                 `json:"tool_success_rate_pct"`
 	ContextHealthStatus       ContextHealthStatus     `json:"context_health_status"`
-	OrchestratorSaturationPct float64                 `json:"orchestrator_saturation_pct"`
+	RootSaturationPct         float64                 `json:"root_saturation_pct"`
 	PeakContextTokens         int64                   `json:"peak_context_tokens"`
 	TicketTitle               string                  `json:"ticket_title"`
 	TicketType                *ConventionalTicketType `json:"ticket_type,omitempty"`

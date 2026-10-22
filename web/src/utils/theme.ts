@@ -53,14 +53,6 @@ export function getHealthStatusColor(status: string): string {
   }
 }
 
-export const CANONICAL_ROLE_COLORS: Readonly<Record<string, string>> = {
-  orchestrator: THEME_COLORS.purple,
-  planner: THEME_COLORS.cyan,
-  coder: THEME_COLORS.green,
-  tester: THEME_COLORS.yellow,
-  reviewer: THEME_COLORS.blue,
-} as const;
-
 export const DYNAMIC_PALETTE: readonly string[] = [
   '#ec4899',
   '#14b8a6',
@@ -91,11 +83,7 @@ export function hashStringToColor(str: string): string {
 }
 
 export function getRoleColor(role: string): string {
-  const normalized = role.trim().toLowerCase();
-  if (normalized in CANONICAL_ROLE_COLORS) {
-    return CANONICAL_ROLE_COLORS[normalized]!;
-  }
-  return hashStringToColor(normalized);
+  return hashStringToColor(role);
 }
 
 export function getModelColor(model: string): string {

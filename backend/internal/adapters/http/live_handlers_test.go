@@ -90,7 +90,7 @@ func TestLiveSessionsHandler_Success(t *testing.T) {
 				{
 					ID:               "ses_root_1",
 					Agent:            "orchestrator",
-					Role:             domain.RoleOrchestrator,
+					Role:             domain.AgentRole("orchestrator"),
 					Model:            "gemini-3.8-flash",
 					Title:            "Task AL-17: implement live telemetry",
 					TimeCreated:      "2026-10-19T10:00:00Z",
@@ -461,7 +461,7 @@ func TestLiveSessionsHandler_AnomaliesField(t *testing.T) {
 				{
 					ID:                  "ses_alert_1",
 					Agent:               "coder",
-					Role:                domain.RoleCoder,
+					Role:                domain.AgentRole("coder"),
 					Model:               "gemini-3.8-flash",
 					Title:               "Test Anomaly",
 					TimeCreated:         "2026-10-19T10:00:00Z",

@@ -422,27 +422,27 @@ func TestOrderRoles_GenericAgentRoleType(t *testing.T) {
 	t.Parallel()
 
 	input := []domain.AgentRole{
-		domain.RoleTester,
+		domain.AgentRole("tester"),
 		domain.AgentRole("architect"),
-		domain.RoleCoder,
+		domain.AgentRole("coder"),
 		domain.AgentRole("security-auditor"),
-		domain.RolePlanner,
-		domain.RoleOrchestrator,
+		domain.AgentRole("planner"),
+		domain.AgentRole("orchestrator"),
 	}
 
 	customOrder := []domain.AgentRole{
-		domain.RoleOrchestrator,
-		domain.RolePlanner,
-		domain.RoleCoder,
-		domain.RoleTester,
+		domain.AgentRole("orchestrator"),
+		domain.AgentRole("planner"),
+		domain.AgentRole("coder"),
+		domain.AgentRole("tester"),
 	}
 
 	ordered := domain.OrderRoles(input, customOrder)
 	expected := []domain.AgentRole{
-		domain.RoleOrchestrator,
-		domain.RolePlanner,
-		domain.RoleCoder,
-		domain.RoleTester,
+		domain.AgentRole("orchestrator"),
+		domain.AgentRole("planner"),
+		domain.AgentRole("coder"),
+		domain.AgentRole("tester"),
 		domain.AgentRole("architect"),
 		domain.AgentRole("security-auditor"),
 	}
@@ -465,5 +465,16 @@ func TestOrderRoles_GenericAgentRoleType(t *testing.T) {
 		if subOrdered[i] != expected[i] {
 			t.Errorf("subagent at index %d: expected %s, got %s", i, expected[i], subOrdered[i])
 		}
+	}
+}
+
+func TestAgentRole_FallbackConstants(t *testing.T) {
+	t.Parallel()
+
+	if domain.RoleRootAgent != "RootAgent" {
+		t.Errorf("expected RoleRootAgent to be 'RootAgent', got %q", domain.RoleRootAgent)
+	}
+	if domain.RoleUnassignedSubAgent != "UnassignedSubAgent" {
+		t.Errorf("expected RoleUnassignedSubAgent to be 'UnassignedSubAgent', got %q", domain.RoleUnassignedSubAgent)
 	}
 }

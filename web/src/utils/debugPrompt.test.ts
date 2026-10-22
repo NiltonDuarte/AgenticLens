@@ -14,13 +14,13 @@ import {
 
 describe('debugPrompt Utility Module', () => {
   describe('stripInternalIdentifiers', () => {
-    it('strips ticket identifiers such as AL-20, FIX-3, GEN-42, PO-2', () => {
-      const input = 'Resolving issue on ticket AL-20 and fixing bug in FIX-3 for GEN-42 and PO-2.';
+    it('strips ticket identifiers across arbitrary project prefixes (e.g. PROJ-123, ISSUE-42, AL-20, FIX-3)', () => {
+      const input = 'Resolving issue on ticket PROJ-123 and fixing bug in ISSUE-42 for AL-20 and FIX-3.';
       const output = stripInternalIdentifiers(input);
+      expect(output).not.toContain('PROJ-123');
+      expect(output).not.toContain('ISSUE-42');
       expect(output).not.toContain('AL-20');
       expect(output).not.toContain('FIX-3');
-      expect(output).not.toContain('GEN-42');
-      expect(output).not.toContain('PO-2');
       expect(output).not.toContain('ticket');
     });
 

@@ -83,12 +83,8 @@ const (
 type AgentRole string
 
 const (
-	RoleOrchestrator AgentRole = "orchestrator"
-	RolePlanner      AgentRole = "planner"
-	RoleCoder        AgentRole = "coder"
-	RoleTester       AgentRole = "tester"
-	RoleReviewer     AgentRole = "reviewer"
-	RoleUnassigned   AgentRole = "unassigned"
+	RoleRootAgent          AgentRole = "RootAgent"
+	RoleUnassignedSubAgent AgentRole = "UnassignedSubAgent"
 )
 
 // TimeGranularity defines aggregation time windows for progression charts.

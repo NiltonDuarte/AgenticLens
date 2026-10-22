@@ -47,11 +47,21 @@ Extends and unifies anomaly detection, metric consistency, and debug actions acr
    - Updated `LivePartFact.Severity` to `FailureSeverity`, `ClassifyToolFailure` to return `(bool, FailureSeverity, *string)`, and typed `LiveAnomalySeverity`. Exported `FailureSeverity` in TypeScript.
    - Replaced raw `*string` with `*domain.ConventionalTicketType` in `AgenticFactLedger`, `AgenticMetricsLedger`, and `TicketComparisonRow`. Updated TypeScript `StandardTicketType` and `TicketType = StandardTicketType | (string & {})`.
 
+7. **Platform Decoupling and Removal of Repository Role Assumptions**:
+   - Eliminated repository-specific role constants (`RoleOrchestrator`, `RolePlanner`, `RoleCoder`, `RoleTester`, `RoleReviewer`, `RoleUnassigned`) from Go backend domain core (`backend/internal/domain/enums.go`).
+   - Declared generic platform fallback constants: `RoleRootAgent AgentRole = "RootAgent"` for nameless root sessions and `RoleUnassignedSubAgent AgentRole = "UnassignedSubAgent"` for nameless subagents and unmapped sessions.
+   - Updated live adapters (`service.go`, `extractor.go`, `aggregations.go`, `config.go`) to use platform fallbacks.
+   - Eliminated `CanonicalAgentRole`, `CANONICAL_ROLE_ORDER`, `SUBAGENT_ROLE_ORDER`, and `isCanonicalRole` from TypeScript contracts (`web/src/types/telemetry.ts` and `web/src/domain/types.ts`), redefining `type AgentRole = string`.
+   - Clean break renamed root context metrics from `orchestrator_peak_tokens` / `orchestrator_saturation_pct` to `root_peak_tokens` / `root_saturation_pct` across Go structs, JSON tags, TypeScript contracts, and UI components.
+   - Decoupled theme role colors in `web/src/utils/theme.ts` via deterministic hash-to-palette algorithm (`hashStringToColor`), eliminating hardcoded agent role styling.
+   - Generalized ticket stripping regex in `web/src/utils/debugPrompt.ts` to `[A-Z]{2,10}-\d+`, eliminating hardcoded repository ticket prefixes (`AL`, `FIX`, `GEN`, `PO`).
+   - Decoupled CLI formatter output string to report `Root agent peak %s tokens`.
+
 ## Testing & Verification
 - `go test -race -count=1 ./...` (All Go backend tests passed cleanly)
 - `go vet ./...` (Zero warnings)
 - `npm run typecheck` (Zero TypeScript errors)
 - `npm run lint` (Zero ESLint warnings/errors)
-- `npm test` (All 731 frontend tests passed across 30 test suites)
+- `npm test` (All 728 frontend tests passed across 30 test suites)
 - `make build` (Production binary build and asset embedding clean)
 - Zero emojis across all modified code, tests, and markdown artifacts.

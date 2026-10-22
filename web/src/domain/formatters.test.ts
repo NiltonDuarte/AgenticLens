@@ -26,17 +26,11 @@ import {
   formatLinesCompact,
 } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
-import {
-  CANONICAL_ROLE_ORDER,
-  SUBAGENT_ROLE_ORDER,
-  isCanonicalRole,
-} from './types';
 import type {
   AgenticMetricsLedger,
   ContextHealthStatus,
   ConventionalTicketType,
   TicketComparisonRow,
-  CanonicalAgentRole,
   AgentRole,
   StandardTicketType,
   TicketType,
@@ -252,8 +246,8 @@ describe('Domain Pure Formatters', () => {
           context_window_health: {
             healthy_ceiling_tokens: 200000,
             status: 'HEALTHY' as ContextHealthStatus,
-            orchestrator_peak_tokens: 0,
-            orchestrator_saturation_pct: 0,
+            root_peak_tokens: 0,
+            root_saturation_pct: 0,
             subagents_peak_tokens: 0,
             subagents_peak_role: 'none',
             compactions: 0,
@@ -349,8 +343,8 @@ describe('Domain Pure Formatters', () => {
           context_window_health: {
             healthy_ceiling_tokens: 200000,
             status: 'HEALTHY' as ContextHealthStatus,
-            orchestrator_peak_tokens: 0,
-            orchestrator_saturation_pct: 0,
+            root_peak_tokens: 0,
+            root_saturation_pct: 0,
             subagents_peak_tokens: 0,
             subagents_peak_role: 'none',
             compactions: 0,
@@ -895,7 +889,7 @@ describe('Domain Pure Formatters', () => {
         files_changed: 1,
         tool_success_rate_pct: 100,
         context_health_status: 'HEALTHY',
-        orchestrator_saturation_pct: 10,
+        root_saturation_pct: 10,
         peak_context_tokens: 1000,
         ticket_title: 'Title 1',
         started_at: '2026-10-15T10:00:00Z',
@@ -918,7 +912,7 @@ describe('Domain Pure Formatters', () => {
         files_changed: 1,
         tool_success_rate_pct: 100,
         context_health_status: 'HEALTHY',
-        orchestrator_saturation_pct: 10,
+        root_saturation_pct: 10,
         peak_context_tokens: 1000,
         ticket_title: 'Title 2',
         started_at: '2026-10-16T10:00:00Z',
@@ -941,7 +935,7 @@ describe('Domain Pure Formatters', () => {
         files_changed: 1,
         tool_success_rate_pct: 100,
         context_health_status: 'HEALTHY',
-        orchestrator_saturation_pct: 10,
+        root_saturation_pct: 10,
         peak_context_tokens: 1000,
         ticket_title: 'Title 3',
         started_at: '2026-10-17T10:00:00Z',
@@ -964,7 +958,7 @@ describe('Domain Pure Formatters', () => {
         files_changed: 1,
         tool_success_rate_pct: 100,
         context_health_status: 'HEALTHY',
-        orchestrator_saturation_pct: 10,
+        root_saturation_pct: 10,
         peak_context_tokens: 1000,
         ticket_title: 'Title 4',
         started_at: '2026-10-18T10:00:00Z',
@@ -1155,50 +1149,11 @@ describe('Domain Pure Formatters', () => {
 
   describe('Domain Enums and Primitive Obsession Remediation', () => {
     describe('AgentRole Autocomplete and Custom Persona Extension', () => {
-      it('contains all 5 canonical roles in ordered constants', () => {
-        const canonical: readonly CanonicalAgentRole[] = [
-          'orchestrator',
-          'planner',
-          'coder',
-          'tester',
-          'reviewer',
-        ];
-        expect(CANONICAL_ROLE_ORDER).toEqual(canonical);
-
-        const subagents: readonly CanonicalAgentRole[] = [
-          'planner',
-          'coder',
-          'tester',
-          'reviewer',
-        ];
-        expect(SUBAGENT_ROLE_ORDER).toEqual(subagents);
-      });
-
-      it('validates canonical roles with isCanonicalRole type predicate', () => {
-        expect(isCanonicalRole('orchestrator')).toBe(true);
-        expect(isCanonicalRole('planner')).toBe(true);
-        expect(isCanonicalRole('coder')).toBe(true);
-        expect(isCanonicalRole('tester')).toBe(true);
-        expect(isCanonicalRole('reviewer')).toBe(true);
-
-        // Case-insensitivity and whitespace trimming
-        expect(isCanonicalRole('  Orchestrator  ')).toBe(true);
-        expect(isCanonicalRole('CODER')).toBe(true);
-        expect(isCanonicalRole('\tplanner\n')).toBe(true);
-
-        // Custom subagent roles return false but remain valid AgentRole strings
-        expect(isCanonicalRole('architect')).toBe(false);
-        expect(isCanonicalRole('researcher')).toBe(false);
-        expect(isCanonicalRole('lead-qa')).toBe(false);
-        expect(isCanonicalRole('unassigned')).toBe(false);
-        expect(isCanonicalRole('')).toBe(false);
-      });
-
-      it('accepts both canonical roles and custom subagent strings under AgentRole', () => {
-        const canonicalRole: AgentRole = 'coder';
+      it('accepts arbitrary role strings under AgentRole', () => {
+        const coderRole: AgentRole = 'coder';
         const customRole: AgentRole = 'architect';
         const dynamicRoles: readonly AgentRole[] = [
-          canonicalRole,
+          coderRole,
           customRole,
           'security-auditor',
           'orchestrator',

@@ -497,22 +497,22 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 	mappings := testProjectConfig().RoleMappings
 
 	// Default role mappings
-	if mappings.ResolveRole("planner") != domain.RolePlanner {
+	if mappings.ResolveRole("planner") != domain.AgentRole("planner") {
 		t.Errorf("expected RolePlanner, got %s", mappings.ResolveRole("planner"))
 	}
-	if mappings.ResolveRole("coder") != domain.RoleCoder {
+	if mappings.ResolveRole("coder") != domain.AgentRole("coder") {
 		t.Errorf("expected RoleCoder, got %s", mappings.ResolveRole("coder"))
 	}
-	if mappings.ResolveRole("tester") != domain.RoleTester {
+	if mappings.ResolveRole("tester") != domain.AgentRole("tester") {
 		t.Errorf("expected RoleTester, got %s", mappings.ResolveRole("tester"))
 	}
-	if mappings.ResolveRole("reviewer") != domain.RoleReviewer {
+	if mappings.ResolveRole("reviewer") != domain.AgentRole("reviewer") {
 		t.Errorf("expected RoleReviewer, got %s", mappings.ResolveRole("reviewer"))
 	}
-	if mappings.ResolveRole("orchestrator") != domain.RoleOrchestrator {
+	if mappings.ResolveRole("orchestrator") != domain.AgentRole("orchestrator") {
 		t.Errorf("expected RoleOrchestrator, got %s", mappings.ResolveRole("orchestrator"))
 	}
-	if mappings.ResolveRole("build") != domain.RoleOrchestrator {
+	if mappings.ResolveRole("build") != domain.AgentRole("orchestrator") {
 		t.Errorf("expected RoleOrchestrator for build, got %s", mappings.ResolveRole("build"))
 	}
 	if mappings.ResolveRole("root") != domain.AgentRole("root") {
@@ -520,11 +520,11 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 	}
 
 	// Empty string safety
-	if mappings.ResolveRole("") != domain.RoleUnassigned {
-		t.Errorf("expected RoleUnassigned for empty string, got %s", mappings.ResolveRole(""))
+	if mappings.ResolveRole("") != domain.RoleUnassignedSubAgent {
+		t.Errorf("expected RoleUnassignedSubAgent for empty string, got %s", mappings.ResolveRole(""))
 	}
-	if mappings.ResolveRole("   ") != domain.RoleUnassigned {
-		t.Errorf("expected RoleUnassigned for whitespace, got %s", mappings.ResolveRole("   "))
+	if mappings.ResolveRole("   ") != domain.RoleUnassignedSubAgent {
+		t.Errorf("expected RoleUnassignedSubAgent for whitespace, got %s", mappings.ResolveRole("   "))
 	}
 
 	// Custom mapping
@@ -532,10 +532,10 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 		"agent-qa": "tester",
 		"architect": "planner",
 	}
-	if customMappings.ResolveRole("agent-qa") != domain.RoleTester {
+	if customMappings.ResolveRole("agent-qa") != domain.AgentRole("tester") {
 		t.Errorf("expected RoleTester for agent-qa, got %s", customMappings.ResolveRole("agent-qa"))
 	}
-	if customMappings.ResolveRole("architect") != domain.RolePlanner {
+	if customMappings.ResolveRole("architect") != domain.AgentRole("planner") {
 		t.Errorf("expected RolePlanner for architect, got %s", customMappings.ResolveRole("architect"))
 	}
 
@@ -546,7 +546,7 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 
 	// Nil mappings safety
 	var nilMappings domain.RoleMappings
-	if nilMappings.ResolveRole("coder") != domain.RoleCoder {
+	if nilMappings.ResolveRole("coder") != domain.AgentRole("coder") {
 		t.Errorf("expected RoleCoder from nil mappings, got %s", nilMappings.ResolveRole("coder"))
 	}
 }
@@ -835,23 +835,23 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 			input    string
 			expected domain.AgentRole
 		}{
-			{"PLANNER", domain.RolePlanner},
-			{"Planner", domain.RolePlanner},
-			{"  planner  ", domain.RolePlanner},
-			{"\tplanner\n", domain.RolePlanner},
-			{"CODER", domain.RoleCoder},
-			{"Coder", domain.RoleCoder},
-			{"  coder  ", domain.RoleCoder},
-			{"TESTER", domain.RoleTester},
-			{"Tester", domain.RoleTester},
-			{"tEsTeR", domain.RoleTester},
-			{"REVIEWER", domain.RoleReviewer},
-			{"Reviewer", domain.RoleReviewer},
-			{"ORCHESTRATOR", domain.RoleOrchestrator},
-			{"Orchestrator", domain.RoleOrchestrator},
-			{"BUILD", domain.RoleOrchestrator},
+			{"PLANNER", domain.AgentRole("planner")},
+			{"Planner", domain.AgentRole("planner")},
+			{"  planner  ", domain.AgentRole("planner")},
+			{"\tplanner\n", domain.AgentRole("planner")},
+			{"CODER", domain.AgentRole("coder")},
+			{"Coder", domain.AgentRole("coder")},
+			{"  coder  ", domain.AgentRole("coder")},
+			{"TESTER", domain.AgentRole("tester")},
+			{"Tester", domain.AgentRole("tester")},
+			{"tEsTeR", domain.AgentRole("tester")},
+			{"REVIEWER", domain.AgentRole("reviewer")},
+			{"Reviewer", domain.AgentRole("reviewer")},
+			{"ORCHESTRATOR", domain.AgentRole("orchestrator")},
+			{"Orchestrator", domain.AgentRole("orchestrator")},
+			{"BUILD", domain.AgentRole("orchestrator")},
 			{"ROOT", domain.AgentRole("root")},
-			{"  build  ", domain.RoleOrchestrator},
+			{"  build  ", domain.AgentRole("orchestrator")},
 			{"  root  ", domain.AgentRole("root")},
 		}
 
@@ -869,8 +869,8 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 		emptyInputs := []string{"", " ", "   ", "\t", "\n", "\r\n"}
 		for _, input := range emptyInputs {
 			got := mappings.ResolveRole(input)
-			if got != domain.RoleUnassigned {
-				t.Errorf("ResolveRole(%q) = %s, expected RoleUnassigned", input, got)
+			if got != domain.RoleUnassignedSubAgent {
+				t.Errorf("ResolveRole(%q) = %s, expected RoleUnassignedSubAgent", input, got)
 			}
 		}
 	})
@@ -885,13 +885,13 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 		if custom.ResolveRole("coder") != domain.AgentRole("custom-developer") {
 			t.Errorf("expected custom-developer, got %s", custom.ResolveRole("coder"))
 		}
-		if custom.ResolveRole("agent-qa") != domain.RoleTester {
+		if custom.ResolveRole("agent-qa") != domain.AgentRole("tester") {
 			t.Errorf("expected RoleTester for agent-qa, got %s", custom.ResolveRole("agent-qa"))
 		}
-		if custom.ResolveRole("AGENT-QA") != domain.RoleTester {
+		if custom.ResolveRole("AGENT-QA") != domain.AgentRole("tester") {
 			t.Errorf("expected RoleTester for AGENT-QA, got %s", custom.ResolveRole("AGENT-QA"))
 		}
-		if custom.ResolveRole("automation-bot") != domain.RoleReviewer {
+		if custom.ResolveRole("automation-bot") != domain.AgentRole("reviewer") {
 			t.Errorf("expected RoleReviewer for automation-bot, got %s", custom.ResolveRole("automation-bot"))
 		}
 		if custom.ResolveRole("unknown-persona") != domain.AgentRole("unknown-persona") {
@@ -904,25 +904,25 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("nil and empty role mappings resilience", func(t *testing.T) {
 		var nilMap domain.RoleMappings
-		if nilMap.ResolveRole("planner") != domain.RolePlanner {
+		if nilMap.ResolveRole("planner") != domain.AgentRole("planner") {
 			t.Errorf("expected RolePlanner, got %s", nilMap.ResolveRole("planner"))
 		}
-		if nilMap.ResolveRole("coder") != domain.RoleCoder {
+		if nilMap.ResolveRole("coder") != domain.AgentRole("coder") {
 			t.Errorf("expected RoleCoder, got %s", nilMap.ResolveRole("coder"))
 		}
-		if nilMap.ResolveRole("") != domain.RoleUnassigned {
-			t.Errorf("expected RoleUnassigned for empty string, got %s", nilMap.ResolveRole(""))
+		if nilMap.ResolveRole("") != domain.RoleUnassignedSubAgent {
+			t.Errorf("expected RoleUnassignedSubAgent for empty string, got %s", nilMap.ResolveRole(""))
 		}
 		if nilMap.ResolveRole("arbitrary") != domain.AgentRole("arbitrary") {
 			t.Errorf("expected arbitrary cast, got %s", nilMap.ResolveRole("arbitrary"))
 		}
 
 		emptyMap := domain.RoleMappings{}
-		if emptyMap.ResolveRole("reviewer") != domain.RoleReviewer {
+		if emptyMap.ResolveRole("reviewer") != domain.AgentRole("reviewer") {
 			t.Errorf("expected RoleReviewer, got %s", emptyMap.ResolveRole("reviewer"))
 		}
-		if emptyMap.ResolveRole("") != domain.RoleUnassigned {
-			t.Errorf("expected RoleUnassigned for empty string, got %s", emptyMap.ResolveRole(""))
+		if emptyMap.ResolveRole("") != domain.RoleUnassignedSubAgent {
+			t.Errorf("expected RoleUnassignedSubAgent for empty string, got %s", emptyMap.ResolveRole(""))
 		}
 	})
 }
@@ -1240,7 +1240,7 @@ func TestRoleMappings_ResolveRole_AdversarialUnmappedAndWhitespace(t *testing.T)
 		}
 	})
 
-	t.Run("empty and whitespace variations across mappings instances resolve to RoleUnassigned", func(t *testing.T) {
+	t.Run("empty and whitespace variations across mappings instances resolve to RoleUnassignedSubAgent", func(t *testing.T) {
 		t.Parallel()
 
 		whitespaceInputs := []string{
@@ -1268,8 +1268,8 @@ func TestRoleMappings_ResolveRole_AdversarialUnmappedAndWhitespace(t *testing.T)
 		for _, mi := range mappingInstances {
 			for _, input := range whitespaceInputs {
 				got := mi.mappings.ResolveRole(input)
-				if got != domain.RoleUnassigned {
-					t.Errorf("%s: ResolveRole(%q) = %q, expected RoleUnassigned (%q)", mi.name, input, got, domain.RoleUnassigned)
+				if got != domain.RoleUnassignedSubAgent {
+					t.Errorf("%s: ResolveRole(%q) = %q, expected RoleUnassignedSubAgent (%q)", mi.name, input, got, domain.RoleUnassignedSubAgent)
 				}
 			}
 		}
@@ -1302,22 +1302,22 @@ func TestRoleMappings_ResolveRole_AdversarialUnmappedAndWhitespace(t *testing.T)
 			"empty-target": "   ",
 		}
 
-		if got := custom.ResolveRole("architect"); got != domain.RolePlanner {
+		if got := custom.ResolveRole("architect"); got != domain.AgentRole("planner") {
 			t.Errorf("expected RolePlanner for architect, got %q", got)
 		}
-		if got := custom.ResolveRole("ARCHITECT"); got != domain.RolePlanner {
+		if got := custom.ResolveRole("ARCHITECT"); got != domain.AgentRole("planner") {
 			t.Errorf("expected RolePlanner for ARCHITECT, got %q", got)
 		}
-		if got := custom.ResolveRole("  architect  "); got != domain.RolePlanner {
+		if got := custom.ResolveRole("  architect  "); got != domain.AgentRole("planner") {
 			t.Errorf("expected RolePlanner for '  architect  ', got %q", got)
 		}
-		if got := custom.ResolveRole("lead-qa"); got != domain.RoleTester {
+		if got := custom.ResolveRole("lead-qa"); got != domain.AgentRole("tester") {
 			t.Errorf("expected RoleTester for lead-qa, got %q", got)
 		}
-		if got := custom.ResolveRole("LEAD-QA"); got != domain.RoleTester {
+		if got := custom.ResolveRole("LEAD-QA"); got != domain.AgentRole("tester") {
 			t.Errorf("expected RoleTester for LEAD-QA, got %q", got)
 		}
-		if got := custom.ResolveRole("reviewer-bot"); got != domain.RoleReviewer {
+		if got := custom.ResolveRole("reviewer-bot"); got != domain.AgentRole("reviewer") {
 			t.Errorf("expected RoleReviewer for reviewer-bot, got %q", got)
 		}
 

@@ -79,6 +79,25 @@
     - Updated wire DTOs (`schemas.go`) with clean conversion to/from `domain.ConventionalTicketType` and generic `ptrEqual[T comparable]` migration check.
     - Updated TypeScript `StandardTicketType` and `TicketType = StandardTicketType | (string & {})`.
 
+### Iteration 06
+- **Platform Decoupling and Removal of Repository Role Assumptions**:
+  - Eliminated repository-specific role constants (`RoleOrchestrator`, `RolePlanner`, `RoleCoder`, `RoleTester`, `RoleReviewer`, `RoleUnassigned`) from Go backend domain core (`backend/internal/domain/enums.go`).
+  - Introduced generic platform fallback constants: `RoleRootAgent AgentRole = "RootAgent"` for nameless root sessions and `RoleUnassignedSubAgent AgentRole = "UnassignedSubAgent"` for nameless subagents and unmapped sessions.
+  - Updated adapters (`backend/internal/adapters/live/service.go`, `backend/internal/adapters/opencode/extractor.go`, `backend/internal/domain/config.go`, `backend/internal/domain/aggregations.go`) to use platform fallbacks.
+  - Eliminated `CanonicalAgentRole`, `CANONICAL_ROLE_ORDER`, `SUBAGENT_ROLE_ORDER`, and `isCanonicalRole` from TypeScript contracts (`web/src/types/telemetry.ts` and `web/src/domain/types.ts`), redefining `type AgentRole = string`.
+- **Clean Break Renaming of Root Context Health Metrics**:
+  - Renamed `ContextWindowHealth.OrchestratorPeakTokens` to `RootPeakTokens` (`json:"root_peak_tokens"`).
+  - Renamed `ContextWindowHealth.OrchestratorSaturationPct` to `RootSaturationPct` (`json:"root_saturation_pct"`).
+  - Renamed `TicketComparisonRow.OrchestratorSaturationPct` to `RootSaturationPct` (`json:"root_saturation_pct"`).
+  - Updated frontend interfaces, UI presentation components (`SaturationBar.tsx`, `TicketComparisons.tsx`, `TicketTable.tsx`), formatters, and mock data fixtures.
+- **Theme Palette Decoupling (`web/src/utils/theme.ts`)**:
+  - Removed `CANONICAL_ROLE_COLORS`.
+  - Implemented deterministic hash-to-palette algorithm (`hashStringToColor`) across 12 distinct accessible color tokens, ensuring zero hardcoded role names in frontend styling.
+- **Generalized Debug Prompt Ticket Regex (`web/src/utils/debugPrompt.ts`)**:
+  - Generalized ticket stripping regex to `[A-Z]{2,10}-\d+`, eliminating hardcoded repository prefixes (`AL`, `FIX`, `GEN`, `PO`).
+- **CLI Formatter Decoupling (`backend/internal/adapters/formatters.go`)**:
+  - Formatted metrics table output to report `Root agent peak %s tokens` instead of `Orchestrator peak`.
+
 ---
 
 ## Verification & Test Results
@@ -91,39 +110,44 @@
 - **Zero Emojis**: Verified zero emojis across code, tests, and documentation.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 18
-- **Active Agent Duration:** 15h 25m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 174.3k tokens (87% of 200k healthy ceiling, 19 compactions) | Subagents peak 171.2k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 5.5%, Coder 75.8%, Tester 11.5%, Reviewer 7.1%
-- **Subagent Turn Velocity & Thrashing:** 171.3 avg turns/run (peak: 1672 turns) | Planner 51.2, Coder 458.8, Tester 84.0, Reviewer 56.7
-- **Test-to-Production Code Ratio:** 2.3:1 (+2,730 test lines / +1,199 prod lines)
-- **Code Delivered:** +3,930 / -240 lines across 26 code files (excluding docs)
-- **Reasoning Effort:** 487,925 reasoning tokens (45.1% of generated output)
-- **Tool Health & Self-Correction:** 4,069 tool calls (38 self-corrections, 99.1% success rate)
+- **Software Development Life Cycle Iterations:** 22
+- **Active Agent Duration:** 28h 22m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 174.3k tokens (87% of 200k healthy ceiling, 21 compactions) | Subagents peak 171.2k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 6.8%, Coder 73.4%, Tester 11.5%, Reviewer 8.3%
+- **Subagent Turn Velocity & Thrashing:** 165.5 avg turns/run (peak: 1672 turns) | Planner 56.5, Coder 434.9, Tester 84.0, Reviewer 59.3
+- **Test-to-Production Code Ratio:** 2.0:1 (+3,213 test lines / +1,643 prod lines)
+- **Code Delivered:** +4,857 / -774 lines across 57 code files (excluding docs)
+- **Reasoning Effort:** 594,356 reasoning tokens (46.4% of generated output)
+- **Tool Health & Self-Correction:** 4,724 tool calls (52 self-corrections, 98.9% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 24 execution anomalies detected (17 CRITICAL, 7 WARNING).
+- **Status:** 29 execution anomalies detected (21 CRITICAL, 8 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 38 (session: ses_e9f2e1db2fferR7NvzZ0uguWkT), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.4k tokens) — Context tokens reached 161.4k in turn 48 (session: ses_e9f645441ffeLoPoDrRwxIQajj), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k in turn 67 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k in turn 86 (session: ses_ea026f776ffeMcs4kPDJwMBVgo), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k in turn 116 (session: ses_e9f2247dbffeJHdhGhq4vE2Q5z), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.0k tokens) — Context tokens reached 160.0k in turn 168 (session: ses_e9d912167ffeLO6s00pZOEWIE7), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+110.1k tokens) — Context tokens surged by 110.1k tokens in turn 193 (session: ses_e9d912167ffeLO6s00pZOEWIE7, total: 110.1k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k in turn 204 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+105.1k tokens) — Context tokens surged by 105.1k tokens in turn 205 (session: ses_e9f645441ffeLoPoDrRwxIQajj, total: 105.1k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+93.6k tokens) — Context tokens surged by 93.6k tokens in turn 217 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 93.6k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+108.8k tokens) — Context tokens surged by 108.8k tokens in turn 218 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 108.8k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+114.5k tokens) — Context tokens surged by 114.5k tokens in turn 272 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 114.5k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+117.0k tokens) — Context tokens surged by 117.0k tokens in turn 380 (session: ses_e9f645441ffeLoPoDrRwxIQajj, total: 117.0k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+84.8k tokens) — Context tokens surged by 84.8k tokens in turn 434 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 84.8k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+107.5k tokens) — Context tokens surged by 107.5k tokens in turn 474 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 107.5k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+120.2k tokens) — Context tokens surged by 120.2k tokens in turn 803 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 120.2k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+116.1k tokens) — Context tokens surged by 116.1k tokens in turn 968 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 116.1k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+103.7k tokens) — Context tokens surged by 103.7k tokens in turn 1110 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 103.7k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+93.6k tokens) — Context tokens surged by 93.6k tokens in turn 1240 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 93.6k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+110.3k tokens) — Context tokens surged by 110.3k tokens in turn 1383 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 110.3k tokens, threshold: 80000)
+- [CRITICAL] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: mcp-gateway_mcp-exec (100.0%) — Tool 'mcp-gateway_mcp-exec' failed 5 out of 5 calls (100.0% failure rate, threshold: >=50%)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+42.0k tokens) — Context tokens surged by 42.0k tokens in turn 81 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 42.0k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+66.5k tokens) — Context tokens surged by 66.5k tokens in turn 95 (session: ses_ea026f776ffeMcs4kPDJwMBVgo, total: 66.5k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+79.1k tokens) — Context tokens surged by 79.1k tokens in turn 128 (session: ses_e9f2247dbffeJHdhGhq4vE2Q5z, total: 79.1k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+58.2k tokens) — Context tokens surged by 58.2k tokens in turn 317 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 58.2k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+58.2k tokens) — Context tokens surged by 58.2k tokens in turn 463 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 58.2k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.8k tokens) — Context tokens surged by 72.8k tokens in turn 601 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 72.8k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+66.9k tokens) — Context tokens surged by 66.9k tokens in turn 1459 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 66.9k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.3k tokens) — Context tokens surged by 72.3k tokens in turn 1579 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 72.3k tokens, threshold: 40000)
@@ -135,15 +159,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 5 | 1,243,882 | 37,216 | 13,410,269 | 91.5% | 139.9k | ELEVATED | $2.48 |
-| **coder** | 6 | 18,595,810 | 329,896 | 246,917,652 | 93.0% | 171.2k | ELEVATED | $34.27 |
-| **tester** | 5 | 2,944,088 | 95,317 | 30,497,173 | 91.2% | 154.4k | ELEVATED | $5.21 |
-| **reviewer** | 6 | 2,046,305 | 28,898 | 17,811,492 | 89.7% | 167.0k | ELEVATED | $3.22 |
-| **advisor** | 1 | 9,305,051 | 101,793 | 24,556,584 | 72.5% | 174.3k | ELEVATED | $9.45 |
-| **Total** | **23** | **34,135,136** | **593,120** | **333,193,170** | **90.7%** | **174.3k** | **ELEVATED** | **$54.64** |
+| **planner** | 6 | 2,014,718 | 47,071 | 18,142,843 | 90.0% | 139.9k | ELEVATED | $3.54 |
+| **coder** | 7 | 20,766,440 | 373,288 | 274,234,612 | 93.0% | 171.2k | ELEVATED | $38.24 |
+| **tester** | 6 | 3,415,592 | 101,053 | 35,590,910 | 91.2% | 154.4k | ELEVATED | $6.02 |
+| **reviewer** | 7 | 3,002,475 | 34,794 | 21,825,067 | 87.9% | 167.0k | ELEVATED | $4.30 |
+| **advisor** | 1 | 10,739,040 | 129,830 | 35,383,059 | 76.7% | 174.3k | ELEVATED | $11.54 |
+| **Total** | **27** | **39,938,265** | **686,036** | **385,176,491** | **90.6%** | **174.3k** | **ELEVATED** | **$63.64** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 23 | 34,135,136 | 593,120 | 333,193,170 | 90.7% | $54.64 |
-| **Total** | **23** | **34,135,136** | **593,120** | **333,193,170** | **90.7%** | **$54.64** |
+| **gemini-3.8-flash** | 27 | 39,938,265 | 686,036 | 385,176,491 | 90.6% | $63.64 |
+| **Total** | **27** | **39,938,265** | **686,036** | **385,176,491** | **90.6%** | **$63.64** |

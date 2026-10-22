@@ -249,9 +249,9 @@ func ExtractFacts(
 		if cleanAgent != "" {
 			role = domain.AgentRole(cleanAgent)
 		} else if s.parentID == nil {
-			role = domain.RoleOrchestrator
+			role = domain.RoleRootAgent
 		} else {
-			role = domain.RoleUnassigned
+			role = domain.RoleUnassignedSubAgent
 		}
 		sessionRoleMap[s.id] = role
 
@@ -476,7 +476,7 @@ func ExtractFacts(
 			mID = mid.String
 		}
 
-		role := domain.RoleOrchestrator
+		role := domain.RoleRootAgent
 		if r, ok := sessionRoleMap[sID]; ok {
 			role = r
 		}

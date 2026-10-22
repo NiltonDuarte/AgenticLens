@@ -189,7 +189,7 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 		} else {
 			role := inv.Role
 			if strings.TrimSpace(string(role)) == "" {
-				role = RoleUnassigned
+				role = RoleUnassignedSubAgent
 			}
 			subCosts[string(role)] += inv.CostUSD
 			totSubCost += inv.CostUSD
@@ -328,13 +328,13 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 		SuccessRatePct:       toolSuccessRate,
 	}
 
-	var orchPeak int64
+	var rootPeakVal int64
 	if hasRoot {
-		orchPeak = rootPeak
+		rootPeakVal = rootPeak
 	}
-	var orchSatPct float64
+	var rootSatPct float64
 	if HealthyCeilingTokens > 0 {
-		orchSatPct = math.Round(float64(orchPeak)/float64(HealthyCeilingTokens)*1000.0) / 10.0
+		rootSatPct = math.Round(float64(rootPeakVal)/float64(HealthyCeilingTokens)*1000.0) / 10.0
 	}
 
 	var subPeak int64
@@ -375,21 +375,21 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 		}
 	}
 
-	overallPeak := orchPeak
+	overallPeak := rootPeakVal
 	if subPeak > overallPeak {
 		overallPeak = subPeak
 	}
 	cwhStatus := GetBaseHealthStatus(overallPeak, HealthyCeilingTokens)
 
 	contextWindowHealth := ContextWindowHealth{
-		HealthyCeilingTokens:      HealthyCeilingTokens,
-		Status:                    cwhStatus,
-		OrchestratorPeakTokens:    orchPeak,
-		OrchestratorSaturationPct: orchSatPct,
-		SubagentsPeakTokens:       subPeak,
-		SubagentsPeakRole:         subRoleStr,
-		Compactions:               totCompactions,
-		PeakByRole:                rolePeaks,
+		HealthyCeilingTokens: HealthyCeilingTokens,
+		Status:               cwhStatus,
+		RootPeakTokens:       rootPeakVal,
+		RootSaturationPct:    rootSatPct,
+		SubagentsPeakTokens:  subPeak,
+		SubagentsPeakRole:    subRoleStr,
+		Compactions:          totCompactions,
+		PeakByRole:           rolePeaks,
 	}
 
 	return WorkflowEfficiency{
@@ -874,8 +874,8 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 			FilesChanged:              eff.CodeDelivered.FilesChanged,
 			ToolSuccessRatePct:        eff.ToolExecution.SuccessRatePct,
 			ContextHealthStatus:       cwh.Status,
-			OrchestratorSaturationPct: cwh.OrchestratorSaturationPct,
-			PeakContextTokens:         cwh.OrchestratorPeakTokens,
+			RootSaturationPct:         cwh.RootSaturationPct,
+			PeakContextTokens:         cwh.RootPeakTokens,
 			TicketTitle:               title,
 			TicketType:                ledger.TicketType,
 			StartedAt:                 ledger.StartedAt,

@@ -76,6 +76,10 @@ Zero emojis permitted across all Go source files, TypeScript components, test su
    - In Go adapters (backend/internal/adapters/): align schemas DTO converters, git inference helpers, live service, and opencode extractor.
    - In TypeScript domain (web/src/domain/, web/src/types/): define and export CanonicalAgentRole and autocomplete union AgentRole, export FailureSeverity, align StandardTicketType and TicketType, and update domain interfaces to use ContextHealthStatus, AgentRole, FailureSeverity, and TicketType.
    - In TypeScript presentation components (web/src/components/): update TicketSelector and FailedToolAlertCard props and alignment.
+6. Decoupling Platform Source Code from Repository Roles (Iteration 06 Extension):
+   - In Go domain (backend/internal/domain/): remove RoleOrchestrator, RolePlanner, RoleCoder, RoleTester, RoleReviewer, RoleUnassigned. Add generic fallback constants RoleRootAgent and RoleUnassignedSubAgent.
+   - In Go adapters (backend/internal/adapters/): use RoleRootAgent for nameless root sessions and RoleUnassignedSubAgent for nameless subagents in live service, extractor, config, and aggregations.
+   - In TypeScript domain and types (web/src/): delete CanonicalAgentRole, CANONICAL_ROLE_ORDER, SUBAGENT_ROLE_ORDER, and isCanonicalRole. Redefine AgentRole as plain string alias. Update mock fixtures and tests to avoid hardcoded canonical assumptions.
 
 ### Out of Scope
 1. Modifying SQLite schema migrations or altering database column definitions in OpenCode.
@@ -186,3 +190,30 @@ Zero emojis permitted across all Go source files, TypeScript components, test su
 4. Conventional Ticket Type Typings:
    - Go: AgenticFactLedger.TicketType, AgenticMetricsLedger.TicketType, and TicketComparisonRow.TicketType must use *ConventionalTicketType.
    - TypeScript: StandardTicketType must include canonical types, TicketType must be StandardTicketType | (string & {}), and ticket_type across ledgers and rows must use TicketType | null.
+
+### Decoupling Platform Source Code from Project Roles and Repository Details Contract (Iteration 06 Extension)
+1. Removal of Repository-Specific Role Constants:
+   - Go backend must delete RoleOrchestrator, RolePlanner, RoleCoder, RoleTester, RoleReviewer, and RoleUnassigned from backend/internal/domain/enums.go.
+   - Go backend must declare generic fallback constants: RoleRootAgent AgentRole = "RootAgent" and RoleUnassignedSubAgent AgentRole = "UnassignedSubAgent".
+   - Go adapters (service.go, extractor.go, aggregations.go, config.go) must use RoleRootAgent for nameless root sessions and RoleUnassignedSubAgent for nameless subagents, removing hardcoded defaults to "orchestrator", "coder", or "unassigned".
+2. Removal of Canonical Role Concepts from Frontend:
+   - TypeScript must delete CanonicalAgentRole, CANONICAL_ROLE_ORDER, SUBAGENT_ROLE_ORDER, and isCanonicalRole from web/src/types/telemetry.ts and web/src/domain/types.ts.
+   - TypeScript must define AgentRole as a direct string alias: export type AgentRole = string;.
+   - Role ordering is determined strictly by runtime project configuration (project_config.role_order), never hardcoded as platform source constants.
+3. Clean Break Renaming of Root Context Window Health Metrics:
+   - In backend/internal/domain/models.go:
+     - ContextWindowHealth.OrchestratorPeakTokens -> ContextWindowHealth.RootPeakTokens (`json:"root_peak_tokens"`).
+     - ContextWindowHealth.OrchestratorSaturationPct -> ContextWindowHealth.RootSaturationPct (`json:"root_saturation_pct"`).
+     - TicketComparisonRow.OrchestratorSaturationPct -> TicketComparisonRow.RootSaturationPct (`json:"root_saturation_pct"`).
+   - In web/src/domain/types.ts and web/src/types/telemetry.ts:
+     - ContextWindowHealth: root_peak_tokens and root_saturation_pct.
+     - TicketComparisonRow: root_saturation_pct.
+     - ComparisonSortKey: 'root_saturation_pct'.
+   - All existing JSON ledgers (across alspaces/ and test fixtures) must be migrated to the new root_peak_tokens and root_saturation_pct keys.
+4. Decoupling Theme Colors:
+   - Remove CANONICAL_ROLE_COLORS from web/src/utils/theme.ts.
+   - getRoleColor assigns colors dynamically/deterministically via string hashing across a rich accessible color palette, ensuring zero agent role names are hardcoded into frontend styling.
+5. Decoupling Debug Prompt Ticket Prefixes:
+   - In web/src/utils/debugPrompt.ts, generalize ticket regex to `\b(?:on\s+|in\s+|for\s+)?(?:tickets?\s+)?[A-Z]{2,10}-\d+\b` removing repository-specific prefix list (AL, FIX, GEN, PO).
+6. Decoupling CLI Formatter Output:
+   - In backend/internal/adapters/formatters.go, render "- **Context Window Health:** ... Root agent peak %s tokens" instead of "Orchestrator peak".

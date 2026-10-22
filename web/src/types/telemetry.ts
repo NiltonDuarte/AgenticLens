@@ -2,14 +2,7 @@ export type EventType = 'tool_call' | 'turn_message' | 'compaction';
 
 export type DataSource = 'local_sqlite' | 'committed_ledger';
 
-export type CanonicalAgentRole =
-  | 'orchestrator'
-  | 'planner'
-  | 'coder'
-  | 'tester'
-  | 'reviewer';
-
-export type AgentRole = CanonicalAgentRole | (string & {});
+export type AgentRole = string;
 
 export type ConventionalTicketType =
   | 'feat'

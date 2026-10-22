@@ -220,9 +220,9 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		velStr = fmt.Sprintf(" | %s", strings.Join(velParts, ", "))
 	}
 
-	orchTokStr := domain.FormatTokensK(cwh.OrchestratorPeakTokens)
+	rootTokStr := domain.FormatTokensK(cwh.RootPeakTokens)
 	subTokStr := domain.FormatTokensK(cwh.SubagentsPeakTokens)
-	orchPctStr := fmt.Sprintf("%.0f%%", math.Round(cwh.OrchestratorSaturationPct))
+	rootPctStr := fmt.Sprintf("%.0f%%", math.Round(cwh.RootSaturationPct))
 
 	subPeakRoleStr := titleCase(cwh.SubagentsPeakRole)
 
@@ -231,10 +231,10 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		fmt.Sprintf("- **Software Development Life Cycle Iterations:** %d", we.SDLCIterations),
 		fmt.Sprintf("- **Active Agent Duration:** %s (excludes user wait time)", we.ActiveDurationFormatted),
 		fmt.Sprintf(
-			"- **Context Window Health:** %s — Orchestrator peak %s tokens (%s of %s healthy ceiling, %d compactions) | Subagents peak %s (%s)",
+			"- **Context Window Health:** %s — Root agent peak %s tokens (%s of %s healthy ceiling, %d compactions) | Subagents peak %s (%s)",
 			cwh.Status,
-			orchTokStr,
-			orchPctStr,
+			rootTokStr,
+			rootPctStr,
 			domain.FormatTokensK(domain.HealthyCeilingTokens),
 			cwh.Compactions,
 			subTokStr,

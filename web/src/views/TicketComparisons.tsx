@@ -472,12 +472,12 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                   </span>
                 </th>
                 <th
-                  onClick={() => handleHeaderSort('orchestrator_saturation_pct')}
+                  onClick={() => handleHeaderSort('root_saturation_pct')}
                   className="sortable-col num-col"
                   aria-label="Saturation"
                 >
                   <span className="th-content">
-                    <span>Saturation {renderSortIndicator('orchestrator_saturation_pct')}</span>
+                    <span>Saturation {renderSortIndicator('root_saturation_pct')}</span>
                     <InfoTooltip
                       content="Peak context window utilization percentage relative to the 200k token ceiling"
                       placement="bottom"
@@ -546,7 +546,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                         </span>
                       </td>
                       <td className="num-col mono">
-                        {formatPercentage(row.orchestrator_saturation_pct)}
+                        {formatPercentage(row.root_saturation_pct)}
                       </td>
                     </tr>
                   );

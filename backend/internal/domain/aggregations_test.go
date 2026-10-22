@@ -965,8 +965,8 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 			if eff.ContextWindowHealth.Status != domain.ContextHealthBloated {
 				t.Errorf("expected BLOATED, got %s", eff.ContextWindowHealth.Status)
 			}
-			if eff.ContextWindowHealth.OrchestratorSaturationPct != 125.0 {
-				t.Errorf("expected 125.0 orchestrator saturation, got %f", eff.ContextWindowHealth.OrchestratorSaturationPct)
+			if eff.ContextWindowHealth.RootSaturationPct != 125.0 {
+				t.Errorf("expected 125.0 root saturation, got %f", eff.ContextWindowHealth.RootSaturationPct)
 			}
 			if eff.ContextWindowHealth.SubagentsPeakTokens != 210000 {
 				t.Errorf("expected 210000 subagent peak, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -1747,7 +1747,7 @@ func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
 	}
 
 	rec := records[0]
-	expectedRoles := []domain.AgentRole{domain.RoleOrchestrator, domain.RoleCoder, domain.AgentRole("advisor")}
+	expectedRoles := []domain.AgentRole{domain.AgentRole("orchestrator"), domain.AgentRole("coder"), domain.AgentRole("advisor")}
 	if len(rec.Roles) != len(expectedRoles) {
 		t.Fatalf("expected %d roles, got %d", len(expectedRoles), len(rec.Roles))
 	}
@@ -2011,8 +2011,8 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected 'none' subagents peak role, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
 		}
 		// Root coordination peak tokens matches root session:
-		if eff.ContextWindowHealth.OrchestratorPeakTokens != 50000 {
-			t.Errorf("expected 50000 orchestrator peak tokens, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		if eff.ContextWindowHealth.RootPeakTokens != 50000 {
+			t.Errorf("expected 50000 root peak tokens, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
 	})
 }
@@ -2740,7 +2740,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 				name:               "root session with raw build mapped to orchestrator",
 				rawRole:            "build",
 				parentID:           nil,
-				targetRole:         domain.RoleOrchestrator,
+				targetRole:         domain.AgentRole("orchestrator"),
 				expectSubagentCost: false,
 				expectTurnCounted:  false,
 			},
@@ -2748,7 +2748,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 				name:               "child session with raw build mapped to orchestrator",
 				rawRole:            "build",
 				parentID:           &parentID,
-				targetRole:         domain.RoleOrchestrator,
+				targetRole:         domain.AgentRole("orchestrator"),
 				expectSubagentCost: true,
 				expectTurnCounted:  true,
 			},
@@ -2756,7 +2756,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 				name:               "child session with custom-worker mapped to coder",
 				rawRole:            "custom-worker",
 				parentID:           &parentID,
-				targetRole:         domain.RoleCoder,
+				targetRole:         domain.AgentRole("coder"),
 				expectSubagentCost: true,
 				expectTurnCounted:  true,
 			},
@@ -4687,12 +4687,12 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
-		if eff.ContextWindowHealth.OrchestratorPeakTokens != 60000 {
-			t.Errorf("expected OrchestratorPeakTokens 60000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		if eff.ContextWindowHealth.RootPeakTokens != 60000 {
+			t.Errorf("expected RootPeakTokens 60000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
 		expectedSat := math.Round(60000.0/float64(domain.HealthyCeilingTokens)*1000.0) / 10.0
-		if eff.ContextWindowHealth.OrchestratorSaturationPct != expectedSat {
-			t.Errorf("expected OrchestratorSaturationPct %f, got %f", expectedSat, eff.ContextWindowHealth.OrchestratorSaturationPct)
+		if eff.ContextWindowHealth.RootSaturationPct != expectedSat {
+			t.Errorf("expected RootSaturationPct %f, got %f", expectedSat, eff.ContextWindowHealth.RootSaturationPct)
 		}
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -4729,8 +4729,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
-		if eff.ContextWindowHealth.OrchestratorPeakTokens != 75000 {
-			t.Errorf("expected OrchestratorPeakTokens 75000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		if eff.ContextWindowHealth.RootPeakTokens != 75000 {
+			t.Errorf("expected RootPeakTokens 75000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -4802,8 +4802,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
-		if eff.ContextWindowHealth.OrchestratorPeakTokens != 40000 {
-			t.Errorf("expected OrchestratorPeakTokens 40000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		if eff.ContextWindowHealth.RootPeakTokens != 40000 {
+			t.Errorf("expected RootPeakTokens 40000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 150000 {
 			t.Errorf("expected SubagentsPeakTokens 150000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -4838,8 +4838,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
-		if eff.ContextWindowHealth.OrchestratorPeakTokens != 0 {
-			t.Errorf("expected OrchestratorPeakTokens 0, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		if eff.ContextWindowHealth.RootPeakTokens != 0 {
+			t.Errorf("expected RootPeakTokens 0, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -4914,8 +4914,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		eff := domain.ComputeWorkflowEfficiency(ledger)
 
 		// Root coordination metrics must exclusively capture the ParentID == nil invocation
-		if eff.ContextWindowHealth.OrchestratorPeakTokens != 35000 {
-			t.Errorf("expected OrchestratorPeakTokens 35000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		if eff.ContextWindowHealth.RootPeakTokens != 35000 {
+			t.Errorf("expected RootPeakTokens 35000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
 
 		// Delegated subagents metrics must capture all tiers with ParentID != nil
@@ -4988,8 +4988,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 				}
 
 				eff := domain.ComputeWorkflowEfficiency(ledger)
-				if eff.ContextWindowHealth.OrchestratorPeakTokens != tc.peakContext {
-					t.Errorf("role %q: expected OrchestratorPeakTokens %d, got %d", tc.role, tc.peakContext, eff.ContextWindowHealth.OrchestratorPeakTokens)
+				if eff.ContextWindowHealth.RootPeakTokens != tc.peakContext {
+					t.Errorf("role %q: expected RootPeakTokens %d, got %d", tc.role, tc.peakContext, eff.ContextWindowHealth.RootPeakTokens)
 				}
 				if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 					t.Errorf("role %q: expected SubagentsPeakTokens 0, got %d", tc.role, eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -5127,8 +5127,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 				Invocations: nil,
 			}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
-			if eff.ContextWindowHealth.OrchestratorPeakTokens != 0 {
-				t.Errorf("expected OrchestratorPeakTokens 0, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+			if eff.ContextWindowHealth.RootPeakTokens != 0 {
+				t.Errorf("expected RootPeakTokens 0, got %d", eff.ContextWindowHealth.RootPeakTokens)
 			}
 			if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 				t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -5167,8 +5167,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
 			// Root peak is 30000 from the ParentID == nil invocation
-			if eff.ContextWindowHealth.OrchestratorPeakTokens != 30000 {
-				t.Errorf("expected OrchestratorPeakTokens 30000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+			if eff.ContextWindowHealth.RootPeakTokens != 30000 {
+				t.Errorf("expected RootPeakTokens 30000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 			}
 			// Delegated child invocations are classified structurally as subagents
 			if eff.ContextWindowHealth.SubagentsPeakTokens != 50000 {
@@ -5204,14 +5204,14 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			if eff.ContextWindowHealth.SubagentsPeakTokens != 45000 {
 				t.Errorf("expected SubagentsPeakTokens 45000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
 			}
-			if eff.ContextWindowHealth.SubagentsPeakRole != "unassigned" {
-				t.Errorf("expected SubagentsPeakRole 'unassigned', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+			if eff.ContextWindowHealth.SubagentsPeakRole != domain.RoleUnassignedSubAgent {
+				t.Errorf("expected SubagentsPeakRole %q, got %s", domain.RoleUnassignedSubAgent, eff.ContextWindowHealth.SubagentsPeakRole)
 			}
-			if eff.RoleEffortDistributionPct["unassigned"] != 100.0 {
-				t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct["unassigned"])
+			if eff.RoleEffortDistributionPct[string(domain.RoleUnassignedSubAgent)] != 100.0 {
+				t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct[string(domain.RoleUnassignedSubAgent)])
 			}
-			if eff.SubagentTurnVelocity.ByRole["unassigned"] != 6.0 {
-				t.Errorf("expected unassigned turn velocity 6.0, got %f", eff.SubagentTurnVelocity.ByRole["unassigned"])
+			if eff.SubagentTurnVelocity.ByRole[domain.RoleUnassignedSubAgent] != 6.0 {
+				t.Errorf("expected unassigned turn velocity 6.0, got %f", eff.SubagentTurnVelocity.ByRole[domain.RoleUnassignedSubAgent])
 			}
 		})
 
@@ -5231,8 +5231,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
-			if eff.ContextWindowHealth.OrchestratorPeakTokens != 68000 {
-				t.Errorf("expected OrchestratorPeakTokens 68000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+			if eff.ContextWindowHealth.RootPeakTokens != 68000 {
+				t.Errorf("expected RootPeakTokens 68000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 			}
 			if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 				t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -5280,8 +5280,8 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
-			if eff.ContextWindowHealth.OrchestratorPeakTokens != 20000 {
-				t.Errorf("expected OrchestratorPeakTokens 20000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+			if eff.ContextWindowHealth.RootPeakTokens != 20000 {
+				t.Errorf("expected RootPeakTokens 20000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 			}
 			if eff.ContextWindowHealth.SubagentsPeakTokens != 42000 {
 				t.Errorf("expected SubagentsPeakTokens 42000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -5408,8 +5408,8 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
 
 		// Root coordination is strictly ParentID == nil (even though role is coder)
-		if eff.ContextWindowHealth.OrchestratorPeakTokens != 120000 {
-			t.Errorf("expected OrchestratorPeakTokens 120000 from root coder, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		if eff.ContextWindowHealth.RootPeakTokens != 120000 {
+			t.Errorf("expected RootPeakTokens 120000 from root coder, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
 
 		// Subagents are strictly ParentID != nil (even though role is orchestrator)
@@ -5477,8 +5477,8 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
 
 		// Max root peak is 110000
-		if eff.ContextWindowHealth.OrchestratorPeakTokens != 110000 {
-			t.Errorf("expected OrchestratorPeakTokens 110000, got %d", eff.ContextWindowHealth.OrchestratorPeakTokens)
+		if eff.ContextWindowHealth.RootPeakTokens != 110000 {
+			t.Errorf("expected RootPeakTokens 110000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -5532,18 +5532,18 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
 
-		// Both children are combined under role "unassigned"
+		// Both children are combined under role "UnassignedSubAgent"
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 70000 {
 			t.Errorf("expected SubagentsPeakTokens 70000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
 		}
-		if eff.ContextWindowHealth.SubagentsPeakRole != "unassigned" {
-			t.Errorf("expected SubagentsPeakRole 'unassigned', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
+		if eff.ContextWindowHealth.SubagentsPeakRole != domain.RoleUnassignedSubAgent {
+			t.Errorf("expected SubagentsPeakRole %q, got %s", domain.RoleUnassignedSubAgent, eff.ContextWindowHealth.SubagentsPeakRole)
 		}
-		if eff.RoleEffortDistributionPct["unassigned"] != 100.0 {
-			t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct["unassigned"])
+		if eff.RoleEffortDistributionPct[string(domain.RoleUnassignedSubAgent)] != 100.0 {
+			t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct[string(domain.RoleUnassignedSubAgent)])
 		}
-		if eff.SubagentTurnVelocity.ByRole["unassigned"] != 5.0 {
-			t.Errorf("expected unassigned turn velocity 5.0, got %f", eff.SubagentTurnVelocity.ByRole["unassigned"])
+		if eff.SubagentTurnVelocity.ByRole[domain.RoleUnassignedSubAgent] != 5.0 {
+			t.Errorf("expected unassigned turn velocity 5.0, got %f", eff.SubagentTurnVelocity.ByRole[domain.RoleUnassignedSubAgent])
 		}
 		if eff.SubagentTurnVelocity.PeakTurns != 6 {
 			t.Errorf("expected PeakTurns 6, got %d", eff.SubagentTurnVelocity.PeakTurns)
@@ -5657,19 +5657,19 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 			},
 		}
 
-		// Alphabetical default: advisor < unassigned
+		// Alphabetical default: UnassignedSubAgent < advisor ('U' < 'a')
 		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
 		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 85000 {
 			t.Errorf("expected SubagentsPeakTokens 85000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
 		}
-		if effAlpha.ContextWindowHealth.SubagentsPeakRole != "advisor" {
-			t.Errorf("expected 'advisor' via alphabetical tie-break, got %q", effAlpha.ContextWindowHealth.SubagentsPeakRole)
+		if effAlpha.ContextWindowHealth.SubagentsPeakRole != domain.RoleUnassignedSubAgent {
+			t.Errorf("expected %q via alphabetical tie-break, got %q", domain.RoleUnassignedSubAgent, effAlpha.ContextWindowHealth.SubagentsPeakRole)
 		}
 
-		// Custom order prioritizing unassigned
-		effUnassigned := domain.ComputeWorkflowEfficiency(ledger, []string{"unassigned", "advisor"})
-		if effUnassigned.ContextWindowHealth.SubagentsPeakRole != "unassigned" {
-			t.Errorf("expected 'unassigned' via custom tie-break, got %q", effUnassigned.ContextWindowHealth.SubagentsPeakRole)
+		// Custom order prioritizing advisor
+		effAdvisor := domain.ComputeWorkflowEfficiency(ledger, []string{"advisor", string(domain.RoleUnassignedSubAgent)})
+		if effAdvisor.ContextWindowHealth.SubagentsPeakRole != "advisor" {
+			t.Errorf("expected 'advisor' via custom tie-break, got %q", effAdvisor.ContextWindowHealth.SubagentsPeakRole)
 		}
 	})
 
@@ -5686,8 +5686,8 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 
 		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
-		if effAlpha.ContextWindowHealth.OrchestratorPeakTokens != 200000 {
-			t.Errorf("expected OrchestratorPeakTokens 200000, got %d", effAlpha.ContextWindowHealth.OrchestratorPeakTokens)
+		if effAlpha.ContextWindowHealth.RootPeakTokens != 200000 {
+			t.Errorf("expected RootPeakTokens 200000, got %d", effAlpha.ContextWindowHealth.RootPeakTokens)
 		}
 		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 95000 {
 			t.Errorf("expected SubagentsPeakTokens 95000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
