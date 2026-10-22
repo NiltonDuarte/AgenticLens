@@ -20,14 +20,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: AL-43
   - **File**: `alspaces/plan/to-do/AL-42 unify tool execution error classification and offline live pipeline parity.md`
 
-- **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
-  - **Subsystem**: Docs / Packaging / CLI
-  - **Phase**: Phase 7
-  - **Status**: Ready
-  - **Blocked by**: None (AL-36 Done)
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-37 cross-project setup manual and telemetry integration guide.md`
-
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
   - **Phase**: Phase 8 (v2 Phase 2)
@@ -80,3 +72,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-5 multi project web dashboard selector cross project fleet overview and comparative analytics.md`
 
+---
+
+## Done
+
+- **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
+  - **Subsystem**: Docs / Packaging / CLI
+  - **Phase**: Phase 7
+  - **Status**: Done
+  - **Blocked by**: None (AL-36 Done)
+  - **Blocks**: None
+  - **File**: `alspaces/plan/done/AL-37 cross-project setup manual and telemetry integration guide.md`
