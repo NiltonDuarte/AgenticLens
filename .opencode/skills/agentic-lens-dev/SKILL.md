@@ -114,10 +114,10 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
    Move specification file from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` to `<WORKSPACES_DIR>/plan/done/`, update `<WORKSPACES_DIR>/plan/TICKETS.md` status to `Done`, and unblock downstream tickets: check tickets blocked by `<TICKET_ID>` and promote any whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`.
 6. **Extract Telemetry & Render Metrics (Final Step Before PR Commit)**:
    Delayed strictly to the final step before committing so that fewer turns, tool calls, compactions, or subagent sessions are omitted.
+   Generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs.
    Run AgenticLens Go CLI to query OpenCode SQLite and Git, construct the fact ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs. Pass explicit `--ticket-type` matching the conventional commit classification (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`):
    ```bash
-   NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-   ./bin/agentic-lens generate --nonce $NONCE --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
+   ./bin/agentic-lens generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
    ```
 7. **Commit, Push & Open Pull Request**:
    Extract title from the first line of `PULL_REQUEST.md`, commit final workspace and telemetry files, push upstream, and open a GitHub Pull Request:

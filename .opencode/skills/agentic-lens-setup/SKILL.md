@@ -153,11 +153,10 @@ Present an overview of AgenticLens features to the user:
 
 #### CLI Subcommands
 - `init`: Scaffold and generate `.agenticlens-config.yaml` configuration.
-- `generate`: Ingest session telemetry from OpenCode SQLite DB and git history into `agentic_metrics.json`, and idempotently update markdown summary tables.
+- `generate`: Ingest session telemetry from OpenCode SQLite DB and git history into `agentic_metrics.json`, and idempotently update markdown summary tables. The executing agent generates a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and passes the literal token to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs.
   ```bash
-  NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
   "$BIN_DIR/agentic-lens" generate \
-    --nonce "$NONCE" \
+    --nonce <GENERATED_NONCE> \
     --ticket-id <TICKET_ID> \
     --ticket-type <CONVENTIONAL_TYPE> \
     --json-output workspaces/<TICKET_ID>/agentic_metrics.json \
@@ -220,11 +219,11 @@ When approved by the user, append the following standardized operational policie
   - `workspaces/<TICKET_ID>/agentic_metrics.json`: Telemetry fact ledger.
 
 ### 3. Delayed Telemetry Ingestion Mandate
-- Telemetry generation must be executed as the very final turn before git commit:
+- Telemetry generation must be executed as the very final turn before git commit.
+- Generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token directly to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs:
   ```bash
-  NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
   ./bin/agentic-lens generate \
-    --nonce "$NONCE" \
+    --nonce <GENERATED_NONCE> \
     --ticket-id <TICKET_ID> \
     --ticket-type <CONVENTIONAL_TYPE> \
     --json-output workspaces/<TICKET_ID>/agentic_metrics.json \
