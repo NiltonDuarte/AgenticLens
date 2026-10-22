@@ -19,7 +19,7 @@ func TestComputeTotals(t *testing.T) {
 		if res.CostUSD != 0.0 {
 			t.Errorf("expected 0 cost, got %f", res.CostUSD)
 		}
-		if res.ContextHealth != string(domain.ContextHealthHealthy) {
+		if res.ContextHealth != domain.ContextHealthHealthy {
 			t.Errorf("expected HEALTHY, got %s", res.ContextHealth)
 		}
 	})
@@ -81,7 +81,7 @@ func TestComputeTotals(t *testing.T) {
 		if res.PeakContextTokens != 120000 {
 			t.Errorf("expected 120000 peak context, got %d", res.PeakContextTokens)
 		}
-		if res.ContextHealth != string(domain.ContextHealthElevated) {
+		if res.ContextHealth != domain.ContextHealthElevated {
 			t.Errorf("expected ELEVATED health status, got %s", res.ContextHealth)
 		}
 	})
@@ -331,8 +331,8 @@ func TestCalculateFleetSummary(t *testing.T) {
 	}
 }
 
-func ptr(s string) *string {
-	return &s
+func ptr[T any](v T) *T {
+	return &v
 }
 
 func TestFilterLedgersByTimeWindow(t *testing.T) {
@@ -576,10 +576,11 @@ func TestBuildComparisonRows(t *testing.T) {
 	time1 := "2026-10-17T14:00:00Z"
 	time2 := "2026-10-17T15:00:00Z"
 
+	featType := domain.TicketTypeFeat
 	ledgers := []domain.AgenticMetricsLedger{
 		{
 			TicketID:    ptr("AL-1"),
-			TicketType:  ptr("feature"),
+			TicketType:  &featType,
 			StartedAt:   &time1,
 			CompletedAt: &time2,
 			UpdatedAt:   time2,
@@ -589,7 +590,7 @@ func TestBuildComparisonRows(t *testing.T) {
 			WorkflowEfficiency: domain.WorkflowEfficiency{
 				ActiveDurationFormatted: "10m 0s",
 				ContextWindowHealth: domain.ContextWindowHealth{
-					Status: "HEALTHY",
+					Status: domain.ContextHealthHealthy,
 				},
 				TestToProductionRatio: domain.TestToCodeRatio{
 					Ratio: "1.0:1",
@@ -605,8 +606,8 @@ func TestBuildComparisonRows(t *testing.T) {
 	if rows[0].TicketID != "AL-1" {
 		t.Errorf("expected ticket_id AL-1, got %s", rows[0].TicketID)
 	}
-	if rows[0].TicketType == nil || *rows[0].TicketType != "feature" {
-		t.Errorf("expected ticket_type feature, got %v", rows[0].TicketType)
+	if rows[0].TicketType == nil || *rows[0].TicketType != domain.TicketTypeFeat {
+		t.Errorf("expected ticket_type feat, got %v", rows[0].TicketType)
 	}
 	if rows[0].LeadDurationFormatted != "1h 0m" {
 		t.Errorf("expected 1h 0m lead time, got %q", rows[0].LeadDurationFormatted)
@@ -756,7 +757,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 					},
 				}
 				totals := domain.ComputeTotals(inv)
-				if totals.ContextHealth != string(tc.expectedHealth) {
+				if totals.ContextHealth != tc.expectedHealth {
 					t.Errorf("expected health %s for %d tokens, got %s", tc.expectedHealth, tc.peakTokens, totals.ContextHealth)
 				}
 			})
@@ -791,7 +792,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 		if totals.CacheHitRatePct != 0.0 {
 			t.Errorf("expected 0.0 cache hit rate on zero input/cache tokens, got %f", totals.CacheHitRatePct)
 		}
-		if totals.ContextHealth != string(domain.ContextHealthHealthy) {
+		if totals.ContextHealth != domain.ContextHealthHealthy {
 			t.Errorf("expected HEALTHY status for zero peak tokens, got %s", totals.ContextHealth)
 		}
 	})
@@ -892,7 +893,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 			if tot.CacheHitRatePct != 0.0 {
 				t.Errorf("expected 0 cache hit rate, got %f", tot.CacheHitRatePct)
 			}
-			if tot.ContextHealth != string(domain.ContextHealthHealthy) {
+			if tot.ContextHealth != domain.ContextHealthHealthy {
 				t.Errorf("expected HEALTHY, got %s", tot.ContextHealth)
 			}
 			if eff.ActiveDurationFormatted != "0m 0s" {
@@ -904,7 +905,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 			if eff.ToolExecution.SuccessRatePct != 100.0 {
 				t.Errorf("expected 100.0, got %f", eff.ToolExecution.SuccessRatePct)
 			}
-			if eff.ContextWindowHealth.Status != string(domain.ContextHealthHealthy) {
+			if eff.ContextWindowHealth.Status != domain.ContextHealthHealthy {
 				t.Errorf("expected HEALTHY, got %s", eff.ContextWindowHealth.Status)
 			}
 			if eff.ContextWindowHealth.SubagentsPeakRole != "none" {
@@ -961,7 +962,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 				},
 			}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
-			if eff.ContextWindowHealth.Status != string(domain.ContextHealthBloated) {
+			if eff.ContextWindowHealth.Status != domain.ContextHealthBloated {
 				t.Errorf("expected BLOATED, got %s", eff.ContextWindowHealth.Status)
 			}
 			if eff.ContextWindowHealth.OrchestratorSaturationPct != 125.0 {
@@ -988,7 +989,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 				},
 			}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
-			if eff.ContextWindowHealth.Status != string(domain.ContextHealthCritical) {
+			if eff.ContextWindowHealth.Status != domain.ContextHealthCritical {
 				t.Errorf("expected CRITICAL, got %s", eff.ContextWindowHealth.Status)
 			}
 		})
@@ -999,7 +1000,7 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 	t.Parallel()
 	tid := "AL-6"
 	title := "Chronological Event Extraction"
-	ttype := "feature"
+	ttype := domain.TicketTypeFeat
 	baseLedger := domain.AgenticFactLedger{
 		TicketID:    &tid,
 		TicketTitle: &title,
@@ -1684,7 +1685,7 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 	if len(metricsAlpha) != 5 {
 		t.Fatalf("expected 5 roles, got %d", len(metricsAlpha))
 	}
-	expectedAlpha := []string{"advisor", "architect", "orchestrator", "planner", "reviewer"}
+	expectedAlpha := []domain.AgentRole{"advisor", "architect", "orchestrator", "planner", "reviewer"}
 	for i, exp := range expectedAlpha {
 		if metricsAlpha[i].Role != exp {
 			t.Errorf("default at index %d: expected %s, got %s", i, exp, metricsAlpha[i].Role)
@@ -1697,7 +1698,7 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 	if len(metricsCustom) != 5 {
 		t.Fatalf("expected 5 roles, got %d", len(metricsCustom))
 	}
-	expectedCustom := []string{"orchestrator", "planner", "reviewer", "advisor", "architect"}
+	expectedCustom := []domain.AgentRole{"orchestrator", "planner", "reviewer", "advisor", "architect"}
 	for i, exp := range expectedCustom {
 		if metricsCustom[i].Role != exp {
 			t.Errorf("custom at index %d: expected %s, got %s", i, exp, metricsCustom[i].Role)
@@ -1746,7 +1747,7 @@ func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
 	}
 
 	rec := records[0]
-	expectedRoles := []string{"orchestrator", "coder", "advisor"}
+	expectedRoles := []domain.AgentRole{domain.RoleOrchestrator, domain.RoleCoder, domain.AgentRole("advisor")}
 	if len(rec.Roles) != len(expectedRoles) {
 		t.Fatalf("expected %d roles, got %d", len(expectedRoles), len(rec.Roles))
 	}
@@ -1773,7 +1774,7 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("empty and whitespace inputs", func(t *testing.T) {
 		t.Parallel()
-		if len(domain.OrderRoles(nil)) != 0 {
+		if len(domain.OrderRoles[string](nil)) != 0 {
 			t.Errorf("expected empty slice for nil roles")
 		}
 		if len(domain.OrderRoles([]string{})) != 0 {
@@ -1783,7 +1784,7 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected empty slice for whitespace-only roles")
 		}
 
-		if len(domain.OrderSubagentRoles(nil)) != 0 {
+		if len(domain.OrderSubagentRoles[string](nil)) != 0 {
 			t.Errorf("expected empty slice for nil subagent roles")
 		}
 		if len(domain.OrderSubagentRoles([]string{})) != 0 {
@@ -2091,7 +2092,7 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 
 		// Default alphabetical ordering:
 		metrics := domain.ComputeRoleMetrics(invs)
-		expected := []string{"advisor", "coder", "reviewer", "security-auditor"}
+		expected := []domain.AgentRole{"advisor", "coder", "reviewer", "security-auditor"}
 		if len(metrics) != len(expected) {
 			t.Fatalf("expected %d metrics, got %d", len(expected), len(metrics))
 		}
@@ -2104,7 +2105,7 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 		// With custom order prioritizing coder and reviewer:
 		customOrder := []string{"coder", "reviewer"}
 		metricsCustom := domain.ComputeRoleMetrics(invs, customOrder)
-		expectedCustom := []string{"coder", "reviewer", "advisor", "security-auditor"}
+		expectedCustom := []domain.AgentRole{"coder", "reviewer", "advisor", "security-auditor"}
 		if len(metricsCustom) != len(expectedCustom) {
 			t.Fatalf("expected %d custom metrics, got %d", len(expectedCustom), len(metricsCustom))
 		}
@@ -2239,7 +2240,7 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 		// Derived roles should be coder, orchestrator, tester (alphabetical order when RoleOrder is empty)
 		roleNames := make([]string, len(metrics.Roles))
 		for i, r := range metrics.Roles {
-			roleNames[i] = r.Role
+			roleNames[i] = string(r.Role)
 		}
 		expectedRoles := []string{"coder", "orchestrator", "tester"}
 		if len(roleNames) != len(expectedRoles) {
@@ -2296,7 +2297,7 @@ func TestDeriveMetricsLedger_RoleOrder(t *testing.T) {
 
 		roleNames := make([]string, len(metrics.Roles))
 		for i, r := range metrics.Roles {
-			roleNames[i] = r.Role
+			roleNames[i] = string(r.Role)
 		}
 		expectedRoles := []string{"architect", "coder", "orchestrator", "tester"}
 		if len(roleNames) != len(expectedRoles) {
@@ -2316,7 +2317,7 @@ func TestDeriveMetricsLedger_RoleOrder(t *testing.T) {
 
 		roleNames := make([]string, len(metrics.Roles))
 		for i, r := range metrics.Roles {
-			roleNames[i] = r.Role
+			roleNames[i] = string(r.Role)
 		}
 		expectedRoles := []string{"tester", "orchestrator", "architect", "coder"}
 		if len(roleNames) != len(expectedRoles) {
@@ -2551,7 +2552,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 
 		// 3. Assert derived aggregates use mapped roles (orchestrator, tester) and dynamic subagent (security-auditor)
-		roleMap := make(map[string]domain.RoleMetric)
+		roleMap := make(map[domain.AgentRole]domain.RoleMetric)
 		for _, r := range derived.Roles {
 			roleMap[r.Role] = r
 		}
@@ -2603,7 +2604,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		if derivedEmpty.Totals.CostUSD != 0.0 {
 			t.Errorf("expected 0.0 cost, got %f", derivedEmpty.Totals.CostUSD)
 		}
-		if derivedEmpty.Totals.ContextHealth != string(domain.ContextHealthHealthy) {
+		if derivedEmpty.Totals.ContextHealth != domain.ContextHealthHealthy {
 			t.Errorf("expected HEALTHY context health for empty ledger, got %s", derivedEmpty.Totals.ContextHealth)
 		}
 		if derivedEmpty.WorkflowEfficiency.ContextWindowHealth.SubagentsPeakRole != "none" {
@@ -2666,7 +2667,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		if derivedZero.Totals.CacheHitRatePct != 0.0 {
 			t.Errorf("expected 0.0 cache hit rate, got %f", derivedZero.Totals.CacheHitRatePct)
 		}
-		if derivedZero.Totals.ContextHealth != string(domain.ContextHealthHealthy) {
+		if derivedZero.Totals.ContextHealth != domain.ContextHealthHealthy {
 			t.Errorf("expected HEALTHY context health, got %s", derivedZero.Totals.ContextHealth)
 		}
 		if len(derivedZero.WorkflowEfficiency.RoleEffortDistributionPct) != 0 {
@@ -2786,7 +2787,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 						{
 							ID:       "ses-test",
 							ParentID: tc.parentID,
-							Role:     tc.rawRole,
+							Role:     domain.AgentRole(tc.rawRole),
 							CostUSD:  1.50,
 							Turns:    5,
 							Tokens: domain.InvocationTokens{
@@ -2809,7 +2810,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 					t.Errorf("RoleEffortDistributionPct[%q] presence = %v, want %v", targetStr, hasSubCost, tc.expectSubagentCost)
 				}
 
-				turns, hasTurns := metrics.WorkflowEfficiency.SubagentTurnVelocity.ByRole[targetStr]
+				turns, hasTurns := metrics.WorkflowEfficiency.SubagentTurnVelocity.ByRole[tc.targetRole]
 				if tc.expectTurnCounted {
 					if !hasTurns || turns != 5.0 {
 						t.Errorf("expected 5.0 turns for %s, got: %+v", targetStr, metrics.WorkflowEfficiency.SubagentTurnVelocity)
@@ -4145,12 +4146,12 @@ func TestCanonicalTicketType(t *testing.T) {
 func TestFilterLedgersByTicketTypes(t *testing.T) {
 	t.Parallel()
 
-	featLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-1"), TicketType: ptr("feature")}
-	featAliasLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-2"), TicketType: ptr("feat")}
-	bugLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-3"), TicketType: ptr("bug")}
-	bugFixLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-4"), TicketType: ptr("fix")}
-	choreLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-5"), TicketType: ptr("chore")}
-	docsLedger := domain.AgenticMetricsLedger{TicketID: ptr("PO-1"), TicketType: ptr("docs")}
+	featLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-1"), TicketType: ptr(domain.ConventionalTicketType("feature"))}
+	featAliasLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-2"), TicketType: ptr(domain.TicketTypeFeat)}
+	bugLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-3"), TicketType: ptr(domain.ConventionalTicketType("bug"))}
+	bugFixLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-4"), TicketType: ptr(domain.TicketTypeFix)}
+	choreLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-5"), TicketType: ptr(domain.TicketTypeChore)}
+	docsLedger := domain.AgenticMetricsLedger{TicketID: ptr("PO-1"), TicketType: ptr(domain.TicketTypeDocs)}
 	nilTypeLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-6"), TicketType: nil}
 
 	allLedgers := []domain.AgenticMetricsLedger{
@@ -4255,8 +4256,8 @@ func TestFilterLedgersByTicketTypes(t *testing.T) {
 
 func TestFilterLedgersByTicketType_Wrapper(t *testing.T) {
 	t.Parallel()
-	featLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-1"), TicketType: ptr("feature")}
-	bugLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-2"), TicketType: ptr("bug")}
+	featLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-1"), TicketType: ptr(domain.ConventionalTicketType("feature"))}
+	bugLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-2"), TicketType: ptr(domain.ConventionalTicketType("bug"))}
 	allLedgers := []domain.AgenticMetricsLedger{featLedger, bugLedger}
 
 	t.Run("comma-separated types", func(t *testing.T) {
@@ -4472,8 +4473,8 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		sample := []domain.AgenticMetricsLedger{
-			{TicketID: ptr("AL-1"), TicketType: ptr("feature")},
-			{TicketID: ptr("AL-2"), TicketType: ptr("bug")},
+			{TicketID: ptr("AL-1"), TicketType: ptr(domain.TicketTypeFeat)},
+			{TicketID: ptr("AL-2"), TicketType: ptr(domain.TicketTypeFix)},
 		}
 
 		resEmptyTypes := domain.FilterLedgersByTicketTypes(sample, []string{})
@@ -4524,11 +4525,11 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 
 		pathologicalLedgers := []domain.AgenticMetricsLedger{
 			{TicketID: nil, TicketType: nil},
-			{TicketID: ptr(""), TicketType: ptr("")},
-			{TicketID: ptr("   "), TicketType: ptr("   ")},
-			{TicketID: ptr("123-abc"), TicketType: ptr("\t\n")},
-			{TicketID: ptr("___"), TicketType: ptr("unknown_custom_type")},
-			{TicketID: ptr("AL-1"), TicketType: ptr("feature")},
+			{TicketID: ptr(""), TicketType: ptr(domain.ConventionalTicketType(""))},
+			{TicketID: ptr("   "), TicketType: ptr(domain.ConventionalTicketType("   "))},
+			{TicketID: ptr("123-abc"), TicketType: ptr(domain.ConventionalTicketType("\t\n"))},
+			{TicketID: ptr("___"), TicketType: ptr(domain.ConventionalTicketType("unknown_custom_type"))},
+			{TicketID: ptr("AL-1"), TicketType: ptr(domain.TicketTypeFeat)},
 		}
 
 		// Querying concrete ticket types excludes all nil/empty/pathological types
@@ -4566,14 +4567,14 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 		t.Parallel()
 
 		aliasLedgers := []domain.AgenticMetricsLedger{
-			{TicketID: ptr("T-1"), TicketType: ptr("feat")},
-			{TicketID: ptr("T-2"), TicketType: ptr("feature")},
-			{TicketID: ptr("T-3"), TicketType: ptr("bug")},
-			{TicketID: ptr("T-4"), TicketType: ptr("fix")},
-			{TicketID: ptr("T-5"), TicketType: ptr("bugfix")},
-			{TicketID: ptr("T-6"), TicketType: ptr("doc")},
-			{TicketID: ptr("T-7"), TicketType: ptr("docs")},
-			{TicketID: ptr("T-8"), TicketType: ptr("chore")},
+			{TicketID: ptr("T-1"), TicketType: ptr(domain.TicketTypeFeat)},
+			{TicketID: ptr("T-2"), TicketType: ptr(domain.ConventionalTicketType("feature"))},
+			{TicketID: ptr("T-3"), TicketType: ptr(domain.ConventionalTicketType("bug"))},
+			{TicketID: ptr("T-4"), TicketType: ptr(domain.TicketTypeFix)},
+			{TicketID: ptr("T-5"), TicketType: ptr(domain.ConventionalTicketType("bugfix"))},
+			{TicketID: ptr("T-6"), TicketType: ptr(domain.ConventionalTicketType("doc"))},
+			{TicketID: ptr("T-7"), TicketType: ptr(domain.TicketTypeDocs)},
+			{TicketID: ptr("T-8"), TicketType: ptr(domain.TicketTypeChore)},
 		}
 
 		// Test "feature" aliases: "feat" and "feature"
@@ -4976,7 +4977,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 						{
 							ID:       "ses-single-root",
 							ParentID: nil,
-							Role:     tc.role,
+							Role:     domain.AgentRole(tc.role),
 							CostUSD:  tc.costUSD,
 							Turns:    tc.turns,
 							Tokens: domain.InvocationTokens{

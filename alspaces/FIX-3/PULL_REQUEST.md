@@ -40,11 +40,18 @@ Extends and unifies anomaly detection, metric consistency, and debug actions acr
    - Typed `LiveAnomalyAlert.rule_name` strictly as `LiveAnomalyRule`.
    - Added explicit OpenCode database provenance statement (`This data was extracted from the OpenCode database.`) across all 4 prompt generator layers.
 
+6. **Primitive Obsession Remediation for Declared Domain Enums**:
+   - Replaced raw `string` with `domain.ContextHealthStatus` across Go backend domain structs (`GroupedMetric`, `ContextWindowHealth`, `ModelMetric`, `RoleMetric`, `TicketComparisonRow`) and TypeScript interfaces.
+   - Replaced raw `string` with `domain.AgentRole` across fact records (`InvocationFact.Role`, `EventFact.Role`, `ThreadRoleMetric.Role`, `ContextWindowHealth.SubagentsPeakRole`, `LiveMessageFact.Role`) and role maps. Made `OrderRoles[T ~string]` generic.
+   - Exported `CanonicalAgentRole` and autocomplete union `AgentRole = CanonicalAgentRole | (string & {})` in TypeScript, updating all domain fact interfaces.
+   - Updated `LivePartFact.Severity` to `FailureSeverity`, `ClassifyToolFailure` to return `(bool, FailureSeverity, *string)`, and typed `LiveAnomalySeverity`. Exported `FailureSeverity` in TypeScript.
+   - Replaced raw `*string` with `*domain.ConventionalTicketType` in `AgenticFactLedger`, `AgenticMetricsLedger`, and `TicketComparisonRow`. Updated TypeScript `StandardTicketType` and `TicketType = StandardTicketType | (string & {})`.
+
 ## Testing & Verification
 - `go test -race -count=1 ./...` (All Go backend tests passed cleanly)
 - `go vet ./...` (Zero warnings)
 - `npm run typecheck` (Zero TypeScript errors)
 - `npm run lint` (Zero ESLint warnings/errors)
-- `npm test` (All 725 frontend tests passed across 30 test suites)
+- `npm test` (All 731 frontend tests passed across 30 test suites)
 - `make build` (Production binary build and asset embedding clean)
 - Zero emojis across all modified code, tests, and markdown artifacts.

@@ -504,11 +504,12 @@ func TestPruneEventsForPersistence(t *testing.T) {
 
 		started := "2026-10-18T10:00:00Z"
 		completed := "2026-10-18T10:00:30Z"
+		tt := domain.TicketTypeFeat
 
 		ledgerUnpruned := domain.AgenticFactLedger{
 			TicketID:    strPtr("AL-32"),
 			TicketTitle: strPtr("Event Pruning"),
-			TicketType:  strPtr("feat"),
+			TicketType:  &tt,
 			StartedAt:   &started,
 			CompletedAt: &completed,
 			UpdatedAt:   completed,

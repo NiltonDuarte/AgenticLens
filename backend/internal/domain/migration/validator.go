@@ -29,25 +29,25 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 	}
 
 	// 2. Ticket identification invariant
-	if !stringPtrEqual(before.TicketID, after.TicketID) {
+	if !ptrEqual(before.TicketID, after.TicketID) {
 		return fmt.Errorf("%w: ticket_id modified from %v to %v",
 			ErrInvariantViolation, ptrString(before.TicketID), ptrString(after.TicketID))
 	}
-	if !stringPtrEqual(before.TicketTitle, after.TicketTitle) {
+	if !ptrEqual(before.TicketTitle, after.TicketTitle) {
 		return fmt.Errorf("%w: ticket_title modified from %v to %v",
 			ErrInvariantViolation, ptrString(before.TicketTitle), ptrString(after.TicketTitle))
 	}
-	if !stringPtrEqual(before.TicketType, after.TicketType) {
+	if !ptrEqual(before.TicketType, after.TicketType) {
 		return fmt.Errorf("%w: ticket_type modified from %v to %v",
 			ErrInvariantViolation, ptrString(before.TicketType), ptrString(after.TicketType))
 	}
 
 	// 3. Timestamps invariant
-	if !stringPtrEqual(before.StartedAt, after.StartedAt) {
+	if !ptrEqual(before.StartedAt, after.StartedAt) {
 		return fmt.Errorf("%w: started_at modified from %v to %v",
 			ErrInvariantViolation, ptrString(before.StartedAt), ptrString(after.StartedAt))
 	}
-	if !stringPtrEqual(before.CompletedAt, after.CompletedAt) {
+	if !ptrEqual(before.CompletedAt, after.CompletedAt) {
 		return fmt.Errorf("%w: completed_at modified from %v to %v",
 			ErrInvariantViolation, ptrString(before.CompletedAt), ptrString(after.CompletedAt))
 	}
@@ -71,12 +71,12 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 		b := before.Invocations[i]
 		a := after.Invocations[i]
 		if b.ID != a.ID ||
-			!stringPtrEqual(b.ParentID, a.ParentID) ||
+			!ptrEqual(b.ParentID, a.ParentID) ||
 			b.Role != a.Role ||
 			b.Model != a.Model ||
 			b.User != a.User ||
-			!stringPtrEqual(b.StartedAt, a.StartedAt) ||
-			!stringPtrEqual(b.CompletedAt, a.CompletedAt) ||
+			!ptrEqual(b.StartedAt, a.StartedAt) ||
+			!ptrEqual(b.CompletedAt, a.CompletedAt) ||
 			b.ActiveDurationSeconds != a.ActiveDurationSeconds ||
 			b.Turns != a.Turns ||
 			b.Tokens != a.Tokens ||
@@ -124,9 +124,9 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 					b.Turn == a.Turn &&
 					b.Role == a.Role &&
 					b.EventType == a.EventType &&
-					stringPtrEqual(b.ToolName, a.ToolName) &&
+					ptrEqual(b.ToolName, a.ToolName) &&
 					b.Status == a.Status &&
-					int64PtrEqual(b.DurationMs, a.DurationMs) &&
+					ptrEqual(b.DurationMs, a.DurationMs) &&
 					b.ContextTokens == a.ContextTokens {
 					matched[j] = true
 					found = true
@@ -164,10 +164,10 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 				b.Turn != a.Turn ||
 				b.Role != a.Role ||
 				b.EventType != a.EventType ||
-				!stringPtrEqual(b.ToolName, a.ToolName) ||
+				!ptrEqual(b.ToolName, a.ToolName) ||
 				b.Status != a.Status ||
-				!stringPtrEqual(b.ErrorMessage, a.ErrorMessage) ||
-				!int64PtrEqual(b.DurationMs, a.DurationMs) ||
+				!ptrEqual(b.ErrorMessage, a.ErrorMessage) ||
+				!ptrEqual(b.DurationMs, a.DurationMs) ||
 				b.ContextTokens != a.ContextTokens {
 				return fmt.Errorf("%w: pre-existing event[%d] modified",
 					ErrInvariantViolation, i)
@@ -178,7 +178,7 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 	return nil
 }
 
-func stringPtrEqual(a, b *string) bool {
+func ptrEqual[T comparable](a, b *T) bool {
 	if a == nil && b == nil {
 		return true
 	}
@@ -188,19 +188,9 @@ func stringPtrEqual(a, b *string) bool {
 	return *a == *b
 }
 
-func int64PtrEqual(a, b *int64) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
-}
-
-func ptrString(s *string) string {
-	if s == nil {
+func ptrString[T any](p *T) string {
+	if p == nil {
 		return "<nil>"
 	}
-	return *s
+	return fmt.Sprint(*p)
 }

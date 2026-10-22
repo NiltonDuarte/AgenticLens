@@ -5,6 +5,7 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { TicketDeepDive } from './TicketDeepDive';
 import * as apiClient from '../api/client';
 import { EventFact } from '../types/telemetry';
+import type { AgenticMetricsLedger, ContextHealthStatus } from '../domain/types';
 import {
   mockAgenticMetricsLedgers,
   mockWorkspaceDetails,
@@ -760,7 +761,7 @@ describe('TicketDeepDive View Component', () => {
   });
 
   it('renders custom agent roles and arbitrary models in autopsy tables and velocity', async () => {
-    const customRoleLedger = {
+    const customRoleLedger: AgenticMetricsLedger = {
       ...mockAgenticMetricsLedgers['AL-1']!,
       ticket_id: 'AL-CUSTOM',
       workflow_efficiency: {
@@ -798,7 +799,7 @@ describe('TicketDeepDive View Component', () => {
           cache_hit_rate_pct: 33.3,
           cost_usd: 1.0,
           peak_context_tokens: 60000,
-          context_health: 'HEALTHY',
+          context_health: 'HEALTHY' as ContextHealthStatus,
         },
         {
           role: 'advisor',
@@ -809,7 +810,7 @@ describe('TicketDeepDive View Component', () => {
           cache_hit_rate_pct: 33.3,
           cost_usd: 2.0,
           peak_context_tokens: 150000,
-          context_health: 'HEALTHY',
+          context_health: 'HEALTHY' as ContextHealthStatus,
         },
         {
           role: 'po',
@@ -820,7 +821,7 @@ describe('TicketDeepDive View Component', () => {
           cache_hit_rate_pct: 33.3,
           cost_usd: 0.8,
           peak_context_tokens: 80000,
-          context_health: 'HEALTHY',
+          context_health: 'HEALTHY' as ContextHealthStatus,
         },
       ],
       models: [
@@ -833,7 +834,7 @@ describe('TicketDeepDive View Component', () => {
           cache_hit_rate_pct: 33.3,
           cost_usd: 2.0,
           peak_context_tokens: 150000,
-          context_health: 'HEALTHY',
+          context_health: 'HEALTHY' as ContextHealthStatus,
         },
         {
           model: 'gemini-2.5-pro',
@@ -844,7 +845,7 @@ describe('TicketDeepDive View Component', () => {
           cache_hit_rate_pct: 33.3,
           cost_usd: 1.8,
           peak_context_tokens: 80000,
-          context_health: 'HEALTHY',
+          context_health: 'HEALTHY' as ContextHealthStatus,
         },
       ],
     };

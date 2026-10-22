@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { LandingPage } from './LandingPage';
 import * as apiClient from '../api/client';
 import { mockFleetSummary, mockTicketComparisonRows } from '../test/fixtures/mockData';
+import type { ContextHealthStatus } from '../domain/types';
 
 describe('LandingPage View Component', () => {
   beforeEach(() => {
@@ -208,6 +209,7 @@ describe('LandingPage View Component', () => {
         {
           ticket_id: 'ZERO-1',
           ticket_title: 'Zero Iteration Ticket',
+          ticket_type: 'feat',
           updated_at: '2026-10-17T01:00:00Z',
           started_at: '2026-10-17T00:00:00Z',
           completed_at: '2026-10-17T01:00:00Z',
@@ -230,6 +232,7 @@ describe('LandingPage View Component', () => {
         {
           ticket_id: 'NAN-1',
           ticket_title: 'Corrupted Iteration Ticket',
+          ticket_type: 'feat',
           updated_at: '2026-10-17T01:00:00Z',
           started_at: '2026-10-17T00:00:00Z',
           completed_at: '2026-10-17T01:00:00Z',
@@ -393,7 +396,7 @@ describe('LandingPage View Component', () => {
         {
           ...mockTicketComparisonRows[0],
           ticket_id: 'CUSTOM-STATUS-1',
-          context_health_status: 'UNRECOGNIZED_STATUS' as unknown as 'HEALTHY',
+          context_health_status: 'UNRECOGNIZED_STATUS' as unknown as ContextHealthStatus,
         },
       ],
     });

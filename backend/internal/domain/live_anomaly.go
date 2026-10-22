@@ -18,11 +18,14 @@ const (
 	RuleToolThrashing          LiveAnomalyRuleName = "ToolThrashing"
 )
 
+// LiveAnomalySeverity defines the severity tier of a live anomaly alert.
+type LiveAnomalySeverity string
+
 // Live anomaly severity tiers.
 const (
-	LiveSeverityWarning  = "WARNING"
-	LiveSeverityHigh     = "HIGH"
-	LiveSeverityCritical = "CRITICAL"
+	LiveSeverityWarning  LiveAnomalySeverity = "WARNING"
+	LiveSeverityHigh     LiveAnomalySeverity = "HIGH"
+	LiveSeverityCritical LiveAnomalySeverity = "CRITICAL"
 )
 
 // Default thresholds for live anomaly detection rules.
@@ -43,7 +46,7 @@ const (
 type LiveAnomalyAlert struct {
 	SessionID    string              `json:"session_id"`
 	RuleName     LiveAnomalyRuleName `json:"rule_name"`
-	Severity     string              `json:"severity"`
+	Severity     LiveAnomalySeverity `json:"severity"`
 	Message      string              `json:"message"`
 	Timestamp    string              `json:"timestamp"`
 	TriggerEvent string              `json:"trigger_event"`
@@ -238,7 +241,7 @@ func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, 
 			}
 		}
 
-		var severity string
+		var severity LiveAnomalySeverity
 		var surgingTokens int64
 		var thresholdUsed int64
 
@@ -443,7 +446,7 @@ func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
 	return alerts
 }
 
-func liveSeverityRank(sev string) int {
+func liveSeverityRank(sev LiveAnomalySeverity) int {
 	switch sev {
 	case LiveSeverityCritical:
 		return 3

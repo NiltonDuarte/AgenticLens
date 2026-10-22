@@ -2,12 +2,32 @@ export type EventType = 'tool_call' | 'turn_message' | 'compaction';
 
 export type DataSource = 'local_sqlite' | 'committed_ledger';
 
+export type CanonicalAgentRole =
+  | 'orchestrator'
+  | 'planner'
+  | 'coder'
+  | 'tester'
+  | 'reviewer';
+
+export type AgentRole = CanonicalAgentRole | (string & {});
+
+export type ConventionalTicketType =
+  | 'feat'
+  | 'fix'
+  | 'docs'
+  | 'chore'
+  | 'refactor'
+  | 'test'
+  | 'ci'
+  | 'perf'
+  | 'build';
+
 export interface EventFact {
   readonly timestamp: string;
   readonly session_id: string;
   readonly message_id?: string | null | undefined;
   readonly turn: number;
-  readonly role: string;
+  readonly role: AgentRole;
   readonly event_type: EventType;
   readonly tool_name?: string | null | undefined;
   readonly status: string;
@@ -39,8 +59,8 @@ export interface AnomalyContext {
   readonly tool_name?: string | undefined;
   readonly session_id?: string | undefined;
   readonly turn?: number | undefined;
-  readonly role?: string | undefined;
-  readonly secondary_role?: string | undefined;
+  readonly role?: AgentRole | null | undefined;
+  readonly secondary_role?: AgentRole | null | undefined;
   readonly count?: number | undefined;
   readonly total_calls?: number | undefined;
   readonly token_delta?: number | undefined;

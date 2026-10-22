@@ -405,7 +405,7 @@ describe('LiveTraceInspector Component', () => {
               tool_name: 'read_file',
               status: 'completed',
               is_error: false,
-              severity: 'LOW',
+              severity: 'low',
               input_snippet: 'path: config.yaml',
               output_snippet: 'version: 1.0.0',
             },
@@ -415,7 +415,7 @@ describe('LiveTraceInspector Component', () => {
               tool_name: 'bash',
               status: 'failed',
               is_error: true,
-              severity: 'HIGH',
+              severity: 'high',
               input_snippet: 'cat missing.txt',
               output_snippet: 'cat: missing.txt: No such file or directory',
             },
@@ -476,7 +476,7 @@ describe('LiveTraceInspector Component', () => {
               tool_name: 'bash',
               status: 'completed',
               is_error: false,
-              severity: 'NONE',
+              severity: 'none',
               input_snippet: 'echo hello',
               output_snippet: 'hello',
             },
@@ -574,7 +574,7 @@ describe('LiveTraceInspector Component', () => {
               tool_name: 'bash',
               status: 'completed',
               is_error: false,
-              severity: 'NONE',
+              severity: 'none',
             },
           ],
           total_tokens: 50,
@@ -606,13 +606,13 @@ describe('LiveTraceInspector Component', () => {
   });
 
   it('does not display streak badge when anomaly count is 1 or missing', () => {
-    const errorPart = {
+    const errorPart: LivePartFact = {
       id: 'part-fail-single',
       type: 'tool',
       tool_name: 'bash',
       status: 'error',
       is_error: true,
-      severity: 'WARNING',
+      severity: 'medium',
       input_snippet: 'cat foo.txt',
       output_snippet: 'not found',
     };
@@ -653,13 +653,13 @@ describe('LiveTraceInspector Component', () => {
   });
 
   it('wires exact anomaly streak count to FailedToolAlertCard', () => {
-    const errorPart = {
+    const errorPart: LivePartFact = {
       id: 'part-fail-streak',
       type: 'tool',
       tool_name: 'bash',
       status: 'error',
       is_error: true,
-      severity: 'CRITICAL',
+      severity: 'high',
       input_snippet: 'make test',
       output_snippet: 'exit status 2',
     };
@@ -724,7 +724,7 @@ describe('LiveTraceInspector Component', () => {
       tool_name: 'bash',
       status: 'error',
       is_error: true,
-      severity: 'CRITICAL',
+      severity: 'high',
       input_snippet: 'cargo test --all',
       output_snippet: 'error[E0432]: unresolved import',
       error_message: 'compilation failed',

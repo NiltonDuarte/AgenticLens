@@ -290,7 +290,7 @@ func TestClassifyToolFailure(t *testing.T) {
 		output            string
 		consecutiveErrors int
 		expectedIsError   bool
-		expectedSeverity  string
+		expectedSeverity  domain.FailureSeverity
 		expectNilMsg      bool
 	}{
 		{
@@ -485,7 +485,7 @@ func TestClassifyToolFailure_ContentInspectionTools_CompletedStatusBypassesConte
 					if isErr {
 						t.Errorf("expected isError=false for %s with status completed, got true", tool)
 					}
-					if sev != string(domain.SeverityNone) {
+					if sev != domain.SeverityNone {
 						t.Errorf("expected severity=none, got %s", sev)
 					}
 					if errMsg != nil {
@@ -518,7 +518,7 @@ func TestClassifyToolFailure_ContentInspectionTools_CompletedStatusBypassesConte
 				if !isErr {
 					t.Errorf("expected isError=true for %s with status=%s, got false", tc.tool, tc.status)
 				}
-				if sev == string(domain.SeverityNone) {
+				if sev == domain.SeverityNone {
 					t.Errorf("expected severity != none for tool error, got %s", sev)
 				}
 				if errMsg == nil {
@@ -537,7 +537,7 @@ func TestClassifyToolFailure_AdversarialSuite(t *testing.T) {
 		output            string
 		consecutiveErrors int
 		expectedIsError   bool
-		expectedSeverity  string
+		expectedSeverity  domain.FailureSeverity
 		assertMsgContains string
 	}{
 		// Fatal Go errors

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
-import type { LivePartFact } from '../domain/live';
+import type { FailureSeverity, LivePartFact } from '../domain/live';
 
 describe('FailedToolAlertCard Component', () => {
   const basePart: LivePartFact = {
@@ -13,7 +13,7 @@ describe('FailedToolAlertCard Component', () => {
     status: 'error',
     is_error: true,
     error_message: 'Compilation failure in workspace crate',
-    severity: 'HIGH',
+    severity: 'high',
   };
 
   it('renders tool name, failed status badge, and high severity tag with red accent styling', () => {
@@ -84,8 +84,8 @@ describe('FailedToolAlertCard Component', () => {
     expect(onInspect).toHaveBeenCalledTimes(1);
   });
 
-  it('renders all severity levels (CRITICAL, HIGH, MEDIUM, LOW) and defaults to HIGH when omitted', () => {
-    const severities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
+  it('renders all severity levels (high, medium, low, none) and defaults to high when omitted', () => {
+    const severities: readonly FailureSeverity[] = ['high', 'medium', 'low', 'none'];
 
     for (const sev of severities) {
       const partWithSev: LivePartFact = {
@@ -95,8 +95,8 @@ describe('FailedToolAlertCard Component', () => {
 
       const { unmount } = render(<FailedToolAlertCard part={partWithSev} />);
       const card = screen.getByTestId('failed-tool-alert-card');
-      expect(card).toHaveClass(`severity-${sev.toLowerCase()}`);
-      expect(screen.getByText(sev)).toBeInTheDocument();
+      expect(card).toHaveClass(`severity-${sev}`);
+      expect(screen.getByText(sev.toUpperCase())).toBeInTheDocument();
       unmount();
     }
 
@@ -106,7 +106,6 @@ describe('FailedToolAlertCard Component', () => {
       type: 'tool',
       status: 'error',
       is_error: true,
-      severity: '',
     };
     render(<FailedToolAlertCard part={omittedSevPart} />);
     const card = screen.getByTestId('failed-tool-alert-card');
@@ -146,7 +145,7 @@ describe('FailedToolAlertCard Component', () => {
       type: 'tool',
       status: 'error',
       is_error: true,
-      severity: 'HIGH',
+      severity: 'high',
       error_message: 'Explicit error reason',
     };
 
@@ -159,7 +158,7 @@ describe('FailedToolAlertCard Component', () => {
       type: 'tool',
       status: 'error',
       is_error: true,
-      severity: 'HIGH',
+      severity: 'high',
     };
 
     render(<FailedToolAlertCard part={noSnippetPart} />);
@@ -172,7 +171,7 @@ describe('FailedToolAlertCard Component', () => {
       type: 'tool',
       status: 'error',
       is_error: true,
-      severity: 'HIGH',
+      severity: 'high',
     };
 
     render(<FailedToolAlertCard part={missingFieldsPart} />);
@@ -274,7 +273,7 @@ describe('FailedToolAlertCard Component', () => {
         tool_name: 'git',
         status: 'error',
         is_error: true,
-        severity: 'WARNING',
+        severity: 'medium',
         error_message: 'fatal: repository not found',
       };
 

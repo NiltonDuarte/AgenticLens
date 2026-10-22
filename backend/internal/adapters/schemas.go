@@ -55,7 +55,7 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 	return domain.InvocationFact{
 		ID:                    dto.ID,
 		ParentID:              dto.ParentID,
-		Role:                  role,
+		Role:                  domain.AgentRole(role),
 		Model:                 model,
 		User:                  user,
 		StartedAt:             dto.StartedAt,
@@ -65,6 +65,30 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 		Tokens:                dto.Tokens.ToDomain(),
 		CostUSD:               dto.CostUSD,
 		Compactions:           dto.Compactions,
+	}
+}
+
+// InvocationFactDTOFromDomain converts domain.InvocationFact to InvocationFactDTO.
+func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
+	return InvocationFactDTO{
+		ID:                    inv.ID,
+		ParentID:              inv.ParentID,
+		Role:                  string(inv.Role),
+		Model:                 inv.Model,
+		User:                  inv.User,
+		StartedAt:             inv.StartedAt,
+		CompletedAt:           inv.CompletedAt,
+		ActiveDurationSeconds: inv.ActiveDurationSeconds,
+		Turns:                 inv.Turns,
+		Tokens: InvocationTokensDTO{
+			Input:       inv.Tokens.Input,
+			Output:      inv.Tokens.Output,
+			CacheRead:   inv.Tokens.CacheRead,
+			Reasoning:   inv.Tokens.Reasoning,
+			PeakContext: inv.Tokens.PeakContext,
+		},
+		CostUSD:     inv.CostUSD,
+		Compactions: inv.Compactions,
 	}
 }
 
@@ -114,7 +138,7 @@ func (dto EventFactDTO) ToDomain() domain.EventFact {
 		Timestamp:     dto.Timestamp,
 		SessionID:     dto.SessionID,
 		Turn:          dto.Turn,
-		Role:          role,
+		Role:          domain.AgentRole(role),
 		EventType:     domain.EventType(dto.EventType),
 		ToolName:      dto.ToolName,
 		Status:        status,
@@ -130,7 +154,7 @@ func EventFactDTOFromDomain(fact domain.EventFact) EventFactDTO {
 		Timestamp:     fact.Timestamp,
 		SessionID:     fact.SessionID,
 		Turn:          fact.Turn,
-		Role:          fact.Role,
+		Role:          string(fact.Role),
 		EventType:     string(fact.EventType),
 		ToolName:      fact.ToolName,
 		Status:        fact.Status,
@@ -236,6 +260,41 @@ type AgenticFactLedgerDTO struct {
 	Events        []EventFactDTO      `json:"events"`
 }
 
+func toDomainTicketType(raw *string) *domain.ConventionalTicketType {
+	if raw == nil {
+		return nil
+	}
+	if tt, ok := domain.NormalizeTicketType(*raw); ok {
+		return &tt
+	}
+	ct := domain.ConventionalTicketType(*raw)
+	return &ct
+}
+
+func fromDomainTicketType(tt *domain.ConventionalTicketType) *string {
+	if tt == nil {
+		return nil
+	}
+	s := string(*tt)
+	return &s
+}
+
+func toDomainAgentRole(raw *string) *domain.AgentRole {
+	if raw == nil {
+		return nil
+	}
+	r := domain.AgentRole(*raw)
+	return &r
+}
+
+func fromDomainAgentRole(r *domain.AgentRole) *string {
+	if r == nil {
+		return nil
+	}
+	s := string(*r)
+	return &s
+}
+
 func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	invs := make([]domain.InvocationFact, len(dto.Invocations))
 	for i, inv := range dto.Invocations {
@@ -265,7 +324,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		Migration:     mig,
 		TicketID:      dto.TicketID,
 		TicketTitle:   dto.TicketTitle,
-		TicketType:    dto.TicketType,
+		TicketType:    toDomainTicketType(dto.TicketType),
 		StartedAt:     dto.StartedAt,
 		CompletedAt:   dto.CompletedAt,
 		UpdatedAt:     dto.UpdatedAt,
@@ -280,26 +339,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
 	invs := make([]InvocationFactDTO, len(ledger.Invocations))
 	for i, inv := range ledger.Invocations {
-		invs[i] = InvocationFactDTO{
-			ID:                    inv.ID,
-			ParentID:              inv.ParentID,
-			Role:                  inv.Role,
-			Model:                 inv.Model,
-			User:                  inv.User,
-			StartedAt:             inv.StartedAt,
-			CompletedAt:           inv.CompletedAt,
-			ActiveDurationSeconds: inv.ActiveDurationSeconds,
-			Turns:                 inv.Turns,
-			Tokens: InvocationTokensDTO{
-				Input:       inv.Tokens.Input,
-				Output:      inv.Tokens.Output,
-				CacheRead:   inv.Tokens.CacheRead,
-				Reasoning:   inv.Tokens.Reasoning,
-				PeakContext: inv.Tokens.PeakContext,
-			},
-			CostUSD:     inv.CostUSD,
-			Compactions: inv.Compactions,
-		}
+		invs[i] = InvocationFactDTOFromDomain(inv)
 	}
 
 	tools := make([]ToolFactDTO, len(ledger.Tools))
@@ -326,7 +366,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
 		TicketID:      ledger.TicketID,
 		TicketTitle:   ledger.TicketTitle,
-		TicketType:    ledger.TicketType,
+		TicketType:    fromDomainTicketType(ledger.TicketType),
 		StartedAt:     ledger.StartedAt,
 		CompletedAt:   ledger.CompletedAt,
 		UpdatedAt:     ledger.UpdatedAt,
@@ -366,8 +406,8 @@ func (dto AnomalyContextDTO) ToDomain() domain.AnomalyContext {
 		ToolName:       dto.ToolName,
 		SessionID:      dto.SessionID,
 		Turn:           dto.Turn,
-		Role:           dto.Role,
-		SecondaryRole:  dto.SecondaryRole,
+		Role:           toDomainAgentRole(dto.Role),
+		SecondaryRole:  toDomainAgentRole(dto.SecondaryRole),
 		Count:          dto.Count,
 		TotalCalls:     dto.TotalCalls,
 		TokenDelta:     dto.TokenDelta,
@@ -383,8 +423,8 @@ func AnomalyContextDTOFromDomain(ctx domain.AnomalyContext) AnomalyContextDTO {
 		ToolName:       ctx.ToolName,
 		SessionID:      ctx.SessionID,
 		Turn:           ctx.Turn,
-		Role:           ctx.Role,
-		SecondaryRole:  ctx.SecondaryRole,
+		Role:           fromDomainAgentRole(ctx.Role),
+		SecondaryRole:  fromDomainAgentRole(ctx.SecondaryRole),
 		Count:          ctx.Count,
 		TotalCalls:     ctx.TotalCalls,
 		TokenDelta:     ctx.TokenDelta,
@@ -549,7 +589,7 @@ func (dto AgenticMetricsLedgerDTO) ToDomain() domain.AgenticMetricsLedger {
 	return domain.AgenticMetricsLedger{
 		TicketID:           dto.TicketID,
 		TicketTitle:        dto.TicketTitle,
-		TicketType:         dto.TicketType,
+		TicketType:         toDomainTicketType(dto.TicketType),
 		StartedAt:          dto.StartedAt,
 		CompletedAt:        dto.CompletedAt,
 		UpdatedAt:          dto.UpdatedAt,
@@ -573,7 +613,7 @@ func SerializeLedger(ledger domain.AgenticMetricsLedger) AgenticMetricsLedgerDTO
 	return AgenticMetricsLedgerDTO{
 		TicketID:           ledger.TicketID,
 		TicketTitle:        ledger.TicketTitle,
-		TicketType:         ledger.TicketType,
+		TicketType:         fromDomainTicketType(ledger.TicketType),
 		StartedAt:          ledger.StartedAt,
 		CompletedAt:        ledger.CompletedAt,
 		UpdatedAt:          ledger.UpdatedAt,

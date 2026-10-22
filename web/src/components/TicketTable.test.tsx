@@ -8,6 +8,7 @@ describe('TicketTable Component', () => {
     {
       ticket_id: 'AL-10',
       ticket_title: 'Zeta feature optimization',
+      ticket_type: 'feat',
       updated_at: '2026-10-15T14:32:00Z',
       sdlc_iterations: 5,
       active_duration_seconds: 3600,
@@ -30,6 +31,7 @@ describe('TicketTable Component', () => {
     {
       ticket_id: 'AL-2',
       ticket_title: 'Alpha backend refactor',
+      ticket_type: 'refactor',
       updated_at: '2026-10-16T16:15:00Z',
       sdlc_iterations: 1,
       active_duration_seconds: 1200,
@@ -52,6 +54,7 @@ describe('TicketTable Component', () => {
     {
       ticket_id: 'GEN-9',
       ticket_title: 'Beta regex special char [.*+?^${}()|[]\\] test',
+      ticket_type: 'chore',
       updated_at: '2026-10-17T10:00:00Z',
       sdlc_iterations: 2,
       active_duration_seconds: 2400,

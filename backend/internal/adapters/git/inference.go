@@ -21,7 +21,7 @@ func GetGitUser() string {
 }
 
 // InferTicketTypeFromBranchList parses git branch list output to resolve conventional commit type.
-func InferTicketTypeFromBranchList(branchOut, ticketID string) *string {
+func InferTicketTypeFromBranchList(branchOut, ticketID string) *domain.ConventionalTicketType {
 	cleanTicket := strings.TrimSpace(ticketID)
 	if cleanTicket == "" {
 		return nil
@@ -44,14 +44,12 @@ func InferTicketTypeFromBranchList(branchOut, ticketID string) *string {
 			if len(filtered) > 0 {
 				prefix := strings.ToLower(filtered[0])
 				if tt, ok := domain.NormalizeTicketType(prefix); ok {
-					s := string(tt)
-					return &s
+					return &tt
 				}
 				// If first segment was a remote identifier (e.g. origin, upstream), check the next segment
 				if len(filtered) > 1 {
 					if tt, ok := domain.NormalizeTicketType(strings.ToLower(filtered[1])); ok {
-						s := string(tt)
-						return &s
+						return &tt
 					}
 				}
 			}
@@ -61,7 +59,7 @@ func InferTicketTypeFromBranchList(branchOut, ticketID string) *string {
 }
 
 // InferTicketType infers ticket classification from caller-supplied configured prefixes or git branch prefix.
-func InferTicketType(ticketID string, prefixes ...domain.TicketPrefix) *string {
+func InferTicketType(ticketID string, prefixes ...domain.TicketPrefix) *domain.ConventionalTicketType {
 	cleanTicket := strings.TrimSpace(ticketID)
 	if cleanTicket == "" {
 		return nil
@@ -70,8 +68,7 @@ func InferTicketType(ticketID string, prefixes ...domain.TicketPrefix) *string {
 	// 1. Evaluate configured ticket identifier prefixes first (shortcut avoiding subprocess forks)
 	if len(prefixes) > 0 {
 		if tt, ok := domain.InferTicketTypeFromPrefix(cleanTicket, prefixes); ok {
-			s := string(tt)
-			return &s
+			return &tt
 		}
 	}
 

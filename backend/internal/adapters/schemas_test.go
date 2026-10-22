@@ -26,8 +26,8 @@ func TestAnomalyContextDTO_BidirectionalMapping(t *testing.T) {
 		tool := "bash"
 		sess := "ses-10"
 		turn := int64(4)
-		role := "coder"
-		secRole := "tester"
+		role := domain.RoleCoder
+		secRole := domain.RoleTester
 		count := int64(5)
 		totalCalls := int64(10)
 		delta := int64(45000)
@@ -51,7 +51,7 @@ func TestAnomalyContextDTO_BidirectionalMapping(t *testing.T) {
 
 		dto := adapters.AnomalyContextDTOFromDomain(domCtx)
 		if *dto.ToolName != tool || *dto.SessionID != sess || *dto.Turn != turn ||
-			*dto.Role != role || *dto.SecondaryRole != secRole || *dto.Count != count ||
+			*dto.Role != string(role) || *dto.SecondaryRole != string(secRole) || *dto.Count != count ||
 			*dto.TotalCalls != totalCalls || *dto.TokenDelta != delta || *dto.ContextTokens != ctxTokens ||
 			*dto.Threshold != thresh || *dto.FailureRatePct != failPct {
 			t.Fatalf("AnomalyContextDTOFromDomain lost fields: %+v", dto)
@@ -482,7 +482,7 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 			}
 
 			dom := dto.ToDomain()
-			if dom.Role != tc.role {
+			if string(dom.Role) != tc.role {
 				t.Errorf("expected role %q preserved, got %q", tc.role, dom.Role)
 			}
 			if dom.Model != tc.model {
@@ -707,17 +707,18 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 
 	t.Run("canonical ticket_type values round-trip through metrics and fact DTOs", func(t *testing.T) {
 		t.Parallel()
-		types := []string{"feat", "fix", "docs", "chore", "refactor", "test", "ci", "perf", "build"}
+		types := domain.CanonicalTicketTypes
+		convPtr := func(tt domain.ConventionalTicketType) *domain.ConventionalTicketType { return &tt }
 		for _, tt := range types {
 			domFact := domain.AgenticFactLedger{
 				TicketID:   strPtr("AL-29"),
-				TicketType: strPtr(tt),
+				TicketType: convPtr(tt),
 				Code: domain.CodeFacts{
 					SDLCIterations: 1,
 				},
 			}
 			dto := adapters.AgenticFactLedgerDTOFromDomain(domFact)
-			if dto.TicketType == nil || *dto.TicketType != tt {
+			if dto.TicketType == nil || *dto.TicketType != string(tt) {
 				t.Errorf("expected %q in FactDTO, got %v", tt, dto.TicketType)
 			}
 			backToDom := dto.ToDomain()
@@ -727,10 +728,10 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 
 			domMetrics := domain.AgenticMetricsLedger{
 				TicketID:   strPtr("AL-29"),
-				TicketType: strPtr(tt),
+				TicketType: convPtr(tt),
 			}
 			metricsDTO := adapters.SerializeLedger(domMetrics)
-			if metricsDTO.TicketType == nil || *metricsDTO.TicketType != tt {
+			if metricsDTO.TicketType == nil || *metricsDTO.TicketType != string(tt) {
 				t.Errorf("expected %q in MetricsDTO, got %v", tt, metricsDTO.TicketType)
 			}
 			metricsBackToDom := metricsDTO.ToDomain()

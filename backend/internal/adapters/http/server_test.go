@@ -2435,8 +2435,8 @@ func TestMultiFilterEndpoints(t *testing.T) {
 		if rows[0].TicketID != "AL-2" {
 			t.Errorf("expected ticket ID AL-2, got %s", rows[0].TicketID)
 		}
-		if rows[0].TicketType == nil || *rows[0].TicketType != "bug" {
-			t.Errorf("expected ticket_type bug, got %v", rows[0].TicketType)
+		if rows[0].TicketType == nil || *rows[0].TicketType != domain.TicketTypeFix {
+			t.Errorf("expected ticket_type fix, got %v", rows[0].TicketType)
 		}
 
 		// 2. Bad request on invalid temporal filter

@@ -1,4 +1,8 @@
+import type { AgentRole } from '../types/telemetry';
+
 export type LiveAnomalySeverity = 'WARNING' | 'HIGH' | 'CRITICAL';
+
+export type FailureSeverity = 'none' | 'low' | 'medium' | 'high';
 
 export type LiveAnomalyRule =
   | 'ConsecutiveToolErrors'
@@ -25,12 +29,12 @@ export interface LivePartFact {
   readonly status: string;
   readonly is_error: boolean;
   readonly error_message?: string | null;
-  readonly severity: string;
+  readonly severity?: FailureSeverity;
 }
 
 export interface LiveMessageFact {
   readonly id: string;
-  readonly role: string;
+  readonly role: AgentRole;
   readonly content: string;
   readonly timestamp: string;
   readonly reasoning_content?: string | null;
@@ -56,7 +60,7 @@ export interface LiveSessionNode {
   readonly id: string;
   readonly parent_id?: string | null;
   readonly agent: string;
-  readonly role: string;
+  readonly role: AgentRole;
   readonly model: string;
   readonly title: string;
   readonly time_created: string;

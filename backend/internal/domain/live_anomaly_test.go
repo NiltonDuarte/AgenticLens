@@ -258,7 +258,7 @@ func TestContextCeilingApproachRule(t *testing.T) {
 		tokens           int64
 		ceiling          int64
 		expectedAlerts   int
-		expectedSeverity string
+		expectedSeverity domain.LiveAnomalySeverity
 	}{
 		{
 			name:           "0 tokens produces zero alerts and no division by zero",

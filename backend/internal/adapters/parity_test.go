@@ -13,14 +13,14 @@ import (
 )
 
 type expectedTotals struct {
-	Invocations       int64   `json:"invocations"`
-	InputTokens       int64   `json:"input_tokens"`
-	OutputTokens      int64   `json:"output_tokens"`
-	CacheReadTokens   int64   `json:"cache_read_tokens"`
-	CacheHitRatePct   float64 `json:"cache_hit_rate_pct"`
-	CostUSD           float64 `json:"cost_usd"`
-	PeakContextTokens int64   `json:"peak_context_tokens"`
-	ContextHealth     string  `json:"context_health"`
+	Invocations       int64                      `json:"invocations"`
+	InputTokens       int64                      `json:"input_tokens"`
+	OutputTokens      int64                      `json:"output_tokens"`
+	CacheReadTokens   int64                      `json:"cache_read_tokens"`
+	CacheHitRatePct   float64                    `json:"cache_hit_rate_pct"`
+	CostUSD           float64                    `json:"cost_usd"`
+	PeakContextTokens int64                      `json:"peak_context_tokens"`
+	ContextHealth     domain.ContextHealthStatus `json:"context_health"`
 }
 
 type expectedSubagentTurnVelocity struct {
@@ -42,8 +42,8 @@ type expectedToolExecution struct {
 }
 
 type expectedContextWindowHealth struct {
-	HealthyCeilingTokens      int64            `json:"healthy_ceiling_tokens"`
-	Status                    string           `json:"status"`
+	HealthyCeilingTokens      int64                      `json:"healthy_ceiling_tokens"`
+	Status                    domain.ContextHealthStatus `json:"status"`
 	OrchestratorPeakTokens    int64            `json:"orchestrator_peak_tokens"`
 	OrchestratorSaturationPct float64          `json:"orchestrator_saturation_pct"`
 	SubagentsPeakTokens       int64            `json:"subagents_peak_tokens"`
@@ -907,7 +907,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
 				t.Errorf("[%s] PeakTurns: expected %d, got %d", ticketID, expSatv.PeakTurns, satv.PeakTurns)
 			}
 			for role, expVal := range expSatv.ByRole {
-				gotVal, ok := satv.ByRole[role]
+				gotVal, ok := satv.ByRole[domain.AgentRole(role)]
 				if !ok || !almostEqual(gotVal, expVal, 0.05) {
 					t.Errorf("[%s] ByRole[%s]: expected %f, got %f", ticketID, role, expVal, gotVal)
 				}
@@ -954,11 +954,11 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
 			if cwh.SubagentsPeakTokens != expCwh.SubagentsPeakTokens {
 				t.Errorf("[%s] SubagentsPeakTokens: expected %d, got %d", ticketID, expCwh.SubagentsPeakTokens, cwh.SubagentsPeakTokens)
 			}
-			if cwh.SubagentsPeakRole != expCwh.SubagentsPeakRole {
+			if string(cwh.SubagentsPeakRole) != expCwh.SubagentsPeakRole {
 				t.Errorf("[%s] SubagentsPeakRole: expected %s, got %s", ticketID, expCwh.SubagentsPeakRole, cwh.SubagentsPeakRole)
 			}
 			for role, expPeak := range expCwh.PeakByRole {
-				gotPeak, ok := cwh.PeakByRole[role]
+				gotPeak, ok := cwh.PeakByRole[domain.AgentRole(role)]
 				if !ok || gotPeak != expPeak {
 					t.Errorf("[%s] PeakByRole[%s]: expected %d, got %d", ticketID, role, expPeak, gotPeak)
 				}
@@ -1058,7 +1058,7 @@ func TestFleetSummaryAndComparisonParity(t *testing.T) {
 		"reviewer":     2.5671,
 	}
 	for role, expCost := range expectedRoleCosts {
-		gotCost, ok := fleet.RoleCosts[role]
+		gotCost, ok := fleet.RoleCosts[domain.AgentRole(role)]
 		if !ok || !almostEqual(gotCost, expCost, 0.0001) {
 			t.Errorf("RoleCost[%s]: expected %f, got %f", role, expCost, gotCost)
 		}

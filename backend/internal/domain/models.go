@@ -13,7 +13,7 @@ type InvocationTokens struct {
 type InvocationFact struct {
 	ID                    string           `json:"id"`
 	ParentID              *string          `json:"parent_id"`
-	Role                  string           `json:"role"`
+	Role                  AgentRole        `json:"role"`
 	Model                 string           `json:"model"`
 	User                  string           `json:"user"`
 	StartedAt             *string          `json:"started_at"`
@@ -38,7 +38,7 @@ type EventFact struct {
 	SessionID        string    `json:"session_id"`
 	MessageID        *string   `json:"message_id,omitempty"`
 	Turn             int64     `json:"turn"`
-	Role             string    `json:"role"`
+	Role             AgentRole `json:"role"`
 	EventType        EventType `json:"event_type"`
 	ToolName         *string   `json:"tool_name,omitempty"`
 	Status           string    `json:"status"`
@@ -84,30 +84,30 @@ type MigrationInfo struct {
 
 // AgenticFactLedger is the root raw session facts ledger extracted for a ticket workspace.
 type AgenticFactLedger struct {
-	SchemaVersion *int             `json:"schema_version,omitempty"`
-	Migration     *MigrationInfo   `json:"migration,omitempty"`
-	TicketID      *string          `json:"ticket_id"`
-	TicketTitle   *string          `json:"ticket_title"`
-	TicketType    *string          `json:"ticket_type"`
-	StartedAt     *string          `json:"started_at"`
-	CompletedAt   *string          `json:"completed_at"`
-	UpdatedAt     string           `json:"updated_at"`
-	Code          CodeFacts        `json:"code"`
-	Invocations   []InvocationFact `json:"invocations"`
-	Tools         []ToolFact       `json:"tools"`
-	Events        []EventFact      `json:"events,omitempty"`
+	SchemaVersion *int                    `json:"schema_version,omitempty"`
+	Migration     *MigrationInfo          `json:"migration,omitempty"`
+	TicketID      *string                 `json:"ticket_id"`
+	TicketTitle   *string                 `json:"ticket_title"`
+	TicketType    *ConventionalTicketType `json:"ticket_type"`
+	StartedAt     *string                 `json:"started_at"`
+	CompletedAt   *string                 `json:"completed_at"`
+	UpdatedAt     string                  `json:"updated_at"`
+	Code          CodeFacts               `json:"code"`
+	Invocations   []InvocationFact        `json:"invocations"`
+	Tools         []ToolFact              `json:"tools"`
+	Events        []EventFact             `json:"events,omitempty"`
 }
 
 // GroupedMetric aggregates metrics across invocations.
 type GroupedMetric struct {
-	Invocations       int64   `json:"invocations"`
-	InputTokens       int64   `json:"input_tokens"`
-	OutputTokens      int64   `json:"output_tokens"`
-	CacheReadTokens   int64   `json:"cache_read_tokens"`
-	CacheHitRatePct   float64 `json:"cache_hit_rate_pct"`
-	CostUSD           float64 `json:"cost_usd"`
-	PeakContextTokens int64   `json:"peak_context_tokens"`
-	ContextHealth     string  `json:"context_health"`
+	Invocations       int64               `json:"invocations"`
+	InputTokens       int64               `json:"input_tokens"`
+	OutputTokens      int64               `json:"output_tokens"`
+	CacheReadTokens   int64               `json:"cache_read_tokens"`
+	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
+	CostUSD           float64             `json:"cost_usd"`
+	PeakContextTokens int64               `json:"peak_context_tokens"`
+	ContextHealth     ContextHealthStatus `json:"context_health"`
 }
 
 // TestToCodeRatio captures test to production code lines added and ratio string.
@@ -119,9 +119,9 @@ type TestToCodeRatio struct {
 
 // SubagentTurnVelocity records turn efficiency and thrashing for subagents.
 type SubagentTurnVelocity struct {
-	AvgTurnsPerInvocation float64            `json:"avg_turns_per_invocation"`
-	PeakTurns             int64              `json:"peak_turns"`
-	ByRole                map[string]float64 `json:"by_role"`
+	AvgTurnsPerInvocation float64               `json:"avg_turns_per_invocation"`
+	PeakTurns             int64                 `json:"peak_turns"`
+	ByRole                map[AgentRole]float64 `json:"by_role"`
 }
 
 // CodeDeliveredStats summarizes delivered code lines and file count.
@@ -140,14 +140,14 @@ type ToolExecutionHealth struct {
 
 // ContextWindowHealth captures context saturation, ceiling thresholds, and peak token tracking.
 type ContextWindowHealth struct {
-	HealthyCeilingTokens      int64            `json:"healthy_ceiling_tokens"`
-	Status                    string           `json:"status"`
-	OrchestratorPeakTokens    int64            `json:"orchestrator_peak_tokens"`
-	OrchestratorSaturationPct float64          `json:"orchestrator_saturation_pct"`
-	SubagentsPeakTokens       int64            `json:"subagents_peak_tokens"`
-	SubagentsPeakRole         string           `json:"subagents_peak_role"`
-	Compactions               int64            `json:"compactions"`
-	PeakByRole                map[string]int64 `json:"peak_by_role"`
+	HealthyCeilingTokens      int64               `json:"healthy_ceiling_tokens"`
+	Status                    ContextHealthStatus `json:"status"`
+	OrchestratorPeakTokens    int64               `json:"orchestrator_peak_tokens"`
+	OrchestratorSaturationPct float64             `json:"orchestrator_saturation_pct"`
+	SubagentsPeakTokens       int64               `json:"subagents_peak_tokens"`
+	SubagentsPeakRole         AgentRole           `json:"subagents_peak_role"`
+	Compactions               int64               `json:"compactions"`
+	PeakByRole                map[AgentRole]int64 `json:"peak_by_role"`
 }
 
 // WorkflowEfficiency aggregates SDLC duration, code delivery, and operational health metrics.
@@ -167,33 +167,33 @@ type WorkflowEfficiency struct {
 
 // ModelMetric summarizes aggregated usage and performance for a single model.
 type ModelMetric struct {
-	Model             string  `json:"model"`
-	Invocations       int64   `json:"invocations"`
-	InputTokens       int64   `json:"input_tokens"`
-	OutputTokens      int64   `json:"output_tokens"`
-	CacheReadTokens   int64   `json:"cache_read_tokens"`
-	CacheHitRatePct   float64 `json:"cache_hit_rate_pct"`
-	CostUSD           float64 `json:"cost_usd"`
-	PeakContextTokens int64   `json:"peak_context_tokens"`
-	ContextHealth     string  `json:"context_health"`
+	Model             string              `json:"model"`
+	Invocations       int64               `json:"invocations"`
+	InputTokens       int64               `json:"input_tokens"`
+	OutputTokens      int64               `json:"output_tokens"`
+	CacheReadTokens   int64               `json:"cache_read_tokens"`
+	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
+	CostUSD           float64             `json:"cost_usd"`
+	PeakContextTokens int64               `json:"peak_context_tokens"`
+	ContextHealth     ContextHealthStatus `json:"context_health"`
 }
 
 // RoleMetric summarizes aggregated usage and performance for an agent role.
 type RoleMetric struct {
-	Role              string  `json:"role"`
-	Invocations       int64   `json:"invocations"`
-	InputTokens       int64   `json:"input_tokens"`
-	OutputTokens      int64   `json:"output_tokens"`
-	CacheReadTokens   int64   `json:"cache_read_tokens"`
-	CacheHitRatePct   float64 `json:"cache_hit_rate_pct"`
-	CostUSD           float64 `json:"cost_usd"`
-	PeakContextTokens int64   `json:"peak_context_tokens"`
-	ContextHealth     string  `json:"context_health"`
+	Role              AgentRole           `json:"role"`
+	Invocations       int64               `json:"invocations"`
+	InputTokens       int64               `json:"input_tokens"`
+	OutputTokens      int64               `json:"output_tokens"`
+	CacheReadTokens   int64               `json:"cache_read_tokens"`
+	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
+	CostUSD           float64             `json:"cost_usd"`
+	PeakContextTokens int64               `json:"peak_context_tokens"`
+	ContextHealth     ContextHealthStatus `json:"context_health"`
 }
 
 // ThreadRoleMetric groups model metrics within an agent role under a thread session.
 type ThreadRoleMetric struct {
-	Role   string        `json:"role"`
+	Role   AgentRole     `json:"role"`
 	Models []ModelMetric `json:"models"`
 }
 
@@ -209,7 +209,7 @@ type ThreadExecutionRecord struct {
 type AgenticMetricsLedger struct {
 	TicketID           *string                 `json:"ticket_id"`
 	TicketTitle        *string                 `json:"ticket_title"`
-	TicketType         *string                 `json:"ticket_type"`
+	TicketType         *ConventionalTicketType `json:"ticket_type"`
 	StartedAt          *string                 `json:"started_at"`
 	CompletedAt        *string                 `json:"completed_at"`
 	UpdatedAt          string                  `json:"updated_at"`
@@ -284,36 +284,36 @@ type FleetSummary struct {
 	TotalLinesAdded          int64               `json:"total_lines_added"`
 	TotalLinesDeleted        int64               `json:"total_lines_deleted"`
 	TotalFilesChanged        int64               `json:"total_files_changed"`
-	TotalReasoningTokens     int64               `json:"total_reasoning_tokens"`
-	OverallReasoningRatioPct float64             `json:"overall_reasoning_ratio_pct"`
-	RoleCosts                map[string]float64  `json:"role_costs"`
-	ModelCosts               map[string]float64  `json:"model_costs"`
-	AnomalySummary           FleetAnomalySummary `json:"anomaly_summary"`
+	TotalReasoningTokens     int64                 `json:"total_reasoning_tokens"`
+	OverallReasoningRatioPct float64               `json:"overall_reasoning_ratio_pct"`
+	RoleCosts                map[AgentRole]float64 `json:"role_costs"`
+	ModelCosts               map[string]float64    `json:"model_costs"`
+	AnomalySummary           FleetAnomalySummary   `json:"anomaly_summary"`
 }
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
-	TicketID                  string  `json:"ticket_id"`
-	UpdatedAt                 string  `json:"updated_at"`
-	SDLCIterations            int64   `json:"sdlc_iterations"`
-	ActiveDurationSeconds     int64   `json:"active_duration_seconds"`
-	ActiveDurationFormatted   string  `json:"active_duration_formatted"`
-	CostUSD                   float64 `json:"cost_usd"`
-	CacheHitRatePct           float64 `json:"cache_hit_rate_pct"`
-	TestToCodeRatio           string  `json:"test_to_code_ratio"`
-	LinesAdded                int64   `json:"lines_added"`
-	LinesDeleted              int64   `json:"lines_deleted"`
-	FilesChanged              int64   `json:"files_changed"`
-	ToolSuccessRatePct        float64 `json:"tool_success_rate_pct"`
-	ContextHealthStatus       string  `json:"context_health_status"`
-	OrchestratorSaturationPct float64 `json:"orchestrator_saturation_pct"`
-	PeakContextTokens         int64   `json:"peak_context_tokens"`
-	TicketTitle               string  `json:"ticket_title"`
-	TicketType                *string `json:"ticket_type,omitempty"`
-	StartedAt                 *string `json:"started_at"`
-	CompletedAt               *string `json:"completed_at"`
-	LeadDurationSeconds       *int64  `json:"lead_duration_seconds"`
-	LeadDurationFormatted     string  `json:"lead_duration_formatted"`
+	TicketID                  string                  `json:"ticket_id"`
+	UpdatedAt                 string                  `json:"updated_at"`
+	SDLCIterations            int64                   `json:"sdlc_iterations"`
+	ActiveDurationSeconds     int64                   `json:"active_duration_seconds"`
+	ActiveDurationFormatted   string                  `json:"active_duration_formatted"`
+	CostUSD                   float64                 `json:"cost_usd"`
+	CacheHitRatePct           float64                 `json:"cache_hit_rate_pct"`
+	TestToCodeRatio           string                  `json:"test_to_code_ratio"`
+	LinesAdded                int64                   `json:"lines_added"`
+	LinesDeleted              int64                   `json:"lines_deleted"`
+	FilesChanged              int64                   `json:"files_changed"`
+	ToolSuccessRatePct        float64                 `json:"tool_success_rate_pct"`
+	ContextHealthStatus       ContextHealthStatus     `json:"context_health_status"`
+	OrchestratorSaturationPct float64                 `json:"orchestrator_saturation_pct"`
+	PeakContextTokens         int64                   `json:"peak_context_tokens"`
+	TicketTitle               string                  `json:"ticket_title"`
+	TicketType                *ConventionalTicketType `json:"ticket_type,omitempty"`
+	StartedAt                 *string                 `json:"started_at"`
+	CompletedAt               *string                 `json:"completed_at"`
+	LeadDurationSeconds       *int64                  `json:"lead_duration_seconds"`
+	LeadDurationFormatted     string                  `json:"lead_duration_formatted"`
 }
 
 // ScanReport holds all ledgers loaded from workspace traversal alongside non-fatal scan errors.

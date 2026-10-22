@@ -16,6 +16,9 @@ Four interrelated operational issues impair operator observability and anomaly i
 4. Absence of Concrete Debug Identifiers with Copy to Clipboard Actions:
    When an operator identifies an anomalous event, failure alert, or unexpected tool outcome, debugging requires locating the underlying agent message turn in raw logs or the SQLite database. Currently, the UI displays fragmented labels without a unified, copyable debug identifier. The system must expose concrete identifiers (session ID, message ID, turn identifier, or composite debug ID) across event inspection views (web/src/components/AnomalyDrawer.tsx, web/src/components/TraceWaterfall.tsx, and web/src/components/FailedToolAlertCard.tsx) equipped with a one-click Copy to Clipboard button providing temporary feedback.
 
+5. Primitive Obsession Across Declared Domain Enums (Iteration 05 Scope Extension):
+   A systematic audit identified that existing declared enums in the domain layer (ContextHealthStatus, AgentRole, FailureSeverity, ConventionalTicketType / StandardTicketType) are bypassed in favor of raw strings across domain structs in both Go and TypeScript. This degrades compile-time safety and introduces risks of transposition errors in function signatures. Existing declared types must be systematically wired into the domain core and presentation boundaries.
+
 ---
 
 ## 2. Functional Core, Imperative Shell (FCIS) Invariants
@@ -68,12 +71,18 @@ Zero emojis permitted across all Go source files, TypeScript components, test su
    - Implement collapsible section pattern in web/src/components/TraceWaterfall.tsx, collapsed by default, displaying concise summary metrics when collapsed and full interactive controls when expanded.
    - Add concrete debug identifiers and Copy to Clipboard controls in web/src/components/TraceWaterfall.tsx, web/src/components/AnomalyDrawer.tsx, and web/src/components/FailedToolAlertCard.tsx.
    - Update and expand test suites in web/src/components/TraceWaterfall.test.tsx, web/src/components/AnomalyDrawer.test.tsx, web/src/components/FailedToolAlertCard.test.tsx, and web/src/views/TicketDeepDive.test.tsx.
+5. Domain Typing & Primitive Obsession Remediation (Iteration 05 Extension):
+   - In Go domain (backend/internal/domain/): wire ContextHealthStatus, AgentRole, FailureSeverity, and ConventionalTicketType into domain structs. Update OrderRoles to accept generic string types. Return FailureSeverity directly from ClassifyToolFailure.
+   - In Go adapters (backend/internal/adapters/): align schemas DTO converters, git inference helpers, live service, and opencode extractor.
+   - In TypeScript domain (web/src/domain/, web/src/types/): define and export CanonicalAgentRole and autocomplete union AgentRole, export FailureSeverity, align StandardTicketType and TicketType, and update domain interfaces to use ContextHealthStatus, AgentRole, FailureSeverity, and TicketType.
+   - In TypeScript presentation components (web/src/components/): update TicketSelector and FailedToolAlertCard props and alignment.
 
 ### Out of Scope
 1. Modifying SQLite schema migrations or altering database column definitions in OpenCode.
-2. Altering Git commit diff extraction or file churn calculations in backend/internal/adapters/git/.
-3. Changing HTTP server endpoint routes or server configuration APIs.
-4. Modifying live WebSocket or Server-Sent Events protocols.
+2. Introducing branded or nominal entity identifier types (TicketID, SessionID, MessageID, PartID); deferred to dedicated architectural ticket REF-1.
+3. Altering Git commit diff extraction or file churn calculations in backend/internal/adapters/git/.
+4. Changing HTTP server endpoint routes or server configuration APIs.
+5. Modifying live WebSocket or Server-Sent Events protocols.
 
 ---
 
@@ -163,3 +172,17 @@ Zero emojis permitted across all Go source files, TypeScript components, test su
    - Clicking invokes clipboard copy via navigator.clipboard.writeText with fallback to document.execCommand('copy').
    - Button text transitions to "Copied" for 2000 milliseconds before reverting to "Copy".
    - Safe exception handling ensuring clipboard permission denial does not crash the UI.
+
+### Domain Enums and Typing Contract (Iteration 05 Extension)
+1. Context Window Health Typings:
+   - Go: GroupedMetric.ContextHealth, ContextWindowHealth.Status, ModelMetric.ContextHealth, RoleMetric.ContextHealth, and TicketComparisonRow.ContextHealthStatus must use ContextHealthStatus.
+   - TypeScript: GroupedMetric.context_health, ContextWindowHealth.status, ModelMetric.context_health, RoleMetric.context_health, and TicketComparisonRow.context_health_status must use ContextHealthStatus.
+2. Agent Role Typings:
+   - Go: InvocationFact.Role, EventFact.Role, LiveMessageFact.Role, RoleMetric.Role, ThreadRoleMetric.Role, and ContextWindowHealth.SubagentsPeakRole must use AgentRole. OrderRoles and OrderSubagentRoles must be generic over ~string.
+   - TypeScript: CanonicalAgentRole must be 'orchestrator' | 'planner' | 'coder' | 'tester' | 'reviewer'. AgentRole must be autocomplete union CanonicalAgentRole | (string & {}). EventFact.role, InvocationFact.role, LiveMessageFact.role, LiveSessionNode.role, RoleMetric.role, ThreadRoleMetric.role, and ContextWindowHealth.subagents_peak_role must use AgentRole.
+3. Failure Severity Typings:
+   - Go: LivePartFact.Severity must use FailureSeverity. ClassifyToolFailure signature must return (bool, FailureSeverity, *string). LiveAnomalyAlert.Severity must use LiveAnomalySeverity.
+   - TypeScript: FailureSeverity must be 'none' | 'low' | 'medium' | 'high'. LivePartFact.severity must use FailureSeverity.
+4. Conventional Ticket Type Typings:
+   - Go: AgenticFactLedger.TicketType, AgenticMetricsLedger.TicketType, and TicketComparisonRow.TicketType must use *ConventionalTicketType.
+   - TypeScript: StandardTicketType must include canonical types, TicketType must be StandardTicketType | (string & {}), and ticket_type across ledgers and rows must use TicketType | null.

@@ -3169,14 +3169,14 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		t.Parallel()
 		mixedCases := []struct {
 			input    string
-			expected string
+			expected domain.ConventionalTicketType
 		}{
-			{input: "  FeAt  ", expected: "feat"},
-			{input: "BUGFIX", expected: "fix"},
-			{input: "DoCs", expected: "docs"},
-			{input: "  cI  ", expected: "ci"},
-			{input: "PeRfOrMaNcE", expected: "perf"},
-			{input: "  bUiLd  ", expected: "build"},
+			{input: "  FeAt  ", expected: domain.TicketTypeFeat},
+			{input: "BUGFIX", expected: domain.TicketTypeFix},
+			{input: "DoCs", expected: domain.TicketTypeDocs},
+			{input: "  cI  ", expected: domain.TicketTypeCI},
+			{input: "PeRfOrMaNcE", expected: domain.TicketTypePerf},
+			{input: "  bUiLd  ", expected: domain.TicketTypeBuild},
 		}
 
 		for _, tc := range mixedCases {

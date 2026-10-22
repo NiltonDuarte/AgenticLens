@@ -126,10 +126,10 @@ const (
 	TimeWindowCustomRange      TimeWindowPreset = "Custom Range"
 )
 
-func orderRolesHelper(roles []string, customOrder ...[]string) []string {
-	present := make(map[string]struct{})
+func orderRolesHelper[T ~string](roles []T, customOrder ...[]T) []T {
+	present := make(map[T]struct{})
 	for _, r := range roles {
-		trimmed := strings.TrimSpace(r)
+		trimmed := T(strings.TrimSpace(string(r)))
 		if trimmed != "" {
 			present[trimmed] = struct{}{}
 		}
@@ -139,10 +139,10 @@ func orderRolesHelper(roles []string, customOrder ...[]string) []string {
 	}
 
 	var hasCustom bool
-	var orderList []string
+	var orderList []T
 	if len(customOrder) > 0 && len(customOrder[0]) > 0 {
 		for _, o := range customOrder[0] {
-			trimmed := strings.TrimSpace(o)
+			trimmed := T(strings.TrimSpace(string(o)))
 			if trimmed != "" {
 				orderList = append(orderList, trimmed)
 			}
@@ -153,16 +153,18 @@ func orderRolesHelper(roles []string, customOrder ...[]string) []string {
 	}
 
 	if !hasCustom {
-		var all []string
+		var all []T
 		for r := range present {
 			all = append(all, r)
 		}
-		sort.Strings(all)
+		sort.Slice(all, func(i, j int) bool {
+			return all[i] < all[j]
+		})
 		return all
 	}
 
-	var ordered []string
-	seenInOrder := make(map[string]struct{})
+	var ordered []T
+	seenInOrder := make(map[T]struct{})
 	for _, r := range orderList {
 		if _, exists := present[r]; exists {
 			if _, alreadyAdded := seenInOrder[r]; !alreadyAdded {
@@ -173,18 +175,20 @@ func orderRolesHelper(roles []string, customOrder ...[]string) []string {
 		}
 	}
 
-	var remaining []string
+	var remaining []T
 	for r := range present {
 		remaining = append(remaining, r)
 	}
-	sort.Strings(remaining)
+	sort.Slice(remaining, func(i, j int) bool {
+		return remaining[i] < remaining[j]
+	})
 	return append(ordered, remaining...)
 }
 
 // OrderRoles deduplicates and orders roles by custom order first (if provided and non-empty),
 // followed by remaining roles sorted in ascending alphabetical order.
 // If custom order is omitted or empty, all roles are sorted alphabetically.
-func OrderRoles(roles []string, customOrder ...[]string) []string {
+func OrderRoles[T ~string](roles []T, customOrder ...[]T) []T {
 	return orderRolesHelper(roles, customOrder...)
 }
 
@@ -192,7 +196,7 @@ func OrderRoles(roles []string, customOrder ...[]string) []string {
 // custom order first (if provided and non-empty), followed by remaining candidate roles sorted
 // in ascending alphabetical order. If custom order is omitted or empty, all candidate roles
 // are sorted alphabetically.
-func OrderSubagentRoles(roles []string, customOrder ...[]string) []string {
+func OrderSubagentRoles[T ~string](roles []T, customOrder ...[]T) []T {
 	return orderRolesHelper(roles, customOrder...)
 }
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { LivePartFact } from '../domain/live';
+import type { LivePartFact, FailureSeverity } from '../domain/live';
+import type { AgentRole } from '../domain/types';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { generateExecutionIssuePrompt } from '../utils/debugPrompt';
 
@@ -9,7 +10,7 @@ export interface FailedToolAlertCardProps {
   readonly onInspect?: (() => void) | undefined;
   readonly sessionId?: string | undefined;
   readonly turn?: number | undefined;
-  readonly role?: string | undefined;
+  readonly role?: AgentRole | undefined;
   readonly model?: string | undefined;
   readonly messageId?: string | undefined;
 }
@@ -26,8 +27,8 @@ export const FailedToolAlertCard: React.FC<FailedToolAlertCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  const rawSeverity = (part.severity || 'HIGH').toUpperCase();
-  const severityClass = rawSeverity.toLowerCase();
+  const effectiveSeverity: FailureSeverity = part.severity || 'high';
+  const severityClass = effectiveSeverity.toLowerCase();
   const toolName = part.tool_name || 'unknown_tool';
   const errorMessage = part.output_snippet || part.error_message || 'Execution error without output message';
   const isLong = errorMessage.length > 200;
@@ -67,7 +68,7 @@ export const FailedToolAlertCard: React.FC<FailedToolAlertCardProps> = ({
         <div className="failed-tool-title-group">
           <span className="failed-tool-name">{toolName}</span>
           <span className="failed-tool-badge">FAILED</span>
-          <span className={`failed-tool-severity severity-${severityClass}`}>{rawSeverity}</span>
+          <span className={`failed-tool-severity severity-${severityClass}`}>{effectiveSeverity.toUpperCase()}</span>
           {consecutiveErrors !== undefined && consecutiveErrors > 1 && (
             <span className="failed-tool-streak">
               {consecutiveErrors} Consecutive Failures

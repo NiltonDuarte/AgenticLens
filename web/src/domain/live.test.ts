@@ -749,7 +749,7 @@ describe('Live Domain Models and Serialization Contracts', () => {
             status: 'error',
             is_error: true,
             error_message: 'segmentation fault (core dumped)',
-            severity: 'critical',
+            severity: 'high',
           },
           {
             id: 'err_4',
@@ -758,7 +758,7 @@ describe('Live Domain Models and Serialization Contracts', () => {
             status: 'error',
             is_error: true,
             error_message: 'process killed: OOM',
-            severity: 'critical',
+            severity: 'high',
           },
         ],
         anomalies: [
@@ -777,7 +777,7 @@ describe('Live Domain Models and Serialization Contracts', () => {
       expect(trace.total_tool_calls).toBe(5);
       expect(trace.failed_tool_calls).toBe(5);
       expect(trace.recent_errors).toHaveLength(2);
-      expect(trace.recent_errors[0].severity).toBe('critical');
+      expect(trace.recent_errors[0].severity).toBe('high');
       expect(trace.anomalies).toHaveLength(1);
       expect(trace.anomalies[0].severity).toBe('CRITICAL');
     });

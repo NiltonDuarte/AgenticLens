@@ -63,7 +63,7 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 			SubagentTurnVelocity: domain.SubagentTurnVelocity{
 				AvgTurnsPerInvocation: 3.0,
 				PeakTurns:             3,
-				ByRole:                map[string]float64{"coder": 3.0},
+				ByRole:                map[domain.AgentRole]float64{domain.RoleCoder: 3.0},
 			},
 			TestToProductionRatio: domain.TestToCodeRatio{
 				Ratio:          "1.0:1",
@@ -302,7 +302,7 @@ func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {
 			SubagentTurnVelocity: domain.SubagentTurnVelocity{
 				AvgTurnsPerInvocation: 6.0,
 				PeakTurns:             8,
-				ByRole: map[string]float64{
+				ByRole: map[domain.AgentRole]float64{
 					"advisor": 4.0,
 					"po":      8.0,
 				},
@@ -343,7 +343,7 @@ func TestFormatMarkdownMetricsTable_MixedCanonicalAndCustomSubagentsPrecedence(t
 			SubagentTurnVelocity: domain.SubagentTurnVelocity{
 				AvgTurnsPerInvocation: 4.2,
 				PeakTurns:             8,
-				ByRole: map[string]float64{
+				ByRole: map[domain.AgentRole]float64{
 					"po":      5.0,
 					"coder":   6.0,
 					"advisor": 4.0,
@@ -476,7 +476,7 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 			SubagentTurnVelocity: domain.SubagentTurnVelocity{
 				AvgTurnsPerInvocation: 0.0,
 				PeakTurns:             0,
-				ByRole:                map[string]float64{},
+				ByRole:                map[domain.AgentRole]float64{},
 			},
 			ContextWindowHealth: domain.ContextWindowHealth{
 				Status:                    "HEALTHY",

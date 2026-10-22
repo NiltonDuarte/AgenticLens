@@ -24,14 +24,14 @@ func TestInferTicketType_PrefixMapping(t *testing.T) {
 	tests := []struct {
 		name     string
 		ticketID string
-		expected string
+		expected domain.ConventionalTicketType
 	}{
-		{name: "PO ticket uppercase", ticketID: "PO-5", expected: "docs"},
-		{name: "po ticket lowercase", ticketID: "po-12", expected: "docs"},
-		{name: "Po ticket mixed case", ticketID: "Po-99", expected: "docs"},
-		{name: "GEN ticket uppercase", ticketID: "GEN-42", expected: "chore"},
-		{name: "gen ticket lowercase", ticketID: "gen-1", expected: "chore"},
-		{name: "Gen ticket mixed case", ticketID: "Gen-100", expected: "chore"},
+		{name: "PO ticket uppercase", ticketID: "PO-5", expected: domain.TicketTypeDocs},
+		{name: "po ticket lowercase", ticketID: "po-12", expected: domain.TicketTypeDocs},
+		{name: "Po ticket mixed case", ticketID: "Po-99", expected: domain.TicketTypeDocs},
+		{name: "GEN ticket uppercase", ticketID: "GEN-42", expected: domain.TicketTypeChore},
+		{name: "gen ticket lowercase", ticketID: "gen-1", expected: domain.TicketTypeChore},
+		{name: "Gen ticket mixed case", ticketID: "Gen-100", expected: domain.TicketTypeChore},
 	}
 
 	for _, tc := range tests {
@@ -111,12 +111,24 @@ func TestInferTicketType_BranchPrefixResolution(t *testing.T) {
 	branchTests := []struct {
 		ticketID   string
 		branchList string
-		expected   string
+		expected   domain.ConventionalTicketType
 	}{
-		{ticketID: "AL-1", branchList: "  feat/AL-1-ci-fixture\n", expected: "feat"},
-		{ticketID: "AL-14", branchList: "  remotes/origin/ci/AL-14-ci-fixture\n", expected: "ci"},
-		{ticketID: "AL-16", branchList: "* refactor/AL-16-ci-fixture\n", expected: "refactor"},
-		{ticketID: "AL-30", branchList: "+ fix/AL-30-ci-fixture\n", expected: "fix"},
+		// Canonical types
+		{ticketID: "AL-1", branchList: "  feat/AL-1-ci-fixture\n", expected: domain.TicketTypeFeat},
+		{ticketID: "AL-30", branchList: "+ fix/AL-30-ci-fixture\n", expected: domain.TicketTypeFix},
+		{ticketID: "AL-40", branchList: "  docs/AL-40-architecture\n", expected: domain.TicketTypeDocs},
+		{ticketID: "AL-50", branchList: "  chore/AL-50-cleanup\n", expected: domain.TicketTypeChore},
+		{ticketID: "AL-16", branchList: "* refactor/AL-16-ci-fixture\n", expected: domain.TicketTypeRefactor},
+		{ticketID: "AL-60", branchList: "  test/AL-60-e2e\n", expected: domain.TicketTypeTest},
+		{ticketID: "AL-14", branchList: "  remotes/origin/ci/AL-14-ci-fixture\n", expected: domain.TicketTypeCI},
+		{ticketID: "AL-70", branchList: "  perf/AL-70-cache-opt\n", expected: domain.TicketTypePerf},
+		{ticketID: "AL-80", branchList: "  build/AL-80-goreleaser\n", expected: domain.TicketTypeBuild},
+
+		// Aliases
+		{ticketID: "AL-90", branchList: "  feature/AL-90-ui-dashboard\n", expected: domain.TicketTypeFeat},
+		{ticketID: "AL-91", branchList: "  bug/AL-91-segfault\n", expected: domain.TicketTypeFix},
+		{ticketID: "AL-92", branchList: "  bugfix/AL-92-nil-pointer\n", expected: domain.TicketTypeFix},
+		{ticketID: "AL-93", branchList: "  remotes/upstream/doc/AL-93-guide\n", expected: domain.TicketTypeDocs},
 	}
 
 	for _, tc := range branchTests {
@@ -128,6 +140,38 @@ func TestInferTicketType_BranchPrefixResolution(t *testing.T) {
 			t.Errorf("InferTicketTypeFromBranchList(%q) = %q, expected %q", tc.ticketID, *res, tc.expected)
 		}
 	}
+
+	// Boundary and edge cases
+	t.Run("empty ticketID returns nil", func(t *testing.T) {
+		t.Parallel()
+		if res := git.InferTicketTypeFromBranchList("  feat/AL-1-feature\n", ""); res != nil {
+			t.Errorf("expected nil for empty ticketID, got %v", *res)
+		}
+		if res := git.InferTicketTypeFromBranchList("  feat/AL-1-feature\n", "   "); res != nil {
+			t.Errorf("expected nil for whitespace ticketID, got %v", *res)
+		}
+	})
+
+	t.Run("empty branch output returns nil", func(t *testing.T) {
+		t.Parallel()
+		if res := git.InferTicketTypeFromBranchList("", "AL-1"); res != nil {
+			t.Errorf("expected nil for empty branch output, got %v", *res)
+		}
+	})
+
+	t.Run("unmatched ticket branch returns nil", func(t *testing.T) {
+		t.Parallel()
+		if res := git.InferTicketTypeFromBranchList("  feat/AL-99-other\n", "AL-1"); res != nil {
+			t.Errorf("expected nil for unmatched ticket, got %v", *res)
+		}
+	})
+
+	t.Run("branch without conventional prefix returns nil", func(t *testing.T) {
+		t.Parallel()
+		if res := git.InferTicketTypeFromBranchList("  random/AL-1-feature\n", "AL-1"); res != nil {
+			t.Errorf("expected nil for non-conventional prefix, got %v", *res)
+		}
+	})
 }
 
 func TestInferTicketType_Precedence_BranchOverConfiguredPrefix(t *testing.T) {
@@ -136,7 +180,7 @@ func TestInferTicketType_Precedence_BranchOverConfiguredPrefix(t *testing.T) {
 	// In-memory branch fixture evaluates conventional commit type directly
 	branchOut := "  fix/AL-30-ci-fixture\n"
 	branchType := git.InferTicketTypeFromBranchList(branchOut, "AL-30")
-	if branchType == nil || *branchType != "fix" {
+	if branchType == nil || *branchType != domain.TicketTypeFix {
 		t.Fatalf("expected in-memory branch resolution 'fix', got %v", branchType)
 	}
 
@@ -145,18 +189,18 @@ func TestInferTicketType_Precedence_BranchOverConfiguredPrefix(t *testing.T) {
 		{Prefix: "AL", TicketType: "chore"},
 	}
 	actual := git.InferTicketType("AL-30", configuredPrefixes...)
-	if actual == nil || *actual != "chore" {
+	if actual == nil || *actual != domain.TicketTypeChore {
 		t.Errorf("expected configured prefix 'chore' to take priority in InferTicketType, got %v", actual)
 	}
 
 	// Configured prefixes resolve unbranched PO and custom tickets
 	poActual := git.InferTicketType("PO-5", domain.TicketPrefix{Prefix: "PO", TicketType: "docs"})
-	if poActual == nil || *poActual != "docs" {
+	if poActual == nil || *poActual != domain.TicketTypeDocs {
 		t.Errorf("expected configured prefix 'docs' for unbranched PO-5, got %v", poActual)
 	}
 
 	unbranchedActual := git.InferTicketType("CUSTOM-99", domain.TicketPrefix{Prefix: "CUSTOM", TicketType: "refactor"})
-	if unbranchedActual == nil || *unbranchedActual != "refactor" {
+	if unbranchedActual == nil || *unbranchedActual != domain.TicketTypeRefactor {
 		t.Errorf("expected configured prefix 'refactor' for unbranched CUSTOM-99, got %v", unbranchedActual)
 	}
 
@@ -174,7 +218,7 @@ func TestInferTicketTypeFromBranchList_Adversarial(t *testing.T) {
 		name       string
 		branchOut  string
 		ticketID   string
-		expected   *string
+		expected   *domain.ConventionalTicketType
 	}{
 		// Empty and whitespace edge cases
 		{
@@ -468,14 +512,14 @@ func TestInferTicketType_AdversarialEdgeCases(t *testing.T) {
 		t.Parallel()
 		cases := []struct {
 			input    string
-			expected string
+			expected domain.ConventionalTicketType
 		}{
-			{input: "  PO-1  ", expected: "docs"},
-			{input: "\tpO-42\n", expected: "docs"},
-			{input: "\r\nPo-999\t", expected: "docs"},
-			{input: "  GEN-1  ", expected: "chore"},
-			{input: "\tgEn-42\n", expected: "chore"},
-			{input: "\r\nGen-888\t", expected: "chore"},
+			{input: "  PO-1  ", expected: domain.TicketTypeDocs},
+			{input: "\tpO-42\n", expected: domain.TicketTypeDocs},
+			{input: "\r\nPo-999\t", expected: domain.TicketTypeDocs},
+			{input: "  GEN-1  ", expected: domain.TicketTypeChore},
+			{input: "\tgEn-42\n", expected: domain.TicketTypeChore},
+			{input: "\r\nGen-888\t", expected: domain.TicketTypeChore},
 		}
 		for _, tc := range cases {
 			res := git.InferTicketType(tc.input, configuredPrefixes...)
@@ -509,7 +553,7 @@ func TestInferTicketType_AdversarialEdgeCases(t *testing.T) {
 	})
 }
 
-func strPtr(s string) *string {
+func strPtr(s domain.ConventionalTicketType) *domain.ConventionalTicketType {
 	return &s
 }
 

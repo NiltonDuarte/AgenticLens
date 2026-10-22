@@ -59,6 +59,26 @@
 - **OpenCode Database Telemetry Provenance Attribution**:
   - Updated all 4 debug prompt generators in `web/src/utils/debugPrompt.ts` (`generateToolExecutionPrompt`, `generateExecutionIssuePrompt`, `generateMessageTurnPrompt`, `generateSessionOverviewPrompt`) to explicitly declare: `This data was extracted from the OpenCode database.` in their narrative provenance paragraph.
 
+### Iteration 05
+- **Domain Enums and Primitive Obsession Remediation**:
+  - **Context Window Health (`ContextHealthStatus`)**:
+    - Replaced raw `string` with `domain.ContextHealthStatus` across Go backend domain structs (`GroupedMetric.ContextHealth`, `ContextWindowHealth.Status`, `ModelMetric.ContextHealth`, `RoleMetric.ContextHealth`, and `TicketComparisonRow.ContextHealthStatus`).
+    - Aligned aggregations in `aggregations.go` to return `ContextHealthStatus` directly from pure helper `GetBaseHealthStatus`.
+    - Typed frontend interfaces (`GroupedMetric.context_health`, `ContextWindowHealth.status`, `ModelMetric.context_health`, `RoleMetric.context_health`, `TicketComparisonRow.context_health_status`, and `TicketSelectorProps.context_health_status`) as `ContextHealthStatus`.
+  - **Agent Role (`AgentRole` & `CanonicalAgentRole`)**:
+    - Replaced raw `string` with `domain.AgentRole` across `InvocationFact.Role`, `EventFact.Role`, `ThreadRoleMetric.Role`, `ContextWindowHealth.SubagentsPeakRole`, and `LiveMessageFact.Role`.
+    - Typed role map keys (`ContextWindowHealth.PeakByRole`, `SubagentTurnVelocity.ByRole`, and `FleetSummary.RoleCosts`) as `map[AgentRole]T`.
+    - Made `OrderRoles[T ~string]` and `OrderSubagentRoles[T ~string]` generic to sort any slice of strings or `AgentRole` without conversion or allocation.
+    - Exported `CanonicalAgentRole` and autocomplete union `AgentRole = CanonicalAgentRole | (string & {})` in TypeScript, updating all domain fact interfaces, anomaly contexts, and card props.
+  - **Tool & Failure Severity (`FailureSeverity` & `LiveAnomalySeverity`)**:
+    - Updated `LivePartFact.Severity` to `domain.FailureSeverity` and `ClassifyToolFailure` to return `(bool, FailureSeverity, *string)`.
+    - Defined typed `domain.LiveAnomalySeverity` (`LiveSeverityWarning`, `LiveSeverityHigh`, `LiveSeverityCritical`) for live anomaly alerts.
+    - Exported TypeScript `FailureSeverity = 'none' | 'low' | 'medium' | 'high'`, updating `LivePartFact.severity` and fixing test fixture mocks.
+  - **Conventional Ticket Types (`ConventionalTicketType` & `TicketType`)**:
+    - Replaced `*string` with `*domain.ConventionalTicketType` in `AgenticFactLedger`, `AgenticMetricsLedger`, `TicketComparisonRow`, and Git branch inference helpers.
+    - Updated wire DTOs (`schemas.go`) with clean conversion to/from `domain.ConventionalTicketType` and generic `ptrEqual[T comparable]` migration check.
+    - Updated TypeScript `StandardTicketType` and `TicketType = StandardTicketType | (string & {})`.
+
 ---
 
 ## Verification & Test Results
@@ -71,24 +91,29 @@
 - **Zero Emojis**: Verified zero emojis across code, tests, and documentation.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 15
-- **Active Agent Duration:** 11h 38m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 174.3k tokens (87% of 200k healthy ceiling, 13 compactions) | Subagents peak 171.2k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 5.0%, Coder 77.5%, Tester 12.6%, Reviewer 4.9%
-- **Subagent Turn Velocity & Thrashing:** 167.7 avg turns/run (peak: 1672 turns) | Planner 44.5, Coder 502.0, Tester 80.0, Reviewer 44.3
+- **Software Development Life Cycle Iterations:** 18
+- **Active Agent Duration:** 15h 25m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Orchestrator peak 174.3k tokens (87% of 200k healthy ceiling, 19 compactions) | Subagents peak 171.2k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 5.5%, Coder 75.8%, Tester 11.5%, Reviewer 7.1%
+- **Subagent Turn Velocity & Thrashing:** 171.3 avg turns/run (peak: 1672 turns) | Planner 51.2, Coder 458.8, Tester 84.0, Reviewer 56.7
 - **Test-to-Production Code Ratio:** 2.3:1 (+2,730 test lines / +1,199 prod lines)
 - **Code Delivered:** +3,930 / -240 lines across 26 code files (excluding docs)
-- **Reasoning Effort:** 275,742 reasoning tokens (40.4% of generated output)
-- **Tool Health & Self-Correction:** 2,923 tool calls (28 self-corrections, 99.0% success rate)
+- **Reasoning Effort:** 487,925 reasoning tokens (45.1% of generated output)
+- **Tool Health & Self-Correction:** 4,069 tool calls (38 self-corrections, 99.1% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 17 execution anomalies detected (12 CRITICAL, 5 WARNING).
+- **Status:** 24 execution anomalies detected (17 CRITICAL, 7 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 38 (session: ses_e9f2e1db2fferR7NvzZ0uguWkT), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.4k tokens) — Context tokens reached 161.4k in turn 48 (session: ses_e9f645441ffeLoPoDrRwxIQajj), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k in turn 67 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k in turn 86 (session: ses_ea026f776ffeMcs4kPDJwMBVgo), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k in turn 116 (session: ses_e9f2247dbffeJHdhGhq4vE2Q5z), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k in turn 204 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+105.1k tokens) — Context tokens surged by 105.1k tokens in turn 205 (session: ses_e9f645441ffeLoPoDrRwxIQajj, total: 105.1k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+93.6k tokens) — Context tokens surged by 93.6k tokens in turn 217 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 93.6k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+108.8k tokens) — Context tokens surged by 108.8k tokens in turn 218 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 108.8k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+114.5k tokens) — Context tokens surged by 114.5k tokens in turn 272 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 114.5k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+117.0k tokens) — Context tokens surged by 117.0k tokens in turn 380 (session: ses_e9f645441ffeLoPoDrRwxIQajj, total: 117.0k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+107.5k tokens) — Context tokens surged by 107.5k tokens in turn 474 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 107.5k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+120.2k tokens) — Context tokens surged by 120.2k tokens in turn 803 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 120.2k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+116.1k tokens) — Context tokens surged by 116.1k tokens in turn 968 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 116.1k tokens, threshold: 80000)
@@ -97,6 +122,8 @@
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+110.3k tokens) — Context tokens surged by 110.3k tokens in turn 1383 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 110.3k tokens, threshold: 80000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+42.0k tokens) — Context tokens surged by 42.0k tokens in turn 81 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 42.0k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+66.5k tokens) — Context tokens surged by 66.5k tokens in turn 95 (session: ses_ea026f776ffeMcs4kPDJwMBVgo, total: 66.5k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+79.1k tokens) — Context tokens surged by 79.1k tokens in turn 128 (session: ses_e9f2247dbffeJHdhGhq4vE2Q5z, total: 79.1k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+58.2k tokens) — Context tokens surged by 58.2k tokens in turn 317 (session: ses_ea24ee73affeUPiQ7FMWOo0cS9, total: 58.2k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.8k tokens) — Context tokens surged by 72.8k tokens in turn 601 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 72.8k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+66.9k tokens) — Context tokens surged by 66.9k tokens in turn 1459 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 66.9k tokens, threshold: 40000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.3k tokens) — Context tokens surged by 72.3k tokens in turn 1579 (session: ses_ea224a06dffeUUVUn1Vi3HlWh6, total: 72.3k tokens, threshold: 40000)
@@ -108,15 +135,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 4 | 902,825 | 27,393 | 7,526,994 | 89.3% | 97.5k | HEALTHY | $1.64 |
-| **coder** | 4 | 14,003,310 | 205,599 | 185,443,145 | 93.0% | 171.2k | ELEVATED | $25.37 |
-| **tester** | 4 | 2,534,615 | 80,495 | 22,185,949 | 89.7% | 154.4k | ELEVATED | $4.13 |
-| **reviewer** | 4 | 1,112,079 | 16,460 | 8,074,921 | 87.9% | 102.9k | ELEVATED | $1.60 |
-| **advisor** | 1 | 8,450,283 | 76,714 | 18,356,728 | 68.5% | 174.3k | ELEVATED | $8.19 |
-| **Total** | **17** | **27,003,112** | **406,661** | **241,587,737** | **89.9%** | **174.3k** | **ELEVATED** | **$40.93** |
+| **planner** | 5 | 1,243,882 | 37,216 | 13,410,269 | 91.5% | 139.9k | ELEVATED | $2.48 |
+| **coder** | 6 | 18,595,810 | 329,896 | 246,917,652 | 93.0% | 171.2k | ELEVATED | $34.27 |
+| **tester** | 5 | 2,944,088 | 95,317 | 30,497,173 | 91.2% | 154.4k | ELEVATED | $5.21 |
+| **reviewer** | 6 | 2,046,305 | 28,898 | 17,811,492 | 89.7% | 167.0k | ELEVATED | $3.22 |
+| **advisor** | 1 | 9,305,051 | 101,793 | 24,556,584 | 72.5% | 174.3k | ELEVATED | $9.45 |
+| **Total** | **23** | **34,135,136** | **593,120** | **333,193,170** | **90.7%** | **174.3k** | **ELEVATED** | **$54.64** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 17 | 27,003,112 | 406,661 | 241,587,737 | 89.9% | $40.93 |
-| **Total** | **17** | **27,003,112** | **406,661** | **241,587,737** | **89.9%** | **$40.93** |
+| **gemini-3.8-flash** | 23 | 34,135,136 | 593,120 | 333,193,170 | 90.7% | $54.64 |
+| **Total** | **23** | **34,135,136** | **593,120** | **333,193,170** | **90.7%** | **$54.64** |

@@ -42,21 +42,21 @@ type LiveSessionTree struct {
 
 // LivePartFact captures a granular execution part (tool invocation, reasoning block, or compaction).
 type LivePartFact struct {
-	ID            string  `json:"id"`
-	Type          string  `json:"type"`
-	ToolName      *string `json:"tool_name,omitempty"`
-	InputSnippet  string  `json:"input_snippet"`
-	OutputSnippet string  `json:"output_snippet"`
-	Status        string  `json:"status"`
-	IsError       bool    `json:"is_error"`
-	ErrorMessage  *string `json:"error_message,omitempty"`
-	Severity      string  `json:"severity"`
+	ID            string          `json:"id"`
+	Type          string          `json:"type"`
+	ToolName      *string         `json:"tool_name,omitempty"`
+	InputSnippet  string          `json:"input_snippet"`
+	OutputSnippet string          `json:"output_snippet"`
+	Status        string          `json:"status"`
+	IsError       bool            `json:"is_error"`
+	ErrorMessage  *string         `json:"error_message,omitempty"`
+	Severity      FailureSeverity `json:"severity"`
 }
 
 // LiveMessageFact captures a chat message turn with associated execution parts.
 type LiveMessageFact struct {
 	ID               string         `json:"id"`
-	Role             string         `json:"role"`
+	Role             AgentRole      `json:"role"`
 	Content          string         `json:"content"`
 	Timestamp        string         `json:"timestamp"`
 	ReasoningContent *string        `json:"reasoning_content,omitempty"`
@@ -81,7 +81,7 @@ type LiveTraceView struct {
 
 // ClassifyToolFailure categorizes a tool execution failure into severity tiers (high, medium, low, none)
 // based on output signatures, exit status, and consecutive error escalation.
-func ClassifyToolFailure(toolName string, status string, output string, consecutiveErrors int) (bool, string, *string) {
+func ClassifyToolFailure(toolName string, status string, output string, consecutiveErrors int) (bool, FailureSeverity, *string) {
 	trimmedOutput := strings.TrimSpace(output)
 	lowerOutput := strings.ToLower(trimmedOutput)
 	cleanStatus := strings.ToLower(strings.TrimSpace(status))
@@ -91,7 +91,7 @@ func ClassifyToolFailure(toolName string, status string, output string, consecut
 	if cleanStatus == "completed" {
 		switch cleanTool {
 		case "read", "grep", "glob", "webfetch":
-			return false, string(SeverityNone), nil
+			return false, SeverityNone, nil
 		}
 	}
 
@@ -146,18 +146,18 @@ func ClassifyToolFailure(toolName string, status string, output string, consecut
 		isSoftCancelation || isMissingResource || isTimeout || isCommandFailure
 
 	if !isError {
-		return false, string(SeverityNone), nil
+		return false, SeverityNone, nil
 	}
 
 	// Determine severity tier
-	var severity string
+	var severity FailureSeverity
 	switch {
 	case isTraceback || isSystemFault || isCompilationError || consecutiveErrors >= 2:
-		severity = string(SeverityHigh)
+		severity = SeverityHigh
 	case isEmptySearch || isSoftCancelation:
-		severity = string(SeverityLow)
+		severity = SeverityLow
 	default:
-		severity = string(SeverityMedium)
+		severity = SeverityMedium
 	}
 
 	// Prepare sanitized error message capped at 2048 characters

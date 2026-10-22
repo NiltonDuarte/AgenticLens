@@ -1,6 +1,29 @@
 export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL';
 
-export type AgentRole = string;
+export type {
+  CanonicalAgentRole,
+  AgentRole,
+} from '../types/telemetry';
+
+import type {
+  CanonicalAgentRole,
+  AgentRole,
+} from '../types/telemetry';
+
+export type StandardTicketType =
+  | 'feat'
+  | 'fix'
+  | 'feature'
+  | 'bug'
+  | 'chore'
+  | 'docs'
+  | 'refactor'
+  | 'test'
+  | 'ci'
+  | 'perf'
+  | 'build';
+
+export type TicketType = StandardTicketType | (string & {});
 
 export type MigrationStatus = 'pending' | 'partial' | 'completed';
 
@@ -14,7 +37,7 @@ export interface MigrationInfo {
   readonly notes?: string;
 }
 
-export const CANONICAL_ROLE_ORDER: readonly string[] = [
+export const CANONICAL_ROLE_ORDER: readonly CanonicalAgentRole[] = [
   'orchestrator',
   'planner',
   'coder',
@@ -22,15 +45,15 @@ export const CANONICAL_ROLE_ORDER: readonly string[] = [
   'reviewer',
 ];
 
-export const SUBAGENT_ROLE_ORDER: readonly string[] = [
+export const SUBAGENT_ROLE_ORDER: readonly CanonicalAgentRole[] = [
   'planner',
   'coder',
   'tester',
   'reviewer',
 ];
 
-export function isCanonicalRole(role: string): boolean {
-  return CANONICAL_ROLE_ORDER.includes(role.toLowerCase().trim());
+export function isCanonicalRole(role: string): role is CanonicalAgentRole {
+  return (CANONICAL_ROLE_ORDER as readonly string[]).includes(role.toLowerCase().trim());
 }
 
 export interface InvocationTokens {
@@ -44,7 +67,7 @@ export interface InvocationTokens {
 export interface InvocationFact {
   readonly id: string;
   readonly parent_id: string | null;
-  readonly role: string;
+  readonly role: AgentRole;
   readonly model: string;
   readonly user: string;
   readonly started_at: string | null;
@@ -73,6 +96,7 @@ export type {
   Anomaly,
   BrittleToolSummary,
   FleetAnomalySummary,
+  ConventionalTicketType,
 } from '../types/telemetry';
 
 import type {
@@ -97,7 +121,7 @@ export interface AgenticFactLedger {
   readonly migration?: MigrationInfo;
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
-  readonly ticket_type: string | null;
+  readonly ticket_type: TicketType | null;
   readonly started_at: string | null;
   readonly completed_at: string | null;
   readonly updated_at: string;
@@ -115,7 +139,7 @@ export interface GroupedMetric {
   readonly cache_hit_rate_pct: number;
   readonly cost_usd: number;
   readonly peak_context_tokens: number;
-  readonly context_health: string;
+  readonly context_health: ContextHealthStatus;
 }
 
 export interface TestToCodeRatio {
@@ -144,11 +168,11 @@ export interface ToolExecutionHealth {
 
 export interface ContextWindowHealth {
   readonly healthy_ceiling_tokens: number;
-  readonly status: string;
+  readonly status: ContextHealthStatus;
   readonly orchestrator_peak_tokens: number;
   readonly orchestrator_saturation_pct: number;
   readonly subagents_peak_tokens: number;
-  readonly subagents_peak_role: string;
+  readonly subagents_peak_role: AgentRole;
   readonly compactions: number;
   readonly peak_by_role: Readonly<Record<string, number>>;
 }
@@ -176,11 +200,11 @@ export interface ModelMetric {
   readonly cache_hit_rate_pct: number;
   readonly cost_usd: number;
   readonly peak_context_tokens: number;
-  readonly context_health: string;
+  readonly context_health: ContextHealthStatus;
 }
 
 export interface RoleMetric {
-  readonly role: string;
+  readonly role: AgentRole;
   readonly invocations: number;
   readonly input_tokens: number;
   readonly output_tokens: number;
@@ -188,11 +212,11 @@ export interface RoleMetric {
   readonly cache_hit_rate_pct: number;
   readonly cost_usd: number;
   readonly peak_context_tokens: number;
-  readonly context_health: string;
+  readonly context_health: ContextHealthStatus;
 }
 
 export interface ThreadRoleMetric {
-  readonly role: string;
+  readonly role: AgentRole;
   readonly models: readonly ModelMetric[];
 }
 
@@ -206,7 +230,7 @@ export interface ThreadExecutionRecord {
 export interface AgenticMetricsLedger {
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
-  readonly ticket_type: string | null;
+  readonly ticket_type: TicketType | null;
   readonly started_at: string | null;
   readonly completed_at: string | null;
   readonly updated_at: string;
@@ -239,20 +263,9 @@ export interface FleetSummary {
   readonly anomaly_summary: FleetAnomalySummary;
 }
 
-export type StandardTicketType =
-  | 'feature'
-  | 'bug'
-  | 'chore'
-  | 'docs'
-  | 'refactor'
-  | 'test'
-  | 'ci'
-  | 'perf'
-  | 'build';
-
 export interface TicketComparisonRow {
   readonly ticket_id: string;
-  readonly ticket_type?: StandardTicketType | string | null;
+  readonly ticket_type: TicketType | null;
   readonly updated_at: string;
   readonly sdlc_iterations: number;
   readonly active_duration_seconds: number;
@@ -264,7 +277,7 @@ export interface TicketComparisonRow {
   readonly lines_deleted: number;
   readonly files_changed: number;
   readonly tool_success_rate_pct: number;
-  readonly context_health_status: string;
+  readonly context_health_status: ContextHealthStatus;
   readonly orchestrator_saturation_pct: number;
   readonly peak_context_tokens: number;
   readonly ticket_title: string;
@@ -362,6 +375,7 @@ export interface ProjectConfigResponse {
 }
 
 export type {
+  FailureSeverity,
   LiveAnomalySeverity,
   LiveAnomalyRule,
   LiveAnomalyAlert,

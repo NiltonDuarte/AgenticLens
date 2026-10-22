@@ -321,7 +321,7 @@ type ExistingLedgerFacts struct {
 	Migration     *domain.MigrationInfo
 	TicketID      *string
 	TicketTitle   *string
-	TicketType    *string
+	TicketType    *domain.ConventionalTicketType
 	StartedAt     *string
 	CompletedAt   *string
 	RootThreadIDs []string
@@ -408,7 +408,7 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		Migration:     mig,
 		TicketID:      raw.TicketID,
 		TicketTitle:   raw.TicketTitle,
-		TicketType:    raw.TicketType,
+		TicketType:    toDomainTicketType(raw.TicketType),
 		StartedAt:     raw.StartedAt,
 		CompletedAt:   raw.CompletedAt,
 		Events:        events,

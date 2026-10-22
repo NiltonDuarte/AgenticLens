@@ -10,6 +10,7 @@ import { SaturationBar } from './SaturationBar';
 import { ThreadViewer } from './ThreadViewer';
 import { ArtifactViewer } from './ArtifactViewer';
 import { TicketSelector } from './TicketSelector';
+import type { ThreadExecutionRecord } from '../domain/types';
 
 describe('Presentation Components Boundary Tests', () => {
   describe('EmptyState Component', () => {
@@ -799,7 +800,7 @@ describe('Presentation Components Boundary Tests', () => {
     });
 
     it('renders thread headers and expands child models on toggle click', () => {
-      const dummyThread = {
+      const dummyThread: ThreadExecutionRecord = {
         session_id: 'ses-root-01',
         user: 'dev',
         compactions: 0,
@@ -841,7 +842,7 @@ describe('Presentation Components Boundary Tests', () => {
     });
 
     it('renders InfoTooltip on section header and all 10 column headers of thread models table', () => {
-      const dummyThread = {
+      const dummyThread: ThreadExecutionRecord = {
         session_id: 'ses-root-02',
         user: 'dev',
         compactions: 0,
@@ -910,7 +911,7 @@ describe('Presentation Components Boundary Tests', () => {
     });
 
     it('clicking column header InfoTooltip triggers stops propagation and does not toggle thread details', () => {
-      const dummyThread = {
+      const dummyThread: ThreadExecutionRecord = {
         session_id: 'ses-root-03',
         user: 'dev',
         compactions: 0,
@@ -952,7 +953,7 @@ describe('Presentation Components Boundary Tests', () => {
     });
 
     it('wraps thread models table in .table-responsive container and keeps section header outside', () => {
-      const dummyThread = {
+      const dummyThread: ThreadExecutionRecord = {
         session_id: 'ses-root-04',
         user: 'dev',
         compactions: 0,
