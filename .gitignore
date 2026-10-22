@@ -11,6 +11,8 @@ dist/
 build/
 *.egg-info/
 bin/
+!.opencode/skills/agentic-lens-setup/bin/
+!.opencode/skills/agentic-lens-setup/bin/.gitignore
 
 web/node_modules
 web/node_modules/

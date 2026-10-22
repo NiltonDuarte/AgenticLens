@@ -276,11 +276,148 @@ if [[ ! -f "${SKILL_DIR}/bin/.gitignore" ]]; then
 fi
 echo "[PASS] Skill manifest and support scripts verified."
 
-# Test 6: Zero emojis check
+# Test 6: Verify cross-project setup manual exists, non-empty, and has required sections
+echo "[TEST] Verifying cross-project setup manual (docs/SETUP_MANUAL.md)..."
+MANUAL_PATH="${REPO_ROOT}/docs/SETUP_MANUAL.md"
+if [[ ! -s "$MANUAL_PATH" ]]; then
+    echo "[FAIL] Setup manual missing or empty at $MANUAL_PATH" >&2
+    exit 1
+fi
+
+REQUIRED_SECTIONS=(
+    "Platform Architecture"
+    "Architectural Delineation"
+    "Installation and Setup Pathways"
+    "Configuration Reference"
+    "Agnostic Agent Workflow"
+    "CLI and Web Dashboard Reference"
+    "Troubleshooting"
+)
+
+for section in "${REQUIRED_SECTIONS[@]}"; do
+    if ! grep -q "$section" "$MANUAL_PATH"; then
+        echo "[FAIL] Setup manual missing required section: $section" >&2
+        exit 1
+    fi
+done
+echo "[PASS] Setup manual verified with all required section headers."
+
+# Test 7: Verify standalone setup skill packaging script and archive contents
+echo "[TEST] Testing standalone setup skill packaging script..."
+PACKAGING_SCRIPT="${REPO_ROOT}/scripts/package-setup-skill.sh"
+if [[ ! -x "$PACKAGING_SCRIPT" ]]; then
+    echo "[FAIL] Packaging script missing or not executable at $PACKAGING_SCRIPT" >&2
+    exit 1
+fi
+
+# Test dry-run
+SKILL_DRY_RUN="$("$PACKAGING_SCRIPT" --dry-run)"
+if ! echo "$SKILL_DRY_RUN" | grep -q "Packaging dry run for agentic-lens-setup skill"; then
+    echo "[FAIL] Packaging dry-run output missing expected title" >&2
+    exit 1
+fi
+
+# Test actual archive generation in isolated destination
+TEST_SKILLS_DEST="${TEMP_DIR}/packaged_skills"
+"$PACKAGING_SCRIPT" --dest-dir "$TEST_SKILLS_DEST"
+
+TAR_ARCHIVE="${TEST_SKILLS_DEST}/agentic-lens-setup.tar.gz"
+ZIP_ARCHIVE="${TEST_SKILLS_DEST}/agentic-lens-setup.zip"
+CHECKSUMS_FILE="${TEST_SKILLS_DEST}/SHA256SUMS"
+
+if [[ ! -f "$TAR_ARCHIVE" ]]; then
+    echo "[FAIL] Expected tar.gz archive not found at $TAR_ARCHIVE" >&2
+    exit 1
+fi
+
+if [[ ! -f "$ZIP_ARCHIVE" ]]; then
+    echo "[FAIL] Expected zip archive not found at $ZIP_ARCHIVE" >&2
+    exit 1
+fi
+
+if [[ ! -f "$CHECKSUMS_FILE" ]]; then
+    echo "[FAIL] Expected SHA256SUMS file not found at $CHECKSUMS_FILE" >&2
+    exit 1
+fi
+
+# Verify checksums integrity
+(cd "$TEST_SKILLS_DEST" && sha256sum -c SHA256SUMS >/dev/null)
+echo "[PASS] SHA256 checksums verified for packaged skill archives."
+
+# Extract tar.gz into isolated sandbox and verify archive contents
+EXTRACT_TAR_DIR="${TEMP_DIR}/extract_tar"
+mkdir -p "$EXTRACT_TAR_DIR"
+tar -xzf "$TAR_ARCHIVE" -C "$EXTRACT_TAR_DIR"
+
+if [[ ! -f "${EXTRACT_TAR_DIR}/SKILL.md" ]]; then
+    echo "[FAIL] Packaged archive missing SKILL.md" >&2
+    exit 1
+fi
+
+if [[ ! -x "${EXTRACT_TAR_DIR}/scripts/download.sh" ]]; then
+    echo "[FAIL] Packaged archive missing executable scripts/download.sh" >&2
+    exit 1
+fi
+
+if [[ ! -f "${EXTRACT_TAR_DIR}/bin/.gitignore" ]]; then
+    echo "[FAIL] Packaged archive missing bin/.gitignore" >&2
+    exit 1
+fi
+
+# Assert protective gitignore patterns in archive
+if ! grep -q '^\*$' "${EXTRACT_TAR_DIR}/bin/.gitignore" || ! grep -q -E '^!/?\.gitignore$' "${EXTRACT_TAR_DIR}/bin/.gitignore"; then
+    echo "[FAIL] Packaged bin/.gitignore missing wildcard exclusion patterns" >&2
+    exit 1
+fi
+
+# Assert NO binary executables leaked into archive
+if find "$EXTRACT_TAR_DIR" -type f -name "agentic-lens*" | grep -q .; then
+    echo "[FAIL] Precompiled binary found inside packaged skill archive" >&2
+    exit 1
+fi
+
+# Assert NO internal repository skills leaked into archive
+for internal in "agentic-lens-dev" "agentic-lens-po" "agentic-lens-review"; do
+    if find "$EXTRACT_TAR_DIR" -name "*${internal}*" | grep -q .; then
+        echo "[FAIL] Internal skill ${internal} found inside packaged skill archive" >&2
+        exit 1
+    fi
+done
+
+# Extract zip into isolated sandbox and verify zip contents match
+EXTRACT_ZIP_DIR="${TEMP_DIR}/extract_zip"
+mkdir -p "$EXTRACT_ZIP_DIR"
+unzip -q "$ZIP_ARCHIVE" -d "$EXTRACT_ZIP_DIR"
+
+if [[ ! -f "${EXTRACT_ZIP_DIR}/SKILL.md" ]]; then
+    echo "[FAIL] Packaged zip archive missing SKILL.md" >&2
+    exit 1
+fi
+
+if [[ ! -f "${EXTRACT_ZIP_DIR}/scripts/download.sh" ]]; then
+    echo "[FAIL] Packaged zip archive missing scripts/download.sh" >&2
+    exit 1
+fi
+
+if [[ ! -f "${EXTRACT_ZIP_DIR}/bin/.gitignore" ]]; then
+    echo "[FAIL] Packaged zip archive missing bin/.gitignore" >&2
+    exit 1
+fi
+
+if find "$EXTRACT_ZIP_DIR" -type f -name "agentic-lens*" | grep -q .; then
+    echo "[FAIL] Precompiled binary found inside packaged zip archive" >&2
+    exit 1
+fi
+
+echo "[PASS] Standalone skill packaging verified (tar.gz, zip, SHA256SUMS, contents, and exclusions)."
+
+# Test 8: Zero emojis check
 echo "[TEST] Verifying zero emojis mandate across new files..."
 CHECK_FILES=(
     "${REPO_ROOT}/scripts/download-agentic-lens.sh"
+    "${REPO_ROOT}/scripts/package-setup-skill.sh"
     "${REPO_ROOT}/scripts/test-setup.sh"
+    "${REPO_ROOT}/docs/SETUP_MANUAL.md"
     "${SKILL_DIR}/SKILL.md"
     "${SKILL_DIR}/scripts/download.sh"
     "${SKILL_DIR}/bin/.gitignore"

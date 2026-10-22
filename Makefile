@@ -16,30 +16,31 @@ LDFLAGS := -X 'agenticlens/internal/domain.Version=$(VERSION)' \
            -X 'agenticlens/internal/domain.GitCommit=$(GIT_COMMIT)' \
            -X 'agenticlens/internal/domain.BuildDate=$(BUILD_DATE)'
 
-.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean
+.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean package-setup-skill
 
 all: install check test build
 
 help:
 	@echo "Available targets:"
-	@echo "  all              - Install dependencies, run checks, tests, and build"
-	@echo "  install          - Install all dependencies (backend and frontend)"
-	@echo "  install-backend  - Download Go backend module dependencies"
-	@echo "  install-frontend - Install npm packages for frontend dashboard"
-	@echo "  check            - Run static checks (vet, lint, git diff check)"
-	@echo "  test             - Run all tests (backend and frontend if present)"
-	@echo "  test-backend     - Run Go test suite with race detector"
-	@echo "  test-frontend    - Run frontend test suite (if web directory exists)"
-	@echo "  vet              - Run go vet on all Go packages"
-	@echo "  lint             - Run Go vet and frontend linting"
-	@echo "  build            - Build backend executable (and web bundle if present)"
-	@echo "  release-build    - Cross-compile binaries for all supported platforms"
-	@echo "  release-package  - Package release archives and generate SHA256SUMS"
-	@echo "  release-verify   - Verify release checksums and host binary execution"
-	@echo "  release-clean    - Remove release distribution artifacts"
-	@echo "  server           - Build and run HTTP server (PORT=$(PORT))"
-	@echo "  serve            - Alias for server target"
-	@echo "  clean            - Remove build and release artifacts"
+	@echo "  all                 - Install dependencies, run checks, tests, and build"
+	@echo "  install             - Install all dependencies (backend and frontend)"
+	@echo "  install-backend     - Download Go backend module dependencies"
+	@echo "  install-frontend    - Install npm packages for frontend dashboard"
+	@echo "  check               - Run static checks (vet, lint, git diff check)"
+	@echo "  test                - Run all tests (backend and frontend if present)"
+	@echo "  test-backend        - Run Go test suite with race detector"
+	@echo "  test-frontend       - Run frontend test suite (if web directory exists)"
+	@echo "  vet                 - Run go vet on all Go packages"
+	@echo "  lint                - Run Go vet and frontend linting"
+	@echo "  build               - Build backend executable (and web bundle if present)"
+	@echo "  release-build       - Cross-compile binaries for all supported platforms"
+	@echo "  release-package     - Package release archives and generate SHA256SUMS"
+	@echo "  package-setup-skill - Package agentic-lens-setup skill for distribution"
+	@echo "  release-verify      - Verify release checksums and host binary execution"
+	@echo "  release-clean       - Remove release distribution artifacts"
+	@echo "  server              - Build and run HTTP server (PORT=$(PORT))"
+	@echo "  serve               - Alias for server target"
+	@echo "  clean               - Remove build and release artifacts"
 
 install: install-backend install-frontend
 
@@ -111,7 +112,11 @@ release-build:
 		(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$$output ./cmd/agentic-lens) || exit 1; \
 	done
 
-release-package:
+package-setup-skill:
+	@echo "Packaging agentic-lens-setup skill..."
+	./scripts/package-setup-skill.sh --dest-dir $(RELEASE_DIR)/skills --version $(VERSION)
+
+release-package: package-setup-skill
 	@mkdir -p $(RELEASE_DIR)
 	@for platform in $(PLATFORMS); do \
 		os=$${platform%/*}; \
