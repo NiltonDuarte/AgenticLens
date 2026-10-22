@@ -3,7 +3,7 @@
 # download.sh - Cross-platform artifact downloader for AgenticLens setup skill
 #
 # Detects host platform and architecture, downloads the precompiled binary from
-# GitHub Releases, unpacks it into the destination directory, sets executable
+# GitHub Releases, installs it into the destination directory, sets executable
 # permissions, and writes a protective .gitignore.
 #
 # Zero compilation required. Zero Go/Node toolchain dependency.
@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-REPO="NiltonDuarte/AgenticLens"
+REPO="${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}"
 DEST_DIR="${AGENTIC_LENS_BIN_DIR:-${SKILL_ROOT}/bin}"
 VERSION="${AGENTIC_LENS_VERSION:-latest}"
 LOCAL_BIN="${AGENTIC_LENS_LOCAL_BINARY:-}"
@@ -101,19 +101,18 @@ case "$ARCH_RAW" in
 esac
 
 BIN_NAME="agentic-lens"
+BIN_EXT=""
 if [[ "$OS" == "windows" ]]; then
     BIN_NAME="agentic-lens.exe"
-    ARCHIVE_EXT="zip"
-else
-    ARCHIVE_EXT="tar.gz"
+    BIN_EXT=".exe"
 fi
 
+REMOTE_BIN="agentic-lens-${OS}-${ARCH}${BIN_EXT}"
+
 if [[ "$VERSION" == "latest" ]]; then
-    ARCHIVE_NAME="agentic-lens-${OS}-${ARCH}.${ARCHIVE_EXT}"
-    DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ARCHIVE_NAME}"
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${REMOTE_BIN}"
 else
-    ARCHIVE_NAME="agentic-lens-${VERSION}-${OS}-${ARCH}.${ARCHIVE_EXT}"
-    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ARCHIVE_NAME}"
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${REMOTE_BIN}"
 fi
 
 TARGET_BIN="${DEST_DIR}/${BIN_NAME}"
@@ -123,7 +122,7 @@ if [[ $DRY_RUN -eq 1 ]]; then
     echo "Architecture: ${ARCH}"
     echo "Version: ${VERSION}"
     echo "Destination: ${TARGET_BIN}"
-    echo "Archive Name: ${ARCHIVE_NAME}"
+    echo "Remote Binary: ${REMOTE_BIN}"
     echo "Download URL: ${DOWNLOAD_URL}"
     exit 0
 fi
@@ -160,76 +159,39 @@ if [[ -n "$LOCAL_BIN" ]]; then
     exit 0
 fi
 
-# Create secure temporary directory for download and unpacking
-TMP_DIR="$(mktemp -d)"
+echo "Downloading AgenticLens binary (${OS}/${ARCH}, ${VERSION})..."
+
+TEMP_BIN="${TARGET_BIN}.tmp.$$"
 cleanup() {
-    rm -rf "$TMP_DIR"
+    rm -f "$TEMP_BIN"
 }
 trap cleanup EXIT
 
-echo "Downloading AgenticLens (${OS}/${ARCH}, ${VERSION})..."
-
 DOWNLOAD_SUCCESS=0
 
-# Attempt 1: GitHub CLI (gh) if authenticated and available
-if command -v gh >/dev/null 2>&1; then
-    echo "Attempting download via GitHub CLI..."
-    GH_ARGS=(release download)
-    if [[ "$VERSION" != "latest" ]]; then
-        GH_ARGS+=("$VERSION")
-    fi
-    GH_ARGS+=(--repo "$REPO" --pattern "$ARCHIVE_NAME" --dir "$TMP_DIR")
-    if gh "${GH_ARGS[@]}" >/dev/null 2>&1; then
-        DOWNLOAD_SUCCESS=1
-    fi
-fi
-
-# Attempt 2: curl
-if [[ $DOWNLOAD_SUCCESS -eq 0 ]] && command -v curl >/dev/null 2>&1; then
+# Attempt 1: curl
+if command -v curl >/dev/null 2>&1; then
     echo "Attempting download via curl..."
-    if curl -fsSL -o "${TMP_DIR}/${ARCHIVE_NAME}" "$DOWNLOAD_URL"; then
+    if curl -fsSL -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
         DOWNLOAD_SUCCESS=1
     fi
 fi
 
-# Attempt 3: wget
+# Attempt 2: wget
 if [[ $DOWNLOAD_SUCCESS -eq 0 ]] && command -v wget >/dev/null 2>&1; then
     echo "Attempting download via wget..."
-    if wget -q -O "${TMP_DIR}/${ARCHIVE_NAME}" "$DOWNLOAD_URL"; then
+    if wget -q -O "$TEMP_BIN" "$DOWNLOAD_URL"; then
         DOWNLOAD_SUCCESS=1
     fi
 fi
 
-if [[ $DOWNLOAD_SUCCESS -eq 0 ]]; then
-    echo "Error: Failed to download ${ARCHIVE_NAME} from ${DOWNLOAD_URL}" >&2
+if [[ $DOWNLOAD_SUCCESS -eq 0 || ! -f "$TEMP_BIN" ]]; then
+    echo "Error: Failed to download ${REMOTE_BIN} from ${DOWNLOAD_URL}" >&2
     echo "Please check network connectivity or verify release exists at https://github.com/${REPO}/releases" >&2
     exit 1
 fi
 
-echo "Extracting ${ARCHIVE_NAME}..."
-if [[ "$ARCHIVE_EXT" == "tar.gz" ]]; then
-    tar -xzf "${TMP_DIR}/${ARCHIVE_NAME}" -C "$TMP_DIR"
-elif [[ "$ARCHIVE_EXT" == "zip" ]]; then
-    unzip -q -o "${TMP_DIR}/${ARCHIVE_NAME}" -d "$TMP_DIR"
-fi
-
-# Locate the executable in unpacked files
-FOUND_BIN=""
-if [[ -f "${TMP_DIR}/${BIN_NAME}" ]]; then
-    FOUND_BIN="${TMP_DIR}/${BIN_NAME}"
-elif [[ -f "${TMP_DIR}/bin/${BIN_NAME}" ]]; then
-    FOUND_BIN="${TMP_DIR}/bin/${BIN_NAME}"
-else
-    # Search recursively for matching binary name
-    FOUND_BIN="$(find "$TMP_DIR" -maxdepth 2 -type f -name "$BIN_NAME" | head -n 1)"
-fi
-
-if [[ -z "$FOUND_BIN" || ! -f "$FOUND_BIN" ]]; then
-    echo "Error: Could not locate ${BIN_NAME} inside downloaded archive." >&2
-    exit 1
-fi
-
-mv "$FOUND_BIN" "$TARGET_BIN"
+mv "$TEMP_BIN" "$TARGET_BIN"
 chmod +x "$TARGET_BIN"
 
 echo "Successfully installed AgenticLens binary at ${TARGET_BIN}"

@@ -332,6 +332,23 @@ describe('TicketDeepDive View Component', () => {
     });
   });
 
+  it('defaults to first available ticket when selectedTicketId is not provided', async () => {
+    const ledgers = Object.values(mockAgenticMetricsLedgers);
+    const fetchLedgersSpy = vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: ledgers,
+    });
+    const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+      data: mockWorkspaceDetails['AL-1']!,
+    });
+
+    render(<TicketDeepDive />);
+
+    await waitFor(() => {
+      expect(fetchByIdSpy).toHaveBeenCalledWith(ledgers[0]!.ticket_id);
+    });
+    expect(fetchLedgersSpy).toHaveBeenCalled();
+  });
+
   it('displays error banner and allows retry when API call fails', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockRejectedValueOnce(
       new Error('Failed to load workspaces')

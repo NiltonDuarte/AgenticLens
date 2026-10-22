@@ -76,6 +76,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Done
 
+- **FIX-7**: Direct Binary Download and Dynamic Initial Ticket Selection
+  - **Subsystem**: Scripts / Web / Setup / Presentation / Tests
+  - **Phase**: Defect Remediation
+  - **Status**: Done
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/done/FIX-7 direct binary download and dynamic initial ticket selection.md`
+
 - **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
   - **Subsystem**: Docs / Packaging / CLI
   - **Phase**: Phase 7
