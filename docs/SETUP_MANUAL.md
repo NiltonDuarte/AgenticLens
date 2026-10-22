@@ -1,163 +1,80 @@
 # AgenticLens Platform Setup Manual and Telemetry Integration Guide
 
-## 1. Title and Document Overview
-
 AgenticLens is a developer telemetry and observability platform designed specifically for agentic software engineering workflows. It provides real-time monitoring, longitudinal cost and token tracking, automated anomaly detection, and context window health diagnostics across autonomous coding agents.
 
-This manual serves as the comprehensive, authoritative guide for engineering teams, platform architects, and developers integrating AgenticLens into any software repository. It documents the platform architecture, installation pathways, configuration schema, telemetry ingestion mechanics, command-line interface, embedded web dashboard, and operational troubleshooting techniques.
+This manual serves as the comprehensive, authoritative guide for engineering teams, platform architects, and autonomous coding agents integrating AgenticLens into any software repository.
 
 ---
 
-## 2. Platform Architecture and Core Concepts
+## 1. Quick Start and Setup Pathways
 
-AgenticLens is constructed around the Functional Core, Imperative Shell (FCIS) pattern and packaged as a single, self-contained binary executable with zero external runtime dependencies.
+AgenticLens offers two primary setup pathways: an autonomous agentic setup via a shared skill manifest, and a direct manual developer installation using official precompiled release archives. Target repositories never need to compile code from source or install Go, Node.js, npm, or C compiler toolchains.
 
-### 2.1 Zero-Dependency Single-Binary Architecture
+### 1.1 Pathway A: Agentic Distribution and Setup via SKILL.md
 
-Traditional developer tools often require complex runtime dependencies such as Node.js, Python runtimes, or external database servers. AgenticLens eliminates this operational overhead:
-- The backend is written in Go 1.23+ and compiles to a native static executable with CGO disabled (`CGO_ENABLED=0`).
-- SQLite database connectivity is powered by a pure Go driver (`modernc.org/sqlite`), eliminating the requirement for a host C compiler or shared C libraries.
-- The web dashboard is built with TypeScript and Vite. During the build process, compiled static frontend assets (`web/dist/`) are embedded directly into the Go executable via `embed.FS`.
-- Adopting repositories run a single executable file that serves both the command-line interface and the full-featured interactive web dashboard.
+In modern agentic workflows, autonomous agents consume skills natively through Markdown instruction manifests (`SKILL.md`) accessed directly via shared repository links or raw URLs. No archive packaging, zip files, or custom unpacking scripts are required.
 
-### 2.2 Local Telemetry Fact Ledgers (`agentic_metrics.json`)
+#### Step 1: Share Skill Reference with Your Agent
+Provide your autonomous coding agent (in OpenCode, Claude Code, Cursor, or similar harnesses) with the reference to the AgenticLens setup skill. You can either:
+- Point the agent directly to the canonical remote URL:
+  `https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.opencode/skills/agentic-lens-setup/SKILL.md`
+- Or copy `.opencode/skills/agentic-lens-setup/SKILL.md` into your repository.
 
-Rather than transmitting proprietary code or execution telemetry to external cloud services, AgenticLens operates entirely locally:
-- Telemetry facts are captured per ticket or task in isolated workspace directories: `workspaces/<TICKET_ID>/agentic_metrics.json`.
-- Each ledger is an immutable JSON document recording session identifiers, wall-clock duration, token volume (input, output, cache-read, and cache-write tokens), financial costs calculated from precise model pricing matrices, turn counts, tool invocation distributions, error rates, and git commit diff volumes (insertions, deletions, and affected files).
-- These ledgers are committed directly to version control alongside code deliverables, establishing an auditable, repository-native history of agent engineering metrics.
-
-### 2.3 Real-Time Live Observability and SSE Event Streaming
-
-In addition to post-turn historical ledgers, AgenticLens provides live observability of active agent sessions:
-- The embedded server continuously polls the local OpenCode SQLite database at configurable intervals (`poll_interval_ms`, default 2000 ms).
-- Active sessions are identified based on recent turn activity within a sliding time window (`active_threshold_seconds`, default 300 seconds).
-- Telemetry events, tool calls, and status updates are broadcast to connected browsers via Server-Sent Events (SSE) through the `/api/live/stream` endpoint.
-- An in-memory trace buffer retains recent execution events, providing immediate visibility into subagent handoffs, prompt dispatches, and tool outputs as they occur.
-
-### 2.4 Automated Anomaly Detection
-
-AgenticLens continuously analyzes active sessions and historical ledgers against configurable statistical thresholds to detect engineering inefficiencies:
-- **Session Stalls**: Sessions that remain open with no new turn activity beyond a configurable duration (`stall_threshold_seconds`, default 120 seconds).
-- **High Tool Error Rates**: Sessions where the ratio of failed tool executions to total invocations exceeds a critical limit (`error_rate_threshold`, default 0.25 or 25%).
-- **Context Window Exhaustion**: Sessions where cumulative prompt and generation tokens reach or exceed a critical percentage of model capacity (`context_exhaustion_pct`, default 0.85 or 85%).
-
-### 2.5 Context Window Health States
-
-Context saturation severely impacts model reasoning quality, instruction adherence, and cost. AgenticLens classifies context health into four discrete states based on utilization percentage:
-- **HEALTHY** (0% to 50% utilization): Optimal operating envelope. The model retains complete instruction adherence and context fidelity with minimal compaction pressure.
-- **ELEVATED** (50% to 75% utilization): Normal working range for complex implementations. The agent operates effectively, but monitoring is recommended.
-- **BLOATED** (75% to 85% utilization): High context saturation. Model reasoning degradation and prompt compaction risks increase significantly.
-- **CRITICAL** (85% to 100% utilization): Severe exhaustion. Immediate session compaction or subagent delegation is advised to avoid catastrophic forgetting or dropped instructions.
-
----
-
-## 3. Architectural Delineation: Product Platform vs. Internal Methodology
-
-A foundational design principle of AgenticLens is the strict architectural separation between the AgenticLens product platform and the internal development methodology used by its maintainers.
-
-### 3.1 What Constitutes the AgenticLens Product Platform
-
-The AgenticLens product platform consists strictly of:
-1. The standalone command-line executable (`agentic-lens`).
-2. The embedded TypeScript web dashboard and SSE streaming engine.
-3. The root configuration schema (`.agenticlens-config.yaml`).
-4. The local telemetry ledger format (`agentic_metrics.json`).
-5. The standalone onboarding skill (`agentic-lens-setup`).
-
-### 3.2 What Constitutes This Repository's Internal Development Methodology
-
-This repository uses a specific multi-agent Software Development Life Cycle (SDLC) to build AgenticLens itself:
-- Internal development skills located at `.opencode/skills/agentic-lens-dev`, `.opencode/skills/agentic-lens-po`, and `.opencode/skills/agentic-lens-review`.
-- The multi-agent persona lifecycle: `orchestrator` -> `planner` -> `coder` -> `tester` -> `reviewer`.
-- Specific ticket prefixes such as `AL` and `PO`.
-- Rigid multi-turn iteration subfolders (`iterations/<NN>/`).
-
-### 3.3 Agnostic Adoption for External Projects
-
-External repositories adopting AgenticLens must never adopt or duplicate this repository's internal skills, agent personas, or development procedures:
-- Adopting teams define their own ways of working, agent prompts, and delivery workflows.
-- AgenticLens works seamlessly with single-agent loops, custom multi-agent frameworks, LangChain or AutoGen scripts, human developers using OpenCode or Claude Code, and CI/CD pipelines.
-- External projects configure their own ticket naming conventions (e.g. `JIRA-`, `ISSUE-`, `FEAT-`, `BUG-`), workspace directory names, and git branching strategies.
-- AgenticLens functions purely as an agnostic telemetry ingestion, aggregation, and visualization layer.
-
----
-
-## 4. Installation and Setup Pathways
-
-AgenticLens offers two straightforward onboarding pathways: an automated, agent-driven setup skill, and a manual developer installation using precompiled release archives. Target repositories never need to install Go, Node.js, npm, or C build tools.
-
-### 4.1 Pathway A: Agent-Driven Onboarding via `agentic-lens-setup`
-
-For teams using OpenCode, the platform provides a self-contained onboarding skill located at `.opencode/skills/agentic-lens-setup`.
-
-#### Step 1: Install or Package the Setup Skill
-Ensure the `agentic-lens-setup` skill is placed into your repository at `.opencode/skills/agentic-lens-setup/`. The directory structure contains:
+Prompt your agent:
 ```
-.opencode/skills/agentic-lens-setup/
-├── SKILL.md
-├── bin/
-│   └── .gitignore
-└── scripts/
-    └── download.sh
+Read the instructions at https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.opencode/skills/agentic-lens-setup/SKILL.md and set up AgenticLens in this repository.
 ```
 
-#### Step 2: Execute the Setup Skill
-In your OpenCode conversation, prompt the agent:
-```
-Load the agentic-lens-setup skill and configure AgenticLens for this repository.
-```
-
-The skill executes the following sequence autonomously:
-1. **Host Detection and Binary Download**: Runs `./.opencode/skills/agentic-lens-setup/scripts/download.sh` to determine host operating system (Linux, macOS, Windows) and architecture (amd64, arm64). It downloads the latest precompiled release binary from GitHub Releases directly into `.opencode/skills/agentic-lens-setup/bin/agentic-lens` and applies executable permissions (`chmod +x`).
-2. **Protective Git Exclusion**: Verifies `.opencode/skills/agentic-lens-setup/bin/.gitignore` exists with patterns `*` and `!/.gitignore` to prevent precompiled binaries from being tracked in git.
-3. **Interactive Project Interview**: Inspects the repository and queries the developer for project parameters (project name, ticket prefixes, workspaces directory, and monitored source folders).
-4. **Configuration Scaffolding**: Executes `./.opencode/skills/agentic-lens-setup/bin/agentic-lens init` to scaffold `.agenticlens-config.yaml`.
-5. **Mandatory User Confirmation Gate**: Inspects existing repository guidelines (`AGENTS.md`, `CLAUDE.md`, or `.opencode/agent/*.md`), prepares a proposed telemetry integration policy block, presents the exact text to the developer, and requests explicit confirmation before modifying any files.
-
-### 4.2 Pathway B: Manual Developer Installation via GitHub Releases
-
-Developers who prefer direct manual installation can retrieve official precompiled binaries directly from GitHub Releases.
-
-#### Step 1: Retrieve Precompiled Release Binary
-Navigate to the releases page:
-`https://github.com/NiltonDuarte/AgenticLens/releases`
-
-Select the archive corresponding to your platform:
-- Linux x86_64: `agentic-lens-<VERSION>-linux-amd64.tar.gz`
-- Linux ARM64: `agentic-lens-<VERSION>-linux-arm64.tar.gz`
-- macOS Apple Silicon: `agentic-lens-<VERSION>-darwin-arm64.tar.gz`
-- macOS Intel: `agentic-lens-<VERSION>-darwin-amd64.tar.gz`
-- Windows x86_64: `agentic-lens-<VERSION>-windows-amd64.zip`
-
-#### Step 2: Extract and Install Binary
-Create a local binary directory (e.g. `./bin/`) and extract the archive:
-
-On Linux and macOS:
+#### Step 2: Autonomous Host Detection and Binary Retrieval
+The agent inspects the host platform and architecture using standard system utilities:
 ```bash
-mkdir -p ./bin
-tar -xzf agentic-lens-*-linux-amd64.tar.gz -C ./bin
-chmod +x ./bin/agentic-lens
+OS_RAW=$(uname -s)
+ARCH_RAW=$(uname -m)
+
+case "$OS_RAW" in
+  Linux) OS="linux" ;;
+  Darwin) OS="darwin" ;;
+  MINGW*|MSYS*|CYGWIN*|Windows_NT) OS="windows" ;;
+  *) echo "Unsupported OS: $OS_RAW" >&2; exit 1 ;;
+esac
+
+case "$ARCH_RAW" in
+  x86_64|amd64) ARCH="amd64" ;;
+  arm64|aarch64) ARCH="arm64" ;;
+  *) echo "Unsupported Architecture: $ARCH_RAW" >&2; exit 1 ;;
+esac
 ```
 
-On Windows:
-```powershell
-New-Item -ItemType Directory -Force -Path .\bin
-Expand-Archive -Path .\agentic-lens-*-windows-amd64.zip -DestinationPath .\bin
-```
+The agent resolves the release artifact from GitHub Releases:
+- Linux x86_64: `agentic-lens-linux-amd64.tar.gz`
+- Linux ARM64: `agentic-lens-linux-arm64.tar.gz`
+- macOS Apple Silicon: `agentic-lens-darwin-arm64.tar.gz`
+- macOS Intel: `agentic-lens-darwin-amd64.tar.gz`
+- Windows x86_64: `agentic-lens-windows-amd64.zip`
 
-Alternatively, use the repository download script:
+The agent creates the binary destination directory, downloads the archive, extracts the binary, and sets executable permissions:
 ```bash
-./scripts/download-agentic-lens.sh --dest ./bin
+DEST_DIR=".opencode/skills/agentic-lens-setup/bin"
+mkdir -p "$DEST_DIR"
+
+# Write protective .gitignore to prevent committing binaries to version control
+cat <<'EOF' > "$DEST_DIR/.gitignore"
+*
+!.gitignore
+EOF
+
+# Download and unpack precompiled binary
+RELEASE_URL="https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-${OS}-${ARCH}.tar.gz"
+curl -fsSL "$RELEASE_URL" | tar -xz -C "$DEST_DIR"
+chmod +x "$DEST_DIR/agentic-lens"
 ```
 
 #### Step 3: Verify Binary Execution
-Confirm that the binary runs and outputs valid build metadata:
+The agent validates that the executable operates cleanly on the host system:
 ```bash
-./bin/agentic-lens version --json
+./.opencode/skills/agentic-lens-setup/bin/agentic-lens version --json
 ```
-
-Expected JSON response:
+Expected output:
 ```json
 {
   "version": "v1.0.0",
@@ -166,38 +83,128 @@ Expected JSON response:
 }
 ```
 
-#### Step 4: Scaffold Configuration
-Run the `init` command to generate `.agenticlens-config.yaml`:
+#### Step 4: Project Scaffolding
+The agent queries the developer or inspects the codebase to determine:
+- Project Name (e.g. `BillingService`)
+- Ticket prefixes (e.g. `BILL,PAY,GEN`)
+- Monitored source code folders (e.g. `services,pkg,cmd`)
+- Workspaces directory (default: `workspaces`)
+
+The agent runs `init` to write `.agenticlens-config.yaml`:
 ```bash
-./bin/agentic-lens init \
-  --project-name "MyProject" \
-  --ticket-prefixes "PROJ,GEN,PO" \
-  --workspaces "workspaces" \
-  --src-folders "src,pkg"
+./.opencode/skills/agentic-lens-setup/bin/agentic-lens init \
+  --project-name "BillingService" \
+  --ticket-prefixes "BILL,PAY,GEN" \
+  --src-folders "services,pkg,cmd" \
+  --workspaces "workspaces"
 ```
+
+#### Step 5: Mandatory User Confirmation Gate
+Before updating or creating any agent policy files (`AGENTS.md`, `CLAUDE.md`, or `.opencode/agent/*.md`), the agent must present the exact policy text to the user and receive explicit approval.
 
 ---
 
-## 5. Configuration Reference (.agenticlens-config.yaml)
+### 1.2 Pathway B: Manual Developer Installation via GitHub Releases
 
-AgenticLens is configured via `.agenticlens-config.yaml` located at the repository root. Below is the complete schema reference detailing all sections, fields, types, defaults, and operational semantics.
+Developers who prefer direct manual installation without an agent setup skill can install AgenticLens in three quick steps.
 
-### 5.1 Root Configuration Overview
+#### Step 1: Download Release Archive
+Navigate to official GitHub Releases:
+`https://github.com/NiltonDuarte/AgenticLens/releases`
+
+Download the appropriate archive for your operating system and architecture.
+
+Alternatively, download via `curl`:
+```bash
+# Example for Linux amd64
+curl -fsSL -o agentic-lens.tar.gz "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-linux-amd64.tar.gz"
+
+# Example for macOS Apple Silicon
+curl -fsSL -o agentic-lens.tar.gz "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-darwin-arm64.tar.gz"
+```
+
+#### Step 2: Extract and Set Executable Permissions
+```bash
+mkdir -p ./bin
+tar -xzf agentic-lens.tar.gz -C ./bin
+chmod +x ./bin/agentic-lens
+rm agentic-lens.tar.gz
+```
+
+On Windows (PowerShell):
+```powershell
+New-Item -ItemType Directory -Force -Path .\bin
+Invoke-WebRequest -Uri "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-windows-amd64.zip" -OutFile ".\agentic-lens.zip"
+Expand-Archive -Path ".\agentic-lens.zip" -DestinationPath ".\bin"
+Remove-Item ".\agentic-lens.zip"
+```
+
+#### Step 3: Scaffold Configuration and Launch Dashboard
+Verify the binary:
+```bash
+./bin/agentic-lens version --short
+```
+
+Initialize your repository configuration:
+```bash
+./bin/agentic-lens init \
+  --project-name "MyProject" \
+  --ticket-prefixes "PROJ,GEN" \
+  --src-folders "src,pkg" \
+  --workspaces "workspaces"
+```
+
+Start the embedded dashboard:
+```bash
+./bin/agentic-lens server --port 8085
+```
+Open `http://localhost:8085` in your browser to view the Fleet Overview and Live Observability feeds.
+
+---
+
+## 2. Agnostic Adoption for External Projects
+
+AgenticLens is engineered from first principles as an agnostic telemetry ingestion, aggregation, and visualization engine. It imposes zero methodology constraints on adopting organizations.
+
+### 2.1 Complete Workflow Neutrality
+Every software team operates with distinct development lifecycles, branching strategies, and agent harnesses. AgenticLens accommodates any way of working:
+- **Harness Agnostic**: Fully compatible with OpenCode, Claude Code, Cursor, Aider, GitHub Copilot, custom Python/Node scripts, or proprietary orchestration harnesses.
+- **Workflow Topology Agnostic**: Operates equally well with single-agent prompt loops, human developers, hierarchical multi-agent swarms, or CI/CD automated maintenance pipelines.
+- **Review and QA Independence**: Adopters define their own testing standards, linting gates, and code review criteria. AgenticLens records what occurred during execution without prescribing how development must be managed.
+- **Zero Maintainer Coupling**: Adopters do not inherit internal development skills, internal maintainer personas, or internal repository conventions.
+
+### 2.2 Custom Conventions and Taxonomy
+External repositories configure AgenticLens to align with their existing organizational standards:
+- **Custom Ticket Prefixes**: Support for any ticketing taxonomy (e.g. `JIRA-`, `ISSUE-`, `FEAT-`, `BUG-`, `CORE-`, `PAY-`, `DEVOPS-`). Multiple prefixes are treated as equal peers.
+- **Custom Workspace Hierarchies**: Telemetry can be housed in `workspaces/`, `alspaces/`, `.tasks/`, `specs/`, or any custom repository path.
+- **Custom Git Branching**: Operates seamlessly with trunk-based development, GitFlow, GitHub flow, or short-lived feature branches.
+- **Custom Persona Mappings**: Arbitrary agent identifiers emitted by custom harnesses can be mapped into canonical reporting roles or tracked as bespoke domains.
+
+---
+
+## 3. Configuration Reference (.agenticlens-config.yaml)
+
+AgenticLens is configured through a YAML manifest located at the repository root (`.agenticlens-config.yaml`).
+
+### 3.1 Complete Configuration Schema Example
 
 ```yaml
 # AgenticLens Global Configuration Reference
-project_name: MyProject
+project_name: PaymentGateway
 
 ticket:
   prefixes:
-    - prefix: PROJ
-      description: Primary project development features and bugfixes
+    - prefix: PAY
+      description: Payment core transactions and ledger logic
       ticket_type: feat
-    - prefix: GEN
-      description: General maintenance, operational tasks, and ad-hoc chores
+    - prefix: SEC
+      description: Security scanning, vulnerability remediation, and audits
+      ticket_type: fix
+    - prefix: OPS
+      description: Infrastructure, deployment pipelines, and chores
       ticket_type: chore
-    - prefix: PO
-      description: Product specifications and requirements documentation
+    - prefix: DOCS
+      description: Architecture decision records and API references
       ticket_type: docs
   case_insensitive: true
   custom_patterns: []
@@ -207,6 +214,7 @@ workspaces:
   src_folders:
     - src
     - pkg
+    - cmd
   artifacts:
     - path: CONTRACT.md
       title: Technical Contract
@@ -238,37 +246,35 @@ code_metrics:
   prod_patterns: []
 
 role_mappings:
-  orchestrator: orchestrator
-  build: orchestrator
-  planner: planner
-  coder: coder
-  tester: tester
-  reviewer: reviewer
+  security-scanner: security
+  perf-analyzer: tester
+  integration-tester: tester
+  frontend-specialist: developer
+  backend-specialist: developer
 
 role_order:
-  - orchestrator
-  - planner
-  - coder
+  - security
+  - developer
   - tester
-  - reviewer
 ```
 
-### 5.2 Section: `project_name`
+### 3.2 Schema Field Definitions
+
+#### `project_name`
 - **Type**: String
 - **Default**: None (Mandatory during `init`)
-- **Semantics**: The human-readable name of the project. Displayed in web dashboard navigation bars, page titles, CLI summary tables, and JSON export metadata.
+- **Description**: Human-readable name of the project. Displayed in web dashboard headers, page titles, CLI summary tables, and JSON export metadata.
 
-### 5.3 Section: `ticket`
+#### `ticket`
 Controls ticket identifier parsing, prefix matching, and normalization.
 - **`prefixes`** (List of Objects or Strings): Recognized ticket prefixes.
-  - `prefix` (String): Prefix string (e.g. `PROJ`, `AL`, `GEN`, `PO`, `FIX`).
+  - `prefix` (String): Prefix string (e.g. `PAY`, `SEC`, `OPS`).
   - `description` (String): Operational description of the ticket domain.
   - `ticket_type` (String, Optional): Default conventional commit type inferred for this prefix (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
-  - *Semantics*: All configured prefixes are treated as equal peers.
-- **`case_insensitive`** (Boolean, Default: `true`): When true, matches ticket identifiers regardless of casing (e.g. `proj-123` normalizes to `PROJ-123`).
-- **`custom_patterns`** (List of Strings, Default: `[]`): Additional regular expressions to match unconventional ticket naming formats when standard `<PREFIX>-<NUMBER>` is insufficient.
+- **`case_insensitive`** (Boolean, Default: `true`): When true, matches ticket identifiers regardless of casing (e.g. `pay-101` normalizes to `PAY-101`).
+- **`custom_patterns`** (List of Strings, Default: `[]`): Additional regular expressions to match custom ticket naming formats when standard `<PREFIX>-<NUMBER>` is insufficient.
 
-### 5.4 Section: `workspaces`
+#### `workspaces`
 Defines filesystem layout for ticket telemetry and change tracking.
 - **`dir`** (String, Default: `workspaces`): Directory where ticket workspace folders live (e.g. `workspaces/<TICKET_ID>/`).
 - **`src_folders`** (List of Strings, Mandatory during `init`): Monitored source code folders. Git diffs, line additions, and line deletions occurring outside these folders are filtered out when calculating project code metrics.
@@ -277,14 +283,14 @@ Defines filesystem layout for ticket telemetry and change tracking.
   - `title` (String): Display title in web dashboard tabs.
   - `description` (String, Optional): Explanatory subtitle.
 
-### 5.5 Section: `database`
+#### `database`
 Specifies local OpenCode SQLite database connectivity parameters.
 - **`path`** (String, Default: `~/.local/share/opencode/opencode.db`): Filesystem path to the OpenCode SQLite database. Supports home directory tilde expansion (`~`).
 - **`query_timeout_ms`** (Integer, Default: `5000`): Maximum execution duration in milliseconds for database queries before timing out.
 - **`busy_timeout_ms`** (Integer, Default: `5000`): SQLite busy handler wait duration in milliseconds before returning a busy lock error.
 - **`read_only`** (Boolean, Default: `true`): Opens database connection in immutable read-only mode to prevent accidental writes or lock contention with OpenCode.
 
-### 5.6 Section: `live`
+#### `live`
 Configures real-time session polling and automated anomaly detection.
 - **`active_threshold_seconds`** (Integer, Default: `300`): Sliding window in seconds. Sessions with turn activity within this window are classified as active.
 - **`poll_interval_ms`** (Integer, Default: `2000`): Frequency in milliseconds at which the embedded server polls SQLite for new session turns.
@@ -294,7 +300,7 @@ Configures real-time session polling and automated anomaly detection.
   - `error_rate_threshold` (Float, Default: `0.25`): Ratio of tool errors to total invocations triggering a high error rate alert (e.g. 0.25 = 25%).
   - `context_exhaustion_pct` (Float, Default: `0.85`): Token usage percentage of model context window capacity triggering a saturation warning (e.g. 0.85 = 85%).
 
-### 5.7 Section: `code_metrics`
+#### `code_metrics`
 Configures git commit diff extraction and file classification.
 - **`base_branch`** (String, Optional, Default: automatic probing): Comparison branch for computing diff metrics. If omitted or empty, AgenticLens probes `origin/HEAD`, `origin/main`, `main`, `origin/master`, and `master`.
 - **`include`** (List of Strings, Default: `[]`): Glob patterns explicitly included as production code.
@@ -302,23 +308,23 @@ Configures git commit diff extraction and file classification.
 - **`test_patterns`** (List of Strings, Default: `[]`): Glob patterns identifying test code and fixtures.
 - **`prod_patterns`** (List of Strings, Default: `[]`): Glob patterns identifying production runtime code.
 
-### 5.8 Section: `role_mappings`
-Maps raw agent persona strings recorded in OpenCode traces to canonical role categories (`orchestrator`, `planner`, `coder`, `tester`, `reviewer`).
+#### `role_mappings`
+Maps raw agent persona strings recorded in OpenCode traces to canonical role categories:
 - Unmapped personas are categorized under their raw name or as unassigned subagents.
-- Custom personas (e.g. `security-auditor`, `db-architect`) can be mapped directly to canonical roles or preserved as standalone custom roles.
+- Custom personas can be mapped directly to canonical roles or preserved as standalone custom roles.
 
-### 5.9 Section: `role_order`
+#### `role_order`
 - **Type**: List of Strings
 - **Default**: `[orchestrator, planner, coder, tester, reviewer]`
-- **Semantics**: Explicit sorting sequence for agent roles in CLI tables, summary markdowns, and web dashboard charts. Listed roles appear first in the specified order; any unlisted roles follow in alphabetical order.
+- **Description**: Explicit sorting sequence for agent roles in CLI tables, summary markdowns, and web dashboard charts. Listed roles appear first in the specified order; any unlisted roles follow in alphabetical order.
 
 ---
 
-## 6. Agnostic Agent Workflow Integration Guide
+## 4. Agnostic Agent Workflow Integration Guide
 
 Integrating AgenticLens into your repository requires zero changes to agent reasoning loops, model selection, or coding styles. Integration is achieved through a single command invocation at the conclusion of each task.
 
-### 6.1 The Delayed Telemetry Ingestion Mandate
+### 4.1 The Delayed Telemetry Ingestion Mandate
 
 The most critical operational principle for accurate telemetry is the **Delayed Telemetry Ingestion Mandate**:
 - Telemetry generation must always be executed as the very final turn of an agent session, immediately before committing work to git.
@@ -328,9 +334,9 @@ The most critical operational principle for accurate telemetry is the **Delayed 
   2. Execute `./bin/agentic-lens generate ...` to record final telemetry facts into `agentic_metrics.json` and append the markdown table to `SUMMARY.md`.
   3. Execute `git add -A && git commit -m "..."` to commit code and metrics atomically.
 
-### 6.2 Telemetry Ingestion Command (`generate`)
+### 4.2 Nonce Generation and Ingestion Command (`generate`)
 
-To record session metrics, invoke the `generate` subcommand:
+To guarantee deterministic session resolution across concurrent agents or subagent delegations, generate a unique execution nonce and pass it to the `generate` command:
 
 ```bash
 NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
@@ -343,7 +349,7 @@ NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
 ```
 
 #### Command Flags Breakdown:
-- `--ticket-id <ID>` (Required): The active ticket or issue identifier (e.g. `PROJ-42`, `BUG-101`).
+- `--ticket-id <ID>` (Required): The active ticket or issue identifier (e.g. `PAY-42`, `SEC-101`).
 - `--nonce <STRING>` (Recommended): A unique execution nonce used to correlate concurrent subagent sessions and resolve the precise execution window.
 - `--ticket-type <TYPE>` (Required): Conventional commit classification (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
 - `--json-output <PATH>`: Destination path for the immutable JSON telemetry ledger.
@@ -351,7 +357,7 @@ NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
 - `--db-path <PATH>` (Optional): Explicit path to OpenCode SQLite database (overrides configuration).
 - `--anomalies` (Optional): Evaluate and record anomaly alerts directly into the output ledger.
 
-### 6.3 Conventional Commit Type Classification
+### 4.3 Conventional Commit Type Classification
 
 AgenticLens requires explicit commit type classification to generate accurate engineering velocity rollups:
 - `feat`: New product capabilities, user-facing enhancements, or API additions.
@@ -364,20 +370,22 @@ AgenticLens requires explicit commit type classification to generate accurate en
 - `perf`: Performance optimizations and latency reductions.
 - `build`: Build toolchain modifications or compiler flag updates.
 
-### 6.4 Integrating Custom Personas
+### 4.4 Custom Persona Role Mapping
 
-If your organization uses custom agent personas (for example, `security-scanner`, `perf-analyzer`, or `frontend-specialist`), map them in `.agenticlens-config.yaml`:
+Adopting repositories often utilize specialized agent personas. Map them in `.agenticlens-config.yaml` to unify cross-team reporting:
 
 ```yaml
 role_mappings:
-  security-scanner: reviewer
+  security-scanner: security
   perf-analyzer: tester
-  frontend-specialist: coder
+  integration-tester: tester
+  frontend-specialist: developer
+  backend-specialist: developer
 ```
 
 When AgenticLens processes execution traces, it automatically aggregates tokens, costs, and durations under the designated canonical role while preserving the granular persona identifier in the raw telemetry ledger.
 
-### 6.5 Example Agent Integration Guidelines (`AGENTS.md`)
+### 4.5 Standard Repository Agent Guidelines Policy Block
 
 Below is the standard policy block that can be added to your repository's agent instructions file (`AGENTS.md`, `CLAUDE.md`, or `.opencode/agent/*.md`):
 
@@ -385,7 +393,7 @@ Below is the standard policy block that can be added to your repository's agent 
 ## AgenticLens Telemetry Guidelines
 
 1. Ticket Tracking Mandate:
-   - Every task must be tracked by an explicit ticket identifier matching configured prefixes (e.g. PROJ-101).
+   - Every task must be tracked by an explicit ticket identifier matching configured prefixes (e.g. PAY-101).
    - Agents work on one ticket at a time. All turns belong to the active ticket.
 
 2. Dedicated Workspace Allocation:
@@ -406,17 +414,17 @@ Below is the standard policy block that can be added to your repository's agent 
 
 ---
 
-## 7. CLI and Web Dashboard Reference
+## 5. CLI Commands and Embedded Web Dashboard Reference
 
 AgenticLens provides a unified command-line interface and an embedded web dashboard for observability.
 
-### 7.1 CLI Subcommands Reference
+### 5.1 CLI Subcommands Reference
 
 #### `agentic-lens init`
 Scaffolds and writes `.agenticlens-config.yaml` at the repository root.
 - Flags:
   - `--project-name <NAME>` (Required): Human-readable name of the project.
-  - `--ticket-prefixes <LIST>` (Required): Comma-separated list of ticket prefixes (e.g. `PROJ,GEN,PO`).
+  - `--ticket-prefixes <LIST>` (Required): Comma-separated list of ticket prefixes (e.g. `PAY,SEC,OPS`).
   - `--src-folders <LIST>` (Required): Comma-separated list of monitored source code directories.
   - `--workspaces <DIR>` (Optional, Default: `workspaces`): Root directory for ticket workspaces.
   - `--db-path <PATH>` (Optional): Custom path to OpenCode SQLite database.
@@ -483,7 +491,9 @@ Runs stepwise schema migrations across ticket workspace ledgers.
   - `--backup` (Optional): Create `.bak` backup copies before modifying ledgers.
   - `--update-summaries` (Optional): Refresh Markdown summary tables after migration.
 
-### 7.2 Embedded Web Dashboard Views
+---
+
+### 5.2 Embedded Web Dashboard Views
 
 When running `agentic-lens server --port 8080`, navigate to `http://localhost:8080` to access the interactive dashboard.
 
@@ -515,16 +525,16 @@ When running `agentic-lens server --port 8080`, navigate to `http://localhost:80
 
 ---
 
-## 8. Troubleshooting and Operational Best Practices
+## 6. Operational Troubleshooting and Best Practices
 
-### 8.1 SQLite Concurrency and Database Locks
+### 6.1 SQLite Concurrency, Busy Timeouts, and WAL Mode
 
 AgenticLens accesses the local OpenCode SQLite database concurrently while OpenCode writes session traces:
 - **Busy Timeouts**: If OpenCode holds an exclusive lock during a database transaction, SQLite queries can experience transient lock contention. AgenticLens mitigates this using a configurable busy timeout handler (`database.busy_timeout_ms`, default 5000 ms).
 - **WAL Mode**: OpenCode operates in SQLite Write-Ahead Logging (WAL) mode, allowing concurrent readers without blocking active writers.
 - **Read-Only Connections**: Keep `database.read_only: true` enabled in `.agenticlens-config.yaml`. This guarantees that AgenticLens opens connections with `SQLITE_OPEN_READONLY`, ensuring zero lock escalation and eliminating the risk of corrupting OpenCode state.
 
-### 8.2 Cross-Platform Database Paths
+### 6.2 Cross-Platform Database Paths with Tilde Expansion
 
 The OpenCode SQLite database location varies across operating systems. Configure `database.path` accordingly:
 - **Linux**: `~/.local/share/opencode/opencode.db`
@@ -533,17 +543,17 @@ The OpenCode SQLite database location varies across operating systems. Configure
 
 AgenticLens automatically performs tilde expansion (`~`) on Linux and macOS, resolving paths to the user home directory. If running in a containerized or CI environment, set the database path via command-line flag: `--db-path /path/to/opencode.db`.
 
-### 8.3 Executable Permissions and Binary Placement
+### 6.3 Executable Permissions and macOS Quarantine Flags
 
 When installing precompiled binaries manually on Unix systems (Linux and macOS):
 - Ensure the executable bit is set: `chmod +x ./bin/agentic-lens`.
-- If gatekeeper blocks execution on macOS, clear quarantine flags:
+- If Gatekeeper blocks execution on macOS, clear quarantine flags:
   ```bash
   xattr -d com.apple.quarantine ./bin/agentic-lens
   ```
 - Store the binary in a dedicated directory (such as `./bin/` or `.opencode/skills/agentic-lens-setup/bin/`) and ensure a protective `.gitignore` contains `*` and `!/.gitignore` to prevent tracking compiled binaries in git.
 
-### 8.4 Git Upstream Base Branch Inference
+### 6.4 Git Upstream Base Branch Inference and Fallback Probing
 
 When extracting commit diff metrics, AgenticLens compares the active branch against an upstream base branch:
 - By default, if `code_metrics.base_branch` is omitted or empty, AgenticLens automatically probes:
@@ -559,7 +569,7 @@ When extracting commit diff metrics, AgenticLens compares the active branch agai
   ```
 - Ensure git fetch includes the base branch in CI pipelines (`git fetch origin main`).
 
-### 8.5 Workspace Directory Path Resolution
+### 6.5 Workspace Directory Path Resolution
 
 AgenticLens resolves workspace directories relative to the current working directory or git repository root:
 - Paths with spaces (e.g. `my workspaces/ticket 1`) are fully supported by wrapping arguments in quotes:
@@ -567,3 +577,53 @@ AgenticLens resolves workspace directories relative to the current working direc
   ./bin/agentic-lens --workspaces "my workspaces"
   ```
 - Always verify that the configured `workspaces.dir` in `.agenticlens-config.yaml` matches the directory used in CLI commands and agent prompts.
+
+---
+
+## Appendix: Platform Architecture and Core Concepts
+
+AgenticLens is constructed around the Functional Core, Imperative Shell (FCIS) pattern and packaged as a single, self-contained binary executable with zero external runtime dependencies.
+
+### A.1 Functional Core, Imperative Shell (FCIS) Architecture
+
+The architecture strictly separates pure domain computations from side-effecting operations:
+- **Functional Core (`backend/internal/domain/`)**: Contains pure value objects, cost models, statistical anomaly calculation formulas, and context window health algorithms. The functional core contains zero file I/O, zero network dependencies, and zero system clocks. All calculations are completely deterministic and easily verified via unit tests.
+- **Imperative Shell (`backend/internal/adapters/` and `backend/cmd/agentic-lens/`)**: Manages external interactions including SQLite database querying, git repository diff extraction, configuration file parsing, HTTP server lifecycle management, and CLI argument binding.
+
+### A.2 Single Binary Zero-Dependency Model
+
+Traditional developer tools often require complex runtime dependencies such as Node.js, Python runtimes, or external database servers. AgenticLens eliminates this operational overhead:
+- The backend is written in Go 1.23+ and compiles to a native static executable with CGO disabled (`CGO_ENABLED=0`).
+- SQLite database connectivity is powered by a pure Go driver (`modernc.org/sqlite`), eliminating the requirement for a host C compiler or shared C libraries.
+- The web dashboard is built with TypeScript and Vite. During the build process, compiled static frontend assets (`web/dist/`) are embedded directly into the Go executable via `embed.FS`.
+- Adopting repositories run a single executable file that serves both the command-line interface and the full-featured interactive web dashboard.
+
+### A.3 Local Immutable Telemetry Fact Ledgers (`agentic_metrics.json`)
+
+Rather than transmitting proprietary code or execution telemetry to external cloud services, AgenticLens operates entirely locally:
+- Telemetry facts are captured per ticket or task in isolated workspace directories: `workspaces/<TICKET_ID>/agentic_metrics.json`.
+- Each ledger is an immutable JSON document recording session identifiers, wall-clock duration, token volume (input, output, cache-read, and cache-write tokens), financial costs calculated from precise model pricing matrices, turn counts, tool invocation distributions, error rates, and git commit diff volumes (insertions, deletions, and affected files).
+- These ledgers are committed directly to version control alongside code deliverables, establishing an auditable, repository-native history of agent engineering metrics with zero cloud egress.
+
+### A.4 Real-Time Live Observability and SSE Event Streaming
+
+In addition to post-turn historical ledgers, AgenticLens provides live observability of active agent sessions:
+- The embedded server continuously polls the local OpenCode SQLite database at configurable intervals (`poll_interval_ms`, default 2000 ms).
+- Active sessions are identified based on recent turn activity within a sliding time window (`active_threshold_seconds`, default 300 seconds).
+- Telemetry events, tool calls, and status updates are broadcast to connected browsers via Server-Sent Events (SSE) through the `/api/live/stream` endpoint.
+- An in-memory trace buffer retains recent execution events, providing immediate visibility into subagent handoffs, prompt dispatches, and tool outputs as they occur.
+
+### A.5 Automated Anomaly Detection
+
+AgenticLens continuously analyzes active sessions and historical ledgers against configurable statistical thresholds to detect engineering inefficiencies:
+- **Session Stalls**: Sessions that remain open with no new turn activity beyond a configurable duration (`stall_threshold_seconds`, default 120 seconds).
+- **High Tool Error Rates**: Sessions where the ratio of failed tool executions to total invocations exceeds a critical limit (`error_rate_threshold`, default 0.25 or 25%).
+- **Context Window Exhaustion**: Sessions where cumulative prompt and generation tokens reach or exceed a critical percentage of model capacity (`context_exhaustion_pct`, default 0.85 or 85%).
+
+### A.6 Context Window Health States
+
+Context saturation severely impacts model reasoning quality, instruction adherence, and cost. AgenticLens classifies context health into four discrete states based on utilization percentage:
+- **HEALTHY** (0% to 50% utilization): Optimal operating envelope. The model retains complete instruction adherence and context fidelity with minimal compaction pressure.
+- **ELEVATED** (50% to 75% utilization): Normal working range for complex implementations. The agent operates effectively, but monitoring is recommended.
+- **BLOATED** (75% to 85% utilization): High context saturation. Model reasoning degradation and prompt compaction risks increase significantly.
+- **CRITICAL** (85% to 100% utilization): Severe exhaustion. Immediate session compaction or subagent delegation is advised to avoid catastrophic forgetting or dropped instructions.

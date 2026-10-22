@@ -1,15 +1,17 @@
 ---
 name: agentic-lens-setup
-description: Guided interactive setup skill to bootstrap AgenticLens in any repository, downloading precompiled release binaries, configuring project parameters, explaining telemetry features, and reviewing agent guidelines with mandatory user confirmation.
+description: Autonomous setup skill to bootstrap AgenticLens in any repository, downloading precompiled release binaries, configuring project parameters, explaining telemetry features, and reviewing agent guidelines with mandatory user confirmation.
 ---
 
-# AgenticLens Cross-Project Interactive Setup Skill
+# AgenticLens Cross-Project Autonomous Setup Skill
 
-Guides autonomous bootstrapping and adoption of AgenticLens in any software repository using precompiled release artifacts from https://github.com/NiltonDuarte/AgenticLens/releases.
+Guides autonomous bootstrapping and adoption of AgenticLens in any software repository using precompiled release artifacts from GitHub Releases (https://github.com/NiltonDuarte/AgenticLens/releases).
+
+This skill follows the autonomous agentic distribution model: it is completely self-contained and executable by any autonomous coding agent reading this manifest directly via shared repository URL or local path.
 
 ## Operational Mandates
-- Strict Release-Only Mandate: Never compile binaries from source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
-- Skill Co-Location Mandate: Download and store the precompiled binary inside this skill directory (`.opencode/skills/agentic-lens-setup/bin/agentic-lens`) alongside a protective `.gitignore` preventing accidental git tracking.
+- Strict Release-Only Mandate: Never compile binaries from Go/TypeScript source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
+- Binary Placement and Git Protection: Store the precompiled binary inside `.opencode/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) alongside a protective `.gitignore` containing `*` and `!/.gitignore` to prevent committing compiled binaries to version control.
 - Mandatory User Confirmation Gate: Inspect existing agent instructions (`AGENTS.md`, `.opencode/agent/*.md`, `CLAUDE.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
 
@@ -17,27 +19,79 @@ Guides autonomous bootstrapping and adoption of AgenticLens in any software repo
 
 ## Step-by-Step Setup Workflow
 
-### Step 1: Precompiled Release Retrieval
+### Step 1: Precompiled Release Retrieval and Verification
 
-Retrieve official precompiled release artifacts from the canonical release repository: https://github.com/NiltonDuarte/AgenticLens/releases.
+An autonomous agent executing this skill must perform host platform detection, download the appropriate official release archive, unpack the executable, and verify its integrity.
 
-Execute the co-located artifact downloader script to detect the host operating system (Linux, macOS, Windows) and architecture (amd64, arm64), fetch the precompiled release binary, unpack it, and enforce executable permissions:
+#### 1.1 Host Platform and Architecture Detection
+Run the following shell commands to determine the target OS and CPU architecture:
 
+```bash
+OS_RAW=$(uname -s)
+ARCH_RAW=$(uname -m)
+
+case "$OS_RAW" in
+  Linux) OS="linux" ;;
+  Darwin) OS="darwin" ;;
+  MINGW*|MSYS*|CYGWIN*|Windows_NT) OS="windows" ;;
+  *) echo "Error: Unsupported OS $OS_RAW" >&2; exit 1 ;;
+esac
+
+case "$ARCH_RAW" in
+  x86_64|amd64) ARCH="amd64" ;;
+  arm64|aarch64) ARCH="arm64" ;;
+  *) echo "Error: Unsupported architecture $ARCH_RAW" >&2; exit 1 ;;
+esac
+```
+
+#### 1.2 Binary Destination and Protective Git Exclusion
+Create the binary directory and ensure a protective `.gitignore` is in place:
+
+```bash
+BIN_DIR=".opencode/skills/agentic-lens-setup/bin"
+mkdir -p "$BIN_DIR"
+
+if [ ! -f "$BIN_DIR/.gitignore" ]; then
+  cat <<'EOF' > "$BIN_DIR/.gitignore"
+# Prevent accidental git tracking of precompiled binaries
+*
+!.gitignore
+EOF
+fi
+```
+
+#### 1.3 Binary Download and Extraction
+If a local downloader script exists at `./.opencode/skills/agentic-lens-setup/scripts/download.sh`, execute it:
 ```bash
 ./.opencode/skills/agentic-lens-setup/scripts/download.sh
 ```
 
-If the downloader script is invoked from the repository root, `scripts/download-agentic-lens.sh` may also be used:
+Otherwise, download directly from GitHub Releases using `curl` or `wget`:
 
+For Linux or macOS:
 ```bash
-./scripts/download-agentic-lens.sh
+ARCHIVE_NAME="agentic-lens-${OS}-${ARCH}.tar.gz"
+DOWNLOAD_URL="https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/${ARCHIVE_NAME}"
+
+echo "Downloading ${DOWNLOAD_URL}..."
+curl -fsSL "$DOWNLOAD_URL" | tar -xz -C "$BIN_DIR"
+chmod +x "$BIN_DIR/agentic-lens"
 ```
 
-#### Verification
-Confirm the binary is operational and inspect the build metadata:
+For Windows (PowerShell):
+```powershell
+$archiveName = "agentic-lens-windows-amd64.zip"
+$downloadUrl = "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/$archiveName"
+Invoke-WebRequest -Uri $downloadUrl -OutFile "$BIN_DIR\$archiveName"
+Expand-Archive -Path "$BIN_DIR\$archiveName" -DestinationPath "$BIN_DIR" -Force
+Remove-Item "$BIN_DIR\$archiveName"
+```
+
+#### 1.4 Verification
+Validate that the downloaded binary executes properly and outputs valid build metadata:
 
 ```bash
-./.opencode/skills/agentic-lens-setup/bin/agentic-lens version --json
+"$BIN_DIR/agentic-lens" version --json
 ```
 
 Verify that valid JSON is returned containing:
@@ -49,13 +103,13 @@ Verify that valid JSON is returned containing:
 
 ### Step 2: Interactive Interview and Configuration Scaffolding
 
-Prompt the developer or inspect the repository to collect configuration parameters:
+Inspect the repository and collect configuration parameters from the developer or workspace environment:
 
 1. Project Name:
    - Descriptive identifier for the repository.
    - Strictly mandatory flag (`--project-name`); no default is provided.
 2. Ticket Prefixes:
-   - Comma-separated list of recognized ticket prefixes (e.g. `PROJ,GEN,PO` or `AL,GEN,PO`). All configured prefixes are treated as equal peers.
+   - Comma-separated list of recognized ticket prefixes (e.g. `PROJ,GEN,PO` or `PAY,SEC,OPS`). All configured prefixes are treated as equal peers.
    - Strictly mandatory flag (`--ticket-prefixes`); no default or synthetic fallback is provided.
 3. Workspaces Directory:
    - Directory where ticket artifacts and session telemetry ledgers are stored.
@@ -66,14 +120,12 @@ Prompt the developer or inspect the repository to collect configuration paramete
 5. OpenCode SQLite Database Path:
    - Path to local OpenCode database.
    - Default: `~/.local/share/opencode/opencode.db`.
-6. Agent Role Mappings:
-   - Personas mapped to canonical roles (`orchestrator`, `planner`, `coder`, `tester`, `reviewer`).
 
 #### Generating Configuration
 Run the CLI `init` command using the collected parameters:
 
 ```bash
-./.opencode/skills/agentic-lens-setup/bin/agentic-lens init \
+"$BIN_DIR/agentic-lens" init \
   --project-name "<PROJECT_NAME>" \
   --ticket-prefixes "<TICKET_PREFIXES>" \
   --workspaces "<WORKSPACES_DIR>" \
@@ -84,7 +136,7 @@ Run the CLI `init` command using the collected parameters:
 Alternatively, review generated YAML with `--dry-run` before writing:
 
 ```bash
-./.opencode/skills/agentic-lens-setup/bin/agentic-lens init \
+"$BIN_DIR/agentic-lens" init \
   --project-name "<PROJECT_NAME>" \
   --ticket-prefixes "<TICKET_PREFIXES>" \
   --src-folders "<SRC_FOLDERS>" \
@@ -104,8 +156,8 @@ Present an overview of AgenticLens features to the user:
 - `generate`: Ingest session telemetry from OpenCode SQLite DB and git history into `agentic_metrics.json`, and idempotently update markdown summary tables.
   ```bash
   NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-  ./.opencode/skills/agentic-lens-setup/bin/agentic-lens generate \
-    --nonce $NONCE \
+  "$BIN_DIR/agentic-lens" generate \
+    --nonce "$NONCE" \
     --ticket-id <TICKET_ID> \
     --ticket-type <CONVENTIONAL_TYPE> \
     --json-output workspaces/<TICKET_ID>/agentic_metrics.json \
@@ -113,11 +165,11 @@ Present an overview of AgenticLens features to the user:
   ```
 - `scan`: Scan workspace ledgers, reporting active sessions, iteration counts, context window health, and token costs:
   ```bash
-  ./.opencode/skills/agentic-lens-setup/bin/agentic-lens --list
+  "$BIN_DIR/agentic-lens" --list
   ```
 - `server`: Start embedded web dashboard and real-time streaming API service:
   ```bash
-  ./.opencode/skills/agentic-lens-setup/bin/agentic-lens server --port 8080
+  "$BIN_DIR/agentic-lens" server --port 8080
   ```
 - `backfill`: Batch telemetry backfill, git diff fact recomputation, and schema upgrades.
 - `migrate`: Stepwise schema migration engine across ledger versions.
@@ -171,8 +223,8 @@ When approved by the user, append the following standardized operational policie
 - Telemetry generation must be executed as the very final turn before git commit:
   ```bash
   NONCE=$(od -N 4 -tx1 /dev/urandom | head -1 | tr -d ' ')
-  ./.opencode/skills/agentic-lens-setup/bin/agentic-lens generate \
-    --nonce $NONCE \
+  ./bin/agentic-lens generate \
+    --nonce "$NONCE" \
     --ticket-id <TICKET_ID> \
     --ticket-type <CONVENTIONAL_TYPE> \
     --json-output workspaces/<TICKET_ID>/agentic_metrics.json \
@@ -184,9 +236,9 @@ When approved by the user, append the following standardized operational policie
 ---
 
 ## Completion Verification Checklist
-- Binary exists at `.opencode/skills/agentic-lens-setup/bin/agentic-lens` and is executable.
-- Protective `.gitignore` exists at `.opencode/skills/agentic-lens-setup/bin/.gitignore`.
+- Binary exists at `.opencode/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) and is executable.
+- Protective `.gitignore` exists at binary destination directory.
 - Root `.agenticlens-config.yaml` is present, valid YAML, and non-empty.
-- Verification command `./.opencode/skills/agentic-lens-setup/bin/agentic-lens version --json` succeeds.
+- Verification command reports valid JSON metadata.
 - Agent guidelines updated only after explicit user confirmation.
 - Zero emojis in all artifacts and outputs.

@@ -16,7 +16,7 @@ LDFLAGS := -X 'agenticlens/internal/domain.Version=$(VERSION)' \
            -X 'agenticlens/internal/domain.GitCommit=$(GIT_COMMIT)' \
            -X 'agenticlens/internal/domain.BuildDate=$(BUILD_DATE)'
 
-.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean package-setup-skill
+.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean
 
 all: install check test build
 
@@ -35,7 +35,6 @@ help:
 	@echo "  build               - Build backend executable (and web bundle if present)"
 	@echo "  release-build       - Cross-compile binaries for all supported platforms"
 	@echo "  release-package     - Package release archives and generate SHA256SUMS"
-	@echo "  package-setup-skill - Package agentic-lens-setup skill for distribution"
 	@echo "  release-verify      - Verify release checksums and host binary execution"
 	@echo "  release-clean       - Remove release distribution artifacts"
 	@echo "  server              - Build and run HTTP server (PORT=$(PORT))"
@@ -112,11 +111,7 @@ release-build:
 		(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$$output ./cmd/agentic-lens) || exit 1; \
 	done
 
-package-setup-skill:
-	@echo "Packaging agentic-lens-setup skill..."
-	./scripts/package-setup-skill.sh --dest-dir $(RELEASE_DIR)/skills --version $(VERSION)
-
-release-package: package-setup-skill
+release-package:
 	@mkdir -p $(RELEASE_DIR)
 	@for platform in $(PLATFORMS); do \
 		os=$${platform%/*}; \
