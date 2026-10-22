@@ -2,123 +2,107 @@
 
 ## 1. Problem Statement
 
-External engineering teams, platform architects, and developers require comprehensive, authoritative documentation to onboard and operate AgenticLens across diverse software repositories. Currently, external adopters lack a unified setup manual and an automated packaging mechanism for platform onboarding skills.
+External engineering teams, platform architects, and autonomous coding agents require comprehensive, authoritative documentation to onboard and operate AgenticLens across diverse software repositories.
 
-Crucially, an architectural confusion exists between the AgenticLens product platform and this repository's internal development methodology. The internal skills resident in this repository (.opencode/skills/agentic-lens-dev, .opencode/skills/agentic-lens-po, and .opencode/skills/agentic-lens-review), alongside the multi-agent orchestrator-planner-coder-tester-reviewer delivery lifecycle, are specific to developing AgenticLens itself. They are not part of the AgenticLens product platform.
+In Iteration 01, AL-37 attempted to package the setup skill into compressed release archives (`tar.gz` and `zip`) via custom shell packaging scripts and Makefile targets. This approach introduced unnecessary packaging overhead and contradicted the modern agentic distribution model. In agentic workflows, autonomous agents consume skills natively via Markdown instruction manifests (`SKILL.md`) read directly through shared repository URLs or cloned paths. Packaging archives of markdown files is redundant and counter-productive.
 
-External repositories adopting AgenticLens must never be forced or expected to adopt the internal agent personas, ticket prefixes, or delivery workflows of this repository. Instead, adopting teams define their own ways of working, agent personas, review procedures, and branching strategies. They require a neutral, standalone platform documentation manual explaining:
-1. Platform architecture, value proposition, and the single-binary zero-dependency deployment model.
-2. Setup pathways for both agent-driven bootstrapping via the standalone agentic-lens-setup skill and manual developer installation via GitHub Releases.
-3. Exhaustive reference documentation for all root configuration parameters in .agenticlens-config.yaml.
-4. Agnostic agent workflow integration demonstrating how any agent harness, single-agent loop, or continuous integration script invokes the AgenticLens CLI as the final turn before committing work.
-5. Complete CLI command reference and embedded web dashboard navigation.
-6. Operational troubleshooting and best practices covering SQLite locks, database path resolution across operating systems, binary permissions, and git branch inference.
+Furthermore, the documentation manual requires restructuring:
+1. Adopters and autonomous agents need immediate actionable setup steps at the very top of the manual (Section 1 Quick Start covering Agent-Driven and Manual Developer pathways).
+2. Adopting repositories define their own ways of working, agent personas, review procedures, and branching strategies. Adoption guidelines (Section 2 Agnostic Adoption) must be completely decoupled from internal maintainer methodology text, focusing purely on cross-project adoption.
+3. Realistic adopter role mappings must be documented (such as `security-scanner: security`, `perf-analyzer: tester`, `integration-tester: tester`, `frontend-specialist: developer`, and `backend-specialist: developer`).
+4. Platform architecture, value propositions, and context health details belong logically in an Appendix rather than blocking early adoption reading.
+5. Obsolete packaging scripts (`scripts/package-setup-skill.sh`, `scripts/test-setup.sh`) and Makefile packaging targets must be removed and reverted.
+6. The onboarding skill manifest (`.opencode/skills/agentic-lens-setup/SKILL.md`) must be fully self-contained for an autonomous agent reading via shared URL or repo link.
 
-To enable clean distribution, the standalone onboarding skill agentic-lens-setup must be cleanly packaged into standalone release archives (dist/skills/agentic-lens-setup.tar.gz and dist/skills/agentic-lens-setup.zip) that strictly exclude internal development skills, temporary binaries, and build artifacts.
-
-Ticket AL-37 delivers this complete documentation manual at docs/SETUP_MANUAL.md, implements the standalone skill packaging script at scripts/package-setup-skill.sh, exposes the corresponding Makefile packaging targets, and verifies the end-to-end setup and packaging pipeline via scripts/test-setup.sh.
+Ticket AL-37 Iteration 02 delivers the restructured `docs/SETUP_MANUAL.md`, enhances `.opencode/skills/agentic-lens-setup/SKILL.md`, deletes the obsolete packaging and test scripts, reverts Makefile packaging additions, and aligns the entire repository with the agentic distribution model.
 
 ---
 
 ## 2. Functional Core, Imperative Shell (FCIS) and Architectural Invariants
 
-All implementation deliverables must strictly adhere to TECHNICAL_GUIDELINES.md and core system invariants:
+All deliverables must strictly satisfy `TECHNICAL_GUIDELINES.md` and repository architectural invariants:
 
 ### Functional Core, Imperative Shell (FCIS) Invariants
 1. Pure Functional Core Isolation:
-   - Go domain models and mathematical rollups in backend/internal/domain/ (such as token aggregation, cost derivation, context window health evaluation, anomaly detection, and version formatting) remain pure value-semantic functions with zero external dependencies, zero disk I/O, zero network calls, and zero clocks.
-   - Documentation and integration instructions must preserve this boundary: telemetry ledgers (agentic_metrics.json) are immutable factual records generated deterministically from SQLite execution traces and git diff analysis.
+   - Go domain models, mathematical rollups, token aggregation, anomaly thresholds, and context window health logic in `backend/internal/domain/` remain pure, immutable value-semantic functions with zero external dependencies, zero disk I/O, zero network access, and zero clocks.
+   - Documentation and skill instructions strictly honor this boundary: telemetry ledgers (`agentic_metrics.json`) are immutable factual records generated deterministically from SQLite execution traces and git diff analysis.
 2. Imperative Shell Discipline:
-   - All filesystem operations, configuration file parsing and generation (backend/internal/adapters/config/), SQLite database queries (backend/internal/adapters/sqlite/), git diff extraction (backend/internal/adapters/git/), HTTP serving and asset embedding (backend/internal/adapters/http/ and backend/internal/adapters/web/), and CLI flag handling (backend/cmd/agentic-lens/) reside exclusively within the imperative shell.
-   - Packaging scripts and verification harnesses operate cleanly within the imperative shell without introducing runtime dependencies to the pure domain core.
+   - Configuration file parsing and generation (`backend/internal/adapters/config/`), SQLite querying (`backend/internal/adapters/sqlite/`), git analysis (`backend/internal/adapters/git/`), HTTP serving (`backend/internal/adapters/http/`), and CLI command routing (`backend/cmd/agentic-lens/`) reside exclusively within the imperative shell.
+   - Documentation, skill manifests, Makefiles, and repository operations belong to the imperative shell and must never introduce runtime dependencies to the pure domain core.
 
 ### Single Binary Distribution and Runtime Independence
 1. Zero External Runtime Dependency:
-   - The compiled Go binary is completely self-contained. The TypeScript single-page application dashboard is embedded into the Go binary via Go embed.FS.
+   - The compiled Go binary is completely self-contained. The TypeScript single-page application dashboard is embedded into the Go binary via Go `embed.FS`.
    - Adopters require zero Node.js runtime, zero npm dependencies, and zero external database servers in production.
-   - SQLite connectivity uses a pure Go driver (modernc.org/sqlite) compiled with CGO_ENABLED=0, eliminating C compiler toolchain requirements on target host machines.
+   - SQLite connectivity uses a pure Go driver (`modernc.org/sqlite`) compiled with `CGO_ENABLED=0`, eliminating C compiler toolchain requirements on target host machines.
 2. Precompiled Release Consumption:
-   - External projects must never be instructed or required to compile AgenticLens from Go or TypeScript source code. Setup pathways strictly consume official precompiled release binaries from GitHub Releases (https://github.com/NiltonDuarte/AgenticLens/releases).
+   - External projects must never be instructed or required to compile AgenticLens from Go or TypeScript source code. Setup pathways strictly consume official precompiled release binaries from GitHub Releases (`https://github.com/NiltonDuarte/AgenticLens/releases`).
 
-### Clean Skill Distribution and Boundary Isolation
-1. Exclusive Distribution of agentic-lens-setup:
-   - Only .opencode/skills/agentic-lens-setup/ is packaged for external distribution.
-   - Internal development skills (.opencode/skills/agentic-lens-dev, .opencode/skills/agentic-lens-po, and .opencode/skills/agentic-lens-review) must never be packaged, exported, or distributed in release archives.
-2. Binary Hygiene in Skill Distribution:
-   - Distribution archives package SKILL.md, scripts/download.sh, and the protective bin/.gitignore.
-   - Precompiled binary executables (.opencode/skills/agentic-lens-setup/bin/agentic-lens) must never be bundled into the git repository or into the skill distribution archive; binaries are downloaded dynamically on target host machines during onboarding.
+### Agentic Distribution Model
+1. Markdown Skill Manifest Distribution:
+   - Skills are distributed natively as markdown files accessed directly via shared URLs (e.g. raw GitHub URLs) or repository links.
+   - No archive packaging (`tar.gz`, `zip`) or packaging scripts are maintained for skills.
+   - Precompiled binary executables must never be checked into git; binaries are retrieved dynamically on target host machines by the autonomous agent or developer.
+2. Self-Contained Autonomous Execution:
+   - `.opencode/skills/agentic-lens-setup/SKILL.md` must contain all necessary detection logic, download URLs, parameter prompts, configuration generation commands, policy recommendations, and the mandatory confirmation gate for an agent operating from a URL or repo link.
 
 ### Zero Emojis Mandate
-Zero emojis are permitted across all documentation files, skill manifests, bash scripts, Makefiles, Go code, TypeScript code, commit messages, pull requests, CLI outputs, and workspace artifacts.
+Zero emojis are permitted across all documentation files, skill manifests, Makefiles, Go code, TypeScript code, commit messages, pull requests, CLI outputs, and workspace artifacts.
 
 ---
 
-## 3. Scope Boundaries: Documentation, Packaging, and Automated Verification
+## 3. Scope Boundaries: Documentation, Skill Enhancement, and Cleanup
 
 ### In Scope
-1. Documentation Authoring (docs/SETUP_MANUAL.md):
-   - Section 1: Platform Overview and Architecture (value proposition, single binary with embedded web dashboard, local fact ledgers, live observability, context window health analytics).
-   - Section 2: Delineation of Product Platform vs. Internal Development Methodology (explicitly establishing that internal skills and multi-agent roles belong to this repository's own git project structure, whereas adopters configure their own workflows).
-   - Section 3: Setup Pathways (Agent-Driven Onboarding via agentic-lens-setup, and Manual Developer Installation via precompiled GitHub Releases).
-   - Section 4: Configuration Reference (exhaustive schema reference for .agenticlens-config.yaml covering project_name, ticket, workspaces, database, live, code_metrics, role_mappings, and role_order).
-   - Section 5: Agnostic Agent Workflow Integration (the delayed telemetry ingestion mandate, invoking generate as the final turn before committing work, integrating custom personas, and conventional commit classification).
-   - Section 6: CLI and Embedded Web Dashboard Reference (full command-line reference for init, generate, scan / root flags, server, version, backfill, and migrate, along with navigation for Fleet Overview, Live Observability, Ticket Detail, Ticket Comparisons, and Metric Progression).
-   - Section 7: Operational Troubleshooting and Best Practices (SQLite concurrency and locks, platform-specific database paths, binary permissions, git branch inference, and workspace resolution).
-2. Standalone Skill Packaging (scripts/package-setup-skill.sh and Makefile):
-   - Implement scripts/package-setup-skill.sh to package .opencode/skills/agentic-lens-setup into dist/skills/agentic-lens-setup.tar.gz and dist/skills/agentic-lens-setup.zip.
-   - Enforce packaging hygiene: include SKILL.md, scripts/download.sh, and bin/.gitignore; explicitly exclude any precompiled binaries, temporary files, or internal skills.
-   - Generate SHA256 checksums for packaged skill archives.
-   - Add package-setup-skill target to Makefile, integrate it with release-package, and ensure release-clean removes dist/skills/.
-3. Automated Verification (scripts/test-setup.sh):
-   - Extend scripts/test-setup.sh with automated assertions verifying:
-     - docs/SETUP_MANUAL.md exists, is non-empty, and satisfies the zero-emoji mandate.
-     - scripts/package-setup-skill.sh executes successfully and outputs valid tar.gz and zip archives in dist/skills/.
-     - Packaged skill archives contain SKILL.md, scripts/download.sh, and bin/.gitignore.
-     - Packaged skill archives do not contain precompiled binaries (bin/agentic-lens) or internal skills (agentic-lens-dev, agentic-lens-po, agentic-lens-review).
-     - SHA256 checksums are generated and verify cleanly.
+1. Documentation Authoring and Restructuring (`docs/SETUP_MANUAL.md`):
+   - Section 1: Quick Start (Pathway A: Agent-Driven Setup via `SKILL.md`, Pathway B: Manual Developer Installation via GitHub Releases).
+   - Section 2: Agnostic Adoption (purely methodology-agnostic cross-project adoption, zero internal maintainer methodology text).
+   - Section 3: Configuration Reference (exhaustive schema reference for `.agenticlens-config.yaml` covering `project_name`, `ticket`, `workspaces`, `database`, `live`, `code_metrics`, `role_mappings`, and `role_order`).
+   - Section 4: Agnostic Agent Workflow Integration Guide (delayed telemetry ingestion mandate, random execution nonce generation, conventional commit classification, and realistic adopter role mappings including `security-scanner: security`, `perf-analyzer: tester`, `integration-tester: tester`, `frontend-specialist: developer`, and `backend-specialist: developer`).
+   - Section 5: CLI and Web Dashboard Reference (full command-line reference for `init`, `generate`, `scan` / root flags, `server`, `version`, `backfill`, and `migrate`, alongside Fleet Overview, Live Observability, Ticket Detail, Comparisons, and Metric Progression).
+   - Section 6: Operational Troubleshooting (SQLite concurrency, platform database paths, binary permissions, macOS quarantine, git branch inference, and workspace path resolution).
+   - Appendix: Platform Architecture (FCIS architecture, single binary zero-dependency model, local `agentic_metrics.json` ledgers, live SSE streaming, anomaly detection, and context window health states).
+2. Autonomous Skill Manifest Enhancement (`.opencode/skills/agentic-lens-setup/SKILL.md`):
+   - Update `SKILL.md` to be completely self-contained for an autonomous agent reading via shared URL or repository link.
+   - Include direct architecture detection and release download commands from GitHub Releases (`https://github.com/NiltonDuarte/AgenticLens/releases`).
+   - Include configuration interviewing, scaffolding, feature explanation, and the mandatory user confirmation gate before touching repository files.
+3. Script Cleanup:
+   - Delete `scripts/package-setup-skill.sh`.
+   - Delete `scripts/test-setup.sh`.
+4. Makefile Reversion:
+   - Remove `package-setup-skill` from `.PHONY` and `help`.
+   - Remove `package-setup-skill` target definition.
+   - Revert `release-package` target so it does not depend on `package-setup-skill`.
 
 ### Out of Scope
-1. Altering Go domain logic, aggregation formulas, context window health rules, or anomaly detection thresholds in backend/internal/domain/.
-2. Modifying TypeScript frontend UI components, views, or routing in web/src/.
+1. Altering Go domain logic, mathematical aggregation formulas, context window health rules, or anomaly detection thresholds in `backend/internal/domain/`.
+2. Modifying TypeScript frontend UI components, views, or routing in `web/src/`.
 3. Altering OpenCode SQLite schema parsing or SSE live event streaming formats.
-4. Changing the behavior, manifest, or instructions of internal repository skills (agentic-lens-dev, agentic-lens-po, agentic-lens-review).
+4. Changing internal repository skills (`agentic-lens-dev`, `agentic-lens-po`, `agentic-lens-review`).
 
 ---
 
-## 4. Architectural Contracts and Data Specifications
+## 4. Architectural Contracts and Deliverables Specification
 
-### Documentation Structure Contract: docs/SETUP_MANUAL.md
-The setup manual must be authored as a clean, highly structured Markdown file at docs/SETUP_MANUAL.md containing the following exact top-level sections:
-1. Title and Document Overview
-2. Platform Architecture and Core Concepts
-3. Architectural Delineation: Product Platform vs. Internal Methodology
-4. Installation and Setup Pathways
-5. Configuration Reference (.agenticlens-config.yaml)
-6. Agnostic Agent Workflow Integration Guide
-7. CLI and Web Dashboard Reference
-8. Troubleshooting and Operational Best Practices
+### Documentation Contract: docs/SETUP_MANUAL.md
+The setup manual must be authored as a clean, highly structured Markdown file at `docs/SETUP_MANUAL.md` with the following exact top-level sections:
+1. Section 1: Quick Start
+2. Section 2: Agnostic Adoption
+3. Section 3: Configuration Reference (.agenticlens-config.yaml)
+4. Section 4: Agnostic Agent Workflow Integration Guide
+5. Section 5: CLI and Web Dashboard Reference
+6. Section 6: Operational Troubleshooting
+7. Appendix: Platform Architecture
 
-### Standalone Skill Packaging Contract: scripts/package-setup-skill.sh
-1. Input Source Directory: .opencode/skills/agentic-lens-setup
-2. Output Directory: dist/skills/
-3. Output Artifacts:
-   - dist/skills/agentic-lens-setup.tar.gz
-   - dist/skills/agentic-lens-setup.zip
-   - dist/skills/SHA256SUMS
-4. Validation and Packaging Rules:
-   - Fail immediately if .opencode/skills/agentic-lens-setup/SKILL.md is missing.
-   - Fail immediately if .opencode/skills/agentic-lens-setup/scripts/download.sh is missing.
-   - Ensure bin/.gitignore is present in the archive with wildcard pattern '*' and '!/.gitignore'.
-   - Strictly exclude any existing binary files in bin/ (such as bin/agentic-lens or bin/agentic-lens.exe).
-   - Strictly exclude any parent or sibling directories containing internal skills (agentic-lens-dev, agentic-lens-po, agentic-lens-review).
-   - Support optional command-line flags: --dest-dir <dir>, --version <ver>, --dry-run, --help.
+### Skill Manifest Contract: .opencode/skills/agentic-lens-setup/SKILL.md
+1. Self-contained instructions enabling an agent accessing only the markdown file (via URL or path) to bootstrap AgenticLens.
+2. Direct binary download commands using `curl`/`wget` targeting official precompiled releases from `https://github.com/NiltonDuarte/AgenticLens/releases`.
+3. Co-located binary placement at `.opencode/skills/agentic-lens-setup/bin/agentic-lens` or `./bin/agentic-lens` with protective `.gitignore`.
+4. Non-interactive and interactive configuration generation via `init`.
+5. Strict enforcement of the Mandatory User Confirmation Gate before modifying any target repository instructions (`AGENTS.md`, `CLAUDE.md`, etc.).
 
-### Makefile Integration Contract
-1. package-setup-skill: Standalone target invoking scripts/package-setup-skill.sh.
-2. release-package: Dependencies updated to build cross-compiled binaries and invoke package-setup-skill.
-3. release-clean: Updated to remove dist/ including dist/skills/.
-
-### Verification Contract: scripts/test-setup.sh
-1. Documentation Check: Verifies existence and zero-emoji compliance of docs/SETUP_MANUAL.md.
-2. Packaging Check: Executes packaging script in a temporary test directory, verifies tar.gz and zip archive creation, inspects archive contents for expected files, and asserts zero inclusion of internal skills or binary executables.
-3. Checksum Verification: Validates SHA256SUMS file generation and integrity.
+### Repository Cleanliness Contract
+1. `scripts/package-setup-skill.sh` must be completely removed from the repository.
+2. `scripts/test-setup.sh` must be completely removed from the repository.
+3. `Makefile` must contain zero references to `package-setup-skill`.
+4. Standard quality gates (`make check`, `make test`, `make build`) must succeed cleanly.
