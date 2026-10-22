@@ -11,7 +11,7 @@ import { LiveObservability } from './views/LiveObservability';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('landing');
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>('AL-1');
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [projectConfig, setProjectConfig] = useState<ProjectConfigResponse | null>(null);
 
   useEffect(() => {
