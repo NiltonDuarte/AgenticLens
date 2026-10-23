@@ -55,6 +55,42 @@ An embedded pure-functional configurable rule engine flags dangerous execution p
 
 ---
 
+## Visual Platform Showcase
+
+The following captures demonstrate AgenticLens operating against real multi-agent engineering traces from 63 completed software development workspaces in this repository:
+
+### 1. Fleet Overview & Anomaly Reliability Profile
+Macro-level operational telemetry aggregating $520+ in model inference, 3.08B tokens, prompt cache efficiency, active anomaly rule distributions, and brittle tool rankings:
+
+![AgenticLens Fleet Overview](docs/images/fleet-overview.png)
+
+### 2. Ticket Forensic Autopsy & Context Saturation
+Granular single-ticket autopsy (AL-4) measuring turnaround lead time versus active compute duration, test-to-production ratio, reasoning token volume, and context window saturation:
+
+![AgenticLens Ticket Deep Dive](docs/images/ticket-deep-dive.png)
+
+### 3. Chronological Multi-Agent Trace Waterfall
+Interactive execution waterfall tracking turn-by-turn transitions between Orchestrator, Planner, Coder, and Tester roles, with sub-second execution timings and failure markers:
+
+![AgenticLens Execution Trace Waterfall](docs/images/trace-waterfall.png)
+
+### 4. Deterministic Anomaly Inspector
+Contextual diagnostic drawer isolating tool execution failures, parameter payloads, subagent context, and error diagnostics:
+
+![AgenticLens Anomaly Drawer](docs/images/anomaly-drawer.png)
+
+### 5. Longitudinal Metric Progression
+Temporal velocity tracking cumulative financial spend trajectories, token volume distributions, prompt cache hit rate baselines, and net code churn:
+
+![AgenticLens Metric Progression](docs/images/metric-progression.png)
+
+### 6. Cross-Ticket Benchmarking
+Comparative matrix ranking tickets by active duration, turnaround lead time, iteration cycles, and cost:
+
+![AgenticLens Ticket Comparisons](docs/images/ticket-comparisons.png)
+
+---
+
 ## Powering the Agentic SDLC
 
 AgenticLens brings rigor to the Autonomous Software Development Life Cycle:
