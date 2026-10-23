@@ -1,8 +1,8 @@
-# Feature Specification: Live Observability Refinements and Cross-Ticket Scatter Comparison (AL-44 through AL-50)
+# Feature Specification: Live Observability Refinements, Comparison Scatter Plot, and Agent & Skill Invocation Tracking (AL-44 through AL-56)
 
 ## Problem Statement
 
-During active multi-agent development and retrospective review, operators face six distinct friction points across the Live Observability inspector and the Cross-Ticket Comparison matrix:
+During active multi-agent development and retrospective review, operators face eight distinct friction points across the Live Observability inspector, Cross-Ticket Comparison matrix, and agent runtime telemetry:
 
 1. **Unformatted Timestamp Spatial Congestion**:
    In `LiveTraceInspector.tsx`, message turns render raw ISO-8601 UTC strings (`2026-10-22T14:32:10.123Z`). At 24+ characters, this string clutters `.message-turn-meta`, pushing token chips onto secondary lines. Operators debugging in local time must manually compute timezone offsets, and the inspector header lacks timezone context.
@@ -25,16 +25,19 @@ During active multi-agent development and retrospective review, operators face s
 7. **Over-Engineered Debug Prompt Sanitization and Verbose Messaging (FIX-3)**:
    In `web/src/utils/debugPrompt.ts` (added in `fix/FIX-3-centralize-live-anomalies-debug-identifiers`), 420+ LOC performs aggressive multi-pass regex transformations across raw tool payloads, stripping tickets and branch names from actual shell commands, test runs, and compiler error logs. Furthermore, the generated debug messages include repetitive provenance sentences ("This data was extracted from the OpenCode database.") and overly verbose, rhetorical checklists.
 
+8. **Blindness Toward Modular Skills and Autonomous Subagent Invocations**:
+   OpenCode runtime primitives for modular skills (`tool == "skill"`) and subagent delegations (`tool == "task"`) are currently treated as generic, opaque tools (`ToolFact{Name: "skill", Calls: 3}`). Telemetry discards skill names, caller roles, invocation turns, and the explicit links between parent `task` calls and spawned child `session_id`s. In the UI, trace views lack contextual skill badges and one-click subagent jump links, Ticket Deep Dive has zero skill autopsy visibility, and Fleet Overview lacks skill adoption metrics.
+
 ---
 
 ## Target Personas & Use Cases
 
 - **AI System Engineers & Agent Debuggers**:
-  Need real-time visual feedback in the live trace inspector without manual reloads. Require concise, localized timestamps to correlate agent actions with local development logs.
+  Need real-time visual feedback in the live trace inspector without manual reloads. Require concise, localized timestamps to correlate agent actions with local development logs. Need to trace subagent task delegations and identify context impact from loaded skills.
 - **Platform Operators & Autonomous Overseers**:
-  Need high-level oversight of active sessions without being blinded by massive expanded error blocks. Want newest model turns surfaced immediately at the top of the stream.
+  Need high-level oversight of active sessions without being blinded by massive expanded error blocks. Want newest model turns surfaced immediately at the top of the stream. Need to track skill adoption and prevent redundant skill thrashing.
 - **Engineering Leads & Performance Analysts**:
-  Need flexible multi-metric scatter plots to benchmark agent efficiency across diverse tickets, correlating cost, iterations, and context saturation.
+  Need flexible multi-metric scatter plots to benchmark agent efficiency across diverse tickets, correlating cost, iterations, and context saturation. Need fleet-wide analytics on skill adoption and workflow efficacy.
 
 ---
 
@@ -46,10 +49,12 @@ During active multi-agent development and retrospective review, operators face s
 4. As an operator watching an ongoing agent run, I want the right-hand trace inspector to dynamically update when new turns and tool calls occur, so that I never have to refresh the browser to see live progress.
 5. As an engineering manager comparing ticket performances, I want an interactive scatter plot with customizable X and Y axes where each point represents a ticket, so that I can visually analyze cost-to-iteration efficiency and spot outliers.
 6. As a developer reviewing deep session traces, I want recent events displayed at the top of the inspector with quick-jump buttons to the top and bottom of the stream, so that I can immediately inspect the latest model activity without scrolling.
+7. As an operator reviewing a ticket autopsy or live trace, I want to see which modular skills were loaded, by which agent, and at what turn, with direct jump links from parent tasks to child subagents.
+8. As an engineering lead, I want fleet-wide skill adoption analytics and a filter in Ticket Comparisons to evaluate skill efficacy.
 
 ---
 
-## Architectural Breakdown: Seven Vertical Slices (v1 AL Prefix)
+## Architectural Breakdown: Thirteen Vertical Slices (AL-44 through AL-56)
 
 ### AL-44: Global Localized Millisecond Timestamp Formatting and Timezone Header
 - **Domain / Formatters**: Add `formatLocalTimeWithMs(isoStr: string): string` and `getClientTimezoneBadge(): string` in `web/src/domain/formatters.ts`.
@@ -116,6 +121,66 @@ During active multi-agent development and retrospective review, operators face s
 - **Testing**:
   - Update `web/src/utils/debugPrompt.test.ts` to assert that raw code payloads containing ticket prefixes, branch names, and severity tags are preserved intact within code blocks, while diagnostic checklists remain sharp and concise.
 
+### AL-51: Schema v4 Evolution, Domain Invariants, and V3->V4 Migration Engine
+- **Target**: `internal/domain` (models, schemas, migration, tests)
+- **Domain Models**:
+  - `SkillFact`: Captures `Name string`, `Invocations int64`, `Errors int64`, `FirstTurn int64`, `LoadedByRole AgentRole`.
+  - `TaskLinkFact`: Captures `ParentSessionID string`, `Turn int64`, `SubagentRole AgentRole`, `ChildSessionID string`, `Description string`.
+  - Bump `SchemaVersion` constant to 4. Add `Skills []SkillFact` and `TaskLinks []TaskLinkFact` to `AgenticFactLedger`.
+  - Extend `EventFact` with optional `SkillName *string` and `ChildSessionID *string`.
+- **Migration Engine**:
+  - Implement `StepV3ToV4` in `backend/internal/domain/migration/step_v3_v4.go`.
+  - Register migration step in `registry.go` and update `validator.go` to validate Schema v4 ledgers.
+- **Testing**: Pure domain unit tests verifying schema serialization, round-trip fidelity, invariant validation, and upgrade migrations from v1, v2, and v3 to v4.
+
+### AL-52: OpenCode Extractor and Backfill Engine for Skills and Tasks
+- **Target**: `internal/adapters/opencode`, `internal/adapters/backfill`, CLI, tests
+- **Extractor Logic**:
+  - In `extractor.go`, parse `p.data` for `tool == "skill"`. Extract JSON input arguments `{"name": "..."}` to populate `SkillFact` and event metadata.
+  - In `extractor.go`, parse `p.data` for `tool == "task"`. Extract `subagent_type`, description, and link with child `session_id` using parent session hierarchy and timestamps.
+- **Backfill Engine**:
+  - Update `internal/adapters/backfill/engine.go` to re-extract skills and task links when running backfill against SQLite databases.
+  - Backfill existing testdata and workspace ledgers to Schema v4.
+- **Testing**: Integration tests in `extractor_test.go` and `backfill_test.go` verifying accurate fact extraction from SQLite parts.
+
+### AL-53: Live Stream Extraction and Dual-Plane Skill and Task Ingestion
+- **Target**: `internal/adapters/live`, `backend/internal/adapters/http`, tests
+- **Live Stream Parity**:
+  - Update `internal/adapters/live/sqlite.go` and `service.go` to parse skill names and child session targets from streaming tool parts.
+  - Populate `LivePartFact` with `SkillName` and `ChildSessionID`.
+  - Broadcast enriched `LivePartFact` over SSE event stream (`LiveEventTraceUpdate`).
+- **HTTP Layer**:
+  - Ensure `/api/live/traces/:sessionId` and `/api/tickets/:id/events` return enriched skill and subagent metadata.
+- **Testing**: Live service tests and HTTP handler tests in `sqlite_test.go` and `live_handlers_test.go`.
+
+### AL-54: Rich Timeline Badges and Subagent Session Linking in Trace Views
+- **Target**: `web/src/components/TraceWaterfall.tsx`, `web/src/components/LiveTraceInspector.tsx`, CSS, tests
+- **Presentation**:
+  - In `TraceWaterfall.tsx`, render `skill` tool calls with a distinct badge: `[skill: <name>]`.
+  - Render `task` tool calls with a subagent badge: `[task -> <subagent_type>]`.
+  - Make `[task -> ...]` badges clickable to immediately scroll or jump to that child session's timeline.
+  - Apply identical rich badges in `LiveTraceInspector.tsx` turn tool execution lists.
+- **Testing**: Component tests in `TraceWaterfall.test.tsx` and `LiveTraceInspector.test.tsx` verifying badge formatting, fallback handling, and jump interactions.
+
+### AL-55: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
+- **Target**: `web/src/views/TicketDeepDive.tsx`, `web/src/components/`, tests
+- **Presentation**:
+  - Add a dedicated "Skills & Subagents" section in Ticket Deep Dive below Role Effort Distribution.
+  - Render an interactive Skills Table listing: Skill Name, Loaded By Role, Invocations Count, Error Count, and First Turn Loaded.
+  - Render a Subagent Delegation Tree showing root orchestrator to child subagent handoffs, turn numbers, task descriptions, and execution status.
+  - Provide an empty-state indicator when no skills were loaded during the session.
+- **Testing**: Tests in `TicketDeepDive.test.tsx` verifying correct rendering of skills table, subagent tree, and empty states.
+
+### AL-56: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
+- **Target**: `internal/domain/aggregations.go`, `web/src/views/FleetOverview.tsx`, `web/src/views/TicketComparisons.tsx`, tests
+- **Domain Aggregations**:
+  - Add `SkillUsageSummary` struct to `backend/internal/domain/aggregations.go` computing total unique skill loads, error rates, and tickets adopting each skill.
+  - Update `BuildFleetOverview` to compute fleet-wide skill usage summaries from scanned ticket workspaces.
+- **Presentation**:
+  - In `FleetOverview.tsx`, add a "Skill Adoption" card showing top invoked skills across workspaces.
+  - In `TicketComparisons.tsx`, add a "Skills Used" column and a multi-select filter to slice tickets by loaded skill.
+- **Testing**: Domain tests in `aggregations_test.go` and view tests in `FleetOverview.test.tsx` and `TicketComparisons.test.tsx`.
+
 ---
 
 ## Stakeholder Steering Decisions & Resolved Invariants
@@ -138,3 +203,9 @@ During active multi-agent development and retrospective review, operators face s
    - *Decision*: Reverse chronological order by default, with an interactive toggle allowing operators to switch back to chronological order.
 9. **Debug Prompt Sanitization & Messaging (AL-50)**:
    - *Decision*: Technical payloads inside code blocks must never be regex-mangled. Prompts must be concise, direct, and free of redundant boilerplate sentences. Stakeholder review of the 4 prompt layers is incorporated into AL-50.
+10. **Scope of Invocations (AL-51 to AL-56)**:
+    - *Decision*: Unified tracking of both modular skills and subagent task delegations.
+11. **UI Presentation Scope (AL-54 to AL-56)**:
+    - *Decision*: Full visibility across Live Inspector & Waterfall (badges & jump links), Ticket Deep Dive (dedicated autopsy panel), and Fleet Overview & Comparisons (skill adoption analytics).
+12. **Telemetry Ledger Evolution (AL-51, AL-52)**:
+    - *Decision*: Formally bump to Schema v4 with domain migration step (`StepV3ToV4`) and backfill runner.
