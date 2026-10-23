@@ -100,57 +100,49 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-50 audit and streamline debug prompt generation and sanitization.md`
 
-- **AL-51**: Schema v4 Evolution, Domain Invariants, and V3->V4 Migration Engine
-  - **Subsystem**: Domain / Models / Migration / Tests
+- **AL-52**: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
+  - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Ready
   - **Blocked by**: None
-  - **Blocks**: AL-52, AL-53
-  - **File**: `alspaces/plan/to-do/AL-51 schema v4 evolution domain invariants and migration engine.md`
+  - **Blocks**: AL-53, AL-54, AL-55
+  - **File**: `alspaces/plan/to-do/AL-52 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
 
 ---
 
 ## Blocked
 
-- **AL-52**: OpenCode Extractor and Backfill Engine for Skills and Tasks
-  - **Subsystem**: Adapters / OpenCode / Backfill / CLI / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-51
-  - **Blocks**: AL-54, AL-55, AL-56
-  - **File**: `alspaces/plan/to-do/AL-52 opencode extractor and backfill engine for skills and tasks.md`
-
-- **AL-53**: Live Stream Extraction and Dual-Plane Skill and Task Ingestion
-  - **Subsystem**: Adapters / Live / HTTP / Service / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-51
-  - **Blocks**: AL-54
-  - **File**: `alspaces/plan/to-do/AL-53 live stream extraction and dual plane skill task ingestion.md`
-
-- **AL-54**: Rich Timeline Badges and Subagent Session Linking in Trace Views
+- **AL-53**: Rich Timeline Badges and Subagent Session Linking in Trace Views
   - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-52, AL-53
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-54 rich timeline badges and subagent session linking in trace views.md`
+  - **Blocked by**: AL-52
+  - **Blocks**: AL-56
+  - **File**: `alspaces/plan/to-do/AL-53 rich timeline badges and subagent session linking in trace views.md`
 
-- **AL-55**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
+- **AL-54**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
   - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
   - **Blocked by**: AL-52
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-55 dedicated skills and subagents autopsy panel in ticket deep dive.md`
+  - **Blocks**: AL-56
+  - **File**: `alspaces/plan/to-do/AL-54 dedicated skills and subagents autopsy panel in ticket deep dive.md`
 
-- **AL-56**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
-  - **Subsystem**: Domain / Aggregations / Presentation / Web / Fleet / Comparisons / Tests
+- **AL-55**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
+  - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
   - **Blocked by**: AL-52
+  - **Blocks**: AL-56
+  - **File**: `alspaces/plan/to-do/AL-55 fleet wide skill adoption analytics and comparison matrix filter.md`
+
+- **AL-56**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
+  - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
+  - **Phase**: Phase 8 (v2 Observability / Skills)
+  - **Status**: Pending
+  - **Blocked by**: AL-52, AL-53, AL-54, AL-55
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-56 fleet wide skill adoption analytics and comparison matrix filter.md`
+  - **File**: `alspaces/plan/to-do/AL-56 formal schema v4 evolution migration step and backfill runner.md`
 
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
@@ -195,3 +187,22 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None (AL-36 Done)
   - **Blocks**: None
   - **File**: `alspaces/plan/done/AL-37 cross-project setup manual and telemetry integration guide.md`
+
+---
+
+## Discarded
+
+- **AL-51**: Additive Domain Contracts and OpenCode Extractor for Skills and Tasks
+  - **Subsystem**: Domain / Adapters / OpenCode / Tests
+  - **Status**: Discarded (Merged into AL-52)
+  - **File**: `alspaces/plan/discarded/AL-51 additive domain contracts and opencode extractor for skills and tasks.md`
+
+- **AL-18**: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry
+  - **Subsystem**: Domain / Adapters / HTTP / Tests
+  - **Status**: Discarded (Merged into AL-17)
+  - **File**: `alspaces/plan/discarded/AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md`
+
+- **AL-10**: Fix Git Metrics Calculation in Python Extractor and Backfill Ledgers
+  - **Subsystem**: Adapters / Python / Tests
+  - **Status**: Discarded (Superseded by AL-11)
+  - **File**: `alspaces/plan/discarded/AL-10 fix git metrics calculation in python extractor and backfill ledgers.md`

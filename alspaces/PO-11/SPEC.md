@@ -121,65 +121,56 @@ During active multi-agent development and retrospective review, operators face e
 - **Testing**:
   - Update `web/src/utils/debugPrompt.test.ts` to assert that raw code payloads containing ticket prefixes, branch names, and severity tags are preserved intact within code blocks, while diagnostic checklists remain sharp and concise.
 
-### AL-51: Schema v4 Evolution, Domain Invariants, and V3->V4 Migration Engine
-- **Target**: `internal/domain` (models, schemas, migration, tests)
-- **Domain Models**:
-  - `SkillFact`: Captures `Name string`, `Invocations int64`, `Errors int64`, `FirstTurn int64`, `LoadedByRole AgentRole`.
-  - `TaskLinkFact`: Captures `ParentSessionID string`, `Turn int64`, `SubagentRole AgentRole`, `ChildSessionID string`, `Description string`.
-  - Bump `SchemaVersion` constant to 4. Add `Skills []SkillFact` and `TaskLinks []TaskLinkFact` to `AgenticFactLedger`.
-  - Extend `EventFact` with optional `SkillName *string` and `ChildSessionID *string`.
-- **Migration Engine**:
-  - Implement `StepV3ToV4` in `backend/internal/domain/migration/step_v3_v4.go`.
-  - Register migration step in `registry.go` and update `validator.go` to validate Schema v4 ledgers.
-- **Testing**: Pure domain unit tests verifying schema serialization, round-trip fidelity, invariant validation, and upgrade migrations from v1, v2, and v3 to v4.
+### AL-52: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
+- **Target**: `internal/domain`, `web/src/types.ts`, `internal/adapters/opencode`, `internal/adapters/live`, `web/src/domain/live.ts`, `backend/internal/adapters/http`, tests
+- **Additive Domain Invariants**:
+  - Define `SkillFact` and `TaskLinkFact` structs with `omitempty` JSON tags.
+  - Add optional `Skills []SkillFact` and `TaskLinks []TaskLinkFact` to `AgenticFactLedger` without bumping `CurrentSchemaVersion` (maintains v3).
+  - Add optional `skills?: SkillFact[]` and `task_links?: TaskLinkFact[]` to TypeScript `AgenticFactLedger`.
+  - Extend `LivePartFact` in Go and TypeScript with optional `SkillName`, `ChildSessionID`, and `SubagentType`.
+  - Maintain defensive fallbacks (`ledger.skills ?? []`) across all frontend code.
+- **Dual-Plane Ingestion Logic**:
+  - In `internal/adapters/opencode/extractor.go`, parse `tool == "skill"` parts: extract skill name, turn, caller role, and success state.
+  - Parse `tool == "task"` parts: extract subagent type, description, parent turn, and link child session IDs.
+  - In `internal/adapters/live/watcher.go`, parse skill names and child session targets from streaming tool parts during active session SQLite tailing.
+  - Broadcast enriched parts over SSE event stream (`/api/live/stream`) and trace payload endpoints (`/api/live/traces/:id`).
+- **Testing**: Pure domain serialization tests, OpenCode extractor tests, and live watcher SSE streaming tests with synthetic SQLite fixtures.
 
-### AL-52: OpenCode Extractor and Backfill Engine for Skills and Tasks
-- **Target**: `internal/adapters/opencode`, `internal/adapters/backfill`, CLI, tests
-- **Extractor Logic**:
-  - In `extractor.go`, parse `p.data` for `tool == "skill"`. Extract JSON input arguments `{"name": "..."}` to populate `SkillFact` and event metadata.
-  - In `extractor.go`, parse `p.data` for `tool == "task"`. Extract `subagent_type`, description, and link with child `session_id` using parent session hierarchy and timestamps.
-- **Backfill Engine**:
-  - Update `internal/adapters/backfill/engine.go` to re-extract skills and task links when running backfill against SQLite databases.
-  - Backfill existing testdata and workspace ledgers to Schema v4.
-- **Testing**: Integration tests in `extractor_test.go` and `backfill_test.go` verifying accurate fact extraction from SQLite parts.
-
-### AL-53: Live Stream Extraction and Dual-Plane Skill and Task Ingestion
-- **Target**: `internal/adapters/live`, `backend/internal/adapters/http`, tests
-- **Live Stream Parity**:
-  - Update `internal/adapters/live/sqlite.go` and `service.go` to parse skill names and child session targets from streaming tool parts.
-  - Populate `LivePartFact` with `SkillName` and `ChildSessionID`.
-  - Broadcast enriched `LivePartFact` over SSE event stream (`LiveEventTraceUpdate`).
-- **HTTP Layer**:
-  - Ensure `/api/live/traces/:sessionId` and `/api/tickets/:id/events` return enriched skill and subagent metadata.
-- **Testing**: Live service tests and HTTP handler tests in `sqlite_test.go` and `live_handlers_test.go`.
-
-### AL-54: Rich Timeline Badges and Subagent Session Linking in Trace Views
+### AL-53: Rich Timeline Badges and Subagent Session Linking in Trace Views
 - **Target**: `web/src/components/TraceWaterfall.tsx`, `web/src/components/LiveTraceInspector.tsx`, CSS, tests
 - **Presentation**:
-  - In `TraceWaterfall.tsx`, render `skill` tool calls with a distinct badge: `[skill: <name>]`.
-  - Render `task` tool calls with a subagent badge: `[task -> <subagent_type>]`.
-  - Make `[task -> ...]` badges clickable to immediately scroll or jump to that child session's timeline.
-  - Apply identical rich badges in `LiveTraceInspector.tsx` turn tool execution lists.
-- **Testing**: Component tests in `TraceWaterfall.test.tsx` and `LiveTraceInspector.test.tsx` verifying badge formatting, fallback handling, and jump interactions.
+  - In `TraceWaterfall.tsx` and `LiveTraceInspector.tsx`, render skill invocations with distinct badge: `[skill: <name>]`.
+  - Render subagent task delegations with badge: `[task -> <subagent_type>]`.
+  - Make `[task -> ...]` badges interactive: clicking navigates directly to the child session timeline in the live tree or deep dive.
+  - Prevent horizontal layout blowout using text truncation and tooltips.
+- **Testing**: Component tests in `TraceWaterfall.test.tsx` and `LiveTraceInspector.test.tsx` verifying badge formatting and jump navigation.
 
-### AL-55: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
+### AL-54: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
 - **Target**: `web/src/views/TicketDeepDive.tsx`, `web/src/components/`, tests
 - **Presentation**:
   - Add a dedicated "Skills & Subagents" section in Ticket Deep Dive below Role Effort Distribution.
+  - Defensive fallback: if `skills` or `task_links` are undefined/null (legacy ledgers), display an elegant empty state without console warnings.
   - Render an interactive Skills Table listing: Skill Name, Loaded By Role, Invocations Count, Error Count, and First Turn Loaded.
-  - Render a Subagent Delegation Tree showing root orchestrator to child subagent handoffs, turn numbers, task descriptions, and execution status.
-  - Provide an empty-state indicator when no skills were loaded during the session.
-- **Testing**: Tests in `TicketDeepDive.test.tsx` verifying correct rendering of skills table, subagent tree, and empty states.
+  - Render a Subagent Delegation Tree showing parent-child handoffs, task prompts, duration, cost, and child session jump links.
+- **Testing**: Vitest tests in `TicketDeepDive.test.tsx` verifying rendering of skills table, subagent tree, and empty states.
 
-### AL-56: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
+### AL-55: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
 - **Target**: `internal/domain/aggregations.go`, `web/src/views/FleetOverview.tsx`, `web/src/views/TicketComparisons.tsx`, tests
 - **Domain Aggregations**:
-  - Add `SkillUsageSummary` struct to `backend/internal/domain/aggregations.go` computing total unique skill loads, error rates, and tickets adopting each skill.
-  - Update `BuildFleetOverview` to compute fleet-wide skill usage summaries from scanned ticket workspaces.
+  - Add `SkillAdoptionFact` and `ComputeSkillAdoption(ledgers []AgenticFactLedger)` to `backend/internal/domain/aggregations.go`.
+  - Gracefully handle legacy ledgers without skills data.
 - **Presentation**:
-  - In `FleetOverview.tsx`, add a "Skill Adoption" card showing top invoked skills across workspaces.
+  - In `FleetOverview.tsx`, add a "Skill Adoption" card showing top invoked skills and fleet-wide adoption rates.
   - In `TicketComparisons.tsx`, add a "Skills Used" column and a multi-select filter to slice tickets by loaded skill.
 - **Testing**: Domain tests in `aggregations_test.go` and view tests in `FleetOverview.test.tsx` and `TicketComparisons.test.tsx`.
+
+### AL-56: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
+- **Target**: `internal/domain/models.go`, `internal/domain/migration/runner.go`, `web/src/domain/migration.ts`, `internal/adapters/backfill`, tests
+- **Hardening and Finalization**:
+  - Once the data shape and UI contracts are stabilized by AL-52 through AL-55, formally bump `CurrentSchemaVersion` from 3 to 4.
+  - Implement `StepV3ToV4` in Go and TypeScript to normalize legacy ledgers (initializing `skills: []` and `task_links: []`).
+  - Update `agentic-lens backfill` CLI to upgrade historical workspaces to Schema v4 and retroactively extract skill/task facts from raw OpenCode session logs.
+- **Testing**: Table-driven migration tests in Go and Vitest, end-to-end backfill CLI tests.
 
 ---
 
@@ -203,9 +194,11 @@ During active multi-agent development and retrospective review, operators face e
    - *Decision*: Reverse chronological order by default, with an interactive toggle allowing operators to switch back to chronological order.
 9. **Debug Prompt Sanitization & Messaging (AL-50)**:
    - *Decision*: Technical payloads inside code blocks must never be regex-mangled. Prompts must be concise, direct, and free of redundant boilerplate sentences. Stakeholder review of the 4 prompt layers is incorporated into AL-50.
-10. **Scope of Invocations (AL-51 to AL-56)**:
+10. **Scope of Invocations (AL-52 to AL-56)**:
     - *Decision*: Unified tracking of both modular skills and subagent task delegations.
-11. **UI Presentation Scope (AL-54 to AL-56)**:
+11. **Consolidation of Dual-Plane Ingestion (AL-51 into AL-52)**:
+    - *Decision*: AL-51 (domain models + offline extractor) was merged directly into AL-52 (live stream extraction and dual-plane ingestion) to provide an atomic, end-to-end backend ingestion slice.
+12. **UI Presentation Scope (AL-53 to AL-55)**:
     - *Decision*: Full visibility across Live Inspector & Waterfall (badges & jump links), Ticket Deep Dive (dedicated autopsy panel), and Fleet Overview & Comparisons (skill adoption analytics).
-12. **Telemetry Ledger Evolution (AL-51, AL-52)**:
-    - *Decision*: Formally bump to Schema v4 with domain migration step (`StepV3ToV4`) and backfill runner.
+13. **Additive-First Evolution & Migration-Last Strategy (AL-52, AL-56)**:
+    - *Decision*: Implement the domain fields and dual-plane extraction additively first under Schema v3 (`omitempty`), build and steer the UI features, and formalize Schema v4 and `StepV3ToV4` backfill as the final hardening step (AL-56). This avoids premature migration churn while preserving full backward compatibility.
