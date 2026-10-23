@@ -28,11 +28,11 @@ AgenticLens solves this by providing real-time telemetry streaming, deterministi
 - Track subagent delegation transitions (Orchestrator -> Planner -> Coder -> Tester -> Reviewer) live.
 
 ### 2. Deterministic Anomaly Detection
-An embedded pure-functional rule engine flags dangerous execution patterns before budgets and contexts collapse:
+An embedded pure-functional configurable rule engine flags dangerous execution patterns before budgets and contexts collapse:
 
-- **Tool Retry Streaks (`TOOL_RETRY_STREAK`)**: Identifies repeated consecutive failures on the same tool (warning at 3 failures, critical alert at 5).
-- **Elevated Tool Error Rates (`TOOL_HIGH_FAILURE_RATE`)**: Surfaces unreliable tools with failure rates exceeding 20% to 50%.
-- **Context Saturation Spikes (`CONTEXT_SATURATION_SPIKE`)**: Detects hazardous token deltas (>40k/turn) and context window exhaustion (>80% of model ceiling).
+- **Tool Retry Streaks (`TOOL_RETRY_STREAK`)**: Identifies repeated consecutive failures on the same tool (e.g. warning at 3 failures, critical alert at 5).
+- **Elevated Tool Error Rates (`TOOL_HIGH_FAILURE_RATE`)**: Surfaces unreliable tools with failure rates (e.g. exceeding 20% to 50%).
+- **Context Saturation Spikes (`CONTEXT_SATURATION_SPIKE`)**: Detects hazardous token deltas (>40k/turn) and context window exhaustion (e.g. >80% of model ceiling).
 - **Subagent Thrashing Loops (`SUBAGENT_REWORK_LOOP`)**: Uncovers recursive handoff ping-pong between subagent roles.
 
 ### 3. Multi-Agent SDLC Analytics
@@ -41,9 +41,9 @@ An embedded pure-functional rule engine flags dangerous execution patterns befor
 - **Code Velocity & Test Ratio**: Quantify test lines versus production lines delivered per session (`Test:Prod Ratio`), files touched, and iteration cycles.
 - **Tool Health & Self-Correction**: Measure invocation counts, self-correction frequency, and tool success percentages.
 
-### 4. Automated Pull Request & Session Ledgers
-- Automatically compile audit-ready markdown telemetry blocks into session summaries (`SUMMARY.md`) and GitHub Pull Request descriptions.
-- Ensure every pull request includes verifiable proof of agent reasoning, context health, anomaly status, and test coverage.
+### 4. Automated Session Ledgers
+- Automatically compile audit-ready markdown telemetry blocks into session summaries (e.g. `SUMMARY.md`).
+- Ensure every work session includes verifiable proof of agent reasoning, context health, anomaly status, and test coverage.
 
 ### 5. Universal Backfill and Schema Migrations
 - Recompute historical workspace facts from git commit history and SQLite event traces.
@@ -79,7 +79,7 @@ AgenticLens brings rigor to the Autonomous Software Development Life Cycle:
 |                   |  Observable Dashboard & PR Artifacts  |                       |
 |                   |  - Embedded Web SPA (port 8085)       |                       |
 |                   |  - Markdown SUMMARY.md Telemetry      |                       |
-|                   |  - Automated Pull Request Audit Trail |                       |
+|                   |  - Automated Work Session Audit Trail |                       |
 |                   +---------------------------------------+                       |
 +-----------------------------------------------------------------------------------+
 ```
@@ -87,13 +87,13 @@ AgenticLens brings rigor to the Autonomous Software Development Life Cycle:
 1. **Pre-flight & Inception**: Track architectural planning and contract formulation without runaway prompt spending.
 2. **Implementation Guardrails**: Catch tool failure spirals and context saturation spikes before code corruption happens.
 3. **Adversarial Verification**: Monitor testing velocity and ensure test-to-production ratios satisfy engineering standards.
-4. **Handoff & Merge**: Stamp every pull request with deterministic execution telemetry, anomaly verdicts, and cost ledgers.
+4. **Handoff & Merge**: Stamp every work with deterministic execution telemetry, anomaly verdicts, and cost ledgers.
 
 ---
 
 ## Quick Start
 
-### Option 1: Download Precompiled Binary (Recommended)
+### Download Precompiled Binary
 
 Download the latest standalone binary for your operating system from GitHub Releases:
 
@@ -111,22 +111,6 @@ Precompiled binaries are available for:
 - Linux (`x86_64`, `arm64`)
 - macOS (`Intel`, `Apple Silicon`)
 - Windows (`x86_64`)
-
-### Option 2: Build From Source
-
-Clone the repository and build using Make:
-
-```bash
-# Clone the repository
-git clone https://github.com/NiltonDuarte/AgenticLens.git
-cd AgenticLens
-
-# Install dependencies, run checks, and build the binary
-make all
-
-# Start the dashboard
-make server
-```
 
 Open `http://localhost:8085` to view the platform.
 
