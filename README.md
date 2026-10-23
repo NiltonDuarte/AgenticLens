@@ -76,7 +76,7 @@ AgenticLens brings rigor to the Autonomous Software Development Life Cycle:
 |                                       |                                           |
 |                                       v                                           |
 |                   +---------------------------------------+                       |
-|                   |  Observable Dashboard & PR Artifacts  |                       |
+|                   |  Observable Dashboard & Artifacts     |                       |
 |                   |  - Embedded Web SPA (port 8085)       |                       |
 |                   |  - Markdown SUMMARY.md Telemetry      |                       |
 |                   |  - Automated Work Session Audit Trail |                       |
@@ -87,7 +87,7 @@ AgenticLens brings rigor to the Autonomous Software Development Life Cycle:
 1. **Pre-flight & Inception**: Track architectural planning and contract formulation without runaway prompt spending.
 2. **Implementation Guardrails**: Catch tool failure spirals and context saturation spikes before code corruption happens.
 3. **Adversarial Verification**: Monitor testing velocity and ensure test-to-production ratios satisfy engineering standards.
-4. **Handoff & Merge**: Stamp every work with deterministic execution telemetry, anomaly verdicts, and cost ledgers.
+4. **Handoff & Merge**: Stamp every work session with deterministic execution telemetry, anomaly verdicts, and cost ledgers.
 
 ---
 
@@ -111,8 +111,6 @@ Precompiled binaries are available for:
 - Linux (`x86_64`, `arm64`)
 - macOS (`Intel`, `Apple Silicon`)
 - Windows (`x86_64`)
-
-Open `http://localhost:8085` to view the platform.
 
 ---
 
