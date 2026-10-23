@@ -209,7 +209,7 @@ notify_if_update_available() {
     if [ -n "$latest_tag" ]; then
       current_ver="$("$TARGET_BIN" version --short 2>/dev/null || true)"
       case "$current_ver" in
-        *"-dirty"*|*"-dev"*|"unknown"|"")
+        *"-dirty"*|*"-dev"*|*"-g"*|"unknown"|"")
           ;;
         *)
           if [ "$current_ver" != "$latest_tag" ]; then
