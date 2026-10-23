@@ -1,10 +1,10 @@
-# AL-54: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
+# AL-53: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
 
 - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
 - **Status**: Pending
-- **Blocked by**: AL-52
-- **Blocks**: AL-56
+- **Blocked by**: AL-51
+- **Blocks**: AL-55
 
 ## Context
 Ticket Deep Dive provides an autopsy of an agent's run across tokens, costs, tools, and files. However, there is no high-level overview of which modular skills were loaded during the session or how subagents were delegated. Operators must comb through hundreds of individual tool spans in the waterfall to reconstruct the delegation graph.

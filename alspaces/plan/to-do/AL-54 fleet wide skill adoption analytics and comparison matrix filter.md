@@ -1,10 +1,10 @@
-# AL-55: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
+# AL-54: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
 
 - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
 - **Status**: Pending
-- **Blocked by**: AL-52
-- **Blocks**: AL-56
+- **Blocked by**: AL-51
+- **Blocks**: AL-55
 
 ## Context
 Engineering managers and lead architects need visibility into modular skill adoption across all tickets: Which skills are leveraged most frequently? Which skills fail or trigger anomalies? Which tickets succeeded without using any specialized skills?

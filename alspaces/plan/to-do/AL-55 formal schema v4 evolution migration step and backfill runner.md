@@ -1,13 +1,13 @@
-# AL-56: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
+# AL-55: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
 
 - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
 - **Status**: Pending
-- **Blocked by**: AL-52, AL-53, AL-54, AL-55
+- **Blocked by**: AL-51, AL-52, AL-53, AL-54
 - **Blocks**: None
 
 ## Context
-With the skill and task observation features implemented, exercised, and stabilized across Live Observability, Trace Waterfall, Ticket Deep Dive, and Fleet Analytics (AL-51 through AL-55), the schema contracts are mature. Now the domain schema must be formally locked and bumped to Schema Version 4. A formal migration step (`StepV3ToV4`) and backfill runner must be executed to ensure historical ledgers are permanently upgraded and normalized.
+With the skill and task observation features implemented, exercised, and stabilized across Live Observability, Trace Waterfall, Ticket Deep Dive, and Fleet Analytics (AL-51 through AL-54), the schema contracts are mature. Now the domain schema must be formally locked and bumped to Schema Version 4. A formal migration step (`StepV3ToV4`) and backfill runner must be executed to ensure historical ledgers are permanently upgraded and normalized.
 
 ## Goal
 Bump the domain schema version to 4, implement the `StepV3ToV4` migration step in Go and TypeScript, and enhance the `agentic-lens backfill` CLI to backfill skill and task facts into historical workspace ledgers.

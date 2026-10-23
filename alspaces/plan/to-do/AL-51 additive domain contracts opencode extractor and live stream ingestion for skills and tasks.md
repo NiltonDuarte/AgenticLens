@@ -1,10 +1,10 @@
-# AL-52: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
+# AL-51: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
 
 - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
 - **Status**: Ready
 - **Blocked by**: None
-- **Blocks**: AL-53, AL-54, AL-55
+- **Blocks**: AL-52, AL-53, AL-54
 
 ## Context
 Operators currently lack first-class visibility into modular skill invocations (`tool == "skill"`) and subagent delegations (`tool == "task"`), both during live real-time observation and in historical ticket autopsies. To allow iterative UI exploration without premature migration churn, domain contracts for skills and tasks must be introduced additively. By adding optional fields (`omitempty`) to `AgenticFactLedger` and maintaining `SchemaVersion` at 3, existing ledgers remain fully valid and backward-compatible while both offline extractors and live SSE streams gain full dual-plane parity.

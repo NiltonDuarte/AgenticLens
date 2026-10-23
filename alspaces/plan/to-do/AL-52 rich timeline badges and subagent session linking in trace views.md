@@ -1,10 +1,10 @@
-# AL-53: Rich Timeline Badges and Subagent Session Linking in Trace Views
+# AL-52: Rich Timeline Badges and Subagent Session Linking in Trace Views
 
 - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
 - **Status**: Pending
-- **Blocked by**: AL-52
-- **Blocks**: AL-56
+- **Blocked by**: AL-51
+- **Blocks**: AL-55
 
 ## Context
 When inspecting agent execution traces in the Trace Waterfall or Live Trace Inspector, tool calls for `skill` and `task` appear as generic tool invocations. Operators must expand the JSON arguments manually to understand what skill was loaded or what subagent role was spawned.

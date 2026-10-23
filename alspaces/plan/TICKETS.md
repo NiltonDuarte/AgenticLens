@@ -100,49 +100,49 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-50 audit and streamline debug prompt generation and sanitization.md`
 
-- **AL-52**: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
+- **AL-51**: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
   - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Ready
   - **Blocked by**: None
-  - **Blocks**: AL-53, AL-54, AL-55
-  - **File**: `alspaces/plan/to-do/AL-52 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
+  - **Blocks**: AL-52, AL-53, AL-54
+  - **File**: `alspaces/plan/to-do/AL-51 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
 
 ---
 
 ## Blocked
 
-- **AL-53**: Rich Timeline Badges and Subagent Session Linking in Trace Views
+- **AL-52**: Rich Timeline Badges and Subagent Session Linking in Trace Views
   - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-52
-  - **Blocks**: AL-56
-  - **File**: `alspaces/plan/to-do/AL-53 rich timeline badges and subagent session linking in trace views.md`
+  - **Blocked by**: AL-51
+  - **Blocks**: AL-55
+  - **File**: `alspaces/plan/to-do/AL-52 rich timeline badges and subagent session linking in trace views.md`
 
-- **AL-54**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
+- **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
   - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-52
-  - **Blocks**: AL-56
-  - **File**: `alspaces/plan/to-do/AL-54 dedicated skills and subagents autopsy panel in ticket deep dive.md`
+  - **Blocked by**: AL-51
+  - **Blocks**: AL-55
+  - **File**: `alspaces/plan/to-do/AL-53 dedicated skills and subagents autopsy panel in ticket deep dive.md`
 
-- **AL-55**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
+- **AL-54**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
   - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-52
-  - **Blocks**: AL-56
-  - **File**: `alspaces/plan/to-do/AL-55 fleet wide skill adoption analytics and comparison matrix filter.md`
+  - **Blocked by**: AL-51
+  - **Blocks**: AL-55
+  - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
 
-- **AL-56**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
+- **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
   - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-52, AL-53, AL-54, AL-55
+  - **Blocked by**: AL-51, AL-52, AL-53, AL-54
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-56 formal schema v4 evolution migration step and backfill runner.md`
+  - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
 
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
@@ -191,11 +191,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## Discarded
-
-- **AL-51**: Additive Domain Contracts and OpenCode Extractor for Skills and Tasks
-  - **Subsystem**: Domain / Adapters / OpenCode / Tests
-  - **Status**: Discarded (Merged into AL-52)
-  - **File**: `alspaces/plan/discarded/AL-51 additive domain contracts and opencode extractor for skills and tasks.md`
 
 - **AL-18**: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry
   - **Subsystem**: Domain / Adapters / HTTP / Tests

@@ -121,7 +121,7 @@ During active multi-agent development and retrospective review, operators face e
 - **Testing**:
   - Update `web/src/utils/debugPrompt.test.ts` to assert that raw code payloads containing ticket prefixes, branch names, and severity tags are preserved intact within code blocks, while diagnostic checklists remain sharp and concise.
 
-### AL-52: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
+### AL-51: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
 - **Target**: `internal/domain`, `web/src/types.ts`, `internal/adapters/opencode`, `internal/adapters/live`, `web/src/domain/live.ts`, `backend/internal/adapters/http`, tests
 - **Additive Domain Invariants**:
   - Define `SkillFact` and `TaskLinkFact` structs with `omitempty` JSON tags.
@@ -136,7 +136,7 @@ During active multi-agent development and retrospective review, operators face e
   - Broadcast enriched parts over SSE event stream (`/api/live/stream`) and trace payload endpoints (`/api/live/traces/:id`).
 - **Testing**: Pure domain serialization tests, OpenCode extractor tests, and live watcher SSE streaming tests with synthetic SQLite fixtures.
 
-### AL-53: Rich Timeline Badges and Subagent Session Linking in Trace Views
+### AL-52: Rich Timeline Badges and Subagent Session Linking in Trace Views
 - **Target**: `web/src/components/TraceWaterfall.tsx`, `web/src/components/LiveTraceInspector.tsx`, CSS, tests
 - **Presentation**:
   - In `TraceWaterfall.tsx` and `LiveTraceInspector.tsx`, render skill invocations with distinct badge: `[skill: <name>]`.
@@ -145,7 +145,7 @@ During active multi-agent development and retrospective review, operators face e
   - Prevent horizontal layout blowout using text truncation and tooltips.
 - **Testing**: Component tests in `TraceWaterfall.test.tsx` and `LiveTraceInspector.test.tsx` verifying badge formatting and jump navigation.
 
-### AL-54: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
+### AL-53: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
 - **Target**: `web/src/views/TicketDeepDive.tsx`, `web/src/components/`, tests
 - **Presentation**:
   - Add a dedicated "Skills & Subagents" section in Ticket Deep Dive below Role Effort Distribution.
@@ -154,7 +154,7 @@ During active multi-agent development and retrospective review, operators face e
   - Render a Subagent Delegation Tree showing parent-child handoffs, task prompts, duration, cost, and child session jump links.
 - **Testing**: Vitest tests in `TicketDeepDive.test.tsx` verifying rendering of skills table, subagent tree, and empty states.
 
-### AL-55: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
+### AL-54: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
 - **Target**: `internal/domain/aggregations.go`, `web/src/views/FleetOverview.tsx`, `web/src/views/TicketComparisons.tsx`, tests
 - **Domain Aggregations**:
   - Add `SkillAdoptionFact` and `ComputeSkillAdoption(ledgers []AgenticFactLedger)` to `backend/internal/domain/aggregations.go`.
@@ -164,10 +164,10 @@ During active multi-agent development and retrospective review, operators face e
   - In `TicketComparisons.tsx`, add a "Skills Used" column and a multi-select filter to slice tickets by loaded skill.
 - **Testing**: Domain tests in `aggregations_test.go` and view tests in `FleetOverview.test.tsx` and `TicketComparisons.test.tsx`.
 
-### AL-56: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
+### AL-55: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
 - **Target**: `internal/domain/models.go`, `internal/domain/migration/runner.go`, `web/src/domain/migration.ts`, `internal/adapters/backfill`, tests
 - **Hardening and Finalization**:
-  - Once the data shape and UI contracts are stabilized by AL-52 through AL-55, formally bump `CurrentSchemaVersion` from 3 to 4.
+  - Once the data shape and UI contracts are stabilized by AL-51 through AL-54, formally bump `CurrentSchemaVersion` from 3 to 4.
   - Implement `StepV3ToV4` in Go and TypeScript to normalize legacy ledgers (initializing `skills: []` and `task_links: []`).
   - Update `agentic-lens backfill` CLI to upgrade historical workspaces to Schema v4 and retroactively extract skill/task facts from raw OpenCode session logs.
 - **Testing**: Table-driven migration tests in Go and Vitest, end-to-end backfill CLI tests.
@@ -194,11 +194,11 @@ During active multi-agent development and retrospective review, operators face e
    - *Decision*: Reverse chronological order by default, with an interactive toggle allowing operators to switch back to chronological order.
 9. **Debug Prompt Sanitization & Messaging (AL-50)**:
    - *Decision*: Technical payloads inside code blocks must never be regex-mangled. Prompts must be concise, direct, and free of redundant boilerplate sentences. Stakeholder review of the 4 prompt layers is incorporated into AL-50.
-10. **Scope of Invocations (AL-52 to AL-56)**:
+10. **Scope of Invocations (AL-51 to AL-55)**:
     - *Decision*: Unified tracking of both modular skills and subagent task delegations.
-11. **Consolidation of Dual-Plane Ingestion (AL-51 into AL-52)**:
-    - *Decision*: AL-51 (domain models + offline extractor) was merged directly into AL-52 (live stream extraction and dual-plane ingestion) to provide an atomic, end-to-end backend ingestion slice.
-12. **UI Presentation Scope (AL-53 to AL-55)**:
-    - *Decision*: Full visibility across Live Inspector & Waterfall (badges & jump links), Ticket Deep Dive (dedicated autopsy panel), and Fleet Overview & Comparisons (skill adoption analytics).
-13. **Additive-First Evolution & Migration-Last Strategy (AL-52, AL-56)**:
-    - *Decision*: Implement the domain fields and dual-plane extraction additively first under Schema v3 (`omitempty`), build and steer the UI features, and formalize Schema v4 and `StepV3ToV4` backfill as the final hardening step (AL-56). This avoids premature migration churn while preserving full backward compatibility.
+11. **Consolidated Dual-Plane Ingestion (AL-51)**:
+    - *Decision*: Additive domain models, OpenCode batch extractor, and live stream SQLite watcher are consolidated into an atomic backend slice (AL-51).
+12. **UI Presentation Scope (AL-52 to AL-54)**:
+    - *Decision*: Full visibility across Live Inspector & Waterfall (badges & jump links, AL-52), Ticket Deep Dive (dedicated autopsy panel, AL-53), and Fleet Overview & Comparisons (skill adoption analytics, AL-54).
+13. **Additive-First Evolution & Migration-Last Strategy (AL-51, AL-55)**:
+    - *Decision*: Implement domain fields and dual-plane extraction additively first under Schema v3 (`omitempty`), build and steer UI features, and formalize Schema v4 and `StepV3ToV4` backfill as the final hardening step (AL-55). This avoids premature migration churn while preserving full backward compatibility.
