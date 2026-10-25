@@ -1,4 +1,4 @@
-# AL-56: Add Codex session discovery and metrics generation
+# feat(AL-56): add Codex session discovery and metrics generation
 
 `agentic-lens generate --source codex` discovers local Codex rollouts and writes the existing schema-v3 fact ledger. Resolution requires a literal nonce or explicit thread ID; ticket text and working-directory heuristics are excluded, and ambiguous nonces fail. Child threads are included through parent metadata. OpenCode remains the default source. The existing dashboard reads the generated ledger; this PR adds no HTTP routes or frontend changes.
 
