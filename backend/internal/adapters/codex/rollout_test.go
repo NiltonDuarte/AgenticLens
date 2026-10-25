@@ -312,3 +312,38 @@ func TestChildRolloutPreservesIdentityAndSkipsInheritedReplay(t *testing.T) {
 		}
 	})
 }
+
+func TestApplyRoleMappingsUsesConfiguredPersonaAndPreservesExplicitRole(t *testing.T) {
+	input := `{"type":"session_meta","payload":{"id":"child","parent_thread_id":"root","source":{"subagent":{"thread_spawn":{"parent_thread_id":"root","agent_path":"/private/agents/coder"}}}}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"fixture-model"}}
+{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"usage":{"input_tokens":1}}}
+`
+	transcript, err := codex.ParseRollout(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if transcript.Invocations[0].Role != domain.RoleUnassignedSubAgent {
+		t.Fatalf("role inferred without config: %s", transcript.Invocations[0].Role)
+	}
+	transcript.ApplyRoleMappings(domain.RoleMappings{"coder": "tester"})
+	if transcript.Invocations[0].Role != domain.AgentRole("tester") {
+		t.Fatalf("configured persona not mapped: %s", transcript.Invocations[0].Role)
+	}
+	encoded, err := json.Marshal(transcript)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "/private/agents/coder") {
+		t.Fatal("private agent path was exposed")
+	}
+
+	explicitInput := strings.Replace(input, `"agent_path":"/private/agents/coder"`, `"agent_path":"/private/agents/coder","agent_role":"reviewer"`, 1)
+	explicit, err := codex.ParseRollout(strings.NewReader(explicitInput))
+	if err != nil {
+		t.Fatal(err)
+	}
+	explicit.ApplyRoleMappings(domain.RoleMappings{"coder": "tester", "reviewer": "reviewer"})
+	if explicit.Invocations[0].Role != domain.AgentRole("reviewer") {
+		t.Fatalf("explicit role lost precedence: %s", explicit.Invocations[0].Role)
+	}
+}

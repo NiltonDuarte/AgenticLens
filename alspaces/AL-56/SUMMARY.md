@@ -59,7 +59,7 @@ Configuration correction: removed implicit test-directory/name and production-ex
 
 Subagent accounting probe and fix: spawned `telemetry_hi`, which returned `Hi!`. The probe exposed object-valued source metadata, inherited root metadata replay, and root/child ID collisions. The parser now preserves first child identity and parent, accepts nested spawn provenance, assigns `UnassignedSubAgent` when no role is provided, and resumes child parsing only at a matching `thread_settings_applied` marker. Parent replay is excluded from child usage, turns, tools, events, and duration. A missing marker produces a warning and conservatively excludes the ambiguous continuation. Synthetic adapter and isolated CLI regression tests passed with race detection.
 
-Role mapping probe: spawned a child task named `coder` and regenerated metrics. The rollout correctly records it as a child with its own thread ID and parent ID, but its role remains `UnassignedSubAgent`. The persisted `agent_path` ends with `/coder`; both top-level and nested `agent_role` metadata are null. Current ingestion does not resolve the agent path through project `role_mappings`, so this probe identifies a separate role-mapping gap.
+Role mapping probe and fix: the spawned `coder` child had null top-level and nested `agent_role`, while its persisted `agent_path` ended in `/coder`. The CLI now uses only that final persona component as a lookup key in project `role_mappings`; explicit role metadata takes precedence. The actual probe maps to `coder`, and the raw path is not exported. Regression tests cover custom mappings, explicit-role precedence, root identity, and path privacy.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 51

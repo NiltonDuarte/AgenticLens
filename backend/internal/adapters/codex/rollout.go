@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -56,6 +57,7 @@ type Transcript struct {
 	currentContext int64                   `json:"-"`
 	role           domain.AgentRole        `json:"-"`
 	parentThread   string                  `json:"-"`
+	agentPersona   string                  `json:"-"`
 	latestTime     string                  `json:"-"`
 }
 
@@ -104,6 +106,7 @@ type sessionMetadata struct {
 	Provider   string          `json:"model_provider"`
 	ParentID   string          `json:"parent_thread_id"`
 	AgentRole  string          `json:"agent_role"`
+	AgentPath  string          `json:"-"`
 }
 
 // decodeSessionMetadata accepts both interactive source labels and structured
@@ -119,6 +122,7 @@ func decodeSessionMetadata(payload json.RawMessage) (sessionMetadata, error) {
 				ThreadSpawn struct {
 					ParentID  string `json:"parent_thread_id"`
 					AgentRole string `json:"agent_role"`
+					AgentPath string `json:"agent_path"`
 				} `json:"thread_spawn"`
 			} `json:"subagent"`
 		}
@@ -130,6 +134,7 @@ func decodeSessionMetadata(payload json.RawMessage) (sessionMetadata, error) {
 			if metadata.AgentRole == "" {
 				metadata.AgentRole = source.Subagent.ThreadSpawn.AgentRole
 			}
+			metadata.AgentPath = source.Subagent.ThreadSpawn.AgentPath
 		}
 	}
 	return metadata, nil
@@ -342,9 +347,36 @@ func readSessionMetadata(payload json.RawMessage, transcript *Transcript) error 
 		transcript.role = domain.RoleUnassignedSubAgent
 	}
 	if strings.TrimSpace(metadata.AgentRole) != "" {
-		transcript.role = domain.AgentRole(strings.TrimSpace(metadata.AgentRole))
+		transcript.agentPersona = strings.TrimSpace(metadata.AgentRole)
+	} else if metadata.AgentPath != "" {
+		transcript.agentPersona = filepath.Base(filepath.ToSlash(metadata.AgentPath))
 	}
 	return nil
+}
+
+// ApplyRoleMappings resolves the child persona from project configuration. The
+// raw agent path remains private and is never copied into exported facts.
+func (transcript *Transcript) ApplyRoleMappings(mappings domain.RoleMappings) {
+	if transcript == nil || transcript.agentPersona == "" || mappings == nil {
+		return
+	}
+	for persona := range mappings {
+		if !strings.EqualFold(strings.TrimSpace(persona), transcript.agentPersona) {
+			continue
+		}
+		resolved := mappings.ResolveRole(transcript.agentPersona)
+		for i := range transcript.Invocations {
+			if transcript.Invocations[i].Role == domain.RoleUnassignedSubAgent {
+				transcript.Invocations[i].Role = resolved
+			}
+		}
+		for i := range transcript.Events {
+			if transcript.Events[i].Role == domain.RoleUnassignedSubAgent {
+				transcript.Events[i].Role = resolved
+			}
+		}
+		return
+	}
 }
 
 func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript, lineNumber int, usageRecordSeen bool) {

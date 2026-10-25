@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/domain"
@@ -106,7 +107,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 
 func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing.T) {
 	project := t.TempDir()
-	config := "project_name: ChildFixture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: records\n  src_folders:\n    - src\n"
+	config := "project_name: ChildFixture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: records\n  src_folders:\n    - src\nrole_mappings:\n  coder: coder\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +125,7 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 `
 	// The inherited records have replay timestamps, so elapsed-time filtering
 	// cannot establish ownership. The explicit child thread marker ends replay.
-	child := `{"timestamp":"2026-01-01T10:01:00Z","type":"session_meta","payload":{"id":"child-fixture","session_id":"root-fixture","source":{"subagent":{"thread_spawn":{"parent_thread_id":"root-fixture","depth":1}}},"timestamp":"2026-01-01T10:01:00Z"}}
+	child := `{"timestamp":"2026-01-01T10:01:00Z","type":"session_meta","payload":{"id":"child-fixture","session_id":"root-fixture","source":{"subagent":{"thread_spawn":{"parent_thread_id":"root-fixture","depth":1,"agent_path":"/private/agents/coder"}}},"timestamp":"2026-01-01T10:01:00Z"}}
 {"timestamp":"2026-01-01T10:01:00Z","type":"session_meta","payload":{"id":"root-fixture","session_id":"root-fixture","source":"cli","timestamp":"2026-01-01T10:00:00Z"}}
 {"timestamp":"2026-01-01T10:01:00Z","type":"response_item","payload":{"type":"message","role":"user"}}
 {"timestamp":"2026-01-01T10:01:00Z","type":"event_msg","payload":{"type":"task_started","turn_id":"root-turn"}}
@@ -174,11 +175,18 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 		if rootInvocation.ParentID != nil || rootInvocation.Role != domain.RoleRootAgent || rootInvocation.Tokens.Input != 80 {
 			t.Fatalf("incorrect root facts: %#v", rootInvocation)
 		}
-		if childInvocation.ParentID == nil || *childInvocation.ParentID != "root-fixture" || childInvocation.Role != domain.RoleUnassignedSubAgent {
+		if childInvocation.ParentID == nil || *childInvocation.ParentID != "root-fixture" || childInvocation.Role != domain.AgentRole("coder") {
 			t.Fatalf("incorrect child attribution: %#v", childInvocation)
 		}
 		if childInvocation.Model != "fixture-model" || childInvocation.Turns != 1 || childInvocation.ActiveDurationSeconds != 2 || childInvocation.Tokens.Input != 20 || childInvocation.Tokens.CacheRead != 10 || childInvocation.Tokens.Output != 2 {
 			t.Fatalf("inherited history leaked into child usage: %#v", childInvocation)
+		}
+		encodedLedger, err := json.Marshal(ledger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(encodedLedger), "/private/agents/coder") {
+			t.Fatal("agent path leaked into exported ledger")
 		}
 		if ledger.Code.SDLCIterations != 1 {
 			t.Fatalf("child replay inflated root steering count: %d", ledger.Code.SDLCIterations)
