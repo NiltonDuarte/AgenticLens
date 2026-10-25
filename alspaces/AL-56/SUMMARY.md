@@ -57,20 +57,23 @@ Fixture classification correction: `testdata/` directory components now classify
 
 Configuration correction: removed implicit test-directory/name and production-extension classification. The project YAML now declares both policies. Recursive glob matching respects directory boundaries, configured test paths outside source roots participate in metrics, and automatic ticket discovery applies the same source filtering as explicit code refs. Regression tests use independent configured paths and verify empty rules do not infer a category.
 
+Subagent accounting probe: spawned `telemetry_hi`, which returned `Hi!`. Discovery found both root and child rollouts, but the child invocation was incorrectly attributed to RootAgent with the root ID and no parent. The child metadata uses an object-valued `source` unsupported by the current string field, and its rollout includes inherited root metadata that overwrites identity. The regenerated ledger preserves this observed failure; correct child identity, role, parent linkage, and inherited-history handling remain unverified and require a parser fix.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 45
-- **Active Agent Duration:** 1h 27m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 13
+- **Active Agent Duration:** 1h 30m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 5 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0.5:1 (+732 test lines / +1,348 prod lines)
 - **Code Delivered:** +2,080 / -134 lines across 12 code files (excluding docs)
-- **Reasoning Effort:** 143,593 reasoning tokens (29.8% of generated output)
-- **Tool Health & Self-Correction:** 408 tool calls (35 self-corrections, 91.4% success rate)
+- **Reasoning Effort:** 143,703 reasoning tokens (29.7% of generated output)
+- **Tool Health & Self-Correction:** 419 tool calls (35 self-corrections, 91.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- **Status:** 3 execution anomalies detected (2 CRITICAL, 1 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k in turn 3 (session: 01a17362-baa4-72b3-934d-3cb040c899ea), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+125.6k tokens) — Context tokens surged by 125.6k tokens in turn 46 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 125.6k tokens, threshold: 80000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k tokens in turn 14 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 148.4k tokens, threshold: 40000)
 
 ### Agentic Execution Metrics
@@ -78,13 +81,13 @@ Configuration correction: removed implicit test-directory/name and production-ex
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,452,339 | 337,668 | 83,542,016 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
-| **Total** | **1** | **1,452,339** | **337,668** | **83,542,016** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 1,463,124 | 339,755 | 85,281,024 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
+| **Total** | **1** | **1,463,124** | **339,755** | **85,281,024** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 1 | 344,727 | 41,229 | 15,560,320 | 97.8% | $0.00 |
+| **gpt-6-astra** | 1 | 355,512 | 43,316 | 17,299,328 | 98.0% | $0.00 |
 | **gpt-6-luna** | 1 | 944,753 | 280,027 | 63,737,728 | 98.5% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **1** | **1,452,339** | **337,668** | **83,542,016** | **98.3%** | **$0.00** |
+| **Total** | **1** | **1,463,124** | **339,755** | **85,281,024** | **98.3%** | **$0.00** |
