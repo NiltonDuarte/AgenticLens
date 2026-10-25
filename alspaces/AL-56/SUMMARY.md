@@ -66,15 +66,15 @@ Subagent accounting probe and fix: spawned `telemetry_hi`, which returned `Hi!`.
 Role mapping probe and correction: the spawned `coder` child had null top-level and nested `agent_role`, while its persisted `agent_path` ended in `/coder`. OpenCode extraction stores the source agent name as the raw fact and does not resolve project `role_mappings`; Codex now follows that behavior. It extracts only the final persona component as the raw role, gives explicit role metadata precedence, and keeps the path private. The CLI regression sets `coder: tester` in project config and verifies the persisted invocation role remains `coder`.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 59
-- **Active Agent Duration:** 1h 40m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 60
+- **Active Agent Duration:** 1h 49m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 5 compactions) | Subagents peak 170.1k (Role_mapping_review)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 1.4 avg turns/run (peak: 2 turns) | Coder 1.0, Child_cli_test 2.0, Fix_child_parser 2.0, Role_mapping_review 1.0, Telemetry_hi 1.0
-- **Test-to-Production Code Ratio:** 0.7:1 (+950 test lines / +1,379 prod lines)
-- **Code Delivered:** +2,329 / -136 lines across 12 code files (excluding docs)
-- **Reasoning Effort:** 169,210 reasoning tokens (29.3% of generated output)
-- **Tool Health & Self-Correction:** 585 tool calls (51 self-corrections, 91.3% success rate)
+- **Test-to-Production Code Ratio:** 0.7:1 (+935 test lines / +1,400 prod lines)
+- **Code Delivered:** +2,335 / -1,008 lines across 16 code files (excluding docs)
+- **Reasoning Effort:** 187,964 reasoning tokens (29.9% of generated output)
+- **Tool Health & Self-Correction:** 638 tool calls (61 self-corrections, 90.4% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 7 execution anomalies detected (6 CRITICAL, 1 WARNING).
@@ -95,14 +95,14 @@ Role mapping probe and correction: the spawned `coder` child had null top-level 
 | **child_cli_test** | 1 | 6,617 | 3,066 | 2,258,432 | 99.7% | 143.4k | ELEVATED | $0.00 |
 | **fix_child_parser** | 1 | 11,868 | 5,234 | 2,119,552 | 99.4% | 146.3k | ELEVATED | $0.00 |
 | **role_mapping_review** | 1 | 3,980 | 677 | 503,040 | 99.2% | 170.1k | ELEVATED | $0.00 |
-| **rootagent** | 1 | 1,830,423 | 399,233 | 108,208,256 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
+| **rootagent** | 1 | 1,942,686 | 432,313 | 119,829,376 | 98.4% | 247.7k | BLOATED (124%) | $0.00 |
 | **telemetry_hi** | 1 | 994 | 6 | 125,312 | 99.2% | 126.3k | ELEVATED | $0.00 |
-| **Total** | **6** | **1,854,784** | **408,225** | **113,373,824** | **98.4%** | **247.7k** | **BLOATED** | **$0.00** |
+| **Total** | **6** | **1,967,047** | **441,305** | **124,994,944** | **98.5%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
-| **gpt-6-luna** | 3 | 1,306,939 | 338,435 | 85,295,360 | 98.5% | $0.00 |
+| **gpt-6-luna** | 3 | 1,419,202 | 371,515 | 96,916,480 | 98.6% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **6** | **1,854,784** | **408,225** | **113,373,824** | **98.4%** | **$0.00** |
+| **Total** | **6** | **1,967,047** | **441,305** | **124,994,944** | **98.5%** | **$0.00** |
