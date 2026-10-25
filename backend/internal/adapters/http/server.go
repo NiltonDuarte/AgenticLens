@@ -73,6 +73,7 @@ func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.Projec
 	mux.HandleFunc("GET /api/fleet", FleetHandler(cleanWsDir))
 	mux.HandleFunc("GET /api/comparison", ComparisonHandler(cleanWsDir))
 	mux.HandleFunc("GET /api/progression", ProgressionHandler(cleanWsDir))
+	mux.HandleFunc("POST /api/codex/extract", CodexExtractHandler())
 
 	// Register Live API endpoints
 	mux.HandleFunc("GET /api/live/sessions", LiveSessionsHandler(ls))

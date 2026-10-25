@@ -293,7 +293,35 @@ export type TimeWindowPreset = '1d' | '7d' | '30d' | '90d' | 'all' | 'custom';
 
 export type AutopsySortMode = 'ticket_id' | 'completed_at';
 
-export type ActiveTab = 'landing' | 'overview' | 'deep-dive' | 'progression' | 'comparisons' | 'live';
+export type ActiveTab = 'landing' | 'overview' | 'deep-dive' | 'progression' | 'comparisons' | 'live' | 'codex-import';
+
+export interface CodexUsageSummary {
+  readonly input: number;
+  readonly output: number;
+  readonly cache_read: number;
+  readonly cache_write: number;
+  readonly reasoning: number;
+}
+
+export interface CodexTranscriptSummary {
+  readonly thread_id?: string;
+  readonly session_id?: string;
+  readonly source?: string;
+  readonly codex_version?: string;
+  readonly started_at?: string;
+  readonly provider?: string;
+  readonly model?: string;
+  readonly usage: CodexUsageSummary;
+  readonly context_window?: number;
+  readonly record_kinds: Readonly<Record<string, number>>;
+  readonly event_kinds: Readonly<Record<string, number>>;
+  readonly warnings?: readonly string[] | null;
+}
+
+export interface CodexExtractionResult {
+  readonly transcript: CodexTranscriptSummary;
+  readonly agentic_metrics: AgenticMetricsLedger;
+}
 
 export type ComparisonSortField =
   | 'completed_at'

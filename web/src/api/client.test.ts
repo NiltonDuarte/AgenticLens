@@ -11,6 +11,7 @@ import {
   fetchComparisonRows,
   fetchProgressionLedgers,
   fetchProgressionMetrics,
+  extractCodexRollout,
 } from './client';
 import {
   mockFleetSummary,
@@ -26,6 +27,33 @@ describe('Boundary API Client', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  describe('extractCodexRollout', () => {
+    it('posts the selected JSONL file and ticket metadata and returns the generated ledger', async () => {
+      const result = { transcript: { thread_id: 'thread-1' }, agentic_metrics: mockAgenticMetricsLedgers['AL-1'] };
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => result });
+      vi.stubGlobal('fetch', fetchMock);
+      const file = new File(['{"type":"session_meta"}\\n'], 'rollout.jsonl', { type: 'application/x-ndjson' });
+
+      const response = await extractCodexRollout(file, 'GEN-07', 'Codex metrics research', 'chore');
+
+      expect(response.data).toEqual(result);
+      expect(fetchMock).toHaveBeenCalledWith('/api/codex/extract?ticket_id=GEN-07&ticket_type=chore&ticket_title=Codex+metrics+research', expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-ndjson' },
+        body: file,
+      }));
+    });
+
+    it('rejects files above the upload limit before making a request', async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      const file = new File([new Uint8Array(64 * 1024 * 1024 + 1)], 'large.jsonl');
+
+      await expect(extractCodexRollout(file)).rejects.toThrow('64 MiB or smaller');
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('fetchFleetSummary', () => {

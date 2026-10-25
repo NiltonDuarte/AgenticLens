@@ -17,6 +17,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/backfill"
+	"agenticlens/internal/adapters/codex"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	adaptershttp "agenticlens/internal/adapters/http"
@@ -34,6 +35,7 @@ func runGenerate(args []string) {
 	}
 
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
+	sourceFlag := genFlags.String("source", "opencode", "Telemetry harness to read: opencode or codex")
 	nonceFlag := genFlags.String("nonce", "", "Unique random execution nonce to lock session resolution to")
 	sessionIDFlag := genFlags.String("session-id", "", "Explicit root session ID")
 	ticketTitleFlag := genFlags.String("ticket-title", "", "Human-readable ticket title or descriptive name")
@@ -44,11 +46,17 @@ func runGenerate(args []string) {
 	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update structured JSON ledger")
 	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
+	codexHomeFlag := genFlags.String("codex-home", "", "Path to CODEX_HOME (defaults to $CODEX_HOME or ~/.codex)")
 	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
 	allowEmptyFlag := genFlags.Bool("allow-empty", false, "Allow empty metrics generation even if no root session or invocations are resolved (test escape hatch)")
 
 	if err := genFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing generate flags: %v\n", err)
+		os.Exit(1)
+	}
+	activeSource := strings.ToLower(strings.TrimSpace(*sourceFlag))
+	if activeSource != "opencode" && activeSource != "codex" {
+		fmt.Fprintf(os.Stderr, "Error: unsupported source %q. Use opencode or codex.\n", *sourceFlag)
 		os.Exit(1)
 	}
 
@@ -173,50 +181,92 @@ func runGenerate(args []string) {
 		fallbackCode = cachedFacts.Code
 	}
 
-	dbClient, err := opencode.OpenDB(*dbPathFlag)
-	if err == nil {
-		defer dbClient.Close()
-
-		rootID, err := opencode.ResolveActiveRootSession(
-			dbClient.DB(),
-			*nonceFlag,
-			activeTicketID,
-			*sessionIDFlag,
-		)
-		if err == nil && rootID != nil && *rootID != "" {
-			alreadyKnown := false
-			for _, id := range knownThreadIDs {
-				if id == *rootID {
-					alreadyKnown = true
-					break
-				}
-			}
-			if !alreadyKnown {
-				knownThreadIDs = append(knownThreadIDs, *rootID)
+	if activeSource == "codex" {
+		codexHome := strings.TrimSpace(*codexHomeFlag)
+		if codexHome == "" {
+			codexHome = strings.TrimSpace(os.Getenv("CODEX_HOME"))
+		}
+		if codexHome == "" {
+			if home, homeErr := os.UserHomeDir(); homeErr == nil {
+				codexHome = filepath.Join(home, ".codex")
 			}
 		}
+		rolloutPaths, discoverErr := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{
+			CodexHome: codexHome, TicketID: activeTicketID, Nonce: *nonceFlag,
+			SessionID: *sessionIDFlag,
+		})
+		if discoverErr != nil {
+			fmt.Fprintf(os.Stderr, "Error discovering Codex sessions: %v\n", discoverErr)
+			os.Exit(1)
+		}
+		transcripts := make([]codex.Transcript, 0, len(rolloutPaths))
+		for _, path := range rolloutPaths {
+			transcript, parseErr := codex.ParseRolloutPath(path)
+			if parseErr != nil {
+				fmt.Fprintf(os.Stderr, "Error reading discovered Codex session: %v\n", parseErr)
+				os.Exit(1)
+			}
+			transcripts = append(transcripts, transcript)
+			knownThreadIDs = append(knownThreadIDs, transcript.ThreadID)
+		}
+		combined, combineErr := codex.CombineTranscripts(transcripts)
+		if combineErr != nil {
+			fmt.Fprintf(os.Stderr, "Error combining Codex session facts: %v\n", combineErr)
+			os.Exit(1)
+		}
+		invocations = combined.Invocations
+		tools = combined.Tools
+		events = combined.Events
+		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
+			activeStartedAt = &combined.StartedAt
+		}
+		if strings.TrimSpace(*completedAtFlag) == "" && combined.CompletedAt != "" {
+			activeCompletedAt = &combined.CompletedAt
+		}
+		fmt.Fprintf(os.Stderr, "Discovered %d Codex thread rollout(s) for session %s.\n", len(rolloutPaths), combined.ThreadID)
+	} else {
+		dbClient, dbErr := opencode.OpenDB(*dbPathFlag)
+		if dbErr == nil {
+			defer dbClient.Close()
 
-		if len(knownThreadIDs) > 0 {
-			dbInvs, dbTools, dbEvents, dbStarted, dbCompleted, err := opencode.ExtractFacts(
+			rootID, resolveErr := opencode.ResolveActiveRootSession(
 				dbClient.DB(),
-				knownThreadIDs,
-				currentUser,
-				userBySessionID,
+				*nonceFlag,
+				activeTicketID,
+				*sessionIDFlag,
 			)
-			if err == nil && len(dbInvs) > 0 {
-				invocations = dbInvs
-				tools = dbTools
-				events = dbEvents
-				if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
-					activeStartedAt = dbStarted
+			if resolveErr == nil && rootID != nil && *rootID != "" {
+				alreadyKnown := false
+				for _, id := range knownThreadIDs {
+					if id == *rootID {
+						alreadyKnown = true
+						break
+					}
 				}
-				if strings.TrimSpace(*completedAtFlag) == "" && dbCompleted != nil {
-					activeCompletedAt = dbCompleted
+				if !alreadyKnown {
+					knownThreadIDs = append(knownThreadIDs, *rootID)
 				}
 			}
 
-			if turns, err := opencode.ExtractSteeringTurns(dbClient.DB(), knownThreadIDs); err == nil && turns > 0 {
-				extractedSteeringTurns = turns
+			if len(knownThreadIDs) > 0 {
+				dbInvs, dbTools, dbEvents, dbStarted, dbCompleted, extractErr := opencode.ExtractFacts(
+					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID,
+				)
+				if extractErr == nil && len(dbInvs) > 0 {
+					invocations = dbInvs
+					tools = dbTools
+					events = dbEvents
+					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
+						activeStartedAt = dbStarted
+					}
+					if strings.TrimSpace(*completedAtFlag) == "" && dbCompleted != nil {
+						activeCompletedAt = dbCompleted
+					}
+				}
+
+				if turns, steeringErr := opencode.ExtractSteeringTurns(dbClient.DB(), knownThreadIDs); steeringErr == nil && turns > 0 {
+					extractedSteeringTurns = turns
+				}
 			}
 		}
 	}
@@ -802,7 +852,7 @@ func printRootUsage() {
 	fmt.Fprintln(out, "Subcommands:")
 	fmt.Fprintln(out, "  init      Scaffold and generate a new .agenticlens-config.yaml configuration")
 	fmt.Fprintln(out, "  server    Start the HTTP dashboard server and API service")
-	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode SQLite DB and Git history")
+	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode or Codex and Git history")
 	fmt.Fprintln(out, "  backfill  Batch telemetry backfill, Git code facts recomputation, and schema upgrades")
 	fmt.Fprintln(out, "  migrate   Universal stepwise schema migration engine for telemetry ledgers")
 	fmt.Fprintln(out, "  version   Print version and build information")

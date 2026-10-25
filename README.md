@@ -161,6 +161,9 @@ AgenticLens provides a unified CLI for automation and local workflows:
 # Ingest active session telemetry and generate summary markdown block
 ./bin/agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
 
+# Discover the latest matching Codex rollout in CODEX_HOME, including child threads
+./bin/agentic-lens generate --source codex --ticket-id GEN-07 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/GEN-07/agentic_metrics.json --append alspaces/GEN-07/SUMMARY.md
+
 # List all tracked workspaces with detected anomaly counts
 ./bin/agentic-lens --list
 
@@ -173,6 +176,8 @@ AgenticLens provides a unified CLI for automation and local workflows:
 # Run stepwise schema migrations across workspace ledgers
 ./bin/agentic-lens migrate --backup --update-summaries
 ```
+
+Use `--nonce <literal>` to select the exact Codex rollout containing a unique run nonce, or `--session-id <thread-id>` to select a known thread. `--codex-home <path>` overrides `$CODEX_HOME` and `~/.codex`. Codex remains opt-in through `--source codex`; OpenCode is the default source.
 
 ---
 
