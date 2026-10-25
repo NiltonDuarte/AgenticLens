@@ -62,19 +62,21 @@ Subagent accounting probe and fix: spawned `telemetry_hi`, which returned `Hi!`.
 Role mapping probe and fix: the spawned `coder` child had null top-level and nested `agent_role`, while its persisted `agent_path` ended in `/coder`. The CLI now uses only that final persona component as a lookup key in project `role_mappings`; explicit role metadata takes precedence. The actual probe maps to `coder`, and the raw path is not exported. Regression tests cover custom mappings, explicit-role precedence, root identity, and path privacy.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 51
-- **Active Agent Duration:** 1h 34m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 160.1k (Unassignedsubagent)
+- **Software Development Life Cycle Iterations:** 52
+- **Active Agent Duration:** 1h 35m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 170.1k (Unassignedsubagent)
 - **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 2 turns) | Unassignedsubagent 1.5
-- **Test-to-Production Code Ratio:** 0.6:1 (+894 test lines / +1,408 prod lines)
-- **Code Delivered:** +2,302 / -134 lines across 12 code files (excluding docs)
-- **Reasoning Effort:** 147,687 reasoning tokens (29.3% of generated output)
-- **Tool Health & Self-Correction:** 490 tool calls (40 self-corrections, 91.8% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.4 avg turns/run (peak: 2 turns) | Coder 1.0, Unassignedsubagent 1.5
+- **Test-to-Production Code Ratio:** 0.7:1 (+937 test lines / +1,441 prod lines)
+- **Code Delivered:** +2,378 / -134 lines across 12 code files (excluding docs)
+- **Reasoning Effort:** 149,763 reasoning tokens (29.2% of generated output)
+- **Tool Health & Self-Correction:** 504 tool calls (41 self-corrections, 91.9% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 3 execution anomalies detected (2 CRITICAL, 1 WARNING).
+- **Status:** 5 execution anomalies detected (4 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.3k tokens) — Context tokens reached 167.3k in turn 1 (session: 01a174b1-3b71-73c0-a0b7-6428b55ad981), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+137.2k tokens) — Context tokens surged by 137.2k tokens in turn 1 (session: 01a174a5-1271-7791-8474-55e6bf0e84fd, total: 137.2k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+167.3k tokens) — Context tokens surged by 167.3k tokens in turn 1 (session: 01a174b1-3b71-73c0-a0b7-6428b55ad981, total: 167.3k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k in turn 3 (session: 01a17362-baa4-72b3-934d-3cb040c899ea), breaching 160k critical ceiling
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k tokens in turn 14 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 148.4k tokens, threshold: 40000)
 
@@ -83,14 +85,15 @@ Role mapping probe and fix: the spawned `coder` child had null top-level and nes
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,635,510 | 348,640 | 92,827,008 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
-| **unassignedsubagent** | 4 | 20,381 | 8,315 | 4,662,528 | 99.6% | 160.1k | ELEVATED | $0.00 |
-| **Total** | **5** | **1,655,891** | **356,955** | **97,489,536** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
+| **coder** | 1 | 902 | 9 | 159,232 | 99.4% | 160.1k | ELEVATED | $0.00 |
+| **rootagent** | 1 | 1,650,550 | 354,209 | 95,217,408 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
+| **unassignedsubagent** | 4 | 23,459 | 8,983 | 5,006,336 | 99.5% | 170.1k | ELEVATED | $0.00 |
+| **Total** | **6** | **1,674,911** | **363,201** | **100,382,976** | **98.4%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
-| **gpt-6-luna** | 2 | 1,108,046 | 287,165 | 69,411,072 | 98.4% | $0.00 |
+| **gpt-6-luna** | 3 | 1,127,066 | 293,411 | 72,304,512 | 98.5% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **5** | **1,655,891** | **356,955** | **97,489,536** | **98.3%** | **$0.00** |
+| **Total** | **6** | **1,674,911** | **363,201** | **100,382,976** | **98.4%** | **$0.00** |

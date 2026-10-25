@@ -2,19 +2,19 @@
   "schema_version": 3,
   "ticket_id": "AL-56",
   "ticket_title": "Codex metrics research",
-  "ticket_type": "test",
+  "ticket_type": "fix",
   "started_at": "2026-10-25T14:06:52.585Z",
-  "completed_at": "2026-10-25T20:09:16.353Z",
-  "updated_at": "2026-10-25T20:09:17.044392+00:00",
+  "completed_at": "2026-10-25T20:13:10.283Z",
+  "updated_at": "2026-10-25T20:13:11.261875+00:00",
   "code": {
-    "lines_added": 2302,
+    "lines_added": 2378,
     "lines_deleted": 134,
-    "test_lines_added": 894,
+    "test_lines_added": 937,
     "test_lines_deleted": 24,
-    "prod_lines_added": 1408,
+    "prod_lines_added": 1441,
     "prod_lines_deleted": 110,
     "files_changed": 12,
-    "sdlc_iterations": 51
+    "sdlc_iterations": 52
   },
   "invocations": [
     {
@@ -44,14 +44,14 @@
       "model": "gpt-6-luna",
       "user": "",
       "started_at": "2026-10-25T14:06:52.762Z",
-      "completed_at": "2026-10-25T20:09:16.353Z",
-      "active_duration_seconds": 3711,
-      "turns": 28,
+      "completed_at": "2026-10-25T20:13:10.283Z",
+      "active_duration_seconds": 3753,
+      "turns": 29,
       "tokens": {
-        "input": 1107144,
-        "output": 287156,
-        "cache_read": 69251840,
-        "reasoning": 133802,
+        "input": 1122184,
+        "output": 292725,
+        "cache_read": 71642240,
+        "reasoning": 135598,
         "peak_context": 247681
       },
       "cost_usd": 0,
@@ -140,7 +140,7 @@
     {
       "id": "01a174ad-f5c2-79b1-a5d6-df60b61f6b93",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
-      "role": "UnassignedSubAgent",
+      "role": "coder",
       "model": "gpt-6-luna",
       "user": "",
       "started_at": "2026-10-25T20:08:40.259Z",
@@ -156,13 +156,33 @@
       },
       "cost_usd": 0,
       "compactions": 0
+    },
+    {
+      "id": "01a174b1-3b71-73c0-a0b7-6428b55ad981",
+      "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "role": "UnassignedSubAgent",
+      "model": "gpt-6-luna",
+      "user": "",
+      "started_at": "2026-10-25T20:12:14.739Z",
+      "completed_at": "2026-10-25T20:12:26.425Z",
+      "active_duration_seconds": 12,
+      "turns": 1,
+      "tokens": {
+        "input": 3980,
+        "output": 677,
+        "cache_read": 503040,
+        "reasoning": 280,
+        "peak_context": 170099
+      },
+      "cost_usd": 0,
+      "compactions": 0
     }
   ],
   "tools": [
     {
       "name": "command",
-      "calls": 450,
-      "errors": 40
+      "calls": 462,
+      "errors": 41
     },
     {
       "name": "followup_task",
@@ -181,7 +201,7 @@
     },
     {
       "name": "send_message",
-      "calls": 15,
+      "calls": 16,
       "errors": 0
     },
     {
@@ -191,7 +211,7 @@
     },
     {
       "name": "spawn_agent",
-      "calls": 4,
+      "calls": 5,
       "errors": 0
     },
     {
@@ -1644,6 +1664,39 @@
       "status": "error",
       "duration_ms": 1,
       "context_tokens": 161675
+    },
+    {
+      "timestamp": "2026-10-25T20:12:18.991Z",
+      "session_id": "01a174b1-3b71-73c0-a0b7-6428b55ad981",
+      "turn": 1,
+      "role": "UnassignedSubAgent",
+      "event_type": "tool_call",
+      "tool_name": "command",
+      "status": "completed",
+      "duration_ms": 0,
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-25T20:12:24.950Z",
+      "session_id": "01a174b1-3b71-73c0-a0b7-6428b55ad981",
+      "turn": 1,
+      "role": "UnassignedSubAgent",
+      "event_type": "tool_call",
+      "tool_name": "send_message",
+      "status": "completed",
+      "duration_ms": 142,
+      "context_tokens": 167308
+    },
+    {
+      "timestamp": "2026-10-25T20:12:29.961Z",
+      "session_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "turn": 50,
+      "role": "RootAgent",
+      "event_type": "tool_call",
+      "tool_name": "command",
+      "status": "error",
+      "duration_ms": 2336,
+      "context_tokens": 170047
     }
   ]
 }
