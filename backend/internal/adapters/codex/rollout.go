@@ -57,7 +57,6 @@ type Transcript struct {
 	currentContext int64                   `json:"-"`
 	role           domain.AgentRole        `json:"-"`
 	parentThread   string                  `json:"-"`
-	agentPersona   string                  `json:"-"`
 	latestTime     string                  `json:"-"`
 }
 
@@ -347,36 +346,13 @@ func readSessionMetadata(payload json.RawMessage, transcript *Transcript) error 
 		transcript.role = domain.RoleUnassignedSubAgent
 	}
 	if strings.TrimSpace(metadata.AgentRole) != "" {
-		transcript.agentPersona = strings.TrimSpace(metadata.AgentRole)
-	} else if metadata.AgentPath != "" {
-		transcript.agentPersona = filepath.Base(filepath.ToSlash(metadata.AgentPath))
+		transcript.role = domain.AgentRole(strings.TrimSpace(metadata.AgentRole))
+	} else if metadata.AgentPath != "" && metadata.ParentID != "" {
+		// Codex exposes the raw persona in agent_path even when agent_role is
+		// unset. Store only the basename, matching OpenCode's raw session.agent.
+		transcript.role = domain.AgentRole(filepath.Base(filepath.ToSlash(metadata.AgentPath)))
 	}
 	return nil
-}
-
-// ApplyRoleMappings resolves the child persona from project configuration. The
-// raw agent path remains private and is never copied into exported facts.
-func (transcript *Transcript) ApplyRoleMappings(mappings domain.RoleMappings) {
-	if transcript == nil || transcript.agentPersona == "" || mappings == nil {
-		return
-	}
-	for persona := range mappings {
-		if !strings.EqualFold(strings.TrimSpace(persona), transcript.agentPersona) {
-			continue
-		}
-		resolved := mappings.ResolveRole(transcript.agentPersona)
-		for i := range transcript.Invocations {
-			if transcript.Invocations[i].Role == domain.RoleUnassignedSubAgent {
-				transcript.Invocations[i].Role = resolved
-			}
-		}
-		for i := range transcript.Events {
-			if transcript.Events[i].Role == domain.RoleUnassignedSubAgent {
-				transcript.Events[i].Role = resolved
-			}
-		}
-		return
-	}
 }
 
 func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript, lineNumber int, usageRecordSeen bool) {

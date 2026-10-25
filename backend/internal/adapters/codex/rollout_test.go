@@ -313,7 +313,7 @@ func TestChildRolloutPreservesIdentityAndSkipsInheritedReplay(t *testing.T) {
 	})
 }
 
-func TestApplyRoleMappingsUsesConfiguredPersonaAndPreservesExplicitRole(t *testing.T) {
+func TestCodexExtractionPreservesRawPersonaAndExplicitRole(t *testing.T) {
 	input := `{"type":"session_meta","payload":{"id":"child","parent_thread_id":"root","source":{"subagent":{"thread_spawn":{"parent_thread_id":"root","agent_path":"/private/agents/coder"}}}}}
 {"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"fixture-model"}}
 {"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"usage":{"input_tokens":1}}}
@@ -322,12 +322,8 @@ func TestApplyRoleMappingsUsesConfiguredPersonaAndPreservesExplicitRole(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if transcript.Invocations[0].Role != domain.RoleUnassignedSubAgent {
-		t.Fatalf("role inferred without config: %s", transcript.Invocations[0].Role)
-	}
-	transcript.ApplyRoleMappings(domain.RoleMappings{"coder": "tester"})
-	if transcript.Invocations[0].Role != domain.AgentRole("tester") {
-		t.Fatalf("configured persona not mapped: %s", transcript.Invocations[0].Role)
+	if transcript.Invocations[0].Role != domain.AgentRole("coder") {
+		t.Fatalf("expected raw persona in extracted facts, got %s", transcript.Invocations[0].Role)
 	}
 	encoded, err := json.Marshal(transcript)
 	if err != nil {
@@ -342,7 +338,6 @@ func TestApplyRoleMappingsUsesConfiguredPersonaAndPreservesExplicitRole(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	explicit.ApplyRoleMappings(domain.RoleMappings{"coder": "tester", "reviewer": "reviewer"})
 	if explicit.Invocations[0].Role != domain.AgentRole("reviewer") {
 		t.Fatalf("explicit role lost precedence: %s", explicit.Invocations[0].Role)
 	}

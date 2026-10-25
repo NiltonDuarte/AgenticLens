@@ -207,7 +207,6 @@ func runGenerate(args []string) {
 				fmt.Fprintf(os.Stderr, "Error reading discovered Codex session: %v\n", parseErr)
 				os.Exit(1)
 			}
-			transcript.ApplyRoleMappings(projCfg.RoleMappings)
 			transcripts = append(transcripts, transcript)
 			knownThreadIDs = append(knownThreadIDs, transcript.ThreadID)
 		}

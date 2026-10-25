@@ -107,7 +107,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 
 func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing.T) {
 	project := t.TempDir()
-	config := "project_name: ChildFixture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: records\n  src_folders:\n    - src\nrole_mappings:\n  coder: coder\n"
+	config := "project_name: ChildFixture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: records\n  src_folders:\n    - src\nrole_mappings:\n  coder: tester\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
