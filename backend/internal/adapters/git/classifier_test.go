@@ -209,3 +209,29 @@ func TestClassifyFile_AdversarialBoundaries(t *testing.T) {
 		}
 	})
 }
+
+func TestClassifyFileTestdataFixtures(t *testing.T) {
+	for _, path := range []string{"testdata/input.json", "src/parser/testdata/rollout.jsonl", "./src/testdata/nested/expected.txt", "src/testdata/example.go"} {
+		if got := git.ClassifyFile(path, nil); got != git.CategoryTest {
+			t.Errorf("fixture %q: got %s, want test", path, got)
+		}
+	}
+	for _, path := range []string{"src/testdata_backup/input.json", "src/mytestdata/input.json"} {
+		if got := git.ClassifyFile(path, nil); got != git.CategoryOther {
+			t.Errorf("non-fixture %q: got %s, want other", path, got)
+		}
+	}
+	path := "src/testdata/input.json"
+	for _, tc := range []struct {
+		cfg  git.ClassificationConfig
+		want git.FileCategory
+	}{
+		{git.ClassificationConfig{Exclude: []string{path}}, git.CategoryIgnored},
+		{git.ClassificationConfig{ProdPatterns: []string{path}}, git.CategoryProd},
+		{git.ClassificationConfig{WorkspacesDir: "src/testdata"}, git.CategoryIgnored},
+	} {
+		if got := git.ClassifyFile(path, &tc.cfg); got != tc.want {
+			t.Errorf("configuration precedence: got %s, want %s", got, tc.want)
+		}
+	}
+}

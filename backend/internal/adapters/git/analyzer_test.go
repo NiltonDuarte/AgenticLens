@@ -1308,6 +1308,12 @@ func TestExplicitCodeRefDoesNotDependOnTicketOrBranchNaming(t *testing.T) {
 	if err := os.WriteFile("src/app_test.go", []byte("package app\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Mkdir("src/testdata", 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("src/testdata/input.jsonl", []byte("{}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	run("add", ".")
 	run("commit", "-m", "implementation under an earlier ticket")
 	if err := os.WriteFile("README.md", []byte("changed documentation\n"), 0600); err != nil {
@@ -1321,7 +1327,7 @@ func TestExplicitCodeRefDoesNotDependOnTicketOrBranchNaming(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if facts.LinesAdded != 2 || facts.FilesChanged != 2 || facts.TestLinesAdded != 1 || facts.ProdLinesAdded != 1 {
+		if facts.LinesAdded != 3 || facts.FilesChanged != 3 || facts.TestLinesAdded != 2 || facts.ProdLinesAdded != 1 {
 			t.Fatalf("incorrect branch facts: %+v", facts)
 		}
 	}

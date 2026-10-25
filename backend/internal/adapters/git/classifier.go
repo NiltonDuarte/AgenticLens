@@ -128,7 +128,9 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 	}
 
 	// 2. Test files detection
-	isTestDir := strings.HasPrefix(cleanPath, "test/") ||
+	isTestDir := strings.HasPrefix(cleanPath, "testdata/") ||
+		strings.Contains(cleanPath, "/testdata/") ||
+		strings.HasPrefix(cleanPath, "test/") ||
 		strings.HasPrefix(cleanPath, "tests/") ||
 		strings.HasPrefix(cleanPath, "__tests__/") ||
 		strings.Contains(cleanPath, "/test/") ||
