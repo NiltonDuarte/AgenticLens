@@ -66,24 +66,24 @@ func TestClassifyFile(t *testing.T) {
 		{"workspaces/spec.md", nil, git.CategoryOther},
 
 		// Test files
-		{"internal/adapters/git/analyzer_test.go", nil, git.CategoryTest},
-		{"tests/test_api.py", nil, git.CategoryTest},
-		{"src/components/Card.test.tsx", nil, git.CategoryTest},
-		{"src/utils/math.spec.ts", nil, git.CategoryTest},
-		{"tests/unit/test_runner.py", nil, git.CategoryTest},
-		{"__tests__/dashboard.test.js", nil, git.CategoryTest},
+		{"internal/adapters/git/analyzer_test.go", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
+		{"tests/test_api.py", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
+		{"src/components/Card.test.tsx", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
+		{"src/utils/math.spec.ts", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
+		{"tests/unit/test_runner.py", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
+		{"__tests__/dashboard.test.js", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
 
 		// Production files
-		{"internal/domain/models.go", nil, git.CategoryProd},
-		{"workspaces/file.go", nil, git.CategoryProd},
-		{"cmd/agentic-lens/main.go", nil, git.CategoryProd},
-		{"web/src/App.tsx", nil, git.CategoryProd},
-		{"web/src/main.ts", nil, git.CategoryProd},
-		{"web/index.html", nil, git.CategoryProd},
-		{"web/src/style.css", nil, git.CategoryProd},
-		{"Makefile", nil, git.CategoryProd},
-		{"scripts/setup.sh", nil, git.CategoryProd},
-		{"db/schema.sql", nil, git.CategoryProd},
+		{"internal/domain/models.go", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"workspaces/file.go", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"cmd/agentic-lens/main.go", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"web/src/App.tsx", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"web/src/main.ts", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"web/index.html", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"web/src/style.css", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"Makefile", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"scripts/setup.sh", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
+		{"db/schema.sql", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
 
 		// Config overrides
 		{
@@ -342,6 +342,12 @@ code_metrics:
 		t.Errorf("unexpected prod_patterns: %v", cfg.ProdPatterns)
 	}
 
+	if got := git.ClassifyFile("checks/example_test_custom.go", cfg); got != git.CategoryTest {
+		t.Fatalf("loaded test pattern: %s", got)
+	}
+	if got := git.ClassifyFile("runtime/example.custom_prod", cfg); got != git.CategoryProd {
+		t.Fatalf("loaded production pattern: %s", got)
+	}
 	// Verify classification applies loaded patterns
 	catInc := git.ClassifyFile("custom/include/file.xyz", cfg)
 	if catInc != git.CategoryProd {
@@ -1314,6 +1320,14 @@ func TestExplicitCodeRefDoesNotDependOnTicketOrBranchNaming(t *testing.T) {
 	if err := os.WriteFile("src/testdata/input.jsonl", []byte("{}\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	for _, path := range []string{"checks/samples/input.json", "runtime/service.custom", "runtime_backup/unrelated.custom"} {
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("fixture\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
 	run("add", ".")
 	run("commit", "-m", "implementation under an earlier ticket")
 	if err := os.WriteFile("README.md", []byte("changed documentation\n"), 0600); err != nil {
@@ -1321,15 +1335,23 @@ func TestExplicitCodeRefDoesNotDependOnTicketOrBranchNaming(t *testing.T) {
 	}
 	run("add", ".")
 	run("commit", "-m", "documentation outside source folders")
-	cfg := &git.ClassificationConfig{BaseBranch: "baseline", SrcFolders: []string{"src"}}
+	cfg := &git.ClassificationConfig{BaseBranch: "baseline", SrcFolders: []string{"src"}, TestPatterns: []string{"**/*_test.go", "**/testdata/**", "checks/**"}, ProdPatterns: []string{"src/**/*.go", "runtime/**"}}
 	for _, ticket := range []string{"TEST-123", "RENAMED-456"} {
 		facts, err := git.ComputeCodeFactsAtRef(ticket, cfg, nil, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if facts.LinesAdded != 3 || facts.FilesChanged != 3 || facts.TestLinesAdded != 2 || facts.ProdLinesAdded != 1 {
+		if facts.LinesAdded != 5 || facts.FilesChanged != 5 || facts.TestLinesAdded != 3 || facts.ProdLinesAdded != 2 {
 			t.Fatalf("incorrect branch facts: %+v", facts)
 		}
+	}
+	run("checkout", "-b", "feature/TEST-123")
+	automatic, err := git.ComputeCodeFacts("TEST-123", cfg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if automatic.LinesAdded != 5 || automatic.FilesChanged != 5 || automatic.TestLinesAdded != 3 || automatic.ProdLinesAdded != 2 {
+		t.Fatalf("automatic discovery bypassed configured source filtering: %+v", automatic)
 	}
 	fallback := &domain.CodeFacts{LinesAdded: 99}
 	facts, err := git.ComputeCodeFactsAtRef("TEST-123", cfg, fallback, "baseline")

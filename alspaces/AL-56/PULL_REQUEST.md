@@ -4,6 +4,8 @@
 
 `--code-ref HEAD` supports code attribution for branches without ticket IDs, including renamed tickets. It measures committed changes against the configured base and respects source/classification settings. Codex SDLC iterations derive from root-session user messages, without duplicate event/response counting or child delegation.
 
+Test/production classification now comes from project configuration rather than hardcoded directory names or extensions. Recursive globs respect directory boundaries; configured test paths outside source roots are included, and both Git discovery modes apply source filtering.
+
 Repeated generation replaces the selected snapshot, model changes preserve per-model usage, and event context uses request input counts rather than cumulative usage. CLI persistence uses the existing error/compaction/anomaly-turn pruning policy.
 
 ## Privacy review

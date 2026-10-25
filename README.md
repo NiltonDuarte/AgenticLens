@@ -195,3 +195,8 @@ For branches whose names do not contain the ticket ID, use `--code-ref HEAD` (or
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+Code classification is configured under `code_metrics` in `.agenticlens-config.yaml`:
+`test_patterns` identifies tests and fixtures; `prod_patterns` and `include` identify production files. There are no implicit test directory, test filename, or production extension rules. Empty patterns leave files unclassified (`Other`), which can contribute to total lines without contributing to test/production subtotals.
+
+Patterns containing `/` are relative to the repository root; a `**` path component matches zero or more directories. Patterns without `/` match basenames. Workspace exclusions and `exclude` win, followed by test patterns, then production/include patterns. The existing lockfile/dotfile exclusions apply to otherwise unmatched files. Both Git discovery modes monitor `workspaces.src_folders` plus configured test, production, and include patterns, allowing fixtures outside source roots.

@@ -128,7 +128,7 @@ func ValidateSrcFolders(srcFolders []string) error {
 	return nil
 }
 
-// IsMonitoredSourcePath reports whether a file path falls within configured source folders, include patterns, or production patterns.
+// IsMonitoredSourcePath reports whether a file path falls within configured source folders or configured test/production inclusion patterns.
 func IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool {
 	cleanPath := filepath.ToSlash(strings.TrimSpace(path))
 	cleanPath = strings.TrimPrefix(cleanPath, "./")
@@ -150,6 +150,11 @@ func IsMonitoredSourcePath(path string, srcFolders []string, cfg *Classification
 
 	if cfg != nil {
 		for _, pattern := range cfg.Include {
+			if matchPattern(pattern, cleanPath) {
+				return true
+			}
+		}
+		for _, pattern := range cfg.TestPatterns {
 			if matchPattern(pattern, cleanPath) {
 				return true
 			}
@@ -415,7 +420,7 @@ func ComputeCodeFactsAtRef(ticketID string, cfg *ClassificationConfig, fallback 
 	var filesChanged int64
 
 	for _, entry := range numstat {
-		if codeRef != "" && !IsMonitoredSourcePath(entry.Path, cfg.SrcFolders, cfg) {
+		if !IsMonitoredSourcePath(entry.Path, cfg.SrcFolders, cfg) {
 			continue
 		}
 		category := ClassifyFile(entry.Path, cfg)

@@ -46,38 +46,30 @@ const (
 	CategoryOther   FileCategory = "other"
 )
 
+// Patterns containing a slash are relative to the repository root. A ** path
+// component matches zero or more directories; patterns without slashes match basenames.
 func matchPattern(pattern, path string) bool {
-	pattern = filepath.ToSlash(pattern)
+	pattern = strings.TrimPrefix(filepath.ToSlash(strings.TrimSpace(pattern)), "./")
 	path = filepath.ToSlash(path)
-
-	if pattern == path {
-		return true
+	if !strings.Contains(pattern, "/") {
+		matched, _ := filepath.Match(pattern, filepath.Base(path))
+		return matched
 	}
+	return matchSegments(strings.Split(pattern, "/"), strings.Split(path, "/"))
+}
 
-	if strings.Contains(pattern, "**") {
-		parts := strings.Split(pattern, "**")
-		if len(parts) == 2 {
-			prefix := strings.TrimSuffix(parts[0], "/")
-			suffix := strings.TrimPrefix(parts[1], "/")
-			hasPrefix := prefix == "" || strings.HasPrefix(path, prefix)
-			hasSuffix := suffix == "" || strings.HasSuffix(path, suffix) || matchPattern(suffix, filepath.Base(path))
-			if hasPrefix && hasSuffix {
-				return true
-			}
-		}
+func matchSegments(pattern, path []string) bool {
+	if len(pattern) == 0 {
+		return len(path) == 0
 	}
-
-	matched, err := filepath.Match(pattern, path)
-	if err == nil && matched {
-		return true
+	if pattern[0] == "**" {
+		return matchSegments(pattern[1:], path) || (len(path) > 0 && matchSegments(pattern, path[1:]))
 	}
-
-	baseMatched, err := filepath.Match(pattern, filepath.Base(path))
-	if err == nil && baseMatched {
-		return true
+	if len(path) == 0 {
+		return false
 	}
-
-	return false
+	matched, _ := filepath.Match(pattern[0], path[0])
+	return matched && matchSegments(pattern[1:], path[1:])
 }
 
 // ClassifyFile classifies a repository file path as ignored, test, prod, or other.
@@ -86,7 +78,6 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 	cleanPath = strings.TrimPrefix(cleanPath, "./")
 	cleanPath = strings.TrimPrefix(cleanPath, "/")
 	baseName := filepath.Base(cleanPath)
-	ext := strings.ToLower(filepath.Ext(cleanPath))
 
 	// 1. Workspace directory check - classify immediately as CategoryIgnored
 	if cfg != nil && strings.TrimSpace(cfg.WorkspacesDir) != "" {
@@ -125,53 +116,6 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 	}
 	if strings.HasPrefix(baseName, ".") {
 		return CategoryIgnored
-	}
-
-	// 2. Test files detection
-	isTestDir := strings.HasPrefix(cleanPath, "testdata/") ||
-		strings.Contains(cleanPath, "/testdata/") ||
-		strings.HasPrefix(cleanPath, "test/") ||
-		strings.HasPrefix(cleanPath, "tests/") ||
-		strings.HasPrefix(cleanPath, "__tests__/") ||
-		strings.Contains(cleanPath, "/test/") ||
-		strings.Contains(cleanPath, "/tests/") ||
-		strings.Contains(cleanPath, "/__tests__/")
-
-	isTestFile := strings.HasSuffix(baseName, "_test.go") ||
-		strings.HasSuffix(baseName, ".test.ts") ||
-		strings.HasSuffix(baseName, ".test.tsx") ||
-		strings.HasSuffix(baseName, ".spec.ts") ||
-		strings.HasSuffix(baseName, ".spec.tsx") ||
-		strings.HasSuffix(baseName, ".test.js") ||
-		strings.HasSuffix(baseName, ".test.jsx") ||
-		strings.HasSuffix(baseName, ".spec.js") ||
-		strings.HasSuffix(baseName, ".spec.jsx") ||
-		strings.HasPrefix(baseName, "test_") && ext == ".py" ||
-		strings.HasSuffix(baseName, "_test.py")
-
-	if isTestDir || isTestFile {
-		return CategoryTest
-	}
-
-	// 3. Production files detection
-	if baseName == "Makefile" {
-		return CategoryProd
-	}
-	prodExtensions := map[string]struct{}{
-		".go":   {},
-		".ts":   {},
-		".tsx":  {},
-		".py":   {},
-		".js":   {},
-		".jsx":  {},
-		".html": {},
-		".css":  {},
-		".scss": {},
-		".sql":  {},
-		".sh":   {},
-	}
-	if _, ok := prodExtensions[ext]; ok {
-		return CategoryProd
 	}
 
 	return CategoryOther

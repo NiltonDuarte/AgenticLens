@@ -55,16 +55,18 @@ Code metrics correction: the research branch lacked a ticket ID, so default tick
 
 Fixture classification correction: `testdata/` directory components now classify as test code, including JSONL fixtures. Explicit configuration overrides retain precedence. Isolated classifier and Git aggregation regressions cover fixture totals and similarly named non-test directories.
 
+Configuration correction: removed implicit test-directory/name and production-extension classification. The project YAML now declares both policies. Recursive glob matching respects directory boundaries, configured test paths outside source roots participate in metrics, and automatic ticket discovery applies the same source filtering as explicit code refs. Regression tests use independent configured paths and verify empty rules do not infer a category.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 43
-- **Active Agent Duration:** 1h 25m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 45
+- **Active Agent Duration:** 1h 27m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0.5:1 (+643 test lines / +1,328 prod lines)
 - **Code Delivered:** +1,971 / -39 lines across 12 code files (excluding docs)
-- **Reasoning Effort:** 143,044 reasoning tokens (30.1% of generated output)
-- **Tool Health & Self-Correction:** 396 tool calls (34 self-corrections, 91.4% success rate)
+- **Reasoning Effort:** 143,593 reasoning tokens (29.9% of generated output)
+- **Tool Health & Self-Correction:** 407 tool calls (35 self-corrections, 91.4% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -76,13 +78,13 @@ Fixture classification correction: `testdata/` directory components now classify
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,437,215 | 332,073 | 81,983,232 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
-| **Total** | **1** | **1,437,215** | **332,073** | **81,983,232** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 1,451,926 | 337,293 | 83,422,208 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
+| **Total** | **1** | **1,451,926** | **337,293** | **83,422,208** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 1 | 329,603 | 35,634 | 14,001,536 | 97.7% | $0.00 |
+| **gpt-6-astra** | 1 | 344,314 | 40,854 | 15,440,512 | 97.8% | $0.00 |
 | **gpt-6-luna** | 1 | 944,753 | 280,027 | 63,737,728 | 98.5% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **1** | **1,437,215** | **332,073** | **81,983,232** | **98.3%** | **$0.00** |
+| **Total** | **1** | **1,451,926** | **337,293** | **83,422,208** | **98.3%** | **$0.00** |

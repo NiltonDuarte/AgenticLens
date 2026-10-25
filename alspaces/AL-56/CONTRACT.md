@@ -34,3 +34,7 @@ Following FIX-4, source code must receive ticket identity and workspace layout t
 ## Code and iteration metrics
 
 `--code-ref` explicitly selects committed Git work independently of ticket or branch naming. Compare its merge base with the configured base branch, filter by configured source folders and classification patterns, and reject invalid refs without falling back to cached facts. An empty explicit diff is zero, not stale cached code. Codex SDLC iterations count root user messages, preferring the semantic user-message event stream over duplicate response-item representations; child delegation and lifecycle/model events do not increment this count.
+
+## Configured file classification
+
+Test directory/name and production extension heuristics are prohibited. Classification uses `code_metrics.test_patterns`, `prod_patterns`, and `include` from project configuration, with workspace/exclude precedence and unmatched files left as Other. Slash-containing globs are repository-relative; `**` matches complete directory components. Both code-ref and automatic ticket discovery filter totals using configured source roots and inclusion patterns, including test fixtures outside source roots.
