@@ -60,20 +60,20 @@ Configuration correction: removed implicit test-directory/name and production-ex
 Subagent accounting probe and fix: spawned `telemetry_hi`, which returned `Hi!`. The probe exposed object-valued source metadata, inherited root metadata replay, and root/child ID collisions. The parser now preserves first child identity and parent, accepts nested spawn provenance, assigns `UnassignedSubAgent` when no role is provided, and resumes child parsing only at a matching `thread_settings_applied` marker. Parent replay is excluded from child usage, turns, tools, events, and duration. A missing marker produces a warning and conservatively excludes the ambiguous continuation. Synthetic adapter and isolated CLI regression tests passed with race detection.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 13
-- **Active Agent Duration:** 1h 30m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 5 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 50
+- **Active Agent Duration:** 1h 32m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 146.3k (Unassignedsubagent)
 - **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
-- **Test-to-Production Code Ratio:** 0.5:1 (+732 test lines / +1,348 prod lines)
-- **Code Delivered:** +2,080 / -134 lines across 12 code files (excluding docs)
-- **Reasoning Effort:** 143,703 reasoning tokens (29.7% of generated output)
-- **Tool Health & Self-Correction:** 419 tool calls (35 self-corrections, 91.6% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.7 avg turns/run (peak: 2 turns) | Unassignedsubagent 1.7
+- **Test-to-Production Code Ratio:** 0.6:1 (+894 test lines / +1,408 prod lines)
+- **Code Delivered:** +2,302 / -134 lines across 12 code files (excluding docs)
+- **Reasoning Effort:** 146,085 reasoning tokens (29.2% of generated output)
+- **Tool Health & Self-Correction:** 477 tool calls (38 self-corrections, 92.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 3 execution anomalies detected (2 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+137.2k tokens) — Context tokens surged by 137.2k tokens in turn 1 (session: 01a174a5-1271-7791-8474-55e6bf0e84fd, total: 137.2k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k in turn 3 (session: 01a17362-baa4-72b3-934d-3cb040c899ea), breaching 160k critical ceiling
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+125.6k tokens) — Context tokens surged by 125.6k tokens in turn 46 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 125.6k tokens, threshold: 80000)
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k tokens in turn 14 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 148.4k tokens, threshold: 40000)
 
 ### Agentic Execution Metrics
@@ -81,13 +81,14 @@ Subagent accounting probe and fix: spawned `telemetry_hi`, which returned `Hi!`.
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,463,124 | 339,755 | 85,281,024 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
-| **Total** | **1** | **1,463,124** | **339,755** | **85,281,024** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 1,625,635 | 345,068 | 90,595,712 | 98.2% | 247.7k | BLOATED (124%) | $0.00 |
+| **unassignedsubagent** | 3 | 19,479 | 8,306 | 4,503,296 | 99.6% | 146.3k | ELEVATED | $0.00 |
+| **Total** | **4** | **1,645,114** | **353,374** | **95,099,008** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 1 | 355,512 | 43,316 | 17,299,328 | 98.0% | $0.00 |
-| **gpt-6-luna** | 1 | 944,753 | 280,027 | 63,737,728 | 98.5% | $0.00 |
+| **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
+| **gpt-6-luna** | 1 | 1,097,269 | 283,584 | 67,020,544 | 98.4% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **1** | **1,463,124** | **339,755** | **85,281,024** | **98.3%** | **$0.00** |
+| **Total** | **4** | **1,645,114** | **353,374** | **95,099,008** | **98.3%** | **$0.00** |
