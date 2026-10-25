@@ -13,7 +13,7 @@ Represent cost availability across the full telemetry contract so an actual zero
 *VERTICAL SLICE SCOPE*
 
 * Domain Core: Define nullable USD cost for invocation facts and all derived totals. Unknown inputs must not be summed as zero or yield a misleading partial aggregate; define and document propagation behavior for mixed known and unknown inputs.
-* Boundary Adapter: Map measured source costs to values and sources without billing evidence to null. Preserve legacy numeric ledger values and add a versioned migration for Codex ledgers only where source provenance can reliably establish that zero meant unavailable.
+* Boundary Adapter: Map measured source costs to values and sources without billing evidence to null. Preserve legacy numeric ledger values and add a cost-specific compatibility/migration path where source provenance can reliably establish that zero meant unavailable. Coordinate schema versioning with other migration work without depending on it.
 * Presentation: Render null as unavailable across ticket details, fleet totals, comparisons, progression charts, and CLI output. Keep genuine zero distinct and define sort/filter/chart behavior for unavailable values.
 * Quality: Add Go serialization, aggregation, migration, and source-mapping tests plus TypeScript formatter/component tests; include mixed-source and legacy-ledger cases.
 
@@ -27,6 +27,6 @@ Represent cost availability across the full telemetry contract so an actual zero
 
 *DEFINITION OF DONE*
 
-* Implementation and tests are merged after AL-55 establishes the schema migration path.
+* Cost migration is versioned and compatible with the repository's existing migration framework; it does not require AL-55 to complete first.
 * Quality gates pass with `make`.
 * Existing ledgers with numeric costs continue to load and display correctly.

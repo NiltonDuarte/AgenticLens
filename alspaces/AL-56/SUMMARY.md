@@ -55,7 +55,7 @@ Ticket index maintenance: restored the baseline index and removed its Done secti
 
 Code metrics correction: `generate` defaults to the explicit `--code-ref HEAD`; Git discovery no longer searches ticket IDs in branches or commit subjects. Backfill requires an explicit code ref when recomputing Git facts. Codex root user messages supply SDLC iterations. Regression coverage uses isolated Git repositories and synthetic rollouts, including ticket-free branch names, invalid refs, duplicate message representations, and child delegation.
 
-Cost follow-up: created AL-57 through the PO ticket workflow to carry unavailable USD cost as nullable values across the shared schema, aggregates, migrations, CLI, and dashboard. It is blocked by AL-55; no PO workspace was created.
+Cost follow-up: created AL-57 through the PO ticket workflow to carry unavailable USD cost as nullable values across the shared schema, aggregates, migrations, CLI, and dashboard. It is Ready and can proceed independently of AL-55; no PO workspace was created.
 
 Fixture classification correction: `testdata/` directory components now classify as test code, including JSONL fixtures. Explicit configuration overrides retain precedence. Isolated classifier and Git aggregation regressions cover fixture totals and similarly named non-test directories.
 
