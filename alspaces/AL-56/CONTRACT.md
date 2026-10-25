@@ -1,4 +1,4 @@
-# GEN-07 Research Contract
+# AL-56 Research Contract
 
 ## Goal
 
@@ -12,7 +12,7 @@ Find and validate the strongest practical way to generate AgenticLens metrics fr
 - Implement a fixture-backed Codex rollout adapter and a user-selected-file probe that derives a schema-v3 `agentic_metrics.json` ledger.
 - Keep the checked-in parser fixture synthetic, but generate the session ledger from real local Codex data; exclude transcript/tool payloads and distinguish observed from unavailable metrics.
 - Keep real-session validation ledgers and generated summary tables local and gitignored; publish only synthetic fixtures and sanitized research findings.
-- Keep all ticket materials in `alspaces/GEN-07`; maintain one research plan and no iteration folders.
+- Keep all ticket materials in `alspaces/AL-56`; maintain one research plan and no iteration folders.
 
 ## Scope limits
 

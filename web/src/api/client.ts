@@ -21,7 +21,7 @@ export interface ApiResponse<T> {
 
 export async function extractCodexRollout(
   file: File,
-  ticketId = 'GEN-07',
+  ticketId = 'AL-56',
   ticketTitle = '',
   ticketType = 'chore'
 ): Promise<ApiResponse<CodexExtractionResult>> {

@@ -1,4 +1,4 @@
-# GEN-07 Summary
+# AL-56 Summary
 
 Research branch: `research/codex-openai-metrics`.
 
@@ -8,7 +8,7 @@ AgenticLens can derive meaningful metrics from a Codex rollout without keeping t
 
 The `Codex Import` view lets a user select one uncompressed `.jsonl` rollout (up to 64 MiB), provide the AgenticLens ticket ID/title, preview calculated metrics, and download a standard `agentic_metrics.json` ledger. The upload is parsed in memory. The response omits prompts, assistant/reasoning text, command arguments, and tool input/output.
 
-`agentic_metrics.json` (gitignored) is the local session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as GEN-07. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
+`agentic_metrics.json` (gitignored) is the local session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as AL-56. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
 
 The real rollout exposed a mapping detail: current records carry command lifecycle facts in completed `CommandExecution` items and custom tool calls in paired `response_item` records. The parser handles both while retaining no command/input/output content. It also applies a turn's `turn_context` model to its earlier `task_started` event, avoiding a spurious `default` model invocation.
 

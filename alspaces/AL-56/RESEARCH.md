@@ -130,7 +130,7 @@ Both CLI output and the downloadable import ledger use `domain.PruneEventsForPer
 
 The dashboard `Codex Import` tab accepts one user-selected uncompressed `.jsonl` rollout up to 64 MiB. `POST /api/codex/extract` parses it in memory, accepts explicit AgenticLens ticket metadata, and returns the computed metrics alongside a minimized summary. The view previews derived totals and provides a JSON download containing the schema-v3 ledger itself. Prompt/assistant/reasoning text and command/tool payloads do not enter the response or downloaded file. The fixture includes sensitive markers and tests verify they do not leak.
 
-`agentic_metrics.json` (gitignored) is the local session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as GEN-07. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
+`agentic_metrics.json` (gitignored) is the local session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as AL-56. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
 
 The dashboard's file picker remains a manual extraction path. The CLI now has an explicit `--source codex` discovery path that scans `CODEX_HOME/sessions` and `archived_sessions`, accepts `.jsonl` and `.jsonl.gz`, resolves by nonce, explicit thread ID, or ticket text, and includes descendants linked by `parent_thread_id`. Ticket matching prefers the current working directory and otherwise selects the most recently modified matching thread; if ticket text is absent, cwd fallback is allowed only when it identifies one root thread. Raw rollout lines are scanned in memory for matching only and are not retained in generated ledgers. The CLI does not yet tail active rollouts or join Codex-derived Git facts beyond the existing Git analyzer.
 
@@ -144,7 +144,7 @@ The CLI integration preserves the OpenCode default and keeps source selection ex
 
 ## Open product decisions for later
 
-- Which session-to-ticket association should be default when several Codex rollouts share a cwd or one session works across tickets? For this user's research output, use the confirmed ticket ID GEN-07.
+- Which session-to-ticket association should be default when several Codex rollouts share a cwd or one session works across tickets? For this user's research output, use the confirmed ticket ID AL-56.
 - Is local transcript parsing acceptable given that rollout files contain raw prompts, responses, tool arguments, and command output?
 - Whether to add separately labeled Codex credit-equivalent and API-equivalent estimates; neither should be represented as actual spend without billing evidence.
 - Which workspaces should Codex threads map to when a thread's cwd changes or one Codex thread spans several tickets?

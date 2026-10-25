@@ -55,6 +55,6 @@ Thumbs.db
 coverage.out
 coverage.html
 
-# GEN-07 real-session telemetry stays local; fixtures are synthetic.
-/alspaces/GEN-07/agentic_metrics.json
-/alspaces/GEN-07/SESSION_METRICS.local.md
+# AL-56 real-session telemetry stays local; fixtures are synthetic.
+/alspaces/AL-56/agentic_metrics.json
+/alspaces/AL-56/SESSION_METRICS.local.md

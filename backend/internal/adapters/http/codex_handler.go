@@ -26,7 +26,7 @@ func CodexExtractHandler() http.HandlerFunc {
 		}
 		ticketID := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("ticket_id")))
 		if ticketID == "" {
-			ticketID = "GEN-07"
+			ticketID = "AL-56"
 		}
 		if !codexTicketIDPattern.MatchString(ticketID) {
 			WriteError(w, http.StatusBadRequest, "invalid_ticket_id", "ticket_id must start with a letter and contain only letters, numbers, hyphens, or underscores")

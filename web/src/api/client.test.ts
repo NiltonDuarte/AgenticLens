@@ -36,10 +36,10 @@ describe('Boundary API Client', () => {
       vi.stubGlobal('fetch', fetchMock);
       const file = new File(['{"type":"session_meta"}\\n'], 'rollout.jsonl', { type: 'application/x-ndjson' });
 
-      const response = await extractCodexRollout(file, 'GEN-07', 'Codex metrics research', 'chore');
+      const response = await extractCodexRollout(file, 'AL-56', 'Codex metrics research', 'chore');
 
       expect(response.data).toEqual(result);
-      expect(fetchMock).toHaveBeenCalledWith('/api/codex/extract?ticket_id=GEN-07&ticket_type=chore&ticket_title=Codex+metrics+research', expect.objectContaining({
+      expect(fetchMock).toHaveBeenCalledWith('/api/codex/extract?ticket_id=AL-56&ticket_type=chore&ticket_title=Codex+metrics+research', expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/x-ndjson' },
         body: file,

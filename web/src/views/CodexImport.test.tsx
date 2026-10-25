@@ -24,8 +24,8 @@ describe('CodexImport', () => {
     const baseLedger = mockAgenticMetricsLedgers['AL-1']!;
     const ledger = {
       ...baseLedger,
-      ticket_id: 'GEN-07',
-      facts: { ...baseLedger.facts, ticket_id: 'GEN-07' },
+      ticket_id: 'AL-56',
+      facts: { ...baseLedger.facts, ticket_id: 'AL-56' },
       totals: { ...baseLedger.totals, invocations: 1, input_tokens: 400, cache_read_tokens: 800, output_tokens: 340 },
       workflow_efficiency: {
         ...baseLedger.workflow_efficiency,
@@ -41,7 +41,7 @@ describe('CodexImport', () => {
     expect(screen.getByText('thread.jsonl')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Generate AgenticLens metrics' }));
 
-    expect(await screen.findByRole('heading', { name: 'Metrics for GEN-07' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Metrics for AL-56' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download agentic_metrics.json' })).toBeInTheDocument();
     expect(screen.getByText('gpt-5-codex · openai')).toBeInTheDocument();
     expect(screen.getByText('1,200')).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe('CodexImport', () => {
     expect(screen.getByText(/Capacity is not consumed context/)).toBeInTheDocument();
     expect(screen.getByText('One record had no usage details')).toBeInTheDocument();
     expect(screen.getByText(/Transcript text and tool payloads are not returned or saved/)).toBeInTheDocument();
-    expect(apiClient.extractCodexRollout).toHaveBeenCalledWith(expect.objectContaining({ name: 'thread.jsonl' }), 'GEN-07', '', 'chore');
+    expect(apiClient.extractCodexRollout).toHaveBeenCalledWith(expect.objectContaining({ name: 'thread.jsonl' }), 'AL-56', '', 'chore');
   });
 
   it('rejects a non-JSONL file before extraction', async () => {

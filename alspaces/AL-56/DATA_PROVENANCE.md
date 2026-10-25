@@ -1,4 +1,4 @@
-# GEN-07 Data Provenance
+# AL-56 Data Provenance
 
 The implementation was validated against a real local Codex rollout. That validation output remains in the gitignored `agentic_metrics.json` and `SESSION_METRICS.local.md`; it is not published with this research. All committed parser and discovery fixtures are synthetic.
 

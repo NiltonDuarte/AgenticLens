@@ -36,7 +36,7 @@ func TestRoutineCodexEventsUseRequestContextInsteadOfCumulativeUsage(t *testing.
 					t.Fatalf("event context is not the last request's input: %d", event.ContextTokens)
 				}
 			}
-			ledger := transcript.ToMetricsLedger("GEN-07", "Retention regression", domain.TicketTypeChore, domain.DefaultProjectConfig())
+			ledger := transcript.ToMetricsLedger("AL-56", "Retention regression", domain.TicketTypeChore, domain.DefaultProjectConfig())
 			for _, anomaly := range ledger.Anomalies {
 				if anomaly.RuleID == domain.RuleContextSaturationSpike {
 					t.Fatalf("cumulative usage triggered a false context anomaly: %#v", anomaly)
@@ -61,7 +61,7 @@ func TestCodexLedgerRetainsErrorsCompactionsAndAnomalyTurns(t *testing.T) {
 			{Timestamp: "2026-10-25T09:04:00Z", SessionID: "thread", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", ContextTokens: 100000},
 		},
 	}
-	ledger := transcript.ToMetricsLedger("GEN-07", "Retention regression", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	ledger := transcript.ToMetricsLedger("AL-56", "Retention regression", domain.TicketTypeChore, domain.DefaultProjectConfig())
 	retained := ledger.Facts.Events
 	if len(retained) != 3 || retained[0].Status != "error" || retained[1].EventType != domain.EventTypeCompaction || retained[2].Turn != 3 {
 		t.Fatalf("expected error, compaction, and real context-spike turn only: %#v", retained)

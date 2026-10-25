@@ -28,7 +28,7 @@ func TestGenerateCodexRefreshReplacesSnapshotAndCapturesModelChange(t *testing.T
 	generate := func() domain.AgenticFactLedger {
 		t.Helper()
 		cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", home,
-			"--session-id", "thread-01", "--ticket-id", "GEN-07", "--ticket-title", "Codex refresh regression",
+			"--session-id", "thread-01", "--ticket-id", "AL-56", "--ticket-title", "Codex refresh regression",
 			"--ticket-type", "chore", "--json-output", output)
 		if result, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("generate failed: %v\n%s", err, result)

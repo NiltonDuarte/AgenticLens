@@ -15,11 +15,11 @@ import (
 
 func TestDiscoverRolloutPathsMatchesTicketAndIncludesChildThreads(t *testing.T) {
 	home := t.TempDir()
-	rootPath := writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-root.jsonl", "root", "", "/repo", "working on GEN-07")
-	childPath := writeDiscoveryRollout(t, home, "archived_sessions/rollout-child.jsonl.gz", "child", "root", "/repo", "GEN-07 subagent")
+	rootPath := writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-root.jsonl", "root", "", "/repo", "working on AL-56")
+	childPath := writeDiscoveryRollout(t, home, "archived_sessions/rollout-child.jsonl.gz", "child", "root", "/repo", "AL-56 subagent")
 	writeDiscoveryRollout(t, home, "sessions/2026/10/24/rollout-other.jsonl", "other", "", "/other", "working on GEN-08")
 
-	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "GEN-07", WorkingDir: "/repo"})
+	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "AL-56", WorkingDir: "/repo"})
 	if err != nil {
 		t.Fatalf("DiscoverRolloutPaths returned an error: %v", err)
 	}
@@ -30,13 +30,13 @@ func TestDiscoverRolloutPathsMatchesTicketAndIncludesChildThreads(t *testing.T) 
 
 func TestDiscoverRolloutPathsNonceTakesPriorityOverTicket(t *testing.T) {
 	home := t.TempDir()
-	newer := writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-newer.jsonl", "newer", "", "/repo", "GEN-07 general context")
-	older := writeDiscoveryRollout(t, home, "sessions/2026/10/24/rollout-nonce.jsonl", "nonce-thread", "", "/repo", "nonce GEN07-deadbeef")
+	newer := writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-newer.jsonl", "newer", "", "/repo", "AL-56 general context")
+	older := writeDiscoveryRollout(t, home, "sessions/2026/10/24/rollout-nonce.jsonl", "nonce-thread", "", "/repo", "nonce AL56-deadbeef")
 	if err := os.Chtimes(older, time.Now().Add(-time.Hour), time.Now().Add(-time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 
-	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "GEN-07", Nonce: "GEN07-deadbeef", WorkingDir: "/repo"})
+	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "AL-56", Nonce: "AL56-deadbeef", WorkingDir: "/repo"})
 	if err != nil {
 		t.Fatalf("DiscoverRolloutPaths returned an error: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestDiscoverRolloutPathsNonceTakesPriorityOverTicket(t *testing.T) {
 func TestDiscoverRolloutPathsUsesUniqueWorkingDirectoryFallback(t *testing.T) {
 	home := t.TempDir()
 	path := writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout.jsonl", "only", "", "/repo", "no ticket reference")
-	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "GEN-07", WorkingDir: "/repo"})
+	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "AL-56", WorkingDir: "/repo"})
 	if err != nil {
 		t.Fatalf("DiscoverRolloutPaths returned an error: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestDiscoverRolloutPathsRejectsAmbiguousWorkingDirectory(t *testing.T) {
 	home := t.TempDir()
 	writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-one.jsonl", "one", "", "/repo", "no ticket")
 	writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-two.jsonl", "two", "", "/repo", "no ticket")
-	_, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "GEN-07", WorkingDir: "/repo"})
+	_, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "AL-56", WorkingDir: "/repo"})
 	if err == nil || !strings.Contains(err.Error(), "--nonce or --session-id") {
 		t.Fatalf("expected ambiguous discovery error, got %v", err)
 	}

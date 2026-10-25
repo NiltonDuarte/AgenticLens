@@ -22,7 +22,7 @@ function ledgerFilename(ledger: AgenticMetricsLedger): string {
 
 export const CodexImport: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [ticketId, setTicketId] = useState('GEN-07');
+  const [ticketId, setTicketId] = useState('AL-56');
   const [ticketTitle, setTicketTitle] = useState('');
   const [result, setResult] = useState<CodexExtractionResult | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);

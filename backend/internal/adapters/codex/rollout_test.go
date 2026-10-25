@@ -45,11 +45,11 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 	if len(transcript.Events) != 2 || transcript.Events[0].Status != "completed" || transcript.Events[0].DurationMs == nil || *transcript.Events[0].DurationMs != 125 {
 		t.Fatalf("expected privacy-safe paired command event with duration, got %#v", transcript.Events)
 	}
-	ledger := transcript.ToMetricsLedger("GEN-07", "Codex metrics research", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	ledger := transcript.ToMetricsLedger("AL-56", "Codex metrics research", domain.TicketTypeChore, domain.DefaultProjectConfig())
 	if ledger.Facts.SchemaVersion == nil || *ledger.Facts.SchemaVersion != domain.CurrentSchemaVersion {
 		t.Fatalf("expected current AgenticLens fact schema, got %#v", ledger.Facts.SchemaVersion)
 	}
-	if ledger.TicketID == nil || *ledger.TicketID != "GEN-07" || ledger.Totals.Invocations != 1 || ledger.Totals.InputTokens != 40 || ledger.Totals.CacheReadTokens != 80 {
+	if ledger.TicketID == nil || *ledger.TicketID != "AL-56" || ledger.Totals.Invocations != 1 || ledger.Totals.InputTokens != 40 || ledger.Totals.CacheReadTokens != 80 {
 		t.Fatalf("unexpected derived AgenticLens ledger: %#v", ledger)
 	}
 	if ledger.WorkflowEfficiency.ToolExecution.TotalCalls != 2 || ledger.WorkflowEfficiency.ToolExecution.ErrorsAndCorrections != 1 {
@@ -92,7 +92,7 @@ func TestMetricsLedgerUsesCodexThreadIDForInvocationHierarchy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseRollout returned an error: %v", err)
 	}
-	ledger := transcript.ToMetricsLedger("GEN-07", "Codex metrics research", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	ledger := transcript.ToMetricsLedger("AL-56", "Codex metrics research", domain.TicketTypeChore, domain.DefaultProjectConfig())
 	if len(ledger.Facts.Invocations) != 1 {
 		t.Fatalf("expected one invocation, got %d", len(ledger.Facts.Invocations))
 	}

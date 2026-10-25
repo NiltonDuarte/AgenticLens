@@ -56,7 +56,7 @@ func TestCodexExtractHandlerReturnsPrivacyMinimizedSummary(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d: %s", response.Code, response.Body.String())
 	}
-	if !strings.Contains(response.Body.String(), `"transcript":{"thread_id":"thread-1"`) || !strings.Contains(response.Body.String(), `"ticket_id":"GEN-07"`) || !strings.Contains(response.Body.String(), `"schema_version":3`) {
+	if !strings.Contains(response.Body.String(), `"transcript":{"thread_id":"thread-1"`) || !strings.Contains(response.Body.String(), `"ticket_id":"AL-56"`) || !strings.Contains(response.Body.String(), `"schema_version":3`) {
 		t.Fatalf("response is missing the Codex summary or AgenticLens ledger: %s", response.Body.String())
 	}
 	if strings.Contains(response.Body.String(), "private-prompt-marker") {
@@ -69,7 +69,7 @@ func TestCodexExtractHandlerReturnsPrivacyMinimizedSummary(t *testing.T) {
 
 func TestCodexExtractHandlerAcceptsExplicitTicketAndRejectsInvalidTicketType(t *testing.T) {
 	body := `{"timestamp":"2026-10-25T09:00:00Z","type":"session_meta","payload":{"id":"thread-1","timestamp":"2026-10-25T09:00:00Z"}}`
-	request := httptest.NewRequest(http.MethodPost, "/api/codex/extract?ticket_id=GEN-07&ticket_title=Research&ticket_type=chore", strings.NewReader(body))
+	request := httptest.NewRequest(http.MethodPost, "/api/codex/extract?ticket_id=AL-56&ticket_title=Research&ticket_type=chore", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/x-ndjson")
 	response := httptest.NewRecorder()
 	adaptershttp.CodexExtractHandler().ServeHTTP(response, request)
