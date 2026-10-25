@@ -4,8 +4,8 @@
   "ticket_title": "Codex metrics research",
   "ticket_type": "docs",
   "started_at": "2026-10-25T14:06:52.585Z",
-  "completed_at": "2026-10-25T19:21:13.015Z",
-  "updated_at": "2026-10-25T19:21:14.066985+00:00",
+  "completed_at": "2026-10-25T19:29:55.558Z",
+  "updated_at": "2026-10-25T19:29:56.932429+00:00",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -24,14 +24,14 @@
       "model": "gpt-6-astra",
       "user": "",
       "started_at": "2026-10-25T18:59:14.542Z",
-      "completed_at": "2026-10-25T19:21:13.015Z",
-      "active_duration_seconds": 468,
-      "turns": 8,
+      "completed_at": "2026-10-25T19:29:55.558Z",
+      "active_duration_seconds": 532,
+      "turns": 10,
       "tokens": {
-        "input": 293675,
-        "output": 24315,
-        "cache_read": 10504576,
-        "reasoning": 4733,
+        "input": 299048,
+        "output": 26294,
+        "cache_read": 11150464,
+        "reasoning": 4757,
         "peak_context": 244535
       },
       "cost_usd": 0,
@@ -81,8 +81,8 @@
   "tools": [
     {
       "name": "command",
-      "calls": 355,
-      "errors": 32
+      "calls": 363,
+      "errors": 33
     },
     {
       "name": "request_user_input_async",
@@ -1385,6 +1385,17 @@
       "status": "error",
       "duration_ms": 372,
       "context_tokens": 54892
+    },
+    {
+      "timestamp": "2026-10-25T19:29:36.454Z",
+      "session_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "turn": 39,
+      "role": "RootAgent",
+      "event_type": "tool_call",
+      "tool_name": "command",
+      "status": "error",
+      "duration_ms": 353,
+      "context_tokens": 65656
     }
   ]
 }

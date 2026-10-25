@@ -24,7 +24,7 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
 5. **Workspace Deliverables Checklist**:
    - `workspaces/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
    - `workspaces/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
-   - **Plan Lifecycle Synchronization**: Move specification file from `workspaces/plan/to-do/<TICKET_ID>*.md` to `workspaces/plan/done/`, update `workspaces/plan/TICKETS.md` status to `Done`, and unblock downstream tickets (inspect any tickets blocked by `<TICKET_ID>` and promote those whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`).
+   - **Plan Lifecycle Synchronization**: Move specification file from `workspaces/plan/to-do/<TICKET_ID>*.md` to `workspaces/plan/done/`, remove the completed ticket entry from `workspaces/plan/TICKETS.md` (do not create or maintain a Done section; completed specifications remain in `plan/done/`), and unblock downstream tickets (inspect any tickets blocked by `<TICKET_ID>` and promote those whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`).
    - `workspaces/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger (generated at the very final step of the iteration).
 6. **Telemetry Ingestion as the Final Step & Conventional Commit Type Classification**:
    - **Delayed Ingestion Mandate**: Generating telemetry must always be delayed to the very last step of the workflow. Running telemetry early causes subsequent turns, tool calls, compactions, and subagent sessions to be omitted from the ledger.

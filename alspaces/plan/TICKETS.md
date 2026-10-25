@@ -170,34 +170,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ---
 
-## Done
-
-- **AL-56**: Codex/OpenAI Telemetry Adapter Research
-  - **Subsystem**: Docs / Adapters / Codex / CLI / Tests
-  - **Phase**: Research Spike
-  - **Status**: Done
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/AL-56/RESEARCH_PLAN.md`
-
-- **FIX-7**: Direct Binary Download and Dynamic Initial Ticket Selection
-  - **Subsystem**: Scripts / Web / Setup / Presentation / Tests
-  - **Phase**: Defect Remediation
-  - **Status**: Done
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/done/FIX-7 direct binary download and dynamic initial ticket selection.md`
-
-- **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
-  - **Subsystem**: Docs / Packaging / CLI
-  - **Phase**: Phase 7
-  - **Status**: Done
-  - **Blocked by**: None (AL-36 Done)
-  - **Blocks**: None
-  - **File**: `alspaces/plan/done/AL-37 cross-project setup manual and telemetry integration guide.md`
-
----
-
 ## Discarded
 
 - **AL-18**: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry

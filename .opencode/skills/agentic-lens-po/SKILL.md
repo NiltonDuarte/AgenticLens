@@ -69,7 +69,7 @@ Output tickets to `<WORKSPACES_DIR>/plan/to-do/<PREFIX>-# <slug>.md` using `temp
 - `*CONTEXT*`, `*GOAL*`, `*VERTICAL SLICE SCOPE*`, `*ACCEPTANCE CRITERIA*`, and `*DEFINITION OF DONE*`.
 
 Shared planning registry lives under `<WORKSPACES_DIR>/plan/`:
-- `TICKETS.md`: Shared roadmap index and dependency graph structured using **Execution Tiers with Adjacency Lists** (e.g. `Tier 1 (Ready)`, with explicit `Blocked by: ...` and `Blocks: ...` links for unambiguous agent parsing). Updated across PO sessions as tickets are created, and by developers as ticket statuses advance (`Ready` -> `In Progress` -> `Done`).
+- `TICKETS.md`: Shared roadmap index and dependency graph structured using **Execution Tiers with Adjacency Lists** (e.g. `Tier 1 (Ready)`, with explicit `Blocked by: ...` and `Blocks: ...` links for unambiguous agent parsing). Updated across PO sessions as tickets are created, and by developers as tickets advance from `Ready` to `In Progress`. On completion, remove the ticket from the index and retain its specification in `plan/done/`; do not create or maintain a Done section.
 - `to-do/<PREFIX>-# <slug>.md`: Planned ticket definitions.
 
 PO session-specific deliverables live under `<WORKSPACES_DIR>/PO-#/`:

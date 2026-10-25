@@ -49,16 +49,18 @@ The ticket rename incorrectly updated research identifiers embedded in tests and
 
 Validation: race-enabled CLI and Codex adapter suites pass with fresh test execution. No runtime source change was necessary for this correction.
 
+Ticket index maintenance: restored the baseline index and removed its Done section. Updated repository and OpenCode workflow instructions to remove completed entries instead of accumulating them, retaining completed specifications in `plan/done/` and downstream dependency updates.
+
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 1h 20m (excludes user wait time)
+- **Active Agent Duration:** 1h 21m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 142,202 reasoning tokens (30.7% of generated output)
-- **Tool Health & Self-Correction:** 361 tool calls (32 self-corrections, 91.1% success rate)
+- **Reasoning Effort:** 142,226 reasoning tokens (30.6% of generated output)
+- **Tool Health & Self-Correction:** 369 tool calls (33 self-corrections, 91.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -70,13 +72,13 @@ Validation: race-enabled CLI and Codex adapter suites pass with fresh test execu
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,401,287 | 320,754 | 78,486,272 | 98.2% | 247.7k | BLOATED (124%) | $0.00 |
-| **Total** | **1** | **1,401,287** | **320,754** | **78,486,272** | **98.2%** | **247.7k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 1,406,660 | 322,733 | 79,132,160 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
+| **Total** | **1** | **1,406,660** | **322,733** | **79,132,160** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 1 | 293,675 | 24,315 | 10,504,576 | 97.3% | $0.00 |
+| **gpt-6-astra** | 1 | 299,048 | 26,294 | 11,150,464 | 97.4% | $0.00 |
 | **gpt-6-luna** | 1 | 944,753 | 280,027 | 63,737,728 | 98.5% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **1** | **1,401,287** | **320,754** | **78,486,272** | **98.2%** | **$0.00** |
+| **Total** | **1** | **1,406,660** | **322,733** | **79,132,160** | **98.3%** | **$0.00** |
