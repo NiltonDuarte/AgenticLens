@@ -30,3 +30,7 @@ Find and validate the strongest practical way to generate AgenticLens metrics fr
 ## Repository independence
 
 Following FIX-4, source code must receive ticket identity and workspace layout through user input or configuration. Research ticket IDs are tracking metadata only; renaming a ticket must not require application or test changes. Tests use stable synthetic identifiers and fixtures under `testdata` or `t.TempDir()`. CLI tests must run from their own temporary project with an explicit fixture configuration, never inherit the development checkout configuration or live ticket directories.
+
+## Code and iteration metrics
+
+`--code-ref` explicitly selects committed Git work independently of ticket or branch naming. Compare its merge base with the configured base branch, filter by configured source folders and classification patterns, and reject invalid refs without falling back to cached facts. An empty explicit diff is zero, not stale cached code. Codex SDLC iterations count root user messages, preferring the semantic user-message event stream over duplicate response-item representations; child delegation and lifecycle/model events do not increment this count.

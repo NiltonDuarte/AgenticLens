@@ -35,6 +35,7 @@ func runGenerate(args []string) {
 	}
 
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
+	codeRefFlag := genFlags.String("code-ref", "", "Git branch or commit to measure against the configured base (committed changes only)")
 	sourceFlag := genFlags.String("source", "opencode", "Telemetry harness to read: opencode or codex")
 	nonceFlag := genFlags.String("nonce", "", "Unique random execution nonce to lock session resolution to")
 	sessionIDFlag := genFlags.String("session-id", "", "Explicit root session ID")
@@ -214,6 +215,7 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error combining Codex session facts: %v\n", combineErr)
 			os.Exit(1)
 		}
+		extractedSteeringTurns = combined.SteeringTurns
 		invocations = combined.Invocations
 		tools = combined.Tools
 		events = combined.Events
@@ -317,7 +319,7 @@ func runGenerate(args []string) {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		os.Exit(1)
 	}
-	codeFacts, err := git.ComputeCodeFacts(activeTicketID, cfg, fallbackCode)
+	codeFacts, err := git.ComputeCodeFactsAtRef(activeTicketID, cfg, fallbackCode, strings.TrimSpace(*codeRefFlag))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

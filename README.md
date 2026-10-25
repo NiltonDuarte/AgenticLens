@@ -162,7 +162,7 @@ AgenticLens provides a unified CLI for automation and local workflows:
 ./bin/agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
 
 # Discover the latest matching Codex rollout in CODEX_HOME, including child threads
-./bin/agentic-lens generate --source codex --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
+./bin/agentic-lens generate --source codex --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
 
 # List all tracked workspaces with detected anomaly counts
 ./bin/agentic-lens --list
@@ -178,6 +178,8 @@ AgenticLens provides a unified CLI for automation and local workflows:
 ```
 
 Use `--nonce <literal>` to select the exact Codex rollout containing a unique run nonce, or `--session-id <thread-id>` to select a known thread. `--codex-home <path>` overrides `$CODEX_HOME` and `~/.codex`. Codex remains opt-in through `--source codex`; OpenCode is the default source.
+
+For branches whose names do not contain the ticket ID, use `--code-ref HEAD` (or an explicit branch/commit). This measures committed changes from the merge base with the configured `code_metrics.base_branch`, independent of ticket renames. It excludes uncommitted changes. Without this flag, existing ticket-based Git discovery is used. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts.
 
 ---
 

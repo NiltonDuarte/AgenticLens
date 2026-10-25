@@ -233,3 +233,28 @@ func TestCombineTranscriptsPreservesThreadFactsAndAggregatesTools(t *testing.T) 
 		t.Fatalf("expected chronologically ordered events, got %#v", combined.Events)
 	}
 }
+
+func TestSteeringTurnsCountUserMessagesWithoutDuplicateRepresentations(t *testing.T) {
+	responses := `{"type":"response_item","payload":{"type":"message","role":"user"}}
+{"type":"response_item","payload":{"type":"message","role":"assistant"}}
+{"type":"response_item","payload":{"type":"message","role":"user"}}
+`
+	for _, input := range []string{responses, responses + `{"type":"event_msg","payload":{"type":"user_message"}}
+{"type":"event_msg","payload":{"type":"user_message"}}
+`} {
+		transcript, err := codex.ParseRollout(strings.NewReader(input))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if transcript.SteeringTurns != 2 {
+			t.Fatalf("expected two user inputs, got %d", transcript.SteeringTurns)
+		}
+		combined, err := codex.CombineTranscripts([]codex.Transcript{transcript, {SteeringTurns: 5}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if combined.SteeringTurns != 2 {
+			t.Fatalf("child delegation inflated steering: %d", combined.SteeringTurns)
+		}
+	}
+}

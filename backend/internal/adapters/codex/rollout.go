@@ -34,6 +34,7 @@ type Transcript struct {
 	RecordKinds    map[string]int64        `json:"record_kinds"`
 	EventKinds     map[string]int64        `json:"event_kinds"`
 	Warnings       []string                `json:"warnings,omitempty"`
+	SteeringTurns  int64                   `json:"steering_turns"`
 	Turns          int64                   `json:"turns"`
 	ToolCalls      int64                   `json:"tool_calls"`
 	ToolErrors     int64                   `json:"tool_errors"`
@@ -262,6 +263,11 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 		transcript.EventKinds = map[string]int64{}
 	}
 	transcript.finalizeFacts()
+	// Event messages and response items can represent the same user input.
+	// Prefer the semantic user-message stream when present.
+	if count := transcript.EventKinds["user_message"]; count > 0 {
+		transcript.SteeringTurns = count
+	}
 	return transcript, nil
 }
 
@@ -526,11 +532,18 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestamp string) {
 	var item struct {
 		Type   string `json:"type"`
+		Role   string `json:"role"`
 		CallID string `json:"call_id"`
 		Name   string `json:"name"`
 		Status string `json:"status"`
 	}
-	if err := json.Unmarshal(payload, &item); err != nil || item.CallID == "" {
+	if err := json.Unmarshal(payload, &item); err != nil {
+		return
+	}
+	if item.Type == "message" && item.Role == "user" {
+		transcript.SteeringTurns++
+	}
+	if item.CallID == "" {
 		return
 	}
 	switch item.Type {
@@ -783,6 +796,8 @@ func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
 	toolTotals := make(map[string]toolUsage)
 	for index, transcript := range transcripts {
 		if index == 0 {
+			// Human steering belongs to the root; child prompts are delegation.
+			combined.SteeringTurns = transcript.SteeringTurns
 			combined.ThreadID = transcript.ThreadID
 			combined.SessionID = transcript.SessionID
 			combined.WorkingDir = transcript.WorkingDir

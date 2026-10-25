@@ -75,6 +75,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 		t.Fatalf("expected one initial model, got %d", len(first.Invocations))
 	}
 	modelChange := `
+{"type":"response_item","payload":{"type":"message","role":"user"}}
 {"timestamp":"2026-10-25T09:01:00Z","type":"turn_context","payload":{"model":"gpt-next","turn_id":"turn-next"}}
 {"timestamp":"2026-10-25T09:01:01Z","type":"token_usage_record","payload":{"model":"gpt-next","turn_id":"turn-next","usage":{"input_tokens":100,"cached_input_tokens":20,"output_tokens":10}}}
 `
@@ -84,6 +85,9 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 	second := generate()
 	third := generate()
 	for _, ledger := range []domain.AgenticFactLedger{second, third} {
+		if ledger.Code.SDLCIterations != 2 {
+			t.Fatalf("expected two user steering iterations, got %+v", ledger.Code)
+		}
 		if len(ledger.Invocations) != 2 {
 			t.Fatalf("expected exactly two models after refresh, got %d", len(ledger.Invocations))
 		}

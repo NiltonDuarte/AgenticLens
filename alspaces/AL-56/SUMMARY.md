@@ -51,16 +51,18 @@ Validation: race-enabled CLI and Codex adapter suites pass with fresh test execu
 
 Ticket index maintenance: restored the baseline index and removed its Done section. Updated repository and OpenCode workflow instructions to remove completed entries instead of accumulating them, retaining completed specifications in `plan/done/` and downstream dependency updates.
 
+Code metrics correction: the research branch lacked a ticket ID, so default ticket-based Git discovery returned zero. The Codex path also omitted human steering counts and reused one cached SDLC iteration. `--code-ref HEAD` now selects committed branch changes explicitly; Codex root user messages supply SDLC iterations. Regression coverage uses isolated Git repositories and synthetic rollouts, including ticket renames, stale-cache rejection, duplicate message representations, and child delegation.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 1h 21m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 41
+- **Active Agent Duration:** 1h 22m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
-- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 142,226 reasoning tokens (30.6% of generated output)
-- **Tool Health & Self-Correction:** 369 tool calls (33 self-corrections, 91.1% success rate)
+- **Test-to-Production Code Ratio:** 0.4:1 (+514 test lines / +1,279 prod lines)
+- **Code Delivered:** +1,804 / -35 lines across 8 code files (excluding docs)
+- **Reasoning Effort:** 142,806 reasoning tokens (30.3% of generated output)
+- **Tool Health & Self-Correction:** 384 tool calls (34 self-corrections, 91.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -72,13 +74,13 @@ Ticket index maintenance: restored the baseline index and removed its Done secti
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,406,660 | 322,733 | 79,132,160 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
-| **Total** | **1** | **1,406,660** | **322,733** | **79,132,160** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 1,429,126 | 328,955 | 80,517,248 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
+| **Total** | **1** | **1,429,126** | **328,955** | **80,517,248** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 1 | 299,048 | 26,294 | 11,150,464 | 97.4% | $0.00 |
+| **gpt-6-astra** | 1 | 321,514 | 32,516 | 12,535,552 | 97.5% | $0.00 |
 | **gpt-6-luna** | 1 | 944,753 | 280,027 | 63,737,728 | 98.5% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **1** | **1,406,660** | **322,733** | **79,132,160** | **98.3%** | **$0.00** |
+| **Total** | **1** | **1,429,126** | **328,955** | **80,517,248** | **98.3%** | **$0.00** |

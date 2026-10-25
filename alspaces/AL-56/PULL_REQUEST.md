@@ -2,6 +2,8 @@
 
 `agentic-lens generate --source codex` discovers local Codex rollouts and writes the existing schema-v3 fact ledger. Resolution supports a literal nonce, an explicit thread ID, or ticket matching, with child threads included through parent metadata. OpenCode remains the default source. The existing dashboard reads the generated ledger; this PR adds no HTTP routes or frontend changes.
 
+`--code-ref HEAD` supports code attribution for branches without ticket IDs, including renamed tickets. It measures committed changes against the configured base and respects source/classification settings. Codex SDLC iterations derive from root-session user messages, without duplicate event/response counting or child delegation.
+
 Repeated generation replaces the selected snapshot, model changes preserve per-model usage, and event context uses request input counts rather than cumulative usage. CLI persistence uses the existing error/compaction/anomaly-turn pruning policy.
 
 ## Privacy review

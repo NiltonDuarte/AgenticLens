@@ -1280,3 +1280,60 @@ func TestGetTicketNumstat_IncludesMarkdownAndJSON(t *testing.T) {
 		t.Errorf("expected src/service.go Added > 0, got %d", goEntry.Added)
 	}
 }
+
+func TestExplicitCodeRefDoesNotDependOnTicketOrBranchNaming(t *testing.T) {
+	repo := t.TempDir()
+	initTestGitRepo(t, repo, "baseline")
+	before, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(repo); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(before) })
+	run := func(args ...string) {
+		t.Helper()
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+	}
+	run("checkout", "-b", "research/adapter")
+	if err := os.Mkdir("src", 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("src/app.go", []byte("package app\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("src/app_test.go", []byte("package app\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-m", "implementation under an earlier ticket")
+	if err := os.WriteFile("README.md", []byte("changed documentation\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-m", "documentation outside source folders")
+	cfg := &git.ClassificationConfig{BaseBranch: "baseline", SrcFolders: []string{"src"}}
+	for _, ticket := range []string{"TEST-123", "RENAMED-456"} {
+		facts, err := git.ComputeCodeFactsAtRef(ticket, cfg, nil, "HEAD")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if facts.LinesAdded != 2 || facts.FilesChanged != 2 || facts.TestLinesAdded != 1 || facts.ProdLinesAdded != 1 {
+			t.Fatalf("incorrect branch facts: %+v", facts)
+		}
+	}
+	fallback := &domain.CodeFacts{LinesAdded: 99}
+	facts, err := git.ComputeCodeFactsAtRef("TEST-123", cfg, fallback, "baseline")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if facts.LinesAdded != 0 {
+		t.Fatalf("empty explicit comparison reused stale facts: %+v", facts)
+	}
+	if _, err := git.ComputeCodeFactsAtRef("TEST-123", cfg, fallback, "missing-ref"); err == nil {
+		t.Fatal("invalid ref silently accepted")
+	}
+}

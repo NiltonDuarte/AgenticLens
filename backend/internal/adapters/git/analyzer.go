@@ -310,9 +310,18 @@ func GetTicketNumstat(ticketID string, baseBranch string, srcFolders []string, c
 
 // ComputeCodeFacts computes code changes, test/prod breakdown, and SDLC iterations from git diff.
 func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *domain.CodeFacts) (domain.CodeFacts, error) {
+	return ComputeCodeFactsAtRef(ticketID, cfg, fallback, "")
+}
+
+// ComputeCodeFactsAtRef uses an explicitly selected branch or commit when ticket
+// naming cannot identify the work. It measures committed changes from merge-base.
+func ComputeCodeFactsAtRef(ticketID string, cfg *ClassificationConfig, fallback *domain.CodeFacts, codeRef string) (domain.CodeFacts, error) {
 	// 1. Return safe defaults or fallback if not in a git repository
 	_, gitErr := runGitCommand("rev-parse", "--show-toplevel")
 	if gitErr != nil {
+		if codeRef != "" {
+			return domain.CodeFacts{}, fmt.Errorf("cannot resolve code ref outside a Git repository")
+		}
 		if fallback != nil {
 			return *fallback, nil
 		}
@@ -378,11 +387,25 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 		return domain.CodeFacts{}, err
 	}
 
-	numstat, err := GetTicketNumstat(ticketID, baseBranch, cfg.SrcFolders, cfg)
+	var numstat []NumstatEntry
+	if codeRef != "" {
+		// Resolve to a commit hash before constructing the revision range.
+		resolved, resolveErr := runGitCommand("rev-parse", "--verify", "--end-of-options", codeRef+"^{commit}")
+		if resolveErr != nil {
+			return domain.CodeFacts{}, fmt.Errorf("invalid code ref %q", codeRef)
+		}
+		out, diffErr := runGitCommand("diff", "--numstat", baseBranch+"..."+strings.TrimSpace(resolved), "--")
+		if diffErr != nil {
+			return domain.CodeFacts{}, fmt.Errorf("comparing code ref %q with %q: %w", codeRef, baseBranch, diffErr)
+		}
+		numstat = ParseNumstatOutput(out)
+	} else {
+		numstat, err = GetTicketNumstat(ticketID, baseBranch, cfg.SrcFolders, cfg)
+	}
 	if err != nil {
 		return domain.CodeFacts{}, err
 	}
-	if len(numstat) == 0 && fallback != nil {
+	if len(numstat) == 0 && fallback != nil && codeRef == "" {
 		return *fallback, nil
 	}
 
@@ -392,6 +415,9 @@ func ComputeCodeFacts(ticketID string, cfg *ClassificationConfig, fallback *doma
 	var filesChanged int64
 
 	for _, entry := range numstat {
+		if codeRef != "" && !IsMonitoredSourcePath(entry.Path, cfg.SrcFolders, cfg) {
+			continue
+		}
 		category := ClassifyFile(entry.Path, cfg)
 		if category == CategoryIgnored {
 			continue
