@@ -59,16 +59,18 @@ Configuration correction: removed implicit test-directory/name and production-ex
 
 Subagent accounting probe and fix: spawned `telemetry_hi`, which returned `Hi!`. The probe exposed object-valued source metadata, inherited root metadata replay, and root/child ID collisions. The parser now preserves first child identity and parent, accepts nested spawn provenance, assigns `UnassignedSubAgent` when no role is provided, and resumes child parsing only at a matching `thread_settings_applied` marker. Parent replay is excluded from child usage, turns, tools, events, and duration. A missing marker produces a warning and conservatively excludes the ambiguous continuation. Synthetic adapter and isolated CLI regression tests passed with race detection.
 
+Role mapping probe: spawned a child task named `coder` and regenerated metrics. The rollout correctly records it as a child with its own thread ID and parent ID, but its role remains `UnassignedSubAgent`. The persisted `agent_path` ends with `/coder`; both top-level and nested `agent_role` metadata are null. Current ingestion does not resolve the agent path through project `role_mappings`, so this probe identifies a separate role-mapping gap.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 50
-- **Active Agent Duration:** 1h 32m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 146.3k (Unassignedsubagent)
+- **Software Development Life Cycle Iterations:** 51
+- **Active Agent Duration:** 1h 34m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 160.1k (Unassignedsubagent)
 - **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 1.7 avg turns/run (peak: 2 turns) | Unassignedsubagent 1.7
+- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 2 turns) | Unassignedsubagent 1.5
 - **Test-to-Production Code Ratio:** 0.6:1 (+894 test lines / +1,408 prod lines)
 - **Code Delivered:** +2,302 / -134 lines across 12 code files (excluding docs)
-- **Reasoning Effort:** 146,085 reasoning tokens (29.2% of generated output)
-- **Tool Health & Self-Correction:** 477 tool calls (38 self-corrections, 92.0% success rate)
+- **Reasoning Effort:** 147,687 reasoning tokens (29.3% of generated output)
+- **Tool Health & Self-Correction:** 490 tool calls (40 self-corrections, 91.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 3 execution anomalies detected (2 CRITICAL, 1 WARNING).
@@ -81,14 +83,14 @@ Subagent accounting probe and fix: spawned `telemetry_hi`, which returned `Hi!`.
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,625,635 | 345,068 | 90,595,712 | 98.2% | 247.7k | BLOATED (124%) | $0.00 |
-| **unassignedsubagent** | 3 | 19,479 | 8,306 | 4,503,296 | 99.6% | 146.3k | ELEVATED | $0.00 |
-| **Total** | **4** | **1,645,114** | **353,374** | **95,099,008** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 1,635,510 | 348,640 | 92,827,008 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
+| **unassignedsubagent** | 4 | 20,381 | 8,315 | 4,662,528 | 99.6% | 160.1k | ELEVATED | $0.00 |
+| **Total** | **5** | **1,655,891** | **356,955** | **97,489,536** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
-| **gpt-6-luna** | 1 | 1,097,269 | 283,584 | 67,020,544 | 98.4% | $0.00 |
+| **gpt-6-luna** | 2 | 1,108,046 | 287,165 | 69,411,072 | 98.4% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **4** | **1,645,114** | **353,374** | **95,099,008** | **98.3%** | **$0.00** |
+| **Total** | **5** | **1,655,891** | **356,955** | **97,489,536** | **98.3%** | **$0.00** |
