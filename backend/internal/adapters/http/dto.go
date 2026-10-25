@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
 )
 
@@ -40,7 +39,7 @@ type ProjectConfigDTO struct {
 
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | codex.Transcript | codex.ExtractionResult | []domain.AgenticMetricsLedger | domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | domain.WorkspaceEventsResponse | BuildInfoDTO | ProjectConfigDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
+	ErrorResponse | []domain.AgenticMetricsLedger | WorkspaceDetailResponse | domain.FleetSummary | []domain.EventFact | domain.WorkspaceEventsResponse | BuildInfoDTO | ProjectConfigDTO | []domain.TicketComparisonRow | []domain.TimeBucketMetric | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.

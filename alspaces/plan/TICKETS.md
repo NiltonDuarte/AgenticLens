@@ -173,7 +173,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ## Done
 
 - **AL-56**: Codex/OpenAI Telemetry Adapter Research
-  - **Subsystem**: Docs / Adapters / Codex / HTTP / Web / Tests
+  - **Subsystem**: Docs / Adapters / Codex / CLI / Tests
   - **Phase**: Research Spike
   - **Status**: Done
   - **Blocked by**: None

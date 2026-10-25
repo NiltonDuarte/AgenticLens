@@ -70,6 +70,15 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 			t.Fatalf("summary retained content-bearing value %q", sensitiveValue)
 		}
 	}
+	encodedLedger, err := json.Marshal(ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, marker := range []string{"/repo/example", "fixture-secret-command", "fixture-secret-args", "fixture-secret-prompt"} {
+		if strings.Contains(string(encodedLedger), marker) {
+			t.Fatalf("exported ledger retained content-bearing value %q", marker)
+		}
+	}
 }
 
 func TestParseRolloutUsesCumulativeTokenCountAsFallback(t *testing.T) {

@@ -8,7 +8,6 @@ import { TicketDeepDive } from './views/TicketDeepDive';
 import { MetricProgression } from './views/MetricProgression';
 import { TicketComparisons } from './views/TicketComparisons';
 import { LiveObservability } from './views/LiveObservability';
-import { CodexImport } from './views/CodexImport';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('landing');
@@ -84,7 +83,6 @@ export const App: React.FC = () => {
             onSelectTicket={handleSelectTicketFromList}
           />
         )}
-        {activeTab === 'codex-import' && <CodexImport />}
       </main>
     </div>
   );

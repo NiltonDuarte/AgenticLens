@@ -2,7 +2,6 @@ import type {
   AgenticMetricsLedger,
   Anomaly,
   BuildInfo,
-  CodexExtractionResult,
   EventFact,
   FleetSummary,
   ProjectConfigResponse,
@@ -17,40 +16,6 @@ import { deriveTicketComparisonRows } from '../domain/formatters';
 
 export interface ApiResponse<T> {
   readonly data: T;
-}
-
-export async function extractCodexRollout(
-  file: File,
-  ticketId = 'AL-56',
-  ticketTitle = '',
-  ticketType = 'chore'
-): Promise<ApiResponse<CodexExtractionResult>> {
-  if (file.size > 64 * 1024 * 1024) {
-    throw new Error('Codex rollout files must be 64 MiB or smaller');
-  }
-  try {
-    const params = new URLSearchParams({ ticket_id: ticketId, ticket_type: ticketType });
-    if (ticketTitle.trim() !== '') params.set('ticket_title', ticketTitle.trim());
-    const res = await fetch(`/api/codex/extract?${params.toString()}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-ndjson' },
-      body: file,
-    });
-    if (!res.ok) {
-      let message = `HTTP error ${res.status}: ${res.statusText || 'Failed to extract Codex rollout'}`;
-      try {
-        const payload = (await res.json()) as { readonly message?: string };
-        if (payload.message) message = payload.message;
-      } catch {
-        // Keep the HTTP status message when the server response is not JSON.
-      }
-      throw new Error(message);
-    }
-    const data = (await res.json()) as CodexExtractionResult;
-    return { data };
-  } catch (err: unknown) {
-    rethrowError(err, 'Failed to extract Codex rollout');
-  }
 }
 
 function appendMultiParams(params: URLSearchParams, key: string, values?: readonly string[]): void {

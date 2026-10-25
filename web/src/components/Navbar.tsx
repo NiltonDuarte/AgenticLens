@@ -155,13 +155,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           Live Observability
         </button>
-        <button
-          type="button"
-          className={`nav-tab ${activeTab === 'codex-import' ? 'active' : ''}`}
-          onClick={() => onSelectTab?.('codex-import')}
-        >
-          Codex Import
-        </button>
       </nav>
 
       <div className="navbar-actions">

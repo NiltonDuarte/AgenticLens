@@ -58,13 +58,6 @@ type Transcript struct {
 	latestTime     string                  `json:"-"`
 }
 
-// ExtractionResult combines the privacy-minimized source summary with the
-// standard AgenticLens ledger generated from that Codex session.
-type ExtractionResult struct {
-	Transcript Transcript                  `json:"transcript"`
-	Ledger     domain.AgenticMetricsLedger `json:"agentic_metrics"`
-}
-
 // Usage contains Codex-reported token counts. Cost is deliberately omitted:
 // the rollout does not establish whether usage is subscription or API billed.
 type Usage struct {
@@ -775,7 +768,7 @@ func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticke
 	}
 	ledger := domain.DeriveMetricsLedger(facts, cfg)
 	// Derive from complete facts, then apply the same persisted-event policy
-	// used by generate so HTTP downloads do not contain routine events.
+	// used by generate so exported facts do not contain routine events.
 	ledger.Facts.Events = domain.PruneEventsForPersistence(facts)
 	return ledger
 }
