@@ -14,6 +14,7 @@ Repeated generation replaces the selected snapshot, model changes preserve per-m
 ## Validation
 
 - `make`: Go vet, race-enabled Go tests, frontend typecheck/lint/tests, frontend bundle, and cross-platform binary builds.
+- CLI regression tests run in isolated temporary projects with synthetic ticket prefixes and custom workspace layouts, independent of the checkout configuration and research ticket.
 - Regression coverage for discovery, nonce precedence, gzip rollouts, child threads, repeated generation, model switches, token accounting, event retention, and export privacy.
 - `git diff --check` and a scan of the publication candidate files for local identifiers, home paths, credentials, and email addresses.
 

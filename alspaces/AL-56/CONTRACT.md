@@ -26,3 +26,7 @@ Find and validate the strongest practical way to generate AgenticLens metrics fr
 
 - Parser tests cover token/cache semantics, tool lifecycle/error projection, unknown/malformed records, and privacy filtering.
 - CLI tests cover discovery, repeated generation, and model changes. The existing dashboard consumes the generated ledger.
+
+## Repository independence
+
+Following FIX-4, source code must receive ticket identity and workspace layout through user input or configuration. Research ticket IDs are tracking metadata only; renaming a ticket must not require application or test changes. Tests use stable synthetic identifiers and fixtures under `testdata` or `t.TempDir()`. CLI tests must run from their own temporary project with an explicit fixture configuration, never inherit the development checkout configuration or live ticket directories.

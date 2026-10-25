@@ -42,3 +42,9 @@ The local database audit found that `state_5.sqlite` can discover threads and ro
 ## Publication privacy review
 
 Real session IDs, usage snapshots, timestamps, and the generated metrics table are excluded from the PR. The local ledger and `SESSION_METRICS.local.md` are gitignored. Published notes describe extraction methods without session identifiers, literal correlation nonces, or machine-specific database inventories. Working-directory paths are excluded from exported summaries; transcript and tool payloads are tested for omission.
+
+## Ticket rename coupling correction
+
+The ticket rename incorrectly updated research identifiers embedded in tests and in the former import UI/API defaults. Those runtime defaults were removed with the import workflow. Remaining Codex fixtures now use synthetic identifiers unrelated to this ticket. The CLI refresh test also inherited the checkout working directory and configuration, violating FIX-4 isolation; it now runs in temporary projects with their own configuration and checks two independent ticket prefixes and workspace layouts. Ticket renames must be scoped to tracking documents and artifact paths, not application or fixture values.
+
+Validation: race-enabled CLI and Codex adapter suites pass with fresh test execution. No runtime source change was necessary for this correction.

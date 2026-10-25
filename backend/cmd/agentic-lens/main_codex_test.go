@@ -11,6 +11,29 @@ import (
 )
 
 func TestGenerateCodexRefreshReplacesSnapshotAndCapturesModelChange(t *testing.T) {
+	for _, tc := range []struct {
+		ticketID     string
+		prefix       string
+		workspaceDir string
+	}{
+		{"TEST-101", "TEST", "records"},
+		{"CUSTOM-902", "CUSTOM", "nested/custom records"},
+	} {
+		t.Run(tc.ticketID, func(t *testing.T) {
+			testCodexRefresh(t, tc.ticketID, tc.prefix, tc.workspaceDir)
+		})
+	}
+}
+
+func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
+	t.Helper()
+	// Run outside the checkout so configuration, Git history, and ticket
+	// directories cannot be inherited from the development repository.
+	project := t.TempDir()
+	config := "project_name: FixtureProject\nticket:\n  prefixes:\n    - prefix: " + prefix + "\nworkspaces:\n  dir: " + workspaceDir + "\n  src_folders:\n    - src\n"
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
+		t.Fatal(err)
+	}
 	home := t.TempDir()
 	sessions := filepath.Join(home, "sessions")
 	if err := os.MkdirAll(sessions, 0700); err != nil {
@@ -28,8 +51,9 @@ func TestGenerateCodexRefreshReplacesSnapshotAndCapturesModelChange(t *testing.T
 	generate := func() domain.AgenticFactLedger {
 		t.Helper()
 		cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", home,
-			"--session-id", "thread-01", "--ticket-id", "AL-56", "--ticket-title", "Codex refresh regression",
+			"--session-id", "thread-01", "--ticket-id", ticketID, "--ticket-title", "Codex refresh regression",
 			"--ticket-type", "chore", "--json-output", output)
+		cmd.Dir = project
 		if result, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("generate failed: %v\n%s", err, result)
 		}
@@ -40,6 +64,9 @@ func TestGenerateCodexRefreshReplacesSnapshotAndCapturesModelChange(t *testing.T
 		var ledger domain.AgenticFactLedger
 		if err := json.Unmarshal(data, &ledger); err != nil {
 			t.Fatal(err)
+		}
+		if ledger.TicketID == nil || *ledger.TicketID != ticketID {
+			t.Fatalf("expected supplied ticket %q, got %v", ticketID, ledger.TicketID)
 		}
 		return ledger
 	}
