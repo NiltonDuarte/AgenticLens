@@ -11,29 +11,24 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 )
 
 const maxDiscoveryLineBytes = 8 * 1024 * 1024
 
-// DiscoveryOptions selects a Codex thread from local rollout files. Matching
-// prioritizes a literal nonce, then a thread ID, then ticket/cwd discovery.
+// DiscoveryOptions selects a Codex thread from local rollout files using an
+// explicit nonce or thread ID. Ticket text and working-directory heuristics
+// are intentionally excluded because they can identify the wrong session.
 type DiscoveryOptions struct {
-	CodexHome  string
-	TicketID   string
-	Nonce      string
-	SessionID  string
-	WorkingDir string
+	CodexHome string
+	Nonce     string
+	SessionID string
 }
 
 type rolloutCandidate struct {
-	path        string
-	threadID    string
-	parentID    string
-	workingDir  string
-	updatedAt   time.Time
-	nonceMatch  bool
-	ticketMatch bool
+	path       string
+	threadID   string
+	parentID   string
+	nonceMatch bool
 }
 
 // DiscoverRolloutPaths finds the selected root thread and its known child
@@ -45,24 +40,13 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 	if home == "" {
 		return nil, errors.New("Codex home is empty")
 	}
-	workingDir := cleanPath(options.WorkingDir)
-	if workingDir == "" {
-		workingDir, _ = os.Getwd()
-		workingDir = cleanPath(workingDir)
-	}
-
 	paths, err := listRolloutPaths(home)
 	if err != nil {
 		return nil, err
 	}
 	candidates := make([]rolloutCandidate, 0, len(paths))
-	searchNonce := options.Nonce
-	searchTicket := options.TicketID
-	if searchNonce != "" || options.SessionID != "" {
-		searchTicket = ""
-	}
 	for _, path := range paths {
-		candidate, inspectErr := inspectRollout(path, searchNonce, searchTicket)
+		candidate, inspectErr := inspectRollout(path, options.Nonce)
 		if inspectErr != nil {
 			// A partially written or future-format rollout should not hide other
 			// usable sessions. Explicit selection reports a not-found error below.
@@ -77,9 +61,22 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 	selectedID := strings.TrimSpace(options.SessionID)
 	switch {
 	case strings.TrimSpace(options.Nonce) != "":
-		selectedID = newestMatchingRoot(candidates, func(candidate rolloutCandidate) bool { return candidate.nonceMatch })
-		if selectedID == "" {
+		matches := matchingRoots(candidates, func(candidate rolloutCandidate) bool { return candidate.nonceMatch })
+		if len(matches) == 0 {
 			return nil, fmt.Errorf("no Codex rollout contains the supplied nonce")
+		}
+		if len(matches) > 1 {
+			return nil, fmt.Errorf("nonce matches multiple Codex root sessions (%s); use --session-id", strings.Join(matches, ", "))
+		}
+		selectedID = matches[0]
+		if explicitID := strings.TrimSpace(options.SessionID); explicitID != "" {
+			if !containsThread(candidates, explicitID) {
+				return nil, fmt.Errorf("Codex session %q was not found under %s", explicitID, home)
+			}
+			explicitRoot := rootThreadID(candidates, explicitID)
+			if explicitRoot != selectedID {
+				return nil, fmt.Errorf("supplied nonce and session ID select different Codex root sessions")
+			}
 		}
 	case selectedID != "":
 		found := false
@@ -93,21 +90,8 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 			return nil, fmt.Errorf("Codex session %q was not found under %s", selectedID, home)
 		}
 		selectedID = rootThreadID(candidates, selectedID)
-	case strings.TrimSpace(options.TicketID) != "":
-		selectedID = newestMatchingRootInWorkingDir(candidates, workingDir)
-		if selectedID == "" {
-			selectedID = newestMatchingRoot(candidates, func(candidate rolloutCandidate) bool { return candidate.ticketMatch })
-		}
-		if selectedID == "" {
-			// A unique session in the current working directory is a safe fallback
-			// when the ticket ID is not present in persisted rollout text.
-			selectedID = uniqueWorkingDirectoryRoot(candidates, workingDir)
-		}
-		if selectedID == "" {
-			return nil, fmt.Errorf("could not uniquely resolve a Codex session for ticket %q; use --nonce or --session-id", options.TicketID)
-		}
 	default:
-		return nil, errors.New("Codex session discovery requires --nonce, --session-id, or --ticket-id")
+		return nil, errors.New("Codex session discovery requires --nonce or --session-id")
 	}
 
 	selected := make([]rolloutCandidate, 0)
@@ -133,6 +117,15 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 		result = append(result, candidate.path)
 	}
 	return result, nil
+}
+
+func containsThread(candidates []rolloutCandidate, threadID string) bool {
+	for _, candidate := range candidates {
+		if candidate.threadID == threadID {
+			return true
+		}
+	}
+	return false
 }
 
 // ParseRolloutPath opens and parses an uncompressed or gzip-compressed Codex rollout.
@@ -190,7 +183,7 @@ func listRolloutPaths(home string) ([]string, error) {
 	return paths, nil
 }
 
-func inspectRollout(path, nonce, ticketID string) (rolloutCandidate, error) {
+func inspectRollout(path, nonce string) (rolloutCandidate, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return rolloutCandidate{}, err
@@ -205,20 +198,13 @@ func inspectRollout(path, nonce, ticketID string) (rolloutCandidate, error) {
 		defer compressed.Close()
 		reader = compressed
 	}
-	info, err := file.Stat()
-	if err != nil {
-		return rolloutCandidate{}, err
-	}
-	candidate := rolloutCandidate{path: path, updatedAt: info.ModTime()}
+	candidate := rolloutCandidate{path: path}
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 64*1024), maxDiscoveryLineBytes)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if nonce != "" && strings.Contains(line, nonce) {
 			candidate.nonceMatch = true
-		}
-		if ticketID != "" && strings.Contains(strings.ToLower(line), strings.ToLower(ticketID)) {
-			candidate.ticketMatch = true
 		}
 		if candidate.threadID != "" {
 			continue
@@ -233,8 +219,7 @@ func inspectRollout(path, nonce, ticketID string) (rolloutCandidate, error) {
 		}
 		candidate.threadID = strings.TrimSpace(metadata.ID)
 		candidate.parentID = strings.TrimSpace(metadata.ParentID)
-		candidate.workingDir = cleanPath(metadata.CWD)
-		if nonce == "" && ticketID == "" {
+		if nonce == "" {
 			break
 		}
 	}
@@ -247,47 +232,20 @@ func inspectRollout(path, nonce, ticketID string) (rolloutCandidate, error) {
 	return candidate, nil
 }
 
-func newestMatchingRoot(candidates []rolloutCandidate, match func(rolloutCandidate) bool) string {
-	updated := make(map[string]time.Time)
+func matchingRoots(candidates []rolloutCandidate, match func(rolloutCandidate) bool) []string {
+	roots := make(map[string]struct{})
 	for _, candidate := range candidates {
 		if !match(candidate) {
 			continue
 		}
-		rootID := rootThreadID(candidates, candidate.threadID)
-		if candidate.updatedAt.After(updated[rootID]) {
-			updated[rootID] = candidate.updatedAt
-		}
+		roots[rootThreadID(candidates, candidate.threadID)] = struct{}{}
 	}
-	var selected string
-	var latest time.Time
-	for rootID, timestamp := range updated {
-		if selected == "" || timestamp.After(latest) {
-			selected, latest = rootID, timestamp
-		}
-	}
-	return selected
-}
-
-func newestMatchingRootInWorkingDir(candidates []rolloutCandidate, workingDir string) string {
-	return newestMatchingRoot(candidates, func(candidate rolloutCandidate) bool {
-		return candidate.ticketMatch && candidate.workingDir == workingDir
-	})
-}
-
-func uniqueWorkingDirectoryRoot(candidates []rolloutCandidate, workingDir string) string {
-	roots := make(map[string]struct{})
-	for _, candidate := range candidates {
-		if candidate.workingDir == workingDir {
-			roots[rootThreadID(candidates, candidate.threadID)] = struct{}{}
-		}
-	}
-	if len(roots) != 1 {
-		return ""
-	}
+	result := make([]string, 0, len(roots))
 	for rootID := range roots {
-		return rootID
+		result = append(result, rootID)
 	}
-	return ""
+	sort.Strings(result)
+	return result
 }
 
 func rootThreadID(candidates []rolloutCandidate, threadID string) string {

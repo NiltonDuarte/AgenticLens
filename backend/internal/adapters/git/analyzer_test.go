@@ -1345,6 +1345,13 @@ func TestExplicitCodeRefDoesNotDependOnTicketOrBranchNaming(t *testing.T) {
 			t.Fatalf("incorrect branch facts: %+v", facts)
 		}
 	}
+	withoutTicket, err := git.ComputeCodeFactsAtRef("", cfg, nil, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withoutTicket.LinesAdded != 5 || withoutTicket.TestLinesAdded != 3 || withoutTicket.ProdLinesAdded != 2 {
+		t.Fatalf("explicit code ref should work without a ticket identifier: %+v", withoutTicket)
+	}
 	run("checkout", "-b", "feature/TEST-123")
 	automatic, err := git.ComputeCodeFacts("TEST-123", cfg, nil)
 	if err != nil {

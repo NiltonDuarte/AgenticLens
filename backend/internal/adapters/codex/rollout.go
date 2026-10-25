@@ -226,8 +226,7 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 			continue
 		}
 		if record.Type == "" {
-			transcript.Warnings = append(transcript.Warnings, fmt.Sprintf("line %d: record has no type", lineNumber))
-			continue
+			return Transcript{}, fmt.Errorf("line %d: record has no type", lineNumber)
 		}
 		// Forked rollouts start with their own identity and then replay parent
 		// history, including parent metadata and rewritten timestamps. Ignore
@@ -306,6 +305,11 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 			}
 		case "compacted":
 			transcript.addCompactionEvent(record.Timestamp)
+		case "world_state", "inter_agent_communication_metadata":
+			// These Codex records contain harness state/provenance, not session
+			// metrics. Keep their types explicit so future record types fail closed.
+		default:
+			return Transcript{}, fmt.Errorf("line %d: unsupported Codex rollout record type %q", lineNumber, record.Type)
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -318,7 +322,7 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 		transcript.EventKinds = map[string]int64{}
 	}
 	if inheritedHistory {
-		transcript.Warnings = append(transcript.Warnings, "child rollout has inherited history without an owning-thread resume marker")
+		return Transcript{}, errors.New("child rollout has inherited history without an owning-thread resume marker; refusing incomplete metrics")
 	}
 	transcript.finalizeFacts()
 	// Event messages and response items can represent the same user input.

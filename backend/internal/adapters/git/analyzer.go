@@ -324,7 +324,7 @@ func ComputeCodeFactsAtRef(ticketID string, cfg *ClassificationConfig, fallback 
 	// 1. Return safe defaults or fallback if not in a git repository
 	_, gitErr := runGitCommand("rev-parse", "--show-toplevel")
 	if gitErr != nil {
-		if codeRef != "" {
+		if codeRef != "" && strings.TrimSpace(codeRef) != "HEAD" {
 			return domain.CodeFacts{}, fmt.Errorf("cannot resolve code ref outside a Git repository")
 		}
 		if fallback != nil {
@@ -342,8 +342,8 @@ func ComputeCodeFactsAtRef(ticketID string, cfg *ClassificationConfig, fallback 
 		}, nil
 	}
 
-	// 2. Return safe defaults or fallback if ticket ID is empty
-	if strings.TrimSpace(ticketID) == "" {
+	// 2. Ticket discovery needs an ID; an explicit code ref does not.
+	if strings.TrimSpace(ticketID) == "" && strings.TrimSpace(codeRef) == "" {
 		if fallback != nil {
 			return *fallback, nil
 		}

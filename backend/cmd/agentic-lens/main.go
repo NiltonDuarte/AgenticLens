@@ -35,7 +35,7 @@ func runGenerate(args []string) {
 	}
 
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
-	codeRefFlag := genFlags.String("code-ref", "", "Git branch or commit to measure against the configured base (committed changes only)")
+	codeRefFlag := genFlags.String("code-ref", "HEAD", "Git branch or commit to measure against the configured base (defaults to HEAD; committed changes only)")
 	sourceFlag := genFlags.String("source", "opencode", "Telemetry harness to read: opencode or codex")
 	nonceFlag := genFlags.String("nonce", "", "Unique random execution nonce to lock session resolution to")
 	sessionIDFlag := genFlags.String("session-id", "", "Explicit root session ID")
@@ -193,8 +193,7 @@ func runGenerate(args []string) {
 			}
 		}
 		rolloutPaths, discoverErr := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{
-			CodexHome: codexHome, TicketID: activeTicketID, Nonce: *nonceFlag,
-			SessionID: *sessionIDFlag,
+			CodexHome: codexHome, Nonce: *nonceFlag, SessionID: *sessionIDFlag,
 		})
 		if discoverErr != nil {
 			fmt.Fprintf(os.Stderr, "Error discovering Codex sessions: %v\n", discoverErr)

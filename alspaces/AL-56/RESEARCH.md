@@ -130,9 +130,19 @@ CLI output and exported facts use `domain.PruneEventsForPersistence`: preserve e
 
 `agentic_metrics.json` is the committed session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as AL-56. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
 
-The CLI has an explicit `--source codex` discovery path that scans `CODEX_HOME/sessions` and `archived_sessions`, accepts `.jsonl` and `.jsonl.gz`, resolves by nonce, explicit thread ID, or ticket text, and includes descendants linked by `parent_thread_id`. Ticket matching prefers the current working directory and otherwise selects the most recently modified matching thread; if ticket text is absent, cwd fallback is allowed only when it identifies one root thread. Raw rollout lines are scanned in memory for matching only and are not retained in generated ledgers. The CLI does not yet tail active rollouts or join Codex-derived Git facts beyond the existing Git analyzer.
+The CLI has an explicit `--source codex` discovery path that scans `CODEX_HOME/sessions` and `archived_sessions`, accepts `.jsonl` and `.jsonl.gz`, resolves by literal nonce or explicit thread ID, and includes descendants linked by `parent_thread_id`. Nonce discovery requires exactly one root match; if both selectors are supplied, they must resolve to the same root. Ticket-text and working-directory heuristics were removed because they can select an unrelated session. Raw rollout lines are scanned in memory for nonce matching and are not copied to the ledger. The CLI does not yet tail active rollouts or join Codex-derived Git facts beyond the existing Git analyzer.
 
-The CLI integration preserves the OpenCode default and keeps source selection explicit: `agentic-lens generate --source codex ...`. `CODEX_HOME` comes from `--codex-home`, then the environment, then `~/.codex`. The implementation uses filesystem discovery rather than Codex's versioned SQLite catalog; this avoids schema coupling but currently scans rollout files to resolve ticket text. `--nonce` takes precedence over ticket matching and is the most precise selector.
+The CLI integration preserves the OpenCode default and keeps source selection explicit: `agentic-lens generate --source codex ...`. `CODEX_HOME` comes from `--codex-home`, then the environment, then `~/.codex`. The implementation uses filesystem discovery rather than Codex's versioned SQLite catalog. `--nonce` must identify one root; `--session-id` selects a known thread and its root/descendants. Ticket ID is ledger metadata only and never participates in Codex session selection.
+
+Code attribution now defaults to the explicit Git ref `HEAD` and compares committed changes with the configured base branch. It is independent of ticket and branch names; the caller can provide another ref. When running outside any Git repository, no HEAD comparison is possible and the existing safe empty/fallback behavior applies.
+
+## Rollout record and timestamp audit
+
+The local read-only audit inspected 38,374 valid JSONL records across 21 rollout files. It found 88 `world_state` records and 27 `inter_agent_communication_metadata` records. The parser now recognizes these two known non-metric types explicitly and fails with the line and type for any other record type (or a missing type), rather than silently omitting future data. The exported ledger does not retain their payloads.
+
+All audited records had an outer timestamp, and all session metadata had a timestamp either on the record or in its payload. This is an observation about the local files, not a guarantee of the private rollout format. Metric facts can still have absent timestamps in other/future rollouts; current schema consumers should treat missing start/end times as unavailable rather than infer zero elapsed time.
+
+The rollout reader opens files read-only and does not relocate or copy raw files; raw JSONL remains under the original CODEX_HOME session/archive directories. Ledgers do retain real thread IDs, usage counts, and timing. These values do not expose prompt/tool payloads but can correlate records and describe work, so sharing the ledger remains a deliberate disclosure.
 
 ## Suggested delivery sequence
 
@@ -154,4 +164,6 @@ This review inspects Codex source; it does not claim a stable public contract fo
 
 ### Child rollout replay boundary
 
-A subagent rollout may begin with child metadata, replay parent records with rewritten timestamps, then resume child-owned records at `thread_settings_applied` for the child thread. The parser preserves initial child metadata and uses that explicit ownership marker instead of timestamps. If the marker is absent, ambiguous continuation is excluded and a warning is emitted. This is safer than charging parent usage to the child, but can undercount unusual or future rollout formats; the warning must be surfaced to operators.
+A subagent rollout may begin with child metadata, replay parent records with rewritten timestamps, then resume child-owned records at `thread_settings_applied` for the child thread. The parser preserves initial child metadata and uses that explicit ownership marker instead of timestamps. If the marker is absent, extraction now fails with an error instead of emitting an incomplete child ledger.
+
+Codex does not expose billing cost in these rollout records. The shared schema currently serializes numeric zero, which can be mistaken for free usage. The appropriate schema fix is nullable/omitted cost propagated through invocation facts, aggregates, and UI; changing only the Codex adapter would leave totals and charts misleading, so this remains a cross-cutting follow-up.

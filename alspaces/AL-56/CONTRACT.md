@@ -18,7 +18,7 @@ Find and validate the strongest practical way to generate AgenticLens metrics fr
 
 - The CLI supports explicit Codex-source discovery across `CODEX_HOME` active and archived rollout directories, including gzip archives and child threads; it does not yet tail active sessions.
 - The session ledger uses a real local rollout; a nonce lookup in the projected history database correlates its thread ID with this interaction (see `DATA_PROVENANCE.md`).
-- The session ledger has no Codex-billed USD cost. Schema-v3 requires numeric cost, so zero represents unavailable here and must be disclosed.
+- The session ledger has no Codex-billed USD cost. The shared schema currently emits numeric zero, which is ambiguous with free usage; a cross-cutting nullable cost representation is recommended for a later schema change.
 - Git-derived code facts are not inferred from Codex transcript/file-change content and are joined through the existing Git analyzer.
 - No prompts, assistant text, reasoning content, command arguments, or tool input/output are returned or saved.
 
@@ -33,7 +33,7 @@ Following FIX-4, source code must receive ticket identity and workspace layout t
 
 ## Code and iteration metrics
 
-`--code-ref` explicitly selects committed Git work independently of ticket or branch naming. Compare its merge base with the configured base branch, filter by configured source folders and classification patterns, and reject invalid refs without falling back to cached facts. An empty explicit diff is zero, not stale cached code. Codex SDLC iterations count root user messages, preferring the semantic user-message event stream over duplicate response-item representations; child delegation and lifecycle/model events do not increment this count.
+`--code-ref` defaults to `HEAD` and explicitly selects committed Git work independently of ticket or branch naming. Compare its merge base with the configured base branch, filter by configured source folders and classification patterns, and reject invalid refs without falling back to cached facts. An empty explicit diff is zero, not stale cached code. Codex SDLC iterations count root user messages, preferring the semantic user-message event stream over duplicate response-item representations; child delegation and lifecycle/model events do not increment this count.
 
 ## Configured file classification
 

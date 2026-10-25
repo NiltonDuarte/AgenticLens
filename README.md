@@ -179,7 +179,7 @@ AgenticLens provides a unified CLI for automation and local workflows:
 
 Use `--nonce <literal>` to select the exact Codex rollout containing a unique run nonce, or `--session-id <thread-id>` to select a known thread. `--codex-home <path>` overrides `$CODEX_HOME` and `~/.codex`. Codex remains opt-in through `--source codex`; OpenCode is the default source.
 
-For branches whose names do not contain the ticket ID, use `--code-ref HEAD` (or an explicit branch/commit). This measures committed changes from the merge base with the configured `code_metrics.base_branch`, independent of ticket renames. It excludes uncommitted changes. Without this flag, existing ticket-based Git discovery is used. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts.
+Code metrics use `--code-ref HEAD` by default (or an explicit branch/commit). This measures committed changes from the merge base with the configured `code_metrics.base_branch`, independent of ticket names. It excludes uncommitted changes. Pass `--code-ref ""` only to opt back into legacy ticket-based discovery. Codex session discovery requires `--nonce` or `--session-id`; ticket text and working-directory heuristics are not reliable session identifiers. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts.
 
 ---
 

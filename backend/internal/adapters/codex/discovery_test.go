@@ -13,13 +13,13 @@ import (
 	"agenticlens/internal/adapters/codex"
 )
 
-func TestDiscoverRolloutPathsMatchesTicketAndIncludesChildThreads(t *testing.T) {
+func TestDiscoverRolloutPathsMatchesNonceAndIncludesChildThreads(t *testing.T) {
 	home := t.TempDir()
 	rootPath := writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-root.jsonl", "root", "", "/repo", "working on TEST-101")
 	childPath := writeDiscoveryRollout(t, home, "archived_sessions/rollout-child.jsonl.gz", "child", "root", "/repo", "TEST-101 subagent")
 	writeDiscoveryRollout(t, home, "sessions/2026/10/24/rollout-other.jsonl", "other", "", "/other", "working on OTHER-202")
 
-	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "TEST-101", WorkingDir: "/repo"})
+	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, Nonce: "working on TEST-101"})
 	if err != nil {
 		t.Fatalf("DiscoverRolloutPaths returned an error: %v", err)
 	}
@@ -28,7 +28,7 @@ func TestDiscoverRolloutPathsMatchesTicketAndIncludesChildThreads(t *testing.T) 
 	}
 }
 
-func TestDiscoverRolloutPathsNonceTakesPriorityOverTicket(t *testing.T) {
+func TestDiscoverRolloutPathsNonceSelectsExactThread(t *testing.T) {
 	home := t.TempDir()
 	newer := writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-newer.jsonl", "newer", "", "/repo", "TEST-101 general context")
 	older := writeDiscoveryRollout(t, home, "sessions/2026/10/24/rollout-nonce.jsonl", "nonce-thread", "", "/repo", "nonce fixture-nonce-deadbeef")
@@ -36,7 +36,7 @@ func TestDiscoverRolloutPathsNonceTakesPriorityOverTicket(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "TEST-101", Nonce: "fixture-nonce-deadbeef", WorkingDir: "/repo"})
+	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, Nonce: "fixture-nonce-deadbeef"})
 	if err != nil {
 		t.Fatalf("DiscoverRolloutPaths returned an error: %v", err)
 	}
@@ -45,25 +45,32 @@ func TestDiscoverRolloutPathsNonceTakesPriorityOverTicket(t *testing.T) {
 	}
 }
 
-func TestDiscoverRolloutPathsUsesUniqueWorkingDirectoryFallback(t *testing.T) {
+func TestDiscoverRolloutPathsRequiresReliableSelector(t *testing.T) {
 	home := t.TempDir()
-	path := writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout.jsonl", "only", "", "/repo", "no ticket reference")
-	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "TEST-101", WorkingDir: "/repo"})
-	if err != nil {
-		t.Fatalf("DiscoverRolloutPaths returned an error: %v", err)
-	}
-	if !reflect.DeepEqual(paths, []string{path}) {
-		t.Fatalf("unexpected fallback paths: %#v", paths)
+	writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout.jsonl", "only", "", "/repo", "no ticket reference")
+	_, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home})
+	if err == nil || !strings.Contains(err.Error(), "requires --nonce or --session-id") {
+		t.Fatalf("expected reliable selector error, got %v", err)
 	}
 }
 
-func TestDiscoverRolloutPathsRejectsAmbiguousWorkingDirectory(t *testing.T) {
+func TestDiscoverRolloutPathsRejectsAmbiguousNonce(t *testing.T) {
 	home := t.TempDir()
-	writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-one.jsonl", "one", "", "/repo", "no ticket")
-	writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-two.jsonl", "two", "", "/repo", "no ticket")
-	_, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, TicketID: "TEST-101", WorkingDir: "/repo"})
-	if err == nil || !strings.Contains(err.Error(), "--nonce or --session-id") {
-		t.Fatalf("expected ambiguous discovery error, got %v", err)
+	writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-one.jsonl", "one", "", "/repo", "same-nonce")
+	writeDiscoveryRollout(t, home, "sessions/2026/10/25/rollout-two.jsonl", "two", "", "/repo", "same-nonce")
+	_, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, Nonce: "same-nonce"})
+	if err == nil || !strings.Contains(err.Error(), "nonce matches multiple Codex root sessions") {
+		t.Fatalf("expected ambiguous nonce error, got %v", err)
+	}
+}
+
+func TestDiscoverRolloutPathsRejectsConflictingSelectors(t *testing.T) {
+	home := t.TempDir()
+	writeDiscoveryRollout(t, home, "sessions/root-one.jsonl", "one", "", "/repo", "nonce-one")
+	writeDiscoveryRollout(t, home, "sessions/root-two.jsonl", "two", "", "/repo", "other")
+	_, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, Nonce: "nonce-one", SessionID: "two"})
+	if err == nil || !strings.Contains(err.Error(), "select different Codex root sessions") {
+		t.Fatalf("expected conflicting selector error, got %v", err)
 	}
 }
 
@@ -111,6 +118,7 @@ func TestDiscoveryReadsNestedChildProvenanceBeforeInheritedMetadata(t *testing.T
 	childPath := filepath.Join(home, "sessions", "child.jsonl")
 	child := `{"type":"session_meta","payload":{"id":"child","source":{"subagent":{"thread_spawn":{"parent_thread_id":"root","agent_role":"tester"}}}}}
 {"type":"session_meta","payload":{"id":"root","source":"cli"}}
+{"type":"event_msg","payload":{"type":"thread_settings_applied","thread_id":"child"}}
 `
 	if err := os.WriteFile(childPath, []byte(child), 0600); err != nil {
 		t.Fatal(err)

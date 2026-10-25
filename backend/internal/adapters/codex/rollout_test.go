@@ -55,8 +55,8 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 	if ledger.WorkflowEfficiency.ToolExecution.TotalCalls != 2 || ledger.WorkflowEfficiency.ToolExecution.ErrorsAndCorrections != 1 {
 		t.Fatalf("unexpected derived tool execution metrics: %#v", ledger.WorkflowEfficiency.ToolExecution)
 	}
-	if transcript.RecordKinds["new_future_record"] != 1 {
-		t.Fatalf("unknown record type should be counted, got %#v", transcript.RecordKinds)
+	if transcript.RecordKinds["world_state"] != 1 || transcript.RecordKinds["inter_agent_communication_metadata"] != 1 {
+		t.Fatalf("known non-metric records should be explicitly accounted, got %#v", transcript.RecordKinds)
 	}
 	if len(transcript.Warnings) != 0 {
 		t.Fatalf("valid fixture produced warnings: %#v", transcript.Warnings)
@@ -78,6 +78,14 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 		if strings.Contains(string(encodedLedger), marker) {
 			t.Fatalf("exported ledger retained content-bearing value %q", marker)
 		}
+	}
+}
+
+func TestParseRolloutRejectsUnknownRecordType(t *testing.T) {
+	input := `{"timestamp":"2026-10-25T09:00:00Z","type":"future_record_v99","payload":{}}`
+	_, err := codex.ParseRollout(strings.NewReader(input))
+	if err == nil || !strings.Contains(err.Error(), `unsupported Codex rollout record type "future_record_v99"`) {
+		t.Fatalf("expected unknown record type to fail extraction, got %v", err)
 	}
 }
 
@@ -299,16 +307,10 @@ func TestChildRolloutPreservesIdentityAndSkipsInheritedReplay(t *testing.T) {
 			t.Fatalf("inherited tool/event/steering facts counted: %+v", transcript)
 		}
 	})
-	t.Run("missing resume marker does not count inherited history", func(t *testing.T) {
-		transcript, err := codex.ParseRollout(strings.NewReader(inherited))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if transcript.Usage.Input != 0 || transcript.ToolCalls != 0 || transcript.Turns != 0 || len(transcript.Events) != 0 || transcript.SteeringTurns != 0 {
-			t.Fatalf("inherited history counted without resume marker: %+v", transcript)
-		}
-		if len(transcript.Warnings) != 1 || !strings.Contains(transcript.Warnings[0], "resume marker") {
-			t.Fatalf("missing warning: %v", transcript.Warnings)
+	t.Run("missing resume marker fails extraction", func(t *testing.T) {
+		_, err := codex.ParseRollout(strings.NewReader(inherited))
+		if err == nil || !strings.Contains(err.Error(), "without an owning-thread resume marker") {
+			t.Fatalf("expected incomplete child rollout to fail extraction, got %v", err)
 		}
 	})
 }

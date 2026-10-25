@@ -8,4 +8,5 @@
 {"timestamp":"2026-10-25T09:00:06Z","type":"event_msg","payload":{"type":"mcp_tool_call_end","call_id":"call-02","turn_id":"turn-01","status":"failed","invocation":{"server":"fixture","tool":"lookup","arguments":{"value":"fixture-secret-args"}}}}
 {"timestamp":"2026-10-25T09:00:07Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-01"}}
 {"timestamp":"2026-10-25T09:00:08Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"fixture-secret-prompt"}]}}
-{"timestamp":"2026-10-25T09:00:09Z","type":"new_future_record","payload":{"ignored":"value"}}
+{"timestamp":"2026-10-25T09:00:09Z","type":"world_state","payload":{"full":false,"state":null}}
+{"timestamp":"2026-10-25T09:00:10Z","type":"inter_agent_communication_metadata","payload":{"trigger_turn":1}}
