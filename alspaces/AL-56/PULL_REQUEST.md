@@ -6,17 +6,17 @@ Repeated generation replaces the selected snapshot, model changes preserve per-m
 
 ## Privacy review
 
-- Real-session ledgers and generated diagnostic summaries are gitignored and excluded from the PR.
-- Published research omits real thread IDs, literal correlation nonces, local home paths, and machine-specific database inventories. Committed rollout fixtures are synthetic.
+- The real-session `agentic_metrics.json` and generated metrics summary in `SUMMARY.md` are committed lifecycle deliverables.
+- The ledger retains real thread IDs and timing for correlation. Raw rollouts, local home paths, and machine-specific database inventories are excluded. Test fixtures are synthetic.
 - Parser tests verify that prompts, command arguments, tool payloads, and working-directory paths are excluded from exported summaries and ledgers. Extraction runs locally without external service calls.
-- Generated local ledgers intentionally retain session identity and timing for correlation. They need review before sharing.
+- Metrics are generated from this conversation using nonce-based session discovery.
 
 ## Validation
 
 - `make`: Go vet, race-enabled Go tests, frontend typecheck/lint/tests, frontend bundle, and cross-platform binary builds.
 - CLI regression tests run in isolated temporary projects with synthetic ticket prefixes and custom workspace layouts, independent of the checkout configuration and research ticket.
 - Regression coverage for discovery, nonce precedence, gzip rollouts, child threads, repeated generation, model switches, token accounting, event retention, and export privacy.
-- `git diff --check` and a scan of the publication candidate files for local identifiers, home paths, credentials, and email addresses.
+- `git diff --check`; generated facts omit transcript content, command payloads, and working-directory paths.
 
 ## Limits
 

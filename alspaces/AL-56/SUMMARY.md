@@ -6,7 +6,7 @@ Research branch: `research/codex-openai-metrics`.
 
 AgenticLens can derive meaningful metrics from a Codex rollout without keeping transcript payloads. The implementation adds a Codex JSONL adapter that projects observed thread/model/token usage, turn timing, tool lifecycle outcomes, and compaction events into source-neutral facts, then calls the existing schema-v3 metrics derivation pipeline.
 
-`agentic_metrics.json` (gitignored) is the local session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as AL-56. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
+`agentic_metrics.json` is the committed session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as AL-56. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
 
 The real rollout exposed a mapping detail: current records carry command lifecycle facts in completed `CommandExecution` items and custom tool calls in paired `response_item` records. The parser handles both while retaining no command/input/output content. It also applies a turn's `turn_context` model to its earlier `task_started` event, avoiding a spurious `default` model invocation.
 
@@ -36,15 +36,47 @@ The local database audit found that `state_5.sqlite` can discover threads and ro
 - `npm run lint` — passed.
 - `npm run build` — passed; embedded frontend assets refreshed.
 - `git diff --check` — passed.
-- Real-session validation artifacts remain local. Only synthetic fixtures are committed.
+- Real-session metrics are committed as lifecycle evidence; automated tests use independent synthetic fixtures.
 
 
 ## Publication privacy review
 
-Real session IDs, usage snapshots, timestamps, and the generated metrics table are excluded from the PR. The local ledger and `SESSION_METRICS.local.md` are gitignored. Published notes describe extraction methods without session identifiers, literal correlation nonces, or machine-specific database inventories. Working-directory paths are excluded from exported summaries; transcript and tool payloads are tested for omission.
+The PR includes real session IDs, usage snapshots, timestamps, and the generated metrics table as development lifecycle evidence. Raw rollouts and machine-specific database inventories remain local. Working-directory paths are excluded from exported summaries; transcript and tool payloads are tested for omission.
 
 ## Ticket rename coupling correction
 
 The ticket rename incorrectly updated research identifiers embedded in tests and in the former import UI/API defaults. Those runtime defaults were removed with the import workflow. Remaining Codex fixtures now use synthetic identifiers unrelated to this ticket. The CLI refresh test also inherited the checkout working directory and configuration, violating FIX-4 isolation; it now runs in temporary projects with their own configuration and checks two independent ticket prefixes and workspace layouts. Ticket renames must be scoped to tracking documents and artifact paths, not application or fixture values.
 
 Validation: race-enabled CLI and Codex adapter suites pass with fresh test execution. No runtime source change was necessary for this correction.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 1
+- **Active Agent Duration:** 1h 20m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** N/A
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 142,202 reasoning tokens (30.7% of generated output)
+- **Tool Health & Self-Correction:** 361 tool calls (32 self-corrections, 91.1% success rate)
+
+### Anomalies & Health Flags
+- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k in turn 3 (session: 01a17362-baa4-72b3-934d-3cb040c899ea), breaching 160k critical ceiling
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k tokens in turn 14 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 148.4k tokens, threshold: 40000)
+
+### Agentic Execution Metrics
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **rootagent** | 1 | 1,401,287 | 320,754 | 78,486,272 | 98.2% | 247.7k | BLOATED (124%) | $0.00 |
+| **Total** | **1** | **1,401,287** | **320,754** | **78,486,272** | **98.2%** | **247.7k** | **BLOATED** | **$0.00** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6-astra** | 1 | 293,675 | 24,315 | 10,504,576 | 97.3% | $0.00 |
+| **gpt-6-luna** | 1 | 944,753 | 280,027 | 63,737,728 | 98.5% | $0.00 |
+| **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
+| **Total** | **1** | **1,401,287** | **320,754** | **78,486,272** | **98.2%** | **$0.00** |

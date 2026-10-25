@@ -14,4 +14,4 @@ Compare each surface with AgenticLens facts and computed metrics: invocation/thr
 
 Keep findings, code probes, fixtures, and session metrics in `alspaces/AL-56`. Distinguish observed values from unavailable or inferred values; never invent cost or retain content-bearing transcript/tool payloads by default. Do not include the raw rollout in the repository. This remains a research ticket: no iterations or production-readiness claim are required.
 
-Publication: keep real-session telemetry and diagnostic summaries gitignored. Commit only synthetic fixtures, source changes, and research notes without local identifiers or machine-specific inventories.
+Publication: commit the real-session metrics ledger and its generated summary in SUMMARY.md as required lifecycle artifacts. Keep raw rollouts local and test fixtures independent of live session data.

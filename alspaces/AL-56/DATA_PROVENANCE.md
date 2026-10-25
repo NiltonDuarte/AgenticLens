@@ -1,6 +1,6 @@
 # AL-56 Data Provenance
 
-The implementation was validated against a real local Codex rollout. That validation output remains in the gitignored `agentic_metrics.json` and `SESSION_METRICS.local.md`; it is not published with this research. All committed parser and discovery fixtures are synthetic.
+The implementation was validated against a real local Codex rollout. The real-session ledger is committed as `agentic_metrics.json`, with its generated metrics summary in `SUMMARY.md`. All committed parser and discovery fixtures are synthetic.
 
 Session correlation uses a fresh literal nonce passed to `generate --source codex`. The nonce is searched in persisted rollout records; a read-only lookup in the thread-history projection and state catalog can independently correlate the thread ID and rollout path. Actual identifiers, correlation nonces, working-directory paths, timestamps, and usage snapshots are omitted from published notes.
 

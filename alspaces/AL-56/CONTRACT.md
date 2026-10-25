@@ -11,7 +11,7 @@ Find and validate the strongest practical way to generate AgenticLens metrics fr
 - Compare Codex rollout history, opt-in rollout traces, `codex exec --json`, and app-server events for metric coverage and privacy.
 - Implement a fixture-backed Codex rollout adapter and CLI integration that generates a schema-v3 `agentic_metrics.json` ledger.
 - Keep the checked-in parser fixture synthetic, but generate the session ledger from real local Codex data; exclude transcript/tool payloads and distinguish observed from unavailable metrics.
-- Keep real-session validation ledgers and generated summary tables local and gitignored; publish only synthetic fixtures and sanitized research findings.
+- Commit the real-session `agentic_metrics.json` and generate its metrics summary in `SUMMARY.md` as lifecycle deliverables. Keep raw rollouts local and test fixtures synthetic.
 - Keep all ticket materials in `alspaces/AL-56`; maintain one research plan and no iteration folders.
 
 ## Scope limits

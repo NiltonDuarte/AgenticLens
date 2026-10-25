@@ -55,6 +55,5 @@ Thumbs.db
 coverage.out
 coverage.html
 
-# AL-56 real-session telemetry stays local; fixtures are synthetic.
-/alspaces/AL-56/agentic_metrics.json
+# Optional local scratch summary; lifecycle metrics are committed.
 /alspaces/AL-56/SESSION_METRICS.local.md
