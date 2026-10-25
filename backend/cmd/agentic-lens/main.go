@@ -215,6 +215,9 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error combining Codex session facts: %v\n", combineErr)
 			os.Exit(1)
 		}
+		for _, warning := range combined.Warnings {
+			fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
+		}
 		extractedSteeringTurns = combined.SteeringTurns
 		invocations = combined.Invocations
 		tools = combined.Tools
