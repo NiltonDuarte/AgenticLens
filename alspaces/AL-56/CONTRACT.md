@@ -38,3 +38,7 @@ Following FIX-4, source code must receive ticket identity and workspace layout t
 ## Configured file classification
 
 Test directory/name and production extension heuristics are prohibited. Classification uses `code_metrics.test_patterns`, `prod_patterns`, and `include` from project configuration, with workspace/exclude precedence and unmatched files left as Other. Slash-containing globs are repository-relative; `**` matches complete directory components. Both code-ref and automatic ticket discovery filter totals using configured source roots and inclusion patterns, including test fixtures outside source roots.
+
+## Child rollout attribution
+
+Codex child rollouts must retain their own first session identity and explicit or nested parent linkage. Object-valued subagent source metadata is supported. Inherited parent history must not overwrite child identity or contribute parent token, event, duration, or turn facts to the child. An unnamed child role maps to UnassignedSubAgent. Synthetic adapter and isolated CLI regressions must verify distinct root/child identities, child-only usage, and idempotent regeneration before validating the real probe.

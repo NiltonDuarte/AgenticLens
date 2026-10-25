@@ -150,3 +150,8 @@ The CLI integration preserves the OpenCode default and keeps source selection ex
 ## Validation boundary
 
 This review inspects Codex source; it does not claim a stable public contract for every persistence field. Parser tests validate mapping assumptions against synthetic fixtures plus a real local rollout extraction. Real-session validation ledgers and their summary are committed; raw rollouts remain local and automated tests use synthetic fixtures. Later integration tests should use deterministic local fixtures or a Codex mock and should not send a model request by default.
+
+
+### Child rollout replay boundary
+
+A subagent rollout may begin with child metadata, replay parent records with rewritten timestamps, then resume child-owned records at `thread_settings_applied` for the child thread. The parser preserves initial child metadata and uses that explicit ownership marker instead of timestamps. If the marker is absent, ambiguous continuation is excluded and a warning is emitted. This is safer than charging parent usage to the child, but can undercount unusual or future rollout formats; the warning must be surfaced to operators.

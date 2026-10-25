@@ -258,3 +258,57 @@ func TestSteeringTurnsCountUserMessagesWithoutDuplicateRepresentations(t *testin
 		}
 	}
 }
+
+func TestChildRolloutPreservesIdentityAndSkipsInheritedReplay(t *testing.T) {
+	inherited := `{"timestamp":"2026-01-01T10:00:00Z","type":"session_meta","payload":{"id":"child","session_id":"root","timestamp":"2026-01-01T10:00:00Z","cli_version":"child-version","source":{"subagent":{"thread_spawn":{"parent_thread_id":"root"}}}}}
+{"timestamp":"2026-01-01T10:00:00Z","type":"session_meta","payload":{"id":"root","session_id":"root","timestamp":"2025-01-01T10:00:00Z","cli_version":"parent-version","source":"cli"}}
+{"timestamp":"2026-01-01T10:00:00Z","type":"turn_context","payload":{"model":"parent-model","turn_id":"parent-turn"}}
+{"timestamp":"2026-01-01T10:00:00Z","type":"event_msg","payload":{"type":"task_started","turn_id":"parent-turn"}}
+{"timestamp":"2026-01-01T10:00:00Z","type":"response_item","payload":{"type":"message","role":"user"}}
+{"timestamp":"2026-01-01T10:00:00Z","type":"event_msg","payload":{"type":"exec_command_end","call_id":"parent-call","exit_code":1}}
+{"timestamp":"2026-01-01T10:00:00Z","type":"compacted","payload":{}}
+{"timestamp":"2026-01-01T10:00:00Z","type":"token_usage_record","payload":{"thread_id":"root","model":"parent-model","usage":{"input_tokens":9000,"output_tokens":900}}}
+{"timestamp":"2026-01-01T10:00:00Z","type":"token_usage_record","payload":{"thread_id":"child","model":"inherited-model","usage":{"input_tokens":8000}}}
+`
+	own := `{"timestamp":"2026-01-01T10:00:01Z","type":"event_msg","payload":{"type":"thread_settings_applied","thread_id":"child"}}
+{"timestamp":"2026-01-01T10:00:02Z","type":"event_msg","payload":{"type":"task_started","turn_id":"child-turn"}}
+{"timestamp":"2026-01-01T10:00:02Z","type":"turn_context","payload":{"model":"child-model","turn_id":"child-turn"}}
+{"timestamp":"2026-01-01T10:00:03Z","type":"event_msg","payload":{"type":"exec_command_end","call_id":"child-call","turn_id":"child-turn","exit_code":1}}
+{"timestamp":"2026-01-01T10:00:04Z","type":"token_usage_record","payload":{"thread_id":"child","model":"child-model","turn_id":"child-turn","usage":{"input_tokens":30,"cached_input_tokens":10,"output_tokens":2}}}
+{"timestamp":"2026-01-01T10:00:04Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"child-turn"}}
+`
+	t.Run("own activity only", func(t *testing.T) {
+		transcript, err := codex.ParseRollout(strings.NewReader(inherited + own))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if transcript.ThreadID != "child" || transcript.Source != "subagent" || transcript.CodexVersion != "child-version" || transcript.StartedAt != "2026-01-01T10:00:00Z" {
+			t.Fatalf("child identity was overwritten: %+v", transcript)
+		}
+		if len(transcript.Invocations) != 1 {
+			t.Fatalf("inherited model counted: %+v", transcript.Invocations)
+		}
+		inv := transcript.Invocations[0]
+		if inv.ID != "child" || inv.ParentID == nil || *inv.ParentID != "root" || inv.Role != domain.RoleUnassignedSubAgent || inv.Model != "child-model" {
+			t.Fatalf("incorrect child invocation attribution: %+v", inv)
+		}
+		if inv.Turns != 1 || inv.ActiveDurationSeconds != 2 || inv.Compactions != 0 || inv.Tokens.Input != 20 || inv.Tokens.CacheRead != 10 || inv.Tokens.Output != 2 {
+			t.Fatalf("inherited facts counted: %+v", inv)
+		}
+		if transcript.SteeringTurns != 0 || transcript.ToolCalls != 1 || len(transcript.Events) != 1 || transcript.Events[0].SessionID != "child" {
+			t.Fatalf("inherited tool/event/steering facts counted: %+v", transcript)
+		}
+	})
+	t.Run("missing resume marker does not count inherited history", func(t *testing.T) {
+		transcript, err := codex.ParseRollout(strings.NewReader(inherited))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if transcript.Usage.Input != 0 || transcript.ToolCalls != 0 || transcript.Turns != 0 || len(transcript.Events) != 0 || transcript.SteeringTurns != 0 {
+			t.Fatalf("inherited history counted without resume marker: %+v", transcript)
+		}
+		if len(transcript.Warnings) != 1 || !strings.Contains(transcript.Warnings[0], "resume marker") {
+			t.Fatalf("missing warning: %v", transcript.Warnings)
+		}
+	})
+}

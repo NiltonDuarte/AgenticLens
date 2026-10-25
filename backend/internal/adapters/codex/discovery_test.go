@@ -104,3 +104,29 @@ func writeDiscoveryRollout(t *testing.T, home, relativePath, id, parentID, cwd, 
 	}
 	return path
 }
+
+func TestDiscoveryReadsNestedChildProvenanceBeforeInheritedMetadata(t *testing.T) {
+	home := t.TempDir()
+	rootPath := writeDiscoveryRollout(t, home, "sessions/root.jsonl", "root", "", "/fixture", "selected-nonce")
+	childPath := filepath.Join(home, "sessions", "child.jsonl")
+	child := `{"type":"session_meta","payload":{"id":"child","source":{"subagent":{"thread_spawn":{"parent_thread_id":"root","agent_role":"tester"}}}}}
+{"type":"session_meta","payload":{"id":"root","source":"cli"}}
+`
+	if err := os.WriteFile(childPath, []byte(child), 0600); err != nil {
+		t.Fatal(err)
+	}
+	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, Nonce: "selected-nonce"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(paths, []string{rootPath, childPath}) {
+		t.Fatalf("nested provenance lost: %v", paths)
+	}
+	transcript, err := codex.ParseRollout(strings.NewReader(child))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transcript.Invocations) != 1 || string(transcript.Invocations[0].Role) != "tester" {
+		t.Fatalf("explicit child role lost: %+v", transcript.Invocations)
+	}
+}

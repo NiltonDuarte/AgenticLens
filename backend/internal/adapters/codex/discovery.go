@@ -227,8 +227,8 @@ func inspectRollout(path, nonce, ticketID string) (rolloutCandidate, error) {
 		if json.Unmarshal([]byte(line), &record) != nil || record.Type != "session_meta" {
 			continue
 		}
-		var metadata sessionMetadata
-		if json.Unmarshal(record.Payload, &metadata) != nil {
+		metadata, metadataErr := decodeSessionMetadata(record.Payload)
+		if metadataErr != nil {
 			continue
 		}
 		candidate.threadID = strings.TrimSpace(metadata.ID)

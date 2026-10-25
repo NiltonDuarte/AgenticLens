@@ -94,15 +94,45 @@ type rolloutRecord struct {
 }
 
 type sessionMetadata struct {
-	ID         string `json:"id"`
-	SessionID  string `json:"session_id"`
-	CWD        string `json:"cwd"`
-	Timestamp  string `json:"timestamp"`
-	Source     string `json:"source"`
-	CLIVersion string `json:"cli_version"`
-	Provider   string `json:"model_provider"`
-	ParentID   string `json:"parent_thread_id"`
-	AgentRole  string `json:"agent_role"`
+	ID         string          `json:"id"`
+	SessionID  string          `json:"session_id"`
+	CWD        string          `json:"cwd"`
+	Timestamp  string          `json:"timestamp"`
+	Source     json.RawMessage `json:"source"`
+	SourceName string          `json:"-"`
+	CLIVersion string          `json:"cli_version"`
+	Provider   string          `json:"model_provider"`
+	ParentID   string          `json:"parent_thread_id"`
+	AgentRole  string          `json:"agent_role"`
+}
+
+// decodeSessionMetadata accepts both interactive source labels and structured
+// subagent provenance without retaining the content-bearing metadata fields.
+func decodeSessionMetadata(payload json.RawMessage) (sessionMetadata, error) {
+	var metadata sessionMetadata
+	if err := json.Unmarshal(payload, &metadata); err != nil {
+		return metadata, err
+	}
+	if err := json.Unmarshal(metadata.Source, &metadata.SourceName); err != nil {
+		var source struct {
+			Subagent struct {
+				ThreadSpawn struct {
+					ParentID  string `json:"parent_thread_id"`
+					AgentRole string `json:"agent_role"`
+				} `json:"thread_spawn"`
+			} `json:"subagent"`
+		}
+		if err := json.Unmarshal(metadata.Source, &source); err == nil && source.Subagent.ThreadSpawn.ParentID != "" {
+			metadata.SourceName = "subagent"
+			if metadata.ParentID == "" {
+				metadata.ParentID = source.Subagent.ThreadSpawn.ParentID
+			}
+			if metadata.AgentRole == "" {
+				metadata.AgentRole = source.Subagent.ThreadSpawn.AgentRole
+			}
+		}
+	}
+	return metadata, nil
 }
 
 type tokenUsage struct {
@@ -175,6 +205,7 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 		role:         domain.RoleRootAgent,
 	}
 	usageRecordSeen := false
+	inheritedHistory := false
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 64*1024), maxRolloutLineBytes)
 	lineNumber := 0
@@ -193,6 +224,26 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 		if record.Type == "" {
 			transcript.Warnings = append(transcript.Warnings, fmt.Sprintf("line %d: record has no type", lineNumber))
 			continue
+		}
+		// Forked rollouts start with their own identity and then replay parent
+		// history, including parent metadata and rewritten timestamps. Ignore
+		// that replay until the thread-settings event identifies this child thread.
+		if record.Type == "session_meta" && transcript.ThreadID != "" {
+			metadata, err := decodeSessionMetadata(record.Payload)
+			if err == nil && metadata.ID != "" && metadata.ID != transcript.ThreadID && transcript.parentThread != "" {
+				inheritedHistory = true
+			}
+			continue
+		}
+		if inheritedHistory {
+			var owner struct {
+				Type     string `json:"type"`
+				ThreadID string `json:"thread_id"`
+			}
+			if record.Type != "event_msg" || json.Unmarshal(record.Payload, &owner) != nil || owner.Type != "thread_settings_applied" || owner.ThreadID != transcript.ThreadID {
+				continue
+			}
+			inheritedHistory = false
 		}
 		if record.Timestamp != "" {
 			transcript.latestTime = record.Timestamp
@@ -262,6 +313,9 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 	if transcript.EventKinds == nil {
 		transcript.EventKinds = map[string]int64{}
 	}
+	if inheritedHistory {
+		transcript.Warnings = append(transcript.Warnings, "child rollout has inherited history without an owning-thread resume marker")
+	}
 	transcript.finalizeFacts()
 	// Event messages and response items can represent the same user input.
 	// Prefer the semantic user-message stream when present.
@@ -272,18 +326,21 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 }
 
 func readSessionMetadata(payload json.RawMessage, transcript *Transcript) error {
-	var metadata sessionMetadata
-	if err := json.Unmarshal(payload, &metadata); err != nil {
+	metadata, err := decodeSessionMetadata(payload)
+	if err != nil {
 		return err
 	}
 	transcript.ThreadID = metadata.ID
 	transcript.SessionID = metadata.SessionID
 	transcript.WorkingDir = metadata.CWD
 	transcript.StartedAt = metadata.Timestamp
-	transcript.Source = metadata.Source
+	transcript.Source = metadata.SourceName
 	transcript.CodexVersion = metadata.CLIVersion
 	transcript.Provider = metadata.Provider
 	transcript.parentThread = metadata.ParentID
+	if metadata.ParentID != "" {
+		transcript.role = domain.RoleUnassignedSubAgent
+	}
 	if strings.TrimSpace(metadata.AgentRole) != "" {
 		transcript.role = domain.AgentRole(strings.TrimSpace(metadata.AgentRole))
 	}
@@ -662,10 +719,10 @@ func (transcript *Transcript) addCompactionEvent(timestamp string) {
 }
 
 func (transcript *Transcript) sessionIDOrThread() string {
-	if transcript.SessionID != "" {
-		return transcript.SessionID
+	if transcript.ThreadID != "" {
+		return transcript.ThreadID
 	}
-	return transcript.ThreadID
+	return transcript.SessionID
 }
 
 func (transcript *Transcript) turnNumber(turnID string) int64 {
