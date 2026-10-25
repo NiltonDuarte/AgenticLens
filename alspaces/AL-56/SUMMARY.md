@@ -59,10 +59,10 @@ Code metrics correction: the research branch lacked a ticket ID, so default tick
 - **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 4 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
-- **Test-to-Production Code Ratio:** 0.4:1 (+514 test lines / +1,279 prod lines)
-- **Code Delivered:** +1,804 / -35 lines across 8 code files (excluding docs)
-- **Reasoning Effort:** 142,806 reasoning tokens (30.3% of generated output)
-- **Tool Health & Self-Correction:** 384 tool calls (34 self-corrections, 91.1% success rate)
+- **Test-to-Production Code Ratio:** 0.5:1 (+600 test lines / +1,325 prod lines)
+- **Code Delivered:** +1,936 / -38 lines across 10 code files (excluding docs)
+- **Reasoning Effort:** 142,815 reasoning tokens (30.3% of generated output)
+- **Tool Health & Self-Correction:** 385 tool calls (34 self-corrections, 91.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -74,13 +74,13 @@ Code metrics correction: the research branch lacked a ticket ID, so default tick
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,429,126 | 328,955 | 80,517,248 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
-| **Total** | **1** | **1,429,126** | **328,955** | **80,517,248** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 1,429,380 | 329,164 | 80,611,072 | 98.3% | 247.7k | BLOATED (124%) | $0.00 |
+| **Total** | **1** | **1,429,380** | **329,164** | **80,611,072** | **98.3%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 1 | 321,514 | 32,516 | 12,535,552 | 97.5% | $0.00 |
+| **gpt-6-astra** | 1 | 321,768 | 32,725 | 12,629,376 | 97.5% | $0.00 |
 | **gpt-6-luna** | 1 | 944,753 | 280,027 | 63,737,728 | 98.5% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **1** | **1,429,126** | **328,955** | **80,517,248** | **98.3%** | **$0.00** |
+| **Total** | **1** | **1,429,380** | **329,164** | **80,611,072** | **98.3%** | **$0.00** |
