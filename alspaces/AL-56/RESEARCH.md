@@ -134,7 +134,7 @@ The CLI has an explicit `--source codex` discovery path that scans `CODEX_HOME/s
 
 The CLI integration preserves the OpenCode default and keeps source selection explicit: `agentic-lens generate --source codex ...`. `CODEX_HOME` comes from `--codex-home`, then the environment, then `~/.codex`. The implementation uses filesystem discovery rather than Codex's versioned SQLite catalog. `--nonce` must identify one root; `--session-id` selects a known thread and its root/descendants. Ticket ID is ledger metadata only and never participates in Codex session selection.
 
-Code attribution now defaults to the explicit Git ref `HEAD` and compares committed changes with the configured base branch. It is independent of ticket and branch names; the caller can provide another ref. When running outside any Git repository, no HEAD comparison is possible and the existing safe empty/fallback behavior applies.
+Code attribution now always uses an explicit Git ref, defaulting to `HEAD` for generation. Ticket/branch-based diff discovery and cached code-fact fallbacks are removed; `backfill --recompute-git` requires `--code-ref`. Comparisons use committed changes from the ref's merge base with the configured base branch. An empty or invalid ref fails clearly.
 
 ## Rollout record and timestamp audit
 

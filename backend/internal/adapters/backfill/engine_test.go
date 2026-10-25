@@ -135,6 +135,7 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 		WorkspacesDir:   tempDir,
 		DryRun:          true,
 		RecomputeGit:    true,
+		CodeRef:         "HEAD",
 		UpdateSummaries: true,
 	})
 	if err != nil {
@@ -330,6 +331,7 @@ func TestBackfillEngine_CorruptedFileResilience(t *testing.T) {
 	report, err := engine.Execute(BackfillOptions{
 		WorkspacesDir: tempDir,
 		RecomputeGit:  true,
+		CodeRef:       "HEAD",
 	})
 	if err != nil {
 		t.Fatalf("engine execute should not fail fatally on corrupt files: %v", err)

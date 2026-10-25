@@ -152,6 +152,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
 
+- **AL-57**: Represent Unavailable Telemetry Cost as Nullable
+  - **Subsystem**: Domain / Adapters / CLI / Presentation / Tests
+  - **Phase**: Phase 8 (Schema Evolution / Cost Accuracy)
+  - **Status**: Pending
+  - **Blocked by**: AL-55
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-57 nullable cost values across telemetry ledger aggregates and ui.md`
+
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests
   - **Phase**: Phase 8 (v2 Phase 2)

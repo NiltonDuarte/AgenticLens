@@ -5,6 +5,7 @@ type BackfillOptions struct {
 	WorkspacesDir   string
 	TicketID        string
 	RecomputeGit    bool
+	CodeRef         string
 	RecomputeDB     bool
 	DryRun          bool
 	UpdateSummaries bool

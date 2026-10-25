@@ -321,7 +321,7 @@ func runGenerate(args []string) {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		os.Exit(1)
 	}
-	codeFacts, err := git.ComputeCodeFactsAtRef(activeTicketID, cfg, fallbackCode, strings.TrimSpace(*codeRefFlag))
+	codeFacts, err := git.ComputeCodeFactsAtRef(strings.TrimSpace(*codeRefFlag), cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -556,6 +556,7 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "  --workspaces <path>    Path to root workspaces directory containing agentic_metrics.json ledgers\n")
 		fmt.Fprintf(out, "  --ticket-id <id>       Target single ticket identifier to filter backfill operation\n")
 		fmt.Fprintf(out, "  --recompute-git        Recompute Git code facts and SDLC iterations from repository history\n")
+		fmt.Fprintf(out, "  --code-ref <ref>        Required with --recompute-git; branch or commit to compare with configured base\n")
 		fmt.Fprintf(out, "  --recompute-db         Recompute OpenCode invocations and tool facts from local SQLite DB\n")
 		fmt.Fprintf(out, "  --migrate-schema       Upgrade telemetry ledger schema versions to latest supported version\n")
 		fmt.Fprintf(out, "  --dry-run              Preview planned migrations without writing changes to disk\n")
@@ -571,6 +572,7 @@ func runBackfill(args []string) {
 	workspacesFlag := backfillFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
 	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
 	recomputeGitFlag := backfillFlags.Bool("recompute-git", false, "Recompute Git code facts and SDLC iterations from repository history")
+	codeRefFlag := backfillFlags.String("code-ref", "", "Git branch or commit to compare with the configured base when recomputing code facts")
 	recomputeDBFlag := backfillFlags.Bool("recompute-db", false, "Recompute OpenCode invocations and tool facts from local SQLite DB")
 	migrateSchemaFlag := backfillFlags.Bool("migrate-schema", false, "Upgrade telemetry ledger schema versions to latest supported version")
 	dryRunFlag := backfillFlags.Bool("dry-run", false, "Preview planned migrations without writing changes to disk")
@@ -582,11 +584,16 @@ func runBackfill(args []string) {
 		fmt.Fprintf(os.Stderr, "Error parsing backfill flags: %v\n", err)
 		os.Exit(1)
 	}
+	if *recomputeGitFlag && strings.TrimSpace(*codeRefFlag) == "" {
+		fmt.Fprintln(os.Stderr, "Error: --code-ref is required with --recompute-git")
+		os.Exit(1)
+	}
 
 	opts := backfill.BackfillOptions{
 		WorkspacesDir:   *workspacesFlag,
 		TicketID:        *ticketIDFlag,
 		RecomputeGit:    *recomputeGitFlag,
+		CodeRef:         strings.TrimSpace(*codeRefFlag),
 		RecomputeDB:     *recomputeDBFlag,
 		MigrateSchema:   *migrateSchemaFlag,
 		DryRun:          *dryRunFlag,
@@ -620,6 +627,9 @@ func runBackfill(args []string) {
 		fmt.Printf("Filter Ticket ID:            %s\n", opts.TicketID)
 	}
 	fmt.Printf("Recompute Git Facts:         %t\n", opts.RecomputeGit)
+	if opts.RecomputeGit {
+		fmt.Printf("Git Code Ref:                %s\n", opts.CodeRef)
+	}
 	fmt.Printf("Recompute OpenCode DB:       %t\n", opts.RecomputeDB)
 	fmt.Printf("Migrate Schema:              %t\n", opts.MigrateSchema)
 	fmt.Printf("Update Markdown Summaries:   %t\n", opts.UpdateSummaries)

@@ -2,9 +2,9 @@
 
 `agentic-lens generate --source codex` discovers local Codex rollouts and writes the existing schema-v3 fact ledger. Resolution requires a literal nonce or explicit thread ID; ticket text and working-directory heuristics are excluded, and ambiguous nonces fail. Child threads are included through parent metadata. OpenCode remains the default source. The existing dashboard reads the generated ledger; this PR adds no HTTP routes or frontend changes.
 
-Code attribution defaults to `--code-ref HEAD`, independent of ticket or branch names. It measures committed changes against the configured base and respects source/classification settings. Codex SDLC iterations derive from root-session user messages, without duplicate event/response counting or child delegation.
+Code attribution always uses an explicit ref and defaults to `--code-ref HEAD`. Ticket ID and branch-name matching have been removed from Git diff discovery. `backfill --recompute-git` requires `--code-ref`; missing or invalid refs fail. Comparisons measure committed changes against the configured base and respect source/classification settings. Codex SDLC iterations derive from root-session user messages, without duplicate event/response counting or child delegation.
 
-Test/production classification now comes from project configuration rather than hardcoded directory names or extensions. Recursive globs respect directory boundaries; configured test paths outside source roots are included, and both Git discovery modes apply source filtering.
+Test/production classification comes from project configuration rather than hardcoded directory names or extensions. Recursive globs respect directory boundaries, and configured test paths outside source roots are included in ref-based comparisons.
 
 Repeated generation replaces the selected snapshot, model changes preserve per-model usage, and event context uses request input counts rather than cumulative usage. CLI persistence uses the existing error/compaction/anomaly-turn pruning policy.
 

@@ -1904,6 +1904,15 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 func TestCLIBackfillCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
+	t.Run("recompute-git requires an explicit code ref", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir, "--recompute-git")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "--code-ref is required with --recompute-git") {
+			t.Fatalf("expected missing code ref to fail explicitly, err=%v stderr=%s", err, stderr.String())
+		}
+	})
 
 	t.Run("dry-run backfill outputs preview without error", func(t *testing.T) {
 		cmd := exec.Command(
@@ -1912,6 +1921,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 			"--workspaces", wsDir,
 			"--dry-run",
 			"--recompute-git",
+			"--code-ref", "HEAD",
 		)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1940,6 +1950,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 			"--workspaces", wsDir,
 			"--ticket-id", "TICKET-1",
 			"--recompute-git",
+			"--code-ref", "HEAD",
 		)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1967,7 +1978,6 @@ func TestCLIBackfillCommand(t *testing.T) {
 		}
 	})
 }
-
 
 func TestCLIVersionCommand(t *testing.T) {
 	t.Parallel()
@@ -2339,6 +2349,7 @@ func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 		"--workspaces", wsDir,
 		"--migrate-schema",
 		"--recompute-git",
+		"--code-ref", "HEAD",
 	)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -2664,6 +2675,7 @@ func TestCLIHelpCommand(t *testing.T) {
 			"--workspaces",
 			"--ticket-id",
 			"--db-path",
+			"--code-ref",
 		}
 		for _, flag := range expectedFlags {
 			if !strings.Contains(out, flag) {

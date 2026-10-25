@@ -481,7 +481,8 @@ Batch recomputes git diff metrics, recalculates token costs against updated mode
 - Flags:
   - `--workspaces <DIR>` (Optional): Directory containing ticket workspaces.
   - `--ticket-id <ID>` (Optional): Limit backfill to a single ticket.
-  - `--recompute-git` (Optional): Re-extract git diff metrics from git commit history.
+  - `--recompute-git` (Optional): Recompute Git code facts from an explicit ref; requires `--code-ref`.
+  - `--code-ref <REF>` (Required with `--recompute-git`): Branch or commit to compare with the configured base branch.
   - `--recompute-db` (Optional): Re-query OpenCode SQLite database for session turns and tokens.
   - `--migrate-schema` (Optional): Upgrade legacy ledger files to current schema version.
   - `--dry-run` (Optional): Simulate backfill operations without modifying disk files.

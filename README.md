@@ -171,7 +171,7 @@ AgenticLens provides a unified CLI for automation and local workflows:
 ./bin/agentic-lens --ticket-id AL-15 --anomalies
 
 # Batch reconcile git facts and database telemetry across historical workspaces
-./bin/agentic-lens backfill --recompute-git --recompute-db --migrate-schema --update-summaries
+./bin/agentic-lens backfill --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
 
 # Run stepwise schema migrations across workspace ledgers
 ./bin/agentic-lens migrate --backup --update-summaries
@@ -179,7 +179,7 @@ AgenticLens provides a unified CLI for automation and local workflows:
 
 Use `--nonce <literal>` to select the exact Codex rollout containing a unique run nonce, or `--session-id <thread-id>` to select a known thread. `--codex-home <path>` overrides `$CODEX_HOME` and `~/.codex`. Codex remains opt-in through `--source codex`; OpenCode is the default source.
 
-Code metrics use `--code-ref HEAD` by default (or an explicit branch/commit). This measures committed changes from the merge base with the configured `code_metrics.base_branch`, independent of ticket names. It excludes uncommitted changes. Pass `--code-ref ""` only to opt back into legacy ticket-based discovery. Codex session discovery requires `--nonce` or `--session-id`; ticket text and working-directory heuristics are not reliable session identifiers. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts.
+Code metrics always compare an explicit Git ref with the configured `code_metrics.base_branch`; `generate` defaults to `HEAD`, and `backfill --recompute-git` requires `--code-ref`. Empty or invalid refs fail instead of trying to infer a branch or commits from the ticket ID. Comparisons include committed changes and exclude the uncommitted working tree. Codex session discovery requires `--nonce` or `--session-id`; ticket text and working-directory heuristics are not reliable session identifiers. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts.
 
 ---
 

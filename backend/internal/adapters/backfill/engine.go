@@ -28,6 +28,9 @@ func NewEngine() *BackfillEngine {
 
 // Execute runs the backfill and migration workflow across target workspaces.
 func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) {
+	if opts.RecomputeGit && strings.TrimSpace(opts.CodeRef) == "" {
+		return nil, fmt.Errorf("a Git code ref is required when recomputing code facts")
+	}
 	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
 	if err != nil {
 		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
@@ -217,14 +220,13 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// 1. Git Recomputation
 	gitSucceeded := false
 	if opts.RecomputeGit {
-		var fallbackCode *domain.CodeFacts
-		if factLedger.Code.LinesAdded > 0 || factLedger.Code.FilesChanged > 0 {
-			fallbackCode = &factLedger.Code
-		}
-		newCode, err := git.ComputeCodeFacts(ticketID, classificationCfg, fallbackCode)
+		newCode, err := git.ComputeCodeFactsAtRef(opts.CodeRef, classificationCfg)
 		if err != nil {
 			result.Error = fmt.Errorf("recomputing git facts for %s: %w", ticketID, err)
 			return result
+		}
+		if factLedger.Code.SDLCIterations > 0 {
+			newCode.SDLCIterations = factLedger.Code.SDLCIterations
 		}
 		factLedger.Code = newCode
 		gitSucceeded = true
