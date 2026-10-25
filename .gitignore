@@ -54,6 +54,3 @@ Thumbs.db
 *.log
 coverage.out
 coverage.html
-
-# Optional local scratch summary; lifecycle metrics are committed.
-/alspaces/AL-56/SESSION_METRICS.local.md
