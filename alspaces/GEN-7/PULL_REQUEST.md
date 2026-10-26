@@ -24,6 +24,5 @@ Resolves cross-platform execution failures when autonomous coding agents run ins
   - Updated setup pathways to direct binary and wrapper distribution.
   - Added `agentic-lens update` to CLI reference (Section 5.1).
 - **Tests & Verification**:
-  - Added `backend/cmd/agentic-lens/wrapper_and_downloader_test.go` verifying dispatching, update notifications, local installs, and zero-emoji compliance.
-  - Added `scripts/tests/test_wrapper.sh` for POSIX shell verification.
-  - Verified `make check` and `make test-backend` pass cleanly.
+  - Removed obsolete "no emoji" test cases across Go and TypeScript test suites (as no-emoji is an agent operational guideline rather than a platform feature).
+  - Verified `make check`, `make test-backend`, and `make test-frontend` pass cleanly.

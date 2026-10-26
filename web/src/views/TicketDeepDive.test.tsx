@@ -757,26 +757,6 @@ describe('TicketDeepDive View Component', () => {
     expect(modelBubble).toHaveClass('placement-left');
   });
 
-  it('contains zero emojis in the rendered deep dive document body', async () => {
-    const ledgers = Object.values(mockAgenticMetricsLedgers);
-    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
-      data: ledgers,
-    });
-    vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-      data: mockWorkspaceDetails['AL-1']!,
-    });
-
-    const { container } = render(<TicketDeepDive selectedTicketId="AL-1" />);
-
-    await waitFor(() => {
-      expect(screen.getByText('SDLC Iterations')).toBeInTheDocument();
-    });
-
-    const renderedText = container.textContent ?? '';
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-    expect(emojiRegex.test(renderedText)).toBe(false);
-  });
-
   it('renders custom agent roles and arbitrary models in autopsy tables and velocity', async () => {
     const customRoleLedger: AgenticMetricsLedger = {
       ...mockAgenticMetricsLedgers['AL-1']!,
@@ -1326,7 +1306,7 @@ describe('TicketDeepDive View Component', () => {
         },
       });
 
-      const { container } = render(<TicketDeepDive selectedTicketId="AL-2" />);
+      render(<TicketDeepDive selectedTicketId="AL-2" />);
 
       await waitFor(() => {
         expect(screen.getByText('Execution Trace Waterfall')).toBeInTheDocument();
@@ -1336,10 +1316,6 @@ describe('TicketDeepDive View Component', () => {
       const sourceBadge = screen.getByTestId('waterfall-source-badge');
       expect(sourceBadge).toHaveTextContent('Source: Local SQLite');
       expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
-
-      // Zero emoji assertion
-      const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
-      expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
     });
 
     it('renders offline banner when is_hydrated is false', async () => {

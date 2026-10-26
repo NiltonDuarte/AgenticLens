@@ -1,7 +1,6 @@
 package adapters_test
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 
@@ -421,35 +420,6 @@ func TestFormatMarkdownMetricsTable_EmptyAndZeroValues(t *testing.T) {
 			t.Errorf("expected markdown to contain KPI row %q", kpi)
 		}
 	}
-
-	emojiPattern := regexp.MustCompile(`[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F1E6}-\x{1F1FF}\x{1F600}-\x{1F64F}\x{1F680}-\x{1F6FF}]`)
-	if emojiPattern.MatchString(tableMD) {
-		t.Errorf("expected zero emojis in markdown table for empty ledger, found emoji match")
-	}
-}
-
-func TestFormatMarkdownMetricsTable_ZeroEmojis(t *testing.T) {
-	t.Parallel()
-	tid := "AL-ZERO-EMOJI"
-	ledger := domain.AgenticMetricsLedger{
-		TicketID: &tid,
-		WorkflowEfficiency: domain.WorkflowEfficiency{
-			ActiveDurationFormatted: "1h 30m",
-			ContextWindowHealth: domain.ContextWindowHealth{
-				Status: "HEALTHY",
-			},
-		},
-		Totals: domain.GroupedMetric{
-			Invocations: 5,
-			CostUSD:     1.25,
-		},
-	}
-
-	tableMD := adapters.FormatMarkdownMetricsTable(ledger)
-	emojiPattern := regexp.MustCompile(`[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F1E6}-\x{1F1FF}\x{1F600}-\x{1F64F}\x{1F680}-\x{1F6FF}]`)
-	if emojiPattern.MatchString(tableMD) {
-		t.Errorf("expected zero emojis in populated markdown table, found emoji match")
-	}
 }
 
 func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
@@ -508,10 +478,5 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 	expectedVel := "- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)"
 	if !strings.Contains(tableMD, expectedVel) {
 		t.Errorf("expected zero turn velocity format:\nwant: %s\ngot:\n%s", expectedVel, tableMD)
-	}
-
-	emojiPattern := regexp.MustCompile(`[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F1E6}-\x{1F1FF}\x{1F600}-\x{1F64F}\x{1F680}-\x{1F6FF}]`)
-	if emojiPattern.MatchString(tableMD) {
-		t.Errorf("expected zero emojis in markdown table, found emoji match")
 	}
 }

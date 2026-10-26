@@ -448,30 +448,6 @@ describe('LandingPage View Component', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('contains zero emojis in the rendered document body', async () => {
-    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
-      data: mockFleetSummary,
-    });
-    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
-      data: [...mockTicketComparisonRows],
-    });
-
-    const { container } = render(
-      <LandingPage
-        onNavigate={vi.fn()}
-        onSelectTicket={vi.fn()}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('AgenticLens Observability')).toBeInTheDocument();
-    });
-
-    const renderedText = container.textContent ?? '';
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-    expect(emojiRegex.test(renderedText)).toBe(false);
-  });
-
   it('sorts quick-launch workspaces naturally by ticket ID and supports column header toggles', async () => {
     const customRows = [
       {

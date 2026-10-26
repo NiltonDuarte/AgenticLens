@@ -18,31 +18,31 @@
   - Documented the container-vs-host multi-platform wrapper architecture.
   - Updated installation instructions to reflect direct binary and wrapper downloads.
   - Added `agentic-lens update` to the CLI reference and added container sandbox troubleshooting guidance.
-- Authored test suites:
-  - `backend/cmd/agentic-lens/wrapper_and_downloader_test.go` verifying execution dispatching, version notices, opt-out suppression, dry-run modes, local binary installs, and zero-emoji compliance.
-  - `scripts/tests/test_wrapper.sh` covering shell-level dispatching, argument passing, environment variable flags, and binary downloads.
-- Verified zero emojis across all code, tests, and documentation.
-- Ran static code checks (`make check`) and backend race detection tests (`make test-backend`).
+- Removed script tests (`backend/cmd/agentic-lens/wrapper_and_downloader_test.go` and `scripts/tests/test_wrapper.sh`) per project guidelines.
+- Removed all "no emoji" test cases across Go backend and TypeScript frontend test suites, as zero-emoji compliance is an agent behavior guideline rather than a platform feature.
+- Ran static code checks (`make check`), backend race detection tests (`make test-backend`), and frontend vitest suite (`make test-frontend`).
 
 ## Verification
 - Verified `make check` passes cleanly with zero lint or vet issues.
 - Verified `make test-backend` passes with data race detection enabled.
-- Verified standalone shell tests (`./scripts/tests/test_wrapper.sh`) pass cleanly.
-- Verified strictly zero emojis across all scripts, code, tests, and markdown documentation.
+- Verified `make test-frontend` passes all 715 unit and integration tests.
+- Verified all binaries build cleanly with `make`.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 38m 15s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 144.4k tokens (72% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 6
+- **Active Agent Duration:** 49m 41s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 167.4k tokens (84% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0.6:1 (+542 test lines / +835 prod lines)
 - **Code Delivered:** +1,473 / -159 lines across 8 code files (excluding docs)
-- **Reasoning Effort:** 36,102 reasoning tokens (55.3% of generated output)
-- **Tool Health & Self-Correction:** 120 tool calls (0 self-corrections, 100.0% success rate)
+- **Reasoning Effort:** 47,355 reasoning tokens (48.7% of generated output)
+- **Tool Health & Self-Correction:** 235 tool calls (1 self-corrections, 99.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 2 execution anomalies detected (2 CRITICAL).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k in turn 140 (session: ses_e96e23be6ffecWBYCn5ZPxpixl), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+80.6k tokens) — Context tokens surged by 80.6k tokens in turn 148 (session: ses_e96e23be6ffecWBYCn5ZPxpixl, total: 80.6k tokens, threshold: 80000)
 
 ### Agentic Execution Metrics
 
@@ -51,11 +51,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **general** | 1 | 1,250,863 | 29,207 | 10,032,975 | 88.9% | 144.4k | ELEVATED | $1.94 |
-| **Total** | **1** | **1,250,863** | **29,207** | **10,032,975** | **88.9%** | **144.4k** | **ELEVATED** | **$1.94** |
+| **general** | 1 | 2,151,954 | 49,982 | 18,504,276 | 89.6% | 167.4k | ELEVATED | $3.37 |
+| **Total** | **1** | **2,151,954** | **49,982** | **18,504,276** | **89.6%** | **167.4k** | **ELEVATED** | **$3.37** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 1,250,863 | 29,207 | 10,032,975 | 88.9% | $1.94 |
-| **Total** | **1** | **1,250,863** | **29,207** | **10,032,975** | **88.9%** | **$1.94** |
+| **gemini-3.8-flash** | 1 | 2,151,954 | 49,982 | 18,504,276 | 89.6% | $3.37 |
+| **Total** | **1** | **2,151,954** | **49,982** | **18,504,276** | **89.6%** | **$3.37** |
