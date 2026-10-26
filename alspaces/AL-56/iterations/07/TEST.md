@@ -89,3 +89,9 @@
   All passed: both missing-root and missing-child cases returned empty unhydrated responses, and cached-summary/new-session refresh retained/recomputed summaries and aggregate totals.
 - Ran `make` again after the child completeness change. It passed Go vet, race-enabled Go tests, TypeScript typecheck/lint, 31 frontend test files / 722 tests, frontend bundle generation, and four platform builds. `git diff --check` passed.
 - The metrics-ledger status and diff path audits returned no paths. No telemetry generation, migration, or backfill was run.
+
+## Final Scoped AL-56 Generation
+
+- Ran normal Codex generation for AL-56 only. No workspace-wide migration/backfill ran, and other ticket ledgers were not modified.
+- The generated ledger has 25 sessions, 27 invocations, and 49 session anomaly summaries. Recursive JSON inspection found zero `events`, `evidence`, or `event_id` fields.
+- The prior AL-56 ledger was 5,166 lines / 176,299 bytes. The new ledger is 1,691 lines / 53,208 bytes: 67.3% fewer lines and 69.8% fewer bytes.

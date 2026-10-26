@@ -22,7 +22,7 @@ Remove persisted anomaly evidence references and event rows from the schema-v4 t
 - Local anomaly detection can associate rebuilt events with stored summaries for UI highlighting without persisting those associations.
 - Privacy checks confirm event payloads and transient evidence do not enter the ledger or unrelated ticket artifacts.
 - AL-56 generation is idempotent, preserves invocation/tool totals, and changes no other ticket ledger. No workspace-wide migration/backfill command is run.
-- Compare the resulting AL-56 ledger with the current 5,166-line / 176,299-byte baseline and report exact lines/bytes. The expected reduction removes the 231 event rows and 231 event references while retaining compact summaries.
+- Compare the resulting AL-56 ledger with the current 5,166-line / 176,299-byte baseline and report exact lines/bytes. The final output contains no event or evidence fields and is 1,691 lines / 53,208 bytes (67.3% fewer lines, 69.8% fewer bytes).
 
 ## Deliverables
 

@@ -53,7 +53,7 @@ Validation: race-enabled CLI and Codex adapter suites pass with fresh test execu
 
 Ticket index maintenance: restored the baseline index and removed its Done section. Updated repository and OpenCode workflow instructions to remove completed entries instead of accumulating them, retaining completed specifications in `plan/done/` and downstream dependency updates.
 
-Iteration 07 ledger compaction: removed persisted anomaly evidence IDs and event rows while keeping anomaly summaries, invocations, and tool totals. Local event hydration now rebuilds anomaly associations on demand from the declared harness source. Codex hydration uses rollout trees from `CODEX_HOME`; OpenCode keeps its SQLite path. Hydration fails closed if any expected session source is unavailable. Full `make` passed with 722 frontend tests, and independent review approved the implementation. Only AL-56 is refreshed during final generation; other ticket ledgers remain untouched and no workspace-wide backfill ran.
+Iteration 07 ledger compaction: removed persisted anomaly evidence IDs and event rows while keeping anomaly summaries, invocations, and tool totals. Local event hydration now rebuilds anomaly associations on demand from the declared harness source. Codex hydration uses rollout trees from `CODEX_HOME`; OpenCode keeps its SQLite path. Hydration fails closed if any expected session source is unavailable. Full `make` passed with 722 frontend tests, and independent review approved the implementation. Final AL-56 generation contains 25 sessions and 49 anomaly summaries, with no `events`, `evidence`, or `event_id` fields. The ledger shrank from 5,166 lines / 176,299 bytes to 1,691 lines / 53,208 bytes (67.3% fewer lines and 69.8% fewer bytes). Other ticket ledgers remain untouched; no workspace-wide backfill ran.
 
 Code metrics correction: `generate` defaults to the explicit `--code-ref HEAD`; Git discovery no longer searches ticket IDs in branches or commit subjects. Backfill requires an explicit code ref when recomputing Git facts. Codex root user messages supply SDLC iterations. Regression coverage uses isolated Git repositories and synthetic rollouts, including ticket-free branch names, invalid refs, duplicate message representations, and child delegation.
 
@@ -140,24 +140,25 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - Migrated the AL-56 ledger. Other ticket ledgers are unchanged in the final branch; their backfill is deferred to the machine with their source data. Schema tests use canonical v4 fixtures. The full `make` passed, including Go race tests, 719 frontend tests, typecheck/lint, production build, and multi-platform CLI builds. Independent review approved the implementation.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 81
-- **Active Agent Duration:** 6h 32m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 16 compactions) | Subagents peak 246.7k (Coder_iteration_06)
+- **Software Development Life Cycle Iterations:** 88
+- **Active Agent Duration:** 7h 40m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 18 compactions) | Subagents peak 246.7k (Coder_iteration_06)
 - **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 2.7 avg turns/run (peak: 9 turns) | Coder 1.0, Child_cli_test 2.0, Coder_iteration_04 7.0, Coder_iteration_05 4.0, Coder_iteration_05_validation 2.0, Coder_iteration_06 9.0, Fix_child_parser 2.0, Planner_iteration_04 6.0, Planner_iteration_05 1.0, Planner_iteration_06 4.0, Reviewer_iteration_04 1.0, Reviewer_iteration_04_final 1.0, Reviewer_iteration_05 1.0, Reviewer_iteration_05_final 1.0, Reviewer_iteration_05_round2 1.0, Reviewer_iteration_05_round2_restart 1.0, Reviewer_iteration_05_round3 1.0, Reviewer_iteration_06 4.0, Role_mapping_review 1.0, Telemetry_hi 1.0, Tester_iteration_04 3.0, Tester_iteration_05 4.0, Tester_iteration_06 3.0
-- **Test-to-Production Code Ratio:** 2.8:1 (+15,414 test lines / +5,594 prod lines)
-- **Code Delivered:** +21,031 / -15,019 lines across 102 code files (excluding docs)
-- **Reasoning Effort:** 557,326 reasoning tokens (32.0% of generated output)
-- **Tool Health & Self-Correction:** 2,328 tool calls (171 self-corrections, 92.7% success rate)
+- **Subagent Turn Velocity & Thrashing:** 3.0 avg turns/run (peak: 12 turns) | Coder 1.0, Child_cli_test 2.0, Coder_iteration_04 7.0, Coder_iteration_05 4.0, Coder_iteration_05_validation 2.0, Coder_iteration_06 12.0, Fix_child_parser 2.0, Planner_iteration_04 6.0, Planner_iteration_05 1.0, Planner_iteration_06 4.0, Planner_iteration_07 1.0, Reviewer_iteration_04 1.0, Reviewer_iteration_04_final 1.0, Reviewer_iteration_05 1.0, Reviewer_iteration_05_final 1.0, Reviewer_iteration_05_round2 1.0, Reviewer_iteration_05_round2_restart 1.0, Reviewer_iteration_05_round3 1.0, Reviewer_iteration_06 7.0, Role_mapping_review 1.0, Telemetry_hi 1.0, Tester_iteration_04 3.0, Tester_iteration_05 4.0, Tester_iteration_06 6.0
+- **Test-to-Production Code Ratio:** 2.7:1 (+15,133 test lines / +5,642 prod lines)
+- **Code Delivered:** +20,859 / -15,877 lines across 103 code files (excluding docs)
+- **Reasoning Effort:** 637,630 reasoning tokens (32.3% of generated output)
+- **Tool Health & Self-Correction:** 2,664 tool calls (191 self-corrections, 92.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 39 execution anomalies detected (32 CRITICAL, 7 WARNING).
+- **Status:** 43 execution anomalies detected (34 CRITICAL, 9 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (245.3k tokens) — Context tokens reached 245.3k in turn 0 (session: 01a1798b-2122-74a2-995f-359b2ed68fd8), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+245.3k tokens) — Context tokens surged by 245.3k tokens in turn 0 (session: 01a1798b-2122-74a2-995f-359b2ed68fd8, total: 245.3k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.2k tokens) — Context tokens reached 162.2k in turn 1 (session: 01a17887-026c-7ac0-91f7-cd128bc8ecd6), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.9k tokens) — Context tokens reached 162.9k in turn 1 (session: 01a1792e-17ec-7cb1-b062-30f0676256a6), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.0k tokens) — Context tokens reached 163.0k in turn 1 (session: 01a1788f-bbe2-7a21-b94e-a0caeeed057e), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.4k tokens) — Context tokens reached 163.4k in turn 1 (session: 01a17896-6f63-7a41-b321-1db548a94221), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.8k tokens) — Context tokens reached 163.8k in turn 1 (session: 01a179cf-823d-72a2-af9a-47c51661e36d), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.2k tokens) — Context tokens reached 164.2k in turn 1 (session: 01a17943-1953-71e0-9136-27f88405d173), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.5k tokens) — Context tokens reached 164.5k in turn 1 (session: 01a17924-7d48-7de3-98b7-6a29aad49868), breaching 160k critical ceiling
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.3k tokens) — Context tokens reached 167.3k in turn 1 (session: 01a174b1-3b71-73c0-a0b7-6428b55ad981), breaching 160k critical ceiling
@@ -170,6 +171,7 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+133.9k tokens) — Context tokens surged by 133.9k tokens in turn 1 (session: 01a1793f-458c-7233-9583-ac7f631a5f8b, total: 133.9k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+137.2k tokens) — Context tokens surged by 137.2k tokens in turn 1 (session: 01a174a5-1271-7791-8474-55e6bf0e84fd, total: 137.2k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+142.5k tokens) — Context tokens surged by 142.5k tokens in turn 1 (session: 01a17943-1953-71e0-9136-27f88405d173, total: 142.5k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+158.8k tokens) — Context tokens surged by 158.8k tokens in turn 1 (session: 01a179cf-823d-72a2-af9a-47c51661e36d, total: 158.8k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+167.3k tokens) — Context tokens surged by 167.3k tokens in turn 1 (session: 01a174b1-3b71-73c0-a0b7-6428b55ad981, total: 167.3k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+188.9k tokens) — Context tokens surged by 188.9k tokens in turn 1 (session: 01a17955-edfd-71c3-95d0-7a9055ea8d3e, total: 188.9k tokens, threshold: 80000)
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+226.6k tokens) — Context tokens surged by 226.6k tokens in turn 1 (session: 01a17976-d881-77e1-bc91-009160a00a20, total: 226.6k tokens, threshold: 80000)
@@ -187,10 +189,12 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k tokens in turn 14 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 148.4k tokens, threshold: 40000)
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer_iteration_04_final <-> coder_iteration_04 (4 cycles) — Subagent roles 'reviewer_iteration_04_final' and 'coder_iteration_04' alternated for 4 consecutive cycles indicating thrashing
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer_iteration_04_final <-> coder_iteration_04 (4 cycles) — Subagent roles 'reviewer_iteration_04_final' and 'coder_iteration_04' alternated for 4 consecutive cycles indicating thrashing
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer_iteration_06 <-> tester_iteration_06 (4 cycles) — Subagent roles 'reviewer_iteration_06' and 'tester_iteration_06' alternated for 4 consecutive cycles indicating thrashing
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester_iteration_05 <-> reviewer_iteration_05_final (3 cycles) — Subagent roles 'tester_iteration_05' and 'reviewer_iteration_05_final' alternated for 3 consecutive cycles indicating thrashing
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester_iteration_05 <-> reviewer_iteration_05_round2 (4 cycles) — Subagent roles 'tester_iteration_05' and 'reviewer_iteration_05_round2' alternated for 4 consecutive cycles indicating thrashing
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester_iteration_06 <-> reviewer_iteration_06 (3 cycles) — Subagent roles 'tester_iteration_06' and 'reviewer_iteration_06' alternated for 3 consecutive cycles indicating thrashing
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures (session: 01a17903-9e65-78b2-8413-2fb3d35a68b1, turn: 3)
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures (session: 01a17976-d881-77e1-bc91-009160a00a20, turn: 10)
 
 ### Agentic Execution Metrics
 
@@ -202,11 +206,12 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 | **coder_iteration_04** | 1 | 232,389 | 50,593 | 20,593,792 | 98.9% | 243.9k | BLOATED (122%) | $0.00 |
 | **coder_iteration_05** | 1 | 520,660 | 154,185 | 61,281,024 | 99.2% | 245.1k | BLOATED (123%) | $0.00 |
 | **coder_iteration_05_validation** | 1 | 48,684 | 18,921 | 6,521,472 | 99.3% | 172.2k | ELEVATED | $0.00 |
-| **coder_iteration_06** | 1 | 740,482 | 140,507 | 47,614,976 | 98.5% | 246.7k | BLOATED (123%) | $0.00 |
+| **coder_iteration_06** | 1 | 1,035,664 | 226,089 | 81,622,144 | 98.7% | 246.7k | BLOATED (123%) | $0.00 |
 | **fix_child_parser** | 1 | 11,868 | 5,234 | 2,119,552 | 99.4% | 146.3k | ELEVATED | $0.00 |
 | **planner_iteration_04** | 1 | 56,280 | 13,411 | 2,993,920 | 98.2% | 101.5k | ELEVATED | $0.00 |
 | **planner_iteration_05** | 1 | 28,308 | 5,183 | 683,520 | 96.0% | 78.7k | HEALTHY | $0.00 |
 | **planner_iteration_06** | 1 | 33,825 | 13,841 | 3,905,920 | 99.1% | 218.6k | BLOATED (109%) | $0.00 |
+| **planner_iteration_07** | 1 | 47,552 | 4,946 | 1,512,704 | 97.0% | 183.4k | ELEVATED | $0.00 |
 | **reviewer_iteration_04** | 1 | 21,236 | 1,983 | 360,064 | 94.4% | 103.5k | ELEVATED | $0.00 |
 | **reviewer_iteration_04_final** | 1 | 79,359 | 21,199 | 13,344,768 | 99.4% | 221.8k | BLOATED (111%) | $0.00 |
 | **reviewer_iteration_05** | 1 | 58,454 | 9,421 | 2,089,984 | 97.3% | 165.1k | ELEVATED | $0.00 |
@@ -214,19 +219,19 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 | **reviewer_iteration_05_round2** | 1 | 22,838 | 2,386 | 1,419,904 | 98.4% | 136.6k | ELEVATED | $0.00 |
 | **reviewer_iteration_05_round2_restart** | 1 | 26,641 | 7,626 | 1,868,160 | 98.6% | 153.4k | ELEVATED | $0.00 |
 | **reviewer_iteration_05_round3** | 1 | 26,473 | 7,396 | 2,497,920 | 99.0% | 156.2k | ELEVATED | $0.00 |
-| **reviewer_iteration_06** | 1 | 128,693 | 13,420 | 2,554,368 | 95.2% | 245.3k | BLOATED (123%) | $0.00 |
+| **reviewer_iteration_06** | 1 | 318,650 | 27,246 | 7,210,240 | 95.8% | 245.3k | BLOATED (123%) | $0.00 |
 | **role_mapping_review** | 1 | 3,980 | 677 | 503,040 | 99.2% | 170.1k | ELEVATED | $0.00 |
-| **rootagent** | 1 | 3,115,531 | 633,398 | 212,411,648 | 98.6% | 247.7k | BLOATED (124%) | $0.00 |
+| **rootagent** | 1 | 3,410,447 | 677,305 | 234,132,736 | 98.6% | 247.7k | BLOATED (124%) | $0.00 |
 | **telemetry_hi** | 1 | 994 | 6 | 125,312 | 99.2% | 126.3k | ELEVATED | $0.00 |
 | **tester_iteration_04** | 1 | 49,097 | 7,761 | 8,845,056 | 99.4% | 178.1k | ELEVATED | $0.00 |
 | **tester_iteration_05** | 1 | 148,011 | 27,425 | 13,262,080 | 98.9% | 187.0k | ELEVATED | $0.00 |
-| **tester_iteration_06** | 1 | 274,095 | 36,336 | 20,108,160 | 98.7% | 243.0k | BLOATED (122%) | $0.00 |
-| **Total** | **24** | **5,677,166** | **1,184,399** | **431,184,256** | **98.7%** | **247.7k** | **BLOATED** | **$0.00** |
+| **tester_iteration_06** | 1 | 517,194 | 42,637 | 22,315,648 | 97.7% | 243.0k | BLOATED (122%) | $0.00 |
+| **Total** | **25** | **6,747,872** | **1,338,961** | **495,288,576** | **98.7%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
-| **gpt-6-luna** | 21 | 5,129,321 | 1,114,609 | 403,105,792 | 98.7% | $0.00 |
+| **gpt-6-luna** | 22 | 6,200,027 | 1,269,171 | 467,210,112 | 98.7% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **24** | **5,677,166** | **1,184,399** | **431,184,256** | **98.7%** | **$0.00** |
+| **Total** | **25** | **6,747,872** | **1,338,961** | **495,288,576** | **98.7%** | **$0.00** |
