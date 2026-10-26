@@ -4,7 +4,7 @@ Adds opt-in Codex rollout discovery and metrics extraction through `agentic-lens
 
 Finalizes the unreleased schema v4 as a session-owned ledger. Each session contains its invocations, per-tool call/error summaries, and retained events; session identity is stored once. Cross-session tool totals and dashboard rows are derived from session facts. OpenCode and Codex generation, migration, repository loading, backfill, and UI use this shape.
 
-Migration converts v1-v3 and interim-v4 ledgers, rejects mixed or malformed data without modifying the source, and enforces event privacy. Legacy tool aggregates without session attribution are removed with a count and recovery guidance in migration notes and CLI output. Across 84 tracked ledgers, 843 such rows were removed from 66 ledgers; all 545 invocations and attributed tool counts were preserved. Missing source logs mean unscoped totals cannot be recovered.
+Migration converts v1-v3 and interim-v4 ledgers, rejects mixed or malformed data without modifying the source, and enforces event privacy. Legacy tool aggregates without session attribution are removed with a count and recovery guidance in migration notes and CLI output. This branch migrates AL-56 only; other ticket ledgers remain unchanged for backfill on the machine that has their source data. Missing source logs mean unscoped totals cannot be recovered.
 
 Code attribution uses `--code-ref HEAD` by default; ticket/branch-based discovery remains removed. No HTTP routes or import UI were added.
 

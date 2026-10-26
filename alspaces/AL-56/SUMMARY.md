@@ -126,7 +126,7 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 ## Iteration 04: Session-Scoped Tool Facts and Exact Zero Iterations
 
 - **Schema-v4 tool provenance:** OpenCode and Codex facts are grouped under owning sessions. Each session contains its invocation records, per-tool call/error summaries, and retained events; cross-session totals are derived during loading and aggregation. Session refresh replaces a matching session snapshot while retaining other sessions.
-- **Breaking validation and recovery:** Unscoped legacy tool rows cannot be attributed reliably. Migration removes them, reports the count and source-log recovery guidance in the ledger and CLI, and preserves the original file on migration failure. Across the 84 tracked ledgers, 843 unscoped rows were removed from 66 ledgers; scoped counts and all 545 invocations were preserved. Re-extract from source logs to recover dropped counts when those logs remain available.
+- **Breaking validation and recovery:** Unscoped legacy tool rows cannot be attributed reliably. Migration removes them, reports the count and source-log recovery guidance in the ledger and CLI, and preserves the original file on migration failure. The AL-56 ledger is migrated here; other ticket ledgers were restored because their source data is on another machine. Re-extract from source logs there to recover dropped counts.
 - **Exact-zero iterations:** Extraction and backfill now retain zero steering turns; schema conversion no longer substitutes one. Focused regressions cover zero-preserving backfill and invalid unscoped v4 ledger rejection without mutation. Session-fact merge, DTO validation, and repository-load regressions also pass.
 - **Validation and limitations:** Real Codex smoke extraction generated this ticket's ledger from the local rollout discovery path. Focused Go tests passed for migration runner, backfill, and repository loading; diff checks passed. The current checkout has no configured OpenCode database for a fresh live OpenCode smoke run. Existing unscoped counts cannot be reconstructed without source logs.
 
@@ -135,7 +135,7 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - Finalized unreleased schema v4 as a session-owned ledger: invocations, per-tool summaries, and retained events are nested under sessions, with each session ID stored once. Cross-session tool totals and UI rows are derived from these facts.
 - Added v1-v3 and interim-v4 migration to the canonical shape. Migration rejects mixed legacy/canonical data and malformed current-v4 sessions atomically; unscoped tool aggregates are counted in migration notes and CLI output.
 - Enforced event privacy during migration and persistence. OpenCode and Codex generation, repository loading, backfill, API/domain aggregation, and frontend consumers use the session-owned shape.
-- Migrated all 84 tracked ledgers. The full `make` passed, including Go race tests, 719 frontend tests, typecheck/lint, production build, and multi-platform CLI builds. Independent review approved the iteration.
+- Migrated the AL-56 ledger. Other ticket ledgers are unchanged in the final branch; their backfill is deferred to the machine with their source data. Schema tests use canonical v4 fixtures. The full `make` passed, including Go race tests, 719 frontend tests, typecheck/lint, production build, and multi-platform CLI builds. Independent review approved the implementation.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 75

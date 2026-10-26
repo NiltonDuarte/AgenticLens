@@ -10,9 +10,8 @@
 
 - The full test run includes regression coverage for v1-v3 migration, interim-v4 normalization, mixed canonical/legacy shape rejection, atomic failure, and repeated migration.
 - CLI and migration-runner tests verify that removed unscoped tool totals are reported with their count and source-log recovery guidance.
-- Audited all 84 tracked `agentic_metrics.json` ledgers. All parse as schema v4, contain only root-level `sessions` for telemetry facts, and contain unique nonblank session IDs (545 sessions total).
-- All 545 prior invocations are preserved. The only invocation-field changes are the expected v4 `user_iterations` values; every other compared invocation field is unchanged.
-- Session-attributed tool calls and errors are preserved. The migration removed 843 unscoped tool aggregate rows across 66 ledgers and recorded the corresponding drop count and recovery guidance in each affected ledger.
+- An initial migration sweep audited 84 tracked `agentic_metrics.json` files. After the user clarified that other tickets' source data lives on another machine, all non-AL-56 `alspaces/*/agentic_metrics.json` files were restored. Only AL-56 remains migrated in the final branch; synthetic `testdata/` fixtures stay canonical v4 for tests.
+- The initial sweep preserved all 545 invocations and session-attributed tool calls/errors while removing 843 unscoped tool rows across 66 ledgers. Those counts describe the audit before restoration, not the current workspace contents.
 - The existing v3 event-persistence allowlist pruned 12 ineligible routine events from `testdata/workspaces/AL-2`; retained event metadata was preserved.
 - No persisted session event contains nonempty prompt, reasoning, tool-input, tool-output, or error-message payloads.
 
@@ -50,3 +49,8 @@ Not run in the tester phase. The repository workflow requires telemetry ingestio
 - Event sanitization and rejection of `error_message` remain covered by passing migration-runner and DTO tests in the full suite.
 - Migration metadata uses `completed` when `steps_pending` is empty and `partial` when pending steps remain; the v3-to-v4 step preserves this distinction. Existing migration tests cover pending-step preservation and completed status.
 - Final `git diff --check` passed.
+
+## Workspace data scope correction
+
+- Restored every non-AL-56 ticket ledger to its pre-migration content. No workspace-wide migration/backfill was run after the user requested that it wait for the source-bearing machine.
+- The AL-56 ledger remains session-owned v4. Test fixture ledgers remain v4-shaped because the full test suite requires the current schema.

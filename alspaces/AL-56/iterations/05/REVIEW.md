@@ -14,9 +14,8 @@ Reviewed the approved iteration 05 plan and implementation diff against the tick
 
 ## Data and Privacy Audit
 
-- Independently parsed all 84 tracked `agentic_metrics.json` files. All are schema v4 with only root-level `sessions` for telemetry facts; they contain 545 sessions and 545 invocations.
-- All sessions have at least one fact, and there are no duplicate per-session tool names.
-- The migration removed 843 unscoped tool aggregate rows across 66 ledgers with corresponding count and re-extraction guidance in each ledger. The user explicitly accepted this loss. Session-attributed tool totals are preserved.
+- During review, independently parsed the initial 84-file migration sweep: all files were schema v4 with session-owned facts; 545 sessions/invocations were preserved, and 843 unscoped tool rows were removed across 66 ledgers with notes. After the user clarified that other ticket sources live on a different machine, all non-AL-56 workspace ledgers were restored. These sweep totals are historical review evidence, not the final branch contents.
+- The final branch keeps only the AL-56 workspace ledger migrated; synthetic `testdata/` fixtures remain schema-v4-shaped for tests. No duplicate per-session tool names or persisted private event payloads were found in the audited data.
 - No persisted session event contains prompt, reasoning, tool-input, tool-output, or error-message payloads. The 12 ineligible events removed from `testdata/workspaces/AL-2` follow the existing event allowlist.
 - The JSON changes are limited to the approved session-owned relocation, schema-v4 `user_iterations`, documented migration notes, and the AL-2 privacy pruning.
 
@@ -32,3 +31,7 @@ Reviewed the approved iteration 05 plan and implementation diff against the tick
 `APPROVED`
 
 The session-owned v4 contract is consistently implemented across migration, persistence, extraction, aggregation, and UI consumption. Migration loss is explicit, validated input is not silently discarded, and the final repository checks pass.
+
+## Post-review workspace scope correction
+
+After this review, the user requested that other ticket ledgers remain unchanged until backfill runs on the machine containing their source data. Those tracked files were restored; no workspace-wide backfill has been run. The code review and test verdict remain applicable to the implementation and canonical fixtures.
