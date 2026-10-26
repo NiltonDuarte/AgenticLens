@@ -56,71 +56,101 @@ func float64Ptr(f float64) *float64 {
 
 // detectToolRetryStreaks detects consecutive execution failures of the same tool in the event stream,
 // strictly scoped per session ID.
-func detectToolRetryStreaks(events []EventFact) []Anomaly {
+type retryStreakDetection struct {
+	anomaly      Anomaly
+	eventIndexes []int
+}
+
+func detectToolRetryStreaksWithIndexes(events []EventFact) []retryStreakDetection {
 	if len(events) == 0 {
 		return nil
 	}
-
-	var anomalies []Anomaly
-	var activeTool string
-	var activeSessionID string
-	var consecutiveErrors int64
-	var lastTurn int64
-
-	emitStreak := func() {
-		if consecutiveErrors >= 3 && activeTool != "" && activeSessionID != "" {
-			sev := SeverityWarning
-			thresholdStr := "3"
-			if consecutiveErrors >= 5 {
-				sev = SeverityCritical
-				thresholdStr = "5"
-			}
-			anomaly := Anomaly{
-				RuleID:   RuleToolRetryStreak,
-				Severity: sev,
-				Title:    fmt.Sprintf("Tool retry streak: %s (%d consecutive errors)", activeTool, consecutiveErrors),
-				Description: fmt.Sprintf("Tool '%s' encountered %d consecutive execution failures (session: %s, turn: %d)",
-					activeTool, consecutiveErrors, activeSessionID, lastTurn),
-				Context: AnomalyContext{
-					ToolName:  strPtr(activeTool),
-					Count:     int64Ptr(consecutiveErrors),
-					SessionID: strPtr(activeSessionID),
-					Turn:      int64Ptr(lastTurn),
-					Threshold: strPtr(thresholdStr),
-				},
-			}
-			anomalies = append(anomalies, anomaly)
+	var detections []retryStreakDetection
+	bySession := make(map[string][]int)
+	for index, event := range events {
+		if strings.TrimSpace(event.SessionID) != "" {
+			bySession[event.SessionID] = append(bySession[event.SessionID], index)
 		}
 	}
-
-	for _, event := range events {
-		if event.EventType != EventTypeToolCall || event.ToolName == nil || *event.ToolName == "" {
-			continue
+	sessionIDs := make([]string, 0, len(bySession))
+	for sessionID := range bySession {
+		sessionIDs = append(sessionIDs, sessionID)
+	}
+	sort.Strings(sessionIDs)
+	for _, sessionID := range sessionIDs {
+		indices := bySession[sessionID]
+		sort.SliceStable(indices, func(i, j int) bool {
+			a, b := events[indices[i]], events[indices[j]]
+			if a.Timestamp != b.Timestamp {
+				return a.Timestamp < b.Timestamp
+			}
+			return a.Turn < b.Turn
+		})
+		var activeTool string
+		var consecutiveErrors int64
+		var lastTurn int64
+		var activeEventIndexes []int
+		emitStreak := func() {
+			if consecutiveErrors >= 3 && activeTool != "" {
+				severity, threshold := SeverityWarning, "3"
+				if consecutiveErrors >= 5 {
+					severity, threshold = SeverityCritical, "5"
+				}
+				var evidence []AnomalyEvidenceRef
+				for _, eventIndex := range activeEventIndexes {
+					event := events[eventIndex]
+					if event.SessionID != "" && event.EventID != "" {
+						evidence = append(evidence, AnomalyEvidenceRef{SessionID: event.SessionID, EventID: event.EventID})
+					}
+				}
+				detections = append(detections, retryStreakDetection{
+					anomaly: Anomaly{
+						RuleID: RuleToolRetryStreak, Severity: severity,
+						Title:       fmt.Sprintf("Tool retry streak: %s (%d consecutive errors)", activeTool, consecutiveErrors),
+						Description: fmt.Sprintf("Tool '%s' encountered %d consecutive execution failures (session: %s, turn: %d)", activeTool, consecutiveErrors, sessionID, lastTurn),
+						Context:     AnomalyContext{ToolName: strPtr(activeTool), Count: int64Ptr(consecutiveErrors), SessionID: strPtr(sessionID), Turn: int64Ptr(lastTurn), Threshold: strPtr(threshold)},
+						Evidence:    evidence,
+					},
+					eventIndexes: append([]int{}, activeEventIndexes...),
+				})
+			}
+			activeEventIndexes = nil
 		}
-
-		tool := *event.ToolName
-
-		if event.Status == "error" || event.Status == "failed" {
-			if tool == activeTool && event.SessionID == activeSessionID {
-				consecutiveErrors++
-				lastTurn = event.Turn
+		for _, eventIndex := range indices {
+			event := events[eventIndex]
+			if event.EventType != EventTypeToolCall || event.ToolName == nil || *event.ToolName == "" {
+				continue
+			}
+			tool := *event.ToolName
+			if event.Status == "error" || event.Status == "failed" {
+				if tool == activeTool {
+					consecutiveErrors++
+					lastTurn = event.Turn
+					activeEventIndexes = append(activeEventIndexes, eventIndex)
+				} else {
+					emitStreak()
+					activeTool = tool
+					consecutiveErrors = 1
+					lastTurn = event.Turn
+					activeEventIndexes = []int{eventIndex}
+				}
 			} else {
 				emitStreak()
-				activeTool = tool
-				activeSessionID = event.SessionID
-				consecutiveErrors = 1
-				lastTurn = event.Turn
+				activeTool = ""
+				consecutiveErrors = 0
 			}
-		} else {
-			// Status is completed or non-error
-			emitStreak()
-			activeTool = ""
-			activeSessionID = ""
-			consecutiveErrors = 0
 		}
+		emitStreak()
 	}
+	return detections
+}
 
-	emitStreak()
+func detectToolRetryStreaks(events []EventFact) []Anomaly {
+	detections := detectToolRetryStreaksWithIndexes(events)
+	anomalies := make([]Anomaly, 0, len(detections))
+	for _, detection := range detections {
+		anomalies = append(anomalies, detection.anomaly)
+	}
 	return anomalies
 }
 

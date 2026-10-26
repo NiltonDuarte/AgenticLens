@@ -286,7 +286,7 @@ func TestPruneEventsForPersistence(t *testing.T) {
 
 	t.Run("nil or empty events slice returns allocated empty non-nil slice", func(t *testing.T) {
 		t.Parallel()
-		resNil := domain.PruneEventsForPersistence(domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, nil)})
+		resNil := mustPruneEvents(t, domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, nil)})
 		if resNil == nil {
 			t.Fatal("expected non-nil slice for nil events, got nil")
 		}
@@ -294,7 +294,7 @@ func TestPruneEventsForPersistence(t *testing.T) {
 			t.Fatalf("expected 0 events, got %d", len(resNil))
 		}
 
-		resEmpty := domain.PruneEventsForPersistence(domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{})})
+		resEmpty := mustPruneEvents(t, domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{})})
 		if resEmpty == nil {
 			t.Fatal("expected non-nil slice for empty events, got nil")
 		}
@@ -359,7 +359,7 @@ func TestPruneEventsForPersistence(t *testing.T) {
 		}, events),
 		}
 
-		pruned := domain.PruneEventsForPersistence(ledger)
+		pruned := mustPruneEvents(t, ledger)
 		if len(pruned) != 0 {
 			t.Fatalf("expected no direct anomaly evidence for isolated error/compaction, got %d: %+v", len(pruned), pruned)
 		}
@@ -395,7 +395,7 @@ func TestPruneEventsForPersistence(t *testing.T) {
 
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events)}
 
-		pruned := domain.PruneEventsForPersistence(ledger)
+		pruned := mustPruneEvents(t, ledger)
 		if len(pruned) != 2 {
 			t.Fatalf("expected before/after context evidence, got %d", len(pruned))
 		}
@@ -592,6 +592,15 @@ func TestPruneEventsForPersistence(t *testing.T) {
 			t.Errorf("DeriveMetricsLedger Anomalies mismatch:\nunpruned: %+v\npruned: %+v", derivedUnpruned.Anomalies, derivedPruned.Anomalies)
 		}
 	})
+}
+
+func TestPruneEventsForPersistencePropagatesMissingEvidenceError(t *testing.T) {
+	tool := "bash"
+	ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, []domain.ToolFact{{SessionID: "s1", Name: tool, Calls: 5, Errors: 3}}, nil)}
+	_, err := domain.PruneEventsForPersistence(ledger)
+	if err == nil || !strings.Contains(err.Error(), "requires 3 failed tool-call evidence events") {
+		t.Fatalf("expected required evidence error to propagate, got %v", err)
+	}
 }
 
 func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
@@ -858,7 +867,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 			ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, tt.tools, tt.inputEvents)}
 			beforeEvents := ledger.EventFacts()
 
-			pruned := domain.PruneEventsForPersistence(ledger)
+			pruned := mustPruneEvents(t, ledger)
 
 			if len(pruned) != tt.expectedCount {
 				t.Fatalf("expected %d pruned events, got %d", tt.expectedCount, len(pruned))
@@ -1010,7 +1019,7 @@ func TestPruneEventsForPersistence_DiagnosticSanitization(t *testing.T) {
 	}),
 	}
 
-	pruned := domain.PruneEventsForPersistence(ledger)
+	pruned := mustPruneEvents(t, ledger)
 	if len(pruned) != 0 {
 		t.Fatalf("expected no direct evidence for isolated error/compaction, got %d", len(pruned))
 	}
@@ -1068,8 +1077,12 @@ func TestPersistSparseAnomalyEvidenceKeepsOnlyDirectEvidenceAndCompactSummaries(
 		for i := range metrics.Anomalies {
 			metrics.Anomalies[i].Evidence = nil
 		}
-		if !reflect.DeepEqual(metrics.Anomalies, domain.DetectAnomalies(full)) {
-			t.Fatalf("stored summary differs from full stream: %#v != %#v", metrics.Anomalies, domain.DetectAnomalies(full))
+		fullSummaries := domain.DetectAnomalies(full)
+		for i := range fullSummaries {
+			fullSummaries[i].Evidence = nil
+		}
+		if !reflect.DeepEqual(metrics.Anomalies, fullSummaries) {
+			t.Fatalf("stored summary differs from full stream: %#v != %#v", metrics.Anomalies, fullSummaries)
 		}
 	})
 
@@ -1147,6 +1160,85 @@ func TestPersistSparseAnomalyEvidenceSelectsMinimalReworkRoleSequence(t *testing
 	}
 	if len(persisted.Anomalies) != 1 || persisted.Anomalies[0].RuleID != domain.RuleSubagentReworkLoop || persisted.Anomalies[0].Context.Count == nil || *persisted.Anomalies[0].Context.Count != 3 {
 		t.Fatalf("missing ticket-scoped rework summary: %#v", persisted.Anomalies)
+	}
+}
+
+func TestPersistSparseAnomalyEvidenceSelectsExactRetryRunWhenSameTurnRepeats(t *testing.T) {
+	tool := "command"
+	events := make([]domain.EventFact, 0, 8)
+	for i := 0; i < 5; i++ {
+		events = append(events, domain.EventFact{EventID: fmt.Sprintf("first-run-%d", i), Timestamp: fmt.Sprintf("2026-10-01T00:00:0%dZ", i+1), SessionID: "s1", Turn: 9, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"})
+	}
+	events = append(events, domain.EventFact{EventID: "separator-success", Timestamp: "2026-10-01T00:00:06Z", SessionID: "s1", Turn: 9, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed"})
+	for i := 0; i < 2; i++ {
+		events = append(events, domain.EventFact{EventID: fmt.Sprintf("final-run-%d", i), Timestamp: fmt.Sprintf("2026-10-01T00:00:0%dZ", i+7), SessionID: "s1", Turn: 9, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"})
+	}
+	sessions, err := domain.SessionsFromFacts(nil, []domain.ToolFact{{SessionID: "s1", Name: tool, Calls: 8, Errors: 7}}, events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := domain.PersistSparseAnomalyEvidence(domain.AgenticFactLedger{Sessions: sessions})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var retry *domain.Anomaly
+	allAnomalies := persisted.AnomalyFacts()
+	for i := range allAnomalies {
+		if allAnomalies[i].RuleID == domain.RuleToolRetryStreak {
+			retry = &allAnomalies[i]
+			break
+		}
+	}
+	if retry == nil || retry.Context.Count == nil || *retry.Context.Count != 5 {
+		t.Fatalf("expected the first five-error run to be detected, got %#v", allAnomalies)
+	}
+	if len(retry.Evidence) != 5 {
+		t.Fatalf("expected five refs for first run, got %#v", retry.Evidence)
+	}
+	for i, ref := range retry.Evidence {
+		want := fmt.Sprintf("first-run-%d", i)
+		if ref.SessionID != "s1" || ref.EventID != want {
+			t.Errorf("retry evidence[%d]=%#v, want event_id %q", i, ref, want)
+		}
+	}
+}
+
+func TestPersistSparseAnomalyEvidenceKeepsSessionRetryStreakAcrossInterleavedSessions(t *testing.T) {
+	bash, command := "bash", "command"
+	events := []domain.EventFact{
+		{EventID: "a-1", Timestamp: "2026-10-01T00:00:01Z", SessionID: "session-a", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &bash, Status: "error"},
+		{EventID: "b-1", Timestamp: "2026-10-01T00:00:02Z", SessionID: "session-b", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &command, Status: "completed"},
+		{EventID: "a-2", Timestamp: "2026-10-01T00:00:03Z", SessionID: "session-a", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &bash, Status: "error"},
+		{EventID: "b-2", Timestamp: "2026-10-01T00:00:04Z", SessionID: "session-b", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &command, Status: "completed"},
+		{EventID: "a-3", Timestamp: "2026-10-01T00:00:05Z", SessionID: "session-a", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &bash, Status: "error"},
+	}
+	sessions, err := domain.SessionsFromFacts(nil, nil, events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := domain.PersistSparseAnomalyEvidence(domain.AgenticFactLedger{Sessions: sessions})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var retry *domain.Anomaly
+	allAnomalies := persisted.AnomalyFacts()
+	for i := range allAnomalies {
+		if allAnomalies[i].RuleID == domain.RuleToolRetryStreak {
+			retry = &allAnomalies[i]
+			break
+		}
+	}
+	if retry == nil || retry.Context.SessionID == nil || *retry.Context.SessionID != "session-a" || retry.Context.Count == nil || *retry.Context.Count != 3 {
+		t.Fatalf("expected three-call retry streak in session A independent of session B, got %#v", allAnomalies)
+	}
+	retained := persisted.EventFacts()
+	if len(retained) != 3 {
+		t.Fatalf("retained %d events, want exactly three session A failures: %#v", len(retained), retained)
+	}
+	for i, event := range retained {
+		if event.SessionID != "session-a" || event.EventID != fmt.Sprintf("a-%d", i+1) {
+			t.Errorf("retained event[%d]=%#v; expected session A source event a-%d", i, event, i+1)
+		}
 	}
 }
 
@@ -1260,6 +1352,15 @@ func TestSparseEvidenceMeetsLedgerSizeTargets(t *testing.T) {
 	if len(after)*100 > len(before)*60 {
 		t.Fatalf("ledger size reduction is below 40%%: before=%d after=%d", len(before), len(after))
 	}
+}
+
+func mustPruneEvents(t *testing.T, ledger domain.AgenticFactLedger) []domain.EventFact {
+	t.Helper()
+	events, err := domain.PruneEventsForPersistence(ledger)
+	if err != nil {
+		t.Fatalf("PruneEventsForPersistence failed: %v", err)
+	}
+	return events
 }
 
 func ptrString(v string) *string { return &v }

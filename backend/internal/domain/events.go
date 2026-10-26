@@ -127,11 +127,11 @@ func PersistSparseAnomalyEvidence(ledger AgenticFactLedger) (AgenticFactLedger, 
 }
 
 // PruneEventsForPersistence returns only event rows that directly support a detected anomaly.
-func PruneEventsForPersistence(ledger AgenticFactLedger) []EventFact {
+func PruneEventsForPersistence(ledger AgenticFactLedger) ([]EventFact, error) {
 	events := SortEvents(ledger.EventFacts())
 	selection, err := selectAnomalyEvidence(ledger, events, DetectAnomalies(ledger))
 	if err != nil {
-		return []EventFact{}
+		return nil, err
 	}
 	result := make([]EventFact, 0, len(selection.events))
 	for index, event := range events {
@@ -142,7 +142,7 @@ func PruneEventsForPersistence(ledger AgenticFactLedger) []EventFact {
 		event.ToolInput, event.ToolOutput = nil, nil
 		result = append(result, event)
 	}
-	return result
+	return result, nil
 }
 
 type anomalyEvidenceSelection struct {
@@ -179,6 +179,8 @@ func selectAnomalyEvidence(ledger AgenticFactLedger, events []EventFact, anomali
 		reworkCandidates[candidate.key] = append(reworkCandidates[candidate.key], candidate)
 	}
 	reworkCandidateOffset := make(map[string]int)
+	retryDetections := detectToolRetryStreaksWithIndexes(events)
+	retryDetectionUsed := make([]bool, len(retryDetections))
 	for anomalyIndex, anomaly := range anomalies {
 		sid, turn := "", int64(-1)
 		if anomaly.Context.SessionID != nil {
@@ -197,28 +199,48 @@ func selectAnomalyEvidence(ledger AgenticFactLedger, events []EventFact, anomali
 			if anomaly.Context.Count != nil {
 				needed = *anomaly.Context.Count
 			}
-			end := -1
-			for i, event := range events {
-				if event.SessionID == sid && event.Turn == turn && event.EventType == EventTypeToolCall && (event.Status == "error" || event.Status == "failed") && event.ToolName != nil && *event.ToolName == tool {
-					end = i
+			if len(anomaly.Evidence) > 0 {
+				if int64(len(anomaly.Evidence)) != needed {
+					return selection, fmt.Errorf("anomaly %s session=%q tool=%q requires %d retry evidence refs; found %d", anomaly.RuleID, sid, tool, needed, len(anomaly.Evidence))
 				}
+				for _, ref := range anomaly.Evidence {
+					found := false
+					for eventIndex, event := range events {
+						if event.SessionID == ref.SessionID && event.EventID == ref.EventID {
+							if ref.SessionID != sid || event.EventType != EventTypeToolCall || event.ToolName == nil || *event.ToolName != tool || (event.Status != "error" && event.Status != "failed") {
+								return selection, fmt.Errorf("anomaly %s evidence session=%q event_id=%q does not match its detected retry streak", anomaly.RuleID, ref.SessionID, ref.EventID)
+							}
+							add(anomalyIndex, eventIndex)
+							found = true
+							break
+						}
+					}
+					if !found {
+						return selection, fmt.Errorf("anomaly %s references missing retry event session=%q event_id=%q", anomaly.RuleID, ref.SessionID, ref.EventID)
+					}
+				}
+				continue
 			}
-			indices := make([]int, 0, needed)
-			for i := end; i >= 0 && int64(len(indices)) < needed; i-- {
-				event := events[i]
-				if event.EventType != EventTypeToolCall {
+			matched := -1
+			for candidateIndex, candidate := range retryDetections {
+				if retryDetectionUsed[candidateIndex] {
 					continue
 				}
-				if event.SessionID != sid || (event.Status != "error" && event.Status != "failed") || event.ToolName == nil || *event.ToolName != tool {
+				candidateAnomaly := candidate.anomaly
+				if candidateAnomaly.Context.SessionID == nil || candidateAnomaly.Context.ToolName == nil || candidateAnomaly.Context.Turn == nil || candidateAnomaly.Context.Count == nil {
+					continue
+				}
+				if *candidateAnomaly.Context.SessionID == sid && *candidateAnomaly.Context.ToolName == tool && *candidateAnomaly.Context.Turn == turn && *candidateAnomaly.Context.Count == needed {
+					matched = candidateIndex
 					break
 				}
-				indices = append(indices, i)
 			}
-			if int64(len(indices)) != needed {
-				return selection, fmt.Errorf("anomaly %s session=%q tool=%q requires %d retry evidence events; found %d", anomaly.RuleID, sid, tool, needed, len(indices))
+			if matched < 0 {
+				return selection, fmt.Errorf("anomaly %s session=%q tool=%q turn=%d requires a matching retry streak of %d events; found none", anomaly.RuleID, sid, tool, turn, needed)
 			}
-			for i := len(indices) - 1; i >= 0; i-- {
-				add(anomalyIndex, indices[i])
+			retryDetectionUsed[matched] = true
+			for _, eventIndex := range retryDetections[matched].eventIndexes {
+				add(anomalyIndex, eventIndex)
 			}
 		case RuleToolHighFailureRate:
 			if anomaly.Context.ToolName == nil || anomaly.Context.Count == nil {
