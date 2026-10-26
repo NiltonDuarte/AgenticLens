@@ -6,6 +6,35 @@ import (
 	"agenticlens/internal/domain"
 )
 
+func TestAnomalyDisplayTextFormatsRulesAndFallsBackSafely(t *testing.T) {
+	tool := "bash"
+	count, calls, delta, tokens := int64(3), int64(10), int64(45_000), int64(165_000)
+	rate := 30.0
+	threshold := ">20%"
+	role, secondary := domain.AgentRole("coder"), domain.AgentRole("tester")
+	cycles := int64(4)
+	tests := []struct {
+		name               string
+		anomaly            domain.Anomaly
+		title, description string
+	}{
+		{"retry", domain.Anomaly{RuleID: domain.RuleToolRetryStreak, Context: domain.AnomalyContext{ToolName: &tool, Count: &count}}, "Tool retry streak: bash (3 consecutive errors)", "Tool 'bash' encountered 3 consecutive execution failures."},
+		{"high failure", domain.Anomaly{RuleID: domain.RuleToolHighFailureRate, Context: domain.AnomalyContext{ToolName: &tool, Count: &count, TotalCalls: &calls, FailureRatePct: &rate, Threshold: &threshold}}, "High tool failure rate: bash (30.0%)", "Tool 'bash' failed 3 out of 10 calls (30.0% failure rate, threshold: >20%)."},
+		{"context spike", domain.Anomaly{RuleID: domain.RuleContextSaturationSpike, Context: domain.AnomalyContext{TokenDelta: &delta, ContextTokens: &tokens}}, "Context saturation spike (+45k tokens)", "Context tokens surged by 45k to 165k tokens."},
+		{"context ceiling", domain.Anomaly{RuleID: domain.RuleContextSaturationSpike, Context: domain.AnomalyContext{ContextTokens: &tokens, Threshold: strPtr("160000")}}, "Context ceiling breached (165k tokens)", "Context tokens reached 165k, breaching the 160k critical ceiling."},
+		{"rework", domain.Anomaly{RuleID: domain.RuleSubagentReworkLoop, Context: domain.AnomalyContext{Role: &role, SecondaryRole: &secondary, Count: &cycles}}, "Subagent rework loop: coder <-> tester (4 cycles)", "Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles."},
+		{"incomplete", domain.Anomaly{RuleID: domain.RuleToolRetryStreak}, "Tool retry streak", "tool retry streak detected; some diagnostic context is unavailable."},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			title, description := domain.AnomalyDisplayText(test.anomaly)
+			if title != test.title || description != test.description {
+				t.Fatalf("got (%q, %q), want (%q, %q)", title, description, test.title, test.description)
+			}
+		})
+	}
+}
+
 func strPtr(s string) *string {
 	return &s
 }
@@ -1556,9 +1585,13 @@ func TestDetectAnomalies_DoesNotConcatenateIndependentParentGroups(t *testing.T)
 		{Timestamp: "2026-10-01T00:00:06Z", SessionID: "tester-3", Role: "tester"},
 	}
 	sessions, err := domain.SessionsFromFacts(invocations, nil, events)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	anomalies := domain.DetectAnomalies(domain.AgenticFactLedger{Sessions: sessions})
-	if len(anomalies) != 0 { t.Fatalf("independent parent groups were concatenated into a false loop: %#v", anomalies) }
+	if len(anomalies) != 0 {
+		t.Fatalf("independent parent groups were concatenated into a false loop: %#v", anomalies)
+	}
 }
 
 // 6. Boundary Cases & Division by Zero Guards
@@ -1823,13 +1856,11 @@ func TestDetectAnomalies_SortingTieBreakers(t *testing.T) {
 	aWithTurn := domain.Anomaly{
 		RuleID:   domain.RuleContextSaturationSpike,
 		Severity: domain.SeverityCritical,
-		Title:    "With Turn",
 		Context:  domain.AnomalyContext{Turn: &turn1},
 	}
 	aWithoutTurn := domain.Anomaly{
 		RuleID:   domain.RuleContextSaturationSpike,
 		Severity: domain.SeverityCritical,
-		Title:    "Without Turn",
 		Context:  domain.AnomalyContext{Turn: nil},
 	}
 	// Test DetectAnomalies sorting helper logic by sorting a slice directly

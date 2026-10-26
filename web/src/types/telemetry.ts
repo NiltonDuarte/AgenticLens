@@ -67,8 +67,6 @@ export interface AnomalyContext {
 export interface Anomaly {
   readonly rule_id: AnomalyRuleID;
   readonly severity: AnomalySeverity;
-  readonly title: string;
-  readonly description: string;
   readonly context: AnomalyContext;
   readonly evidence?: readonly AnomalyEvidenceRef[] | undefined;
 }

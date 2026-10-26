@@ -308,7 +308,7 @@ func TestPersistAnomalySummariesDropsEventsAndEvidenceButKeepsFacts(t *testing.T
 
 func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) {
 	tool := "bash"
-	oldSummary := domain.Anomaly{RuleID: domain.RuleContextSaturationSpike, Severity: domain.SeverityWarning, Title: "cached summary", Description: "old session summary"}
+	oldSummary := domain.Anomaly{RuleID: domain.RuleContextSaturationSpike, Severity: domain.SeverityWarning}
 	newEvents := []domain.SessionEventFact{
 		{EventID: "new-1", Timestamp: "2026-10-26T10:00:01Z", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
 		{EventID: "new-2", Timestamp: "2026-10-26T10:00:02Z", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
@@ -322,7 +322,7 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(persisted.Sessions[0].Anomalies) != 1 || persisted.Sessions[0].Anomalies[0].Title != "cached summary" {
+	if len(persisted.Sessions[0].Anomalies) != 1 {
 		t.Fatalf("cached session summary was lost: %#v", persisted.Sessions)
 	}
 	var retryFound bool
@@ -349,7 +349,7 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 	projected := domain.DeriveMetricsLedger(merged, domain.DefaultProjectConfig())
 	projectedOld, projectedRetry, projectedAggregate := false, false, false
 	for _, anomaly := range projected.Anomalies {
-		projectedOld = projectedOld || anomaly.Title == "cached summary"
+		projectedOld = projectedOld || anomaly.RuleID == domain.RuleContextSaturationSpike
 		projectedRetry = projectedRetry || anomaly.RuleID == domain.RuleToolRetryStreak
 		projectedAggregate = projectedAggregate || (anomaly.RuleID == domain.RuleToolHighFailureRate && anomaly.Context.TotalCalls != nil && *anomaly.Context.TotalCalls == 8)
 	}

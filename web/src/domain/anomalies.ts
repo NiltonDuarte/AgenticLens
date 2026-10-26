@@ -1,5 +1,50 @@
 import type { EventFact, Anomaly, AnomalyRuleID } from '../types/telemetry';
 import type { LivePartFact, LiveAnomalyAlert, LiveAnomalyRule } from './live';
+import { formatTokensK } from './formatters';
+
+export interface AnomalyDisplayText {
+  readonly title: string;
+  readonly description: string;
+}
+
+/** Derives presentation strings from the canonical rule and structured context. */
+export function formatAnomaly(anomaly: Anomaly): AnomalyDisplayText {
+  const context = anomaly.context;
+  const tool = context.tool_name?.trim() || 'tool';
+  switch (anomaly.rule_id) {
+    case 'TOOL_RETRY_STREAK':
+      if (context.tool_name && context.count !== undefined) {
+        return { title: `Tool retry streak: ${tool} (${context.count} consecutive errors)`, description: `Tool '${tool}' encountered ${context.count} consecutive execution failures.` };
+      }
+      break;
+    case 'TOOL_HIGH_FAILURE_RATE':
+      if (context.tool_name && context.count !== undefined && context.total_calls !== undefined && context.failure_rate_pct !== undefined) {
+        return {
+          title: `High tool failure rate: ${tool} (${context.failure_rate_pct.toFixed(1)}%)`,
+          description: `Tool '${tool}' failed ${context.count} out of ${context.total_calls} calls (${context.failure_rate_pct.toFixed(1)}% failure rate, threshold: ${context.threshold || 'configured threshold'}).`,
+        };
+      }
+      break;
+    case 'CONTEXT_SATURATION_SPIKE':
+      if (context.context_tokens !== undefined && context.threshold === '160000') {
+        return { title: `Context ceiling breached (${formatTokensK(context.context_tokens)} tokens)`, description: `Context tokens reached ${formatTokensK(context.context_tokens)}, breaching the 160k critical ceiling.` };
+      }
+      if (context.token_delta !== undefined && context.context_tokens !== undefined) {
+        return { title: `Context saturation spike (+${formatTokensK(context.token_delta)} tokens)`, description: `Context tokens surged by ${formatTokensK(context.token_delta)} to ${formatTokensK(context.context_tokens)} tokens.` };
+      }
+      break;
+    case 'SUBAGENT_REWORK_LOOP':
+      if (context.role && context.secondary_role && context.count !== undefined) {
+        return {
+          title: `Subagent rework loop: ${context.role} <-> ${context.secondary_role} (${context.count} cycles)`,
+          description: `Subagent roles '${context.role}' and '${context.secondary_role}' alternated for ${context.count} consecutive cycles.`,
+        };
+      }
+      break;
+  }
+  const name = anomaly.rule_id.toLowerCase().replaceAll('_', ' ') || 'execution anomaly';
+  return { title: name.charAt(0).toUpperCase() + name.slice(1), description: `${name} detected; some diagnostic context is unavailable.` };
+}
 
 /**
  * Union of domain and live anomaly rule identifiers.

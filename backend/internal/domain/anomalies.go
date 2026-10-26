@@ -24,18 +24,61 @@ type AnomalyContext struct {
 
 // Anomaly represents a single detected execution health issue or operational degradation.
 type Anomaly struct {
-	RuleID      AnomalyRuleID        `json:"rule_id"`
-	Severity    AnomalySeverity      `json:"severity"`
-	Title       string               `json:"title"`
-	Description string               `json:"description"`
-	Context     AnomalyContext       `json:"context"`
-	Evidence    []AnomalyEvidenceRef `json:"evidence,omitempty"`
+	RuleID   AnomalyRuleID        `json:"rule_id"`
+	Severity AnomalySeverity      `json:"severity"`
+	Context  AnomalyContext       `json:"context"`
+	Evidence []AnomalyEvidenceRef `json:"evidence,omitempty"`
 }
 
 // AnomalyEvidenceRef identifies a source event without duplicating its session or event payload.
 type AnomalyEvidenceRef struct {
 	SessionID string `json:"session_id"`
 	EventID   string `json:"event_id"`
+}
+
+// AnomalyDisplayText derives concise presentation strings from canonical anomaly facts.
+// It is intentionally outside the persisted Anomaly shape.
+func AnomalyDisplayText(anomaly Anomaly) (string, string) {
+	ctx := anomaly.Context
+	tool := "tool"
+	if ctx.ToolName != nil && strings.TrimSpace(*ctx.ToolName) != "" {
+		tool = *ctx.ToolName
+	}
+	count := int64(0)
+	if ctx.Count != nil {
+		count = *ctx.Count
+	}
+	switch anomaly.RuleID {
+	case RuleToolRetryStreak:
+		if ctx.ToolName != nil && ctx.Count != nil {
+			return fmt.Sprintf("Tool retry streak: %s (%d consecutive errors)", tool, count), fmt.Sprintf("Tool '%s' encountered %d consecutive execution failures.", tool, count)
+		}
+	case RuleToolHighFailureRate:
+		if ctx.ToolName != nil && ctx.Count != nil && ctx.TotalCalls != nil && ctx.FailureRatePct != nil {
+			threshold := ctx.Threshold
+			thresholdText := "configured threshold"
+			if threshold != nil && *threshold != "" {
+				thresholdText = *threshold
+			}
+			return fmt.Sprintf("High tool failure rate: %s (%.1f%%)", tool, *ctx.FailureRatePct), fmt.Sprintf("Tool '%s' failed %d out of %d calls (%.1f%% failure rate, threshold: %s).", tool, count, *ctx.TotalCalls, *ctx.FailureRatePct, thresholdText)
+		}
+	case RuleContextSaturationSpike:
+		if ctx.ContextTokens != nil && ctx.Threshold != nil && *ctx.Threshold == "160000" {
+			return fmt.Sprintf("Context ceiling breached (%s tokens)", FormatTokensK(*ctx.ContextTokens)), fmt.Sprintf("Context tokens reached %s, breaching the 160k critical ceiling.", FormatTokensK(*ctx.ContextTokens))
+		}
+		if ctx.TokenDelta != nil && ctx.ContextTokens != nil {
+			return fmt.Sprintf("Context saturation spike (+%s tokens)", FormatTokensK(*ctx.TokenDelta)), fmt.Sprintf("Context tokens surged by %s to %s tokens.", FormatTokensK(*ctx.TokenDelta), FormatTokensK(*ctx.ContextTokens))
+		}
+	case RuleSubagentReworkLoop:
+		if ctx.Role != nil && ctx.SecondaryRole != nil && ctx.Count != nil {
+			return fmt.Sprintf("Subagent rework loop: %s <-> %s (%d cycles)", *ctx.Role, *ctx.SecondaryRole, count), fmt.Sprintf("Subagent roles '%s' and '%s' alternated for %d consecutive cycles.", *ctx.Role, *ctx.SecondaryRole, count)
+		}
+	}
+	name := strings.ToLower(strings.ReplaceAll(string(anomaly.RuleID), "_", " "))
+	if name == "" {
+		name = "execution anomaly"
+	}
+	return strings.ToUpper(name[:1]) + name[1:], fmt.Sprintf("%s detected; some diagnostic context is unavailable.", name)
 }
 
 func strPtr(s string) *string {
@@ -106,10 +149,8 @@ func detectToolRetryStreaksWithIndexes(events []EventFact) []retryStreakDetectio
 				detections = append(detections, retryStreakDetection{
 					anomaly: Anomaly{
 						RuleID: RuleToolRetryStreak, Severity: severity,
-						Title:       fmt.Sprintf("Tool retry streak: %s (%d consecutive errors)", activeTool, consecutiveErrors),
-						Description: fmt.Sprintf("Tool '%s' encountered %d consecutive execution failures (session: %s, turn: %d)", activeTool, consecutiveErrors, sessionID, lastTurn),
-						Context:     AnomalyContext{ToolName: strPtr(activeTool), Count: int64Ptr(consecutiveErrors), SessionID: strPtr(sessionID), Turn: int64Ptr(lastTurn), Threshold: strPtr(threshold)},
-						Evidence:    evidence,
+						Context:  AnomalyContext{ToolName: strPtr(activeTool), Count: int64Ptr(consecutiveErrors), SessionID: strPtr(sessionID), Turn: int64Ptr(lastTurn), Threshold: strPtr(threshold)},
+						Evidence: evidence,
 					},
 					eventIndexes: append([]int{}, activeEventIndexes...),
 				})
@@ -219,9 +260,6 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 			anomaly := Anomaly{
 				RuleID:   RuleToolHighFailureRate,
 				Severity: sev,
-				Title:    fmt.Sprintf("High tool failure rate: %s (%.1f%%)", name, pct),
-				Description: fmt.Sprintf("Tool '%s' failed %d out of %d calls (%.1f%% failure rate, threshold: %s)",
-					name, st.errors, st.calls, pct, thresholdStr),
 				Context: AnomalyContext{
 					ToolName:       strPtr(name),
 					Count:          int64Ptr(st.errors),
@@ -278,9 +316,6 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 						anomaly := Anomaly{
 							RuleID:   RuleContextSaturationSpike,
 							Severity: sev,
-							Title:    fmt.Sprintf("Context saturation spike (+%s tokens)", FormatTokensK(delta)),
-							Description: fmt.Sprintf("Context tokens surged by %s tokens in turn %d (session: %s, total: %s tokens, threshold: %s)",
-								FormatTokensK(delta), ev.Turn, ev.SessionID, FormatTokensK(ev.ContextTokens), thresh),
 							Context: AnomalyContext{
 								SessionID:     strPtr(ev.SessionID),
 								Turn:          int64Ptr(ev.Turn),
@@ -302,9 +337,6 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 					anomaly := Anomaly{
 						RuleID:   RuleContextSaturationSpike,
 						Severity: SeverityCritical,
-						Title:    fmt.Sprintf("Context ceiling breached (%s tokens)", FormatTokensK(ev.ContextTokens)),
-						Description: fmt.Sprintf("Context tokens reached %s in turn %d (session: %s), breaching 160k critical ceiling",
-							FormatTokensK(ev.ContextTokens), ev.Turn, ev.SessionID),
 						Context: AnomalyContext{
 							SessionID:     strPtr(ev.SessionID),
 							Turn:          int64Ptr(ev.Turn),
@@ -323,9 +355,6 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 				anomaly := Anomaly{
 					RuleID:   RuleContextSaturationSpike,
 					Severity: SeverityCritical,
-					Title:    fmt.Sprintf("Context ceiling breached (%s tokens)", FormatTokensK(inv.Tokens.PeakContext)),
-					Description: fmt.Sprintf("Context tokens reached %s in role '%s' (session: %s), breaching 160k critical ceiling",
-						FormatTokensK(inv.Tokens.PeakContext), inv.Role, inv.ID),
 					Context: AnomalyContext{
 						SessionID:     strPtr(inv.ID),
 						Role:          agentRolePtr(AgentRole(inv.Role)),
@@ -407,9 +436,7 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 				}
 				anomalies = append(anomalies, Anomaly{
 					RuleID: RuleSubagentReworkLoop, Severity: severity,
-					Title:       fmt.Sprintf("Subagent rework loop: %s <-> %s (%d cycles)", a, b, cycles),
-					Description: fmt.Sprintf("Subagent roles '%s' and '%s' alternated for %d consecutive cycles indicating thrashing", a, b, cycles),
-					Context:     AnomalyContext{Role: agentRolePtr(AgentRole(a)), SecondaryRole: agentRolePtr(AgentRole(b)), Count: int64Ptr(cycles), Threshold: strPtr(threshold)},
+					Context: AnomalyContext{Role: agentRolePtr(AgentRole(a)), SecondaryRole: agentRolePtr(AgentRole(b)), Count: int64Ptr(cycles), Threshold: strPtr(threshold)},
 				})
 				i = pos
 			} else {
@@ -483,7 +510,7 @@ func sortAnomalies(anomalies []Anomaly) {
 			return toolA < toolB
 		}
 
-		return a.Title < b.Title
+		return string(a.RuleID) < string(b.RuleID)
 	})
 }
 

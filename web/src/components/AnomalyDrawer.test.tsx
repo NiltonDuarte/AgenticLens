@@ -7,8 +7,6 @@ describe('AnomalyDrawer Component', () => {
   const sampleAnomaly: Anomaly = {
     rule_id: 'TOOL_RETRY_STREAK',
     severity: 'WARNING',
-    title: 'Repeated Tool Failures',
-    description: 'Tool git failed 3 consecutive times.',
     context: {
       tool_name: 'git',
       session_id: 'session-123',
@@ -47,7 +45,7 @@ describe('AnomalyDrawer Component', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders title, severity badge, rule ID, and description when isOpen is true and anomaly is provided', () => {
+  it('derives title and description from the rule context when open', () => {
     render(
       <AnomalyDrawer
         isOpen={true}
@@ -57,10 +55,10 @@ describe('AnomalyDrawer Component', () => {
       />
     );
 
-    expect(screen.getByText('Repeated Tool Failures')).toBeInTheDocument();
+    expect(screen.getByText('Tool retry streak: git (3 consecutive errors)')).toBeInTheDocument();
     expect(screen.getByText('Rule Diagnosis')).toBeInTheDocument();
     expect(screen.getByText('TOOL_RETRY_STREAK')).toBeInTheDocument();
-    expect(screen.getByText('Tool git failed 3 consecutive times.')).toBeInTheDocument();
+    expect(screen.getByText("Tool 'git' encountered 3 consecutive execution failures.")).toBeInTheDocument();
     expect(screen.getByText('WARNING')).toBeInTheDocument();
   });
 
@@ -227,8 +225,6 @@ describe('AnomalyDrawer Component', () => {
     const minimalAnomaly: Anomaly = {
       rule_id: 'CONTEXT_SATURATION_SPIKE',
       severity: 'CRITICAL',
-      title: 'Context Saturation Spike',
-      description: 'Context spiked sharply',
       context: {},
     };
 
@@ -240,7 +236,7 @@ describe('AnomalyDrawer Component', () => {
       />
     );
 
-    expect(screen.getByText('Context Saturation Spike')).toBeInTheDocument();
+    expect(screen.getByText('Context saturation spike')).toBeInTheDocument();
     expect(screen.getByText('CONTEXT_SATURATION_SPIKE')).toBeInTheDocument();
     expect(screen.getByText('CRITICAL')).toBeInTheDocument();
     expect(screen.queryByText('Error Payload')).not.toBeInTheDocument();
@@ -265,8 +261,6 @@ describe('AnomalyDrawer Component', () => {
     const anomalyWithoutContext: Anomaly = {
       rule_id: 'TOOL_HIGH_FAILURE_RATE',
       severity: 'WARNING',
-      title: 'High Failure Rate',
-      description: 'Tool failure rate exceeded threshold',
       context: {},
     };
 
@@ -512,9 +506,9 @@ describe('AnomalyDrawer Component', () => {
 
       expect(writeTextMock).toHaveBeenCalledTimes(1);
       const copiedText = writeTextMock.mock.calls[0][0];
-      expect(copiedText).toContain('# Agent Execution Issue: Repeated Tool Failures');
+      expect(copiedText).toContain('# Agent Execution Issue: Tool retry streak: git (3 consecutive errors)');
       expect(copiedText).toContain('During turn 4 of session `session-123`');
-      expect(copiedText).toContain('tool git failed 3 consecutive times');
+      expect(copiedText).toContain("tool 'git' encountered 3 consecutive execution failures");
       expect(copiedText).toContain('### Error Details');
       expect(copiedText).toContain('fatal: destination path already exists');
       expect(copyPromptBtn).toHaveTextContent('Copied');

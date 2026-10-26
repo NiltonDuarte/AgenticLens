@@ -31,6 +31,7 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { getRoleColor, getModelColor } from '../utils/theme';
 import { TraceWaterfall } from '../components/TraceWaterfall';
 import { AnomalyDrawer } from '../components/AnomalyDrawer';
+import { formatAnomaly } from '../domain/anomalies';
 import { AnomalyBadge } from '../components/AnomalyBadge';
 import { InfoTooltip } from '../components/InfoTooltip';
 
@@ -621,6 +622,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
               <span className="legacy-anomalies-heading">Detected Workspace Anomalies:</span>
               <div className="legacy-anomalies-list">
                 {detail.anomalies.map((a, i) => (
+                  (() => {
+                    const display = formatAnomaly(a);
+                    return (
                   <div
                     key={`${a.rule_id}-${i}`}
                     className="legacy-anomaly-item"
@@ -639,14 +643,16 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                         setIsDrawerOpen(true);
                       }
                     }}
-                    aria-label={`Inspect anomaly: ${a.title}`}
+                    aria-label={`Inspect anomaly: ${display.title}`}
                   >
                     <div className="legacy-anomaly-info">
-                      <span className="legacy-anomaly-title">{a.title}</span>
-                      <span className="legacy-anomaly-desc">{a.description}</span>
+                      <span className="legacy-anomaly-title">{display.title}</span>
+                      <span className="legacy-anomaly-desc">{display.description}</span>
                     </div>
                     <AnomalyBadge severity={a.severity} label={a.severity} size="sm" />
                   </div>
+                    );
+                  })()
                 ))}
               </div>
             </div>

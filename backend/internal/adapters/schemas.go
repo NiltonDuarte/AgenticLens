@@ -628,12 +628,28 @@ func AnomalyContextDTOFromDomain(ctx domain.AnomalyContext) AnomalyContextDTO {
 
 // AnomalyDTO represents a detected domain execution anomaly in JSON boundary serialization.
 type AnomalyDTO struct {
-	RuleID      string                  `json:"rule_id"`
-	Severity    string                  `json:"severity"`
-	Title       string                  `json:"title"`
-	Description string                  `json:"description"`
-	Context     AnomalyContextDTO       `json:"context"`
-	Evidence    []AnomalyEvidenceRefDTO `json:"evidence,omitempty"`
+	RuleID   string                  `json:"rule_id"`
+	Severity string                  `json:"severity"`
+	Context  AnomalyContextDTO       `json:"context"`
+	Evidence []AnomalyEvidenceRefDTO `json:"evidence,omitempty"`
+}
+
+// UnmarshalJSON accepts old presentation fields so strict ledger decoding can
+// normalize them away while continuing to reject unrelated unknown fields.
+func (dto *AnomalyDTO) UnmarshalJSON(data []byte) error {
+	type anomalyDTOAlias AnomalyDTO
+	var decoded struct {
+		*anomalyDTOAlias
+		Title       json.RawMessage `json:"title"`
+		Description json.RawMessage `json:"description"`
+	}
+	decoded.anomalyDTOAlias = (*anomalyDTOAlias)(dto)
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&decoded); err != nil {
+		return err
+	}
+	return nil
 }
 
 type AnomalyEvidenceRefDTO struct {
@@ -643,22 +659,18 @@ type AnomalyEvidenceRefDTO struct {
 
 func (dto AnomalyDTO) ToDomain() domain.Anomaly {
 	return domain.Anomaly{
-		RuleID:      domain.AnomalyRuleID(dto.RuleID),
-		Severity:    domain.AnomalySeverity(dto.Severity),
-		Title:       dto.Title,
-		Description: dto.Description,
-		Context:     dto.Context.ToDomain(),
+		RuleID:   domain.AnomalyRuleID(dto.RuleID),
+		Severity: domain.AnomalySeverity(dto.Severity),
+		Context:  dto.Context.ToDomain(),
 	}
 }
 
 // AnomalyDTOFromDomain converts domain.Anomaly to AnomalyDTO.
 func AnomalyDTOFromDomain(anomaly domain.Anomaly) AnomalyDTO {
 	return AnomalyDTO{
-		RuleID:      string(anomaly.RuleID),
-		Severity:    string(anomaly.Severity),
-		Title:       anomaly.Title,
-		Description: anomaly.Description,
-		Context:     AnomalyContextDTOFromDomain(anomaly.Context),
+		RuleID:   string(anomaly.RuleID),
+		Severity: string(anomaly.Severity),
+		Context:  AnomalyContextDTOFromDomain(anomaly.Context),
 	}
 }
 

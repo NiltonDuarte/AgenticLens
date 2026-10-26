@@ -16,8 +16,8 @@ func strPtr(s string) *string {
 func TestAgenticFactLedgerDTO_PersistsSessionAndTicketAnomalyScopes(t *testing.T) {
 	sid, tool := "s1", "bash"
 	count, calls, rate, threshold := int64(3), int64(10), 30.0, ">20%"
-	nested := domain.Anomaly{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Title: "Retry", Description: "three retries", Context: domain.AnomalyContext{SessionID: &sid, ToolName: &tool, Count: &count}}
-	aggregate := domain.Anomaly{RuleID: domain.RuleToolHighFailureRate, Severity: domain.SeverityWarning, Title: "High tool failure rate", Description: "aggregate", Context: domain.AnomalyContext{ToolName: &tool, Count: &count, TotalCalls: &calls, FailureRatePct: &rate, Threshold: &threshold}}
+	nested := domain.Anomaly{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{SessionID: &sid, ToolName: &tool, Count: &count}}
+	aggregate := domain.Anomaly{RuleID: domain.RuleToolHighFailureRate, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &tool, Count: &count, TotalCalls: &calls, FailureRatePct: &rate, Threshold: &threshold}}
 	version := domain.CurrentSchemaVersion
 	ledger := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{{ID: sid, Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{nested}}}, Anomalies: []domain.Anomaly{aggregate}}
 	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
@@ -59,6 +59,13 @@ func TestAgenticFactLedgerDTO_OmitsEventsAndAnomalyEvidence(t *testing.T) {
 	}
 	if len(legacy.Sessions[0].Events) != 1 || len(legacy.Sessions[0].Anomalies[0].Evidence) != 1 {
 		t.Fatal("legacy rows weren't available to the normalizer")
+	}
+	legacyAnomaly, err := json.Marshal(legacy.Sessions[0].Anomalies[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(legacyAnomaly), `"title"`) || strings.Contains(string(legacyAnomaly), `"description"`) {
+		t.Fatalf("legacy presentation strings were not normalized away: %s", legacyAnomaly)
 	}
 }
 
@@ -138,10 +145,8 @@ func TestAnomalyDTO_BidirectionalMapping(t *testing.T) {
 	count := int64(2)
 
 	dom := domain.Anomaly{
-		RuleID:      domain.RuleToolHighFailureRate,
-		Severity:    domain.SeverityCritical,
-		Title:       "High tool failure rate: git (50.0%)",
-		Description: "Tool 'git' failed 3 out of 6 calls (50.0% failure rate, threshold: >=50%)",
+		RuleID:   domain.RuleToolHighFailureRate,
+		Severity: domain.SeverityCritical,
 		Context: domain.AnomalyContext{
 			ToolName: &toolName,
 			Turn:     &turn,
@@ -156,16 +161,12 @@ func TestAnomalyDTO_BidirectionalMapping(t *testing.T) {
 	if dto.Severity != string(domain.SeverityCritical) {
 		t.Errorf("expected Severity %s, got %s", domain.SeverityCritical, dto.Severity)
 	}
-	if dto.Title != dom.Title || dto.Description != dom.Description {
-		t.Errorf("title/description mismatch in DTO: %+v", dto)
-	}
 	if *dto.Context.ToolName != toolName {
 		t.Errorf("context tool name mismatch: %v", dto.Context.ToolName)
 	}
 
 	roundDom := dto.ToDomain()
-	if roundDom.RuleID != dom.RuleID || roundDom.Severity != dom.Severity ||
-		roundDom.Title != dom.Title || roundDom.Description != dom.Description {
+	if roundDom.RuleID != dom.RuleID || roundDom.Severity != dom.Severity {
 		t.Fatalf("round-trip domain mismatch: %+v", roundDom)
 	}
 	if *roundDom.Context.ToolName != toolName {
@@ -185,10 +186,8 @@ func TestAgenticMetricsLedgerDTO_AnomaliesSerialization(t *testing.T) {
 			UpdatedAt: "2026-10-18T10:00:00Z",
 			Anomalies: []domain.Anomaly{
 				{
-					RuleID:      domain.RuleToolRetryStreak,
-					Severity:    domain.SeverityCritical,
-					Title:       "Tool retry streak: bash (5 consecutive errors)",
-					Description: "Tool 'bash' encountered 5 consecutive execution failures (session: s1, turn: 5)",
+					RuleID:   domain.RuleToolRetryStreak,
+					Severity: domain.SeverityCritical,
 					Context: domain.AnomalyContext{
 						ToolName: &tool,
 						Turn:     &turn,
@@ -213,6 +212,9 @@ func TestAgenticMetricsLedgerDTO_AnomaliesSerialization(t *testing.T) {
 		}
 		if !strings.Contains(jsonStr, `"TOOL_RETRY_STREAK"`) || !strings.Contains(jsonStr, `"CRITICAL"`) {
 			t.Errorf("expected TOOL_RETRY_STREAK and CRITICAL in JSON: %s", jsonStr)
+		}
+		if strings.Contains(jsonStr, `"title"`) || strings.Contains(jsonStr, `"description"`) {
+			t.Errorf("presentation text must not be persisted: %s", jsonStr)
 		}
 
 		var parsed adapters.AgenticMetricsLedgerDTO

@@ -187,16 +187,16 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 	count2 := int64(2)
 	total6 := int64(6)
 	failPct := 33.3
+	threshold := ">20%"
+	contextTokens := int64(165_000)
 
 	t.Run("multiple anomalies with mixed severities", func(t *testing.T) {
 		ledger := domain.AgenticMetricsLedger{
 			TicketID: &tid,
 			Anomalies: []domain.Anomaly{
 				{
-					RuleID:      domain.RuleToolRetryStreak,
-					Severity:    domain.SeverityCritical,
-					Title:       "Tool retry streak: bash (5 consecutive errors)",
-					Description: "Tool 'bash' encountered 5 consecutive execution failures (session: s1, turn: 3)",
+					RuleID:   domain.RuleToolRetryStreak,
+					Severity: domain.SeverityCritical,
 					Context: domain.AnomalyContext{
 						ToolName: &toolBash,
 						Count:    &count5,
@@ -204,15 +204,14 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 					},
 				},
 				{
-					RuleID:      domain.RuleToolHighFailureRate,
-					Severity:    domain.SeverityWarning,
-					Title:       "High tool failure rate: git (33.3%)",
-					Description: "Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%)",
+					RuleID:   domain.RuleToolHighFailureRate,
+					Severity: domain.SeverityWarning,
 					Context: domain.AnomalyContext{
 						ToolName:       &toolGit,
 						Count:          &count2,
 						TotalCalls:     &total6,
 						FailureRatePct: &failPct,
+						Threshold:      &threshold,
 					},
 				},
 			},
@@ -226,10 +225,10 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 		if !strings.Contains(tableMD, "- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).") {
 			t.Errorf("expected 2 execution anomalies status summary, got:\n%s", tableMD)
 		}
-		if !strings.Contains(tableMD, "- [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: bash (5 consecutive errors) — Tool 'bash' encountered 5 consecutive execution failures (session: s1, turn: 3)") {
+		if !strings.Contains(tableMD, "- [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: bash (5 consecutive errors) — Tool 'bash' encountered 5 consecutive execution failures.") {
 			t.Errorf("expected formatted CRITICAL anomaly bullet, got:\n%s", tableMD)
 		}
-		if !strings.Contains(tableMD, "- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: git (33.3%) — Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%)") {
+		if !strings.Contains(tableMD, "- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: git (33.3%) — Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%).") {
 			t.Errorf("expected formatted WARNING anomaly bullet, got:\n%s", tableMD)
 		}
 	})
@@ -239,10 +238,9 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 			TicketID: &tid,
 			Anomalies: []domain.Anomaly{
 				{
-					RuleID:      domain.RuleContextSaturationSpike,
-					Severity:    domain.SeverityCritical,
-					Title:       "Context ceiling breached (165k tokens)",
-					Description: "Context tokens reached 165k, breaching 160k critical ceiling",
+					RuleID:   domain.RuleContextSaturationSpike,
+					Severity: domain.SeverityCritical,
+					Context:  domain.AnomalyContext{ContextTokens: &contextTokens, Threshold: strPtr("160000")},
 				},
 			},
 		}
@@ -251,7 +249,7 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 		if !strings.Contains(tableMD, "- **Status:** 1 execution anomaly detected (1 CRITICAL).") {
 			t.Errorf("expected singular phrasing for 1 anomaly, got:\n%s", tableMD)
 		}
-		if !strings.Contains(tableMD, "- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165k tokens) — Context tokens reached 165k, breaching 160k critical ceiling") {
+		if !strings.Contains(tableMD, "- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165k tokens) — Context tokens reached 165k, breaching the 160k critical ceiling.") {
 			t.Errorf("expected formatted bullet, got:\n%s", tableMD)
 		}
 	})

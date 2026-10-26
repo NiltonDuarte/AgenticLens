@@ -883,11 +883,12 @@ func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly) {
 		return
 	}
 	fmt.Printf("Found %d anomalies for ticket %s:\n\n", len(anomalies), ticketID)
-	header := fmt.Sprintf("%-10s %-28s %-40s %s", "Severity", "Rule ID", "Title", "Description")
+	header := fmt.Sprintf("%-10s %-28s %s", "Severity", "Rule ID", "Summary")
 	fmt.Println(header)
 	fmt.Println(strings.Repeat("-", len(header)))
 	for _, a := range anomalies {
-		fmt.Printf("%-10s %-28s %-40s %s\n", string(a.Severity), string(a.RuleID), a.Title, a.Description)
+		title, description := domain.AnomalyDisplayText(a)
+		fmt.Printf("%-10s %-28s %s — %s\n", string(a.Severity), string(a.RuleID), title, description)
 	}
 }
 

@@ -958,7 +958,7 @@ func TestHydrateWorkspaceEvents_SourceLessLedgerStaysUnhydrated(t *testing.T) {
 	defer service.Close()
 	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
 		ID: "legacy", Events: []domain.SessionEventFact{{EventID: "old", Timestamp: "2026-10-26T09:00:00Z", EventType: domain.EventTypeToolCall, Status: "error"}},
-		Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Title: "Retry", Description: "summary"}},
+		Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning}},
 	}}}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-LEGACY", ledger)
 	if err != nil {

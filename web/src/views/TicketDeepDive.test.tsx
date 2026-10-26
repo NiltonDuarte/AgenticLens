@@ -720,9 +720,7 @@ describe('TicketDeepDive View Component', () => {
                     {
                         rule_id: 'CONTEXT_SATURATION_SPIKE' as const,
                         severity: 'CRITICAL' as const,
-                        title: 'Critical Context Saturation',
-                        description: 'Context spiked sharply',
-                        context: { turn: 5, token_delta: 50000 },
+                        context: { turn: 5, token_delta: 50000, context_tokens: 130000 },
                     },
                 ],
             };
@@ -744,10 +742,10 @@ describe('TicketDeepDive View Component', () => {
             await waitFor(() => {
                 expect(screen.getByText('Detected Workspace Anomalies:')).toBeInTheDocument();
             });
-            expect(screen.getByText('Critical Context Saturation')).toBeInTheDocument();
+            expect(screen.getByText('Context saturation spike (+50k tokens)')).toBeInTheDocument();
             expect(screen.getByText('CRITICAL')).toBeInTheDocument();
             // Clicking legacy anomaly item opens AnomalyDrawer
-            fireEvent.click(screen.getByText('Critical Context Saturation'));
+            fireEvent.click(screen.getByText('Context saturation spike (+50k tokens)'));
             await waitFor(() => {
                 expect(screen.getByRole('dialog')).toBeInTheDocument();
             });

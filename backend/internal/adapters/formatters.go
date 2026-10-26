@@ -301,7 +301,8 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		lines = append(lines, fmt.Sprintf("- **Status:** %d %s detected (%s).", len(ledger.Anomalies), statusNoun, strings.Join(breakdownParts, ", ")))
 
 		for _, a := range ledger.Anomalies {
-			lines = append(lines, fmt.Sprintf("- [%s] **%s**: %s — %s", a.Severity, a.RuleID, a.Title, a.Description))
+			title, description := domain.AnomalyDisplayText(a)
+			lines = append(lines, fmt.Sprintf("- [%s] **%s**: %s — %s", a.Severity, a.RuleID, title, description))
 		}
 	}
 

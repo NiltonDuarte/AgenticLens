@@ -31,8 +31,6 @@ export const mockAL2Anomalies: readonly Anomaly[] = [
     {
         rule_id: 'TOOL_RETRY_STREAK',
         severity: 'WARNING',
-        title: 'Tool retry streak: bash (3 consecutive errors)',
-        description: "Tool 'bash' encountered 3 consecutive execution failures (session: ses-al2-root, turn: 4)",
         context: {
             tool_name: 'bash',
             count: 3,
@@ -46,8 +44,6 @@ export const mockGEN1Anomalies: readonly Anomaly[] = [
     {
         rule_id: 'CONTEXT_SATURATION_SPIKE',
         severity: 'CRITICAL',
-        title: 'Context ceiling breached (225k tokens)',
-        description: 'Context tokens reached 225k in turn 8 (session: ses-gen1-root), breaching 160k critical ceiling',
         context: {
             session_id: 'ses-gen1-root',
             turn: 8,
