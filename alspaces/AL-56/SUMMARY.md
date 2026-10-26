@@ -142,15 +142,15 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - Migrated the AL-56 ledger. Other ticket ledgers are unchanged in the final branch; their backfill is deferred to the machine with their source data. Schema tests use canonical v4 fixtures. The full `make` passed, including Go race tests, 719 frontend tests, typecheck/lint, production build, and multi-platform CLI builds. Independent review approved the implementation.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 90
-- **Active Agent Duration:** 8h 27m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 93
+- **Active Agent Duration:** 8h 39m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 20 compactions) | Subagents peak 246.7k (Coder_iteration_06)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 3.0 avg turns/run (peak: 13 turns) | Coder 1.0, Child_cli_test 2.0, Coder_iteration_04 7.0, Coder_iteration_05 4.0, Coder_iteration_05_validation 2.0, Coder_iteration_06 13.0, Fix_child_parser 2.0, Planner_iteration_04 6.0, Planner_iteration_05 1.0, Planner_iteration_06 4.0, Planner_iteration_07 1.0, Planner_iteration_08 1.0, Reviewer_iteration_04 1.0, Reviewer_iteration_04_final 1.0, Reviewer_iteration_05 1.0, Reviewer_iteration_05_final 1.0, Reviewer_iteration_05_round2 1.0, Reviewer_iteration_05_round2_restart 1.0, Reviewer_iteration_05_round3 1.0, Reviewer_iteration_06 8.0, Role_mapping_review 1.0, Telemetry_hi 1.0, Tester_iteration_04 3.0, Tester_iteration_05 4.0, Tester_iteration_06 7.0
 - **Test-to-Production Code Ratio:** 2.6:1 (+15,217 test lines / +5,768 prod lines)
 - **Code Delivered:** +21,069 / -15,997 lines across 105 code files (excluding docs)
-- **Reasoning Effort:** 653,917 reasoning tokens (32.1% of generated output)
-- **Tool Health & Self-Correction:** 2,768 tool calls (197 self-corrections, 92.9% success rate)
+- **Reasoning Effort:** 655,027 reasoning tokens (32.0% of generated output)
+- **Tool Health & Self-Correction:** 2,777 tool calls (197 self-corrections, 92.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 44 execution anomalies detected (34 CRITICAL, 10 WARNING).
@@ -225,17 +225,17 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 | **reviewer_iteration_05_round3** | 1 | 26,473 | 7,396 | 2,497,920 | 99.0% | 156.2k | ELEVATED | $0.00 |
 | **reviewer_iteration_06** | 1 | 335,551 | 29,968 | 8,264,832 | 96.1% | 245.3k | BLOATED (123%) | $0.00 |
 | **role_mapping_review** | 1 | 3,980 | 677 | 503,040 | 99.2% | 170.1k | ELEVATED | $0.00 |
-| **rootagent** | 1 | 3,475,951 | 693,986 | 245,042,944 | 98.6% | 247.7k | BLOATED (124%) | $0.00 |
+| **rootagent** | 1 | 3,506,641 | 696,973 | 245,676,160 | 98.6% | 247.7k | BLOATED (124%) | $0.00 |
 | **telemetry_hi** | 1 | 994 | 6 | 125,312 | 99.2% | 126.3k | ELEVATED | $0.00 |
 | **tester_iteration_04** | 1 | 49,097 | 7,761 | 8,845,056 | 99.4% | 178.1k | ELEVATED | $0.00 |
 | **tester_iteration_05** | 1 | 148,011 | 27,425 | 13,262,080 | 98.9% | 187.0k | ELEVATED | $0.00 |
 | **tester_iteration_06** | 1 | 542,560 | 45,470 | 24,035,456 | 97.8% | 243.0k | BLOATED (122%) | $0.00 |
-| **Total** | **26** | **7,068,137** | **1,386,222** | **517,405,056** | **98.7%** | **247.7k** | **BLOATED** | **$0.00** |
+| **Total** | **26** | **7,098,827** | **1,389,209** | **518,038,272** | **98.6%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
-| **gpt-6-luna** | 23 | 6,520,292 | 1,316,432 | 489,326,592 | 98.7% | $0.00 |
+| **gpt-6-luna** | 23 | 6,550,982 | 1,319,419 | 489,959,808 | 98.7% | $0.00 |
 | **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **26** | **7,068,137** | **1,386,222** | **517,405,056** | **98.7%** | **$0.00** |
+| **Total** | **26** | **7,098,827** | **1,389,209** | **518,038,272** | **98.6%** | **$0.00** |
