@@ -153,15 +153,16 @@ func IsMonitoredSourcePath(path string, srcFolders []string, cfg *Classification
 				return true
 			}
 		}
-		for _, pattern := range cfg.TestPatterns {
-			if matchPattern(pattern, cleanPath) {
-				return true
-			}
-		}
 		for _, pattern := range cfg.ProdPatterns {
 			if matchPattern(pattern, cleanPath) {
 				return true
 			}
+		}
+	}
+
+	for _, pattern := range EffectiveTestPatterns(cfg) {
+		if matchPattern(pattern, cleanPath) {
+			return true
 		}
 	}
 

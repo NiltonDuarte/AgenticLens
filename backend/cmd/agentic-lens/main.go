@@ -323,8 +323,13 @@ func runGenerate(args []string) {
 	}
 	codeFacts, err := git.ComputeCodeFactsAtRef(strings.TrimSpace(*codeRefFlag), cfg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		if fallbackCode != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: Failed to compute git code facts (%v); falling back to cached code facts\n", err)
+			codeFacts = *fallbackCode
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	if extractedSteeringTurns >= 1 {
@@ -584,9 +589,15 @@ func runBackfill(args []string) {
 		fmt.Fprintf(os.Stderr, "Error parsing backfill flags: %v\n", err)
 		os.Exit(1)
 	}
-	if *recomputeGitFlag && strings.TrimSpace(*codeRefFlag) == "" {
-		fmt.Fprintln(os.Stderr, "Error: --code-ref is required with --recompute-git")
-		os.Exit(1)
+	if *recomputeGitFlag {
+		if strings.TrimSpace(*codeRefFlag) == "" {
+			fmt.Fprintln(os.Stderr, "Error: --code-ref is required with --recompute-git")
+			os.Exit(1)
+		}
+		if strings.TrimSpace(*ticketIDFlag) == "" {
+			fmt.Fprintln(os.Stderr, "Error: --ticket-id is required when --recompute-git is specified")
+			os.Exit(1)
+		}
 	}
 
 	opts := backfill.BackfillOptions{

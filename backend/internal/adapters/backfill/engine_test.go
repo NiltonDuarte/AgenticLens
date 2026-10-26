@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -133,6 +134,7 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
 		WorkspacesDir:   tempDir,
+		TicketID:        tid,
 		DryRun:          true,
 		RecomputeGit:    true,
 		CodeRef:         "HEAD",
@@ -330,8 +332,7 @@ func TestBackfillEngine_CorruptedFileResilience(t *testing.T) {
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
 		WorkspacesDir: tempDir,
-		RecomputeGit:  true,
-		CodeRef:       "HEAD",
+		Force:         true,
 	})
 	if err != nil {
 		t.Fatalf("engine execute should not fail fatally on corrupt files: %v", err)
@@ -386,5 +387,21 @@ func TestBackfillEngine_MissingWorkspacesDir(t *testing.T) {
 	}
 	if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
 		t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
+	}
+}
+
+func TestBackfillEngine_RecomputeGitRequiresTicketID(t *testing.T) {
+	tempDir := t.TempDir()
+	engine := NewEngine()
+	_, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		RecomputeGit:  true,
+		CodeRef:       "HEAD",
+	})
+	if err == nil {
+		t.Fatal("expected error when RecomputeGit is true without TicketID, got nil")
+	}
+	if !strings.Contains(err.Error(), "--ticket-id is required") {
+		t.Fatalf("unexpected error message: %v", err)
 	}
 }

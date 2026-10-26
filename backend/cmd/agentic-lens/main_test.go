@@ -1441,6 +1441,91 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected non-empty resolved completed_at on whitespace flag, got %v", factWS.CompletedAt)
 		}
 	})
+
+	t.Run("generate falls back to cached code facts on git error when available", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+		dbPath := filepath.Join(tempDir, "test.db")
+
+		db, err := sql.Open("sqlite", dbPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			INSERT INTO session VALUES ('ses_fallback', NULL, 'build', 'default_model', 'Fallback Test', 1000, 1000);
+			INSERT INTO message VALUES ('msg_fallback', 'ses_fallback', 1000, 1000, '{"role":"assistant","tokens":{"input":10,"output":5},"cost":0.01}');
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		tid := "AL-GIT-FALLBACK"
+		ver := domain.CurrentSchemaVersion
+		existingDTO := adapters.AgenticFactLedgerDTO{
+			TicketID:      &tid,
+			SchemaVersion: &ver,
+			Code: adapters.CodeFactsDTO{
+				LinesAdded:       123,
+				LinesDeleted:     45,
+				ProdLinesAdded:   100,
+				ProdLinesDeleted: 40,
+				TestLinesAdded:   23,
+				TestLinesDeleted: 5,
+				FilesChanged:     3,
+				SDLCIterations:   4,
+			},
+		}
+		existingData, err := json.Marshal(existingDTO)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(outJSON, existingData, 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", dbPath,
+			"--ticket-id", "AL-GIT-FALLBACK",
+			"--ticket-title", "Fallback Git Code Facts",
+			"--ticket-type", "feat",
+			"--session-id", "ses_fallback",
+			"--code-ref", "invalid-nonexistent-git-branch-xyz-999",
+			"--json-output", outJSON,
+		)
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected generate to succeed using cached code facts fallback, err=%v, stderr=%s", err, stderr.String())
+		}
+
+		if !strings.Contains(stderr.String(), "WARNING: Failed to compute git code facts") {
+			t.Errorf("expected warning in stderr about git facts failure, got: %s", stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatal(err)
+		}
+
+		if parsed.Code.LinesAdded != 123 || parsed.Code.LinesDeleted != 45 {
+			t.Errorf("expected cached code facts preserved (LinesAdded: 123, LinesDeleted: 45), got: %+v", parsed.Code)
+		}
+	})
 }
 
 func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
@@ -1914,14 +1999,23 @@ func TestCLIBackfillCommand(t *testing.T) {
 		}
 	})
 
+	t.Run("recompute-git requires an explicit ticket id", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir, "--recompute-git", "--code-ref", "HEAD")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "--ticket-id is required when --recompute-git is specified") {
+			t.Fatalf("expected missing ticket id to fail explicitly, err=%v stderr=%s", err, stderr.String())
+		}
+	})
+
 	t.Run("dry-run backfill outputs preview without error", func(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"backfill",
 			"--workspaces", wsDir,
 			"--dry-run",
-			"--recompute-git",
-			"--code-ref", "HEAD",
+			"--migrate-schema",
 		)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -2348,8 +2442,6 @@ func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 		"backfill",
 		"--workspaces", wsDir,
 		"--migrate-schema",
-		"--recompute-git",
-		"--code-ref", "HEAD",
 	)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

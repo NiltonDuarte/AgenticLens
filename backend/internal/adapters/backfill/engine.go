@@ -28,8 +28,13 @@ func NewEngine() *BackfillEngine {
 
 // Execute runs the backfill and migration workflow across target workspaces.
 func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) {
-	if opts.RecomputeGit && strings.TrimSpace(opts.CodeRef) == "" {
-		return nil, fmt.Errorf("a Git code ref is required when recomputing code facts")
+	if opts.RecomputeGit {
+		if strings.TrimSpace(opts.TicketID) == "" {
+			return nil, fmt.Errorf("--ticket-id is required when recomputing Git code facts (--recompute-git)")
+		}
+		if strings.TrimSpace(opts.CodeRef) == "" {
+			return nil, fmt.Errorf("a Git code ref is required when recomputing code facts")
+		}
 	}
 	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
 	if err != nil {

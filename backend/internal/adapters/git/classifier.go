@@ -46,6 +46,37 @@ const (
 	CategoryOther   FileCategory = "other"
 )
 
+// DefaultTestPatterns defines standard fallback glob patterns for identifying test code.
+var DefaultTestPatterns = config.DefaultTestPatterns
+
+// DefaultProdPatterns defines standard fallback glob patterns for identifying production runtime code.
+var DefaultProdPatterns = config.DefaultProdPatterns
+
+func hasPatterns(patterns []string) bool {
+	for _, p := range patterns {
+		if strings.TrimSpace(p) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// EffectiveTestPatterns returns configured test patterns if present, or standard default fallbacks.
+func EffectiveTestPatterns(cfg *ClassificationConfig) []string {
+	if cfg != nil && hasPatterns(cfg.TestPatterns) {
+		return cfg.TestPatterns
+	}
+	return DefaultTestPatterns
+}
+
+// EffectiveProdPatterns returns configured production patterns if present, or standard default fallbacks.
+func EffectiveProdPatterns(cfg *ClassificationConfig) []string {
+	if cfg != nil && hasPatterns(cfg.ProdPatterns) {
+		return cfg.ProdPatterns
+	}
+	return DefaultProdPatterns
+}
+
 // Patterns containing a slash are relative to the repository root. A ** path
 // component matches zero or more directories; patterns without slashes match basenames.
 func matchPattern(pattern, path string) bool {
@@ -87,22 +118,35 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 		}
 	}
 
+	// 2. Explicit exclusions
 	if cfg != nil {
 		for _, p := range cfg.Exclude {
 			if matchPattern(p, cleanPath) {
 				return CategoryIgnored
 			}
 		}
+	}
+
+	// 3. Explicit test patterns (take precedence over production rules)
+	if cfg != nil && hasPatterns(cfg.TestPatterns) {
 		for _, p := range cfg.TestPatterns {
 			if matchPattern(p, cleanPath) {
 				return CategoryTest
 			}
 		}
+	}
+
+	// 4. Explicit production patterns
+	if cfg != nil && hasPatterns(cfg.ProdPatterns) {
 		for _, p := range cfg.ProdPatterns {
 			if matchPattern(p, cleanPath) {
 				return CategoryProd
 			}
 		}
+	}
+
+	// 5. Explicit includes
+	if cfg != nil {
 		for _, p := range cfg.Include {
 			if matchPattern(p, cleanPath) {
 				return CategoryProd
@@ -110,12 +154,30 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 		}
 	}
 
-	// 2. Specific lockfiles and dotfiles ignored
+	// 6. Specific lockfiles and dotfiles ignored
 	if baseName == "go.sum" || baseName == "package-lock.json" || baseName == "pnpm-lock.yaml" || baseName == "yarn.lock" {
 		return CategoryIgnored
 	}
 	if strings.HasPrefix(baseName, ".") {
 		return CategoryIgnored
+	}
+
+	// 7. Fallback test patterns when test patterns are empty or unconfigured
+	if cfg == nil || !hasPatterns(cfg.TestPatterns) {
+		for _, p := range DefaultTestPatterns {
+			if matchPattern(p, cleanPath) {
+				return CategoryTest
+			}
+		}
+	}
+
+	// 8. Fallback production patterns when production patterns are empty or unconfigured
+	if cfg == nil || !hasPatterns(cfg.ProdPatterns) {
+		for _, p := range DefaultProdPatterns {
+			if matchPattern(p, cleanPath) {
+				return CategoryProd
+			}
+		}
 	}
 
 	return CategoryOther
