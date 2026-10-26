@@ -65,44 +65,56 @@ Subagent accounting probe and fix: spawned `telemetry_hi`, which returned `Hi!`.
 
 Role mapping probe and correction: the spawned `coder` child had null top-level and nested `agent_role`, while its persisted `agent_path` ended in `/coder`. OpenCode extraction stores the source agent name as the raw fact and does not resolve project `role_mappings`; Codex now follows that behavior. It extracts only the final persona component as the raw role, gives explicit role metadata precedence, and keeps the path private. The CLI regression sets `coder: tester` in project config and verifies the persisted invocation role remains `coder`.
 
+## Iteration 01: OpenCode Compatibility & Non-Breakage Hardening
+
+Conducted cross-cutting audit to ensure Codex support introduced in AL-56 does not regress OpenCode workflows, historical ledgers, or metric derivations:
+
+- **Domain Layer**: Pure functional core in `internal/domain` preserved with zero modifications, zero I/O, value semantics, and full backward compatibility.
+- **Adapters Layer**:
+  - `internal/adapters/git/classifier.go`: Added `DefaultTestPatterns` and `DefaultProdPatterns` fallback logic when project configuration arrays are empty or unconfigured, preventing test-to-production code ratio collapse to `0:0` in legacy or minimal OpenCode repositories. Explicit configuration overrides maintain full precedence.
+  - `internal/adapters/config/writer.go`: Updated `GenerateDefaultYAML` so that new configurations scaffolded via `agentic-lens init` include standard pattern defaults rather than empty lists.
+  - `internal/adapters/backfill/engine.go`: Enforced mandatory `--ticket-id` requirement when `--recompute-git` is passed, preventing batch backfills across entire workspace directories from accidentally overwriting every historical ticket with a single commit diff from `--code-ref`.
+  - `internal/adapters/repository.go`: Enhanced ledger loader to preserve cached code facts even when invocation or tool slices are empty.
+- **CLI / Entrypoint Layer**:
+  - `cmd/agentic-lens/main.go`: In `runGenerate`, added graceful fallback to cached code facts from existing JSON ledgers with an explicit warning when `ComputeCodeFactsAtRef` fails (e.g. unresolvable base branches in minimal environments). Enforced mandatory `--ticket-id` for `backfill --recompute-git`. Verified `--source` strictly defaults to `"opencode"`.
+- **Verification**:
+  - Full backend race tests (`go test -race ./...`) passed across all packages.
+  - Frontend typecheck, linter, and Vitest suite (30 files, 715 tests) passed.
+  - Multi-platform compilation via `make build` succeeded.
+  - Adversarial regression tests covering empty patterns, cached code fallbacks, and backfill scoping invariants passed.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 66
-- **Active Agent Duration:** 1h 58m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 5 compactions) | Subagents peak 170.1k (Role_mapping_review)
-- **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 1.4 avg turns/run (peak: 2 turns) | Coder 1.0, Child_cli_test 2.0, Fix_child_parser 2.0, Role_mapping_review 1.0, Telemetry_hi 1.0
-- **Test-to-Production Code Ratio:** 0.7:1 (+935 test lines / +1,400 prod lines)
-- **Code Delivered:** +2,335 / -1,008 lines across 16 code files (excluding docs)
-- **Reasoning Effort:** 193,474 reasoning tokens (30.0% of generated output)
-- **Tool Health & Self-Correction:** 656 tool calls (61 self-corrections, 90.7% success rate)
+- **Software Development Life Cycle Iterations:** 1
+- **Active Agent Duration:** 1h 3m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 115.7k tokens (58% of 200k healthy ceiling, 1 compactions) | Subagents peak 176.7k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 21.6%, Coder 60.1%, Tester 3.1%, Reviewer 15.3%
+- **Subagent Turn Velocity & Thrashing:** 59.3 avg turns/run (peak: 127 turns) | Planner 55.0, Coder 127.0, Tester 14.0, Reviewer 41.0
+- **Test-to-Production Code Ratio:** 0.7:1 (+1,109 test lines / +1,522 prod lines)
+- **Code Delivered:** +2,631 / -1,008 lines across 19 code files (excluding docs)
+- **Reasoning Effort:** 95,673 reasoning tokens (69.6% of generated output)
+- **Tool Health & Self-Correction:** 319 tool calls (5 self-corrections, 98.4% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 7 execution anomalies detected (6 CRITICAL, 1 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.3k tokens) — Context tokens reached 167.3k in turn 1 (session: 01a174b1-3b71-73c0-a0b7-6428b55ad981), breaching 160k critical ceiling
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+137.2k tokens) — Context tokens surged by 137.2k tokens in turn 1 (session: 01a174a5-1271-7791-8474-55e6bf0e84fd, total: 137.2k tokens, threshold: 80000)
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+167.3k tokens) — Context tokens surged by 167.3k tokens in turn 1 (session: 01a174b1-3b71-73c0-a0b7-6428b55ad981, total: 167.3k tokens, threshold: 80000)
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k in turn 3 (session: 01a17362-baa4-72b3-934d-3cb040c899ea), breaching 160k critical ceiling
-- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: fix_child_parser <-> child_cli_test (6 cycles) — Subagent roles 'fix_child_parser' and 'child_cli_test' alternated for 6 consecutive cycles indicating thrashing
-- [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: command (5 consecutive errors) — Tool 'command' encountered 5 consecutive execution failures (session: 01a17362-baa4-72b3-934d-3cb040c899ea, turn: 51)
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k tokens in turn 14 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 148.4k tokens, threshold: 40000)
+- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k in turn 49 (session: ses_e8878898fffeAahBOyEwQAMD4f), breaching 160k critical ceiling
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: mcp-gateway_mcp-exec (3 consecutive errors) — Tool 'mcp-gateway_mcp-exec' encountered 3 consecutive execution failures (session: ses_e88858e3affeaQz4frllatuA9L, turn: 48)
 
 ### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **coder** | 1 | 902 | 9 | 159,232 | 99.4% | 160.1k | ELEVATED | $0.00 |
-| **child_cli_test** | 1 | 6,617 | 3,066 | 2,258,432 | 99.7% | 143.4k | ELEVATED | $0.00 |
-| **fix_child_parser** | 1 | 11,868 | 5,234 | 2,119,552 | 99.4% | 146.3k | ELEVATED | $0.00 |
-| **role_mapping_review** | 1 | 3,980 | 677 | 503,040 | 99.2% | 170.1k | ELEVATED | $0.00 |
-| **rootagent** | 1 | 1,961,508 | 441,734 | 125,952,768 | 98.5% | 247.7k | BLOATED (124%) | $0.00 |
-| **telemetry_hi** | 1 | 994 | 6 | 125,312 | 99.2% | 126.3k | ELEVATED | $0.00 |
-| **Total** | **6** | **1,985,869** | **450,726** | **131,118,336** | **98.5%** | **247.7k** | **BLOATED** | **$0.00** |
+| **planner** | 1 | 314,544 | 6,706 | 2,806,057 | 89.9% | 91.8k | HEALTHY | $0.54 |
+| **coder** | 1 | 783,545 | 17,316 | 8,171,070 | 91.2% | 176.7k | ELEVATED | $1.49 |
+| **tester** | 1 | 69,822 | 1,112 | 272,267 | 79.6% | 39.1k | HEALTHY | $0.08 |
+| **reviewer** | 1 | 297,837 | 3,459 | 1,631,680 | 84.6% | 70.4k | HEALTHY | $0.38 |
+| **general** | 1 | 821,701 | 13,146 | 4,553,560 | 84.7% | 115.7k | ELEVATED | $1.06 |
+| **Total** | **5** | **2,287,449** | **41,739** | **17,434,634** | **88.4%** | **176.7k** | **ELEVATED** | **$3.54** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
-| **gpt-6-luna** | 3 | 1,438,024 | 380,936 | 103,039,872 | 98.6% | $0.00 |
-| **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **6** | **1,985,869** | **450,726** | **131,118,336** | **98.5%** | **$0.00** |
+| **gemini-3.8-flash** | 5 | 2,287,449 | 41,739 | 17,434,634 | 88.4% | $3.54 |
+| **Total** | **5** | **2,287,449** | **41,739** | **17,434,634** | **88.4%** | **$3.54** |
