@@ -452,7 +452,7 @@ describe('Domain Pure Formatters', () => {
       expect(formatIsoDateOnly('short')).toBe('N/A');
     });
 
-    it('formats short datetime correctly without emojis', () => {
+    it('formats short datetime correctly', () => {
       expect(formatIsoDateTimeShort('2026-10-15T14:30:00Z')).toBe('2026-10-15 14:30');
       expect(formatIsoDateTimeShort('2026-10-15')).toBe('2026-10-15');
       expect(formatIsoDateTimeShort(null)).toBe('N/A');

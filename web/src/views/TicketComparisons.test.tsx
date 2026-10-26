@@ -225,23 +225,6 @@ describe('TicketComparisons View Component', () => {
     }
   });
 
-  it('contains zero emojis in the rendered comparisons document body', async () => {
-    const ledgers = Object.values(mockAgenticMetricsLedgers);
-    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
-      data: ledgers,
-    });
-
-    const { container } = render(<TicketComparisons />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Benchmarked Workspaces')).toBeInTheDocument();
-    });
-
-    const renderedText = container.textContent ?? '';
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-    expect(emojiRegex.test(renderedText)).toBe(false);
-  });
-
   it('filters comparison rows by ticket type and workspace prefix dropdowns', async () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({

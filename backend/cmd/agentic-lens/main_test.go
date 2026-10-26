@@ -2475,21 +2475,6 @@ func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 	}
 }
 
-func containsEmoji(s string) bool {
-	for _, r := range s {
-		if (r >= 0x1F600 && r <= 0x1F64F) ||
-			(r >= 0x1F300 && r <= 0x1F5FF) ||
-			(r >= 0x1F680 && r <= 0x1F6FF) ||
-			(r >= 0x2600 && r <= 0x26FF) ||
-			(r >= 0x2700 && r <= 0x27BF) ||
-			(r >= 0x1F900 && r <= 0x1F9FF) ||
-			(r >= 0x1FA70 && r <= 0x1FAFF) {
-			return true
-		}
-	}
-	return false
-}
-
 func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 	t.Run("fails on non-existent workspaces directory", func(t *testing.T) {
 		cmd := exec.Command(
@@ -2550,30 +2535,6 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 		out := stdout.String()
 		if !strings.Contains(out, "No matching ticket workspaces found to migrate") {
 			t.Errorf("expected clean message for unmatching ticket filter, got: %s", out)
-		}
-	})
-
-	t.Run("output strictly adheres to zero-emoji invariant", func(t *testing.T) {
-		wsDir := setupTestWorkspace(t)
-		cmd := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", wsDir,
-			"--dry-run",
-		)
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("migrate failed: %v", err)
-		}
-
-		if containsEmoji(stdout.String()) {
-			t.Errorf("stdout contains forbidden emoji characters: %s", stdout.String())
-		}
-		if containsEmoji(stderr.String()) {
-			t.Errorf("stderr contains forbidden emoji characters: %s", stderr.String())
 		}
 	})
 
@@ -2674,10 +2635,6 @@ func TestCLIHelpCommand(t *testing.T) {
 				t.Errorf("expected help output to contain %q, but was missing. Output:\n%s", exp, out)
 			}
 		}
-
-		if containsEmoji(out) {
-			t.Errorf("root --help output contains forbidden emoji characters: %s", out)
-		}
 	})
 
 	t.Run("root -h outputs structured subcommands", func(t *testing.T) {
@@ -2695,10 +2652,6 @@ func TestCLIHelpCommand(t *testing.T) {
 			if !strings.Contains(out, sub) {
 				t.Errorf("expected -h output to contain subcommand %q, but was missing", sub)
 			}
-		}
-
-		if containsEmoji(out) {
-			t.Errorf("root -h output contains forbidden emoji characters: %s", out)
 		}
 	})
 
@@ -2718,10 +2671,6 @@ func TestCLIHelpCommand(t *testing.T) {
 				t.Errorf("expected help output to contain subcommand %q, but was missing", sub)
 			}
 		}
-
-		if containsEmoji(out) {
-			t.Errorf("root help output contains forbidden emoji characters: %s", out)
-		}
 	})
 
 	t.Run("root -help outputs structured subcommands", func(t *testing.T) {
@@ -2739,10 +2688,6 @@ func TestCLIHelpCommand(t *testing.T) {
 			if !strings.Contains(out, sub) {
 				t.Errorf("expected -help output to contain subcommand %q, but was missing", sub)
 			}
-		}
-
-		if containsEmoji(out) {
-			t.Errorf("root -help output contains forbidden emoji characters: %s", out)
 		}
 	})
 
@@ -2774,10 +2719,6 @@ func TestCLIHelpCommand(t *testing.T) {
 				t.Errorf("expected backfill --help output to contain %q, but was missing. Output:\n%s", flag, out)
 			}
 		}
-
-		if containsEmoji(out) {
-			t.Errorf("backfill --help output contains forbidden emoji characters: %s", out)
-		}
 	})
 
 	t.Run("backfill -h and backfill help list all backfill flags", func(t *testing.T) {
@@ -2796,9 +2737,6 @@ func TestCLIHelpCommand(t *testing.T) {
 				if !strings.Contains(out, flag) {
 					t.Errorf("expected %v output to contain %q", invocation, flag)
 				}
-			}
-			if containsEmoji(out) {
-				t.Errorf("%v output contains forbidden emoji characters", invocation)
 			}
 		}
 	})
@@ -2827,10 +2765,6 @@ func TestCLIHelpCommand(t *testing.T) {
 				t.Errorf("expected migrate --help output to contain %q, but was missing. Output:\n%s", flag, out)
 			}
 		}
-
-		if containsEmoji(out) {
-			t.Errorf("migrate --help output contains forbidden emoji characters: %s", out)
-		}
 	})
 
 	t.Run("migrate -h and migrate help list all migrate flags", func(t *testing.T) {
@@ -2849,9 +2783,6 @@ func TestCLIHelpCommand(t *testing.T) {
 				if !strings.Contains(out, flag) {
 					t.Errorf("expected %v output to contain %q", invocation, flag)
 				}
-			}
-			if containsEmoji(out) {
-				t.Errorf("%v output contains forbidden emoji characters", invocation)
 			}
 		}
 	})

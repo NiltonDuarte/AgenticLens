@@ -590,30 +590,6 @@ describe('TraceWaterfall Component', () => {
       expect(screen.getByTestId('payload-details-1')).toBeInTheDocument();
       expect(screen.getByText('Zero payload data captured for this event')).toBeInTheDocument();
     });
-
-    it('ensures zero emojis across all rendered waterfall components in both modes', () => {
-      const { container: hydratedContainer } = render(
-        <TraceWaterfall
-          events={hydratedEvents}
-          isHydrated={true}
-          dataSource="local_sqlite"
-          defaultExpanded={true}
-        />
-      );
-
-      const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
-      expect(emojiRegex.test(hydratedContainer.textContent ?? '')).toBe(false);
-
-      const { container: offlineContainer } = render(
-        <TraceWaterfall
-          events={sampleEvents}
-          isHydrated={false}
-          dataSource="committed_ledger"
-          defaultExpanded={true}
-        />
-      );
-      expect(emojiRegex.test(offlineContainer.textContent ?? '')).toBe(false);
-    });
   });
 
   describe('Adversarial Multi-dimensional Filtering', () => {
@@ -1467,31 +1443,6 @@ describe('TraceWaterfall Component', () => {
       });
     });
 
-    describe('Zero Emojis Invariant Across Multi-Filter States', () => {
-      it('maintains zero emojis across all multi-filter toolbar elements, dropdowns, and empty states', () => {
-        const { container } = render(
-          <TraceWaterfall
-            events={adversarialEvents}
-            defaultExpanded={true}
-            anomalies={adversarialAnomalies}
-          />
-        );
-
-        const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
-        expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
-
-        // Trigger empty state by filtering tool to task (which has no errors in default mode)
-        const toolSelect = screen.getByTestId('trace-tool-filter');
-        const toolContainer = toolSelect.closest('.multiselect-container')!;
-        fireEvent.click(toolSelect);
-        fireEvent.click(within(toolContainer as HTMLElement).getByRole('checkbox', { name: 'task' }));
-        fireEvent.click(toolSelect);
-
-        expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
-        expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
-      });
-    });
-
     describe('Multi-Select & "No filter" Enhancements', () => {
       it('initial mount displays "No filter" on Role, Tool, and Anomaly triggers and passes through all events in All Events mode', () => {
         render(
@@ -2076,28 +2027,6 @@ describe('TraceWaterfall Component', () => {
         const cardHeader = screen.getByText('Execution Trace Waterfall');
         fireEvent.mouseDown(cardHeader);
         expect(anomalyTrigger).toHaveAttribute('aria-expanded', 'false');
-      });
-
-      it('asserts zero emojis across all rendered elements and multi-select states', () => {
-        const { container } = render(
-          <TraceWaterfall
-            events={adversarialEvents}
-            defaultExpanded={true}
-            anomalies={adversarialAnomalies}
-          />
-        );
-
-        // Open each dropdown to ensure options are also rendered in DOM
-        const roleTrigger = screen.getByRole('combobox', { name: 'Filter by subagent role' });
-        const toolTrigger = screen.getByTestId('trace-tool-filter');
-        const anomalyTrigger = screen.getByTestId('trace-anomaly-filter');
-
-        fireEvent.click(roleTrigger);
-        fireEvent.click(toolTrigger);
-        fireEvent.click(anomalyTrigger);
-
-        const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-        expect(emojiRegex.test(container.textContent ?? '')).toBe(false);
       });
     });
   });

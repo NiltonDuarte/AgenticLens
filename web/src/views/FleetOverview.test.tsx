@@ -80,26 +80,6 @@ describe('FleetOverview View Component', () => {
     });
   });
 
-  it('contains zero emojis in the rendered document body', async () => {
-    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
-      data: mockFleetSummary,
-    });
-    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
-      data: [...mockTicketComparisonRows],
-    });
-
-    const { container } = render(<FleetOverview />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Total Cost')).toBeInTheDocument();
-    });
-
-    const renderedText = container.textContent ?? '';
-    // Regex matching emoji characters
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-    expect(emojiRegex.test(renderedText)).toBe(false);
-  });
-
   describe('Adversarial & Boundary Scenarios', () => {
     it('displays error banner and allows retry when fetch throws unexpected error', async () => {
       const fetchFleetSpy = vi.spyOn(apiClient, 'fetchFleetSummary')

@@ -13,7 +13,7 @@ This skill follows the autonomous agentic distribution model: it is completely s
 
 ## Operational Mandates
 - Strict Release-Only Mandate: Never compile binaries from Go/TypeScript source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
-- Binary Placement and Git Protection: Store the precompiled binary inside `.opencode/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) alongside a protective `.gitignore` containing `*` and `!/.gitignore` to prevent committing compiled binaries to version control.
+- Binary Placement and Git Protection: Install the multi-platform wrapper script inside `.opencode/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) alongside precompiled platform binaries (`agentic-lens-${OS}-${ARCH}`) and a protective `.gitignore` containing `*` and `!/.gitignore` to prevent committing compiled binaries and cache files to version control.
 - Mandatory User Confirmation Gate: Inspect existing OpenCode agent instructions (`AGENTS.md` or `.opencode/agent/*.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
 
@@ -62,31 +62,42 @@ EOF
 fi
 ```
 
-#### 1.3 Binary Download and Extraction
+#### 1.3 Multi-Platform Wrapper and Binary Installation
+Autonomous agents frequently execute inside containerized Linux sandboxes (such as devcontainers or Docker) while developers interact from macOS or Windows host workstations. To ensure `./bin/agentic-lens` executes seamlessly across both container and host environments, AgenticLens uses a portable POSIX wrapper script at `bin/agentic-lens` that dynamically delegates to native platform executables (`agentic-lens-${OS}-${ARCH}`). If a required platform binary is missing when invoked on the host, the wrapper self-heals by downloading it from GitHub Releases on demand.
+
 If a local downloader script exists at `./.opencode/skills/agentic-lens-setup/scripts/download.sh`, execute it:
 ```bash
+# Basic setup for current execution environment (e.g. Linux container)
 ./.opencode/skills/agentic-lens-setup/scripts/download.sh
+
+# Optional: Pre-download host workstation binary (e.g. macOS Apple Silicon)
+# ./.opencode/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
 ```
 
-Otherwise, download directly from GitHub Releases using `curl` or `wget`:
+Otherwise, install the wrapper script and platform binary directly from GitHub:
 
 For Linux or macOS:
 ```bash
-ARCHIVE_NAME="agentic-lens-${OS}-${ARCH}.tar.gz"
-DOWNLOAD_URL="https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/${ARCHIVE_NAME}"
+# 1. Install multi-platform wrapper script
+WRAPPER_URL="https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/agentic-lens-wrapper.sh"
+curl -fsSL -o "$BIN_DIR/agentic-lens" "$WRAPPER_URL"
+chmod +x "$BIN_DIR/agentic-lens"
+
+# 2. Download native binary for current execution platform
+BIN_NAME="agentic-lens-${OS}-${ARCH}"
+DOWNLOAD_URL="https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/${BIN_NAME}"
 
 echo "Downloading ${DOWNLOAD_URL}..."
-curl -fsSL "$DOWNLOAD_URL" | tar -xz -C "$BIN_DIR"
-chmod +x "$BIN_DIR/agentic-lens"
+curl -fsSL -o "$BIN_DIR/${BIN_NAME}" "$DOWNLOAD_URL"
+chmod +x "$BIN_DIR/${BIN_NAME}"
 ```
 
 For Windows (PowerShell):
 ```powershell
-$archiveName = "agentic-lens-windows-amd64.zip"
-$downloadUrl = "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/$archiveName"
-Invoke-WebRequest -Uri $downloadUrl -OutFile "$BIN_DIR\$archiveName"
-Expand-Archive -Path "$BIN_DIR\$archiveName" -DestinationPath "$BIN_DIR" -Force
-Remove-Item "$BIN_DIR\$archiveName"
+$binName = "agentic-lens-windows-amd64.exe"
+$downloadUrl = "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/$binName"
+Invoke-WebRequest -Uri $downloadUrl -OutFile "$BIN_DIR\$binName"
+Copy-Item "$BIN_DIR\$binName" "$BIN_DIR\agentic-lens.exe"
 ```
 
 #### 1.4 Verification
@@ -174,6 +185,10 @@ Present an overview of AgenticLens features to the user:
   ```
 - `backfill`: Batch telemetry backfill, git diff fact recomputation, and schema upgrades.
 - `migrate`: Stepwise schema migration engine across ledger versions.
+- `update`: Check GitHub Releases and upgrade installed platform binaries synchronously:
+  ```bash
+  "$BIN_DIR/agentic-lens" update
+  ```
 - `version`: Print binary version, git commit, build date, and schema information.
 
 #### Real-Time Observability and Live Monitoring

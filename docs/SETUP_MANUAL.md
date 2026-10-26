@@ -48,27 +48,45 @@ esac
 ```
 
 The agent resolves the release artifact from GitHub Releases:
-- Linux x86_64: `agentic-lens-linux-amd64.tar.gz`
-- Linux ARM64: `agentic-lens-linux-arm64.tar.gz`
-- macOS Apple Silicon: `agentic-lens-darwin-arm64.tar.gz`
-- macOS Intel: `agentic-lens-darwin-amd64.tar.gz`
-- Windows x86_64: `agentic-lens-windows-amd64.zip`
+- Linux x86_64: `agentic-lens-linux-amd64`
+- Linux ARM64: `agentic-lens-linux-arm64`
+- macOS Apple Silicon: `agentic-lens-darwin-arm64`
+- macOS Intel: `agentic-lens-darwin-amd64`
+- Windows x86_64: `agentic-lens-windows-amd64.exe`
 
-The agent creates the binary destination directory, downloads the archive, extracts the binary, and sets executable permissions:
+##### Multi-Platform Container vs Host Support
+Autonomous coding agents frequently execute inside sandboxed Linux containers (e.g. devcontainers, Docker) while developers work on host machines (macOS, Windows). To ensure `./bin/agentic-lens` functions seamlessly across both environments without architecture conflicts, AgenticLens uses a portable POSIX wrapper script installed at `bin/agentic-lens` that dynamically delegates to native platform executables (`bin/agentic-lens-${OS}-${ARCH}`). If a developer runs `agentic-lens server` on their macOS host after setup ran inside a Linux container, the wrapper automatically detects Darwin, downloads the missing `agentic-lens-darwin-arm64` binary on demand from GitHub Releases, and executes it.
+
+The agent creates the binary destination directory, installs the wrapper script, downloads the native binary, and sets executable permissions:
 ```bash
 DEST_DIR=".opencode/skills/agentic-lens-setup/bin"
 mkdir -p "$DEST_DIR"
 
-# Write protective .gitignore to prevent committing binaries to version control
+# Write protective .gitignore to prevent committing binaries and cache files to version control
 cat <<'EOF' > "$DEST_DIR/.gitignore"
 *
 !.gitignore
 EOF
 
-# Download and unpack precompiled binary
-RELEASE_URL="https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-${OS}-${ARCH}.tar.gz"
-curl -fsSL "$RELEASE_URL" | tar -xz -C "$DEST_DIR"
+# Install multi-platform wrapper script
+WRAPPER_URL="https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/agentic-lens-wrapper.sh"
+curl -fsSL -o "$DEST_DIR/agentic-lens" "$WRAPPER_URL"
 chmod +x "$DEST_DIR/agentic-lens"
+
+# Download native precompiled binary for current platform
+BIN_NAME="agentic-lens-${OS}-${ARCH}"
+RELEASE_URL="https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/${BIN_NAME}"
+curl -fsSL -o "$DEST_DIR/${BIN_NAME}" "$RELEASE_URL"
+chmod +x "$DEST_DIR/${BIN_NAME}"
+```
+
+Alternatively, if `.opencode/skills/agentic-lens-setup/scripts/download.sh` is present:
+```bash
+# Basic setup
+./.opencode/skills/agentic-lens-setup/scripts/download.sh
+
+# Optional: Pre-download host workstation binary (e.g. macOS Apple Silicon)
+./.opencode/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
 ```
 
 #### Step 3: Verify Binary Execution
@@ -110,38 +128,48 @@ Before updating or creating any OpenCode agent policy files (`AGENTS.md` or `.op
 
 Developers who prefer direct manual installation without an agent setup skill can install AgenticLens in three quick steps.
 
-#### Step 1: Download Release Archive
+#### Step 1: Install Wrapper and Platform Binary
 Navigate to official GitHub Releases:
 `https://github.com/NiltonDuarte/AgenticLens/releases`
 
-Download the appropriate archive for your operating system and architecture.
+Standalone precompiled binaries are distributed directly with embedded frontend assets and runtime dependencies. No archive extraction tools (`tar`, `unzip`) or compilation toolchains are required.
 
-Alternatively, download via `curl`:
-```bash
-# Example for Linux amd64
-curl -fsSL -o agentic-lens.tar.gz "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-linux-amd64.tar.gz"
-
-# Example for macOS Apple Silicon
-curl -fsSL -o agentic-lens.tar.gz "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-darwin-arm64.tar.gz"
-```
-
-#### Step 2: Extract and Set Executable Permissions
+Download via `curl`:
 ```bash
 mkdir -p ./bin
-tar -xzf agentic-lens.tar.gz -C ./bin
+
+# Write protective .gitignore
+cat <<'EOF' > ./bin/.gitignore
+*
+!.gitignore
+EOF
+
+# Install multi-platform wrapper script
+curl -fsSL -o ./bin/agentic-lens "https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/agentic-lens-wrapper.sh"
 chmod +x ./bin/agentic-lens
-rm agentic-lens.tar.gz
+
+# Example for Linux amd64
+curl -fsSL -o ./bin/agentic-lens-linux-amd64 "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-linux-amd64"
+chmod +x ./bin/agentic-lens-linux-amd64
+
+# Example for macOS Apple Silicon
+curl -fsSL -o ./bin/agentic-lens-darwin-arm64 "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-darwin-arm64"
+chmod +x ./bin/agentic-lens-darwin-arm64
+```
+
+Alternatively, use the automated downloader script:
+```bash
+curl -fsSL https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/download-agentic-lens.sh | bash -s -- --dest ./bin
 ```
 
 On Windows (PowerShell):
 ```powershell
 New-Item -ItemType Directory -Force -Path .\bin
-Invoke-WebRequest -Uri "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-windows-amd64.zip" -OutFile ".\agentic-lens.zip"
-Expand-Archive -Path ".\agentic-lens.zip" -DestinationPath ".\bin"
-Remove-Item ".\agentic-lens.zip"
+Invoke-WebRequest -Uri "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-windows-amd64.exe" -OutFile ".\bin\agentic-lens-windows-amd64.exe"
+Copy-Item ".\bin\agentic-lens-windows-amd64.exe" ".\bin\agentic-lens.exe"
 ```
 
-#### Step 3: Scaffold Configuration and Launch Dashboard
+#### Step 2: Scaffold Configuration and Launch Dashboard
 Verify the binary:
 ```bash
 ./bin/agentic-lens version --short
@@ -476,6 +504,14 @@ Prints binary version, build metadata, and schema version.
   - `--json` (Optional): Output metadata formatted as JSON.
   - `--short` (Optional): Output version string only.
 
+#### `agentic-lens update`
+Upgrades installed platform binaries to the latest (or specified) official release from GitHub Releases.
+- Flags:
+  - `--version <tag>` (Optional, Default: `latest`): Target release tag to install (e.g. `v1.0.1`).
+- Notes:
+  - Executed directly by the multi-platform wrapper script (`bin/agentic-lens`).
+  - Synchronously refreshes all installed platform binaries (`agentic-lens-*`) in the binary directory and updates the version sentinel.
+
 #### `agentic-lens backfill`
 Batch recomputes git diff metrics, recalculates token costs against updated model pricing, or upgrades schema across historical workspace ledgers.
 - Flags:
@@ -585,6 +621,15 @@ AgenticLens resolves workspace directories relative to the current working direc
   ./bin/agentic-lens --workspaces "my workspaces"
   ```
 - Always verify that the configured `workspaces.dir` in `.agenticlens-config.yaml` matches the directory used in CLI commands and agent prompts.
+
+### 6.6 Container Sandbox vs Host Machine Execution (Multi-Platform Wrapper)
+
+A very common configuration in OpenCode development is running the autonomous agent inside a Linux sandbox (such as Docker, Dev Containers, or a remote container) while the engineer interacts from a macOS host workstation:
+- **The Problem**: If setup installs a single platform executable (e.g. Linux ELF binary) to `./bin/agentic-lens`, running `./bin/agentic-lens server` on macOS fails with binary execution errors (`cannot execute binary file`). Conversely, installing only a macOS binary prevents the containerized agent from executing `./bin/agentic-lens generate` or `./bin/agentic-lens version`.
+- **The Solution**: AgenticLens resolves this by installing a lightweight dispatcher wrapper script at `bin/agentic-lens` alongside native platform executables (`agentic-lens-${OS}-${ARCH}`).
+- **Self-Healing Download**: If an engineer runs `./bin/agentic-lens server` on their macOS workstation after the setup skill ran inside the Linux container, the wrapper detects that `agentic-lens-darwin-arm64` is missing locally and downloads it automatically from GitHub Releases before executing.
+- **Background Update Notification**: The wrapper checks for newer versions in a background subshell (throttled to at most once per 24 hours) without blocking CLI commands. If an update is detected, a notice is displayed on stderr. The check can be disabled by setting `AGENTIC_LENS_NO_UPDATE_CHECK=1`.
+- **Upgrading**: Run `./bin/agentic-lens update` to upgrade all installed platform binaries to the latest release tag.
 
 ---
 

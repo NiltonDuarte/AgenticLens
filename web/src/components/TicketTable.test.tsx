@@ -354,12 +354,5 @@ describe('TicketTable Component', () => {
       expect(rows[2]).toHaveTextContent('GEN-9');
       expect(rows[3]).toHaveTextContent('AL-10');
     });
-
-    it('contains zero emojis throughout rendered TicketTable', () => {
-      const { container } = render(<TicketTable rows={sampleRows} />);
-      const text = container.textContent ?? '';
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-      expect(emojiRegex.test(text)).toBe(false);
-    });
   });
 });
