@@ -133,72 +133,86 @@
     {
       "name": "read",
       "calls": 156,
-      "errors": 5
+      "errors": 5,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "bash",
       "calls": 136,
-      "errors": 1
+      "errors": 1,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "edit",
       "calls": 35,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "glob",
       "calls": 24,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "grep",
       "calls": 17,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "write",
       "calls": 14,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "task",
       "calls": 5,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "todowrite",
       "calls": 5,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "mcp-gateway_mcp-find",
       "calls": 4,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "skill",
       "calls": 2,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "list_mcp_resource_templates",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "list_mcp_resources",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "mcp-gateway_code-mode",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     },
     {
       "name": "question",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4840007ffeHd4Ly84B1mC2YT"
     }
   ],
   "events": [

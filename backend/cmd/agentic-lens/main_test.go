@@ -103,6 +103,7 @@ func sampleFactJSON(ticketID, title string, duration int64, cost float64) string
 		],
 		"tools": [
 			{
+				"session_id": "ses-orch",
 				"name": "bash",
 				"calls": 10,
 				"errors": 1
@@ -242,6 +243,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		"updated_at": "2026-10-18T10:00:00Z",
 		"tools": [
 			{
+				"session_id": "ses-anom",
 				"name": "bash",
 				"calls": 10,
 				"errors": 6
@@ -324,7 +326,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"ticket_id": "AL-GEN-ANOM",
 			"ticket_title": "Test Fixture Ticket",
 			"tools": [
-				{"name": "bash", "calls": 8, "errors": 6}
+				{"session_id": "session-fixture", "name": "bash", "calls": 8, "errors": 6}
 			]
 		}`
 		if err := os.WriteFile(outJSON, []byte(seedJSON), 0644); err != nil {
@@ -5580,20 +5582,20 @@ func TestCLIGenerate_UnconfiguredPatternWarnings(t *testing.T) {
 	tempDir := t.TempDir()
 	outJSON := filepath.Join(tempDir, "out.json")
 
-		// Create git repository with config missing test_patterns and prod_patterns
-		initGitCmd := exec.Command("git", "init")
-		initGitCmd.Dir = tempDir
-		if out, err := initGitCmd.CombinedOutput(); err != nil {
-			t.Fatalf("git init failed: %v: %s", err, string(out))
-		}
-		setGitEmail := exec.Command("git", "config", "user.email", "test@example.com")
-		setGitEmail.Dir = tempDir
-		_ = setGitEmail.Run()
-		setGitName := exec.Command("git", "config", "user.name", "Test User")
-		setGitName.Dir = tempDir
-		_ = setGitName.Run()
+	// Create git repository with config missing test_patterns and prod_patterns
+	initGitCmd := exec.Command("git", "init")
+	initGitCmd.Dir = tempDir
+	if out, err := initGitCmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v: %s", err, string(out))
+	}
+	setGitEmail := exec.Command("git", "config", "user.email", "test@example.com")
+	setGitEmail.Dir = tempDir
+	_ = setGitEmail.Run()
+	setGitName := exec.Command("git", "config", "user.name", "Test User")
+	setGitName.Dir = tempDir
+	_ = setGitName.Run()
 
-		cfgContent := `project_name: "Test Patterns Warn"
+	cfgContent := `project_name: "Test Patterns Warn"
 ticket:
   prefixes:
     - prefix: "AL"
@@ -5607,35 +5609,35 @@ code_metrics:
   test_patterns: []
   prod_patterns: []
 `
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatalf("failed writing config: %v", err)
-		}
-		gitAdd := exec.Command("git", "add", ".agenticlens-config.yaml")
-		gitAdd.Dir = tempDir
-		_ = gitAdd.Run()
-		gitCommit := exec.Command("git", "commit", "-m", "init")
-		gitCommit.Dir = tempDir
-		_ = gitCommit.Run()
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatalf("failed writing config: %v", err)
+	}
+	gitAdd := exec.Command("git", "add", ".agenticlens-config.yaml")
+	gitAdd.Dir = tempDir
+	_ = gitAdd.Run()
+	gitCommit := exec.Command("git", "commit", "-m", "init")
+	gitCommit.Dir = tempDir
+	_ = gitCommit.Run()
 
-		cmd := exec.Command(
-			cliBinaryPath,
-			"generate",
-			"--db-path", filepath.Join(tempDir, "test.db"),
-			"--ticket-id", "AL-TEST-WARN",
-			"--ticket-title", "Test Warn Ticket",
-			"--json-output", outJSON,
-			"--allow-empty",
-		)
-		cmd.Dir = tempDir
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
+	cmd := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", filepath.Join(tempDir, "test.db"),
+		"--ticket-id", "AL-TEST-WARN",
+		"--ticket-title", "Test Warn Ticket",
+		"--json-output", outJSON,
+		"--allow-empty",
+	)
+	cmd.Dir = tempDir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
-		}
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+	}
 
-		errOut := stderr.String()
+	errOut := stderr.String()
 	if !strings.Contains(errOut, "WARNING: code_metrics.test_patterns is empty or unconfigured") {
 		t.Errorf("expected warning for code_metrics.test_patterns in stderr, got: %s", errOut)
 	}
@@ -5699,7 +5701,7 @@ code_metrics:
 			},
 		},
 		Tools: []domain.ToolFact{
-			{Name: "read", Calls: 5, Errors: 0},
+			{SessionID: "session-a", Name: "read", Calls: 5, Errors: 0},
 		},
 		Code: domain.CodeFacts{
 			LinesAdded:     10,
@@ -6283,7 +6285,7 @@ code_metrics:
 				},
 				Code: domain.CodeFacts{
 					LinesAdded:     10,
-					SDLCIterations: 0,
+					SDLCIterations: 7,
 				},
 			}
 			if err := adapters.SaveFactLedger(outJSON, ledger); err != nil {
@@ -6308,12 +6310,12 @@ code_metrics:
 				t.Errorf("v%d: expected warning for schema version < 4 in stderr, got: %s", ver, stderr.String())
 			}
 
-			// Verify SDLCIterations was not guessed and defaulted strictly to 1
+			// A zero exact sum remains zero even when migrating a pre-v4 ledger.
 			raw, _ := os.ReadFile(outJSON)
 			var dto adapters.AgenticFactLedgerDTO
 			_ = json.Unmarshal(raw, &dto)
-			if dto.Code.SDLCIterations != 1 {
-				t.Errorf("v%d: expected SDLCIterations to default to 1, got %d", ver, dto.Code.SDLCIterations)
+			if dto.Code.SDLCIterations != 0 {
+				t.Errorf("v%d: expected SDLCIterations to remain 0, got %d", ver, dto.Code.SDLCIterations)
 			}
 		}
 	})

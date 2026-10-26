@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"agenticlens/internal/domain"
 )
@@ -70,6 +71,11 @@ func (e *Engine) Migrate(input []byte, targetVersion int) (domain.AgenticFactLed
 	if err := json.Unmarshal(input, &ledger); err != nil {
 		return domain.AgenticFactLedger{}, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
 	}
+	if sourceVersion >= 4 {
+		if err := validateToolSessionIDs(ledger.Tools); err != nil {
+			return domain.AgenticFactLedger{}, err
+		}
+	}
 
 	// Idempotency: if already at target version, return ledger unchanged with zero mutations.
 	if sourceVersion == targetVersion {
@@ -90,12 +96,26 @@ func (e *Engine) MigrateLedger(ledger domain.AgenticFactLedger, targetVersion in
 	if ledger.SchemaVersion != nil && *ledger.SchemaVersion > 1 {
 		sourceVersion = *ledger.SchemaVersion
 	}
+	if sourceVersion >= 4 {
+		if err := validateToolSessionIDs(ledger.Tools); err != nil {
+			return domain.AgenticFactLedger{}, err
+		}
+	}
 
 	if sourceVersion == targetVersion {
 		return ledger, nil
 	}
 
 	return e.applyChain(ledger, sourceVersion, targetVersion)
+}
+
+func validateToolSessionIDs(tools []domain.ToolFact) error {
+	for i, tool := range tools {
+		if strings.TrimSpace(tool.SessionID) == "" {
+			return fmt.Errorf("tools[%d] is missing required session_id; regenerate or re-extract this ledger from source logs", i)
+		}
+	}
+	return nil
 }
 
 func (e *Engine) applyChain(ledger domain.AgenticFactLedger, sourceVersion int, targetVersion int) (domain.AgenticFactLedger, error) {

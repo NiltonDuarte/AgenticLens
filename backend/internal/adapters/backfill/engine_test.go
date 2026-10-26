@@ -175,6 +175,43 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 	}
 }
 
+func TestBackfillEngine_RecomputeDBPreservesExactZeroSteeringTurns(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "AL-ZERO-TURNS"
+	ledger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Code: domain.CodeFacts{SDLCIterations: 4},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+	dbPath := filepath.Join(tempDir, "opencode.db")
+	setupMockOpenCodeDB(t, dbPath, "sess-zero", ticketID)
+
+	report, err := NewEngine().Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      ticketID,
+		RecomputeDB:   true,
+		DBPath:        dbPath,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if report.Completed != 1 {
+		t.Fatalf("expected one completed workspace, got %d", report.Completed)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("read updated ledger: %v", err)
+	}
+	var updated adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &updated); err != nil {
+		t.Fatalf("decode updated ledger: %v", err)
+	}
+	if updated.Code.SDLCIterations != 0 {
+		t.Fatalf("expected exact zero steering turns, got %d", updated.Code.SDLCIterations)
+	}
+}
+
 func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	tempDir := t.TempDir()
 	tidA := "AL-AUTHORED-ON-A"

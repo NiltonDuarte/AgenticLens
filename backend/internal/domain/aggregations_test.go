@@ -169,7 +169,7 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 				},
 			},
 			Tools: []domain.ToolFact{
-				{Name: "read", Calls: 10, Errors: 1},
+				{SessionID: "session-a", Name: "read", Calls: 10, Errors: 1},
 			},
 		}
 
@@ -1028,7 +1028,7 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 			},
 		},
 		Tools: []domain.ToolFact{
-			{Name: "bash", Calls: 5, Errors: 1},
+			{SessionID: "session-a", Name: "bash", Calls: 5, Errors: 1},
 		},
 	}
 

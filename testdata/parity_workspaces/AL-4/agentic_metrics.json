@@ -233,102 +233,122 @@
     {
       "name": "read",
       "calls": 337,
-      "errors": 5
+      "errors": 5,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "bash",
       "calls": 261,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "edit",
       "calls": 79,
-      "errors": 2
+      "errors": 2,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "grep",
       "calls": 70,
-      "errors": 2
+      "errors": 2,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "glob",
       "calls": 33,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "write",
       "calls": 31,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "todowrite",
       "calls": 14,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "task",
       "calls": 10,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "t3-code_preview_navigate",
       "calls": 9,
-      "errors": 3
+      "errors": 3,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "t3-code_preview_evaluate",
       "calls": 7,
-      "errors": 2
+      "errors": 2,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "t3-code_preview_snapshot",
       "calls": 7,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "mcp-gateway_mcp-find",
       "calls": 5,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "skill",
       "calls": 3,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "t3-code_preview_open",
       "calls": 3,
-      "errors": 1
+      "errors": 1,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "list_mcp_resources",
       "calls": 2,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "question",
       "calls": 2,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "t3-code_preview_status",
       "calls": 2,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "list_mcp_resource_templates",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "mcp-gateway_code-mode",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     },
     {
       "name": "mcp-gateway_mcp-exec",
       "calls": 1,
-      "errors": 1
+      "errors": 1,
+      "session_id": "ses_eb49fc8eeffeHdKz5VKGwRmXjO"
     }
   ],
   "events": [

@@ -133,57 +133,68 @@
     {
       "name": "read",
       "calls": 163,
-      "errors": 3
+      "errors": 3,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "bash",
       "calls": 141,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "edit",
       "calls": 42,
-      "errors": 2
+      "errors": 2,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "grep",
       "calls": 29,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "write",
       "calls": 21,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "glob",
       "calls": 13,
-      "errors": 1
+      "errors": 1,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "todowrite",
       "calls": 6,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "task",
       "calls": 4,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "mcp-gateway_mcp-find",
       "calls": 3,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "skill",
       "calls": 2,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     },
     {
       "name": "question",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb42a03cbffeMmzw7XwJc39y1y"
     }
   ],
   "events": [

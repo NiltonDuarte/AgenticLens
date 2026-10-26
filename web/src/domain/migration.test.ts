@@ -51,6 +51,7 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
         ],
         tools: [
           {
+            session_id: 'ses-1',
             name: 'bash',
             calls: 12,
             errors: 1,

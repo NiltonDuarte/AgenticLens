@@ -116,6 +116,23 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 			continue
 		}
 		res.SourceVersion = sourceVer
+		if sourceVer >= domain.CurrentSchemaVersion || targetVer >= domain.CurrentSchemaVersion {
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(content, &dto); err != nil {
+				res.Status = "error"
+				res.Error = fmt.Errorf("decoding ledger for session validation: %w", err)
+				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+				report.Results = append(report.Results, res)
+				continue
+			}
+			if err := dto.Validate(); err != nil {
+				res.Status = "error"
+				res.Error = fmt.Errorf("validating tool session provenance: %w", err)
+				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+				report.Results = append(report.Results, res)
+				continue
+			}
+		}
 
 		if sourceVer >= targetVer {
 			res.Status = "up-to-date"

@@ -49,7 +49,7 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 				},
 			},
 			Tools: []domain.ToolFact{
-				{Name: "bash", Calls: 5, Errors: 0},
+				{SessionID: "session-a", Name: "bash", Calls: 5, Errors: 0},
 			},
 		},
 		WorkflowEfficiency: domain.WorkflowEfficiency{

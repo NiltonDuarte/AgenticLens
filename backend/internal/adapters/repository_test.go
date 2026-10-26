@@ -460,6 +460,7 @@ func TestScanWorkspaces(t *testing.T) {
 		],
 		"tools": [
 			{
+				"session_id": "ses-1",
 				"name": "bash",
 				"calls": 2,
 				"errors": 0
@@ -843,8 +844,8 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 		if dom.UpdatedAt != "2026-10-17T12:00:00Z" {
 			t.Errorf("expected updated_at preserved, got %s", dom.UpdatedAt)
 		}
-		if dom.Code.SDLCIterations != 1 {
-			t.Errorf("expected default SDLC iterations 1, got %d", dom.Code.SDLCIterations)
+		if dom.Code.SDLCIterations != 0 {
+			t.Errorf("expected zero SDLC iterations to remain zero, got %d", dom.Code.SDLCIterations)
 		}
 	})
 
@@ -943,7 +944,6 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 		}
 	})
 }
-
 
 func TestSerializationDTO(t *testing.T) {
 	tid := "AL-1"
@@ -1340,6 +1340,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 	}
 
 	factJSON := `{
+		"schema_version": 4,
 		"ticket_id": "AL-TARGET",
 		"ticket_title": "Target Feature",
 		"updated_at": "2026-10-18T12:00:00Z",
@@ -1369,6 +1370,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		],
 		"tools": [
 			{
+				"session_id": "ses-1",
 				"name": "edit",
 				"calls": 4,
 				"errors": 0
@@ -1396,6 +1398,28 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		}
 		if ledger.WorkflowEfficiency.CodeDelivered.LinesAdded != 40 {
 			t.Errorf("expected 40 lines added, got %d", ledger.WorkflowEfficiency.CodeDelivered.LinesAdded)
+		}
+	})
+
+	t.Run("v4 ledger with unscoped tools requires source re-extraction", func(t *testing.T) {
+		badDir := filepath.Join(tempDir, "AL-UNSCOPED")
+		if err := os.MkdirAll(badDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		badLedger := `{"schema_version":4,"tools":[{"name":"edit","calls":1,"errors":0}]}`
+		if err := os.WriteFile(filepath.Join(badDir, "agentic_metrics.json"), []byte(badLedger), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		ledger, err := adapters.LoadTicketWorkspace("AL-UNSCOPED", tempDir)
+		if err == nil {
+			t.Fatal("expected unscoped v4 tool facts to be rejected")
+		}
+		if ledger != nil {
+			t.Fatalf("expected nil ledger for invalid v4 tool facts, got %+v", ledger)
+		}
+		if !strings.Contains(err.Error(), "re-extract") || !strings.Contains(err.Error(), "session_id") {
+			t.Errorf("expected actionable session_id re-extraction guidance, got %v", err)
 		}
 	})
 

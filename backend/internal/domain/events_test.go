@@ -354,8 +354,8 @@ func TestPruneEventsForPersistence(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			Events: events,
 			Tools: []domain.ToolFact{
-				{Name: "read", Calls: 1, Errors: 0},
-				{Name: "bash", Calls: 1, Errors: 1},
+				{SessionID: "session-a", Name: "read", Calls: 1, Errors: 0},
+				{SessionID: "session-a", Name: "bash", Calls: 1, Errors: 1},
 			},
 		}
 
@@ -563,8 +563,8 @@ func TestPruneEventsForPersistence(t *testing.T) {
 				},
 			},
 			Tools: []domain.ToolFact{
-				{Name: "read", Calls: 1, Errors: 0},
-				{Name: "bash", Calls: 1, Errors: 1},
+				{SessionID: "session-a", Name: "read", Calls: 1, Errors: 0},
+				{SessionID: "session-a", Name: "bash", Calls: 1, Errors: 1},
 			},
 			Events: unprunedEvents,
 		}
@@ -813,7 +813,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 				},
 			},
 			tools: []domain.ToolFact{
-				{Name: "bash", Calls: 2, Errors: 2},
+				{SessionID: "session-a", Name: "bash", Calls: 2, Errors: 2},
 			},
 			expectedCount: 2,
 			verify: func(t *testing.T, pruned []domain.EventFact) {
@@ -935,8 +935,8 @@ func TestWorkspaceEventsResponseSerialization(t *testing.T) {
 	duration := int64(150)
 
 	tests := []struct {
-		name        string
-		input       domain.WorkspaceEventsResponse
+		name         string
+		input        domain.WorkspaceEventsResponse
 		expectedJSON string
 	}{
 		{

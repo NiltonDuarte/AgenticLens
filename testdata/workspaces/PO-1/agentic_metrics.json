@@ -50,8 +50,18 @@
     }
   ],
   "tools": [
-    { "name": "read", "calls": 35, "errors": 0 },
-    { "name": "write", "calls": 8, "errors": 0 }
+    {
+      "name": "read",
+      "calls": 35,
+      "errors": 0,
+      "session_id": "inv-po1-01"
+    },
+    {
+      "name": "write",
+      "calls": 8,
+      "errors": 0,
+      "session_id": "inv-po1-01"
+    }
   ],
   "events": []
 }

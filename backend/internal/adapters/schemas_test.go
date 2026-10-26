@@ -442,8 +442,8 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 		if dom.SchemaVersion != nil {
 			t.Errorf("expected nil schema_version for empty JSON")
 		}
-		if dom.Code.SDLCIterations != 1 {
-			t.Errorf("expected default SDLC iterations 1, got %d", dom.Code.SDLCIterations)
+		if dom.Code.SDLCIterations != 0 {
+			t.Errorf("expected zero SDLC iterations to remain zero, got %d", dom.Code.SDLCIterations)
 		}
 		if len(dom.Events) != 0 {
 			t.Errorf("expected 0 events, got len %d", len(dom.Events))
@@ -455,6 +455,41 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 			t.Errorf("expected 0 tools, got %d", len(dom.Tools))
 		}
 	})
+}
+
+func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
+	cases := []struct {
+		name      string
+		sessionID string
+		valid     bool
+	}{
+		{name: "missing"},
+		{name: "empty", sessionID: ""},
+		{name: "whitespace", sessionID: " \t\n"},
+		{name: "present", sessionID: "thread-fixture", valid: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dto := adapters.AgenticFactLedgerDTO{Tools: []adapters.ToolFactDTO{{SessionID: tc.sessionID, Name: "command", Calls: 1}}}
+			err := dto.Validate()
+			if tc.valid && err != nil {
+				t.Fatalf("expected valid session identity, got %v", err)
+			}
+			if !tc.valid && err == nil {
+				t.Fatal("expected missing session identity to be rejected")
+			}
+		})
+	}
+	if err := (adapters.AgenticFactLedgerDTO{Tools: []adapters.ToolFactDTO{}}).Validate(); err != nil {
+		t.Fatalf("empty tools collection should be valid: %v", err)
+	}
+}
+
+func TestCodeFactsDTOToDomainPreservesZeroIterations(t *testing.T) {
+	got := (adapters.CodeFactsDTO{SDLCIterations: 0}).ToDomain()
+	if got.SDLCIterations != 0 {
+		t.Fatalf("expected exact zero SDLC iterations, got %d", got.SDLCIterations)
+	}
 }
 
 func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {

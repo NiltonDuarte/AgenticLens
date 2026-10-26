@@ -131,10 +131,13 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 			if t.Name == "" {
 				continue
 			}
-			statsMap[t.Name] = &toolStats{
-				calls:  t.Calls,
-				errors: t.Errors,
+			st, ok := statsMap[t.Name]
+			if !ok {
+				st = &toolStats{}
+				statsMap[t.Name] = st
 			}
+			st.calls += t.Calls
+			st.errors += t.Errors
 		}
 	} else if len(ledger.Events) > 0 {
 		for _, e := range ledger.Events {
@@ -502,7 +505,15 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
 			}
 		}
 
-		if len(ledger.Events) > 0 {
+		if len(ledger.Tools) > 0 {
+			for _, t := range ledger.Tools {
+				if t.Name != "" {
+					tm := getTool(t.Name)
+					tm.calls += t.Calls
+					tm.errors += t.Errors
+				}
+			}
+		} else if len(ledger.Events) > 0 {
 			for _, e := range ledger.Events {
 				if e.EventType == EventTypeToolCall && e.ToolName != nil && *e.ToolName != "" {
 					tm := getTool(*e.ToolName)
@@ -510,14 +521,6 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
 					if e.Status == "error" {
 						tm.errors++
 					}
-				}
-			}
-		} else {
-			for _, t := range ledger.Tools {
-				if t.Name != "" {
-					tm := getTool(t.Name)
-					tm.calls += t.Calls
-					tm.errors += t.Errors
 				}
 			}
 		}

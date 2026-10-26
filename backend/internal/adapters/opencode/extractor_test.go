@@ -180,10 +180,10 @@ func TestResolveActiveRootSession(t *testing.T) {
 		}
 
 		scenarios := []struct {
-			name        string
-			nonce       string
-			ticketID    string
-			sessionID   string
+			name      string
+			nonce     string
+			ticketID  string
+			sessionID string
 		}{
 			{name: "unmatched nonce and ticket", nonce: "non-existent-nonce", ticketID: "AL-FOREIGN-GHOST", sessionID: ""},
 			{name: "empty nonce and unmatched ticket", nonce: "", ticketID: "AL-FOREIGN-GHOST", sessionID: ""},
@@ -1456,6 +1456,9 @@ func TestExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID(t *test
 	}
 	if readTool.Calls != 3 {
 		t.Errorf("expected read calls=3, got %d", readTool.Calls)
+	}
+	if readTool.SessionID != "ses_insp" {
+		t.Errorf("expected read tool session_id ses_insp, got %q", readTool.SessionID)
 	}
 	if readTool.Errors != 1 {
 		t.Errorf("expected read errors=1 (only from status error part), got %d", readTool.Errors)

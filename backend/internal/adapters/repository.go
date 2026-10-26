@@ -86,6 +86,10 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, err))
 			continue
 		}
+		if err := dto.Validate(); err != nil {
+			scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, err))
+			continue
+		}
 
 		factLedger := dto.ToDomain()
 
@@ -249,6 +253,9 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	if err := json.Unmarshal(content, &dto); err != nil {
 		return nil, fmt.Errorf("unmarshaling metrics for ticket %s: %w", cleanID, err)
 	}
+	if err := dto.Validate(); err != nil {
+		return nil, fmt.Errorf("validating metrics for ticket %s: %w", cleanID, err)
+	}
 
 	factLedger := dto.ToDomain()
 	if factLedger.TicketID == nil || *factLedger.TicketID == "" {
@@ -388,6 +395,11 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("decoding existing ledger at %s: %w", path, err)
 	}
+	for i, tool := range raw.Tools {
+		if strings.TrimSpace(tool.SessionID) == "" {
+			return nil, fmt.Errorf("loading existing ledger at %s: %w: tools[%d] is missing; regenerate or re-extract this ledger from source logs", path, ErrToolSessionIDRequired, i)
+		}
+	}
 
 	var mig *domain.MigrationInfo
 	if raw.Migration != nil {
@@ -453,10 +465,6 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 
 	if raw.WorkflowEfficiency != nil {
 		we := raw.WorkflowEfficiency
-		sdlc := we.SDLCIterations
-		if sdlc <= 0 {
-			sdlc = 1
-		}
 		result.Code = &domain.CodeFacts{
 			LinesAdded:       we.CodeDelivered.LinesAdded,
 			LinesDeleted:     we.CodeDelivered.LinesDeleted,
@@ -465,7 +473,7 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 			ProdLinesAdded:   we.TestToProductionRatio.ProdLinesAdded,
 			ProdLinesDeleted: 0,
 			FilesChanged:     we.CodeDelivered.FilesChanged,
-			SDLCIterations:   sdlc,
+			SDLCIterations:   we.SDLCIterations,
 		}
 	}
 
@@ -479,6 +487,9 @@ func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
 	}
 	if ledger.TicketTitle == nil || strings.TrimSpace(*ledger.TicketTitle) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketTitle is required and cannot be empty")
+	}
+	if err := ValidateToolFacts(ledger.Tools); err != nil {
+		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}
 
 	parentDir := filepath.Dir(path)

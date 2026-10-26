@@ -806,9 +806,16 @@ func (transcript *Transcript) finalizeFacts() {
 		})
 	}
 	for name, stats := range transcript.toolUsage {
-		transcript.Tools = append(transcript.Tools, domain.ToolFact{Name: name, Calls: stats.calls, Errors: stats.errors})
+		transcript.Tools = append(transcript.Tools, domain.ToolFact{
+			SessionID: transcript.sessionIDOrThread(), Name: name, Calls: stats.calls, Errors: stats.errors,
+		})
 	}
-	sort.Slice(transcript.Tools, func(i, j int) bool { return transcript.Tools[i].Name < transcript.Tools[j].Name })
+	sort.Slice(transcript.Tools, func(i, j int) bool {
+		if transcript.Tools[i].SessionID != transcript.Tools[j].SessionID {
+			return transcript.Tools[i].SessionID < transcript.Tools[j].SessionID
+		}
+		return transcript.Tools[i].Name < transcript.Tools[j].Name
+	})
 	if transcript.UpdatedAt == "" {
 		transcript.UpdatedAt = transcript.latestTime
 	}
@@ -867,7 +874,6 @@ func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
 		return Transcript{}, errors.New("cannot combine an empty Codex transcript set")
 	}
 	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64)}
-	toolTotals := make(map[string]toolUsage)
 	for index, transcript := range transcripts {
 		if index == 0 {
 			// Human steering belongs to the root; child prompts are delegation.
@@ -900,12 +906,7 @@ func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
 		for kind, count := range transcript.EventKinds {
 			combined.EventKinds[kind] += count
 		}
-		for _, tool := range transcript.Tools {
-			stats := toolTotals[tool.Name]
-			stats.calls += tool.Calls
-			stats.errors += tool.Errors
-			toolTotals[tool.Name] = stats
-		}
+		combined.Tools = append(combined.Tools, transcript.Tools...)
 		if transcript.StartedAt != "" && (combined.StartedAt == "" || transcript.StartedAt < combined.StartedAt) {
 			combined.StartedAt = transcript.StartedAt
 		}
@@ -916,10 +917,12 @@ func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
 			combined.UpdatedAt = transcript.UpdatedAt
 		}
 	}
-	for name, stats := range toolTotals {
-		combined.Tools = append(combined.Tools, domain.ToolFact{Name: name, Calls: stats.calls, Errors: stats.errors})
-	}
-	sort.Slice(combined.Tools, func(i, j int) bool { return combined.Tools[i].Name < combined.Tools[j].Name })
+	sort.Slice(combined.Tools, func(i, j int) bool {
+		if combined.Tools[i].SessionID != combined.Tools[j].SessionID {
+			return combined.Tools[i].SessionID < combined.Tools[j].SessionID
+		}
+		return combined.Tools[i].Name < combined.Tools[j].Name
+	})
 	sort.SliceStable(combined.Events, func(i, j int) bool { return combined.Events[i].Timestamp < combined.Events[j].Timestamp })
 	return combined, nil
 }

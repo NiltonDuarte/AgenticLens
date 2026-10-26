@@ -42,6 +42,14 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 	if transcript.Turns != 1 || transcript.ToolCalls != 2 || transcript.ToolErrors != 1 || len(transcript.Invocations) != 1 {
 		t.Fatalf("rollout facts were not projected: turns=%d tools=%d tool_errors=%d invocations=%d", transcript.Turns, transcript.ToolCalls, transcript.ToolErrors, len(transcript.Invocations))
 	}
+	if len(transcript.Tools) == 0 {
+		t.Fatal("expected session-scoped tool facts")
+	}
+	for _, tool := range transcript.Tools {
+		if tool.SessionID != transcript.ThreadID {
+			t.Errorf("expected tool session_id %q, got %q", transcript.ThreadID, tool.SessionID)
+		}
+	}
 	if len(transcript.Events) != 2 || transcript.Events[0].Status != "completed" || transcript.Events[0].DurationMs == nil || *transcript.Events[0].DurationMs != 125 {
 		t.Fatalf("expected privacy-safe paired command event with duration, got %#v", transcript.Events)
 	}
@@ -205,20 +213,20 @@ func TestParseRolloutRejectsNilReader(t *testing.T) {
 	}
 }
 
-func TestCombineTranscriptsPreservesThreadFactsAndAggregatesTools(t *testing.T) {
+func TestCombineTranscriptsPreservesPerSessionToolFacts(t *testing.T) {
 	parentID := "root-thread"
 	transcripts := []codex.Transcript{
 		{
 			ThreadID: "root-thread", StartedAt: "2026-10-25T09:00:00Z", UpdatedAt: "2026-10-25T09:00:10Z",
 			Invocations: []domain.InvocationFact{{ID: "root-thread"}},
-			Tools:       []domain.ToolFact{{Name: "command", Calls: 2, Errors: 1}},
+			Tools:       []domain.ToolFact{{SessionID: "root-thread", Name: "command", Calls: 2, Errors: 1}},
 			Events:      []domain.EventFact{{Timestamp: "2026-10-25T09:00:02Z", SessionID: "root-thread"}},
 			Usage:       codex.Usage{Input: 10, CacheRead: 4},
 		},
 		{
 			ThreadID: "child-thread", StartedAt: "2026-10-25T09:00:03Z", UpdatedAt: "2026-10-25T09:00:08Z",
 			Invocations: []domain.InvocationFact{{ID: "child-thread", ParentID: &parentID}},
-			Tools:       []domain.ToolFact{{Name: "command", Calls: 1}, {Name: "search", Calls: 1}},
+			Tools:       []domain.ToolFact{{SessionID: "child-thread", Name: "command", Calls: 1}, {SessionID: "child-thread", Name: "search", Calls: 1}},
 			Events:      []domain.EventFact{{Timestamp: "2026-10-25T09:00:01Z", SessionID: "child-thread"}},
 			Usage:       codex.Usage{Input: 20, CacheRead: 7},
 		},
@@ -231,11 +239,14 @@ func TestCombineTranscriptsPreservesThreadFactsAndAggregatesTools(t *testing.T) 
 	if combined.ThreadID != "root-thread" || combined.Usage.Input != 30 || combined.Usage.CacheRead != 11 {
 		t.Fatalf("unexpected combined thread metadata/usage: %#v", combined)
 	}
-	if len(combined.Invocations) != 2 || len(combined.Tools) != 2 || len(combined.Events) != 2 {
+	if len(combined.Invocations) != 2 || len(combined.Tools) != 3 || len(combined.Events) != 2 {
 		t.Fatalf("expected facts from both threads, got invocations=%d tools=%d events=%d", len(combined.Invocations), len(combined.Tools), len(combined.Events))
 	}
-	if combined.Tools[0].Name != "command" || combined.Tools[0].Calls != 3 || combined.Tools[0].Errors != 1 {
-		t.Fatalf("expected aggregate command totals, got %#v", combined.Tools)
+	if combined.Tools[0].SessionID != "child-thread" || combined.Tools[0].Name != "command" || combined.Tools[0].Calls != 1 {
+		t.Fatalf("expected child command facts to retain session identity, got %#v", combined.Tools)
+	}
+	if combined.Tools[2].SessionID != "root-thread" || combined.Tools[2].Calls != 2 || combined.Tools[2].Errors != 1 {
+		t.Fatalf("expected root command facts to retain session identity, got %#v", combined.Tools)
 	}
 	if combined.Events[0].Timestamp != "2026-10-25T09:00:01Z" {
 		t.Fatalf("expected chronologically ordered events, got %#v", combined.Events)

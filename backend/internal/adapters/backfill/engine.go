@@ -191,6 +191,10 @@ func (e *BackfillEngine) processSingleWorkspace(
 		result.Error = fmt.Errorf("decoding JSON: %w", err)
 		return result
 	}
+	if err := dto.Validate(); err != nil {
+		result.Error = fmt.Errorf("validating tool session provenance: %w", err)
+		return result
+	}
 
 	factLedger := dto.ToDomain()
 	ticketID := workspaceName
@@ -308,7 +312,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 				dbSessionFound = true
 				rootID := strings.TrimSpace(*resolvedSessionID)
 				turns, err := opencode.ExtractSteeringTurns(opencodeDB.DB(), []string{rootID})
-				if err == nil && turns >= 1 {
+				if err == nil {
 					factLedger.Code.SDLCIterations = turns
 				}
 				invs, tools, events, stISO, endISO, err := opencode.ExtractFacts(

@@ -4,7 +4,7 @@ Research branch: `research/codex-openai-metrics`.
 
 ## Result
 
-AgenticLens can derive meaningful metrics from a Codex rollout without keeping transcript payloads. The implementation adds a Codex JSONL adapter that projects observed thread/model/token usage, turn timing, tool lifecycle outcomes, and compaction events into source-neutral facts, then calls the existing schema-v3 metrics derivation pipeline.
+AgenticLens can derive meaningful metrics from a Codex rollout without keeping transcript payloads. The implementation adds a Codex JSONL adapter that projects observed thread/model/token usage, turn timing, tool lifecycle outcomes, and compaction events into source-neutral facts, then derives metrics from the schema-v4 ledger. Tool facts are session-scoped and require a nonempty `session_id`; totals aggregate distinct session rows by tool name. SDLC iteration totals preserve exact zero and sum primary root-session invocation counts.
 
 `agentic_metrics.json` is the committed session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as AL-56. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
 
@@ -122,6 +122,13 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - **Adversarial Verification**:
   - Multi-device chaining test (`TestCLIGenerate_ThreeDeviceHandoffAccumulation`) verified 3-device accumulation without loss or duplicate records.
   - Full race test suite, Vitest suite, and multi-platform compilation passed cleanly.
+
+## Iteration 04: Session-Scoped Tool Facts and Exact Zero Iterations
+
+- **Schema-v4 tool provenance:** Made `session_id` mandatory and nonempty on each tool fact. OpenCode and Codex extractors emit per-session/tool rows; refresh merges by `(session_id, tool_name)`, replacing the selected session snapshot while retaining other sessions. Domain and presentation consumers aggregate by tool name, and tool count is based on unique tool names.
+- **Breaking validation and recovery:** Legacy aggregate tool rows without session IDs are rejected during migration, backfill, repository loading, and generation. Recovery preserves the old ledger, re-extracts each known root session into one fresh output path, verifies all expected session IDs and tool counts, then replaces the old ledger. Codex root selection includes child rollouts. If source logs are unavailable, old unscoped aggregate totals cannot be re-sourced or reliably split.
+- **Exact-zero iterations:** Extraction and backfill now retain zero steering turns; schema conversion no longer substitutes one. Focused regressions cover zero-preserving backfill and invalid unscoped v4 ledger rejection without mutation. Session-fact merge, DTO validation, and repository-load regressions also pass.
+- **Validation and limitations:** Real Codex smoke extraction generated this ticket's ledger from the local rollout discovery path. Focused Go tests passed for migration runner, backfill, and repository loading; diff checks passed. The current checkout has no configured OpenCode database for a fresh live OpenCode smoke run. Existing unscoped counts cannot be reconstructed without source logs.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 9

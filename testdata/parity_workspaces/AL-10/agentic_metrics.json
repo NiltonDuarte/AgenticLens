@@ -113,67 +113,80 @@
     {
       "name": "read",
       "calls": 64,
-      "errors": 4
+      "errors": 4,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "bash",
       "calls": 57,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "glob",
       "calls": 16,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "edit",
       "calls": 8,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "grep",
       "calls": 6,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "todowrite",
       "calls": 6,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "write",
       "calls": 6,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "mcp-gateway_mcp-find",
       "calls": 4,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "mcp-gateway_mcp-exec",
       "calls": 3,
-      "errors": 3
+      "errors": 3,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "task",
       "calls": 3,
-      "errors": 1
+      "errors": 1,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "question",
       "calls": 2,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "list_mcp_resources",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     },
     {
       "name": "skill",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb"
     }
   ],
   "events": [

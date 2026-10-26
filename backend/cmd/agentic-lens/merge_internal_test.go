@@ -101,27 +101,43 @@ func TestMergeInvocations_UnitAdversarial(t *testing.T) {
 }
 
 func TestMergeToolsAndEvents_UnitAdversarial(t *testing.T) {
-	t.Run("tools merge takes max calls and errors, appends novel tools", func(t *testing.T) {
+	t.Run("tools replace matching session facts and preserve distinct sessions", func(t *testing.T) {
 		cached := []domain.ToolFact{
-			{Name: "bash", Calls: 10, Errors: 2},
-			{Name: "read", Calls: 5, Errors: 0},
+			{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 2},
+			{SessionID: "session-a", Name: "read", Calls: 5, Errors: 0},
 		}
 		local := []domain.ToolFact{
-			{Name: "bash", Calls: 15, Errors: 1}, // calls increased, errors lower
-			{Name: "write", Calls: 3, Errors: 0}, // new tool
+			{SessionID: "session-a", Name: "bash", Calls: 15, Errors: 1},
+			{SessionID: "session-b", Name: "bash", Calls: 4, Errors: 1},
+			{SessionID: "session-a", Name: "write", Calls: 3, Errors: 0},
 		}
 
 		merged := mergeTools(cached, local)
-		if len(merged) != 3 {
-			t.Fatalf("expected 3 tools, got %d", len(merged))
+		if len(merged) != 4 {
+			t.Fatalf("expected 4 session tool facts, got %d", len(merged))
 		}
-		// bash must take max(10, 15) = 15 calls and max(2, 1) = 2 errors
-		if merged[0].Calls != 15 || merged[0].Errors != 2 {
-			t.Errorf("expected bash calls 15, errors 2, got calls %d, errors %d", merged[0].Calls, merged[0].Errors)
+		var bashCalls, bashErrors int64
+		for _, tool := range merged {
+			if tool.Name == "bash" {
+				bashCalls += tool.Calls
+				bashErrors += tool.Errors
+			}
 		}
-		// write appended
-		if merged[2].Name != "write" || merged[2].Calls != 3 {
-			t.Errorf("expected write tool appended, got %+v", merged[2])
+		if bashCalls != 19 || bashErrors != 2 {
+			t.Errorf("expected cross-session bash calls 19, errors 2, got calls %d, errors %d", bashCalls, bashErrors)
+		}
+		repeated := mergeTools(merged, local)
+		if len(repeated) != len(merged) {
+			t.Fatalf("repeat merge duplicated facts: before=%d after=%d", len(merged), len(repeated))
+		}
+		var repeatedBashCalls int64
+		for _, tool := range repeated {
+			if tool.Name == "bash" {
+				repeatedBashCalls += tool.Calls
+			}
+		}
+		if repeatedBashCalls != bashCalls {
+			t.Errorf("repeat merge changed bash calls: before=%d after=%d", bashCalls, repeatedBashCalls)
 		}
 	})
 

@@ -130,11 +130,36 @@
     }
   ],
   "tools": [
-    { "name": "read", "calls": 62, "errors": 0 },
-    { "name": "write", "calls": 24, "errors": 0 },
-    { "name": "edit", "calls": 28, "errors": 1 },
-    { "name": "bash", "calls": 18, "errors": 2 },
-    { "name": "grep", "calls": 10, "errors": 0 }
+    {
+      "name": "read",
+      "calls": 62,
+      "errors": 0,
+      "session_id": "inv-al1-01"
+    },
+    {
+      "name": "write",
+      "calls": 24,
+      "errors": 0,
+      "session_id": "inv-al1-01"
+    },
+    {
+      "name": "edit",
+      "calls": 28,
+      "errors": 1,
+      "session_id": "inv-al1-01"
+    },
+    {
+      "name": "bash",
+      "calls": 18,
+      "errors": 2,
+      "session_id": "inv-al1-01"
+    },
+    {
+      "name": "grep",
+      "calls": 10,
+      "errors": 0,
+      "session_id": "inv-al1-01"
+    }
   ],
   "events": []
 }

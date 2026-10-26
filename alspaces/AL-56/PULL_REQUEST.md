@@ -1,29 +1,13 @@
 # feat(AL-56): add Codex session discovery and metrics generation
 
-`agentic-lens generate --source codex` discovers local Codex rollouts and writes the existing schema-v3 fact ledger. Resolution requires a literal nonce or explicit thread ID; ticket text and working-directory heuristics are excluded, and ambiguous nonces fail. Child threads are included through parent metadata. OpenCode remains the default source. The existing dashboard reads the generated ledger; this PR adds no HTTP routes or frontend changes.
+Adds opt-in Codex rollout discovery and metrics extraction through `agentic-lens generate --source codex`, while keeping OpenCode as the default. Codex selection requires a literal nonce or explicit thread ID; ambiguous nonces fail, ticket text and working-directory heuristics are excluded, and root selection includes linked child rollouts. Real-session smoke extraction produced the committed ledger from local Codex rollout data.
 
-Code attribution always uses an explicit ref and defaults to `--code-ref HEAD`. Ticket ID and branch-name matching have been removed from Git diff discovery. `backfill --recompute-git` requires `--code-ref`; missing or invalid refs fail. Comparisons measure committed changes against the configured base and respect source/classification settings. Codex SDLC iterations derive from root-session user messages, without duplicate event/response counting or child delegation.
+The ledger remains schema v4 and now stores tool facts per `(session_id, tool_name)`. Repeated generation replaces matching session facts and retains facts from other sessions; dashboards aggregate by tool name. SDLC iteration totals preserve exact zero and derive from root-session user messages. Every v4 tool row requires a nonempty `session_id`; old unscoped aggregate rows are intentionally rejected, which is a breaking migration/load behavior.
 
-Test/production classification comes from project configuration rather than hardcoded directory names or extensions. Recursive globs respect directory boundaries, and configured test paths outside source roots are included in ref-based comparisons.
+To recover an old unscoped ledger, preserve it and re-extract each root session into one new JSON output path, reusing that path to merge sessions. Codex root discovery includes child rollouts. Verify expected session IDs and tool counts before replacing the old ledger. Generation against the old path fails validation. If source logs are unavailable, unscoped aggregate counts cannot be split or recovered.
 
-Repeated generation replaces the selected snapshot, model changes preserve per-model usage, and event context uses request input counts rather than cumulative usage. CLI persistence uses the existing error/compaction/anomaly-turn pruning policy.
-
-Iteration 01, 02, and 03 harden OpenCode non-breakage and operational reliability: strict zero runtime fallback classification with diagnostic stderr warnings for unconfigured patterns, CLI `generate` graceful fallback to cached code facts on Git diff errors, template-only pattern defaults for `init`, mandatory `--ticket-id` enforcement during `--recompute-git` backfills, schema version 4 elevation with atomic per-invocation `user_iterations`, composite `(id, model)` ID-aware invocations merging for multi-device workflows, and strict zero-fallback SDLC iteration derivation. Detailed contracts, plans, and reviews live in `CONTRACT.md`, `SUMMARY.md`, and `iterations/`.
-
-## Privacy review
-
-- The real-session `agentic_metrics.json` and generated metrics summary in `SUMMARY.md` are committed lifecycle deliverables.
-- The ledger retains real thread IDs and timing for correlation. Raw rollouts, local home paths, and machine-specific database inventories are excluded. Test fixtures are synthetic.
-- Parser tests verify that prompts, command arguments, tool payloads, and working-directory paths are excluded from exported summaries and ledgers. Raw rollout files are opened read-only and stay in CODEX_HOME; extraction does not copy them. Extraction runs locally without external service calls.
-- Metrics are generated from this conversation using nonce-based session discovery.
-
-## Validation
-
-- `make`: Go vet, race-enabled Go tests, frontend typecheck/lint/tests, frontend bundle, and cross-platform binary builds.
-- CLI regression tests run in isolated temporary projects with synthetic ticket prefixes and custom workspace layouts, independent of the checkout configuration and research ticket.
-- Regression coverage for strict unknown-record rejection, explicit known non-metric record handling, unique nonce/thread discovery, gzip rollouts, child identity/parent linkage, inherited replay exclusion, fatal missing resume markers, raw persona extraction without role-mapping resolution, path privacy, repeated generation, model switches, token accounting, event retention, and export privacy.
-- `git diff --check`; generated facts omit transcript content, command payloads, and working-directory paths.
+Code attribution requires an explicit ref (generation defaults to `HEAD`); ticket/branch-based discovery is removed. Backfill Git recomputation requires `--code-ref`. File classification uses configured test and production paths, including configured paths outside source roots. Frontend types and tool aggregation were updated; there are no HTTP routes or import UI changes.
 
 ## Limits
 
-Rollout persistence is a private Codex format. Discovery scans files and has no live tailing or automatic harness detection; use `--source codex`. The local record audit found all timestamps present, but the format does not guarantee this; future records without timestamps leave time metrics unavailable. Cost is not exposed by the rollout; the current shared schema writes zero, which is ambiguous and should become nullable in a separate cross-cutting schema/UI change. The existing npm dependency audit reports six advisories; this change introduces no new dependencies.
+Rollout persistence is a private, version-sensitive Codex format. Discovery does not tail live sessions or select a harness automatically. Missing source timestamps remain unavailable. Cost is not exposed by rollout data; current numeric zero is ambiguous and nullable cost is tracked separately. No new dependencies were added.

@@ -655,8 +655,28 @@ Traditional developer tools often require complex runtime dependencies such as N
 
 Rather than transmitting proprietary code or execution telemetry to external cloud services, AgenticLens operates entirely locally:
 - Telemetry facts are captured per ticket or task in isolated workspace directories: `workspaces/<TICKET_ID>/agentic_metrics.json`.
+- Schema-v4 tool facts require a non-empty `session_id`; tool totals are stored per session and aggregated for display. Legacy ledgers with unscoped tool totals cannot be safely migrated. Re-extract from OpenCode/Codex source logs before retrying migration; if the logs are unavailable, migration stops without changing the ledger. Generation against the old unscoped ledger also fails validation, so follow the recovery sequence below and use a new JSON output path.
 - Each ledger is an immutable JSON document recording session identifiers, wall-clock duration, token volume (input, output, cache-read, and cache-write tokens), financial costs calculated from precise model pricing matrices, turn counts, tool invocation distributions, error rates, and git commit diff volumes (insertions, deletions, and affected files).
 - These ledgers are committed directly to version control alongside code deliverables, establishing an auditable, repository-native history of agent engineering metrics with zero cloud egress.
+
+#### Recovering unscoped tool totals
+
+Preserve the old ledger first. Run `generate` for each known root session ID with `--json-output` pointing to a new, initially nonexistent file. Reuse that same new output path for later root sessions; generation merges the session facts by session and tool name. For Codex, selecting a root thread also discovers its child rollouts. For OpenCode, generate once for each root session. Do not point `--json-output` at the old ledger: its unscoped tool rows fail validation before generation can merge new facts.
+
+```bash
+cp workspaces/<TICKET_ID>/agentic_metrics.json workspaces/<TICKET_ID>/agentic_metrics.unscoped-backup.json
+./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_1> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_2> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+
+# Compare the IDs and per-session tool rows with the sessions you intended to recover.
+jq -r '.tools[].session_id' workspaces/<TICKET_ID>/agentic_metrics.recovered.json | sort -u
+jq '.tools | length' workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+
+# Replace the active ledger only after verifying all expected sessions and counts.
+mv workspaces/<TICKET_ID>/agentic_metrics.recovered.json workspaces/<TICKET_ID>/agentic_metrics.json
+```
+
+Use `--source opencode` and repeat with each OpenCode root session ID for OpenCode recovery. Verify all expected session IDs (including Codex child rollouts) and tool counts before replacing the original. An unscoped aggregate cannot be accurately divided among sessions; if the source logs are unavailable, those old aggregate counts cannot be recovered. Keep the backup and do not invent IDs or redistribute the totals.
 
 ### A.4 Real-Time Live Observability and SSE Event Streaming
 

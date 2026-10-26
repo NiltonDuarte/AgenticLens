@@ -28,9 +28,10 @@ type InvocationFact struct {
 
 // ToolFact stores tool usage execution counts and errors.
 type ToolFact struct {
-	Name   string `json:"name"`
-	Calls  int64  `json:"calls"`
-	Errors int64  `json:"errors"`
+	SessionID string `json:"session_id"`
+	Name      string `json:"name"`
+	Calls     int64  `json:"calls"`
+	Errors    int64  `json:"errors"`
 }
 
 // EventFact captures a single discrete, ordered lifecycle occurrence in an agent session.
@@ -62,14 +63,14 @@ type WorkspaceEventsResponse struct {
 
 // CodeFacts stores lines of code modified and SDLC iteration counts.
 type CodeFacts struct {
-	LinesAdded      int64 `json:"lines_added"`
-	LinesDeleted    int64 `json:"lines_deleted"`
-	TestLinesAdded  int64 `json:"test_lines_added"`
+	LinesAdded       int64 `json:"lines_added"`
+	LinesDeleted     int64 `json:"lines_deleted"`
+	TestLinesAdded   int64 `json:"test_lines_added"`
 	TestLinesDeleted int64 `json:"test_lines_deleted"`
-	ProdLinesAdded  int64 `json:"prod_lines_added"`
+	ProdLinesAdded   int64 `json:"prod_lines_added"`
 	ProdLinesDeleted int64 `json:"prod_lines_deleted"`
-	FilesChanged    int64 `json:"files_changed"`
-	SDLCIterations  int64 `json:"sdlc_iterations"`
+	FilesChanged     int64 `json:"files_changed"`
+	SDLCIterations   int64 `json:"sdlc_iterations"`
 }
 
 // MigrationInfo captures migration state, completed steps, pending requirements, and audit metadata.
@@ -273,18 +274,18 @@ type FleetAnomalySummary struct {
 
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
-	TotalTickets             int64               `json:"total_tickets"`
-	TotalCostUSD             float64             `json:"total_cost_usd"`
-	TotalInvocations         int64               `json:"total_invocations"`
-	TotalInputTokens         int64               `json:"total_input_tokens"`
-	TotalOutputTokens        int64               `json:"total_output_tokens"`
-	TotalCacheReadTokens     int64               `json:"total_cache_read_tokens"`
-	OverallCacheHitRatePct   float64             `json:"overall_cache_hit_rate_pct"`
-	TotalDurationSeconds     int64               `json:"total_duration_seconds"`
-	FormattedTotalDuration   string              `json:"formatted_total_duration"`
-	TotalLinesAdded          int64               `json:"total_lines_added"`
-	TotalLinesDeleted        int64               `json:"total_lines_deleted"`
-	TotalFilesChanged        int64               `json:"total_files_changed"`
+	TotalTickets             int64                 `json:"total_tickets"`
+	TotalCostUSD             float64               `json:"total_cost_usd"`
+	TotalInvocations         int64                 `json:"total_invocations"`
+	TotalInputTokens         int64                 `json:"total_input_tokens"`
+	TotalOutputTokens        int64                 `json:"total_output_tokens"`
+	TotalCacheReadTokens     int64                 `json:"total_cache_read_tokens"`
+	OverallCacheHitRatePct   float64               `json:"overall_cache_hit_rate_pct"`
+	TotalDurationSeconds     int64                 `json:"total_duration_seconds"`
+	FormattedTotalDuration   string                `json:"formatted_total_duration"`
+	TotalLinesAdded          int64                 `json:"total_lines_added"`
+	TotalLinesDeleted        int64                 `json:"total_lines_deleted"`
+	TotalFilesChanged        int64                 `json:"total_files_changed"`
 	TotalReasoningTokens     int64                 `json:"total_reasoning_tokens"`
 	OverallReasoningRatioPct float64               `json:"overall_reasoning_ratio_pct"`
 	RoleCosts                map[AgentRole]float64 `json:"role_costs"`
@@ -294,27 +295,27 @@ type FleetSummary struct {
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
-	TicketID                  string                  `json:"ticket_id"`
-	UpdatedAt                 string                  `json:"updated_at"`
-	SDLCIterations            int64                   `json:"sdlc_iterations"`
-	ActiveDurationSeconds     int64                   `json:"active_duration_seconds"`
-	ActiveDurationFormatted   string                  `json:"active_duration_formatted"`
-	CostUSD                   float64                 `json:"cost_usd"`
-	CacheHitRatePct           float64                 `json:"cache_hit_rate_pct"`
-	TestToCodeRatio           string                  `json:"test_to_code_ratio"`
-	LinesAdded                int64                   `json:"lines_added"`
-	LinesDeleted              int64                   `json:"lines_deleted"`
-	FilesChanged              int64                   `json:"files_changed"`
-	ToolSuccessRatePct        float64                 `json:"tool_success_rate_pct"`
-	ContextHealthStatus       ContextHealthStatus     `json:"context_health_status"`
-	RootSaturationPct         float64                 `json:"root_saturation_pct"`
-	PeakContextTokens         int64                   `json:"peak_context_tokens"`
-	TicketTitle               string                  `json:"ticket_title"`
-	TicketType                *ConventionalTicketType `json:"ticket_type,omitempty"`
-	StartedAt                 *string                 `json:"started_at"`
-	CompletedAt               *string                 `json:"completed_at"`
-	LeadDurationSeconds       *int64                  `json:"lead_duration_seconds"`
-	LeadDurationFormatted     string                  `json:"lead_duration_formatted"`
+	TicketID                string                  `json:"ticket_id"`
+	UpdatedAt               string                  `json:"updated_at"`
+	SDLCIterations          int64                   `json:"sdlc_iterations"`
+	ActiveDurationSeconds   int64                   `json:"active_duration_seconds"`
+	ActiveDurationFormatted string                  `json:"active_duration_formatted"`
+	CostUSD                 float64                 `json:"cost_usd"`
+	CacheHitRatePct         float64                 `json:"cache_hit_rate_pct"`
+	TestToCodeRatio         string                  `json:"test_to_code_ratio"`
+	LinesAdded              int64                   `json:"lines_added"`
+	LinesDeleted            int64                   `json:"lines_deleted"`
+	FilesChanged            int64                   `json:"files_changed"`
+	ToolSuccessRatePct      float64                 `json:"tool_success_rate_pct"`
+	ContextHealthStatus     ContextHealthStatus     `json:"context_health_status"`
+	RootSaturationPct       float64                 `json:"root_saturation_pct"`
+	PeakContextTokens       int64                   `json:"peak_context_tokens"`
+	TicketTitle             string                  `json:"ticket_title"`
+	TicketType              *ConventionalTicketType `json:"ticket_type,omitempty"`
+	StartedAt               *string                 `json:"started_at"`
+	CompletedAt             *string                 `json:"completed_at"`
+	LeadDurationSeconds     *int64                  `json:"lead_duration_seconds"`
+	LeadDurationFormatted   string                  `json:"lead_duration_formatted"`
 }
 
 // ScanReport holds all ledgers loaded from workspace traversal alongside non-fatal scan errors.

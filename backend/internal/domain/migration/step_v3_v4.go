@@ -1,6 +1,9 @@
 package migration
 
 import (
+	"fmt"
+	"strings"
+
 	"agenticlens/internal/domain"
 )
 
@@ -31,6 +34,11 @@ func (s *StepV3ToV4UserIterations) Description() string {
 
 // Apply executes the pure migration from schema v3 to schema v4.
 func (s *StepV3ToV4UserIterations) Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
+	for i, tool := range ledger.Tools {
+		if strings.TrimSpace(tool.SessionID) == "" {
+			return domain.AgenticFactLedger{}, fmt.Errorf("tools[%d] is missing required session_id; regenerate or re-extract this ledger from source logs before migrating", i)
+		}
+	}
 	cloned := ledger
 	targetVer := 4
 	cloned.SchemaVersion = &targetVer

@@ -563,11 +563,11 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         },
       ],
       tools: [
-        { name: 'read', calls: 62, errors: 0 },
-        { name: 'write', calls: 24, errors: 0 },
-        { name: 'edit', calls: 28, errors: 1 },
-        { name: 'bash', calls: 18, errors: 2 },
-        { name: 'grep', calls: 10, errors: 0 },
+        { session_id: 'fixture-session', name: 'read', calls: 62, errors: 0 },
+        { session_id: 'fixture-session', name: 'write', calls: 24, errors: 0 },
+        { session_id: 'fixture-session', name: 'edit', calls: 28, errors: 1 },
+        { session_id: 'fixture-session', name: 'bash', calls: 18, errors: 2 },
+        { session_id: 'fixture-session', name: 'grep', calls: 10, errors: 0 },
       ],
     },
     workflow_efficiency: {
@@ -838,10 +838,10 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         },
       ],
       tools: [
-        { name: 'read', calls: 48, errors: 0 },
-        { name: 'write', calls: 18, errors: 0 },
-        { name: 'edit', calls: 22, errors: 2 },
-        { name: 'bash', calls: 32, errors: 1 },
+        { session_id: 'fixture-session', name: 'read', calls: 48, errors: 0 },
+        { session_id: 'fixture-session', name: 'write', calls: 18, errors: 0 },
+        { session_id: 'fixture-session', name: 'edit', calls: 22, errors: 2 },
+        { session_id: 'fixture-session', name: 'bash', calls: 32, errors: 1 },
       ],
       events: mockAL2Events,
     },
@@ -1073,10 +1073,10 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         },
       ],
       tools: [
-        { name: 'read', calls: 52, errors: 0 },
-        { name: 'write', calls: 20, errors: 0 },
-        { name: 'edit', calls: 14, errors: 1 },
-        { name: 'bash', calls: 26, errors: 0 },
+        { session_id: 'fixture-session', name: 'read', calls: 52, errors: 0 },
+        { session_id: 'fixture-session', name: 'write', calls: 20, errors: 0 },
+        { session_id: 'fixture-session', name: 'edit', calls: 14, errors: 1 },
+        { session_id: 'fixture-session', name: 'bash', calls: 26, errors: 0 },
       ],
     },
     workflow_efficiency: {
@@ -1266,8 +1266,8 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         },
       ],
       tools: [
-        { name: 'read', calls: 35, errors: 0 },
-        { name: 'write', calls: 8, errors: 0 },
+        { session_id: 'fixture-session', name: 'read', calls: 35, errors: 0 },
+        { session_id: 'fixture-session', name: 'write', calls: 8, errors: 0 },
       ],
     },
     workflow_efficiency: {
@@ -1443,10 +1443,10 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         },
       ],
       tools: [
-        { name: 'read', calls: 42, errors: 0 },
-        { name: 'write', calls: 14, errors: 0 },
-        { name: 'edit', calls: 24, errors: 3 },
-        { name: 'bash', calls: 35, errors: 3 },
+        { session_id: 'fixture-session', name: 'read', calls: 42, errors: 0 },
+        { session_id: 'fixture-session', name: 'write', calls: 14, errors: 0 },
+        { session_id: 'fixture-session', name: 'edit', calls: 24, errors: 3 },
+        { session_id: 'fixture-session', name: 'bash', calls: 35, errors: 3 },
       ],
     },
     workflow_efficiency: {

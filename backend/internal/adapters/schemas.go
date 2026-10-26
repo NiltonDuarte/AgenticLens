@@ -1,8 +1,16 @@
 package adapters
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+
 	"agenticlens/internal/domain"
 )
+
+// ErrToolSessionIDRequired identifies a fact ledger that has tool aggregates
+// without the session identity required by schema v4.
+var ErrToolSessionIDRequired = errors.New("tool fact requires session_id")
 
 // InvocationTokensDTO represents the token counts in JSON boundary serialization.
 type InvocationTokensDTO struct {
@@ -97,9 +105,10 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 
 // ToolFactDTO represents a single tool execution fact in JSON.
 type ToolFactDTO struct {
-	Name   string `json:"name"`
-	Calls  int64  `json:"calls"`
-	Errors int64  `json:"errors"`
+	SessionID string `json:"session_id"`
+	Name      string `json:"name"`
+	Calls     int64  `json:"calls"`
+	Errors    int64  `json:"errors"`
 }
 
 func (dto ToolFactDTO) ToDomain() domain.ToolFact {
@@ -108,9 +117,10 @@ func (dto ToolFactDTO) ToDomain() domain.ToolFact {
 		name = "unknown"
 	}
 	return domain.ToolFact{
-		Name:   name,
-		Calls:  dto.Calls,
-		Errors: dto.Errors,
+		SessionID: dto.SessionID,
+		Name:      name,
+		Calls:     dto.Calls,
+		Errors:    dto.Errors,
 	}
 }
 
@@ -169,30 +179,26 @@ func EventFactDTOFromDomain(fact domain.EventFact) EventFactDTO {
 
 // CodeFactsDTO represents code facts in JSON.
 type CodeFactsDTO struct {
-	LinesAdded      int64 `json:"lines_added"`
-	LinesDeleted    int64 `json:"lines_deleted"`
-	TestLinesAdded  int64 `json:"test_lines_added"`
+	LinesAdded       int64 `json:"lines_added"`
+	LinesDeleted     int64 `json:"lines_deleted"`
+	TestLinesAdded   int64 `json:"test_lines_added"`
 	TestLinesDeleted int64 `json:"test_lines_deleted"`
-	ProdLinesAdded  int64 `json:"prod_lines_added"`
+	ProdLinesAdded   int64 `json:"prod_lines_added"`
 	ProdLinesDeleted int64 `json:"prod_lines_deleted"`
-	FilesChanged    int64 `json:"files_changed"`
-	SDLCIterations  int64 `json:"sdlc_iterations"`
+	FilesChanged     int64 `json:"files_changed"`
+	SDLCIterations   int64 `json:"sdlc_iterations"`
 }
 
 func (dto CodeFactsDTO) ToDomain() domain.CodeFacts {
-	sdlc := dto.SDLCIterations
-	if sdlc <= 0 {
-		sdlc = 1
-	}
 	return domain.CodeFacts{
-		LinesAdded:      dto.LinesAdded,
-		LinesDeleted:    dto.LinesDeleted,
-		TestLinesAdded:  dto.TestLinesAdded,
+		LinesAdded:       dto.LinesAdded,
+		LinesDeleted:     dto.LinesDeleted,
+		TestLinesAdded:   dto.TestLinesAdded,
 		TestLinesDeleted: dto.TestLinesDeleted,
-		ProdLinesAdded:  dto.ProdLinesAdded,
+		ProdLinesAdded:   dto.ProdLinesAdded,
 		ProdLinesDeleted: dto.ProdLinesDeleted,
-		FilesChanged:    dto.FilesChanged,
-		SDLCIterations:  sdlc,
+		FilesChanged:     dto.FilesChanged,
+		SDLCIterations:   dto.SDLCIterations,
 	}
 }
 
@@ -338,6 +344,26 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	}
 }
 
+// Validate enforces required fields at the persisted telemetry boundary.
+func (dto AgenticFactLedgerDTO) Validate() error {
+	for i, tool := range dto.Tools {
+		if strings.TrimSpace(tool.SessionID) == "" {
+			return fmt.Errorf("%w: tools[%d] is missing; regenerate or re-extract this ledger from source logs", ErrToolSessionIDRequired, i)
+		}
+	}
+	return nil
+}
+
+// ValidateToolFacts enforces session identity for facts before writing a ledger.
+func ValidateToolFacts(tools []domain.ToolFact) error {
+	for i, tool := range tools {
+		if strings.TrimSpace(tool.SessionID) == "" {
+			return fmt.Errorf("%w: tools[%d] is missing; regenerate or re-extract this ledger from source logs", ErrToolSessionIDRequired, i)
+		}
+	}
+	return nil
+}
+
 // AgenticFactLedgerDTOFromDomain converts a domain AgenticFactLedger to its DTO for serialization.
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
 	invs := make([]InvocationFactDTO, len(ledger.Invocations))
@@ -348,9 +374,10 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 	tools := make([]ToolFactDTO, len(ledger.Tools))
 	for i, t := range ledger.Tools {
 		tools[i] = ToolFactDTO{
-			Name:   t.Name,
-			Calls:  t.Calls,
-			Errors: t.Errors,
+			SessionID: t.SessionID,
+			Name:      t.Name,
+			Calls:     t.Calls,
+			Errors:    t.Errors,
 		}
 	}
 

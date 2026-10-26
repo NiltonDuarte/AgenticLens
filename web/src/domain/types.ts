@@ -61,6 +61,7 @@ export interface InvocationFact {
 }
 
 export interface ToolFact {
+  readonly session_id: string;
   readonly name: string;
   readonly calls: number;
   readonly errors: number;

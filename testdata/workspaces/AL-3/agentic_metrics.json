@@ -90,10 +90,30 @@
     }
   ],
   "tools": [
-    { "name": "read", "calls": 52, "errors": 0 },
-    { "name": "write", "calls": 20, "errors": 0 },
-    { "name": "edit", "calls": 14, "errors": 1 },
-    { "name": "bash", "calls": 26, "errors": 0 }
+    {
+      "name": "read",
+      "calls": 52,
+      "errors": 0,
+      "session_id": "inv-al3-01"
+    },
+    {
+      "name": "write",
+      "calls": 20,
+      "errors": 0,
+      "session_id": "inv-al3-01"
+    },
+    {
+      "name": "edit",
+      "calls": 14,
+      "errors": 1,
+      "session_id": "inv-al3-01"
+    },
+    {
+      "name": "bash",
+      "calls": 26,
+      "errors": 0,
+      "session_id": "inv-al3-01"
+    }
   ],
   "events": []
 }

@@ -75,6 +75,7 @@ func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, 
 		],
 		"tools": [
 			{
+				"session_id": "ses-orch",
 				"name": "bash",
 				"calls": 5,
 				"errors": 0

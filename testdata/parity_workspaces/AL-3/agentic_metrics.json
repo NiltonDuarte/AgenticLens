@@ -213,67 +213,80 @@
     {
       "name": "read",
       "calls": 154,
-      "errors": 2
+      "errors": 2,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "bash",
       "calls": 127,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "glob",
       "calls": 46,
-      "errors": 2
+      "errors": 2,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "write",
       "calls": 38,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "edit",
       "calls": 15,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "grep",
       "calls": 14,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "task",
       "calls": 8,
-      "errors": 2
+      "errors": 2,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "todowrite",
       "calls": 7,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "mcp-gateway_mcp-find",
       "calls": 5,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "list_mcp_resources",
       "calls": 3,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "mcp-gateway_code-mode",
       "calls": 3,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "skill",
       "calls": 3,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     },
     {
       "name": "question",
       "calls": 2,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb4f4deedffenMAjNNnoaOCTA0"
     }
   ],
   "events": [

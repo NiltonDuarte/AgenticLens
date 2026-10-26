@@ -49,8 +49,8 @@ func TestDetectAnomalies_CleanSessions(t *testing.T) {
 				},
 			},
 			Tools: []domain.ToolFact{
-				{Name: "read_file", Calls: 10, Errors: 0},
-				{Name: "bash", Calls: 8, Errors: 1}, // 1/8 = 12.5% <= 20%
+				{SessionID: "session-a", Name: "read_file", Calls: 10, Errors: 0},
+				{SessionID: "session-a", Name: "bash", Calls: 8, Errors: 1}, // 1/8 = 12.5% <= 20%
 			},
 			Events: []domain.EventFact{
 				{
@@ -462,7 +462,7 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 		// Even if ToolFact has many errors, v1 cannot determine consecutive streak
 		ledger := domain.AgenticFactLedger{
 			Tools: []domain.ToolFact{
-				{Name: "bash", Calls: 10, Errors: 8},
+				{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 8},
 			},
 			Events: nil,
 		}
@@ -589,7 +589,7 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 		// 10 calls, 2 errors = 20.0% -> NOT > 20%
 		ledger10 := domain.AgenticFactLedger{
 			Tools: []domain.ToolFact{
-				{Name: "git", Calls: 10, Errors: 2},
+				{SessionID: "session-a", Name: "git", Calls: 10, Errors: 2},
 			},
 		}
 		anomalies10 := domain.DetectAnomalies(ledger10)
@@ -604,9 +604,9 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 		// v1 ledger
 		ledgerV1 := domain.AgenticFactLedger{
 			Tools: []domain.ToolFact{
-				{Name: "git", Calls: 6, Errors: 2},   // 33.3% WARNING
-				{Name: "bash", Calls: 10, Errors: 6}, // 60.0% CRITICAL
-				{Name: "curl", Calls: 4, Errors: 4},  // <5 calls -> ignored
+				{SessionID: "session-a", Name: "git", Calls: 6, Errors: 2},   // 33.3% WARNING
+				{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 6}, // 60.0% CRITICAL
+				{SessionID: "session-a", Name: "curl", Calls: 4, Errors: 4},  // <5 calls -> ignored
 			},
 		}
 		anomaliesV1 := domain.DetectAnomalies(ledgerV1)
@@ -696,6 +696,30 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestToolFailureAnomaliesAggregateSessionFactsByName(t *testing.T) {
+	ledger := domain.AgenticFactLedger{Tools: []domain.ToolFact{
+		{SessionID: "session-a", Name: "bash", Calls: 4, Errors: 1},
+		{SessionID: "session-b", Name: "bash", Calls: 6, Errors: 2},
+	}}
+	anomalies := domain.DetectAnomalies(ledger)
+	var failureRateAnomalies []domain.Anomaly
+	for _, anomaly := range anomalies {
+		if anomaly.RuleID == domain.RuleToolHighFailureRate {
+			failureRateAnomalies = append(failureRateAnomalies, anomaly)
+		}
+	}
+	if len(failureRateAnomalies) != 1 {
+		t.Fatalf("expected one aggregated bash anomaly, got %#v", failureRateAnomalies)
+	}
+	if failureRateAnomalies[0].Context.TotalCalls == nil || *failureRateAnomalies[0].Context.TotalCalls != 10 ||
+		failureRateAnomalies[0].Context.Count == nil || *failureRateAnomalies[0].Context.Count != 3 {
+		t.Fatalf("expected aggregate 3 errors across 10 calls, got %+v", failureRateAnomalies[0].Context)
+	}
+	if len(domain.ComputeFleetAnomalies([]domain.AgenticFactLedger{ledger}).BrittleTools) != 1 {
+		t.Fatal("expected fleet summary to include exactly one brittle tool name")
+	}
 }
 
 // 4. CONTEXT_SATURATION_SPIKE Rule Tests
@@ -1620,7 +1644,7 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 				},
 			},
 			Tools: []domain.ToolFact{
-				{Name: "bash", Calls: 0, Errors: 0},
+				{SessionID: "session-a", Name: "bash", Calls: 0, Errors: 0},
 			},
 			Events: []domain.EventFact{
 				{SessionID: "ses-0", Turn: 0, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: "completed", ContextTokens: 0},
@@ -1666,7 +1690,7 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 	t.Run("v1 fallback tool facts with empty name safely skipped", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			Tools: []domain.ToolFact{
-				{Name: "", Calls: 10, Errors: 10},
+				{SessionID: "session-a", Name: "", Calls: 10, Errors: 10},
 			},
 		}
 
@@ -2215,7 +2239,7 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 			{
 				TicketID: &tid,
 				Tools: []domain.ToolFact{
-					{Name: "zero_call_tool", Calls: 0, Errors: 1},
+					{SessionID: "session-a", Name: "zero_call_tool", Calls: 0, Errors: 1},
 				},
 			},
 		}
@@ -2239,8 +2263,8 @@ func TestComputeFleetAnomalies_LegacyV1Fallback(t *testing.T) {
 		{
 			TicketID: &tidV1,
 			Tools: []domain.ToolFact{
-				{Name: "bash", Calls: 10, Errors: 4}, // 40% failure rate > 20% -> WARNING anomaly
-				{Name: "clean_tool", Calls: 5, Errors: 0},
+				{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 4}, // 40% failure rate > 20% -> WARNING anomaly
+				{SessionID: "session-a", Name: "clean_tool", Calls: 5, Errors: 0},
 			},
 			Invocations: []domain.InvocationFact{
 				{

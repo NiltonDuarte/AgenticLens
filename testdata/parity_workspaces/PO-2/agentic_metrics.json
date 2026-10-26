@@ -53,42 +53,50 @@
     {
       "name": "bash",
       "calls": 58,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh"
     },
     {
       "name": "read",
       "calls": 27,
-      "errors": 1
+      "errors": 1,
+      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh"
     },
     {
       "name": "write",
       "calls": 7,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh"
     },
     {
       "name": "edit",
       "calls": 6,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh"
     },
     {
       "name": "glob",
       "calls": 5,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh"
     },
     {
       "name": "grep",
       "calls": 3,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh"
     },
     {
       "name": "question",
       "calls": 3,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh"
     },
     {
       "name": "skill",
       "calls": 1,
-      "errors": 0
+      "errors": 0,
+      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh"
     }
   ],
   "events": [

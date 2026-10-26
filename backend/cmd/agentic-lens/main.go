@@ -64,7 +64,11 @@ func runGenerate(args []string) {
 	var cachedFacts *adapters.ExistingLedgerFacts
 	if *jsonOutputFlag != "" {
 		loaded, err := adapters.LoadExistingFactLedger(*jsonOutputFlag)
-		if err == nil && loaded != nil {
+		if errors.Is(err, adapters.ErrToolSessionIDRequired) {
+			fmt.Fprintf(os.Stderr, "Error loading existing fact ledger: %v\n", err)
+			os.Exit(1)
+		}
+		if loaded != nil {
 			cachedFacts = loaded
 		}
 	}
@@ -349,15 +353,9 @@ func runGenerate(args []string) {
 		}
 	}
 
-	if totalSDLC > 0 {
-		codeFacts.SDLCIterations = totalSDLC
-	} else {
-		if cachedFacts != nil && (cachedFacts.SchemaVersion == nil || *cachedFacts.SchemaVersion < 4) {
-			fmt.Fprintf(os.Stderr, "WARNING: Existing fact ledger has schema version < 4 and must be migrated via 'agentic-lens migrate' or 'agentic-lens backfill'.\n")
-		}
-		if codeFacts.SDLCIterations <= 0 {
-			codeFacts.SDLCIterations = 1
-		}
+	codeFacts.SDLCIterations = totalSDLC
+	if totalSDLC == 0 && cachedFacts != nil && (cachedFacts.SchemaVersion == nil || *cachedFacts.SchemaVersion < 4) {
+		fmt.Fprintf(os.Stderr, "WARNING: Existing fact ledger has schema version < 4 and must be migrated via 'agentic-lens migrate' or 'agentic-lens backfill'.\n")
 	}
 
 	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
@@ -1238,6 +1236,11 @@ type invocationKey struct {
 	model string
 }
 
+type toolFactKey struct {
+	sessionID string
+	name      string
+}
+
 func mergeInvocations(cached []domain.InvocationFact, local []domain.InvocationFact) []domain.InvocationFact {
 	merged := make([]domain.InvocationFact, len(cached))
 	copy(merged, cached)
@@ -1264,17 +1267,17 @@ func mergeTools(cached []domain.ToolFact, local []domain.ToolFact) []domain.Tool
 	merged := make([]domain.ToolFact, len(cached))
 	copy(merged, cached)
 
-	indexMap := make(map[string]int)
+	indexMap := make(map[toolFactKey]int)
 	for i, t := range merged {
-		indexMap[t.Name] = i
+		indexMap[toolFactKey{sessionID: t.SessionID, name: t.Name}] = i
 	}
 
 	for _, lt := range local {
-		if idx, exists := indexMap[lt.Name]; exists {
-			merged[idx].Calls = max(merged[idx].Calls, lt.Calls)
-			merged[idx].Errors = max(merged[idx].Errors, lt.Errors)
+		key := toolFactKey{sessionID: lt.SessionID, name: lt.Name}
+		if idx, exists := indexMap[key]; exists {
+			merged[idx] = lt
 		} else {
-			indexMap[lt.Name] = len(merged)
+			indexMap[key] = len(merged)
 			merged = append(merged, lt)
 		}
 	}

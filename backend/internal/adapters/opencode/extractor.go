@@ -70,6 +70,11 @@ type toolAccumulator struct {
 	errors int64
 }
 
+type toolAccumulatorKey struct {
+	sessionID string
+	toolName  string
+}
+
 func sanitizeSessionID(id string) (string, error) {
 	clean := strings.TrimSpace(id)
 	if clean == "" {
@@ -453,7 +458,7 @@ func ExtractFacts(
 	defer partRows.Close()
 
 	compMap := make(map[string]int64)
-	toolMap := make(map[string]*toolAccumulator)
+	toolMap := make(map[toolAccumulatorKey]*toolAccumulator)
 
 	for partRows.Next() {
 		var pid, sid, mid sql.NullString
@@ -530,15 +535,19 @@ func ExtractFacts(
 		}
 
 		if *rawPD.Type == "tool" {
+			if sID == "" {
+				return nil, nil, nil, nil, nil, errors.New("tool part has no owning session ID")
+			}
 			toolName := "unknown"
 			if rawPD.Tool != nil && strings.TrimSpace(*rawPD.Tool) != "" {
 				toolName = strings.TrimSpace(*rawPD.Tool)
 			}
 
-			tAcc, exists := toolMap[toolName]
+			key := toolAccumulatorKey{sessionID: sID, toolName: toolName}
+			tAcc, exists := toolMap[key]
 			if !exists {
 				tAcc = &toolAccumulator{}
-				toolMap[toolName] = tAcc
+				toolMap[key] = tAcc
 			}
 			tAcc.calls++
 
@@ -676,15 +685,19 @@ func ExtractFacts(
 
 	// 6. Build tools
 	var tools []domain.ToolFact
-	for tName, tStats := range toolMap {
+	for key, tStats := range toolMap {
 		tools = append(tools, domain.ToolFact{
-			Name:   tName,
-			Calls:  tStats.calls,
-			Errors: tStats.errors,
+			SessionID: key.sessionID,
+			Name:      key.toolName,
+			Calls:     tStats.calls,
+			Errors:    tStats.errors,
 		})
 	}
 
 	sort.Slice(tools, func(i, j int) bool {
+		if tools[i].SessionID != tools[j].SessionID {
+			return tools[i].SessionID < tools[j].SessionID
+		}
 		if tools[i].Calls == tools[j].Calls {
 			return tools[i].Name < tools[j].Name
 		}

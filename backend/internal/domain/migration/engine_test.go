@@ -1,8 +1,10 @@
 package migration_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
@@ -68,9 +70,10 @@ func sampleFactLedger() domain.AgenticFactLedger {
 		},
 		Tools: []domain.ToolFact{
 			{
-				Name:   "bash",
-				Calls:  15,
-				Errors: 1,
+				SessionID: "session-fixture",
+				Name:      "bash",
+				Calls:     15,
+				Errors:    1,
 			},
 		},
 		Events: nil,
@@ -226,8 +229,8 @@ type mockStep struct {
 	apply  func(domain.AgenticFactLedger) (domain.AgenticFactLedger, error)
 }
 
-func (m *mockStep) SourceVersion() int { return m.source }
-func (m *mockStep) TargetVersion() int { return m.target }
+func (m *mockStep) SourceVersion() int  { return m.source }
+func (m *mockStep) TargetVersion() int  { return m.target }
 func (m *mockStep) Description() string { return m.desc }
 func (m *mockStep) Apply(l domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
 	if m.apply != nil {
@@ -742,7 +745,7 @@ func TestInvariantValidator(t *testing.T) {
 
 		// added
 		m2 := base
-		m2.Tools = append(m2.Tools, domain.ToolFact{Name: "git", Calls: 1})
+		m2.Tools = append(m2.Tools, domain.ToolFact{SessionID: "session-fixture", Name: "git", Calls: 1})
 		if err := validator.Validate(base, m2, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for added tools, got %v", err)
 		}
@@ -1634,4 +1637,35 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 			t.Errorf("expected schema version 4, got %v", upgraded.SchemaVersion)
 		}
 	})
+}
+
+func TestStepV3ToV4RejectsUnscopedToolsWithoutMutatingSource(t *testing.T) {
+	initial := sampleFactLedger()
+	v3 := 3
+	initial.SchemaVersion = &v3
+	initial.Tools = []domain.ToolFact{{Name: "bash", Calls: 4, Errors: 1}}
+	original := initial.Tools[0]
+
+	_, err := migration.NewStepV3ToV4UserIterations().Apply(initial)
+	if err == nil || !strings.Contains(err.Error(), "re-extract this ledger from source logs") {
+		t.Fatalf("expected actionable unscoped-tool migration error, got %v", err)
+	}
+	if initial.SchemaVersion == nil || *initial.SchemaVersion != 3 || initial.Tools[0] != original {
+		t.Fatalf("failed migration mutated source ledger: %+v", initial)
+	}
+}
+
+func TestMigrationEngineRejectsUnscopedToolsInExistingV4Ledger(t *testing.T) {
+	engine := migration.NewEngine(nil)
+	v4 := 4
+	ledger := sampleFactLedger()
+	ledger.SchemaVersion = &v4
+	ledger.Tools = []domain.ToolFact{{Name: "bash", Calls: 4, Errors: 1}}
+	data, err := json.Marshal(ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Migrate(data, 4); err == nil || !strings.Contains(err.Error(), "required session_id") {
+		t.Fatalf("expected existing-v4 session validation error, got %v", err)
+	}
 }

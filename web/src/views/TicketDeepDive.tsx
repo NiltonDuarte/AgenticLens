@@ -20,6 +20,7 @@ import {
   formatTokensK,
   computeLeadTimeSeconds,
 } from '../domain/formatters';
+import { aggregateToolUsage } from '../domain/tools';
 import { KPICard } from '../components/KPICard';
 import { EmptyState } from '../components/EmptyState';
 import { TicketSelector } from '../components/TicketSelector';
@@ -179,6 +180,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const leadSecs = computeLeadTimeSeconds(ledger.started_at, ledger.completed_at);
   const code = eff.code_delivered;
   const tools = eff.tool_execution;
+  const toolUsageByName = aggregateToolUsage(ledger.facts?.tools ?? []);
   const subTurns = eff.subagent_turn_velocity;
 
   const ticketOptions = ledgers.map((l) => ({
@@ -328,7 +330,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           </div>
           <div className="stat-row">
             <span className="stat-label">Tool Tools Count:</span>
-            <span className="stat-val mono">{ledger.facts?.tools?.length ?? 0}</span>
+            <span className="stat-val mono">{toolUsageByName.length}</span>
           </div>
         </div>
       </div>

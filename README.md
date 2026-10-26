@@ -179,7 +179,28 @@ AgenticLens provides a unified CLI for automation and local workflows:
 
 Use `--nonce <literal>` to select the exact Codex rollout containing a unique run nonce, or `--session-id <thread-id>` to select a known thread. `--codex-home <path>` overrides `$CODEX_HOME` and `~/.codex`. Codex remains opt-in through `--source codex`; OpenCode is the default source.
 
-Code metrics always compare an explicit Git ref with the configured `code_metrics.base_branch`; `generate` defaults to `HEAD`, and `backfill --recompute-git` requires `--code-ref`. Empty or invalid refs fail instead of trying to infer a branch or commits from the ticket ID. Comparisons include committed changes and exclude the uncommitted working tree. Codex session discovery requires `--nonce` or `--session-id`; ticket text and working-directory heuristics are not reliable session identifiers. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts.
+Code metrics always compare an explicit Git ref with the configured `code_metrics.base_branch`; `generate` defaults to `HEAD`, and `backfill --recompute-git` requires `--code-ref`. Empty or invalid refs fail instead of trying to infer a branch or commits from the ticket ID. Comparisons include committed changes and exclude the uncommitted working tree. Codex session discovery requires `--nonce` or `--session-id`; ticket text and working-directory heuristics are not reliable session identifiers. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts. Every schema-v4 tool fact has a required `session_id`, so distinct sessions can be accumulated without double-counting refreshes. Legacy ledgers with tool totals but no session identity cannot be migrated safely; use the recovery sequence below while source logs are available. Migration fails with guidance rather than inventing IDs or dropping counts.
+
+#### Recovering a legacy ledger with unscoped tool totals
+
+Generation validates an existing output ledger before merging. Therefore `--json-output` must point to a new file for recovery; writing directly to the old unscoped ledger fails validation. Keep the old ledger as a backup, generate each known root session into the same new output path, verify the recovered session IDs and tool rows, then replace the old file. For Codex, selecting a root session also discovers its child rollouts. For OpenCode, repeat once per root session. Repeated generations to the new path merge session facts by `(session_id, tool_name)`.
+
+```bash
+cp workspaces/<TICKET_ID>/agentic_metrics.json workspaces/<TICKET_ID>/agentic_metrics.unscoped-backup.json
+
+# Run once for each root session, always reusing this new output path.
+./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_1> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_2> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+
+# Check the distinct session IDs and per-session tool rows against the source sessions.
+jq -r '.tools[].session_id' workspaces/<TICKET_ID>/agentic_metrics.recovered.json | sort -u
+jq '.tools | length' workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+
+# Replace the active ledger only after the recovered contents are verified.
+mv workspaces/<TICKET_ID>/agentic_metrics.recovered.json workspaces/<TICKET_ID>/agentic_metrics.json
+```
+
+Substitute `--source opencode` and each OpenCode root ID when recovering OpenCode data. Confirm the expected root and child session IDs (for Codex) and expected tool rows/counts before replacement. If source logs are unavailable, the old aggregate tool count cannot be split into session facts or recovered; keep the backup and do not fabricate session IDs.
 
 ---
 

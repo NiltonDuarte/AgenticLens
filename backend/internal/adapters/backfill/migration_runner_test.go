@@ -50,6 +50,7 @@ func sampleHistoricalJSON(ticketID string) string {
 		],
 		"tools": [
 			{
+				"session_id": "inv-1",
 				"name": "bash",
 				"calls": 10,
 				"errors": 1
@@ -783,6 +784,42 @@ func TestMigrationRunner_BatchV4(t *testing.T) {
 					dto.Code.SDLCIterations, dto.Invocations[0].UserIterations, tid)
 			}
 		}
+	}
+}
+
+func TestMigrationRunner_RejectsUnscopedToolsInAlreadyV4LedgerWithoutMutation(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "workspaces", "TEST-SESSION")
+	if err := os.MkdirAll(workspace, 0755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	original := []byte(`{"schema_version":4,"ticket_id":"TEST-SESSION","ticket_title":"Session provenance validation","code":{"sdlc_iterations":0},"invocations":[],"tools":[{"name":"bash","calls":4,"errors":1}]}`)
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	runner := backfill.NewMigrationRunner(nil)
+	report, err := runner.Run(backfill.MigrationOptions{
+		WorkspacesDir: filepath.Dir(workspace),
+		TargetVersion: 4,
+	})
+	if err != nil {
+		t.Fatalf("unexpected runner error: %v", err)
+	}
+	if report.Migrated != 0 || report.UpToDate != 0 || len(report.Errors) != 1 {
+		t.Fatalf("expected one rejected ledger, got migrated=%d up_to_date=%d errors=%v", report.Migrated, report.UpToDate, report.Errors)
+	}
+	if !strings.Contains(report.Errors[0], "session_id") || !strings.Contains(report.Errors[0], "re-extract") {
+		t.Fatalf("expected actionable session provenance error, got %q", report.Errors[0])
+	}
+
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(original) {
+		t.Fatal("runner modified the source ledger after rejecting its unscoped tool fact")
 	}
 }
 
