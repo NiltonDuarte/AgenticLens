@@ -78,16 +78,18 @@
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
 - **Reasoning Effort:** 57,053 reasoning tokens (31.2% of generated output)
-- **Tool Health & Self-Correction:** 339 tool calls (9 self-corrections, 97.3% success rate)
+- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 6 execution anomalies detected (4 CRITICAL, 2 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k in turn 120 (session: ses_e9c722653ffep5q7OO5ZGoWZwk), breaching 160k critical ceiling
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+84.0k tokens) — Context tokens surged by 84.0k tokens in turn 129 (session: ses_e9c722653ffep5q7OO5ZGoWZwk, total: 84.0k tokens, threshold: 80000)
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+103.5k tokens) — Context tokens surged by 103.5k tokens in turn 332 (session: ses_e9c722653ffep5q7OO5ZGoWZwk, total: 103.5k tokens, threshold: 80000)
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+130.7k tokens) — Context tokens surged by 130.7k tokens in turn 352 (session: ses_e9c722653ffep5q7OO5ZGoWZwk, total: 130.7k tokens, threshold: 80000)
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+77.8k tokens) — Context tokens surged by 77.8k tokens in turn 268 (session: ses_e9c722653ffep5q7OO5ZGoWZwk, total: 77.8k tokens, threshold: 40000)
-- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: grep (33.3%) — Tool 'grep' failed 5 out of 15 calls (33.3% failure rate, threshold: >20%)
+- **Status:** 8 execution anomalies detected (4 CRITICAL, 4 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+84.0k tokens) — Context tokens surged by 84.0k to 84.0k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (170.6k tokens) — Context tokens reached 170.6k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (170.6k tokens) — Context tokens reached 170.6k, breaching the 160k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+51.5k tokens) — Context tokens surged by 51.5k to 123.9k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+77.8k tokens) — Context tokens surged by 77.8k to 77.8k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+64.2k tokens) — Context tokens surged by 64.2k to 103.5k tokens.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: grep (4 consecutive errors) — Tool 'grep' encountered 4 consecutive execution failures.
 
 ### Agentic Execution Metrics
 

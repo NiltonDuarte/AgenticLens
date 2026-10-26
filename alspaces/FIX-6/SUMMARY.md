@@ -27,12 +27,14 @@
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +103 / -0 lines across 1 code files (excluding docs)
 - **Reasoning Effort:** 56,994 reasoning tokens (78.7% of generated output)
-- **Tool Health & Self-Correction:** 143 tool calls (1 self-corrections, 99.3% success rate)
+- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.1k tokens) — Context tokens reached 163.1k in turn 101 (session: ses_e9aaa3b47ffevLfJH42EFfD0EQ), breaching 160k critical ceiling
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+47.9k tokens) — Context tokens surged by 47.9k tokens in turn 112 (session: ses_e9aaa3b47ffevLfJH42EFfD0EQ, total: 47.9k tokens, threshold: 40000)
+- **Status:** 4 execution anomalies detected (3 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.1k tokens) — Context tokens reached 163.1k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (169.6k tokens) — Context tokens reached 169.6k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (169.6k tokens) — Context tokens reached 169.6k, breaching the 160k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+47.9k tokens) — Context tokens surged by 47.9k to 47.9k tokens.
 
 ### Agentic Execution Metrics
 

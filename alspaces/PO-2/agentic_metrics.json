@@ -1,22 +1,11 @@
 {
-  "schema_version": 3,
-  "migration": {
-    "schema_version": 3,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v3_sanitized"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
-    "last_migrated_by": "universal-migration-engine",
-    "notes": "Sanitized event telemetry migration from v2 to v3"
-  },
+  "schema_version": 4,
   "ticket_id": "PO-2",
   "ticket_title": "Session Schema Expansion v2, Anomaly Engine, and Visual Waterfall",
   "ticket_type": "docs",
   "started_at": "2026-10-17T16:27:43.244000+00:00",
   "completed_at": "2026-10-17T22:40:08.126000+00:00",
-  "updated_at": "2026-10-19T13:00:13.241024505Z",
+  "updated_at": "2026-10-26T21:47:08.841350577Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -27,81 +16,35 @@
     "files_changed": 0,
     "sdlc_iterations": 1
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "ses_eb54f32f3ffegeE9GhJiivqQXh",
-      "parent_id": null,
-      "role": "general",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-17T16:27:43.704000+00:00",
-      "completed_at": "2026-10-17T22:40:08.126000+00:00",
-      "active_duration_seconds": 1241,
-      "turns": 126,
-      "tokens": {
-        "input": 757331,
-        "output": 17281,
-        "cache_read": 6092711,
-        "reasoning": 17265,
-        "peak_context": 88541
-      },
-      "cost_usd": 1.154499,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "ses_eb54f32f3ffegeE9GhJiivqQXh",
+          "parent_id": null,
+          "role": "general",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-17T16:27:43.704000+00:00",
+          "completed_at": "2026-10-17T22:40:08.126000+00:00",
+          "active_duration_seconds": 1241,
+          "turns": 126,
+          "tokens": {
+            "input": 757331,
+            "output": 17281,
+            "cache_read": 6092711,
+            "reasoning": 17265,
+            "peak_context": 88541
+          },
+          "cost_usd": 1.154499,
+          "compactions": 0,
+          "user_iterations": 1
+        }
+      ],
+      "tools": [],
+      "anomalies": []
     }
   ],
-  "tools": [
-    {
-      "name": "bash",
-      "calls": 58,
-      "errors": 0
-    },
-    {
-      "name": "read",
-      "calls": 27,
-      "errors": 1
-    },
-    {
-      "name": "write",
-      "calls": 7,
-      "errors": 0
-    },
-    {
-      "name": "edit",
-      "calls": 6,
-      "errors": 0
-    },
-    {
-      "name": "glob",
-      "calls": 5,
-      "errors": 0
-    },
-    {
-      "name": "grep",
-      "calls": 3,
-      "errors": 0
-    },
-    {
-      "name": "question",
-      "calls": 3,
-      "errors": 0
-    },
-    {
-      "name": "skill",
-      "calls": 1,
-      "errors": 0
-    }
-  ],
-  "events": [
-    {
-      "timestamp": "2026-10-17T16:41:50.256000+00:00",
-      "session_id": "ses_eb54f32f3ffegeE9GhJiivqQXh",
-      "turn": 20,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 9,
-      "context_tokens": 32800
-    }
-  ]
+  "anomalies": []
 }

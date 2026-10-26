@@ -41,7 +41,7 @@
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
 - **Reasoning Effort:** 8,751 reasoning tokens (46.1% of generated output)
-- **Tool Health & Self-Correction:** 41 tool calls (1 self-corrections, 97.6% success rate)
+- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).

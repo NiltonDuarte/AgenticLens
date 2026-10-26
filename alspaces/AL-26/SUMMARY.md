@@ -46,18 +46,20 @@ Implemented ticket AL-26: Fleet Overview completion date filtering and Autopsy w
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 1
 - **Active Agent Duration:** 1h 54m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 100.2k tokens (50% of 200k healthy ceiling, 1 compactions) | Subagents peak 167.9k (Coder)
+- **Context Window Health:** ELEVATED — Root agent peak 100.2k tokens (50% of 200k healthy ceiling, 1 compactions) | Subagents peak 167.9k (Coder)
 - **Role Effort Distribution (Subagents):** Planner 14.1%, Coder 58.9%, Tester 17.9%, Reviewer 9.1%
 - **Subagent Turn Velocity & Thrashing:** 78.3 avg turns/run (peak: 164 turns) | Planner 39.0, Coder 164.0, Tester 64.0, Reviewer 46.0
 - **Test-to-Production Code Ratio:** 1.7:1 (+1,067 test lines / +640 prod lines)
 - **Code Delivered:** +1,707 / -265 lines across 18 code files (excluding docs)
 - **Reasoning Effort:** 108,503 reasoning tokens (52.5% of generated output)
-- **Tool Health & Self-Correction:** 397 tool calls (1 self-corrections, 99.7% success rate)
+- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k in turn 57 (session: ses_eac99264cffeKTg38cW5BDaNfx), breaching 160k critical ceiling
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+55.7k tokens) — Context tokens surged by 55.7k tokens in turn 64 (session: ses_eac99264cffeKTg38cW5BDaNfx, total: 55.7k tokens, threshold: 40000)
+- **Status:** 4 execution anomalies detected (3 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.9k tokens) — Context tokens reached 167.9k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.9k tokens) — Context tokens reached 167.9k, breaching the 160k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+55.7k tokens) — Context tokens surged by 55.7k to 55.7k tokens.
 
 ### Agentic Execution Metrics
 

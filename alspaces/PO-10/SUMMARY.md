@@ -37,18 +37,21 @@
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 5
 - **Active Agent Duration:** 21m 25s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 175.3k tokens (88% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
+- **Context Window Health:** ELEVATED — Root agent peak 175.3k tokens (88% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
 - **Reasoning Effort:** 21,453 reasoning tokens (56.2% of generated output)
-- **Tool Health & Self-Correction:** 118 tool calls (4 self-corrections, 96.6% success rate)
+- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (175.3k tokens) — Context tokens reached 175.3k in turn 78 (session: ses_ea171b41bffe9svsG0gpC7ETC1), breaching 160k critical ceiling
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+45.2k tokens) — Context tokens surged by 45.2k tokens in turn 79 (session: ses_ea171b41bffe9svsG0gpC7ETC1, total: 45.2k tokens, threshold: 40000)
+- **Status:** 5 execution anomalies detected (3 CRITICAL, 2 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (175.3k tokens) — Context tokens reached 175.3k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (175.3k tokens) — Context tokens reached 175.3k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (175.3k tokens) — Context tokens reached 175.3k, breaching the 160k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+45.2k tokens) — Context tokens surged by 45.2k to 45.2k tokens.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: bash (3 consecutive errors) — Tool 'bash' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
 

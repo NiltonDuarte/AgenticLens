@@ -49,16 +49,19 @@
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 2
 - **Active Agent Duration:** 1h 49m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 131.6k tokens (66% of 200k healthy ceiling, 0 compactions) | Subagents peak 159.9k (Coder)
+- **Context Window Health:** ELEVATED — Root agent peak 131.6k tokens (66% of 200k healthy ceiling, 0 compactions) | Subagents peak 159.9k (Coder)
 - **Role Effort Distribution (Subagents):** Planner 16.2%, Coder 55.1%, Tester 14.8%, Reviewer 13.9%
 - **Subagent Turn Velocity & Thrashing:** 54.3 avg turns/run (peak: 169 turns) | Planner 38.5, Coder 102.5, Tester 31.5, Reviewer 44.5
 - **Test-to-Production Code Ratio:** 1.5:1 (+671 test lines / +441 prod lines)
 - **Code Delivered:** +1,112 / -184 lines across 28 code files (excluding docs)
 - **Reasoning Effort:** 85,566 reasoning tokens (47.5% of generated output)
-- **Tool Health & Self-Correction:** 564 tool calls (7 self-corrections, 98.8% success rate)
+- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 3 execution anomalies detected (3 WARNING).
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+41.8k tokens) — Context tokens surged by 41.8k to 91k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+40.6k tokens) — Context tokens surged by 40.6k to 131.6k tokens.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: read (3 consecutive errors) — Tool 'read' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
 
