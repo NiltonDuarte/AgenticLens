@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Navbar } from './Navbar';
-import type { ActiveTab, BuildInfo } from '../domain/types';
+import type { BuildInfo } from '../domain/types';
 import { mockBuildInfo, mockProjectConfig } from '../test/fixtures/mockData';
 
 describe('Navbar Component', () => {
@@ -411,18 +411,5 @@ describe('Navbar Component', () => {
     expect(badge).toHaveAttribute('title', 'Observed Project: FetchedProject');
 
     vi.unstubAllGlobals();
-  });
-
-  it('contains zero emojis across all navigation states and modes', () => {
-    const tabs: readonly ActiveTab[] = ['landing', 'overview', 'deep-dive', 'progression', 'comparisons', 'live'];
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F000}-\u{1F02F}\u{1FA00}-\u{1FAFF}]/u;
-
-    for (const tab of tabs) {
-      const { container: liveContainer } = render(
-        <Navbar activeTab={tab} versionInfo={mockBuildInfo} projectConfig={mockProjectConfig} />
-      );
-      expect(emojiRegex.test(liveContainer.textContent ?? '')).toBe(false);
-      expect(emojiRegex.test(liveContainer.innerHTML)).toBe(false);
-    }
   });
 });

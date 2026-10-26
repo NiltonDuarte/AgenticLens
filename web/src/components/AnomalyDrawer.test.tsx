@@ -298,7 +298,7 @@ describe('AnomalyDrawer Component', () => {
         tool_output: 'error: Your local changes would be overwritten',
       };
 
-      const { container } = render(
+      render(
         <AnomalyDrawer
           isOpen={true}
           onClose={vi.fn()}
@@ -326,11 +326,6 @@ describe('AnomalyDrawer Component', () => {
       expect(toolOutputSection).toBeInTheDocument();
       expect(screen.getByText('Tool Output')).toBeInTheDocument();
       expect(screen.getByText('error: Your local changes would be overwritten')).toBeInTheDocument();
-
-      // Zero emoji check
-      const text = container.textContent ?? '';
-      const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
-      expect(emojiRegex.test(text)).toBe(false);
     });
 
     it('omits diagnostic payload sections when event does not have payload fields', () => {

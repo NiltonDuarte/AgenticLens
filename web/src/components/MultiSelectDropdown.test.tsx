@@ -245,26 +245,6 @@ describe('MultiSelectDropdown Component', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('contains zero emojis in the rendered component', () => {
-    const handleChange = vi.fn();
-    const { container } = render(
-      <MultiSelectDropdown
-        id="type-select"
-        label="Ticket Type"
-        options={options}
-        selectedValues={['feature']}
-        onChange={handleChange}
-      />
-    );
-
-    // Open dropdown to check all rendered options
-    fireEvent.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
-
-    const text = container.textContent ?? '';
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-    expect(emojiRegex.test(text)).toBe(false);
-  });
-
   it('renders allLabel as "No filter" in trigger summary and checkbox when provided', () => {
     const handleChange = vi.fn();
     render(

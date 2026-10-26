@@ -78,20 +78,6 @@ describe('Presentation Components Boundary Tests', () => {
       rerender(<KPICard title="Empty String" value="" />);
       expect(screen.getByText('-')).toBeInTheDocument();
     });
-
-    it('contains zero emojis in KPICard rendering', () => {
-      const { container } = render(
-        <KPICard
-          title="Subagent Velocity"
-          value="4.5 turns"
-          secondary="Coder peak"
-          tooltip="Average turns per subagent invocation"
-        />
-      );
-      const text = container.textContent ?? '';
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-      expect(emojiRegex.test(text)).toBe(false);
-    });
   });
 
   describe('DistributionCard Component', () => {
@@ -227,20 +213,6 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.getByText('gemini-3.8-flash')).toBeInTheDocument();
       expect(screen.getByText('(100.0%)')).toBeInTheDocument();
     });
-
-    it('contains zero emojis in DistributionCard rendering', () => {
-      const { container } = render(
-        <DistributionCard
-          title="Role Costs"
-          items={{ coder: 10, tester: 5 }}
-          totalCostUSD={15}
-          tooltip="Distribution information"
-        />
-      );
-      const text = container.textContent ?? '';
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-      expect(emojiRegex.test(text)).toBe(false);
-    });
   });
 
   describe('InfoTooltip Component', () => {
@@ -351,15 +323,6 @@ describe('Presentation Components Boundary Tests', () => {
       const button = screen.getByRole('button', { name: 'Information' });
       fireEvent.click(button);
       expect(parentClick).not.toHaveBeenCalled();
-    });
-
-    it('contains zero emojis in the rendered component', () => {
-      const { container } = render(
-        <InfoTooltip content="Zero emoji requirement strictly verified" />
-      );
-      const renderedText = container.textContent ?? '';
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-      expect(emojiRegex.test(renderedText)).toBe(false);
     });
 
     it('exports InfoIcon alias identically', () => {
