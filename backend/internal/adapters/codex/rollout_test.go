@@ -344,3 +344,44 @@ func TestCodexExtractionPreservesRawPersonaAndExplicitRole(t *testing.T) {
 		t.Fatalf("explicit role lost precedence: %s", explicit.Invocations[0].Role)
 	}
 }
+
+func TestCodexUserIterationsAttribution(t *testing.T) {
+	rootJSON := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"root_thread"}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"user_message"}}
+{"timestamp":"2026-01-01T00:00:02Z","type":"event_msg","payload":{"type":"user_message"}}
+{"timestamp":"2026-01-01T00:00:03Z","type":"token_usage_record","payload":{"model":"model-a","usage":{"input_tokens":10}}}
+{"timestamp":"2026-01-01T00:00:04Z","type":"token_usage_record","payload":{"model":"model-b","usage":{"input_tokens":20}}}
+`
+	childJSON := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"child_thread","parent_thread_id":"root_thread"}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"user_message"}}
+{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"model":"model-a","usage":{"input_tokens":15}}}
+`
+	rootTranscript, err := codex.ParseRollout(strings.NewReader(rootJSON))
+	if err != nil {
+		t.Fatalf("failed parsing root rollout: %v", err)
+	}
+	childTranscript, err := codex.ParseRollout(strings.NewReader(childJSON))
+	if err != nil {
+		t.Fatalf("failed parsing child rollout: %v", err)
+	}
+
+	if len(rootTranscript.Invocations) != 2 {
+		t.Fatalf("expected 2 invocations for root, got %d", len(rootTranscript.Invocations))
+	}
+	// Primary model on root thread receives SteeringTurns (2)
+	if rootTranscript.Invocations[0].UserIterations != 2 {
+		t.Errorf("expected root primary invocation UserIterations=2, got %d", rootTranscript.Invocations[0].UserIterations)
+	}
+	// Secondary model on root thread receives 0
+	if rootTranscript.Invocations[1].UserIterations != 0 {
+		t.Errorf("expected root secondary invocation UserIterations=0, got %d", rootTranscript.Invocations[1].UserIterations)
+	}
+
+	// Child rollout invocation receives 0
+	if len(childTranscript.Invocations) != 1 {
+		t.Fatalf("expected 1 invocation for child, got %d", len(childTranscript.Invocations))
+	}
+	if childTranscript.Invocations[0].UserIterations != 0 {
+		t.Errorf("expected child invocation UserIterations=0, got %d", childTranscript.Invocations[0].UserIterations)
+	}
+}

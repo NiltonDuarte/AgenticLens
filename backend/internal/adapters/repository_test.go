@@ -2247,4 +2247,51 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 			t.Errorf("expected 'unmarshaling metrics' in error, got: %v", err)
 		}
 	})
+
+	t.Run("serialization round-trip preserves user_iterations exactly", func(t *testing.T) {
+		roundTripPath := filepath.Join(wsDir, "roundtrip.json")
+		schemaVer := domain.CurrentSchemaVersion
+		ticketID := "AL-ROUNDTRIP"
+		ticketTitle := "Roundtrip Title"
+		original := domain.AgenticFactLedger{
+			SchemaVersion: &schemaVer,
+			TicketID:      &ticketID,
+			TicketTitle:   &ticketTitle,
+			Invocations: []domain.InvocationFact{
+				{
+					ID:             "ses_1",
+					Role:           domain.RoleRootAgent,
+					Model:          "gpt-4o",
+					UserIterations: 7,
+				},
+				{
+					ID:             "ses_child",
+					Role:           domain.RoleUnassignedSubAgent,
+					Model:          "gpt-4o",
+					UserIterations: 0,
+				},
+			},
+		}
+
+		if err := adapters.SaveFactLedger(roundTripPath, original); err != nil {
+			t.Fatalf("failed saving fact ledger: %v", err)
+		}
+
+		loaded, err := adapters.LoadExistingFactLedger(roundTripPath)
+		if err != nil {
+			t.Fatalf("failed loading fact ledger: %v", err)
+		}
+		if loaded == nil {
+			t.Fatal("expected non-nil loaded ledger")
+		}
+		if len(loaded.Invocations) != 2 {
+			t.Fatalf("expected 2 invocations, got %d", len(loaded.Invocations))
+		}
+		if loaded.Invocations[0].UserIterations != 7 {
+			t.Errorf("expected invocation 0 user_iterations 7, got %d", loaded.Invocations[0].UserIterations)
+		}
+		if loaded.Invocations[1].UserIterations != 0 {
+			t.Errorf("expected invocation 1 user_iterations 0, got %d", loaded.Invocations[1].UserIterations)
+		}
+	})
 }

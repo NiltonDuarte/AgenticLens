@@ -81,7 +81,8 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 			b.Turns != a.Turns ||
 			b.Tokens != a.Tokens ||
 			b.CostUSD != a.CostUSD ||
-			b.Compactions != a.Compactions {
+			b.Compactions != a.Compactions ||
+			(expectedTargetVersion < 4 && b.UserIterations != a.UserIterations) {
 			return fmt.Errorf("%w: invocation[%d] (ID %s) data modified",
 				ErrInvariantViolation, i, b.ID)
 		}

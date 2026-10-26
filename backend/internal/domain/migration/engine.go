@@ -16,12 +16,13 @@ type Engine struct {
 }
 
 // NewEngine creates an Engine using the provided registry and standard invariant validator.
-// If the provided registry is nil, a default registry pre-loaded with StepV1ToV2 and StepV2ToV3Sanitized is used.
+// If the provided registry is nil, a default registry pre-loaded with StepV1ToV2, StepV2ToV3Sanitized, and StepV3ToV4UserIterations is used.
 func NewEngine(registry *Registry) *Engine {
 	if registry == nil {
 		registry = NewRegistry()
 		_ = registry.Register(NewStepV1ToV2())
 		_ = registry.Register(NewStepV2ToV3Sanitized())
+		_ = registry.Register(NewStepV3ToV4UserIterations())
 	}
 	return &Engine{
 		registry:  registry,

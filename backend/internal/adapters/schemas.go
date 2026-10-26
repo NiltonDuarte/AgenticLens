@@ -37,6 +37,7 @@ type InvocationFactDTO struct {
 	Tokens                InvocationTokensDTO `json:"tokens"`
 	CostUSD               float64             `json:"cost_usd"`
 	Compactions           int64               `json:"compactions"`
+	UserIterations        int64               `json:"user_iterations"`
 }
 
 func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
@@ -65,6 +66,7 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 		Tokens:                dto.Tokens.ToDomain(),
 		CostUSD:               dto.CostUSD,
 		Compactions:           dto.Compactions,
+		UserIterations:        dto.UserIterations,
 	}
 }
 
@@ -87,8 +89,9 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 			Reasoning:   inv.Tokens.Reasoning,
 			PeakContext: inv.Tokens.PeakContext,
 		},
-		CostUSD:     inv.CostUSD,
-		Compactions: inv.Compactions,
+		CostUSD:        inv.CostUSD,
+		Compactions:    inv.Compactions,
+		UserIterations: inv.UserIterations,
 	}
 }
 

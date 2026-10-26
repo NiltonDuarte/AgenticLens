@@ -100,21 +100,50 @@ Refined file classification and operational diagnostics based on user steering:
   - Race-enabled Go tests and Vitest suites passed cleanly (0 failures, 0 skips).
   - Verified warning emission in `main_test.go` and zero-fallback classification rules in `classifier_test.go`.
 
+## Iteration 03: Cross-Device Invocations Merging and Schema Version 4 Elevation
+
+Resolved multi-device session overwrites and implemented cross-device iteration tracking:
+
+- **Platform Database Grounding**:
+  - Confirmed `code.sdlc_iterations` derivation strictly adheres to database facts (SQLite message turns, rollout transcripts) and configuration, with zero inspection of workspace directory structures (`iterations/`).
+- **Schema Version 4 Elevation (`constants.go`, `models.go`, `schemas.go`, `types.ts`)**:
+  - Elevated `CurrentSchemaVersion` to 4.
+  - Added `UserIterations int64 json:"user_iterations"` to `InvocationFact` domain model, serialization DTOs, and TypeScript interfaces.
+  - Registered `StepV3ToV4UserIterations` in the migration engine to support atomic migration of historical ledgers to schema version 4.
+- **Atomic Steering Turns Attribution (`opencode/extractor.go`, `codex/rollout.go`)**:
+  - OpenCode extractor assigns `UserIterations` strictly to the primary invocation (`idx == 0`) of root sessions (`parent_id == nil`), assigning 0 to secondary model splits and child subagents.
+  - Codex rollout parser attributes `SteeringTurns` to `UserIterations` strictly on the primary model invocation of root threads.
+- **Cross-Device Invocations Merging (`cmd/agentic-lens/main.go`)**:
+  - Replaced destructive slice assignment with composite `(id, model)` ID-aware merging, preserving historical invocations from prior devices absent from the local database.
+  - Implemented monotonic tool usage merging and event deduplication.
+- **Strict Zero-Fallback Derivation**:
+  - `code.sdlc_iterations` strictly computed as the sum of `UserIterations` across all merged root invocations.
+  - Completely removed loose fallback heuristics and guessing; pre-v4 ledgers emit an actionable warning directing users to migrate.
+- **Adversarial Verification**:
+  - Multi-device chaining test (`TestCLIGenerate_ThreeDeviceHandoffAccumulation`) verified 3-device accumulation without loss or duplicate records.
+  - Full race test suite, Vitest suite, and multi-platform compilation passed cleanly.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 2h 7m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 143.5k tokens (72% of 200k healthy ceiling, 1 compactions) | Subagents peak 176.7k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 18.6%, Coder 56.9%, Tester 3.9%, Reviewer 20.5%
-- **Subagent Turn Velocity & Thrashing:** 49.1 avg turns/run (peak: 127 turns) | Planner 37.0, Coder 103.0, Tester 13.5, Reviewer 43.0
+- **Software Development Life Cycle Iterations:** 9
+- **Active Agent Duration:** 3h 27m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 168.5k tokens (84% of 200k healthy ceiling, 3 compactions) | Subagents peak 176.7k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 12.7%, Coder 53.6%, Tester 15.1%, Reviewer 18.6%
+- **Subagent Turn Velocity & Thrashing:** 58.3 avg turns/run (peak: 130 turns) | Planner 35.3, Coder 112.0, Tester 36.7, Reviewer 49.3
 - **Test-to-Production Code Ratio:** 0.8:1 (+1,224 test lines / +1,502 prod lines)
 - **Code Delivered:** +2,726 / -1,018 lines across 19 code files (excluding docs)
-- **Reasoning Effort:** 112,677 reasoning tokens (60.2% of generated output)
-- **Tool Health & Self-Correction:** 513 tool calls (10 self-corrections, 98.1% success rate)
+- **Reasoning Effort:** 162,536 reasoning tokens (51.2% of generated output)
+- **Tool Health & Self-Correction:** 917 tool calls (18 self-corrections, 98.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- **Status:** 8 execution anomalies detected (3 CRITICAL, 5 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k in turn 49 (session: ses_e8878898fffeAahBOyEwQAMD4f), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 93 (session: ses_e87b3c3d0ffesHQ6T9hIvjIV2e), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k in turn 131 (session: ses_e8888e4e3ffe9fNCDyBMse5Irk), breaching 160k critical ceiling
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+47.0k tokens) — Context tokens surged by 47.0k tokens in turn 46 (session: ses_e88858e3affeaQz4frllatuA9L, total: 83.5k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+63.8k tokens) — Context tokens surged by 63.8k tokens in turn 106 (session: ses_e87b3c3d0ffesHQ6T9hIvjIV2e, total: 63.8k tokens, threshold: 40000)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+67.8k tokens) — Context tokens surged by 67.8k tokens in turn 145 (session: ses_e8888e4e3ffe9fNCDyBMse5Irk, total: 67.8k tokens, threshold: 40000)
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: mcp-gateway_mcp-exec (3 consecutive errors) — Tool 'mcp-gateway_mcp-exec' encountered 3 consecutive execution failures (session: ses_e88858e3affeaQz4frllatuA9L, turn: 48)
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: edit (4 consecutive errors) — Tool 'edit' encountered 4 consecutive execution failures (session: ses_e8818726dffe52h3INfcK0B59t, turn: 68)
 
 ### Agentic Execution Metrics
 
@@ -123,15 +152,15 @@ Refined file classification and operational diagnostics based on user steering:
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 2 | 397,545 | 11,139 | 3,397,822 | 89.5% | 91.8k | HEALTHY | $0.69 |
-| **coder** | 2 | 1,107,041 | 32,374 | 12,296,934 | 91.7% | 176.7k | ELEVATED | $2.10 |
-| **tester** | 2 | 130,703 | 2,066 | 477,210 | 78.5% | 39.1k | HEALTHY | $0.15 |
-| **reviewer** | 2 | 565,367 | 6,498 | 3,622,994 | 86.5% | 70.4k | HEALTHY | $0.76 |
-| **general** | 1 | 1,702,923 | 22,468 | 8,153,618 | 82.7% | 143.5k | ELEVATED | $2.04 |
-| **Total** | **9** | **3,903,579** | **74,545** | **27,948,578** | **87.7%** | **176.7k** | **ELEVATED** | **$5.73** |
+| **planner** | 3 | 564,932 | 16,435 | 3,900,439 | 87.3% | 91.8k | HEALTHY | $0.90 |
+| **coder** | 3 | 1,932,455 | 60,121 | 25,680,788 | 93.0% | 176.7k | ELEVATED | $3.82 |
+| **tester** | 3 | 679,423 | 26,267 | 5,547,148 | 89.1% | 113.7k | ELEVATED | $1.08 |
+| **reviewer** | 3 | 947,860 | 11,383 | 6,814,841 | 87.8% | 91.1k | HEALTHY | $1.33 |
+| **general** | 1 | 3,384,971 | 41,016 | 15,214,732 | 81.8% | 168.5k | ELEVATED | $3.97 |
+| **Total** | **13** | **7,509,641** | **155,222** | **57,157,948** | **88.4%** | **176.7k** | **ELEVATED** | **$11.11** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 9 | 3,903,579 | 74,545 | 27,948,578 | 87.7% | $5.73 |
-| **Total** | **9** | **3,903,579** | **74,545** | **27,948,578** | **87.7%** | **$5.73** |
+| **gemini-3.8-flash** | 13 | 7,509,641 | 155,222 | 57,157,948 | 88.4% | $11.11 |
+| **Total** | **13** | **7,509,641** | **155,222** | **57,157,948** | **88.4%** | **$11.11** |

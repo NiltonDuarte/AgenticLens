@@ -57,6 +57,7 @@ export interface InvocationFact {
   readonly tokens: InvocationTokens;
   readonly cost_usd: number;
   readonly compactions: number;
+  readonly user_iterations?: number;
 }
 
 export interface ToolFact {

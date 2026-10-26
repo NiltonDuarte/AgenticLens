@@ -726,6 +726,66 @@ func TestMigrationRunner_BatchV3(t *testing.T) {
 	}
 }
 
+func TestMigrationRunner_BatchV4(t *testing.T) {
+	wsDir := setupMigrationTestWorkspaces(t)
+	runner := backfill.NewMigrationRunner(nil)
+
+	// Live batch migration directly to schema version 4
+	report, err := runner.Run(backfill.MigrationOptions{
+		WorkspacesDir: wsDir,
+		TargetVersion: 4,
+	})
+	if err != nil {
+		t.Fatalf("unexpected runner error: %v", err)
+	}
+
+	if report.Scanned != 4 {
+		t.Errorf("expected 4 scanned workspaces, got %d", report.Scanned)
+	}
+	if report.Migrated != 3 {
+		t.Errorf("expected 3 migrated workspaces, got %d", report.Migrated)
+	}
+
+	for _, tid := range []string{"AL-1", "AL-2", "AL-3"} {
+		path := filepath.Join(wsDir, tid, "agentic_metrics.json")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", tid, err)
+		}
+
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &dto); err != nil {
+			t.Fatalf("unmarshaling %s: %v", tid, err)
+		}
+
+		if dto.SchemaVersion == nil || *dto.SchemaVersion != 4 {
+			t.Errorf("expected schema version 4 for %s, got %v", tid, dto.SchemaVersion)
+		}
+		if dto.Migration == nil {
+			t.Errorf("expected non-nil migration info for %s", tid)
+		} else {
+			hasV4Step := false
+			for _, step := range dto.Migration.StepsCompleted {
+				if step == domain.MigrationStepUserIterations {
+					hasV4Step = true
+					break
+				}
+			}
+			if !hasV4Step {
+				t.Errorf("expected %s in steps completed for %s", domain.MigrationStepUserIterations, tid)
+			}
+		}
+
+		// If the ledger has code.sdlc_iterations > 0 and invocations, primary root invocation must receive user_iterations
+		if dto.Code.SDLCIterations > 0 && len(dto.Invocations) > 0 {
+			if dto.Invocations[0].UserIterations != dto.Code.SDLCIterations {
+				t.Errorf("expected primary root invocation to have UserIterations %d, got %d for %s",
+					dto.Code.SDLCIterations, dto.Invocations[0].UserIterations, tid)
+			}
+		}
+	}
+}
+
 func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
 	tempDir := t.TempDir()
 	origWd, _ := os.Getwd()

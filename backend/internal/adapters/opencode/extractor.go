@@ -241,6 +241,7 @@ func ExtractFacts(
 	sessionModels := make(map[string]map[string]*sessionModelAccumulator)
 	sessionModelOrders := make(map[string][]string)
 	sessionTurns := make(map[string]int64)
+	sessionUserIterations := make(map[string]int64)
 
 	// 3. Process messages per session
 	for _, s := range sessions {
@@ -270,6 +271,7 @@ func ExtractFacts(
 		var modelOrder []string
 		var totalSessionMsgs int64
 		var sessionAssistantTurn int64
+		var sessionUserTurns int64
 
 		for msgRows.Next() {
 			totalSessionMsgs++
@@ -286,6 +288,11 @@ func ExtractFacts(
 
 			var rawMD rawMessageData
 			if err := json.Unmarshal([]byte(mData.String), &rawMD); err != nil {
+				continue
+			}
+
+			if rawMD.Role != nil && strings.EqualFold(strings.TrimSpace(*rawMD.Role), "user") {
+				sessionUserTurns++
 				continue
 			}
 
@@ -426,6 +433,7 @@ func ExtractFacts(
 		sessionModels[s.id] = byModel
 		sessionModelOrders[s.id] = modelOrder
 		sessionTurns[s.id] = totalSessionMsgs
+		sessionUserIterations[s.id] = sessionUserTurns
 	}
 
 	// 4. Query parts (tool calls and compactions)
@@ -632,8 +640,12 @@ func ExtractFacts(
 			}
 
 			var compactions int64
+			var userIterations int64
 			if idx == 0 {
 				compactions = sessionCompactions
+				if s.parentID == nil {
+					userIterations = sessionUserIterations[s.id]
+				}
 			}
 
 			activeSecs := int64(math.Round(float64(st.activeMS) / 1000.0))
@@ -655,8 +667,9 @@ func ExtractFacts(
 					Reasoning:   st.reasoning,
 					PeakContext: st.peak,
 				},
-				CostUSD:     math.Round(st.cost*1e6) / 1e6,
-				Compactions: compactions,
+				CostUSD:        math.Round(st.cost*1e6) / 1e6,
+				Compactions:    compactions,
+				UserIterations: userIterations,
 			})
 		}
 	}

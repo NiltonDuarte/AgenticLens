@@ -1161,8 +1161,8 @@ func TestEngineMigrate(t *testing.T) {
 	})
 
 	t.Run("missing migration step returns ErrMissingStep", func(t *testing.T) {
-		// Default engine only has 1->2. Asking for version 4 should fail with missing step.
-		_, err := engine.Migrate([]byte(unversionedJSON), 4)
+		// Default engine only has 1->2, 2->3, 3->4. Asking for version 5 should fail with missing step.
+		_, err := engine.Migrate([]byte(unversionedJSON), 5)
 		if !errors.Is(err, migration.ErrMissingStep) {
 			t.Errorf("expected ErrMissingStep when chain has gap, got %v", err)
 		}
@@ -1401,6 +1401,237 @@ func TestEngineMigrate(t *testing.T) {
 		_, errDown := engine.MigrateLedger(ledgerV2, 1)
 		if !errors.Is(errDown, migration.ErrDowngradeNotAllowed) {
 			t.Errorf("expected ErrDowngradeNotAllowed, got %v", errDown)
+		}
+	})
+
+	t.Run("migrates v1 unversioned JSON cleanly to v4", func(t *testing.T) {
+		v1JSON := `{
+			"ticket_id": "AL-100",
+			"ticket_title": "V1 to V4 Chain",
+			"updated_at": "2026-10-18T11:00:00Z",
+			"code": {"lines_added": 20, "sdlc_iterations": 4},
+			"invocations": [
+				{
+					"id": "inv-root",
+					"role": "orchestrator",
+					"model": "claude-3-opus",
+					"user": "developer",
+					"turns": 2,
+					"tokens": {"input": 100, "output": 50},
+					"cost_usd": 0.05
+				},
+				{
+					"id": "inv-child",
+					"parent_id": "inv-root",
+					"role": "coder",
+					"model": "claude-3-opus",
+					"user": "developer",
+					"turns": 1,
+					"tokens": {"input": 50, "output": 25},
+					"cost_usd": 0.02
+				}
+			],
+			"tools": []
+		}`
+
+		migrated, err := engine.Migrate([]byte(v1JSON), 4)
+		if err != nil {
+			t.Fatalf("unexpected error migrating v1 to v4: %v", err)
+		}
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 4 {
+			t.Fatalf("expected schema_version 4, got %v", migrated.SchemaVersion)
+		}
+		if len(migrated.Invocations) != 2 {
+			t.Fatalf("expected 2 invocations, got %d", len(migrated.Invocations))
+		}
+		if migrated.Invocations[0].UserIterations != 4 {
+			t.Errorf("expected primary root invocation to receive 4 iterations from code, got %d", migrated.Invocations[0].UserIterations)
+		}
+		if migrated.Invocations[1].UserIterations != 0 {
+			t.Errorf("expected child invocation to receive 0 iterations, got %d", migrated.Invocations[1].UserIterations)
+		}
+		if migrated.Migration == nil || migrated.Migration.SchemaVersion != 4 {
+			t.Errorf("expected migration info schema_version 4, got %+v", migrated.Migration)
+		}
+	})
+
+	t.Run("migrates v2 JSON cleanly to v4", func(t *testing.T) {
+		v2JSON := `{
+			"schema_version": 2,
+			"ticket_id": "AL-102",
+			"updated_at": "2026-10-18T11:00:00Z",
+			"code": {"lines_added": 30, "sdlc_iterations": 7},
+			"invocations": [
+				{
+					"id": "inv-v2-root",
+					"role": "orchestrator",
+					"model": "gpt-4o",
+					"turns": 4,
+					"tokens": {"input": 200, "output": 100},
+					"cost_usd": 0.10
+				}
+			],
+			"tools": [],
+			"events": []
+		}`
+
+		migrated, err := engine.Migrate([]byte(v2JSON), 4)
+		if err != nil {
+			t.Fatalf("unexpected error migrating v2 to v4: %v", err)
+		}
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 4 {
+			t.Fatalf("expected schema_version 4, got %v", migrated.SchemaVersion)
+		}
+		if migrated.Invocations[0].UserIterations != 7 {
+			t.Errorf("expected UserIterations 7, got %d", migrated.Invocations[0].UserIterations)
+		}
+	})
+
+	t.Run("migrates v3 JSON cleanly to v4", func(t *testing.T) {
+		v3JSON := `{
+			"schema_version": 3,
+			"ticket_id": "AL-103",
+			"updated_at": "2026-10-18T11:00:00Z",
+			"code": {"lines_added": 10, "sdlc_iterations": 3},
+			"invocations": [
+				{
+					"id": "inv-v3-root",
+					"role": "orchestrator",
+					"model": "gpt-4o",
+					"turns": 2,
+					"tokens": {"input": 50, "output": 25},
+					"cost_usd": 0.05,
+					"user_iterations": 0
+				}
+			],
+			"tools": [],
+			"events": []
+		}`
+
+		migrated, err := engine.Migrate([]byte(v3JSON), 4)
+		if err != nil {
+			t.Fatalf("unexpected error migrating v3 to v4: %v", err)
+		}
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 4 {
+			t.Fatalf("expected schema_version 4, got %v", migrated.SchemaVersion)
+		}
+		if migrated.Invocations[0].UserIterations != 3 {
+			t.Errorf("expected UserIterations 3, got %d", migrated.Invocations[0].UserIterations)
+		}
+	})
+}
+
+func TestStepV3ToV4UserIterations(t *testing.T) {
+	step := migration.NewStepV3ToV4UserIterations()
+	if step.SourceVersion() != 3 || step.TargetVersion() != 4 {
+		t.Errorf("unexpected versions: source %d, target %d", step.SourceVersion(), step.TargetVersion())
+	}
+	if step.Description() == "" {
+		t.Errorf("expected non-empty description")
+	}
+
+	t.Run("upgrades v3 to v4 and assigns Code.SDLCIterations to primary root invocation", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		initial.Code.SDLCIterations = 5
+		initial.Invocations = []domain.InvocationFact{
+			{
+				ID:             "root-1",
+				ParentID:       nil,
+				Role:           "orchestrator",
+				Model:          "gpt-4o",
+				UserIterations: 0,
+			},
+			{
+				ID:             "root-2",
+				ParentID:       nil,
+				Role:           "orchestrator",
+				Model:          "claude-3-5-sonnet",
+				UserIterations: 0,
+			},
+			{
+				ID:             "sub-1",
+				ParentID:       stringPtr("root-1"),
+				Role:           "coder",
+				Model:          "gpt-4o",
+				UserIterations: 0,
+			},
+		}
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if upgraded.SchemaVersion == nil || *upgraded.SchemaVersion != 4 {
+			t.Errorf("expected schema version 4, got %v", upgraded.SchemaVersion)
+		}
+		if upgraded.Invocations[0].UserIterations != 5 {
+			t.Errorf("expected primary root invocation to receive 5 iterations, got %d", upgraded.Invocations[0].UserIterations)
+		}
+		if upgraded.Invocations[1].UserIterations != 0 {
+			t.Errorf("expected secondary root invocation to have 0 iterations, got %d", upgraded.Invocations[1].UserIterations)
+		}
+		if upgraded.Invocations[2].UserIterations != 0 {
+			t.Errorf("expected subagent invocation to have 0 iterations, got %d", upgraded.Invocations[2].UserIterations)
+		}
+
+		if upgraded.Migration == nil {
+			t.Fatalf("expected non-nil migration info")
+		}
+		if upgraded.Migration.SchemaVersion != 4 {
+			t.Errorf("expected migration schema version 4, got %d", upgraded.Migration.SchemaVersion)
+		}
+		foundStep := false
+		for _, s := range upgraded.Migration.StepsCompleted {
+			if s == domain.MigrationStepUserIterations {
+				foundStep = true
+				break
+			}
+		}
+		if !foundStep {
+			t.Errorf("expected step %s in steps completed", domain.MigrationStepUserIterations)
+		}
+	})
+
+	t.Run("preserves existing non-zero UserIterations and does not overwrite with Code.SDLCIterations", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		initial.Code.SDLCIterations = 10
+		initial.Invocations = []domain.InvocationFact{
+			{
+				ID:             "root-1",
+				ParentID:       nil,
+				Role:           "orchestrator",
+				Model:          "gpt-4o",
+				UserIterations: 3,
+			},
+		}
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if upgraded.Invocations[0].UserIterations != 3 {
+			t.Errorf("expected UserIterations to remain 3, got %d", upgraded.Invocations[0].UserIterations)
+		}
+	})
+
+	t.Run("handles empty invocations slice cleanly", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		initial.Code.SDLCIterations = 4
+		initial.Invocations = nil
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if upgraded.SchemaVersion == nil || *upgraded.SchemaVersion != 4 {
+			t.Errorf("expected schema version 4, got %v", upgraded.SchemaVersion)
 		}
 	})
 }

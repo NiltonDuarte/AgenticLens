@@ -25,7 +25,7 @@ func TestEvaluateMigrationStatus(t *testing.T) {
 				HasExistingDBFacts: false,
 			},
 			expected: MigrationInfo{
-				SchemaVersion:  3,
+				SchemaVersion:  CurrentSchemaVersion,
 				Status:         MigrationStatusCompleted,
 				StepsCompleted: []string{"git_code_facts", "opencode_db"},
 				StepsPending:   nil,
@@ -48,7 +48,7 @@ func TestEvaluateMigrationStatus(t *testing.T) {
 				HasExistingDBFacts: true,
 			},
 			expected: MigrationInfo{
-				SchemaVersion:  3,
+				SchemaVersion:  CurrentSchemaVersion,
 				Status:         MigrationStatusPartial,
 				StepsCompleted: []string{"git_code_facts"},
 				StepsPending:   []string{"opencode_db"},
@@ -79,7 +79,7 @@ func TestEvaluateMigrationStatus(t *testing.T) {
 				HasExistingDBFacts: true,
 			},
 			expected: MigrationInfo{
-				SchemaVersion:  3,
+				SchemaVersion:  CurrentSchemaVersion,
 				Status:         MigrationStatusCompleted,
 				StepsCompleted: []string{"git_code_facts", "opencode_db"},
 				StepsPending:   nil,
@@ -109,7 +109,7 @@ func TestEvaluateMigrationStatus(t *testing.T) {
 				HasExistingDBFacts: true,
 			},
 			expected: MigrationInfo{
-				SchemaVersion:  3,
+				SchemaVersion:  CurrentSchemaVersion,
 				Status:         MigrationStatusPartial,
 				StepsCompleted: []string{"git_code_facts"},
 				StepsPending:   []string{"opencode_db"},
@@ -132,7 +132,7 @@ func TestEvaluateMigrationStatus(t *testing.T) {
 				HasExistingDBFacts: true,
 			},
 			expected: MigrationInfo{
-				SchemaVersion:  3,
+				SchemaVersion:  CurrentSchemaVersion,
 				Status:         MigrationStatusCompleted,
 				StepsCompleted: []string{"git_code_facts"},
 				StepsPending:   nil,
@@ -155,7 +155,7 @@ func TestEvaluateMigrationStatus(t *testing.T) {
 				HasExistingDBFacts: false,
 			},
 			expected: MigrationInfo{
-				SchemaVersion:  3,
+				SchemaVersion:  CurrentSchemaVersion,
 				Status:         MigrationStatusPending,
 				StepsCompleted: nil,
 				StepsPending:   []string{"opencode_db"},
@@ -178,7 +178,7 @@ func TestEvaluateMigrationStatus(t *testing.T) {
 				HasExistingDBFacts: false,
 			},
 			expected: MigrationInfo{
-				SchemaVersion:  3,
+				SchemaVersion:  CurrentSchemaVersion,
 				Status:         MigrationStatusPending,
 				StepsCompleted: nil,
 				StepsPending:   []string{"git_code_facts"},

@@ -23,6 +23,7 @@ type InvocationFact struct {
 	Tokens                InvocationTokens `json:"tokens"`
 	CostUSD               float64          `json:"cost_usd"`
 	Compactions           int64            `json:"compactions"`
+	UserIterations        int64            `json:"user_iterations"`
 }
 
 // ToolFact stores tool usage execution counts and errors.

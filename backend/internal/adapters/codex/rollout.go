@@ -324,12 +324,12 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 	if inheritedHistory {
 		return Transcript{}, errors.New("child rollout has inherited history without an owning-thread resume marker; refusing incomplete metrics")
 	}
-	transcript.finalizeFacts()
 	// Event messages and response items can represent the same user input.
 	// Prefer the semantic user-message stream when present.
 	if count := transcript.EventKinds["user_message"]; count > 0 {
 		transcript.SteeringTurns = count
 	}
+	transcript.finalizeFacts()
 	return transcript, nil
 }
 
@@ -791,13 +791,18 @@ func (transcript *Transcript) finalizeFacts() {
 		turns := int64(len(usage.turns))
 		activeSeconds := int64(math.Round(float64(usage.activeMillis) / 1000))
 		compactions := int64(0)
+		userIterations := int64(0)
 		if len(transcript.Invocations) == 0 {
 			compactions = transcript.compactions
+			if transcript.parentThread == "" {
+				userIterations = transcript.SteeringTurns
+			}
 		}
 		transcript.Invocations = append(transcript.Invocations, domain.InvocationFact{
 			ID: transcript.invocationID(), ParentID: parentID, Role: transcript.role, Model: model,
 			StartedAt: startedAt, CompletedAt: completedAt, ActiveDurationSeconds: activeSeconds, Turns: turns,
 			Tokens: usage.usage.ToInvocationTokens(), CostUSD: 0, Compactions: compactions,
+			UserIterations: userIterations,
 		})
 	}
 	for name, stats := range transcript.toolUsage {

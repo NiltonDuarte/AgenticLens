@@ -134,6 +134,110 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
     });
   });
 
+  describe('Schema Version 4 Upgraded Telemetry Ledgers', () => {
+    it('accurately parses version 4 ledger with atomic user_iterations on invocations and migration metadata', () => {
+      const v4Payload = JSON.stringify({
+        schema_version: 4,
+        ticket_id: 'AL-V4',
+        ticket_title: 'Atomic User Iterations Task',
+        ticket_type: 'feature',
+        started_at: '2026-10-25T10:00:00Z',
+        completed_at: '2026-10-25T11:00:00Z',
+        updated_at: '2026-10-25T11:00:00Z',
+        migration: {
+          schema_version: 4,
+          status: 'completed',
+          steps_completed: ['git_code_facts', 'opencode_db', 'schema_v3_sanitized', 'schema_v4_user_iterations'],
+          steps_pending: [],
+          last_migrated_at: '2026-10-25T11:00:00Z',
+          last_migrated_by: 'universal-migration-engine',
+          notes: 'User iterations migration from v3 to v4',
+        },
+        code: {
+          lines_added: 60,
+          lines_deleted: 15,
+          test_lines_added: 30,
+          test_lines_deleted: 0,
+          prod_lines_added: 30,
+          prod_lines_deleted: 15,
+          files_changed: 3,
+          sdlc_iterations: 4,
+        },
+        invocations: [
+          {
+            id: 'root-ses',
+            parent_id: null,
+            role: 'orchestrator',
+            model: 'claude-3-5-sonnet',
+            user: 'engineer_a',
+            active_duration_seconds: 120,
+            turns: 6,
+            tokens: { input: 1000, output: 500 },
+            cost_usd: 0.05,
+            compactions: 1,
+            user_iterations: 4,
+          },
+          {
+            id: 'sub-ses',
+            parent_id: 'root-ses',
+            role: 'coder',
+            model: 'claude-3-5-sonnet',
+            user: 'engineer_a',
+            active_duration_seconds: 60,
+            turns: 3,
+            tokens: { input: 300, output: 100 },
+            cost_usd: 0.01,
+            compactions: 0,
+            user_iterations: 0,
+          },
+        ],
+        tools: [],
+        events: [],
+      });
+
+      const ledger: AgenticFactLedger = JSON.parse(v4Payload);
+      expect(ledger.schema_version).toBe(4);
+      expect(ledger.invocations).toHaveLength(2);
+      expect(ledger.invocations[0].user_iterations).toBe(4);
+      expect(ledger.invocations[1].user_iterations).toBe(0);
+
+      const mig = ledger.migration as MigrationInfo;
+      expect(mig).toBeDefined();
+      expect(mig.schema_version).toBe(4);
+      expect(mig.status).toBe('completed');
+      expect(mig.steps_completed).toContain('schema_v4_user_iterations');
+    });
+
+    it('handles legacy ledgers where user_iterations is undefined without runtime error', () => {
+      const legacyPayload = JSON.stringify({
+        schema_version: 3,
+        ticket_id: 'AL-LEGACY',
+        ticket_title: 'Legacy Task',
+        ticket_type: 'feature',
+        code: { lines_added: 10, sdlc_iterations: 2 },
+        invocations: [
+          {
+            id: 'legacy-root',
+            parent_id: null,
+            role: 'orchestrator',
+            model: 'gpt-4o',
+            turns: 4,
+            tokens: { input: 100, output: 50 },
+            cost_usd: 0.01,
+            compactions: 0,
+          },
+        ],
+        tools: [],
+        events: [],
+      });
+
+      const ledger: AgenticFactLedger = JSON.parse(legacyPayload);
+      expect(ledger.invocations[0].user_iterations).toBeUndefined();
+      const derivedIterations = ledger.invocations[0].user_iterations ?? 0;
+      expect(derivedIterations).toBe(0);
+    });
+  });
+
   describe('Adversarial Boundary Validation', () => {
     it('handles empty code facts defensively', () => {
       const code: CodeFacts = {

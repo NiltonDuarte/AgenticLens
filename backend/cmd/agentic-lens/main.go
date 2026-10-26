@@ -169,7 +169,6 @@ func runGenerate(args []string) {
 	var tools []domain.ToolFact
 	var events []domain.EventFact
 	var fallbackCode *domain.CodeFacts
-	var extractedSteeringTurns int64
 
 	if cachedFacts != nil {
 		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
@@ -181,6 +180,11 @@ func runGenerate(args []string) {
 		events = append(events, cachedFacts.Events...)
 		fallbackCode = cachedFacts.Code
 	}
+
+	var localInvocations []domain.InvocationFact
+	var localTools []domain.ToolFact
+	var localEvents []domain.EventFact
+	var hasLocalExtraction bool
 
 	if activeSource == "codex" {
 		codexHome := strings.TrimSpace(*codexHomeFlag)
@@ -217,10 +221,10 @@ func runGenerate(args []string) {
 		for _, warning := range combined.Warnings {
 			fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
 		}
-		extractedSteeringTurns = combined.SteeringTurns
-		invocations = combined.Invocations
-		tools = combined.Tools
-		events = combined.Events
+		localInvocations = combined.Invocations
+		localTools = combined.Tools
+		localEvents = combined.Events
+		hasLocalExtraction = true
 		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
 			activeStartedAt = &combined.StartedAt
 		}
@@ -257,9 +261,10 @@ func runGenerate(args []string) {
 					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID,
 				)
 				if extractErr == nil && len(dbInvs) > 0 {
-					invocations = dbInvs
-					tools = dbTools
-					events = dbEvents
+					localInvocations = dbInvs
+					localTools = dbTools
+					localEvents = dbEvents
+					hasLocalExtraction = true
 					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
 						activeStartedAt = dbStarted
 					}
@@ -267,12 +272,14 @@ func runGenerate(args []string) {
 						activeCompletedAt = dbCompleted
 					}
 				}
-
-				if turns, steeringErr := opencode.ExtractSteeringTurns(dbClient.DB(), knownThreadIDs); steeringErr == nil && turns > 0 {
-					extractedSteeringTurns = turns
-				}
 			}
 		}
+	}
+
+	if hasLocalExtraction {
+		invocations = mergeInvocations(invocations, localInvocations)
+		tools = mergeTools(tools, localTools)
+		events = mergeEvents(events, localEvents)
 	}
 
 	if len(knownThreadIDs) == 0 && len(invocations) == 0 && !*allowEmptyFlag {
@@ -335,12 +342,22 @@ func runGenerate(args []string) {
 		}
 	}
 
-	if extractedSteeringTurns >= 1 {
-		codeFacts.SDLCIterations = extractedSteeringTurns
-	} else if fallbackCode != nil && fallbackCode.SDLCIterations > 0 {
-		codeFacts.SDLCIterations = fallbackCode.SDLCIterations
-	} else if codeFacts.SDLCIterations <= 0 {
-		codeFacts.SDLCIterations = 1
+	var totalSDLC int64
+	for _, inv := range invocations {
+		if inv.ParentID == nil {
+			totalSDLC += inv.UserIterations
+		}
+	}
+
+	if totalSDLC > 0 {
+		codeFacts.SDLCIterations = totalSDLC
+	} else {
+		if cachedFacts != nil && (cachedFacts.SchemaVersion == nil || *cachedFacts.SchemaVersion < 4) {
+			fmt.Fprintf(os.Stderr, "WARNING: Existing fact ledger has schema version < 4 and must be migrated via 'agentic-lens migrate' or 'agentic-lens backfill'.\n")
+		}
+		if codeFacts.SDLCIterations <= 0 {
+			codeFacts.SDLCIterations = 1
+		}
 	}
 
 	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
@@ -1214,4 +1231,90 @@ func main() {
 	if *appendFlag == "" && *jsonOutputFlag == "" {
 		fmt.Println(tableMD)
 	}
+}
+
+type invocationKey struct {
+	id    string
+	model string
+}
+
+func mergeInvocations(cached []domain.InvocationFact, local []domain.InvocationFact) []domain.InvocationFact {
+	merged := make([]domain.InvocationFact, len(cached))
+	copy(merged, cached)
+
+	indexMap := make(map[invocationKey]int)
+	for i, inv := range merged {
+		indexMap[invocationKey{id: inv.ID, model: inv.Model}] = i
+	}
+
+	for _, lInv := range local {
+		k := invocationKey{id: lInv.ID, model: lInv.Model}
+		if idx, exists := indexMap[k]; exists {
+			merged[idx] = lInv
+		} else {
+			indexMap[k] = len(merged)
+			merged = append(merged, lInv)
+		}
+	}
+
+	return merged
+}
+
+func mergeTools(cached []domain.ToolFact, local []domain.ToolFact) []domain.ToolFact {
+	merged := make([]domain.ToolFact, len(cached))
+	copy(merged, cached)
+
+	indexMap := make(map[string]int)
+	for i, t := range merged {
+		indexMap[t.Name] = i
+	}
+
+	for _, lt := range local {
+		if idx, exists := indexMap[lt.Name]; exists {
+			merged[idx].Calls = max(merged[idx].Calls, lt.Calls)
+			merged[idx].Errors = max(merged[idx].Errors, lt.Errors)
+		} else {
+			indexMap[lt.Name] = len(merged)
+			merged = append(merged, lt)
+		}
+	}
+
+	return merged
+}
+
+type eventKey struct {
+	timestamp string
+	sessionID string
+	turn      int64
+	eventType domain.EventType
+}
+
+func mergeEvents(cached []domain.EventFact, local []domain.EventFact) []domain.EventFact {
+	merged := make([]domain.EventFact, len(cached))
+	copy(merged, cached)
+
+	seen := make(map[eventKey]bool)
+	for _, e := range merged {
+		seen[eventKey{
+			timestamp: e.Timestamp,
+			sessionID: e.SessionID,
+			turn:      e.Turn,
+			eventType: e.EventType,
+		}] = true
+	}
+
+	for _, le := range local {
+		k := eventKey{
+			timestamp: le.Timestamp,
+			sessionID: le.SessionID,
+			turn:      le.Turn,
+			eventType: le.EventType,
+		}
+		if !seen[k] {
+			seen[k] = true
+			merged = append(merged, le)
+		}
+	}
+
+	return merged
 }

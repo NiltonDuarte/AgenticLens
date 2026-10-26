@@ -9,7 +9,7 @@ Provide first-class Codex session discovery and telemetry extraction in AgenticL
 - Review AgenticLens extraction, live collection, domain facts, ledger derivation, and Git analysis.
 - Inspect local CODEX_HOME rollout files and SQLite databases read-only; identify usable metadata, projections, diagnostic logs, and sensitive/non-metric stores.
 - Compare Codex rollout history, opt-in rollout traces, codex exec --json, and app-server events for metric coverage and privacy.
-- Implement a fixture-backed Codex rollout adapter and CLI integration that generates a schema-v3 agentic_metrics.json ledger.
+- Implement a fixture-backed Codex rollout adapter and CLI integration that generates a schema-v4 agentic_metrics.json ledger.
 - Keep the checked-in parser fixture synthetic, but generate the session ledger from real local Codex data; exclude transcript/tool payloads and distinguish observed from unavailable metrics.
 - Commit the real-session agentic_metrics.json and generate its metrics summary in SUMMARY.md as lifecycle deliverables. Keep raw rollouts local and test fixtures synthetic.
 - Maintain ticket materials in alspaces/AL-56, advancing phased plans under iterations/ as implementation progresses.
@@ -35,9 +35,9 @@ Provide first-class Codex session discovery and telemetry extraction in AgenticL
    - Batch execution of backfill across multi-ticket workspaces without --ticket-id must reject --recompute-git to prevent applying a single Git commit diff across historical tickets.
    - Schema migration (--migrate-schema) and database recomputation (--recompute-db) without --recompute-git must preserve existing Git code facts without alteration.
 6. Non-Destructive Ledger Loader:
-   - backend/internal/adapters/repository.go (LoadExistingFactLedger) parses both current schema-v3 atomic ledgers and legacy schemas to preserve historical code facts, root session links, and event streams during incremental runs.
+   - backend/internal/adapters/repository.go (LoadExistingFactLedger) parses both current schema-v4 atomic ledgers and legacy schemas (v1, v2, v3) to preserve historical code facts, root session links, and event streams during incremental runs.
 7. Frontend Transparency:
-   - All emitted ledgers adhere to schema-v3 domain models in backend/internal/domain/models.go.
+   - All emitted ledgers adhere to schema-v4 domain models in backend/internal/domain/models.go.
    - The TypeScript frontend in web/src/ continues to consume ledgers identically regardless of whether the originating telemetry harness was OpenCode or Codex.
 
 ## Scope Limits
@@ -70,3 +70,24 @@ Test directory/name and production extension heuristics must not silently overri
 ## Child Rollout Attribution
 
 Codex child rollouts must retain their own first session identity and explicit or nested parent linkage. Object-valued subagent source metadata is supported. Inherited parent history must not overwrite child identity or contribute parent token, event, duration, or turn facts to the child. When role metadata is absent, derive only the final persona component from agent_path as a raw source role, matching OpenCode's extraction of session.agent. Do not resolve project role_mappings in Codex extraction. Explicit role metadata takes precedence; absent persona data remains UnassignedSubAgent, and the full path stays private.
+
+## Cross-Device SDLC Iterations & Session Accumulation
+
+1. Platform Adherence to Database and Configuration:
+   - Telemetry extraction adheres strictly to database facts (SQLite, rollout transcripts) and project configuration.
+   - The platform strictly forbids inspection or file traversal of workspace iteration directories (<workspaces_dir>/<ticket_id>/iterations/). Ticket workspaces are project-level organizational conventions, not platform-enforced data stores.
+2. Invocations-Level Iteration Attribution:
+   - Each invocation record (InvocationFact) carries an explicit user_iterations counter representing the number of human steering turns directed to that root session.
+   - For multi-model root sessions, user_iterations is assigned exclusively to the primary invocation (index 0) to guarantee zero double-counting across model splits.
+   - Child/subagent invocations (non-nil parent_id) carry a user_iterations count of 0.
+3. Multi-Device Invocations Merging:
+   - Telemetry generation must never blindly overwrite cached invocations with local session extractions.
+   - When generating facts on a new device where local database state only contains the local session, existing invocations from cached fact ledgers are merged by invocation ID and model identity.
+   - Existing invocations from previous devices or earlier sessions absent from the local database are preserved in their entirety.
+4. Strict SDLC Iterations Summation (Zero Fallback Policy):
+   - Total code.sdlc_iterations is strictly derived as the exact mathematical sum of user_iterations across all merged invocations.
+   - Zero fallback heuristics or guessing: the platform does not fall back to loose steering turn counts, cached code.sdlc_iterations, or arbitrary defaults.
+   - If an existing ledger has a schema version prior to 4 or unpopulated user_iterations, fallback is explicitly rejected and migration is required via migrate-schema or backfill.
+5. Schema Version 4 Elevation:
+   - Schema version is bumped to 4 (CurrentSchemaVersion = 4) to formally incorporate atomic user_iterations on InvocationFact.
+   - Historical ledgers created under schema versions 1, 2, and 3 require migration to schema version 4 via migrate-schema or backfill to populate user_iterations and align with the strict schema contract.

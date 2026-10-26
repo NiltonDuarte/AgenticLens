@@ -8,7 +8,7 @@ Test/production classification comes from project configuration rather than hard
 
 Repeated generation replaces the selected snapshot, model changes preserve per-model usage, and event context uses request input counts rather than cumulative usage. CLI persistence uses the existing error/compaction/anomaly-turn pruning policy.
 
-Iteration 01 and 02 harden OpenCode non-breakage and operational reliability: strict zero runtime fallback classification with diagnostic stderr warnings for unconfigured patterns, CLI `generate` graceful fallback to cached code facts on Git diff errors, template-only pattern defaults for `init`, and mandatory `--ticket-id` enforcement during `--recompute-git` backfills. Detailed contracts, plans, and reviews live in `CONTRACT.md`, `SUMMARY.md`, and `iterations/`.
+Iteration 01, 02, and 03 harden OpenCode non-breakage and operational reliability: strict zero runtime fallback classification with diagnostic stderr warnings for unconfigured patterns, CLI `generate` graceful fallback to cached code facts on Git diff errors, template-only pattern defaults for `init`, mandatory `--ticket-id` enforcement during `--recompute-git` backfills, schema version 4 elevation with atomic per-invocation `user_iterations`, composite `(id, model)` ID-aware invocations merging for multi-device workflows, and strict zero-fallback SDLC iteration derivation. Detailed contracts, plans, and reviews live in `CONTRACT.md`, `SUMMARY.md`, and `iterations/`.
 
 ## Privacy review
 

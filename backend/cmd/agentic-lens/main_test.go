@@ -969,8 +969,8 @@ func TestCLIGenerateCommand(t *testing.T) {
 	if parsed.TicketID == nil || *parsed.TicketID != "AL-999" {
 		t.Errorf("expected ticket_id AL-999, got %v", parsed.TicketID)
 	}
-	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 3 {
-		t.Errorf("expected schema_version 3, got %v", parsed.SchemaVersion)
+	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 	}
 	if len(parsed.Invocations) != 2 {
 		t.Fatalf("expected 2 invocations, got %d", len(parsed.Invocations))
@@ -1125,8 +1125,8 @@ func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
 	}
 
 	// 3. Schema version must be 3
-	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 3 {
-		t.Errorf("expected schema_version 3, got %v", parsed.SchemaVersion)
+	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 	}
 
 	// 4. In-memory derived metrics (invocations, tokens, cost) are fully preserved
@@ -5642,4 +5642,723 @@ code_metrics:
 	if !strings.Contains(errOut, "WARNING: code_metrics.prod_patterns is empty or unconfigured") {
 		t.Errorf("expected warning for code_metrics.prod_patterns in stderr, got: %s", errOut)
 	}
+}
+
+func TestCLIGenerate_MultiDeviceInvocationsMergeAndSDLC(t *testing.T) {
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+
+	initGitCmd := exec.Command("git", "init")
+	initGitCmd.Dir = tempDir
+	if out, err := initGitCmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v: %s", err, string(out))
+	}
+	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
+
+	cfgContent := `project_name: "Test Multi Device"
+ticket:
+  prefixes:
+    - prefix: "AL"
+workspaces:
+  dir: "workspaces"
+  src_folders:
+    - "."
+database:
+  path: "test.db"
+code_metrics:
+  test_patterns: ["*_test.go"]
+  prod_patterns: ["*.go"]
+`
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatalf("failed writing config: %v", err)
+	}
+	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
+	_ = exec.Command("git", "-C", tempDir, "commit", "-m", "init").Run()
+
+	schemaVer := domain.CurrentSchemaVersion
+	ticketIDStr := "AL-HANDOFF"
+	ticketTitleStr := "Cross Device Handoff Ticket"
+	cachedLedger := domain.AgenticFactLedger{
+		SchemaVersion: &schemaVer,
+		TicketID:      &ticketIDStr,
+		TicketTitle:   &ticketTitleStr,
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
+		Invocations: []domain.InvocationFact{
+			{
+				ID:             "ses_device_a",
+				Role:           domain.RoleRootAgent,
+				Model:          "claude-3-5-sonnet",
+				User:           "engineer_a",
+				Turns:          6,
+				UserIterations: 3,
+				Tokens: domain.InvocationTokens{
+					Input:  500,
+					Output: 200,
+				},
+			},
+		},
+		Tools: []domain.ToolFact{
+			{Name: "read", Calls: 5, Errors: 0},
+		},
+		Code: domain.CodeFacts{
+			LinesAdded:     10,
+			SDLCIterations: 3,
+		},
+	}
+	if err := adapters.SaveFactLedger(outJSON, cachedLedger); err != nil {
+		t.Fatalf("failed saving initial cached ledger: %v", err)
+	}
+
+	// 2. Set up SQLite DB on "Device B" with local session "ses_device_b" having 2 user messages
+	dbPath := filepath.Join(tempDir, "test.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening sqlite: %v", err)
+	}
+	defer db.Close()
+
+	createSchema := `
+	CREATE TABLE session (
+		id TEXT PRIMARY KEY,
+		parent_id TEXT,
+		agent TEXT,
+		model TEXT,
+		time_created INTEGER,
+		time_updated INTEGER
+	);
+	CREATE TABLE message (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	CREATE TABLE part (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		message_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	`
+	if _, err := db.Exec(createSchema); err != nil {
+		t.Fatalf("failed creating test tables: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+	if _, err := db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES ('ses_device_b', NULL, 'root', 'claude-3-5-sonnet', ?, ?)`, now, now); err != nil {
+		t.Fatalf("failed inserting session: %v", err)
+	}
+
+	// Insert 2 user messages and 2 assistant messages
+	uMsg1 := `{"role": "user"}`
+	aMsg1 := `{"role": "assistant", "modelID": "claude-3-5-sonnet", "tokens": {"input": 100, "output": 50}}`
+	uMsg2 := `{"role": "user"}`
+	aMsg2 := `{"role": "assistant", "modelID": "claude-3-5-sonnet", "tokens": {"input": 120, "output": 60}}`
+
+	if _, err := db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m1', 'ses_device_b', ?, ?, ?),
+		('m2', 'ses_device_b', ?, ?, ?),
+		('m3', 'ses_device_b', ?, ?, ?),
+		('m4', 'ses_device_b', ?, ?, ?)`,
+		now, now, uMsg1,
+		now+100, now+100, aMsg1,
+		now+200, now+200, uMsg2,
+		now+300, now+300, aMsg2,
+	); err != nil {
+		t.Fatalf("failed inserting messages: %v", err)
+	}
+
+	// 3. Run generate on Device B
+	cmd := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", dbPath,
+		"--session-id", "ses_device_b",
+		"--ticket-id", "AL-HANDOFF",
+		"--ticket-title", "Cross Device Handoff Ticket",
+		"--json-output", outJSON,
+	)
+	cmd.Dir = tempDir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate on Device B failed: %v, stderr: %s", err, stderr.String())
+	}
+
+	// 4. Verify merged output: both invocations present, SDLC iterations = 3 + 2 = 5
+	rawMerged, err := os.ReadFile(outJSON)
+	if err != nil {
+		t.Fatalf("failed reading merged json: %v", err)
+	}
+
+	var mergedDTO adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(rawMerged, &mergedDTO); err != nil {
+		t.Fatalf("failed unmarshaling merged json: %v", err)
+	}
+
+	if len(mergedDTO.Invocations) != 2 {
+		t.Fatalf("expected 2 merged invocations, got %d", len(mergedDTO.Invocations))
+	}
+	var foundA, foundB bool
+	for _, inv := range mergedDTO.Invocations {
+		if inv.ID == "ses_device_a" {
+			foundA = true
+			if inv.UserIterations != 3 {
+				t.Errorf("expected invocation A user_iterations 3, got %d", inv.UserIterations)
+			}
+		}
+		if inv.ID == "ses_device_b" {
+			foundB = true
+			if inv.UserIterations != 2 {
+				t.Errorf("expected invocation B user_iterations 2, got %d", inv.UserIterations)
+			}
+		}
+	}
+	if !foundA || !foundB {
+		t.Errorf("missing merged invocation: foundA=%v, foundB=%v", foundA, foundB)
+	}
+
+	if mergedDTO.Code.SDLCIterations != 5 {
+		t.Errorf("expected total sdlc_iterations 5 (3+2), got %d", mergedDTO.Code.SDLCIterations)
+	}
+
+	// 5. Test idempotency: run generate again and assert no duplicate invocations or inflation
+	cmd2 := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", dbPath,
+		"--session-id", "ses_device_b",
+		"--ticket-id", "AL-HANDOFF",
+		"--ticket-title", "Cross Device Handoff Ticket",
+		"--json-output", outJSON,
+	)
+	cmd2.Dir = tempDir
+	if out, err := cmd2.CombinedOutput(); err != nil {
+		t.Fatalf("second generate failed: %v, output: %s", err, string(out))
+	}
+
+	rawIdempotent, _ := os.ReadFile(outJSON)
+	var idempDTO adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(rawIdempotent, &idempDTO)
+	if len(idempDTO.Invocations) != 2 {
+		t.Errorf("idempotency check failed: expected 2 invocations, got %d", len(idempDTO.Invocations))
+	}
+	// 6. Test strict rejection of fallbacks: verify that older schema ledgers lacking user_iterations emit warning and require migration
+	legacyOutJSON := filepath.Join(tempDir, "legacy.json")
+	legacyVer := 3
+	legacyLedger := domain.AgenticFactLedger{
+		SchemaVersion: &legacyVer,
+		TicketID:      &ticketIDStr,
+		TicketTitle:   &ticketTitleStr,
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
+		Invocations: []domain.InvocationFact{
+			{
+				ID:             "ses_legacy",
+				Role:           domain.RoleRootAgent,
+				Model:          "claude-3-5-sonnet",
+				User:           "engineer_a",
+				Turns:          6,
+				UserIterations: 0,
+			},
+		},
+		Code: domain.CodeFacts{
+			LinesAdded:     10,
+			SDLCIterations: 0,
+		},
+	}
+	if err := adapters.SaveFactLedger(legacyOutJSON, legacyLedger); err != nil {
+		t.Fatalf("failed saving legacy ledger: %v", err)
+	}
+
+	cmdLegacy := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--ticket-id", "AL-HANDOFF",
+		"--ticket-title", "Cross Device Handoff Ticket",
+		"--json-output", legacyOutJSON,
+		"--allow-empty",
+	)
+	cmdLegacy.Dir = tempDir
+	var legacyStderr bytes.Buffer
+	cmdLegacy.Stderr = &legacyStderr
+	_ = cmdLegacy.Run()
+
+	if !strings.Contains(legacyStderr.String(), "Existing fact ledger has schema version < 4 and must be migrated") {
+		t.Errorf("expected warning for schema version < 4 in stderr, got: %s", legacyStderr.String())
+	}
+}
+
+func TestCLIGenerate_ThreeDeviceHandoffAccumulation(t *testing.T) {
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+
+	_ = exec.Command("git", "-C", tempDir, "init").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
+
+	cfgContent := `project_name: "Test Three Device Handoff"
+ticket:
+  prefixes: ["AL"]
+workspaces:
+  dir: "workspaces"
+  src_folders: ["."]
+database:
+  path: "device.db"
+code_metrics:
+  test_patterns: ["*_test.go"]
+  prod_patterns: ["*.go"]
+`
+	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
+	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
+	_ = exec.Command("git", "-C", tempDir, "commit", "-m", "init").Run()
+
+	schemaVer := domain.CurrentSchemaVersion
+	ticketIDStr := "AL-THREE-DEVICE"
+	ticketTitleStr := "Three Device Handoff"
+
+	// 1. Device A: writes initial ledger with ses_device_a (user_iterations: 4)
+	deviceALedger := domain.AgenticFactLedger{
+		SchemaVersion: &schemaVer,
+		TicketID:      &ticketIDStr,
+		TicketTitle:   &ticketTitleStr,
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
+		Invocations: []domain.InvocationFact{
+			{
+				ID:             "ses_device_a",
+				Role:           domain.RoleRootAgent,
+				Model:          "claude-3-5-sonnet",
+				Turns:          8,
+				UserIterations: 4,
+				Tokens:         domain.InvocationTokens{Input: 1000, Output: 400},
+			},
+		},
+		Code: domain.CodeFacts{
+			LinesAdded:     15,
+			SDLCIterations: 4,
+		},
+	}
+	if err := adapters.SaveFactLedger(outJSON, deviceALedger); err != nil {
+		t.Fatalf("failed saving Device A ledger: %v", err)
+	}
+
+	// Helper to create a device sqlite database with root and child sessions
+	createDeviceDB := func(dbFile string, rootSessionID string, rootUserTurns int, childSessionID string) {
+		db, err := sql.Open("sqlite", dbFile)
+		if err != nil {
+			t.Fatalf("failed opening sqlite: %v", err)
+		}
+		defer db.Close()
+
+		createSchema := `
+		CREATE TABLE session (
+			id TEXT PRIMARY KEY,
+			parent_id TEXT,
+			agent TEXT,
+			model TEXT,
+			time_created INTEGER,
+			time_updated INTEGER
+		);
+		CREATE TABLE message (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		CREATE TABLE part (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			message_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		`
+		if _, err := db.Exec(createSchema); err != nil {
+			t.Fatalf("failed creating schema: %v", err)
+		}
+
+		now := time.Now().UnixMilli()
+		// Root session
+		_, _ = db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES (?, NULL, 'root', 'gpt-4o', ?, ?)`, rootSessionID, now, now)
+		// Child session
+		if childSessionID != "" {
+			_, _ = db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES (?, ?, 'coder', 'gpt-4o', ?, ?)`, childSessionID, rootSessionID, now, now)
+			// Child messages (user + assistant)
+			_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('c_m1', ?, ?, ?, '{"role": "user"}')`, childSessionID, now, now)
+			_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('c_m2', ?, ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 50, "output": 25}}')`, childSessionID, now, now)
+		}
+
+		// Root messages
+		for i := 0; i < rootUserTurns; i++ {
+			uID := fmt.Sprintf("u_%s_%d", rootSessionID, i)
+			aID := fmt.Sprintf("a_%s_%d", rootSessionID, i)
+			_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, '{"role": "user"}')`, uID, rootSessionID, now+int64(i*100), now+int64(i*100))
+			_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 100, "output": 50}}')`, aID, rootSessionID, now+int64(i*100)+50, now+int64(i*100)+50)
+		}
+	}
+
+	// 2. Device B: root ses_device_b with 3 user turns, and child sub_device_b
+	dbB := filepath.Join(tempDir, "device_b.db")
+	createDeviceDB(dbB, "ses_device_b", 3, "sub_device_b")
+
+	cmdB := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbB,
+		"--session-id", "ses_device_b",
+		"--ticket-id", "AL-THREE-DEVICE",
+		"--ticket-title", "Three Device Handoff",
+		"--json-output", outJSON,
+	)
+	cmdB.Dir = tempDir
+	if out, err := cmdB.CombinedOutput(); err != nil {
+		t.Fatalf("generate Device B failed: %v, out: %s", err, string(out))
+	}
+
+	// Verify Device B state: 3 invocations (ses_device_a, ses_device_b, sub_device_b), SDLC = 4 + 3 = 7
+	rawB, _ := os.ReadFile(outJSON)
+	var dtoB adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(rawB, &dtoB)
+	if len(dtoB.Invocations) != 3 {
+		t.Fatalf("after Device B, expected 3 invocations, got %d", len(dtoB.Invocations))
+	}
+	if dtoB.Code.SDLCIterations != 7 {
+		t.Fatalf("after Device B, expected SDLCIterations 7 (4+3), got %d", dtoB.Code.SDLCIterations)
+	}
+
+	// 3. Device C: root ses_device_c with 5 user turns, and child sub_device_c
+	dbC := filepath.Join(tempDir, "device_c.db")
+	createDeviceDB(dbC, "ses_device_c", 5, "sub_device_c")
+
+	cmdC := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbC,
+		"--session-id", "ses_device_c",
+		"--ticket-id", "AL-THREE-DEVICE",
+		"--ticket-title", "Three Device Handoff",
+		"--json-output", outJSON,
+	)
+	cmdC.Dir = tempDir
+	if out, err := cmdC.CombinedOutput(); err != nil {
+		t.Fatalf("generate Device C failed: %v, out: %s", err, string(out))
+	}
+
+	// Verify Device C state: 5 invocations, SDLC = 4 + 3 + 0 + 5 + 0 = 12
+	rawC, _ := os.ReadFile(outJSON)
+	var dtoC adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(rawC, &dtoC)
+	if len(dtoC.Invocations) != 5 {
+		t.Fatalf("after Device C, expected 5 invocations, got %d", len(dtoC.Invocations))
+	}
+	if dtoC.Code.SDLCIterations != 12 {
+		t.Errorf("after Device C, expected SDLCIterations 12 (4+3+5), got %d", dtoC.Code.SDLCIterations)
+	}
+
+	// Verify each invocation's user_iterations
+	expectedIterations := map[string]int64{
+		"ses_device_a": 4,
+		"ses_device_b": 3,
+		"sub_device_b": 0,
+		"ses_device_c": 5,
+		"sub_device_c": 0,
+	}
+	for _, inv := range dtoC.Invocations {
+		expected, exists := expectedIterations[inv.ID]
+		if !exists {
+			t.Errorf("unexpected invocation %s in merged ledger", inv.ID)
+		} else if inv.UserIterations != expected {
+			t.Errorf("invocation %s expected UserIterations %d, got %d", inv.ID, expected, inv.UserIterations)
+		}
+	}
+
+	// 4. Test idempotency across repeated Device C invocations
+	cmdC2 := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbC,
+		"--session-id", "ses_device_c",
+		"--ticket-id", "AL-THREE-DEVICE",
+		"--ticket-title", "Three Device Handoff",
+		"--json-output", outJSON,
+	)
+	cmdC2.Dir = tempDir
+	if out, err := cmdC2.CombinedOutput(); err != nil {
+		t.Fatalf("repeated generate Device C failed: %v, out: %s", err, string(out))
+	}
+
+	rawC2, _ := os.ReadFile(outJSON)
+	var dtoC2 adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(rawC2, &dtoC2)
+	if len(dtoC2.Invocations) != 5 {
+		t.Errorf("expected strictly 5 invocations after repeat, got %d", len(dtoC2.Invocations))
+	}
+	if dtoC2.Code.SDLCIterations != 12 {
+		t.Errorf("expected SDLCIterations strictly 12 after repeat, got %d", dtoC2.Code.SDLCIterations)
+	}
+}
+
+func TestCLIGenerate_InvocationsUpdateInPlaceOnSameDevice(t *testing.T) {
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+	dbPath := filepath.Join(tempDir, "same_device.db")
+
+	_ = exec.Command("git", "-C", tempDir, "init").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
+
+	cfgContent := `project_name: "Test Update In Place"
+ticket:
+  prefixes: ["AL"]
+workspaces:
+  dir: "workspaces"
+  src_folders: ["."]
+database:
+  path: "same_device.db"
+code_metrics:
+  test_patterns: ["*_test.go"]
+  prod_patterns: ["*.go"]
+`
+	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
+	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
+	_ = exec.Command("git", "-C", tempDir, "commit", "-m", "init").Run()
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening sqlite: %v", err)
+	}
+	defer db.Close()
+
+	createSchema := `
+	CREATE TABLE session (
+		id TEXT PRIMARY KEY,
+		parent_id TEXT,
+		agent TEXT,
+		model TEXT,
+		time_created INTEGER,
+		time_updated INTEGER
+	);
+	CREATE TABLE message (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	CREATE TABLE part (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		message_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	`
+	if _, err := db.Exec(createSchema); err != nil {
+		t.Fatalf("failed creating schema: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+	_, _ = db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES ('ses_dev', NULL, 'root', 'gpt-4o', ?, ?)`, now, now)
+
+	// First pass: 1 user message, 1 assistant message
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m1', 'ses_dev', ?, ?, '{"role": "user"}')`, now, now)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m2', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 100, "output": 50}}')`, now+50, now+50)
+
+	cmd1 := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbPath,
+		"--session-id", "ses_dev",
+		"--ticket-id", "AL-UPDATE-IN-PLACE",
+		"--ticket-title", "Update In Place Test",
+		"--json-output", outJSON,
+	)
+	cmd1.Dir = tempDir
+	if out, err := cmd1.CombinedOutput(); err != nil {
+		t.Fatalf("pass 1 failed: %v, out: %s", err, string(out))
+	}
+
+	raw1, _ := os.ReadFile(outJSON)
+	var dto1 adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(raw1, &dto1)
+	if len(dto1.Invocations) != 1 {
+		t.Fatalf("pass 1 expected 1 invocation, got %d", len(dto1.Invocations))
+	}
+	if dto1.Invocations[0].UserIterations != 1 {
+		t.Errorf("pass 1 expected UserIterations 1, got %d", dto1.Invocations[0].UserIterations)
+	}
+	if dto1.Invocations[0].Tokens.Input != 100 {
+		t.Errorf("pass 1 expected Input tokens 100, got %d", dto1.Invocations[0].Tokens.Input)
+	}
+
+	// Second pass: 2 more user messages, 2 more assistant messages with more tokens, and a compaction
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m3', 'ses_dev', ?, ?, '{"role": "user"}')`, now+100, now+100)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m4', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 200, "output": 80}}')`, now+150, now+150)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m5', 'ses_dev', ?, ?, '{"role": "user"}')`, now+200, now+200)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m6', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 300, "output": 120}}')`, now+250, now+250)
+	// Add a compaction part
+	compactionJSON := `{"type":"compaction"}`
+	_, _ = db.Exec(`INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES ('p_comp', 'ses_dev', 'm4', ?, ?, ?)`, now+160, now+160, compactionJSON)
+
+	cmd2 := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbPath,
+		"--session-id", "ses_dev",
+		"--ticket-id", "AL-UPDATE-IN-PLACE",
+		"--ticket-title", "Update In Place Test",
+		"--json-output", outJSON,
+	)
+	cmd2.Dir = tempDir
+	if out, err := cmd2.CombinedOutput(); err != nil {
+		t.Fatalf("pass 2 failed: %v, out: %s", err, string(out))
+	}
+
+	raw2, _ := os.ReadFile(outJSON)
+	var dto2 adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(raw2, &dto2)
+	// Must NOT have duplicated invocation records!
+	if len(dto2.Invocations) != 1 {
+		t.Fatalf("pass 2 expected strictly 1 invocation (updated in place), got %d", len(dto2.Invocations))
+	}
+	inv := dto2.Invocations[0]
+	if inv.UserIterations != 3 {
+		t.Errorf("pass 2 expected UserIterations 3, got %d", inv.UserIterations)
+	}
+	if inv.Tokens.Input != 600 { // 100 + 200 + 300
+		t.Errorf("pass 2 expected Input tokens 600, got %d", inv.Tokens.Input)
+	}
+	if inv.Compactions != 1 {
+		t.Errorf("pass 2 expected Compactions 1, got %d", inv.Compactions)
+	}
+	if dto2.Code.SDLCIterations != 3 {
+		t.Errorf("pass 2 expected total SDLCIterations 3, got %d", dto2.Code.SDLCIterations)
+	}
+}
+
+func TestCLIGenerate_StrictZeroFallback(t *testing.T) {
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+
+	_ = exec.Command("git", "-C", tempDir, "init").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
+
+	cfgContent := `project_name: "Test Zero Fallback"
+ticket:
+  prefixes: ["AL"]
+workspaces:
+  dir: "workspaces"
+  src_folders: ["."]
+database:
+  path: "test.db"
+code_metrics:
+  test_patterns: ["*_test.go"]
+  prod_patterns: ["*.go"]
+`
+	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
+	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
+	_ = exec.Command("git", "-C", tempDir, "commit", "-m", "init").Run()
+
+	ticketIDStr := "AL-ZERO-FALLBACK"
+	ticketTitleStr := "Zero Fallback Invariant"
+
+	t.Run("pre-v4 ledger with zero user_iterations emits warning and does not guess", func(t *testing.T) {
+		for _, ver := range []int{1, 2, 3} {
+			schemaVer := ver
+			ledger := domain.AgenticFactLedger{
+				SchemaVersion: &schemaVer,
+				TicketID:      &ticketIDStr,
+				TicketTitle:   &ticketTitleStr,
+				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
+				Invocations: []domain.InvocationFact{
+					{
+						ID:             "ses_pre_v4",
+						Role:           domain.RoleRootAgent,
+						Model:          "gpt-4o",
+						Turns:          5,
+						UserIterations: 0, // unpopulated in pre-v4
+					},
+				},
+				Code: domain.CodeFacts{
+					LinesAdded:     10,
+					SDLCIterations: 0,
+				},
+			}
+			if err := adapters.SaveFactLedger(outJSON, ledger); err != nil {
+				t.Fatalf("failed saving v%d ledger: %v", ver, err)
+			}
+
+			cmd := exec.Command(
+				cliBinaryPath, "generate",
+				"--ticket-id", ticketIDStr,
+				"--ticket-title", ticketTitleStr,
+				"--json-output", outJSON,
+				"--allow-empty",
+			)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			if err := cmd.Run(); err != nil {
+				t.Fatalf("generate v%d failed: %v", ver, err)
+			}
+
+			if !strings.Contains(stderr.String(), "Existing fact ledger has schema version < 4 and must be migrated") {
+				t.Errorf("v%d: expected warning for schema version < 4 in stderr, got: %s", ver, stderr.String())
+			}
+
+			// Verify SDLCIterations was not guessed and defaulted strictly to 1
+			raw, _ := os.ReadFile(outJSON)
+			var dto adapters.AgenticFactLedgerDTO
+			_ = json.Unmarshal(raw, &dto)
+			if dto.Code.SDLCIterations != 1 {
+				t.Errorf("v%d: expected SDLCIterations to default to 1, got %d", ver, dto.Code.SDLCIterations)
+			}
+		}
+	})
+
+	t.Run("schema-v4 ledger with zero user_iterations does not emit pre-v4 warning", func(t *testing.T) {
+		schemaVer := 4
+		ledger := domain.AgenticFactLedger{
+			SchemaVersion: &schemaVer,
+			TicketID:      &ticketIDStr,
+			TicketTitle:   &ticketTitleStr,
+			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
+			Invocations: []domain.InvocationFact{
+				{
+					ID:             "ses_v4",
+					Role:           domain.RoleRootAgent,
+					Model:          "gpt-4o",
+					Turns:          5,
+					UserIterations: 0,
+				},
+			},
+			Code: domain.CodeFacts{
+				LinesAdded:     10,
+				SDLCIterations: 0,
+			},
+		}
+		if err := adapters.SaveFactLedger(outJSON, ledger); err != nil {
+			t.Fatalf("failed saving v4 ledger: %v", err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath, "generate",
+			"--ticket-id", ticketIDStr,
+			"--ticket-title", ticketTitleStr,
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate v4 failed: %v", err)
+		}
+
+		if strings.Contains(stderr.String(), "Existing fact ledger has schema version < 4") {
+			t.Errorf("v4: did not expect schema version < 4 warning, got: %s", stderr.String())
+		}
+	})
 }
