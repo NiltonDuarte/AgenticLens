@@ -131,43 +131,54 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - **Validation and limitations:** Real Codex smoke extraction generated this ticket's ledger from the local rollout discovery path. Focused Go tests passed for migration runner, backfill, and repository loading; diff checks passed. The current checkout has no configured OpenCode database for a fresh live OpenCode smoke run. Existing unscoped counts cannot be reconstructed without source logs.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 9
-- **Active Agent Duration:** 3h 27m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 168.5k tokens (84% of 200k healthy ceiling, 3 compactions) | Subagents peak 176.7k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 12.7%, Coder 53.6%, Tester 15.1%, Reviewer 18.6%
-- **Subagent Turn Velocity & Thrashing:** 58.3 avg turns/run (peak: 130 turns) | Planner 35.3, Coder 112.0, Tester 36.7, Reviewer 49.3
-- **Test-to-Production Code Ratio:** 0.8:1 (+1,224 test lines / +1,502 prod lines)
-- **Code Delivered:** +2,726 / -1,018 lines across 19 code files (excluding docs)
-- **Reasoning Effort:** 162,536 reasoning tokens (51.2% of generated output)
-- **Tool Health & Self-Correction:** 917 tool calls (18 self-corrections, 98.0% success rate)
+- **Software Development Life Cycle Iterations:** 70
+- **Active Agent Duration:** 2h 39m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 7 compactions) | Subagents peak 243.9k (Coder_iteration_04)
+- **Role Effort Distribution (Subagents):** N/A
+- **Subagent Turn Velocity & Thrashing:** 2.5 avg turns/run (peak: 7 turns) | Coder 1.0, Child_cli_test 2.0, Coder_iteration_04 7.0, Fix_child_parser 2.0, Planner_iteration_04 6.0, Reviewer_iteration_04 1.0, Reviewer_iteration_04_final 1.0, Role_mapping_review 1.0, Telemetry_hi 1.0, Tester_iteration_04 3.0
+- **Test-to-Production Code Ratio:** 1.7:1 (+3,348 test lines / +1,984 prod lines)
+- **Code Delivered:** +5,353 / -1,366 lines across 65 code files (excluding docs)
+- **Reasoning Effort:** 270,658 reasoning tokens (31.1% of generated output)
+- **Tool Health & Self-Correction:** 1,016 tool calls (74 self-corrections, 92.7% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 8 execution anomalies detected (3 CRITICAL, 5 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k in turn 49 (session: ses_e8878898fffeAahBOyEwQAMD4f), breaching 160k critical ceiling
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k in turn 93 (session: ses_e87b3c3d0ffesHQ6T9hIvjIV2e), breaching 160k critical ceiling
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k in turn 131 (session: ses_e8888e4e3ffe9fNCDyBMse5Irk), breaching 160k critical ceiling
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+47.0k tokens) — Context tokens surged by 47.0k tokens in turn 46 (session: ses_e88858e3affeaQz4frllatuA9L, total: 83.5k tokens, threshold: 40000)
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+63.8k tokens) — Context tokens surged by 63.8k tokens in turn 106 (session: ses_e87b3c3d0ffesHQ6T9hIvjIV2e, total: 63.8k tokens, threshold: 40000)
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+67.8k tokens) — Context tokens surged by 67.8k tokens in turn 145 (session: ses_e8888e4e3ffe9fNCDyBMse5Irk, total: 67.8k tokens, threshold: 40000)
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: mcp-gateway_mcp-exec (3 consecutive errors) — Tool 'mcp-gateway_mcp-exec' encountered 3 consecutive execution failures (session: ses_e88858e3affeaQz4frllatuA9L, turn: 48)
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: edit (4 consecutive errors) — Tool 'edit' encountered 4 consecutive execution failures (session: ses_e8818726dffe52h3INfcK0B59t, turn: 68)
+- **Status:** 13 execution anomalies detected (10 CRITICAL, 3 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.2k tokens) — Context tokens reached 162.2k in turn 1 (session: 01a17887-026c-7ac0-91f7-cd128bc8ecd6), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.0k tokens) — Context tokens reached 163.0k in turn 1 (session: 01a1788f-bbe2-7a21-b94e-a0caeeed057e), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.4k tokens) — Context tokens reached 163.4k in turn 1 (session: 01a17896-6f63-7a41-b321-1db548a94221), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.3k tokens) — Context tokens reached 167.3k in turn 1 (session: 01a174b1-3b71-73c0-a0b7-6428b55ad981), breaching 160k critical ceiling
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+137.2k tokens) — Context tokens surged by 137.2k tokens in turn 1 (session: 01a174a5-1271-7791-8474-55e6bf0e84fd, total: 137.2k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+167.3k tokens) — Context tokens surged by 167.3k tokens in turn 1 (session: 01a174b1-3b71-73c0-a0b7-6428b55ad981, total: 167.3k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+83.8k tokens) — Context tokens surged by 83.8k tokens in turn 1 (session: 01a17879-2b06-7a51-9d1a-0962c002d9a3, total: 83.8k tokens, threshold: 80000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k in turn 3 (session: 01a17362-baa4-72b3-934d-3cb040c899ea), breaching 160k critical ceiling
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: fix_child_parser <-> child_cli_test (6 cycles) — Subagent roles 'fix_child_parser' and 'child_cli_test' alternated for 6 consecutive cycles indicating thrashing
+- [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: command (5 consecutive errors) — Tool 'command' encountered 5 consecutive execution failures (session: 01a17362-baa4-72b3-934d-3cb040c899ea, turn: 51)
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k tokens in turn 14 (session: 01a17362-baa4-72b3-934d-3cb040c899ea, total: 148.4k tokens, threshold: 40000)
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer_iteration_04_final <-> coder_iteration_04 (4 cycles) — Subagent roles 'reviewer_iteration_04_final' and 'coder_iteration_04' alternated for 4 consecutive cycles indicating thrashing
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer_iteration_04_final <-> coder_iteration_04 (4 cycles) — Subagent roles 'reviewer_iteration_04_final' and 'coder_iteration_04' alternated for 4 consecutive cycles indicating thrashing
 
 ### Agentic Execution Metrics
-
-**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 3 | 564,932 | 16,435 | 3,900,439 | 87.3% | 91.8k | HEALTHY | $0.90 |
-| **coder** | 3 | 1,932,455 | 60,121 | 25,680,788 | 93.0% | 176.7k | ELEVATED | $3.82 |
-| **tester** | 3 | 679,423 | 26,267 | 5,547,148 | 89.1% | 113.7k | ELEVATED | $1.08 |
-| **reviewer** | 3 | 947,860 | 11,383 | 6,814,841 | 87.8% | 91.1k | HEALTHY | $1.33 |
-| **general** | 1 | 3,384,971 | 41,016 | 15,214,732 | 81.8% | 168.5k | ELEVATED | $3.97 |
-| **Total** | **13** | **7,509,641** | **155,222** | **57,157,948** | **88.4%** | **176.7k** | **ELEVATED** | **$11.11** |
+| **coder** | 1 | 902 | 9 | 159,232 | 99.4% | 160.1k | ELEVATED | $0.00 |
+| **child_cli_test** | 1 | 6,617 | 3,066 | 2,258,432 | 99.7% | 143.4k | ELEVATED | $0.00 |
+| **coder_iteration_04** | 1 | 232,389 | 50,593 | 20,593,792 | 98.9% | 243.9k | BLOATED (122%) | $0.00 |
+| **fix_child_parser** | 1 | 11,868 | 5,234 | 2,119,552 | 99.4% | 146.3k | ELEVATED | $0.00 |
+| **planner_iteration_04** | 1 | 56,280 | 13,411 | 2,993,920 | 98.2% | 101.5k | ELEVATED | $0.00 |
+| **reviewer_iteration_04** | 1 | 21,236 | 1,983 | 360,064 | 94.4% | 103.5k | ELEVATED | $0.00 |
+| **reviewer_iteration_04_final** | 1 | 79,359 | 21,199 | 13,344,768 | 99.4% | 221.8k | BLOATED (111%) | $0.00 |
+| **role_mapping_review** | 1 | 3,980 | 677 | 503,040 | 99.2% | 170.1k | ELEVATED | $0.00 |
+| **rootagent** | 1 | 2,414,958 | 496,625 | 154,191,744 | 98.5% | 247.7k | BLOATED (124%) | $0.00 |
+| **telemetry_hi** | 1 | 994 | 6 | 125,312 | 99.2% | 126.3k | ELEVATED | $0.00 |
+| **tester_iteration_04** | 1 | 49,097 | 7,761 | 8,845,056 | 99.4% | 178.1k | ELEVATED | $0.00 |
+| **Total** | **11** | **2,877,680** | **600,564** | **205,494,912** | **98.6%** | **247.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 13 | 7,509,641 | 155,222 | 57,157,948 | 88.4% | $11.11 |
-| **Total** | **13** | **7,509,641** | **155,222** | **57,157,948** | **88.4%** | **$11.11** |
+| **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
+| **gpt-6-luna** | 8 | 2,329,835 | 530,774 | 177,416,448 | 98.7% | $0.00 |
+| **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
+| **Total** | **11** | **2,877,680** | **600,564** | **205,494,912** | **98.6%** | **$0.00** |
