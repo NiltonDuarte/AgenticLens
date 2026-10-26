@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_eafa5cd13ffeKB4jlHvf8EaJii",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eafa5cd13ffeKB4jlHvf8EaJii",
@@ -48,6 +49,7 @@
     {
       "id": "ses_eafa36845ffeBo4uc7BRDHV8uG",
       "parent_id": "ses_eafa5cd13ffeKB4jlHvf8EaJii",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eafa36845ffeBo4uc7BRDHV8uG",
@@ -77,6 +79,7 @@
     {
       "id": "ses_eaf9a3cd4ffeN1N6mnNHnvN37p",
       "parent_id": "ses_eafa5cd13ffeKB4jlHvf8EaJii",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eaf9a3cd4ffeN1N6mnNHnvN37p",
@@ -106,6 +109,7 @@
     {
       "id": "ses_eaf944cd7ffedMoIwSfMoGqqFX",
       "parent_id": "ses_eafa5cd13ffeKB4jlHvf8EaJii",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eaf944cd7ffedMoIwSfMoGqqFX",
@@ -135,6 +139,7 @@
     {
       "id": "ses_eaf8e9e5effeFfcAhlHEZwiVB5",
       "parent_id": "ses_eafa5cd13ffeKB4jlHvf8EaJii",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eaf8e9e5effeFfcAhlHEZwiVB5",

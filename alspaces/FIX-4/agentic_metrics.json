@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
@@ -74,15 +75,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "general",
-            "context_tokens": 174317,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 81,
@@ -116,6 +108,7 @@
     {
       "id": "ses_ea23057b0ffeEWz3XDCyl9Kcqv",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea23057b0ffeEWz3XDCyl9Kcqv",
@@ -145,6 +138,7 @@
     {
       "id": "ses_ea224a06dffeUUVUn1Vi3HlWh6",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea224a06dffeUUVUn1Vi3HlWh6",
@@ -260,15 +254,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 171152,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 465,
@@ -322,6 +307,7 @@
     {
       "id": "ses_ea18cb86fffeMEsJtwr41GvO3M",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea18cb86fffeMEsJtwr41GvO3M",
@@ -351,6 +337,7 @@
     {
       "id": "ses_ea1818b3cffeU25wNxaCo7oudL",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1818b3cffeU25wNxaCo7oudL",
@@ -380,6 +367,7 @@
     {
       "id": "ses_ea1683c75ffeRUqwJ7sEGgKNAQ",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1683c75ffeRUqwJ7sEGgKNAQ",
@@ -409,6 +397,7 @@
     {
       "id": "ses_ea14a58a7ffe4I3YPTcubf0M4z",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea14a58a7ffe4I3YPTcubf0M4z",
@@ -438,6 +427,7 @@
     {
       "id": "ses_ea1302ec4ffejLAKJ5H42YOYb2",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1302ec4ffejLAKJ5H42YOYb2",
@@ -467,6 +457,7 @@
     {
       "id": "ses_ea129d782ffe9kuu66lyqG5dBi",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea129d782ffe9kuu66lyqG5dBi",

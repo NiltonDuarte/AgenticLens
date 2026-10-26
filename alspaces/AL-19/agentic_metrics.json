@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
@@ -59,6 +60,7 @@
     {
       "id": "ses_ea9a7f069ffeiRh1EbXynp9CvD",
       "parent_id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea9a7f069ffeiRh1EbXynp9CvD",
@@ -109,6 +111,7 @@
     {
       "id": "ses_ea99762aaffegd2F4AlRsKShuE",
       "parent_id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea99762aaffegd2F4AlRsKShuE",
@@ -164,15 +167,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 167980,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 29,
@@ -196,6 +190,7 @@
     {
       "id": "ses_ea977ffa4ffe3eAOAX0AFDTNCV",
       "parent_id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea977ffa4ffe3eAOAX0AFDTNCV",
@@ -241,15 +236,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "tester",
-            "context_tokens": 183196,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 83,
@@ -263,6 +249,7 @@
     {
       "id": "ses_ea960b5a1ffehLKNL55TZPOM2D",
       "parent_id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea960b5a1ffehLKNL55TZPOM2D",
@@ -292,6 +279,7 @@
     {
       "id": "ses_ea759f090ffe5FX6t7yWtB3SZD",
       "parent_id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea759f090ffe5FX6t7yWtB3SZD",
@@ -321,6 +309,7 @@
     {
       "id": "ses_ea739b008ffeuKcjYfiFLdcWEu",
       "parent_id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea739b008ffeuKcjYfiFLdcWEu",
@@ -350,6 +339,7 @@
     {
       "id": "ses_ea734f933ffecM2q5KGJPSyq4V",
       "parent_id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea734f933ffecM2q5KGJPSyq4V",
@@ -379,6 +369,7 @@
     {
       "id": "ses_ea72ce09bffeWlyUE6NFQyhl3m",
       "parent_id": "ses_ea9b1cc48ffeepWYSYxJMYu1cA",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea72ce09bffeWlyUE6NFQyhl3m",

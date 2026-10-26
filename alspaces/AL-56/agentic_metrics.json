@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17362-baa4-72b3-934d-3cb040c899ea",
@@ -164,33 +165,6 @@
           }
         },
         {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "RootAgent",
-            "context_tokens": 244535,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "RootAgent",
-            "context_tokens": 247681,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "RootAgent",
-            "context_tokens": 182636,
-            "threshold": "160000"
-          }
-        },
-        {
           "rule_id": "TOOL_RETRY_STREAK",
           "severity": "CRITICAL",
           "context": {
@@ -210,12 +184,12 @@
             "threshold": "40000"
           }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a174a2-debd-7bb2-933f-18c8f3d76c70",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a174a2-debd-7bb2-933f-18c8f3d76c70",
@@ -240,12 +214,12 @@
         }
       ],
       "tools": [],
-      "anomalies": [],
-      "source": "codex"
+      "anomalies": []
     },
     {
       "id": "01a174a4-dd8f-75a1-ba8b-9d78cd357bdc",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a174a4-dd8f-75a1-ba8b-9d78cd357bdc",
@@ -281,12 +255,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "codex"
+      "anomalies": []
     },
     {
       "id": "01a174a5-1271-7791-8474-55e6bf0e84fd",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a174a5-1271-7791-8474-55e6bf0e84fd",
@@ -338,12 +312,12 @@
             "threshold": "80000"
           }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a174ad-f5c2-79b1-a5d6-df60b61f6b93",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a174ad-f5c2-79b1-a5d6-df60b61f6b93",
@@ -377,22 +351,13 @@
             "context_tokens": 160134,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 160134,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a174b1-3b71-73c0-a0b7-6428b55ad981",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a174b1-3b71-73c0-a0b7-6428b55ad981",
@@ -456,22 +421,13 @@
             "context_tokens": 170099,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "role_mapping_review",
-            "context_tokens": 170099,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17876-b15e-7e01-8575-bd8183cd362e",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17876-b15e-7e01-8575-bd8183cd362e",
@@ -507,12 +463,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "codex"
+      "anomalies": []
     },
     {
       "id": "01a17879-2b06-7a51-9d1a-0962c002d9a3",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17879-2b06-7a51-9d1a-0962c002d9a3",
@@ -554,12 +510,12 @@
             "threshold": "80000"
           }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17887-026c-7ac0-91f7-cd128bc8ecd6",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17887-026c-7ac0-91f7-cd128bc8ecd6",
@@ -613,22 +569,13 @@
             "context_tokens": 243917,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder_iteration_04",
-            "context_tokens": 243917,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a1788f-bbe2-7a21-b94e-a0caeeed057e",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a1788f-bbe2-7a21-b94e-a0caeeed057e",
@@ -682,22 +629,13 @@
             "context_tokens": 178114,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "tester_iteration_04",
-            "context_tokens": 178114,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17896-6f63-7a41-b321-1db548a94221",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17896-6f63-7a41-b321-1db548a94221",
@@ -761,22 +699,13 @@
             "context_tokens": 221820,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "reviewer_iteration_04_final",
-            "context_tokens": 221820,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a178f6-65f8-7033-b54e-ab9c3b777a3b",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a178f6-65f8-7033-b54e-ab9c3b777a3b",
@@ -807,12 +736,12 @@
           "errors": 1
         }
       ],
-      "anomalies": [],
-      "source": "codex"
+      "anomalies": []
     },
     {
       "id": "01a17903-9e65-78b2-8413-2fb3d35a68b1",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17903-9e65-78b2-8413-2fb3d35a68b1",
@@ -873,15 +802,6 @@
           }
         },
         {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder_iteration_05",
-            "context_tokens": 245059,
-            "threshold": "160000"
-          }
-        },
-        {
           "rule_id": "TOOL_RETRY_STREAK",
           "severity": "WARNING",
           "context": {
@@ -891,12 +811,12 @@
             "threshold": "3"
           }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17924-7d48-7de3-98b7-6a29aad49868",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17924-7d48-7de3-98b7-6a29aad49868",
@@ -960,22 +880,13 @@
             "context_tokens": 186997,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "tester_iteration_05",
-            "context_tokens": 186997,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a1792e-17ec-7cb1-b062-30f0676256a6",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a1792e-17ec-7cb1-b062-30f0676256a6",
@@ -1039,22 +950,13 @@
             "context_tokens": 165142,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "reviewer_iteration_05",
-            "context_tokens": 165142,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17934-63f3-7ca3-a360-f92b70b28882",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17934-63f3-7ca3-a360-f92b70b28882",
@@ -1095,12 +997,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "codex"
+      "anomalies": []
     },
     {
       "id": "01a1793c-d001-7e21-a321-6c70d60d2857",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a1793c-d001-7e21-a321-6c70d60d2857",
@@ -1141,12 +1043,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "codex"
+      "anomalies": []
     },
     {
       "id": "01a1793d-ec6c-7592-92db-61baab10a62b",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a1793d-ec6c-7592-92db-61baab10a62b",
@@ -1210,22 +1112,13 @@
             "context_tokens": 172208,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder_iteration_05_validation",
-            "context_tokens": 172208,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a1793f-458c-7233-9583-ac7f631a5f8b",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a1793f-458c-7233-9583-ac7f631a5f8b",
@@ -1272,12 +1165,12 @@
             "threshold": "80000"
           }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17943-1953-71e0-9136-27f88405d173",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17943-1953-71e0-9136-27f88405d173",
@@ -1351,22 +1244,13 @@
             "context_tokens": 176190,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "reviewer_iteration_05_final",
-            "context_tokens": 176190,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17955-edfd-71c3-95d0-7a9055ea8d3e",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17955-edfd-71c3-95d0-7a9055ea8d3e",
@@ -1425,22 +1309,13 @@
             "context_tokens": 218609,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "planner_iteration_06",
-            "context_tokens": 218609,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17976-d881-77e1-bc91-009160a00a20",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17976-d881-77e1-bc91-009160a00a20",
@@ -1506,15 +1381,6 @@
           }
         },
         {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder_iteration_06",
-            "context_tokens": 246694,
-            "threshold": "160000"
-          }
-        },
-        {
           "rule_id": "TOOL_RETRY_STREAK",
           "severity": "WARNING",
           "context": {
@@ -1524,12 +1390,12 @@
             "threshold": "3"
           }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a17982-8f5a-7913-ba87-e230fe9dccb8",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a17982-8f5a-7913-ba87-e230fe9dccb8",
@@ -1603,22 +1469,13 @@
             "context_tokens": 243010,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "tester_iteration_06",
-            "context_tokens": 243010,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a1798b-2122-74a2-995f-359b2ed68fd8",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a1798b-2122-74a2-995f-359b2ed68fd8",
@@ -1682,22 +1539,13 @@
             "context_tokens": 245263,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "reviewer_iteration_06",
-            "context_tokens": 245263,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a179cf-823d-72a2-af9a-47c51661e36d",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a179cf-823d-72a2-af9a-47c51661e36d",
@@ -1761,22 +1609,13 @@
             "context_tokens": 183406,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "planner_iteration_07",
-            "context_tokens": 183406,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "01a179f3-f6dc-71b0-b520-0ec53f1a79d0",
       "parent_id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "source": "codex",
       "invocations": [
         {
           "id": "01a179f3-f6dc-71b0-b520-0ec53f1a79d0",
@@ -1816,22 +1655,13 @@
             "context_tokens": 225140,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "planner_iteration_08",
-            "context_tokens": 225140,
-            "threshold": "160000"
-          }
         }
-      ],
-      "source": "codex"
+      ]
     },
     {
       "id": "ses_e879f1cebffe3jzoSFoOYdCo79",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e879f1cebffe3jzoSFoOYdCo79",
@@ -1887,12 +1717,12 @@
           "errors": 1
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e87a8c7a8ffeZRsTek2OLp59MJ",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e87a8c7a8ffeZRsTek2OLp59MJ",
@@ -1948,12 +1778,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e87b3c3d0ffesHQ6T9hIvjIV2e",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e87b3c3d0ffesHQ6T9hIvjIV2e",
@@ -2038,12 +1868,12 @@
             "threshold": "40000"
           }
         }
-      ],
-      "source": "opencode"
+      ]
     },
     {
       "id": "ses_e87c74831ffeYcyGKvZUtfH2xg",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e87c74831ffeYcyGKvZUtfH2xg",
@@ -2099,12 +1929,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e881281c9ffemXFC0soWxLInNl",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e881281c9ffemXFC0soWxLInNl",
@@ -2155,12 +1985,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e8813db2dffeL9htvjScN5Gagx",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e8813db2dffeL9htvjScN5Gagx",
@@ -2206,12 +2036,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e8818726dffe52h3INfcK0B59t",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e8818726dffe52h3INfcK0B59t",
@@ -2262,12 +2092,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e883d2ce0ffeAh4uP8ZZ7ro7Iv",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e883d2ce0ffeAh4uP8ZZ7ro7Iv",
@@ -2333,12 +2163,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e886928e5ffedgGde6oQuXTuWr",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e886928e5ffedgGde6oQuXTuWr",
@@ -2379,12 +2209,12 @@
           "errors": 1
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e886a5ec9ffe0e2W0BUYiElAEI",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e886a5ec9ffe0e2W0BUYiElAEI",
@@ -2430,12 +2260,12 @@
           "errors": 0
         }
       ],
-      "anomalies": [],
-      "source": "opencode"
+      "anomalies": []
     },
     {
       "id": "ses_e8878898fffeAahBOyEwQAMD4f",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e8878898fffeAahBOyEwQAMD4f",
@@ -2505,12 +2335,12 @@
             "threshold": "160000"
           }
         }
-      ],
-      "source": "opencode"
+      ]
     },
     {
       "id": "ses_e88858e3affeaQz4frllatuA9L",
       "parent_id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e88858e3affeaQz4frllatuA9L",
@@ -2587,11 +2417,11 @@
             "threshold": "3"
           }
         }
-      ],
-      "source": "opencode"
+      ]
     },
     {
       "id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
@@ -2706,8 +2536,7 @@
             "threshold": "40000"
           }
         }
-      ],
-      "source": "opencode"
+      ]
     }
   ],
   "anomalies": []

@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
@@ -71,21 +72,13 @@
             "context_tokens": 163436,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "orchestrator",
-            "context_tokens": 163436,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_eb0c89b58ffemRFSNCwXjkm65x",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0c89b58ffemRFSNCwXjkm65x",
@@ -115,6 +108,7 @@
     {
       "id": "ses_eb0bb489bffe7j2HrZ39KlkJFW",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0bb489bffe7j2HrZ39KlkJFW",
@@ -160,15 +154,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168526,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 56,
@@ -182,6 +167,7 @@
     {
       "id": "ses_eb0ab4c9cffepSEc1fF398wvgd",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0ab4c9cffepSEc1fF398wvgd",
@@ -227,15 +213,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "tester",
-            "context_tokens": 166738,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 59,
@@ -259,6 +236,7 @@
     {
       "id": "ses_eb0a0edb4ffetxrQ34wVXa1YmL",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0a0edb4ffetxrQ34wVXa1YmL",
@@ -288,6 +266,7 @@
     {
       "id": "ses_eb08830d2ffesuONOIzdcnEtXt",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb08830d2ffesuONOIzdcnEtXt",
@@ -317,6 +296,7 @@
     {
       "id": "ses_eb081c0bdffeDfMB3pkGMl5MAl",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb081c0bdffeDfMB3pkGMl5MAl",
@@ -346,6 +326,7 @@
     {
       "id": "ses_eb0758689ffeNUegXcRcy0pSdI",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0758689ffeNUegXcRcy0pSdI",
@@ -375,6 +356,7 @@
     {
       "id": "ses_eb072aa92ffeWx5dE68godRBx1",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb072aa92ffeWx5dE68godRBx1",
@@ -404,6 +386,7 @@
     {
       "id": "ses_eb061dfbcffeyzcAqYVciTVSG5",
       "parent_id": "ses_eb0ca775bffeuwfuv3M5evs8eH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb061dfbcffeyzcAqYVciTVSG5",
@@ -435,15 +418,6 @@
           "context": {
             "turn": 27,
             "context_tokens": 163269,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 172903,
             "threshold": "160000"
           }
         },

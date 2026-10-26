@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_ea6d4e957ffefp2aD5QW1wK0ya",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea6d4e957ffefp2aD5QW1wK0ya",
@@ -50,15 +51,6 @@
           "context": {
             "turn": 138,
             "context_tokens": 160032,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "general",
-            "context_tokens": 167222,
             "threshold": "160000"
           }
         },

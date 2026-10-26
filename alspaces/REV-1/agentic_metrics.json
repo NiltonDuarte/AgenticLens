@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1a4b28affeowyXAPpI4V07XM",
@@ -64,15 +65,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "orchestrator",
-            "context_tokens": 168328,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 89,
@@ -86,6 +78,7 @@
     {
       "id": "ses_ea17bbe74ffef0as99U4IUVtW1",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea17bbe74ffef0as99U4IUVtW1",
@@ -115,6 +108,7 @@
     {
       "id": "ses_ea1699b13ffeeKDYzCAellSCs3",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1699b13ffeeKDYzCAellSCs3",
@@ -177,21 +171,13 @@
             "context_tokens": 168221,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168221,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_ea1534ff3ffe0XcOy270OG7Yvo",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1534ff3ffe0XcOy270OG7Yvo",
@@ -221,6 +207,7 @@
     {
       "id": "ses_ea1490dd7ffeWTqY5lK9D98zaq",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1490dd7ffeWTqY5lK9D98zaq",
@@ -271,6 +258,7 @@
     {
       "id": "ses_ea1416804ffeoK0BDxmI0F15Js",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1416804ffeoK0BDxmI0F15Js",
@@ -300,6 +288,7 @@
     {
       "id": "ses_ea11bb0b4ffeLrcSDVV0v4qgU3",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea11bb0b4ffeLrcSDVV0v4qgU3",
@@ -329,6 +318,7 @@
     {
       "id": "ses_ea0792dbfffeEhkwbTIQ6z2X1E",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea0792dbfffeEhkwbTIQ6z2X1E",
@@ -381,21 +371,13 @@
             "context_tokens": 164888,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 164888,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_ea06b025effeMczhmubylHJTtw",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea06b025effeMczhmubylHJTtw",
@@ -425,6 +407,7 @@
     {
       "id": "ses_ea0671888ffeqPbGqKQzMjaO00",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea0671888ffeqPbGqKQzMjaO00",
@@ -454,6 +437,7 @@
     {
       "id": "ses_ea062d95cffeSOtl8kODc5qIf8",
       "parent_id": "ses_ea1a4b28affeowyXAPpI4V07XM",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea062d95cffeSOtl8kODc5qIf8",
@@ -485,15 +469,6 @@
           "context": {
             "turn": 56,
             "context_tokens": 161194,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168050,
             "threshold": "160000"
           }
         },

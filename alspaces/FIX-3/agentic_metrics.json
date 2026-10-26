@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
@@ -81,15 +82,6 @@
             "token_delta": 84796,
             "context_tokens": 84796,
             "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "advisor",
-            "context_tokens": 174317,
-            "threshold": "160000"
           }
         },
         {
@@ -206,6 +198,7 @@
     {
       "id": "ses_ea23057b0ffeEWz3XDCyl9Kcqv",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea23057b0ffeEWz3XDCyl9Kcqv",
@@ -235,6 +228,7 @@
     {
       "id": "ses_ea224a06dffeUUVUn1Vi3HlWh6",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea224a06dffeUUVUn1Vi3HlWh6",
@@ -350,15 +344,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 171152,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 465,
@@ -412,6 +397,7 @@
     {
       "id": "ses_ea18cb86fffeMEsJtwr41GvO3M",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea18cb86fffeMEsJtwr41GvO3M",
@@ -441,6 +427,7 @@
     {
       "id": "ses_ea1818b3cffeU25wNxaCo7oudL",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1818b3cffeU25wNxaCo7oudL",
@@ -470,6 +457,7 @@
     {
       "id": "ses_ea1683c75ffeRUqwJ7sEGgKNAQ",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1683c75ffeRUqwJ7sEGgKNAQ",
@@ -499,6 +487,7 @@
     {
       "id": "ses_ea14a58a7ffe4I3YPTcubf0M4z",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea14a58a7ffe4I3YPTcubf0M4z",
@@ -528,6 +517,7 @@
     {
       "id": "ses_ea1302ec4ffejLAKJ5H42YOYb2",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea1302ec4ffejLAKJ5H42YOYb2",
@@ -557,6 +547,7 @@
     {
       "id": "ses_ea129d782ffe9kuu66lyqG5dBi",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea129d782ffe9kuu66lyqG5dBi",
@@ -586,6 +577,7 @@
     {
       "id": "ses_ea0300f77ffey3TAm63OjlCb71",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea0300f77ffey3TAm63OjlCb71",
@@ -615,6 +607,7 @@
     {
       "id": "ses_ea026f776ffeMcs4kPDJwMBVgo",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea026f776ffeMcs4kPDJwMBVgo",
@@ -660,15 +653,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168283,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 95,
@@ -682,6 +666,7 @@
     {
       "id": "ses_ea00ff6ceffekh2Zo5Vf2oIqWg",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea00ff6ceffekh2Zo5Vf2oIqWg",
@@ -711,6 +696,7 @@
     {
       "id": "ses_ea0046991ffeRt34j7JItJKO9i",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea0046991ffeRt34j7JItJKO9i",
@@ -740,6 +726,7 @@
     {
       "id": "ses_e9fd32489ffeNXClNJS7hPdjLj",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9fd32489ffeNXClNJS7hPdjLj",
@@ -769,6 +756,7 @@
     {
       "id": "ses_e9fcd9a2dffeycgUYFWWHuiJNw",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9fcd9a2dffeycgUYFWWHuiJNw",
@@ -798,6 +786,7 @@
     {
       "id": "ses_e9fc748dfffer9w67bJl7dsW7X",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9fc748dfffer9w67bJl7dsW7X",
@@ -827,6 +816,7 @@
     {
       "id": "ses_e9fc07891ffe3NAJpcyd6hmSmU",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9fc07891ffe3NAJpcyd6hmSmU",
@@ -856,6 +846,7 @@
     {
       "id": "ses_e9f6dff20ffera1XB1lFTLnCPE",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9f6dff20ffera1XB1lFTLnCPE",
@@ -885,6 +876,7 @@
     {
       "id": "ses_e9f645441ffeLoPoDrRwxIQajj",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9f645441ffeLoPoDrRwxIQajj",
@@ -947,21 +939,13 @@
             "context_tokens": 168247,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168247,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_e9f35b251ffeqfqWkV5a59S5WX",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9f35b251ffeqfqWkV5a59S5WX",
@@ -991,6 +975,7 @@
     {
       "id": "ses_e9f2e1db2fferR7NvzZ0uguWkT",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9f2e1db2fferR7NvzZ0uguWkT",
@@ -1043,21 +1028,13 @@
             "context_tokens": 167021,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "reviewer",
-            "context_tokens": 167021,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_e9f2247dbffeJHdhGhq4vE2Q5z",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9f2247dbffeJHdhGhq4vE2Q5z",
@@ -1113,15 +1090,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 167738,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 128,
@@ -1135,6 +1103,7 @@
     {
       "id": "ses_e9f0e6d39ffeomtx46b2vdcH3v",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9f0e6d39ffeomtx46b2vdcH3v",
@@ -1164,6 +1133,7 @@
     {
       "id": "ses_e9dac062fffeoPgTlfjDGr5K4M",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9dac062fffeoPgTlfjDGr5K4M",
@@ -1193,6 +1163,7 @@
     {
       "id": "ses_e9d912167ffeLO6s00pZOEWIE7",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9d912167ffeLO6s00pZOEWIE7",
@@ -1255,21 +1226,13 @@
             "context_tokens": 168437,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168437,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_e9d6aec5fffeZ7kkCUesr1nl1T",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9d6aec5fffeZ7kkCUesr1nl1T",
@@ -1299,6 +1262,7 @@
     {
       "id": "ses_e9c92ccb0ffeSHRFHwWlkuLahU",
       "parent_id": "ses_ea24ee73affeUPiQ7FMWOo0cS9",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_e9c92ccb0ffeSHRFHwWlkuLahU",

@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
@@ -71,21 +72,13 @@
             "context_tokens": 169851,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "orchestrator",
-            "context_tokens": 169851,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_ea9aef479ffeQsdebc6Aqk1PpM",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea9aef479ffeQsdebc6Aqk1PpM",
@@ -146,6 +139,7 @@
     {
       "id": "ses_ea993e78cffe2hJgbgLAqR6JlB",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea993e78cffe2hJgbgLAqR6JlB",
@@ -198,21 +192,13 @@
             "context_tokens": 168457,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168457,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_ea9652b71ffevyNnzL2ziGzFAc",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea9652b71ffevyNnzL2ziGzFAc",
@@ -242,6 +228,7 @@
     {
       "id": "ses_ea9573853ffeRe6JNrbCahq5hB",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea9573853ffeRe6JNrbCahq5hB",
@@ -292,6 +279,7 @@
     {
       "id": "ses_ea759f32bffeFLgpv5rYN1E6kC",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea759f32bffeFLgpv5rYN1E6kC",
@@ -321,6 +309,7 @@
     {
       "id": "ses_ea7399d9bffetdBDxhgOTEyjaT",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea7399d9bffetdBDxhgOTEyjaT",
@@ -350,6 +339,7 @@
     {
       "id": "ses_ea733c241ffeIMkWWSU8XmJbM4",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea733c241ffeIMkWWSU8XmJbM4",
@@ -379,6 +369,7 @@
     {
       "id": "ses_ea718336effejPWLp5KsFIRTrl",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea718336effejPWLp5KsFIRTrl",
@@ -408,6 +399,7 @@
     {
       "id": "ses_ea710bd11ffe3ZfTOKhz7VwQOd",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea710bd11ffe3ZfTOKhz7VwQOd",
@@ -437,6 +429,7 @@
     {
       "id": "ses_ea70a750bffenGDXNEoJp7knsb",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea70a750bffenGDXNEoJp7knsb",
@@ -466,6 +459,7 @@
     {
       "id": "ses_ea703099bffeCU3akEl2MWL9gU",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea703099bffeCU3akEl2MWL9gU",
@@ -495,6 +489,7 @@
     {
       "id": "ses_ea6fae6c1ffeygRPNHQcV5LICB",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea6fae6c1ffeygRPNHQcV5LICB",
@@ -524,6 +519,7 @@
     {
       "id": "ses_ea6eb54acffe1LjVQv1KLShOc3",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea6eb54acffe1LjVQv1KLShOc3",
@@ -553,6 +549,7 @@
     {
       "id": "ses_ea6e5184effejMwAicl0HJee7a",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea6e5184effejMwAicl0HJee7a",
@@ -593,6 +590,7 @@
     {
       "id": "ses_ea6d9c907ffeTikNk07uvVWnu0",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea6d9c907ffeTikNk07uvVWnu0",
@@ -622,6 +620,7 @@
     {
       "id": "ses_ea6d2455affecOvpkICHpqBj2i",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea6d2455affecOvpkICHpqBj2i",
@@ -662,6 +661,7 @@
     {
       "id": "ses_ea6ceab0effeWJCoMAysFEztL0",
       "parent_id": "ses_ea9b1e5a9ffeRLAKu7DajE7i4e",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea6ceab0effeWJCoMAysFEztL0",

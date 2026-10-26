@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
@@ -48,6 +49,7 @@
     {
       "id": "ses_eb3cf0777ffeo5v4qiFyip6L7w",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3cf0777ffeo5v4qiFyip6L7w",
@@ -77,6 +79,7 @@
     {
       "id": "ses_eb3bc0d80ffeOuJuT5y3t49VcI",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3bc0d80ffeOuJuT5y3t49VcI",
@@ -117,6 +120,7 @@
     {
       "id": "ses_eb3b3f986ffeBDhpk4nCte9oGh",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3b3f986ffeBDhpk4nCte9oGh",
@@ -146,6 +150,7 @@
     {
       "id": "ses_eb3af2f1affeEPr0CIO7okE46z",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3af2f1affeEPr0CIO7okE46z",
@@ -175,6 +180,7 @@
     {
       "id": "ses_eb3acfbb8ffewNtH2os9iMMhqC",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3acfbb8ffewNtH2os9iMMhqC",
@@ -204,6 +210,7 @@
     {
       "id": "ses_eb3aa62ebffeAFT9lohCNM6ZPk",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3aa62ebffeAFT9lohCNM6ZPk",
@@ -233,6 +240,7 @@
     {
       "id": "ses_eb3a90188ffex67vTzmXqpdoS9",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3a90188ffex67vTzmXqpdoS9",
@@ -262,6 +270,7 @@
     {
       "id": "ses_eb3a4df7fffeESiBUkKl3M4poI",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3a4df7fffeESiBUkKl3M4poI",
@@ -291,6 +300,7 @@
     {
       "id": "ses_eb3a3c0b1ffejGZ6yilGUv6RAL",
       "parent_id": "ses_eb3cff1bdfferTv9BYpEcrjotO",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb3a3c0b1ffejGZ6yilGUv6RAL",

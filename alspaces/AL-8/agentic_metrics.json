@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_eb0eb4449ffe3cBUB3nI29udcx",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0eb4449ffe3cBUB3nI29udcx",
@@ -48,6 +49,7 @@
     {
       "id": "ses_eb0e9c258ffeKWTLfeFm7MQqT3",
       "parent_id": "ses_eb0eb4449ffe3cBUB3nI29udcx",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0e9c258ffeKWTLfeFm7MQqT3",
@@ -77,6 +79,7 @@
     {
       "id": "ses_eb0ddd134ffeADvio7rR7tnsrq",
       "parent_id": "ses_eb0eb4449ffe3cBUB3nI29udcx",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0ddd134ffeADvio7rR7tnsrq",
@@ -129,21 +132,13 @@
             "context_tokens": 173632,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 173632,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_eb0cb2d04ffe4fpKyMAfsZfFiG",
       "parent_id": "ses_eb0eb4449ffe3cBUB3nI29udcx",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0cb2d04ffe4fpKyMAfsZfFiG",
@@ -186,21 +181,13 @@
             "context_tokens": 171050,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "tester",
-            "context_tokens": 171050,
-            "threshold": "160000"
-          }
         }
       ]
     },
     {
       "id": "ses_eb0c708bdffeT17WO8HKNXTqaD",
       "parent_id": "ses_eb0eb4449ffe3cBUB3nI29udcx",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb0c708bdffeT17WO8HKNXTqaD",

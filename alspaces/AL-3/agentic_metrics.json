@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
@@ -59,6 +60,7 @@
     {
       "id": "ses_eb4e98754ffeXdUDxqSl6vzZiY",
       "parent_id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4e98754ffeXdUDxqSl6vzZiY",
@@ -88,6 +90,7 @@
     {
       "id": "ses_eb4e31f2fffevWGCMGO5rMxraz",
       "parent_id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4e31f2fffevWGCMGO5rMxraz",
@@ -117,6 +120,7 @@
     {
       "id": "ses_eb4e040eaffeRZrI8cYVtrZDvC",
       "parent_id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4e040eaffeRZrI8cYVtrZDvC",
@@ -146,6 +150,7 @@
     {
       "id": "ses_eb4dc7397ffesknCNqW0hOgAFt",
       "parent_id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4dc7397ffesknCNqW0hOgAFt",
@@ -175,6 +180,7 @@
     {
       "id": "ses_eb4d2ca26ffeJDSO47uyJCY6rL",
       "parent_id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4d2ca26ffeJDSO47uyJCY6rL",
@@ -204,6 +210,7 @@
     {
       "id": "ses_eb4d0657fffefOIupm8pfS3ElE",
       "parent_id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4d0657fffefOIupm8pfS3ElE",
@@ -233,6 +240,7 @@
     {
       "id": "ses_eb4cfd100ffevW0gblRZ2EWau3",
       "parent_id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4cfd100ffevW0gblRZ2EWau3",
@@ -262,6 +270,7 @@
     {
       "id": "ses_eb4c63fcdffe6HS77ySfmN3tWQ",
       "parent_id": "ses_eb4f4deedffenMAjNNnoaOCTA0",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb4c63fcdffe6HS77ySfmN3tWQ",

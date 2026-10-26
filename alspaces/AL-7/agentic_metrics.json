@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb1a7f353ffetemGi7xYk76UIH",
@@ -48,6 +49,7 @@
     {
       "id": "ses_eb19fe224ffeHDZBPwa1woE6w1",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb19fe224ffeHDZBPwa1woE6w1",
@@ -88,6 +90,7 @@
     {
       "id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
@@ -128,6 +131,7 @@
     {
       "id": "ses_eb18741bdffeB86InRZ5cqbZZK",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb18741bdffeB86InRZ5cqbZZK",
@@ -157,6 +161,7 @@
     {
       "id": "ses_eb183cc93ffeqoQN9Hlevo3825",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb183cc93ffeqoQN9Hlevo3825",
@@ -202,15 +207,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 166711,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 47,
@@ -224,6 +220,7 @@
     {
       "id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
@@ -269,15 +266,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "tester",
-            "context_tokens": 166180,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 71,
@@ -291,6 +279,7 @@
     {
       "id": "ses_eb1674d57ffer3yZnHLhOY7oku",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_eb1674d57ffer3yZnHLhOY7oku",
@@ -322,15 +311,6 @@
           "context": {
             "turn": 29,
             "context_tokens": 160997,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "reviewer",
-            "context_tokens": 168054,
             "threshold": "160000"
           }
         },

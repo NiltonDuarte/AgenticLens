@@ -19,6 +19,7 @@
   "sessions": [
     {
       "id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
@@ -79,6 +80,7 @@
     {
       "id": "ses_ea603269effeOym2tztZGBFYwB",
       "parent_id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea603269effeOym2tztZGBFYwB",
@@ -108,6 +110,7 @@
     {
       "id": "ses_ea5f82c89ffeRpn456FddA8AzE",
       "parent_id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea5f82c89ffeRpn456FddA8AzE",
@@ -137,6 +140,7 @@
     {
       "id": "ses_ea5e95da5ffeLyFUUy73K0IDJT",
       "parent_id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea5e95da5ffeLyFUUy73K0IDJT",
@@ -166,6 +170,7 @@
     {
       "id": "ses_ea5e44e5cffeTgxGq7yA06SEY2",
       "parent_id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea5e44e5cffeTgxGq7yA06SEY2",
@@ -195,6 +200,7 @@
     {
       "id": "ses_ea4b3794dffeTH8PZXSKn5brbc",
       "parent_id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea4b3794dffeTH8PZXSKn5brbc",
@@ -224,6 +230,7 @@
     {
       "id": "ses_ea4a900d9ffejYsrT3wb9Zfw4h",
       "parent_id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea4a900d9ffejYsrT3wb9Zfw4h",
@@ -253,6 +260,7 @@
     {
       "id": "ses_ea4a56388ffed4JP1EquLyDj4a",
       "parent_id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea4a56388ffed4JP1EquLyDj4a",
@@ -282,6 +290,7 @@
     {
       "id": "ses_ea4a466a4ffeqP4iEFlGy9ZRBr",
       "parent_id": "ses_ea603c3a7ffeTRX87CiBw8vaeQ",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_ea4a466a4ffeqP4iEFlGy9ZRBr",
