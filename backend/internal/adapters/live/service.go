@@ -26,8 +26,8 @@ var (
 type LiveEventType string
 
 const (
-	LiveEventSessionTree   LiveEventType = "session_tree"
-	LiveEventTraceUpdate   LiveEventType = "trace_update"
+	LiveEventSessionTree  LiveEventType = "session_tree"
+	LiveEventTraceUpdate  LiveEventType = "trace_update"
 	LiveEventAnomalyAlert LiveEventType = "anomaly_alert"
 )
 
@@ -345,9 +345,9 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 				Reasoning        *string         `json:"reasoning"`
 				ReasoningContent *string         `json:"reasoning_content"`
 				Tokens           *struct {
-					Input     *int64 `json:"input"`
-					Output    *int64 `json:"output"`
-					Cache     *struct {
+					Input  *int64 `json:"input"`
+					Output *int64 `json:"output"`
+					Cache  *struct {
 						Read *int64 `json:"read"`
 					} `json:"cache"`
 					Reasoning *int64 `json:"reasoning"`
@@ -638,7 +638,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	fallbackResp := domain.WorkspaceEventsResponse{
 		TicketID:   ticketID,
 		IsHydrated: false,
-		Events:     domain.SortEvents(ledger.Facts.Events),
+		Events:     domain.SortEvents(ledger.Facts.EventFacts()),
 		DataSource: domain.DataSourceCommittedLedger,
 	}
 
@@ -648,13 +648,13 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 
 	// 1. Collect session IDs from ledger invocations and events
 	sessionIDMap := make(map[string]bool)
-	for _, inv := range ledger.Facts.Invocations {
+	for _, inv := range ledger.Facts.InvocationFacts() {
 		trimmed := strings.TrimSpace(inv.ID)
 		if trimmed != "" {
 			sessionIDMap[trimmed] = true
 		}
 	}
-	for _, ev := range ledger.Facts.Events {
+	for _, ev := range ledger.Facts.EventFacts() {
 		trimmed := strings.TrimSpace(ev.SessionID)
 		if trimmed != "" {
 			sessionIDMap[trimmed] = true
@@ -710,7 +710,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 
 	// 4. Map session IDs to roles
 	sessionRoleMap := make(map[string]domain.AgentRole)
-	for _, inv := range ledger.Facts.Invocations {
+	for _, inv := range ledger.Facts.InvocationFacts() {
 		if inv.ID != "" && inv.Role != "" {
 			sessionRoleMap[inv.ID] = inv.Role
 		}

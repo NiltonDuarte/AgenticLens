@@ -633,7 +633,6 @@ func TestLiveService_AdversarialSessionIDValidation(t *testing.T) {
 	}
 }
 
-
 func TestFetchSessionTraceMulti_And_ResolveChildSessionIDs(t *testing.T) {
 	dbPath := createTestDBFile(t)
 	rwDB, err := sql.Open("sqlite", dbPath)
@@ -765,23 +764,21 @@ func TestHydrateWorkspaceEvents_SuccessAndZeroDiskWrites(t *testing.T) {
 	ctx := context.Background()
 
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:   "s_al33",
-					Role: "orchestrator",
-				},
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:   "s_al33",
+				Role: "orchestrator",
 			},
-			Events: []domain.EventFact{
-				{
-					Timestamp: "2026-10-19T10:00:00Z",
-					SessionID: "s_al33",
-					Turn:      1,
-					Role:      "orchestrator",
-					EventType: domain.EventTypeCompaction,
-					Status:    "completed",
-				},
+		}, nil, []domain.EventFact{
+			{
+				Timestamp: "2026-10-19T10:00:00Z",
+				SessionID: "s_al33",
+				Turn:      1,
+				Role:      "orchestrator",
+				EventType: domain.EventTypeCompaction,
+				Status:    "completed",
 			},
+		}),
 		},
 	}
 
@@ -877,23 +874,21 @@ func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:   "s_missing",
-					Role: "orchestrator",
-				},
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:   "s_missing",
+				Role: "orchestrator",
 			},
-			Events: []domain.EventFact{
-				{
-					Timestamp: "2026-10-19T10:00:00Z",
-					SessionID: "s_missing",
-					Turn:      1,
-					Role:      "orchestrator",
-					EventType: domain.EventTypeCompaction,
-					Status:    "completed",
-				},
+		}, nil, []domain.EventFact{
+			{
+				Timestamp: "2026-10-19T10:00:00Z",
+				SessionID: "s_missing",
+				Turn:      1,
+				Role:      "orchestrator",
+				EventType: domain.EventTypeCompaction,
+				Status:    "completed",
 			},
+		}),
 		},
 	}
 
@@ -918,20 +913,18 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 	workspacesDir := t.TempDir()
 
 	ledgerWithFallback := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "ses-hostile", Role: "coder"},
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "ses-hostile", Role: "coder"},
+		}, nil, []domain.EventFact{
+			{
+				Timestamp: "2026-10-19T10:00:00Z",
+				SessionID: "ses-hostile",
+				Turn:      1,
+				Role:      "coder",
+				EventType: domain.EventTypeCompaction,
+				Status:    "completed",
 			},
-			Events: []domain.EventFact{
-				{
-					Timestamp: "2026-10-19T10:00:00Z",
-					SessionID: "ses-hostile",
-					Turn:      1,
-					Role:      "coder",
-					EventType: domain.EventTypeCompaction,
-					Status:    "completed",
-				},
-			},
+		}),
 		},
 	}
 
@@ -1070,10 +1063,9 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		defer service.Close()
 
 		corruptLedger := domain.AgenticMetricsLedger{
-			Facts: domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{ID: "s_corrupt", Role: "coder"},
-				},
+			Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{ID: "s_corrupt", Role: "coder"},
+			}, nil, nil),
 			},
 		}
 
@@ -1130,7 +1122,6 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		t.Errorf("zero disk persistence violation: files written to %s: %v", workspacesDir, entries)
 	}
 }
-
 
 func TestLiveService_TokenExtractionAndAnomalyDetection(t *testing.T) {
 	dbPath := createTestDBFile(t)
@@ -1637,10 +1628,9 @@ func TestHydrateWorkspaceEvents_ConsecutiveErrorsSpansTurns(t *testing.T) {
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "s_span_1", Role: "coder"},
-			},
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "s_span_1", Role: "coder"},
+		}, nil, nil),
 		},
 	}
 
@@ -1748,11 +1738,10 @@ func TestHydrateWorkspaceEvents_MultiSessionIsolationAndStreakReset(t *testing.T
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "s_iso_A", Role: "coder"},
-				{ID: "s_iso_B", Role: "coder"},
-			},
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "s_iso_A", Role: "coder"},
+			{ID: "s_iso_B", Role: "coder"},
+		}, nil, nil),
 		},
 	}
 
@@ -1851,13 +1840,12 @@ func TestHydrateWorkspaceEvents_FallbackRoleBehaviorForNamelessSessions(t *testi
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "s_root_null"},
-				{ID: "s_root_ws"},
-				{ID: "s_child_null"},
-				{ID: "s_child_ws"},
-			},
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "s_root_null"},
+			{ID: "s_root_ws"},
+			{ID: "s_child_null"},
+			{ID: "s_child_ws"},
+		}, nil, nil),
 		},
 	}
 

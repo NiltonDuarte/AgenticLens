@@ -426,47 +426,52 @@ func TestScanWorkspaces(t *testing.T) {
 	}
 
 	factJSON := `{
-		"ticket_id": "TEST-1",
-		"ticket_title": "Test Ticket",
-		"updated_at": "2026-10-17T15:00:00Z",
-		"code": {
-			"lines_added": 10,
-			"lines_deleted": 2,
-			"test_lines_added": 5,
-			"test_lines_deleted": 0,
-			"prod_lines_added": 5,
-			"prod_lines_deleted": 2,
-			"files_changed": 1,
-			"sdlc_iterations": 1
-		},
-		"invocations": [
-			{
-				"id": "ses-1",
-				"role": "orchestrator",
-				"model": "model-x",
-				"user": "test-user",
-				"active_duration_seconds": 60,
-				"turns": 5,
-				"tokens": {
-					"input": 1000,
-					"output": 100,
-					"cache_read": 500,
-					"reasoning": 50,
-					"peak_context": 20000
-				},
-				"cost_usd": 0.05,
-				"compactions": 0
-			}
-		],
-		"tools": [
-			{
-				"session_id": "ses-1",
-				"name": "bash",
-				"calls": 2,
-				"errors": 0
-			}
-		]
-	}`
+  "ticket_id": "TEST-1",
+  "ticket_title": "Test Ticket",
+  "updated_at": "2026-10-17T15:00:00Z",
+  "code": {
+    "lines_added": 10,
+    "lines_deleted": 2,
+    "test_lines_added": 5,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 5,
+    "prod_lines_deleted": 2,
+    "files_changed": 1,
+    "sdlc_iterations": 1
+  },
+  "sessions": [
+    {
+      "id": "ses-1",
+      "invocations": [
+        {
+          "id": "ses-1",
+          "role": "orchestrator",
+          "model": "model-x",
+          "user": "test-user",
+          "active_duration_seconds": 60,
+          "turns": 5,
+          "tokens": {
+            "input": 1000,
+            "output": 100,
+            "cache_read": 500,
+            "reasoning": 50,
+            "peak_context": 20000
+          },
+          "cost_usd": 0.05,
+          "compactions": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "events": []
+    }
+  ]
+}`
 
 	metricPath := filepath.Join(ticketDir, "agentic_metrics.json")
 	if err := os.WriteFile(metricPath, []byte(factJSON), 0644); err != nil {
@@ -849,38 +854,55 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 		}
 	})
 
-	t.Run("invocation and tool defaults when fields omitted", func(t *testing.T) {
+	t.Run("canonical DTO decoding does not fabricate omitted invocation values", func(t *testing.T) {
 		raw := `{
-			"updated_at": "2026-10-17T12:00:00Z",
-			"invocations": [
-				{"id": "inv-1"}
-			],
-			"tools": [
-				{"calls": 5}
-			]
-		}`
+  "updated_at": "2026-10-17T12:00:00Z",
+  "sessions": [
+    {
+      "id": "inv-1",
+      "invocations": [
+        {
+          "id": "inv-1"
+        }
+      ],
+      "tools": [],
+      "events": []
+    },
+    {
+      "id": "fixture-session",
+      "invocations": [],
+      "tools": [
+        {
+            "name": "bash",
+          "calls": 5
+        }
+      ],
+      "events": []
+    }
+  ]
+}`
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(raw), &dto); err != nil {
 			t.Fatalf("unexpected unmarshal error: %v", err)
 		}
 		dom := dto.ToDomain()
-		if len(dom.Invocations) != 1 {
-			t.Fatalf("expected 1 invocation, got %d", len(dom.Invocations))
+		if len(dom.InvocationFacts()) != 1 {
+			t.Fatalf("expected 1 invocation, got %d", len(dom.InvocationFacts()))
 		}
-		if dom.Invocations[0].Role != "orchestrator" {
-			t.Errorf("expected default role orchestrator, got %s", dom.Invocations[0].Role)
+		if dom.InvocationFacts()[0].Role != "" {
+			t.Errorf("expected omitted role to remain empty, got %s", dom.InvocationFacts()[0].Role)
 		}
-		if dom.Invocations[0].Model != "default" {
-			t.Errorf("expected default model default, got %s", dom.Invocations[0].Model)
+		if dom.InvocationFacts()[0].Model != "" {
+			t.Errorf("expected omitted model to remain empty, got %s", dom.InvocationFacts()[0].Model)
 		}
-		if dom.Invocations[0].User != "unknown" {
-			t.Errorf("expected default user unknown, got %s", dom.Invocations[0].User)
+		if dom.InvocationFacts()[0].User != "" {
+			t.Errorf("expected omitted user to remain empty, got %s", dom.InvocationFacts()[0].User)
 		}
-		if len(dom.Tools) != 1 {
-			t.Fatalf("expected 1 tool, got %d", len(dom.Tools))
+		if len(dom.ToolFacts()) != 1 {
+			t.Fatalf("expected 1 tool, got %d", len(dom.ToolFacts()))
 		}
-		if dom.Tools[0].Name != "unknown" {
-			t.Errorf("expected default tool name unknown, got %s", dom.Tools[0].Name)
+		if dom.ToolFacts()[0].Name != "bash" {
+			t.Errorf("expected tool name preserved, got %s", dom.ToolFacts()[0].Name)
 		}
 	})
 
@@ -978,7 +1000,23 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 			{"bad type for number", `{"ticket_id": "T-1", "code": {"lines_added": "not_a_number"}}`, true},
 			{"bad type for invocations", `{"invocations": "should_be_array"}`, true},
 			{"empty json object", `{}`, false},
-			{"negative token counts", `{"updated_at": "2026-10-17T12:00:00Z", "invocations": [{"tokens": {"input": -50}}]}`, false},
+			{"negative token counts", `{
+  "updated_at": "2026-10-17T12:00:00Z",
+  "sessions": [
+    {
+      "id": "fixture-session",
+      "invocations": [
+        {
+          "tokens": {
+            "input": -50
+          }
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`, false},
 		}
 
 		for _, tc := range hostileJSONs {
@@ -1091,51 +1129,66 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 	t.Run("legacy payload omitting events decodes without error", func(t *testing.T) {
 		legacyJSON := `{
-			"schema_version": 2,
-			"ticket_id": "AL-LEGACY",
-			"updated_at": "2026-10-18T10:00:00Z",
-			"invocations": [
-				{
-					"id": "ses-legacy",
-					"role": "orchestrator",
-					"model": "gemini-3.8-flash",
-					"user": "eng",
-					"active_duration_seconds": 30,
-					"turns": 2,
-					"tokens": {"input": 100, "output": 20, "cache_read": 50, "reasoning": 0, "peak_context": 150},
-					"cost_usd": 0.01,
-					"compactions": 0
-				}
-			]
-		}`
+  "schema_version": 2,
+  "ticket_id": "AL-LEGACY",
+  "updated_at": "2026-10-18T10:00:00Z",
+  "sessions": [
+    {
+      "id": "ses-legacy",
+      "invocations": [
+        {
+          "id": "ses-legacy",
+          "role": "orchestrator",
+          "model": "gemini-3.8-flash",
+          "user": "eng",
+          "active_duration_seconds": 30,
+          "turns": 2,
+          "tokens": {
+            "input": 100,
+            "output": 20,
+            "cache_read": 50,
+            "reasoning": 0,
+            "peak_context": 150
+          },
+          "cost_usd": 0.01,
+          "compactions": 0
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`
 
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(legacyJSON), &dto); err != nil {
 			t.Fatalf("failed to unmarshal legacy ledger without events: %v", err)
 		}
-		if dto.Events != nil {
-			t.Errorf("expected dto.Events to be nil, got: %+v", dto.Events)
+		if len(dto.Sessions) != 1 || len(dto.Sessions[0].Invocations) != 1 {
+			t.Errorf("expected invocation to remain inside session facts, got: %+v", dto.Sessions)
 		}
 
 		dom := dto.ToDomain()
-		if len(dom.Events) != 0 {
-			t.Errorf("expected empty domain events slice, got len %d", len(dom.Events))
+		if len(dom.EventFacts()) != 0 {
+			t.Errorf("expected empty domain events slice, got len %d", len(dom.EventFacts()))
 		}
 	})
 
 	t.Run("ledger with events parses and round-trips cleanly", func(t *testing.T) {
 		toolName := "bash"
-		errMsg := "command not found: foobar"
 		var durMs int64 = 150
 
 		eventJSON := `{
 			"schema_version": 2,
 			"ticket_id": "AL-EVENTS",
 			"updated_at": "2026-10-18T10:00:00Z",
-			"events": [
+			"sessions": [{
+				"id": "ses-1",
+				"invocations": [],
+				"tools": [],
+				"events": [
 				{
 					"timestamp": "2026-10-18T10:00:01.100000+00:00",
-					"session_id": "ses-1",
 					"turn": 1,
 					"role": "orchestrator",
 					"event_type": "turn_message",
@@ -1145,60 +1198,63 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 				},
 				{
 					"timestamp": "2026-10-18T10:00:02.300000+00:00",
-					"session_id": "ses-1",
 					"turn": 1,
 					"role": "orchestrator",
 					"event_type": "tool_call",
 					"tool_name": "bash",
 					"status": "error",
-					"error_message": "command not found: foobar",
 					"duration_ms": 150,
 					"context_tokens": 5000
 				},
 				{
 					"timestamp": "2026-10-18T10:00:03.000000+00:00",
-					"session_id": "ses-1",
 					"turn": 2,
 					"role": "orchestrator",
 					"event_type": "compaction",
 					"status": "completed",
 					"context_tokens": 4200
 				}
-			]
+				]
+			}]
 		}`
 
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(eventJSON), &dto); err != nil {
 			t.Fatalf("failed to unmarshal ledger with events: %v", err)
 		}
-		if len(dto.Events) != 3 {
-			t.Fatalf("expected 3 events in DTO, got %d", len(dto.Events))
+		if len(dto.Sessions) != 1 || len(dto.Sessions[0].Events) != 3 {
+			t.Fatalf("expected 3 session-owned events in DTO, got %+v", dto.Sessions)
 		}
 
 		dom := dto.ToDomain()
-		if len(dom.Events) != 3 {
-			t.Fatalf("expected 3 events in domain model, got %d", len(dom.Events))
+		if len(dom.EventFacts()) != 3 {
+			t.Fatalf("expected 3 events in domain model, got %d", len(dom.EventFacts()))
 		}
 
-		e0 := dom.Events[0]
+		e0 := dom.EventFacts()[0]
 		if e0.EventType != domain.EventTypeTurnMessage || e0.Turn != 1 || e0.ContextTokens != 5000 {
 			t.Errorf("unexpected event 0: %+v", e0)
 		}
 
-		e1 := dom.Events[1]
+		e1 := dom.EventFacts()[1]
 		if e1.EventType != domain.EventTypeToolCall || e1.ToolName == nil || *e1.ToolName != toolName {
 			t.Errorf("unexpected tool name in event 1: %+v", e1)
 		}
-		if e1.ErrorMessage == nil || *e1.ErrorMessage != errMsg {
-			t.Errorf("unexpected error message in event 1: %+v", e1)
+		if e1.ErrorMessage != nil {
+			t.Errorf("canonical event should not contain error payload: %+v", e1)
 		}
 		if e1.DurationMs == nil || *e1.DurationMs != durMs {
 			t.Errorf("unexpected duration in event 1: %+v", e1)
 		}
 
-		e2 := dom.Events[2]
+		e2 := dom.EventFacts()[2]
 		if e2.EventType != domain.EventTypeCompaction || e2.Turn != 2 {
 			t.Errorf("unexpected event 2: %+v", e2)
+		}
+		var unsafe adapters.AgenticFactLedgerDTO
+		unsafeJSON := `{"schema_version":4,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","role":"coder","event_type":"tool_call","status":"error","error_message":"private"}]}]}`
+		if err := json.Unmarshal([]byte(unsafeJSON), &unsafe); err == nil {
+			t.Fatal("canonical DTO accepted sensitive event error_message")
 		}
 
 		// Round-trip
@@ -1212,11 +1268,11 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 		if err := json.Unmarshal(roundBytes, &reloadedDTO); err != nil {
 			t.Fatalf("failed to unmarshal reloaded DTO: %v", err)
 		}
-		if len(reloadedDTO.Events) != 3 {
-			t.Fatalf("expected 3 reloaded events, got %d", len(reloadedDTO.Events))
+		if len(reloadedDTO.Sessions) != 1 || len(reloadedDTO.Sessions[0].Events) != 3 {
+			t.Fatalf("expected 3 reloaded session events, got %+v", reloadedDTO.Sessions)
 		}
-		if *reloadedDTO.Events[1].ToolName != toolName {
-			t.Errorf("expected tool_name %s, got %s", toolName, *reloadedDTO.Events[1].ToolName)
+		if *reloadedDTO.Sessions[0].Events[1].ToolName != toolName {
+			t.Errorf("expected tool_name %s, got %s", toolName, *reloadedDTO.Sessions[0].Events[1].ToolName)
 		}
 	})
 
@@ -1237,8 +1293,8 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LoadExistingFactLedger failed on ledger without events: %v", err)
 		}
-		if len(factsNoEvents.Events) != 0 {
-			t.Errorf("expected empty events slice, got %d", len(factsNoEvents.Events))
+		if len(factsNoEvents.Sessions) != 0 {
+			t.Errorf("expected no sessions, got %d", len(factsNoEvents.Sessions))
 		}
 
 		// 2. Workspace with events
@@ -1262,44 +1318,52 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LoadExistingFactLedger failed on ledger with events: %v", err)
 		}
-		if len(factsWithEvents.Events) != 1 {
-			t.Fatalf("expected 1 event, got %d", len(factsWithEvents.Events))
+		if len((domain.AgenticFactLedger{Sessions: factsWithEvents.Sessions}).EventFacts()) != 1 {
+			t.Fatalf("expected 1 event, got %d", len((domain.AgenticFactLedger{Sessions: factsWithEvents.Sessions}).EventFacts()))
 		}
-		if factsWithEvents.Events[0].EventType != domain.EventTypeToolCall {
-			t.Errorf("expected tool_call event, got %s", factsWithEvents.Events[0].EventType)
+		if (domain.AgenticFactLedger{Sessions: factsWithEvents.Sessions}).EventFacts()[0].EventType != domain.EventTypeToolCall {
+			t.Errorf("expected tool_call event, got %s", (domain.AgenticFactLedger{Sessions: factsWithEvents.Sessions}).EventFacts()[0].EventType)
+		}
+		mixedFile := filepath.Join(tempDir, "mixed.json")
+		mixed := `{"schema_version":4,"sessions":[],"invocations":[],"events":[]}`
+		if err := os.WriteFile(mixedFile, []byte(mixed), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := adapters.LoadExistingFactLedger(mixedFile); err == nil || !strings.Contains(err.Error(), "mixed ledger shape") {
+			t.Fatalf("expected mixed canonical/legacy ledger to be rejected, got %v", err)
 		}
 	})
 
 	t.Run("explicit events null decodes gracefully with empty slice", func(t *testing.T) {
-		nullEventsJSON := `{"schema_version":2,"ticket_id":"AL-NULL","updated_at":"2026-10-18T10:00:00Z","events":null}`
+		nullEventsJSON := `{"schema_version":4,"ticket_id":"AL-NULL","updated_at":"2026-10-18T10:00:00Z","sessions":[{"id":"s1","invocations":[],"tools":[],"events":null}]}`
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(nullEventsJSON), &dto); err != nil {
 			t.Fatalf("failed to unmarshal explicit null events: %v", err)
 		}
-		if dto.Events != nil {
-			t.Errorf("expected dto.Events to be nil, got %+v", dto.Events)
+		if dto.Sessions[0].Events != nil {
+			t.Errorf("expected nested event list to be nil, got %+v", dto.Sessions[0].Events)
 		}
 		dom := dto.ToDomain()
-		if len(dom.Events) != 0 {
-			t.Errorf("expected empty domain events slice, got len %d", len(dom.Events))
+		if len(dom.EventFacts()) != 0 {
+			t.Errorf("expected empty domain events slice, got len %d", len(dom.EventFacts()))
 		}
 	})
 
 	t.Run("explicit events empty array decodes gracefully with empty slice", func(t *testing.T) {
-		emptyArrayJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY","updated_at":"2026-10-18T10:00:00Z","events":[]}`
+		emptyArrayJSON := `{"schema_version":4,"ticket_id":"AL-EMPTY","updated_at":"2026-10-18T10:00:00Z","sessions":[{"id":"s1","invocations":[],"tools":[],"events":[]}]}`
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(emptyArrayJSON), &dto); err != nil {
 			t.Fatalf("failed to unmarshal explicit empty events array: %v", err)
 		}
-		if dto.Events == nil {
-			t.Fatal("expected dto.Events to be non-nil empty slice")
+		if dto.Sessions[0].Events == nil {
+			t.Fatal("expected nested event list to be non-nil empty slice")
 		}
-		if len(dto.Events) != 0 {
-			t.Errorf("expected 0 events, got %d", len(dto.Events))
+		if len(dto.Sessions[0].Events) != 0 {
+			t.Errorf("expected 0 events, got %d", len(dto.Sessions[0].Events))
 		}
 		dom := dto.ToDomain()
-		if len(dom.Events) != 0 {
-			t.Errorf("expected empty domain events slice, got len %d", len(dom.Events))
+		if len(dom.EventFacts()) != 0 {
+			t.Errorf("expected empty domain events slice, got len %d", len(dom.EventFacts()))
 		}
 	})
 
@@ -1340,43 +1404,48 @@ func TestLoadTicketWorkspace(t *testing.T) {
 	}
 
 	factJSON := `{
-		"schema_version": 4,
-		"ticket_id": "AL-TARGET",
-		"ticket_title": "Target Feature",
-		"updated_at": "2026-10-18T12:00:00Z",
-		"code": {
-			"lines_added": 40,
-			"lines_deleted": 5,
-			"files_changed": 3,
-			"sdlc_iterations": 2
-		},
-		"invocations": [
-			{
-				"id": "ses-1",
-				"role": "orchestrator",
-				"model": "model-1",
-				"user": "test-dev",
-				"active_duration_seconds": 90,
-				"turns": 3,
-				"tokens": {
-					"input": 2000,
-					"output": 300,
-					"cache_read": 1000,
-					"peak_context": 25000
-				},
-				"cost_usd": 0.08,
-				"compactions": 0
-			}
-		],
-		"tools": [
-			{
-				"session_id": "ses-1",
-				"name": "edit",
-				"calls": 4,
-				"errors": 0
-			}
-		]
-	}`
+  "schema_version": 4,
+  "ticket_id": "AL-TARGET",
+  "ticket_title": "Target Feature",
+  "updated_at": "2026-10-18T12:00:00Z",
+  "code": {
+    "lines_added": 40,
+    "lines_deleted": 5,
+    "files_changed": 3,
+    "sdlc_iterations": 2
+  },
+  "sessions": [
+    {
+      "id": "ses-1",
+      "invocations": [
+        {
+          "id": "ses-1",
+          "role": "orchestrator",
+          "model": "model-1",
+          "user": "test-dev",
+          "active_duration_seconds": 90,
+          "turns": 3,
+          "tokens": {
+            "input": 2000,
+            "output": 300,
+            "cache_read": 1000,
+            "peak_context": 25000
+          },
+          "cost_usd": 0.08,
+          "compactions": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "edit",
+          "calls": 4,
+          "errors": 0
+        }
+      ],
+      "events": []
+    }
+  ]
+}`
 
 	if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
@@ -1401,7 +1470,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		}
 	})
 
-	t.Run("v4 ledger with unscoped tools requires source re-extraction", func(t *testing.T) {
+	t.Run("v4 ledger with legacy unscoped tools directs user to migrate", func(t *testing.T) {
 		badDir := filepath.Join(tempDir, "AL-UNSCOPED")
 		if err := os.MkdirAll(badDir, 0755); err != nil {
 			t.Fatal(err)
@@ -1418,8 +1487,8 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		if ledger != nil {
 			t.Fatalf("expected nil ledger for invalid v4 tool facts, got %+v", ledger)
 		}
-		if !strings.Contains(err.Error(), "re-extract") || !strings.Contains(err.Error(), "session_id") {
-			t.Errorf("expected actionable session_id re-extraction guidance, got %v", err)
+		if !strings.Contains(err.Error(), "agentic-lens migrate") {
+			t.Errorf("expected actionable migration guidance, got %v", err)
 		}
 	})
 
@@ -1641,15 +1710,14 @@ func TestSaveFactLedger(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			SchemaVersion: &schemaVer,
 			TicketID:      &tid,
-			TicketTitle:   &title,
-			Invocations: []domain.InvocationFact{
+			TicketTitle:   &title, Sessions: sessionFacts([]domain.InvocationFact{
 				{
 					ID:      "inv-1",
 					Role:    "coder",
 					Model:   "gemini-3.8-flash",
 					CostUSD: 0.05,
 				},
-			},
+			}, nil, nil),
 		}
 
 		err := adapters.SaveFactLedger(outPath, ledger)
@@ -1681,8 +1749,8 @@ func TestSaveFactLedger(t *testing.T) {
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-PERSIST-1" {
 			t.Errorf("expected ticket_id AL-PERSIST-1, got %v", parsed.TicketID)
 		}
-		if len(parsed.Invocations) != 1 || parsed.Invocations[0].ID != "inv-1" {
-			t.Errorf("expected 1 invocation with ID inv-1, got %+v", parsed.Invocations)
+		if len(parsed.InvocationFacts()) != 1 || parsed.InvocationFacts()[0].ID != "inv-1" {
+			t.Errorf("expected 1 invocation with ID inv-1, got %+v", parsed.InvocationFacts())
 		}
 	})
 
@@ -2014,27 +2082,42 @@ role_mappings:
 	}
 
 	factJSON := `{
-		"ticket_id": "AL-24",
-		"ticket_title": "Role Mapping Test",
-		"updated_at": "2026-10-18T12:00:00Z",
-		"invocations": [
-			{
-				"id": "ses-build",
-				"role": "build",
-				"model": "claude-3-sonnet",
-				"cost_usd": 1.50,
-				"turns": 3
-			},
-			{
-				"id": "ses-qa",
-				"parent_id": "ses-build",
-				"role": "qa-bot",
-				"model": "claude-3-haiku",
-				"cost_usd": 0.50,
-				"turns": 2
-			}
-		]
-	}`
+  "ticket_id": "AL-24",
+  "ticket_title": "Role Mapping Test",
+  "updated_at": "2026-10-18T12:00:00Z",
+  "sessions": [
+    {
+      "id": "ses-build",
+      "invocations": [
+        {
+          "id": "ses-build",
+          "role": "build",
+          "model": "claude-3-sonnet",
+          "cost_usd": 1.5,
+          "turns": 3
+        }
+      ],
+      "tools": [],
+      "events": []
+    },
+    {
+      "id": "ses-qa",
+      "invocations": [
+        {
+          "id": "ses-qa",
+          "parent_id": "ses-build",
+          "role": "qa-bot",
+          "model": "claude-3-haiku",
+          "cost_usd": 0.5,
+          "turns": 2
+        }
+      ],
+      "tools": [],
+      "events": [],
+      "parent_id": "ses-build"
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2059,14 +2142,14 @@ role_mappings:
 		}
 
 		// Facts should retain raw roles 'build' and 'qa-bot'
-		if len(ledger.Facts.Invocations) != 2 {
-			t.Fatalf("expected 2 raw invocations, got %d", len(ledger.Facts.Invocations))
+		if len(ledger.Facts.InvocationFacts()) != 2 {
+			t.Fatalf("expected 2 raw invocations, got %d", len(ledger.Facts.InvocationFacts()))
 		}
-		if ledger.Facts.Invocations[0].Role != "build" {
-			t.Errorf("expected raw invocation 0 role 'build', got %s", ledger.Facts.Invocations[0].Role)
+		if ledger.Facts.InvocationFacts()[0].Role != "build" {
+			t.Errorf("expected raw invocation 0 role 'build', got %s", ledger.Facts.InvocationFacts()[0].Role)
 		}
-		if ledger.Facts.Invocations[1].Role != "qa-bot" {
-			t.Errorf("expected raw invocation 1 role 'qa-bot', got %s", ledger.Facts.Invocations[1].Role)
+		if ledger.Facts.InvocationFacts()[1].Role != "qa-bot" {
+			t.Errorf("expected raw invocation 1 role 'qa-bot', got %s", ledger.Facts.InvocationFacts()[1].Role)
 		}
 
 		// Subagents effort distribution should reflect tester with 100%
@@ -2092,8 +2175,8 @@ role_mappings:
 		if scanned.Roles[0].Role != "orchestrator" || scanned.Roles[1].Role != "tester" {
 			t.Errorf("expected orchestrator and tester, got %+v", scanned.Roles)
 		}
-		if scanned.Facts.Invocations[0].Role != "build" {
-			t.Errorf("expected raw role build in Facts, got %s", scanned.Facts.Invocations[0].Role)
+		if scanned.Facts.InvocationFacts()[0].Role != "build" {
+			t.Errorf("expected raw role build in Facts, got %s", scanned.Facts.InvocationFacts()[0].Role)
 		}
 	})
 }
@@ -2126,26 +2209,40 @@ role_mappings:
 	}
 
 	factJSON := `{
-		"ticket_id": "AL-38",
-		"ticket_title": "Root Config Role Mapping Test",
-		"updated_at": "2026-10-20T12:00:00Z",
-		"invocations": [
-			{
-				"id": "ses-eng",
-				"role": "sys-engineer",
-				"model": "claude-3-sonnet",
-				"cost_usd": 1.50,
-				"duration_seconds": 120
-			},
-			{
-				"id": "ses-test",
-				"role": "lead-tester",
-				"model": "gpt-4o",
-				"cost_usd": 0.80,
-				"duration_seconds": 60
-			}
-		]
-	}`
+  "ticket_id": "AL-38",
+  "ticket_title": "Root Config Role Mapping Test",
+  "updated_at": "2026-10-20T12:00:00Z",
+  "sessions": [
+    {
+      "id": "ses-eng",
+      "invocations": [
+        {
+          "id": "ses-eng",
+          "role": "sys-engineer",
+          "model": "claude-3-sonnet",
+          "cost_usd": 1.5,
+          "active_duration_seconds": 120
+        }
+      ],
+      "tools": [],
+      "events": []
+    },
+    {
+      "id": "ses-test",
+      "invocations": [
+        {
+          "id": "ses-test",
+          "role": "lead-tester",
+          "model": "gpt-4o",
+          "cost_usd": 0.8,
+          "active_duration_seconds": 60
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2179,8 +2276,8 @@ role_mappings:
 	if scanned.Roles[0].Role != "coder" || scanned.Roles[1].Role != "tester" {
 		t.Errorf("expected coder and tester, got %+v", scanned.Roles)
 	}
-	if scanned.Facts.Invocations[0].Role != "sys-engineer" {
-		t.Errorf("expected raw role sys-engineer in Facts, got %s", scanned.Facts.Invocations[0].Role)
+	if scanned.Facts.InvocationFacts()[0].Role != "sys-engineer" {
+		t.Errorf("expected raw role sys-engineer in Facts, got %s", scanned.Facts.InvocationFacts()[0].Role)
 	}
 }
 
@@ -2280,8 +2377,7 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 		original := domain.AgenticFactLedger{
 			SchemaVersion: &schemaVer,
 			TicketID:      &ticketID,
-			TicketTitle:   &ticketTitle,
-			Invocations: []domain.InvocationFact{
+			TicketTitle:   &ticketTitle, Sessions: sessionFacts([]domain.InvocationFact{
 				{
 					ID:             "ses_1",
 					Role:           domain.RoleRootAgent,
@@ -2294,7 +2390,7 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 					Model:          "gpt-4o",
 					UserIterations: 0,
 				},
-			},
+			}, nil, nil),
 		}
 
 		if err := adapters.SaveFactLedger(roundTripPath, original); err != nil {
@@ -2308,14 +2404,14 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 		if loaded == nil {
 			t.Fatal("expected non-nil loaded ledger")
 		}
-		if len(loaded.Invocations) != 2 {
-			t.Fatalf("expected 2 invocations, got %d", len(loaded.Invocations))
+		if len((domain.AgenticFactLedger{Sessions: loaded.Sessions}).InvocationFacts()) != 2 {
+			t.Fatalf("expected 2 invocations, got %d", len((domain.AgenticFactLedger{Sessions: loaded.Sessions}).InvocationFacts()))
 		}
-		if loaded.Invocations[0].UserIterations != 7 {
-			t.Errorf("expected invocation 0 user_iterations 7, got %d", loaded.Invocations[0].UserIterations)
+		if (domain.AgenticFactLedger{Sessions: loaded.Sessions}).InvocationFacts()[0].UserIterations != 7 {
+			t.Errorf("expected invocation 0 user_iterations 7, got %d", (domain.AgenticFactLedger{Sessions: loaded.Sessions}).InvocationFacts()[0].UserIterations)
 		}
-		if loaded.Invocations[1].UserIterations != 0 {
-			t.Errorf("expected invocation 1 user_iterations 0, got %d", loaded.Invocations[1].UserIterations)
+		if (domain.AgenticFactLedger{Sessions: loaded.Sessions}).InvocationFacts()[1].UserIterations != 0 {
+			t.Errorf("expected invocation 1 user_iterations 0, got %d", (domain.AgenticFactLedger{Sessions: loaded.Sessions}).InvocationFacts()[1].UserIterations)
 		}
 	})
 }

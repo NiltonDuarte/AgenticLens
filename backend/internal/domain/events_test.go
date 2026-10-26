@@ -284,7 +284,7 @@ func TestPruneEventsForPersistence(t *testing.T) {
 
 	t.Run("nil or empty events slice returns allocated empty non-nil slice", func(t *testing.T) {
 		t.Parallel()
-		resNil := domain.PruneEventsForPersistence(domain.AgenticFactLedger{Events: nil})
+		resNil := domain.PruneEventsForPersistence(domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, nil)})
 		if resNil == nil {
 			t.Fatal("expected non-nil slice for nil events, got nil")
 		}
@@ -292,7 +292,7 @@ func TestPruneEventsForPersistence(t *testing.T) {
 			t.Fatalf("expected 0 events, got %d", len(resNil))
 		}
 
-		resEmpty := domain.PruneEventsForPersistence(domain.AgenticFactLedger{Events: []domain.EventFact{}})
+		resEmpty := domain.PruneEventsForPersistence(domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{})})
 		if resEmpty == nil {
 			t.Fatal("expected non-nil slice for empty events, got nil")
 		}
@@ -351,12 +351,10 @@ func TestPruneEventsForPersistence(t *testing.T) {
 			},
 		}
 
-		ledger := domain.AgenticFactLedger{
-			Events: events,
-			Tools: []domain.ToolFact{
-				{SessionID: "session-a", Name: "read", Calls: 1, Errors: 0},
-				{SessionID: "session-a", Name: "bash", Calls: 1, Errors: 1},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, []domain.ToolFact{
+			{SessionID: "session-a", Name: "read", Calls: 1, Errors: 0},
+			{SessionID: "session-a", Name: "bash", Calls: 1, Errors: 1},
+		}, events),
 		}
 
 		pruned := domain.PruneEventsForPersistence(ledger)
@@ -422,9 +420,7 @@ func TestPruneEventsForPersistence(t *testing.T) {
 			},
 		}
 
-		ledger := domain.AgenticFactLedger{
-			Events: events,
-		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events)}
 
 		pruned := domain.PruneEventsForPersistence(ledger)
 		if len(pruned) != 1 {
@@ -520,8 +516,7 @@ func TestPruneEventsForPersistence(t *testing.T) {
 				ProdLinesAdded: 40,
 				FilesChanged:   3,
 				SDLCIterations: 1,
-			},
-			Invocations: []domain.InvocationFact{
+			}, Sessions: sessionFacts([]domain.InvocationFact{
 				{
 					ID:                    "inv-1",
 					Role:                  "orchestrator",
@@ -562,20 +557,20 @@ func TestPruneEventsForPersistence(t *testing.T) {
 					Compactions: 0,
 				},
 			},
-			Tools: []domain.ToolFact{
-				{SessionID: "session-a", Name: "read", Calls: 1, Errors: 0},
-				{SessionID: "session-a", Name: "bash", Calls: 1, Errors: 1},
-			},
-			Events: unprunedEvents,
+				[]domain.ToolFact{
+					{SessionID: "session-a", Name: "read", Calls: 1, Errors: 0},
+					{SessionID: "session-a", Name: "bash", Calls: 1, Errors: 1},
+				},
+				unprunedEvents),
 		}
 
 		prunedEvents := domain.PruneEventsForPersistence(ledgerUnpruned)
 		ledgerPruned := ledgerUnpruned
-		ledgerPruned.Events = prunedEvents
+		setEventFacts(&ledgerPruned, prunedEvents)
 
 		// 1. ComputeTotals parity
-		totalsUnpruned := domain.ComputeTotals(ledgerUnpruned.Invocations)
-		totalsPruned := domain.ComputeTotals(ledgerPruned.Invocations)
+		totalsUnpruned := domain.ComputeTotals(ledgerUnpruned.InvocationFacts())
+		totalsPruned := domain.ComputeTotals(ledgerPruned.InvocationFacts())
 		if !reflect.DeepEqual(totalsUnpruned, totalsPruned) {
 			t.Fatalf("ComputeTotals mismatch:\nunpruned: %+v\npruned: %+v", totalsUnpruned, totalsPruned)
 		}
@@ -588,22 +583,22 @@ func TestPruneEventsForPersistence(t *testing.T) {
 		}
 
 		// 3. ComputeRoleMetrics parity
-		rolesUnpruned := domain.ComputeRoleMetrics(ledgerUnpruned.Invocations)
-		rolesPruned := domain.ComputeRoleMetrics(ledgerPruned.Invocations)
+		rolesUnpruned := domain.ComputeRoleMetrics(ledgerUnpruned.InvocationFacts())
+		rolesPruned := domain.ComputeRoleMetrics(ledgerPruned.InvocationFacts())
 		if !reflect.DeepEqual(rolesUnpruned, rolesPruned) {
 			t.Fatalf("ComputeRoleMetrics mismatch:\nunpruned: %+v\npruned: %+v", rolesUnpruned, rolesPruned)
 		}
 
 		// 4. ComputeModelMetrics parity
-		modelsUnpruned := domain.ComputeModelMetrics(ledgerUnpruned.Invocations)
-		modelsPruned := domain.ComputeModelMetrics(ledgerPruned.Invocations)
+		modelsUnpruned := domain.ComputeModelMetrics(ledgerUnpruned.InvocationFacts())
+		modelsPruned := domain.ComputeModelMetrics(ledgerPruned.InvocationFacts())
 		if !reflect.DeepEqual(modelsUnpruned, modelsPruned) {
 			t.Fatalf("ComputeModelMetrics mismatch:\nunpruned: %+v\npruned: %+v", modelsUnpruned, modelsPruned)
 		}
 
 		// 5. ComputeThreadSummaries parity
-		threadsUnpruned := domain.ComputeThreadSummaries(ledgerUnpruned.Invocations)
-		threadsPruned := domain.ComputeThreadSummaries(ledgerPruned.Invocations)
+		threadsUnpruned := domain.ComputeThreadSummaries(ledgerUnpruned.InvocationFacts())
+		threadsPruned := domain.ComputeThreadSummaries(ledgerPruned.InvocationFacts())
 		if !reflect.DeepEqual(threadsUnpruned, threadsPruned) {
 			t.Fatalf("ComputeThreadSummaries mismatch:\nunpruned: %+v\npruned: %+v", threadsUnpruned, threadsPruned)
 		}
@@ -886,20 +881,8 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ledger := domain.AgenticFactLedger{
-				Events: tt.inputEvents,
-				Tools:  tt.tools,
-			}
-
-			// Verify immutability: deep copy before pruning
-			var originalErrorMessages []string
-			for _, ev := range tt.inputEvents {
-				if ev.ErrorMessage != nil {
-					originalErrorMessages = append(originalErrorMessages, *ev.ErrorMessage)
-				} else {
-					originalErrorMessages = append(originalErrorMessages, "")
-				}
-			}
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, tt.tools, tt.inputEvents)}
+			beforeEvents := ledger.EventFacts()
 
 			pruned := domain.PruneEventsForPersistence(ledger)
 
@@ -907,14 +890,10 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 				t.Fatalf("expected %d pruned events, got %d", tt.expectedCount, len(pruned))
 			}
 
-			// Verify original input events slice was not mutated in place
-			for i, ev := range ledger.Events {
-				var msg string
-				if ev.ErrorMessage != nil {
-					msg = *ev.ErrorMessage
-				}
-				if msg != originalErrorMessages[i] {
-					t.Fatalf("ledger.Events[%d] ErrorMessage mutated in-place: was %q, now %q", i, originalErrorMessages[i], msg)
+			// Verify pruning did not mutate source facts.
+			for i, event := range ledger.EventFacts() {
+				if event.ErrorMessage != beforeEvents[i].ErrorMessage {
+					t.Fatalf("ledger.EventFacts()[%d] changed after pruning", i)
 				}
 			}
 
@@ -1030,32 +1009,31 @@ func TestPruneEventsForPersistence_DiagnosticSanitization(t *testing.T) {
 	toolIn := `{"secret_key": "abc123xyz"}`
 	toolOut := "DATABASE_PASSWORD=supersecret"
 
-	ledger := domain.AgenticFactLedger{
-		Events: []domain.EventFact{
-			{
-				Timestamp:        "2026-10-19T10:00:00Z",
-				SessionID:        "ses-1",
-				Turn:             1,
-				Role:             "coder",
-				EventType:        domain.EventTypeToolCall,
-				Status:           "error",
-				ErrorMessage:     &errMsg,
-				PromptContent:    &prompt,
-				ReasoningContent: &reasoning,
-				ToolInput:        &toolIn,
-				ToolOutput:       &toolOut,
-			},
-			{
-				Timestamp:        "2026-10-19T10:01:00Z",
-				SessionID:        "ses-1",
-				Turn:             2,
-				Role:             "orchestrator",
-				EventType:        domain.EventTypeCompaction,
-				Status:           "completed",
-				PromptContent:    &prompt,
-				ReasoningContent: &reasoning,
-			},
+	ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		{
+			Timestamp:        "2026-10-19T10:00:00Z",
+			SessionID:        "ses-1",
+			Turn:             1,
+			Role:             "coder",
+			EventType:        domain.EventTypeToolCall,
+			Status:           "error",
+			ErrorMessage:     &errMsg,
+			PromptContent:    &prompt,
+			ReasoningContent: &reasoning,
+			ToolInput:        &toolIn,
+			ToolOutput:       &toolOut,
 		},
+		{
+			Timestamp:        "2026-10-19T10:01:00Z",
+			SessionID:        "ses-1",
+			Turn:             2,
+			Role:             "orchestrator",
+			EventType:        domain.EventTypeCompaction,
+			Status:           "completed",
+			PromptContent:    &prompt,
+			ReasoningContent: &reasoning,
+		},
+	}),
 	}
 
 	pruned := domain.PruneEventsForPersistence(ledger)
@@ -1082,10 +1060,10 @@ func TestPruneEventsForPersistence_DiagnosticSanitization(t *testing.T) {
 	}
 
 	// Verify original ledger is not mutated
-	if ledger.Events[0].PromptContent == nil || *ledger.Events[0].PromptContent != prompt {
+	if ledger.EventFacts()[0].PromptContent == nil || *ledger.EventFacts()[0].PromptContent != prompt {
 		t.Errorf("original ledger PromptContent was mutated")
 	}
-	if ledger.Events[0].ToolInput == nil || *ledger.Events[0].ToolInput != toolIn {
+	if ledger.EventFacts()[0].ToolInput == nil || *ledger.EventFacts()[0].ToolInput != toolIn {
 		t.Errorf("original ledger ToolInput was mutated")
 	}
 }

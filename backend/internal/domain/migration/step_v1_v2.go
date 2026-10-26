@@ -34,9 +34,14 @@ func (s *StepV1ToV2) Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactL
 	cloned := ledger
 	targetVer := 2
 	cloned.SchemaVersion = &targetVer
+	if cloned.Sessions == nil {
+		cloned.Sessions = []domain.SessionFact{}
+	}
 
-	if cloned.Events == nil {
-		cloned.Events = []domain.EventFact{}
+	for i := range cloned.Sessions {
+		if cloned.Sessions[i].Events == nil {
+			cloned.Sessions[i].Events = []domain.SessionEventFact{}
+		}
 	}
 
 	if cloned.Migration == nil {

@@ -92,9 +92,8 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 	t.Run("zero division defenses", func(t *testing.T) {
 		t.Parallel()
 		ledger := domain.AgenticFactLedger{
-			Code:        domain.CodeFacts{},
-			Invocations: []domain.InvocationFact{},
-			Tools:       []domain.ToolFact{},
+			Code: domain.CodeFacts{}, Sessions: sessionFacts([]domain.InvocationFact{},
+				[]domain.ToolFact{}, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -127,8 +126,7 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 				ProdLinesDeleted: 20,
 				FilesChanged:     5,
 				SDLCIterations:   2,
-			},
-			Invocations: []domain.InvocationFact{
+			}, Sessions: sessionFacts([]domain.InvocationFact{
 				{
 					ID:                    "ses-orch",
 					Role:                  "orchestrator",
@@ -168,9 +166,9 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 					CostUSD: 1.0,
 				},
 			},
-			Tools: []domain.ToolFact{
-				{SessionID: "session-a", Name: "read", Calls: 10, Errors: 1},
-			},
+				[]domain.ToolFact{
+					{SessionID: "session-a", Name: "read", Calls: 10, Errors: 1},
+				}, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -877,12 +875,11 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 	t.Run("edge cases pure mathematical parity", func(t *testing.T) {
 		t.Run("all zero values", func(t *testing.T) {
 			emptyLedger := domain.AgenticFactLedger{
-				Code:        domain.CodeFacts{},
-				Invocations: nil,
-				Tools:       nil,
+				Code: domain.CodeFacts{}, Sessions: sessionFacts(nil,
+					nil, nil),
 			}
 			eff := domain.ComputeWorkflowEfficiency(emptyLedger)
-			tot := domain.ComputeTotals(emptyLedger.Invocations)
+			tot := domain.ComputeTotals(emptyLedger.InvocationFacts())
 
 			if tot.Invocations != 0 {
 				t.Errorf("expected 0 invocations, got %d", tot.Invocations)
@@ -941,25 +938,24 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 
 		t.Run("high token saturation exceeding 200k ceiling", func(t *testing.T) {
 			parentID := "ses-0"
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:   "ses-0",
-						Role: "orchestrator",
-						Tokens: domain.InvocationTokens{
-							PeakContext: 250000,
-						},
-					},
-					{
-						ID:       "ses-1",
-						ParentID: &parentID,
-						Role:     "coder",
-						Tokens: domain.InvocationTokens{
-							PeakContext: 210000,
-						},
-						Turns: 10,
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:   "ses-0",
+					Role: "orchestrator",
+					Tokens: domain.InvocationTokens{
+						PeakContext: 250000,
 					},
 				},
+				{
+					ID:       "ses-1",
+					ParentID: &parentID,
+					Role:     "coder",
+					Tokens: domain.InvocationTokens{
+						PeakContext: 210000,
+					},
+					Turns: 10,
+				},
+			}, nil, nil),
 			}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
 			if eff.ContextWindowHealth.Status != domain.ContextHealthBloated {
@@ -977,16 +973,15 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 		})
 
 		t.Run("critical token saturation exceeding 400k ceiling", func(t *testing.T) {
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:   "ses-0",
-						Role: "orchestrator",
-						Tokens: domain.InvocationTokens{
-							PeakContext: 450000,
-						},
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:   "ses-0",
+					Role: "orchestrator",
+					Tokens: domain.InvocationTokens{
+						PeakContext: 450000,
 					},
 				},
+			}, nil, nil),
 			}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
 			if eff.ContextWindowHealth.Status != domain.ContextHealthCritical {
@@ -1009,8 +1004,7 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 			LinesAdded:   100,
 			LinesDeleted: 20,
 			FilesChanged: 4,
-		},
-		Invocations: []domain.InvocationFact{
+		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				ID:                    "ses-orch-1",
 				Role:                  "orchestrator",
@@ -1027,18 +1021,18 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 				CostUSD: 0.05,
 			},
 		},
-		Tools: []domain.ToolFact{
-			{SessionID: "session-a", Name: "bash", Calls: 5, Errors: 1},
-		},
+			[]domain.ToolFact{
+				{SessionID: "session-a", Name: "bash", Calls: 5, Errors: 1},
+			}, nil),
 	}
 
 	t.Run("nil events preserved in Facts and does not mutate mathematical derivations", func(t *testing.T) {
 		ledgerNilEvents := baseLedger
-		ledgerNilEvents.Events = nil
+		setEventFacts(&ledgerNilEvents, nil)
 
 		metrics := domain.DeriveMetricsLedger(ledgerNilEvents, domain.DefaultProjectConfig())
-		if metrics.Facts.Events != nil {
-			t.Errorf("expected nil Facts.Events, got %+v", metrics.Facts.Events)
+		if metrics.Facts.EventFacts() != nil {
+			t.Errorf("expected nil Facts.Events, got %+v", metrics.Facts.EventFacts())
 		}
 		if metrics.Totals.Invocations != 1 {
 			t.Errorf("expected 1 invocation, got %d", metrics.Totals.Invocations)
@@ -1050,14 +1044,14 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 
 	t.Run("empty slice events preserved in Facts", func(t *testing.T) {
 		ledgerEmptyEvents := baseLedger
-		ledgerEmptyEvents.Events = []domain.EventFact{}
+		setEventFacts(&ledgerEmptyEvents, []domain.EventFact{})
 
 		metrics := domain.DeriveMetricsLedger(ledgerEmptyEvents, domain.DefaultProjectConfig())
-		if metrics.Facts.Events == nil {
+		if metrics.Facts.EventFacts() == nil {
 			t.Fatal("expected non-nil empty Events slice")
 		}
-		if len(metrics.Facts.Events) != 0 {
-			t.Errorf("expected 0 events, got %d", len(metrics.Facts.Events))
+		if len(metrics.Facts.EventFacts()) != 0 {
+			t.Errorf("expected 0 events, got %d", len(metrics.Facts.EventFacts()))
 		}
 	})
 
@@ -1100,13 +1094,13 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 		}
 
 		ledgerWithEvents := baseLedger
-		ledgerWithEvents.Events = events
+		setEventFacts(&ledgerWithEvents, events)
 
 		metricsWithEvents := domain.DeriveMetricsLedger(ledgerWithEvents, domain.DefaultProjectConfig())
 		metricsWithoutEvents := domain.DeriveMetricsLedger(baseLedger, domain.DefaultProjectConfig())
 
-		if len(metricsWithEvents.Facts.Events) != 3 {
-			t.Fatalf("expected 3 events in Facts, got %d", len(metricsWithEvents.Facts.Events))
+		if len(metricsWithEvents.Facts.EventFacts()) != 3 {
+			t.Fatalf("expected 3 events in Facts, got %d", len(metricsWithEvents.Facts.EventFacts()))
 		}
 
 		// Invariant: totals, efficiency, roles, models must be identical
@@ -1122,15 +1116,15 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 		}
 
 		// Verify event facts fidelity
-		ev0 := metricsWithEvents.Facts.Events[0]
+		ev0 := metricsWithEvents.Facts.EventFacts()[0]
 		if ev0.EventType != domain.EventTypeTurnMessage || ev0.Turn != 1 {
 			t.Errorf("unexpected event 0: %+v", ev0)
 		}
-		ev1 := metricsWithEvents.Facts.Events[1]
+		ev1 := metricsWithEvents.Facts.EventFacts()[1]
 		if ev1.EventType != domain.EventTypeToolCall || ev1.Status != "error" || *ev1.ErrorMessage != errBash || *ev1.DurationMs != durMs {
 			t.Errorf("unexpected event 1: %+v", ev1)
 		}
-		ev2 := metricsWithEvents.Facts.Events[2]
+		ev2 := metricsWithEvents.Facts.EventFacts()[2]
 		if ev2.EventType != domain.EventTypeCompaction || ev2.Turn != 2 {
 			t.Errorf("unexpected event 2: %+v", ev2)
 		}
@@ -1152,8 +1146,8 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 		if metrics.WorkflowEfficiency.ToolExecution.SuccessRatePct != 100.0 {
 			t.Errorf("expected 100.0%% default success rate, got %f", metrics.WorkflowEfficiency.ToolExecution.SuccessRatePct)
 		}
-		if len(metrics.Facts.Events) != 0 {
-			t.Errorf("expected 0 events, got %d", len(metrics.Facts.Events))
+		if len(metrics.Facts.EventFacts()) != 0 {
+			t.Errorf("expected 0 events, got %d", len(metrics.Facts.EventFacts()))
 		}
 	})
 }
@@ -1468,13 +1462,12 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 	t.Run("dynamic subagent effort distribution", func(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-orch"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "ses-orch", Role: "orchestrator", CostUSD: 1.0},
-				{ID: "ses-coder", ParentID: &parentID, Role: "coder", CostUSD: 2.0},
-				{ID: "ses-adv", ParentID: &parentID, Role: "advisor", CostUSD: 1.0},
-				{ID: "ses-po", ParentID: &parentID, Role: "po", CostUSD: 1.0},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "ses-orch", Role: "orchestrator", CostUSD: 1.0},
+			{ID: "ses-coder", ParentID: &parentID, Role: "coder", CostUSD: 2.0},
+			{ID: "ses-adv", ParentID: &parentID, Role: "advisor", CostUSD: 1.0},
+			{ID: "ses-po", ParentID: &parentID, Role: "po", CostUSD: 1.0},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -1497,12 +1490,11 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 	t.Run("dynamic subagent turn velocity", func(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-orch"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "ses-adv", ParentID: &parentID, Role: "advisor", Turns: 4},
-				{ID: "ses-po", ParentID: &parentID, Role: "po", Turns: 8},
-				{ID: "ses-coder", ParentID: &parentID, Role: "coder", Turns: 6},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "ses-adv", ParentID: &parentID, Role: "advisor", Turns: 4},
+			{ID: "ses-po", ParentID: &parentID, Role: "po", Turns: 8},
+			{ID: "ses-coder", ParentID: &parentID, Role: "coder", Turns: 6},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -1528,26 +1520,25 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 	t.Run("subagent peak context tracking with custom role", func(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-orch"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:     "ses-orch",
-					Role:   "orchestrator",
-					Tokens: domain.InvocationTokens{PeakContext: 50000},
-				},
-				{
-					ID:       "ses-coder",
-					ParentID: &parentID,
-					Role:     "coder",
-					Tokens:   domain.InvocationTokens{PeakContext: 120000},
-				},
-				{
-					ID:       "ses-adv",
-					ParentID: &parentID,
-					Role:     "advisor",
-					Tokens:   domain.InvocationTokens{PeakContext: 180000},
-				},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:     "ses-orch",
+				Role:   "orchestrator",
+				Tokens: domain.InvocationTokens{PeakContext: 50000},
 			},
+			{
+				ID:       "ses-coder",
+				ParentID: &parentID,
+				Role:     "coder",
+				Tokens:   domain.InvocationTokens{PeakContext: 120000},
+			},
+			{
+				ID:       "ses-adv",
+				ParentID: &parentID,
+				Role:     "advisor",
+				Tokens:   domain.InvocationTokens{PeakContext: 180000},
+			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -1565,21 +1556,20 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-root"
 		// Default tie-break: alphabetical order breaks ties (advisor before coder)
-		ledgerCanonicalVsCustom := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       "ses-coder",
-					ParentID: &parentID,
-					Role:     "coder",
-					Tokens:   domain.InvocationTokens{PeakContext: 100000},
-				},
-				{
-					ID:       "ses-adv",
-					ParentID: &parentID,
-					Role:     "advisor",
-					Tokens:   domain.InvocationTokens{PeakContext: 100000},
-				},
+		ledgerCanonicalVsCustom := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       "ses-coder",
+				ParentID: &parentID,
+				Role:     "coder",
+				Tokens:   domain.InvocationTokens{PeakContext: 100000},
 			},
+			{
+				ID:       "ses-adv",
+				ParentID: &parentID,
+				Role:     "advisor",
+				Tokens:   domain.InvocationTokens{PeakContext: 100000},
+			},
+		}, nil, nil),
 		}
 
 		eff1 := domain.ComputeWorkflowEfficiency(ledgerCanonicalVsCustom)
@@ -1594,21 +1584,20 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		}
 
 		// Custom vs Custom tie-break: alphabetical (advisor before po)
-		ledgerCustomVsCustom := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       "ses-po",
-					ParentID: &parentID,
-					Role:     "po",
-					Tokens:   domain.InvocationTokens{PeakContext: 100000},
-				},
-				{
-					ID:       "ses-adv",
-					ParentID: &parentID,
-					Role:     "advisor",
-					Tokens:   domain.InvocationTokens{PeakContext: 100000},
-				},
+		ledgerCustomVsCustom := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       "ses-po",
+				ParentID: &parentID,
+				Role:     "po",
+				Tokens:   domain.InvocationTokens{PeakContext: 100000},
 			},
+			{
+				ID:       "ses-adv",
+				ParentID: &parentID,
+				Role:     "advisor",
+				Tokens:   domain.InvocationTokens{PeakContext: 100000},
+			},
+		}, nil, nil),
 		}
 
 		eff2 := domain.ComputeWorkflowEfficiency(ledgerCustomVsCustom)
@@ -1619,16 +1608,15 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 
 	t.Run("orchestrator-only session", func(t *testing.T) {
 		t.Parallel()
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:      "ses-orch",
-					Role:    "orchestrator",
-					Turns:   10,
-					CostUSD: 2.5,
-					Tokens:  domain.InvocationTokens{PeakContext: 75000},
-				},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:      "ses-orch",
+				Role:    "orchestrator",
+				Turns:   10,
+				CostUSD: 2.5,
+				Tokens:  domain.InvocationTokens{PeakContext: 75000},
 			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -1887,12 +1875,11 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 	t.Run("zero cost subagent invocations do not divide by zero or enter distribution", func(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-orch"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "1", Role: "orchestrator", CostUSD: 0.0},
-				{ID: "2", ParentID: &parentID, Role: "advisor", CostUSD: 0.0, Turns: 5},
-				{ID: "3", ParentID: &parentID, Role: "po", CostUSD: 0.0, Turns: 3},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "1", Role: "orchestrator", CostUSD: 0.0},
+			{ID: "2", ParentID: &parentID, Role: "advisor", CostUSD: 0.0, Turns: 5},
+			{ID: "3", ParentID: &parentID, Role: "po", CostUSD: 0.0, Turns: 3},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -1911,10 +1898,9 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 	t.Run("subagent invocations with zero turns", func(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-orch"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "1", ParentID: &parentID, Role: "advisor", Turns: 0, CostUSD: 1.0},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "1", ParentID: &parentID, Role: "advisor", Turns: 0, CostUSD: 1.0},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -1934,13 +1920,12 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 
 		parentID := "ses-root"
 		// Case A: 4 subagents tied at 120k tokens. Default alphabetical: coder > planner > reviewer > tester
-		canonicalTiedLedger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "1", ParentID: &parentID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "2", ParentID: &parentID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "3", ParentID: &parentID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "4", ParentID: &parentID, Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-			},
+		canonicalTiedLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "1", ParentID: &parentID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			{ID: "2", ParentID: &parentID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			{ID: "3", ParentID: &parentID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			{ID: "4", ParentID: &parentID, Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+		}, nil, nil),
 		}
 		effA := domain.ComputeWorkflowEfficiency(canonicalTiedLedger)
 		if effA.ContextWindowHealth.SubagentsPeakRole != "coder" {
@@ -1954,13 +1939,12 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		// Case B: 4 custom subagents all tied at 120k tokens. Precedence: alphabetical (advisor > po > researcher > security-auditor)
-		customTiedLedger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "1", ParentID: &parentID, Role: "security-auditor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "2", ParentID: &parentID, Role: "researcher", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "3", ParentID: &parentID, Role: "po", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "4", ParentID: &parentID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-			},
+		customTiedLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "1", ParentID: &parentID, Role: "security-auditor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			{ID: "2", ParentID: &parentID, Role: "researcher", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			{ID: "3", ParentID: &parentID, Role: "po", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			{ID: "4", ParentID: &parentID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+		}, nil, nil),
 		}
 		effB := domain.ComputeWorkflowEfficiency(customTiedLedger)
 		if effB.ContextWindowHealth.SubagentsPeakRole != "advisor" {
@@ -1969,11 +1953,10 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 
 		// Case C: Tied at 120k between reviewer and advisor.
 		// Alphabetical default: advisor < reviewer.
-		mixedTiedLedger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "1", ParentID: &parentID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-				{ID: "2", ParentID: &parentID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
-			},
+		mixedTiedLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "1", ParentID: &parentID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+			{ID: "2", ParentID: &parentID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 120000}},
+		}, nil, nil),
 		}
 		effC := domain.ComputeWorkflowEfficiency(mixedTiedLedger)
 		if effC.ContextWindowHealth.SubagentsPeakRole != "advisor" {
@@ -1988,10 +1971,9 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("subagent invocations without parent ID are root sessions: excluded from subagent metrics", func(t *testing.T) {
 		t.Parallel()
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "1", Role: "advisor", ParentID: nil, CostUSD: 2.0, Turns: 10, Tokens: domain.InvocationTokens{PeakContext: 50000}},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "1", Role: "advisor", ParentID: nil, CostUSD: 2.0, Turns: 10, Tokens: domain.InvocationTokens{PeakContext: 50000}},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -2123,33 +2105,32 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 	t.Run("mapping execution invariance: rolls up build under orchestrator while preserving raw facts", func(t *testing.T) {
 		t.Parallel()
 
-		factLedger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:      "ses-build",
-					Role:    "build",
-					Model:   "claude-3-sonnet",
-					CostUSD: 2.00,
-					Turns:   4,
-					Tokens: domain.InvocationTokens{
-						Input:       1000,
-						Output:      500,
-						PeakContext: 10000,
-					},
-				},
-				{
-					ID:      "ses-orch",
-					Role:    "orchestrator",
-					Model:   "claude-3-sonnet",
-					CostUSD: 1.00,
-					Turns:   2,
-					Tokens: domain.InvocationTokens{
-						Input:       500,
-						Output:      200,
-						PeakContext: 5000,
-					},
+		factLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:      "ses-build",
+				Role:    "build",
+				Model:   "claude-3-sonnet",
+				CostUSD: 2.00,
+				Turns:   4,
+				Tokens: domain.InvocationTokens{
+					Input:       1000,
+					Output:      500,
+					PeakContext: 10000,
 				},
 			},
+			{
+				ID:      "ses-orch",
+				Role:    "orchestrator",
+				Model:   "claude-3-sonnet",
+				CostUSD: 1.00,
+				Turns:   2,
+				Tokens: domain.InvocationTokens{
+					Input:       500,
+					Output:      200,
+					PeakContext: 5000,
+				},
+			},
+		}, nil, nil),
 		}
 
 		customMappings := domain.RoleMappings{
@@ -2176,14 +2157,14 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 		}
 
 		// 2. Facts retains unmutated raw roles
-		if len(metrics.Facts.Invocations) != 2 {
-			t.Fatalf("expected 2 raw invocations in Facts, got %d", len(metrics.Facts.Invocations))
+		if len(metrics.Facts.InvocationFacts()) != 2 {
+			t.Fatalf("expected 2 raw invocations in Facts, got %d", len(metrics.Facts.InvocationFacts()))
 		}
-		if metrics.Facts.Invocations[0].Role != "build" {
-			t.Errorf("expected Facts.Invocations[0].Role 'build', got %s", metrics.Facts.Invocations[0].Role)
+		if metrics.Facts.InvocationFacts()[0].Role != "build" {
+			t.Errorf("expected Facts.Invocations[0].Role 'build', got %s", metrics.Facts.InvocationFacts()[0].Role)
 		}
-		if metrics.Facts.Invocations[1].Role != "orchestrator" {
-			t.Errorf("expected Facts.Invocations[1].Role 'orchestrator', got %s", metrics.Facts.Invocations[1].Role)
+		if metrics.Facts.InvocationFacts()[1].Role != "orchestrator" {
+			t.Errorf("expected Facts.Invocations[1].Role 'orchestrator', got %s", metrics.Facts.InvocationFacts()[1].Role)
 		}
 
 		// 3. Orchestrator is excluded from subagent velocity and effort distribution
@@ -2201,31 +2182,30 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 		t.Parallel()
 
 		pid := "ses-orch"
-		factLedger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:      "ses-orch",
-					Role:    "build",
-					Model:   "claude-3-sonnet",
-					CostUSD: 1.00,
-				},
-				{
-					ID:       "ses-worker-1",
-					ParentID: &pid,
-					Role:     "coder",
-					Model:    "claude-3-opus",
-					CostUSD:  2.00,
-					Turns:    5,
-				},
-				{
-					ID:       "ses-worker-2",
-					ParentID: &pid,
-					Role:     "custom-qa",
-					Model:    "claude-3-sonnet",
-					CostUSD:  2.00,
-					Turns:    3,
-				},
+		factLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:      "ses-orch",
+				Role:    "build",
+				Model:   "claude-3-sonnet",
+				CostUSD: 1.00,
 			},
+			{
+				ID:       "ses-worker-1",
+				ParentID: &pid,
+				Role:     "coder",
+				Model:    "claude-3-opus",
+				CostUSD:  2.00,
+				Turns:    5,
+			},
+			{
+				ID:       "ses-worker-2",
+				ParentID: &pid,
+				Role:     "custom-qa",
+				Model:    "claude-3-sonnet",
+				CostUSD:  2.00,
+				Turns:    3,
+			},
+		}, nil, nil),
 		}
 
 		customMappings := domain.RoleMappings{
@@ -2253,11 +2233,11 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 		}
 
 		// Raw facts must still have build, coder, custom-qa
-		if metrics.Facts.Invocations[0].Role != "build" {
-			t.Errorf("expected raw fact build, got %s", metrics.Facts.Invocations[0].Role)
+		if metrics.Facts.InvocationFacts()[0].Role != "build" {
+			t.Errorf("expected raw fact build, got %s", metrics.Facts.InvocationFacts()[0].Role)
 		}
-		if metrics.Facts.Invocations[2].Role != "custom-qa" {
-			t.Errorf("expected raw fact custom-qa, got %s", metrics.Facts.Invocations[2].Role)
+		if metrics.Facts.InvocationFacts()[2].Role != "custom-qa" {
+			t.Errorf("expected raw fact custom-qa, got %s", metrics.Facts.InvocationFacts()[2].Role)
 		}
 
 		// Subagents effort: coder=50%, tester=50%
@@ -2282,13 +2262,12 @@ func TestDeriveMetricsLedger_RoleOrder(t *testing.T) {
 
 	ticketID := "FIX-2"
 	factLedger := domain.AgenticFactLedger{
-		TicketID: &ticketID,
-		Invocations: []domain.InvocationFact{
+		TicketID: &ticketID, Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "inv-1", Role: "orchestrator", Model: "gpt-4o", CostUSD: 0.10, ActiveDurationSeconds: 10},
 			{ID: "inv-2", Role: "coder", Model: "gpt-4o", CostUSD: 0.20, ActiveDurationSeconds: 20},
 			{ID: "inv-3", Role: "tester", Model: "gpt-4o", CostUSD: 0.15, ActiveDurationSeconds: 15},
 			{ID: "inv-4", Role: "architect", Model: "gpt-4o", CostUSD: 0.05, ActiveDurationSeconds: 5},
-		},
+		}, nil, nil),
 	}
 
 	t.Run("empty role order defaults strictly to alphabetical sorting", func(t *testing.T) {
@@ -2335,23 +2314,22 @@ func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T
 	t.Parallel()
 
 	pid := "ses-orch"
-	baseLedger := domain.AgenticFactLedger{
-		Invocations: []domain.InvocationFact{
-			{
-				ID:      "ses-orch",
-				Role:    "orchestrator",
-				Model:   "claude-3-sonnet",
-				CostUSD: 1.00,
-			},
-			{
-				ID:       "ses-custom",
-				ParentID: &pid,
-				Role:     "custom-bot",
-				Model:    "claude-3-sonnet",
-				CostUSD:  1.50,
-				Turns:    4,
-			},
+	baseLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+		{
+			ID:      "ses-orch",
+			Role:    "orchestrator",
+			Model:   "claude-3-sonnet",
+			CostUSD: 1.00,
 		},
+		{
+			ID:       "ses-custom",
+			ParentID: &pid,
+			Role:     "custom-bot",
+			Model:    "claude-3-sonnet",
+			CostUSD:  1.50,
+			Turns:    4,
+		},
+	}, nil, nil),
 	}
 
 	t.Run("Scenario A: child invocation mapped to orchestrator is included in subagent metrics structurally", func(t *testing.T) {
@@ -2489,18 +2467,16 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 
 		tid := "AL-IMMUTABILITY"
 		factLedger := domain.AgenticFactLedger{
-			TicketID:    &tid,
-			Invocations: origInvs,
-			Events:      origEvents,
+			TicketID: &tid, Sessions: sessionFacts(origInvs, nil, origEvents),
 		}
 
 		// Snapshot before derivation
-		invBefore0Role := factLedger.Invocations[0].Role
-		invBefore1Role := factLedger.Invocations[1].Role
-		invBefore2Role := factLedger.Invocations[2].Role
-		evBefore0Role := factLedger.Events[0].Role
-		evBefore1Role := factLedger.Events[1].Role
-		evBefore2Role := factLedger.Events[2].Role
+		invBefore0Role := factLedger.InvocationFacts()[0].Role
+		invBefore1Role := factLedger.InvocationFacts()[1].Role
+		invBefore2Role := factLedger.InvocationFacts()[2].Role
+		evBefore0Role := factLedger.EventFacts()[0].Role
+		evBefore1Role := factLedger.EventFacts()[1].Role
+		evBefore2Role := factLedger.EventFacts()[2].Role
 
 		mappings := domain.RoleMappings{
 			"build":     "orchestrator",
@@ -2512,43 +2488,43 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		derived := domain.DeriveMetricsLedger(factLedger, cfg)
 
 		// 1. Assert input factLedger was not mutated in place
-		if factLedger.Invocations[0].Role != invBefore0Role || invBefore0Role != "build" {
-			t.Errorf("input factLedger.Invocations[0].Role mutated: got %q, want 'build'", factLedger.Invocations[0].Role)
+		if factLedger.InvocationFacts()[0].Role != invBefore0Role || invBefore0Role != "build" {
+			t.Errorf("input factLedger.InvocationFacts()[0].Role mutated: got %q, want 'build'", factLedger.InvocationFacts()[0].Role)
 		}
-		if factLedger.Invocations[1].Role != invBefore1Role || invBefore1Role != "custom-qa" {
-			t.Errorf("input factLedger.Invocations[1].Role mutated: got %q, want 'custom-qa'", factLedger.Invocations[1].Role)
+		if factLedger.InvocationFacts()[1].Role != invBefore1Role || invBefore1Role != "custom-qa" {
+			t.Errorf("input factLedger.InvocationFacts()[1].Role mutated: got %q, want 'custom-qa'", factLedger.InvocationFacts()[1].Role)
 		}
-		if factLedger.Invocations[2].Role != invBefore2Role || invBefore2Role != "security-auditor" {
-			t.Errorf("input factLedger.Invocations[2].Role mutated: got %q, want 'security-auditor'", factLedger.Invocations[2].Role)
+		if factLedger.InvocationFacts()[2].Role != invBefore2Role || invBefore2Role != "security-auditor" {
+			t.Errorf("input factLedger.InvocationFacts()[2].Role mutated: got %q, want 'security-auditor'", factLedger.InvocationFacts()[2].Role)
 		}
-		if factLedger.Events[0].Role != evBefore0Role || evBefore0Role != "build" {
-			t.Errorf("input factLedger.Events[0].Role mutated: got %q, want 'build'", factLedger.Events[0].Role)
+		if factLedger.EventFacts()[0].Role != evBefore0Role || evBefore0Role != "build" {
+			t.Errorf("input factLedger.EventFacts()[0].Role mutated: got %q, want 'build'", factLedger.EventFacts()[0].Role)
 		}
-		if factLedger.Events[1].Role != evBefore1Role || evBefore1Role != "custom-qa" {
-			t.Errorf("input factLedger.Events[1].Role mutated: got %q, want 'custom-qa'", factLedger.Events[1].Role)
+		if factLedger.EventFacts()[1].Role != evBefore1Role || evBefore1Role != "custom-qa" {
+			t.Errorf("input factLedger.EventFacts()[1].Role mutated: got %q, want 'custom-qa'", factLedger.EventFacts()[1].Role)
 		}
-		if factLedger.Events[2].Role != evBefore2Role || evBefore2Role != "security-auditor" {
-			t.Errorf("input factLedger.Events[2].Role mutated: got %q, want 'security-auditor'", factLedger.Events[2].Role)
+		if factLedger.EventFacts()[2].Role != evBefore2Role || evBefore2Role != "security-auditor" {
+			t.Errorf("input factLedger.EventFacts()[2].Role mutated: got %q, want 'security-auditor'", factLedger.EventFacts()[2].Role)
 		}
 
 		// 2. Assert derived.Facts retains the exact raw persona strings
-		if derived.Facts.Invocations[0].Role != "build" {
-			t.Errorf("derived.Facts.Invocations[0].Role is not raw 'build', got %q", derived.Facts.Invocations[0].Role)
+		if derived.Facts.InvocationFacts()[0].Role != "build" {
+			t.Errorf("derived.Facts.InvocationFacts()[0].Role is not raw 'build', got %q", derived.Facts.InvocationFacts()[0].Role)
 		}
-		if derived.Facts.Invocations[1].Role != "custom-qa" {
-			t.Errorf("derived.Facts.Invocations[1].Role is not raw 'custom-qa', got %q", derived.Facts.Invocations[1].Role)
+		if derived.Facts.InvocationFacts()[1].Role != "custom-qa" {
+			t.Errorf("derived.Facts.InvocationFacts()[1].Role is not raw 'custom-qa', got %q", derived.Facts.InvocationFacts()[1].Role)
 		}
-		if derived.Facts.Invocations[2].Role != "security-auditor" {
-			t.Errorf("derived.Facts.Invocations[2].Role is not raw 'security-auditor', got %q", derived.Facts.Invocations[2].Role)
+		if derived.Facts.InvocationFacts()[2].Role != "security-auditor" {
+			t.Errorf("derived.Facts.InvocationFacts()[2].Role is not raw 'security-auditor', got %q", derived.Facts.InvocationFacts()[2].Role)
 		}
-		if derived.Facts.Events[0].Role != "build" {
-			t.Errorf("derived.Facts.Events[0].Role is not raw 'build', got %q", derived.Facts.Events[0].Role)
+		if derived.Facts.EventFacts()[0].Role != "build" {
+			t.Errorf("derived.Facts.EventFacts()[0].Role is not raw 'build', got %q", derived.Facts.EventFacts()[0].Role)
 		}
-		if derived.Facts.Events[1].Role != "custom-qa" {
-			t.Errorf("derived.Facts.Events[1].Role is not raw 'custom-qa', got %q", derived.Facts.Events[1].Role)
+		if derived.Facts.EventFacts()[1].Role != "custom-qa" {
+			t.Errorf("derived.Facts.EventFacts()[1].Role is not raw 'custom-qa', got %q", derived.Facts.EventFacts()[1].Role)
 		}
-		if derived.Facts.Events[2].Role != "security-auditor" {
-			t.Errorf("derived.Facts.Events[2].Role is not raw 'security-auditor', got %q", derived.Facts.Events[2].Role)
+		if derived.Facts.EventFacts()[2].Role != "security-auditor" {
+			t.Errorf("derived.Facts.EventFacts()[2].Role is not raw 'security-auditor', got %q", derived.Facts.EventFacts()[2].Role)
 		}
 
 		// 3. Assert derived aggregates use mapped roles (orchestrator, tester) and dynamic subagent (security-auditor)
@@ -2619,38 +2595,37 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 
 		// Case B: Invocations with all zeroes across metrics
-		zeroInvLedger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:                    "ses-zero-1",
-					Role:                  "build",
-					Model:                 "zero-model",
-					ActiveDurationSeconds: 0,
-					CostUSD:               0.0,
-					Turns:                 0,
-					Tokens: domain.InvocationTokens{
-						Input:       0,
-						Output:      0,
-						CacheRead:   0,
-						Reasoning:   0,
-						PeakContext: 0,
-					},
-				},
-				{
-					ID:                    "ses-zero-2",
-					Role:                  "coder",
-					ActiveDurationSeconds: 0,
-					CostUSD:               0.0,
-					Turns:                 0,
-					Tokens: domain.InvocationTokens{
-						Input:       0,
-						Output:      0,
-						CacheRead:   0,
-						Reasoning:   0,
-						PeakContext: 0,
-					},
+		zeroInvLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:                    "ses-zero-1",
+				Role:                  "build",
+				Model:                 "zero-model",
+				ActiveDurationSeconds: 0,
+				CostUSD:               0.0,
+				Turns:                 0,
+				Tokens: domain.InvocationTokens{
+					Input:       0,
+					Output:      0,
+					CacheRead:   0,
+					Reasoning:   0,
+					PeakContext: 0,
 				},
 			},
+			{
+				ID:                    "ses-zero-2",
+				Role:                  "coder",
+				ActiveDurationSeconds: 0,
+				CostUSD:               0.0,
+				Turns:                 0,
+				Tokens: domain.InvocationTokens{
+					Input:       0,
+					Output:      0,
+					CacheRead:   0,
+					Reasoning:   0,
+					PeakContext: 0,
+				},
+			},
+		}, nil, nil),
 		}
 
 		mappings := domain.RoleMappings{"build": "orchestrator"}
@@ -2681,11 +2656,10 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 	t.Run("role mappings configuration handling: default, nil, custom override, and empty mappings", func(t *testing.T) {
 		t.Parallel()
 		parentID := "ses-root"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "ses-root", Role: "build", CostUSD: 1.0},
-				{ID: "ses-child", ParentID: &parentID, Role: "coder", CostUSD: 2.0, Turns: 3},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "ses-root", Role: "build", CostUSD: 1.0},
+			{ID: "ses-child", ParentID: &parentID, Role: "coder", CostUSD: 2.0, Turns: 3},
+		}, nil, nil),
 		}
 
 		// Default configuration: with empty RoleMappings, raw roles are preserved
@@ -2712,10 +2686,9 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 
 		// Empty mapping: unmapped custom role retains raw name
-		ledgerWithCustom := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "ses-custom", Role: "specialist-agent", CostUSD: 3.0},
-			},
+		ledgerWithCustom := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "ses-custom", Role: "specialist-agent", CostUSD: 3.0},
+		}, nil, nil),
 		}
 		cfgEmptyMap := domain.DefaultProjectConfig()
 		cfgEmptyMap.RoleMappings = domain.RoleMappings{}
@@ -2782,19 +2755,18 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
-				factLedger := domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							ID:       "ses-test",
-							ParentID: tc.parentID,
-							Role:     domain.AgentRole(tc.rawRole),
-							CostUSD:  1.50,
-							Turns:    5,
-							Tokens: domain.InvocationTokens{
-								Input: 1000, Output: 200, PeakContext: 10000,
-							},
+				factLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:       "ses-test",
+						ParentID: tc.parentID,
+						Role:     domain.AgentRole(tc.rawRole),
+						CostUSD:  1.50,
+						Turns:    5,
+						Tokens: domain.InvocationTokens{
+							Input: 1000, Output: 200, PeakContext: 10000,
 						},
 					},
+				}, nil, nil),
 				}
 
 				mappings := domain.RoleMappings{
@@ -3635,33 +3607,32 @@ func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 		{
 			TicketID:    ptr("AL-1"),
 			CompletedAt: &ts1,
-			Facts: domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:          "inv-1",
-						CompletedAt: &ts1,
-						Tokens: domain.InvocationTokens{
-							Input:       100,
-							Output:      50,
-							CacheRead:   20,
-							PeakContext: 1000,
-						},
-						CostUSD:               0.05,
-						ActiveDurationSeconds: 10,
+			Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:          "inv-1",
+					CompletedAt: &ts1,
+					Tokens: domain.InvocationTokens{
+						Input:       100,
+						Output:      50,
+						CacheRead:   20,
+						PeakContext: 1000,
 					},
-					{
-						ID:          "inv-2",
-						CompletedAt: &ts2,
-						Tokens: domain.InvocationTokens{
-							Input:       200,
-							Output:      100,
-							CacheRead:   80,
-							PeakContext: 2000,
-						},
-						CostUSD:               0.10,
-						ActiveDurationSeconds: 20,
-					},
+					CostUSD:               0.05,
+					ActiveDurationSeconds: 10,
 				},
+				{
+					ID:          "inv-2",
+					CompletedAt: &ts2,
+					Tokens: domain.InvocationTokens{
+						Input:       200,
+						Output:      100,
+						CacheRead:   80,
+						PeakContext: 2000,
+					},
+					CostUSD:               0.10,
+					ActiveDurationSeconds: 20,
+				},
+			}, nil, nil),
 			},
 			WorkflowEfficiency: domain.WorkflowEfficiency{
 				CodeDelivered: domain.CodeDeliveredStats{
@@ -3674,21 +3645,20 @@ func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 		{
 			TicketID:    ptr("AL-2"),
 			CompletedAt: &ts3,
-			Facts: domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:          "inv-3",
-						CompletedAt: &ts3,
-						Tokens: domain.InvocationTokens{
-							Input:       300,
-							Output:      150,
-							CacheRead:   100,
-							PeakContext: 1500,
-						},
-						CostUSD:               0.15,
-						ActiveDurationSeconds: 15,
+			Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:          "inv-3",
+					CompletedAt: &ts3,
+					Tokens: domain.InvocationTokens{
+						Input:       300,
+						Output:      150,
+						CacheRead:   100,
+						PeakContext: 1500,
 					},
+					CostUSD:               0.15,
+					ActiveDurationSeconds: 15,
 				},
+			}, nil, nil),
 			},
 			WorkflowEfficiency: domain.WorkflowEfficiency{
 				CodeDelivered: domain.CodeDeliveredStats{
@@ -3886,27 +3856,26 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 			{
 				TicketID:    ptr("AL-MIDNIGHT"),
 				CompletedAt: &tsEarly,
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							ID:          "inv-early",
-							CompletedAt: &tsEarly,
-							Tokens:      domain.InvocationTokens{Input: 100, Output: 50, CacheRead: 25},
-							CostUSD:     0.02,
-						},
-						{
-							ID:          "inv-late",
-							CompletedAt: &tsLate,
-							Tokens:      domain.InvocationTokens{Input: 200, Output: 100, CacheRead: 50},
-							CostUSD:     0.04,
-						},
-						{
-							ID:          "inv-mid",
-							CompletedAt: &tsMid,
-							Tokens:      domain.InvocationTokens{Input: 300, Output: 150, CacheRead: 75},
-							CostUSD:     0.06,
-						},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:          "inv-early",
+						CompletedAt: &tsEarly,
+						Tokens:      domain.InvocationTokens{Input: 100, Output: 50, CacheRead: 25},
+						CostUSD:     0.02,
 					},
+					{
+						ID:          "inv-late",
+						CompletedAt: &tsLate,
+						Tokens:      domain.InvocationTokens{Input: 200, Output: 100, CacheRead: 50},
+						CostUSD:     0.04,
+					},
+					{
+						ID:          "inv-mid",
+						CompletedAt: &tsMid,
+						Tokens:      domain.InvocationTokens{Input: 300, Output: 150, CacheRead: 75},
+						CostUSD:     0.06,
+					},
+				}, nil, nil),
 				},
 			},
 		}
@@ -3941,21 +3910,20 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 		ledgers := []domain.AgenticMetricsLedger{
 			{
 				TicketID: ptr("AL-TZ"),
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							ID:          "inv-plus2",
-							CompletedAt: &tsPlus2,
-							Tokens:      domain.InvocationTokens{Input: 100, Output: 20},
-							CostUSD:     0.01,
-						},
-						{
-							ID:          "inv-minus4",
-							CompletedAt: &tsMinus4,
-							Tokens:      domain.InvocationTokens{Input: 200, Output: 40},
-							CostUSD:     0.02,
-						},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:          "inv-plus2",
+						CompletedAt: &tsPlus2,
+						Tokens:      domain.InvocationTokens{Input: 100, Output: 20},
+						CostUSD:     0.01,
 					},
+					{
+						ID:          "inv-minus4",
+						CompletedAt: &tsMinus4,
+						Tokens:      domain.InvocationTokens{Input: 200, Output: 40},
+						CostUSD:     0.02,
+					},
+				}, nil, nil),
 				},
 			},
 		}
@@ -3977,14 +3945,13 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 		ledgers := []domain.AgenticMetricsLedger{
 			{
 				TicketID: ptr("AL-NO-SEC"),
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							ID:          "inv-no-sec",
-							CompletedAt: &tsNoSeconds,
-							Tokens:      domain.InvocationTokens{Input: 50, Output: 10},
-						},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:          "inv-no-sec",
+						CompletedAt: &tsNoSeconds,
+						Tokens:      domain.InvocationTokens{Input: 50, Output: 10},
 					},
+				}, nil, nil),
 				},
 			},
 		}
@@ -4003,15 +3970,14 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 		ledgers := []domain.AgenticMetricsLedger{
 			{
 				TicketID: ptr("AL-ZERO"),
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							ID:          "inv-zero",
-							CompletedAt: &ts,
-							Tokens:      domain.InvocationTokens{Input: 0, Output: 0, CacheRead: 0, Reasoning: 0},
-							CostUSD:     0.0,
-						},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:          "inv-zero",
+						CompletedAt: &ts,
+						Tokens:      domain.InvocationTokens{Input: 0, Output: 0, CacheRead: 0, Reasoning: 0},
+						CostUSD:     0.0,
 					},
+				}, nil, nil),
 				},
 			},
 		}
@@ -4034,14 +4000,13 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 		ledgers := []domain.AgenticMetricsLedger{
 			{
 				TicketID: ptr("AL-RANGE"),
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							ID:          "inv-1",
-							CompletedAt: &ts,
-							Tokens:      domain.InvocationTokens{Input: 100, Output: 50},
-						},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:          "inv-1",
+						CompletedAt: &ts,
+						Tokens:      domain.InvocationTokens{Input: 100, Output: 50},
 					},
+				}, nil, nil),
 				},
 			},
 		}
@@ -4068,7 +4033,7 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 		noInvs := []domain.AgenticMetricsLedger{
 			{
 				TicketID: ptr("NO-INVS"),
-				Facts:    domain.AgenticFactLedger{Invocations: []domain.InvocationFact{}},
+				Facts:    domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{}, nil, nil)},
 			},
 		}
 		resNoInvs := domain.AggregateMetricsOverTime(noInvs, "hourly", nil, nil)
@@ -4083,14 +4048,13 @@ func TestAggregateMetricsOverTime_AdversarialHourly(t *testing.T) {
 			{
 				TicketID:    ptr("AL-CORRUPTED"),
 				CompletedAt: &badDate,
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							ID:          "inv-bad",
-							CompletedAt: &badDate,
-							Tokens:      domain.InvocationTokens{Input: 100, Output: 50},
-						},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:          "inv-bad",
+						CompletedAt: &badDate,
+						Tokens:      domain.InvocationTokens{Input: 100, Output: 50},
 					},
+				}, nil, nil),
 				},
 			},
 		}
@@ -4671,19 +4635,18 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 	t.Run("Case A: Single root invocation with role general", func(t *testing.T) {
 		t.Parallel()
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       "ses-root-gen",
-					ParentID: nil,
-					Role:     "general",
-					CostUSD:  1.50,
-					Turns:    12,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 60000,
-					},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       "ses-root-gen",
+				ParentID: nil,
+				Role:     "general",
+				CostUSD:  1.50,
+				Turns:    12,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 60000,
 				},
 			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -4713,19 +4676,18 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 	t.Run("Case B: Single root invocation with role build or custom root persona", func(t *testing.T) {
 		t.Parallel()
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       "ses-root-build",
-					ParentID: nil,
-					Role:     "build",
-					CostUSD:  2.25,
-					Turns:    8,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 75000,
-					},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       "ses-root-build",
+				ParentID: nil,
+				Role:     "build",
+				CostUSD:  2.25,
+				Turns:    8,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 75000,
 				},
 			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -4746,59 +4708,58 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 	t.Run("Case C: Root session with role general and child subagents", func(t *testing.T) {
 		t.Parallel()
 		rootID := "ses-root-1"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       rootID,
-					ParentID: nil,
-					Role:     "general",
-					CostUSD:  1.00,
-					Turns:    5,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 40000,
-					},
-				},
-				{
-					ID:       "ses-planner",
-					ParentID: &rootID,
-					Role:     "planner",
-					CostUSD:  2.00,
-					Turns:    10,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 80000,
-					},
-				},
-				{
-					ID:       "ses-coder",
-					ParentID: &rootID,
-					Role:     "coder",
-					CostUSD:  4.00,
-					Turns:    20,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 150000,
-					},
-				},
-				{
-					ID:       "ses-tester",
-					ParentID: &rootID,
-					Role:     "tester",
-					CostUSD:  2.00,
-					Turns:    10,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 90000,
-					},
-				},
-				{
-					ID:       "ses-reviewer",
-					ParentID: &rootID,
-					Role:     "reviewer",
-					CostUSD:  2.00,
-					Turns:    10,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 70000,
-					},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       rootID,
+				ParentID: nil,
+				Role:     "general",
+				CostUSD:  1.00,
+				Turns:    5,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 40000,
 				},
 			},
+			{
+				ID:       "ses-planner",
+				ParentID: &rootID,
+				Role:     "planner",
+				CostUSD:  2.00,
+				Turns:    10,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 80000,
+				},
+			},
+			{
+				ID:       "ses-coder",
+				ParentID: &rootID,
+				Role:     "coder",
+				CostUSD:  4.00,
+				Turns:    20,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 150000,
+				},
+			},
+			{
+				ID:       "ses-tester",
+				ParentID: &rootID,
+				Role:     "tester",
+				CostUSD:  2.00,
+				Turns:    10,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 90000,
+				},
+			},
+			{
+				ID:       "ses-reviewer",
+				ParentID: &rootID,
+				Role:     "reviewer",
+				CostUSD:  2.00,
+				Turns:    10,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 70000,
+				},
+			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -4833,9 +4794,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 	t.Run("Case D: Empty ledger with zero invocations", func(t *testing.T) {
 		t.Parallel()
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{},
-		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{}, nil, nil)}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
 		if eff.ContextWindowHealth.RootPeakTokens != 0 {
@@ -4866,49 +4825,48 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 		// Deep hierarchy: root -> planner -> coder -> tester
 		// All tiers where ParentID != nil must be classified as delegated subagents
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       rootID,
-					ParentID: nil,
-					Role:     "general",
-					CostUSD:  1.00,
-					Turns:    3,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 35000,
-					},
-				},
-				{
-					ID:       tier1ID,
-					ParentID: &rootID,
-					Role:     "planner",
-					CostUSD:  2.00,
-					Turns:    5,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 65000,
-					},
-				},
-				{
-					ID:       tier2ID,
-					ParentID: &tier1ID,
-					Role:     "coder",
-					CostUSD:  5.00,
-					Turns:    15,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 145000,
-					},
-				},
-				{
-					ID:       "ses-tester-3",
-					ParentID: &tier2ID,
-					Role:     "tester",
-					CostUSD:  3.00,
-					Turns:    10,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 95000,
-					},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       rootID,
+				ParentID: nil,
+				Role:     "general",
+				CostUSD:  1.00,
+				Turns:    3,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 35000,
 				},
 			},
+			{
+				ID:       tier1ID,
+				ParentID: &rootID,
+				Role:     "planner",
+				CostUSD:  2.00,
+				Turns:    5,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 65000,
+				},
+			},
+			{
+				ID:       tier2ID,
+				ParentID: &tier1ID,
+				Role:     "coder",
+				CostUSD:  5.00,
+				Turns:    15,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 145000,
+				},
+			},
+			{
+				ID:       "ses-tester-3",
+				ParentID: &tier2ID,
+				Role:     "tester",
+				CostUSD:  3.00,
+				Turns:    10,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 95000,
+				},
+			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -4972,19 +4930,18 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			tc := tc
 			t.Run("persona_"+tc.role, func(t *testing.T) {
 				t.Parallel()
-				ledger := domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							ID:       "ses-single-root",
-							ParentID: nil,
-							Role:     domain.AgentRole(tc.role),
-							CostUSD:  tc.costUSD,
-							Turns:    tc.turns,
-							Tokens: domain.InvocationTokens{
-								PeakContext: tc.peakContext,
-							},
+				ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:       "ses-single-root",
+						ParentID: nil,
+						Role:     domain.AgentRole(tc.role),
+						CostUSD:  tc.costUSD,
+						Turns:    tc.turns,
+						Tokens: domain.InvocationTokens{
+							PeakContext: tc.peakContext,
 						},
 					},
+				}, nil, nil),
 				}
 
 				eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5013,45 +4970,44 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 	t.Run("Case G: Child subagents with zero peak tokens and tie-breaking", func(t *testing.T) {
 		t.Parallel()
 		rootID := "ses-root-0"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       rootID,
-					ParentID: nil,
-					Role:     "general",
-					CostUSD:  1.0,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 50000,
-					},
-				},
-				{
-					ID:       "ses-coder",
-					ParentID: &rootID,
-					Role:     "coder",
-					CostUSD:  2.0,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 0,
-					},
-				},
-				{
-					ID:       "ses-planner",
-					ParentID: &rootID,
-					Role:     "planner",
-					CostUSD:  1.0,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 0,
-					},
-				},
-				{
-					ID:       "ses-reviewer",
-					ParentID: &rootID,
-					Role:     "reviewer",
-					CostUSD:  1.0,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 0,
-					},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       rootID,
+				ParentID: nil,
+				Role:     "general",
+				CostUSD:  1.0,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 50000,
 				},
 			},
+			{
+				ID:       "ses-coder",
+				ParentID: &rootID,
+				Role:     "coder",
+				CostUSD:  2.0,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 0,
+				},
+			},
+			{
+				ID:       "ses-planner",
+				ParentID: &rootID,
+				Role:     "planner",
+				CostUSD:  1.0,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 0,
+				},
+			},
+			{
+				ID:       "ses-reviewer",
+				ParentID: &rootID,
+				Role:     "reviewer",
+				CostUSD:  1.0,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 0,
+				},
+			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5083,30 +5039,29 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 		t.Run("zero total subagent cost with active subagents", func(t *testing.T) {
 			t.Parallel()
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:       rootID,
-						ParentID: nil,
-						Role:     "general",
-						CostUSD:  0.0,
-						Tokens:   domain.InvocationTokens{PeakContext: 10000},
-					},
-					{
-						ID:       "ses-c1",
-						ParentID: &rootID,
-						Role:     "coder",
-						CostUSD:  0.0,
-						Tokens:   domain.InvocationTokens{PeakContext: 20000},
-					},
-					{
-						ID:       "ses-p1",
-						ParentID: &rootID,
-						Role:     "planner",
-						CostUSD:  0.0,
-						Tokens:   domain.InvocationTokens{PeakContext: 15000},
-					},
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					CostUSD:  0.0,
+					Tokens:   domain.InvocationTokens{PeakContext: 10000},
 				},
+				{
+					ID:       "ses-c1",
+					ParentID: &rootID,
+					Role:     "coder",
+					CostUSD:  0.0,
+					Tokens:   domain.InvocationTokens{PeakContext: 20000},
+				},
+				{
+					ID:       "ses-p1",
+					ParentID: &rootID,
+					Role:     "planner",
+					CostUSD:  0.0,
+					Tokens:   domain.InvocationTokens{PeakContext: 15000},
+				},
+			}, nil, nil),
 			}
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5123,9 +5078,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 		t.Run("nil invocations slice", func(t *testing.T) {
 			t.Parallel()
-			ledger := domain.AgenticFactLedger{
-				Invocations: nil,
-			}
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, nil)}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
 			if eff.ContextWindowHealth.RootPeakTokens != 0 {
 				t.Errorf("expected RootPeakTokens 0, got %d", eff.ContextWindowHealth.RootPeakTokens)
@@ -5142,27 +5095,26 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			t.Parallel()
 			// Under pure structural classification, child invocations (ParentID != nil) are treated
 			// as subagents regardless of their persona role string (e.g. orchestrator or general).
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:       rootID,
-						ParentID: nil,
-						Role:     "general",
-						Tokens:   domain.InvocationTokens{PeakContext: 30000},
-					},
-					{
-						ID:       "ses-child-orch",
-						ParentID: &rootID,
-						Role:     "orchestrator",
-						Tokens:   domain.InvocationTokens{PeakContext: 50000},
-					},
-					{
-						ID:       "ses-child-gen",
-						ParentID: &rootID,
-						Role:     "general",
-						Tokens:   domain.InvocationTokens{PeakContext: 40000},
-					},
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					Tokens:   domain.InvocationTokens{PeakContext: 30000},
 				},
+				{
+					ID:       "ses-child-orch",
+					ParentID: &rootID,
+					Role:     "orchestrator",
+					Tokens:   domain.InvocationTokens{PeakContext: 50000},
+				},
+				{
+					ID:       "ses-child-gen",
+					ParentID: &rootID,
+					Role:     "general",
+					Tokens:   domain.InvocationTokens{PeakContext: 40000},
+				},
+			}, nil, nil),
 			}
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5181,23 +5133,22 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 		t.Run("child invocation with whitespace role normalizes to unassigned", func(t *testing.T) {
 			t.Parallel()
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:       rootID,
-						ParentID: nil,
-						Role:     "general",
-						Tokens:   domain.InvocationTokens{PeakContext: 25000},
-					},
-					{
-						ID:       "ses-child-blank",
-						ParentID: &rootID,
-						Role:     "   ",
-						CostUSD:  1.20,
-						Turns:    6,
-						Tokens:   domain.InvocationTokens{PeakContext: 45000},
-					},
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					Tokens:   domain.InvocationTokens{PeakContext: 25000},
 				},
+				{
+					ID:       "ses-child-blank",
+					ParentID: &rootID,
+					Role:     "   ",
+					CostUSD:  1.20,
+					Turns:    6,
+					Tokens:   domain.InvocationTokens{PeakContext: 45000},
+				},
+			}, nil, nil),
 			}
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5217,17 +5168,16 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 		t.Run("single-invocation ticket with custom persona produces zero subagent metrics", func(t *testing.T) {
 			t.Parallel()
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:       "ses-single-custom",
-						ParentID: nil,
-						Role:     "custom-researcher",
-						CostUSD:  3.50,
-						Turns:    10,
-						Tokens:   domain.InvocationTokens{PeakContext: 68000},
-					},
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:       "ses-single-custom",
+					ParentID: nil,
+					Role:     "custom-researcher",
+					CostUSD:  3.50,
+					Turns:    10,
+					Tokens:   domain.InvocationTokens{PeakContext: 68000},
 				},
+			}, nil, nil),
 			}
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5251,32 +5201,31 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		t.Run("multi-tier child invocations all treated as subagents", func(t *testing.T) {
 			t.Parallel()
 			tier1ID := "ses-tier1"
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:       rootID,
-						ParentID: nil,
-						Role:     "general",
-						CostUSD:  1.0,
-						Tokens:   domain.InvocationTokens{PeakContext: 20000},
-					},
-					{
-						ID:       tier1ID,
-						ParentID: &rootID,
-						Role:     "coordinator-subagent",
-						CostUSD:  2.0,
-						Turns:    5,
-						Tokens:   domain.InvocationTokens{PeakContext: 35000},
-					},
-					{
-						ID:       "ses-tier2",
-						ParentID: &tier1ID,
-						Role:     "specialist-subagent",
-						CostUSD:  2.0,
-						Turns:    7,
-						Tokens:   domain.InvocationTokens{PeakContext: 42000},
-					},
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					CostUSD:  1.0,
+					Tokens:   domain.InvocationTokens{PeakContext: 20000},
 				},
+				{
+					ID:       tier1ID,
+					ParentID: &rootID,
+					Role:     "coordinator-subagent",
+					CostUSD:  2.0,
+					Turns:    5,
+					Tokens:   domain.InvocationTokens{PeakContext: 35000},
+				},
+				{
+					ID:       "ses-tier2",
+					ParentID: &tier1ID,
+					Role:     "specialist-subagent",
+					CostUSD:  2.0,
+					Turns:    7,
+					Tokens:   domain.InvocationTokens{PeakContext: 42000},
+				},
+			}, nil, nil),
 			}
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5307,29 +5256,28 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 		t.Run("canonical tie-break tester vs reviewer", func(t *testing.T) {
 			t.Parallel()
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:       rootID,
-						ParentID: nil,
-						Role:     "general",
-						Tokens:   domain.InvocationTokens{PeakContext: 20000},
-					},
-					{
-						ID:       "ses-reviewer",
-						ParentID: &rootID,
-						Role:     "reviewer",
-						CostUSD:  1.0,
-						Tokens:   domain.InvocationTokens{PeakContext: 80000},
-					},
-					{
-						ID:       "ses-tester",
-						ParentID: &rootID,
-						Role:     "tester",
-						CostUSD:  1.0,
-						Tokens:   domain.InvocationTokens{PeakContext: 80000},
-					},
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					Tokens:   domain.InvocationTokens{PeakContext: 20000},
 				},
+				{
+					ID:       "ses-reviewer",
+					ParentID: &rootID,
+					Role:     "reviewer",
+					CostUSD:  1.0,
+					Tokens:   domain.InvocationTokens{PeakContext: 80000},
+				},
+				{
+					ID:       "ses-tester",
+					ParentID: &rootID,
+					Role:     "tester",
+					CostUSD:  1.0,
+					Tokens:   domain.InvocationTokens{PeakContext: 80000},
+				},
+			}, nil, nil),
 			}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
 			// reviewer comes before tester in default alphabetical order
@@ -5345,29 +5293,28 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 
 		t.Run("custom tie-break alphabetical order", func(t *testing.T) {
 			t.Parallel()
-			ledger := domain.AgenticFactLedger{
-				Invocations: []domain.InvocationFact{
-					{
-						ID:       rootID,
-						ParentID: nil,
-						Role:     "general",
-						Tokens:   domain.InvocationTokens{PeakContext: 20000},
-					},
-					{
-						ID:       "ses-zebra",
-						ParentID: &rootID,
-						Role:     "zebra-agent",
-						CostUSD:  1.0,
-						Tokens:   domain.InvocationTokens{PeakContext: 75000},
-					},
-					{
-						ID:       "ses-alpha",
-						ParentID: &rootID,
-						Role:     "alpha-agent",
-						CostUSD:  1.0,
-						Tokens:   domain.InvocationTokens{PeakContext: 75000},
-					},
+			ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:       rootID,
+					ParentID: nil,
+					Role:     "general",
+					Tokens:   domain.InvocationTokens{PeakContext: 20000},
 				},
+				{
+					ID:       "ses-zebra",
+					ParentID: &rootID,
+					Role:     "zebra-agent",
+					CostUSD:  1.0,
+					Tokens:   domain.InvocationTokens{PeakContext: 75000},
+				},
+				{
+					ID:       "ses-alpha",
+					ParentID: &rootID,
+					Role:     "alpha-agent",
+					CostUSD:  1.0,
+					Tokens:   domain.InvocationTokens{PeakContext: 75000},
+				},
+			}, nil, nil),
 			}
 			eff := domain.ComputeWorkflowEfficiency(ledger)
 			// alpha-agent comes before zebra-agent alphabetically
@@ -5384,25 +5331,24 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 	t.Run("inverted persona roles: root as coder and child as orchestrator", func(t *testing.T) {
 		t.Parallel()
 		rootID := "ses-inverted-root"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       rootID,
-					ParentID: nil,
-					Role:     "coder",
-					CostUSD:  10.0,
-					Turns:    15,
-					Tokens:   domain.InvocationTokens{PeakContext: 120000},
-				},
-				{
-					ID:       "ses-inverted-child",
-					ParentID: &rootID,
-					Role:     "orchestrator",
-					CostUSD:  5.0,
-					Turns:    8,
-					Tokens:   domain.InvocationTokens{PeakContext: 45000},
-				},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       rootID,
+				ParentID: nil,
+				Role:     "coder",
+				CostUSD:  10.0,
+				Turns:    15,
+				Tokens:   domain.InvocationTokens{PeakContext: 120000},
 			},
+			{
+				ID:       "ses-inverted-child",
+				ParentID: &rootID,
+				Role:     "orchestrator",
+				CostUSD:  5.0,
+				Turns:    8,
+				Tokens:   domain.InvocationTokens{PeakContext: 45000},
+			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5445,33 +5391,32 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 
 	t.Run("multiple root sessions with zero children", func(t *testing.T) {
 		t.Parallel()
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       "ses-root-1",
-					ParentID: nil,
-					Role:     "general",
-					CostUSD:  2.0,
-					Turns:    10,
-					Tokens:   domain.InvocationTokens{PeakContext: 50000},
-				},
-				{
-					ID:       "ses-root-2",
-					ParentID: nil,
-					Role:     "build",
-					CostUSD:  3.0,
-					Turns:    15,
-					Tokens:   domain.InvocationTokens{PeakContext: 110000},
-				},
-				{
-					ID:       "ses-root-3",
-					ParentID: nil,
-					Role:     "orchestrator",
-					CostUSD:  1.0,
-					Turns:    5,
-					Tokens:   domain.InvocationTokens{PeakContext: 80000},
-				},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       "ses-root-1",
+				ParentID: nil,
+				Role:     "general",
+				CostUSD:  2.0,
+				Turns:    10,
+				Tokens:   domain.InvocationTokens{PeakContext: 50000},
 			},
+			{
+				ID:       "ses-root-2",
+				ParentID: nil,
+				Role:     "build",
+				CostUSD:  3.0,
+				Turns:    15,
+				Tokens:   domain.InvocationTokens{PeakContext: 110000},
+			},
+			{
+				ID:       "ses-root-3",
+				ParentID: nil,
+				Role:     "orchestrator",
+				CostUSD:  1.0,
+				Turns:    5,
+				Tokens:   domain.InvocationTokens{PeakContext: 80000},
+			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5503,31 +5448,30 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 	t.Run("empty string and whitespace-only roles on multiple child invocations normalize to unassigned", func(t *testing.T) {
 		t.Parallel()
 		rootID := "ses-root"
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:       rootID,
-					ParentID: nil,
-					Role:     "general",
-					Tokens:   domain.InvocationTokens{PeakContext: 20000},
-				},
-				{
-					ID:       "ses-child-empty",
-					ParentID: &rootID,
-					Role:     "",
-					CostUSD:  2.0,
-					Turns:    4,
-					Tokens:   domain.InvocationTokens{PeakContext: 60000},
-				},
-				{
-					ID:       "ses-child-spaces",
-					ParentID: &rootID,
-					Role:     "   \t\n  ",
-					CostUSD:  3.0,
-					Turns:    6,
-					Tokens:   domain.InvocationTokens{PeakContext: 70000},
-				},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:       rootID,
+				ParentID: nil,
+				Role:     "general",
+				Tokens:   domain.InvocationTokens{PeakContext: 20000},
 			},
+			{
+				ID:       "ses-child-empty",
+				ParentID: &rootID,
+				Role:     "",
+				CostUSD:  2.0,
+				Turns:    4,
+				Tokens:   domain.InvocationTokens{PeakContext: 60000},
+			},
+			{
+				ID:       "ses-child-spaces",
+				ParentID: &rootID,
+				Role:     "   \t\n  ",
+				CostUSD:  3.0,
+				Turns:    6,
+				Tokens:   domain.InvocationTokens{PeakContext: 70000},
+			},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
@@ -5562,14 +5506,13 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 	t.Run("five-way tie across arbitrary unmapped roles alphabetical default and custom order", func(t *testing.T) {
 		t.Parallel()
 
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "inv-1", ParentID: &rootID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 125000}},
-				{ID: "inv-2", ParentID: &rootID, Role: "researcher", Tokens: domain.InvocationTokens{PeakContext: 125000}},
-				{ID: "inv-3", ParentID: &rootID, Role: "developer", Tokens: domain.InvocationTokens{PeakContext: 125000}},
-				{ID: "inv-4", ParentID: &rootID, Role: "architect", Tokens: domain.InvocationTokens{PeakContext: 125000}},
-				{ID: "inv-5", ParentID: &rootID, Role: "lead-qa", Tokens: domain.InvocationTokens{PeakContext: 125000}},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "inv-1", ParentID: &rootID, Role: "reviewer", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+			{ID: "inv-2", ParentID: &rootID, Role: "researcher", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+			{ID: "inv-3", ParentID: &rootID, Role: "developer", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+			{ID: "inv-4", ParentID: &rootID, Role: "architect", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+			{ID: "inv-5", ParentID: &rootID, Role: "lead-qa", Tokens: domain.InvocationTokens{PeakContext: 125000}},
+		}, nil, nil),
 		}
 
 		// Alphabetical default: architect < developer < lead-qa < researcher < reviewer
@@ -5621,14 +5564,13 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 	t.Run("multiple invocations per role with peak tie", func(t *testing.T) {
 		t.Parallel()
 
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "inv-coder-1", ParentID: &rootID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 40000}},
-				{ID: "inv-coder-2", ParentID: &rootID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 90000}},
-				{ID: "inv-tester-1", ParentID: &rootID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 90000}},
-				{ID: "inv-tester-2", ParentID: &rootID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 60000}},
-				{ID: "inv-planner-1", ParentID: &rootID, Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 70000}},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "inv-coder-1", ParentID: &rootID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 40000}},
+			{ID: "inv-coder-2", ParentID: &rootID, Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 90000}},
+			{ID: "inv-tester-1", ParentID: &rootID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 90000}},
+			{ID: "inv-tester-2", ParentID: &rootID, Role: "tester", Tokens: domain.InvocationTokens{PeakContext: 60000}},
+			{ID: "inv-planner-1", ParentID: &rootID, Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 70000}},
+		}, nil, nil),
 		}
 
 		// Alphabetical default: coder < tester
@@ -5650,11 +5592,10 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 	t.Run("unassigned role participates in tie-breaking properly", func(t *testing.T) {
 		t.Parallel()
 
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "inv-empty", ParentID: &rootID, Role: "   ", Tokens: domain.InvocationTokens{PeakContext: 85000}},
-				{ID: "inv-advisor", ParentID: &rootID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 85000}},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "inv-empty", ParentID: &rootID, Role: "   ", Tokens: domain.InvocationTokens{PeakContext: 85000}},
+			{ID: "inv-advisor", ParentID: &rootID, Role: "advisor", Tokens: domain.InvocationTokens{PeakContext: 85000}},
+		}, nil, nil),
 		}
 
 		// Alphabetical default: UnassignedSubAgent < advisor ('U' < 'a')
@@ -5676,13 +5617,12 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 	t.Run("structural hierarchy isolation during tie-breaking", func(t *testing.T) {
 		t.Parallel()
 
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "inv-root-orch", ParentID: nil, Role: "orchestrator", Tokens: domain.InvocationTokens{PeakContext: 200000}},
-				{ID: "inv-root-gen", ParentID: nil, Role: "general", Tokens: domain.InvocationTokens{PeakContext: 200000}},
-				{ID: "inv-sub-dev", ParentID: &rootID, Role: "developer", Tokens: domain.InvocationTokens{PeakContext: 95000}},
-				{ID: "inv-sub-arch", ParentID: &rootID, Role: "architect", Tokens: domain.InvocationTokens{PeakContext: 95000}},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "inv-root-orch", ParentID: nil, Role: "orchestrator", Tokens: domain.InvocationTokens{PeakContext: 200000}},
+			{ID: "inv-root-gen", ParentID: nil, Role: "general", Tokens: domain.InvocationTokens{PeakContext: 200000}},
+			{ID: "inv-sub-dev", ParentID: &rootID, Role: "developer", Tokens: domain.InvocationTokens{PeakContext: 95000}},
+			{ID: "inv-sub-arch", ParentID: &rootID, Role: "architect", Tokens: domain.InvocationTokens{PeakContext: 95000}},
+		}, nil, nil),
 		}
 
 		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
@@ -5713,11 +5653,10 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 	t.Run("pure root sessions always evaluate to none regardless of custom order", func(t *testing.T) {
 		t.Parallel()
 
-		ledger := domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{ID: "inv-root-1", ParentID: nil, Role: "general", Tokens: domain.InvocationTokens{PeakContext: 110000}},
-				{ID: "inv-root-2", ParentID: nil, Role: "orchestrator", Tokens: domain.InvocationTokens{PeakContext: 130000}},
-			},
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "inv-root-1", ParentID: nil, Role: "general", Tokens: domain.InvocationTokens{PeakContext: 110000}},
+			{ID: "inv-root-2", ParentID: nil, Role: "orchestrator", Tokens: domain.InvocationTokens{PeakContext: 130000}},
+		}, nil, nil),
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger, []string{"orchestrator", "planner", "coder", "general"})
@@ -5751,10 +5690,9 @@ func TestAL34_NetLinesGrowthAndGranularityAdversarial(t *testing.T) {
 						LinesDeleted: 200,
 					},
 				},
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{CompletedAt: &d1, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
-					},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{CompletedAt: &d1, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
+				}, nil, nil),
 				},
 			},
 			{
@@ -5766,10 +5704,9 @@ func TestAL34_NetLinesGrowthAndGranularityAdversarial(t *testing.T) {
 						LinesDeleted: 1200,
 					},
 				},
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{CompletedAt: &d2, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
-					},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{CompletedAt: &d2, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
+				}, nil, nil),
 				},
 			},
 			{
@@ -5781,10 +5718,9 @@ func TestAL34_NetLinesGrowthAndGranularityAdversarial(t *testing.T) {
 						LinesDeleted: 0,
 					},
 				},
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{CompletedAt: &d3, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
-					},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{CompletedAt: &d3, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
+				}, nil, nil),
 				},
 			},
 			{
@@ -5796,10 +5732,9 @@ func TestAL34_NetLinesGrowthAndGranularityAdversarial(t *testing.T) {
 						LinesDeleted: 50,
 					},
 				},
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{CompletedAt: &d4, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
-					},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{CompletedAt: &d4, Tokens: domain.InvocationTokens{Input: 100, CacheRead: 50}},
+				}, nil, nil),
 				},
 			},
 		}
@@ -5934,18 +5869,17 @@ func TestAL34_NetLinesGrowthAndGranularityAdversarial(t *testing.T) {
 			{
 				TicketID:    ptr("ZERO-1"),
 				CompletedAt: &d,
-				Facts: domain.AgenticFactLedger{
-					Invocations: []domain.InvocationFact{
-						{
-							CompletedAt: &d,
-							Tokens: domain.InvocationTokens{
-								Input:     0,
-								Output:    0,
-								CacheRead: 0,
-								Reasoning: 0,
-							},
+				Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						CompletedAt: &d,
+						Tokens: domain.InvocationTokens{
+							Input:     0,
+							Output:    0,
+							CacheRead: 0,
+							Reasoning: 0,
 						},
 					},
+				}, nil, nil),
 				},
 				WorkflowEfficiency: domain.WorkflowEfficiency{
 					CodeDelivered: domain.CodeDeliveredStats{

@@ -1,11 +1,6 @@
 package migration
 
-import (
-	"fmt"
-	"strings"
-
-	"agenticlens/internal/domain"
-)
+import "agenticlens/internal/domain"
 
 // StepV3ToV4UserIterations upgrades schema version 3 ledgers to schema version 4.
 // It populates UserIterations on root invocations from code.sdlc_iterations if unpopulated,
@@ -34,25 +29,33 @@ func (s *StepV3ToV4UserIterations) Description() string {
 
 // Apply executes the pure migration from schema v3 to schema v4.
 func (s *StepV3ToV4UserIterations) Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
-	for i, tool := range ledger.Tools {
-		if strings.TrimSpace(tool.SessionID) == "" {
-			return domain.AgenticFactLedger{}, fmt.Errorf("tools[%d] is missing required session_id; regenerate or re-extract this ledger from source logs before migrating", i)
-		}
-	}
 	cloned := ledger
+	// Reapply the current persistence allowlist at the schema boundary. Some v3
+	// ledgers predate the event payload sanitizer and may still contain error text.
+	retainedEvents := domain.PruneEventsForPersistence(ledger)
+	sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), retainedEvents)
+	if err != nil {
+		return domain.AgenticFactLedger{}, err
+	}
+	cloned.Sessions = sessions
 	targetVer := 4
 	cloned.SchemaVersion = &targetVer
 
 	// If root invocations have 0 user_iterations and ledger has Code.SDLCIterations,
 	// assign Code.SDLCIterations to the primary root invocation.
 	var totalIterations int64
-	for _, inv := range cloned.Invocations {
+	for _, inv := range cloned.InvocationFacts() {
 		totalIterations += inv.UserIterations
 	}
 	if totalIterations == 0 && cloned.Code.SDLCIterations > 0 {
-		for i := range cloned.Invocations {
-			if cloned.Invocations[i].ParentID == nil {
-				cloned.Invocations[i].UserIterations = cloned.Code.SDLCIterations
+		for i := range cloned.Sessions {
+			if cloned.Sessions[i].ParentID == nil {
+				for j := range cloned.Sessions[i].Invocations {
+					if cloned.Sessions[i].Invocations[j].ParentID == nil {
+						cloned.Sessions[i].Invocations[j].UserIterations = cloned.Code.SDLCIterations
+						break
+					}
+				}
 				break
 			}
 		}

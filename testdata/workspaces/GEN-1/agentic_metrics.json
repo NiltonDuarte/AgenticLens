@@ -1,10 +1,11 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "migration": {
-    "schema_version": 3,
+    "schema_version": 4,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized"
+      "schema_v3_sanitized",
+      "schema_v4_user_iterations"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
@@ -27,84 +28,100 @@
     "files_changed": 13,
     "sdlc_iterations": 4
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "inv-gen1-01",
-      "parent_id": null,
-      "role": "orchestrator",
-      "model": "o1-mini",
-      "user": "developer",
-      "started_at": "2026-10-17T07:30:00Z",
-      "completed_at": "2026-10-17T08:15:00Z",
-      "active_duration_seconds": 720,
-      "turns": 8,
-      "tokens": {
-        "input": 450000,
-        "output": 55000,
-        "cache_read": 1100000,
-        "reasoning": 25000,
-        "peak_context": 225000
-      },
-      "cost_usd": 2.15,
-      "compactions": 2
+      "invocations": [
+        {
+          "id": "inv-gen1-01",
+          "parent_id": null,
+          "role": "orchestrator",
+          "model": "o1-mini",
+          "user": "developer",
+          "started_at": "2026-10-17T07:30:00Z",
+          "completed_at": "2026-10-17T08:15:00Z",
+          "active_duration_seconds": 720,
+          "turns": 8,
+          "tokens": {
+            "input": 450000,
+            "output": 55000,
+            "cache_read": 1100000,
+            "reasoning": 25000,
+            "peak_context": 225000
+          },
+          "cost_usd": 2.15,
+          "compactions": 2,
+          "user_iterations": 4
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 35,
+          "errors": 3
+        },
+        {
+          "name": "edit",
+          "calls": 24,
+          "errors": 3
+        },
+        {
+          "name": "read",
+          "calls": 42,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 14,
+          "errors": 0
+        }
+      ],
+      "events": []
     },
     {
       "id": "inv-gen1-02",
       "parent_id": "inv-gen1-01",
-      "role": "coder",
-      "model": "claude-3-5-sonnet",
-      "user": "developer",
-      "started_at": "2026-10-17T08:20:00Z",
-      "completed_at": "2026-10-17T09:40:00Z",
-      "active_duration_seconds": 1150,
-      "turns": 9,
-      "tokens": {
-        "input": 380000,
-        "output": 42000,
-        "cache_read": 950000,
-        "reasoning": 0,
-        "peak_context": 185000
-      },
-      "cost_usd": 1.7625,
-      "compactions": 1
-    }
-  ],
-  "tools": [
-    {
-      "name": "read",
-      "calls": 42,
-      "errors": 0,
-      "session_id": "inv-gen1-01"
+      "invocations": [
+        {
+          "id": "inv-gen1-02",
+          "parent_id": "inv-gen1-01",
+          "role": "coder",
+          "model": "claude-3-5-sonnet",
+          "user": "developer",
+          "started_at": "2026-10-17T08:20:00Z",
+          "completed_at": "2026-10-17T09:40:00Z",
+          "active_duration_seconds": 1150,
+          "turns": 9,
+          "tokens": {
+            "input": 380000,
+            "output": 42000,
+            "cache_read": 950000,
+            "reasoning": 0,
+            "peak_context": 185000
+          },
+          "cost_usd": 1.7625,
+          "compactions": 1,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": []
     },
     {
-      "name": "write",
-      "calls": 14,
-      "errors": 0,
-      "session_id": "inv-gen1-01"
-    },
-    {
-      "name": "edit",
-      "calls": 24,
-      "errors": 3,
-      "session_id": "inv-gen1-01"
-    },
-    {
-      "name": "bash",
-      "calls": 35,
-      "errors": 3,
-      "session_id": "inv-gen1-01"
-    }
-  ],
-  "events": [
-    {
-      "timestamp": "2026-10-17T08:15:00Z",
-      "session_id": "ses-gen1-root",
-      "turn": 8,
-      "role": "orchestrator",
-      "event_type": "turn_message",
-      "status": "completed",
-      "duration_ms": 1200,
-      "context_tokens": 225000
+      "id": "ses-gen1-root",
+      "invocations": [],
+      "tools": [],
+      "events": [
+        {
+          "timestamp": "2026-10-17T08:15:00Z",
+          "turn": 8,
+          "role": "orchestrator",
+          "event_type": "turn_message",
+          "status": "completed",
+          "duration_ms": 1200,
+          "context_tokens": 225000
+        }
+      ]
     }
   ]
 }

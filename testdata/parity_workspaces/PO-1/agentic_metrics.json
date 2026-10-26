@@ -1,10 +1,11 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "migration": {
-    "schema_version": 3,
+    "schema_version": 4,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized"
+      "schema_v3_sanitized",
+      "schema_v4_user_iterations"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
@@ -27,83 +28,81 @@
     "files_changed": 0,
     "sdlc_iterations": 1
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2",
-      "parent_id": null,
-      "role": "general",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-17T14:39:16.049000+00:00",
-      "completed_at": "2026-10-17T15:12:34.057000+00:00",
-      "active_duration_seconds": 1234,
-      "turns": 141,
-      "tokens": {
-        "input": 1139501,
-        "output": 28249,
-        "cache_read": 7633800,
-        "reasoning": 20118,
-        "peak_context": 113824
-      },
-      "cost_usd": 1.608537,
-      "compactions": 0
-    }
-  ],
-  "tools": [
-    {
-      "name": "bash",
-      "calls": 47,
-      "errors": 1,
-      "session_id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2"
-    },
-    {
-      "name": "read",
-      "calls": 31,
-      "errors": 0,
-      "session_id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2"
-    },
-    {
-      "name": "write",
-      "calls": 20,
-      "errors": 0,
-      "session_id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2"
-    },
-    {
-      "name": "glob",
-      "calls": 9,
-      "errors": 0,
-      "session_id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2"
-    },
-    {
-      "name": "edit",
-      "calls": 8,
-      "errors": 0,
-      "session_id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2"
-    },
-    {
-      "name": "grep",
-      "calls": 5,
-      "errors": 0,
-      "session_id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2"
-    },
-    {
-      "name": "skill",
-      "calls": 1,
-      "errors": 0,
-      "session_id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2"
-    }
-  ],
-  "events": [
-    {
-      "timestamp": "2026-10-17T14:50:31.748000+00:00",
-      "session_id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2",
-      "turn": 37,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "bash",
-      "status": "error",
-      "duration_ms": 35,
-      "context_tokens": 47888
+      "invocations": [
+        {
+          "id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2",
+          "parent_id": null,
+          "role": "general",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-17T14:39:16.049000+00:00",
+          "completed_at": "2026-10-17T15:12:34.057000+00:00",
+          "active_duration_seconds": 1234,
+          "turns": 141,
+          "tokens": {
+            "input": 1139501,
+            "output": 28249,
+            "cache_read": 7633800,
+            "reasoning": 20118,
+            "peak_context": 113824
+          },
+          "cost_usd": 1.608537,
+          "compactions": 0,
+          "user_iterations": 1
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 47,
+          "errors": 1
+        },
+        {
+          "name": "edit",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 9,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 5,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 31,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 20,
+          "errors": 0
+        }
+      ],
+      "events": [
+        {
+          "timestamp": "2026-10-17T14:50:31.748000+00:00",
+          "turn": 37,
+          "role": "general",
+          "event_type": "tool_call",
+          "tool_name": "bash",
+          "status": "error",
+          "duration_ms": 35,
+          "context_tokens": 47888
+        }
+      ]
     }
   ]
 }

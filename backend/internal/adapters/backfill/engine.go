@@ -15,6 +15,7 @@ import (
 	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
+	"agenticlens/internal/domain/migration"
 )
 
 // BackfillEngine coordinates scanning, Git recomputation, OpenCode SQLite querying,
@@ -186,17 +187,20 @@ func (e *BackfillEngine) processSingleWorkspace(
 		return result
 	}
 
-	var dto adapters.AgenticFactLedgerDTO
-	if err := json.Unmarshal(content, &dto); err != nil {
-		result.Error = fmt.Errorf("decoding JSON: %w", err)
+	canonical, err := migration.NewEngine(nil).Migrate(content, domain.CurrentSchemaVersion)
+	if err != nil {
+		result.Error = fmt.Errorf("normalizing ledger before backfill: %w", err)
 		return result
 	}
+	dto := adapters.AgenticFactLedgerDTOFromDomain(canonical)
 	if err := dto.Validate(); err != nil {
 		result.Error = fmt.Errorf("validating tool session provenance: %w", err)
 		return result
 	}
 
 	factLedger := dto.ToDomain()
+	sourceVersion, _ := migration.NewEngine(nil).DetectVersion(content)
+	needsNormalization := sourceVersion < domain.CurrentSchemaVersion || hasLegacyFactCollections(content)
 	ticketID := workspaceName
 	if factLedger.TicketID != nil && strings.TrimSpace(*factLedger.TicketID) != "" {
 		ticketID = strings.TrimSpace(*factLedger.TicketID)
@@ -215,8 +219,8 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// Fully completed tickets are skipped unless --force is specified.
 	// A ticket is considered completed if it has CurrentSchemaVersion,
 	// does not have a partial migration pending, and does not require event backfill when RecomputeDB is requested.
-	needsEventBackfill := opts.RecomputeDB && (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && len(factLedger.Events) == 0
-	isCompleted := factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
+	needsEventBackfill := opts.RecomputeDB && (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && len(factLedger.EventFacts()) == 0
+	isCompleted := !needsNormalization && factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
 		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) &&
 		!needsEventBackfill
 
@@ -256,7 +260,10 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// 2. OpenCode DB Recomputation with safe fallback preservation
 	dbAttempted := false
 	dbSessionFound := false
-	hasExistingDBFacts := len(factLedger.Invocations) > 0 || len(factLedger.Events) > 0
+	existingInvocations := factLedger.InvocationFacts()
+	existingTools := factLedger.ToolFacts()
+	existingEvents := factLedger.EventFacts()
+	hasExistingDBFacts := len(existingInvocations) > 0 || len(existingEvents) > 0
 
 	if opts.RecomputeDB {
 		dbAttempted = true
@@ -265,17 +272,17 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 			// Strategy 1 (Main resolution method): Existing Session ID from ledger invocations
 			var existingSessionID string
-			for _, inv := range factLedger.Invocations {
+			for _, inv := range existingInvocations {
 				if inv.ParentID == nil || strings.TrimSpace(*inv.ParentID) == "" {
 					existingSessionID = strings.TrimSpace(inv.ID)
 					break
 				}
 			}
-			if existingSessionID == "" && len(factLedger.Invocations) > 0 {
-				if factLedger.Invocations[0].ParentID != nil && strings.TrimSpace(*factLedger.Invocations[0].ParentID) != "" {
-					existingSessionID = strings.TrimSpace(*factLedger.Invocations[0].ParentID)
+			if existingSessionID == "" && len(existingInvocations) > 0 {
+				if existingInvocations[0].ParentID != nil && strings.TrimSpace(*existingInvocations[0].ParentID) != "" {
+					existingSessionID = strings.TrimSpace(*existingInvocations[0].ParentID)
 				} else {
-					existingSessionID = strings.TrimSpace(factLedger.Invocations[0].ID)
+					existingSessionID = strings.TrimSpace(existingInvocations[0].ID)
 				}
 			}
 
@@ -323,9 +330,9 @@ func (e *BackfillEngine) processSingleWorkspace(
 				)
 				if err == nil && len(invs) > 0 {
 					shouldUpdateInvocations := !hasExistingDBFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
+					updatedInvocations, updatedTools, updatedEvents := existingInvocations, existingTools, events
 					if shouldUpdateInvocations {
-						factLedger.Invocations = invs
-						factLedger.Tools = tools
+						updatedInvocations, updatedTools = invs, tools
 						if stISO != nil {
 							factLedger.StartedAt = stISO
 						}
@@ -341,10 +348,14 @@ func (e *BackfillEngine) processSingleWorkspace(
 								filteredEvents = append(filteredEvents, ev)
 							}
 						}
-						factLedger.Events = filteredEvents
-					} else {
-						factLedger.Events = events
+						updatedEvents = filteredEvents
 					}
+					sessions, sessionErr := domain.SessionsFromFacts(updatedInvocations, updatedTools, updatedEvents)
+					if sessionErr != nil {
+						result.Error = fmt.Errorf("grouping refreshed session facts: %w", sessionErr)
+						return result
+					}
+					factLedger.Sessions = sessions
 					result.DBUpdated = true
 				}
 			}
@@ -385,7 +396,12 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// 4. Atomic File Write
 	persistedLedger := factLedger
-	persistedLedger.Events = domain.PruneEventsForPersistence(factLedger)
+	persistedEvents := domain.PruneEventsForPersistence(factLedger)
+	persistedLedger.Sessions, err = domain.SessionsFromFacts(factLedger.InvocationFacts(), factLedger.ToolFacts(), persistedEvents)
+	if err != nil {
+		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
+		return result
+	}
 	dtoToSave := adapters.AgenticFactLedgerDTOFromDomain(persistedLedger)
 	data, err := json.MarshalIndent(dtoToSave, "", "  ")
 	if err != nil {

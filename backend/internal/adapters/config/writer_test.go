@@ -548,4 +548,3 @@ func TestGenerateConfigYAML_WorkspaceArtifacts(t *testing.T) {
 		t.Errorf("expected title 'Custom Documentation', got %q", loaded.Workspaces.Artifacts[0].Title)
 	}
 }
-

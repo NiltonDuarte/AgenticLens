@@ -115,11 +115,11 @@ type TimeWindowPreset string
 
 const (
 	TimeWindowLast24Hours     TimeWindowPreset = "Last 24 Hours"
-	TimeWindowLast7Days        TimeWindowPreset = "Last 7 Days"
-	TimeWindowLast30Days       TimeWindowPreset = "Last 30 Days"
-	TimeWindowLast90Days       TimeWindowPreset = "Last 90 Days"
-	TimeWindowProjectLifetime  TimeWindowPreset = "Project Lifetime"
-	TimeWindowCustomRange      TimeWindowPreset = "Custom Range"
+	TimeWindowLast7Days       TimeWindowPreset = "Last 7 Days"
+	TimeWindowLast30Days      TimeWindowPreset = "Last 30 Days"
+	TimeWindowLast90Days      TimeWindowPreset = "Last 90 Days"
+	TimeWindowProjectLifetime TimeWindowPreset = "Project Lifetime"
+	TimeWindowCustomRange     TimeWindowPreset = "Custom Range"
 )
 
 func orderRolesHelper[T ~string](roles []T, customOrder ...[]T) []T {

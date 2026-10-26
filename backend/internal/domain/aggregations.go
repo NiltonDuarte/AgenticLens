@@ -155,8 +155,8 @@ func ComputeTotals(invocations []InvocationFact) GroupedMetric {
 
 // ComputeWorkflowEfficiency derives workflow efficiency profile from an atomic fact ledger.
 func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) WorkflowEfficiency {
-	invs := ledger.Invocations
-	tools := ledger.Tools
+	invs := ledger.InvocationFacts()
+	tools := ledger.ToolFacts()
 	code := ledger.Code
 
 	var activeDurationSeconds int64
@@ -651,24 +651,29 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		mappings = RoleMappings{}
 	}
 
-	mappedInvocations := make([]InvocationFact, len(factLedger.Invocations))
-	for i, inv := range factLedger.Invocations {
+	invocations := factLedger.InvocationFacts()
+	mappedInvocations := make([]InvocationFact, len(invocations))
+	for i, inv := range invocations {
 		mappedInvocations[i] = inv
 		mappedInvocations[i].Role = mappings.ResolveRole(string(inv.Role))
 	}
 
+	events := factLedger.EventFacts()
 	var mappedEvents []EventFact
-	if factLedger.Events != nil {
-		mappedEvents = make([]EventFact, len(factLedger.Events))
-		for i, ev := range factLedger.Events {
+	if events != nil {
+		mappedEvents = make([]EventFact, len(events))
+		for i, ev := range events {
 			mappedEvents[i] = ev
 			mappedEvents[i].Role = mappings.ResolveRole(string(ev.Role))
 		}
 	}
 
 	mappedFactLedger := factLedger
-	mappedFactLedger.Invocations = mappedInvocations
-	mappedFactLedger.Events = mappedEvents
+	var err error
+	mappedFactLedger.Sessions, err = SessionsFromFacts(mappedInvocations, factLedger.ToolFacts(), mappedEvents)
+	if err != nil {
+		mappedFactLedger.Sessions = factLedger.Sessions
+	}
 
 	totals := ComputeTotals(mappedInvocations)
 	eff := ComputeWorkflowEfficiency(mappedFactLedger, cfg.RoleOrder)
@@ -861,27 +866,27 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 		}
 
 		rows = append(rows, TicketComparisonRow{
-			TicketID:                  tid,
-			UpdatedAt:                 ledger.UpdatedAt,
-			SDLCIterations:            eff.SDLCIterations,
-			ActiveDurationSeconds:     eff.ActiveDurationSeconds,
-			ActiveDurationFormatted:   eff.ActiveDurationFormatted,
-			CostUSD:                   tot.CostUSD,
-			CacheHitRatePct:           tot.CacheHitRatePct,
-			TestToCodeRatio:           eff.TestToProductionRatio.Ratio,
-			LinesAdded:                eff.CodeDelivered.LinesAdded,
-			LinesDeleted:              eff.CodeDelivered.LinesDeleted,
-			FilesChanged:              eff.CodeDelivered.FilesChanged,
-			ToolSuccessRatePct:        eff.ToolExecution.SuccessRatePct,
-			ContextHealthStatus:       cwh.Status,
-			RootSaturationPct:         cwh.RootSaturationPct,
-			PeakContextTokens:         cwh.RootPeakTokens,
-			TicketTitle:               title,
-			TicketType:                ledger.TicketType,
-			StartedAt:                 ledger.StartedAt,
-			CompletedAt:               ledger.CompletedAt,
-			LeadDurationSeconds:       leadSecs,
-			LeadDurationFormatted:     FormatLeadTime(leadSecs),
+			TicketID:                tid,
+			UpdatedAt:               ledger.UpdatedAt,
+			SDLCIterations:          eff.SDLCIterations,
+			ActiveDurationSeconds:   eff.ActiveDurationSeconds,
+			ActiveDurationFormatted: eff.ActiveDurationFormatted,
+			CostUSD:                 tot.CostUSD,
+			CacheHitRatePct:         tot.CacheHitRatePct,
+			TestToCodeRatio:         eff.TestToProductionRatio.Ratio,
+			LinesAdded:              eff.CodeDelivered.LinesAdded,
+			LinesDeleted:            eff.CodeDelivered.LinesDeleted,
+			FilesChanged:            eff.CodeDelivered.FilesChanged,
+			ToolSuccessRatePct:      eff.ToolExecution.SuccessRatePct,
+			ContextHealthStatus:     cwh.Status,
+			RootSaturationPct:       cwh.RootSaturationPct,
+			PeakContextTokens:       cwh.RootPeakTokens,
+			TicketTitle:             title,
+			TicketType:              ledger.TicketType,
+			StartedAt:               ledger.StartedAt,
+			CompletedAt:             ledger.CompletedAt,
+			LeadDurationSeconds:     leadSecs,
+			LeadDurationFormatted:   FormatLeadTime(leadSecs),
 		})
 	}
 
@@ -1506,7 +1511,7 @@ func AggregateMetricsOverTime(
 	}
 
 	for _, ledger := range ledgers {
-		for _, inv := range ledger.Facts.Invocations {
+		for _, inv := range ledger.Facts.InvocationFacts() {
 			var invDate time.Time
 			var ok bool
 			if d, okInv := parseTimestamp(inv.CompletedAt); okInv {
@@ -1620,24 +1625,24 @@ func AggregateMetricsOverTime(
 		}
 
 		results = append(results, TimeBucketMetric{
-			BucketKey:              bkey,
-			BucketDate:             bkey,
-			Invocations:            acc.invocations,
-			CostUSD:                math.Round(acc.costUSD*10000.0) / 10000.0,
-			InputTokens:            acc.inputTokens,
-			OutputTokens:           acc.outputTokens,
-			CacheReadTokens:        acc.cacheReadTokens,
-			ReasoningTokens:        acc.reasoningTokens,
-			CacheHitRatePct:        hitPct,
-			LinesAdded:             acc.linesAdded,
-			LinesDeleted:           acc.linesDeleted,
-			FilesChanged:           acc.filesChanged,
-			NetLinesAdded:          acc.linesAdded - acc.linesDeleted,
-			PeakContextTokens:      acc.peakContextTokens,
-			ActiveDurationSeconds:  acc.activeDurationSeconds,
-			CumulativeCostUSD:      math.Round(runningCumCost*10000.0) / 10000.0,
-			CumulativeInputTokens:  runningCumInput,
-			CumulativeOutputTokens: runningCumOutput,
+			BucketKey:               bkey,
+			BucketDate:              bkey,
+			Invocations:             acc.invocations,
+			CostUSD:                 math.Round(acc.costUSD*10000.0) / 10000.0,
+			InputTokens:             acc.inputTokens,
+			OutputTokens:            acc.outputTokens,
+			CacheReadTokens:         acc.cacheReadTokens,
+			ReasoningTokens:         acc.reasoningTokens,
+			CacheHitRatePct:         hitPct,
+			LinesAdded:              acc.linesAdded,
+			LinesDeleted:            acc.linesDeleted,
+			FilesChanged:            acc.filesChanged,
+			NetLinesAdded:           acc.linesAdded - acc.linesDeleted,
+			PeakContextTokens:       acc.peakContextTokens,
+			ActiveDurationSeconds:   acc.activeDurationSeconds,
+			CumulativeCostUSD:       math.Round(runningCumCost*10000.0) / 10000.0,
+			CumulativeInputTokens:   runningCumInput,
+			CumulativeOutputTokens:  runningCumOutput,
 			CumulativeLinesAdded:    runningCumLinesAdded,
 			CumulativeLinesDeleted:  runningCumLinesDeleted,
 			CumulativeNetLinesAdded: runningCumLinesAdded - runningCumLinesDeleted,

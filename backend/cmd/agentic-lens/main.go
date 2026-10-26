@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -169,20 +170,20 @@ func runGenerate(args []string) {
 
 	var knownThreadIDs []string
 	userBySessionID := make(map[string]string)
-	var invocations []domain.InvocationFact
-	var tools []domain.ToolFact
-	var events []domain.EventFact
+	var sessions []domain.SessionFact
 	var fallbackCode *domain.CodeFacts
 
 	if cachedFacts != nil {
 		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
-		for _, inv := range cachedFacts.Invocations {
+		sessions = append(sessions, cachedFacts.Sessions...)
+		cachedLedger := domain.AgenticFactLedger{Sessions: cachedFacts.Sessions}
+		for _, inv := range cachedLedger.InvocationFacts() {
 			userBySessionID[inv.ID] = inv.User
 		}
-		invocations = append(invocations, cachedFacts.Invocations...)
-		tools = append(tools, cachedFacts.Tools...)
-		events = append(events, cachedFacts.Events...)
 		fallbackCode = cachedFacts.Code
+		if cachedFacts.Migration != nil && strings.Contains(cachedFacts.Migration.Notes, "Removed ") {
+			fmt.Fprintf(os.Stderr, "WARNING: %s\n", cachedFacts.Migration.Notes)
+		}
 	}
 
 	var localInvocations []domain.InvocationFact
@@ -281,10 +282,14 @@ func runGenerate(args []string) {
 	}
 
 	if hasLocalExtraction {
-		invocations = mergeInvocations(invocations, localInvocations)
-		tools = mergeTools(tools, localTools)
-		events = mergeEvents(events, localEvents)
+		freshSessions, buildErr := domain.SessionsFromFacts(localInvocations, localTools, localEvents)
+		if buildErr != nil {
+			fmt.Fprintf(os.Stderr, "Error grouping extracted session facts: %v\n", buildErr)
+			os.Exit(1)
+		}
+		sessions = mergeSessions(sessions, freshSessions)
 	}
+	invocations := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 
 	if len(knownThreadIDs) == 0 && len(invocations) == 0 && !*allowEmptyFlag {
 		fmt.Fprintf(os.Stderr, "Error: unable to identify root session for ticket '%s'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted.\n", activeTicketID)
@@ -387,9 +392,7 @@ func runGenerate(args []string) {
 		CompletedAt:   activeCompletedAt,
 		UpdatedAt:     updatedAtISO,
 		Code:          codeFacts,
-		Invocations:   invocations,
-		Tools:         tools,
-		Events:        events,
+		Sessions:      sessions,
 	}
 
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
@@ -397,7 +400,13 @@ func runGenerate(args []string) {
 
 	if *jsonOutputFlag != "" {
 		persistedFactLedger := factLedger
-		persistedFactLedger.Events = domain.PruneEventsForPersistence(factLedger)
+		persistedEvents := domain.PruneEventsForPersistence(factLedger)
+		persistedSessions, pruneErr := domain.SessionsFromFacts(factLedger.InvocationFacts(), factLedger.ToolFacts(), persistedEvents)
+		if pruneErr != nil {
+			fmt.Fprintf(os.Stderr, "Error preparing session-owned telemetry: %v\n", pruneErr)
+			os.Exit(1)
+		}
+		persistedFactLedger.Sessions = persistedSessions
 		if err := adapters.SaveFactLedger(*jsonOutputFlag, persistedFactLedger); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
@@ -1319,5 +1328,25 @@ func mergeEvents(cached []domain.EventFact, local []domain.EventFact) []domain.E
 		}
 	}
 
+	return merged
+}
+
+func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []domain.SessionFact {
+	byID := make(map[string]domain.SessionFact, len(cached)+len(local))
+	for _, session := range cached {
+		byID[session.ID] = session
+	}
+	for _, session := range local {
+		byID[session.ID] = session
+	}
+	ids := make([]string, 0, len(byID))
+	for id := range byID {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	merged := make([]domain.SessionFact, 0, len(ids))
+	for _, id := range ids {
+		merged = append(merged, byID[id])
+	}
 	return merged
 }

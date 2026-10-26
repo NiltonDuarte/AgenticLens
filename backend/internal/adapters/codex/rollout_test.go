@@ -53,7 +53,10 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 	if len(transcript.Events) != 2 || transcript.Events[0].Status != "completed" || transcript.Events[0].DurationMs == nil || *transcript.Events[0].DurationMs != 125 {
 		t.Fatalf("expected privacy-safe paired command event with duration, got %#v", transcript.Events)
 	}
-	ledger := transcript.ToMetricsLedger("TEST-101", "Fixture metrics", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	ledger, err := transcript.ToMetricsLedger("TEST-101", "Fixture metrics", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if ledger.Facts.SchemaVersion == nil || *ledger.Facts.SchemaVersion != domain.CurrentSchemaVersion {
 		t.Fatalf("expected current AgenticLens fact schema, got %#v", ledger.Facts.SchemaVersion)
 	}
@@ -117,11 +120,14 @@ func TestMetricsLedgerUsesCodexThreadIDForInvocationHierarchy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseRollout returned an error: %v", err)
 	}
-	ledger := transcript.ToMetricsLedger("TEST-101", "Fixture metrics", domain.TicketTypeChore, domain.DefaultProjectConfig())
-	if len(ledger.Facts.Invocations) != 1 {
-		t.Fatalf("expected one invocation, got %d", len(ledger.Facts.Invocations))
+	ledger, err := transcript.ToMetricsLedger("TEST-101", "Fixture metrics", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	if err != nil {
+		t.Fatal(err)
 	}
-	invocation := ledger.Facts.Invocations[0]
+	if len(ledger.Facts.InvocationFacts()) != 1 {
+		t.Fatalf("expected one invocation, got %d", len(ledger.Facts.InvocationFacts()))
+	}
+	invocation := ledger.Facts.InvocationFacts()[0]
 	if invocation.ID != "child-thread" || invocation.ParentID == nil || *invocation.ParentID != "root-thread" {
 		t.Fatalf("Codex thread hierarchy was not preserved: %#v", invocation)
 	}

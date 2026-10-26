@@ -108,9 +108,27 @@ export interface AgenticFactLedger {
   readonly completed_at: string | null;
   readonly updated_at: string;
   readonly code: CodeFacts;
+  readonly sessions: readonly SessionFact[];
+}
+
+export interface SessionFact {
+  readonly id: string;
+  readonly parent_id?: string | null;
   readonly invocations: readonly InvocationFact[];
-  readonly tools: readonly ToolFact[];
-  readonly events?: readonly EventFact[];
+  readonly tools: readonly Omit<ToolFact, 'session_id'>[];
+  readonly events: readonly Omit<EventFact, 'session_id'>[];
+}
+
+export function sessionInvocations(sessions: readonly SessionFact[] | undefined): readonly InvocationFact[] {
+  return sessions?.flatMap((session) => session.invocations) ?? [];
+}
+
+export function sessionTools(sessions: readonly SessionFact[] | undefined): readonly ToolFact[] {
+  return sessions?.flatMap((session) => session.tools.map((tool) => ({ ...tool, session_id: session.id }))) ?? [];
+}
+
+export function sessionEvents(sessions: readonly SessionFact[] | undefined): readonly EventFact[] {
+  return sessions?.flatMap((session) => session.events.map((event) => ({ ...event, session_id: session.id }))) ?? [];
 }
 
 export interface GroupedMetric {

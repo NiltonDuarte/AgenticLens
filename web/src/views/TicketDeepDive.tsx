@@ -6,6 +6,7 @@ import type {
   EventFact,
   WorkspaceDetail,
 } from '../domain/types';
+import { sessionEvents, sessionTools } from '../domain/types';
 import {
   fetchWorkspaceById,
   fetchWorkspaceEvents,
@@ -87,7 +88,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         const detailRes = await fetchWorkspaceById(targetId);
         setDetail(detailRes.data);
 
-        let loadedEvents: readonly EventFact[] = detailRes.data.ledger?.facts?.events ?? [];
+        let loadedEvents: readonly EventFact[] = sessionEvents(detailRes.data.ledger?.facts?.sessions);
         let hydrated = false;
         let source: DataSource = 'committed_ledger';
         try {
@@ -180,7 +181,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const leadSecs = computeLeadTimeSeconds(ledger.started_at, ledger.completed_at);
   const code = eff.code_delivered;
   const tools = eff.tool_execution;
-  const toolUsageByName = aggregateToolUsage(ledger.facts?.tools ?? []);
+  const toolUsageByName = aggregateToolUsage(sessionTools(ledger.facts?.sessions));
   const subTurns = eff.subagent_turn_velocity;
 
   const ticketOptions = ledgers.map((l) => ({

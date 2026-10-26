@@ -63,13 +63,14 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 	}
 
 	// 5. Invocations invariant
-	if len(after.Invocations) != len(before.Invocations) {
+	afterInvocations, beforeInvocations := after.InvocationFacts(), before.InvocationFacts()
+	if len(afterInvocations) != len(beforeInvocations) {
 		return fmt.Errorf("%w: invocation count changed from %d to %d",
-			ErrInvariantViolation, len(before.Invocations), len(after.Invocations))
+			ErrInvariantViolation, len(beforeInvocations), len(afterInvocations))
 	}
-	for i := range before.Invocations {
-		b := before.Invocations[i]
-		a := after.Invocations[i]
+	for i := range beforeInvocations {
+		b := beforeInvocations[i]
+		a := afterInvocations[i]
 		if b.ID != a.ID ||
 			!ptrEqual(b.ParentID, a.ParentID) ||
 			b.Role != a.Role ||
@@ -89,13 +90,14 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 	}
 
 	// 6. Tools invariant
-	if len(after.Tools) != len(before.Tools) {
+	afterTools, beforeTools := after.ToolFacts(), before.ToolFacts()
+	if len(afterTools) != len(beforeTools) {
 		return fmt.Errorf("%w: tools count changed from %d to %d",
-			ErrInvariantViolation, len(before.Tools), len(after.Tools))
+			ErrInvariantViolation, len(beforeTools), len(afterTools))
 	}
-	for i := range before.Tools {
-		b := before.Tools[i]
-		a := after.Tools[i]
+	for i := range beforeTools {
+		b := beforeTools[i]
+		a := afterTools[i]
 		if b != a {
 			return fmt.Errorf("%w: tool[%d] (%s) modified from %+v to %+v",
 				ErrInvariantViolation, i, b.Name, b, a)
@@ -105,18 +107,19 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 	// 7. Event facts invariant
 	if expectedTargetVersion >= 3 {
 		// Version 3+ invariant: event pruning and error message stripping
-		if len(after.Events) > len(before.Events) {
+		afterEvents, beforeEvents := after.EventFacts(), before.EventFacts()
+		if len(afterEvents) > len(beforeEvents) {
 			return fmt.Errorf("%w: events count increased in v3 migration from %d to %d",
-				ErrInvariantViolation, len(before.Events), len(after.Events))
+				ErrInvariantViolation, len(beforeEvents), len(afterEvents))
 		}
 		matched := make(map[int]bool)
-		for i, a := range after.Events {
+		for i, a := range afterEvents {
 			if a.ErrorMessage != nil {
 				return fmt.Errorf("%w: event[%d] in schema v3 has non-nil error_message: %s",
 					ErrInvariantViolation, i, *a.ErrorMessage)
 			}
 			found := false
-			for j, b := range before.Events {
+			for j, b := range beforeEvents {
 				if matched[j] {
 					continue
 				}
@@ -140,8 +143,8 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 			}
 		}
 
-		totalsBefore := domain.ComputeTotals(before.Invocations)
-		totalsAfter := domain.ComputeTotals(after.Invocations)
+		totalsBefore := domain.ComputeTotals(beforeInvocations)
+		totalsAfter := domain.ComputeTotals(afterInvocations)
 		if !reflect.DeepEqual(totalsBefore, totalsAfter) {
 			return fmt.Errorf("%w: ComputeTotals mismatch after migration", ErrInvariantViolation)
 		}
@@ -153,13 +156,14 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 		}
 	} else {
 		// Schema v1/v2: events count cannot decrease and all prior events must be strictly preserved
-		if len(after.Events) < len(before.Events) {
+		afterEvents, beforeEvents := after.EventFacts(), before.EventFacts()
+		if len(afterEvents) < len(beforeEvents) {
 			return fmt.Errorf("%w: events count decreased from %d to %d",
-				ErrInvariantViolation, len(before.Events), len(after.Events))
+				ErrInvariantViolation, len(beforeEvents), len(afterEvents))
 		}
-		for i := range before.Events {
-			b := before.Events[i]
-			a := after.Events[i]
+		for i := range beforeEvents {
+			b := beforeEvents[i]
+			a := afterEvents[i]
 			if b.Timestamp != a.Timestamp ||
 				b.SessionID != a.SessionID ||
 				b.Turn != a.Turn ||

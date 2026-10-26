@@ -1,5 +1,16 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
+  "migration": {
+    "schema_version": 4,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v4_user_iterations"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "2026-10-26T09:20:49.972741+00:00",
+    "last_migrated_by": "universal-migration-engine",
+    "notes": "Removed 9 unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them."
+  },
   "ticket_id": "GEN-7",
   "ticket_title": "Multi-Platform Binary Selection and Host-Container Wrapper Support in Setup",
   "ticket_type": "chore",
@@ -16,131 +27,86 @@
     "files_changed": 8,
     "sdlc_iterations": 6
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
-      "parent_id": null,
-      "role": "general",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-23T14:15:21.283000+00:00",
-      "completed_at": "2026-10-26T09:20:44.515000+00:00",
-      "active_duration_seconds": 2981,
-      "turns": 242,
-      "tokens": {
-        "input": 2151954,
-        "output": 49982,
-        "cache_read": 18504276,
-        "reasoning": 47355,
-        "peak_context": 167359
-      },
-      "cost_usd": 3.3668,
-      "compactions": 1
-    }
-  ],
-  "tools": [
-    {
-      "name": "read",
-      "calls": 78,
-      "errors": 1
-    },
-    {
-      "name": "bash",
-      "calls": 72,
-      "errors": 0
-    },
-    {
-      "name": "edit",
-      "calls": 40,
-      "errors": 0
-    },
-    {
-      "name": "glob",
-      "calls": 14,
-      "errors": 0
-    },
-    {
-      "name": "grep",
-      "calls": 13,
-      "errors": 0
-    },
-    {
-      "name": "todowrite",
-      "calls": 8,
-      "errors": 0
-    },
-    {
-      "name": "write",
-      "calls": 8,
-      "errors": 0
-    },
-    {
-      "name": "t3-code_link_pull_request",
-      "calls": 1,
-      "errors": 0
-    },
-    {
-      "name": "t3-code_list_thread_pull_requests",
-      "calls": 1,
-      "errors": 0
-    }
-  ],
-  "events": [
-    {
-      "timestamp": "2026-10-26T09:11:55.397000+00:00",
-      "session_id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
-      "message_id": "msg_1777b0d05001Y2Z883Cz2FmhjH",
-      "turn": 140,
-      "role": "general",
-      "event_type": "turn_message",
-      "status": "completed",
-      "duration_ms": 3927,
-      "context_tokens": 160886
-    },
-    {
-      "timestamp": "2026-10-26T09:11:59.113000+00:00",
-      "session_id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
-      "message_id": "msg_1777b0d05001Y2Z883Cz2FmhjH",
-      "turn": 140,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "completed",
-      "duration_ms": 21,
-      "context_tokens": 160886
-    },
-    {
-      "timestamp": "2026-10-26T09:12:50.652000+00:00",
-      "session_id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
-      "message_id": "msg_1777be4da001pVTpRokUcFwhh4",
-      "turn": 1,
-      "role": "general",
-      "event_type": "compaction",
-      "status": "completed",
-      "context_tokens": 0
-    },
-    {
-      "timestamp": "2026-10-26T09:12:50.674000+00:00",
-      "session_id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
-      "message_id": "msg_1777be4f2001U8UbldNvwyeKpb",
-      "turn": 148,
-      "role": "general",
-      "event_type": "turn_message",
-      "status": "completed",
-      "duration_ms": 21108,
-      "context_tokens": 80641
-    },
-    {
-      "timestamp": "2026-10-26T09:20:10.928000+00:00",
-      "session_id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
-      "message_id": "msg_1778284af001eNbU954Vr8JXV3",
-      "turn": 228,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 15,
-      "context_tokens": 78650
+      "invocations": [
+        {
+          "id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
+          "parent_id": null,
+          "role": "general",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-23T14:15:21.283000+00:00",
+          "completed_at": "2026-10-26T09:20:44.515000+00:00",
+          "active_duration_seconds": 2981,
+          "turns": 242,
+          "tokens": {
+            "input": 2151954,
+            "output": 49982,
+            "cache_read": 18504276,
+            "reasoning": 47355,
+            "peak_context": 167359
+          },
+          "cost_usd": 3.3668,
+          "compactions": 1,
+          "user_iterations": 6
+        }
+      ],
+      "tools": [],
+      "events": [
+        {
+          "timestamp": "2026-10-26T09:11:55.397000+00:00",
+          "message_id": "msg_1777b0d05001Y2Z883Cz2FmhjH",
+          "turn": 140,
+          "role": "general",
+          "event_type": "turn_message",
+          "status": "completed",
+          "duration_ms": 3927,
+          "context_tokens": 160886
+        },
+        {
+          "timestamp": "2026-10-26T09:11:59.113000+00:00",
+          "message_id": "msg_1777b0d05001Y2Z883Cz2FmhjH",
+          "turn": 140,
+          "role": "general",
+          "event_type": "tool_call",
+          "tool_name": "read",
+          "status": "completed",
+          "duration_ms": 21,
+          "context_tokens": 160886
+        },
+        {
+          "timestamp": "2026-10-26T09:12:50.652000+00:00",
+          "message_id": "msg_1777be4da001pVTpRokUcFwhh4",
+          "turn": 1,
+          "role": "general",
+          "event_type": "compaction",
+          "status": "completed",
+          "context_tokens": 0
+        },
+        {
+          "timestamp": "2026-10-26T09:12:50.674000+00:00",
+          "message_id": "msg_1777be4f2001U8UbldNvwyeKpb",
+          "turn": 148,
+          "role": "general",
+          "event_type": "turn_message",
+          "status": "completed",
+          "duration_ms": 21108,
+          "context_tokens": 80641
+        },
+        {
+          "timestamp": "2026-10-26T09:20:10.928000+00:00",
+          "message_id": "msg_1778284af001eNbU954Vr8JXV3",
+          "turn": 228,
+          "role": "general",
+          "event_type": "tool_call",
+          "tool_name": "read",
+          "status": "error",
+          "duration_ms": 15,
+          "context_tokens": 78650
+        }
+      ]
     }
   ]
 }

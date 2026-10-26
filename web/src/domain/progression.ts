@@ -1,4 +1,4 @@
-import type { AgenticMetricsLedger, TimeBucketMetric, TimeGranularity } from './types';
+import { sessionInvocations, type AgenticMetricsLedger, type TimeBucketMetric, type TimeGranularity } from './types';
 
 interface MutableBucketAccumulator {
   invocations: number;
@@ -164,7 +164,7 @@ export function aggregateMetricsOverTime(
   };
 
   for (const ledger of ledgers) {
-    const invocations = ledger.facts?.invocations ?? [];
+    const invocations = sessionInvocations(ledger.facts?.sessions);
     for (const inv of invocations) {
       const invDate =
         parseIsoDateToUtc(inv.completed_at) ??

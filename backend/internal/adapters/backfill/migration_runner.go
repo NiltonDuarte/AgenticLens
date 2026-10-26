@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -116,25 +117,18 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 			continue
 		}
 		res.SourceVersion = sourceVer
-		if sourceVer >= domain.CurrentSchemaVersion || targetVer >= domain.CurrentSchemaVersion {
-			var dto adapters.AgenticFactLedgerDTO
-			if err := json.Unmarshal(content, &dto); err != nil {
-				res.Status = "error"
-				res.Error = fmt.Errorf("decoding ledger for session validation: %w", err)
-				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-				report.Results = append(report.Results, res)
-				continue
+		hasLegacyFacts := hasLegacyFactCollections(content)
+		needsSanitization := sourceVer == domain.CurrentSchemaVersion && needsEventSanitization(content)
+		if sourceVer >= targetVer && !(sourceVer == domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
+			if sourceVer == domain.CurrentSchemaVersion && !hasLegacyFacts {
+				if err := validateCurrentLedger(content); err != nil {
+					res.Status = "error"
+					res.Error = fmt.Errorf("validating current schema ledger: %w", err)
+					report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+					report.Results = append(report.Results, res)
+					continue
+				}
 			}
-			if err := dto.Validate(); err != nil {
-				res.Status = "error"
-				res.Error = fmt.Errorf("validating tool session provenance: %w", err)
-				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-				report.Results = append(report.Results, res)
-				continue
-			}
-		}
-
-		if sourceVer >= targetVer {
 			res.Status = "up-to-date"
 			res.DiffSummary = fmt.Sprintf("Schema version %d is already up-to-date", sourceVer)
 			report.UpToDate++
@@ -155,6 +149,9 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 			res.TicketID = strings.TrimSpace(*migrated.TicketID)
 		}
 		res.DiffSummary = fmt.Sprintf("Upgraded schema v%d -> v%d", sourceVer, targetVer)
+		if migrated.Migration != nil && strings.TrimSpace(migrated.Migration.Notes) != "" {
+			res.DiffSummary += "; " + strings.TrimSpace(migrated.Migration.Notes)
+		}
 
 		if opts.DryRun {
 			res.Status = "migrated (dry-run)"
@@ -176,6 +173,13 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 		}
 
 		dto := adapters.AgenticFactLedgerDTOFromDomain(migrated)
+		if err := dto.Validate(); err != nil {
+			res.Status = "error"
+			res.Error = fmt.Errorf("validating migrated schema: %w", err)
+			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+			report.Results = append(report.Results, res)
+			continue
+		}
 		data, err := json.MarshalIndent(dto, "", "  ")
 		if err != nil {
 			res.Status = "error"
@@ -219,4 +223,41 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 	}
 
 	return report, nil
+}
+
+func needsEventSanitization(content []byte) bool {
+	var ledger domain.AgenticFactLedger
+	if json.Unmarshal(content, &ledger) != nil {
+		return false
+	}
+	events := ledger.EventFacts()
+	pruned := domain.PruneEventsForPersistence(ledger)
+	if len(events) != len(pruned) {
+		return true
+	}
+	if len(events) == 0 {
+		return false
+	}
+	return !reflect.DeepEqual(events, pruned)
+}
+
+func hasLegacyFactCollections(content []byte) bool {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(content, &fields) != nil {
+		return false
+	}
+	for _, key := range []string{"invocations", "tools", "events"} {
+		if _, ok := fields[key]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func validateCurrentLedger(content []byte) error {
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(content, &dto); err != nil {
+		return err
+	}
+	return dto.Validate()
 }

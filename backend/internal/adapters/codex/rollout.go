@@ -829,7 +829,7 @@ func (transcript *Transcript) invocationID() string {
 }
 
 // ToMetricsLedger maps one Codex thread into AgenticLens facts and uses the existing pure aggregation pipeline.
-func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticketType domain.ConventionalTicketType, cfg domain.ProjectConfig) domain.AgenticMetricsLedger {
+func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticketType domain.ConventionalTicketType, cfg domain.ProjectConfig) (domain.AgenticMetricsLedger, error) {
 	version := domain.CurrentSchemaVersion
 	var ticketIDPtr, titlePtr *string
 	var ticketTypePtr *domain.ConventionalTicketType
@@ -854,17 +854,24 @@ func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticke
 		value := transcript.CompletedAt
 		completedAt = &value
 	}
+	sessions, err := domain.SessionsFromFacts(transcript.Invocations, transcript.Tools, transcript.Events)
+	if err != nil {
+		return domain.AgenticMetricsLedger{}, fmt.Errorf("grouping Codex facts by session: %w", err)
+	}
 	facts := domain.AgenticFactLedger{
 		SchemaVersion: &version, TicketID: ticketIDPtr, TicketTitle: titlePtr, TicketType: ticketTypePtr,
 		StartedAt: startedAt, CompletedAt: completedAt, UpdatedAt: transcript.UpdatedAt,
-		Invocations: append([]domain.InvocationFact{}, transcript.Invocations...),
-		Tools:       append([]domain.ToolFact{}, transcript.Tools...), Events: append([]domain.EventFact{}, transcript.Events...),
+		Sessions: sessions,
 	}
 	ledger := domain.DeriveMetricsLedger(facts, cfg)
 	// Derive from complete facts, then apply the same persisted-event policy
 	// used by generate so exported facts do not contain routine events.
-	ledger.Facts.Events = domain.PruneEventsForPersistence(facts)
-	return ledger
+	persistedEvents := domain.PruneEventsForPersistence(facts)
+	ledger.Facts.Sessions, err = domain.SessionsFromFacts(facts.InvocationFacts(), facts.ToolFacts(), persistedEvents)
+	if err != nil {
+		return domain.AgenticMetricsLedger{}, fmt.Errorf("pruning Codex events by session: %w", err)
+	}
+	return ledger, nil
 }
 
 // CombineTranscripts merges a discovered root thread and its child threads

@@ -1,5 +1,12 @@
 package domain
 
+import (
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+)
+
 // InvocationTokens stores immutable token counts for a single agent invocation.
 type InvocationTokens struct {
 	Input       int64 `json:"input"`
@@ -53,6 +60,41 @@ type EventFact struct {
 	ToolOutput       *string   `json:"tool_output,omitempty"`
 }
 
+// SessionToolFact stores tool totals owned by one session. Session identity is
+// inherited from the containing SessionFact.
+type SessionToolFact struct {
+	Name   string `json:"name"`
+	Calls  int64  `json:"calls"`
+	Errors int64  `json:"errors"`
+}
+
+// SessionEventFact is a persisted event whose identity is inherited from its session.
+type SessionEventFact struct {
+	Timestamp        string    `json:"timestamp"`
+	MessageID        *string   `json:"message_id,omitempty"`
+	Turn             int64     `json:"turn"`
+	Role             AgentRole `json:"role"`
+	EventType        EventType `json:"event_type"`
+	ToolName         *string   `json:"tool_name,omitempty"`
+	Status           string    `json:"status"`
+	ErrorMessage     *string   `json:"error_message,omitempty"`
+	DurationMs       *int64    `json:"duration_ms,omitempty"`
+	ContextTokens    int64     `json:"context_tokens"`
+	PromptContent    *string   `json:"prompt_content,omitempty"`
+	ReasoningContent *string   `json:"reasoning_content,omitempty"`
+	ToolInput        *string   `json:"tool_input,omitempty"`
+	ToolOutput       *string   `json:"tool_output,omitempty"`
+}
+
+// SessionFact owns all raw telemetry attributed to a single agent session.
+type SessionFact struct {
+	ID          string             `json:"id"`
+	ParentID    *string            `json:"parent_id,omitempty"`
+	Invocations []InvocationFact   `json:"invocations"`
+	Tools       []SessionToolFact  `json:"tools"`
+	Events      []SessionEventFact `json:"events"`
+}
+
 // WorkspaceEventsResponse wraps execution events for a ticket workspace with hydration status and data source provenance.
 type WorkspaceEventsResponse struct {
 	TicketID   string      `json:"ticket_id"`
@@ -95,9 +137,130 @@ type AgenticFactLedger struct {
 	CompletedAt   *string                 `json:"completed_at"`
 	UpdatedAt     string                  `json:"updated_at"`
 	Code          CodeFacts               `json:"code"`
-	Invocations   []InvocationFact        `json:"invocations"`
-	Tools         []ToolFact              `json:"tools"`
-	Events        []EventFact             `json:"events,omitempty"`
+	Sessions      []SessionFact           `json:"sessions"`
+}
+
+// InvocationFacts returns invocation rows in deterministic session order.
+func (ledger AgenticFactLedger) InvocationFacts() []InvocationFact {
+	var result []InvocationFact
+	for _, session := range ledger.Sessions {
+		result = append(result, session.Invocations...)
+	}
+	return result
+}
+
+// ToolFacts returns session-owned tool summaries with their owning identity restored for aggregation.
+func (ledger AgenticFactLedger) ToolFacts() []ToolFact {
+	var result []ToolFact
+	for _, session := range ledger.Sessions {
+		for _, tool := range session.Tools {
+			result = append(result, ToolFact{SessionID: session.ID, Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
+		}
+	}
+	return result
+}
+
+// EventFacts returns persisted events with their owning session identity restored for consumers.
+func (ledger AgenticFactLedger) EventFacts() []EventFact {
+	var result []EventFact
+	eventsPresent := false
+	for _, session := range ledger.Sessions {
+		if session.Events != nil {
+			eventsPresent = true
+		}
+		for _, event := range session.Events {
+			result = append(result, EventFact{
+				Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
+				Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
+				ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+				PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
+				ToolInput: event.ToolInput, ToolOutput: event.ToolOutput,
+			})
+		}
+	}
+	if len(result) == 0 && eventsPresent {
+		return []EventFact{}
+	}
+	if len(result) == 0 && !eventsPresent {
+		return nil
+	}
+	return SortEvents(result)
+}
+
+// SessionsFromFacts builds the canonical session tree from extracted atomic facts.
+func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
+	byID := make(map[string]*SessionFact)
+	order := make([]string, 0)
+	get := func(id string, parent *string) (*SessionFact, error) {
+		clean := strings.TrimSpace(id)
+		if clean == "" {
+			return nil, errors.New("session identity is required when grouping facts")
+		}
+		if session, ok := byID[clean]; ok {
+			if parent != nil && session.ParentID != nil && *session.ParentID != *parent {
+				return nil, fmt.Errorf("session %q has conflicting parent identities", clean)
+			}
+			return session, nil
+		}
+		session := &SessionFact{ID: clean, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{}}
+		if parent != nil && strings.TrimSpace(*parent) != "" {
+			p := strings.TrimSpace(*parent)
+			session.ParentID = &p
+		}
+		byID[clean] = session
+		order = append(order, clean)
+		return session, nil
+	}
+	for _, invocation := range invocations {
+		session, err := get(invocation.ID, invocation.ParentID)
+		if err != nil {
+			return nil, err
+		}
+		session.Invocations = append(session.Invocations, invocation)
+	}
+	for _, tool := range tools {
+		session, err := get(tool.SessionID, nil)
+		if err != nil {
+			return nil, err
+		}
+		found := false
+		for i := range session.Tools {
+			if session.Tools[i].Name == tool.Name {
+				session.Tools[i].Calls += tool.Calls
+				session.Tools[i].Errors += tool.Errors
+				found = true
+				break
+			}
+		}
+		if !found {
+			session.Tools = append(session.Tools, SessionToolFact{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
+		}
+	}
+	for _, event := range events {
+		session, err := get(event.SessionID, nil)
+		if err != nil {
+			return nil, err
+		}
+		session.Events = append(session.Events, SessionEventFact{
+			Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
+			EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
+			ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+			PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
+			ToolInput: event.ToolInput, ToolOutput: event.ToolOutput,
+		})
+	}
+	if events == nil {
+		for _, session := range byID {
+			session.Events = nil
+		}
+	}
+	result := make([]SessionFact, 0, len(order))
+	for _, id := range order {
+		session := *byID[id]
+		sort.SliceStable(session.Tools, func(i, j int) bool { return session.Tools[i].Name < session.Tools[j].Name })
+		result = append(result, session)
+	}
+	return result, nil
 }
 
 // GroupedMetric aggregates metrics across invocations.

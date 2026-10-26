@@ -366,19 +366,59 @@ func TestFleetAnomalySummaryDTO_BidirectionalMapping(t *testing.T) {
 }
 
 func TestSchemaMigrationDTOBoundaries(t *testing.T) {
-	t.Run("v2 schema guarantees events array in serialized JSON", func(t *testing.T) {
-		v2 := 2
-		tid := "AL-V2-EMPTY"
+	t.Run("malformed nested session records are rejected instead of defaulted", func(t *testing.T) {
+		validEvent := adapters.SessionEventFactDTO{Timestamp: "2026-10-18T10:00:00Z", Role: "coder", EventType: string(domain.EventTypeToolCall), Status: "error"}
+		missingParent := "missing"
+		cases := []struct {
+			name    string
+			session adapters.SessionFactDTO
+		}{
+			{"blank tool name", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Calls: 1}}}},
+			{"negative tool calls", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: -1}}}},
+			{"errors exceed calls", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1, Errors: 2}}}},
+			{"duplicate tool name", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1}, {Name: "bash", Calls: 2}}}},
+			{"missing event timestamp", adapters.SessionFactDTO{ID: "s1", Events: []adapters.SessionEventFactDTO{{Role: "coder", EventType: string(domain.EventTypeToolCall), Status: "error"}}}},
+			{"missing event role", adapters.SessionFactDTO{ID: "s1", Events: []adapters.SessionEventFactDTO{{Timestamp: validEvent.Timestamp, EventType: validEvent.EventType, Status: "error"}}}},
+			{"unsupported event type", adapters.SessionFactDTO{ID: "s1", Events: []adapters.SessionEventFactDTO{{Timestamp: validEvent.Timestamp, Role: "coder", EventType: "unknown", Status: "error"}}}},
+			{"dangling invocation parent", adapters.SessionFactDTO{ID: "s1", Invocations: []adapters.InvocationFactDTO{{ID: "i1", ParentID: &missingParent}}}},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				dto := adapters.AgenticFactLedgerDTO{Sessions: []adapters.SessionFactDTO{tc.session}}
+				if err := dto.Validate(); err == nil {
+					t.Fatal("expected malformed nested record to fail validation")
+				}
+			})
+		}
+	})
+	t.Run("canonical event DTO rejects error payload and serialization omits it", func(t *testing.T) {
+		var decoded adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(`{"schema_version":4,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","role":"coder","event_type":"tool_call","status":"error","error_message":"private error text"}]}]}`), &decoded); err == nil {
+			t.Fatal("canonical DTO accepted error_message")
+		}
+		message := "private error text"
+		ledger := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "s1", Events: []domain.SessionEventFact{{Timestamp: "2026-10-18T10:00:00Z", Role: "coder", EventType: domain.EventTypeToolCall, Status: "error", ErrorMessage: &message}}}}}
+		data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(data), "private error text") || strings.Contains(string(data), `"error_message"`) {
+			t.Fatalf("canonical DTO serialized sensitive event payload: %s", data)
+		}
+	})
+
+	t.Run("empty ledger serializes a sessions collection without root facts", func(t *testing.T) {
+		v4 := 4
+		tid := "AL-V4-EMPTY"
 		ledger := domain.AgenticFactLedger{
-			SchemaVersion: &v2,
+			SchemaVersion: &v4,
 			TicketID:      &tid,
-			UpdatedAt:     "2026-10-18T10:00:00Z",
-			Events:        nil, // nil events in domain
+			UpdatedAt:     "2026-10-18T10:00:00Z", Sessions: []domain.SessionFact{},
 		}
 
 		dto := adapters.AgenticFactLedgerDTOFromDomain(ledger)
-		if dto.Events == nil {
-			t.Fatal("expected DTO.Events to be initialized to empty slice for schema_version >= 2")
+		if dto.Sessions == nil {
+			t.Fatal("expected DTO.Sessions to be initialized")
 		}
 
 		data, err := json.Marshal(dto)
@@ -386,24 +426,23 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 			t.Fatalf("marshal failed: %v", err)
 		}
 		jsonStr := string(data)
-		if !strings.Contains(jsonStr, `"events":[]`) {
-			t.Errorf("expected serialized JSON to contain '\"events\":[]', got %s", jsonStr)
+		if !strings.Contains(jsonStr, `"sessions":[]`) || strings.Contains(jsonStr, `"invocations"`) || strings.Contains(jsonStr, `"tools"`) || strings.Contains(jsonStr, `"events"`) {
+			t.Errorf("expected an empty sessions collection with no root facts, got %s", jsonStr)
 		}
 	})
 
-	t.Run("v1 schema without events serializes without synthetic events array", func(t *testing.T) {
-		v1 := 1
-		tid := "AL-V1"
-		ledger := domain.AgenticFactLedger{
-			SchemaVersion: &v1,
-			TicketID:      &tid,
-			UpdatedAt:     "2026-10-18T10:00:00Z",
-			Events:        nil,
+	t.Run("session event serialization omits repeated session identity", func(t *testing.T) {
+		sid := "session-fixture"
+		tool := "bash"
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil,
+			[]domain.ToolFact{{SessionID: sid, Name: tool, Calls: 2}},
+			[]domain.EventFact{{SessionID: sid, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}})}
+		data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
+		if err != nil {
+			t.Fatal(err)
 		}
-
-		dto := adapters.AgenticFactLedgerDTOFromDomain(ledger)
-		if dto.Events != nil {
-			t.Errorf("expected DTO.Events to be nil for v1 with nil events, got %+v", dto.Events)
+		if strings.Count(string(data), `"id":"session-fixture"`) != 1 || strings.Contains(string(data), `"session_id"`) {
+			t.Fatalf("expected session identity only on the session, got %s", data)
 		}
 	})
 
@@ -445,14 +484,14 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 		if dom.Code.SDLCIterations != 0 {
 			t.Errorf("expected zero SDLC iterations to remain zero, got %d", dom.Code.SDLCIterations)
 		}
-		if len(dom.Events) != 0 {
-			t.Errorf("expected 0 events, got len %d", len(dom.Events))
+		if len(dom.EventFacts()) != 0 {
+			t.Errorf("expected 0 events, got len %d", len(dom.EventFacts()))
 		}
-		if len(dom.Invocations) != 0 {
-			t.Errorf("expected 0 invocations, got %d", len(dom.Invocations))
+		if len(dom.InvocationFacts()) != 0 {
+			t.Errorf("expected 0 invocations, got %d", len(dom.InvocationFacts()))
 		}
-		if len(dom.Tools) != 0 {
-			t.Errorf("expected 0 tools, got %d", len(dom.Tools))
+		if len(dom.ToolFacts()) != 0 {
+			t.Errorf("expected 0 tools, got %d", len(dom.ToolFacts()))
 		}
 	})
 }
@@ -470,7 +509,8 @@ func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			dto := adapters.AgenticFactLedgerDTO{Tools: []adapters.ToolFactDTO{{SessionID: tc.sessionID, Name: "command", Calls: 1}}}
+			tools := []adapters.SessionToolFactDTO{{Name: "command", Calls: 1}}
+			dto := adapters.AgenticFactLedgerDTO{Sessions: []adapters.SessionFactDTO{{ID: tc.sessionID, Invocations: []adapters.InvocationFactDTO{}, Tools: tools, Events: []adapters.SessionEventFactDTO{}}}}
 			err := dto.Validate()
 			if tc.valid && err != nil {
 				t.Fatalf("expected valid session identity, got %v", err)
@@ -480,7 +520,7 @@ func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
 			}
 		})
 	}
-	if err := (adapters.AgenticFactLedgerDTO{Tools: []adapters.ToolFactDTO{}}).Validate(); err != nil {
+	if err := (adapters.AgenticFactLedgerDTO{Sessions: []adapters.SessionFactDTO{}}).Validate(); err != nil {
 		t.Fatalf("empty tools collection should be valid: %v", err)
 	}
 }
@@ -526,7 +566,7 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 		}
 	})
 
-	t.Run("empty role model and user fall back to domain defaults", func(t *testing.T) {
+	t.Run("empty role model and user remain empty without fallback values", func(t *testing.T) {
 		t.Parallel()
 		dto := adapters.InvocationFactDTO{
 			ID:    "inv-empty",
@@ -536,14 +576,14 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 		}
 
 		dom := dto.ToDomain()
-		if dom.Role != "orchestrator" {
-			t.Errorf("expected empty role fallback to 'orchestrator', got %q", dom.Role)
+		if dom.Role != "" {
+			t.Errorf("expected empty role to remain empty, got %q", dom.Role)
 		}
-		if dom.Model != "default" {
-			t.Errorf("expected empty model fallback to 'default', got %q", dom.Model)
+		if dom.Model != "" {
+			t.Errorf("expected empty model to remain empty, got %q", dom.Model)
 		}
-		if dom.User != "unknown" {
-			t.Errorf("expected empty user fallback to 'unknown', got %q", dom.User)
+		if dom.User != "" {
+			t.Errorf("expected empty user to remain empty, got %q", dom.User)
 		}
 	})
 
@@ -687,9 +727,7 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 				"files_changed": 0,
 				"sdlc_iterations": 1
 			},
-			"invocations": [],
-			"tools": [],
-			"events": []
+			"sessions": []
 		}`
 
 		var factDTO adapters.AgenticFactLedgerDTO
@@ -726,9 +764,7 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 				"files_changed": 0,
 				"sdlc_iterations": 1
 			},
-			"invocations": [],
-			"tools": [],
-			"events": []
+			"sessions": []
 		}`
 
 		var factDTO adapters.AgenticFactLedgerDTO

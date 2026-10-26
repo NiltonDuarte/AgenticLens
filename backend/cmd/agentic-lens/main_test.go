@@ -47,69 +47,25 @@ func TestMain(m *testing.M) {
 }
 
 func sampleFactJSON(ticketID, title string, duration int64, cost float64) string {
-	return `{
-		"ticket_id": "` + ticketID + `",
-		"ticket_title": "` + title + `",
-		"ticket_type": "feature",
-		"started_at": "2026-10-17T10:00:00Z",
-		"completed_at": "2026-10-17T11:00:00Z",
-		"updated_at": "2026-10-17T11:00:00Z",
-		"code": {
-			"lines_added": 120,
-			"lines_deleted": 20,
-			"test_lines_added": 60,
-			"test_lines_deleted": 0,
-			"prod_lines_added": 60,
-			"prod_lines_deleted": 20,
-			"files_changed": 4,
-			"sdlc_iterations": 2
+	parent := "ses-orch"
+	ledger := domain.AgenticFactLedger{
+		SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(),
+		TicketID:      &ticketID, TicketTitle: &title,
+		TicketType:  func() *domain.ConventionalTicketType { v := domain.TicketTypeFeat; return &v }(),
+		StartedAt:   func() *string { v := "2026-10-17T10:00:00Z"; return &v }(),
+		CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(),
+		UpdatedAt:   "2026-10-17T11:00:00Z",
+		Code:        domain.CodeFacts{LinesAdded: 120, LinesDeleted: 20, TestLinesAdded: 60, ProdLinesAdded: 60, ProdLinesDeleted: 20, FilesChanged: 4, SDLCIterations: 2},
+		Sessions: []domain.SessionFact{
+			{ID: "ses-orch", Invocations: []domain.InvocationFact{{ID: "ses-orch", Role: "orchestrator", Model: "claude-3-sonnet", User: "test-engineer", ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}},
+			{ID: "ses-coder", ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "ses-coder", ParentID: &parent, Role: "coder", Model: "claude-3-opus", User: "test-engineer", ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75}}, Events: []domain.SessionEventFact{}},
 		},
-		"invocations": [
-			{
-				"id": "ses-orch",
-				"role": "orchestrator",
-				"model": "claude-3-sonnet",
-				"user": "test-engineer",
-				"active_duration_seconds": ` + fmt.Sprintf("%d", duration) + `,
-				"turns": 6,
-				"tokens": {
-					"input": 5000,
-					"output": 1000,
-					"cache_read": 10000,
-					"reasoning": 300,
-					"peak_context": 80000
-				},
-				"cost_usd": ` + "0.25" + `,
-				"compactions": 0
-			},
-			{
-				"id": "ses-coder",
-				"parent_id": "ses-orch",
-				"role": "coder",
-				"model": "claude-3-opus",
-				"user": "test-engineer",
-				"active_duration_seconds": 60,
-				"turns": 4,
-				"tokens": {
-					"input": 8000,
-					"output": 2000,
-					"cache_read": 12000,
-					"reasoning": 500,
-					"peak_context": 150000
-				},
-				"cost_usd": ` + "0.75" + `,
-				"compactions": 0
-			}
-		],
-		"tools": [
-			{
-				"session_id": "ses-orch",
-				"name": "bash",
-				"calls": 10,
-				"errors": 1
-			}
-		]
-	}`
+	}
+	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }
 
 func setupTestWorkspace(t *testing.T) string {
@@ -239,16 +195,19 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	anomalyFactJSON := `{
 		"ticket_id": "TICKET-ANOMALY",
 		"ticket_title": "Failing Feature",
-		"session_id": "ses-anom",
 		"updated_at": "2026-10-18T10:00:00Z",
-		"tools": [
+		"sessions": [{
+			"id": "ses-anom",
+			"invocations": [],
+			"events": [],
+			"tools": [
 			{
-				"session_id": "ses-anom",
 				"name": "bash",
 				"calls": 10,
 				"errors": 6
 			}
-		]
+			]
+		}]
 	}`
 	if err := os.WriteFile(filepath.Join(tanomDir, "agentic_metrics.json"), []byte(anomalyFactJSON), 0644); err != nil {
 		t.Fatalf("failed to write TICKET-ANOMALY ledger: %v", err)
@@ -974,8 +933,8 @@ func TestCLIGenerateCommand(t *testing.T) {
 	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
 		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 	}
-	if len(parsed.Invocations) != 2 {
-		t.Fatalf("expected 2 invocations, got %d", len(parsed.Invocations))
+	if len(parsed.ToDomain().InvocationFacts()) != 2 {
+		t.Fatalf("expected 2 invocations, got %d", len(parsed.ToDomain().InvocationFacts()))
 	}
 	if strings.Contains(string(data), `"error_message"`) {
 		t.Errorf("expected zero error_message in output JSON: %s", string(data))
@@ -1132,26 +1091,26 @@ func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
 	}
 
 	// 4. In-memory derived metrics (invocations, tokens, cost) are fully preserved
-	if len(parsed.Invocations) != 2 {
-		t.Fatalf("expected 2 invocations, got %d", len(parsed.Invocations))
+	if len(parsed.ToDomain().InvocationFacts()) != 2 {
+		t.Fatalf("expected 2 invocations, got %d", len(parsed.ToDomain().InvocationFacts()))
 	}
 
 	// 5. Events are pruned: routine tool "read_file" is pruned, but failed tool "execute_cmd" and compaction are preserved
 	var hasErrorTool, hasCompaction, hasRoutineTool bool
-	for _, ev := range parsed.Events {
+	for _, ev := range parsed.ToDomain().EventFacts() {
 		if ev.ErrorMessage != nil {
 			t.Errorf("expected event ErrorMessage to be nil, got: %s", *ev.ErrorMessage)
 		}
-		if ev.EventType == string(domain.EventTypeToolCall) && ev.ToolName != nil && *ev.ToolName == "execute_cmd" {
+		if ev.EventType == domain.EventTypeToolCall && ev.ToolName != nil && *ev.ToolName == "execute_cmd" {
 			hasErrorTool = true
 			if ev.Status != "error" {
 				t.Errorf("expected execute_cmd status 'error', got %s", ev.Status)
 			}
 		}
-		if ev.EventType == string(domain.EventTypeCompaction) {
+		if ev.EventType == domain.EventTypeCompaction {
 			hasCompaction = true
 		}
-		if ev.EventType == string(domain.EventTypeToolCall) && ev.ToolName != nil && *ev.ToolName == "read_file" {
+		if ev.EventType == domain.EventTypeToolCall && ev.ToolName != nil && *ev.ToolName == "read_file" {
 			hasRoutineTool = true
 		}
 	}
@@ -1207,8 +1166,8 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-FALLBACK" {
 			t.Errorf("expected AL-FALLBACK ticket ID, got %v", parsed.TicketID)
 		}
-		if len(parsed.Invocations) != 0 {
-			t.Errorf("expected 0 invocations for missing DB, got %d", len(parsed.Invocations))
+		if len(parsed.ToDomain().InvocationFacts()) != 0 {
+			t.Errorf("expected 0 invocations for missing DB, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
 	})
 
@@ -1769,7 +1728,30 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_with_inv.json")
-		cachedJSONContent := `{"schema_version":2,"ticket_id":"AL-CACHED-INV","invocations":[{"id":"ses_cached_inv_1","user":"engineer","role":"coder","model":"gpt-4o","tokens":{"input":150,"output":75},"cost_usd":0.003}]}`
+		cachedJSONContent := `{
+  "schema_version": 2,
+  "ticket_id": "AL-CACHED-INV",
+  "sessions": [
+    {
+      "id": "ses_cached_inv_1",
+      "invocations": [
+        {
+          "id": "ses_cached_inv_1",
+          "user": "engineer",
+          "role": "coder",
+          "model": "gpt-4o",
+          "tokens": {
+            "input": 150,
+            "output": 75
+          },
+          "cost_usd": 0.003
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`
 		if err := os.WriteFile(cachedJSON, []byte(cachedJSONContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1800,11 +1782,11 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if err := json.Unmarshal(data, &parsed); err != nil {
 			t.Fatalf("failed unmarshaling output JSON: %v", err)
 		}
-		if len(parsed.Invocations) != 1 {
-			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.Invocations))
+		if len(parsed.ToDomain().InvocationFacts()) != 1 {
+			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
-		if parsed.Invocations[0].ID != "ses_cached_inv_1" {
-			t.Errorf("expected invocation ID ses_cached_inv_1, got %s", parsed.Invocations[0].ID)
+		if parsed.ToDomain().InvocationFacts()[0].ID != "ses_cached_inv_1" {
+			t.Errorf("expected invocation ID ses_cached_inv_1, got %s", parsed.ToDomain().InvocationFacts()[0].ID)
 		}
 	})
 
@@ -1828,7 +1810,12 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
-		initialJSON := `{"schema_version":2,"ticket_id":"AL-CACHED-NO-INV","ticket_title":"Test Fixture Ticket","invocations":[]}`
+		initialJSON := `{
+  "schema_version": 2,
+  "ticket_id": "AL-CACHED-NO-INV",
+  "ticket_title": "Test Fixture Ticket",
+  "sessions": []
+}`
 		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1893,7 +1880,12 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_empty.json")
-		initialJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY-BOTH","ticket_title":"Test Fixture Ticket","invocations":[]}`
+		initialJSON := `{
+  "schema_version": 2,
+  "ticket_id": "AL-EMPTY-BOTH",
+  "ticket_title": "Test Fixture Ticket",
+  "sessions": []
+}`
 		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1926,8 +1918,8 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-EMPTY-BOTH" {
 			t.Errorf("expected AL-EMPTY-BOTH, got %v", parsed.TicketID)
 		}
-		if len(parsed.Invocations) != 0 {
-			t.Errorf("expected 0 invocations, got %d", len(parsed.Invocations))
+		if len(parsed.ToDomain().InvocationFacts()) != 0 {
+			t.Errorf("expected 0 invocations, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
 	})
 
@@ -2315,6 +2307,28 @@ func TestCLIVersionCommand(t *testing.T) {
 
 func TestCLIMigrateCommand(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
+	originals := make(map[string][]byte)
+	for _, id := range []string{"TICKET-1", "TICKET-2"} {
+		path := filepath.Join(wsDir, id, "agentic_metrics.json")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledger map[string]json.RawMessage
+		if err := json.Unmarshal(data, &ledger); err != nil {
+			t.Fatal(err)
+		}
+		version, _ := json.Marshal(3)
+		ledger["schema_version"] = version
+		data, err = json.Marshal(ledger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0644); err != nil {
+			t.Fatal(err)
+		}
+		originals[id] = append([]byte(nil), data...)
+	}
 
 	t.Run("dry-run preview outputs table without mutating files", func(t *testing.T) {
 		cmd := exec.Command(
@@ -2342,12 +2356,12 @@ func TestCLIMigrateCommand(t *testing.T) {
 			t.Errorf("expected 2 migrated preview in summary, got: %s", out)
 		}
 
-		// Verify files are unmutated (no schema_version)
+		// Verify files are byte-for-byte unchanged by the dry run.
 		data, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
 		if err != nil {
 			t.Fatalf("failed reading file: %v", err)
 		}
-		if strings.Contains(string(data), `"schema_version"`) {
+		if !bytes.Equal(data, originals["TICKET-1"]) {
 			t.Errorf("expected file to remain unmutated during dry-run")
 		}
 	})
@@ -2381,8 +2395,8 @@ func TestCLIMigrateCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected backup file to exist: %v", err)
 		}
-		if strings.Contains(string(bakData), `"schema_version"`) {
-			t.Errorf("backup file should be the original unversioned ledger")
+		if !bytes.Equal(bakData, originals["TICKET-1"]) {
+			t.Errorf("backup file should be the original ledger")
 		}
 
 		// Verify migrated file is upgraded to current schema version with events array
@@ -2397,8 +2411,8 @@ func TestCLIMigrateCommand(t *testing.T) {
 		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
 			t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 		}
-		if parsed.Events == nil {
-			t.Errorf("expected events array to be initialized")
+		if parsed.Sessions == nil || len(parsed.Sessions) == 0 || parsed.Sessions[0].Events == nil {
+			t.Errorf("expected session events array to be initialized")
 		}
 
 		// TICKET-2 should remain untouched
@@ -2406,7 +2420,7 @@ func TestCLIMigrateCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed reading TICKET-2 file: %v", err)
 		}
-		if strings.Contains(string(t2Data), `"schema_version"`) {
+		if !bytes.Equal(t2Data, originals["TICKET-2"]) {
 			t.Errorf("TICKET-2 should not be migrated when filtered by ticket-id")
 		}
 	})
@@ -2547,13 +2561,15 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 		_ = os.MkdirAll(t1Dir, 0755)
 
 		t1JSON := `{
-			"ticket_id": "T-SUM",
-			"ticket_title": "Summary Test",
-			"updated_at": "2026-10-18T10:00:00Z",
-			"code": {"lines_added": 20, "sdlc_iterations": 1},
-			"invocations": [],
-			"tools": []
-		}`
+  "ticket_id": "T-SUM",
+  "ticket_title": "Summary Test",
+  "updated_at": "2026-10-18T10:00:00Z",
+  "code": {
+    "lines_added": 20,
+    "sdlc_iterations": 1
+  },
+  "sessions": []
+}`
 		_ = os.WriteFile(filepath.Join(t1Dir, "agentic_metrics.json"), []byte(t1JSON), 0644)
 		_ = os.WriteFile(filepath.Join(t1Dir, "SUMMARY.md"), []byte("# T-SUM Summary\nInitial description.\n"), 0644)
 
@@ -2863,11 +2879,11 @@ func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
 	if err := json.Unmarshal(jsonData, &rawLedger); err != nil {
 		t.Fatalf("unmarshaling JSON failed: %v", err)
 	}
-	if len(rawLedger.Invocations) != 1 {
-		t.Fatalf("expected 1 invocation in raw facts, got %d", len(rawLedger.Invocations))
+	if len(rawLedger.InvocationFacts()) != 1 {
+		t.Fatalf("expected 1 invocation in raw facts, got %d", len(rawLedger.InvocationFacts()))
 	}
-	if rawLedger.Invocations[0].Role != "build" {
-		t.Errorf("expected raw invocation role 'build', got %q", rawLedger.Invocations[0].Role)
+	if rawLedger.InvocationFacts()[0].Role != "build" {
+		t.Errorf("expected raw invocation role 'build', got %q", rawLedger.InvocationFacts()[0].Role)
 	}
 
 	// 3. Read summary markdown: table must contain orchestrator and NO row for build
@@ -3149,20 +3165,18 @@ func TestCLITicketTypeClassification(t *testing.T) {
 
 		// Create existing fact ledger with legacy "feature"
 		legacyJSON := `{
-			"schema_version": 2,
-			"ticket_id": "AL-29",
-			"ticket_title": "Test Fixture Ticket",
-			"ticket_type": "feature",
-			"code": {
-				"lines_added": 10,
-				"lines_deleted": 2,
-				"files_changed": 1,
-				"sdlc_iterations": 1
-			},
-			"invocations": [],
-			"tools": [],
-			"events": []
-		}`
+  "schema_version": 2,
+  "ticket_id": "AL-29",
+  "ticket_title": "Test Fixture Ticket",
+  "ticket_type": "feature",
+  "code": {
+    "lines_added": 10,
+    "lines_deleted": 2,
+    "files_changed": 1,
+    "sdlc_iterations": 1
+  },
+  "sessions": []
+}`
 		if err := os.WriteFile(outJSON, []byte(legacyJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -4127,11 +4141,11 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts_ws_title.json")
 		wsCachedJSON := `{
-			"schema_version": 3,
-			"ticket_id": "AL-CACHED-WS-TITLE",
-			"ticket_title": "   \t\n",
-			"invocations": []
-		}`
+  "schema_version": 3,
+  "ticket_id": "AL-CACHED-WS-TITLE",
+  "ticket_title": "   \t\n",
+  "sessions": []
+}`
 		if err := os.WriteFile(outJSON, []byte(wsCachedJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -4163,11 +4177,11 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts.json")
 		cachedJSON := `{
-			"schema_version": 3,
-			"ticket_id": "AL-CACHED-TITLE",
-			"ticket_title": "Cached Fixture Title",
-			"invocations": []
-		}`
+  "schema_version": 3,
+  "ticket_id": "AL-CACHED-TITLE",
+  "ticket_title": "Cached Fixture Title",
+  "sessions": []
+}`
 		if err := os.WriteFile(outJSON, []byte(cachedJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -5685,8 +5699,7 @@ code_metrics:
 		SchemaVersion: &schemaVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
-		Invocations: []domain.InvocationFact{
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				ID:             "ses_device_a",
 				Role:           domain.RoleRootAgent,
@@ -5700,10 +5713,9 @@ code_metrics:
 				},
 			},
 		},
-		Tools: []domain.ToolFact{
-			{SessionID: "session-a", Name: "read", Calls: 5, Errors: 0},
-		},
-		Code: domain.CodeFacts{
+			[]domain.ToolFact{
+				{SessionID: "session-a", Name: "read", Calls: 5, Errors: 0},
+			}, nil), Code: domain.CodeFacts{
 			LinesAdded:     10,
 			SDLCIterations: 3,
 		},
@@ -5802,11 +5814,11 @@ code_metrics:
 		t.Fatalf("failed unmarshaling merged json: %v", err)
 	}
 
-	if len(mergedDTO.Invocations) != 2 {
-		t.Fatalf("expected 2 merged invocations, got %d", len(mergedDTO.Invocations))
+	if len(mergedDTO.ToDomain().InvocationFacts()) != 2 {
+		t.Fatalf("expected 2 merged invocations, got %d", len(mergedDTO.ToDomain().InvocationFacts()))
 	}
 	var foundA, foundB bool
-	for _, inv := range mergedDTO.Invocations {
+	for _, inv := range mergedDTO.ToDomain().InvocationFacts() {
 		if inv.ID == "ses_device_a" {
 			foundA = true
 			if inv.UserIterations != 3 {
@@ -5846,8 +5858,8 @@ code_metrics:
 	rawIdempotent, _ := os.ReadFile(outJSON)
 	var idempDTO adapters.AgenticFactLedgerDTO
 	_ = json.Unmarshal(rawIdempotent, &idempDTO)
-	if len(idempDTO.Invocations) != 2 {
-		t.Errorf("idempotency check failed: expected 2 invocations, got %d", len(idempDTO.Invocations))
+	if len(idempDTO.ToDomain().InvocationFacts()) != 2 {
+		t.Errorf("idempotency check failed: expected 2 invocations, got %d", len(idempDTO.ToDomain().InvocationFacts()))
 	}
 	// 6. Test strict rejection of fallbacks: verify that older schema ledgers lacking user_iterations emit warning and require migration
 	legacyOutJSON := filepath.Join(tempDir, "legacy.json")
@@ -5856,8 +5868,7 @@ code_metrics:
 		SchemaVersion: &legacyVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
-		Invocations: []domain.InvocationFact{
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				ID:             "ses_legacy",
 				Role:           domain.RoleRootAgent,
@@ -5866,8 +5877,7 @@ code_metrics:
 				Turns:          6,
 				UserIterations: 0,
 			},
-		},
-		Code: domain.CodeFacts{
+		}, nil, nil), Code: domain.CodeFacts{
 			LinesAdded:     10,
 			SDLCIterations: 0,
 		},
@@ -5927,8 +5937,7 @@ code_metrics:
 		SchemaVersion: &schemaVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
-		Invocations: []domain.InvocationFact{
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				ID:             "ses_device_a",
 				Role:           domain.RoleRootAgent,
@@ -5937,8 +5946,7 @@ code_metrics:
 				UserIterations: 4,
 				Tokens:         domain.InvocationTokens{Input: 1000, Output: 400},
 			},
-		},
-		Code: domain.CodeFacts{
+		}, nil, nil), Code: domain.CodeFacts{
 			LinesAdded:     15,
 			SDLCIterations: 4,
 		},
@@ -6025,8 +6033,8 @@ code_metrics:
 	rawB, _ := os.ReadFile(outJSON)
 	var dtoB adapters.AgenticFactLedgerDTO
 	_ = json.Unmarshal(rawB, &dtoB)
-	if len(dtoB.Invocations) != 3 {
-		t.Fatalf("after Device B, expected 3 invocations, got %d", len(dtoB.Invocations))
+	if len(dtoB.ToDomain().InvocationFacts()) != 3 {
+		t.Fatalf("after Device B, expected 3 invocations, got %d", len(dtoB.ToDomain().InvocationFacts()))
 	}
 	if dtoB.Code.SDLCIterations != 7 {
 		t.Fatalf("after Device B, expected SDLCIterations 7 (4+3), got %d", dtoB.Code.SDLCIterations)
@@ -6053,8 +6061,8 @@ code_metrics:
 	rawC, _ := os.ReadFile(outJSON)
 	var dtoC adapters.AgenticFactLedgerDTO
 	_ = json.Unmarshal(rawC, &dtoC)
-	if len(dtoC.Invocations) != 5 {
-		t.Fatalf("after Device C, expected 5 invocations, got %d", len(dtoC.Invocations))
+	if len(dtoC.ToDomain().InvocationFacts()) != 5 {
+		t.Fatalf("after Device C, expected 5 invocations, got %d", len(dtoC.ToDomain().InvocationFacts()))
 	}
 	if dtoC.Code.SDLCIterations != 12 {
 		t.Errorf("after Device C, expected SDLCIterations 12 (4+3+5), got %d", dtoC.Code.SDLCIterations)
@@ -6068,7 +6076,7 @@ code_metrics:
 		"ses_device_c": 5,
 		"sub_device_c": 0,
 	}
-	for _, inv := range dtoC.Invocations {
+	for _, inv := range dtoC.ToDomain().InvocationFacts() {
 		expected, exists := expectedIterations[inv.ID]
 		if !exists {
 			t.Errorf("unexpected invocation %s in merged ledger", inv.ID)
@@ -6094,8 +6102,8 @@ code_metrics:
 	rawC2, _ := os.ReadFile(outJSON)
 	var dtoC2 adapters.AgenticFactLedgerDTO
 	_ = json.Unmarshal(rawC2, &dtoC2)
-	if len(dtoC2.Invocations) != 5 {
-		t.Errorf("expected strictly 5 invocations after repeat, got %d", len(dtoC2.Invocations))
+	if len(dtoC2.ToDomain().InvocationFacts()) != 5 {
+		t.Errorf("expected strictly 5 invocations after repeat, got %d", len(dtoC2.ToDomain().InvocationFacts()))
 	}
 	if dtoC2.Code.SDLCIterations != 12 {
 		t.Errorf("expected SDLCIterations strictly 12 after repeat, got %d", dtoC2.Code.SDLCIterations)
@@ -6185,14 +6193,14 @@ code_metrics:
 	raw1, _ := os.ReadFile(outJSON)
 	var dto1 adapters.AgenticFactLedgerDTO
 	_ = json.Unmarshal(raw1, &dto1)
-	if len(dto1.Invocations) != 1 {
-		t.Fatalf("pass 1 expected 1 invocation, got %d", len(dto1.Invocations))
+	if len(dto1.ToDomain().InvocationFacts()) != 1 {
+		t.Fatalf("pass 1 expected 1 invocation, got %d", len(dto1.ToDomain().InvocationFacts()))
 	}
-	if dto1.Invocations[0].UserIterations != 1 {
-		t.Errorf("pass 1 expected UserIterations 1, got %d", dto1.Invocations[0].UserIterations)
+	if dto1.ToDomain().InvocationFacts()[0].UserIterations != 1 {
+		t.Errorf("pass 1 expected UserIterations 1, got %d", dto1.ToDomain().InvocationFacts()[0].UserIterations)
 	}
-	if dto1.Invocations[0].Tokens.Input != 100 {
-		t.Errorf("pass 1 expected Input tokens 100, got %d", dto1.Invocations[0].Tokens.Input)
+	if dto1.ToDomain().InvocationFacts()[0].Tokens.Input != 100 {
+		t.Errorf("pass 1 expected Input tokens 100, got %d", dto1.ToDomain().InvocationFacts()[0].Tokens.Input)
 	}
 
 	// Second pass: 2 more user messages, 2 more assistant messages with more tokens, and a compaction
@@ -6221,10 +6229,10 @@ code_metrics:
 	var dto2 adapters.AgenticFactLedgerDTO
 	_ = json.Unmarshal(raw2, &dto2)
 	// Must NOT have duplicated invocation records!
-	if len(dto2.Invocations) != 1 {
-		t.Fatalf("pass 2 expected strictly 1 invocation (updated in place), got %d", len(dto2.Invocations))
+	if len(dto2.ToDomain().InvocationFacts()) != 1 {
+		t.Fatalf("pass 2 expected strictly 1 invocation (updated in place), got %d", len(dto2.ToDomain().InvocationFacts()))
 	}
-	inv := dto2.Invocations[0]
+	inv := dto2.ToDomain().InvocationFacts()[0]
 	if inv.UserIterations != 3 {
 		t.Errorf("pass 2 expected UserIterations 3, got %d", inv.UserIterations)
 	}
@@ -6273,8 +6281,7 @@ code_metrics:
 				SchemaVersion: &schemaVer,
 				TicketID:      &ticketIDStr,
 				TicketTitle:   &ticketTitleStr,
-				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
-				Invocations: []domain.InvocationFact{
+				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
 					{
 						ID:             "ses_pre_v4",
 						Role:           domain.RoleRootAgent,
@@ -6282,8 +6289,7 @@ code_metrics:
 						Turns:          5,
 						UserIterations: 0, // unpopulated in pre-v4
 					},
-				},
-				Code: domain.CodeFacts{
+				}, nil, nil), Code: domain.CodeFacts{
 					LinesAdded:     10,
 					SDLCIterations: 7,
 				},
@@ -6326,8 +6332,7 @@ code_metrics:
 			SchemaVersion: &schemaVer,
 			TicketID:      &ticketIDStr,
 			TicketTitle:   &ticketTitleStr,
-			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00",
-			Invocations: []domain.InvocationFact{
+			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
 				{
 					ID:             "ses_v4",
 					Role:           domain.RoleRootAgent,
@@ -6335,8 +6340,7 @@ code_metrics:
 					Turns:          5,
 					UserIterations: 0,
 				},
-			},
-			Code: domain.CodeFacts{
+			}, nil, nil), Code: domain.CodeFacts{
 				LinesAdded:     10,
 				SDLCIterations: 0,
 			},
@@ -6363,4 +6367,35 @@ code_metrics:
 			t.Errorf("v4: did not expect schema version < 4 warning, got: %s", stderr.String())
 		}
 	})
+}
+
+func TestCLIMigrateReportsDroppedUnscopedToolRows(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "workspaces", "AL-UNSCOPED")
+	if err := os.MkdirAll(workspace, 0755); err != nil {
+		t.Fatal(err)
+	}
+	ledgerPath := filepath.Join(workspace, "agentic_metrics.json")
+	ledger := `{"schema_version":4,"ticket_id":"AL-UNSCOPED","code":{"sdlc_iterations":0},"tools":[{"name":"bash","calls":3,"errors":1}]}`
+	if err := os.WriteFile(ledgerPath, []byte(ledger), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(cliBinaryPath, "migrate", "--workspaces", filepath.Dir(workspace))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("migrate failed: %v\n%s", err, output)
+	}
+	if !strings.Contains(string(output), "Removed 1 unscoped legacy tool") || !strings.Contains(string(output), "Re-extract from source logs") {
+		t.Fatalf("CLI output must report dropped-row count and recovery guidance: %s", output)
+	}
+	data, err := os.ReadFile(ledgerPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var migrated adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &migrated); err != nil {
+		t.Fatal(err)
+	}
+	if migrated.Migration == nil || !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool") {
+		t.Fatalf("expected persisted migration note, got %+v", migrated.Migration)
+	}
 }

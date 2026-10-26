@@ -4,7 +4,7 @@ Research branch: `research/codex-openai-metrics`.
 
 ## Result
 
-AgenticLens can derive meaningful metrics from a Codex rollout without keeping transcript payloads. The implementation adds a Codex JSONL adapter that projects observed thread/model/token usage, turn timing, tool lifecycle outcomes, and compaction events into source-neutral facts, then derives metrics from the schema-v4 ledger. Tool facts are session-scoped and require a nonempty `session_id`; totals aggregate distinct session rows by tool name. SDLC iteration totals preserve exact zero and sum primary root-session invocation counts.
+AgenticLens can derive meaningful metrics from a Codex rollout without keeping transcript payloads. The implementation adds a Codex JSONL adapter that projects observed thread/model/token usage, turn timing, tool lifecycle outcomes, and compaction events into source-neutral facts, then derives metrics from the schema-v4 ledger. Invocations, per-tool summaries, and retained events are grouped under their owning session; cross-session tool totals are derived from these facts. SDLC iteration totals preserve exact zero and sum primary root-session invocation counts.
 
 `agentic_metrics.json` is the committed session ledger generated from the real local Codex rollout using `generate --source codex --nonce`. It contains observed session/model/token/tool facts and pruned diagnostic events. Ticket metadata was supplied as AL-56. A literal nonce lookup correlated the rollout thread ID with this conversation; details are in `DATA_PROVENANCE.md`. The raw rollout remains local, and parser fixtures remain synthetic for repeatable tests.
 
@@ -125,10 +125,17 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 
 ## Iteration 04: Session-Scoped Tool Facts and Exact Zero Iterations
 
-- **Schema-v4 tool provenance:** Made `session_id` mandatory and nonempty on each tool fact. OpenCode and Codex extractors emit per-session/tool rows; refresh merges by `(session_id, tool_name)`, replacing the selected session snapshot while retaining other sessions. Domain and presentation consumers aggregate by tool name, and tool count is based on unique tool names.
-- **Breaking validation and recovery:** Legacy aggregate tool rows without session IDs are rejected during migration, backfill, repository loading, and generation. Recovery preserves the old ledger, re-extracts each known root session into one fresh output path, verifies all expected session IDs and tool counts, then replaces the old ledger. Codex root selection includes child rollouts. If source logs are unavailable, old unscoped aggregate totals cannot be re-sourced or reliably split.
+- **Schema-v4 tool provenance:** OpenCode and Codex facts are grouped under owning sessions. Each session contains its invocation records, per-tool call/error summaries, and retained events; cross-session totals are derived during loading and aggregation. Session refresh replaces a matching session snapshot while retaining other sessions.
+- **Breaking validation and recovery:** Unscoped legacy tool rows cannot be attributed reliably. Migration removes them, reports the count and source-log recovery guidance in the ledger and CLI, and preserves the original file on migration failure. Across the 84 tracked ledgers, 843 unscoped rows were removed from 66 ledgers; scoped counts and all 545 invocations were preserved. Re-extract from source logs to recover dropped counts when those logs remain available.
 - **Exact-zero iterations:** Extraction and backfill now retain zero steering turns; schema conversion no longer substitutes one. Focused regressions cover zero-preserving backfill and invalid unscoped v4 ledger rejection without mutation. Session-fact merge, DTO validation, and repository-load regressions also pass.
 - **Validation and limitations:** Real Codex smoke extraction generated this ticket's ledger from the local rollout discovery path. Focused Go tests passed for migration runner, backfill, and repository loading; diff checks passed. The current checkout has no configured OpenCode database for a fresh live OpenCode smoke run. Existing unscoped counts cannot be reconstructed without source logs.
+
+## Iteration 05: Session-Owned v4 Ledger and Complete Migration
+
+- Finalized unreleased schema v4 as a session-owned ledger: invocations, per-tool summaries, and retained events are nested under sessions, with each session ID stored once. Cross-session tool totals and UI rows are derived from these facts.
+- Added v1-v3 and interim-v4 migration to the canonical shape. Migration rejects mixed legacy/canonical data and malformed current-v4 sessions atomically; unscoped tool aggregates are counted in migration notes and CLI output.
+- Enforced event privacy during migration and persistence. OpenCode and Codex generation, repository loading, backfill, API/domain aggregation, and frontend consumers use the session-owned shape.
+- Migrated all 84 tracked ledgers. The full `make` passed, including Go race tests, 719 frontend tests, typecheck/lint, production build, and multi-platform CLI builds. Independent review approved the iteration.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 70

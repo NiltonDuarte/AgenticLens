@@ -655,7 +655,7 @@ Traditional developer tools often require complex runtime dependencies such as N
 
 Rather than transmitting proprietary code or execution telemetry to external cloud services, AgenticLens operates entirely locally:
 - Telemetry facts are captured per ticket or task in isolated workspace directories: `workspaces/<TICKET_ID>/agentic_metrics.json`.
-- Schema-v4 tool facts require a non-empty `session_id`; tool totals are stored per session and aggregated for display. Legacy ledgers with unscoped tool totals cannot be safely migrated. Re-extract from OpenCode/Codex source logs before retrying migration; if the logs are unavailable, migration stops without changing the ledger. Generation against the old unscoped ledger also fails validation, so follow the recovery sequence below and use a new JSON output path.
+- Schema-v4 sessions own invocation records, per-session tool summaries, and retained events. Cross-session totals are derived for display. Migration reports and removes legacy aggregate tool rows without reliable session attribution; re-extract from OpenCode/Codex source logs to recover those counts when available.
 - Each ledger is an immutable JSON document recording session identifiers, wall-clock duration, token volume (input, output, cache-read, and cache-write tokens), financial costs calculated from precise model pricing matrices, turn counts, tool invocation distributions, error rates, and git commit diff volumes (insertions, deletions, and affected files).
 - These ledgers are committed directly to version control alongside code deliverables, establishing an auditable, repository-native history of agent engineering metrics with zero cloud egress.
 
@@ -669,8 +669,8 @@ cp workspaces/<TICKET_ID>/agentic_metrics.json workspaces/<TICKET_ID>/agentic_me
 ./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_2> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
 
 # Compare the IDs and per-session tool rows with the sessions you intended to recover.
-jq -r '.tools[].session_id' workspaces/<TICKET_ID>/agentic_metrics.recovered.json | sort -u
-jq '.tools | length' workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+jq -r '.sessions[].id' workspaces/<TICKET_ID>/agentic_metrics.recovered.json | sort -u
+jq '[.sessions[].tools[]] | length' workspaces/<TICKET_ID>/agentic_metrics.recovered.json
 
 # Replace the active ledger only after verifying all expected sessions and counts.
 mv workspaces/<TICKET_ID>/agentic_metrics.recovered.json workspaces/<TICKET_ID>/agentic_metrics.json

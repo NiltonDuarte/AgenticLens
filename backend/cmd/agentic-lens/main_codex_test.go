@@ -72,8 +72,8 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 		return ledger
 	}
 	first := generate()
-	if len(first.Invocations) != 1 {
-		t.Fatalf("expected one initial model, got %d", len(first.Invocations))
+	if len(first.InvocationFacts()) != 1 {
+		t.Fatalf("expected one initial model, got %d", len(first.InvocationFacts()))
 	}
 	modelChange := `
 {"type":"response_item","payload":{"type":"message","role":"user"}}
@@ -89,18 +89,18 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 		if ledger.Code.SDLCIterations != 2 {
 			t.Fatalf("expected two user steering iterations, got %+v", ledger.Code)
 		}
-		if len(ledger.Invocations) != 2 {
-			t.Fatalf("expected exactly two models after refresh, got %d", len(ledger.Invocations))
+		if len(ledger.InvocationFacts()) != 2 {
+			t.Fatalf("expected exactly two models after refresh, got %d", len(ledger.InvocationFacts()))
 		}
 		models := make(map[string]domain.InvocationTokens)
-		for _, invocation := range ledger.Invocations {
+		for _, invocation := range ledger.InvocationFacts() {
 			models[invocation.Model] = invocation.Tokens
 		}
 		if len(models) != 2 || models["gpt-example"].Input != 40 || models["gpt-next"].Input != 80 {
 			t.Fatalf("refresh duplicated or lost token usage: %#v", models)
 		}
-		if len(ledger.Tools) != len(first.Tools) || len(ledger.Events) != len(first.Events) {
-			t.Fatalf("refresh duplicated tool/event facts: tools=%d events=%d", len(ledger.Tools), len(ledger.Events))
+		if len(ledger.ToolFacts()) != len(first.ToolFacts()) || len(ledger.EventFacts()) != len(first.EventFacts()) {
+			t.Fatalf("refresh duplicated tool/event facts: tools=%d events=%d", len(ledger.ToolFacts()), len(ledger.EventFacts()))
 		}
 	}
 }
@@ -160,11 +160,11 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 		if err := json.Unmarshal(data, &ledger); err != nil {
 			t.Fatal(err)
 		}
-		if len(ledger.Invocations) != 2 {
-			t.Fatalf("expected exactly root and child, got %#v", ledger.Invocations)
+		if len(ledger.InvocationFacts()) != 2 {
+			t.Fatalf("expected exactly root and child, got %#v", ledger.InvocationFacts())
 		}
 		byID := make(map[string]domain.InvocationFact)
-		for _, invocation := range ledger.Invocations {
+		for _, invocation := range ledger.InvocationFacts() {
 			byID[invocation.ID] = invocation
 		}
 		rootInvocation, rootFound := byID["root-fixture"]

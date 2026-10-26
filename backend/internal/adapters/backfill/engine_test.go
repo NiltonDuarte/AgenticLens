@@ -113,10 +113,9 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 		TicketID: &tid,
 		Code: domain.CodeFacts{
 			LinesAdded: 50,
-		},
-		Invocations: []domain.InvocationFact{
+		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "inv-1", Role: "orchestrator", Model: "gpt-4o"},
-		},
+		}, nil, nil),
 	}
 	createTestWorkspace(t, tempDir, tid, origLedger)
 
@@ -180,7 +179,7 @@ func TestBackfillEngine_RecomputeDBPreservesExactZeroSteeringTurns(t *testing.T)
 	ticketID := "AL-ZERO-TURNS"
 	ledger := domain.AgenticFactLedger{
 		TicketID: &ticketID,
-		Code: domain.CodeFacts{SDLCIterations: 4},
+		Code:     domain.CodeFacts{SDLCIterations: 4},
 	}
 	createTestWorkspace(t, tempDir, ticketID, ledger)
 	dbPath := filepath.Join(tempDir, "opencode.db")
@@ -196,7 +195,7 @@ func TestBackfillEngine_RecomputeDBPreservesExactZeroSteeringTurns(t *testing.T)
 		t.Fatalf("backfill failed: %v", err)
 	}
 	if report.Completed != 1 {
-		t.Fatalf("expected one completed workspace, got %d", report.Completed)
+		t.Fatalf("expected one completed workspace, got %d; results=%+v", report.Completed, report.Results)
 	}
 
 	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
@@ -222,19 +221,17 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		TicketID: &tidA,
 		Code: domain.CodeFacts{
 			LinesAdded: 10,
-		},
-		Invocations: []domain.InvocationFact{
+		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "inv-a1", Role: "orchestrator", Model: "mock"},
-		},
+		}, nil, nil),
 	}
 	ledgerB := domain.AgenticFactLedger{
 		TicketID: &tidB,
 		Code: domain.CodeFacts{
 			LinesAdded: 20,
-		},
-		Invocations: []domain.InvocationFact{
+		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "inv-b1", Role: "coder", Model: "mock"},
-		},
+		}, nil, nil),
 	}
 
 	createTestWorkspace(t, tempDir, tidA, ledgerA)
@@ -262,7 +259,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		t.Errorf("expected 2 scanned, got %d", reportA.Scanned)
 	}
 	if reportA.Completed != 1 {
-		t.Errorf("expected 1 completed (tidA), got %d", reportA.Completed)
+		t.Errorf("expected 1 completed (tidA), got %d; results=%+v", reportA.Completed, reportA.Results)
 	}
 	if reportA.Partial != 1 {
 		t.Errorf("expected 1 partial (tidB), got %d", reportA.Partial)
@@ -286,8 +283,8 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if len(loadedB.Migration.StepsPending) != 1 || loadedB.Migration.StepsPending[0] != domain.MigrationStepOpenCodeDB {
 		t.Errorf("expected steps_pending to contain %q, got %v", domain.MigrationStepOpenCodeDB, loadedB.Migration.StepsPending)
 	}
-	if len(loadedB.Invocations) != 1 || loadedB.Invocations[0].ID != "inv-b1" {
-		t.Errorf("expected preserved invocation inv-b1, got %v", loadedB.Invocations)
+	if len(loadedB.Sessions) != 1 || len(loadedB.Sessions[0].Invocations) != 1 || loadedB.Sessions[0].Invocations[0].ID != "inv-b1" {
+		t.Errorf("expected preserved invocation inv-b1 in session snapshot, got %v", loadedB.Sessions)
 	}
 
 	// Step 2: Developer B on Machine B pulls repo and resumes migration
@@ -329,8 +326,8 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if loadedB2.Migration != nil {
 		t.Errorf("expected migration object to be omitted on completed status, got %v", loadedB2.Migration)
 	}
-	if len(loadedB2.Invocations) != 1 || loadedB2.Invocations[0].ID != "sess-b1" {
-		t.Errorf("expected refreshed invocation sess-b1 from DB, got %v", loadedB2.Invocations)
+	if len(loadedB2.Sessions) != 1 || len(loadedB2.Sessions[0].Invocations) != 1 || loadedB2.Sessions[0].Invocations[0].ID != "sess-b1" {
+		t.Errorf("expected refreshed invocation sess-b1 in session snapshot, got %v", loadedB2.Sessions)
 	}
 }
 

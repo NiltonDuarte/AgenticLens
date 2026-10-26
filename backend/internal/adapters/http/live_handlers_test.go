@@ -459,15 +459,15 @@ func TestLiveSessionsHandler_AnomaliesField(t *testing.T) {
 		tree: domain.LiveSessionTree{
 			RootSessions: []*domain.LiveSessionNode{
 				{
-					ID:                  "ses_alert_1",
-					Agent:               "coder",
-					Role:                domain.AgentRole("coder"),
-					Model:               "gemini-3.8-flash",
-					Title:               "Test Anomaly",
-					TimeCreated:         "2026-10-19T10:00:00Z",
-					TimeUpdated:         "2026-10-19T10:05:00Z",
-					Status:              "running",
-					SubSessions:         []*domain.LiveSessionNode{},
+					ID:          "ses_alert_1",
+					Agent:       "coder",
+					Role:        domain.AgentRole("coder"),
+					Model:       "gemini-3.8-flash",
+					Title:       "Test Anomaly",
+					TimeCreated: "2026-10-19T10:00:00Z",
+					TimeUpdated: "2026-10-19T10:05:00Z",
+					Status:      "running",
+					SubSessions: []*domain.LiveSessionNode{},
 					Anomalies: []domain.LiveAnomalyAlert{
 						{
 							SessionID:    "ses_alert_1",

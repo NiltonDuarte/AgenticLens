@@ -13,44 +13,43 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 	parentID := "ses-1"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:                    "ses-1",
-					Role:                  "orchestrator",
-					Model:                 "model-a",
-					User:                  "developer",
-					ActiveDurationSeconds: 100,
-					Tokens: domain.InvocationTokens{
-						Input:       1000,
-						Output:      500,
-						CacheRead:   2000,
-						Reasoning:   200,
-						PeakContext: 50000,
-					},
-					CostUSD: 0.1,
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:                    "ses-1",
+				Role:                  "orchestrator",
+				Model:                 "model-a",
+				User:                  "developer",
+				ActiveDurationSeconds: 100,
+				Tokens: domain.InvocationTokens{
+					Input:       1000,
+					Output:      500,
+					CacheRead:   2000,
+					Reasoning:   200,
+					PeakContext: 50000,
 				},
-				{
-					ID:                    "ses-2",
-					ParentID:              &parentID,
-					Role:                  "coder",
-					Model:                 "model-b",
-					User:                  "developer",
-					ActiveDurationSeconds: 200,
-					Turns:                 3,
-					Tokens: domain.InvocationTokens{
-						Input:       5000,
-						Output:      1000,
-						CacheRead:   10000,
-						Reasoning:   500,
-						PeakContext: 120000,
-					},
-					CostUSD: 0.4,
-				},
+				CostUSD: 0.1,
 			},
-			Tools: []domain.ToolFact{
+			{
+				ID:                    "ses-2",
+				ParentID:              &parentID,
+				Role:                  "coder",
+				Model:                 "model-b",
+				User:                  "developer",
+				ActiveDurationSeconds: 200,
+				Turns:                 3,
+				Tokens: domain.InvocationTokens{
+					Input:       5000,
+					Output:      1000,
+					CacheRead:   10000,
+					Reasoning:   500,
+					PeakContext: 120000,
+				},
+				CostUSD: 0.4,
+			},
+		},
+			[]domain.ToolFact{
 				{SessionID: "session-a", Name: "bash", Calls: 5, Errors: 0},
-			},
+			}, nil),
 		},
 		WorkflowEfficiency: domain.WorkflowEfficiency{
 			SDLCIterations:          1,
@@ -264,34 +263,33 @@ func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {
 	parentID := "ses-orch"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:      "ses-orch",
-					Role:    "orchestrator",
-					Model:   "model-a",
-					User:    "developer",
-					CostUSD: 1.0,
-				},
-				{
-					ID:       "ses-adv",
-					ParentID: &parentID,
-					Role:     "advisor",
-					Model:    "model-a",
-					User:     "developer",
-					CostUSD:  1.0,
-					Turns:    4,
-				},
-				{
-					ID:       "ses-po",
-					ParentID: &parentID,
-					Role:     "po",
-					Model:    "model-b",
-					User:     "developer",
-					CostUSD:  1.0,
-					Turns:    8,
-				},
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:      "ses-orch",
+				Role:    "orchestrator",
+				Model:   "model-a",
+				User:    "developer",
+				CostUSD: 1.0,
 			},
+			{
+				ID:       "ses-adv",
+				ParentID: &parentID,
+				Role:     "advisor",
+				Model:    "model-a",
+				User:     "developer",
+				CostUSD:  1.0,
+				Turns:    4,
+			},
+			{
+				ID:       "ses-po",
+				ParentID: &parentID,
+				Role:     "po",
+				Model:    "model-b",
+				User:     "developer",
+				CostUSD:  1.0,
+				Turns:    8,
+			},
+		}, nil, nil),
 		},
 		WorkflowEfficiency: domain.WorkflowEfficiency{
 			RoleEffortDistributionPct: map[string]float64{
@@ -427,18 +425,17 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 	tid := "GEN-1"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:                    "ses-root-gen",
-					Role:                  "general",
-					ActiveDurationSeconds: 120,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 60000,
-					},
-					CostUSD: 0.50,
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:                    "ses-root-gen",
+				Role:                  "general",
+				ActiveDurationSeconds: 120,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 60000,
 				},
+				CostUSD: 0.50,
 			},
+		}, nil, nil),
 		},
 		WorkflowEfficiency: domain.WorkflowEfficiency{
 			ActiveDurationFormatted:   "2m 0s",

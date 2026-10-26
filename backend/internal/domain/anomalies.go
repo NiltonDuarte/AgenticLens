@@ -126,8 +126,8 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 
 	statsMap := make(map[string]*toolStats)
 
-	if len(ledger.Tools) > 0 {
-		for _, t := range ledger.Tools {
+	if len(ledger.ToolFacts()) > 0 {
+		for _, t := range ledger.ToolFacts() {
 			if t.Name == "" {
 				continue
 			}
@@ -139,8 +139,8 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 			st.calls += t.Calls
 			st.errors += t.Errors
 		}
-	} else if len(ledger.Events) > 0 {
-		for _, e := range ledger.Events {
+	} else if len(ledger.EventFacts()) > 0 {
+		for _, e := range ledger.EventFacts() {
 			if e.EventType != EventTypeToolCall || e.ToolName == nil || *e.ToolName == "" {
 				continue
 			}
@@ -204,9 +204,9 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 	var anomalies []Anomaly
 
-	if len(ledger.Events) > 0 {
+	if len(ledger.EventFacts()) > 0 {
 		sessionEvents := make(map[string][]EventFact)
-		for _, e := range ledger.Events {
+		for _, e := range ledger.EventFacts() {
 			sid := e.SessionID
 			if sid == "" {
 				sid = "default"
@@ -281,7 +281,7 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 		}
 	} else {
 		// v1 Fallback: inspect Invocations for PeakContext >= 160,000
-		for _, inv := range ledger.Invocations {
+		for _, inv := range ledger.InvocationFacts() {
 			if inv.Tokens.PeakContext >= 160_000 {
 				anomaly := Anomaly{
 					RuleID:   RuleContextSaturationSpike,
@@ -307,7 +307,7 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 // detectSubagentReworkLoops detects cyclic ping-pong role transitions between worker subagents.
 func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 	isChildSession := make(map[string]bool)
-	for _, inv := range ledger.Invocations {
+	for _, inv := range ledger.InvocationFacts() {
 		if inv.ID != "" {
 			isChildSession[inv.ID] = inv.ParentID != nil
 		}
@@ -315,8 +315,8 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 
 	var roles []string
 
-	if len(ledger.Events) > 0 {
-		for _, e := range ledger.Events {
+	if len(ledger.EventFacts()) > 0 {
+		for _, e := range ledger.EventFacts() {
 			if isChildSession[e.SessionID] {
 				r := strings.ToLower(strings.TrimSpace(string(e.Role)))
 				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
@@ -327,7 +327,7 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 	}
 
 	if len(roles) == 0 {
-		for _, inv := range ledger.Invocations {
+		for _, inv := range ledger.InvocationFacts() {
 			if inv.ParentID != nil {
 				r := strings.ToLower(strings.TrimSpace(string(inv.Role)))
 				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
@@ -389,7 +389,7 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 func DetectAnomalies(ledger AgenticFactLedger) []Anomaly {
 	var anomalies []Anomaly
 
-	anomalies = append(anomalies, detectToolRetryStreaks(ledger.Events)...)
+	anomalies = append(anomalies, detectToolRetryStreaks(ledger.EventFacts())...)
 	anomalies = append(anomalies, detectToolHighFailureRates(ledger)...)
 	anomalies = append(anomalies, detectContextSaturationSpikes(ledger)...)
 	anomalies = append(anomalies, detectSubagentReworkLoops(ledger)...)
@@ -505,16 +505,16 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
 			}
 		}
 
-		if len(ledger.Tools) > 0 {
-			for _, t := range ledger.Tools {
+		if len(ledger.ToolFacts()) > 0 {
+			for _, t := range ledger.ToolFacts() {
 				if t.Name != "" {
 					tm := getTool(t.Name)
 					tm.calls += t.Calls
 					tm.errors += t.Errors
 				}
 			}
-		} else if len(ledger.Events) > 0 {
-			for _, e := range ledger.Events {
+		} else if len(ledger.EventFacts()) > 0 {
+			for _, e := range ledger.EventFacts() {
 				if e.EventType == EventTypeToolCall && e.ToolName != nil && *e.ToolName != "" {
 					tm := getTool(*e.ToolName)
 					tm.calls++

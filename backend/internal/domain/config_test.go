@@ -529,7 +529,7 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 
 	// Custom mapping
 	customMappings := domain.RoleMappings{
-		"agent-qa": "tester",
+		"agent-qa":  "tester",
 		"architect": "planner",
 	}
 	if customMappings.ResolveRole("agent-qa") != domain.AgentRole("tester") {

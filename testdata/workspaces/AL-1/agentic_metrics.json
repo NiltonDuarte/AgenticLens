@@ -1,10 +1,11 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "migration": {
-    "schema_version": 3,
+    "schema_version": 4,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized"
+      "schema_v3_sanitized",
+      "schema_v4_user_iterations"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
@@ -27,139 +28,176 @@
     "files_changed": 14,
     "sdlc_iterations": 3
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "inv-al1-01",
-      "parent_id": null,
-      "role": "orchestrator",
-      "model": "claude-3-5-sonnet",
-      "user": "developer",
-      "started_at": "2026-10-15T10:00:00Z",
-      "completed_at": "2026-10-15T10:15:00Z",
-      "active_duration_seconds": 420,
-      "turns": 4,
-      "tokens": {
-        "input": 120000,
-        "output": 14000,
-        "cache_read": 480000,
-        "reasoning": 0,
-        "peak_context": 97000
-      },
-      "cost_usd": 1.25,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "inv-al1-01",
+          "parent_id": null,
+          "role": "orchestrator",
+          "model": "claude-3-5-sonnet",
+          "user": "developer",
+          "started_at": "2026-10-15T10:00:00Z",
+          "completed_at": "2026-10-15T10:15:00Z",
+          "active_duration_seconds": 420,
+          "turns": 4,
+          "tokens": {
+            "input": 120000,
+            "output": 14000,
+            "cache_read": 480000,
+            "reasoning": 0,
+            "peak_context": 97000
+          },
+          "cost_usd": 1.25,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 18,
+          "errors": 2
+        },
+        {
+          "name": "edit",
+          "calls": 28,
+          "errors": 1
+        },
+        {
+          "name": "grep",
+          "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 62,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 24,
+          "errors": 0
+        }
+      ],
+      "events": []
     },
     {
       "id": "inv-al1-02",
       "parent_id": "inv-al1-01",
-      "role": "planner",
-      "model": "claude-3-5-sonnet",
-      "user": "developer",
-      "started_at": "2026-10-15T10:16:00Z",
-      "completed_at": "2026-10-15T10:35:00Z",
-      "active_duration_seconds": 380,
-      "turns": 3,
-      "tokens": {
-        "input": 85000,
-        "output": 9200,
-        "cache_read": 320000,
-        "reasoning": 0,
-        "peak_context": 52000
-      },
-      "cost_usd": 0.65,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "inv-al1-02",
+          "parent_id": "inv-al1-01",
+          "role": "planner",
+          "model": "claude-3-5-sonnet",
+          "user": "developer",
+          "started_at": "2026-10-15T10:16:00Z",
+          "completed_at": "2026-10-15T10:35:00Z",
+          "active_duration_seconds": 380,
+          "turns": 3,
+          "tokens": {
+            "input": 85000,
+            "output": 9200,
+            "cache_read": 320000,
+            "reasoning": 0,
+            "peak_context": 52000
+          },
+          "cost_usd": 0.65,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": []
     },
     {
       "id": "inv-al1-03",
       "parent_id": "inv-al1-01",
-      "role": "coder",
-      "model": "claude-3-5-sonnet",
-      "user": "developer",
-      "started_at": "2026-10-15T10:40:00Z",
-      "completed_at": "2026-10-15T12:00:00Z",
-      "active_duration_seconds": 980,
-      "turns": 6,
-      "tokens": {
-        "input": 320000,
-        "output": 38000,
-        "cache_read": 1200000,
-        "reasoning": 0,
-        "peak_context": 88000
-      },
-      "cost_usd": 1.82,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "inv-al1-03",
+          "parent_id": "inv-al1-01",
+          "role": "coder",
+          "model": "claude-3-5-sonnet",
+          "user": "developer",
+          "started_at": "2026-10-15T10:40:00Z",
+          "completed_at": "2026-10-15T12:00:00Z",
+          "active_duration_seconds": 980,
+          "turns": 6,
+          "tokens": {
+            "input": 320000,
+            "output": 38000,
+            "cache_read": 1200000,
+            "reasoning": 0,
+            "peak_context": 88000
+          },
+          "cost_usd": 1.82,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": []
     },
     {
       "id": "inv-al1-04",
       "parent_id": "inv-al1-01",
-      "role": "tester",
-      "model": "claude-3-5-sonnet",
-      "user": "developer",
-      "started_at": "2026-10-15T12:05:00Z",
-      "completed_at": "2026-10-15T13:30:00Z",
-      "active_duration_seconds": 410,
-      "turns": 4,
-      "tokens": {
-        "input": 160000,
-        "output": 18000,
-        "cache_read": 620000,
-        "reasoning": 0,
-        "peak_context": 64000
-      },
-      "cost_usd": 0.72,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "inv-al1-04",
+          "parent_id": "inv-al1-01",
+          "role": "tester",
+          "model": "claude-3-5-sonnet",
+          "user": "developer",
+          "started_at": "2026-10-15T12:05:00Z",
+          "completed_at": "2026-10-15T13:30:00Z",
+          "active_duration_seconds": 410,
+          "turns": 4,
+          "tokens": {
+            "input": 160000,
+            "output": 18000,
+            "cache_read": 620000,
+            "reasoning": 0,
+            "peak_context": 64000
+          },
+          "cost_usd": 0.72,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": []
     },
     {
       "id": "inv-al1-05",
       "parent_id": "inv-al1-01",
-      "role": "reviewer",
-      "model": "claude-3-5-sonnet",
-      "user": "developer",
-      "started_at": "2026-10-15T13:35:00Z",
-      "completed_at": "2026-10-15T14:30:00Z",
-      "active_duration_seconds": 260,
-      "turns": 2,
-      "tokens": {
-        "input": 75000,
-        "output": 7800,
-        "cache_read": 280000,
-        "reasoning": 0,
-        "peak_context": 45000
-      },
-      "cost_usd": 0.4815,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "inv-al1-05",
+          "parent_id": "inv-al1-01",
+          "role": "reviewer",
+          "model": "claude-3-5-sonnet",
+          "user": "developer",
+          "started_at": "2026-10-15T13:35:00Z",
+          "completed_at": "2026-10-15T14:30:00Z",
+          "active_duration_seconds": 260,
+          "turns": 2,
+          "tokens": {
+            "input": 75000,
+            "output": 7800,
+            "cache_read": 280000,
+            "reasoning": 0,
+            "peak_context": 45000
+          },
+          "cost_usd": 0.4815,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": []
     }
-  ],
-  "tools": [
-    {
-      "name": "read",
-      "calls": 62,
-      "errors": 0,
-      "session_id": "inv-al1-01"
-    },
-    {
-      "name": "write",
-      "calls": 24,
-      "errors": 0,
-      "session_id": "inv-al1-01"
-    },
-    {
-      "name": "edit",
-      "calls": 28,
-      "errors": 1,
-      "session_id": "inv-al1-01"
-    },
-    {
-      "name": "bash",
-      "calls": 18,
-      "errors": 2,
-      "session_id": "inv-al1-01"
-    },
-    {
-      "name": "grep",
-      "calls": 10,
-      "errors": 0,
-      "session_id": "inv-al1-01"
-    }
-  ],
-  "events": []
+  ]
 }

@@ -233,7 +233,7 @@ func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydr
 			return
 		}
 
-		fallbackEvents := domain.SortEvents(targetLedger.Facts.Events)
+		fallbackEvents := domain.SortEvents(targetLedger.Facts.EventFacts())
 		fallbackResp := domain.WorkspaceEventsResponse{
 			TicketID:   ticketID,
 			IsHydrated: false,

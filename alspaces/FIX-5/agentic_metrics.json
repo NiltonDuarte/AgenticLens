@@ -1,5 +1,16 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
+  "migration": {
+    "schema_version": 4,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v4_user_iterations"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "2026-10-22T19:47:52.352598+00:00",
+    "last_migrated_by": "universal-migration-engine",
+    "notes": "Removed 13 unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them."
+  },
   "ticket_id": "FIX-5",
   "ticket_title": "Mandate agent-generated literal nonces for telemetry",
   "ticket_type": "fix",
@@ -16,295 +27,263 @@
     "files_changed": 5,
     "sdlc_iterations": 3
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "parent_id": null,
-      "role": "orchestrator",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-22T18:55:18.535000+00:00",
-      "completed_at": "2026-10-22T19:47:41.698000+00:00",
-      "active_duration_seconds": 2307,
-      "turns": 84,
-      "tokens": {
-        "input": 1025162,
-        "output": 16352,
-        "cache_read": 3859202,
-        "reasoning": 16212,
-        "peak_context": 112727
-      },
-      "cost_usd": 1.180427,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+          "parent_id": null,
+          "role": "orchestrator",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-22T18:55:18.535000+00:00",
+          "completed_at": "2026-10-22T19:47:41.698000+00:00",
+          "active_duration_seconds": 2307,
+          "turns": 84,
+          "tokens": {
+            "input": 1025162,
+            "output": 16352,
+            "cache_read": 3859202,
+            "reasoning": 16212,
+            "peak_context": 112727
+          },
+          "cost_usd": 1.180427,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [],
+      "events": [
+        {
+          "timestamp": "2026-10-22T18:55:28.941000+00:00",
+          "message_id": "msg_164f7b807001kBjv18VzTOr6lL",
+          "turn": 1,
+          "role": "orchestrator",
+          "event_type": "tool_call",
+          "tool_name": "grep",
+          "status": "error",
+          "duration_ms": 30,
+          "context_tokens": 12207
+        },
+        {
+          "timestamp": "2026-10-22T18:55:43.097000+00:00",
+          "message_id": "msg_164f7e176001gss7yUGKKnDh5M",
+          "turn": 2,
+          "role": "orchestrator",
+          "event_type": "tool_call",
+          "tool_name": "grep",
+          "status": "error",
+          "duration_ms": 19,
+          "context_tokens": 12344
+        },
+        {
+          "timestamp": "2026-10-22T18:56:07.225000+00:00",
+          "message_id": "msg_164f818b90012fFPn00yjdG7gf",
+          "turn": 3,
+          "role": "orchestrator",
+          "event_type": "tool_call",
+          "tool_name": "glob",
+          "status": "error",
+          "duration_ms": 11,
+          "context_tokens": 12387
+        },
+        {
+          "timestamp": "2026-10-22T18:56:33.096000+00:00",
+          "message_id": "msg_164f87673001D7SnfgdFpCNm8Y",
+          "turn": 4,
+          "role": "orchestrator",
+          "event_type": "tool_call",
+          "tool_name": "read",
+          "status": "error",
+          "duration_ms": 8,
+          "context_tokens": 12417
+        },
+        {
+          "timestamp": "2026-10-22T18:57:23.514000+00:00",
+          "message_id": "msg_164f95c1d001AZpi3qd57ik00I",
+          "turn": 7,
+          "role": "orchestrator",
+          "event_type": "tool_call",
+          "tool_name": "grep",
+          "status": "error",
+          "duration_ms": 16,
+          "context_tokens": 12739
+        },
+        {
+          "timestamp": "2026-10-22T19:01:28.822000+00:00",
+          "message_id": "msg_164fd4400001NhKWNo6PdARdOa",
+          "turn": 30,
+          "role": "orchestrator",
+          "event_type": "tool_call",
+          "tool_name": "bash",
+          "status": "error",
+          "duration_ms": 1082,
+          "context_tokens": 48723
+        },
+        {
+          "timestamp": "2026-10-22T19:24:59.670000+00:00",
+          "message_id": "msg_16512d547001ZcqE7a7wW5PBEw",
+          "turn": 56,
+          "role": "orchestrator",
+          "event_type": "tool_call",
+          "tool_name": "read",
+          "status": "error",
+          "duration_ms": 7,
+          "context_tokens": 84320
+        },
+        {
+          "timestamp": "2026-10-22T19:46:12.544000+00:00",
+          "message_id": "msg_165263ed9001130od4JLUJvD16",
+          "turn": 69,
+          "role": "orchestrator",
+          "event_type": "tool_call",
+          "tool_name": "read",
+          "status": "error",
+          "duration_ms": 7,
+          "context_tokens": 102642
+        }
+      ]
     },
     {
       "id": "ses_e9af2260cffex9E9t7CYIW1T9S",
       "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "role": "planner",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-22T19:19:29.043000+00:00",
-      "completed_at": "2026-10-22T19:25:57.679000+00:00",
-      "active_duration_seconds": 361,
-      "turns": 43,
-      "tokens": {
-        "input": 251032,
-        "output": 6518,
-        "cache_read": 1596329,
-        "reasoning": 17883,
-        "peak_context": 78713
-      },
-      "cost_usd": 0.399502,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "ses_e9af2260cffex9E9t7CYIW1T9S",
+          "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+          "role": "planner",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-22T19:19:29.043000+00:00",
+          "completed_at": "2026-10-22T19:25:57.679000+00:00",
+          "active_duration_seconds": 361,
+          "turns": 43,
+          "tokens": {
+            "input": 251032,
+            "output": 6518,
+            "cache_read": 1596329,
+            "reasoning": 17883,
+            "peak_context": 78713
+          },
+          "cost_usd": 0.399502,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": [
+        {
+          "timestamp": "2026-10-22T19:23:47.301000+00:00",
+          "message_id": "msg_16511b9da001S1qa5XyxRox3jg",
+          "turn": 35,
+          "role": "planner",
+          "event_type": "tool_call",
+          "tool_name": "read",
+          "status": "error",
+          "duration_ms": 8,
+          "context_tokens": 70984
+        }
+      ]
     },
     {
       "id": "ses_e9ae7e4dcffe6ntMMqmmyaZ8ty",
       "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "role": "coder",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-22T19:30:41.096000+00:00",
-      "completed_at": "2026-10-22T19:36:05.629000+00:00",
-      "active_duration_seconds": 324,
-      "turns": 66,
-      "tokens": {
-        "input": 388804,
-        "output": 7195,
-        "cache_read": 3329513,
-        "reasoning": 17991,
-        "peak_context": 96903
-      },
-      "cost_usd": 0.635764,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "ses_e9ae7e4dcffe6ntMMqmmyaZ8ty",
+          "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+          "role": "coder",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-22T19:30:41.096000+00:00",
+          "completed_at": "2026-10-22T19:36:05.629000+00:00",
+          "active_duration_seconds": 324,
+          "turns": 66,
+          "tokens": {
+            "input": 388804,
+            "output": 7195,
+            "cache_read": 3329513,
+            "reasoning": 17991,
+            "peak_context": 96903
+          },
+          "cost_usd": 0.635764,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": []
     },
     {
       "id": "ses_e9ae2c1baffeCJcNTlTjmLJ1Wg",
       "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "role": "tester",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-22T19:36:17.761000+00:00",
-      "completed_at": "2026-10-22T19:40:39.403000+00:00",
-      "active_duration_seconds": 261,
-      "turns": 48,
-      "tokens": {
-        "input": 265809,
-        "output": 4628,
-        "cache_read": 1755596,
-        "reasoning": 5331,
-        "peak_context": 75313
-      },
-      "cost_usd": 0.368373,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "ses_e9ae2c1baffeCJcNTlTjmLJ1Wg",
+          "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+          "role": "tester",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-22T19:36:17.761000+00:00",
+          "completed_at": "2026-10-22T19:40:39.403000+00:00",
+          "active_duration_seconds": 261,
+          "turns": 48,
+          "tokens": {
+            "input": 265809,
+            "output": 4628,
+            "cache_read": 1755596,
+            "reasoning": 5331,
+            "peak_context": 75313
+          },
+          "cost_usd": 0.368373,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": []
     },
     {
       "id": "ses_e9ade3f22ffezsNJHrA72OW6fU",
       "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "role": "reviewer",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-22T19:41:13.321000+00:00",
-      "completed_at": "2026-10-22T19:46:07.664000+00:00",
-      "active_duration_seconds": 294,
-      "turns": 40,
-      "tokens": {
-        "input": 249481,
-        "output": 3044,
-        "cache_read": 1249597,
-        "reasoning": 10651,
-        "peak_context": 66109
-      },
-      "cost_usd": 0.332187,
-      "compactions": 0
-    }
-  ],
-  "tools": [
-    {
-      "name": "read",
-      "calls": 91,
-      "errors": 5
-    },
-    {
-      "name": "bash",
-      "calls": 88,
-      "errors": 1
-    },
-    {
-      "name": "grep",
-      "calls": 36,
-      "errors": 3
-    },
-    {
-      "name": "glob",
-      "calls": 26,
-      "errors": 1
-    },
-    {
-      "name": "edit",
-      "calls": 7,
-      "errors": 0
-    },
-    {
-      "name": "todowrite",
-      "calls": 7,
-      "errors": 0
-    },
-    {
-      "name": "task",
-      "calls": 5,
-      "errors": 0
-    },
-    {
-      "name": "write",
-      "calls": 5,
-      "errors": 0
-    },
-    {
-      "name": "mcp-gateway_mcp-find",
-      "calls": 3,
-      "errors": 0
-    },
-    {
-      "name": "list_mcp_resources",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "mcp-gateway_code-mode",
-      "calls": 1,
-      "errors": 0
-    },
-    {
-      "name": "question",
-      "calls": 1,
-      "errors": 0
-    },
-    {
-      "name": "skill",
-      "calls": 1,
-      "errors": 0
-    }
-  ],
-  "events": [
-    {
-      "timestamp": "2026-10-22T18:55:28.941000+00:00",
-      "session_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "message_id": "msg_164f7b807001kBjv18VzTOr6lL",
-      "turn": 1,
-      "role": "orchestrator",
-      "event_type": "tool_call",
-      "tool_name": "grep",
-      "status": "error",
-      "duration_ms": 30,
-      "context_tokens": 12207
-    },
-    {
-      "timestamp": "2026-10-22T18:55:43.097000+00:00",
-      "session_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "message_id": "msg_164f7e176001gss7yUGKKnDh5M",
-      "turn": 2,
-      "role": "orchestrator",
-      "event_type": "tool_call",
-      "tool_name": "grep",
-      "status": "error",
-      "duration_ms": 19,
-      "context_tokens": 12344
-    },
-    {
-      "timestamp": "2026-10-22T18:56:07.225000+00:00",
-      "session_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "message_id": "msg_164f818b90012fFPn00yjdG7gf",
-      "turn": 3,
-      "role": "orchestrator",
-      "event_type": "tool_call",
-      "tool_name": "glob",
-      "status": "error",
-      "duration_ms": 11,
-      "context_tokens": 12387
-    },
-    {
-      "timestamp": "2026-10-22T18:56:33.096000+00:00",
-      "session_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "message_id": "msg_164f87673001D7SnfgdFpCNm8Y",
-      "turn": 4,
-      "role": "orchestrator",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 8,
-      "context_tokens": 12417
-    },
-    {
-      "timestamp": "2026-10-22T18:57:23.514000+00:00",
-      "session_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "message_id": "msg_164f95c1d001AZpi3qd57ik00I",
-      "turn": 7,
-      "role": "orchestrator",
-      "event_type": "tool_call",
-      "tool_name": "grep",
-      "status": "error",
-      "duration_ms": 16,
-      "context_tokens": 12739
-    },
-    {
-      "timestamp": "2026-10-22T19:01:28.822000+00:00",
-      "session_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "message_id": "msg_164fd4400001NhKWNo6PdARdOa",
-      "turn": 30,
-      "role": "orchestrator",
-      "event_type": "tool_call",
-      "tool_name": "bash",
-      "status": "error",
-      "duration_ms": 1082,
-      "context_tokens": 48723
-    },
-    {
-      "timestamp": "2026-10-22T19:23:47.301000+00:00",
-      "session_id": "ses_e9af2260cffex9E9t7CYIW1T9S",
-      "message_id": "msg_16511b9da001S1qa5XyxRox3jg",
-      "turn": 35,
-      "role": "planner",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 8,
-      "context_tokens": 70984
-    },
-    {
-      "timestamp": "2026-10-22T19:24:59.670000+00:00",
-      "session_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "message_id": "msg_16512d547001ZcqE7a7wW5PBEw",
-      "turn": 56,
-      "role": "orchestrator",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 7,
-      "context_tokens": 84320
-    },
-    {
-      "timestamp": "2026-10-22T19:42:53.431000+00:00",
-      "session_id": "ses_e9ade3f22ffezsNJHrA72OW6fU",
-      "message_id": "msg_16523075a001Slulzmbo1R5Dm3",
-      "turn": 5,
-      "role": "reviewer",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 6,
-      "context_tokens": 17116
-    },
-    {
-      "timestamp": "2026-10-22T19:46:12.544000+00:00",
-      "session_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "message_id": "msg_165263ed9001130od4JLUJvD16",
-      "turn": 69,
-      "role": "orchestrator",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 7,
-      "context_tokens": 102642
+      "invocations": [
+        {
+          "id": "ses_e9ade3f22ffezsNJHrA72OW6fU",
+          "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+          "role": "reviewer",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-22T19:41:13.321000+00:00",
+          "completed_at": "2026-10-22T19:46:07.664000+00:00",
+          "active_duration_seconds": 294,
+          "turns": 40,
+          "tokens": {
+            "input": 249481,
+            "output": 3044,
+            "cache_read": 1249597,
+            "reasoning": 10651,
+            "peak_context": 66109
+          },
+          "cost_usd": 0.332187,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [],
+      "events": [
+        {
+          "timestamp": "2026-10-22T19:42:53.431000+00:00",
+          "message_id": "msg_16523075a001Slulzmbo1R5Dm3",
+          "turn": 5,
+          "role": "reviewer",
+          "event_type": "tool_call",
+          "tool_name": "read",
+          "status": "error",
+          "duration_ms": 6,
+          "context_tokens": 17116
+        }
+      ]
     }
   ]
 }

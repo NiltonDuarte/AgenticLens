@@ -35,6 +35,80 @@ type versionProbe struct {
 	SchemaVersion *int `json:"schema_version"`
 }
 
+type legacyFactCollections struct {
+	Invocations []domain.InvocationFact `json:"invocations"`
+	Tools       []domain.ToolFact       `json:"tools"`
+	Events      []domain.EventFact      `json:"events"`
+}
+
+func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
+	version, err := (&Engine{}).DetectVersion(input)
+	if err != nil {
+		return domain.AgenticFactLedger{}, 0, err
+	}
+	var ledger domain.AgenticFactLedger
+	var rootFields map[string]json.RawMessage
+	if err := json.Unmarshal(input, &rootFields); err != nil {
+		return domain.AgenticFactLedger{}, 0, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
+	}
+	_, hasSessions := rootFields["sessions"]
+	for _, key := range []string{"invocations", "tools", "events"} {
+		if _, hasLegacy := rootFields[key]; hasSessions && hasLegacy {
+			return domain.AgenticFactLedger{}, 0, fmt.Errorf("mixed ledger shape: canonical sessions cannot coexist with root-level legacy %s; remove ambiguity before migration", key)
+		}
+	}
+	if err := json.Unmarshal(input, &ledger); err != nil {
+		return domain.AgenticFactLedger{}, 0, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
+	}
+	var legacy legacyFactCollections
+	if err := json.Unmarshal(input, &legacy); err != nil {
+		return domain.AgenticFactLedger{}, 0, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
+	}
+	if ledger.Sessions == nil && (len(legacy.Invocations) > 0 || len(legacy.Events) > 0 || len(legacy.Tools) > 0) {
+		attributed := make([]domain.ToolFact, 0, len(legacy.Tools))
+		dropped := 0
+		for _, tool := range legacy.Tools {
+			if strings.TrimSpace(tool.SessionID) == "" {
+				dropped++
+				continue
+			}
+			attributed = append(attributed, tool)
+		}
+		sessions, err := domain.SessionsFromFacts(legacy.Invocations, attributed, legacy.Events)
+		if err != nil {
+			return domain.AgenticFactLedger{}, 0, fmt.Errorf("normalizing legacy fact collections: %w", err)
+		}
+		ledger.Sessions = sessions
+		if dropped > 0 {
+			note := fmt.Sprintf("Removed %d unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them.", dropped)
+			if ledger.Migration == nil {
+				ledger.Migration = &domain.MigrationInfo{SchemaVersion: version, Status: domain.MigrationStatusCompleted, StepsCompleted: []string{}, StepsPending: []string{}, Notes: note}
+			} else {
+				mig := *ledger.Migration
+				if mig.Notes != "" {
+					mig.Notes += "; "
+				}
+				mig.Notes += note
+				if len(mig.StepsPending) == 0 {
+					mig.Status = domain.MigrationStatusCompleted
+				} else {
+					mig.Status = domain.MigrationStatusPartial
+				}
+				ledger.Migration = &mig
+			}
+		}
+	}
+	if version >= domain.CurrentSchemaVersion && hasSessions {
+		retained := domain.PruneEventsForPersistence(ledger)
+		sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), retained)
+		if err != nil {
+			return domain.AgenticFactLedger{}, 0, fmt.Errorf("sanitizing canonical session events: %w", err)
+		}
+		ledger.Sessions = sessions
+	}
+	return ledger, version, nil
+}
+
 // DetectVersion inspects raw JSON bytes to determine the source schema version.
 // Missing, null, or zero/one schema_version values are classified as version 1.
 func (e *Engine) DetectVersion(input []byte) (int, error) {
@@ -62,19 +136,12 @@ func (e *Engine) Migrate(input []byte, targetVersion int) (domain.AgenticFactLed
 			ErrUnsupportedVersion, targetVersion)
 	}
 
-	sourceVersion, err := e.DetectVersion(input)
+	ledger, sourceVersion, err := decodeLedger(input)
 	if err != nil {
 		return domain.AgenticFactLedger{}, err
 	}
-
-	var ledger domain.AgenticFactLedger
-	if err := json.Unmarshal(input, &ledger); err != nil {
-		return domain.AgenticFactLedger{}, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
-	}
-	if sourceVersion >= 4 {
-		if err := validateToolSessionIDs(ledger.Tools); err != nil {
-			return domain.AgenticFactLedger{}, err
-		}
+	if err := validateSessions(ledger.Sessions); err != nil {
+		return domain.AgenticFactLedger{}, err
 	}
 
 	// Idempotency: if already at target version, return ledger unchanged with zero mutations.
@@ -96,10 +163,8 @@ func (e *Engine) MigrateLedger(ledger domain.AgenticFactLedger, targetVersion in
 	if ledger.SchemaVersion != nil && *ledger.SchemaVersion > 1 {
 		sourceVersion = *ledger.SchemaVersion
 	}
-	if sourceVersion >= 4 {
-		if err := validateToolSessionIDs(ledger.Tools); err != nil {
-			return domain.AgenticFactLedger{}, err
-		}
+	if err := validateSessions(ledger.Sessions); err != nil {
+		return domain.AgenticFactLedger{}, err
 	}
 
 	if sourceVersion == targetVersion {
@@ -109,10 +174,29 @@ func (e *Engine) MigrateLedger(ledger domain.AgenticFactLedger, targetVersion in
 	return e.applyChain(ledger, sourceVersion, targetVersion)
 }
 
-func validateToolSessionIDs(tools []domain.ToolFact) error {
-	for i, tool := range tools {
-		if strings.TrimSpace(tool.SessionID) == "" {
-			return fmt.Errorf("tools[%d] is missing required session_id; regenerate or re-extract this ledger from source logs", i)
+func validateSessions(sessions []domain.SessionFact) error {
+	seen := make(map[string]bool, len(sessions))
+	for i, session := range sessions {
+		id := strings.TrimSpace(session.ID)
+		if id == "" {
+			return fmt.Errorf("sessions[%d].id is required", i)
+		}
+		if seen[id] {
+			return fmt.Errorf("sessions[%d].id %q is duplicated", i, id)
+		}
+		seen[id] = true
+	}
+	for i, session := range sessions {
+		if session.ParentID != nil && !seen[strings.TrimSpace(*session.ParentID)] {
+			return fmt.Errorf("sessions[%d].parent_id %q does not identify a session", i, *session.ParentID)
+		}
+		for j, inv := range session.Invocations {
+			if strings.TrimSpace(inv.ID) == "" {
+				return fmt.Errorf("sessions[%d].invocations[%d].id is required", i, j)
+			}
+			if inv.ParentID != nil && !seen[strings.TrimSpace(*inv.ParentID)] {
+				return fmt.Errorf("sessions[%d].invocations[%d].parent_id %q does not identify a session", i, j, *inv.ParentID)
+			}
 		}
 	}
 	return nil

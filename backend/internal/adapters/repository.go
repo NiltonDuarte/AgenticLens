@@ -333,9 +333,7 @@ type ExistingLedgerFacts struct {
 	CompletedAt   *string
 	RootThreadIDs []string
 	Code          *domain.CodeFacts
-	Invocations   []domain.InvocationFact
-	Tools         []domain.ToolFact
-	Events        []domain.EventFact
+	Sessions      []domain.SessionFact
 }
 
 type legacyThreadItem struct {
@@ -368,6 +366,7 @@ type rawExistingLedger struct {
 	StartedAt          *string                   `json:"started_at"`
 	CompletedAt        *string                   `json:"completed_at"`
 	Code               *CodeFactsDTO             `json:"code"`
+	Sessions           []SessionFactDTO          `json:"sessions"`
 	Invocations        []InvocationFactDTO       `json:"invocations"`
 	Tools              []ToolFactDTO             `json:"tools"`
 	Events             []EventFactDTO            `json:"events,omitempty"`
@@ -395,9 +394,16 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("decoding existing ledger at %s: %w", path, err)
 	}
-	for i, tool := range raw.Tools {
-		if strings.TrimSpace(tool.SessionID) == "" {
-			return nil, fmt.Errorf("loading existing ledger at %s: %w: tools[%d] is missing; regenerate or re-extract this ledger from source logs", path, ErrToolSessionIDRequired, i)
+	var rootFields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &rootFields); err != nil {
+		return nil, fmt.Errorf("decoding existing ledger shape at %s: %w", path, err)
+	}
+	_, hasSessions := rootFields["sessions"]
+	if hasSessions {
+		for _, key := range []string{"invocations", "tools", "events"} {
+			if _, hasLegacy := rootFields[key]; hasLegacy {
+				return nil, fmt.Errorf("loading existing ledger at %s: mixed ledger shape: sessions cannot coexist with root-level legacy %s", path, key)
+			}
 		}
 	}
 
@@ -407,11 +413,48 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		mig = &domMig
 	}
 
-	var events []domain.EventFact
-	if len(raw.Events) > 0 {
-		events = make([]domain.EventFact, len(raw.Events))
-		for i, e := range raw.Events {
-			events[i] = e.ToDomain()
+	var sessions []domain.SessionFact
+	droppedTools := 0
+	if len(raw.Sessions) > 0 {
+		dto := AgenticFactLedgerDTO{Sessions: raw.Sessions}
+		if err := dto.Validate(); err != nil {
+			return nil, fmt.Errorf("loading existing ledger at %s: %w", path, err)
+		}
+		sessions = dto.ToDomain().Sessions
+	} else {
+		var invocations []domain.InvocationFact
+		var tools []domain.ToolFact
+		var events []domain.EventFact
+		for _, dto := range raw.Invocations {
+			invocations = append(invocations, dto.ToDomain())
+		}
+		for _, dto := range raw.Tools {
+			if strings.TrimSpace(dto.SessionID) == "" {
+				droppedTools++
+				continue
+			}
+			tools = append(tools, dto.ToDomain())
+		}
+		for _, dto := range raw.Events {
+			events = append(events, dto.ToDomain())
+		}
+		var buildErr error
+		sessions, buildErr = domain.SessionsFromFacts(invocations, tools, events)
+		if buildErr != nil {
+			return nil, fmt.Errorf("loading legacy ledger at %s: %w", path, buildErr)
+		}
+	}
+	if droppedTools > 0 {
+		note := fmt.Sprintf("Removed %d unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them.", droppedTools)
+		if mig == nil {
+			mig = &domain.MigrationInfo{SchemaVersion: domain.CurrentSchemaVersion, Status: domain.MigrationStatusPartial, StepsCompleted: []string{}, StepsPending: []string{}, Notes: note}
+		} else {
+			copy := *mig
+			if copy.Notes != "" {
+				copy.Notes += "; "
+			}
+			copy.Notes += note
+			mig = &copy
 		}
 	}
 
@@ -423,28 +466,18 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		TicketType:    toDomainTicketType(raw.TicketType),
 		StartedAt:     raw.StartedAt,
 		CompletedAt:   raw.CompletedAt,
-		Events:        events,
+		Sessions:      sessions,
 	}
 
 	// Schema 1: Direct atomic fact schema
-	if raw.Code != nil || len(raw.Invocations) > 0 || len(raw.Tools) > 0 || raw.SchemaVersion != nil {
-		var invs []domain.InvocationFact
+	if raw.Code != nil || len(raw.Invocations) > 0 || len(raw.Tools) > 0 || len(raw.Sessions) > 0 || raw.SchemaVersion != nil {
 		var rootIDs []string
-		for _, dto := range raw.Invocations {
-			domInv := dto.ToDomain()
-			invs = append(invs, domInv)
-			if domInv.ParentID == nil {
-				rootIDs = append(rootIDs, domInv.ID)
+		for _, session := range sessions {
+			if session.ParentID == nil {
+				rootIDs = append(rootIDs, session.ID)
 			}
 		}
-		result.Invocations = invs
 		result.RootThreadIDs = rootIDs
-
-		var tools []domain.ToolFact
-		for _, dto := range raw.Tools {
-			tools = append(tools, dto.ToDomain())
-		}
-		result.Tools = tools
 
 		if raw.Code != nil {
 			c := raw.Code.ToDomain()
@@ -488,7 +521,8 @@ func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
 	if ledger.TicketTitle == nil || strings.TrimSpace(*ledger.TicketTitle) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketTitle is required and cannot be empty")
 	}
-	if err := ValidateToolFacts(ledger.Tools); err != nil {
+	dto := AgenticFactLedgerDTOFromDomain(ledger)
+	if err := dto.Validate(); err != nil {
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}
 
@@ -497,7 +531,7 @@ func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
 		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
 	}
 
-	data, err := json.MarshalIndent(ledger, "", "  ")
+	data, err := json.MarshalIndent(dto, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal fact ledger: %w", err)
 	}

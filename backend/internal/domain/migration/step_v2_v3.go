@@ -34,7 +34,12 @@ func (s *StepV2ToV3Sanitized) Apply(ledger domain.AgenticFactLedger) (domain.Age
 	targetVer := 3
 	cloned.SchemaVersion = &targetVer
 
-	cloned.Events = domain.PruneEventsForPersistence(ledger)
+	events := domain.PruneEventsForPersistence(ledger)
+	sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), events)
+	if err != nil {
+		return domain.AgenticFactLedger{}, err
+	}
+	cloned.Sessions = sessions
 
 	if cloned.Migration == nil {
 		cloned.Migration = &domain.MigrationInfo{

@@ -1,8 +1,11 @@
 package adapters
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"agenticlens/internal/domain"
@@ -49,24 +52,12 @@ type InvocationFactDTO struct {
 }
 
 func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
-	role := dto.Role
-	if role == "" {
-		role = "orchestrator"
-	}
-	model := dto.Model
-	if model == "" {
-		model = "default"
-	}
-	user := dto.User
-	if user == "" {
-		user = "unknown"
-	}
 	return domain.InvocationFact{
 		ID:                    dto.ID,
 		ParentID:              dto.ParentID,
-		Role:                  domain.AgentRole(role),
-		Model:                 model,
-		User:                  user,
+		Role:                  domain.AgentRole(dto.Role),
+		Model:                 dto.Model,
+		User:                  dto.User,
 		StartedAt:             dto.StartedAt,
 		CompletedAt:           dto.CompletedAt,
 		ActiveDurationSeconds: dto.ActiveDurationSeconds,
@@ -112,13 +103,9 @@ type ToolFactDTO struct {
 }
 
 func (dto ToolFactDTO) ToDomain() domain.ToolFact {
-	name := dto.Name
-	if name == "" {
-		name = "unknown"
-	}
 	return domain.ToolFact{
 		SessionID: dto.SessionID,
-		Name:      name,
+		Name:      dto.Name,
 		Calls:     dto.Calls,
 		Errors:    dto.Errors,
 	}
@@ -136,6 +123,32 @@ type EventFactDTO struct {
 	ErrorMessage  *string `json:"error_message,omitempty"`
 	DurationMs    *int64  `json:"duration_ms,omitempty"`
 	ContextTokens int64   `json:"context_tokens"`
+}
+
+type SessionToolFactDTO struct {
+	Name   string `json:"name"`
+	Calls  int64  `json:"calls"`
+	Errors int64  `json:"errors"`
+}
+
+type SessionEventFactDTO struct {
+	Timestamp     string  `json:"timestamp"`
+	MessageID     *string `json:"message_id,omitempty"`
+	Turn          int64   `json:"turn"`
+	Role          string  `json:"role"`
+	EventType     string  `json:"event_type"`
+	ToolName      *string `json:"tool_name,omitempty"`
+	Status        string  `json:"status"`
+	DurationMs    *int64  `json:"duration_ms,omitempty"`
+	ContextTokens int64   `json:"context_tokens"`
+}
+
+type SessionFactDTO struct {
+	ID          string                `json:"id"`
+	ParentID    *string               `json:"parent_id,omitempty"`
+	Invocations []InvocationFactDTO   `json:"invocations"`
+	Tools       []SessionToolFactDTO  `json:"tools"`
+	Events      []SessionEventFactDTO `json:"events"`
 }
 
 func (dto EventFactDTO) ToDomain() domain.EventFact {
@@ -255,18 +268,46 @@ func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
 
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
-	SchemaVersion *int                `json:"schema_version,omitempty"`
-	Migration     *MigrationInfoDTO   `json:"migration,omitempty"`
-	TicketID      *string             `json:"ticket_id"`
-	TicketTitle   *string             `json:"ticket_title"`
-	TicketType    *string             `json:"ticket_type"`
-	StartedAt     *string             `json:"started_at"`
-	CompletedAt   *string             `json:"completed_at"`
-	UpdatedAt     string              `json:"updated_at"`
-	Code          CodeFactsDTO        `json:"code"`
-	Invocations   []InvocationFactDTO `json:"invocations"`
-	Tools         []ToolFactDTO       `json:"tools"`
-	Events        []EventFactDTO      `json:"events"`
+	SchemaVersion *int              `json:"schema_version,omitempty"`
+	Migration     *MigrationInfoDTO `json:"migration,omitempty"`
+	TicketID      *string           `json:"ticket_id"`
+	TicketTitle   *string           `json:"ticket_title"`
+	TicketType    *string           `json:"ticket_type"`
+	StartedAt     *string           `json:"started_at"`
+	CompletedAt   *string           `json:"completed_at"`
+	UpdatedAt     string            `json:"updated_at"`
+	Code          CodeFactsDTO      `json:"code"`
+	Sessions      []SessionFactDTO  `json:"sessions"`
+}
+
+// UnmarshalJSON rejects legacy root fact collections at the current schema boundary.
+// They must be passed through the versioned migration engine instead.
+func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
+	type currentDTO AgenticFactLedgerDTO
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	for _, legacy := range []string{"invocations", "tools", "events"} {
+		if _, exists := fields[legacy]; exists {
+			return fmt.Errorf("legacy root-level %s is not valid in session-owned schema v4; run `agentic-lens migrate`", legacy)
+		}
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var decoded currentDTO
+	if err := decoder.Decode(&decoded); err != nil {
+		return err
+	}
+	var trailing struct{}
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return errors.New("multiple JSON values in fact ledger")
+		}
+		return err
+	}
+	*dto = AgenticFactLedgerDTO(decoded)
+	return nil
 }
 
 func toDomainTicketType(raw *string) *domain.ConventionalTicketType {
@@ -305,20 +346,25 @@ func fromDomainAgentRole(r *domain.AgentRole) *string {
 }
 
 func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
-	invs := make([]domain.InvocationFact, len(dto.Invocations))
-	for i, inv := range dto.Invocations {
-		invs[i] = inv.ToDomain()
-	}
-	tools := make([]domain.ToolFact, len(dto.Tools))
-	for i, t := range dto.Tools {
-		tools[i] = t.ToDomain()
-	}
-
-	var events []domain.EventFact
-	if dto.Events != nil {
-		events = make([]domain.EventFact, len(dto.Events))
-		for i, e := range dto.Events {
-			events[i] = e.ToDomain()
+	sessions := make([]domain.SessionFact, len(dto.Sessions))
+	for i, session := range dto.Sessions {
+		sessions[i] = domain.SessionFact{ID: session.ID, ParentID: session.ParentID}
+		for _, inv := range session.Invocations {
+			sessions[i].Invocations = append(sessions[i].Invocations, inv.ToDomain())
+		}
+		for _, tool := range session.Tools {
+			name := tool.Name
+			if name == "" {
+				name = "unknown"
+			}
+			sessions[i].Tools = append(sessions[i].Tools, domain.SessionToolFact{Name: name, Calls: tool.Calls, Errors: tool.Errors})
+		}
+		for _, event := range session.Events {
+			sessions[i].Events = append(sessions[i].Events, domain.SessionEventFact{
+				Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
+				Role: domain.AgentRole(event.Role), EventType: domain.EventType(event.EventType), ToolName: event.ToolName,
+				Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+			})
 		}
 	}
 
@@ -338,17 +384,76 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		CompletedAt:   dto.CompletedAt,
 		UpdatedAt:     dto.UpdatedAt,
 		Code:          dto.Code.ToDomain(),
-		Invocations:   invs,
-		Tools:         tools,
-		Events:        events,
+		Sessions:      sessions,
 	}
 }
 
 // Validate enforces required fields at the persisted telemetry boundary.
 func (dto AgenticFactLedgerDTO) Validate() error {
-	for i, tool := range dto.Tools {
-		if strings.TrimSpace(tool.SessionID) == "" {
-			return fmt.Errorf("%w: tools[%d] is missing; regenerate or re-extract this ledger from source logs", ErrToolSessionIDRequired, i)
+	currentSchema := dto.SchemaVersion != nil && *dto.SchemaVersion >= domain.CurrentSchemaVersion
+	if currentSchema && dto.Sessions == nil {
+		return errors.New("sessions collection is required in schema v4")
+	}
+	seen := make(map[string]bool, len(dto.Sessions))
+	for i, session := range dto.Sessions {
+		if strings.TrimSpace(session.ID) == "" {
+			return fmt.Errorf("sessions[%d].id is required", i)
+		}
+		if session.ID != strings.TrimSpace(session.ID) {
+			return fmt.Errorf("sessions[%d].id must not have leading or trailing whitespace", i)
+		}
+		if seen[session.ID] {
+			return fmt.Errorf("sessions[%d].id %q is duplicated", i, session.ID)
+		}
+		seen[session.ID] = true
+	}
+	for i, session := range dto.Sessions {
+		if currentSchema && (session.Invocations == nil || session.Tools == nil || session.Events == nil) {
+			return fmt.Errorf("sessions[%d] requires invocations, tools, and events collections", i)
+		}
+		if session.ParentID != nil {
+			if *session.ParentID != strings.TrimSpace(*session.ParentID) {
+				return fmt.Errorf("sessions[%d].parent_id must not have leading or trailing whitespace", i)
+			}
+			if !seen[*session.ParentID] {
+				return fmt.Errorf("sessions[%d].parent_id %q does not identify a session", i, *session.ParentID)
+			}
+		}
+		for j, inv := range session.Invocations {
+			if strings.TrimSpace(inv.ID) == "" {
+				return fmt.Errorf("sessions[%d].invocations[%d].id is required", i, j)
+			}
+			if inv.ParentID != nil {
+				if *inv.ParentID != strings.TrimSpace(*inv.ParentID) {
+					return fmt.Errorf("sessions[%d].invocations[%d].parent_id must not have leading or trailing whitespace", i, j)
+				}
+				if !seen[*inv.ParentID] {
+					return fmt.Errorf("sessions[%d].invocations[%d].parent_id %q does not identify a session", i, j, *inv.ParentID)
+				}
+			}
+		}
+		for j, tool := range session.Tools {
+			if strings.TrimSpace(tool.Name) == "" {
+				return fmt.Errorf("sessions[%d].tools[%d].name is required", i, j)
+			}
+			if tool.Calls < 0 || tool.Errors < 0 || tool.Errors > tool.Calls {
+				return fmt.Errorf("sessions[%d].tools[%d] has invalid calls/errors counts", i, j)
+			}
+		}
+		toolNames := make(map[string]bool, len(session.Tools))
+		for j, tool := range session.Tools {
+			if toolNames[tool.Name] {
+				return fmt.Errorf("sessions[%d].tools[%d].name %q is duplicated", i, j, tool.Name)
+			}
+			toolNames[tool.Name] = true
+		}
+		for j, event := range session.Events {
+			if strings.TrimSpace(event.Timestamp) == "" || strings.TrimSpace(event.Role) == "" || strings.TrimSpace(event.EventType) == "" || strings.TrimSpace(event.Status) == "" {
+				return fmt.Errorf("sessions[%d].events[%d] requires timestamp, role, event_type, and status", i, j)
+			}
+			if event.EventType != string(domain.EventTypeToolCall) && event.EventType != string(domain.EventTypeTurnMessage) && event.EventType != string(domain.EventTypeCompaction) {
+				return fmt.Errorf("sessions[%d].events[%d].event_type %q is unsupported", i, j, event.EventType)
+			}
 		}
 	}
 	return nil
@@ -366,29 +471,22 @@ func ValidateToolFacts(tools []domain.ToolFact) error {
 
 // AgenticFactLedgerDTOFromDomain converts a domain AgenticFactLedger to its DTO for serialization.
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
-	invs := make([]InvocationFactDTO, len(ledger.Invocations))
-	for i, inv := range ledger.Invocations {
-		invs[i] = InvocationFactDTOFromDomain(inv)
-	}
-
-	tools := make([]ToolFactDTO, len(ledger.Tools))
-	for i, t := range ledger.Tools {
-		tools[i] = ToolFactDTO{
-			SessionID: t.SessionID,
-			Name:      t.Name,
-			Calls:     t.Calls,
-			Errors:    t.Errors,
+	sessions := make([]SessionFactDTO, len(ledger.Sessions))
+	for i, session := range ledger.Sessions {
+		sessions[i] = SessionFactDTO{ID: session.ID, ParentID: session.ParentID, Invocations: []InvocationFactDTO{}, Tools: []SessionToolFactDTO{}, Events: []SessionEventFactDTO{}}
+		for _, inv := range session.Invocations {
+			sessions[i].Invocations = append(sessions[i].Invocations, InvocationFactDTOFromDomain(inv))
 		}
-	}
-
-	var events []EventFactDTO
-	if ledger.Events != nil {
-		events = make([]EventFactDTO, len(ledger.Events))
-		for i, e := range ledger.Events {
-			events[i] = EventFactDTOFromDomain(e)
+		for _, tool := range session.Tools {
+			sessions[i].Tools = append(sessions[i].Tools, SessionToolFactDTO{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
 		}
-	} else if ledger.SchemaVersion != nil && *ledger.SchemaVersion >= 2 {
-		events = []EventFactDTO{}
+		for _, event := range session.Events {
+			sessions[i].Events = append(sessions[i].Events, SessionEventFactDTO{
+				Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: string(event.Role),
+				EventType: string(event.EventType), ToolName: event.ToolName, Status: event.Status,
+				DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+			})
+		}
 	}
 
 	return AgenticFactLedgerDTO{
@@ -410,9 +508,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 			FilesChanged:     ledger.Code.FilesChanged,
 			SDLCIterations:   ledger.Code.SDLCIterations,
 		},
-		Invocations: invs,
-		Tools:       tools,
-		Events:      events,
+		Sessions: sessions,
 	}
 }
 
