@@ -83,16 +83,33 @@ Conducted cross-cutting audit to ensure Codex support introduced in AL-56 does n
   - Multi-platform compilation via `make build` succeeded.
   - Adversarial regression tests covering empty patterns, cached code fallbacks, and backfill scoping invariants passed.
 
+## Iteration 02: Strict Zero-Fallback Classification & Warning Alignment
+
+Refined file classification and operational diagnostics based on user steering:
+
+- **Strict Zero Runtime Fallback Policy (`classifier.go`)**:
+  - Reverted runtime classification fallbacks. `ClassifyFile` strictly evaluates user-configured patterns (`TestPatterns`, `ProdPatterns`, `Include`, `Exclude`). Unmatched files evaluate strictly to `CategoryOther`.
+  - Added `CheckUnconfiguredPatterns` to inspect project configuration and emit actionable `stderr` warnings during `agentic-lens generate` when `code_metrics.test_patterns` or `code_metrics.prod_patterns` are empty.
+- **Template-Only Default Scaffolding (`writer.go`)**:
+  - Maintained `DefaultTestPatterns` and `DefaultProdPatterns` strictly inside `adapters/config/writer.go` for template generation during `agentic-lens init`, ensuring users explicitly own and commit pattern definitions on disk.
+- **CLI Resilience & Operational Guardrails (`main.go`, `engine.go`, `repository.go`)**:
+  - Reaffirmed CLI entrypoint resilience: when `ComputeCodeFactsAtRef` encounters Git errors in shallow or detached environments, it falls back to cached code facts from existing ledgers with an explicit warning instead of failing.
+  - Retained `--ticket-id` enforcement on `backfill --recompute-git` to prevent multi-ticket Git diff contamination.
+  - Retained non-destructive ledger loading in `repository.go`.
+- **Verification**:
+  - Race-enabled Go tests and Vitest suites passed cleanly (0 failures, 0 skips).
+  - Verified warning emission in `main_test.go` and zero-fallback classification rules in `classifier_test.go`.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
-- **Active Agent Duration:** 1h 3m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 115.7k tokens (58% of 200k healthy ceiling, 1 compactions) | Subagents peak 176.7k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 21.6%, Coder 60.1%, Tester 3.1%, Reviewer 15.3%
-- **Subagent Turn Velocity & Thrashing:** 59.3 avg turns/run (peak: 127 turns) | Planner 55.0, Coder 127.0, Tester 14.0, Reviewer 41.0
-- **Test-to-Production Code Ratio:** 0.7:1 (+1,109 test lines / +1,522 prod lines)
-- **Code Delivered:** +2,631 / -1,008 lines across 19 code files (excluding docs)
-- **Reasoning Effort:** 95,673 reasoning tokens (69.6% of generated output)
-- **Tool Health & Self-Correction:** 319 tool calls (5 self-corrections, 98.4% success rate)
+- **Software Development Life Cycle Iterations:** 2
+- **Active Agent Duration:** 2h 7m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 143.5k tokens (72% of 200k healthy ceiling, 1 compactions) | Subagents peak 176.7k (Coder)
+- **Role Effort Distribution (Subagents):** Planner 18.6%, Coder 56.9%, Tester 3.9%, Reviewer 20.5%
+- **Subagent Turn Velocity & Thrashing:** 49.1 avg turns/run (peak: 127 turns) | Planner 37.0, Coder 103.0, Tester 13.5, Reviewer 43.0
+- **Test-to-Production Code Ratio:** 0.8:1 (+1,224 test lines / +1,502 prod lines)
+- **Code Delivered:** +2,726 / -1,018 lines across 19 code files (excluding docs)
+- **Reasoning Effort:** 112,677 reasoning tokens (60.2% of generated output)
+- **Tool Health & Self-Correction:** 513 tool calls (10 self-corrections, 98.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -106,15 +123,15 @@ Conducted cross-cutting audit to ensure Codex support introduced in AL-56 does n
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 314,544 | 6,706 | 2,806,057 | 89.9% | 91.8k | HEALTHY | $0.54 |
-| **coder** | 1 | 783,545 | 17,316 | 8,171,070 | 91.2% | 176.7k | ELEVATED | $1.49 |
-| **tester** | 1 | 69,822 | 1,112 | 272,267 | 79.6% | 39.1k | HEALTHY | $0.08 |
-| **reviewer** | 1 | 297,837 | 3,459 | 1,631,680 | 84.6% | 70.4k | HEALTHY | $0.38 |
-| **general** | 1 | 821,701 | 13,146 | 4,553,560 | 84.7% | 115.7k | ELEVATED | $1.06 |
-| **Total** | **5** | **2,287,449** | **41,739** | **17,434,634** | **88.4%** | **176.7k** | **ELEVATED** | **$3.54** |
+| **planner** | 2 | 397,545 | 11,139 | 3,397,822 | 89.5% | 91.8k | HEALTHY | $0.69 |
+| **coder** | 2 | 1,107,041 | 32,374 | 12,296,934 | 91.7% | 176.7k | ELEVATED | $2.10 |
+| **tester** | 2 | 130,703 | 2,066 | 477,210 | 78.5% | 39.1k | HEALTHY | $0.15 |
+| **reviewer** | 2 | 565,367 | 6,498 | 3,622,994 | 86.5% | 70.4k | HEALTHY | $0.76 |
+| **general** | 1 | 1,702,923 | 22,468 | 8,153,618 | 82.7% | 143.5k | ELEVATED | $2.04 |
+| **Total** | **9** | **3,903,579** | **74,545** | **27,948,578** | **87.7%** | **176.7k** | **ELEVATED** | **$5.73** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 5 | 2,287,449 | 41,739 | 17,434,634 | 88.4% | $3.54 |
-| **Total** | **5** | **2,287,449** | **41,739** | **17,434,634** | **88.4%** | **$3.54** |
+| **gemini-3.8-flash** | 9 | 3,903,579 | 74,545 | 27,948,578 | 87.7% | $5.73 |
+| **Total** | **9** | **3,903,579** | **74,545** | **27,948,578** | **87.7%** | **$5.73** |

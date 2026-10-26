@@ -8,7 +8,7 @@ Test/production classification comes from project configuration rather than hard
 
 Repeated generation replaces the selected snapshot, model changes preserve per-model usage, and event context uses request input counts rather than cumulative usage. CLI persistence uses the existing error/compaction/anomaly-turn pruning policy.
 
-Iteration 01 hardens OpenCode non-breakage and compatibility: standard test/production file classification fallbacks prevent 0:0 ratio decay in unconfigured repositories, CLI `generate` gracefully falls back to cached code facts on Git diff errors, and `backfill --recompute-git` strictly requires `--ticket-id` to protect against multi-ticket diff contamination. Detailed contracts and plans live in `CONTRACT.md`, `SUMMARY.md`, and `iterations/01/PLAN.md`.
+Iteration 01 and 02 harden OpenCode non-breakage and operational reliability: strict zero runtime fallback classification with diagnostic stderr warnings for unconfigured patterns, CLI `generate` graceful fallback to cached code facts on Git diff errors, template-only pattern defaults for `init`, and mandatory `--ticket-id` enforcement during `--recompute-git` backfills. Detailed contracts, plans, and reviews live in `CONTRACT.md`, `SUMMARY.md`, and `iterations/`.
 
 ## Privacy review
 
