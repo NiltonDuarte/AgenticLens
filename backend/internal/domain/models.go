@@ -94,7 +94,7 @@ type SessionFact struct {
 	ParentID    *string            `json:"parent_id,omitempty"`
 	Invocations []InvocationFact   `json:"invocations"`
 	Tools       []SessionToolFact  `json:"tools"`
-	Events      []SessionEventFact `json:"events"`
+	Events      []SessionEventFact `json:"events,omitempty"`
 	Anomalies   []Anomaly          `json:"anomalies"`
 }
 
@@ -104,6 +104,7 @@ type WorkspaceEventsResponse struct {
 	IsHydrated bool        `json:"is_hydrated"`
 	Events     []EventFact `json:"events"`
 	DataSource string      `json:"data_source"`
+	Anomalies  []Anomaly   `json:"anomalies"`
 }
 
 // CodeFacts stores lines of code modified and SDLC iteration counts.
@@ -132,6 +133,7 @@ type MigrationInfo struct {
 // AgenticFactLedger is the root raw session facts ledger extracted for a ticket workspace.
 type AgenticFactLedger struct {
 	SchemaVersion *int                    `json:"schema_version,omitempty"`
+	Source        string                  `json:"source,omitempty"`
 	Migration     *MigrationInfo          `json:"migration,omitempty"`
 	TicketID      *string                 `json:"ticket_id"`
 	TicketTitle   *string                 `json:"ticket_title"`

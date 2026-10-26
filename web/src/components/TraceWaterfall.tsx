@@ -314,7 +314,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
               className={`waterfall-source-badge ${isHydrated ? 'source-hydrated' : 'source-offline'}`}
               data-testid="waterfall-source-badge"
             >
-              {isHydrated ? 'Source: Local SQLite' : 'Source: Committed Anomaly Evidence'}
+              {isHydrated ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite') : 'Source: Committed Anomaly Summary'}
             </span>
           </div>
 
@@ -358,7 +358,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             className={`waterfall-source-badge ${isHydrated ? 'source-hydrated' : 'source-offline'}`}
             data-testid="waterfall-source-badge"
           >
-              {isHydrated ? 'Source: Local SQLite' : 'Source: Committed Anomaly Evidence'}
+              {isHydrated ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite') : 'Source: Committed Anomaly Summary'}
           </span>
           <span className="waterfall-counter">
             Showing {filteredEvents.length} of {events.length} events
@@ -446,10 +446,10 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       {(!isHydrated || dataSource === 'committed_ledger') && (
         <div className="db-offline-banner" data-testid="db-offline-banner" role="status">
           <div className="offline-banner-header">
-                <span className="offline-indicator-badge">Committed Anomaly Evidence — Local Database Offline</span>
+                <span className="offline-indicator-badge">Committed Anomaly Summaries — Local Source Offline</span>
           </div>
           <p className="offline-banner-text">
-                Local SQLite database was unavailable or not found. Showing only sparse event evidence for detected anomalies from the repository ledger; normal activity and raw payloads are not included.
+                The local source was unavailable or not found. The ledger keeps anomaly summaries; detailed timelines require local session logs.
           </p>
         </div>
       )}

@@ -532,7 +532,7 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
 	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies int64
 
 	for _, ledger := range ledgers {
-		ticketAnomalies := DetectAnomalies(ledger)
+		ticketAnomalies := RefreshAnomalySummaries(ledger)
 		if len(ticketAnomalies) > 0 {
 			ticketsWithAnomalies++
 		}

@@ -99,7 +99,7 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 		}
 	}
 	if version >= domain.CurrentSchemaVersion && hasSessions {
-		normalized, err := domain.PersistSparseAnomalyEvidence(ledger)
+		normalized, err := domain.PersistAnomalySummaries(ledger)
 		if err != nil {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("sanitizing canonical session events: %w", err)
 		}

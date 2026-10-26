@@ -1645,7 +1645,7 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		}
 	})
 
-	t.Run("fails with record diagnostic when required anomaly evidence has no event id", func(t *testing.T) {
+	t.Run("drops legacy events without stable IDs while preserving summary", func(t *testing.T) {
 		initial := sampleFactLedger()
 		v3 := 3
 		initial.SchemaVersion = &v3
@@ -1660,9 +1660,15 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		setToolFacts(&initial, []domain.ToolFact{{SessionID: "fixture-session", Name: tool, Calls: 5, Errors: 3}})
 		setEventFacts(&initial, events)
 
-		_, err := step.Apply(initial)
-		if err == nil || !strings.Contains(err.Error(), "stable event_id") || !strings.Contains(err.Error(), "events[") {
-			t.Fatalf("expected fail-closed record diagnostic for selected legacy evidence, got %v", err)
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(upgraded.EventFacts()) != 0 {
+			t.Fatalf("migration retained transient events: %#v", upgraded.EventFacts())
+		}
+		if len(upgraded.AnomalyFacts()) == 0 {
+			t.Fatal("migration dropped detected anomaly summary")
 		}
 	})
 

@@ -385,6 +385,7 @@ func runGenerate(args []string) {
 	schemaVer := domain.CurrentSchemaVersion
 	factLedger := domain.AgenticFactLedger{
 		SchemaVersion: &schemaVer,
+		Source:        activeSource,
 		TicketID:      ticketIDPtr,
 		TicketTitle:   activeTicketTitle,
 		TicketType:    activeTicketType,
@@ -399,7 +400,7 @@ func runGenerate(args []string) {
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 
 	if *jsonOutputFlag != "" {
-		persistedFactLedger, pruneErr := domain.PersistSparseAnomalyEvidence(factLedger)
+		persistedFactLedger, pruneErr := domain.PersistAnomalySummaries(factLedger)
 		if pruneErr != nil {
 			fmt.Fprintf(os.Stderr, "Error preparing session-owned telemetry: %v\n", pruneErr)
 			os.Exit(1)
@@ -522,7 +523,7 @@ func runServer(args []string) {
 		}
 	}
 
-	var liveService *live.LiveService
+	liveService := live.NewLiveService(nil, projCfg)
 	if cleanDBPath != "" {
 		if _, err := os.Stat(cleanDBPath); err == nil {
 			busyTimeout := projCfg.Database.BusyTimeoutMs

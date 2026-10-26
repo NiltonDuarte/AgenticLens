@@ -1,6 +1,6 @@
 export type EventType = 'tool_call' | 'turn_message' | 'compaction';
 
-export type DataSource = 'local_sqlite' | 'committed_ledger';
+export type DataSource = 'local_sqlite' | 'local_codex' | 'committed_ledger';
 
 export type AgentRole = string;
 
@@ -39,6 +39,7 @@ export interface WorkspaceEventsResponse {
   readonly is_hydrated: boolean;
   readonly events: readonly EventFact[];
   readonly data_source: DataSource;
+  readonly anomalies?: readonly Anomaly[] | undefined;
 }
 
 export type AnomalySeverity = 'WARNING' | 'CRITICAL';

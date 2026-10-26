@@ -92,6 +92,11 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 		}
 
 		factLedger := dto.ToDomain()
+		factLedger, err = domain.PersistAnomalySummaries(factLedger)
+		if err != nil {
+			scanErrors = append(scanErrors, fmt.Sprintf("Failed to normalize %s: %v", metricFile, err))
+			continue
+		}
 
 		// Deduce ticket_id from parent directory if omitted
 		if factLedger.TicketID == nil || *factLedger.TicketID == "" {
@@ -258,6 +263,10 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	}
 
 	factLedger := dto.ToDomain()
+	factLedger, err = domain.PersistAnomalySummaries(factLedger)
+	if err != nil {
+		return nil, fmt.Errorf("normalizing metrics for ticket %s: %w", cleanID, err)
+	}
 	if factLedger.TicketID == nil || *factLedger.TicketID == "" {
 		factLedger.TicketID = &cleanID
 	}
@@ -521,13 +530,17 @@ func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
 	if ledger.TicketTitle == nil || strings.TrimSpace(*ledger.TicketTitle) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketTitle is required and cannot be empty")
 	}
-	ledger, err := domain.PersistSparseAnomalyEvidence(ledger)
-	if err != nil { return fmt.Errorf("cannot prepare sparse anomaly evidence: %w", err) }
+	ledger, err := domain.PersistAnomalySummaries(ledger)
+	if err != nil {
+		return fmt.Errorf("cannot prepare sparse anomaly evidence: %w", err)
+	}
 	dto := AgenticFactLedgerDTOFromDomain(ledger)
 	if err := dto.Validate(); err != nil {
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}
-	if err := dto.ValidatePersistedEvidence(); err != nil { return fmt.Errorf("cannot save fact ledger: %w", err) }
+	if err := dto.ValidatePersistedEvidence(); err != nil {
+		return fmt.Errorf("cannot save fact ledger: %w", err)
+	}
 
 	parentDir := filepath.Dir(path)
 	if err := os.MkdirAll(parentDir, 0755); err != nil {

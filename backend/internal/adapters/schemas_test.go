@@ -41,57 +41,24 @@ func TestAgenticFactLedgerDTO_PersistsSessionAndTicketAnomalyScopes(t *testing.T
 	}
 }
 
-func TestAgenticFactLedgerDTO_ValidatesAggregateEvidenceRows(t *testing.T) {
-	tool, sessionID, eventID := "bash", "s1", "call-1"
-	count, calls, rate, threshold := int64(1), int64(1), 100.0, ">20%"
+func TestAgenticFactLedgerDTO_OmitsEventsAndAnomalyEvidence(t *testing.T) {
 	version := domain.CurrentSchemaVersion
-	newLedger := func() adapters.AgenticFactLedgerDTO {
-		anomaly := domain.Anomaly{
-			RuleID: domain.RuleToolHighFailureRate, Severity: domain.SeverityCritical,
-			Title: "High failure rate", Description: "one failed bash call",
-			Context:  domain.AnomalyContext{ToolName: &tool, Count: &count, TotalCalls: &calls, FailureRatePct: &rate, Threshold: &threshold},
-			Evidence: []domain.AnomalyEvidenceRef{{SessionID: sessionID, EventID: eventID}},
-		}
-		return adapters.AgenticFactLedgerDTO{
-			SchemaVersion: &version,
-			Sessions: []adapters.SessionFactDTO{{
-				ID: sessionID, Invocations: []adapters.InvocationFactDTO{},
-				Tools:  []adapters.SessionToolFactDTO{{Name: tool, Calls: 1, Errors: 1}},
-				Events: []adapters.SessionEventFactDTO{{EventID: eventID, Timestamp: "2026-10-26T10:00:00Z", Role: "coder", EventType: string(domain.EventTypeToolCall), ToolName: &tool, Status: "error"}},
-			}},
-			Anomalies: []adapters.AnomalyDTO{adapters.AnomalyDTOFromDomain(anomaly)},
-		}
+	tool := "bash"
+	event := domain.SessionEventFact{EventID: "event-1", Timestamp: "2026-10-26T10:00:00Z", Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}
+	facts := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{{ID: "s1", Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 1, Errors: 1}}, Events: []domain.SessionEventFact{event}, Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Evidence: []domain.AnomalyEvidenceRef{{SessionID: "s1", EventID: "event-1"}}}}}}}
+	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	t.Run("matching failed tool-call reference is accepted", func(t *testing.T) {
-		if err := newLedger().Validate(); err != nil {
-			t.Fatalf("expected valid aggregate evidence, got %v", err)
-		}
-	})
-	t.Run("duplicate evidence reference is rejected", func(t *testing.T) {
-		dto := newLedger()
-		dto.Anomalies[0].Evidence = append(dto.Anomalies[0].Evidence, dto.Anomalies[0].Evidence[0])
-		if err := dto.Validate(); err == nil || !strings.Contains(err.Error(), "duplicates") {
-			t.Fatalf("expected duplicate ref rejection, got %v", err)
-		}
-	})
-	for _, tc := range []struct {
-		name                    string
-		eventType, status, tool string
-	}{
-		{name: "wrong event type", eventType: string(domain.EventTypeTurnMessage), status: "error", tool: "bash"},
-		{name: "completed event", eventType: string(domain.EventTypeToolCall), status: "completed", tool: "bash"},
-		{name: "wrong tool", eventType: string(domain.EventTypeToolCall), status: "error", tool: "git"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			dto := newLedger()
-			event := &dto.Sessions[0].Events[0]
-			event.EventType, event.Status = tc.eventType, tc.status
-			event.ToolName = &tc.tool
-			if err := dto.Validate(); err == nil || !strings.Contains(err.Error(), "failed tool_call") {
-				t.Fatalf("expected aggregate evidence row rejection, got %v", err)
-			}
-		})
+	if strings.Contains(string(encoded), "events") || strings.Contains(string(encoded), "evidence") {
+		t.Fatalf("compact DTO serialized transient rows or refs: %s", encoded)
+	}
+	var legacy adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal([]byte(`{"schema_version":4,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"event_id":"event-1","timestamp":"2026-10-26T10:00:00Z","role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"}],"anomalies":[{"rule_id":"TOOL_RETRY_STREAK","severity":"WARNING","title":"retry","description":"retry","context":{},"evidence":[{"session_id":"s1","event_id":"event-1"}]}]}]}`), &legacy); err != nil {
+		t.Fatalf("legacy rows should decode for normalization: %v", err)
+	}
+	if len(legacy.Sessions[0].Events) != 1 || len(legacy.Sessions[0].Anomalies[0].Evidence) != 1 {
+		t.Fatal("legacy rows weren't available to the normalizer")
 	}
 }
 
@@ -449,7 +416,6 @@ func TestFleetAnomalySummaryDTO_BidirectionalMapping(t *testing.T) {
 
 func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 	t.Run("malformed nested session records are rejected instead of defaulted", func(t *testing.T) {
-		validEvent := adapters.SessionEventFactDTO{Timestamp: "2026-10-18T10:00:00Z", Role: "coder", EventType: string(domain.EventTypeToolCall), Status: "error"}
 		missingParent := "missing"
 		cases := []struct {
 			name    string
@@ -459,9 +425,6 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 			{"negative tool calls", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: -1}}}},
 			{"errors exceed calls", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1, Errors: 2}}}},
 			{"duplicate tool name", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1}, {Name: "bash", Calls: 2}}}},
-			{"missing event timestamp", adapters.SessionFactDTO{ID: "s1", Events: []adapters.SessionEventFactDTO{{Role: "coder", EventType: string(domain.EventTypeToolCall), Status: "error"}}}},
-			{"missing event role", adapters.SessionFactDTO{ID: "s1", Events: []adapters.SessionEventFactDTO{{Timestamp: validEvent.Timestamp, EventType: validEvent.EventType, Status: "error"}}}},
-			{"unsupported event type", adapters.SessionFactDTO{ID: "s1", Events: []adapters.SessionEventFactDTO{{Timestamp: validEvent.Timestamp, Role: "coder", EventType: "unknown", Status: "error"}}}},
 			{"dangling invocation parent", adapters.SessionFactDTO{ID: "s1", Invocations: []adapters.InvocationFactDTO{{ID: "i1", ParentID: &missingParent}}}},
 		}
 		for _, tc := range cases {
@@ -473,19 +436,17 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 			})
 		}
 	})
-	t.Run("canonical event DTO rejects error payload and serialization omits it", func(t *testing.T) {
+	t.Run("legacy event DTO decodes but output omits rows", func(t *testing.T) {
 		var decoded adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(`{"schema_version":4,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","role":"coder","event_type":"tool_call","status":"error","error_message":"private error text"}]}]}`), &decoded); err == nil {
-			t.Fatal("canonical DTO accepted error_message")
+		if err := json.Unmarshal([]byte(`{"schema_version":4,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"event_id":"e1","timestamp":"2026-10-18T10:00:00Z","role":"coder","event_type":"tool_call","status":"error"}]}]}`), &decoded); err != nil {
+			t.Fatalf("expected legacy event rows to be readable for compaction: %v", err)
 		}
-		message := "private error text"
-		ledger := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "s1", Events: []domain.SessionEventFact{{Timestamp: "2026-10-18T10:00:00Z", Role: "coder", EventType: domain.EventTypeToolCall, Status: "error", ErrorMessage: &message}}}}}
-		data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
+		data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(decoded.ToDomain()))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(data), "private error text") || strings.Contains(string(data), `"error_message"`) {
-			t.Fatalf("canonical DTO serialized sensitive event payload: %s", data)
+		if strings.Contains(string(data), `"events"`) || strings.Contains(string(data), `"evidence"`) {
+			t.Fatalf("canonical DTO serialized event rows or evidence refs: %s", data)
 		}
 	})
 

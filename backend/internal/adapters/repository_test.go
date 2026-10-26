@@ -1127,273 +1127,35 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 }
 
 func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
-	t.Run("legacy payload omitting events decodes without error", func(t *testing.T) {
-		legacyJSON := `{
-  "schema_version": 2,
-  "ticket_id": "AL-LEGACY",
-  "updated_at": "2026-10-18T10:00:00Z",
-  "sessions": [
-    {
-      "id": "ses-legacy",
-      "invocations": [
-        {
-          "id": "ses-legacy",
-          "role": "orchestrator",
-          "model": "gemini-3.8-flash",
-          "user": "eng",
-          "active_duration_seconds": 30,
-          "turns": 2,
-          "tokens": {
-            "input": 100,
-            "output": 20,
-            "cache_read": 50,
-            "reasoning": 0,
-            "peak_context": 150
-          },
-          "cost_usd": 0.01,
-          "compactions": 0
-        }
-      ],
-      "tools": [],
-      "events": []
-    }
-  ]
-}`
-
-		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(legacyJSON), &dto); err != nil {
-			t.Fatalf("failed to unmarshal legacy ledger without events: %v", err)
-		}
-		if len(dto.Sessions) != 1 || len(dto.Sessions[0].Invocations) != 1 {
-			t.Errorf("expected invocation to remain inside session facts, got: %+v", dto.Sessions)
-		}
-
-		dom := dto.ToDomain()
-		if len(dom.EventFacts()) != 0 {
-			t.Errorf("expected empty domain events slice, got len %d", len(dom.EventFacts()))
-		}
-	})
-
-	t.Run("ledger with events parses and round-trips cleanly", func(t *testing.T) {
-		toolName := "bash"
-		var durMs int64 = 150
-
-		eventJSON := `{
-			"schema_version": 2,
-			"ticket_id": "AL-EVENTS",
-			"updated_at": "2026-10-18T10:00:00Z",
-			"sessions": [{
-				"id": "ses-1",
-				"invocations": [],
-				"tools": [],
-				"events": [
-				{
-					"timestamp": "2026-10-18T10:00:01.100000+00:00",
-					"turn": 1,
-					"role": "orchestrator",
-					"event_type": "turn_message",
-					"status": "completed",
-					"duration_ms": 1200,
-					"context_tokens": 5000
-				},
-				{
-					"timestamp": "2026-10-18T10:00:02.300000+00:00",
-					"turn": 1,
-					"role": "orchestrator",
-					"event_type": "tool_call",
-					"tool_name": "bash",
-					"status": "error",
-					"duration_ms": 150,
-					"context_tokens": 5000
-				},
-				{
-					"timestamp": "2026-10-18T10:00:03.000000+00:00",
-					"turn": 2,
-					"role": "orchestrator",
-					"event_type": "compaction",
-					"status": "completed",
-					"context_tokens": 4200
-				}
-				]
-			}]
-		}`
-
-		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(eventJSON), &dto); err != nil {
-			t.Fatalf("failed to unmarshal ledger with events: %v", err)
-		}
-		if len(dto.Sessions) != 1 || len(dto.Sessions[0].Events) != 3 {
-			t.Fatalf("expected 3 session-owned events in DTO, got %+v", dto.Sessions)
-		}
-
-		dom := dto.ToDomain()
-		if len(dom.EventFacts()) != 3 {
-			t.Fatalf("expected 3 events in domain model, got %d", len(dom.EventFacts()))
-		}
-
-		e0 := dom.EventFacts()[0]
-		if e0.EventType != domain.EventTypeTurnMessage || e0.Turn != 1 || e0.ContextTokens != 5000 {
-			t.Errorf("unexpected event 0: %+v", e0)
-		}
-
-		e1 := dom.EventFacts()[1]
-		if e1.EventType != domain.EventTypeToolCall || e1.ToolName == nil || *e1.ToolName != toolName {
-			t.Errorf("unexpected tool name in event 1: %+v", e1)
-		}
-		if e1.ErrorMessage != nil {
-			t.Errorf("canonical event should not contain error payload: %+v", e1)
-		}
-		if e1.DurationMs == nil || *e1.DurationMs != durMs {
-			t.Errorf("unexpected duration in event 1: %+v", e1)
-		}
-
-		e2 := dom.EventFacts()[2]
-		if e2.EventType != domain.EventTypeCompaction || e2.Turn != 2 {
-			t.Errorf("unexpected event 2: %+v", e2)
-		}
-		var unsafe adapters.AgenticFactLedgerDTO
-		unsafeJSON := `{"schema_version":4,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","role":"coder","event_type":"tool_call","status":"error","error_message":"private"}]}]}`
-		if err := json.Unmarshal([]byte(unsafeJSON), &unsafe); err == nil {
-			t.Fatal("canonical DTO accepted sensitive event error_message")
-		}
-
-		// Round-trip
-		roundDTO := adapters.AgenticFactLedgerDTOFromDomain(dom)
-		roundBytes, err := json.Marshal(roundDTO)
-		if err != nil {
-			t.Fatalf("failed to marshal round-trip DTO: %v", err)
-		}
-
-		var reloadedDTO adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal(roundBytes, &reloadedDTO); err != nil {
-			t.Fatalf("failed to unmarshal reloaded DTO: %v", err)
-		}
-		if len(reloadedDTO.Sessions) != 1 || len(reloadedDTO.Sessions[0].Events) != 3 {
-			t.Fatalf("expected 3 reloaded session events, got %+v", reloadedDTO.Sessions)
-		}
-		if *reloadedDTO.Sessions[0].Events[1].ToolName != toolName {
-			t.Errorf("expected tool_name %s, got %s", toolName, *reloadedDTO.Sessions[0].Events[1].ToolName)
-		}
-	})
-
-	t.Run("LoadExistingFactLedger loads events and handles absence", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		// 1. Workspace without events
-		noEventsDir := filepath.Join(tempDir, "NO-EVENTS")
-		if err := os.MkdirAll(noEventsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		noEventsFile := filepath.Join(noEventsDir, "agentic_metrics.json")
-		if err := os.WriteFile(noEventsFile, []byte(`{"ticket_id":"NO-EVENTS","updated_at":"2026-10-18T10:00:00Z"}`), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		factsNoEvents, err := adapters.LoadExistingFactLedger(noEventsFile)
-		if err != nil {
-			t.Fatalf("LoadExistingFactLedger failed on ledger without events: %v", err)
-		}
-		if len(factsNoEvents.Sessions) != 0 {
-			t.Errorf("expected no sessions, got %d", len(factsNoEvents.Sessions))
-		}
-
-		// 2. Workspace with events
-		withEventsDir := filepath.Join(tempDir, "WITH-EVENTS")
-		if err := os.MkdirAll(withEventsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		withEventsFile := filepath.Join(withEventsDir, "agentic_metrics.json")
-		payload := `{
-			"ticket_id":"WITH-EVENTS",
-			"updated_at":"2026-10-18T10:00:00Z",
-			"events":[
-				{"timestamp":"2026-10-18T10:00:00Z","session_id":"s1","turn":1,"role":"coder","event_type":"tool_call","tool_name":"edit","status":"completed","context_tokens":1000}
-			]
-		}`
-		if err := os.WriteFile(withEventsFile, []byte(payload), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		factsWithEvents, err := adapters.LoadExistingFactLedger(withEventsFile)
-		if err != nil {
-			t.Fatalf("LoadExistingFactLedger failed on ledger with events: %v", err)
-		}
-		if len((domain.AgenticFactLedger{Sessions: factsWithEvents.Sessions}).EventFacts()) != 1 {
-			t.Fatalf("expected 1 event, got %d", len((domain.AgenticFactLedger{Sessions: factsWithEvents.Sessions}).EventFacts()))
-		}
-		if (domain.AgenticFactLedger{Sessions: factsWithEvents.Sessions}).EventFacts()[0].EventType != domain.EventTypeToolCall {
-			t.Errorf("expected tool_call event, got %s", (domain.AgenticFactLedger{Sessions: factsWithEvents.Sessions}).EventFacts()[0].EventType)
-		}
-		mixedFile := filepath.Join(tempDir, "mixed.json")
-		mixed := `{"schema_version":4,"sessions":[],"invocations":[],"events":[]}`
-		if err := os.WriteFile(mixedFile, []byte(mixed), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := adapters.LoadExistingFactLedger(mixedFile); err == nil || !strings.Contains(err.Error(), "mixed ledger shape") {
-			t.Fatalf("expected mixed canonical/legacy ledger to be rejected, got %v", err)
-		}
-	})
-
-	t.Run("explicit events null decodes gracefully with empty slice", func(t *testing.T) {
-		nullEventsJSON := `{"schema_version":4,"ticket_id":"AL-NULL","updated_at":"2026-10-18T10:00:00Z","sessions":[{"id":"s1","invocations":[],"tools":[],"events":null}]}`
-		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(nullEventsJSON), &dto); err != nil {
-			t.Fatalf("failed to unmarshal explicit null events: %v", err)
-		}
-		if dto.Sessions[0].Events != nil {
-			t.Errorf("expected nested event list to be nil, got %+v", dto.Sessions[0].Events)
-		}
-		dom := dto.ToDomain()
-		if len(dom.EventFacts()) != 0 {
-			t.Errorf("expected empty domain events slice, got len %d", len(dom.EventFacts()))
-		}
-	})
-
-	t.Run("explicit events empty array decodes gracefully with empty slice", func(t *testing.T) {
-		emptyArrayJSON := `{"schema_version":4,"ticket_id":"AL-EMPTY","updated_at":"2026-10-18T10:00:00Z","sessions":[{"id":"s1","invocations":[],"tools":[],"events":[]}]}`
-		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(emptyArrayJSON), &dto); err != nil {
-			t.Fatalf("failed to unmarshal explicit empty events array: %v", err)
-		}
-		if dto.Sessions[0].Events == nil {
-			t.Fatal("expected nested event list to be non-nil empty slice")
-		}
-		if len(dto.Sessions[0].Events) != 0 {
-			t.Errorf("expected 0 events, got %d", len(dto.Sessions[0].Events))
-		}
-		dom := dto.ToDomain()
-		if len(dom.EventFacts()) != 0 {
-			t.Errorf("expected empty domain events slice, got len %d", len(dom.EventFacts()))
-		}
-	})
-
-	t.Run("event with empty role and status defaults safely", func(t *testing.T) {
-		eventDTO := adapters.EventFactDTO{
-			Timestamp:     "2026-10-18T10:00:00Z",
-			SessionID:     "ses-default",
-			Turn:          1,
-			Role:          "", // should default to orchestrator
-			EventType:     "turn_message",
-			Status:        "", // should default to completed
-			ContextTokens: 100,
-		}
-		dom := eventDTO.ToDomain()
-		if dom.Role != "orchestrator" {
-			t.Errorf("expected default role orchestrator, got %q", dom.Role)
-		}
-		if dom.Status != "completed" {
-			t.Errorf("expected default status completed, got %q", dom.Status)
-		}
-	})
-
-	t.Run("corrupted event json payload returns unmarshal error", func(t *testing.T) {
-		corruptedEventsJSON := `{"schema_version":2,"ticket_id":"AL-CORRUPT","events":[{"timestamp": 12345}]}` // timestamp should be string
-		var dto adapters.AgenticFactLedgerDTO
-		err := json.Unmarshal([]byte(corruptedEventsJSON), &dto)
-		if err == nil {
-			t.Fatal("expected unmarshal error for non-string timestamp in events, got nil")
-		}
-	})
+	temp := t.TempDir()
+	ws := filepath.Join(temp, "AL-COMPACT")
+	if err := os.MkdirAll(ws, 0700); err != nil {
+		t.Fatal(err)
+	}
+	content := `{"schema_version":4,"ticket_id":"AL-COMPACT","sessions":[{"id":"s1","invocations":[{"id":"s1","parent_id":null,"role":"coder","model":"m","user":"u","active_duration_seconds":1,"turns":1,"tokens":{"input":10,"output":2,"cache_read":0,"reasoning":0,"peak_context":10},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[{"name":"bash","calls":8,"errors":6}],"events":[{"event_id":"e1","timestamp":"2026-10-26T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"}],"anomalies":[]}]}`
+	if err := os.WriteFile(filepath.Join(ws, "agentic_metrics.json"), []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	ledger, err := adapters.LoadTicketWorkspace("AL-COMPACT", temp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ledger.Facts.EventFacts()) != 0 {
+		t.Fatalf("legacy events weren't compacted: %#v", ledger.Facts.EventFacts())
+	}
+	if len(ledger.Facts.ToolFacts()) != 1 || ledger.Facts.ToolFacts()[0].Calls != 8 {
+		t.Fatalf("tool totals changed: %#v", ledger.Facts.ToolFacts())
+	}
+	if len(ledger.Facts.AnomalyFacts()) == 0 {
+		t.Fatal("expected transiently recomputed summary from legacy event rows")
+	}
+	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger.Facts))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), `"events"`) || strings.Contains(string(encoded), `"evidence"`) {
+		t.Fatalf("canonical encoding retained rows or refs: %s", encoded)
+	}
 }
 
 func TestLoadTicketWorkspace(t *testing.T) {

@@ -871,13 +871,13 @@ func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticke
 		return domain.AgenticMetricsLedger{}, fmt.Errorf("grouping Codex facts by session: %w", err)
 	}
 	facts := domain.AgenticFactLedger{
-		SchemaVersion: &version, TicketID: ticketIDPtr, TicketTitle: titlePtr, TicketType: ticketTypePtr,
+		SchemaVersion: &version, Source: domain.SourceCodex, TicketID: ticketIDPtr, TicketTitle: titlePtr, TicketType: ticketTypePtr,
 		StartedAt: startedAt, CompletedAt: completedAt, UpdatedAt: transcript.UpdatedAt,
 		Sessions: sessions,
 	}
 	ledger := domain.DeriveMetricsLedger(facts, cfg)
-	// Metrics are derived from the complete stream; persisted facts keep summaries and direct evidence.
-	ledger.Facts, err = domain.PersistSparseAnomalyEvidence(facts)
+	// Metrics and summaries are derived from the complete stream; event rows stay transient.
+	ledger.Facts, err = domain.PersistAnomalySummaries(facts)
 	if err != nil {
 		return domain.AgenticMetricsLedger{}, fmt.Errorf("persisting Codex anomaly evidence: %w", err)
 	}

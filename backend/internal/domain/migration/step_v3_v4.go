@@ -34,7 +34,7 @@ func (s *StepV3ToV4UserIterations) Apply(ledger domain.AgenticFactLedger) (domai
 	// Use the error-returning canonicalizer so required evidence without a stable
 	// source ID fails migration with a record-level diagnostic instead of being
 	// silently dropped by the legacy slice-only pruning helper.
-	cloned, err := domain.PersistSparseAnomalyEvidence(ledger)
+	cloned, err := domain.PersistAnomalySummaries(ledger)
 	if err != nil {
 		return domain.AgenticFactLedger{}, err
 	}

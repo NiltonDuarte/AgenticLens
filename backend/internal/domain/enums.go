@@ -216,7 +216,10 @@ const (
 
 // Data source provenance constants for execution trace events.
 const (
+	SourceOpenCode            = "opencode"
+	SourceCodex               = "codex"
 	DataSourceLocalSQLite     = "local_sqlite"
+	DataSourceLocalCodex      = "local_codex"
 	DataSourceCommittedLedger = "committed_ledger"
 )
 

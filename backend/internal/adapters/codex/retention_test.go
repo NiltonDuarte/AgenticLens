@@ -12,7 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func TestCodexAndOpenCodeAdaptersPersistEquivalentAnomalyEvidence(t *testing.T) {
+func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T) {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +47,12 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentAnomalyEvidence(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	opencodeFacts, err := domain.PersistSparseAnomalyEvidence(domain.AgenticFactLedger{Sessions: opencodeSessions})
+	opencodeTransient := domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: opencodeSessions}
+	opencodeLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(opencodeTransient)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opencodeFacts, err := domain.PersistAnomalySummaries(opencodeTransient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,39 +69,44 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentAnomalyEvidence(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	codexTransientSessions, err := domain.SessionsFromFacts(nil, nil, transcript.Events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	codexLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(domain.AgenticFactLedger{Source: domain.SourceCodex, Sessions: codexTransientSessions})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(opencodeLiveAnomalies) != len(codexLiveAnomalies) {
+		t.Fatalf("transient summary parity mismatch: opencode=%#v codex=%#v", opencodeLiveAnomalies, codexLiveAnomalies)
+	}
+	for i := range opencodeLiveAnomalies {
+		if opencodeLiveAnomalies[i].RuleID != codexLiveAnomalies[i].RuleID || len(opencodeLiveAnomalies[i].Evidence) != len(codexLiveAnomalies[i].Evidence) {
+			t.Fatalf("transient event association mismatch: opencode=%#v codex=%#v", opencodeLiveAnomalies[i], codexLiveAnomalies[i])
+		}
+	}
 	codexLedger, err := transcript.ToMetricsLedger("", "", "", domain.DefaultProjectConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(opencodeFacts.Anomalies) != len(codexLedger.Facts.Anomalies) {
-		t.Fatalf("summary parity mismatch: opencode=%#v codex=%#v", opencodeFacts.Anomalies, codexLedger.Facts.Anomalies)
+	opencodeAnomalies, codexAnomalies := opencodeFacts.AnomalyFacts(), codexLedger.Facts.AnomalyFacts()
+	if len(opencodeAnomalies) != len(codexAnomalies) {
+		t.Fatalf("summary parity mismatch: opencode=%#v codex=%#v", opencodeAnomalies, codexAnomalies)
 	}
-	for i, anomaly := range opencodeFacts.Anomalies {
-		other := codexLedger.Facts.Anomalies[i]
+	for i, anomaly := range opencodeAnomalies {
+		other := codexAnomalies[i]
 		if anomaly.RuleID != other.RuleID || anomaly.Context.Count == nil || other.Context.Count == nil || *anomaly.Context.Count != *other.Context.Count {
 			t.Fatalf("summary mismatch at %d: opencode=%#v codex=%#v", i, anomaly, other)
 		}
-		if len(anomaly.Evidence) != len(other.Evidence) {
-			t.Fatalf("evidence ref count mismatch for %s: opencode=%#v codex=%#v", anomaly.RuleID, anomaly.Evidence, other.Evidence)
-		}
-	}
-	if len(opencodeFacts.EventFacts()) != 3 || len(codexLedger.Facts.EventFacts()) != 3 {
-		t.Fatalf("selected event parity mismatch: opencode=%d codex=%d", len(opencodeFacts.EventFacts()), len(codexLedger.Facts.EventFacts()))
 	}
 	for _, facts := range []domain.AgenticFactLedger{opencodeFacts, codexLedger.Facts} {
-		ids := make(map[string]bool)
-		for _, event := range facts.EventFacts() {
-			if event.EventID == "" || event.Status != "error" {
-				t.Fatalf("invalid retained evidence event: %#v", event)
-			}
-			ids[event.SessionID+"\x00"+event.EventID] = true
+		if len(facts.EventFacts()) != 0 {
+			t.Fatalf("persisted ledger retained events: %#v", facts.EventFacts())
 		}
-		for _, anomaly := range facts.Anomalies {
-			for _, ref := range anomaly.Evidence {
-				if !ids[ref.SessionID+"\x00"+ref.EventID] {
-					t.Errorf("%s has dangling evidence ref %#v", anomaly.RuleID, ref)
-				}
+		for _, anomaly := range facts.AnomalyFacts() {
+			if len(anomaly.Evidence) != 0 {
+				t.Fatalf("persisted summary retained evidence refs: %#v", anomaly.Evidence)
 			}
 		}
 	}
@@ -139,13 +149,13 @@ func TestRoutineCodexEventsUseRequestContextInsteadOfCumulativeUsage(t *testing.
 				}
 			}
 			if len(ledger.Facts.EventFacts()) != 0 || ledger.WorkflowEfficiency.ToolExecution.TotalCalls != 8 {
-				t.Fatalf("routine events should be pruned without losing tool totals: retained=%d calls=%d", len(ledger.Facts.EventFacts()), ledger.WorkflowEfficiency.ToolExecution.TotalCalls)
+				t.Fatalf("events should be omitted without losing tool totals: retained=%d calls=%d", len(ledger.Facts.EventFacts()), ledger.WorkflowEfficiency.ToolExecution.TotalCalls)
 			}
 		})
 	}
 }
 
-func TestCodexLedgerRetainsOnlyDirectAnomalyEvidence(t *testing.T) {
+func TestCodexLedgerOmitsEventsButRetainsAnomalySummaries(t *testing.T) {
 	tool := "command"
 	transcript := codex.Transcript{
 		ThreadID: "thread",
@@ -162,9 +172,11 @@ func TestCodexLedgerRetainsOnlyDirectAnomalyEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	retained := ledger.Facts.EventFacts()
-	if len(retained) != 2 || retained[0].ContextTokens != 1000 || retained[1].Turn != 3 {
-		t.Fatalf("expected before/after context-spike evidence only: %#v", retained)
+	if retained := ledger.Facts.EventFacts(); len(retained) != 0 {
+		t.Fatalf("expected no persisted events: %#v", retained)
+	}
+	if len(ledger.Anomalies) == 0 {
+		t.Fatal("expected anomaly summaries to be retained")
 	}
 	if ledger.WorkflowEfficiency.ToolExecution.TotalCalls != 4 || len(transcript.Events) != 5 {
 		t.Fatal("pruning changed aggregate calls or the full source event list")

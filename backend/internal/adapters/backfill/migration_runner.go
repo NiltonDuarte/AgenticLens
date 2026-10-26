@@ -240,7 +240,7 @@ func needsEventSanitization(content []byte) bool {
 		return false
 	}
 	events := ledger.EventFacts()
-	pruned, err := domain.PersistSparseAnomalyEvidence(ledger)
+	pruned, err := domain.PersistAnomalySummaries(ledger)
 	if err != nil {
 		return true
 	}

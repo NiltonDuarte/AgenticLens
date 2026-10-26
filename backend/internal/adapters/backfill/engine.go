@@ -356,6 +356,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 						return result
 					}
 					factLedger.Sessions = sessions
+					factLedger.Source = domain.SourceOpenCode
 					result.DBUpdated = true
 				}
 			}
@@ -395,7 +396,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	// 4. Atomic File Write
-	persistedLedger, err := domain.PersistSparseAnomalyEvidence(factLedger)
+	persistedLedger, err := domain.PersistAnomalySummaries(factLedger)
 	if err != nil {
 		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
 		return result

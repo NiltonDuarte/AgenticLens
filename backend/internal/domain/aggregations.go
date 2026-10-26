@@ -678,9 +678,19 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	if err != nil {
 		mappedFactLedger.Sessions = factLedger.Sessions
 	} else {
+		mappedSessionIDs := make(map[string]bool, len(mappedFactLedger.Sessions))
 		for i := range mappedFactLedger.Sessions {
+			mappedSessionIDs[mappedFactLedger.Sessions[i].ID] = true
 			if summaries, exists := persistedSessionAnomalies[mappedFactLedger.Sessions[i].ID]; exists {
 				mappedFactLedger.Sessions[i].Anomalies = summaries
+			}
+		}
+		for _, original := range factLedger.Sessions {
+			if !mappedSessionIDs[original.ID] {
+				mappedFactLedger.Sessions = append(mappedFactLedger.Sessions, SessionFact{
+					ID: original.ID, ParentID: original.ParentID, Anomalies: original.Anomalies,
+					Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{},
+				})
 			}
 		}
 	}
@@ -690,10 +700,7 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	roles := ComputeRoleMetrics(mappedInvocations, cfg.RoleOrder)
 	models := ComputeModelMetrics(mappedInvocations)
 	threads := ComputeThreadSummaries(mappedInvocations, cfg.RoleOrder)
-	anomalies := factLedger.AnomalyFacts()
-	if !hasPersistedAnomalySummaries(factLedger) {
-		anomalies = DetectAnomalies(mappedFactLedger)
-	}
+	anomalies := RefreshAnomalySummaries(mappedFactLedger)
 	for i := range anomalies {
 		if anomalies[i].Context.Role != nil {
 			role := mappings.ResolveRole(string(*anomalies[i].Context.Role))
@@ -720,18 +727,6 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		Models:             models,
 		Anomalies:          anomalies,
 	}
-}
-
-func hasPersistedAnomalySummaries(ledger AgenticFactLedger) bool {
-	if ledger.Anomalies != nil {
-		return true
-	}
-	for _, session := range ledger.Sessions {
-		if session.Anomalies != nil {
-			return true
-		}
-	}
-	return false
 }
 
 // CalculateFleetSummary aggregates high-level metrics across multiple ledgers.

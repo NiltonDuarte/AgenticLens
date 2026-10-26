@@ -2,7 +2,6 @@ package domain
 
 import (
 	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,51 +19,78 @@ func SortEvents(events []EventFact) []EventFact {
 	return result
 }
 
-// PersistSparseAnomalyEvidence builds the canonical offline ledger from complete facts.
-// Summaries are derived before the event stream is reduced to direct evidence.
-func PersistSparseAnomalyEvidence(ledger AgenticFactLedger) (AgenticFactLedger, error) {
-	fullEvents := SortEvents(ledger.EventFacts())
-	anomalies := ledger.AnomalyFacts()
-	if !hasPersistedAnomalySummaries(ledger) {
-		anomalies = DetectAnomalies(ledger)
-	}
-	selection, err := selectAnomalyEvidence(ledger, fullEvents, anomalies)
+// DetectAnomaliesWithEvidence attaches request-local source references to summaries.
+// The references are intended only for local hydrated API responses.
+func DetectAnomaliesWithEvidence(ledger AgenticFactLedger) ([]Anomaly, error) {
+	events := SortEvents(ledger.EventFacts())
+	anomalies := RefreshAnomalySummaries(ledger)
+	selection, err := selectAnomalyEvidence(ledger, events, anomalies)
 	if err != nil {
-		return AgenticFactLedger{}, err
+		return nil, err
 	}
-
-	for anomalyIndex := range anomalies {
-		refs := append([]AnomalyEvidenceRef{}, anomalies[anomalyIndex].Evidence...)
-		for _, ref := range refs {
+	for index := range anomalies {
+		refs := []AnomalyEvidenceRef{}
+		for _, ref := range selection.refs[index] {
 			found := false
-			for eventIndex, event := range fullEvents {
-				if event.SessionID == ref.SessionID && event.EventID == ref.EventID {
-					selection.events[eventIndex] = true
-					found = true
-				}
-			}
-			if !found {
-				return AgenticFactLedger{}, fmt.Errorf("anomaly %s references missing event session=%q event_id=%q", anomalies[anomalyIndex].RuleID, ref.SessionID, ref.EventID)
-			}
-		}
-		for _, ref := range selection.refs[anomalyIndex] {
-			duplicate := false
 			for _, existing := range refs {
 				if existing == ref {
-					duplicate = true
+					found = true
 					break
 				}
 			}
-			if !duplicate {
+			if !found {
 				refs = append(refs, ref)
 			}
 		}
-		anomalies[anomalyIndex].Evidence = refs
+		anomalies[index].Evidence = refs
 	}
+	return anomalies, nil
+}
 
+// RefreshAnomalySummaries recomputes summaries for available source events and
+// merged tool totals while retaining cached session summaries only for sessions
+// with no current event stream.
+func RefreshAnomalySummaries(ledger AgenticFactLedger) []Anomaly {
+	cached := ledger.AnomalyFacts()
+	events := ledger.EventFacts()
+	currentSessions := make(map[string]bool)
+	for _, event := range events {
+		if event.SessionID != "" {
+			currentSessions[event.SessionID] = true
+		}
+	}
+	detected := DetectAnomalies(ledger)
+	refreshed := make([]Anomaly, 0, len(cached)+len(detected))
+	for _, anomaly := range detected {
+		if anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "" {
+			anomaly.Evidence = nil
+			refreshed = append(refreshed, anomaly)
+		}
+	}
+	for _, anomaly := range cached {
+		if anomaly.Context.SessionID != nil && !currentSessions[*anomaly.Context.SessionID] {
+			anomaly.Evidence = nil
+			refreshed = append(refreshed, anomaly)
+		}
+	}
+	for _, anomaly := range detected {
+		if anomaly.Context.SessionID != nil && *anomaly.Context.SessionID != "" {
+			anomaly.Evidence = nil
+			refreshed = append(refreshed, anomaly)
+		}
+	}
+	sortAnomalies(refreshed)
+	return refreshed
+}
+
+// PersistAnomalySummaries derives summaries from complete in-memory facts, then
+// removes event rows and evidence references from the canonical ledger.
+func PersistAnomalySummaries(ledger AgenticFactLedger) (AgenticFactLedger, error) {
+	anomalies := RefreshAnomalySummaries(ledger)
 	bySession := make(map[string][]Anomaly)
 	var ticket []Anomaly
 	for _, anomaly := range anomalies {
+		anomaly.Evidence = nil
 		if anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "" {
 			ticket = append(ticket, anomaly)
 			continue
@@ -73,35 +99,7 @@ func PersistSparseAnomalyEvidence(ledger AgenticFactLedger) (AgenticFactLedger, 
 		anomaly.Context.SessionID = nil
 		bySession[sid] = append(bySession[sid], anomaly)
 	}
-
-	persistedEvents := make([]EventFact, 0, len(selection.events))
-	seenIDs := make(map[string]EventFact)
-	for index, event := range fullEvents {
-		if !selection.events[index] {
-			continue
-		}
-		if strings.TrimSpace(event.SessionID) == "" {
-			return AgenticFactLedger{}, fmt.Errorf("direct anomaly evidence events[%d] has no owning session_id", index)
-		}
-		if strings.TrimSpace(event.EventID) == "" {
-			return AgenticFactLedger{}, fmt.Errorf("direct anomaly evidence events[%d] session=%q has no stable event_id", index, event.SessionID)
-		}
-		key := event.SessionID + "\x00" + event.EventID
-		if previous, exists := seenIDs[key]; exists {
-			if !reflect.DeepEqual(previous, event) {
-				return AgenticFactLedger{}, fmt.Errorf("direct anomaly evidence has conflicting source event identity session=%q event_id=%q", event.SessionID, event.EventID)
-			}
-			continue
-		}
-		seenIDs[key] = event
-		event.ErrorMessage = nil
-		event.PromptContent = nil
-		event.ReasoningContent = nil
-		event.ToolInput = nil
-		event.ToolOutput = nil
-		persistedEvents = append(persistedEvents, event)
-	}
-	sessions, err := SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), persistedEvents)
+	sessions, err := SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), nil)
 	if err != nil {
 		return AgenticFactLedger{}, err
 	}
@@ -111,7 +109,7 @@ func PersistSparseAnomalyEvidence(ledger AgenticFactLedger) (AgenticFactLedger, 
 	}
 	for _, original := range ledger.Sessions {
 		if !seen[original.ID] {
-			sessions = append(sessions, SessionFact{ID: original.ID, ParentID: original.ParentID, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{}})
+			sessions = append(sessions, SessionFact{ID: original.ID, ParentID: original.ParentID, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: nil})
 			seen[original.ID] = true
 		}
 	}
@@ -124,25 +122,6 @@ func PersistSparseAnomalyEvidence(ledger AgenticFactLedger) (AgenticFactLedger, 
 	ledger.Sessions = sessions
 	ledger.Anomalies = ticket
 	return ledger, nil
-}
-
-// PruneEventsForPersistence returns only event rows that directly support a detected anomaly.
-func PruneEventsForPersistence(ledger AgenticFactLedger) ([]EventFact, error) {
-	events := SortEvents(ledger.EventFacts())
-	selection, err := selectAnomalyEvidence(ledger, events, DetectAnomalies(ledger))
-	if err != nil {
-		return nil, err
-	}
-	result := make([]EventFact, 0, len(selection.events))
-	for index, event := range events {
-		if !selection.events[index] {
-			continue
-		}
-		event.ErrorMessage, event.PromptContent, event.ReasoningContent = nil, nil, nil
-		event.ToolInput, event.ToolOutput = nil, nil
-		result = append(result, event)
-	}
-	return result, nil
 }
 
 type anomalyEvidenceSelection struct {

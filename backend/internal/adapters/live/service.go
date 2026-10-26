@@ -7,10 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 )
@@ -42,6 +45,7 @@ type LiveService struct {
 	hook            *SQLiteHook
 	buffer          *TraceBuffer
 	cfg             domain.ProjectConfig
+	codexHome       string
 	subscribers     map[chan LiveEvent]struct{}
 	subMu           sync.RWMutex
 	stopCh          chan struct{}
@@ -54,6 +58,17 @@ type LiveService struct {
 
 // NewLiveService constructs a new LiveService instance.
 func NewLiveService(hook *SQLiteHook, cfg domain.ProjectConfig) *LiveService {
+	codexHome := strings.TrimSpace(os.Getenv("CODEX_HOME"))
+	if codexHome == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			codexHome = filepath.Join(home, ".codex")
+		}
+	}
+	return NewLiveServiceWithCodexHome(hook, cfg, codexHome)
+}
+
+// NewLiveServiceWithCodexHome constructs a hydrator with an explicit local Codex data root.
+func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, codexHome string) *LiveService {
 	maxBuffer := cfg.Live.MaxTraceBufferMessages
 	if maxBuffer <= 0 {
 		maxBuffer = 500
@@ -61,6 +76,7 @@ func NewLiveService(hook *SQLiteHook, cfg domain.ProjectConfig) *LiveService {
 
 	return &LiveService{
 		hook:          hook,
+		codexHome:     codexHome,
 		buffer:        NewTraceBuffer(maxBuffer),
 		cfg:           cfg,
 		subscribers:   make(map[chan LiveEvent]struct{}),
@@ -638,8 +654,15 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	fallbackResp := domain.WorkspaceEventsResponse{
 		TicketID:   ticketID,
 		IsHydrated: false,
-		Events:     domain.SortEvents(ledger.Facts.EventFacts()),
+		Events:     []domain.EventFact{},
 		DataSource: domain.DataSourceCommittedLedger,
+		Anomalies:  ledger.Facts.AnomalyFacts(),
+	}
+	if ledger.Facts.Source == domain.SourceCodex {
+		return s.hydrateCodexEvents(ticketID, ledger, fallbackResp)
+	}
+	if ledger.Facts.Source != domain.SourceOpenCode {
+		return fallbackResp, nil
 	}
 
 	if s == nil || s.hook == nil || s.hook.DB() == nil {
@@ -867,6 +890,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 
 		// Append turn_message event
 		events = append(events, domain.EventFact{
+			EventID:          "opencode:message:" + rm.ID,
 			Timestamp:        ts,
 			SessionID:        rm.SessionID,
 			Turn:             turn,
@@ -920,7 +944,80 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		IsHydrated: true,
 		Events:     domain.SortEvents(events),
 		DataSource: domain.DataSourceLocalSQLite,
+		Anomalies:  hydrateAnomalyAssociations(ledger.Facts, events),
 	}, nil
+}
+
+func (s *LiveService) hydrateCodexEvents(ticketID string, ledger domain.AgenticMetricsLedger, fallback domain.WorkspaceEventsResponse) (domain.WorkspaceEventsResponse, error) {
+	if s == nil || strings.TrimSpace(s.codexHome) == "" {
+		return fallback, nil
+	}
+	var paths []string
+	seenPaths := make(map[string]bool)
+	expectedThreadIDs := make(map[string]bool)
+	for _, inv := range ledger.Facts.InvocationFacts() {
+		threadID := strings.TrimSpace(inv.ID)
+		if threadID == "" {
+			return fallback, nil
+		}
+		expectedThreadIDs[threadID] = true
+		if inv.ParentID != nil {
+			continue
+		}
+		found, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: inv.ID})
+		if err != nil || len(found) == 0 {
+			return fallback, nil
+		}
+		for _, path := range found {
+			if !seenPaths[path] {
+				seenPaths[path] = true
+				paths = append(paths, path)
+			}
+		}
+	}
+	if len(paths) == 0 {
+		return fallback, nil
+	}
+	var events []domain.EventFact
+	parsedThreadIDs := make(map[string]bool)
+	for _, path := range paths {
+		transcript, err := codex.ParseRolloutPath(path)
+		if err != nil {
+			return fallback, nil
+		}
+		threadID := strings.TrimSpace(transcript.ThreadID)
+		if threadID == "" {
+			threadID = strings.TrimSpace(transcript.SessionID)
+		}
+		if threadID != "" {
+			parsedThreadIDs[threadID] = true
+		}
+		events = append(events, transcript.Events...)
+	}
+	for expectedID := range expectedThreadIDs {
+		if !parsedThreadIDs[expectedID] {
+			return fallback, nil
+		}
+	}
+	if len(events) == 0 {
+		return fallback, nil
+	}
+	return domain.WorkspaceEventsResponse{TicketID: ticketID, IsHydrated: true, Events: domain.SortEvents(events), DataSource: domain.DataSourceLocalCodex, Anomalies: hydrateAnomalyAssociations(ledger.Facts, events)}, nil
+}
+
+func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, events []domain.EventFact) []domain.Anomaly {
+	transient := facts
+	transient.Anomalies = nil
+	sessions, err := domain.SessionsFromFacts(facts.InvocationFacts(), facts.ToolFacts(), events)
+	if err != nil {
+		return facts.AnomalyFacts()
+	}
+	transient.Sessions = sessions
+	anomalies, err := domain.DetectAnomaliesWithEvidence(transient)
+	if err != nil {
+		return facts.AnomalyFacts()
+	}
+	return anomalies
 }
 
 func convertPartToEventFact(pr RawPartRecord, turn int64, role domain.AgentRole, ctxTokens int64, consecutiveErrors *int) *domain.EventFact {
@@ -980,6 +1077,7 @@ func convertPartToEventFact(pr RawPartRecord, turn int64, role domain.AgentRole,
 
 	if partType == "compaction" {
 		return &domain.EventFact{
+			EventID:       "opencode:part:" + pr.ID,
 			Timestamp:     ts,
 			SessionID:     pr.SessionID,
 			MessageID:     msgIDPtr,
@@ -1016,6 +1114,7 @@ func convertPartToEventFact(pr RawPartRecord, turn int64, role domain.AgentRole,
 		}
 
 		return &domain.EventFact{
+			EventID:       "opencode:part:" + pr.ID,
 			Timestamp:     ts,
 			SessionID:     pr.SessionID,
 			MessageID:     msgIDPtr,

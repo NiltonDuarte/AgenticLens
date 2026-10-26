@@ -1468,7 +1468,8 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
           "tool_name": "bash",
           "status": "error"
         }
-      ]
+      ],
+      "anomalies": [{"rule_id":"TOOL_RETRY_STREAK","severity":"WARNING","title":"Tool retry streak","description":"Three consecutive bash failures","context":{"tool_name":"bash","count":3,"turn":1,"threshold":"3"}}]
     }
   ]
 }`
@@ -1557,11 +1558,8 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		if eventsResp.DataSource != domain.DataSourceCommittedLedger {
 			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, eventsResp.DataSource)
 		}
-		if len(eventsResp.Events) != 3 {
-			t.Fatalf("expected 3 events, got %d", len(eventsResp.Events))
-		}
-		if eventsResp.Events[0].Timestamp != "2026-10-18T10:00:00Z" || eventsResp.Events[1].Timestamp != "2026-10-18T10:00:05Z" || eventsResp.Events[2].Timestamp != "2026-10-18T10:00:10Z" {
-			t.Errorf("unexpected events order or content: %+v", eventsResp.Events)
+		if len(eventsResp.Events) != 0 {
+			t.Fatalf("source-less ledger should return no events, got %d", len(eventsResp.Events))
 		}
 	})
 
@@ -1629,12 +1627,8 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		if err := json.NewDecoder(resp.Body).Decode(&eventsResp); err != nil {
 			t.Fatalf("failed decoding events: %v", err)
 		}
-		if len(eventsResp.Events) != 3 {
-			t.Fatalf("expected 3 events, got %d", len(eventsResp.Events))
-		}
-		if eventsResp.Events[0].SessionID != "ses-early-t1" || eventsResp.Events[1].SessionID != "ses-early-t2" || eventsResp.Events[2].SessionID != "ses-late" {
-			t.Errorf("expected sorted events [ses-early-t1, ses-early-t2, ses-late], got [%s, %s, %s]",
-				eventsResp.Events[0].SessionID, eventsResp.Events[1].SessionID, eventsResp.Events[2].SessionID)
+		if len(eventsResp.Events) != 0 {
+			t.Fatalf("expected source-less ledger to be unhydrated, got %d events", len(eventsResp.Events))
 		}
 	})
 
@@ -1881,11 +1875,8 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		if err := json.Unmarshal(rec.Body.Bytes(), &eventsResp); err != nil {
 			t.Fatalf("failed unmarshaling events response: %v", err)
 		}
-		if len(eventsResp.Events) != 2 {
-			t.Fatalf("expected 2 events, got %d", len(eventsResp.Events))
-		}
-		if eventsResp.Events[0].SessionID != "ses-1" || eventsResp.Events[1].SessionID != "ses-2" {
-			t.Errorf("expected events stably sorted: %+v", eventsResp.Events)
+		if len(eventsResp.Events) != 0 {
+			t.Fatalf("expected source-less ledger to return no events: %+v", eventsResp.Events)
 		}
 	})
 
@@ -1962,8 +1953,8 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		if resp.DataSource != domain.DataSourceCommittedLedger {
 			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, resp.DataSource)
 		}
-		if len(resp.Events) != 2 {
-			t.Errorf("expected 2 fallback events from ledger, got %d", len(resp.Events))
+		if len(resp.Events) != 0 {
+			t.Errorf("expected no persisted fallback events, got %d", len(resp.Events))
 		}
 	})
 }
@@ -2071,6 +2062,7 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		t.Fatal(err)
 	}
 	al33JSON := `{
+  "source": "opencode",
   "ticket_id": "AL-33",
   "ticket_title": "End-to-End Dual Plane",
   "ticket_type": "feature",
@@ -2110,6 +2102,7 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		t.Fatal(err)
 	}
 	offlineJSON := `{
+  "source": "opencode",
   "ticket_id": "AL-OFFLINE",
   "ticket_title": "Offline Ticket",
   "ticket_type": "fix",
@@ -2257,11 +2250,8 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		if eventResp.DataSource != domain.DataSourceCommittedLedger {
 			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, eventResp.DataSource)
 		}
-		if len(eventResp.Events) != 1 {
-			t.Fatalf("expected 1 fallback event, got %d", len(eventResp.Events))
-		}
-		if eventResp.Events[0].EventType != domain.EventTypeCompaction {
-			t.Errorf("expected compaction event, got %s", eventResp.Events[0].EventType)
+		if len(eventResp.Events) != 0 {
+			t.Fatalf("expected no persisted fallback events, got %d", len(eventResp.Events))
 		}
 	})
 
