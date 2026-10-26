@@ -321,6 +321,9 @@ func runGenerate(args []string) {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		os.Exit(1)
 	}
+	for _, warning := range git.CheckUnconfiguredPatterns(cfg) {
+		fmt.Fprintf(os.Stderr, "WARNING: %s\n", warning)
+	}
 	codeFacts, err := git.ComputeCodeFactsAtRef(strings.TrimSpace(*codeRefFlag), cfg)
 	if err != nil {
 		if fallbackCode != nil {

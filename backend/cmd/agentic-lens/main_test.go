@@ -5574,3 +5574,72 @@ workspaces:
 		}
 	})
 }
+
+func TestCLIGenerate_UnconfiguredPatternWarnings(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "out.json")
+
+		// Create git repository with config missing test_patterns and prod_patterns
+		initGitCmd := exec.Command("git", "init")
+		initGitCmd.Dir = tempDir
+		if out, err := initGitCmd.CombinedOutput(); err != nil {
+			t.Fatalf("git init failed: %v: %s", err, string(out))
+		}
+		setGitEmail := exec.Command("git", "config", "user.email", "test@example.com")
+		setGitEmail.Dir = tempDir
+		_ = setGitEmail.Run()
+		setGitName := exec.Command("git", "config", "user.name", "Test User")
+		setGitName.Dir = tempDir
+		_ = setGitName.Run()
+
+		cfgContent := `project_name: "Test Patterns Warn"
+ticket:
+  prefixes:
+    - prefix: "AL"
+workspaces:
+  dir: "workspaces"
+  src_folders:
+    - "."
+database:
+  path: "test.db"
+code_metrics:
+  test_patterns: []
+  prod_patterns: []
+`
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatalf("failed writing config: %v", err)
+		}
+		gitAdd := exec.Command("git", "add", ".agenticlens-config.yaml")
+		gitAdd.Dir = tempDir
+		_ = gitAdd.Run()
+		gitCommit := exec.Command("git", "commit", "-m", "init")
+		gitCommit.Dir = tempDir
+		_ = gitCommit.Run()
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", filepath.Join(tempDir, "test.db"),
+			"--ticket-id", "AL-TEST-WARN",
+			"--ticket-title", "Test Warn Ticket",
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+		}
+
+		errOut := stderr.String()
+	if !strings.Contains(errOut, "WARNING: code_metrics.test_patterns is empty or unconfigured") {
+		t.Errorf("expected warning for code_metrics.test_patterns in stderr, got: %s", errOut)
+	}
+	if !strings.Contains(errOut, "WARNING: code_metrics.prod_patterns is empty or unconfigured") {
+		t.Errorf("expected warning for code_metrics.prod_patterns in stderr, got: %s", errOut)
+	}
+}

@@ -24,15 +24,19 @@ Provide first-class Codex session discovery and telemetry extraction in AgenticL
    - Fact extraction in backend/internal/adapters/opencode/extractor.go for invocations, tools, events, timestamps, and steering turns must experience zero logic modification or regressions.
 3. Code Facts & Git Comparison Safety:
    - The flag --code-ref defaults to "HEAD" for committed change comparison.
-   - When running in detached states, shallow clones, or repositories where an upstream base branch cannot be resolved, failure boundaries must be explicit and informative without silent corruption.
-   - Existing code facts in historical ledgers must be protected against unintentional zeroing during regeneration or recomputation.
-4. File Classification Fallback Discipline:
-   - Projects initialized with empty test_patterns or prod_patterns in .agenticlens-config.yaml must not suffer silent metric collapse (such as test-to-production ratio decaying to 0:0).
-   - Safe language-standard conventions (for Go, TypeScript, JavaScript, CSS) must apply when pattern lists are unconfigured or empty.
-5. Backfill Integrity:
-   - Batch execution of backfill across multi-ticket workspaces must never apply a single --code-ref diff globally across all historical tickets.
-   - Recomputing Git code facts via --recompute-git must be strictly scoped to single-ticket targets (--ticket-id) or accompanied by per-ticket branch resolution to prevent historical ledger corruption.
-6. Frontend Transparency:
+   - When running in detached states, shallow clones, or repositories where an upstream base branch cannot be resolved, existing code facts in historical ledgers are preserved via cached fallback with an explicit stderr warning, while uninitialized runs abort with an explicit non-zero exit.
+4. Strict Zero-Fallback File Classification Policy:
+   - Zero runtime fallback heuristics in backend/internal/adapters/git/classifier.go.
+   - When test_patterns or prod_patterns are unconfigured or empty in .agenticlens-config.yaml, the classifier must not guess or apply default language conventions.
+   - The engine emits an explicit warning notifying the user that pattern lists are empty. Unmatched files are categorized strictly as other.
+   - Sensible defaults belong exclusively to the configuration generation template in backend/internal/adapters/config/writer.go during agentic-lens init, ensuring users own and inspect their configuration explicitly on disk.
+5. Backfill Safety Guardrails:
+   - Recomputing Git code facts via --recompute-git strictly requires an explicit --ticket-id and an explicit --code-ref.
+   - Batch execution of backfill across multi-ticket workspaces without --ticket-id must reject --recompute-git to prevent applying a single Git commit diff across historical tickets.
+   - Schema migration (--migrate-schema) and database recomputation (--recompute-db) without --recompute-git must preserve existing Git code facts without alteration.
+6. Non-Destructive Ledger Loader:
+   - backend/internal/adapters/repository.go (LoadExistingFactLedger) parses both current schema-v3 atomic ledgers and legacy schemas to preserve historical code facts, root session links, and event streams during incremental runs.
+7. Frontend Transparency:
    - All emitted ledgers adhere to schema-v3 domain models in backend/internal/domain/models.go.
    - The TypeScript frontend in web/src/ continues to consume ledgers identically regardless of whether the originating telemetry harness was OpenCode or Codex.
 
@@ -57,11 +61,11 @@ Following FIX-4, source code must receive ticket identity and workspace layout t
 
 ## Code and Iteration Metrics
 
---code-ref defaults to HEAD and is required for every Git code comparison, independently of ticket or branch naming. Compare its merge base with the configured base branch, filter by configured source folders and classification patterns, and reject missing or invalid refs without falling back to ticket-based discovery or cached code facts. An empty explicit diff is zero. Codex SDLC iterations count root user messages, preferring the semantic user-message event stream over duplicate response-item representations; child delegation and lifecycle/model events do not increment this count.
+--code-ref defaults to HEAD and is required for every Git code comparison, independently of ticket or branch naming. Compare its merge base with the configured base branch, filter by configured source folders and classification patterns, and reject missing or invalid refs without falling back to ticket-based discovery or cached code facts when generating a new ledger. An empty explicit diff is zero. Codex SDLC iterations count root user messages, preferring the semantic user-message event stream over duplicate response-item representations; child delegation and lifecycle/model events do not increment this count.
 
 ## Configured File Classification
 
-Test directory/name and production extension heuristics must not silently override explicit configuration. Classification uses code_metrics.test_patterns, prod_patterns, and include from project configuration, with workspace/exclude precedence. When explicit configuration arrays are empty or unconfigured, standard fallback conventions must maintain classification integrity for monitored source extensions. Slash-containing globs are repository-relative; ** matches complete directory components.
+Test directory/name and production extension heuristics must not silently override or substitute for configuration. Classification uses code_metrics.test_patterns, prod_patterns, and include from project configuration, with workspace/exclude precedence. When explicit configuration arrays are empty or unconfigured, no fallback patterns are applied at runtime; a warning is emitted, and unmatched source files are categorized as other. Init command scaffolding populates default patterns in the written configuration file so the user explicitly owns them. Slash-containing globs are repository-relative; double-asterisk matches complete directory components.
 
 ## Child Rollout Attribution
 

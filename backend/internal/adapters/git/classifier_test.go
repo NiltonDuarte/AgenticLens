@@ -51,8 +51,8 @@ func TestClassifyFile_WorkspacesDir(t *testing.T) {
 		}
 
 		categoryCode := git.ClassifyFile("workspaces/AL-39/main.go", nil)
-		if categoryCode != git.CategoryProd {
-			t.Errorf("expected CategoryProd for code inside unconfigured workspaces, got %v", categoryCode)
+		if categoryCode != git.CategoryOther {
+			t.Errorf("expected CategoryOther for code inside unconfigured workspaces when unconfigured, got %v", categoryCode)
 		}
 
 		cfgWs := &git.ClassificationConfig{
@@ -158,10 +158,10 @@ func TestClassifyFile_TestAndProd(t *testing.T) {
 func TestClassifyFile_AdversarialBoundaries(t *testing.T) {
 	t.Parallel()
 
-	t.Run("unconfigured workspaces directory classifies prod and markdown separately", func(t *testing.T) {
+	t.Run("unconfigured workspaces directory classifies unconfigured files as other", func(t *testing.T) {
 		t.Parallel()
-		if cat := git.ClassifyFile("workspaces/file.go", nil); cat != git.CategoryProd {
-			t.Errorf("expected CategoryProd for workspaces/file.go with nil config, got %v", cat)
+		if cat := git.ClassifyFile("workspaces/file.go", nil); cat != git.CategoryOther {
+			t.Errorf("expected CategoryOther for workspaces/file.go with nil config, got %v", cat)
 		}
 		if cat := git.ClassifyFile("workspaces/spec.md", nil); cat != git.CategoryOther {
 			t.Errorf("expected CategoryOther for workspaces/spec.md with nil config, got %v", cat)
@@ -236,26 +236,28 @@ func TestClassifyFileTestdataFixtures(t *testing.T) {
 	}
 }
 
-func TestClassificationFallbackRules(t *testing.T) {
+func TestClassificationZeroFallbackRules(t *testing.T) {
+	// Under zero runtime fallback heuristics, when TestPatterns and ProdPatterns are empty or unconfigured,
+	// all unconfigured files must be classified as CategoryOther.
 	testCases := []struct {
 		path     string
 		expected git.FileCategory
 	}{
-		{"testdata/input.json", git.CategoryTest},
-		{"__tests__/example.ts", git.CategoryTest},
-		{"src/app_test.go", git.CategoryTest},
-		{"web/app.test.tsx", git.CategoryTest},
-		{"src/flow.spec.ts", git.CategoryTest},
-		{"src/flow.spec.tsx", git.CategoryTest},
-		{"backend/util_test.py", git.CategoryTest},
-		{"backend/test_util.py", git.CategoryTest},
-		{"src/app.go", git.CategoryProd},
-		{"web/app.tsx", git.CategoryProd},
-		{"web/app.ts", git.CategoryProd},
-		{"web/styles.css", git.CategoryProd},
-		{"web/index.html", git.CategoryProd},
-		{"scripts/tool.py", git.CategoryProd},
-		{"scripts/tool.js", git.CategoryProd},
+		{"testdata/input.json", git.CategoryOther},
+		{"__tests__/example.ts", git.CategoryOther},
+		{"src/app_test.go", git.CategoryOther},
+		{"web/app.test.tsx", git.CategoryOther},
+		{"src/flow.spec.ts", git.CategoryOther},
+		{"src/flow.spec.tsx", git.CategoryOther},
+		{"backend/util_test.py", git.CategoryOther},
+		{"backend/test_util.py", git.CategoryOther},
+		{"src/app.go", git.CategoryOther},
+		{"web/app.tsx", git.CategoryOther},
+		{"web/app.ts", git.CategoryOther},
+		{"web/styles.css", git.CategoryOther},
+		{"web/index.html", git.CategoryOther},
+		{"scripts/tool.py", git.CategoryOther},
+		{"scripts/tool.js", git.CategoryOther},
 		{"Makefile", git.CategoryOther},
 		{"README.md", git.CategoryOther},
 		{"docs/guide.txt", git.CategoryOther},
@@ -277,13 +279,13 @@ func TestClassificationFallbackRules(t *testing.T) {
 		}
 	}
 
-	t.Run("explicit test patterns override fallbacks", func(t *testing.T) {
+	t.Run("explicit test patterns strictly classify without fallbacks", func(t *testing.T) {
 		cfg := &git.ClassificationConfig{
 			TestPatterns: []string{"custom/tests/**/*.go"},
 		}
-		// Standard _test.go is not matched by custom pattern, so falls through to prod fallback
-		if got := git.ClassifyFile("src/app_test.go", cfg); got != git.CategoryProd {
-			t.Errorf("expected CategoryProd when standard test not in explicit test patterns, got %s", got)
+		// Standard _test.go is not matched by custom pattern, and without fallbacks classifies as CategoryOther
+		if got := git.ClassifyFile("src/app_test.go", cfg); got != git.CategoryOther {
+			t.Errorf("expected CategoryOther when standard test not in explicit test patterns, got %s", got)
 		}
 		// Custom test pattern matches
 		if got := git.ClassifyFile("custom/tests/helper.go", cfg); got != git.CategoryTest {
@@ -291,17 +293,56 @@ func TestClassificationFallbackRules(t *testing.T) {
 		}
 	})
 
-	t.Run("explicit prod patterns override fallbacks", func(t *testing.T) {
+	t.Run("explicit prod patterns strictly classify without fallbacks", func(t *testing.T) {
 		cfg := &git.ClassificationConfig{
 			ProdPatterns: []string{"runtime/**/*.custom"},
 		}
-		// Standard .go file is not in explicit prod patterns, so falls through to other
+		// Standard .go file is not in explicit prod patterns, so classifies as CategoryOther
 		if got := git.ClassifyFile("src/app.go", cfg); got != git.CategoryOther {
 			t.Errorf("expected CategoryOther when standard code not in explicit prod patterns, got %s", got)
 		}
 		// Custom prod pattern matches
 		if got := git.ClassifyFile("runtime/main.custom", cfg); got != git.CategoryProd {
 			t.Errorf("expected CategoryProd for custom prod pattern, got %s", got)
+		}
+	})
+}
+
+func TestCheckUnconfiguredPatterns(t *testing.T) {
+	t.Run("nil config returns warnings for test and prod patterns", func(t *testing.T) {
+		warnings := git.CheckUnconfiguredPatterns(nil)
+		if len(warnings) != 2 {
+			t.Fatalf("expected 2 warnings, got %d: %v", len(warnings), warnings)
+		}
+	})
+
+	t.Run("empty config returns warnings for test and prod patterns", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{}
+		warnings := git.CheckUnconfiguredPatterns(cfg)
+		if len(warnings) != 2 {
+			t.Fatalf("expected 2 warnings, got %d: %v", len(warnings), warnings)
+		}
+	})
+
+	t.Run("blank patterns return warnings", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{
+			TestPatterns: []string{" ", ""},
+			ProdPatterns: []string{},
+		}
+		warnings := git.CheckUnconfiguredPatterns(cfg)
+		if len(warnings) != 2 {
+			t.Fatalf("expected 2 warnings, got %d: %v", len(warnings), warnings)
+		}
+	})
+
+	t.Run("fully configured patterns return zero warnings", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{
+			TestPatterns: []string{"**/*_test.go"},
+			ProdPatterns: []string{"**/*.go"},
+		}
+		warnings := git.CheckUnconfiguredPatterns(cfg)
+		if len(warnings) != 0 {
+			t.Fatalf("expected 0 warnings, got %d: %v", len(warnings), warnings)
 		}
 	})
 }

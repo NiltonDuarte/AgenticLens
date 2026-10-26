@@ -46,12 +46,6 @@ const (
 	CategoryOther   FileCategory = "other"
 )
 
-// DefaultTestPatterns defines standard fallback glob patterns for identifying test code.
-var DefaultTestPatterns = config.DefaultTestPatterns
-
-// DefaultProdPatterns defines standard fallback glob patterns for identifying production runtime code.
-var DefaultProdPatterns = config.DefaultProdPatterns
-
 func hasPatterns(patterns []string) bool {
 	for _, p := range patterns {
 		if strings.TrimSpace(p) != "" {
@@ -61,20 +55,17 @@ func hasPatterns(patterns []string) bool {
 	return false
 }
 
-// EffectiveTestPatterns returns configured test patterns if present, or standard default fallbacks.
-func EffectiveTestPatterns(cfg *ClassificationConfig) []string {
-	if cfg != nil && hasPatterns(cfg.TestPatterns) {
-		return cfg.TestPatterns
+// CheckUnconfiguredPatterns checks if test_patterns or prod_patterns are empty or unconfigured.
+// It returns human-actionable warning messages.
+func CheckUnconfiguredPatterns(cfg *ClassificationConfig) []string {
+	var warnings []string
+	if cfg == nil || !hasPatterns(cfg.TestPatterns) {
+		warnings = append(warnings, "code_metrics.test_patterns is empty or unconfigured: configure 'code_metrics.test_patterns' in .agenticlens-config.yaml")
 	}
-	return DefaultTestPatterns
-}
-
-// EffectiveProdPatterns returns configured production patterns if present, or standard default fallbacks.
-func EffectiveProdPatterns(cfg *ClassificationConfig) []string {
-	if cfg != nil && hasPatterns(cfg.ProdPatterns) {
-		return cfg.ProdPatterns
+	if cfg == nil || !hasPatterns(cfg.ProdPatterns) {
+		warnings = append(warnings, "code_metrics.prod_patterns is empty or unconfigured: configure 'code_metrics.prod_patterns' in .agenticlens-config.yaml")
 	}
-	return DefaultProdPatterns
+	return warnings
 }
 
 // Patterns containing a slash are relative to the repository root. A ** path
@@ -160,24 +151,6 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 	}
 	if strings.HasPrefix(baseName, ".") {
 		return CategoryIgnored
-	}
-
-	// 7. Fallback test patterns when test patterns are empty or unconfigured
-	if cfg == nil || !hasPatterns(cfg.TestPatterns) {
-		for _, p := range DefaultTestPatterns {
-			if matchPattern(p, cleanPath) {
-				return CategoryTest
-			}
-		}
-	}
-
-	// 8. Fallback production patterns when production patterns are empty or unconfigured
-	if cfg == nil || !hasPatterns(cfg.ProdPatterns) {
-		for _, p := range DefaultProdPatterns {
-			if matchPattern(p, cleanPath) {
-				return CategoryProd
-			}
-		}
 	}
 
 	return CategoryOther
