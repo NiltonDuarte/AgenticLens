@@ -20,7 +20,7 @@ Remove persisted anomaly `title` and `description` strings. Keep `rule_id`, `sev
 - Existing anomaly detection results, severity, and aggregate/session counts remain unchanged.
 - Tests cover the current rule variants, including context spike versus ceiling breach and optional session/turn fields.
 - Final AL-56 generation contains no persisted event/evidence/title/description data; invocation/tool totals and anomaly counts remain intact. No other ticket ledger changes and no workspace-wide backfill runs.
-- Record exact AL-56 line/byte change from the current 1,691-line / 53,208-byte baseline; a serializer simulation estimates about 1,593 lines / 42,241 bytes if no other data changes.
+- Record exact AL-56 line/byte change from the current 1,691-line / 53,208-byte baseline. The final generation is 1,638 lines / 43,480 bytes with one additional session, and contains no anomaly title/description fields.
 
 ## Deliverables
 

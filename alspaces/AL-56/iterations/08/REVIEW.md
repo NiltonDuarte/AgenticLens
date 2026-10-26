@@ -17,3 +17,8 @@ Legacy title/description keys are accepted during DTO decoding and are not repre
 ## Review basis
 
 Reviewed the iteration 08 plan and test notes, the diff in anomaly domain types/detection, DTO decoding and serialization, Go and TypeScript display formatters, CLI/Markdown output, ticket view/drawer, and `TECHNICAL_GUIDELINES.md`. No code, test, or ledger files were changed during review.
+
+
+## Final scoped ledger check
+
+Post-review generation updated AL-56 only. The ledger contains 26 sessions and 50 anomaly summaries, with no `title`, `description`, `events`, `evidence`, or `event_id` keys. Its final size is 1,638 lines / 43,480 bytes, down from 1,691 lines / 53,208 bytes despite one additional session. Other ticket ledgers were not changed.

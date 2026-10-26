@@ -8,7 +8,7 @@ Persist anomaly summaries, invocation facts, and tool totals without event rows,
 
 Migration converts v1-v3 and interim-v4 ledgers, rejects mixed or malformed data without modifying the source, and enforces event privacy. Legacy tool aggregates without session attribution are removed with a count and recovery guidance in migration notes and CLI output. This branch does not modify any other ticket ledger; other ledgers remain for backfill on the machine that has their source data. No workspace-wide backfill was run.
 
-Verification: `make` passed, including Go race/vet, 728 frontend tests, lint/type checks, frontend build, and four platform builds. Independent reviews approved the summary-only ledger, local hydration, and derived anomaly text. Final AL-56 generation removes event, evidence, title, and description fields. The final size comparison is recorded in iteration 08 verification. No other ticket ledger changed and no workspace-wide backfill ran.
+Verification: `make` passed, including Go race/vet, 728 frontend tests, lint/type checks, frontend build, and four platform builds. Independent reviews approved the summary-only ledger, local hydration, and derived anomaly text. Final AL-56 generation removes event, evidence, title, and description fields. The final AL-56 ledger has 26 sessions and 50 anomaly summaries, with no title, description, event, evidence, or event_id fields. It is 1,638 lines / 43,480 bytes, down from 1,691 lines / 53,208 bytes (53 fewer lines / 3.1%, 9,728 fewer bytes / 18.3%) despite one additional session. No other ticket ledger changed and no workspace-wide backfill ran.
 
 Code attribution uses `--code-ref HEAD` by default; ticket/branch-based discovery remains removed. No HTTP routes or import UI were added.
 

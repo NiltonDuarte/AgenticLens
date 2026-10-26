@@ -32,3 +32,8 @@ No telemetry generation, migration, or workspace backfill was run. No `alspaces/
 
   Backend focused suites passed. UI focused suites passed (4 files / 148 tests). Full `make` passed `go vet`, race-enabled Go suites, frontend typecheck/lint, 31 Vitest files / 728 tests, bundle build, and all four platform builds.
 - Final metrics-ledger status and diff audits returned no paths. No telemetry generation, migration, or backfill was run.
+
+
+## Final scoped ledger verification
+
+After the code verification, generated telemetry for AL-56 only. The final ledger contains 26 sessions and 50 anomaly summaries; recursive checks found no anomaly `title`/`description` and no `events`, `evidence`, or `event_id` fields. It is 1,638 lines / 43,480 bytes, versus the iteration 07 baseline of 1,691 lines / 53,208 bytes (53 fewer lines / 3.1%, 9,728 fewer bytes / 18.3%) while including one additional session. Git status confirmed AL-56 was the only ticket ledger changed; no other ticket was backfilled.
