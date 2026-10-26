@@ -399,14 +399,11 @@ func runGenerate(args []string) {
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 
 	if *jsonOutputFlag != "" {
-		persistedFactLedger := factLedger
-		persistedEvents := domain.PruneEventsForPersistence(factLedger)
-		persistedSessions, pruneErr := domain.SessionsFromFacts(factLedger.InvocationFacts(), factLedger.ToolFacts(), persistedEvents)
+		persistedFactLedger, pruneErr := domain.PersistSparseAnomalyEvidence(factLedger)
 		if pruneErr != nil {
 			fmt.Fprintf(os.Stderr, "Error preparing session-owned telemetry: %v\n", pruneErr)
 			os.Exit(1)
 		}
-		persistedFactLedger.Sessions = persistedSessions
 		if err := adapters.SaveFactLedger(*jsonOutputFlag, persistedFactLedger); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)

@@ -13,6 +13,13 @@ import (
 	"agenticlens/internal/domain"
 )
 
+func sourceEventID(kind, sourceID string) string {
+	if strings.TrimSpace(sourceID) == "" {
+		return ""
+	}
+	return "opencode:" + kind + ":" + sourceID
+}
+
 type rawTimeInfo struct {
 	Created   *float64 `json:"created"`
 	Completed *float64 `json:"completed"`
@@ -357,6 +364,7 @@ func ExtractFacts(
 			}
 
 			events = append(events, domain.EventFact{
+				EventID:       sourceEventID("message", mid),
 				Timestamp:     msgTS,
 				SessionID:     s.id,
 				MessageID:     msgIDPtr,
@@ -488,6 +496,10 @@ func ExtractFacts(
 		if mid.Valid {
 			mID = mid.String
 		}
+		partID := ""
+		if pid.Valid {
+			partID = sourceEventID("part", pid.String)
+		}
 
 		role := domain.RoleRootAgent
 		if r, ok := sessionRoleMap[sID]; ok {
@@ -519,6 +531,7 @@ func ExtractFacts(
 		if *rawPD.Type == "compaction" {
 			compMap[sID]++
 			events = append(events, domain.EventFact{
+				EventID:       partID,
 				Timestamp:     ts,
 				SessionID:     sID,
 				MessageID:     msgIDPtr,
@@ -595,6 +608,7 @@ func ExtractFacts(
 
 			tName := toolName
 			events = append(events, domain.EventFact{
+				EventID:       partID,
 				Timestamp:     ts,
 				SessionID:     sID,
 				MessageID:     msgIDPtr,

@@ -864,11 +864,11 @@ func TestMigrationRunner_ValidatesCanonicalV4BeforeUpToDateFastPath(t *testing.T
 	}{
 		{
 			name:     "missing sessions collection",
-		sessions: `null`,
+			sessions: `null`,
 		},
 		{
 			name:     "missing nested collections",
-		sessions: `[{"id":"s1"}]`,
+			sessions: `[{"id":"s1"}]`,
 		},
 		{
 			name:     "padded session ID",
@@ -934,7 +934,7 @@ func TestMigrationRunner_ValidatesCanonicalV4BeforeUpToDateFastPath(t *testing.T
 	}
 }
 
-func TestMigrationRunner_ValidCanonicalV4IsUpToDate(t *testing.T) {
+func TestMigrationRunner_NormalizesPreIterationV4AnomalySummaries(t *testing.T) {
 	workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-CANONICAL")
 	if err := os.MkdirAll(workspace, 0755); err != nil {
 		t.Fatal(err)
@@ -949,15 +949,15 @@ func TestMigrationRunner_ValidCanonicalV4IsUpToDate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected runner error: %v", err)
 	}
-	if report.UpToDate != 1 || len(report.Errors) != 0 {
-		t.Fatalf("expected valid current-v4 ledger to be up-to-date, got %+v", report)
+	if report.Migrated != 1 || len(report.Errors) != 0 {
+		t.Fatalf("expected pre-iteration v4 ledger to be normalized, got %+v", report)
 	}
 	after, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(after) != string(original) {
-		t.Fatal("valid canonical ledger was modified by up-to-date validation")
+	if !strings.Contains(string(after), `"anomalies": []`) {
+		t.Fatalf("normalized v4 ledger is missing canonical anomaly arrays: %s", string(after))
 	}
 }
 
@@ -989,8 +989,8 @@ func TestMigrationRunner_SanitizesCanonicalV4EventPayloads(t *testing.T) {
 	if err := json.Unmarshal(data, &dto); err != nil {
 		t.Fatal(err)
 	}
-	if len(dto.Sessions) != 1 || len(dto.Sessions[0].Events) != 1 {
-		t.Fatalf("expected retained sanitized error event, got %+v", dto.Sessions)
+	if len(dto.Sessions) != 1 || len(dto.Sessions[0].Events) != 0 || dto.Sessions[0].Anomalies == nil || dto.Anomalies == nil {
+		t.Fatalf("expected isolated error omitted and canonical summary arrays present, got %+v", dto)
 	}
 }
 

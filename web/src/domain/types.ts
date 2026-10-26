@@ -109,6 +109,7 @@ export interface AgenticFactLedger {
   readonly updated_at: string;
   readonly code: CodeFacts;
   readonly sessions: readonly SessionFact[];
+  readonly anomalies?: readonly Anomaly[];
 }
 
 export interface SessionFact {
@@ -117,6 +118,7 @@ export interface SessionFact {
   readonly invocations: readonly InvocationFact[];
   readonly tools: readonly Omit<ToolFact, 'session_id'>[];
   readonly events: readonly Omit<EventFact, 'session_id'>[];
+  readonly anomalies?: readonly Anomaly[];
 }
 
 export function sessionInvocations(sessions: readonly SessionFact[] | undefined): readonly InvocationFact[] {

@@ -1,13 +1,106 @@
 package codex_test
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/codex"
+	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
+	_ "modernc.org/sqlite"
 )
+
+func TestCodexAndOpenCodeAdaptersPersistEquivalentAnomalyEvidence(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	_, err = db.Exec(`
+		CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+		CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+		INSERT INTO session VALUES ('shared-session', NULL, 'coder', 'model', 'fixture', 1792904400000, 1792904410000);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 1; i <= 5; i++ {
+		status := "completed"
+		if i <= 3 {
+			status = "error"
+		}
+		_, err = db.Exec(`INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES (?, 'shared-session', ?, ?, ?, ?)`,
+			fmt.Sprintf("part-%d", i), fmt.Sprintf("message-%d", i), 1792904400000+i*1000, 1792904400000+i*1000,
+			fmt.Sprintf(`{"type":"tool","tool":"bash","state":{"status":%q}}`, status))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	invocations, tools, events, _, _, err := opencode.ExtractFacts(db, []string{"shared-session"}, "test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opencodeSessions, err := domain.SessionsFromFacts(invocations, tools, events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opencodeFacts, err := domain.PersistSparseAnomalyEvidence(domain.AgenticFactLedger{Sessions: opencodeSessions})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lines := []string{`{"timestamp":"2026-10-25T09:00:00Z","type":"session_meta","payload":{"id":"shared-session"}}`}
+	for i := 1; i <= 5; i++ {
+		status := "completed"
+		if i <= 3 {
+			status = "error"
+		}
+		lines = append(lines, fmt.Sprintf(`{"timestamp":"2026-10-25T09:00:%02dZ","type":"event_msg","payload":{"type":"mcp_tool_call_end","call_id":"part-%d","turn_id":"turn-%d","status":%q,"invocation":{"tool":"bash"}}}`, i, i, i, status))
+	}
+	transcript, err := codex.ParseRollout(strings.NewReader(strings.Join(lines, "\n")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	codexLedger, err := transcript.ToMetricsLedger("", "", "", domain.DefaultProjectConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(opencodeFacts.Anomalies) != len(codexLedger.Facts.Anomalies) {
+		t.Fatalf("summary parity mismatch: opencode=%#v codex=%#v", opencodeFacts.Anomalies, codexLedger.Facts.Anomalies)
+	}
+	for i, anomaly := range opencodeFacts.Anomalies {
+		other := codexLedger.Facts.Anomalies[i]
+		if anomaly.RuleID != other.RuleID || anomaly.Context.Count == nil || other.Context.Count == nil || *anomaly.Context.Count != *other.Context.Count {
+			t.Fatalf("summary mismatch at %d: opencode=%#v codex=%#v", i, anomaly, other)
+		}
+		if len(anomaly.Evidence) != len(other.Evidence) {
+			t.Fatalf("evidence ref count mismatch for %s: opencode=%#v codex=%#v", anomaly.RuleID, anomaly.Evidence, other.Evidence)
+		}
+	}
+	if len(opencodeFacts.EventFacts()) != 3 || len(codexLedger.Facts.EventFacts()) != 3 {
+		t.Fatalf("selected event parity mismatch: opencode=%d codex=%d", len(opencodeFacts.EventFacts()), len(codexLedger.Facts.EventFacts()))
+	}
+	for _, facts := range []domain.AgenticFactLedger{opencodeFacts, codexLedger.Facts} {
+		ids := make(map[string]bool)
+		for _, event := range facts.EventFacts() {
+			if event.EventID == "" || event.Status != "error" {
+				t.Fatalf("invalid retained evidence event: %#v", event)
+			}
+			ids[event.SessionID+"\x00"+event.EventID] = true
+		}
+		for _, anomaly := range facts.Anomalies {
+			for _, ref := range anomaly.Evidence {
+				if !ids[ref.SessionID+"\x00"+ref.EventID] {
+					t.Errorf("%s has dangling evidence ref %#v", anomaly.RuleID, ref)
+				}
+			}
+		}
+	}
+}
 
 func TestRoutineCodexEventsUseRequestContextInsteadOfCumulativeUsage(t *testing.T) {
 	for _, usageSource := range []string{"token_usage_record", "token_count"} {
@@ -52,17 +145,17 @@ func TestRoutineCodexEventsUseRequestContextInsteadOfCumulativeUsage(t *testing.
 	}
 }
 
-func TestCodexLedgerRetainsErrorsCompactionsAndAnomalyTurns(t *testing.T) {
+func TestCodexLedgerRetainsOnlyDirectAnomalyEvidence(t *testing.T) {
 	tool := "command"
 	transcript := codex.Transcript{
 		ThreadID: "thread",
 		Tools:    []domain.ToolFact{{SessionID: "thread", Name: tool, Calls: 4, Errors: 1}},
 		Events: []domain.EventFact{
-			{Timestamp: "2026-10-25T09:00:00Z", SessionID: "thread", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", ContextTokens: 1000},
-			{Timestamp: "2026-10-25T09:01:00Z", SessionID: "thread", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error", ContextTokens: 1000},
-			{Timestamp: "2026-10-25T09:02:00Z", SessionID: "thread", Turn: 2, EventType: domain.EventTypeCompaction, Status: "completed", ContextTokens: 1000},
-			{Timestamp: "2026-10-25T09:03:00Z", SessionID: "thread", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", ContextTokens: 100000},
-			{Timestamp: "2026-10-25T09:04:00Z", SessionID: "thread", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", ContextTokens: 100000},
+			{EventID: "codex-event-1", Timestamp: "2026-10-25T09:00:00Z", SessionID: "thread", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", ContextTokens: 1000},
+			{EventID: "codex-event-2", Timestamp: "2026-10-25T09:01:00Z", SessionID: "thread", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error", ContextTokens: 1000},
+			{EventID: "codex-event-3", Timestamp: "2026-10-25T09:02:00Z", SessionID: "thread", Turn: 2, EventType: domain.EventTypeCompaction, Status: "completed", ContextTokens: 1000},
+			{EventID: "codex-event-4", Timestamp: "2026-10-25T09:03:00Z", SessionID: "thread", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", ContextTokens: 100000},
+			{EventID: "codex-event-5", Timestamp: "2026-10-25T09:04:00Z", SessionID: "thread", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", ContextTokens: 100000},
 		},
 	}
 	ledger, err := transcript.ToMetricsLedger("TEST-101", "Retention regression", domain.TicketTypeChore, domain.DefaultProjectConfig())
@@ -70,8 +163,8 @@ func TestCodexLedgerRetainsErrorsCompactionsAndAnomalyTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	retained := ledger.Facts.EventFacts()
-	if len(retained) != 3 || retained[0].Status != "error" || retained[1].EventType != domain.EventTypeCompaction || retained[2].Turn != 3 {
-		t.Fatalf("expected error, compaction, and real context-spike turn only: %#v", retained)
+	if len(retained) != 2 || retained[0].ContextTokens != 1000 || retained[1].Turn != 3 {
+		t.Fatalf("expected before/after context-spike evidence only: %#v", retained)
 	}
 	if ledger.WorkflowEfficiency.ToolExecution.TotalCalls != 4 || len(transcript.Events) != 5 {
 		t.Fatal("pruning changed aggregate calls or the full source event list")

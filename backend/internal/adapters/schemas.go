@@ -113,6 +113,7 @@ func (dto ToolFactDTO) ToDomain() domain.ToolFact {
 
 // EventFactDTO represents a single chronological event fact in JSON boundary serialization.
 type EventFactDTO struct {
+	EventID       string  `json:"event_id"`
 	Timestamp     string  `json:"timestamp"`
 	SessionID     string  `json:"session_id"`
 	Turn          int64   `json:"turn"`
@@ -132,6 +133,7 @@ type SessionToolFactDTO struct {
 }
 
 type SessionEventFactDTO struct {
+	EventID       string  `json:"event_id"`
 	Timestamp     string  `json:"timestamp"`
 	MessageID     *string `json:"message_id,omitempty"`
 	Turn          int64   `json:"turn"`
@@ -149,6 +151,7 @@ type SessionFactDTO struct {
 	Invocations []InvocationFactDTO   `json:"invocations"`
 	Tools       []SessionToolFactDTO  `json:"tools"`
 	Events      []SessionEventFactDTO `json:"events"`
+	Anomalies   []AnomalyDTO          `json:"anomalies"`
 }
 
 func (dto EventFactDTO) ToDomain() domain.EventFact {
@@ -161,6 +164,7 @@ func (dto EventFactDTO) ToDomain() domain.EventFact {
 		status = "completed"
 	}
 	return domain.EventFact{
+		EventID:       dto.EventID,
 		Timestamp:     dto.Timestamp,
 		SessionID:     dto.SessionID,
 		Turn:          dto.Turn,
@@ -177,6 +181,7 @@ func (dto EventFactDTO) ToDomain() domain.EventFact {
 // EventFactDTOFromDomain converts domain.EventFact to EventFactDTO.
 func EventFactDTOFromDomain(fact domain.EventFact) EventFactDTO {
 	return EventFactDTO{
+		EventID:       fact.EventID,
 		Timestamp:     fact.Timestamp,
 		SessionID:     fact.SessionID,
 		Turn:          fact.Turn,
@@ -278,6 +283,7 @@ type AgenticFactLedgerDTO struct {
 	UpdatedAt     string            `json:"updated_at"`
 	Code          CodeFactsDTO      `json:"code"`
 	Sessions      []SessionFactDTO  `json:"sessions"`
+	Anomalies     []AnomalyDTO      `json:"anomalies"`
 }
 
 // UnmarshalJSON rejects legacy root fact collections at the current schema boundary.
@@ -349,6 +355,9 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	sessions := make([]domain.SessionFact, len(dto.Sessions))
 	for i, session := range dto.Sessions {
 		sessions[i] = domain.SessionFact{ID: session.ID, ParentID: session.ParentID}
+		if session.Anomalies != nil {
+			sessions[i].Anomalies = []domain.Anomaly{}
+		}
 		for _, inv := range session.Invocations {
 			sessions[i].Invocations = append(sessions[i].Invocations, inv.ToDomain())
 		}
@@ -361,10 +370,15 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		}
 		for _, event := range session.Events {
 			sessions[i].Events = append(sessions[i].Events, domain.SessionEventFact{
-				Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
+				EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
 				Role: domain.AgentRole(event.Role), EventType: domain.EventType(event.EventType), ToolName: event.ToolName,
 				Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 			})
+		}
+		for _, anomaly := range session.Anomalies {
+			detected := anomaly.ToDomain()
+			detected.Context.SessionID = nil
+			sessions[i].Anomalies = append(sessions[i].Anomalies, detected)
 		}
 	}
 
@@ -385,6 +399,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		UpdatedAt:     dto.UpdatedAt,
 		Code:          dto.Code.ToDomain(),
 		Sessions:      sessions,
+		Anomalies:     anomaliesToDomain(dto.Anomalies),
 	}
 }
 
@@ -395,6 +410,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		return errors.New("sessions collection is required in schema v4")
 	}
 	seen := make(map[string]bool, len(dto.Sessions))
+	eventsByID := make(map[string]EventFactDTO)
 	for i, session := range dto.Sessions {
 		if strings.TrimSpace(session.ID) == "" {
 			return fmt.Errorf("sessions[%d].id is required", i)
@@ -448,12 +464,112 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 			toolNames[tool.Name] = true
 		}
 		for j, event := range session.Events {
+			if event.EventID != "" {
+				key := session.ID + "\x00" + event.EventID
+				if _, exists := eventsByID[key]; exists {
+					return fmt.Errorf("sessions[%d].events[%d].event_id %q is duplicated", i, j, event.EventID)
+				}
+				eventsByID[key] = EventFactDTO{
+					EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, Turn: event.Turn,
+					Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
+					DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+				}
+			}
 			if strings.TrimSpace(event.Timestamp) == "" || strings.TrimSpace(event.Role) == "" || strings.TrimSpace(event.EventType) == "" || strings.TrimSpace(event.Status) == "" {
 				return fmt.Errorf("sessions[%d].events[%d] requires timestamp, role, event_type, and status", i, j)
 			}
 			if event.EventType != string(domain.EventTypeToolCall) && event.EventType != string(domain.EventTypeTurnMessage) && event.EventType != string(domain.EventTypeCompaction) {
 				return fmt.Errorf("sessions[%d].events[%d].event_type %q is unsupported", i, j, event.EventType)
 			}
+		}
+		for j, anomaly := range session.Anomalies {
+			if anomaly.Context.SessionID != nil {
+				return fmt.Errorf("sessions[%d].anomalies[%d].context.session_id must be inherited from the owning session", i, j)
+			}
+			if err := validateAnomalyEvidence(anomaly, session.ID, true, eventsByID, currentSchema); err != nil {
+				return fmt.Errorf("sessions[%d].anomalies[%d]: %w", i, j, err)
+			}
+		}
+	}
+	for i, anomaly := range dto.Anomalies {
+		if anomaly.Context.SessionID != nil {
+			return fmt.Errorf("anomalies[%d].context.session_id is not allowed for ticket-level summaries", i)
+		}
+		if err := validateAnomalyEvidence(anomaly, "", false, eventsByID, currentSchema); err != nil {
+			return fmt.Errorf("anomalies[%d]: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func validateAnomalyEvidence(anomaly AnomalyDTO, ownerSession string, nested bool, knownEvents map[string]EventFactDTO, canonical bool) error {
+	seenRefs := make(map[string]bool, len(anomaly.Evidence))
+	for i, ref := range anomaly.Evidence {
+		if strings.TrimSpace(ref.SessionID) == "" || strings.TrimSpace(ref.EventID) == "" {
+			return fmt.Errorf("evidence[%d] requires session_id and event_id", i)
+		}
+		if nested && ref.SessionID != ownerSession {
+			return fmt.Errorf("evidence[%d].session_id must match owning session %q", i, ownerSession)
+		}
+		key := ref.SessionID + "\x00" + ref.EventID
+		if seenRefs[key] {
+			return fmt.Errorf("evidence[%d] duplicates session=%q event_id=%q", i, ref.SessionID, ref.EventID)
+		}
+		seenRefs[key] = true
+		_, found := knownEvents[key]
+		if canonical && !found {
+			return fmt.Errorf("evidence[%d] references missing event session=%q event_id=%q", i, ref.SessionID, ref.EventID)
+		}
+	}
+	if anomaly.RuleID == string(domain.RuleToolHighFailureRate) {
+		if anomaly.Context.Count == nil || int64(len(anomaly.Evidence)) != *anomaly.Context.Count {
+			return errors.New("high tool failure anomaly must reference every failed event in its count")
+		}
+		if canonical {
+			toolName := ""
+			if anomaly.Context.ToolName != nil {
+				toolName = strings.TrimSpace(*anomaly.Context.ToolName)
+			}
+			if toolName == "" {
+				return errors.New("high tool failure anomaly requires a tool_name")
+			}
+			for i, ref := range anomaly.Evidence {
+				event := knownEvents[ref.SessionID+"\x00"+ref.EventID]
+				if event.EventType != string(domain.EventTypeToolCall) || (event.Status != "error" && event.Status != "failed") || event.ToolName == nil || *event.ToolName != toolName {
+					return fmt.Errorf("evidence[%d] must reference a failed tool_call for tool %q", i, toolName)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// ValidatePersistedEvidence enforces stable source identity on rows about to be written.
+// Read validation remains tolerant of pre-iteration v4 ledgers so they can be normalized.
+func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
+	known := make(map[string]EventFactDTO)
+	for i, session := range dto.Sessions {
+		for j, event := range session.Events {
+			if strings.TrimSpace(event.EventID) == "" {
+				return fmt.Errorf("sessions[%d].events[%d].event_id is required for persisted evidence", i, j)
+			}
+			known[session.ID+"\x00"+event.EventID] = EventFactDTO{
+				EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, Turn: event.Turn,
+				Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
+				DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+			}
+		}
+	}
+	for i, session := range dto.Sessions {
+		for j, anomaly := range session.Anomalies {
+			if err := validateAnomalyEvidence(anomaly, session.ID, true, known, true); err != nil {
+				return fmt.Errorf("sessions[%d].anomalies[%d]: %w", i, j, err)
+			}
+		}
+	}
+	for i, anomaly := range dto.Anomalies {
+		if err := validateAnomalyEvidence(anomaly, "", false, known, true); err != nil {
+			return fmt.Errorf("anomalies[%d]: %w", i, err)
 		}
 	}
 	return nil
@@ -473,7 +589,7 @@ func ValidateToolFacts(tools []domain.ToolFact) error {
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
-		sessions[i] = SessionFactDTO{ID: session.ID, ParentID: session.ParentID, Invocations: []InvocationFactDTO{}, Tools: []SessionToolFactDTO{}, Events: []SessionEventFactDTO{}}
+		sessions[i] = SessionFactDTO{ID: session.ID, ParentID: session.ParentID, Invocations: []InvocationFactDTO{}, Tools: []SessionToolFactDTO{}, Events: []SessionEventFactDTO{}, Anomalies: []AnomalyDTO{}}
 		for _, inv := range session.Invocations {
 			sessions[i].Invocations = append(sessions[i].Invocations, InvocationFactDTOFromDomain(inv))
 		}
@@ -482,10 +598,14 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		}
 		for _, event := range session.Events {
 			sessions[i].Events = append(sessions[i].Events, SessionEventFactDTO{
-				Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: string(event.Role),
+				EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: string(event.Role),
 				EventType: string(event.EventType), ToolName: event.ToolName, Status: event.Status,
 				DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 			})
+		}
+		for _, anomaly := range session.Anomalies {
+			anomaly.Context.SessionID = nil
+			sessions[i].Anomalies = append(sessions[i].Anomalies, AnomalyDTOFromDomain(anomaly))
 		}
 	}
 
@@ -508,7 +628,8 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 			FilesChanged:     ledger.Code.FilesChanged,
 			SDLCIterations:   ledger.Code.SDLCIterations,
 		},
-		Sessions: sessions,
+		Sessions:  sessions,
+		Anomalies: anomaliesFromDomain(ledger.Anomalies),
 	}
 }
 
@@ -562,11 +683,17 @@ func AnomalyContextDTOFromDomain(ctx domain.AnomalyContext) AnomalyContextDTO {
 
 // AnomalyDTO represents a detected domain execution anomaly in JSON boundary serialization.
 type AnomalyDTO struct {
-	RuleID      string            `json:"rule_id"`
-	Severity    string            `json:"severity"`
-	Title       string            `json:"title"`
-	Description string            `json:"description"`
-	Context     AnomalyContextDTO `json:"context"`
+	RuleID      string                  `json:"rule_id"`
+	Severity    string                  `json:"severity"`
+	Title       string                  `json:"title"`
+	Description string                  `json:"description"`
+	Context     AnomalyContextDTO       `json:"context"`
+	Evidence    []AnomalyEvidenceRefDTO `json:"evidence,omitempty"`
+}
+
+type AnomalyEvidenceRefDTO struct {
+	SessionID string `json:"session_id"`
+	EventID   string `json:"event_id"`
 }
 
 func (dto AnomalyDTO) ToDomain() domain.Anomaly {
@@ -576,6 +703,7 @@ func (dto AnomalyDTO) ToDomain() domain.Anomaly {
 		Title:       dto.Title,
 		Description: dto.Description,
 		Context:     dto.Context.ToDomain(),
+		Evidence:    evidenceRefsToDomain(dto.Evidence),
 	}
 }
 
@@ -587,7 +715,49 @@ func AnomalyDTOFromDomain(anomaly domain.Anomaly) AnomalyDTO {
 		Title:       anomaly.Title,
 		Description: anomaly.Description,
 		Context:     AnomalyContextDTOFromDomain(anomaly.Context),
+		Evidence:    evidenceRefsFromDomain(anomaly.Evidence),
 	}
+}
+
+func evidenceRefsToDomain(items []AnomalyEvidenceRefDTO) []domain.AnomalyEvidenceRef {
+	if items == nil {
+		return nil
+	}
+	result := make([]domain.AnomalyEvidenceRef, len(items))
+	for i, item := range items {
+		result[i] = domain.AnomalyEvidenceRef{SessionID: item.SessionID, EventID: item.EventID}
+	}
+	return result
+}
+
+func evidenceRefsFromDomain(items []domain.AnomalyEvidenceRef) []AnomalyEvidenceRefDTO {
+	if items == nil {
+		return nil
+	}
+	result := make([]AnomalyEvidenceRefDTO, len(items))
+	for i, item := range items {
+		result[i] = AnomalyEvidenceRefDTO{SessionID: item.SessionID, EventID: item.EventID}
+	}
+	return result
+}
+
+func anomaliesToDomain(items []AnomalyDTO) []domain.Anomaly {
+	if items == nil {
+		return nil
+	}
+	result := make([]domain.Anomaly, len(items))
+	for i, item := range items {
+		result[i] = item.ToDomain()
+	}
+	return result
+}
+
+func anomaliesFromDomain(items []domain.Anomaly) []AnomalyDTO {
+	result := make([]AnomalyDTO, len(items))
+	for i, item := range items {
+		result[i] = AnomalyDTOFromDomain(item)
+	}
+	return result
 }
 
 // BrittleToolSummaryDTO represents brittle tool aggregates in JSON boundary serialization.

@@ -10,7 +10,7 @@ AgenticLens can derive meaningful metrics from a Codex rollout without keeping t
 
 The real rollout exposed a mapping detail: current records carry command lifecycle facts in completed `CommandExecution` items and custom tool calls in paired `response_item` records. The parser handles both while retaining no command/input/output content. It also applies a turn's `turn_context` model to its earlier `task_started` event, avoiding a spurious `default` model invocation.
 
-CLI ledgers apply the shared event-retention policy: errors, compactions, and events from anomaly-linked turns. Codex event context uses the last request's input count; using cumulative session usage had caused false context anomalies and excessive event retention. Full tool/token totals are preserved before pruning. Regression tests cover request-level and cumulative-fallback token records, retained anomaly/error/compaction events, and ledger pruning.
+CLI ledgers retain only events that directly support a detected anomaly; normal events from the same turn are not retained. Each kept event has a stable source ID, and anomaly summaries point to exact `(session_id, event_id)` evidence. Aggregate tool-failure summaries retain the failed calls that form their numerator, while session tool totals provide the denominator. Missing evidence IDs fail extraction or migration with a diagnostic. Codex event context uses the last request's input count; using cumulative session usage had caused false context anomalies and excessive event retention. Full tool/token totals are preserved before pruning.
 
 ## Source research
 
@@ -52,6 +52,8 @@ The ticket rename incorrectly updated research identifiers embedded in tests and
 Validation: race-enabled CLI and Codex adapter suites pass with fresh test execution. No runtime source change was necessary for this correction.
 
 Ticket index maintenance: restored the baseline index and removed its Done section. Updated repository and OpenCode workflow instructions to remove completed entries instead of accumulating them, retaining completed specifications in `plan/done/` and downstream dependency updates.
+
+Iteration 06 anomaly evidence: replaced turn-wide event retention with exact anomaly-triggering events. OpenCode message/part IDs and Codex call/item or rollout-line IDs are retained with session-scoped references; the UI correlates events by those references. Rework evidence is grouped by invocation parent, and source-less legacy aggregates fail closed when direct evidence is required. Full `make` and independent review passed. Synthetic size coverage retained 132/619 event rows (21.3%) and reduced fixture JSON by 71.9%. The committed AL-56 ledger remains unchanged pending an explicitly authorized AL-56-only generation; no other ticket ledger was changed and no workspace backfill ran.
 
 Code metrics correction: `generate` defaults to the explicit `--code-ref HEAD`; Git discovery no longer searches ticket IDs in branches or commit subjects. Backfill requires an explicit code ref when recomputing Git facts. Codex root user messages supply SDLC iterations. Regression coverage uses isolated Git repositories and synthetic rollouts, including ticket-free branch names, invalid refs, duplicate message representations, and child delegation.
 

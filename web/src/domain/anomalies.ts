@@ -15,6 +15,8 @@ export type ToolFailureAnomalyRule =
   | 'ConsecutiveToolErrors'
   | 'ToolThrashing';
 
+type AnomalyMatchEvent = Omit<EventFact, 'session_id'> & { readonly session_id?: string | null | undefined };
+
 /**
  * Checks whether an anomaly rule identifier matches tool failure anomaly patterns
  * (retries, high failure rates, consecutive errors, thrashing).
@@ -34,8 +36,21 @@ export function isToolFailureAnomalyRule(
  * Evaluates whether an EventFact matches a detected Anomaly.
  * Enforces strict session identity, error status for tool failure rules, and turn/tool matching.
  */
-export function matchesAnomaly(event: EventFact, anomaly: Anomaly): boolean {
+export function matchesAnomaly(event: AnomalyMatchEvent, anomaly: Anomaly): boolean {
   const ctx = anomaly.context;
+
+  // Persisted evidence refs identify the exact source records. When present,
+  // do not broaden attribution by tool, turn, or role.
+  if (anomaly.evidence && anomaly.evidence.length > 0) {
+    if (!event.event_id) return false;
+    const matchingRefs = anomaly.evidence.filter((ref) => ref.event_id === event.event_id);
+    if (event.session_id) {
+      return matchingRefs.some((ref) => ref.session_id === event.session_id);
+    }
+    // Nested session event rows omit session_id. Accept an ID only when its
+    // evidence refs identify one unambiguous owning session.
+    return new Set(matchingRefs.map((ref) => ref.session_id)).size === 1;
+  }
 
   // Strict Session ID Guard: if both context and event specify session_id, they must match
   if (ctx.session_id && event.session_id && ctx.session_id !== event.session_id) {
@@ -45,7 +60,7 @@ export function matchesAnomaly(event: EventFact, anomaly: Anomaly): boolean {
   // Tool Failure Anomaly Status Criterion:
   // If anomaly is a tool failure rule, only match if the event is an error
   if (isToolFailureAnomalyRule(anomaly.rule_id)) {
-    if (event.status !== 'error') {
+    if (event.status !== 'error' && event.status !== 'failed') {
       return false;
     }
   }

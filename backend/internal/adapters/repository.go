@@ -521,10 +521,13 @@ func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
 	if ledger.TicketTitle == nil || strings.TrimSpace(*ledger.TicketTitle) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketTitle is required and cannot be empty")
 	}
+	ledger, err := domain.PersistSparseAnomalyEvidence(ledger)
+	if err != nil { return fmt.Errorf("cannot prepare sparse anomaly evidence: %w", err) }
 	dto := AgenticFactLedgerDTOFromDomain(ledger)
 	if err := dto.Validate(); err != nil {
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}
+	if err := dto.ValidatePersistedEvidence(); err != nil { return fmt.Errorf("cannot save fact ledger: %w", err) }
 
 	parentDir := filepath.Dir(path)
 	if err := os.MkdirAll(parentDir, 0755); err != nil {

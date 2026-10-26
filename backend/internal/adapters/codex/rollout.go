@@ -10,6 +10,7 @@ import (
 	"math"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -295,7 +296,7 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 		case "event_msg":
 			readEvent(record.Payload, record.Timestamp, &transcript, lineNumber, usageRecordSeen)
 		case "response_item":
-			transcript.readResponseItem(record.Payload, record.Timestamp)
+			transcript.readResponseItem(record.Payload, record.Timestamp, rolloutEventID(lineNumber))
 		case "turn_context":
 			var context turnContext
 			if err := json.Unmarshal(record.Payload, &context); err == nil && context.Model != "" {
@@ -304,7 +305,7 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 				transcript.currentModel = context.Model
 			}
 		case "compacted":
-			transcript.addCompactionEvent(record.Timestamp)
+			transcript.addCompactionEvent(record.Timestamp, rolloutEventID(lineNumber))
 		case "world_state", "inter_agent_communication_metadata":
 			// These Codex records contain harness state/provenance, not session
 			// metrics. Keep their types explicit so future record types fail closed.
@@ -360,6 +361,7 @@ func readSessionMetadata(payload json.RawMessage, transcript *Transcript) error 
 }
 
 func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript, lineNumber int, usageRecordSeen bool) {
+	eventID := rolloutEventID(lineNumber)
 	var event eventPayload
 	if err := json.Unmarshal(payload, &event); err != nil || event.Type == "" {
 		transcript.Warnings = append(transcript.Warnings, fmt.Sprintf("line %d: invalid event message", lineNumber))
@@ -413,11 +415,11 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 	case "shutdown_complete", "thread_ended":
 		transcript.CompletedAt = timestamp
 	case "exec_command_begin", "exec_command_end", "mcp_tool_call_begin", "mcp_tool_call_end", "collab_tool_call_begin", "collab_tool_call_end", "web_search_begin", "web_search_end":
-		transcript.readToolEvent(event.Type, payload, timestamp)
+		transcript.readToolEvent(event.Type, payload, timestamp, eventID)
 	case "context_compacted", "compaction_started", "compaction_completed":
-		transcript.addCompactionEvent(timestamp)
+		transcript.addCompactionEvent(timestamp, eventID)
 	case "item_completed":
-		transcript.readCompletedItem(payload, timestamp)
+		transcript.readCompletedItem(payload, timestamp, eventID)
 	}
 	if event.Type != "token_count" {
 		return
@@ -481,7 +483,7 @@ func (transcript *Transcript) assignTurnModel(turnID, model string) {
 	}
 }
 
-func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage, timestamp string) {
+func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage, timestamp, sourceID string) {
 	var raw struct {
 		CallID      string `json:"call_id"`
 		TurnID      string `json:"turn_id"`
@@ -519,6 +521,10 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 	if callKey == "" {
 		callKey = fmt.Sprintf("%s:%s:%d", kind, timestamp, len(transcript.Events))
 	}
+	eventID := sourceID
+	if raw.CallID != "" {
+		eventID = "codex-call:" + raw.CallID
+	}
 	started := strings.HasSuffix(kind, "_begin")
 	if started {
 		if _, exists := transcript.toolIDs[callKey]; exists {
@@ -535,7 +541,7 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 		transcript.pendingTools[callKey] = len(transcript.Events)
 		toolName := name
 		transcript.Events = append(transcript.Events, domain.EventFact{
-			Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.turnNumber(raw.TurnID),
+			EventID: eventID, Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.turnNumber(raw.TurnID),
 			Role: transcript.role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: "running",
 			ContextTokens: transcript.currentContext,
 		})
@@ -587,7 +593,7 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 		transcript.ToolCalls++
 		toolName := name
 		transcript.Events = append(transcript.Events, domain.EventFact{
-			Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.turnNumber(raw.TurnID),
+			EventID: eventID, Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.turnNumber(raw.TurnID),
 			Role: transcript.role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status,
 			ContextTokens: transcript.currentContext,
 		})
@@ -598,7 +604,7 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 	}
 }
 
-func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestamp string) {
+func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestamp, sourceID string) {
 	var item struct {
 		Type   string `json:"type"`
 		Role   string `json:"role"`
@@ -637,7 +643,7 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 		transcript.pendingTools[item.CallID] = len(transcript.Events)
 		toolName := name
 		transcript.Events = append(transcript.Events, domain.EventFact{
-			Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.Turns,
+			EventID: "codex-call:" + item.CallID, Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.Turns,
 			Role: transcript.role, EventType: domain.EventTypeToolCall, ToolName: &toolName,
 			Status: "running", ContextTokens: transcript.currentContext,
 		})
@@ -655,7 +661,7 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 	}
 }
 
-func (transcript *Transcript) readCompletedItem(payload json.RawMessage, timestamp string) {
+func (transcript *Transcript) readCompletedItem(payload json.RawMessage, timestamp, sourceID string) {
 	var completed struct {
 		TurnID      string `json:"turn_id"`
 		StartedAtMS int64  `json:"started_at_ms"`
@@ -675,7 +681,9 @@ func (transcript *Transcript) readCompletedItem(payload json.RawMessage, timesta
 		return
 	}
 	callID := completed.Item.ID
+	eventID := sourceID
 	if callID != "" {
+		eventID = "codex-call:" + callID
 		if _, exists := transcript.toolIDs[callID]; exists {
 			return
 		}
@@ -715,19 +723,23 @@ func (transcript *Transcript) readCompletedItem(payload json.RawMessage, timesta
 	}
 	toolName := name
 	transcript.Events = append(transcript.Events, domain.EventFact{
-		Timestamp: startedAt, SessionID: transcript.sessionIDOrThread(), Turn: transcript.turnNumber(completed.TurnID),
+		EventID: eventID, Timestamp: startedAt, SessionID: transcript.sessionIDOrThread(), Turn: transcript.turnNumber(completed.TurnID),
 		Role: transcript.role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status,
 		DurationMs: durationMS, ContextTokens: transcript.currentContext,
 	})
 }
 
-func (transcript *Transcript) addCompactionEvent(timestamp string) {
+func (transcript *Transcript) addCompactionEvent(timestamp, eventID string) {
 	transcript.EventKinds["compaction"]++
 	transcript.compactions++
 	transcript.Events = append(transcript.Events, domain.EventFact{
-		Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Role: transcript.role,
+		EventID: eventID, Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Role: transcript.role,
 		EventType: domain.EventTypeCompaction, Status: "completed", ContextTokens: transcript.currentContext,
 	})
+}
+
+func rolloutEventID(lineNumber int) string {
+	return "codex-rollout-line:" + strconv.Itoa(lineNumber)
 }
 
 func (transcript *Transcript) sessionIDOrThread() string {
@@ -864,12 +876,10 @@ func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticke
 		Sessions: sessions,
 	}
 	ledger := domain.DeriveMetricsLedger(facts, cfg)
-	// Derive from complete facts, then apply the same persisted-event policy
-	// used by generate so exported facts do not contain routine events.
-	persistedEvents := domain.PruneEventsForPersistence(facts)
-	ledger.Facts.Sessions, err = domain.SessionsFromFacts(facts.InvocationFacts(), facts.ToolFacts(), persistedEvents)
+	// Metrics are derived from the complete stream; persisted facts keep summaries and direct evidence.
+	ledger.Facts, err = domain.PersistSparseAnomalyEvidence(facts)
 	if err != nil {
-		return domain.AgenticMetricsLedger{}, fmt.Errorf("pruning Codex events by session: %w", err)
+		return domain.AgenticMetricsLedger{}, fmt.Errorf("persisting Codex anomaly evidence: %w", err)
 	}
 	return ledger, nil
 }

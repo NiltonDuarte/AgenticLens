@@ -669,10 +669,20 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	}
 
 	mappedFactLedger := factLedger
+	persistedSessionAnomalies := make(map[string][]Anomaly, len(factLedger.Sessions))
+	for _, session := range factLedger.Sessions {
+		persistedSessionAnomalies[session.ID] = session.Anomalies
+	}
 	var err error
 	mappedFactLedger.Sessions, err = SessionsFromFacts(mappedInvocations, factLedger.ToolFacts(), mappedEvents)
 	if err != nil {
 		mappedFactLedger.Sessions = factLedger.Sessions
+	} else {
+		for i := range mappedFactLedger.Sessions {
+			if summaries, exists := persistedSessionAnomalies[mappedFactLedger.Sessions[i].ID]; exists {
+				mappedFactLedger.Sessions[i].Anomalies = summaries
+			}
+		}
 	}
 
 	totals := ComputeTotals(mappedInvocations)
@@ -680,7 +690,20 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	roles := ComputeRoleMetrics(mappedInvocations, cfg.RoleOrder)
 	models := ComputeModelMetrics(mappedInvocations)
 	threads := ComputeThreadSummaries(mappedInvocations, cfg.RoleOrder)
-	anomalies := DetectAnomalies(mappedFactLedger)
+	anomalies := factLedger.AnomalyFacts()
+	if !hasPersistedAnomalySummaries(factLedger) {
+		anomalies = DetectAnomalies(mappedFactLedger)
+	}
+	for i := range anomalies {
+		if anomalies[i].Context.Role != nil {
+			role := mappings.ResolveRole(string(*anomalies[i].Context.Role))
+			anomalies[i].Context.Role = &role
+		}
+		if anomalies[i].Context.SecondaryRole != nil {
+			role := mappings.ResolveRole(string(*anomalies[i].Context.SecondaryRole))
+			anomalies[i].Context.SecondaryRole = &role
+		}
+	}
 
 	return AgenticMetricsLedger{
 		TicketID:           factLedger.TicketID,
@@ -697,6 +720,18 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		Models:             models,
 		Anomalies:          anomalies,
 	}
+}
+
+func hasPersistedAnomalySummaries(ledger AgenticFactLedger) bool {
+	if ledger.Anomalies != nil {
+		return true
+	}
+	for _, session := range ledger.Sessions {
+		if session.Anomalies != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // CalculateFleetSummary aggregates high-level metrics across multiple ledgers.

@@ -34,7 +34,7 @@ func (s *StepV2ToV3Sanitized) Apply(ledger domain.AgenticFactLedger) (domain.Age
 	targetVer := 3
 	cloned.SchemaVersion = &targetVer
 
-	events := domain.PruneEventsForPersistence(ledger)
+	events := legacyV3Events(ledger)
 	sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), events)
 	if err != nil {
 		return domain.AgenticFactLedger{}, err
@@ -82,4 +82,34 @@ func (s *StepV2ToV3Sanitized) Apply(ledger domain.AgenticFactLedger) (domain.Age
 	}
 
 	return cloned, nil
+}
+
+func legacyV3Events(ledger domain.AgenticFactLedger) []domain.EventFact {
+	events := ledger.EventFacts()
+	type anomalyTurn struct {
+		session string
+		turn    int64
+	}
+	turns := make(map[anomalyTurn]bool)
+	wildcardTurns := make(map[int64]bool)
+	for _, anomaly := range domain.DetectAnomalies(ledger) {
+		if anomaly.Context.Turn == nil {
+			continue
+		}
+		if anomaly.Context.SessionID == nil {
+			wildcardTurns[*anomaly.Context.Turn] = true
+			continue
+		}
+		turns[anomalyTurn{session: *anomaly.Context.SessionID, turn: *anomaly.Context.Turn}] = true
+	}
+	retained := make([]domain.EventFact, 0)
+	for _, event := range events {
+		if event.Status != "error" && event.Status != "failed" && event.EventType != domain.EventTypeCompaction && !wildcardTurns[event.Turn] && !turns[anomalyTurn{session: event.SessionID, turn: event.Turn}] {
+			continue
+		}
+		event.ErrorMessage, event.PromptContent, event.ReasoningContent = nil, nil, nil
+		event.ToolInput, event.ToolOutput = nil, nil
+		retained = append(retained, event)
+	}
+	return domain.SortEvents(retained)
 }

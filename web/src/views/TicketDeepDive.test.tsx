@@ -1133,7 +1133,7 @@ describe('TicketDeepDive View Component', () => {
             }
             expect(screen.getByTestId('db-offline-banner')).toBeInTheDocument();
             const sourceBadge = screen.getByTestId('waterfall-source-badge');
-            expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
+            expect(sourceBadge).toHaveTextContent('Source: Committed Anomaly Evidence');
         });
         it('renders unclassified pill and does not render feature when ticket_type is null or undefined', async () => {
             const unclassifiedDetail = {

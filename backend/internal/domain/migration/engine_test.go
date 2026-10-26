@@ -1644,6 +1644,42 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 			t.Errorf("expected schema version 4, got %v", upgraded.SchemaVersion)
 		}
 	})
+
+	t.Run("fails with record diagnostic when required anomaly evidence has no event id", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		tool := "bash"
+		events := []domain.EventFact{
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed"},
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed"},
+		}
+		setToolFacts(&initial, []domain.ToolFact{{SessionID: "fixture-session", Name: tool, Calls: 5, Errors: 3}})
+		setEventFacts(&initial, events)
+
+		_, err := step.Apply(initial)
+		if err == nil || !strings.Contains(err.Error(), "stable event_id") || !strings.Contains(err.Error(), "events[") {
+			t.Fatalf("expected fail-closed record diagnostic for selected legacy evidence, got %v", err)
+		}
+	})
+
+	t.Run("drops legacy events without ids when they are not direct evidence", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		setEventFacts(&initial, []domain.EventFact{{EventType: domain.EventTypeTurnMessage, Status: "completed", ContextTokens: 1000}})
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatalf("unselected legacy event without id should not block migration: %v", err)
+		}
+		if len(upgraded.EventFacts()) != 0 {
+			t.Fatalf("unselected legacy event should be pruned, got %#v", upgraded.EventFacts())
+		}
+	})
 }
 
 func TestMigrationDropsUnscopedToolsWithDiagnostic(t *testing.T) {

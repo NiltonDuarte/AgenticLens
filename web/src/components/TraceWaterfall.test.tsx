@@ -474,16 +474,16 @@ describe('TraceWaterfall Component', () => {
       const banner = screen.getByTestId('db-offline-banner');
       expect(banner).toBeInTheDocument();
       expect(
-        screen.getByText('Committed Git Ledger — Local Database Offline')
+        screen.getByText('Committed Anomaly Evidence — Local Database Offline')
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          /Local SQLite database was unavailable or not found\. Showing lightweight execution events recorded in the repository ledger without raw prompt, reasoning, or tool payloads\./i
+          /Local SQLite database was unavailable or not found\. Showing only sparse event evidence for detected anomalies from the repository ledger/i
         )
       ).toBeInTheDocument();
 
       const sourceBadge = screen.getByTestId('waterfall-source-badge');
-      expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
+      expect(sourceBadge).toHaveTextContent('Source: Committed Anomaly Evidence');
       expect(sourceBadge).toHaveClass('source-offline');
     });
 

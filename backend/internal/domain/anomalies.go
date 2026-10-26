@@ -24,11 +24,18 @@ type AnomalyContext struct {
 
 // Anomaly represents a single detected execution health issue or operational degradation.
 type Anomaly struct {
-	RuleID      AnomalyRuleID   `json:"rule_id"`
-	Severity    AnomalySeverity `json:"severity"`
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	Context     AnomalyContext  `json:"context"`
+	RuleID      AnomalyRuleID        `json:"rule_id"`
+	Severity    AnomalySeverity      `json:"severity"`
+	Title       string               `json:"title"`
+	Description string               `json:"description"`
+	Context     AnomalyContext       `json:"context"`
+	Evidence    []AnomalyEvidenceRef `json:"evidence,omitempty"`
+}
+
+// AnomalyEvidenceRef identifies a source event without duplicating its session or event payload.
+type AnomalyEvidenceRef struct {
+	SessionID string `json:"session_id"`
+	EventID   string `json:"event_id"`
 }
 
 func strPtr(s string) *string {
@@ -93,7 +100,7 @@ func detectToolRetryStreaks(events []EventFact) []Anomaly {
 
 		tool := *event.ToolName
 
-		if event.Status == "error" {
+		if event.Status == "error" || event.Status == "failed" {
 			if tool == activeTool && event.SessionID == activeSessionID {
 				consecutiveErrors++
 				lastTurn = event.Turn
@@ -151,7 +158,7 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 				statsMap[name] = st
 			}
 			st.calls++
-			if e.Status == "error" {
+			if e.Status == "error" || e.Status == "failed" {
 				st.errors++
 			}
 		}
@@ -304,85 +311,90 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 	return anomalies
 }
 
-// detectSubagentReworkLoops detects cyclic ping-pong role transitions between worker subagents.
+// detectSubagentReworkLoops detects cyclic role alternation within each explicit
+// invocation parent-child group. Independent child groups never share a role stream.
 func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
-	isChildSession := make(map[string]bool)
-	for _, inv := range ledger.InvocationFacts() {
-		if inv.ID != "" {
-			isChildSession[inv.ID] = inv.ParentID != nil
-		}
-	}
-
-	var roles []string
-
-	if len(ledger.EventFacts()) > 0 {
-		for _, e := range ledger.EventFacts() {
-			if isChildSession[e.SessionID] {
-				r := strings.ToLower(strings.TrimSpace(string(e.Role)))
-				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
-					roles = append(roles, r)
-				}
-			}
-		}
-	}
-
-	if len(roles) == 0 {
-		for _, inv := range ledger.InvocationFacts() {
-			if inv.ParentID != nil {
-				r := strings.ToLower(strings.TrimSpace(string(inv.Role)))
-				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
-					roles = append(roles, r)
-				}
-			}
-		}
-	}
-
-	var anomalies []Anomaly
-	n := len(roles)
-	i := 0
-	for i < n-1 {
-		a := roles[i]
-		b := roles[i+1]
-		if a == b {
-			i++
+	childParent := make(map[string]string)
+	invocationRoles := make(map[string][]string)
+	for _, invocation := range ledger.InvocationFacts() {
+		if invocation.ID == "" || invocation.ParentID == nil {
 			continue
 		}
-
-		cycles := 0
-		pos := i
-		for pos+1 < n && roles[pos] == a && roles[pos+1] == b {
-			cycles++
-			pos += 2
+		parent := strings.TrimSpace(*invocation.ParentID)
+		if parent == "" {
+			continue
 		}
-
-		if cycles >= 3 {
-			sev := SeverityWarning
-			thresh := "3"
-			if cycles >= 5 {
-				sev = SeverityCritical
-				thresh = "5"
-			}
-			anomaly := Anomaly{
-				RuleID:   RuleSubagentReworkLoop,
-				Severity: sev,
-				Title:    fmt.Sprintf("Subagent rework loop: %s <-> %s (%d cycles)", a, b, cycles),
-				Description: fmt.Sprintf("Subagent roles '%s' and '%s' alternated for %d consecutive cycles indicating thrashing",
-					a, b, cycles),
-				Context: AnomalyContext{
-					Role:          agentRolePtr(AgentRole(a)),
-					SecondaryRole: agentRolePtr(AgentRole(b)),
-					Count:         int64Ptr(int64(cycles)),
-					Threshold:     strPtr(thresh),
-				},
-			}
-			anomalies = append(anomalies, anomaly)
-			i = pos
-		} else {
-			i++
+		childParent[invocation.ID] = parent
+		role := strings.ToLower(strings.TrimSpace(string(invocation.Role)))
+		if role != "" {
+			invocationRoles[parent] = appendDistinctRole(invocationRoles[parent], role)
 		}
 	}
 
+	eventRoles := make(map[string][]string)
+	for _, event := range ledger.EventFacts() {
+		parent, child := childParent[event.SessionID]
+		if !child {
+			continue
+		}
+		role := strings.ToLower(strings.TrimSpace(string(event.Role)))
+		if role == "" {
+			continue
+		}
+		eventRoles[parent] = appendDistinctRole(eventRoles[parent], role)
+	}
+
+	parents := make([]string, 0, len(childParent))
+	seenParent := make(map[string]bool)
+	for _, parent := range childParent {
+		if !seenParent[parent] {
+			parents = append(parents, parent)
+			seenParent[parent] = true
+		}
+	}
+	sort.Strings(parents)
+	var anomalies []Anomaly
+	for _, parent := range parents {
+		roles := eventRoles[parent]
+		if len(roles) == 0 {
+			roles = invocationRoles[parent]
+		}
+		for i := 0; i < len(roles)-1; {
+			a, b := roles[i], roles[i+1]
+			if a == b {
+				i++
+				continue
+			}
+			cycles, pos := int64(0), i
+			for pos+1 < len(roles) && roles[pos] == a && roles[pos+1] == b {
+				cycles++
+				pos += 2
+			}
+			if cycles >= 3 {
+				severity, threshold := SeverityWarning, "3"
+				if cycles >= 5 {
+					severity, threshold = SeverityCritical, "5"
+				}
+				anomalies = append(anomalies, Anomaly{
+					RuleID: RuleSubagentReworkLoop, Severity: severity,
+					Title:       fmt.Sprintf("Subagent rework loop: %s <-> %s (%d cycles)", a, b, cycles),
+					Description: fmt.Sprintf("Subagent roles '%s' and '%s' alternated for %d consecutive cycles indicating thrashing", a, b, cycles),
+					Context:     AnomalyContext{Role: agentRolePtr(AgentRole(a)), SecondaryRole: agentRolePtr(AgentRole(b)), Count: int64Ptr(cycles), Threshold: strPtr(threshold)},
+				})
+				i = pos
+			} else {
+				i++
+			}
+		}
+	}
 	return anomalies
+}
+
+func appendDistinctRole(roles []string, role string) []string {
+	if role == "" || (len(roles) > 0 && roles[len(roles)-1] == role) {
+		return roles
+	}
+	return append(roles, role)
 }
 
 // DetectAnomalies evaluates deterministic operational rules against the fact ledger.
@@ -398,6 +410,12 @@ func DetectAnomalies(ledger AgenticFactLedger) []Anomaly {
 		return []Anomaly{}
 	}
 
+	sortAnomalies(anomalies)
+
+	return anomalies
+}
+
+func sortAnomalies(anomalies []Anomaly) {
 	sort.SliceStable(anomalies, func(i, j int) bool {
 		a := anomalies[i]
 		b := anomalies[j]
@@ -437,8 +455,6 @@ func DetectAnomalies(ledger AgenticFactLedger) []Anomaly {
 
 		return a.Title < b.Title
 	})
-
-	return anomalies
 }
 
 // ComputeFleetAnomalies aggregates operational anomalies, severity counts, and brittle tools across all ledgers.

@@ -1540,6 +1540,27 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 	})
 }
 
+func TestDetectAnomalies_DoesNotConcatenateIndependentParentGroups(t *testing.T) {
+	parentCoder, parentTester := "parent-coder", "parent-tester"
+	invocations := []domain.InvocationFact{
+		{ID: parentCoder, Role: "general"}, {ID: parentTester, Role: "general"},
+		{ID: "coder-1", ParentID: &parentCoder, Role: "coder"}, {ID: "coder-2", ParentID: &parentCoder, Role: "coder"}, {ID: "coder-3", ParentID: &parentCoder, Role: "coder"},
+		{ID: "tester-1", ParentID: &parentTester, Role: "tester"}, {ID: "tester-2", ParentID: &parentTester, Role: "tester"}, {ID: "tester-3", ParentID: &parentTester, Role: "tester"},
+	}
+	events := []domain.EventFact{
+		{Timestamp: "2026-10-01T00:00:01Z", SessionID: "coder-1", Role: "coder"},
+		{Timestamp: "2026-10-01T00:00:02Z", SessionID: "tester-1", Role: "tester"},
+		{Timestamp: "2026-10-01T00:00:03Z", SessionID: "coder-2", Role: "coder"},
+		{Timestamp: "2026-10-01T00:00:04Z", SessionID: "tester-2", Role: "tester"},
+		{Timestamp: "2026-10-01T00:00:05Z", SessionID: "coder-3", Role: "coder"},
+		{Timestamp: "2026-10-01T00:00:06Z", SessionID: "tester-3", Role: "tester"},
+	}
+	sessions, err := domain.SessionsFromFacts(invocations, nil, events)
+	if err != nil { t.Fatal(err) }
+	anomalies := domain.DetectAnomalies(domain.AgenticFactLedger{Sessions: sessions})
+	if len(anomalies) != 0 { t.Fatalf("independent parent groups were concatenated into a false loop: %#v", anomalies) }
+}
+
 // 6. Boundary Cases & Division by Zero Guards
 func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 	t.Parallel()

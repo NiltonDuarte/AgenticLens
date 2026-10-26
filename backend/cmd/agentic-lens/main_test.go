@@ -276,7 +276,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("generate subcommand with --anomalies flag on ticket with anomalies", func(t *testing.T) {
+	t.Run("generate fails closed for legacy aggregate without event evidence", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "anom_gen.json")
@@ -306,16 +306,11 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("generate --anomalies failed: %v, stderr: %s", err, stderr.String())
+		if err := cmd.Run(); err == nil {
+			t.Fatalf("expected source-less aggregate to fail closed, stdout: %s", stdout.String())
 		}
-
-		out := stdout.String()
-		if !strings.Contains(out, "Found 1 anomalies for ticket AL-GEN-ANOM:") {
-			t.Errorf("expected anomaly count header in generate --anomalies output, got: %s", out)
-		}
-		if !strings.Contains(out, "CRITICAL") || !strings.Contains(out, "TOOL_HIGH_FAILURE_RATE") {
-			t.Errorf("expected CRITICAL TOOL_HIGH_FAILURE_RATE in generate output, got: %s", out)
+		if !strings.Contains(stderr.String(), "requires 6 failed tool-call evidence events") || !strings.Contains(stderr.String(), "found 0") {
+			t.Fatalf("expected missing direct evidence diagnostic, got stderr: %s", stderr.String())
 		}
 	})
 
@@ -980,7 +975,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 	}
 }
 
-func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
+func TestCLIGenerate_SparseAnomalyEvidenceAndZeroErrorMessage(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test_prune.db")
@@ -1095,34 +1090,91 @@ func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
 		t.Fatalf("expected 2 invocations, got %d", len(parsed.ToDomain().InvocationFacts()))
 	}
 
-	// 5. Events are pruned: routine tool "read_file" is pruned, but failed tool "execute_cmd" and compaction are preserved
-	var hasErrorTool, hasCompaction, hasRoutineTool bool
+	// 5. Events contain direct anomaly evidence only; isolated errors and compactions are omitted.
+	var persistedEventCount int
 	for _, ev := range parsed.ToDomain().EventFacts() {
+		persistedEventCount++
 		if ev.ErrorMessage != nil {
 			t.Errorf("expected event ErrorMessage to be nil, got: %s", *ev.ErrorMessage)
 		}
-		if ev.EventType == domain.EventTypeToolCall && ev.ToolName != nil && *ev.ToolName == "execute_cmd" {
-			hasErrorTool = true
-			if ev.Status != "error" {
-				t.Errorf("expected execute_cmd status 'error', got %s", ev.Status)
-			}
-		}
-		if ev.EventType == domain.EventTypeCompaction {
-			hasCompaction = true
-		}
-		if ev.EventType == domain.EventTypeToolCall && ev.ToolName != nil && *ev.ToolName == "read_file" {
-			hasRoutineTool = true
+	}
+	if persistedEventCount != 0 {
+		t.Errorf("expected no unrelated event evidence to persist, got %d rows", persistedEventCount)
+	}
+	var executeCalls, executeErrors int64
+	for _, fact := range parsed.ToDomain().ToolFacts() {
+		if fact.Name == "execute_cmd" {
+			executeCalls += fact.Calls
+			executeErrors += fact.Errors
 		}
 	}
+	if executeCalls != 1 || executeErrors != 1 {
+		t.Errorf("isolated error totals were lost: calls=%d errors=%d", executeCalls, executeErrors)
+	}
+}
 
-	if !hasErrorTool {
-		t.Errorf("expected failed tool call to be preserved in pruned events")
+func TestCLIGenerate_HighFailureAggregateKeepsExactEvidenceRefs(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "aggregate.json")
+	seedJSON := `{
+		"ticket_id":"AL-GEN-EVIDENCE",
+		"ticket_title":"Aggregate evidence fixture",
+		"sessions":[{
+			"id":"session-fixture",
+			"invocations":[],
+			"tools":[{"name":"bash","calls":8,"errors":6}],
+			"events":[
+				{"event_id":"failed-1","timestamp":"2026-10-26T10:00:01Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-2","timestamp":"2026-10-26T10:00:02Z","turn":2,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-3","timestamp":"2026-10-26T10:00:03Z","turn":3,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-4","timestamp":"2026-10-26T10:00:04Z","turn":4,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-5","timestamp":"2026-10-26T10:00:05Z","turn":5,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-6","timestamp":"2026-10-26T10:00:06Z","turn":6,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"success-1","timestamp":"2026-10-26T10:00:07Z","turn":7,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"completed"},
+				{"event_id":"success-2","timestamp":"2026-10-26T10:00:08Z","turn":8,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"completed"}
+			]
+		}]
+	}`
+	if err := os.WriteFile(outJSON, []byte(seedJSON), 0644); err != nil {
+		t.Fatal(err)
 	}
-	if !hasCompaction {
-		t.Errorf("expected compaction event to be preserved in pruned events")
+	cmd := exec.Command(cliBinaryPath, "generate", "--db-path", filepath.Join(tempDir, "missing.db"), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--allow-empty")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate with direct aggregate evidence failed: %v stderr=%s stdout=%s", err, stderr.String(), stdout.String())
 	}
-	if hasRoutineTool {
-		t.Errorf("expected routine successful tool call to be pruned from persisted events")
+	raw, err := os.ReadFile(outJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	facts := parsed.ToDomain()
+	var highFailure *domain.Anomaly
+	for i := range facts.Anomalies {
+		if facts.Anomalies[i].RuleID == domain.RuleToolHighFailureRate {
+			highFailure = &facts.Anomalies[i]
+			break
+		}
+	}
+	if highFailure == nil {
+		t.Fatalf("expected high failure summary, got %#v", facts.Anomalies)
+	}
+	if len(highFailure.Evidence) != 6 {
+		t.Fatalf("expected six aggregate evidence refs, got %#v", highFailure.Evidence)
+	}
+	retained := make(map[string]bool)
+	for _, event := range facts.EventFacts() {
+		retained[event.SessionID+"\x00"+event.EventID] = event.Status == "error" && event.ToolName != nil && *event.ToolName == "bash"
+	}
+	for _, ref := range highFailure.Evidence {
+		if !retained[ref.SessionID+"\x00"+ref.EventID] {
+			t.Errorf("aggregate ref does not resolve to a failed bash event: %#v", ref)
+		}
 	}
 }
 

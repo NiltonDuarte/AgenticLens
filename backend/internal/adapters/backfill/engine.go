@@ -395,9 +395,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	// 4. Atomic File Write
-	persistedLedger := factLedger
-	persistedEvents := domain.PruneEventsForPersistence(factLedger)
-	persistedLedger.Sessions, err = domain.SessionsFromFacts(factLedger.InvocationFacts(), factLedger.ToolFacts(), persistedEvents)
+	persistedLedger, err := domain.PersistSparseAnomalyEvidence(factLedger)
 	if err != nil {
 		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
 		return result

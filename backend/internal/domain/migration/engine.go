@@ -99,12 +99,11 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 		}
 	}
 	if version >= domain.CurrentSchemaVersion && hasSessions {
-		retained := domain.PruneEventsForPersistence(ledger)
-		sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), retained)
+		normalized, err := domain.PersistSparseAnomalyEvidence(ledger)
 		if err != nil {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("sanitizing canonical session events: %w", err)
 		}
-		ledger.Sessions = sessions
+		ledger = normalized
 	}
 	return ledger, version, nil
 }

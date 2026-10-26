@@ -43,6 +43,7 @@ type ToolFact struct {
 
 // EventFact captures a single discrete, ordered lifecycle occurrence in an agent session.
 type EventFact struct {
+	EventID          string    `json:"event_id"`
 	Timestamp        string    `json:"timestamp"`
 	SessionID        string    `json:"session_id"`
 	MessageID        *string   `json:"message_id,omitempty"`
@@ -70,6 +71,7 @@ type SessionToolFact struct {
 
 // SessionEventFact is a persisted event whose identity is inherited from its session.
 type SessionEventFact struct {
+	EventID          string    `json:"event_id"`
 	Timestamp        string    `json:"timestamp"`
 	MessageID        *string   `json:"message_id,omitempty"`
 	Turn             int64     `json:"turn"`
@@ -93,6 +95,7 @@ type SessionFact struct {
 	Invocations []InvocationFact   `json:"invocations"`
 	Tools       []SessionToolFact  `json:"tools"`
 	Events      []SessionEventFact `json:"events"`
+	Anomalies   []Anomaly          `json:"anomalies"`
 }
 
 // WorkspaceEventsResponse wraps execution events for a ticket workspace with hydration status and data source provenance.
@@ -138,6 +141,23 @@ type AgenticFactLedger struct {
 	UpdatedAt     string                  `json:"updated_at"`
 	Code          CodeFacts               `json:"code"`
 	Sessions      []SessionFact           `json:"sessions"`
+	Anomalies     []Anomaly               `json:"anomalies"`
+}
+
+// AnomalyFacts returns persisted anomaly summaries with their owning session restored.
+func (ledger AgenticFactLedger) AnomalyFacts() []Anomaly {
+	result := append([]Anomaly{}, ledger.Anomalies...)
+	for _, session := range ledger.Sessions {
+		for _, anomaly := range session.Anomalies {
+			if anomaly.Context.SessionID == nil {
+				sid := session.ID
+				anomaly.Context.SessionID = &sid
+			}
+			result = append(result, anomaly)
+		}
+	}
+	sortAnomalies(result)
+	return result
 }
 
 // InvocationFacts returns invocation rows in deterministic session order.
@@ -170,7 +190,7 @@ func (ledger AgenticFactLedger) EventFacts() []EventFact {
 		}
 		for _, event := range session.Events {
 			result = append(result, EventFact{
-				Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
+				EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
 				Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
 				ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 				PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
@@ -242,7 +262,7 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 			return nil, err
 		}
 		session.Events = append(session.Events, SessionEventFact{
-			Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
+			EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
 			EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
 			ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 			PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,

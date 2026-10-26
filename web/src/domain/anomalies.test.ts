@@ -176,6 +176,48 @@ describe('Domain Anomalies Logic', () => {
       expect(matchesAnomaly(upperToolEvent, streakAnomaly)).toBe(true);
     });
 
+    it('uses exact evidence refs for persisted anomalies instead of matching every same-tool failure', () => {
+      const evidencedAnomaly: Anomaly = {
+        ...streakAnomaly,
+        evidence: [{ session_id: 'ses-1', event_id: 'failed-call-2' }],
+      };
+      const referencedEvent: EventFact = { ...baseEvent, event_id: 'failed-call-2' };
+      const unrelatedFailure: EventFact = { ...baseEvent, event_id: 'failed-call-9' };
+
+      expect(matchesAnomaly(referencedEvent, evidencedAnomaly)).toBe(true);
+      expect(matchesAnomaly(unrelatedFailure, evidencedAnomaly)).toBe(false);
+      expect(findMatchingAnomaly(unrelatedFailure, [evidencedAnomaly])).toBeUndefined();
+    });
+
+    it('matches a nested event without session_id when its evidence ID has one owner', () => {
+      const evidencedAnomaly: Anomaly = {
+        ...streakAnomaly,
+        evidence: [{ session_id: 'ses-1', event_id: 'failed-call-2' }],
+      };
+      const nestedEvent: Omit<EventFact, 'session_id'> = {
+        event_id: 'failed-call-2', timestamp: baseEvent.timestamp, turn: baseEvent.turn,
+        role: baseEvent.role, event_type: baseEvent.event_type, tool_name: baseEvent.tool_name,
+        status: baseEvent.status, context_tokens: baseEvent.context_tokens,
+      };
+      expect(matchesAnomaly(nestedEvent, evidencedAnomaly)).toBe(true);
+    });
+
+    it('rejects a nested event when the same evidence ID appears under multiple sessions', () => {
+      const evidencedAnomaly: Anomaly = {
+        ...streakAnomaly,
+        evidence: [
+          { session_id: 'ses-1', event_id: 'call-1' },
+          { session_id: 'ses-2', event_id: 'call-1' },
+        ],
+      };
+      const nestedEvent: Omit<EventFact, 'session_id'> = {
+        event_id: 'call-1', timestamp: baseEvent.timestamp, turn: baseEvent.turn,
+        role: baseEvent.role, event_type: baseEvent.event_type, tool_name: baseEvent.tool_name,
+        status: baseEvent.status, context_tokens: baseEvent.context_tokens,
+      };
+      expect(matchesAnomaly(nestedEvent, evidencedAnomaly)).toBe(false);
+    });
+
     it('does NOT match tool failure anomaly if event status is completed', () => {
       const completedEvent: EventFact = {
         ...baseEvent,

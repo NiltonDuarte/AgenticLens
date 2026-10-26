@@ -16,6 +16,7 @@ export type ConventionalTicketType =
   | 'build';
 
 export interface EventFact {
+  readonly event_id?: string | null | undefined;
   readonly timestamp: string;
   readonly session_id: string;
   readonly message_id?: string | null | undefined;
@@ -68,6 +69,12 @@ export interface Anomaly {
   readonly title: string;
   readonly description: string;
   readonly context: AnomalyContext;
+  readonly evidence?: readonly AnomalyEvidenceRef[] | undefined;
+}
+
+export interface AnomalyEvidenceRef {
+  readonly session_id: string;
+  readonly event_id: string;
 }
 
 export interface BrittleToolSummary {

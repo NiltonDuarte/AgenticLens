@@ -13,6 +13,88 @@ func strPtr(s string) *string {
 	return &s
 }
 
+func TestAgenticFactLedgerDTO_PersistsSessionAndTicketAnomalyScopes(t *testing.T) {
+	sid, tool := "s1", "bash"
+	count, calls, rate, threshold := int64(3), int64(10), 30.0, ">20%"
+	nested := domain.Anomaly{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Title: "Retry", Description: "three retries", Context: domain.AnomalyContext{SessionID: &sid, ToolName: &tool, Count: &count}}
+	aggregate := domain.Anomaly{RuleID: domain.RuleToolHighFailureRate, Severity: domain.SeverityWarning, Title: "High tool failure rate", Description: "aggregate", Context: domain.AnomalyContext{ToolName: &tool, Count: &count, TotalCalls: &calls, FailureRatePct: &rate, Threshold: &threshold}}
+	version := domain.CurrentSchemaVersion
+	ledger := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{{ID: sid, Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{nested}}}, Anomalies: []domain.Anomaly{aggregate}}
+	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), `"session_id":"s1"`) {
+		t.Fatalf("nested summary repeats its owning session id: %s", data)
+	}
+	var decoded adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	got := decoded.ToDomain()
+	facts := got.AnomalyFacts()
+	if len(facts) != 2 || facts[1].Context.SessionID == nil {
+		t.Fatalf("summary scope was not restored on read: %#v", facts)
+	}
+	if got.Anomalies[0].Context.SessionID != nil {
+		t.Fatalf("ticket-level summary gained a session id: %#v", got.Anomalies[0])
+	}
+}
+
+func TestAgenticFactLedgerDTO_ValidatesAggregateEvidenceRows(t *testing.T) {
+	tool, sessionID, eventID := "bash", "s1", "call-1"
+	count, calls, rate, threshold := int64(1), int64(1), 100.0, ">20%"
+	version := domain.CurrentSchemaVersion
+	newLedger := func() adapters.AgenticFactLedgerDTO {
+		anomaly := domain.Anomaly{
+			RuleID: domain.RuleToolHighFailureRate, Severity: domain.SeverityCritical,
+			Title: "High failure rate", Description: "one failed bash call",
+			Context:  domain.AnomalyContext{ToolName: &tool, Count: &count, TotalCalls: &calls, FailureRatePct: &rate, Threshold: &threshold},
+			Evidence: []domain.AnomalyEvidenceRef{{SessionID: sessionID, EventID: eventID}},
+		}
+		return adapters.AgenticFactLedgerDTO{
+			SchemaVersion: &version,
+			Sessions: []adapters.SessionFactDTO{{
+				ID: sessionID, Invocations: []adapters.InvocationFactDTO{},
+				Tools:  []adapters.SessionToolFactDTO{{Name: tool, Calls: 1, Errors: 1}},
+				Events: []adapters.SessionEventFactDTO{{EventID: eventID, Timestamp: "2026-10-26T10:00:00Z", Role: "coder", EventType: string(domain.EventTypeToolCall), ToolName: &tool, Status: "error"}},
+			}},
+			Anomalies: []adapters.AnomalyDTO{adapters.AnomalyDTOFromDomain(anomaly)},
+		}
+	}
+
+	t.Run("matching failed tool-call reference is accepted", func(t *testing.T) {
+		if err := newLedger().Validate(); err != nil {
+			t.Fatalf("expected valid aggregate evidence, got %v", err)
+		}
+	})
+	t.Run("duplicate evidence reference is rejected", func(t *testing.T) {
+		dto := newLedger()
+		dto.Anomalies[0].Evidence = append(dto.Anomalies[0].Evidence, dto.Anomalies[0].Evidence[0])
+		if err := dto.Validate(); err == nil || !strings.Contains(err.Error(), "duplicates") {
+			t.Fatalf("expected duplicate ref rejection, got %v", err)
+		}
+	})
+	for _, tc := range []struct {
+		name                    string
+		eventType, status, tool string
+	}{
+		{name: "wrong event type", eventType: string(domain.EventTypeTurnMessage), status: "error", tool: "bash"},
+		{name: "completed event", eventType: string(domain.EventTypeToolCall), status: "completed", tool: "bash"},
+		{name: "wrong tool", eventType: string(domain.EventTypeToolCall), status: "error", tool: "git"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dto := newLedger()
+			event := &dto.Sessions[0].Events[0]
+			event.EventType, event.Status = tc.eventType, tc.status
+			event.ToolName = &tc.tool
+			if err := dto.Validate(); err == nil || !strings.Contains(err.Error(), "failed tool_call") {
+				t.Fatalf("expected aggregate evidence row rejection, got %v", err)
+			}
+		})
+	}
+}
+
 func int64Ptr(i int64) *int64 {
 	return &i
 }

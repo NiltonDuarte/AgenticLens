@@ -2,7 +2,9 @@ package domain_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/domain"
@@ -358,39 +360,10 @@ func TestPruneEventsForPersistence(t *testing.T) {
 		}
 
 		pruned := domain.PruneEventsForPersistence(ledger)
-		if len(pruned) != 2 {
-			t.Fatalf("expected 2 pruned events (error tool call and compaction), got %d: %+v", len(pruned), pruned)
+		if len(pruned) != 0 {
+			t.Fatalf("expected no direct anomaly evidence for isolated error/compaction, got %d: %+v", len(pruned), pruned)
 		}
 
-		// First pruned event: error tool call
-		errEvent := pruned[0]
-		if errEvent.Turn != 3 || errEvent.EventType != domain.EventTypeToolCall {
-			t.Errorf("expected turn 3 tool call error, got turn %d type %s", errEvent.Turn, errEvent.EventType)
-		}
-		if errEvent.ToolName == nil || *errEvent.ToolName != "bash" {
-			t.Errorf("expected tool_name 'bash', got %v", errEvent.ToolName)
-		}
-		if errEvent.Status != "error" {
-			t.Errorf("expected status 'error', got %s", errEvent.Status)
-		}
-		if errEvent.ErrorMessage != nil {
-			t.Errorf("expected ErrorMessage nil, got %v", *errEvent.ErrorMessage)
-		}
-		if errEvent.DurationMs == nil || *errEvent.DurationMs != dur {
-			t.Errorf("expected DurationMs %d, got %v", dur, errEvent.DurationMs)
-		}
-		if errEvent.ContextTokens != 1500 {
-			t.Errorf("expected ContextTokens 1500, got %d", errEvent.ContextTokens)
-		}
-
-		// Second pruned event: compaction
-		compEvent := pruned[1]
-		if compEvent.Turn != 4 || compEvent.EventType != domain.EventTypeCompaction {
-			t.Errorf("expected turn 4 compaction, got turn %d type %s", compEvent.Turn, compEvent.EventType)
-		}
-		if compEvent.ErrorMessage != nil {
-			t.Errorf("expected compaction ErrorMessage nil, got %v", *compEvent.ErrorMessage)
-		}
 	})
 
 	t.Run("preserves anomaly-associated events without ErrorMessage", func(t *testing.T) {
@@ -423,11 +396,11 @@ func TestPruneEventsForPersistence(t *testing.T) {
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events)}
 
 		pruned := domain.PruneEventsForPersistence(ledger)
-		if len(pruned) != 1 {
-			t.Fatalf("expected 1 anomaly-linked event retained, got %d", len(pruned))
+		if len(pruned) != 2 {
+			t.Fatalf("expected before/after context evidence, got %d", len(pruned))
 		}
 
-		anomalyEvent := pruned[0]
+		anomalyEvent := pruned[1]
 		if anomalyEvent.Turn != 2 {
 			t.Errorf("expected turn 2 event retained, got turn %d", anomalyEvent.Turn)
 		}
@@ -564,9 +537,10 @@ func TestPruneEventsForPersistence(t *testing.T) {
 				unprunedEvents),
 		}
 
-		prunedEvents := domain.PruneEventsForPersistence(ledgerUnpruned)
-		ledgerPruned := ledgerUnpruned
-		setEventFacts(&ledgerPruned, prunedEvents)
+		ledgerPruned, err := domain.PersistSparseAnomalyEvidence(ledgerUnpruned)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		// 1. ComputeTotals parity
 		totalsUnpruned := domain.ComputeTotals(ledgerUnpruned.InvocationFacts())
@@ -696,7 +670,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name: "status failed is retained alongside status error with stripped ErrorMessage",
+			name: "isolated failed and error events are omitted",
 			inputEvents: []domain.EventFact{
 				{
 					Timestamp:     "2026-10-18T10:00:00Z",
@@ -723,7 +697,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 					ContextTokens: 3500,
 				},
 			},
-			expectedCount: 2,
+			expectedCount: 0,
 			verify: func(t *testing.T, pruned []domain.EventFact) {
 				for i, ev := range pruned {
 					if ev.ErrorMessage != nil {
@@ -748,7 +722,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name: "compaction event retained regardless of status with ErrorMessage nil",
+			name: "unlinked compaction event is omitted",
 			inputEvents: []domain.EventFact{
 				{
 					Timestamp:     "2026-10-18T10:00:00Z",
@@ -762,7 +736,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 					ContextTokens: 18000,
 				},
 			},
-			expectedCount: 1,
+			expectedCount: 0,
 			verify: func(t *testing.T, pruned []domain.EventFact) {
 				ev := pruned[0]
 				if ev.EventType != domain.EventTypeCompaction {
@@ -780,7 +754,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name: "brittle tool failure anomaly retains error tool calls with nil ErrorMessage",
+			name: "unaggregated tool errors have no direct event evidence",
 			inputEvents: []domain.EventFact{
 				{
 					Timestamp:     "2026-10-18T10:00:00Z",
@@ -810,7 +784,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 			tools: []domain.ToolFact{
 				{SessionID: "session-a", Name: "bash", Calls: 2, Errors: 2},
 			},
-			expectedCount: 2,
+			expectedCount: 0,
 			verify: func(t *testing.T, pruned []domain.EventFact) {
 				for i, ev := range pruned {
 					if ev.ErrorMessage != nil {
@@ -823,7 +797,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name: "mixed chronological events sort ascending by timestamp then turn",
+			name: "isolated event rows are omitted",
 			inputEvents: []domain.EventFact{
 				{
 					Timestamp:     "2026-10-18T10:00:10Z",
@@ -857,7 +831,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 					ContextTokens: 3000,
 				},
 			},
-			expectedCount: 3,
+			expectedCount: 0,
 			verify: func(t *testing.T, pruned []domain.EventFact) {
 				if pruned[0].Turn != 1 || *pruned[0].ToolName != "read" {
 					t.Errorf("expected first event turn 1 read, got %+v", pruned[0])
@@ -897,7 +871,7 @@ func TestPruneEventsForPersistence_TableDrivenEdgeCases(t *testing.T) {
 				}
 			}
 
-			if tt.verify != nil {
+			if tt.verify != nil && tt.expectedCount > 0 {
 				tt.verify(t, pruned)
 			}
 		})
@@ -1037,8 +1011,8 @@ func TestPruneEventsForPersistence_DiagnosticSanitization(t *testing.T) {
 	}
 
 	pruned := domain.PruneEventsForPersistence(ledger)
-	if len(pruned) != 2 {
-		t.Fatalf("expected 2 pruned events, got %d", len(pruned))
+	if len(pruned) != 0 {
+		t.Fatalf("expected no direct evidence for isolated error/compaction, got %d", len(pruned))
 	}
 
 	for i, ev := range pruned {
@@ -1067,6 +1041,229 @@ func TestPruneEventsForPersistence_DiagnosticSanitization(t *testing.T) {
 		t.Errorf("original ledger ToolInput was mutated")
 	}
 }
+
+func TestPersistSparseAnomalyEvidenceKeepsOnlyDirectEvidenceAndCompactSummaries(t *testing.T) {
+	t.Run("retry evidence and session summary are preserved", func(t *testing.T) {
+		tool := "bash"
+		events := []domain.EventFact{}
+		for i := int64(1); i <= 3; i++ {
+			events = append(events, domain.EventFact{EventID: fmt.Sprintf("call-%d", i), Timestamp: fmt.Sprintf("2026-10-01T00:00:0%dZ", i), SessionID: "s1", Turn: i, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error", ContextTokens: 1000})
+		}
+		sessions, err := domain.SessionsFromFacts(nil, []domain.ToolFact{{SessionID: "s1", Name: tool, Calls: 3, Errors: 3}}, events)
+		if err != nil {
+			t.Fatal(err)
+		}
+		full := domain.AgenticFactLedger{Sessions: sessions}
+		persisted, err := domain.PersistSparseAnomalyEvidence(full)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := len(persisted.EventFacts()); got != 3 {
+			t.Fatalf("retry evidence rows = %d, want 3", got)
+		}
+		if len(persisted.Sessions[0].Anomalies) != 1 || persisted.Sessions[0].Anomalies[0].Context.SessionID != nil {
+			t.Fatalf("session summary should be nested without session_id: %#v", persisted.Sessions[0].Anomalies)
+		}
+		metrics := domain.DeriveMetricsLedger(persisted, domain.DefaultProjectConfig())
+		for i := range metrics.Anomalies {
+			metrics.Anomalies[i].Evidence = nil
+		}
+		if !reflect.DeepEqual(metrics.Anomalies, domain.DetectAnomalies(full)) {
+			t.Fatalf("stored summary differs from full stream: %#v != %#v", metrics.Anomalies, domain.DetectAnomalies(full))
+		}
+	})
+
+	t.Run("cross-session failure summary is ticket-scoped and references failed events", func(t *testing.T) {
+		tools := []domain.ToolFact{{SessionID: "s1", Name: "bash", Calls: 5, Errors: 2}, {SessionID: "s2", Name: "bash", Calls: 5, Errors: 1}}
+		errorEvents := []domain.EventFact{
+			{EventID: "call-a", Timestamp: "2026-10-01T00:00:01Z", SessionID: "s1", EventType: domain.EventTypeToolCall, ToolName: ptrString("bash"), Status: "error"},
+			{EventID: "call-b", Timestamp: "2026-10-01T00:00:02Z", SessionID: "s1", EventType: domain.EventTypeToolCall, ToolName: ptrString("bash"), Status: "failed"},
+			{EventID: "call-c", Timestamp: "2026-10-01T00:00:03Z", SessionID: "s2", EventType: domain.EventTypeToolCall, ToolName: ptrString("bash"), Status: "error"},
+		}
+		invocations := []domain.InvocationFact{
+			{ID: "s1", Role: "coder", Model: "model-a", Turns: 2, Tokens: domain.InvocationTokens{Input: 100, Output: 20}},
+			{ID: "s2", Role: "tester", Model: "model-b", Turns: 3, Tokens: domain.InvocationTokens{Input: 200, Output: 30}},
+		}
+		sessions, err := domain.SessionsFromFacts(invocations, tools, errorEvents)
+		if err != nil {
+			t.Fatal(err)
+		}
+		full := domain.AgenticFactLedger{Sessions: sessions}
+		persisted, err := domain.PersistSparseAnomalyEvidence(full)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(persisted.Anomalies) != 1 || len(persisted.EventFacts()) != 3 {
+			t.Fatalf("expected ticket aggregate with all failed-call evidence: anomalies=%d events=%d", len(persisted.Anomalies), len(persisted.EventFacts()))
+		}
+		if !reflect.DeepEqual(domain.ComputeTotals(full.InvocationFacts()), domain.ComputeTotals(persisted.InvocationFacts())) {
+			t.Fatalf("invocation totals changed during event pruning: full=%+v sparse=%+v", domain.ComputeTotals(full.InvocationFacts()), domain.ComputeTotals(persisted.InvocationFacts()))
+		}
+		if !reflect.DeepEqual(full.ToolFacts(), persisted.ToolFacts()) {
+			t.Fatalf("per-session tool calls/errors changed during event pruning: full=%+v sparse=%+v", full.ToolFacts(), persisted.ToolFacts())
+		}
+		a := persisted.Anomalies[0]
+		if a.Context.SessionID != nil || a.Context.ToolName == nil || *a.Context.ToolName != "bash" || a.Context.Count == nil || *a.Context.Count != 3 || a.Context.TotalCalls == nil || *a.Context.TotalCalls != 10 || a.Context.FailureRatePct == nil || *a.Context.FailureRatePct != 30 || a.Context.Threshold == nil {
+			t.Fatalf("ticket anomaly missing aggregate context: %#v", a)
+		}
+		if len(a.Evidence) != 3 || a.Evidence[0] != (domain.AnomalyEvidenceRef{SessionID: "s1", EventID: "call-a"}) || a.Evidence[2] != (domain.AnomalyEvidenceRef{SessionID: "s2", EventID: "call-c"}) {
+			t.Fatalf("ticket anomaly evidence references are incomplete: %#v", a.Evidence)
+		}
+		metrics := domain.DeriveMetricsLedger(persisted, domain.DefaultProjectConfig())
+		if !reflect.DeepEqual(metrics.Anomalies, []domain.Anomaly{a}) {
+			t.Fatalf("aggregate summary not used by metrics: %#v", metrics.Anomalies)
+		}
+	})
+}
+
+func TestPersistSparseAnomalyEvidenceSelectsMinimalReworkRoleSequence(t *testing.T) {
+	root, coder, tester := "root", "child-coder", "child-tester"
+	toolEvents := make([]domain.EventFact, 0, 8)
+	for i, role := range []string{"coder", "tester", "coder", "tester", "coder", "tester", "coder"} {
+		session := coder
+		if role == "tester" {
+			session = tester
+		}
+		toolEvents = append(toolEvents, domain.EventFact{EventID: fmt.Sprintf("role-event-%d", i), Timestamp: fmt.Sprintf("2026-10-01T00:00:0%dZ", i+1), SessionID: session, MessageID: ptrString(fmt.Sprintf("role-%d", i)), Turn: int64(i + 1), Role: domain.AgentRole(role), EventType: domain.EventTypeTurnMessage, Status: "completed", ContextTokens: 1000})
+	}
+	toolEvents = append(toolEvents, domain.EventFact{Timestamp: "2026-10-01T00:00:08Z", SessionID: root, Turn: 8, Role: "reviewer", EventType: domain.EventTypeTurnMessage, Status: "completed", ContextTokens: 1000})
+	parent := root
+	sessions, err := domain.SessionsFromFacts([]domain.InvocationFact{{ID: root, Role: "general"}, {ID: coder, ParentID: &parent, Role: "coder"}, {ID: tester, ParentID: &parent, Role: "tester"}}, nil, toolEvents)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := domain.PersistSparseAnomalyEvidence(domain.AgenticFactLedger{Sessions: sessions})
+	if err != nil {
+		t.Fatal(err)
+	}
+	retained := persisted.EventFacts()
+	if len(retained) != 6 {
+		t.Fatalf("retained %d events; want exactly the six role transitions in three cycles: %#v", len(retained), retained)
+	}
+	for i, event := range retained {
+		if event.Turn != int64(i+1) {
+			t.Errorf("retained turn %d at index %d, want %d", event.Turn, i, i+1)
+		}
+	}
+	if len(persisted.Anomalies) != 1 || persisted.Anomalies[0].RuleID != domain.RuleSubagentReworkLoop || persisted.Anomalies[0].Context.Count == nil || *persisted.Anomalies[0].Context.Count != 3 {
+		t.Fatalf("missing ticket-scoped rework summary: %#v", persisted.Anomalies)
+	}
+}
+
+func TestPersistSparseAnomalyEvidenceRejectsDirectEvidenceWithoutStableID(t *testing.T) {
+	tool := "bash"
+	events := []domain.EventFact{
+		{Timestamp: "2026-10-01T00:00:01Z", SessionID: "s", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+		{Timestamp: "2026-10-01T00:00:02Z", SessionID: "s", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+		{Timestamp: "2026-10-01T00:00:03Z", SessionID: "s", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+	}
+	sessions, err := domain.SessionsFromFacts(nil, []domain.ToolFact{{SessionID: "s", Name: tool, Calls: 3, Errors: 3}}, events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = domain.PersistSparseAnomalyEvidence(domain.AgenticFactLedger{Sessions: sessions})
+	if err == nil || !strings.Contains(err.Error(), "stable event_id") {
+		t.Fatalf("expected record-level error for selected evidence without stable ID, got %v", err)
+	}
+}
+
+func TestPersistSparseAnomalyEvidenceDoesNotJoinInterleavedParentGroups(t *testing.T) {
+	parentCoder, parentTester := "parent-coder", "parent-tester"
+	invocations := []domain.InvocationFact{
+		{ID: parentCoder, Role: "general"}, {ID: parentTester, Role: "general"},
+		{ID: "coder-1", ParentID: &parentCoder, Role: "coder"}, {ID: "coder-2", ParentID: &parentCoder, Role: "coder"}, {ID: "coder-3", ParentID: &parentCoder, Role: "coder"},
+		{ID: "tester-1", ParentID: &parentTester, Role: "tester"}, {ID: "tester-2", ParentID: &parentTester, Role: "tester"}, {ID: "tester-3", ParentID: &parentTester, Role: "tester"},
+	}
+	events := []domain.EventFact{
+		{EventID: "c1", Timestamp: "2026-10-01T00:00:01Z", SessionID: "coder-1", Role: "coder", EventType: domain.EventTypeTurnMessage},
+		{EventID: "t1", Timestamp: "2026-10-01T00:00:02Z", SessionID: "tester-1", Role: "tester", EventType: domain.EventTypeTurnMessage},
+		{EventID: "c2", Timestamp: "2026-10-01T00:00:03Z", SessionID: "coder-2", Role: "coder", EventType: domain.EventTypeTurnMessage},
+		{EventID: "t2", Timestamp: "2026-10-01T00:00:04Z", SessionID: "tester-2", Role: "tester", EventType: domain.EventTypeTurnMessage},
+		{EventID: "c3", Timestamp: "2026-10-01T00:00:05Z", SessionID: "coder-3", Role: "coder", EventType: domain.EventTypeTurnMessage},
+		{EventID: "t3", Timestamp: "2026-10-01T00:00:06Z", SessionID: "tester-3", Role: "tester", EventType: domain.EventTypeTurnMessage},
+	}
+	sessions, err := domain.SessionsFromFacts(invocations, nil, events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := domain.PersistSparseAnomalyEvidence(domain.AgenticFactLedger{Sessions: sessions})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Anomalies) != 0 || len(persisted.EventFacts()) != 0 {
+		t.Fatalf("independent parent groups formed false evidence: anomalies=%#v events=%#v", persisted.Anomalies, persisted.EventFacts())
+	}
+}
+
+func TestPersistSparseAnomalyEvidenceIsIdempotentForStoredReworkSummary(t *testing.T) {
+	root, coder, tester := "root", "child-coder", "child-tester"
+	parent := root
+	firstRole, secondRole, cycles := domain.AgentRole("coder"), domain.AgentRole("tester"), int64(3)
+	unrelated := domain.EventFact{Timestamp: "2026-10-01T00:00:00Z", SessionID: coder, Turn: 40, Role: "coder", EventType: domain.EventTypeTurnMessage, Status: "completed", ContextTokens: 1000}
+	sessions, err := domain.SessionsFromFacts([]domain.InvocationFact{{ID: root, Role: "general"}, {ID: coder, ParentID: &parent, Role: firstRole}, {ID: tester, ParentID: &parent, Role: secondRole}}, nil, []domain.EventFact{unrelated})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := domain.Anomaly{RuleID: domain.RuleSubagentReworkLoop, Severity: domain.SeverityWarning, Title: "Subagent rework loop", Description: "three cycles", Context: domain.AnomalyContext{Role: &firstRole, SecondaryRole: &secondRole, Count: &cycles}}
+	first, err := domain.PersistSparseAnomalyEvidence(domain.AgenticFactLedger{Sessions: sessions, Anomalies: []domain.Anomaly{stored}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := domain.PersistSparseAnomalyEvidence(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(first, second) {
+		t.Fatalf("reapplying sparse persistence changed the canonical ledger:\nfirst=%#v\nsecond=%#v", first, second)
+	}
+	if len(second.Anomalies) != 1 || second.Anomalies[0].RuleID != domain.RuleSubagentReworkLoop {
+		t.Fatalf("stored rework summary was dropped: %#v", second.Anomalies)
+	}
+}
+
+func TestSparseEvidenceMeetsLedgerSizeTargets(t *testing.T) {
+	const toolCalls, compactions, errors = 608, 11, 132
+	tool := "bash"
+	events := make([]domain.EventFact, 0, toolCalls+compactions)
+	for i := 0; i < toolCalls; i++ {
+		status := "completed"
+		if i%4 == 0 && i < errors*4 {
+			status = "error"
+		}
+		events = append(events, domain.EventFact{EventID: fmt.Sprintf("synthetic-call-%d", i), Timestamp: fmt.Sprintf("2026-10-01T00:%02d:%02dZ", i/60, i%60), SessionID: "synthetic-session", MessageID: ptrString(fmt.Sprintf("m-%d", i)), Turn: int64(i + 1), Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: status, DurationMs: ptrInt64(300), ContextTokens: 5000})
+	}
+	for i := 0; i < compactions; i++ {
+		events = append(events, domain.EventFact{Timestamp: fmt.Sprintf("2026-10-02T00:00:%02dZ", i), SessionID: "synthetic-session", Turn: int64(toolCalls + i), Role: "coder", EventType: domain.EventTypeCompaction, Status: "completed", ContextTokens: 5000})
+	}
+	sessions, err := domain.SessionsFromFacts(nil, []domain.ToolFact{{SessionID: "synthetic-session", Name: tool, Calls: toolCalls, Errors: errors}}, events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	full := domain.AgenticFactLedger{Sessions: sessions, Anomalies: nil}
+	persisted, err := domain.PersistSparseAnomalyEvidence(full)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := json.Marshal(full)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := json.Marshal(persisted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := len(persisted.EventFacts())
+	t.Logf("synthetic measurement: baseline_event_rows=%d retained_event_rows=%d baseline_bytes=%d sparse_bytes=%d reduction_pct=%.1f", len(events), rows, len(before), len(after), 100*float64(len(before)-len(after))/float64(len(before)))
+	if rows*4 > len(events) {
+		t.Fatalf("retained %d of %d event rows; max is 25%%", rows, len(events))
+	}
+	if len(after)*100 > len(before)*60 {
+		t.Fatalf("ledger size reduction is below 40%%: before=%d after=%d", len(before), len(after))
+	}
+}
+
+func ptrString(v string) *string { return &v }
+func ptrInt64(v int64) *int64    { return &v }
 
 func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 	t.Parallel()
