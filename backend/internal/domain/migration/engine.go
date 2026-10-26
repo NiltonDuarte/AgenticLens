@@ -78,6 +78,11 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 		if err != nil {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("normalizing legacy fact collections: %w", err)
 		}
+		if ledger.Source != "" {
+			for i := range sessions {
+				sessions[i].Source = ledger.Source
+			}
+		}
 		ledger.Sessions = sessions
 		if dropped > 0 {
 			note := fmt.Sprintf("Removed %d unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them.", dropped)
@@ -104,6 +109,11 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("sanitizing canonical session events: %w", err)
 		}
 		ledger = normalized
+	}
+	for i := range ledger.Sessions {
+		if strings.TrimSpace(ledger.Sessions[i].Source) == "" {
+			ledger.Sessions[i].Source = domain.SourceOpenCode
+		}
 	}
 	return ledger, version, nil
 }

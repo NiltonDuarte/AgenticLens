@@ -79,8 +79,52 @@ func RefreshAnomalySummaries(ledger AgenticFactLedger) []Anomaly {
 			refreshed = append(refreshed, anomaly)
 		}
 	}
-	sortAnomalies(refreshed)
-	return refreshed
+	seen := make(map[string]bool, len(refreshed))
+	deduped := make([]Anomaly, 0, len(refreshed))
+	for _, anomaly := range refreshed {
+		k := anomalyDeduplicationKey(anomaly)
+		if !seen[k] {
+			seen[k] = true
+			deduped = append(deduped, anomaly)
+		}
+	}
+	sortAnomalies(deduped)
+	return deduped
+}
+
+func anomalyDeduplicationKey(a Anomaly) string {
+	var sid, role, tool string
+	var turn, count, tokens, delta, totalCalls int64
+	var thresh string
+	if a.Context.SessionID != nil {
+		sid = *a.Context.SessionID
+	}
+	if a.Context.Role != nil {
+		role = string(*a.Context.Role)
+	}
+	if a.Context.ToolName != nil {
+		tool = *a.Context.ToolName
+	}
+	if a.Context.Turn != nil {
+		turn = *a.Context.Turn
+	}
+	if a.Context.Count != nil {
+		count = *a.Context.Count
+	}
+	if a.Context.ContextTokens != nil {
+		tokens = *a.Context.ContextTokens
+	}
+	if a.Context.TokenDelta != nil {
+		delta = *a.Context.TokenDelta
+	}
+	if a.Context.TotalCalls != nil {
+		totalCalls = *a.Context.TotalCalls
+	}
+	if a.Context.Threshold != nil {
+		thresh = *a.Context.Threshold
+	}
+	return fmt.Sprintf("%s|%s|%s|%s|%s|%d|%d|%d|%d|%d|%s",
+		a.RuleID, a.Severity, sid, role, tool, turn, count, tokens, delta, totalCalls, thresh)
 }
 
 // PersistAnomalySummaries derives summaries from complete in-memory facts, then
@@ -103,17 +147,26 @@ func PersistAnomalySummaries(ledger AgenticFactLedger) (AgenticFactLedger, error
 	if err != nil {
 		return AgenticFactLedger{}, err
 	}
+	origSourceByID := make(map[string]string, len(ledger.Sessions))
+	for _, orig := range ledger.Sessions {
+		origSourceByID[orig.ID] = orig.Source
+	}
 	seen := make(map[string]bool, len(sessions))
 	for _, session := range sessions {
 		seen[session.ID] = true
 	}
 	for _, original := range ledger.Sessions {
 		if !seen[original.ID] {
-			sessions = append(sessions, SessionFact{ID: original.ID, ParentID: original.ParentID, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: nil})
+			sessions = append(sessions, SessionFact{ID: original.ID, ParentID: original.ParentID, Source: original.Source, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: nil})
 			seen[original.ID] = true
 		}
 	}
 	for i := range sessions {
+		if src, ok := origSourceByID[sessions[i].ID]; ok && src != "" {
+			sessions[i].Source = src
+		} else if ledger.Source != "" {
+			sessions[i].Source = ledger.Source
+		}
 		sessions[i].Anomalies = bySession[sessions[i].ID]
 		if sessions[i].Anomalies == nil {
 			sessions[i].Anomalies = []Anomaly{}

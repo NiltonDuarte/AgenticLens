@@ -115,6 +115,7 @@ export interface AgenticFactLedger {
 export interface SessionFact {
   readonly id: string;
   readonly parent_id?: string | null;
+  readonly source?: string;
   readonly invocations: readonly InvocationFact[];
   readonly tools: readonly Omit<ToolFact, 'session_id'>[];
   readonly events: readonly Omit<EventFact, 'session_id'>[];

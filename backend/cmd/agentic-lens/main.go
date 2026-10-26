@@ -282,7 +282,7 @@ func runGenerate(args []string) {
 	}
 
 	if hasLocalExtraction {
-		freshSessions, buildErr := domain.SessionsFromFacts(localInvocations, localTools, localEvents)
+		freshSessions, buildErr := domain.SessionsFromFactsWithSource(activeSource, localInvocations, localTools, localEvents)
 		if buildErr != nil {
 			fmt.Fprintf(os.Stderr, "Error grouping extracted session facts: %v\n", buildErr)
 			os.Exit(1)
@@ -583,6 +583,8 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "Usage: agentic-lens backfill [flags]\n\n")
 		fmt.Fprintf(out, "Batch telemetry backfill, Git code facts recomputation, and schema upgrades.\n\n")
 		fmt.Fprintf(out, "Flags:\n")
+		fmt.Fprintf(out, "  --source <harness>     Required telemetry harness to backfill: opencode, codex, or both\n")
+		fmt.Fprintf(out, "  --codex-home <path>    Path to CODEX_HOME (defaults to $CODEX_HOME or ~/.codex)\n")
 		fmt.Fprintf(out, "  --workspaces <path>    Path to root workspaces directory containing agentic_metrics.json ledgers\n")
 		fmt.Fprintf(out, "  --ticket-id <id>       Target single ticket identifier to filter backfill operation\n")
 		fmt.Fprintf(out, "  --recompute-git        Recompute Git code facts and SDLC iterations from repository history\n")
@@ -600,6 +602,8 @@ func runBackfill(args []string) {
 		return
 	}
 	workspacesFlag := backfillFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	sourceFlag := backfillFlags.String("source", "", "Telemetry harness to backfill: opencode, codex, or both (required)")
+	codexHomeFlag := backfillFlags.String("codex-home", "", "Path to CODEX_HOME (defaults to $CODEX_HOME or ~/.codex)")
 	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
 	recomputeGitFlag := backfillFlags.Bool("recompute-git", false, "Recompute Git code facts and SDLC iterations from repository history")
 	codeRefFlag := backfillFlags.String("code-ref", "", "Git branch or commit to compare with the configured base when recomputing code facts")
@@ -612,6 +616,15 @@ func runBackfill(args []string) {
 
 	if err := backfillFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing backfill flags: %v\n", err)
+		os.Exit(1)
+	}
+	cleanSource := strings.ToLower(strings.TrimSpace(*sourceFlag))
+	if cleanSource == "" {
+		fmt.Fprintln(os.Stderr, "Error: --source flag is required for backfill. Specify 'opencode', 'codex', or 'both'.")
+		os.Exit(1)
+	}
+	if cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "both" && cleanSource != "all" {
+		fmt.Fprintf(os.Stderr, "Error: invalid --source %q. Specify 'opencode', 'codex', or 'both'.\n", *sourceFlag)
 		os.Exit(1)
 	}
 	if *recomputeGitFlag {
@@ -628,6 +641,8 @@ func runBackfill(args []string) {
 	opts := backfill.BackfillOptions{
 		WorkspacesDir:   *workspacesFlag,
 		TicketID:        *ticketIDFlag,
+		Source:          cleanSource,
+		CodexHome:       strings.TrimSpace(*codexHomeFlag),
 		RecomputeGit:    *recomputeGitFlag,
 		CodeRef:         strings.TrimSpace(*codeRefFlag),
 		RecomputeDB:     *recomputeDBFlag,
@@ -1336,6 +1351,11 @@ func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []do
 		byID[session.ID] = session
 	}
 	for _, session := range local {
+		if session.Source == "" {
+			if existing, ok := byID[session.ID]; ok && existing.Source != "" {
+				session.Source = existing.Source
+			}
+		}
 		byID[session.ID] = session
 	}
 	ids := make([]string, 0, len(byID))

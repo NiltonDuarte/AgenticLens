@@ -91,7 +91,8 @@
           "errors": 0
         }
       ],
-      "events": []
+      "events": [],
+      "source": "opencode"
     }
   ]
 }

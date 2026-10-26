@@ -178,7 +178,8 @@
           "duration_ms": 9586,
           "context_tokens": 71308
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb426400cffelHQ5rlr9Lag0kA",
@@ -207,7 +208,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4182dbfffelxbkbXuYflRmg1",
@@ -257,7 +259,8 @@
           "duration_ms": 9,
           "context_tokens": 87196
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4118b56ffepNt4t7Yu3IwyrB",
@@ -297,7 +300,8 @@
           "duration_ms": 6,
           "context_tokens": 36629
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb40efb55ffellbOoCptgjd9F3",
@@ -326,7 +330,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     }
   ]
 }

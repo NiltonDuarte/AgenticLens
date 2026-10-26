@@ -92,6 +92,7 @@ type SessionEventFact struct {
 type SessionFact struct {
 	ID          string             `json:"id"`
 	ParentID    *string            `json:"parent_id,omitempty"`
+	Source      string             `json:"source,omitempty"`
 	Invocations []InvocationFact   `json:"invocations"`
 	Tools       []SessionToolFact  `json:"tools"`
 	Events      []SessionEventFact `json:"events,omitempty"`
@@ -224,7 +225,7 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 			}
 			return session, nil
 		}
-		session := &SessionFact{ID: clean, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{}}
+		session := &SessionFact{ID: clean, Source: SourceOpenCode, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{}}
 		if parent != nil && strings.TrimSpace(*parent) != "" {
 			p := strings.TrimSpace(*parent)
 			session.ParentID = &p
@@ -283,6 +284,21 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 		result = append(result, session)
 	}
 	return result, nil
+}
+
+// SessionsFromFactsWithSource builds the canonical session tree and tags each session with the given source provenance.
+func SessionsFromFactsWithSource(source string, invocations []InvocationFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
+	sessions, err := SessionsFromFacts(invocations, tools, events)
+	if err != nil {
+		return nil, err
+	}
+	cleanSource := strings.TrimSpace(source)
+	if cleanSource != "" {
+		for i := range sessions {
+			sessions[i].Source = cleanSource
+		}
+	}
+	return sessions, nil
 }
 
 // GroupedMetric aggregates metrics across invocations.

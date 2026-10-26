@@ -1,6 +1,10 @@
 package migration
 
-import "agenticlens/internal/domain"
+import (
+	"strings"
+
+	"agenticlens/internal/domain"
+)
 
 // StepV3ToV4UserIterations upgrades schema version 3 ledgers to schema version 4.
 // It populates UserIterations on root invocations from code.sdlc_iterations if unpopulated,
@@ -40,6 +44,12 @@ func (s *StepV3ToV4UserIterations) Apply(ledger domain.AgenticFactLedger) (domai
 	}
 	targetVer := 4
 	cloned.SchemaVersion = &targetVer
+
+	for i := range cloned.Sessions {
+		if strings.TrimSpace(cloned.Sessions[i].Source) == "" {
+			cloned.Sessions[i].Source = domain.SourceOpenCode
+		}
+	}
 
 	// If root invocations have 0 user_iterations and ledger has Code.SDLCIterations,
 	// assign Code.SDLCIterations to the primary root invocation.

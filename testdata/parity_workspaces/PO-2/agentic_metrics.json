@@ -107,7 +107,8 @@
           "duration_ms": 9,
           "context_tokens": 32800
         }
-      ]
+      ],
+      "source": "opencode"
     }
   ]
 }

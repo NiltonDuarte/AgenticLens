@@ -76,7 +76,8 @@
           "errors": 0
         }
       ],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "inv-al3-02",
@@ -105,7 +106,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "inv-al3-03",
@@ -134,7 +136,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     }
   ]
 }

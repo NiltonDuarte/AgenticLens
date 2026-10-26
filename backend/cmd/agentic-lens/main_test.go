@@ -57,8 +57,8 @@ func sampleFactJSON(ticketID, title string, duration int64, cost float64) string
 		UpdatedAt:   "2026-10-17T11:00:00Z",
 		Code:        domain.CodeFacts{LinesAdded: 120, LinesDeleted: 20, TestLinesAdded: 60, ProdLinesAdded: 60, ProdLinesDeleted: 20, FilesChanged: 4, SDLCIterations: 2},
 		Sessions: []domain.SessionFact{
-			{ID: "ses-orch", Invocations: []domain.InvocationFact{{ID: "ses-orch", Role: "orchestrator", Model: "claude-3-sonnet", User: "test-engineer", ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}},
-			{ID: "ses-coder", ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "ses-coder", ParentID: &parent, Role: "coder", Model: "claude-3-opus", User: "test-engineer", ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75}}, Events: []domain.SessionEventFact{}},
+			{ID: "ses-orch", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{ID: "ses-orch", Role: "orchestrator", Model: "claude-3-sonnet", User: "test-engineer", ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}},
+			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "ses-coder", ParentID: &parent, Role: "coder", Model: "claude-3-opus", User: "test-engineer", ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75}}, Events: []domain.SessionEventFact{}},
 		},
 	}
 	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
@@ -198,6 +198,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		"updated_at": "2026-10-18T10:00:00Z",
 		"sessions": [{
 			"id": "ses-anom",
+			"source": "opencode",
 			"invocations": [],
 			"events": [],
 			"tools": [
@@ -2029,8 +2030,18 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 func TestCLIBackfillCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
+	t.Run("backfill requires explicit --source flag", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "--source flag is required for backfill") {
+			t.Fatalf("expected missing --source to fail explicitly, err=%v stderr=%s", err, stderr.String())
+		}
+	})
+
 	t.Run("recompute-git requires an explicit code ref", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir, "--recompute-git")
+		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--recompute-git")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2040,7 +2051,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 	})
 
 	t.Run("recompute-git requires an explicit ticket id", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir, "--recompute-git", "--code-ref", "HEAD")
+		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--recompute-git", "--code-ref", "HEAD")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2053,6 +2064,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"backfill",
+			"--source", "opencode",
 			"--workspaces", wsDir,
 			"--dry-run",
 			"--migrate-schema",
@@ -2081,6 +2093,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"backfill",
+			"--source", "opencode",
 			"--workspaces", wsDir,
 			"--ticket-id", "TICKET-1",
 			"--recompute-git",
@@ -2499,9 +2512,10 @@ func TestCLIMigrateCommand(t *testing.T) {
 func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 
-	cmd := exec.Command(
+		cmd := exec.Command(
 		cliBinaryPath,
 		"backfill",
+		"--source", "opencode",
 		"--workspaces", wsDir,
 		"--migrate-schema",
 	)
@@ -5182,7 +5196,7 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		// 3. Backfill command without --workspaces and without config
-		cmdBackfill := exec.Command(cliBinaryPath, "backfill")
+		cmdBackfill := exec.Command(cliBinaryPath, "backfill", "--source", "opencode")
 		cmdBackfill.Dir = tempDir
 		var stderrBackfill bytes.Buffer
 		cmdBackfill.Stderr = &stderrBackfill

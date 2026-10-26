@@ -76,7 +76,8 @@
           "errors": 0
         }
       ],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "inv-gen1-02",
@@ -105,7 +106,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses-gen1-root",
@@ -121,7 +123,8 @@
           "duration_ms": 1200,
           "context_tokens": 225000
         }
-      ]
+      ],
+      "source": "opencode"
     }
   ]
 }

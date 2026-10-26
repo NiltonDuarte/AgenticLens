@@ -439,3 +439,177 @@ func TestBackfillEngine_RecomputeGitRequiresTicketID(t *testing.T) {
 		t.Fatalf("unexpected error message: %v", err)
 	}
 }
+
+func TestBackfillEngine_SourceValidation(t *testing.T) {
+	tempDir := t.TempDir()
+	engine := NewEngine()
+	_, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		Source:        "invalid-harness",
+	})
+	if err == nil || !strings.Contains(err.Error(), "invalid source") {
+		t.Fatalf("expected invalid source error, got %v", err)
+	}
+}
+
+func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
+	tempDir := t.TempDir()
+	tid := "AL-HYBRID"
+	dbPath := filepath.Join(tempDir, "test_opencode.db")
+	setupMockOpenCodeDB(t, dbPath, "opencode-root-1", tid)
+
+	origLedger := domain.AgenticFactLedger{
+		TicketID: &tid,
+		Sessions: []domain.SessionFact{
+			{
+				ID:     "codex-root-1",
+				Source: domain.SourceCodex,
+				Invocations: []domain.InvocationFact{
+					{ID: "codex-root-1", Role: "orchestrator", Model: "gpt-4o"},
+				},
+				Tools: []domain.SessionToolFact{
+					{Name: "exec", Calls: 3},
+				},
+			},
+			{
+				ID:     "opencode-root-1",
+				Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{
+					{ID: "opencode-root-1", Role: "orchestrator", Model: "mock-model"},
+				},
+				Tools: []domain.SessionToolFact{},
+			},
+		},
+	}
+	createTestWorkspace(t, tempDir, tid, origLedger)
+
+	engine := NewEngine()
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      tid,
+		Source:        "opencode",
+		RecomputeDB:   true,
+		DBPath:        dbPath,
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if report.Scanned != 1 || report.Updated != 1 {
+		t.Fatalf("expected 1 scanned, 1 updated, got %+v", report)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, tid, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("failed reading result: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed unmarshaling result: %v", err)
+	}
+
+	if len(parsed.Sessions) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(parsed.Sessions))
+	}
+
+	var codexSess, opencodeSess *adapters.SessionFactDTO
+	for i := range parsed.Sessions {
+		if parsed.Sessions[i].ID == "codex-root-1" {
+			codexSess = &parsed.Sessions[i]
+		} else if parsed.Sessions[i].ID == "opencode-root-1" {
+			opencodeSess = &parsed.Sessions[i]
+		}
+	}
+
+	if codexSess == nil {
+		t.Fatalf("codex session was dropped!")
+	}
+	if codexSess.Source != domain.SourceCodex {
+		t.Errorf("expected codex session source %q, got %q", domain.SourceCodex, codexSess.Source)
+	}
+	if len(codexSess.Tools) != 1 || codexSess.Tools[0].Name != "exec" || codexSess.Tools[0].Calls != 3 {
+		t.Errorf("codex session was corrupted: %+v", codexSess)
+	}
+
+	if opencodeSess == nil {
+		t.Fatalf("opencode session missing!")
+	}
+	if opencodeSess.Source != domain.SourceOpenCode {
+		t.Errorf("expected opencode session source %q, got %q", domain.SourceOpenCode, opencodeSess.Source)
+	}
+	if len(opencodeSess.Tools) != 1 || opencodeSess.Tools[0].Name != "bash" {
+		t.Errorf("expected opencode session to be updated with bash tool, got: %+v", opencodeSess.Tools)
+	}
+}
+
+func TestBackfillEngine_SourceCodexSkipsOpenCodeSessions(t *testing.T) {
+	tempDir := t.TempDir()
+	tid := "AL-HYBRID-2"
+
+	origLedger := domain.AgenticFactLedger{
+		TicketID: &tid,
+		Sessions: []domain.SessionFact{
+			{
+				ID:     "codex-root-2",
+				Source: domain.SourceCodex,
+				Invocations: []domain.InvocationFact{
+					{ID: "codex-root-2", Role: "orchestrator", Model: "gpt-4o"},
+				},
+				Tools: []domain.SessionToolFact{
+					{Name: "exec", Calls: 5},
+				},
+			},
+			{
+				ID:     "opencode-root-2",
+				Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{
+					{ID: "opencode-root-2", Role: "orchestrator", Model: "claude-3-5-sonnet"},
+				},
+				Tools: []domain.SessionToolFact{
+					{Name: "bash", Calls: 10},
+				},
+			},
+		},
+	}
+	createTestWorkspace(t, tempDir, tid, origLedger)
+
+	engine := NewEngine()
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      tid,
+		Source:        "codex",
+		RecomputeDB:   true,
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if report.Scanned != 1 {
+		t.Fatalf("expected 1 scanned, got %+v", report)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, tid, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("failed reading result: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed unmarshaling result: %v", err)
+	}
+
+	var opencodeSess *adapters.SessionFactDTO
+	for i := range parsed.Sessions {
+		if parsed.Sessions[i].ID == "opencode-root-2" {
+			opencodeSess = &parsed.Sessions[i]
+		}
+	}
+	if opencodeSess == nil {
+		t.Fatalf("opencode session was dropped during codex backfill!")
+	}
+	if opencodeSess.Source != domain.SourceOpenCode {
+		t.Errorf("expected opencode session source %q, got %q", domain.SourceOpenCode, opencodeSess.Source)
+	}
+	if len(opencodeSess.Tools) != 1 || opencodeSess.Tools[0].Calls != 10 {
+		t.Errorf("opencode session was modified during codex backfill: %+v", opencodeSess)
+	}
+}

@@ -866,7 +866,7 @@ func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticke
 		value := transcript.CompletedAt
 		completedAt = &value
 	}
-	sessions, err := domain.SessionsFromFacts(transcript.Invocations, transcript.Tools, transcript.Events)
+	sessions, err := domain.SessionsFromFactsWithSource(domain.SourceCodex, transcript.Invocations, transcript.Tools, transcript.Events)
 	if err != nil {
 		return domain.AgenticMetricsLedger{}, fmt.Errorf("grouping Codex facts by session: %w", err)
 	}

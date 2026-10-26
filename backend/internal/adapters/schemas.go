@@ -148,6 +148,7 @@ type SessionEventFactDTO struct {
 type SessionFactDTO struct {
 	ID          string                `json:"id"`
 	ParentID    *string               `json:"parent_id,omitempty"`
+	Source      string                `json:"source,omitempty"`
 	Invocations []InvocationFactDTO   `json:"invocations"`
 	Tools       []SessionToolFactDTO  `json:"tools"`
 	Events      []SessionEventFactDTO `json:"events,omitempty"`
@@ -355,7 +356,8 @@ func fromDomainAgentRole(r *domain.AgentRole) *string {
 func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	sessions := make([]domain.SessionFact, len(dto.Sessions))
 	for i, session := range dto.Sessions {
-		sessions[i] = domain.SessionFact{ID: session.ID, ParentID: session.ParentID}
+		sessionSource := strings.TrimSpace(session.Source)
+		sessions[i] = domain.SessionFact{ID: session.ID, ParentID: session.ParentID, Source: sessionSource}
 		if session.Anomalies != nil {
 			sessions[i].Anomalies = []domain.Anomaly{}
 		}
@@ -425,6 +427,9 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		seen[session.ID] = true
 	}
 	for i, session := range dto.Sessions {
+		if currentSchema && strings.TrimSpace(session.Source) == "" {
+			return fmt.Errorf("sessions[%d].source is required", i)
+		}
 		if currentSchema && (session.Invocations == nil || session.Tools == nil) {
 			return fmt.Errorf("sessions[%d] requires invocations and tools collections", i)
 		}
@@ -523,6 +528,11 @@ func validateAnomalyEvidence(anomaly AnomalyDTO, ownerSession string, nested boo
 // ValidatePersistedEvidence enforces stable source identity on rows about to be written.
 // Read validation remains tolerant of pre-iteration v4 ledgers so they can be normalized.
 func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
+	for i, session := range dto.Sessions {
+		if strings.TrimSpace(session.Source) == "" {
+			return fmt.Errorf("sessions[%d].source is required", i)
+		}
+	}
 	return dto.Validate()
 }
 
@@ -540,7 +550,8 @@ func ValidateToolFacts(tools []domain.ToolFact) error {
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
-		sessions[i] = SessionFactDTO{ID: session.ID, ParentID: session.ParentID, Invocations: []InvocationFactDTO{}, Tools: []SessionToolFactDTO{}, Events: []SessionEventFactDTO{}, Anomalies: []AnomalyDTO{}}
+		sessionSource := strings.TrimSpace(session.Source)
+		sessions[i] = SessionFactDTO{ID: session.ID, ParentID: session.ParentID, Source: sessionSource, Invocations: []InvocationFactDTO{}, Tools: []SessionToolFactDTO{}, Events: []SessionEventFactDTO{}, Anomalies: []AnomalyDTO{}}
 		for _, inv := range session.Invocations {
 			sessions[i].Invocations = append(sessions[i].Invocations, InvocationFactDTOFromDomain(inv))
 		}
@@ -555,7 +566,6 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 
 	return AgenticFactLedgerDTO{
 		SchemaVersion: ledger.SchemaVersion,
-		Source:        ledger.Source,
 		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
 		TicketID:      ledger.TicketID,
 		TicketTitle:   ledger.TicketTitle,

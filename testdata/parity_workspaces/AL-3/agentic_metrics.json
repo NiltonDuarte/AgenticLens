@@ -190,7 +190,8 @@
           "duration_ms": 24621,
           "context_tokens": 91988
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4e98754ffeXdUDxqSl6vzZiY",
@@ -230,7 +231,8 @@
           "duration_ms": 9,
           "context_tokens": 49714
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4e31f2fffevWGCMGO5rMxraz",
@@ -259,7 +261,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4e040eaffeRZrI8cYVtrZDvC",
@@ -288,7 +291,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4dc7397ffesknCNqW0hOgAFt",
@@ -317,7 +321,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4d2ca26ffeJDSO47uyJCY6rL",
@@ -357,7 +362,8 @@
           "duration_ms": 5,
           "context_tokens": 33225
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4d0657fffefOIupm8pfS3ElE",
@@ -386,7 +392,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4cfd100ffevW0gblRZ2EWau3",
@@ -415,7 +422,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb4c63fcdffe6HS77ySfmN3tWQ",
@@ -444,7 +452,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     }
   ]
 }

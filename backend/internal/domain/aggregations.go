@@ -670,8 +670,10 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 
 	mappedFactLedger := factLedger
 	persistedSessionAnomalies := make(map[string][]Anomaly, len(factLedger.Sessions))
+	origSourceByID := make(map[string]string, len(factLedger.Sessions))
 	for _, session := range factLedger.Sessions {
 		persistedSessionAnomalies[session.ID] = session.Anomalies
+		origSourceByID[session.ID] = session.Source
 	}
 	var err error
 	mappedFactLedger.Sessions, err = SessionsFromFacts(mappedInvocations, factLedger.ToolFacts(), mappedEvents)
@@ -681,6 +683,11 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		mappedSessionIDs := make(map[string]bool, len(mappedFactLedger.Sessions))
 		for i := range mappedFactLedger.Sessions {
 			mappedSessionIDs[mappedFactLedger.Sessions[i].ID] = true
+			if src, exists := origSourceByID[mappedFactLedger.Sessions[i].ID]; exists && src != "" {
+				mappedFactLedger.Sessions[i].Source = src
+			} else if factLedger.Source != "" {
+				mappedFactLedger.Sessions[i].Source = factLedger.Source
+			}
 			if summaries, exists := persistedSessionAnomalies[mappedFactLedger.Sessions[i].ID]; exists {
 				mappedFactLedger.Sessions[i].Anomalies = summaries
 			}
@@ -688,7 +695,7 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		for _, original := range factLedger.Sessions {
 			if !mappedSessionIDs[original.ID] {
 				mappedFactLedger.Sessions = append(mappedFactLedger.Sessions, SessionFact{
-					ID: original.ID, ParentID: original.ParentID, Anomalies: original.Anomalies,
+					ID: original.ID, ParentID: original.ParentID, Source: original.Source, Anomalies: original.Anomalies,
 					Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{},
 				})
 			}

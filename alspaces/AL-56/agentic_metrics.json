@@ -1,6 +1,5 @@
 {
   "schema_version": 4,
-  "source": "opencode",
   "ticket_id": "AL-56",
   "ticket_title": "Codex session discovery and metrics generation",
   "ticket_type": "feat",
@@ -211,7 +210,8 @@
             "threshold": "40000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a174a2-debd-7bb2-933f-18c8f3d76c70",
@@ -240,7 +240,8 @@
         }
       ],
       "tools": [],
-      "anomalies": []
+      "anomalies": [],
+      "source": "codex"
     },
     {
       "id": "01a174a4-dd8f-75a1-ba8b-9d78cd357bdc",
@@ -280,7 +281,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "codex"
     },
     {
       "id": "01a174a5-1271-7791-8474-55e6bf0e84fd",
@@ -336,7 +338,8 @@
             "threshold": "80000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a174ad-f5c2-79b1-a5d6-df60b61f6b93",
@@ -384,7 +387,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a174b1-3b71-73c0-a0b7-6428b55ad981",
@@ -462,7 +466,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17876-b15e-7e01-8575-bd8183cd362e",
@@ -502,7 +507,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "codex"
     },
     {
       "id": "01a17879-2b06-7a51-9d1a-0962c002d9a3",
@@ -548,7 +554,8 @@
             "threshold": "80000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17887-026c-7ac0-91f7-cd128bc8ecd6",
@@ -616,7 +623,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a1788f-bbe2-7a21-b94e-a0caeeed057e",
@@ -684,7 +692,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17896-6f63-7a41-b321-1db548a94221",
@@ -762,7 +771,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a178f6-65f8-7033-b54e-ab9c3b777a3b",
@@ -797,7 +807,8 @@
           "errors": 1
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "codex"
     },
     {
       "id": "01a17903-9e65-78b2-8413-2fb3d35a68b1",
@@ -880,7 +891,8 @@
             "threshold": "3"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17924-7d48-7de3-98b7-6a29aad49868",
@@ -958,7 +970,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a1792e-17ec-7cb1-b062-30f0676256a6",
@@ -1036,7 +1049,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17934-63f3-7ca3-a360-f92b70b28882",
@@ -1081,7 +1095,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "codex"
     },
     {
       "id": "01a1793c-d001-7e21-a321-6c70d60d2857",
@@ -1126,7 +1141,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "codex"
     },
     {
       "id": "01a1793d-ec6c-7592-92db-61baab10a62b",
@@ -1204,7 +1220,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a1793f-458c-7233-9583-ac7f631a5f8b",
@@ -1255,7 +1272,8 @@
             "threshold": "80000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17943-1953-71e0-9136-27f88405d173",
@@ -1343,7 +1361,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17955-edfd-71c3-95d0-7a9055ea8d3e",
@@ -1416,7 +1435,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17976-d881-77e1-bc91-009160a00a20",
@@ -1504,7 +1524,8 @@
             "threshold": "3"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a17982-8f5a-7913-ba87-e230fe9dccb8",
@@ -1592,7 +1613,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a1798b-2122-74a2-995f-359b2ed68fd8",
@@ -1670,7 +1692,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a179cf-823d-72a2-af9a-47c51661e36d",
@@ -1748,7 +1771,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "01a179f3-f6dc-71b0-b520-0ec53f1a79d0",
@@ -1802,7 +1826,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "codex"
     },
     {
       "id": "ses_e879f1cebffe3jzoSFoOYdCo79",
@@ -1862,7 +1887,8 @@
           "errors": 1
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e87a8c7a8ffeZRsTek2OLp59MJ",
@@ -1922,7 +1948,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e87b3c3d0ffesHQ6T9hIvjIV2e",
@@ -2011,7 +2038,8 @@
             "threshold": "40000"
           }
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_e87c74831ffeYcyGKvZUtfH2xg",
@@ -2071,7 +2099,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e881281c9ffemXFC0soWxLInNl",
@@ -2126,7 +2155,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e8813db2dffeL9htvjScN5Gagx",
@@ -2176,7 +2206,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e8818726dffe52h3INfcK0B59t",
@@ -2231,7 +2262,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e883d2ce0ffeAh4uP8ZZ7ro7Iv",
@@ -2301,7 +2333,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e886928e5ffedgGde6oQuXTuWr",
@@ -2346,7 +2379,8 @@
           "errors": 1
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e886a5ec9ffe0e2W0BUYiElAEI",
@@ -2396,7 +2430,8 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [],
+      "source": "opencode"
     },
     {
       "id": "ses_e8878898fffeAahBOyEwQAMD4f",
@@ -2470,7 +2505,8 @@
             "threshold": "160000"
           }
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_e88858e3affeaQz4frllatuA9L",
@@ -2551,7 +2587,8 @@
             "threshold": "3"
           }
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_e8888e4e3ffe9fNCDyBMse5Irk",
@@ -2669,7 +2706,8 @@
             "threshold": "40000"
           }
         }
-      ]
+      ],
+      "source": "opencode"
     }
   ],
   "anomalies": []

@@ -81,7 +81,8 @@
           "errors": 0
         }
       ],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "inv-al1-02",
@@ -110,7 +111,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "inv-al1-03",
@@ -139,7 +141,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "inv-al1-04",
@@ -168,7 +171,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "inv-al1-05",
@@ -197,7 +201,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     }
   ]
 }

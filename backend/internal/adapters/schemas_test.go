@@ -1096,3 +1096,43 @@ func TestLiveSchema_LiveSessionTreeBoundary(t *testing.T) {
 		}
 	})
 }
+
+func TestSessionFactDTO_SourceRoundtripAndRequired(t *testing.T) {
+	t.Run("session source roundtrips accurately", func(t *testing.T) {
+		dto := adapters.AgenticFactLedgerDTO{
+			Sessions: []adapters.SessionFactDTO{
+				{ID: "01a17362-baa4-72b3-934d-3cb040c899ea", Source: "codex"},
+				{ID: "ses_abc123", Source: "opencode"},
+			},
+		}
+		dom := dto.ToDomain()
+		if len(dom.Sessions) != 2 {
+			t.Fatalf("expected 2 sessions, got %d", len(dom.Sessions))
+		}
+		if dom.Sessions[0].Source != "codex" {
+			t.Errorf("expected codex, got %s", dom.Sessions[0].Source)
+		}
+		if dom.Sessions[1].Source != "opencode" {
+			t.Errorf("expected opencode, got %s", dom.Sessions[1].Source)
+		}
+
+		back := adapters.AgenticFactLedgerDTOFromDomain(dom)
+		if back.Sessions[0].Source != "codex" {
+			t.Errorf("expected codex in DTO, got %s", back.Sessions[0].Source)
+		}
+		if back.Sessions[1].Source != "opencode" {
+			t.Errorf("expected opencode in DTO, got %s", back.Sessions[1].Source)
+		}
+	})
+
+	t.Run("validation requires session source", func(t *testing.T) {
+		dto := adapters.AgenticFactLedgerDTO{
+			Sessions: []adapters.SessionFactDTO{
+				{ID: "ses_missing_source", Source: ""},
+			},
+		}
+		if err := dto.ValidatePersistedEvidence(); err == nil {
+			t.Error("expected error for missing session source, got nil")
+		}
+	})
+}

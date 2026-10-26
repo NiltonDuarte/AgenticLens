@@ -329,7 +329,8 @@
           "duration_ms": 27059,
           "context_tokens": 61109
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb49d852bffeBa75BAsTH5ksrT",
@@ -369,7 +370,8 @@
           "duration_ms": 9,
           "context_tokens": 12663
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb49456d5ffeFKwBAj16rRsArN",
@@ -472,7 +474,8 @@
           "duration_ms": 8641,
           "context_tokens": 48715
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb47ed4ecffetJeODsIZNIlBom",
@@ -538,7 +541,8 @@
           "duration_ms": 17561,
           "context_tokens": 43668
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb471a515ffehuEg34y4uywdlx",
@@ -578,7 +582,8 @@
           "duration_ms": 3,
           "context_tokens": 27633
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb455039cffeNnxEHUyZROHJZl",
@@ -607,7 +612,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb43a916cffeWnJaWiut50gkVA",
@@ -636,7 +642,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb432478bffefjdlPrz89OrjaT",
@@ -676,7 +683,8 @@
           "duration_ms": 3,
           "context_tokens": 88212
         }
-      ]
+      ],
+      "source": "opencode"
     },
     {
       "id": "ses_eb42bfe29ffeynY3e9ThpoE30l",
@@ -705,7 +713,8 @@
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "source": "opencode"
     },
     {
       "id": "ses_eb40e54baffeMUaCjDNDjt2uUB",
@@ -745,7 +754,8 @@
           "duration_ms": 8,
           "context_tokens": 17752
         }
-      ]
+      ],
+      "source": "opencode"
     }
   ]
 }

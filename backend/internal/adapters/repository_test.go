@@ -1132,7 +1132,7 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 	if err := os.MkdirAll(ws, 0700); err != nil {
 		t.Fatal(err)
 	}
-	content := `{"schema_version":4,"ticket_id":"AL-COMPACT","sessions":[{"id":"s1","invocations":[{"id":"s1","parent_id":null,"role":"coder","model":"m","user":"u","active_duration_seconds":1,"turns":1,"tokens":{"input":10,"output":2,"cache_read":0,"reasoning":0,"peak_context":10},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[{"name":"bash","calls":8,"errors":6}],"events":[{"event_id":"e1","timestamp":"2026-10-26T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"}],"anomalies":[]}]}`
+	content := `{"schema_version":4,"ticket_id":"AL-COMPACT","sessions":[{"id":"s1","source":"opencode","invocations":[{"id":"s1","parent_id":null,"role":"coder","model":"m","user":"u","active_duration_seconds":1,"turns":1,"tokens":{"input":10,"output":2,"cache_read":0,"reasoning":0,"peak_context":10},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[{"name":"bash","calls":8,"errors":6}],"events":[{"event_id":"e1","timestamp":"2026-10-26T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"}],"anomalies":[]}]}`
 	if err := os.WriteFile(filepath.Join(ws, "agentic_metrics.json"), []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -1179,6 +1179,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
   "sessions": [
     {
       "id": "ses-1",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses-1",
