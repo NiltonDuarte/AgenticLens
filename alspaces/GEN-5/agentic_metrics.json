@@ -1,16 +1,5 @@
 {
-  "schema_version": 4,
-  "migration": {
-    "schema_version": 4,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v4_user_iterations"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "2026-10-23T09:10:54.919757+00:00",
-    "last_migrated_by": "universal-migration-engine",
-    "notes": "Removed 7 unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them."
-  },
+  "schema_version": 3,
   "ticket_id": "GEN-5",
   "ticket_title": "Restructure README as Platform Showcase and Split Internals into ARCHITECTURE and CONTRIBUTING",
   "ticket_type": "chore",
@@ -27,46 +16,77 @@
     "files_changed": 0,
     "sdlc_iterations": 1
   },
-  "sessions": [
+  "invocations": [
     {
       "id": "ses_e983a2c7fffeGXyEFVz6iypza2",
-      "invocations": [
-        {
-          "id": "ses_e983a2c7fffeGXyEFVz6iypza2",
-          "parent_id": null,
-          "role": "general",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-23T07:59:40.967000+00:00",
-          "completed_at": "2026-10-23T09:10:50.979000+00:00",
-          "active_duration_seconds": 4270,
-          "turns": 41,
-          "tokens": {
-            "input": 261538,
-            "output": 10241,
-            "cache_read": 1410216,
-            "reasoning": 8751,
-            "peak_context": 61667
-          },
-          "cost_usd": 0.37314,
-          "compactions": 0,
-          "user_iterations": 1
-        }
-      ],
-      "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-23T09:10:50.757000+00:00",
-          "message_id": "msg_16806ecda001PJA9G89qx7j3vR",
-          "turn": 39,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 66,
-          "context_tokens": 61667
-        }
-      ]
+      "parent_id": null,
+      "role": "general",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-23T07:59:40.967000+00:00",
+      "completed_at": "2026-10-23T09:10:50.979000+00:00",
+      "active_duration_seconds": 4270,
+      "turns": 41,
+      "tokens": {
+        "input": 261538,
+        "output": 10241,
+        "cache_read": 1410216,
+        "reasoning": 8751,
+        "peak_context": 61667
+      },
+      "cost_usd": 0.37314,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    {
+      "name": "bash",
+      "calls": 14,
+      "errors": 1
+    },
+    {
+      "name": "read",
+      "calls": 8,
+      "errors": 0
+    },
+    {
+      "name": "glob",
+      "calls": 7,
+      "errors": 0
+    },
+    {
+      "name": "todowrite",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "write",
+      "calls": 5,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "question",
+      "calls": 1,
+      "errors": 0
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-23T09:10:50.757000+00:00",
+      "session_id": "ses_e983a2c7fffeGXyEFVz6iypza2",
+      "message_id": "msg_16806ecda001PJA9G89qx7j3vR",
+      "turn": 39,
+      "role": "general",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "error",
+      "duration_ms": 66,
+      "context_tokens": 61667
     }
   ]
 }

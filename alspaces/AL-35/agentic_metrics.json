@@ -1,16 +1,5 @@
 {
-  "schema_version": 4,
-  "migration": {
-    "schema_version": 4,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v4_user_iterations"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "2026-10-20T15:40:09.341492+00:00",
-    "last_migrated_by": "universal-migration-engine",
-    "notes": "Removed 11 unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them."
-  },
+  "schema_version": 3,
   "ticket_id": "AL-35",
   "ticket_title": "Pre-Release Source Code Audit, Configuration Leakage Inspection, and Review Artifact Generation",
   "ticket_type": "docs",
@@ -27,91 +16,147 @@
     "files_changed": 0,
     "sdlc_iterations": 1
   },
-  "sessions": [
+  "invocations": [
     {
       "id": "ses_ea6536244ffeCtXgNONiAZ5i7h",
-      "invocations": [
-        {
-          "id": "ses_ea6536244ffeCtXgNONiAZ5i7h",
-          "parent_id": null,
-          "role": "general",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-20T14:17:27.647000+00:00",
-          "completed_at": "2026-10-20T15:40:05.077000+00:00",
-          "active_duration_seconds": 2314,
-          "turns": 201,
-          "tokens": {
-            "input": 1646051,
-            "output": 35144,
-            "cache_read": 14380284,
-            "reasoning": 21909,
-            "peak_context": 168083
-          },
-          "cost_usd": 2.527008,
-          "compactions": 1,
-          "user_iterations": 1
-        }
-      ],
-      "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-20T14:20:47.692000+00:00",
-          "turn": 53,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "grep",
-          "status": "error",
-          "duration_ms": 12,
-          "context_tokens": 72481
-        },
-        {
-          "timestamp": "2026-10-20T15:07:28.776000+00:00",
-          "turn": 136,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "edit",
-          "status": "error",
-          "duration_ms": 18,
-          "context_tokens": 157121
-        },
-        {
-          "timestamp": "2026-10-20T15:07:43.979000+00:00",
-          "turn": 140,
-          "role": "general",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 13492,
-          "context_tokens": 160518
-        },
-        {
-          "timestamp": "2026-10-20T15:07:57.247000+00:00",
-          "turn": 140,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "write",
-          "status": "completed",
-          "duration_ms": 18,
-          "context_tokens": 160518
-        },
-        {
-          "timestamp": "2026-10-20T15:10:19.992000+00:00",
-          "turn": 1,
-          "role": "general",
-          "event_type": "compaction",
-          "status": "completed",
-          "context_tokens": 0
-        },
-        {
-          "timestamp": "2026-10-20T15:10:20.011000+00:00",
-          "turn": 150,
-          "role": "general",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 10977,
-          "context_tokens": 78086
-        }
-      ]
+      "parent_id": null,
+      "role": "general",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-20T14:17:27.647000+00:00",
+      "completed_at": "2026-10-20T15:40:05.077000+00:00",
+      "active_duration_seconds": 2314,
+      "turns": 201,
+      "tokens": {
+        "input": 1646051,
+        "output": 35144,
+        "cache_read": 14380284,
+        "reasoning": 21909,
+        "peak_context": 168083
+      },
+      "cost_usd": 2.527008,
+      "compactions": 1
+    }
+  ],
+  "tools": [
+    {
+      "name": "bash",
+      "calls": 67,
+      "errors": 0
+    },
+    {
+      "name": "read",
+      "calls": 60,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 29,
+      "errors": 1
+    },
+    {
+      "name": "edit",
+      "calls": 15,
+      "errors": 1
+    },
+    {
+      "name": "write",
+      "calls": 7,
+      "errors": 0
+    },
+    {
+      "name": "todowrite",
+      "calls": 4,
+      "errors": 0
+    },
+    {
+      "name": "glob",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "t3-code_list_thread_pull_requests",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "question",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "skill",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "t3-code_link_pull_request",
+      "calls": 1,
+      "errors": 0
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-20T14:20:47.692000+00:00",
+      "session_id": "ses_ea6536244ffeCtXgNONiAZ5i7h",
+      "turn": 53,
+      "role": "general",
+      "event_type": "tool_call",
+      "tool_name": "grep",
+      "status": "error",
+      "duration_ms": 12,
+      "context_tokens": 72481
+    },
+    {
+      "timestamp": "2026-10-20T15:07:28.776000+00:00",
+      "session_id": "ses_ea6536244ffeCtXgNONiAZ5i7h",
+      "turn": 136,
+      "role": "general",
+      "event_type": "tool_call",
+      "tool_name": "edit",
+      "status": "error",
+      "duration_ms": 18,
+      "context_tokens": 157121
+    },
+    {
+      "timestamp": "2026-10-20T15:07:43.979000+00:00",
+      "session_id": "ses_ea6536244ffeCtXgNONiAZ5i7h",
+      "turn": 140,
+      "role": "general",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 13492,
+      "context_tokens": 160518
+    },
+    {
+      "timestamp": "2026-10-20T15:07:57.247000+00:00",
+      "session_id": "ses_ea6536244ffeCtXgNONiAZ5i7h",
+      "turn": 140,
+      "role": "general",
+      "event_type": "tool_call",
+      "tool_name": "write",
+      "status": "completed",
+      "duration_ms": 18,
+      "context_tokens": 160518
+    },
+    {
+      "timestamp": "2026-10-20T15:10:19.992000+00:00",
+      "session_id": "ses_ea6536244ffeCtXgNONiAZ5i7h",
+      "turn": 1,
+      "role": "general",
+      "event_type": "compaction",
+      "status": "completed",
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-20T15:10:20.011000+00:00",
+      "session_id": "ses_ea6536244ffeCtXgNONiAZ5i7h",
+      "turn": 150,
+      "role": "general",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 10977,
+      "context_tokens": 78086
     }
   ]
 }

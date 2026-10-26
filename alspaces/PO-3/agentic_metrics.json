@@ -1,16 +1,15 @@
 {
-  "schema_version": 4,
+  "schema_version": 3,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 3,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized",
-      "schema_v4_user_iterations"
+      "schema_v3_sanitized"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
     "last_migrated_by": "universal-migration-engine",
-    "notes": "Sanitized event telemetry migration from v2 to v3; Removed 7 unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them."
+    "notes": "Sanitized event telemetry migration from v2 to v3"
   },
   "ticket_id": "PO-3",
   "ticket_title": "Session Native Go Extraction, Backfill Command, and Multi-Language Git Metrics",
@@ -28,34 +27,64 @@
     "files_changed": 0,
     "sdlc_iterations": 1
   },
-  "sessions": [
+  "invocations": [
     {
       "id": "ses_eb4d41fccffeZp0lDqQw43gbsu",
-      "invocations": [
-        {
-          "id": "ses_eb4d41fccffeZp0lDqQw43gbsu",
-          "parent_id": null,
-          "role": "general",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-17T18:42:14.916000+00:00",
-          "completed_at": "2026-10-17T19:05:58.757000+00:00",
-          "active_duration_seconds": 592,
-          "turns": 76,
-          "tokens": {
-            "input": 490913,
-            "output": 14833,
-            "cache_read": 3248322,
-            "reasoning": 21515,
-            "peak_context": 86075
-          },
-          "cost_usd": 0.748114,
-          "compactions": 0,
-          "user_iterations": 1
-        }
-      ],
-      "tools": [],
-      "events": []
+      "parent_id": null,
+      "role": "general",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-17T18:42:14.916000+00:00",
+      "completed_at": "2026-10-17T19:05:58.757000+00:00",
+      "active_duration_seconds": 592,
+      "turns": 76,
+      "tokens": {
+        "input": 490913,
+        "output": 14833,
+        "cache_read": 3248322,
+        "reasoning": 21515,
+        "peak_context": 86075
+      },
+      "cost_usd": 0.748114,
+      "compactions": 0
     }
-  ]
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "calls": 26,
+      "errors": 0
+    },
+    {
+      "name": "bash",
+      "calls": 23,
+      "errors": 0
+    },
+    {
+      "name": "glob",
+      "calls": 7,
+      "errors": 0
+    },
+    {
+      "name": "edit",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "write",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "skill",
+      "calls": 1,
+      "errors": 0
+    }
+  ],
+  "events": []
 }

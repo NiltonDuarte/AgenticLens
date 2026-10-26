@@ -1,16 +1,15 @@
 {
-  "schema_version": 4,
+  "schema_version": 3,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 3,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized",
-      "schema_v4_user_iterations"
+      "schema_v3_sanitized"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
     "last_migrated_by": "universal-migration-engine",
-    "notes": "Sanitized event telemetry migration from v2 to v3; Removed 13 unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them."
+    "notes": "Sanitized event telemetry migration from v2 to v3"
   },
   "ticket_id": "AL-10",
   "ticket_title": null,
@@ -28,233 +27,274 @@
     "files_changed": 0,
     "sdlc_iterations": 1
   },
-  "sessions": [
+  "invocations": [
     {
       "id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
-      "invocations": [
-        {
-          "id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
-          "parent_id": null,
-          "role": "general",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-17T19:39:51.480000+00:00",
-          "completed_at": "2026-10-17T20:07:53.377000+00:00",
-          "active_duration_seconds": 1540,
-          "turns": 86,
-          "tokens": {
-            "input": 596513,
-            "output": 19700,
-            "cache_read": 3704428,
-            "reasoning": 12431,
-            "peak_context": 77899
-          },
-          "cost_usd": 0.845708,
-          "compactions": 0,
-          "user_iterations": 1
-        }
-      ],
-      "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T19:43:05.498000+00:00",
-          "turn": 14,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 3,
-          "context_tokens": 26795
-        },
-        {
-          "timestamp": "2026-10-17T19:59:47.922000+00:00",
-          "turn": 46,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "task",
-          "status": "error",
-          "duration_ms": 193359,
-          "context_tokens": 0
-        },
-        {
-          "timestamp": "2026-10-17T20:05:23.021000+00:00",
-          "turn": 47,
-          "role": "general",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 9643,
-          "context_tokens": 62366
-        },
-        {
-          "timestamp": "2026-10-17T20:05:32.600000+00:00",
-          "turn": 47,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "completed",
-          "duration_ms": 39,
-          "context_tokens": 62366
-        }
-      ]
+      "parent_id": null,
+      "role": "general",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-17T19:39:51.480000+00:00",
+      "completed_at": "2026-10-17T20:07:53.377000+00:00",
+      "active_duration_seconds": 1540,
+      "turns": 86,
+      "tokens": {
+        "input": 596513,
+        "output": 19700,
+        "cache_read": 3704428,
+        "reasoning": 12431,
+        "peak_context": 77899
+      },
+      "cost_usd": 0.845708,
+      "compactions": 0
     },
     {
       "id": "ses_eb49e8e35ffe4tOlB0urEsJTAm",
       "parent_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
-      "invocations": [
-        {
-          "id": "ses_eb49e8e35ffe4tOlB0urEsJTAm",
-          "parent_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
-          "role": "planner",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-17T19:40:39.769000+00:00",
-          "completed_at": "2026-10-17T19:43:02.735000+00:00",
-          "active_duration_seconds": 143,
-          "turns": 29,
-          "tokens": {
-            "input": 178347,
-            "output": 5108,
-            "cache_read": 1127013,
-            "reasoning": 9091,
-            "peak_context": 59007
-          },
-          "cost_usd": 0.271532,
-          "compactions": 0,
-          "user_iterations": 0
-        }
-      ],
-      "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T19:40:45.860000+00:00",
-          "turn": 2,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 13,
-          "context_tokens": 12516
-        },
-        {
-          "timestamp": "2026-10-17T19:42:15.231000+00:00",
-          "turn": 25,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "mcp-gateway_mcp-exec",
-          "status": "error",
-          "duration_ms": 8,
-          "context_tokens": 58236
-        },
-        {
-          "timestamp": "2026-10-17T19:42:20.860000+00:00",
-          "turn": 26,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "mcp-gateway_mcp-exec",
-          "status": "error",
-          "duration_ms": 16,
-          "context_tokens": 58421
-        },
-        {
-          "timestamp": "2026-10-17T19:42:20.947000+00:00",
-          "turn": 27,
-          "role": "planner",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 3025,
-          "context_tokens": 58951
-        },
-        {
-          "timestamp": "2026-10-17T19:42:23.835000+00:00",
-          "turn": 27,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "mcp-gateway_mcp-exec",
-          "status": "error",
-          "duration_ms": 8,
-          "context_tokens": 58951
-        }
-      ]
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-17T19:40:39.769000+00:00",
+      "completed_at": "2026-10-17T19:43:02.735000+00:00",
+      "active_duration_seconds": 143,
+      "turns": 29,
+      "tokens": {
+        "input": 178347,
+        "output": 5108,
+        "cache_read": 1127013,
+        "reasoning": 9091,
+        "peak_context": 59007
+      },
+      "cost_usd": 0.271532,
+      "compactions": 0
     },
     {
       "id": "ses_eb491be70ffefMjZwuDQeakO6X",
       "parent_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
-      "invocations": [
-        {
-          "id": "ses_eb491be70ffefMjZwuDQeakO6X",
-          "parent_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
-          "role": "planner",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-17T19:54:39.385000+00:00",
-          "completed_at": "2026-10-17T19:56:42.149000+00:00",
-          "active_duration_seconds": 123,
-          "turns": 17,
-          "tokens": {
-            "input": 114183,
-            "output": 6653,
-            "cache_read": 932360,
-            "reasoning": 8354,
-            "peak_context": 87045
-          },
-          "cost_usd": 0.21184,
-          "compactions": 0,
-          "user_iterations": 0
-        }
-      ],
-      "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T19:54:48.941000+00:00",
-          "turn": 2,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 7,
-          "context_tokens": 13491
-        }
-      ]
+      "role": "planner",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-17T19:54:39.385000+00:00",
+      "completed_at": "2026-10-17T19:56:42.149000+00:00",
+      "active_duration_seconds": 123,
+      "turns": 17,
+      "tokens": {
+        "input": 114183,
+        "output": 6653,
+        "cache_read": 932360,
+        "reasoning": 8354,
+        "peak_context": 87045
+      },
+      "cost_usd": 0.21184,
+      "compactions": 0
     },
     {
       "id": "ses_eb48d0929ffeWkxCRSfpKj1Yql",
       "parent_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
-      "invocations": [
-        {
-          "id": "ses_eb48d0929ffeWkxCRSfpKj1Yql",
-          "parent_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
-          "role": "coder",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-17T19:59:47.936000+00:00",
-          "completed_at": "2026-10-17T20:03:01.288000+00:00",
-          "active_duration_seconds": 193,
-          "turns": 31,
-          "tokens": {
-            "input": 174613,
-            "output": 1843,
-            "cache_read": 1650455,
-            "reasoning": 17840,
-            "peak_context": 84570
-          },
-          "cost_usd": 0.328555,
-          "compactions": 0,
-          "user_iterations": 0
-        }
-      ],
-      "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T20:00:22.588000+00:00",
-          "turn": 10,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 6,
-          "context_tokens": 62499
-        }
-      ]
+      "role": "coder",
+      "model": "gemini-3.8-flash",
+      "user": "Nilton Duarte",
+      "started_at": "2026-10-17T19:59:47.936000+00:00",
+      "completed_at": "2026-10-17T20:03:01.288000+00:00",
+      "active_duration_seconds": 193,
+      "turns": 31,
+      "tokens": {
+        "input": 174613,
+        "output": 1843,
+        "cache_read": 1650455,
+        "reasoning": 17840,
+        "peak_context": 84570
+      },
+      "cost_usd": 0.328555,
+      "compactions": 0
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "calls": 64,
+      "errors": 4
+    },
+    {
+      "name": "bash",
+      "calls": 57,
+      "errors": 0
+    },
+    {
+      "name": "glob",
+      "calls": 16,
+      "errors": 0
+    },
+    {
+      "name": "edit",
+      "calls": 8,
+      "errors": 0
+    },
+    {
+      "name": "grep",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "todowrite",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "write",
+      "calls": 6,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_mcp-find",
+      "calls": 4,
+      "errors": 0
+    },
+    {
+      "name": "mcp-gateway_mcp-exec",
+      "calls": 3,
+      "errors": 3
+    },
+    {
+      "name": "task",
+      "calls": 3,
+      "errors": 1
+    },
+    {
+      "name": "question",
+      "calls": 2,
+      "errors": 0
+    },
+    {
+      "name": "list_mcp_resources",
+      "calls": 1,
+      "errors": 0
+    },
+    {
+      "name": "skill",
+      "calls": 1,
+      "errors": 0
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-17T19:40:45.860000+00:00",
+      "session_id": "ses_eb49e8e35ffe4tOlB0urEsJTAm",
+      "turn": 2,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 13,
+      "context_tokens": 12516
+    },
+    {
+      "timestamp": "2026-10-17T19:42:15.231000+00:00",
+      "session_id": "ses_eb49e8e35ffe4tOlB0urEsJTAm",
+      "turn": 25,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "mcp-gateway_mcp-exec",
+      "status": "error",
+      "duration_ms": 8,
+      "context_tokens": 58236
+    },
+    {
+      "timestamp": "2026-10-17T19:42:20.860000+00:00",
+      "session_id": "ses_eb49e8e35ffe4tOlB0urEsJTAm",
+      "turn": 26,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "mcp-gateway_mcp-exec",
+      "status": "error",
+      "duration_ms": 16,
+      "context_tokens": 58421
+    },
+    {
+      "timestamp": "2026-10-17T19:42:20.947000+00:00",
+      "session_id": "ses_eb49e8e35ffe4tOlB0urEsJTAm",
+      "turn": 27,
+      "role": "planner",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 3025,
+      "context_tokens": 58951
+    },
+    {
+      "timestamp": "2026-10-17T19:42:23.835000+00:00",
+      "session_id": "ses_eb49e8e35ffe4tOlB0urEsJTAm",
+      "turn": 27,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "mcp-gateway_mcp-exec",
+      "status": "error",
+      "duration_ms": 8,
+      "context_tokens": 58951
+    },
+    {
+      "timestamp": "2026-10-17T19:43:05.498000+00:00",
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
+      "turn": 14,
+      "role": "general",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 3,
+      "context_tokens": 26795
+    },
+    {
+      "timestamp": "2026-10-17T19:54:48.941000+00:00",
+      "session_id": "ses_eb491be70ffefMjZwuDQeakO6X",
+      "turn": 2,
+      "role": "planner",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 7,
+      "context_tokens": 13491
+    },
+    {
+      "timestamp": "2026-10-17T19:59:47.922000+00:00",
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
+      "turn": 46,
+      "role": "general",
+      "event_type": "tool_call",
+      "tool_name": "task",
+      "status": "error",
+      "duration_ms": 193359,
+      "context_tokens": 0
+    },
+    {
+      "timestamp": "2026-10-17T20:00:22.588000+00:00",
+      "session_id": "ses_eb48d0929ffeWkxCRSfpKj1Yql",
+      "turn": 10,
+      "role": "coder",
+      "event_type": "tool_call",
+      "tool_name": "read",
+      "status": "error",
+      "duration_ms": 6,
+      "context_tokens": 62499
+    },
+    {
+      "timestamp": "2026-10-17T20:05:23.021000+00:00",
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
+      "turn": 47,
+      "role": "general",
+      "event_type": "turn_message",
+      "status": "completed",
+      "duration_ms": 9643,
+      "context_tokens": 62366
+    },
+    {
+      "timestamp": "2026-10-17T20:05:32.600000+00:00",
+      "session_id": "ses_eb49f4c12ffeqKe8SwAW27I9yb",
+      "turn": 47,
+      "role": "general",
+      "event_type": "tool_call",
+      "tool_name": "bash",
+      "status": "completed",
+      "duration_ms": 39,
+      "context_tokens": 62366
     }
   ]
 }
