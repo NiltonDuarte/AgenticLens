@@ -20,8 +20,8 @@
 
 ## Ledger and Backfill Scope
 
-- `git status --short -- 'alspaces/*/agentic_metrics.json'` — empty; no ledger files changed.
-- `git diff --name-only -- 'alspaces/*/agentic_metrics.json'` — empty; no other ticket ledger changed.
-- No workspace-wide backfill or migration command was run.
-- The current AL-56 ledger remains 7,094 lines / 209,603 bytes. Its final sparse conversion and idempotence against the real ledger were not run because no final-generation/backfill authorization was given. The size result above is synthetic and does not claim a real-ledger before/after measurement.
+- Final scoped `generate --source codex` updated only `alspaces/AL-56/agentic_metrics.json` and its metrics table in `SUMMARY.md`. No workspace-wide backfill or migration command was run, and no other ticket ledger changed.
+- The regenerated AL-56 ledger contains 24 sessions and 231 retained events. All 231 events have distinct source IDs; all 231 unique evidence references resolve, with no unreferenced retained events.
+- Against the prior 20 sessions, retained events fell from 619 to 124 (80.0%); event JSON fell from 114,993 to 31,610 bytes (72.5%); serialized session facts fell from 129,048 to 56,865 bytes (55.9%).
+- The complete ledger is 5,166 lines / 176,299 bytes versus the prior 7,094 lines / 209,603 bytes (15.9% smaller) while including four additional sessions. The added sessions and event IDs/evidence references account for part of the full-ledger size; the common-session comparison isolates the retention change.
 
