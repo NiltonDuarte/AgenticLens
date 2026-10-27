@@ -147,7 +147,7 @@ func PersistAnomalySummaries(ledger AgenticFactLedger) (AgenticFactLedger, error
 	if err != nil {
 		return AgenticFactLedger{}, err
 	}
-	origSourceByID := make(map[string]string, len(ledger.Sessions))
+	origSourceByID := make(map[string]SourceHarness, len(ledger.Sessions))
 	for _, orig := range ledger.Sessions {
 		origSourceByID[orig.ID] = orig.Source
 	}
@@ -164,8 +164,6 @@ func PersistAnomalySummaries(ledger AgenticFactLedger) (AgenticFactLedger, error
 	for i := range sessions {
 		if src, ok := origSourceByID[sessions[i].ID]; ok && src != "" {
 			sessions[i].Source = src
-		} else if ledger.Source != "" {
-			sessions[i].Source = ledger.Source
 		}
 		sessions[i].Anomalies = bySession[sessions[i].ID]
 		if sessions[i].Anomalies == nil {

@@ -214,13 +214,22 @@ const (
 	EventTypeCompaction  EventType = "compaction"
 )
 
-// Data source provenance constants for execution trace events.
+// SourceHarness identifies the agentic runtime harness (e.g. OpenCode, Codex).
+type SourceHarness string
+
 const (
-	SourceOpenCode            = "opencode"
-	SourceCodex               = "codex"
-	DataSourceLocalSQLite     = "local_sqlite"
-	DataSourceLocalCodex      = "local_codex"
-	DataSourceCommittedLedger = "committed_ledger"
+	SourceUnknown  SourceHarness = "unknown"
+	SourceOpenCode SourceHarness = "opencode"
+	SourceCodex    SourceHarness = "codex"
+)
+
+// DataSource identifies the origin and hydration level of telemetry facts.
+type DataSource string
+
+const (
+	DataSourceLocalSQLite     DataSource = "local_sqlite"
+	DataSourceLocalCodex      DataSource = "local_codex"
+	DataSourceCommittedLedger DataSource = "committed_ledger"
 )
 
 // AnomalySeverity defines the severity classification of a detected anomaly.

@@ -92,7 +92,7 @@ type SessionEventFact struct {
 type SessionFact struct {
 	ID          string             `json:"id"`
 	ParentID    *string            `json:"parent_id,omitempty"`
-	Source      string             `json:"source,omitempty"`
+	Source      SourceHarness      `json:"source,omitempty"`
 	Invocations []InvocationFact   `json:"invocations"`
 	Tools       []SessionToolFact  `json:"tools"`
 	Events      []SessionEventFact `json:"events,omitempty"`
@@ -104,7 +104,7 @@ type WorkspaceEventsResponse struct {
 	TicketID   string      `json:"ticket_id"`
 	IsHydrated bool        `json:"is_hydrated"`
 	Events     []EventFact `json:"events"`
-	DataSource string      `json:"data_source"`
+	DataSource DataSource  `json:"data_source"`
 	Anomalies  []Anomaly   `json:"anomalies"`
 }
 
@@ -134,7 +134,6 @@ type MigrationInfo struct {
 // AgenticFactLedger is the root raw session facts ledger extracted for a ticket workspace.
 type AgenticFactLedger struct {
 	SchemaVersion *int                    `json:"schema_version,omitempty"`
-	Source        string                  `json:"source,omitempty"`
 	Migration     *MigrationInfo          `json:"migration,omitempty"`
 	TicketID      *string                 `json:"ticket_id"`
 	TicketTitle   *string                 `json:"ticket_title"`
@@ -287,12 +286,12 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 }
 
 // SessionsFromFactsWithSource builds the canonical session tree and tags each session with the given source provenance.
-func SessionsFromFactsWithSource(source string, invocations []InvocationFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
+func SessionsFromFactsWithSource(source SourceHarness, invocations []InvocationFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
 	sessions, err := SessionsFromFacts(invocations, tools, events)
 	if err != nil {
 		return nil, err
 	}
-	cleanSource := strings.TrimSpace(source)
+	cleanSource := SourceHarness(strings.TrimSpace(string(source)))
 	if cleanSource != "" {
 		for i := range sessions {
 			sessions[i].Source = cleanSource

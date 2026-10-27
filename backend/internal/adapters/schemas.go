@@ -356,7 +356,10 @@ func fromDomainAgentRole(r *domain.AgentRole) *string {
 func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	sessions := make([]domain.SessionFact, len(dto.Sessions))
 	for i, session := range dto.Sessions {
-		sessionSource := strings.TrimSpace(session.Source)
+		sessionSource := domain.SourceHarness(strings.TrimSpace(session.Source))
+		if sessionSource == "" && dto.Source != "" {
+			sessionSource = domain.SourceHarness(strings.TrimSpace(dto.Source))
+		}
 		sessions[i] = domain.SessionFact{ID: session.ID, ParentID: session.ParentID, Source: sessionSource}
 		if session.Anomalies != nil {
 			sessions[i].Anomalies = []domain.Anomaly{}
@@ -393,7 +396,6 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 
 	return domain.AgenticFactLedger{
 		SchemaVersion: dto.SchemaVersion,
-		Source:        dto.Source,
 		Migration:     mig,
 		TicketID:      dto.TicketID,
 		TicketTitle:   dto.TicketTitle,
@@ -550,7 +552,7 @@ func ValidateToolFacts(tools []domain.ToolFact) error {
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
-		sessionSource := strings.TrimSpace(session.Source)
+		sessionSource := strings.TrimSpace(string(session.Source))
 		sessions[i] = SessionFactDTO{ID: session.ID, ParentID: session.ParentID, Source: sessionSource, Invocations: []InvocationFactDTO{}, Tools: []SessionToolFactDTO{}, Events: []SessionEventFactDTO{}, Anomalies: []AnomalyDTO{}}
 		for _, inv := range session.Invocations {
 			sessions[i].Invocations = append(sessions[i].Invocations, InvocationFactDTOFromDomain(inv))

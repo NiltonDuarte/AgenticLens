@@ -46,7 +46,7 @@ func (s *StepV3ToV4UserIterations) Apply(ledger domain.AgenticFactLedger) (domai
 	cloned.SchemaVersion = &targetVer
 
 	for i := range cloned.Sessions {
-		if strings.TrimSpace(cloned.Sessions[i].Source) == "" {
+		if strings.TrimSpace(string(cloned.Sessions[i].Source)) == "" {
 			cloned.Sessions[i].Source = domain.SourceOpenCode
 		}
 	}

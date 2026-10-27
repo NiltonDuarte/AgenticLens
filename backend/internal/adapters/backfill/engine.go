@@ -212,11 +212,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	factLedger := dto.ToDomain()
 	for i := range factLedger.Sessions {
 		if factLedger.Sessions[i].Source == "" {
-			if factLedger.Source != "" {
-				factLedger.Sessions[i].Source = factLedger.Source
-			} else {
-				factLedger.Sessions[i].Source = domain.SourceOpenCode
-			}
+			factLedger.Sessions[i].Source = domain.SourceOpenCode
 		}
 	}
 
@@ -500,12 +496,6 @@ func (e *BackfillEngine) processSingleWorkspace(
 		return finalSessions[i].ID < finalSessions[j].ID
 	})
 	factLedger.Sessions = finalSessions
-
-	if len(openCodeSessions) > 0 && len(codexSessions) == 0 {
-		factLedger.Source = domain.SourceOpenCode
-	} else if len(codexSessions) > 0 && len(openCodeSessions) == 0 {
-		factLedger.Source = domain.SourceCodex
-	}
 
 	// 3. Pure Migration State Evaluation
 	evalInput := domain.MigrationEvaluationInput{

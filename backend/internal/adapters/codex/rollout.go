@@ -871,7 +871,7 @@ func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticke
 		return domain.AgenticMetricsLedger{}, fmt.Errorf("grouping Codex facts by session: %w", err)
 	}
 	facts := domain.AgenticFactLedger{
-		SchemaVersion: &version, Source: domain.SourceCodex, TicketID: ticketIDPtr, TicketTitle: titlePtr, TicketType: ticketTypePtr,
+		SchemaVersion: &version, TicketID: ticketIDPtr, TicketTitle: titlePtr, TicketType: ticketTypePtr,
 		StartedAt: startedAt, CompletedAt: completedAt, UpdatedAt: transcript.UpdatedAt,
 		Sessions: sessions,
 	}

@@ -2,10 +2,12 @@ export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL
 
 export type {
   AgentRole,
+  SourceHarness,
 } from '../types/telemetry';
 
 import type {
   AgentRole,
+  SourceHarness,
 } from '../types/telemetry';
 
 export type StandardTicketType =
@@ -114,7 +116,7 @@ export interface AgenticFactLedger {
 export interface SessionFact {
   readonly id: string;
   readonly parent_id?: string | null;
-  readonly source?: string;
+  readonly source?: SourceHarness;
   readonly invocations: readonly InvocationFact[];
   readonly tools: readonly Omit<ToolFact, 'session_id'>[];
   readonly anomalies?: readonly Anomaly[];

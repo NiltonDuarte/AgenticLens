@@ -280,8 +280,9 @@ func TestSortEvents_AdversarialEdgeCases(t *testing.T) {
 func TestPersistAnomalySummariesDropsEventsAndEvidenceButKeepsFacts(t *testing.T) {
 	tool := "bash"
 	sessionID := "s1"
-	facts := domain.AgenticFactLedger{Source: domain.SourceCodex, Sessions: []domain.SessionFact{{
+	facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
 		ID:          sessionID,
+		Source:      domain.SourceCodex,
 		Invocations: []domain.InvocationFact{{ID: sessionID, Role: "orchestrator"}},
 		Tools:       []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 6}},
 		Events:      []domain.SessionEventFact{{EventID: "e1", Timestamp: "2026-01-01T00:00:00Z", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}},
@@ -290,7 +291,7 @@ func TestPersistAnomalySummariesDropsEventsAndEvidenceButKeepsFacts(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if persisted.Source != domain.SourceCodex || len(persisted.EventFacts()) != 0 {
+	if len(persisted.Sessions) == 0 || persisted.Sessions[0].Source != domain.SourceCodex || len(persisted.EventFacts()) != 0 {
 		t.Fatalf("source/events mismatch: %#v", persisted)
 	}
 	if len(persisted.InvocationFacts()) != 1 || len(persisted.ToolFacts()) != 1 || persisted.ToolFacts()[0].Calls != 6 {

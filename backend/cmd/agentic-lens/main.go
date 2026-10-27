@@ -282,7 +282,7 @@ func runGenerate(args []string) {
 	}
 
 	if hasLocalExtraction {
-		freshSessions, buildErr := domain.SessionsFromFactsWithSource(activeSource, localInvocations, localTools, localEvents)
+		freshSessions, buildErr := domain.SessionsFromFactsWithSource(domain.SourceHarness(activeSource), localInvocations, localTools, localEvents)
 		if buildErr != nil {
 			fmt.Fprintf(os.Stderr, "Error grouping extracted session facts: %v\n", buildErr)
 			os.Exit(1)
@@ -385,7 +385,6 @@ func runGenerate(args []string) {
 	schemaVer := domain.CurrentSchemaVersion
 	factLedger := domain.AgenticFactLedger{
 		SchemaVersion: &schemaVer,
-		Source:        activeSource,
 		TicketID:      ticketIDPtr,
 		TicketTitle:   activeTicketTitle,
 		TicketType:    activeTicketType,

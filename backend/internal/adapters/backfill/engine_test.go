@@ -524,7 +524,7 @@ func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
 	if codexSess == nil {
 		t.Fatalf("codex session was dropped!")
 	}
-	if codexSess.Source != domain.SourceCodex {
+	if codexSess.Source != string(domain.SourceCodex) {
 		t.Errorf("expected codex session source %q, got %q", domain.SourceCodex, codexSess.Source)
 	}
 	if len(codexSess.Tools) != 1 || codexSess.Tools[0].Name != "exec" || codexSess.Tools[0].Calls != 3 {
@@ -534,7 +534,7 @@ func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
 	if opencodeSess == nil {
 		t.Fatalf("opencode session missing!")
 	}
-	if opencodeSess.Source != domain.SourceOpenCode {
+	if opencodeSess.Source != string(domain.SourceOpenCode) {
 		t.Errorf("expected opencode session source %q, got %q", domain.SourceOpenCode, opencodeSess.Source)
 	}
 	if len(opencodeSess.Tools) != 1 || opencodeSess.Tools[0].Name != "bash" {
@@ -606,7 +606,7 @@ func TestBackfillEngine_SourceCodexSkipsOpenCodeSessions(t *testing.T) {
 	if opencodeSess == nil {
 		t.Fatalf("opencode session was dropped during codex backfill!")
 	}
-	if opencodeSess.Source != domain.SourceOpenCode {
+	if opencodeSess.Source != string(domain.SourceOpenCode) {
 		t.Errorf("expected opencode session source %q, got %q", domain.SourceOpenCode, opencodeSess.Source)
 	}
 	if len(opencodeSess.Tools) != 1 || opencodeSess.Tools[0].Calls != 10 {

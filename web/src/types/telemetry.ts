@@ -2,6 +2,8 @@ export type EventType = 'tool_call' | 'turn_message' | 'compaction';
 
 export type DataSource = 'local_sqlite' | 'local_codex' | 'committed_ledger';
 
+export type SourceHarness = 'unknown' | 'opencode' | 'codex';
+
 export type AgentRole = string;
 
 export type ConventionalTicketType =

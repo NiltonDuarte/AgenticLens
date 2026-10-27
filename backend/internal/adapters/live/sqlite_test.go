@@ -764,7 +764,7 @@ func TestHydrateWorkspaceEvents_SuccessAndZeroDiskWrites(t *testing.T) {
 	ctx := context.Background()
 
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				ID:   "s_al33",
 				Role: "orchestrator",
@@ -873,8 +873,8 @@ func TestHydrateWorkspaceEvents_CodexUsesExplicitSourceAndCODEXHome(t *testing.T
 	}
 	service := live.NewLiveServiceWithCodexHome(nil, testProjectConfig(), home)
 	defer service.Close()
-	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Source: domain.SourceCodex, Sessions: []domain.SessionFact{{
-		ID: "thread-codex", Invocations: []domain.InvocationFact{{ID: "thread-codex", Role: "orchestrator"}},
+	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
+		ID: "thread-codex", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{ID: "thread-codex", Role: "orchestrator"}},
 	}}}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CODEX", ledger)
 	if err != nil {
@@ -901,9 +901,9 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenAnyRootIsMissing(t *testing.
 	}
 	service := live.NewLiveServiceWithCodexHome(nil, testProjectConfig(), home)
 	defer service.Close()
-	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Source: domain.SourceCodex, Sessions: []domain.SessionFact{
-		{ID: "root-present", Invocations: []domain.InvocationFact{{ID: "root-present", Role: "orchestrator"}}},
-		{ID: "root-missing", Invocations: []domain.InvocationFact{{ID: "root-missing", Role: "orchestrator"}}},
+	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{
+		{ID: "root-present", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{ID: "root-present", Role: "orchestrator"}}},
+		{ID: "root-missing", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{ID: "root-missing", Role: "orchestrator"}}},
 	}}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-PARTIAL", ledger)
 	if err != nil {
@@ -939,10 +939,10 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenChildRolloutIsMissing(t *tes
 	service := live.NewLiveServiceWithCodexHome(nil, testProjectConfig(), home)
 	defer service.Close()
 	parent := "root-thread"
-	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Source: domain.SourceCodex, Sessions: []domain.SessionFact{
-		{ID: "root-thread", Invocations: []domain.InvocationFact{{ID: "root-thread", Role: "orchestrator"}}},
-		{ID: "child-one", ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "child-one", ParentID: &parent, Role: "coder"}}},
-		{ID: "child-two", ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "child-two", ParentID: &parent, Role: "tester"}}},
+	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{
+		{ID: "root-thread", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{ID: "root-thread", Role: "orchestrator"}}},
+		{ID: "child-one", Source: domain.SourceCodex, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "child-one", ParentID: &parent, Role: "coder"}}},
+		{ID: "child-two", Source: domain.SourceCodex, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "child-two", ParentID: &parent, Role: "tester"}}},
 	}}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CHILD-PARTIAL", ledger)
 	if err != nil {
@@ -986,7 +986,7 @@ func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				ID:   "s_missing",
 				Role: "orchestrator",
@@ -1025,7 +1025,7 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 	workspacesDir := t.TempDir()
 
 	ledgerWithFallback := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "ses-hostile", Role: "coder"},
 		}, nil, []domain.EventFact{
 			{
@@ -1175,7 +1175,7 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		defer service.Close()
 
 		corruptLedger := domain.AgenticMetricsLedger{
-			Facts: domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: sessionFacts([]domain.InvocationFact{
+			Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 				{ID: "s_corrupt", Role: "coder"},
 			}, nil, nil),
 			},
@@ -1740,7 +1740,7 @@ func TestHydrateWorkspaceEvents_ConsecutiveErrorsSpansTurns(t *testing.T) {
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "s_span_1", Role: "coder"},
 		}, nil, nil),
 		},
@@ -1850,7 +1850,7 @@ func TestHydrateWorkspaceEvents_MultiSessionIsolationAndStreakReset(t *testing.T
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "s_iso_A", Role: "coder"},
 			{ID: "s_iso_B", Role: "coder"},
 		}, nil, nil),
@@ -1952,7 +1952,7 @@ func TestHydrateWorkspaceEvents_FallbackRoleBehaviorForNamelessSessions(t *testi
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "s_root_null"},
 			{ID: "s_root_ws"},
 			{ID: "s_child_null"},

@@ -47,7 +47,7 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	opencodeTransient := domain.AgenticFactLedger{Source: domain.SourceOpenCode, Sessions: opencodeSessions}
+	opencodeTransient := domain.AgenticFactLedger{Sessions: opencodeSessions}
 	opencodeLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(opencodeTransient)
 	if err != nil {
 		t.Fatal(err)
@@ -69,11 +69,11 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	codexTransientSessions, err := domain.SessionsFromFacts(nil, nil, transcript.Events)
+	codexTransientSessions, err := domain.SessionsFromFactsWithSource(domain.SourceCodex, nil, nil, transcript.Events)
 	if err != nil {
 		t.Fatal(err)
 	}
-	codexLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(domain.AgenticFactLedger{Source: domain.SourceCodex, Sessions: codexTransientSessions})
+	codexLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(domain.AgenticFactLedger{Sessions: codexTransientSessions})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -36,6 +36,7 @@ type versionProbe struct {
 }
 
 type legacyFactCollections struct {
+	Source      domain.SourceHarness    `json:"source"`
 	Invocations []domain.InvocationFact `json:"invocations"`
 	Tools       []domain.ToolFact       `json:"tools"`
 	Events      []domain.EventFact      `json:"events"`
@@ -78,9 +79,9 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 		if err != nil {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("normalizing legacy fact collections: %w", err)
 		}
-		if ledger.Source != "" {
+		if legacy.Source != "" {
 			for i := range sessions {
-				sessions[i].Source = ledger.Source
+				sessions[i].Source = legacy.Source
 			}
 		}
 		ledger.Sessions = sessions
@@ -111,7 +112,7 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 		ledger = normalized
 	}
 	for i := range ledger.Sessions {
-		if strings.TrimSpace(ledger.Sessions[i].Source) == "" {
+		if strings.TrimSpace(string(ledger.Sessions[i].Source)) == "" {
 			ledger.Sessions[i].Source = domain.SourceOpenCode
 		}
 	}

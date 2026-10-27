@@ -658,29 +658,45 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		DataSource: domain.DataSourceCommittedLedger,
 		Anomalies:  ledger.Facts.AnomalyFacts(),
 	}
-	if ledger.Facts.Source == domain.SourceCodex {
-		return s.hydrateCodexEvents(ticketID, ledger, fallbackResp)
+
+	var openCodeSessions []domain.SessionFact
+	var codexSessions []domain.SessionFact
+	for _, session := range ledger.Facts.Sessions {
+		switch session.Source {
+		case domain.SourceOpenCode:
+			openCodeSessions = append(openCodeSessions, session)
+		case domain.SourceCodex:
+			codexSessions = append(codexSessions, session)
+		}
 	}
-	if ledger.Facts.Source != domain.SourceOpenCode {
+
+	if len(openCodeSessions) == 0 && len(codexSessions) == 0 {
 		return fallbackResp, nil
+	}
+
+	if len(codexSessions) > 0 && len(openCodeSessions) == 0 {
+		return s.hydrateCodexEvents(ticketID, codexSessions, ledger, fallbackResp)
 	}
 
 	if s == nil || s.hook == nil || s.hook.DB() == nil {
+		if len(codexSessions) > 0 {
+			return s.hydrateCodexEvents(ticketID, codexSessions, ledger, fallbackResp)
+		}
 		return fallbackResp, nil
 	}
 
-	// 1. Collect session IDs from ledger invocations and events
+	// 1. Collect session IDs from OpenCode sessions
 	sessionIDMap := make(map[string]bool)
-	for _, inv := range ledger.Facts.InvocationFacts() {
-		trimmed := strings.TrimSpace(inv.ID)
+	for _, session := range openCodeSessions {
+		trimmed := strings.TrimSpace(session.ID)
 		if trimmed != "" {
 			sessionIDMap[trimmed] = true
 		}
-	}
-	for _, ev := range ledger.Facts.EventFacts() {
-		trimmed := strings.TrimSpace(ev.SessionID)
-		if trimmed != "" {
-			sessionIDMap[trimmed] = true
+		for _, inv := range session.Invocations {
+			trimmedInv := strings.TrimSpace(inv.ID)
+			if trimmedInv != "" {
+				sessionIDMap[trimmedInv] = true
+			}
 		}
 	}
 
@@ -935,43 +951,59 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		sessionConsecutiveErrors[sid] = consecutiveErrors
 	}
 
-	if len(events) == 0 {
+	var codexEvents []domain.EventFact
+	if len(codexSessions) > 0 {
+		codexResp, _ := s.hydrateCodexEvents(ticketID, codexSessions, ledger, fallbackResp)
+		if codexResp.IsHydrated {
+			codexEvents = codexResp.Events
+		}
+	}
+
+	allEvents := append(events, codexEvents...)
+	if len(allEvents) == 0 {
 		return fallbackResp, nil
+	}
+
+	dataSource := domain.DataSourceLocalSQLite
+	if len(events) == 0 && len(codexEvents) > 0 {
+		dataSource = domain.DataSourceLocalCodex
 	}
 
 	return domain.WorkspaceEventsResponse{
 		TicketID:   ticketID,
 		IsHydrated: true,
-		Events:     domain.SortEvents(events),
-		DataSource: domain.DataSourceLocalSQLite,
-		Anomalies:  hydrateAnomalyAssociations(ledger.Facts, events),
+		Events:     domain.SortEvents(allEvents),
+		DataSource: dataSource,
+		Anomalies:  hydrateAnomalyAssociations(ledger.Facts, allEvents),
 	}, nil
 }
 
-func (s *LiveService) hydrateCodexEvents(ticketID string, ledger domain.AgenticMetricsLedger, fallback domain.WorkspaceEventsResponse) (domain.WorkspaceEventsResponse, error) {
+func (s *LiveService) hydrateCodexEvents(ticketID string, codexSessions []domain.SessionFact, ledger domain.AgenticMetricsLedger, fallback domain.WorkspaceEventsResponse) (domain.WorkspaceEventsResponse, error) {
 	if s == nil || strings.TrimSpace(s.codexHome) == "" {
 		return fallback, nil
 	}
 	var paths []string
 	seenPaths := make(map[string]bool)
 	expectedThreadIDs := make(map[string]bool)
-	for _, inv := range ledger.Facts.InvocationFacts() {
-		threadID := strings.TrimSpace(inv.ID)
-		if threadID == "" {
-			return fallback, nil
-		}
-		expectedThreadIDs[threadID] = true
-		if inv.ParentID != nil {
-			continue
-		}
-		found, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: inv.ID})
-		if err != nil || len(found) == 0 {
-			return fallback, nil
-		}
-		for _, path := range found {
-			if !seenPaths[path] {
-				seenPaths[path] = true
-				paths = append(paths, path)
+	for _, session := range codexSessions {
+		for _, inv := range session.Invocations {
+			threadID := strings.TrimSpace(inv.ID)
+			if threadID == "" {
+				return fallback, nil
+			}
+			expectedThreadIDs[threadID] = true
+			if inv.ParentID != nil {
+				continue
+			}
+			found, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: inv.ID})
+			if err != nil || len(found) == 0 {
+				return fallback, nil
+			}
+			for _, path := range found {
+				if !seenPaths[path] {
+					seenPaths[path] = true
+					paths = append(paths, path)
+				}
 			}
 		}
 	}
