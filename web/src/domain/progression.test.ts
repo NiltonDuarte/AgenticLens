@@ -181,7 +181,6 @@ describe('Domain Progression Aggregator', () => {
                                 }
                             ],
                             tools: [],
-                            events: []
                         },
                         {
                             id: "inv-2",
@@ -202,7 +201,6 @@ describe('Domain Progression Aggregator', () => {
                                 }
                             ],
                             tools: [],
-                            events: []
                         },
                         {
                             id: "inv-3",
@@ -223,7 +221,6 @@ describe('Domain Progression Aggregator', () => {
                                 }
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -323,7 +320,6 @@ describe('Domain Progression Aggregator', () => {
                                 zeroInv
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -466,7 +462,6 @@ describe('Domain Progression Aggregator', () => {
                                 }
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -645,7 +640,6 @@ describe('Domain Progression Aggregator', () => {
                                 inv1, inv2, inv3
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -756,7 +750,6 @@ describe('Domain Progression Aggregator', () => {
                                 inv
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -864,7 +857,6 @@ describe('Domain Progression Aggregator', () => {
                                 inv
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -957,7 +949,6 @@ describe('Domain Progression Aggregator', () => {
                                 corruptInv
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -1053,7 +1044,6 @@ describe('Domain Progression Aggregator', () => {
                                 fallbackInv
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -1164,7 +1154,6 @@ describe('Domain Progression Aggregator', () => {
                                 fallbackInv
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -1274,8 +1263,7 @@ describe('Domain Progression Aggregator', () => {
                                 invocations: [
                                     invWithoutCompleted
                                 ],
-                                tools: [],
-                                events: []
+                                tools: []
                             }
                         ]
                     },
@@ -1381,7 +1369,6 @@ describe('Domain Progression Aggregator', () => {
                                 invLate, invEarly
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },
@@ -1480,7 +1467,6 @@ describe('Domain Progression Aggregator', () => {
                                 }
                             ],
                             tools: [],
-                            events: []
                         }
                     ]
                 },

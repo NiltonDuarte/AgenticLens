@@ -82,7 +82,6 @@ export type {
 } from '../types/telemetry';
 
 import type {
-  EventFact,
   Anomaly,
   FleetAnomalySummary,
 } from '../types/telemetry';
@@ -118,20 +117,15 @@ export interface SessionFact {
   readonly source?: string;
   readonly invocations: readonly InvocationFact[];
   readonly tools: readonly Omit<ToolFact, 'session_id'>[];
-  readonly events: readonly Omit<EventFact, 'session_id'>[];
   readonly anomalies?: readonly Anomaly[];
 }
 
 export function sessionInvocations(sessions: readonly SessionFact[] | undefined): readonly InvocationFact[] {
-  return sessions?.flatMap((session) => session.invocations) ?? [];
+  return sessions?.flatMap((session) => session.invocations ?? []) ?? [];
 }
 
 export function sessionTools(sessions: readonly SessionFact[] | undefined): readonly ToolFact[] {
-  return sessions?.flatMap((session) => session.tools.map((tool) => ({ ...tool, session_id: session.id }))) ?? [];
-}
-
-export function sessionEvents(sessions: readonly SessionFact[] | undefined): readonly EventFact[] {
-  return sessions?.flatMap((session) => session.events.map((event) => ({ ...event, session_id: session.id }))) ?? [];
+  return sessions?.flatMap((session) => (session.tools ?? []).map((tool) => ({ ...tool, session_id: session.id }))) ?? [];
 }
 
 export interface GroupedMetric {

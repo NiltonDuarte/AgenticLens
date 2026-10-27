@@ -5,8 +5,8 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { TicketDeepDive } from './TicketDeepDive';
 import * as apiClient from '../api/client';
 import { EventFact } from '../types/telemetry';
-import { sessionEvents, type AgenticMetricsLedger, type ContextHealthStatus } from '../domain/types';
-import { mockAgenticMetricsLedgers, mockWorkspaceDetails, } from '../test/fixtures/mockData';
+import { type AgenticMetricsLedger, type ContextHealthStatus } from '../domain/types';
+import { mockAgenticMetricsLedgers, mockWorkspaceDetails, mockAL2Events } from '../test/fixtures/mockData';
 describe('TicketDeepDive View Component', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
@@ -762,7 +762,7 @@ describe('TicketDeepDive View Component', () => {
                 data: {
                     ticket_id: 'AL-2',
                     is_hydrated: false,
-                    events: sessionEvents(mockWorkspaceDetails['AL-2']!.ledger.facts.sessions),
+                    events: mockAL2Events,
                     data_source: 'committed_ledger',
                 },
             });
@@ -783,7 +783,7 @@ describe('TicketDeepDive View Component', () => {
                 data: {
                     ticket_id: 'AL-2',
                     is_hydrated: false,
-                    events: sessionEvents(mockWorkspaceDetails['AL-2']!.ledger.facts.sessions),
+                    events: mockAL2Events,
                     data_source: 'committed_ledger',
                 },
             });
@@ -825,7 +825,7 @@ describe('TicketDeepDive View Component', () => {
                 data: {
                     ticket_id: 'AL-2',
                     is_hydrated: false,
-                    events: sessionEvents(mockWorkspaceDetails['AL-2']!.ledger.facts.sessions),
+                    events: mockAL2Events,
                     data_source: 'committed_ledger',
                 },
             });
@@ -862,7 +862,7 @@ describe('TicketDeepDive View Component', () => {
                 data: {
                     ticket_id: 'AL-2',
                     is_hydrated: false,
-                    events: sessionEvents(mockWorkspaceDetails['AL-2']!.ledger.facts.sessions),
+                    events: mockAL2Events,
                     data_source: 'committed_ledger',
                 },
             });

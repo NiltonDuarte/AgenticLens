@@ -459,8 +459,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "inv-al1-02",
@@ -487,8 +486,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "inv-al1-03",
@@ -515,8 +513,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "inv-al1-04",
@@ -543,8 +540,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "inv-al1-05",
@@ -571,8 +567,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "fixture-session",
@@ -583,8 +578,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                         { name: 'edit', calls: 28, errors: 1 },
                         { name: 'bash', calls: 18, errors: 2 },
                         { name: 'grep', calls: 10, errors: 0 }
-                    ],
-                    events: []
+                    ]
                 }
             ]
         },
@@ -862,10 +856,9 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 { name: 'read', calls: 48, errors: 0 },
                 { name: 'write', calls: 18, errors: 0 },
                 { name: 'edit', calls: 22, errors: 2 },
-                { name: 'bash', calls: 32, errors: 1 },
-               ],
-               events: mockAL2Events.map(({ session_id: _sessionID, ...event }) => event),
-              }
+                 { name: 'bash', calls: 32, errors: 1 },
+                ],
+               }
             ],
         },
         workflow_efficiency: {
@@ -1058,8 +1051,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "inv-al3-02",
@@ -1086,8 +1078,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "inv-al3-03",
@@ -1114,8 +1105,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "fixture-session",
@@ -1125,8 +1115,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                         { name: 'write', calls: 20, errors: 0 },
                         { name: 'edit', calls: 14, errors: 1 },
                         { name: 'bash', calls: 26, errors: 0 }
-                    ],
-                    events: []
+                    ]
                 }
             ]
         },
@@ -1319,8 +1308,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 0,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "fixture-session",
@@ -1328,8 +1316,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     tools: [
                         { name: 'read', calls: 35, errors: 0 },
                         { name: 'write', calls: 8, errors: 0 }
-                    ],
-                    events: []
+                    ]
                 }
             ]
         },
@@ -1488,8 +1475,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 2,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "inv-gen1-02",
@@ -1516,8 +1502,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                             compactions: 1,
                         }
                     ],
-                    tools: [],
-                    events: []
+                    tools: []
                 },
                 {
                     id: "fixture-session",
@@ -1527,8 +1512,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                         { name: 'write', calls: 14, errors: 0 },
                         { name: 'edit', calls: 24, errors: 3 },
                         { name: 'bash', calls: 35, errors: 3 }
-                    ],
-                    events: []
+                    ]
                 }
             ]
         },

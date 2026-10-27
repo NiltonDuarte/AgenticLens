@@ -6,7 +6,7 @@ import type {
   EventFact,
   WorkspaceDetail,
 } from '../domain/types';
-import { sessionEvents, sessionTools } from '../domain/types';
+import { sessionTools } from '../domain/types';
 import {
   fetchWorkspaceById,
   fetchWorkspaceEvents,
@@ -90,7 +90,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         const detailRes = await fetchWorkspaceById(targetId);
         setDetail(detailRes.data);
 
-        let loadedEvents: readonly EventFact[] = sessionEvents(detailRes.data.ledger?.facts?.sessions);
+        let loadedEvents: readonly EventFact[] = [];
         let loadedAnomalies: readonly Anomaly[] = detailRes.data.anomalies ?? [];
         let hydrated = false;
         let source: DataSource = 'committed_ledger';
@@ -103,7 +103,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           hydrated = eventsRes.data?.is_hydrated ?? false;
           source = eventsRes.data?.data_source ?? 'committed_ledger';
         } catch {
-          // Gracefully keep events from detail.ledger.facts.events if fetch fails
+          // Gracefully keep empty events if fetch fails
         }
 
         setEvents(loadedEvents);

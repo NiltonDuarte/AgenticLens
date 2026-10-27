@@ -52,8 +52,7 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                                 calls: 12,
                                 errors: 1,
                             }
-                        ],
-                        events: []
+                        ]
                     }
                 ]
             });
@@ -96,12 +95,11 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                     files_changed: 2,
                     sdlc_iterations: 1,
                 },
-                sessions: [{ id: 'v2-session', invocations: [], tools: [], events: [] }]
+                sessions: [{ id: 'v2-session', invocations: [], tools: [] }]
             });
             const ledger: AgenticFactLedger = JSON.parse(v2Payload);
             expect(ledger.schema_version).toBe(2);
-            expect(ledger.sessions[0]?.events).toBeDefined();
-            expect(ledger.sessions[0]?.events).toHaveLength(0);
+            expect(ledger.sessions[0]?.id).toBe('v2-session');
             const mig = ledger.migration as MigrationInfo;
             expect(mig).toBeDefined();
             expect(mig.schema_version).toBe(2);
@@ -173,7 +171,6 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                             }
                         ],
                         tools: [],
-                        events: []
                     },
                     {
                         id: "sub-ses",
@@ -194,7 +191,6 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                             }
                         ],
                         tools: [],
-                        events: []
                     }
                 ]
             });
@@ -233,7 +229,6 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                             }
                         ],
                         tools: [],
-                        events: []
                     }
                 ]
             });

@@ -1,9 +1,16 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import type { AgenticFactLedger, EventFact, EventType } from './types';
+import {
+    sessionTools,
+    sessionInvocations,
+    type AgenticFactLedger,
+    type EventFact,
+    type EventType,
+    type SessionFact,
+} from './types';
 describe('Event Telemetry and Schema Evolution Contracts', () => {
     describe('Legacy and Backward Compatibility Boundaries', () => {
-        it('deserializes legacy JSON omitting events field without error', () => {
+        it('deserializes legacy JSON omitting sessions without error', () => {
             const legacyPayload = JSON.stringify({
                 schema_version: 2,
                 ticket_id: 'AL-LEGACY',
@@ -21,28 +28,14 @@ describe('Event Telemetry and Schema Evolution Contracts', () => {
             expect(parsed.ticket_id).toBe('AL-LEGACY');
             expect(parsed.sessions).toEqual([]);
         });
-        it('deserializes legacy JSON with explicit null events field', () => {
-            const payloadWithNull = JSON.stringify({
-                schema_version: 2,
-                ticket_id: 'AL-NULL',
-                updated_at: '2026-10-18T10:00:00Z',
-                code: { lines_added: 0, lines_deleted: 0, files_changed: 0, sdlc_iterations: 0 },
-                sessions: [{ id: 'AL-NULL', invocations: [], tools: [], events: [] }],
-            });
-            const parsed: AgenticFactLedger = JSON.parse(payloadWithNull);
-            expect(parsed.sessions[0]?.events).toEqual([]);
-        });
-        it('deserializes ledger with empty events array', () => {
-            const payloadWithEmpty = JSON.stringify({
-                schema_version: 2,
-                ticket_id: 'AL-EMPTY',
-                updated_at: '2026-10-18T10:00:00Z',
-                code: { lines_added: 0, lines_deleted: 0, files_changed: 0, sdlc_iterations: 0 },
-                sessions: [{ id: 'AL-EMPTY', invocations: [], tools: [], events: [] }]
-            });
-            const parsed: AgenticFactLedger = JSON.parse(payloadWithEmpty);
-            expect(parsed.sessions[0]?.events).toBeDefined();
-            expect(parsed.sessions[0]?.events).toHaveLength(0);
+        it('handles undefined tools and invocations in session helpers without throwing', () => {
+            const sessionsWithoutArrays = [
+                { id: 'ses-1' } as unknown as SessionFact,
+            ];
+            expect(sessionTools(sessionsWithoutArrays)).toEqual([]);
+            expect(sessionInvocations(sessionsWithoutArrays)).toEqual([]);
+            expect(sessionTools(undefined)).toEqual([]);
+            expect(sessionInvocations(undefined)).toEqual([]);
         });
     });
     describe('EventFact Type Discrimination and Property Fidelity', () => {
