@@ -1,10 +1,11 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "migration": {
-    "schema_version": 3,
+    "schema_version": 4,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized"
+      "schema_v3_sanitized",
+      "schema_v4_user_iterations"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
@@ -12,7 +13,7 @@
     "notes": "Sanitized event telemetry migration from v2 to v3"
   },
   "ticket_id": "GEN-2",
-  "ticket_title": "Agent Single-Ticket Exclusivity \u0026 Steering Mandate",
+  "ticket_title": "Agent Single-Ticket Exclusivity & Steering Mandate",
   "ticket_type": "chore",
   "started_at": "2026-10-17T16:15:51.795000+00:00",
   "completed_at": "2026-10-17T16:17:40.613000+00:00",
@@ -27,64 +28,71 @@
     "files_changed": 0,
     "sdlc_iterations": 1
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "ses_eb55a0e0cffe31ieoLkBnwIe35",
-      "parent_id": null,
-      "role": "general",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-17T16:15:52.264000+00:00",
-      "completed_at": "2026-10-17T16:17:40.613000+00:00",
-      "active_duration_seconds": 108,
-      "turns": 31,
-      "tokens": {
-        "input": 131392,
-        "output": 3036,
-        "cache_read": 512071,
-        "reasoning": 4772,
-        "peak_context": 29125
-      },
-      "cost_usd": 0.166229,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "ses_eb55a0e0cffe31ieoLkBnwIe35",
+          "parent_id": null,
+          "role": "general",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-17T16:15:52.264000+00:00",
+          "completed_at": "2026-10-17T16:17:40.613000+00:00",
+          "active_duration_seconds": 108,
+          "turns": 31,
+          "tokens": {
+            "input": 131392,
+            "output": 3036,
+            "cache_read": 512071,
+            "reasoning": 4772,
+            "peak_context": 29125
+          },
+          "cost_usd": 0.166229,
+          "compactions": 0,
+          "user_iterations": 1
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 9,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "todowrite",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "events": [],
+      "source": "opencode"
     }
-  ],
-  "tools": [
-    {
-      "name": "bash",
-      "calls": 9,
-      "errors": 0
-    },
-    {
-      "name": "glob",
-      "calls": 6,
-      "errors": 0
-    },
-    {
-      "name": "read",
-      "calls": 6,
-      "errors": 0
-    },
-    {
-      "name": "todowrite",
-      "calls": 3,
-      "errors": 0
-    },
-    {
-      "name": "edit",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "write",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "grep",
-      "calls": 1,
-      "errors": 0
-    }
-  ],
-  "events": []
+  ]
 }

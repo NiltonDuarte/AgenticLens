@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Anomaly, EventFact } from '../types/telemetry';
 import { AnomalyBadge } from './AnomalyBadge';
+import { formatAnomaly } from '../domain/anomalies';
 import { copyTextToClipboard } from '../utils/clipboard';
 import {
   generateExecutionIssuePrompt,
@@ -58,9 +59,8 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
     }
   };
 
-  const title =
-    anomaly?.title ??
-    (event?.status === 'error' ? 'Tool Execution Failure' : 'Execution Details');
+  const display = anomaly ? formatAnomaly(anomaly) : undefined;
+  const title = display?.title ?? (event?.status === 'error' ? 'Tool Execution Failure' : 'Execution Details');
   const errorMessage = event?.error_message;
 
   const ctx = anomaly?.context;
@@ -82,14 +82,12 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   const turnDebugId = turn !== undefined ? (sessionId ? `${sessionId}:turn:${turn}` : `turn-${turn}`) : undefined;
 
   const handleCopyPrompt = async () => {
-    const summary = anomaly?.title
-      ? anomaly.title
-      : anomaly?.rule_id
-        ? translateRuleToPlainEnglish(anomaly.rule_id, toolName ?? undefined)
-        : title;
+    const summary = display?.title ?? (anomaly?.rule_id
+      ? translateRuleToPlainEnglish(anomaly.rule_id, toolName ?? undefined)
+      : title);
 
     const description =
-      anomaly?.description ||
+      display?.description ||
       (errorMessage ? `Execution error: ${errorMessage}` : 'An execution anomaly was detected.');
 
     const errorDetails =
@@ -160,8 +158,8 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
                 <span className="drawer-label">Rule ID:</span>
                 <span className="drawer-mono-val">{anomaly.rule_id}</span>
               </div>
-              {anomaly.description && (
-                <p className="drawer-description">{anomaly.description}</p>
+              {display?.description && (
+                <p className="drawer-description">{display.description}</p>
               )}
             </section>
           )}

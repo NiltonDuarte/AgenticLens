@@ -6,6 +6,7 @@ import type {
   EventFact,
   WorkspaceDetail,
 } from '../domain/types';
+import { sessionTools } from '../domain/types';
 import {
   fetchWorkspaceById,
   fetchWorkspaceEvents,
@@ -20,6 +21,7 @@ import {
   formatTokensK,
   computeLeadTimeSeconds,
 } from '../domain/formatters';
+import { aggregateToolUsage } from '../domain/tools';
 import { KPICard } from '../components/KPICard';
 import { EmptyState } from '../components/EmptyState';
 import { TicketSelector } from '../components/TicketSelector';
@@ -29,6 +31,7 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { getRoleColor, getModelColor } from '../utils/theme';
 import { TraceWaterfall } from '../components/TraceWaterfall';
 import { AnomalyDrawer } from '../components/AnomalyDrawer';
+import { formatAnomaly } from '../domain/anomalies';
 import { AnomalyBadge } from '../components/AnomalyBadge';
 import { InfoTooltip } from '../components/InfoTooltip';
 
@@ -46,6 +49,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const [events, setEvents] = useState<readonly EventFact[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
   const [dataSource, setDataSource] = useState<DataSource>('committed_ledger');
+  const [traceAnomalies, setTraceAnomalies] = useState<readonly Anomaly[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventFact | null>(null);
   const [selectedAnomaly, setSelectedAnomaly] = useState<Anomaly | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -86,7 +90,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         const detailRes = await fetchWorkspaceById(targetId);
         setDetail(detailRes.data);
 
-        let loadedEvents: readonly EventFact[] = detailRes.data.ledger?.facts?.events ?? [];
+        let loadedEvents: readonly EventFact[] = [];
+        let loadedAnomalies: readonly Anomaly[] = detailRes.data.anomalies ?? [];
         let hydrated = false;
         let source: DataSource = 'committed_ledger';
         try {
@@ -94,18 +99,21 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           if (eventsRes.data && eventsRes.data.events && eventsRes.data.events.length > 0) {
             loadedEvents = eventsRes.data.events;
           }
+          if (eventsRes.data?.anomalies) loadedAnomalies = eventsRes.data.anomalies;
           hydrated = eventsRes.data?.is_hydrated ?? false;
           source = eventsRes.data?.data_source ?? 'committed_ledger';
         } catch {
-          // Gracefully keep events from detail.ledger.facts.events if fetch fails
+          // Gracefully keep empty events if fetch fails
         }
 
         setEvents(loadedEvents);
+        setTraceAnomalies(loadedAnomalies);
         setIsHydrated(hydrated);
         setDataSource(source);
       } else {
         setDetail(null);
         setEvents([]);
+        setTraceAnomalies([]);
         setIsHydrated(false);
         setDataSource('committed_ledger');
       }
@@ -179,6 +187,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const leadSecs = computeLeadTimeSeconds(ledger.started_at, ledger.completed_at);
   const code = eff.code_delivered;
   const tools = eff.tool_execution;
+  const toolUsageByName = aggregateToolUsage(sessionTools(ledger.facts?.sessions));
   const subTurns = eff.subagent_turn_velocity;
 
   const ticketOptions = ledgers.map((l) => ({
@@ -328,7 +337,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           </div>
           <div className="stat-row">
             <span className="stat-label">Tool Tools Count:</span>
-            <span className="stat-val mono">{ledger.facts?.tools?.length ?? 0}</span>
+            <span className="stat-val mono">{toolUsageByName.length}</span>
           </div>
         </div>
       </div>
@@ -598,7 +607,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           events={events}
           isHydrated={isHydrated}
           dataSource={dataSource}
-          anomalies={detail.anomalies}
+          anomalies={traceAnomalies}
           selectedEvent={selectedEvent}
           onSelectEvent={handleSelectEvent}
         />
@@ -613,6 +622,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
               <span className="legacy-anomalies-heading">Detected Workspace Anomalies:</span>
               <div className="legacy-anomalies-list">
                 {detail.anomalies.map((a, i) => (
+                  (() => {
+                    const display = formatAnomaly(a);
+                    return (
                   <div
                     key={`${a.rule_id}-${i}`}
                     className="legacy-anomaly-item"
@@ -631,14 +643,16 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                         setIsDrawerOpen(true);
                       }
                     }}
-                    aria-label={`Inspect anomaly: ${a.title}`}
+                    aria-label={`Inspect anomaly: ${display.title}`}
                   >
                     <div className="legacy-anomaly-info">
-                      <span className="legacy-anomaly-title">{a.title}</span>
-                      <span className="legacy-anomaly-desc">{a.description}</span>
+                      <span className="legacy-anomaly-title">{display.title}</span>
+                      <span className="legacy-anomaly-desc">{display.description}</span>
                     </div>
                     <AnomalyBadge severity={a.severity} label={a.severity} size="sm" />
                   </div>
+                    );
+                  })()
                 ))}
               </div>
             </div>

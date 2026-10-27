@@ -232,6 +232,12 @@ func TestGenerateDefaultYAML_Overrides(t *testing.T) {
 	if len(loaded.RoleOrder) != 0 {
 		t.Errorf("expected empty RoleOrder, got %v", loaded.RoleOrder)
 	}
+	if len(loaded.CodeMetrics.TestPatterns) != len(adaptersconfig.DefaultTestPatterns) {
+		t.Errorf("expected %d default test_patterns, got %d", len(adaptersconfig.DefaultTestPatterns), len(loaded.CodeMetrics.TestPatterns))
+	}
+	if len(loaded.CodeMetrics.ProdPatterns) != len(adaptersconfig.DefaultProdPatterns) {
+		t.Errorf("expected %d default prod_patterns, got %d", len(adaptersconfig.DefaultProdPatterns), len(loaded.CodeMetrics.ProdPatterns))
+	}
 
 	content := string(data)
 	if !strings.Contains(content, "role_mappings: {}") {
@@ -542,4 +548,3 @@ func TestGenerateConfigYAML_WorkspaceArtifacts(t *testing.T) {
 		t.Errorf("expected title 'Custom Documentation', got %q", loaded.Workspaces.Artifacts[0].Title)
 	}
 }
-

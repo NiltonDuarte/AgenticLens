@@ -1,22 +1,11 @@
 {
-  "schema_version": 3,
-  "migration": {
-    "schema_version": 3,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v3_sanitized"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
-    "last_migrated_by": "universal-migration-engine",
-    "notes": "Sanitized event telemetry migration from v2 to v3"
-  },
+  "schema_version": 4,
   "ticket_id": "PO-4",
   "ticket_title": "Session CI/CD Pipelines, Multi-Version Schema Migration, Review Skill, and Live Observability",
   "ticket_type": "docs",
   "started_at": "2026-10-18T12:54:13.727000+00:00",
   "completed_at": "2026-10-18T13:23:41.435000+00:00",
-  "updated_at": "2026-10-19T13:00:13.241024505Z",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -25,83 +14,79 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 1
+    "sdlc_iterations": 3
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "ses_eb0ec4c20ffeAlCGs9Bvq0mPqv",
-      "parent_id": null,
-      "role": "general",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-18T12:54:14.173000+00:00",
-      "completed_at": "2026-10-18T13:23:41.435000+00:00",
-      "active_duration_seconds": 754,
-      "turns": 126,
-      "tokens": {
-        "input": 1066397,
-        "output": 36557,
-        "cache_read": 10921418,
-        "reasoning": 20521,
-        "peak_context": 154653
-      },
-      "cost_usd": 1.832947,
-      "compactions": 0
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_eb0ec4c20ffeAlCGs9Bvq0mPqv",
+          "parent_id": null,
+          "role": "general",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-18T12:54:14.173000+00:00",
+          "completed_at": "2026-10-18T13:23:41.435000+00:00",
+          "active_duration_seconds": 754,
+          "turns": 126,
+          "tokens": {
+            "input": 1066397,
+            "output": 36557,
+            "cache_read": 10921418,
+            "reasoning": 20521,
+            "peak_context": 154653
+          },
+          "cost_usd": 1.832947,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 51,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 7,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 29,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "todowrite",
+          "calls": 9,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 21,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
     }
   ],
-  "tools": [
-    {
-      "name": "bash",
-      "calls": 51,
-      "errors": 0
-    },
-    {
-      "name": "read",
-      "calls": 29,
-      "errors": 1
-    },
-    {
-      "name": "write",
-      "calls": 21,
-      "errors": 0
-    },
-    {
-      "name": "todowrite",
-      "calls": 9,
-      "errors": 0
-    },
-    {
-      "name": "glob",
-      "calls": 7,
-      "errors": 0
-    },
-    {
-      "name": "edit",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "grep",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "skill",
-      "calls": 1,
-      "errors": 0
-    }
-  ],
-  "events": [
-    {
-      "timestamp": "2026-10-18T12:56:05.841000+00:00",
-      "session_id": "ses_eb0ec4c20ffeAlCGs9Bvq0mPqv",
-      "turn": 36,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 8,
-      "context_tokens": 74599
-    }
-  ]
+  "anomalies": []
 }

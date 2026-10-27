@@ -37,50 +37,7 @@ func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveServi
 }
 
 func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, invocations int64) string {
-	return `{
-		"ticket_id": "` + ticketID + `",
-		"ticket_title": "` + title + `",
-		"ticket_type": "feature",
-		"started_at": "2026-10-17T10:00:00Z",
-		"completed_at": "2026-10-17T11:00:00Z",
-		"updated_at": "2026-10-17T11:00:00Z",
-		"code": {
-			"lines_added": 120,
-			"lines_deleted": 20,
-			"test_lines_added": 60,
-			"test_lines_deleted": 0,
-			"prod_lines_added": 60,
-			"prod_lines_deleted": 20,
-			"files_changed": 4,
-			"sdlc_iterations": 2
-		},
-		"invocations": [
-			{
-				"id": "ses-orch",
-				"role": "orchestrator",
-				"model": "claude-3-sonnet",
-				"user": "tester",
-				"active_duration_seconds": ` + fmt.Sprintf("%d", duration) + `,
-				"turns": 6,
-				"tokens": {
-					"input": 5000,
-					"output": 1000,
-					"cache_read": 10000,
-					"reasoning": 300,
-					"peak_context": 80000
-				},
-				"cost_usd": ` + "0.5" + `,
-				"compactions": 0
-			}
-		],
-		"tools": [
-			{
-				"name": "bash",
-				"calls": 5,
-				"errors": 0
-			}
-		]
-	}`
+	return fmt.Sprintf(`{"schema_version":4,"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","invocations":[{"id":"ses-orch","role":"orchestrator","model":"claude-3-sonnet","user":"tester","active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"compactions":0}],"tools":[{"name":"bash","calls":5,"errors":0}],"events":[]}]}`, ticketID, title, duration, invocations, cost)
 }
 
 func setupFixtureWorkspaces(t *testing.T) string {
@@ -96,28 +53,49 @@ func setupFixtureWorkspaces(t *testing.T) string {
 		t.Fatalf("failed creating AL-1 dir: %v", err)
 	}
 	t1JSON := `{
-		"ticket_id": "AL-1",
-		"ticket_title": "First Ticket",
-		"ticket_type": "feature",
-		"started_at": "2026-10-15T10:00:00Z",
-		"completed_at": "2026-10-15T11:00:00Z",
-		"updated_at": "2026-10-15T11:00:00Z",
-		"code": {"lines_added": 50, "lines_deleted": 10, "test_lines_added": 20, "test_lines_deleted": 0, "prod_lines_added": 30, "prod_lines_deleted": 10, "files_changed": 2, "sdlc_iterations": 1},
-		"invocations": [
-			{
-				"id": "ses-1",
-				"role": "orchestrator",
-				"model": "gpt-4",
-				"user": "dev",
-				"active_duration_seconds": 60,
-				"turns": 2,
-				"tokens": {"input": 1000, "output": 200, "cache_read": 500, "reasoning": 0, "peak_context": 50000},
-				"cost_usd": 0.10,
-				"compactions": 0
-			}
-		],
-		"tools": []
-	}`
+  "ticket_id": "AL-1",
+  "ticket_title": "First Ticket",
+  "ticket_type": "feature",
+  "started_at": "2026-10-15T10:00:00Z",
+  "completed_at": "2026-10-15T11:00:00Z",
+  "updated_at": "2026-10-15T11:00:00Z",
+  "code": {
+    "lines_added": 50,
+    "lines_deleted": 10,
+    "test_lines_added": 20,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 30,
+    "prod_lines_deleted": 10,
+    "files_changed": 2,
+    "sdlc_iterations": 1
+  },
+  "sessions": [
+    {
+      "id": "ses-1",
+      "invocations": [
+        {
+          "id": "ses-1",
+          "role": "orchestrator",
+          "model": "gpt-4",
+          "user": "dev",
+          "active_duration_seconds": 60,
+          "turns": 2,
+          "tokens": {
+            "input": 1000,
+            "output": 200,
+            "cache_read": 500,
+            "reasoning": 0,
+            "peak_context": 50000
+          },
+          "cost_usd": 0.1,
+          "compactions": 0
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(t1Dir, "agentic_metrics.json"), []byte(t1JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -133,28 +111,49 @@ func setupFixtureWorkspaces(t *testing.T) string {
 		t.Fatalf("failed creating AL-2 dir: %v", err)
 	}
 	t2JSON := `{
-		"ticket_id": "AL-2",
-		"ticket_title": "Second Ticket",
-		"ticket_type": "feature",
-		"started_at": "2026-10-17T10:00:00Z",
-		"completed_at": "2026-10-17T11:00:00Z",
-		"updated_at": "2026-10-17T11:00:00Z",
-		"code": {"lines_added": 100, "lines_deleted": 20, "test_lines_added": 50, "test_lines_deleted": 0, "prod_lines_added": 50, "prod_lines_deleted": 20, "files_changed": 3, "sdlc_iterations": 1},
-		"invocations": [
-			{
-				"id": "ses-2",
-				"role": "orchestrator",
-				"model": "gpt-4",
-				"user": "dev",
-				"active_duration_seconds": 120,
-				"turns": 4,
-				"tokens": {"input": 2000, "output": 400, "cache_read": 1000, "reasoning": 100, "peak_context": 60000},
-				"cost_usd": 0.50,
-				"compactions": 0
-			}
-		],
-		"tools": []
-	}`
+  "ticket_id": "AL-2",
+  "ticket_title": "Second Ticket",
+  "ticket_type": "feature",
+  "started_at": "2026-10-17T10:00:00Z",
+  "completed_at": "2026-10-17T11:00:00Z",
+  "updated_at": "2026-10-17T11:00:00Z",
+  "code": {
+    "lines_added": 100,
+    "lines_deleted": 20,
+    "test_lines_added": 50,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 50,
+    "prod_lines_deleted": 20,
+    "files_changed": 3,
+    "sdlc_iterations": 1
+  },
+  "sessions": [
+    {
+      "id": "ses-2",
+      "invocations": [
+        {
+          "id": "ses-2",
+          "role": "orchestrator",
+          "model": "gpt-4",
+          "user": "dev",
+          "active_duration_seconds": 120,
+          "turns": 4,
+          "tokens": {
+            "input": 2000,
+            "output": 400,
+            "cache_read": 1000,
+            "reasoning": 100,
+            "peak_context": 60000
+          },
+          "cost_usd": 0.5,
+          "compactions": 0
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(t2Dir, "agentic_metrics.json"), []byte(t2JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -942,20 +941,33 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 		zeroJSON := `{
-			"ticket_id": "AL-ZERO",
-			"ticket_title": "Zero Ticket",
-			"updated_at": "2026-10-17T12:00:00Z",
-			"invocations": [
-				{
-					"id": "ses-0",
-					"role": "orchestrator",
-					"active_duration_seconds": 0,
-					"turns": 0,
-					"tokens": {"input": 0, "output": 0, "cache_read": 0, "reasoning": 0, "peak_context": 0},
-					"cost_usd": 0.0
-				}
-			]
-		}`
+  "ticket_id": "AL-ZERO",
+  "ticket_title": "Zero Ticket",
+  "updated_at": "2026-10-17T12:00:00Z",
+  "sessions": [
+    {
+      "id": "ses-0",
+      "invocations": [
+        {
+          "id": "ses-0",
+          "role": "orchestrator",
+          "active_duration_seconds": 0,
+          "turns": 0,
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_read": 0,
+            "reasoning": 0,
+            "peak_context": 0
+          },
+          "cost_usd": 0.0
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`
 		if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(zeroJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1392,57 +1404,75 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		t.Fatalf("failed creating dir: %v", err)
 	}
 	w1JSON := `{
-		"ticket_id": "AL-EVENT-1",
-		"ticket_title": "Event Ticket",
-		"ticket_type": "feature",
-		"started_at": "2026-10-18T10:00:00Z",
-		"completed_at": "2026-10-18T11:00:00Z",
-		"updated_at": "2026-10-18T11:00:00Z",
-		"code": {"lines_added": 10, "lines_deleted": 0, "test_lines_added": 5, "test_lines_deleted": 0, "prod_lines_added": 5, "prod_lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
-		"invocations": [
-			{
-				"id": "ses-1",
-				"role": "orchestrator",
-				"model": "gpt-4",
-				"user": "dev",
-				"active_duration_seconds": 60,
-				"turns": 5,
-				"tokens": {"input": 1000, "output": 200, "cache_read": 500, "reasoning": 0, "peak_context": 50000},
-				"cost_usd": 0.10,
-				"compactions": 0
-			}
-		],
-		"tools": [],
-		"events": [
-			{
-				"session_id": "ses-1",
-				"timestamp": "2026-10-18T10:00:00Z",
-				"turn": 1,
-				"role": "coder",
-				"event_type": "tool_call",
-				"tool_name": "bash",
-				"status": "error"
-			},
-			{
-				"session_id": "ses-1",
-				"timestamp": "2026-10-18T10:00:05Z",
-				"turn": 1,
-				"role": "coder",
-				"event_type": "tool_call",
-				"tool_name": "bash",
-				"status": "error"
-			},
-			{
-				"session_id": "ses-1",
-				"timestamp": "2026-10-18T10:00:10Z",
-				"turn": 1,
-				"role": "coder",
-				"event_type": "tool_call",
-				"tool_name": "bash",
-				"status": "error"
-			}
-		]
-	}`
+  "ticket_id": "AL-EVENT-1",
+  "ticket_title": "Event Ticket",
+  "ticket_type": "feature",
+  "started_at": "2026-10-18T10:00:00Z",
+  "completed_at": "2026-10-18T11:00:00Z",
+  "updated_at": "2026-10-18T11:00:00Z",
+  "code": {
+    "lines_added": 10,
+    "lines_deleted": 0,
+    "test_lines_added": 5,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 5,
+    "prod_lines_deleted": 0,
+    "files_changed": 1,
+    "sdlc_iterations": 1
+  },
+  "sessions": [
+    {
+      "id": "ses-1",
+      "invocations": [
+        {
+          "id": "ses-1",
+          "role": "orchestrator",
+          "model": "gpt-4",
+          "user": "dev",
+          "active_duration_seconds": 60,
+          "turns": 5,
+          "tokens": {
+            "input": 1000,
+            "output": 200,
+            "cache_read": 500,
+            "reasoning": 0,
+            "peak_context": 50000
+          },
+          "cost_usd": 0.1,
+          "compactions": 0
+        }
+      ],
+      "tools": [],
+      "events": [
+        {
+          "timestamp": "2026-10-18T10:00:00Z",
+          "turn": 1,
+          "role": "coder",
+          "event_type": "tool_call",
+          "tool_name": "bash",
+          "status": "error"
+        },
+        {
+          "timestamp": "2026-10-18T10:00:05Z",
+          "turn": 1,
+          "role": "coder",
+          "event_type": "tool_call",
+          "tool_name": "bash",
+          "status": "error"
+        },
+        {
+          "timestamp": "2026-10-18T10:00:10Z",
+          "turn": 1,
+          "role": "coder",
+          "event_type": "tool_call",
+          "tool_name": "bash",
+          "status": "error"
+        }
+      ],
+      "anomalies": [{"rule_id":"TOOL_RETRY_STREAK","severity":"WARNING","title":"Tool retry streak","description":"Three consecutive bash failures","context":{"tool_name":"bash","count":3,"turn":1,"threshold":"3"}}]
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(w1Dir, "agentic_metrics.json"), []byte(w1JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -1453,16 +1483,24 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		t.Fatalf("failed creating dir: %v", err)
 	}
 	w2JSON := `{
-		"ticket_id": "AL-LEGACY",
-		"ticket_title": "Legacy Ticket",
-		"ticket_type": "chore",
-		"started_at": "2026-10-17T10:00:00Z",
-		"completed_at": "2026-10-17T10:30:00Z",
-		"updated_at": "2026-10-17T10:30:00Z",
-		"code": {"lines_added": 5, "lines_deleted": 0, "test_lines_added": 0, "test_lines_deleted": 0, "prod_lines_added": 5, "prod_lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
-		"invocations": [],
-		"tools": []
-	}`
+  "ticket_id": "AL-LEGACY",
+  "ticket_title": "Legacy Ticket",
+  "ticket_type": "chore",
+  "started_at": "2026-10-17T10:00:00Z",
+  "completed_at": "2026-10-17T10:30:00Z",
+  "updated_at": "2026-10-17T10:30:00Z",
+  "code": {
+    "lines_added": 5,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 5,
+    "prod_lines_deleted": 0,
+    "files_changed": 1,
+    "sdlc_iterations": 1
+  },
+  "sessions": []
+}`
 	if err := os.WriteFile(filepath.Join(w2Dir, "agentic_metrics.json"), []byte(w2JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -1477,10 +1515,10 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		"ticket_title": "Unsorted Events Ticket",
 		"ticket_type": "feature",
 		"started_at": "2026-10-18T10:00:00Z",
-		"events": [
-			{"session_id": "ses-late", "timestamp": "2026-10-18T12:00:00Z", "turn": 2, "role": "coder", "event_type": "tool_call", "status": "success"},
-			{"session_id": "ses-early-t2", "timestamp": "2026-10-18T10:00:00Z", "turn": 2, "role": "coder", "event_type": "tool_call", "status": "success"},
-			{"session_id": "ses-early-t1", "timestamp": "2026-10-18T10:00:00Z", "turn": 1, "role": "orchestrator", "event_type": "turn_start", "status": "success"}
+		"sessions": [
+			{"id":"ses-late","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T12:00:00Z","turn":2,"role":"coder","event_type":"tool_call","status":"success"}]},
+			{"id":"ses-early-t2","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":2,"role":"coder","event_type":"tool_call","status":"success"}]},
+			{"id":"ses-early-t1","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":1,"role":"orchestrator","event_type":"turn_message","status":"success"}]}
 		]
 	}`
 	if err := os.WriteFile(filepath.Join(w3Dir, "agentic_metrics.json"), []byte(w3JSON), 0644); err != nil {
@@ -1520,11 +1558,8 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		if eventsResp.DataSource != domain.DataSourceCommittedLedger {
 			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, eventsResp.DataSource)
 		}
-		if len(eventsResp.Events) != 3 {
-			t.Fatalf("expected 3 events, got %d", len(eventsResp.Events))
-		}
-		if eventsResp.Events[0].Timestamp != "2026-10-18T10:00:00Z" || eventsResp.Events[1].Timestamp != "2026-10-18T10:00:05Z" || eventsResp.Events[2].Timestamp != "2026-10-18T10:00:10Z" {
-			t.Errorf("unexpected events order or content: %+v", eventsResp.Events)
+		if len(eventsResp.Events) != 0 {
+			t.Fatalf("source-less ledger should return no events, got %d", len(eventsResp.Events))
 		}
 	})
 
@@ -1592,12 +1627,8 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		if err := json.NewDecoder(resp.Body).Decode(&eventsResp); err != nil {
 			t.Fatalf("failed decoding events: %v", err)
 		}
-		if len(eventsResp.Events) != 3 {
-			t.Fatalf("expected 3 events, got %d", len(eventsResp.Events))
-		}
-		if eventsResp.Events[0].SessionID != "ses-early-t1" || eventsResp.Events[1].SessionID != "ses-early-t2" || eventsResp.Events[2].SessionID != "ses-late" {
-			t.Errorf("expected sorted events [ses-early-t1, ses-early-t2, ses-late], got [%s, %s, %s]",
-				eventsResp.Events[0].SessionID, eventsResp.Events[1].SessionID, eventsResp.Events[2].SessionID)
+		if len(eventsResp.Events) != 0 {
+			t.Fatalf("expected source-less ledger to be unhydrated, got %d events", len(eventsResp.Events))
 		}
 	})
 
@@ -1733,9 +1764,9 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 	validJSON := `{
 		"ticket_id": "AL-TARGETED-VALID",
 		"updated_at": "2026-10-18T10:00:00Z",
-		"events": [
-			{"session_id": "ses-2", "timestamp": "2026-10-18T10:00:10Z", "turn": 2},
-			{"session_id": "ses-1", "timestamp": "2026-10-18T10:00:05Z", "turn": 1}
+		"sessions": [
+			{"id":"ses-2","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:10Z","turn":2,"role":"orchestrator","event_type":"tool_call","status":"completed"}]},
+			{"id":"ses-1","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:05Z","turn":1,"role":"orchestrator","event_type":"tool_call","status":"completed"}]}
 		]
 	}`
 	if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(validJSON), 0644); err != nil {
@@ -1844,11 +1875,8 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		if err := json.Unmarshal(rec.Body.Bytes(), &eventsResp); err != nil {
 			t.Fatalf("failed unmarshaling events response: %v", err)
 		}
-		if len(eventsResp.Events) != 2 {
-			t.Fatalf("expected 2 events, got %d", len(eventsResp.Events))
-		}
-		if eventsResp.Events[0].SessionID != "ses-1" || eventsResp.Events[1].SessionID != "ses-2" {
-			t.Errorf("expected events stably sorted: %+v", eventsResp.Events)
+		if len(eventsResp.Events) != 0 {
+			t.Fatalf("expected source-less ledger to return no events: %+v", eventsResp.Events)
 		}
 	})
 
@@ -1925,8 +1953,8 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		if resp.DataSource != domain.DataSourceCommittedLedger {
 			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, resp.DataSource)
 		}
-		if len(resp.Events) != 2 {
-			t.Errorf("expected 2 fallback events from ledger, got %d", len(resp.Events))
+		if len(resp.Events) != 0 {
+			t.Errorf("expected no persisted fallback events, got %d", len(resp.Events))
 		}
 	})
 }
@@ -2034,19 +2062,36 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		t.Fatal(err)
 	}
 	al33JSON := `{
-		"ticket_id": "AL-33",
-		"ticket_title": "End-to-End Dual Plane",
-		"ticket_type": "feature",
-		"started_at": "2026-10-19T10:00:00Z",
-		"completed_at": "2026-10-19T11:00:00Z",
-		"updated_at": "2026-10-19T11:00:00Z",
-		"invocations": [
-			{"id": "ses_al33", "role": "orchestrator", "model": "gemini-3.8-flash"}
-		],
-		"events": [
-			{"session_id": "ses_al33", "timestamp": "2026-10-19T10:00:00Z", "turn": 1, "role": "orchestrator", "event_type": "turn_message", "status": "completed"}
-		]
-	}`
+  "source": "opencode",
+  "ticket_id": "AL-33",
+  "ticket_title": "End-to-End Dual Plane",
+  "ticket_type": "feature",
+  "started_at": "2026-10-19T10:00:00Z",
+  "completed_at": "2026-10-19T11:00:00Z",
+  "updated_at": "2026-10-19T11:00:00Z",
+  "sessions": [
+    {
+      "id": "ses_al33",
+      "invocations": [
+        {
+          "id": "ses_al33",
+          "role": "orchestrator",
+          "model": "gemini-3.8-flash"
+        }
+      ],
+      "tools": [],
+      "events": [
+        {
+          "timestamp": "2026-10-19T10:00:00Z",
+          "turn": 1,
+          "role": "orchestrator",
+          "event_type": "turn_message",
+          "status": "completed"
+        }
+      ]
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(al33Dir, "agentic_metrics.json"), []byte(al33JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2057,19 +2102,36 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		t.Fatal(err)
 	}
 	offlineJSON := `{
-		"ticket_id": "AL-OFFLINE",
-		"ticket_title": "Offline Ticket",
-		"ticket_type": "fix",
-		"started_at": "2026-10-19T09:00:00Z",
-		"completed_at": "2026-10-19T09:30:00Z",
-		"updated_at": "2026-10-19T09:30:00Z",
-		"invocations": [
-			{"id": "ses_missing_99", "role": "coder", "model": "gemini-3.8-flash"}
-		],
-		"events": [
-			{"session_id": "ses_missing_99", "timestamp": "2026-10-19T09:00:00Z", "turn": 1, "role": "coder", "event_type": "compaction", "status": "completed"}
-		]
-	}`
+  "source": "opencode",
+  "ticket_id": "AL-OFFLINE",
+  "ticket_title": "Offline Ticket",
+  "ticket_type": "fix",
+  "started_at": "2026-10-19T09:00:00Z",
+  "completed_at": "2026-10-19T09:30:00Z",
+  "updated_at": "2026-10-19T09:30:00Z",
+  "sessions": [
+    {
+      "id": "ses_missing_99",
+      "invocations": [
+        {
+          "id": "ses_missing_99",
+          "role": "coder",
+          "model": "gemini-3.8-flash"
+        }
+      ],
+      "tools": [],
+      "events": [
+        {
+          "timestamp": "2026-10-19T09:00:00Z",
+          "turn": 1,
+          "role": "coder",
+          "event_type": "compaction",
+          "status": "completed"
+        }
+      ]
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(alOfflineDir, "agentic_metrics.json"), []byte(offlineJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2188,11 +2250,8 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		if eventResp.DataSource != domain.DataSourceCommittedLedger {
 			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, eventResp.DataSource)
 		}
-		if len(eventResp.Events) != 1 {
-			t.Fatalf("expected 1 fallback event, got %d", len(eventResp.Events))
-		}
-		if eventResp.Events[0].EventType != domain.EventTypeCompaction {
-			t.Errorf("expected compaction event, got %s", eventResp.Events[0].EventType)
+		if len(eventResp.Events) != 0 {
+			t.Fatalf("expected no persisted fallback events, got %d", len(eventResp.Events))
 		}
 	})
 
@@ -2265,6 +2324,8 @@ func setupMultiFilterWorkspaces(t *testing.T) string {
 			"completed_at": "` + tc.completedAt + `",
 			"updated_at": "` + tc.completedAt + `",
 			"code": {"lines_added": 10, "lines_deleted": 0, "test_lines_added": 5, "test_lines_deleted": 0, "prod_lines_added": 5, "prod_lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
+			"sessions": [{
+			"id": "ses-` + tc.id + `",
 			"invocations": [
 				{
 					"id": "ses-` + tc.id + `",
@@ -2278,7 +2339,9 @@ func setupMultiFilterWorkspaces(t *testing.T) string {
 					"compactions": 0
 				}
 			],
-			"tools": []
+			"tools": [],
+			"events": []
+			}]
 		}`
 		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(rawJSON), 0644); err != nil {
 			t.Fatal(err)
@@ -2902,53 +2965,87 @@ func TestProgressionHandler(t *testing.T) {
 		tRecentDir := filepath.Join(wsDir, "RECENT-1")
 		_ = os.MkdirAll(tRecentDir, 0755)
 		recentJSON := fmt.Sprintf(`{
-			"ticket_id": "RECENT-1",
-			"ticket_title": "Recent Ticket",
-			"ticket_type": "feature",
-			"started_at": "%s",
-			"completed_at": "%s",
-			"updated_at": "%s",
-			"code": {"lines_added": 10, "lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
-			"invocations": [
-				{
-					"id": "inv-rec-1",
-					"role": "coder",
-					"model": "gpt-4",
-					"user": "dev",
-					"started_at": "%s",
-					"completed_at": "%s",
-					"tokens": {"input": 500, "output": 100, "cache_read": 200, "reasoning": 0, "peak_context": 2000},
-					"cost_usd": 0.05
-				}
-			],
-			"tools": []
-		}`, recentTS, recentTS, recentTS, recentTS, recentTS)
+  "ticket_id": "RECENT-1",
+  "ticket_title": "Recent Ticket",
+  "ticket_type": "feature",
+  "started_at": "%s",
+  "completed_at": "%s",
+  "updated_at": "%s",
+  "code": {
+    "lines_added": 10,
+    "lines_deleted": 0,
+    "files_changed": 1,
+    "sdlc_iterations": 1
+  },
+  "sessions": [
+    {
+      "id": "inv-rec-1",
+      "invocations": [
+        {
+          "id": "inv-rec-1",
+          "role": "coder",
+          "model": "gpt-4",
+          "user": "dev",
+          "started_at": "%s",
+          "completed_at": "%s",
+          "tokens": {
+            "input": 500,
+            "output": 100,
+            "cache_read": 200,
+            "reasoning": 0,
+            "peak_context": 2000
+          },
+          "cost_usd": 0.05
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`, recentTS, recentTS, recentTS, recentTS, recentTS)
 		_ = os.WriteFile(filepath.Join(tRecentDir, "agentic_metrics.json"), []byte(recentJSON), 0644)
 
 		tOldDir := filepath.Join(wsDir, "OLD-1")
 		_ = os.MkdirAll(tOldDir, 0755)
 		oldJSON := fmt.Sprintf(`{
-			"ticket_id": "OLD-1",
-			"ticket_title": "Old Ticket",
-			"ticket_type": "feature",
-			"started_at": "%s",
-			"completed_at": "%s",
-			"updated_at": "%s",
-			"code": {"lines_added": 10, "lines_deleted": 0, "files_changed": 1, "sdlc_iterations": 1},
-			"invocations": [
-				{
-					"id": "inv-old-1",
-					"role": "coder",
-					"model": "gpt-4",
-					"user": "dev",
-					"started_at": "%s",
-					"completed_at": "%s",
-					"tokens": {"input": 500, "output": 100, "cache_read": 200, "reasoning": 0, "peak_context": 2000},
-					"cost_usd": 0.05
-				}
-			],
-			"tools": []
-		}`, oldTS, oldTS, oldTS, oldTS, oldTS)
+  "ticket_id": "OLD-1",
+  "ticket_title": "Old Ticket",
+  "ticket_type": "feature",
+  "started_at": "%s",
+  "completed_at": "%s",
+  "updated_at": "%s",
+  "code": {
+    "lines_added": 10,
+    "lines_deleted": 0,
+    "files_changed": 1,
+    "sdlc_iterations": 1
+  },
+  "sessions": [
+    {
+      "id": "inv-old-1",
+      "invocations": [
+        {
+          "id": "inv-old-1",
+          "role": "coder",
+          "model": "gpt-4",
+          "user": "dev",
+          "started_at": "%s",
+          "completed_at": "%s",
+          "tokens": {
+            "input": 500,
+            "output": 100,
+            "cache_read": 200,
+            "reasoning": 0,
+            "peak_context": 2000
+          },
+          "cost_usd": 0.05
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`, oldTS, oldTS, oldTS, oldTS, oldTS)
 		_ = os.WriteFile(filepath.Join(tOldDir, "agentic_metrics.json"), []byte(oldJSON), 0644)
 
 		s := mustNewServer(t, wsDir, fstest.MapFS{})
@@ -3048,12 +3145,13 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
     "lines_deleted": 75,
     "files_changed": 5
   },
-  "facts": {
+  "sessions": [{
+    "id": "inv-1",
     "invocations": [
       {
         "id": "inv-1",
         "started_at": "2026-10-15T09:00:00Z",
-        "completed_at": "2026-10-15T10:00:00Z",
+        "completed_at": "2026-10-15T18:00:00Z",
         "tokens": {
           "input": 1500,
           "output": 350,
@@ -3062,8 +3160,10 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
         },
         "cost_usd": 0.05
       }
-    ]
-  }
+    ],
+    "tools": [],
+    "events": []
+  }]
 }`
 	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(rawJSON), 0644); err != nil {
 		t.Fatalf("failed writing test metrics: %v", err)

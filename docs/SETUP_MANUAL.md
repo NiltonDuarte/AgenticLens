@@ -517,7 +517,8 @@ Batch recomputes git diff metrics, recalculates token costs against updated mode
 - Flags:
   - `--workspaces <DIR>` (Optional): Directory containing ticket workspaces.
   - `--ticket-id <ID>` (Optional): Limit backfill to a single ticket.
-  - `--recompute-git` (Optional): Re-extract git diff metrics from git commit history.
+  - `--recompute-git` (Optional): Recompute Git code facts from an explicit ref; requires `--code-ref`.
+  - `--code-ref <REF>` (Required with `--recompute-git`): Branch or commit to compare with the configured base branch.
   - `--recompute-db` (Optional): Re-query OpenCode SQLite database for session turns and tokens.
   - `--migrate-schema` (Optional): Upgrade legacy ledger files to current schema version.
   - `--dry-run` (Optional): Simulate backfill operations without modifying disk files.
@@ -654,8 +655,28 @@ Traditional developer tools often require complex runtime dependencies such as N
 
 Rather than transmitting proprietary code or execution telemetry to external cloud services, AgenticLens operates entirely locally:
 - Telemetry facts are captured per ticket or task in isolated workspace directories: `workspaces/<TICKET_ID>/agentic_metrics.json`.
+- Schema-v4 sessions own invocation records, per-session tool summaries, session-specific anomaly summaries, and sparse direct-evidence events. Cross-session anomaly summaries (including high tool failure rates) live at ticket level without session IDs or event rows. Metrics are derived from summaries and tool totals, not by rerunning sequence detectors over sparse evidence. When OpenCode hydration is unavailable, the timeline shows committed anomaly evidence only; full Codex event hydration is not provided. Migration reports and removes legacy aggregate tool rows without reliable session attribution; re-extract from OpenCode/Codex source logs to recover those counts when available.
 - Each ledger is an immutable JSON document recording session identifiers, wall-clock duration, token volume (input, output, cache-read, and cache-write tokens), financial costs calculated from precise model pricing matrices, turn counts, tool invocation distributions, error rates, and git commit diff volumes (insertions, deletions, and affected files).
 - These ledgers are committed directly to version control alongside code deliverables, establishing an auditable, repository-native history of agent engineering metrics with zero cloud egress.
+
+#### Recovering unscoped tool totals
+
+Preserve the old ledger first. Run `generate` for each known root session ID with `--json-output` pointing to a new, initially nonexistent file. Reuse that same new output path for later root sessions; generation merges the session facts by session and tool name. For Codex, selecting a root thread also discovers its child rollouts. For OpenCode, generate once for each root session. Do not point `--json-output` at the old ledger: its unscoped tool rows fail validation before generation can merge new facts.
+
+```bash
+cp workspaces/<TICKET_ID>/agentic_metrics.json workspaces/<TICKET_ID>/agentic_metrics.unscoped-backup.json
+./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_1> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_2> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+
+# Compare the IDs and per-session tool rows with the sessions you intended to recover.
+jq -r '.sessions[].id' workspaces/<TICKET_ID>/agentic_metrics.recovered.json | sort -u
+jq '[.sessions[].tools[]] | length' workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+
+# Replace the active ledger only after verifying all expected sessions and counts.
+mv workspaces/<TICKET_ID>/agentic_metrics.recovered.json workspaces/<TICKET_ID>/agentic_metrics.json
+```
+
+Use `--source opencode` and repeat with each OpenCode root session ID for OpenCode recovery. Verify all expected session IDs (including Codex child rollouts) and tool counts before replacing the original. An unscoped aggregate cannot be accurately divided among sessions; if the source logs are unavailable, those old aggregate counts cannot be recovered. Keep the backup and do not invent IDs or redistribute the totals.
 
 ### A.4 Real-Time Live Observability and SSE Event Streaming
 

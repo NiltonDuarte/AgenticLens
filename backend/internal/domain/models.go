@@ -1,5 +1,12 @@
 package domain
 
+import (
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+)
+
 // InvocationTokens stores immutable token counts for a single agent invocation.
 type InvocationTokens struct {
 	Input       int64 `json:"input"`
@@ -23,17 +30,20 @@ type InvocationFact struct {
 	Tokens                InvocationTokens `json:"tokens"`
 	CostUSD               float64          `json:"cost_usd"`
 	Compactions           int64            `json:"compactions"`
+	UserIterations        int64            `json:"user_iterations"`
 }
 
 // ToolFact stores tool usage execution counts and errors.
 type ToolFact struct {
-	Name   string `json:"name"`
-	Calls  int64  `json:"calls"`
-	Errors int64  `json:"errors"`
+	SessionID string `json:"session_id"`
+	Name      string `json:"name"`
+	Calls     int64  `json:"calls"`
+	Errors    int64  `json:"errors"`
 }
 
 // EventFact captures a single discrete, ordered lifecycle occurrence in an agent session.
 type EventFact struct {
+	EventID          string    `json:"event_id"`
 	Timestamp        string    `json:"timestamp"`
 	SessionID        string    `json:"session_id"`
 	MessageID        *string   `json:"message_id,omitempty"`
@@ -51,24 +61,63 @@ type EventFact struct {
 	ToolOutput       *string   `json:"tool_output,omitempty"`
 }
 
+// SessionToolFact stores tool totals owned by one session. Session identity is
+// inherited from the containing SessionFact.
+type SessionToolFact struct {
+	Name   string `json:"name"`
+	Calls  int64  `json:"calls"`
+	Errors int64  `json:"errors"`
+}
+
+// SessionEventFact is a persisted event whose identity is inherited from its session.
+type SessionEventFact struct {
+	EventID          string    `json:"event_id"`
+	Timestamp        string    `json:"timestamp"`
+	MessageID        *string   `json:"message_id,omitempty"`
+	Turn             int64     `json:"turn"`
+	Role             AgentRole `json:"role"`
+	EventType        EventType `json:"event_type"`
+	ToolName         *string   `json:"tool_name,omitempty"`
+	Status           string    `json:"status"`
+	ErrorMessage     *string   `json:"error_message,omitempty"`
+	DurationMs       *int64    `json:"duration_ms,omitempty"`
+	ContextTokens    int64     `json:"context_tokens"`
+	PromptContent    *string   `json:"prompt_content,omitempty"`
+	ReasoningContent *string   `json:"reasoning_content,omitempty"`
+	ToolInput        *string   `json:"tool_input,omitempty"`
+	ToolOutput       *string   `json:"tool_output,omitempty"`
+}
+
+// SessionFact owns all raw telemetry attributed to a single agent session.
+type SessionFact struct {
+	ID          string             `json:"id"`
+	ParentID    *string            `json:"parent_id,omitempty"`
+	Source      SourceHarness      `json:"source,omitempty"`
+	Invocations []InvocationFact   `json:"invocations"`
+	Tools       []SessionToolFact  `json:"tools"`
+	Events      []SessionEventFact `json:"events,omitempty"`
+	Anomalies   []Anomaly          `json:"anomalies"`
+}
+
 // WorkspaceEventsResponse wraps execution events for a ticket workspace with hydration status and data source provenance.
 type WorkspaceEventsResponse struct {
 	TicketID   string      `json:"ticket_id"`
 	IsHydrated bool        `json:"is_hydrated"`
 	Events     []EventFact `json:"events"`
-	DataSource string      `json:"data_source"`
+	DataSource DataSource  `json:"data_source"`
+	Anomalies  []Anomaly   `json:"anomalies"`
 }
 
 // CodeFacts stores lines of code modified and SDLC iteration counts.
 type CodeFacts struct {
-	LinesAdded      int64 `json:"lines_added"`
-	LinesDeleted    int64 `json:"lines_deleted"`
-	TestLinesAdded  int64 `json:"test_lines_added"`
+	LinesAdded       int64 `json:"lines_added"`
+	LinesDeleted     int64 `json:"lines_deleted"`
+	TestLinesAdded   int64 `json:"test_lines_added"`
 	TestLinesDeleted int64 `json:"test_lines_deleted"`
-	ProdLinesAdded  int64 `json:"prod_lines_added"`
+	ProdLinesAdded   int64 `json:"prod_lines_added"`
 	ProdLinesDeleted int64 `json:"prod_lines_deleted"`
-	FilesChanged    int64 `json:"files_changed"`
-	SDLCIterations  int64 `json:"sdlc_iterations"`
+	FilesChanged     int64 `json:"files_changed"`
+	SDLCIterations   int64 `json:"sdlc_iterations"`
 }
 
 // MigrationInfo captures migration state, completed steps, pending requirements, and audit metadata.
@@ -93,9 +142,162 @@ type AgenticFactLedger struct {
 	CompletedAt   *string                 `json:"completed_at"`
 	UpdatedAt     string                  `json:"updated_at"`
 	Code          CodeFacts               `json:"code"`
-	Invocations   []InvocationFact        `json:"invocations"`
-	Tools         []ToolFact              `json:"tools"`
-	Events        []EventFact             `json:"events,omitempty"`
+	Sessions      []SessionFact           `json:"sessions"`
+	Anomalies     []Anomaly               `json:"anomalies"`
+}
+
+// AnomalyFacts returns persisted anomaly summaries with their owning session restored.
+func (ledger AgenticFactLedger) AnomalyFacts() []Anomaly {
+	result := append([]Anomaly{}, ledger.Anomalies...)
+	for _, session := range ledger.Sessions {
+		for _, anomaly := range session.Anomalies {
+			if anomaly.Context.SessionID == nil {
+				sid := session.ID
+				anomaly.Context.SessionID = &sid
+			}
+			result = append(result, anomaly)
+		}
+	}
+	sortAnomalies(result)
+	return result
+}
+
+// InvocationFacts returns invocation rows in deterministic session order.
+func (ledger AgenticFactLedger) InvocationFacts() []InvocationFact {
+	var result []InvocationFact
+	for _, session := range ledger.Sessions {
+		result = append(result, session.Invocations...)
+	}
+	return result
+}
+
+// ToolFacts returns session-owned tool summaries with their owning identity restored for aggregation.
+func (ledger AgenticFactLedger) ToolFacts() []ToolFact {
+	var result []ToolFact
+	for _, session := range ledger.Sessions {
+		for _, tool := range session.Tools {
+			result = append(result, ToolFact{SessionID: session.ID, Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
+		}
+	}
+	return result
+}
+
+// EventFacts returns persisted events with their owning session identity restored for consumers.
+func (ledger AgenticFactLedger) EventFacts() []EventFact {
+	var result []EventFact
+	eventsPresent := false
+	for _, session := range ledger.Sessions {
+		if session.Events != nil {
+			eventsPresent = true
+		}
+		for _, event := range session.Events {
+			result = append(result, EventFact{
+				EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
+				Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
+				ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+				PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
+				ToolInput: event.ToolInput, ToolOutput: event.ToolOutput,
+			})
+		}
+	}
+	if len(result) == 0 && eventsPresent {
+		return []EventFact{}
+	}
+	if len(result) == 0 && !eventsPresent {
+		return nil
+	}
+	return SortEvents(result)
+}
+
+// SessionsFromFacts builds the canonical session tree from extracted atomic facts.
+func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
+	byID := make(map[string]*SessionFact)
+	order := make([]string, 0)
+	get := func(id string, parent *string) (*SessionFact, error) {
+		clean := strings.TrimSpace(id)
+		if clean == "" {
+			return nil, errors.New("session identity is required when grouping facts")
+		}
+		if session, ok := byID[clean]; ok {
+			if parent != nil && session.ParentID != nil && *session.ParentID != *parent {
+				return nil, fmt.Errorf("session %q has conflicting parent identities", clean)
+			}
+			return session, nil
+		}
+		session := &SessionFact{ID: clean, Source: SourceOpenCode, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{}}
+		if parent != nil && strings.TrimSpace(*parent) != "" {
+			p := strings.TrimSpace(*parent)
+			session.ParentID = &p
+		}
+		byID[clean] = session
+		order = append(order, clean)
+		return session, nil
+	}
+	for _, invocation := range invocations {
+		session, err := get(invocation.ID, invocation.ParentID)
+		if err != nil {
+			return nil, err
+		}
+		session.Invocations = append(session.Invocations, invocation)
+	}
+	for _, tool := range tools {
+		session, err := get(tool.SessionID, nil)
+		if err != nil {
+			return nil, err
+		}
+		found := false
+		for i := range session.Tools {
+			if session.Tools[i].Name == tool.Name {
+				session.Tools[i].Calls += tool.Calls
+				session.Tools[i].Errors += tool.Errors
+				found = true
+				break
+			}
+		}
+		if !found {
+			session.Tools = append(session.Tools, SessionToolFact{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
+		}
+	}
+	for _, event := range events {
+		session, err := get(event.SessionID, nil)
+		if err != nil {
+			return nil, err
+		}
+		session.Events = append(session.Events, SessionEventFact{
+			EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
+			EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
+			ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+			PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
+			ToolInput: event.ToolInput, ToolOutput: event.ToolOutput,
+		})
+	}
+	if events == nil {
+		for _, session := range byID {
+			session.Events = nil
+		}
+	}
+	result := make([]SessionFact, 0, len(order))
+	for _, id := range order {
+		session := *byID[id]
+		sort.SliceStable(session.Tools, func(i, j int) bool { return session.Tools[i].Name < session.Tools[j].Name })
+		result = append(result, session)
+	}
+	return result, nil
+}
+
+// SessionsFromFactsWithSource builds the canonical session tree and tags each session with the given source provenance.
+func SessionsFromFactsWithSource(source SourceHarness, invocations []InvocationFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
+	sessions, err := SessionsFromFacts(invocations, tools, events)
+	if err != nil {
+		return nil, err
+	}
+	cleanSource := SourceHarness(strings.TrimSpace(string(source)))
+	if cleanSource != "" {
+		for i := range sessions {
+			sessions[i].Source = cleanSource
+		}
+	}
+	return sessions, nil
 }
 
 // GroupedMetric aggregates metrics across invocations.
@@ -272,18 +474,18 @@ type FleetAnomalySummary struct {
 
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
-	TotalTickets             int64               `json:"total_tickets"`
-	TotalCostUSD             float64             `json:"total_cost_usd"`
-	TotalInvocations         int64               `json:"total_invocations"`
-	TotalInputTokens         int64               `json:"total_input_tokens"`
-	TotalOutputTokens        int64               `json:"total_output_tokens"`
-	TotalCacheReadTokens     int64               `json:"total_cache_read_tokens"`
-	OverallCacheHitRatePct   float64             `json:"overall_cache_hit_rate_pct"`
-	TotalDurationSeconds     int64               `json:"total_duration_seconds"`
-	FormattedTotalDuration   string              `json:"formatted_total_duration"`
-	TotalLinesAdded          int64               `json:"total_lines_added"`
-	TotalLinesDeleted        int64               `json:"total_lines_deleted"`
-	TotalFilesChanged        int64               `json:"total_files_changed"`
+	TotalTickets             int64                 `json:"total_tickets"`
+	TotalCostUSD             float64               `json:"total_cost_usd"`
+	TotalInvocations         int64                 `json:"total_invocations"`
+	TotalInputTokens         int64                 `json:"total_input_tokens"`
+	TotalOutputTokens        int64                 `json:"total_output_tokens"`
+	TotalCacheReadTokens     int64                 `json:"total_cache_read_tokens"`
+	OverallCacheHitRatePct   float64               `json:"overall_cache_hit_rate_pct"`
+	TotalDurationSeconds     int64                 `json:"total_duration_seconds"`
+	FormattedTotalDuration   string                `json:"formatted_total_duration"`
+	TotalLinesAdded          int64                 `json:"total_lines_added"`
+	TotalLinesDeleted        int64                 `json:"total_lines_deleted"`
+	TotalFilesChanged        int64                 `json:"total_files_changed"`
 	TotalReasoningTokens     int64                 `json:"total_reasoning_tokens"`
 	OverallReasoningRatioPct float64               `json:"overall_reasoning_ratio_pct"`
 	RoleCosts                map[AgentRole]float64 `json:"role_costs"`
@@ -293,27 +495,27 @@ type FleetSummary struct {
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
-	TicketID                  string                  `json:"ticket_id"`
-	UpdatedAt                 string                  `json:"updated_at"`
-	SDLCIterations            int64                   `json:"sdlc_iterations"`
-	ActiveDurationSeconds     int64                   `json:"active_duration_seconds"`
-	ActiveDurationFormatted   string                  `json:"active_duration_formatted"`
-	CostUSD                   float64                 `json:"cost_usd"`
-	CacheHitRatePct           float64                 `json:"cache_hit_rate_pct"`
-	TestToCodeRatio           string                  `json:"test_to_code_ratio"`
-	LinesAdded                int64                   `json:"lines_added"`
-	LinesDeleted              int64                   `json:"lines_deleted"`
-	FilesChanged              int64                   `json:"files_changed"`
-	ToolSuccessRatePct        float64                 `json:"tool_success_rate_pct"`
-	ContextHealthStatus       ContextHealthStatus     `json:"context_health_status"`
-	RootSaturationPct         float64                 `json:"root_saturation_pct"`
-	PeakContextTokens         int64                   `json:"peak_context_tokens"`
-	TicketTitle               string                  `json:"ticket_title"`
-	TicketType                *ConventionalTicketType `json:"ticket_type,omitempty"`
-	StartedAt                 *string                 `json:"started_at"`
-	CompletedAt               *string                 `json:"completed_at"`
-	LeadDurationSeconds       *int64                  `json:"lead_duration_seconds"`
-	LeadDurationFormatted     string                  `json:"lead_duration_formatted"`
+	TicketID                string                  `json:"ticket_id"`
+	UpdatedAt               string                  `json:"updated_at"`
+	SDLCIterations          int64                   `json:"sdlc_iterations"`
+	ActiveDurationSeconds   int64                   `json:"active_duration_seconds"`
+	ActiveDurationFormatted string                  `json:"active_duration_formatted"`
+	CostUSD                 float64                 `json:"cost_usd"`
+	CacheHitRatePct         float64                 `json:"cache_hit_rate_pct"`
+	TestToCodeRatio         string                  `json:"test_to_code_ratio"`
+	LinesAdded              int64                   `json:"lines_added"`
+	LinesDeleted            int64                   `json:"lines_deleted"`
+	FilesChanged            int64                   `json:"files_changed"`
+	ToolSuccessRatePct      float64                 `json:"tool_success_rate_pct"`
+	ContextHealthStatus     ContextHealthStatus     `json:"context_health_status"`
+	RootSaturationPct       float64                 `json:"root_saturation_pct"`
+	PeakContextTokens       int64                   `json:"peak_context_tokens"`
+	TicketTitle             string                  `json:"ticket_title"`
+	TicketType              *ConventionalTicketType `json:"ticket_type,omitempty"`
+	StartedAt               *string                 `json:"started_at"`
+	CompletedAt             *string                 `json:"completed_at"`
+	LeadDurationSeconds     *int64                  `json:"lead_duration_seconds"`
+	LeadDurationFormatted   string                  `json:"lead_duration_formatted"`
 }
 
 // ScanReport holds all ledgers loaded from workspace traversal alongside non-fatal scan errors.

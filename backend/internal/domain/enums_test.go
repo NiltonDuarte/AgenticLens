@@ -36,10 +36,10 @@ func TestNormalizeTicketType(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		input       string
-		expected    domain.ConventionalTicketType
-		expectedOk  bool
+		name       string
+		input      string
+		expected   domain.ConventionalTicketType
+		expectedOk bool
 	}{
 		// Canonical types
 		{name: "canonical feat", input: "feat", expected: domain.TicketTypeFeat, expectedOk: true},

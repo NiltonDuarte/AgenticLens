@@ -152,6 +152,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
 
+- **AL-57**: Represent Unavailable Telemetry Cost as Nullable
+  - **Subsystem**: Domain / Adapters / CLI / Presentation / Tests
+  - **Phase**: Phase 8 (Schema Evolution / Cost Accuracy)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-57 nullable cost values across telemetry ledger aggregates and ui.md`
+
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests
   - **Phase**: Phase 8 (v2 Phase 2)
@@ -167,26 +175,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: AL2-3, AL2-4
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-5 multi project web dashboard selector cross project fleet overview and comparative analytics.md`
-
----
-
-## Done
-
-- **FIX-7**: Direct Binary Download and Dynamic Initial Ticket Selection
-  - **Subsystem**: Scripts / Web / Setup / Presentation / Tests
-  - **Phase**: Defect Remediation
-  - **Status**: Done
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/done/FIX-7 direct binary download and dynamic initial ticket selection.md`
-
-- **AL-37**: Cross-Project Platform Setup Manual and Telemetry Integration Guide
-  - **Subsystem**: Docs / Packaging / CLI
-  - **Phase**: Phase 7
-  - **Status**: Done
-  - **Blocked by**: None (AL-36 Done)
-  - **Blocks**: None
-  - **File**: `alspaces/plan/done/AL-37 cross-project setup manual and telemetry integration guide.md`
 
 ---
 

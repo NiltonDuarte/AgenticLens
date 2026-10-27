@@ -1,22 +1,11 @@
 {
-  "schema_version": 3,
-  "migration": {
-    "schema_version": 3,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v3_sanitized"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
-    "last_migrated_by": "universal-migration-engine",
-    "notes": "Sanitized event telemetry migration from v2 to v3"
-  },
+  "schema_version": 4,
   "ticket_id": "PO-3",
   "ticket_title": "Session Native Go Extraction, Backfill Command, and Multi-Language Git Metrics",
   "ticket_type": "docs",
   "started_at": "2026-10-17T18:42:09.076000+00:00",
   "completed_at": "2026-10-17T19:05:58.757000+00:00",
-  "updated_at": "2026-10-19T13:00:13.241024505Z",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -25,66 +14,74 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 1
+    "sdlc_iterations": 4
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "ses_eb4d41fccffeZp0lDqQw43gbsu",
-      "parent_id": null,
-      "role": "general",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-17T18:42:14.916000+00:00",
-      "completed_at": "2026-10-17T19:05:58.757000+00:00",
-      "active_duration_seconds": 592,
-      "turns": 76,
-      "tokens": {
-        "input": 490913,
-        "output": 14833,
-        "cache_read": 3248322,
-        "reasoning": 21515,
-        "peak_context": 86075
-      },
-      "cost_usd": 0.748114,
-      "compactions": 0
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_eb4d41fccffeZp0lDqQw43gbsu",
+          "parent_id": null,
+          "role": "general",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-17T18:42:14.916000+00:00",
+          "completed_at": "2026-10-17T19:05:58.757000+00:00",
+          "active_duration_seconds": 592,
+          "turns": 76,
+          "tokens": {
+            "input": 490913,
+            "output": 14833,
+            "cache_read": 3248322,
+            "reasoning": 21515,
+            "peak_context": 86075
+          },
+          "cost_usd": 0.748114,
+          "compactions": 0,
+          "user_iterations": 4
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 23,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 7,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 26,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 6,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
     }
   ],
-  "tools": [
-    {
-      "name": "read",
-      "calls": 26,
-      "errors": 0
-    },
-    {
-      "name": "bash",
-      "calls": 23,
-      "errors": 0
-    },
-    {
-      "name": "glob",
-      "calls": 7,
-      "errors": 0
-    },
-    {
-      "name": "edit",
-      "calls": 6,
-      "errors": 0
-    },
-    {
-      "name": "write",
-      "calls": 6,
-      "errors": 0
-    },
-    {
-      "name": "grep",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "skill",
-      "calls": 1,
-      "errors": 0
-    }
-  ],
-  "events": []
+  "anomalies": []
 }

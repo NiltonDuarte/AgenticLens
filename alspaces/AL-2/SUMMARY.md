@@ -33,9 +33,9 @@
 - Defensive path traversal tests: Traversal attempts (`..`, `\`, `/`) rejected with HTTP 400.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
+- **Software Development Life Cycle Iterations:** 3
 - **Active Agent Duration:** 1h 17m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 91.3k tokens (46% of 200k healthy ceiling, 0 compactions) | Subagents peak 119.1k (Tester)
+- **Context Window Health:** ELEVATED — Root agent peak 91.3k tokens (46% of 200k healthy ceiling, 0 compactions) | Subagents peak 119.1k (Tester)
 - **Role Effort Distribution (Subagents):** Planner 7.6%, Coder 36.0%, Tester 36.0%, Reviewer 20.4%
 - **Subagent Turn Velocity & Thrashing:** 33.3 avg turns/run (peak: 71 turns) | Planner 22.0, Coder 37.0, Tester 43.0, Reviewer 23.5
 - **Test-to-Production Code Ratio:** 2.2:1 (+1,237 test lines / +574 prod lines)

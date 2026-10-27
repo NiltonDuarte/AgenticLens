@@ -16,10 +16,10 @@ type MigrationStep interface {
 
 // Domain sentinel errors for schema migration.
 var (
-	ErrUnsupportedVersion = errors.New("unsupported schema version")
+	ErrUnsupportedVersion  = errors.New("unsupported schema version")
 	ErrDowngradeNotAllowed = errors.New("schema downgrade is not allowed")
-	ErrMissingStep        = errors.New("missing migration step for schema transition")
-	ErrDuplicateStep      = errors.New("migration step already registered for source version")
-	ErrInvariantViolation = errors.New("migration invariant violation")
-	ErrMalformedJSON      = errors.New("malformed JSON payload")
+	ErrMissingStep         = errors.New("missing migration step for schema transition")
+	ErrDuplicateStep       = errors.New("migration step already registered for source version")
+	ErrInvariantViolation  = errors.New("migration invariant violation")
+	ErrMalformedJSON       = errors.New("malformed JSON payload")
 )

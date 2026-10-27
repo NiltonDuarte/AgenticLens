@@ -37,10 +37,10 @@ This ticket delivers complete cross-engine parity verification, relocates the Go
 ---
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
+- **Software Development Life Cycle Iterations:** 3
 - **Active Agent Duration:** 1h 15m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 0 tokens (0% of 200k healthy ceiling, 0 compactions) | Subagents peak 144.7k (Tester)
-- **Role Effort Distribution (Subagents):** Planner 6.8%, Coder 33.0%, Tester 18.5%, Reviewer 16.3%, General 25.4%
+- **Context Window Health:** ELEVATED — Root agent peak 117.7k tokens (59% of 200k healthy ceiling, 0 compactions) | Subagents peak 144.7k (Tester)
+- **Role Effort Distribution (Subagents):** Planner 9.1%, Coder 44.2%, Tester 24.8%, Reviewer 21.8%
 - **Subagent Turn Velocity & Thrashing:** 43.4 avg turns/run (peak: 117 turns) | Planner 36.0, Coder 54.0, Tester 38.5, Reviewer 38.7
 - **Test-to-Production Code Ratio:** 9.3:1 (+121 test lines / +13 prod lines)
 - **Code Delivered:** +157 / -6,209 lines across 65 code files (excluding docs)

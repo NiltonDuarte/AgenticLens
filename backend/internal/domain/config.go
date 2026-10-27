@@ -9,14 +9,14 @@ import (
 
 // ProjectConfig holds the complete configuration settings for AgenticLens.
 type ProjectConfig struct {
-	ProjectName  string                  `json:"project_name" yaml:"project_name"`
-	Ticket       TicketConfig            `json:"ticket" yaml:"ticket"`
-	Workspaces   WorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
-	Database     DatabaseConfig          `json:"database" yaml:"database"`
-	Live         LiveConfig              `json:"live" yaml:"live"`
-	CodeMetrics  CodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
-	RoleMappings RoleMappings            `json:"role_mappings" yaml:"role_mappings"`
-	RoleOrder    []string                `json:"role_order" yaml:"role_order"`
+	ProjectName  string            `json:"project_name" yaml:"project_name"`
+	Ticket       TicketConfig      `json:"ticket" yaml:"ticket"`
+	Workspaces   WorkspacesConfig  `json:"workspaces" yaml:"workspaces"`
+	Database     DatabaseConfig    `json:"database" yaml:"database"`
+	Live         LiveConfig        `json:"live" yaml:"live"`
+	CodeMetrics  CodeMetricsConfig `json:"code_metrics" yaml:"code_metrics"`
+	RoleMappings RoleMappings      `json:"role_mappings" yaml:"role_mappings"`
+	RoleOrder    []string          `json:"role_order" yaml:"role_order"`
 }
 
 // DefaultProjectConfig returns a baseline ProjectConfig with pure defaults.

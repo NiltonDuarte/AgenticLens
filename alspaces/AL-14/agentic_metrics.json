@@ -1,22 +1,11 @@
 {
-  "schema_version": 3,
-  "migration": {
-    "schema_version": 3,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v3_sanitized"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
-    "last_migrated_by": "universal-migration-engine",
-    "notes": "Sanitized event telemetry migration from v2 to v3"
-  },
+  "schema_version": 4,
   "ticket_id": "AL-14",
   "ticket_title": "Automated GitHub Release Workflows for Release Candidates and Stable Versions",
   "ticket_type": "ci",
   "started_at": "2026-10-18T15:51:08.645000+00:00",
   "completed_at": "2026-10-18T17:27:25.469000+00:00",
-  "updated_at": "2026-10-19T13:00:13.241024505Z",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 4160,
     "lines_deleted": 25,
@@ -25,194 +14,313 @@
     "prod_lines_added": 1017,
     "prod_lines_deleted": 24,
     "files_changed": 20,
-    "sdlc_iterations": 1
+    "sdlc_iterations": 2
   },
-  "invocations": [
+  "sessions": [
     {
-      "id": "ses_eb04a539affemJt908XqabzZMk",
-      "parent_id": null,
-      "role": "general",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-18T15:51:09.014000+00:00",
-      "completed_at": "2026-10-18T17:27:25.469000+00:00",
-      "active_duration_seconds": 2006,
-      "turns": 74,
-      "tokens": {
-        "input": 667034,
-        "output": 13100,
-        "cache_read": 3324356,
-        "reasoning": 6806,
-        "peak_context": 80773
-      },
-      "cost_usd": 0.82425,
-      "compactions": 0
-    },
-    {
-      "id": "ses_eb0497821ffeHGgzUEdr5Dymwz",
+      "id": "ses_eb032213cffe7e81UKptuBTm1Y",
       "parent_id": "ses_eb04a539affemJt908XqabzZMk",
-      "role": "planner",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-18T15:52:04.839000+00:00",
-      "completed_at": "2026-10-18T15:54:22.943000+00:00",
-      "active_duration_seconds": 138,
-      "turns": 21,
-      "tokens": {
-        "input": 144979,
-        "output": 5076,
-        "cache_read": 554138,
-        "reasoning": 7551,
-        "peak_context": 48071
-      },
-      "cost_usd": 0.197646,
-      "compactions": 0
-    },
-    {
-      "id": "ses_eb0444317ffePFhnJJc6Me35JT",
-      "parent_id": "ses_eb04a539affemJt908XqabzZMk",
-      "role": "coder",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-18T15:57:46.101000+00:00",
-      "completed_at": "2026-10-18T16:06:03.563000+00:00",
-      "active_duration_seconds": 497,
-      "turns": 82,
-      "tokens": {
-        "input": 433358,
-        "output": 8801,
-        "cache_read": 3654537,
-        "reasoning": 26185,
-        "peak_context": 80699
-      },
-      "cost_usd": 0.730306,
-      "compactions": 0
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_eb032213cffe7e81UKptuBTm1Y",
+          "parent_id": "ses_eb04a539affemJt908XqabzZMk",
+          "role": "reviewer",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-18T16:17:34.411000+00:00",
+          "completed_at": "2026-10-18T16:19:27.412000+00:00",
+          "active_duration_seconds": 113,
+          "turns": 27,
+          "tokens": {
+            "input": 141263,
+            "output": 3069,
+            "cache_read": 838937,
+            "reasoning": 6178,
+            "peak_context": 53673
+          },
+          "cost_usd": 0.203544,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "glob",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "mcp-gateway_mcp-find",
+          "calls": 1,
+          "errors": 1
+        },
+        {
+          "name": "read",
+          "calls": 16,
+          "errors": 1
+        }
+      ],
+      "anomalies": []
     },
     {
       "id": "ses_eb03c9ae4ffeqmugD3nSuTJHVo",
       "parent_id": "ses_eb04a539affemJt908XqabzZMk",
-      "role": "tester",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-18T16:06:07.911000+00:00",
-      "completed_at": "2026-10-18T16:17:29.608000+00:00",
-      "active_duration_seconds": 681,
-      "turns": 77,
-      "tokens": {
-        "input": 632833,
-        "output": 8018,
-        "cache_read": 4792447,
-        "reasoning": 8704,
-        "peak_context": 108190
-      },
-      "cost_usd": 0.896766,
-      "compactions": 0
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_eb03c9ae4ffeqmugD3nSuTJHVo",
+          "parent_id": "ses_eb04a539affemJt908XqabzZMk",
+          "role": "tester",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-18T16:06:07.911000+00:00",
+          "completed_at": "2026-10-18T16:17:29.608000+00:00",
+          "active_duration_seconds": 681,
+          "turns": 77,
+          "tokens": {
+            "input": 632833,
+            "output": 8018,
+            "cache_read": 4792447,
+            "reasoning": 8704,
+            "peak_context": 108190
+          },
+          "cost_usd": 0.896766,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 56,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 16,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
     },
     {
-      "id": "ses_eb032213cffe7e81UKptuBTm1Y",
+      "id": "ses_eb0444317ffePFhnJJc6Me35JT",
       "parent_id": "ses_eb04a539affemJt908XqabzZMk",
-      "role": "reviewer",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-18T16:17:34.411000+00:00",
-      "completed_at": "2026-10-18T16:19:27.412000+00:00",
-      "active_duration_seconds": 113,
-      "turns": 27,
-      "tokens": {
-        "input": 141263,
-        "output": 3069,
-        "cache_read": 838937,
-        "reasoning": 6178,
-        "peak_context": 53673
-      },
-      "cost_usd": 0.203544,
-      "compactions": 0
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_eb0444317ffePFhnJJc6Me35JT",
+          "parent_id": "ses_eb04a539affemJt908XqabzZMk",
+          "role": "coder",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-18T15:57:46.101000+00:00",
+          "completed_at": "2026-10-18T16:06:03.563000+00:00",
+          "active_duration_seconds": 497,
+          "turns": 82,
+          "tokens": {
+            "input": 433358,
+            "output": 8801,
+            "cache_read": 3654537,
+            "reasoning": 26185,
+            "peak_context": 80699
+          },
+          "cost_usd": 0.730306,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 60,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 5,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 14,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "ses_eb0497821ffeHGgzUEdr5Dymwz",
+      "parent_id": "ses_eb04a539affemJt908XqabzZMk",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_eb0497821ffeHGgzUEdr5Dymwz",
+          "parent_id": "ses_eb04a539affemJt908XqabzZMk",
+          "role": "planner",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-18T15:52:04.839000+00:00",
+          "completed_at": "2026-10-18T15:54:22.943000+00:00",
+          "active_duration_seconds": 138,
+          "turns": 21,
+          "tokens": {
+            "input": 144979,
+            "output": 5076,
+            "cache_read": 554138,
+            "reasoning": 7551,
+            "peak_context": 48071
+          },
+          "cost_usd": 0.197646,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "glob",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "list_mcp_resources",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "mcp-gateway_code-mode",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "mcp-gateway_mcp-find",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 13,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "ses_eb04a539affemJt908XqabzZMk",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_eb04a539affemJt908XqabzZMk",
+          "parent_id": null,
+          "role": "general",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-18T15:51:09.014000+00:00",
+          "completed_at": "2026-10-18T17:27:25.469000+00:00",
+          "active_duration_seconds": 2006,
+          "turns": 74,
+          "tokens": {
+            "input": 667034,
+            "output": 13100,
+            "cache_read": 3324356,
+            "reasoning": 6806,
+            "peak_context": 80773
+          },
+          "cost_usd": 0.82425,
+          "compactions": 0,
+          "user_iterations": 2
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 38,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 5,
+          "errors": 0
+        },
+        {
+          "name": "question",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 15,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "task",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 5,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
     }
   ],
-  "tools": [
-    {
-      "name": "bash",
-      "calls": 154,
-      "errors": 0
-    },
-    {
-      "name": "read",
-      "calls": 74,
-      "errors": 1
-    },
-    {
-      "name": "glob",
-      "calls": 25,
-      "errors": 0
-    },
-    {
-      "name": "grep",
-      "calls": 11,
-      "errors": 0
-    },
-    {
-      "name": "edit",
-      "calls": 9,
-      "errors": 0
-    },
-    {
-      "name": "write",
-      "calls": 8,
-      "errors": 0
-    },
-    {
-      "name": "task",
-      "calls": 4,
-      "errors": 0
-    },
-    {
-      "name": "mcp-gateway_mcp-find",
-      "calls": 3,
-      "errors": 1
-    },
-    {
-      "name": "skill",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "list_mcp_resources",
-      "calls": 1,
-      "errors": 0
-    },
-    {
-      "name": "mcp-gateway_code-mode",
-      "calls": 1,
-      "errors": 0
-    },
-    {
-      "name": "question",
-      "calls": 1,
-      "errors": 0
-    }
-  ],
-  "events": [
-    {
-      "timestamp": "2026-10-18T16:17:51.017000+00:00",
-      "session_id": "ses_eb032213cffe7e81UKptuBTm1Y",
-      "turn": 4,
-      "role": "reviewer",
-      "event_type": "tool_call",
-      "tool_name": "mcp-gateway_mcp-find",
-      "status": "error",
-      "duration_ms": 6,
-      "context_tokens": 21549
-    },
-    {
-      "timestamp": "2026-10-18T16:18:15.153000+00:00",
-      "session_id": "ses_eb032213cffe7e81UKptuBTm1Y",
-      "turn": 11,
-      "role": "reviewer",
-      "event_type": "tool_call",
-      "tool_name": "read",
-      "status": "error",
-      "duration_ms": 3,
-      "context_tokens": 37521
-    }
-  ]
+  "anomalies": []
 }

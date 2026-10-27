@@ -47,9 +47,9 @@ type expectedContextWindowHealth struct {
 	RootPeakTokens       int64                      `json:"root_peak_tokens"`
 	RootSaturationPct    float64                    `json:"root_saturation_pct"`
 	SubagentsPeakTokens  int64                      `json:"subagents_peak_tokens"`
-	SubagentsPeakRole         string           `json:"subagents_peak_role"`
-	Compactions               int64            `json:"compactions"`
-	PeakByRole                map[string]int64 `json:"peak_by_role"`
+	SubagentsPeakRole    string                     `json:"subagents_peak_role"`
+	Compactions          int64                      `json:"compactions"`
+	PeakByRole           map[string]int64           `json:"peak_by_role"`
 }
 
 type expectedCodeDelivered struct {
@@ -1089,7 +1089,7 @@ func TestStructuralClassificationParityOnWorkspaces(t *testing.T) {
 			var hasChild bool
 			var expChildPeak int64
 
-			for _, inv := range facts.Invocations {
+			for _, inv := range facts.InvocationFacts() {
 				if inv.ParentID == nil {
 					hasRoot = true
 					if inv.Tokens.PeakContext > expRootPeak {

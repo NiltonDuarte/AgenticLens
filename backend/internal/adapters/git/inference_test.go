@@ -215,10 +215,10 @@ func TestInferTicketTypeFromBranchList_Adversarial(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		branchOut  string
-		ticketID   string
-		expected   *domain.ConventionalTicketType
+		name      string
+		branchOut string
+		ticketID  string
+		expected  *domain.ConventionalTicketType
 	}{
 		// Empty and whitespace edge cases
 		{

@@ -13,44 +13,43 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 	parentID := "ses-1"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:                    "ses-1",
-					Role:                  "orchestrator",
-					Model:                 "model-a",
-					User:                  "developer",
-					ActiveDurationSeconds: 100,
-					Tokens: domain.InvocationTokens{
-						Input:       1000,
-						Output:      500,
-						CacheRead:   2000,
-						Reasoning:   200,
-						PeakContext: 50000,
-					},
-					CostUSD: 0.1,
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:                    "ses-1",
+				Role:                  "orchestrator",
+				Model:                 "model-a",
+				User:                  "developer",
+				ActiveDurationSeconds: 100,
+				Tokens: domain.InvocationTokens{
+					Input:       1000,
+					Output:      500,
+					CacheRead:   2000,
+					Reasoning:   200,
+					PeakContext: 50000,
 				},
-				{
-					ID:                    "ses-2",
-					ParentID:              &parentID,
-					Role:                  "coder",
-					Model:                 "model-b",
-					User:                  "developer",
-					ActiveDurationSeconds: 200,
-					Turns:                 3,
-					Tokens: domain.InvocationTokens{
-						Input:       5000,
-						Output:      1000,
-						CacheRead:   10000,
-						Reasoning:   500,
-						PeakContext: 120000,
-					},
-					CostUSD: 0.4,
+				CostUSD: 0.1,
+			},
+			{
+				ID:                    "ses-2",
+				ParentID:              &parentID,
+				Role:                  "coder",
+				Model:                 "model-b",
+				User:                  "developer",
+				ActiveDurationSeconds: 200,
+				Turns:                 3,
+				Tokens: domain.InvocationTokens{
+					Input:       5000,
+					Output:      1000,
+					CacheRead:   10000,
+					Reasoning:   500,
+					PeakContext: 120000,
 				},
+				CostUSD: 0.4,
 			},
-			Tools: []domain.ToolFact{
-				{Name: "bash", Calls: 5, Errors: 0},
-			},
+		},
+			[]domain.ToolFact{
+				{SessionID: "session-a", Name: "bash", Calls: 5, Errors: 0},
+			}, nil),
 		},
 		WorkflowEfficiency: domain.WorkflowEfficiency{
 			SDLCIterations:          1,
@@ -188,16 +187,16 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 	count2 := int64(2)
 	total6 := int64(6)
 	failPct := 33.3
+	threshold := ">20%"
+	contextTokens := int64(165_000)
 
 	t.Run("multiple anomalies with mixed severities", func(t *testing.T) {
 		ledger := domain.AgenticMetricsLedger{
 			TicketID: &tid,
 			Anomalies: []domain.Anomaly{
 				{
-					RuleID:      domain.RuleToolRetryStreak,
-					Severity:    domain.SeverityCritical,
-					Title:       "Tool retry streak: bash (5 consecutive errors)",
-					Description: "Tool 'bash' encountered 5 consecutive execution failures (session: s1, turn: 3)",
+					RuleID:   domain.RuleToolRetryStreak,
+					Severity: domain.SeverityCritical,
 					Context: domain.AnomalyContext{
 						ToolName: &toolBash,
 						Count:    &count5,
@@ -205,15 +204,14 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 					},
 				},
 				{
-					RuleID:      domain.RuleToolHighFailureRate,
-					Severity:    domain.SeverityWarning,
-					Title:       "High tool failure rate: git (33.3%)",
-					Description: "Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%)",
+					RuleID:   domain.RuleToolHighFailureRate,
+					Severity: domain.SeverityWarning,
 					Context: domain.AnomalyContext{
 						ToolName:       &toolGit,
 						Count:          &count2,
 						TotalCalls:     &total6,
 						FailureRatePct: &failPct,
+						Threshold:      &threshold,
 					},
 				},
 			},
@@ -227,10 +225,10 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 		if !strings.Contains(tableMD, "- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).") {
 			t.Errorf("expected 2 execution anomalies status summary, got:\n%s", tableMD)
 		}
-		if !strings.Contains(tableMD, "- [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: bash (5 consecutive errors) — Tool 'bash' encountered 5 consecutive execution failures (session: s1, turn: 3)") {
+		if !strings.Contains(tableMD, "- [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: bash (5 consecutive errors) — Tool 'bash' encountered 5 consecutive execution failures.") {
 			t.Errorf("expected formatted CRITICAL anomaly bullet, got:\n%s", tableMD)
 		}
-		if !strings.Contains(tableMD, "- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: git (33.3%) — Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%)") {
+		if !strings.Contains(tableMD, "- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: git (33.3%) — Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%).") {
 			t.Errorf("expected formatted WARNING anomaly bullet, got:\n%s", tableMD)
 		}
 	})
@@ -240,10 +238,9 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 			TicketID: &tid,
 			Anomalies: []domain.Anomaly{
 				{
-					RuleID:      domain.RuleContextSaturationSpike,
-					Severity:    domain.SeverityCritical,
-					Title:       "Context ceiling breached (165k tokens)",
-					Description: "Context tokens reached 165k, breaching 160k critical ceiling",
+					RuleID:   domain.RuleContextSaturationSpike,
+					Severity: domain.SeverityCritical,
+					Context:  domain.AnomalyContext{ContextTokens: &contextTokens, Threshold: strPtr("160000")},
 				},
 			},
 		}
@@ -252,7 +249,7 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 		if !strings.Contains(tableMD, "- **Status:** 1 execution anomaly detected (1 CRITICAL).") {
 			t.Errorf("expected singular phrasing for 1 anomaly, got:\n%s", tableMD)
 		}
-		if !strings.Contains(tableMD, "- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165k tokens) — Context tokens reached 165k, breaching 160k critical ceiling") {
+		if !strings.Contains(tableMD, "- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165k tokens) — Context tokens reached 165k, breaching the 160k critical ceiling.") {
 			t.Errorf("expected formatted bullet, got:\n%s", tableMD)
 		}
 	})
@@ -264,34 +261,33 @@ func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {
 	parentID := "ses-orch"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:      "ses-orch",
-					Role:    "orchestrator",
-					Model:   "model-a",
-					User:    "developer",
-					CostUSD: 1.0,
-				},
-				{
-					ID:       "ses-adv",
-					ParentID: &parentID,
-					Role:     "advisor",
-					Model:    "model-a",
-					User:     "developer",
-					CostUSD:  1.0,
-					Turns:    4,
-				},
-				{
-					ID:       "ses-po",
-					ParentID: &parentID,
-					Role:     "po",
-					Model:    "model-b",
-					User:     "developer",
-					CostUSD:  1.0,
-					Turns:    8,
-				},
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:      "ses-orch",
+				Role:    "orchestrator",
+				Model:   "model-a",
+				User:    "developer",
+				CostUSD: 1.0,
 			},
+			{
+				ID:       "ses-adv",
+				ParentID: &parentID,
+				Role:     "advisor",
+				Model:    "model-a",
+				User:     "developer",
+				CostUSD:  1.0,
+				Turns:    4,
+			},
+			{
+				ID:       "ses-po",
+				ParentID: &parentID,
+				Role:     "po",
+				Model:    "model-b",
+				User:     "developer",
+				CostUSD:  1.0,
+				Turns:    8,
+			},
+		}, nil, nil),
 		},
 		WorkflowEfficiency: domain.WorkflowEfficiency{
 			RoleEffortDistributionPct: map[string]float64{
@@ -427,18 +423,17 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 	tid := "GEN-1"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{
-			Invocations: []domain.InvocationFact{
-				{
-					ID:                    "ses-root-gen",
-					Role:                  "general",
-					ActiveDurationSeconds: 120,
-					Tokens: domain.InvocationTokens{
-						PeakContext: 60000,
-					},
-					CostUSD: 0.50,
+		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:                    "ses-root-gen",
+				Role:                  "general",
+				ActiveDurationSeconds: 120,
+				Tokens: domain.InvocationTokens{
+					PeakContext: 60000,
 				},
+				CostUSD: 0.50,
 			},
+		}, nil, nil),
 		},
 		WorkflowEfficiency: domain.WorkflowEfficiency{
 			ActiveDurationFormatted:   "2m 0s",

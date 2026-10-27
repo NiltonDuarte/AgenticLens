@@ -50,6 +50,7 @@ func sampleHistoricalJSON(ticketID string) string {
 		],
 		"tools": [
 			{
+				"session_id": "inv-1",
 				"name": "bash",
 				"calls": 10,
 				"errors": 1
@@ -136,13 +137,13 @@ func TestMigrationRunner_Batch(t *testing.T) {
 	if al1DTO.SchemaVersion == nil || *al1DTO.SchemaVersion != 2 {
 		t.Errorf("expected AL-1 schema version 2, got %v", al1DTO.SchemaVersion)
 	}
-	if al1DTO.Events == nil {
-		t.Errorf("expected AL-1 events array initialized")
+	if al1DTO.Sessions == nil {
+		t.Errorf("expected AL-1 sessions array initialized")
 	}
 	if al1DTO.Code.LinesAdded != 120 {
 		t.Errorf("expected AL-1 lines_added 120, got %d", al1DTO.Code.LinesAdded)
 	}
-	if len(al1DTO.Invocations) != 1 || al1DTO.Invocations[0].ID != "inv-1" {
+	if len(al1DTO.Sessions) != 1 || len(al1DTO.Sessions[0].Invocations) != 1 || al1DTO.Sessions[0].Invocations[0].ID != "inv-1" {
 		t.Errorf("expected AL-1 invocation preserved")
 	}
 
@@ -465,8 +466,8 @@ func TestMigrationRunner_CorruptedAndDefectiveLedgerResilience(t *testing.T) {
 	if valDTO.SchemaVersion == nil || *valDTO.SchemaVersion != 2 {
 		t.Errorf("expected schema_version 2, got %v", valDTO.SchemaVersion)
 	}
-	if valDTO.Events == nil {
-		t.Errorf("expected initialized events array")
+	if valDTO.Sessions == nil {
+		t.Errorf("expected initialized sessions array")
 	}
 
 	// Verify zero-byte and syntax error files were not corrupted further or panicked
@@ -664,7 +665,9 @@ func TestMigrationRunner_BatchV3(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var al3DTODry adapters.AgenticFactLedgerDTO
+	var al3DTODry struct {
+		SchemaVersion *int `json:"schema_version"`
+	}
 	if err := json.Unmarshal(al3DataDry, &al3DTODry); err != nil {
 		t.Fatal(err)
 	}
@@ -708,7 +711,10 @@ func TestMigrationRunner_BatchV3(t *testing.T) {
 			t.Errorf("workspace %s contains persisted error_message keys: %s", tid, string(data))
 		}
 
-		var dto adapters.AgenticFactLedgerDTO
+		var dto struct {
+			SchemaVersion *int                      `json:"schema_version"`
+			Sessions      []adapters.SessionFactDTO `json:"sessions"`
+		}
 		if err := json.Unmarshal(data, &dto); err != nil {
 			t.Fatalf("unmarshaling %s: %v", tid, err)
 		}
@@ -717,12 +723,274 @@ func TestMigrationRunner_BatchV3(t *testing.T) {
 			t.Errorf("expected schema version 3 for %s, got %v", tid, dto.SchemaVersion)
 		}
 
-		// Verify all events have nil ErrorMessage
-		for i, ev := range dto.Events {
-			if ev.ErrorMessage != nil {
-				t.Errorf("workspace %s event[%d] has non-nil ErrorMessage: %s", tid, i, *ev.ErrorMessage)
+	}
+}
+
+func TestMigrationRunner_BatchV4(t *testing.T) {
+	wsDir := setupMigrationTestWorkspaces(t)
+	runner := backfill.NewMigrationRunner(nil)
+
+	// Live batch migration directly to schema version 4
+	report, err := runner.Run(backfill.MigrationOptions{
+		WorkspacesDir: wsDir,
+		TargetVersion: 4,
+	})
+	if err != nil {
+		t.Fatalf("unexpected runner error: %v", err)
+	}
+
+	if report.Scanned != 4 {
+		t.Errorf("expected 4 scanned workspaces, got %d", report.Scanned)
+	}
+	if report.Migrated != 3 {
+		t.Errorf("expected 3 migrated workspaces, got %d", report.Migrated)
+	}
+
+	for _, tid := range []string{"AL-1", "AL-2", "AL-3"} {
+		path := filepath.Join(wsDir, tid, "agentic_metrics.json")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", tid, err)
+		}
+
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &dto); err != nil {
+			t.Fatalf("unmarshaling %s: %v", tid, err)
+		}
+
+		if dto.SchemaVersion == nil || *dto.SchemaVersion != 4 {
+			t.Errorf("expected schema version 4 for %s, got %v", tid, dto.SchemaVersion)
+		}
+		if dto.Migration == nil {
+			t.Errorf("expected non-nil migration info for %s", tid)
+		} else {
+			hasV4Step := false
+			for _, step := range dto.Migration.StepsCompleted {
+				if step == domain.MigrationStepUserIterations {
+					hasV4Step = true
+					break
+				}
+			}
+			if !hasV4Step {
+				t.Errorf("expected %s in steps completed for %s", domain.MigrationStepUserIterations, tid)
 			}
 		}
+
+		// If the ledger has code.sdlc_iterations > 0 and invocations, primary root invocation must receive user_iterations
+		if dto.Code.SDLCIterations > 0 && len(dto.Sessions) > 0 && len(dto.Sessions[0].Invocations) > 0 {
+			if dto.Sessions[0].Invocations[0].UserIterations != dto.Code.SDLCIterations {
+				t.Errorf("expected primary root invocation to have UserIterations %d, got %d for %s",
+					dto.Code.SDLCIterations, dto.Sessions[0].Invocations[0].UserIterations, tid)
+			}
+		}
+	}
+}
+
+func TestMigrationRunner_NormalizesInterimV4AndReportsDroppedUnscopedTools(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "workspaces", "TEST-SESSION")
+	if err := os.MkdirAll(workspace, 0755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	original := []byte(`{"schema_version":4,"ticket_id":"TEST-SESSION","ticket_title":"Session provenance validation","code":{"sdlc_iterations":0},"invocations":[],"tools":[{"name":"bash","calls":4,"errors":1}]}`)
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	runner := backfill.NewMigrationRunner(nil)
+	report, err := runner.Run(backfill.MigrationOptions{
+		WorkspacesDir: filepath.Dir(workspace),
+		TargetVersion: 4,
+	})
+	if err != nil {
+		t.Fatalf("unexpected runner error: %v", err)
+	}
+	if report.Migrated != 1 || report.UpToDate != 0 || len(report.Errors) != 0 {
+		t.Fatalf("expected interim v4 normalization, got migrated=%d up_to_date=%d errors=%v", report.Migrated, report.UpToDate, report.Errors)
+	}
+	if len(report.Results) != 1 || !strings.Contains(report.Results[0].DiffSummary, "Removed 1 unscoped legacy tool") || !strings.Contains(report.Results[0].DiffSummary, "Re-extract") {
+		t.Fatalf("expected migration report to surface dropped-row count and recovery guidance, got %+v", report.Results)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var normalized adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &normalized); err != nil {
+		t.Fatal(err)
+	}
+	if len(normalized.Sessions) != 0 {
+		t.Fatalf("unscoped tools must not fabricate sessions: %#v", normalized.Sessions)
+	}
+	if normalized.Migration == nil || !strings.Contains(normalized.Migration.Notes, "Removed 1 unscoped legacy tool") || !strings.Contains(normalized.Migration.Notes, "Re-extract") {
+		t.Fatalf("expected visible dropped-row count and recovery guidance, got %#v", normalized.Migration)
+	}
+	if strings.Contains(string(data), `"tools"`) || strings.Contains(string(data), `"invocations"`) || strings.Contains(string(data), `"events"`) {
+		t.Fatalf("normalized v4 must not serialize root fact arrays: %s", data)
+	}
+}
+
+func TestMigrationRunner_RejectsMixedCanonicalAndLegacyCollectionsAtomically(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-MIXED")
+	if err := os.MkdirAll(workspace, 0755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	original := []byte(`{"schema_version":4,"ticket_id":"TEST-MIXED","sessions":[],"invocations":[],"tools":[{"session_id":"s1","name":"bash","calls":1,"errors":0}]}`)
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Migrated != 0 || len(report.Errors) != 1 || !strings.Contains(report.Errors[0], "mixed ledger shape") {
+		t.Fatalf("expected mixed-shape rejection, got %+v", report)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(original) {
+		t.Fatal("mixed-shape rejection modified source ledger")
+	}
+}
+
+func TestMigrationRunner_ValidatesCanonicalV4BeforeUpToDateFastPath(t *testing.T) {
+	cases := []struct {
+		name     string
+		sessions string
+	}{
+		{
+			name:     "missing sessions collection",
+			sessions: `null`,
+		},
+		{
+			name:     "missing nested collections",
+			sessions: `[{"id":"s1"}]`,
+		},
+		{
+			name:     "padded session ID",
+			sessions: `[{"id":" s1 ","invocations":[],"tools":[],"events":[]}]`,
+		},
+		{
+			name:     "padded session parent ID",
+			sessions: `[{"id":"root","invocations":[],"tools":[],"events":[]},{"id":"child","parent_id":" root ","invocations":[],"tools":[],"events":[]}]`,
+		},
+		{
+			name:     "padded invocation parent ID",
+			sessions: `[{"id":"root","invocations":[],"tools":[],"events":[]},{"id":"child","invocations":[{"id":"child","parent_id":" root ","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
+		},
+		{
+			name:     "duplicate session IDs",
+			sessions: `[{"id":"s1","invocations":[],"tools":[],"events":[]},{"id":"s1","invocations":[],"tools":[],"events":[]}]`,
+		},
+		{
+			name:     "duplicate tool rows",
+			sessions: `[{"id":"s1","invocations":[],"tools":[{"name":"bash","calls":2,"errors":0},{"name":"bash","calls":1,"errors":0}],"events":[]}]`,
+		},
+		{
+			name:     "invalid tool counts",
+			sessions: `[{"id":"s1","invocations":[],"tools":[{"name":"bash","calls":1,"errors":2}],"events":[]}]`,
+		},
+		{
+			name:     "dangling session parent",
+			sessions: `[{"id":"s1","parent_id":"missing","invocations":[],"tools":[],"events":[]}]`,
+		},
+		{
+			name:     "dangling invocation parent",
+			sessions: `[{"id":"s1","invocations":[{"id":"inv-1","parent_id":"missing","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-CURRENT")
+			if err := os.MkdirAll(workspace, 0755); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(workspace, "agentic_metrics.json")
+			original := []byte(`{"schema_version":4,"ticket_id":"TEST-CURRENT","sessions":` + tc.sessions + `}`)
+			if err := os.WriteFile(path, original, 0600); err != nil {
+				t.Fatal(err)
+			}
+
+			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: 4})
+			if err != nil {
+				t.Fatalf("unexpected runner error: %v", err)
+			}
+			if report.UpToDate != 0 || len(report.Errors) != 1 {
+				t.Fatalf("expected current-v4 validation error, got %+v", report)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(after) != string(original) {
+				t.Fatal("invalid canonical ledger was modified by validation")
+			}
+		})
+	}
+}
+
+func TestMigrationRunner_NormalizesPreIterationV4AnomalySummaries(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-CANONICAL")
+	if err := os.MkdirAll(workspace, 0755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	original := []byte(`{"schema_version":4,"ticket_id":"TEST-CANONICAL","sessions":[{"id":"s1","invocations":[],"tools":[{"name":"bash","calls":2,"errors":0}],"events":[]}]}`)
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: 4})
+	if err != nil {
+		t.Fatalf("unexpected runner error: %v", err)
+	}
+	if report.Migrated != 1 || len(report.Errors) != 0 {
+		t.Fatalf("expected pre-iteration v4 ledger to be normalized, got %+v", report)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(after), `"anomalies": []`) {
+		t.Fatalf("normalized v4 ledger is missing canonical anomaly arrays: %s", string(after))
+	}
+}
+
+func TestMigrationRunner_SanitizesCanonicalV4EventPayloads(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-PRIVACY")
+	if err := os.MkdirAll(workspace, 0755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	original := []byte(`{"schema_version":4,"ticket_id":"TEST-PRIVACY","sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","status":"error","error_message":"private text"}]}]}`)
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Migrated != 1 || len(report.Errors) != 0 {
+		t.Fatalf("expected v4 privacy normalization, got %+v", report)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "private text") || strings.Contains(string(data), `"error_message"`) {
+		t.Fatalf("v4 migration persisted sensitive event payload: %s", data)
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &dto); err != nil {
+		t.Fatal(err)
+	}
+	if len(dto.Sessions) != 1 || len(dto.Sessions[0].Events) != 0 || dto.Sessions[0].Anomalies == nil || dto.Anomalies == nil {
+		t.Fatalf("expected isolated error omitted and canonical summary arrays present, got %+v", dto)
 	}
 }
 

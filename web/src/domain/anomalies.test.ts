@@ -7,11 +7,30 @@ import {
   findMatchingAnomaly,
   extractStreakCount,
   findMatchingLiveAlert,
+  formatAnomaly,
   type AnomalyRule,
   type ToolFailureAnomalyRule,
 } from './anomalies';
 
 describe('Domain Anomalies Logic', () => {
+  describe('formatAnomaly', () => {
+    it.each([
+      [{ rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { tool_name: 'bash', count: 3 } }, 'Tool retry streak: bash (3 consecutive errors)', "Tool 'bash' encountered 3 consecutive execution failures."],
+      [{ rule_id: 'TOOL_HIGH_FAILURE_RATE', severity: 'WARNING', context: { tool_name: 'git', count: 2, total_calls: 6, failure_rate_pct: 33.3, threshold: '>20%' } }, 'High tool failure rate: git (33.3%)', "Tool 'git' failed 2 out of 6 calls (33.3% failure rate, threshold: >20%)."],
+      [{ rule_id: 'CONTEXT_SATURATION_SPIKE', severity: 'WARNING', context: { token_delta: 45000, context_tokens: 165000 } }, 'Context saturation spike (+45k tokens)', 'Context tokens surged by 45k to 165k tokens.'],
+      [{ rule_id: 'CONTEXT_SATURATION_SPIKE', severity: 'CRITICAL', context: { context_tokens: 165000, threshold: '160000' } }, 'Context ceiling breached (165k tokens)', 'Context tokens reached 165k, breaching the 160k critical ceiling.'],
+      [{ rule_id: 'SUBAGENT_REWORK_LOOP', severity: 'WARNING', context: { role: 'coder', secondary_role: 'tester', count: 4 } }, 'Subagent rework loop: coder <-> tester (4 cycles)', "Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles."],
+    ] as const)('formats rule context', (anomaly, title, description) => {
+      expect(formatAnomaly(anomaly)).toEqual({ title, description });
+    });
+
+    it('uses a safe fallback for incomplete context', () => {
+      expect(formatAnomaly({ rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: {} })).toEqual({
+        title: 'Tool retry streak',
+        description: 'tool retry streak detected; some diagnostic context is unavailable.',
+      });
+    });
+  });
   describe('isToolFailureAnomalyRule', () => {
     it('returns true for all four tool failure anomaly rule IDs', () => {
       expect(isToolFailureAnomalyRule('TOOL_RETRY_STREAK')).toBe(true);
@@ -153,8 +172,6 @@ describe('Domain Anomalies Logic', () => {
     const streakAnomaly: Anomaly = {
       rule_id: 'TOOL_RETRY_STREAK',
       severity: 'WARNING',
-      title: 'Tool Retry Streak',
-      description: 'Repeated bash failures',
       context: {
         session_id: 'ses-1',
         tool_name: 'bash',
@@ -174,6 +191,48 @@ describe('Domain Anomalies Logic', () => {
         tool_name: 'BASH',
       };
       expect(matchesAnomaly(upperToolEvent, streakAnomaly)).toBe(true);
+    });
+
+    it('uses exact evidence refs for persisted anomalies instead of matching every same-tool failure', () => {
+      const evidencedAnomaly: Anomaly = {
+        ...streakAnomaly,
+        evidence: [{ session_id: 'ses-1', event_id: 'failed-call-2' }],
+      };
+      const referencedEvent: EventFact = { ...baseEvent, event_id: 'failed-call-2' };
+      const unrelatedFailure: EventFact = { ...baseEvent, event_id: 'failed-call-9' };
+
+      expect(matchesAnomaly(referencedEvent, evidencedAnomaly)).toBe(true);
+      expect(matchesAnomaly(unrelatedFailure, evidencedAnomaly)).toBe(false);
+      expect(findMatchingAnomaly(unrelatedFailure, [evidencedAnomaly])).toBeUndefined();
+    });
+
+    it('matches a nested event without session_id when its evidence ID has one owner', () => {
+      const evidencedAnomaly: Anomaly = {
+        ...streakAnomaly,
+        evidence: [{ session_id: 'ses-1', event_id: 'failed-call-2' }],
+      };
+      const nestedEvent: Omit<EventFact, 'session_id'> = {
+        event_id: 'failed-call-2', timestamp: baseEvent.timestamp, turn: baseEvent.turn,
+        role: baseEvent.role, event_type: baseEvent.event_type, tool_name: baseEvent.tool_name,
+        status: baseEvent.status, context_tokens: baseEvent.context_tokens,
+      };
+      expect(matchesAnomaly(nestedEvent, evidencedAnomaly)).toBe(true);
+    });
+
+    it('rejects a nested event when the same evidence ID appears under multiple sessions', () => {
+      const evidencedAnomaly: Anomaly = {
+        ...streakAnomaly,
+        evidence: [
+          { session_id: 'ses-1', event_id: 'call-1' },
+          { session_id: 'ses-2', event_id: 'call-1' },
+        ],
+      };
+      const nestedEvent: Omit<EventFact, 'session_id'> = {
+        event_id: 'call-1', timestamp: baseEvent.timestamp, turn: baseEvent.turn,
+        role: baseEvent.role, event_type: baseEvent.event_type, tool_name: baseEvent.tool_name,
+        status: baseEvent.status, context_tokens: baseEvent.context_tokens,
+      };
+      expect(matchesAnomaly(nestedEvent, evidencedAnomaly)).toBe(false);
     });
 
     it('does NOT match tool failure anomaly if event status is completed', () => {
@@ -197,8 +256,6 @@ describe('Domain Anomalies Logic', () => {
       const saturationAnomaly: Anomaly = {
         rule_id: 'CONTEXT_SATURATION_SPIKE',
         severity: 'WARNING',
-        title: 'Context Saturation Spike',
-        description: 'Large token burst',
         context: {
           session_id: 'ses-1',
           turn: 2,
@@ -247,8 +304,6 @@ describe('Domain Anomalies Logic', () => {
       const reworkAnomaly: Anomaly = {
         rule_id: 'SUBAGENT_REWORK_LOOP',
         severity: 'WARNING',
-        title: 'Subagent Rework Loop',
-        description: 'Repeated handoffs',
         context: {
           session_id: 'ses-1',
           role: 'coder',
@@ -281,8 +336,6 @@ describe('Domain Anomalies Logic', () => {
       expect(extractStreakCount({
         rule_id: 'CONTEXT_SATURATION_SPIKE',
         severity: 'WARNING',
-        title: 'Spike',
-        description: 'tokens',
         context: {},
       })).toBeUndefined();
     });
@@ -304,8 +357,6 @@ describe('Domain Anomalies Logic', () => {
       const anomaly: Anomaly = {
         rule_id: 'TOOL_RETRY_STREAK',
         severity: 'WARNING',
-        title: 'Streak',
-        description: 'desc',
         context: { count: 4 },
       };
       expect(extractStreakCount(anomaly)).toBe(4);

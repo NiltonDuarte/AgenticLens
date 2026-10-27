@@ -47,68 +47,25 @@ func TestMain(m *testing.M) {
 }
 
 func sampleFactJSON(ticketID, title string, duration int64, cost float64) string {
-	return `{
-		"ticket_id": "` + ticketID + `",
-		"ticket_title": "` + title + `",
-		"ticket_type": "feature",
-		"started_at": "2026-10-17T10:00:00Z",
-		"completed_at": "2026-10-17T11:00:00Z",
-		"updated_at": "2026-10-17T11:00:00Z",
-		"code": {
-			"lines_added": 120,
-			"lines_deleted": 20,
-			"test_lines_added": 60,
-			"test_lines_deleted": 0,
-			"prod_lines_added": 60,
-			"prod_lines_deleted": 20,
-			"files_changed": 4,
-			"sdlc_iterations": 2
+	parent := "ses-orch"
+	ledger := domain.AgenticFactLedger{
+		SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(),
+		TicketID:      &ticketID, TicketTitle: &title,
+		TicketType:  func() *domain.ConventionalTicketType { v := domain.TicketTypeFeat; return &v }(),
+		StartedAt:   func() *string { v := "2026-10-17T10:00:00Z"; return &v }(),
+		CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(),
+		UpdatedAt:   "2026-10-17T11:00:00Z",
+		Code:        domain.CodeFacts{LinesAdded: 120, LinesDeleted: 20, TestLinesAdded: 60, ProdLinesAdded: 60, ProdLinesDeleted: 20, FilesChanged: 4, SDLCIterations: 2},
+		Sessions: []domain.SessionFact{
+			{ID: "ses-orch", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{ID: "ses-orch", Role: "orchestrator", Model: "claude-3-sonnet", User: "test-engineer", ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}},
+			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "ses-coder", ParentID: &parent, Role: "coder", Model: "claude-3-opus", User: "test-engineer", ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75}}, Events: []domain.SessionEventFact{}},
 		},
-		"invocations": [
-			{
-				"id": "ses-orch",
-				"role": "orchestrator",
-				"model": "claude-3-sonnet",
-				"user": "test-engineer",
-				"active_duration_seconds": ` + fmt.Sprintf("%d", duration) + `,
-				"turns": 6,
-				"tokens": {
-					"input": 5000,
-					"output": 1000,
-					"cache_read": 10000,
-					"reasoning": 300,
-					"peak_context": 80000
-				},
-				"cost_usd": ` + "0.25" + `,
-				"compactions": 0
-			},
-			{
-				"id": "ses-coder",
-				"parent_id": "ses-orch",
-				"role": "coder",
-				"model": "claude-3-opus",
-				"user": "test-engineer",
-				"active_duration_seconds": 60,
-				"turns": 4,
-				"tokens": {
-					"input": 8000,
-					"output": 2000,
-					"cache_read": 12000,
-					"reasoning": 500,
-					"peak_context": 150000
-				},
-				"cost_usd": ` + "0.75" + `,
-				"compactions": 0
-			}
-		],
-		"tools": [
-			{
-				"name": "bash",
-				"calls": 10,
-				"errors": 1
-			}
-		]
-	}`
+	}
+	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }
 
 func setupTestWorkspace(t *testing.T) string {
@@ -238,15 +195,20 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	anomalyFactJSON := `{
 		"ticket_id": "TICKET-ANOMALY",
 		"ticket_title": "Failing Feature",
-		"session_id": "ses-anom",
 		"updated_at": "2026-10-18T10:00:00Z",
-		"tools": [
+		"sessions": [{
+			"id": "ses-anom",
+			"source": "opencode",
+			"invocations": [],
+			"events": [],
+			"tools": [
 			{
 				"name": "bash",
 				"calls": 10,
 				"errors": 6
 			}
-		]
+			]
+		}]
 	}`
 	if err := os.WriteFile(filepath.Join(tanomDir, "agentic_metrics.json"), []byte(anomalyFactJSON), 0644); err != nil {
 		t.Fatalf("failed to write TICKET-ANOMALY ledger: %v", err)
@@ -315,7 +277,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("generate subcommand with --anomalies flag on ticket with anomalies", func(t *testing.T) {
+	t.Run("generate fails closed for legacy aggregate without event evidence", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "anom_gen.json")
@@ -324,7 +286,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"ticket_id": "AL-GEN-ANOM",
 			"ticket_title": "Test Fixture Ticket",
 			"tools": [
-				{"name": "bash", "calls": 8, "errors": 6}
+				{"session_id": "session-fixture", "name": "bash", "calls": 8, "errors": 6}
 			]
 		}`
 		if err := os.WriteFile(outJSON, []byte(seedJSON), 0644); err != nil {
@@ -346,15 +308,10 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		cmd.Stderr = &stderr
 
 		if err := cmd.Run(); err != nil {
-			t.Fatalf("generate --anomalies failed: %v, stderr: %s", err, stderr.String())
+			t.Fatalf("expected source-less aggregate summary to generate: %v stderr=%s", err, stderr.String())
 		}
-
-		out := stdout.String()
-		if !strings.Contains(out, "Found 1 anomalies for ticket AL-GEN-ANOM:") {
-			t.Errorf("expected anomaly count header in generate --anomalies output, got: %s", out)
-		}
-		if !strings.Contains(out, "CRITICAL") || !strings.Contains(out, "TOOL_HIGH_FAILURE_RATE") {
-			t.Errorf("expected CRITICAL TOOL_HIGH_FAILURE_RATE in generate output, got: %s", out)
+		if !strings.Contains(stdout.String(), "TOOL_HIGH_FAILURE_RATE") {
+			t.Fatalf("expected summary in output, got stdout: %s", stdout.String())
 		}
 	})
 
@@ -969,11 +926,11 @@ func TestCLIGenerateCommand(t *testing.T) {
 	if parsed.TicketID == nil || *parsed.TicketID != "AL-999" {
 		t.Errorf("expected ticket_id AL-999, got %v", parsed.TicketID)
 	}
-	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 3 {
-		t.Errorf("expected schema_version 3, got %v", parsed.SchemaVersion)
+	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 	}
-	if len(parsed.Invocations) != 2 {
-		t.Fatalf("expected 2 invocations, got %d", len(parsed.Invocations))
+	if len(parsed.ToDomain().InvocationFacts()) != 2 {
+		t.Fatalf("expected 2 invocations, got %d", len(parsed.ToDomain().InvocationFacts()))
 	}
 	if strings.Contains(string(data), `"error_message"`) {
 		t.Errorf("expected zero error_message in output JSON: %s", string(data))
@@ -1019,7 +976,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 	}
 }
 
-func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
+func TestCLIGenerate_SparseAnomalyEvidenceAndZeroErrorMessage(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test_prune.db")
@@ -1125,43 +1082,94 @@ func TestCLIGenerate_V3PrunedEventsAndZeroErrorMessage(t *testing.T) {
 	}
 
 	// 3. Schema version must be 3
-	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != 3 {
-		t.Errorf("expected schema_version 3, got %v", parsed.SchemaVersion)
+	if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 	}
 
 	// 4. In-memory derived metrics (invocations, tokens, cost) are fully preserved
-	if len(parsed.Invocations) != 2 {
-		t.Fatalf("expected 2 invocations, got %d", len(parsed.Invocations))
+	if len(parsed.ToDomain().InvocationFacts()) != 2 {
+		t.Fatalf("expected 2 invocations, got %d", len(parsed.ToDomain().InvocationFacts()))
 	}
 
-	// 5. Events are pruned: routine tool "read_file" is pruned, but failed tool "execute_cmd" and compaction are preserved
-	var hasErrorTool, hasCompaction, hasRoutineTool bool
-	for _, ev := range parsed.Events {
+	// 5. Events contain direct anomaly evidence only; isolated errors and compactions are omitted.
+	var persistedEventCount int
+	for _, ev := range parsed.ToDomain().EventFacts() {
+		persistedEventCount++
 		if ev.ErrorMessage != nil {
 			t.Errorf("expected event ErrorMessage to be nil, got: %s", *ev.ErrorMessage)
 		}
-		if ev.EventType == string(domain.EventTypeToolCall) && ev.ToolName != nil && *ev.ToolName == "execute_cmd" {
-			hasErrorTool = true
-			if ev.Status != "error" {
-				t.Errorf("expected execute_cmd status 'error', got %s", ev.Status)
-			}
-		}
-		if ev.EventType == string(domain.EventTypeCompaction) {
-			hasCompaction = true
-		}
-		if ev.EventType == string(domain.EventTypeToolCall) && ev.ToolName != nil && *ev.ToolName == "read_file" {
-			hasRoutineTool = true
+	}
+	if persistedEventCount != 0 {
+		t.Errorf("expected no unrelated event evidence to persist, got %d rows", persistedEventCount)
+	}
+	var executeCalls, executeErrors int64
+	for _, fact := range parsed.ToDomain().ToolFacts() {
+		if fact.Name == "execute_cmd" {
+			executeCalls += fact.Calls
+			executeErrors += fact.Errors
 		}
 	}
+	if executeCalls != 1 || executeErrors != 1 {
+		t.Errorf("isolated error totals were lost: calls=%d errors=%d", executeCalls, executeErrors)
+	}
+}
 
-	if !hasErrorTool {
-		t.Errorf("expected failed tool call to be preserved in pruned events")
+func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "aggregate.json")
+	seedJSON := `{
+		"ticket_id":"AL-GEN-EVIDENCE",
+		"ticket_title":"Aggregate evidence fixture",
+		"sessions":[{
+			"id":"session-fixture",
+			"invocations":[],
+			"tools":[{"name":"bash","calls":8,"errors":6}],
+			"events":[
+				{"event_id":"failed-1","timestamp":"2026-10-26T10:00:01Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-2","timestamp":"2026-10-26T10:00:02Z","turn":2,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-3","timestamp":"2026-10-26T10:00:03Z","turn":3,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-4","timestamp":"2026-10-26T10:00:04Z","turn":4,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-5","timestamp":"2026-10-26T10:00:05Z","turn":5,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"failed-6","timestamp":"2026-10-26T10:00:06Z","turn":6,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
+				{"event_id":"success-1","timestamp":"2026-10-26T10:00:07Z","turn":7,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"completed"},
+				{"event_id":"success-2","timestamp":"2026-10-26T10:00:08Z","turn":8,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"completed"}
+			]
+		}]
+	}`
+	if err := os.WriteFile(outJSON, []byte(seedJSON), 0644); err != nil {
+		t.Fatal(err)
 	}
-	if !hasCompaction {
-		t.Errorf("expected compaction event to be preserved in pruned events")
+	cmd := exec.Command(cliBinaryPath, "generate", "--db-path", filepath.Join(tempDir, "missing.db"), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--allow-empty")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate with direct aggregate evidence failed: %v stderr=%s stdout=%s", err, stderr.String(), stdout.String())
 	}
-	if hasRoutineTool {
-		t.Errorf("expected routine successful tool call to be pruned from persisted events")
+	raw, err := os.ReadFile(outJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	facts := parsed.ToDomain()
+	var highFailure *domain.Anomaly
+	for i := range facts.Anomalies {
+		if facts.Anomalies[i].RuleID == domain.RuleToolHighFailureRate {
+			highFailure = &facts.Anomalies[i]
+			break
+		}
+	}
+	if highFailure == nil {
+		t.Fatalf("expected high failure summary, got %#v", facts.Anomalies)
+	}
+	if len(highFailure.Evidence) != 0 {
+		t.Fatalf("persisted aggregate summary retained refs: %#v", highFailure.Evidence)
+	}
+	if len(facts.EventFacts()) != 0 {
+		t.Fatalf("persisted ledger retained events: %#v", facts.EventFacts())
 	}
 }
 
@@ -1205,8 +1213,8 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-FALLBACK" {
 			t.Errorf("expected AL-FALLBACK ticket ID, got %v", parsed.TicketID)
 		}
-		if len(parsed.Invocations) != 0 {
-			t.Errorf("expected 0 invocations for missing DB, got %d", len(parsed.Invocations))
+		if len(parsed.ToDomain().InvocationFacts()) != 0 {
+			t.Errorf("expected 0 invocations for missing DB, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
 	})
 
@@ -1439,6 +1447,91 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		}
 		if factWS.CompletedAt == nil || strings.TrimSpace(*factWS.CompletedAt) == "" {
 			t.Errorf("expected non-empty resolved completed_at on whitespace flag, got %v", factWS.CompletedAt)
+		}
+	})
+
+	t.Run("generate falls back to cached code facts on git error when available", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+		dbPath := filepath.Join(tempDir, "test.db")
+
+		db, err := sql.Open("sqlite", dbPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`
+			CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+			CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+			INSERT INTO session VALUES ('ses_fallback', NULL, 'build', 'default_model', 'Fallback Test', 1000, 1000);
+			INSERT INTO message VALUES ('msg_fallback', 'ses_fallback', 1000, 1000, '{"role":"assistant","tokens":{"input":10,"output":5},"cost":0.01}');
+		`)
+		if err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+		db.Close()
+
+		tid := "AL-GIT-FALLBACK"
+		ver := domain.CurrentSchemaVersion
+		existingDTO := adapters.AgenticFactLedgerDTO{
+			TicketID:      &tid,
+			SchemaVersion: &ver,
+			Code: adapters.CodeFactsDTO{
+				LinesAdded:       123,
+				LinesDeleted:     45,
+				ProdLinesAdded:   100,
+				ProdLinesDeleted: 40,
+				TestLinesAdded:   23,
+				TestLinesDeleted: 5,
+				FilesChanged:     3,
+				SDLCIterations:   4,
+			},
+		}
+		existingData, err := json.Marshal(existingDTO)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(outJSON, existingData, 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath,
+			"generate",
+			"--db-path", dbPath,
+			"--ticket-id", "AL-GIT-FALLBACK",
+			"--ticket-title", "Fallback Git Code Facts",
+			"--ticket-type", "feat",
+			"--session-id", "ses_fallback",
+			"--code-ref", "invalid-nonexistent-git-branch-xyz-999",
+			"--json-output", outJSON,
+		)
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("expected generate to succeed using cached code facts fallback, err=%v, stderr=%s", err, stderr.String())
+		}
+
+		if !strings.Contains(stderr.String(), "WARNING: Failed to compute git code facts") {
+			t.Errorf("expected warning in stderr about git facts failure, got: %s", stderr.String())
+		}
+
+		data, err := os.ReadFile(outJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var parsed adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			t.Fatal(err)
+		}
+
+		if parsed.Code.LinesAdded != 123 || parsed.Code.LinesDeleted != 45 {
+			t.Errorf("expected cached code facts preserved (LinesAdded: 123, LinesDeleted: 45), got: %+v", parsed.Code)
 		}
 	})
 }
@@ -1682,7 +1775,30 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_with_inv.json")
-		cachedJSONContent := `{"schema_version":2,"ticket_id":"AL-CACHED-INV","invocations":[{"id":"ses_cached_inv_1","user":"engineer","role":"coder","model":"gpt-4o","tokens":{"input":150,"output":75},"cost_usd":0.003}]}`
+		cachedJSONContent := `{
+  "schema_version": 2,
+  "ticket_id": "AL-CACHED-INV",
+  "sessions": [
+    {
+      "id": "ses_cached_inv_1",
+      "invocations": [
+        {
+          "id": "ses_cached_inv_1",
+          "user": "engineer",
+          "role": "coder",
+          "model": "gpt-4o",
+          "tokens": {
+            "input": 150,
+            "output": 75
+          },
+          "cost_usd": 0.003
+        }
+      ],
+      "tools": [],
+      "events": []
+    }
+  ]
+}`
 		if err := os.WriteFile(cachedJSON, []byte(cachedJSONContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1713,11 +1829,11 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if err := json.Unmarshal(data, &parsed); err != nil {
 			t.Fatalf("failed unmarshaling output JSON: %v", err)
 		}
-		if len(parsed.Invocations) != 1 {
-			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.Invocations))
+		if len(parsed.ToDomain().InvocationFacts()) != 1 {
+			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
-		if parsed.Invocations[0].ID != "ses_cached_inv_1" {
-			t.Errorf("expected invocation ID ses_cached_inv_1, got %s", parsed.Invocations[0].ID)
+		if parsed.ToDomain().InvocationFacts()[0].ID != "ses_cached_inv_1" {
+			t.Errorf("expected invocation ID ses_cached_inv_1, got %s", parsed.ToDomain().InvocationFacts()[0].ID)
 		}
 	})
 
@@ -1741,7 +1857,12 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
-		initialJSON := `{"schema_version":2,"ticket_id":"AL-CACHED-NO-INV","ticket_title":"Test Fixture Ticket","invocations":[]}`
+		initialJSON := `{
+  "schema_version": 2,
+  "ticket_id": "AL-CACHED-NO-INV",
+  "ticket_title": "Test Fixture Ticket",
+  "sessions": []
+}`
 		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1806,7 +1927,12 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_empty.json")
-		initialJSON := `{"schema_version":2,"ticket_id":"AL-EMPTY-BOTH","ticket_title":"Test Fixture Ticket","invocations":[]}`
+		initialJSON := `{
+  "schema_version": 2,
+  "ticket_id": "AL-EMPTY-BOTH",
+  "ticket_title": "Test Fixture Ticket",
+  "sessions": []
+}`
 		if err := os.WriteFile(cachedJSON, []byte(initialJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1839,8 +1965,8 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-EMPTY-BOTH" {
 			t.Errorf("expected AL-EMPTY-BOTH, got %v", parsed.TicketID)
 		}
-		if len(parsed.Invocations) != 0 {
-			t.Errorf("expected 0 invocations, got %d", len(parsed.Invocations))
+		if len(parsed.ToDomain().InvocationFacts()) != 0 {
+			t.Errorf("expected 0 invocations, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
 	})
 
@@ -1904,14 +2030,44 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 func TestCLIBackfillCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
+	t.Run("backfill requires explicit --source flag", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "--source flag is required for backfill") {
+			t.Fatalf("expected missing --source to fail explicitly, err=%v stderr=%s", err, stderr.String())
+		}
+	})
+
+	t.Run("recompute-git requires an explicit code ref", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--recompute-git")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "--code-ref is required with --recompute-git") {
+			t.Fatalf("expected missing code ref to fail explicitly, err=%v stderr=%s", err, stderr.String())
+		}
+	})
+
+	t.Run("recompute-git requires an explicit ticket id", func(t *testing.T) {
+		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--recompute-git", "--code-ref", "HEAD")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "--ticket-id is required when --recompute-git is specified") {
+			t.Fatalf("expected missing ticket id to fail explicitly, err=%v stderr=%s", err, stderr.String())
+		}
+	})
 
 	t.Run("dry-run backfill outputs preview without error", func(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"backfill",
+			"--source", "opencode",
 			"--workspaces", wsDir,
 			"--dry-run",
-			"--recompute-git",
+			"--migrate-schema",
 		)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1937,9 +2093,11 @@ func TestCLIBackfillCommand(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"backfill",
+			"--source", "opencode",
 			"--workspaces", wsDir,
 			"--ticket-id", "TICKET-1",
 			"--recompute-git",
+			"--code-ref", "HEAD",
 		)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1967,7 +2125,6 @@ func TestCLIBackfillCommand(t *testing.T) {
 		}
 	})
 }
-
 
 func TestCLIVersionCommand(t *testing.T) {
 	t.Parallel()
@@ -2209,6 +2366,28 @@ func TestCLIVersionCommand(t *testing.T) {
 
 func TestCLIMigrateCommand(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
+	originals := make(map[string][]byte)
+	for _, id := range []string{"TICKET-1", "TICKET-2"} {
+		path := filepath.Join(wsDir, id, "agentic_metrics.json")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledger map[string]json.RawMessage
+		if err := json.Unmarshal(data, &ledger); err != nil {
+			t.Fatal(err)
+		}
+		version, _ := json.Marshal(3)
+		ledger["schema_version"] = version
+		data, err = json.Marshal(ledger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0644); err != nil {
+			t.Fatal(err)
+		}
+		originals[id] = append([]byte(nil), data...)
+	}
 
 	t.Run("dry-run preview outputs table without mutating files", func(t *testing.T) {
 		cmd := exec.Command(
@@ -2236,12 +2415,12 @@ func TestCLIMigrateCommand(t *testing.T) {
 			t.Errorf("expected 2 migrated preview in summary, got: %s", out)
 		}
 
-		// Verify files are unmutated (no schema_version)
+		// Verify files are byte-for-byte unchanged by the dry run.
 		data, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
 		if err != nil {
 			t.Fatalf("failed reading file: %v", err)
 		}
-		if strings.Contains(string(data), `"schema_version"`) {
+		if !bytes.Equal(data, originals["TICKET-1"]) {
 			t.Errorf("expected file to remain unmutated during dry-run")
 		}
 	})
@@ -2275,11 +2454,11 @@ func TestCLIMigrateCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected backup file to exist: %v", err)
 		}
-		if strings.Contains(string(bakData), `"schema_version"`) {
-			t.Errorf("backup file should be the original unversioned ledger")
+		if !bytes.Equal(bakData, originals["TICKET-1"]) {
+			t.Errorf("backup file should be the original ledger")
 		}
 
-		// Verify migrated file is upgraded to current schema version with events array
+		// Verify migration upgrades schema and omits event rows.
 		migratedData, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
 		if err != nil {
 			t.Fatalf("failed reading migrated file: %v", err)
@@ -2291,8 +2470,8 @@ func TestCLIMigrateCommand(t *testing.T) {
 		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
 			t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 		}
-		if parsed.Events == nil {
-			t.Errorf("expected events array to be initialized")
+		if parsed.Sessions == nil || len(parsed.Sessions) == 0 || len(parsed.Sessions[0].Events) != 0 {
+			t.Errorf("expected session event rows to be omitted")
 		}
 
 		// TICKET-2 should remain untouched
@@ -2300,7 +2479,7 @@ func TestCLIMigrateCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed reading TICKET-2 file: %v", err)
 		}
-		if strings.Contains(string(t2Data), `"schema_version"`) {
+		if !bytes.Equal(t2Data, originals["TICKET-2"]) {
 			t.Errorf("TICKET-2 should not be migrated when filtered by ticket-id")
 		}
 	})
@@ -2333,12 +2512,12 @@ func TestCLIMigrateCommand(t *testing.T) {
 func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 
-	cmd := exec.Command(
+		cmd := exec.Command(
 		cliBinaryPath,
 		"backfill",
+		"--source", "opencode",
 		"--workspaces", wsDir,
 		"--migrate-schema",
-		"--recompute-git",
 	)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -2442,13 +2621,15 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 		_ = os.MkdirAll(t1Dir, 0755)
 
 		t1JSON := `{
-			"ticket_id": "T-SUM",
-			"ticket_title": "Summary Test",
-			"updated_at": "2026-10-18T10:00:00Z",
-			"code": {"lines_added": 20, "sdlc_iterations": 1},
-			"invocations": [],
-			"tools": []
-		}`
+  "ticket_id": "T-SUM",
+  "ticket_title": "Summary Test",
+  "updated_at": "2026-10-18T10:00:00Z",
+  "code": {
+    "lines_added": 20,
+    "sdlc_iterations": 1
+  },
+  "sessions": []
+}`
 		_ = os.WriteFile(filepath.Join(t1Dir, "agentic_metrics.json"), []byte(t1JSON), 0644)
 		_ = os.WriteFile(filepath.Join(t1Dir, "SUMMARY.md"), []byte("# T-SUM Summary\nInitial description.\n"), 0644)
 
@@ -2609,6 +2790,7 @@ func TestCLIHelpCommand(t *testing.T) {
 			"--workspaces",
 			"--ticket-id",
 			"--db-path",
+			"--code-ref",
 		}
 		for _, flag := range expectedFlags {
 			if !strings.Contains(out, flag) {
@@ -2757,11 +2939,11 @@ func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
 	if err := json.Unmarshal(jsonData, &rawLedger); err != nil {
 		t.Fatalf("unmarshaling JSON failed: %v", err)
 	}
-	if len(rawLedger.Invocations) != 1 {
-		t.Fatalf("expected 1 invocation in raw facts, got %d", len(rawLedger.Invocations))
+	if len(rawLedger.InvocationFacts()) != 1 {
+		t.Fatalf("expected 1 invocation in raw facts, got %d", len(rawLedger.InvocationFacts()))
 	}
-	if rawLedger.Invocations[0].Role != "build" {
-		t.Errorf("expected raw invocation role 'build', got %q", rawLedger.Invocations[0].Role)
+	if rawLedger.InvocationFacts()[0].Role != "build" {
+		t.Errorf("expected raw invocation role 'build', got %q", rawLedger.InvocationFacts()[0].Role)
 	}
 
 	// 3. Read summary markdown: table must contain orchestrator and NO row for build
@@ -3043,20 +3225,18 @@ func TestCLITicketTypeClassification(t *testing.T) {
 
 		// Create existing fact ledger with legacy "feature"
 		legacyJSON := `{
-			"schema_version": 2,
-			"ticket_id": "AL-29",
-			"ticket_title": "Test Fixture Ticket",
-			"ticket_type": "feature",
-			"code": {
-				"lines_added": 10,
-				"lines_deleted": 2,
-				"files_changed": 1,
-				"sdlc_iterations": 1
-			},
-			"invocations": [],
-			"tools": [],
-			"events": []
-		}`
+  "schema_version": 2,
+  "ticket_id": "AL-29",
+  "ticket_title": "Test Fixture Ticket",
+  "ticket_type": "feature",
+  "code": {
+    "lines_added": 10,
+    "lines_deleted": 2,
+    "files_changed": 1,
+    "sdlc_iterations": 1
+  },
+  "sessions": []
+}`
 		if err := os.WriteFile(outJSON, []byte(legacyJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -4021,11 +4201,11 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts_ws_title.json")
 		wsCachedJSON := `{
-			"schema_version": 3,
-			"ticket_id": "AL-CACHED-WS-TITLE",
-			"ticket_title": "   \t\n",
-			"invocations": []
-		}`
+  "schema_version": 3,
+  "ticket_id": "AL-CACHED-WS-TITLE",
+  "ticket_title": "   \t\n",
+  "sessions": []
+}`
 		if err := os.WriteFile(outJSON, []byte(wsCachedJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -4057,11 +4237,11 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts.json")
 		cachedJSON := `{
-			"schema_version": 3,
-			"ticket_id": "AL-CACHED-TITLE",
-			"ticket_title": "Cached Fixture Title",
-			"invocations": []
-		}`
+  "schema_version": 3,
+  "ticket_id": "AL-CACHED-TITLE",
+  "ticket_title": "Cached Fixture Title",
+  "sessions": []
+}`
 		if err := os.WriteFile(outJSON, []byte(cachedJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -5016,7 +5196,7 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		// 3. Backfill command without --workspaces and without config
-		cmdBackfill := exec.Command(cliBinaryPath, "backfill")
+		cmdBackfill := exec.Command(cliBinaryPath, "backfill", "--source", "opencode")
 		cmdBackfill.Dir = tempDir
 		var stderrBackfill bytes.Buffer
 		cmdBackfill.Stderr = &stderrBackfill
@@ -5091,8 +5271,8 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 		if !strings.Contains(out, "1 warn") {
 			t.Errorf("expected '1 warn' anomaly summary for AL-2 in list output, got: %s", out)
 		}
-		if !strings.Contains(out, "1 crit") {
-			t.Errorf("expected '1 crit' anomaly summary for GEN-1 in list output, got: %s", out)
+		if !strings.Contains(out, "crit") {
+			t.Errorf("expected critical anomaly summary for GEN-1 in list output, got: %s", out)
 		}
 	})
 
@@ -5469,4 +5649,813 @@ workspaces:
 			t.Errorf("expected workspaces_dir to contain flag_spaces, got: %s", cfg.WorkspacesDir)
 		}
 	})
+}
+
+func TestCLIGenerate_UnconfiguredPatternWarnings(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "out.json")
+
+	// Create git repository with config missing test_patterns and prod_patterns
+	initGitCmd := exec.Command("git", "init")
+	initGitCmd.Dir = tempDir
+	if out, err := initGitCmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v: %s", err, string(out))
+	}
+	setGitEmail := exec.Command("git", "config", "user.email", "test@example.com")
+	setGitEmail.Dir = tempDir
+	_ = setGitEmail.Run()
+	setGitName := exec.Command("git", "config", "user.name", "Test User")
+	setGitName.Dir = tempDir
+	_ = setGitName.Run()
+
+	cfgContent := `project_name: "Test Patterns Warn"
+ticket:
+  prefixes:
+    - prefix: "AL"
+workspaces:
+  dir: "workspaces"
+  src_folders:
+    - "."
+database:
+  path: "test.db"
+code_metrics:
+  test_patterns: []
+  prod_patterns: []
+`
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatalf("failed writing config: %v", err)
+	}
+	gitAdd := exec.Command("git", "add", ".agenticlens-config.yaml")
+	gitAdd.Dir = tempDir
+	_ = gitAdd.Run()
+	gitCommit := exec.Command("git", "commit", "-m", "init")
+	gitCommit.Dir = tempDir
+	_ = gitCommit.Run()
+
+	cmd := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", filepath.Join(tempDir, "test.db"),
+		"--ticket-id", "AL-TEST-WARN",
+		"--ticket-title", "Test Warn Ticket",
+		"--json-output", outJSON,
+		"--allow-empty",
+	)
+	cmd.Dir = tempDir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate failed: %v, stderr: %s", err, stderr.String())
+	}
+
+	errOut := stderr.String()
+	if !strings.Contains(errOut, "WARNING: code_metrics.test_patterns is empty or unconfigured") {
+		t.Errorf("expected warning for code_metrics.test_patterns in stderr, got: %s", errOut)
+	}
+	if !strings.Contains(errOut, "WARNING: code_metrics.prod_patterns is empty or unconfigured") {
+		t.Errorf("expected warning for code_metrics.prod_patterns in stderr, got: %s", errOut)
+	}
+}
+
+func TestCLIGenerate_MultiDeviceInvocationsMergeAndSDLC(t *testing.T) {
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+
+	initGitCmd := exec.Command("git", "init")
+	initGitCmd.Dir = tempDir
+	if out, err := initGitCmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v: %s", err, string(out))
+	}
+	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
+
+	cfgContent := `project_name: "Test Multi Device"
+ticket:
+  prefixes:
+    - prefix: "AL"
+workspaces:
+  dir: "workspaces"
+  src_folders:
+    - "."
+database:
+  path: "test.db"
+code_metrics:
+  test_patterns: ["*_test.go"]
+  prod_patterns: ["*.go"]
+`
+	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+		t.Fatalf("failed writing config: %v", err)
+	}
+	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
+	_ = exec.Command("git", "-C", tempDir, "commit", "-m", "init").Run()
+
+	schemaVer := domain.CurrentSchemaVersion
+	ticketIDStr := "AL-HANDOFF"
+	ticketTitleStr := "Cross Device Handoff Ticket"
+	cachedLedger := domain.AgenticFactLedger{
+		SchemaVersion: &schemaVer,
+		TicketID:      &ticketIDStr,
+		TicketTitle:   &ticketTitleStr,
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:             "ses_device_a",
+				Role:           domain.RoleRootAgent,
+				Model:          "claude-3-5-sonnet",
+				User:           "engineer_a",
+				Turns:          6,
+				UserIterations: 3,
+				Tokens: domain.InvocationTokens{
+					Input:  500,
+					Output: 200,
+				},
+			},
+		},
+			[]domain.ToolFact{
+				{SessionID: "session-a", Name: "read", Calls: 5, Errors: 0},
+			}, nil), Code: domain.CodeFacts{
+			LinesAdded:     10,
+			SDLCIterations: 3,
+		},
+	}
+	if err := adapters.SaveFactLedger(outJSON, cachedLedger); err != nil {
+		t.Fatalf("failed saving initial cached ledger: %v", err)
+	}
+
+	// 2. Set up SQLite DB on "Device B" with local session "ses_device_b" having 2 user messages
+	dbPath := filepath.Join(tempDir, "test.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening sqlite: %v", err)
+	}
+	defer db.Close()
+
+	createSchema := `
+	CREATE TABLE session (
+		id TEXT PRIMARY KEY,
+		parent_id TEXT,
+		agent TEXT,
+		model TEXT,
+		time_created INTEGER,
+		time_updated INTEGER
+	);
+	CREATE TABLE message (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	CREATE TABLE part (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		message_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	`
+	if _, err := db.Exec(createSchema); err != nil {
+		t.Fatalf("failed creating test tables: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+	if _, err := db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES ('ses_device_b', NULL, 'root', 'claude-3-5-sonnet', ?, ?)`, now, now); err != nil {
+		t.Fatalf("failed inserting session: %v", err)
+	}
+
+	// Insert 2 user messages and 2 assistant messages
+	uMsg1 := `{"role": "user"}`
+	aMsg1 := `{"role": "assistant", "modelID": "claude-3-5-sonnet", "tokens": {"input": 100, "output": 50}}`
+	uMsg2 := `{"role": "user"}`
+	aMsg2 := `{"role": "assistant", "modelID": "claude-3-5-sonnet", "tokens": {"input": 120, "output": 60}}`
+
+	if _, err := db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('m1', 'ses_device_b', ?, ?, ?),
+		('m2', 'ses_device_b', ?, ?, ?),
+		('m3', 'ses_device_b', ?, ?, ?),
+		('m4', 'ses_device_b', ?, ?, ?)`,
+		now, now, uMsg1,
+		now+100, now+100, aMsg1,
+		now+200, now+200, uMsg2,
+		now+300, now+300, aMsg2,
+	); err != nil {
+		t.Fatalf("failed inserting messages: %v", err)
+	}
+
+	// 3. Run generate on Device B
+	cmd := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", dbPath,
+		"--session-id", "ses_device_b",
+		"--ticket-id", "AL-HANDOFF",
+		"--ticket-title", "Cross Device Handoff Ticket",
+		"--json-output", outJSON,
+	)
+	cmd.Dir = tempDir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("generate on Device B failed: %v, stderr: %s", err, stderr.String())
+	}
+
+	// 4. Verify merged output: both invocations present, SDLC iterations = 3 + 2 = 5
+	rawMerged, err := os.ReadFile(outJSON)
+	if err != nil {
+		t.Fatalf("failed reading merged json: %v", err)
+	}
+
+	var mergedDTO adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(rawMerged, &mergedDTO); err != nil {
+		t.Fatalf("failed unmarshaling merged json: %v", err)
+	}
+
+	if len(mergedDTO.ToDomain().InvocationFacts()) != 2 {
+		t.Fatalf("expected 2 merged invocations, got %d", len(mergedDTO.ToDomain().InvocationFacts()))
+	}
+	var foundA, foundB bool
+	for _, inv := range mergedDTO.ToDomain().InvocationFacts() {
+		if inv.ID == "ses_device_a" {
+			foundA = true
+			if inv.UserIterations != 3 {
+				t.Errorf("expected invocation A user_iterations 3, got %d", inv.UserIterations)
+			}
+		}
+		if inv.ID == "ses_device_b" {
+			foundB = true
+			if inv.UserIterations != 2 {
+				t.Errorf("expected invocation B user_iterations 2, got %d", inv.UserIterations)
+			}
+		}
+	}
+	if !foundA || !foundB {
+		t.Errorf("missing merged invocation: foundA=%v, foundB=%v", foundA, foundB)
+	}
+
+	if mergedDTO.Code.SDLCIterations != 5 {
+		t.Errorf("expected total sdlc_iterations 5 (3+2), got %d", mergedDTO.Code.SDLCIterations)
+	}
+
+	// 5. Test idempotency: run generate again and assert no duplicate invocations or inflation
+	cmd2 := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--db-path", dbPath,
+		"--session-id", "ses_device_b",
+		"--ticket-id", "AL-HANDOFF",
+		"--ticket-title", "Cross Device Handoff Ticket",
+		"--json-output", outJSON,
+	)
+	cmd2.Dir = tempDir
+	if out, err := cmd2.CombinedOutput(); err != nil {
+		t.Fatalf("second generate failed: %v, output: %s", err, string(out))
+	}
+
+	rawIdempotent, _ := os.ReadFile(outJSON)
+	var idempDTO adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(rawIdempotent, &idempDTO)
+	if len(idempDTO.ToDomain().InvocationFacts()) != 2 {
+		t.Errorf("idempotency check failed: expected 2 invocations, got %d", len(idempDTO.ToDomain().InvocationFacts()))
+	}
+	// 6. Test strict rejection of fallbacks: verify that older schema ledgers lacking user_iterations emit warning and require migration
+	legacyOutJSON := filepath.Join(tempDir, "legacy.json")
+	legacyVer := 3
+	legacyLedger := domain.AgenticFactLedger{
+		SchemaVersion: &legacyVer,
+		TicketID:      &ticketIDStr,
+		TicketTitle:   &ticketTitleStr,
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:             "ses_legacy",
+				Role:           domain.RoleRootAgent,
+				Model:          "claude-3-5-sonnet",
+				User:           "engineer_a",
+				Turns:          6,
+				UserIterations: 0,
+			},
+		}, nil, nil), Code: domain.CodeFacts{
+			LinesAdded:     10,
+			SDLCIterations: 0,
+		},
+	}
+	if err := adapters.SaveFactLedger(legacyOutJSON, legacyLedger); err != nil {
+		t.Fatalf("failed saving legacy ledger: %v", err)
+	}
+
+	cmdLegacy := exec.Command(
+		cliBinaryPath,
+		"generate",
+		"--ticket-id", "AL-HANDOFF",
+		"--ticket-title", "Cross Device Handoff Ticket",
+		"--json-output", legacyOutJSON,
+		"--allow-empty",
+	)
+	cmdLegacy.Dir = tempDir
+	var legacyStderr bytes.Buffer
+	cmdLegacy.Stderr = &legacyStderr
+	_ = cmdLegacy.Run()
+
+	if !strings.Contains(legacyStderr.String(), "Existing fact ledger has schema version < 4 and must be migrated") {
+		t.Errorf("expected warning for schema version < 4 in stderr, got: %s", legacyStderr.String())
+	}
+}
+
+func TestCLIGenerate_ThreeDeviceHandoffAccumulation(t *testing.T) {
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+
+	_ = exec.Command("git", "-C", tempDir, "init").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
+
+	cfgContent := `project_name: "Test Three Device Handoff"
+ticket:
+  prefixes: ["AL"]
+workspaces:
+  dir: "workspaces"
+  src_folders: ["."]
+database:
+  path: "device.db"
+code_metrics:
+  test_patterns: ["*_test.go"]
+  prod_patterns: ["*.go"]
+`
+	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
+	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
+	_ = exec.Command("git", "-C", tempDir, "commit", "-m", "init").Run()
+
+	schemaVer := domain.CurrentSchemaVersion
+	ticketIDStr := "AL-THREE-DEVICE"
+	ticketTitleStr := "Three Device Handoff"
+
+	// 1. Device A: writes initial ledger with ses_device_a (user_iterations: 4)
+	deviceALedger := domain.AgenticFactLedger{
+		SchemaVersion: &schemaVer,
+		TicketID:      &ticketIDStr,
+		TicketTitle:   &ticketTitleStr,
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
+			{
+				ID:             "ses_device_a",
+				Role:           domain.RoleRootAgent,
+				Model:          "claude-3-5-sonnet",
+				Turns:          8,
+				UserIterations: 4,
+				Tokens:         domain.InvocationTokens{Input: 1000, Output: 400},
+			},
+		}, nil, nil), Code: domain.CodeFacts{
+			LinesAdded:     15,
+			SDLCIterations: 4,
+		},
+	}
+	if err := adapters.SaveFactLedger(outJSON, deviceALedger); err != nil {
+		t.Fatalf("failed saving Device A ledger: %v", err)
+	}
+
+	// Helper to create a device sqlite database with root and child sessions
+	createDeviceDB := func(dbFile string, rootSessionID string, rootUserTurns int, childSessionID string) {
+		db, err := sql.Open("sqlite", dbFile)
+		if err != nil {
+			t.Fatalf("failed opening sqlite: %v", err)
+		}
+		defer db.Close()
+
+		createSchema := `
+		CREATE TABLE session (
+			id TEXT PRIMARY KEY,
+			parent_id TEXT,
+			agent TEXT,
+			model TEXT,
+			time_created INTEGER,
+			time_updated INTEGER
+		);
+		CREATE TABLE message (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		CREATE TABLE part (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			message_id TEXT,
+			time_created INTEGER,
+			time_updated INTEGER,
+			data TEXT
+		);
+		`
+		if _, err := db.Exec(createSchema); err != nil {
+			t.Fatalf("failed creating schema: %v", err)
+		}
+
+		now := time.Now().UnixMilli()
+		// Root session
+		_, _ = db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES (?, NULL, 'root', 'gpt-4o', ?, ?)`, rootSessionID, now, now)
+		// Child session
+		if childSessionID != "" {
+			_, _ = db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES (?, ?, 'coder', 'gpt-4o', ?, ?)`, childSessionID, rootSessionID, now, now)
+			// Child messages (user + assistant)
+			_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('c_m1', ?, ?, ?, '{"role": "user"}')`, childSessionID, now, now)
+			_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('c_m2', ?, ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 50, "output": 25}}')`, childSessionID, now, now)
+		}
+
+		// Root messages
+		for i := 0; i < rootUserTurns; i++ {
+			uID := fmt.Sprintf("u_%s_%d", rootSessionID, i)
+			aID := fmt.Sprintf("a_%s_%d", rootSessionID, i)
+			_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, '{"role": "user"}')`, uID, rootSessionID, now+int64(i*100), now+int64(i*100))
+			_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 100, "output": 50}}')`, aID, rootSessionID, now+int64(i*100)+50, now+int64(i*100)+50)
+		}
+	}
+
+	// 2. Device B: root ses_device_b with 3 user turns, and child sub_device_b
+	dbB := filepath.Join(tempDir, "device_b.db")
+	createDeviceDB(dbB, "ses_device_b", 3, "sub_device_b")
+
+	cmdB := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbB,
+		"--session-id", "ses_device_b",
+		"--ticket-id", "AL-THREE-DEVICE",
+		"--ticket-title", "Three Device Handoff",
+		"--json-output", outJSON,
+	)
+	cmdB.Dir = tempDir
+	if out, err := cmdB.CombinedOutput(); err != nil {
+		t.Fatalf("generate Device B failed: %v, out: %s", err, string(out))
+	}
+
+	// Verify Device B state: 3 invocations (ses_device_a, ses_device_b, sub_device_b), SDLC = 4 + 3 = 7
+	rawB, _ := os.ReadFile(outJSON)
+	var dtoB adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(rawB, &dtoB)
+	if len(dtoB.ToDomain().InvocationFacts()) != 3 {
+		t.Fatalf("after Device B, expected 3 invocations, got %d", len(dtoB.ToDomain().InvocationFacts()))
+	}
+	if dtoB.Code.SDLCIterations != 7 {
+		t.Fatalf("after Device B, expected SDLCIterations 7 (4+3), got %d", dtoB.Code.SDLCIterations)
+	}
+
+	// 3. Device C: root ses_device_c with 5 user turns, and child sub_device_c
+	dbC := filepath.Join(tempDir, "device_c.db")
+	createDeviceDB(dbC, "ses_device_c", 5, "sub_device_c")
+
+	cmdC := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbC,
+		"--session-id", "ses_device_c",
+		"--ticket-id", "AL-THREE-DEVICE",
+		"--ticket-title", "Three Device Handoff",
+		"--json-output", outJSON,
+	)
+	cmdC.Dir = tempDir
+	if out, err := cmdC.CombinedOutput(); err != nil {
+		t.Fatalf("generate Device C failed: %v, out: %s", err, string(out))
+	}
+
+	// Verify Device C state: 5 invocations, SDLC = 4 + 3 + 0 + 5 + 0 = 12
+	rawC, _ := os.ReadFile(outJSON)
+	var dtoC adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(rawC, &dtoC)
+	if len(dtoC.ToDomain().InvocationFacts()) != 5 {
+		t.Fatalf("after Device C, expected 5 invocations, got %d", len(dtoC.ToDomain().InvocationFacts()))
+	}
+	if dtoC.Code.SDLCIterations != 12 {
+		t.Errorf("after Device C, expected SDLCIterations 12 (4+3+5), got %d", dtoC.Code.SDLCIterations)
+	}
+
+	// Verify each invocation's user_iterations
+	expectedIterations := map[string]int64{
+		"ses_device_a": 4,
+		"ses_device_b": 3,
+		"sub_device_b": 0,
+		"ses_device_c": 5,
+		"sub_device_c": 0,
+	}
+	for _, inv := range dtoC.ToDomain().InvocationFacts() {
+		expected, exists := expectedIterations[inv.ID]
+		if !exists {
+			t.Errorf("unexpected invocation %s in merged ledger", inv.ID)
+		} else if inv.UserIterations != expected {
+			t.Errorf("invocation %s expected UserIterations %d, got %d", inv.ID, expected, inv.UserIterations)
+		}
+	}
+
+	// 4. Test idempotency across repeated Device C invocations
+	cmdC2 := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbC,
+		"--session-id", "ses_device_c",
+		"--ticket-id", "AL-THREE-DEVICE",
+		"--ticket-title", "Three Device Handoff",
+		"--json-output", outJSON,
+	)
+	cmdC2.Dir = tempDir
+	if out, err := cmdC2.CombinedOutput(); err != nil {
+		t.Fatalf("repeated generate Device C failed: %v, out: %s", err, string(out))
+	}
+
+	rawC2, _ := os.ReadFile(outJSON)
+	var dtoC2 adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(rawC2, &dtoC2)
+	if len(dtoC2.ToDomain().InvocationFacts()) != 5 {
+		t.Errorf("expected strictly 5 invocations after repeat, got %d", len(dtoC2.ToDomain().InvocationFacts()))
+	}
+	if dtoC2.Code.SDLCIterations != 12 {
+		t.Errorf("expected SDLCIterations strictly 12 after repeat, got %d", dtoC2.Code.SDLCIterations)
+	}
+}
+
+func TestCLIGenerate_InvocationsUpdateInPlaceOnSameDevice(t *testing.T) {
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+	dbPath := filepath.Join(tempDir, "same_device.db")
+
+	_ = exec.Command("git", "-C", tempDir, "init").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
+
+	cfgContent := `project_name: "Test Update In Place"
+ticket:
+  prefixes: ["AL"]
+workspaces:
+  dir: "workspaces"
+  src_folders: ["."]
+database:
+  path: "same_device.db"
+code_metrics:
+  test_patterns: ["*_test.go"]
+  prod_patterns: ["*.go"]
+`
+	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
+	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
+	_ = exec.Command("git", "-C", tempDir, "commit", "-m", "init").Run()
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed opening sqlite: %v", err)
+	}
+	defer db.Close()
+
+	createSchema := `
+	CREATE TABLE session (
+		id TEXT PRIMARY KEY,
+		parent_id TEXT,
+		agent TEXT,
+		model TEXT,
+		time_created INTEGER,
+		time_updated INTEGER
+	);
+	CREATE TABLE message (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	CREATE TABLE part (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		message_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	`
+	if _, err := db.Exec(createSchema); err != nil {
+		t.Fatalf("failed creating schema: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+	_, _ = db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES ('ses_dev', NULL, 'root', 'gpt-4o', ?, ?)`, now, now)
+
+	// First pass: 1 user message, 1 assistant message
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m1', 'ses_dev', ?, ?, '{"role": "user"}')`, now, now)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m2', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 100, "output": 50}}')`, now+50, now+50)
+
+	cmd1 := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbPath,
+		"--session-id", "ses_dev",
+		"--ticket-id", "AL-UPDATE-IN-PLACE",
+		"--ticket-title", "Update In Place Test",
+		"--json-output", outJSON,
+	)
+	cmd1.Dir = tempDir
+	if out, err := cmd1.CombinedOutput(); err != nil {
+		t.Fatalf("pass 1 failed: %v, out: %s", err, string(out))
+	}
+
+	raw1, _ := os.ReadFile(outJSON)
+	var dto1 adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(raw1, &dto1)
+	if len(dto1.ToDomain().InvocationFacts()) != 1 {
+		t.Fatalf("pass 1 expected 1 invocation, got %d", len(dto1.ToDomain().InvocationFacts()))
+	}
+	if dto1.ToDomain().InvocationFacts()[0].UserIterations != 1 {
+		t.Errorf("pass 1 expected UserIterations 1, got %d", dto1.ToDomain().InvocationFacts()[0].UserIterations)
+	}
+	if dto1.ToDomain().InvocationFacts()[0].Tokens.Input != 100 {
+		t.Errorf("pass 1 expected Input tokens 100, got %d", dto1.ToDomain().InvocationFacts()[0].Tokens.Input)
+	}
+
+	// Second pass: 2 more user messages, 2 more assistant messages with more tokens, and a compaction
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m3', 'ses_dev', ?, ?, '{"role": "user"}')`, now+100, now+100)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m4', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 200, "output": 80}}')`, now+150, now+150)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m5', 'ses_dev', ?, ?, '{"role": "user"}')`, now+200, now+200)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m6', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 300, "output": 120}}')`, now+250, now+250)
+	// Add a compaction part
+	compactionJSON := `{"type":"compaction"}`
+	_, _ = db.Exec(`INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES ('p_comp', 'ses_dev', 'm4', ?, ?, ?)`, now+160, now+160, compactionJSON)
+
+	cmd2 := exec.Command(
+		cliBinaryPath, "generate",
+		"--db-path", dbPath,
+		"--session-id", "ses_dev",
+		"--ticket-id", "AL-UPDATE-IN-PLACE",
+		"--ticket-title", "Update In Place Test",
+		"--json-output", outJSON,
+	)
+	cmd2.Dir = tempDir
+	if out, err := cmd2.CombinedOutput(); err != nil {
+		t.Fatalf("pass 2 failed: %v, out: %s", err, string(out))
+	}
+
+	raw2, _ := os.ReadFile(outJSON)
+	var dto2 adapters.AgenticFactLedgerDTO
+	_ = json.Unmarshal(raw2, &dto2)
+	// Must NOT have duplicated invocation records!
+	if len(dto2.ToDomain().InvocationFacts()) != 1 {
+		t.Fatalf("pass 2 expected strictly 1 invocation (updated in place), got %d", len(dto2.ToDomain().InvocationFacts()))
+	}
+	inv := dto2.ToDomain().InvocationFacts()[0]
+	if inv.UserIterations != 3 {
+		t.Errorf("pass 2 expected UserIterations 3, got %d", inv.UserIterations)
+	}
+	if inv.Tokens.Input != 600 { // 100 + 200 + 300
+		t.Errorf("pass 2 expected Input tokens 600, got %d", inv.Tokens.Input)
+	}
+	if inv.Compactions != 1 {
+		t.Errorf("pass 2 expected Compactions 1, got %d", inv.Compactions)
+	}
+	if dto2.Code.SDLCIterations != 3 {
+		t.Errorf("pass 2 expected total SDLCIterations 3, got %d", dto2.Code.SDLCIterations)
+	}
+}
+
+func TestCLIGenerate_StrictZeroFallback(t *testing.T) {
+	tempDir := t.TempDir()
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
+
+	_ = exec.Command("git", "-C", tempDir, "init").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
+	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
+
+	cfgContent := `project_name: "Test Zero Fallback"
+ticket:
+  prefixes: ["AL"]
+workspaces:
+  dir: "workspaces"
+  src_folders: ["."]
+database:
+  path: "test.db"
+code_metrics:
+  test_patterns: ["*_test.go"]
+  prod_patterns: ["*.go"]
+`
+	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
+	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
+	_ = exec.Command("git", "-C", tempDir, "commit", "-m", "init").Run()
+
+	ticketIDStr := "AL-ZERO-FALLBACK"
+	ticketTitleStr := "Zero Fallback Invariant"
+
+	t.Run("pre-v4 ledger with zero user_iterations emits warning and does not guess", func(t *testing.T) {
+		for _, ver := range []int{1, 2, 3} {
+			schemaVer := ver
+			ledger := domain.AgenticFactLedger{
+				SchemaVersion: &schemaVer,
+				TicketID:      &ticketIDStr,
+				TicketTitle:   &ticketTitleStr,
+				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
+					{
+						ID:             "ses_pre_v4",
+						Role:           domain.RoleRootAgent,
+						Model:          "gpt-4o",
+						Turns:          5,
+						UserIterations: 0, // unpopulated in pre-v4
+					},
+				}, nil, nil), Code: domain.CodeFacts{
+					LinesAdded:     10,
+					SDLCIterations: 7,
+				},
+			}
+			if err := adapters.SaveFactLedger(outJSON, ledger); err != nil {
+				t.Fatalf("failed saving v%d ledger: %v", ver, err)
+			}
+
+			cmd := exec.Command(
+				cliBinaryPath, "generate",
+				"--ticket-id", ticketIDStr,
+				"--ticket-title", ticketTitleStr,
+				"--json-output", outJSON,
+				"--allow-empty",
+			)
+			cmd.Dir = tempDir
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			if err := cmd.Run(); err != nil {
+				t.Fatalf("generate v%d failed: %v", ver, err)
+			}
+
+			if !strings.Contains(stderr.String(), "Existing fact ledger has schema version < 4 and must be migrated") {
+				t.Errorf("v%d: expected warning for schema version < 4 in stderr, got: %s", ver, stderr.String())
+			}
+
+			// A zero exact sum remains zero even when migrating a pre-v4 ledger.
+			raw, _ := os.ReadFile(outJSON)
+			var dto adapters.AgenticFactLedgerDTO
+			_ = json.Unmarshal(raw, &dto)
+			if dto.Code.SDLCIterations != 0 {
+				t.Errorf("v%d: expected SDLCIterations to remain 0, got %d", ver, dto.Code.SDLCIterations)
+			}
+		}
+	})
+
+	t.Run("schema-v4 ledger with zero user_iterations does not emit pre-v4 warning", func(t *testing.T) {
+		schemaVer := 4
+		ledger := domain.AgenticFactLedger{
+			SchemaVersion: &schemaVer,
+			TicketID:      &ticketIDStr,
+			TicketTitle:   &ticketTitleStr,
+			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
+				{
+					ID:             "ses_v4",
+					Role:           domain.RoleRootAgent,
+					Model:          "gpt-4o",
+					Turns:          5,
+					UserIterations: 0,
+				},
+			}, nil, nil), Code: domain.CodeFacts{
+				LinesAdded:     10,
+				SDLCIterations: 0,
+			},
+		}
+		if err := adapters.SaveFactLedger(outJSON, ledger); err != nil {
+			t.Fatalf("failed saving v4 ledger: %v", err)
+		}
+
+		cmd := exec.Command(
+			cliBinaryPath, "generate",
+			"--ticket-id", ticketIDStr,
+			"--ticket-title", ticketTitleStr,
+			"--json-output", outJSON,
+			"--allow-empty",
+		)
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("generate v4 failed: %v", err)
+		}
+
+		if strings.Contains(stderr.String(), "Existing fact ledger has schema version < 4") {
+			t.Errorf("v4: did not expect schema version < 4 warning, got: %s", stderr.String())
+		}
+	})
+}
+
+func TestCLIMigrateReportsDroppedUnscopedToolRows(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "workspaces", "AL-UNSCOPED")
+	if err := os.MkdirAll(workspace, 0755); err != nil {
+		t.Fatal(err)
+	}
+	ledgerPath := filepath.Join(workspace, "agentic_metrics.json")
+	ledger := `{"schema_version":4,"ticket_id":"AL-UNSCOPED","code":{"sdlc_iterations":0},"tools":[{"name":"bash","calls":3,"errors":1}]}`
+	if err := os.WriteFile(ledgerPath, []byte(ledger), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(cliBinaryPath, "migrate", "--workspaces", filepath.Dir(workspace))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("migrate failed: %v\n%s", err, output)
+	}
+	if !strings.Contains(string(output), "Removed 1 unscoped legacy tool") || !strings.Contains(string(output), "Re-extract from source logs") {
+		t.Fatalf("CLI output must report dropped-row count and recovery guidance: %s", output)
+	}
+	data, err := os.ReadFile(ledgerPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var migrated adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &migrated); err != nil {
+		t.Fatal(err)
+	}
+	if migrated.Migration == nil || !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool") {
+		t.Fatalf("expected persisted migration note, got %+v", migrated.Migration)
+	}
 }

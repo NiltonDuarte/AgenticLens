@@ -30,16 +30,16 @@ const (
 
 // Default thresholds for live anomaly detection rules.
 const (
-	ConsecutiveToolErrorsStreakWarning   = 3
-	ConsecutiveToolErrorsStreakCritical  = 5
-	ContextCeilingApproachRatioWarning  = 0.80
-	ContextCeilingApproachRatioCritical = 1.00
+	ConsecutiveToolErrorsStreakWarning        = 3
+	ConsecutiveToolErrorsStreakCritical       = 5
+	ContextCeilingApproachRatioWarning        = 0.80
+	ContextCeilingApproachRatioCritical       = 1.00
 	TokenVelocityWarningTokens          int64 = 30_000
 	TokenVelocityCriticalTokens         int64 = 60_000
 	TokenVelocityWarningDeltaTokens     int64 = 40_000
 	TokenVelocityCriticalDeltaTokens    int64 = 80_000
-	ToolThrashingMinFailures            = 3
-	ToolThrashingCriticalFailures       = 5
+	ToolThrashingMinFailures                  = 3
+	ToolThrashingCriticalFailures             = 5
 )
 
 // LiveAnomalyAlert represents an active health degradation or operational failure alert in a live session.

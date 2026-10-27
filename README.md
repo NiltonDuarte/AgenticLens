@@ -161,6 +161,9 @@ AgenticLens provides a unified CLI for automation and local workflows:
 # Ingest active session telemetry and generate summary markdown block
 ./bin/agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
 
+# Discover the latest matching Codex rollout in CODEX_HOME, including child threads
+./bin/agentic-lens generate --source codex --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
+
 # List all tracked workspaces with detected anomaly counts
 ./bin/agentic-lens --list
 
@@ -168,11 +171,36 @@ AgenticLens provides a unified CLI for automation and local workflows:
 ./bin/agentic-lens --ticket-id AL-15 --anomalies
 
 # Batch reconcile git facts and database telemetry across historical workspaces
-./bin/agentic-lens backfill --recompute-git --recompute-db --migrate-schema --update-summaries
+./bin/agentic-lens backfill --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
 
 # Run stepwise schema migrations across workspace ledgers
 ./bin/agentic-lens migrate --backup --update-summaries
 ```
+
+Use `--nonce <literal>` to select the exact Codex rollout containing a unique run nonce, or `--session-id <thread-id>` to select a known thread. `--codex-home <path>` overrides `$CODEX_HOME` and `~/.codex`. Codex remains opt-in through `--source codex`; OpenCode is the default source.
+
+Code metrics always compare an explicit Git ref with the configured `code_metrics.base_branch`; `generate` defaults to `HEAD`, and `backfill --recompute-git` requires `--code-ref`. Empty or invalid refs fail instead of trying to infer a branch or commits from the ticket ID. Comparisons include committed changes and exclude the uncommitted working tree. Codex session discovery requires `--nonce` or `--session-id`; ticket text and working-directory heuristics are not reliable session identifiers. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts. Schema-v4 sessions own invocation records, per-session tool summaries, and retained events; cross-session totals are derived for display. Migration reports and removes legacy aggregate tool rows without reliable session attribution. Re-extract from source logs to recover those counts when available.
+
+#### Recovering a legacy ledger with unscoped tool totals
+
+Generation validates an existing output ledger before merging. Therefore `--json-output` must point to a new file for recovery; writing directly to the old unscoped ledger fails validation. Keep the old ledger as a backup, generate each known root session into the same new output path, verify the recovered session IDs and tool rows, then replace the old file. For Codex, selecting a root session also discovers its child rollouts. For OpenCode, repeat once per root session. Repeated generations to the new path merge session facts by `(session_id, tool_name)`.
+
+```bash
+cp workspaces/<TICKET_ID>/agentic_metrics.json workspaces/<TICKET_ID>/agentic_metrics.unscoped-backup.json
+
+# Run once for each root session, always reusing this new output path.
+./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_1> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_2> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+
+# Check the distinct session IDs and per-session tool rows against the source sessions.
+jq -r '.sessions[].id' workspaces/<TICKET_ID>/agentic_metrics.recovered.json | sort -u
+jq '[.sessions[].tools[]] | length' workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+
+# Replace the active ledger only after the recovered contents are verified.
+mv workspaces/<TICKET_ID>/agentic_metrics.recovered.json workspaces/<TICKET_ID>/agentic_metrics.json
+```
+
+Substitute `--source opencode` and each OpenCode root ID when recovering OpenCode data. Confirm the expected root and child session IDs (for Codex) and expected tool rows/counts before replacement. If source logs are unavailable, the old aggregate tool count cannot be split into session facts or recovered; keep the backup and do not fabricate session IDs.
 
 ---
 
@@ -188,3 +216,8 @@ AgenticLens provides a unified CLI for automation and local workflows:
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+Code classification is configured under `code_metrics` in `.agenticlens-config.yaml`:
+`test_patterns` identifies tests and fixtures; `prod_patterns` and `include` identify production files. There are no implicit test directory, test filename, or production extension rules. Empty patterns leave files unclassified (`Other`), which can contribute to total lines without contributing to test/production subtotals.
+
+Patterns containing `/` are relative to the repository root; a `**` path component matches zero or more directories. Patterns without `/` match basenames. Workspace exclusions and `exclude` win, followed by test patterns, then production/include patterns. The existing lockfile/dotfile exclusions apply to otherwise unmatched files. Both Git discovery modes monitor `workspaces.src_folders` plus configured test, production, and include patterns, allowing fixtures outside source roots.

@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
+	"agenticlens/internal/domain/migration"
 )
 
 // BackfillEngine coordinates scanning, Git recomputation, OpenCode SQLite querying,
@@ -28,6 +30,23 @@ func NewEngine() *BackfillEngine {
 
 // Execute runs the backfill and migration workflow across target workspaces.
 func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) {
+	cleanSource := strings.ToLower(strings.TrimSpace(opts.Source))
+	if cleanSource == "" {
+		cleanSource = "opencode"
+	}
+	if cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "both" && cleanSource != "all" {
+		return nil, fmt.Errorf("invalid source %q: must be 'opencode', 'codex', or 'both'", opts.Source)
+	}
+	opts.Source = cleanSource
+
+	if opts.RecomputeGit {
+		if strings.TrimSpace(opts.TicketID) == "" {
+			return nil, fmt.Errorf("--ticket-id is required when recomputing Git code facts (--recompute-git)")
+		}
+		if strings.TrimSpace(opts.CodeRef) == "" {
+			return nil, fmt.Errorf("a Git code ref is required when recomputing code facts")
+		}
+	}
 	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
 	if err != nil {
 		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
@@ -104,9 +123,10 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		}
 	}
 
-	// Prepare SQLite DB handle if DB recompute requested
+	// Prepare SQLite DB handle if DB recompute requested and source targets OpenCode
 	var opencodeDB *opencode.OpenCodeDB
-	if opts.RecomputeDB {
+	wantsOpenCode := cleanSource == "opencode" || cleanSource == "both" || cleanSource == "all"
+	if opts.RecomputeDB && wantsOpenCode {
 		dbHandle, err := opencode.OpenDB(opts.DBPath)
 		if err != nil {
 			// If DB cannot be opened at all, warn and proceed without local DB (preserving telemetry)
@@ -178,13 +198,47 @@ func (e *BackfillEngine) processSingleWorkspace(
 		return result
 	}
 
-	var dto adapters.AgenticFactLedgerDTO
-	if err := json.Unmarshal(content, &dto); err != nil {
-		result.Error = fmt.Errorf("decoding JSON: %w", err)
+	canonical, err := migration.NewEngine(nil).Migrate(content, domain.CurrentSchemaVersion)
+	if err != nil {
+		result.Error = fmt.Errorf("normalizing ledger before backfill: %w", err)
+		return result
+	}
+	dto := adapters.AgenticFactLedgerDTOFromDomain(canonical)
+	if err := dto.Validate(); err != nil {
+		result.Error = fmt.Errorf("validating tool session provenance: %w", err)
 		return result
 	}
 
 	factLedger := dto.ToDomain()
+	for i := range factLedger.Sessions {
+		if factLedger.Sessions[i].Source == "" {
+			factLedger.Sessions[i].Source = domain.SourceOpenCode
+		}
+	}
+
+	cleanSource := strings.ToLower(strings.TrimSpace(opts.Source))
+	if cleanSource == "" {
+		cleanSource = "opencode"
+	}
+	wantsOpenCode := cleanSource == "opencode" || cleanSource == "both" || cleanSource == "all"
+	wantsCodex := cleanSource == "codex" || cleanSource == "both" || cleanSource == "all"
+
+	var openCodeSessions []domain.SessionFact
+	var codexSessions []domain.SessionFact
+	var otherSessions []domain.SessionFact
+	for _, s := range factLedger.Sessions {
+		switch s.Source {
+		case domain.SourceCodex:
+			codexSessions = append(codexSessions, s)
+		case domain.SourceOpenCode:
+			openCodeSessions = append(openCodeSessions, s)
+		default:
+			otherSessions = append(otherSessions, s)
+		}
+	}
+
+	sourceVersion, _ := migration.NewEngine(nil).DetectVersion(content)
+	needsNormalization := sourceVersion < domain.CurrentSchemaVersion || hasLegacyFactCollections(content)
 	ticketID := workspaceName
 	if factLedger.TicketID != nil && strings.TrimSpace(*factLedger.TicketID) != "" {
 		ticketID = strings.TrimSpace(*factLedger.TicketID)
@@ -199,12 +253,37 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 	result.PreviousStatus = prevStatus
 
-	// Skip condition:
-	// Fully completed tickets are skipped unless --force is specified.
-	// A ticket is considered completed if it has CurrentSchemaVersion,
-	// does not have a partial migration pending, and does not require event backfill when RecomputeDB is requested.
-	needsEventBackfill := opts.RecomputeDB && (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && len(factLedger.Events) == 0
-	isCompleted := factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
+	hasTargetSessions := false
+	if wantsOpenCode && (len(openCodeSessions) > 0 || len(factLedger.Sessions) == 0) {
+		hasTargetSessions = true
+	}
+	if wantsCodex && len(codexSessions) > 0 {
+		hasTargetSessions = true
+	}
+
+	needsEventBackfill := false
+	if opts.RecomputeDB {
+		if wantsOpenCode && len(openCodeSessions) > 0 {
+			eventsCount := 0
+			for _, s := range openCodeSessions {
+				eventsCount += len(s.Events)
+			}
+			if (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && eventsCount == 0 {
+				needsEventBackfill = true
+			}
+		}
+		if wantsCodex && len(codexSessions) > 0 {
+			eventsCount := 0
+			for _, s := range codexSessions {
+				eventsCount += len(s.Events)
+			}
+			if (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && eventsCount == 0 {
+				needsEventBackfill = true
+			}
+		}
+	}
+
+	isCompleted := !needsNormalization && factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
 		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) &&
 		!needsEventBackfill
 
@@ -213,18 +292,22 @@ func (e *BackfillEngine) processSingleWorkspace(
 		result.NewStatus = prevStatus
 		return result
 	}
+	if !hasTargetSessions && !opts.RecomputeGit && !needsNormalization {
+		result.Skipped = true
+		result.NewStatus = prevStatus
+		return result
+	}
 
 	// 1. Git Recomputation
 	gitSucceeded := false
 	if opts.RecomputeGit {
-		var fallbackCode *domain.CodeFacts
-		if factLedger.Code.LinesAdded > 0 || factLedger.Code.FilesChanged > 0 {
-			fallbackCode = &factLedger.Code
-		}
-		newCode, err := git.ComputeCodeFacts(ticketID, classificationCfg, fallbackCode)
+		newCode, err := git.ComputeCodeFactsAtRef(opts.CodeRef, classificationCfg)
 		if err != nil {
 			result.Error = fmt.Errorf("recomputing git facts for %s: %w", ticketID, err)
 			return result
+		}
+		if factLedger.Code.SDLCIterations > 0 {
+			newCode.SDLCIterations = factLedger.Code.SDLCIterations
 		}
 		factLedger.Code = newCode
 		gitSucceeded = true
@@ -242,29 +325,48 @@ func (e *BackfillEngine) processSingleWorkspace(
 		}
 	}
 
-	// 2. OpenCode DB Recomputation with safe fallback preservation
+	// 2. DB Recomputation with safe fallback preservation
 	dbAttempted := false
 	dbSessionFound := false
-	hasExistingDBFacts := len(factLedger.Invocations) > 0 || len(factLedger.Events) > 0
+	hasExistingDBFacts := len(factLedger.InvocationFacts()) > 0 || len(factLedger.EventFacts()) > 0
+	recomputeDBForTicket := opts.RecomputeDB && hasTargetSessions
 
-	if opts.RecomputeDB {
+	if opts.RecomputeDB && wantsOpenCode && (len(openCodeSessions) > 0 || len(factLedger.Sessions) == 0) {
 		dbAttempted = true
 		if opencodeDB != nil && opencodeDB.DB() != nil {
-			var resolvedSessionID *string
+			var existingOpenCodeInvocations []domain.InvocationFact
+			var existingOpenCodeTools []domain.ToolFact
+			var existingOpenCodeEvents []domain.EventFact
+			for _, s := range openCodeSessions {
+				existingOpenCodeInvocations = append(existingOpenCodeInvocations, s.Invocations...)
+				for _, t := range s.Tools {
+					existingOpenCodeTools = append(existingOpenCodeTools, domain.ToolFact{SessionID: s.ID, Name: t.Name, Calls: t.Calls, Errors: t.Errors})
+				}
+				for _, e := range s.Events {
+					existingOpenCodeEvents = append(existingOpenCodeEvents, domain.EventFact{
+						EventID: e.EventID, Timestamp: e.Timestamp, MessageID: e.MessageID, Turn: e.Turn,
+						Role: e.Role, EventType: e.EventType, ToolName: e.ToolName, Status: e.Status,
+						ErrorMessage: e.ErrorMessage, DurationMs: e.DurationMs, ContextTokens: e.ContextTokens,
+						PromptContent: e.PromptContent, ReasoningContent: e.ReasoningContent,
+						ToolInput: e.ToolInput, ToolOutput: e.ToolOutput, SessionID: s.ID,
+					})
+				}
+			}
+			hasExistingOpenCodeFacts := len(existingOpenCodeInvocations) > 0 || len(existingOpenCodeEvents) > 0
 
-			// Strategy 1 (Main resolution method): Existing Session ID from ledger invocations
+			var resolvedSessionID *string
 			var existingSessionID string
-			for _, inv := range factLedger.Invocations {
+			for _, inv := range existingOpenCodeInvocations {
 				if inv.ParentID == nil || strings.TrimSpace(*inv.ParentID) == "" {
 					existingSessionID = strings.TrimSpace(inv.ID)
 					break
 				}
 			}
-			if existingSessionID == "" && len(factLedger.Invocations) > 0 {
-				if factLedger.Invocations[0].ParentID != nil && strings.TrimSpace(*factLedger.Invocations[0].ParentID) != "" {
-					existingSessionID = strings.TrimSpace(*factLedger.Invocations[0].ParentID)
+			if existingSessionID == "" && len(existingOpenCodeInvocations) > 0 {
+				if existingOpenCodeInvocations[0].ParentID != nil && strings.TrimSpace(*existingOpenCodeInvocations[0].ParentID) != "" {
+					existingSessionID = strings.TrimSpace(*existingOpenCodeInvocations[0].ParentID)
 				} else {
-					existingSessionID = strings.TrimSpace(factLedger.Invocations[0].ID)
+					existingSessionID = strings.TrimSpace(existingOpenCodeInvocations[0].ID)
 				}
 			}
 
@@ -301,7 +403,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 				dbSessionFound = true
 				rootID := strings.TrimSpace(*resolvedSessionID)
 				turns, err := opencode.ExtractSteeringTurns(opencodeDB.DB(), []string{rootID})
-				if err == nil && turns >= 1 {
+				if err == nil {
 					factLedger.Code.SDLCIterations = turns
 				}
 				invs, tools, events, stISO, endISO, err := opencode.ExtractFacts(
@@ -311,10 +413,10 @@ func (e *BackfillEngine) processSingleWorkspace(
 					make(map[string]string),
 				)
 				if err == nil && len(invs) > 0 {
-					shouldUpdateInvocations := !hasExistingDBFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
+					shouldUpdateInvocations := !hasExistingOpenCodeFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
+					updatedInvocations, updatedTools, updatedEvents := existingOpenCodeInvocations, existingOpenCodeTools, events
 					if shouldUpdateInvocations {
-						factLedger.Invocations = invs
-						factLedger.Tools = tools
+						updatedInvocations, updatedTools = invs, tools
 						if stISO != nil {
 							factLedger.StartedAt = stISO
 						}
@@ -330,23 +432,77 @@ func (e *BackfillEngine) processSingleWorkspace(
 								filteredEvents = append(filteredEvents, ev)
 							}
 						}
-						factLedger.Events = filteredEvents
-					} else {
-						factLedger.Events = events
+						updatedEvents = filteredEvents
 					}
+					refreshedSessions, sessionErr := domain.SessionsFromFactsWithSource(domain.SourceOpenCode, updatedInvocations, updatedTools, updatedEvents)
+					if sessionErr != nil {
+						result.Error = fmt.Errorf("grouping refreshed OpenCode session facts: %w", sessionErr)
+						return result
+					}
+					openCodeSessions = refreshedSessions
 					result.DBUpdated = true
 				}
 			}
 		}
-		result.DBFound = dbSessionFound
 	}
+
+	if opts.RecomputeDB && wantsCodex && len(codexSessions) > 0 {
+		dbAttempted = true
+		codexHome := strings.TrimSpace(opts.CodexHome)
+		if codexHome == "" {
+			codexHome = strings.TrimSpace(os.Getenv("CODEX_HOME"))
+		}
+		if codexHome == "" {
+			if home, err := os.UserHomeDir(); err == nil {
+				codexHome = filepath.Join(home, ".codex")
+			}
+		}
+		if codexHome != "" {
+			for i, cs := range codexSessions {
+				rolloutPaths, discErr := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{
+					CodexHome: codexHome,
+					SessionID: cs.ID,
+				})
+				if discErr == nil && len(rolloutPaths) > 0 {
+					transcripts := make([]codex.Transcript, 0, len(rolloutPaths))
+					for _, p := range rolloutPaths {
+						if t, parseErr := codex.ParseRolloutPath(p); parseErr == nil {
+							transcripts = append(transcripts, t)
+						}
+					}
+					if len(transcripts) > 0 {
+						if combined, combErr := codex.CombineTranscripts(transcripts); combErr == nil {
+							freshCodex, sErr := domain.SessionsFromFactsWithSource(domain.SourceCodex, combined.Invocations, combined.Tools, combined.Events)
+							if sErr == nil && len(freshCodex) > 0 {
+								codexSessions[i] = freshCodex[0]
+								dbSessionFound = true
+								result.DBUpdated = true
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	result.DBFound = dbSessionFound
+
+	// Recombine sessions preserving all non-targeted sessions untouched
+	var finalSessions []domain.SessionFact
+	finalSessions = append(finalSessions, openCodeSessions...)
+	finalSessions = append(finalSessions, codexSessions...)
+	finalSessions = append(finalSessions, otherSessions...)
+	sort.SliceStable(finalSessions, func(i, j int) bool {
+		return finalSessions[i].ID < finalSessions[j].ID
+	})
+	factLedger.Sessions = finalSessions
 
 	// 3. Pure Migration State Evaluation
 	evalInput := domain.MigrationEvaluationInput{
 		ExistingMigration:  factLedger.Migration,
 		RecomputeGit:       opts.RecomputeGit,
 		GitSucceeded:       gitSucceeded,
-		RecomputeDB:        opts.RecomputeDB,
+		RecomputeDB:        recomputeDBForTicket,
 		DBAttempted:        dbAttempted,
 		DBSessionFound:     dbSessionFound,
 		MigratedBy:         gitUser,
@@ -373,8 +529,11 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	// 4. Atomic File Write
-	persistedLedger := factLedger
-	persistedLedger.Events = domain.PruneEventsForPersistence(factLedger)
+	persistedLedger, err := domain.PersistAnomalySummaries(factLedger)
+	if err != nil {
+		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
+		return result
+	}
 	dtoToSave := adapters.AgenticFactLedgerDTOFromDomain(persistedLedger)
 	data, err := json.MarshalIndent(dtoToSave, "", "  ")
 	if err != nil {

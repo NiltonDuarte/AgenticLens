@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -112,10 +113,9 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 		TicketID: &tid,
 		Code: domain.CodeFacts{
 			LinesAdded: 50,
-		},
-		Invocations: []domain.InvocationFact{
+		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "inv-1", Role: "orchestrator", Model: "gpt-4o"},
-		},
+		}, nil, nil),
 	}
 	createTestWorkspace(t, tempDir, tid, origLedger)
 
@@ -133,8 +133,10 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
 		WorkspacesDir:   tempDir,
+		TicketID:        tid,
 		DryRun:          true,
 		RecomputeGit:    true,
+		CodeRef:         "HEAD",
 		UpdateSummaries: true,
 	})
 	if err != nil {
@@ -172,6 +174,43 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 	}
 }
 
+func TestBackfillEngine_RecomputeDBPreservesExactZeroSteeringTurns(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "AL-ZERO-TURNS"
+	ledger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Code:     domain.CodeFacts{SDLCIterations: 4},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+	dbPath := filepath.Join(tempDir, "opencode.db")
+	setupMockOpenCodeDB(t, dbPath, "sess-zero", ticketID)
+
+	report, err := NewEngine().Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      ticketID,
+		RecomputeDB:   true,
+		DBPath:        dbPath,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if report.Completed != 1 {
+		t.Fatalf("expected one completed workspace, got %d; results=%+v", report.Completed, report.Results)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("read updated ledger: %v", err)
+	}
+	var updated adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &updated); err != nil {
+		t.Fatalf("decode updated ledger: %v", err)
+	}
+	if updated.Code.SDLCIterations != 0 {
+		t.Fatalf("expected exact zero steering turns, got %d", updated.Code.SDLCIterations)
+	}
+}
+
 func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	tempDir := t.TempDir()
 	tidA := "AL-AUTHORED-ON-A"
@@ -182,19 +221,17 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		TicketID: &tidA,
 		Code: domain.CodeFacts{
 			LinesAdded: 10,
-		},
-		Invocations: []domain.InvocationFact{
+		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "inv-a1", Role: "orchestrator", Model: "mock"},
-		},
+		}, nil, nil),
 	}
 	ledgerB := domain.AgenticFactLedger{
 		TicketID: &tidB,
 		Code: domain.CodeFacts{
 			LinesAdded: 20,
-		},
-		Invocations: []domain.InvocationFact{
+		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{ID: "inv-b1", Role: "coder", Model: "mock"},
-		},
+		}, nil, nil),
 	}
 
 	createTestWorkspace(t, tempDir, tidA, ledgerA)
@@ -222,7 +259,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		t.Errorf("expected 2 scanned, got %d", reportA.Scanned)
 	}
 	if reportA.Completed != 1 {
-		t.Errorf("expected 1 completed (tidA), got %d", reportA.Completed)
+		t.Errorf("expected 1 completed (tidA), got %d; results=%+v", reportA.Completed, reportA.Results)
 	}
 	if reportA.Partial != 1 {
 		t.Errorf("expected 1 partial (tidB), got %d", reportA.Partial)
@@ -246,8 +283,8 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if len(loadedB.Migration.StepsPending) != 1 || loadedB.Migration.StepsPending[0] != domain.MigrationStepOpenCodeDB {
 		t.Errorf("expected steps_pending to contain %q, got %v", domain.MigrationStepOpenCodeDB, loadedB.Migration.StepsPending)
 	}
-	if len(loadedB.Invocations) != 1 || loadedB.Invocations[0].ID != "inv-b1" {
-		t.Errorf("expected preserved invocation inv-b1, got %v", loadedB.Invocations)
+	if len(loadedB.Sessions) != 1 || len(loadedB.Sessions[0].Invocations) != 1 || loadedB.Sessions[0].Invocations[0].ID != "inv-b1" {
+		t.Errorf("expected preserved invocation inv-b1 in session snapshot, got %v", loadedB.Sessions)
 	}
 
 	// Step 2: Developer B on Machine B pulls repo and resumes migration
@@ -289,8 +326,8 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if loadedB2.Migration != nil {
 		t.Errorf("expected migration object to be omitted on completed status, got %v", loadedB2.Migration)
 	}
-	if len(loadedB2.Invocations) != 1 || loadedB2.Invocations[0].ID != "sess-b1" {
-		t.Errorf("expected refreshed invocation sess-b1 from DB, got %v", loadedB2.Invocations)
+	if len(loadedB2.Sessions) != 1 || len(loadedB2.Sessions[0].Invocations) != 1 || loadedB2.Sessions[0].Invocations[0].ID != "sess-b1" {
+		t.Errorf("expected refreshed invocation sess-b1 in session snapshot, got %v", loadedB2.Sessions)
 	}
 }
 
@@ -329,7 +366,7 @@ func TestBackfillEngine_CorruptedFileResilience(t *testing.T) {
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
 		WorkspacesDir: tempDir,
-		RecomputeGit:  true,
+		Force:         true,
 	})
 	if err != nil {
 		t.Fatalf("engine execute should not fail fatally on corrupt files: %v", err)
@@ -384,5 +421,195 @@ func TestBackfillEngine_MissingWorkspacesDir(t *testing.T) {
 	}
 	if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
 		t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
+	}
+}
+
+func TestBackfillEngine_RecomputeGitRequiresTicketID(t *testing.T) {
+	tempDir := t.TempDir()
+	engine := NewEngine()
+	_, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		RecomputeGit:  true,
+		CodeRef:       "HEAD",
+	})
+	if err == nil {
+		t.Fatal("expected error when RecomputeGit is true without TicketID, got nil")
+	}
+	if !strings.Contains(err.Error(), "--ticket-id is required") {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+}
+
+func TestBackfillEngine_SourceValidation(t *testing.T) {
+	tempDir := t.TempDir()
+	engine := NewEngine()
+	_, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		Source:        "invalid-harness",
+	})
+	if err == nil || !strings.Contains(err.Error(), "invalid source") {
+		t.Fatalf("expected invalid source error, got %v", err)
+	}
+}
+
+func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
+	tempDir := t.TempDir()
+	tid := "AL-HYBRID"
+	dbPath := filepath.Join(tempDir, "test_opencode.db")
+	setupMockOpenCodeDB(t, dbPath, "opencode-root-1", tid)
+
+	origLedger := domain.AgenticFactLedger{
+		TicketID: &tid,
+		Sessions: []domain.SessionFact{
+			{
+				ID:     "codex-root-1",
+				Source: domain.SourceCodex,
+				Invocations: []domain.InvocationFact{
+					{ID: "codex-root-1", Role: "orchestrator", Model: "gpt-4o"},
+				},
+				Tools: []domain.SessionToolFact{
+					{Name: "exec", Calls: 3},
+				},
+			},
+			{
+				ID:     "opencode-root-1",
+				Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{
+					{ID: "opencode-root-1", Role: "orchestrator", Model: "mock-model"},
+				},
+				Tools: []domain.SessionToolFact{},
+			},
+		},
+	}
+	createTestWorkspace(t, tempDir, tid, origLedger)
+
+	engine := NewEngine()
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      tid,
+		Source:        "opencode",
+		RecomputeDB:   true,
+		DBPath:        dbPath,
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if report.Scanned != 1 || report.Updated != 1 {
+		t.Fatalf("expected 1 scanned, 1 updated, got %+v", report)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, tid, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("failed reading result: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed unmarshaling result: %v", err)
+	}
+
+	if len(parsed.Sessions) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(parsed.Sessions))
+	}
+
+	var codexSess, opencodeSess *adapters.SessionFactDTO
+	for i := range parsed.Sessions {
+		if parsed.Sessions[i].ID == "codex-root-1" {
+			codexSess = &parsed.Sessions[i]
+		} else if parsed.Sessions[i].ID == "opencode-root-1" {
+			opencodeSess = &parsed.Sessions[i]
+		}
+	}
+
+	if codexSess == nil {
+		t.Fatalf("codex session was dropped!")
+	}
+	if codexSess.Source != string(domain.SourceCodex) {
+		t.Errorf("expected codex session source %q, got %q", domain.SourceCodex, codexSess.Source)
+	}
+	if len(codexSess.Tools) != 1 || codexSess.Tools[0].Name != "exec" || codexSess.Tools[0].Calls != 3 {
+		t.Errorf("codex session was corrupted: %+v", codexSess)
+	}
+
+	if opencodeSess == nil {
+		t.Fatalf("opencode session missing!")
+	}
+	if opencodeSess.Source != string(domain.SourceOpenCode) {
+		t.Errorf("expected opencode session source %q, got %q", domain.SourceOpenCode, opencodeSess.Source)
+	}
+	if len(opencodeSess.Tools) != 1 || opencodeSess.Tools[0].Name != "bash" {
+		t.Errorf("expected opencode session to be updated with bash tool, got: %+v", opencodeSess.Tools)
+	}
+}
+
+func TestBackfillEngine_SourceCodexSkipsOpenCodeSessions(t *testing.T) {
+	tempDir := t.TempDir()
+	tid := "AL-HYBRID-2"
+
+	origLedger := domain.AgenticFactLedger{
+		TicketID: &tid,
+		Sessions: []domain.SessionFact{
+			{
+				ID:     "codex-root-2",
+				Source: domain.SourceCodex,
+				Invocations: []domain.InvocationFact{
+					{ID: "codex-root-2", Role: "orchestrator", Model: "gpt-4o"},
+				},
+				Tools: []domain.SessionToolFact{
+					{Name: "exec", Calls: 5},
+				},
+			},
+			{
+				ID:     "opencode-root-2",
+				Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{
+					{ID: "opencode-root-2", Role: "orchestrator", Model: "claude-3-5-sonnet"},
+				},
+				Tools: []domain.SessionToolFact{
+					{Name: "bash", Calls: 10},
+				},
+			},
+		},
+	}
+	createTestWorkspace(t, tempDir, tid, origLedger)
+
+	engine := NewEngine()
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      tid,
+		Source:        "codex",
+		RecomputeDB:   true,
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if report.Scanned != 1 {
+		t.Fatalf("expected 1 scanned, got %+v", report)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, tid, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("failed reading result: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed unmarshaling result: %v", err)
+	}
+
+	var opencodeSess *adapters.SessionFactDTO
+	for i := range parsed.Sessions {
+		if parsed.Sessions[i].ID == "opencode-root-2" {
+			opencodeSess = &parsed.Sessions[i]
+		}
+	}
+	if opencodeSess == nil {
+		t.Fatalf("opencode session was dropped during codex backfill!")
+	}
+	if opencodeSess.Source != string(domain.SourceOpenCode) {
+		t.Errorf("expected opencode session source %q, got %q", domain.SourceOpenCode, opencodeSess.Source)
+	}
+	if len(opencodeSess.Tools) != 1 || opencodeSess.Tools[0].Calls != 10 {
+		t.Errorf("opencode session was modified during codex backfill: %+v", opencodeSess)
 	}
 }

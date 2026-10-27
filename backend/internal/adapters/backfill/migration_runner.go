@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -116,8 +117,19 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 			continue
 		}
 		res.SourceVersion = sourceVer
-
-		if sourceVer >= targetVer {
+		hasLegacyFacts := hasLegacyFactCollections(content)
+		missingSource := hasMissingSessionSource(content)
+		needsSanitization := sourceVer == domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
+		if sourceVer == domain.CurrentSchemaVersion && !hasLegacyFacts {
+			if err := validateCurrentLedger(content); err != nil {
+				res.Status = "error"
+				res.Error = fmt.Errorf("validating current schema ledger: %w", err)
+				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+				report.Results = append(report.Results, res)
+				continue
+			}
+		}
+		if sourceVer >= targetVer && !(sourceVer == domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
 			res.Status = "up-to-date"
 			res.DiffSummary = fmt.Sprintf("Schema version %d is already up-to-date", sourceVer)
 			report.UpToDate++
@@ -138,6 +150,9 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 			res.TicketID = strings.TrimSpace(*migrated.TicketID)
 		}
 		res.DiffSummary = fmt.Sprintf("Upgraded schema v%d -> v%d", sourceVer, targetVer)
+		if migrated.Migration != nil && strings.TrimSpace(migrated.Migration.Notes) != "" {
+			res.DiffSummary += "; " + strings.TrimSpace(migrated.Migration.Notes)
+		}
 
 		if opts.DryRun {
 			res.Status = "migrated (dry-run)"
@@ -159,6 +174,13 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 		}
 
 		dto := adapters.AgenticFactLedgerDTOFromDomain(migrated)
+		if err := dto.Validate(); err != nil {
+			res.Status = "error"
+			res.Error = fmt.Errorf("validating migrated schema: %w", err)
+			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+			report.Results = append(report.Results, res)
+			continue
+		}
 		data, err := json.MarshalIndent(dto, "", "  ")
 		if err != nil {
 			res.Status = "error"
@@ -202,4 +224,100 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 	}
 
 	return report, nil
+}
+
+func needsEventSanitization(content []byte) bool {
+	var ledger domain.AgenticFactLedger
+	if json.Unmarshal(content, &ledger) != nil {
+		return false
+	}
+	events := ledger.EventFacts()
+	pruned, err := domain.PersistAnomalySummaries(ledger)
+	if err != nil {
+		return true
+	}
+	if len(events) != len(pruned.EventFacts()) {
+		return true
+	}
+	if !reflect.DeepEqual(events, pruned.EventFacts()) || !reflect.DeepEqual(ledger.AnomalyFacts(), pruned.AnomalyFacts()) || ledger.Anomalies == nil {
+		return true
+	}
+	for _, session := range ledger.Sessions {
+		if session.Anomalies == nil {
+			return true
+		}
+	}
+	return false
+}
+
+func hasLegacyFactCollections(content []byte) bool {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(content, &fields) != nil {
+		return false
+	}
+	for _, key := range []string{"invocations", "tools", "events"} {
+		if _, ok := fields[key]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func hasMissingSessionSource(content []byte) bool {
+	var raw struct {
+		Sessions []struct {
+			Source string `json:"source"`
+		} `json:"sessions"`
+	}
+	if err := json.Unmarshal(content, &raw); err != nil {
+		return false
+	}
+	if len(raw.Sessions) == 0 {
+		return false
+	}
+	for _, s := range raw.Sessions {
+		if strings.TrimSpace(s.Source) == "" {
+			return true
+		}
+	}
+	return false
+}
+
+func validateCurrentLedger(content []byte) error {
+	// Pre-iteration v4 ledgers may contain payload keys that this normalization removes.
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(content, &raw); err != nil {
+		return err
+	}
+	if sessions, ok := raw["sessions"]; ok {
+		var items []map[string]json.RawMessage
+		if err := json.Unmarshal(sessions, &items); err == nil {
+			for i := range items {
+				if events, exists := items[i]["events"]; exists {
+					var rows []map[string]json.RawMessage
+					if json.Unmarshal(events, &rows) == nil {
+						for j := range rows {
+							for _, key := range []string{"error_message", "prompt_content", "reasoning_content", "tool_input", "tool_output"} {
+								delete(rows[j], key)
+							}
+						}
+						items[i]["events"], _ = json.Marshal(rows)
+					}
+				}
+				if _, hasSrc := items[i]["source"]; !hasSrc {
+					items[i]["source"], _ = json.Marshal(domain.SourceOpenCode)
+				}
+			}
+			raw["sessions"], _ = json.Marshal(items)
+		}
+	}
+	cleaned, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(cleaned, &dto); err != nil {
+		return err
+	}
+	return dto.Validate()
 }

@@ -16,6 +16,35 @@ import (
 // ErrFileExists is returned when target configuration file already exists and force is false.
 var ErrFileExists = errors.New("configuration file already exists")
 
+// DefaultTestPatterns defines standard fallback glob patterns for identifying test code.
+var DefaultTestPatterns = []string{
+	"**/*_test.go",
+	"**/*.test.ts",
+	"**/*.test.tsx",
+	"**/*.spec.ts",
+	"**/*.spec.tsx",
+	"**/*.test.js",
+	"**/*.test.jsx",
+	"**/*.spec.js",
+	"**/*.spec.jsx",
+	"**/test_*.py",
+	"**/*_test.py",
+	"**/testdata/**",
+	"**/__tests__/**",
+}
+
+// DefaultProdPatterns defines standard fallback glob patterns for identifying production runtime code.
+var DefaultProdPatterns = []string{
+	"**/*.go",
+	"**/*.ts",
+	"**/*.tsx",
+	"**/*.py",
+	"**/*.js",
+	"**/*.jsx",
+	"**/*.html",
+	"**/*.css",
+}
+
 // FileExistsError is an explicit typed error containing the conflicting file path.
 type FileExistsError struct {
 	Path string
@@ -333,8 +362,8 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 		CodeMetrics: domain.CodeMetricsConfig{
 			Include:      []string{},
 			Exclude:      []string{},
-			TestPatterns: []string{},
-			ProdPatterns: []string{},
+			TestPatterns: append([]string(nil), DefaultTestPatterns...),
+			ProdPatterns: append([]string(nil), DefaultProdPatterns...),
 		},
 		RoleMappings: domain.RoleMappings{},
 		RoleOrder:    []string{},
@@ -424,7 +453,20 @@ func formatStringList(b *strings.Builder, items []string, indent string) {
 	for _, item := range items {
 		clean := strings.TrimSpace(item)
 		if clean != "" {
-			b.WriteString(fmt.Sprintf("%s- %s\n", indent, clean))
+			b.WriteString(fmt.Sprintf("%s- %s\n", indent, formatStringItem(clean)))
 		}
 	}
+}
+
+func formatStringItem(item string) string {
+	if strings.HasPrefix(item, "\"") && strings.HasSuffix(item, "\"") && len(item) >= 2 {
+		return item
+	}
+	if strings.HasPrefix(item, "'") && strings.HasSuffix(item, "'") && len(item) >= 2 {
+		return item
+	}
+	if strings.ContainsAny(item, "*?[]{}#:&@!`") || strings.HasPrefix(item, "-") {
+		return fmt.Sprintf("%q", item)
+	}
+	return item
 }

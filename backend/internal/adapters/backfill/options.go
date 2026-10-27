@@ -4,7 +4,10 @@ package backfill
 type BackfillOptions struct {
 	WorkspacesDir   string
 	TicketID        string
+	Source          string
+	CodexHome       string
 	RecomputeGit    bool
+	CodeRef         string
 	RecomputeDB     bool
 	DryRun          bool
 	UpdateSummaries bool

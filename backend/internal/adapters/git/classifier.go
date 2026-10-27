@@ -46,38 +46,52 @@ const (
 	CategoryOther   FileCategory = "other"
 )
 
-func matchPattern(pattern, path string) bool {
-	pattern = filepath.ToSlash(pattern)
-	path = filepath.ToSlash(path)
-
-	if pattern == path {
-		return true
-	}
-
-	if strings.Contains(pattern, "**") {
-		parts := strings.Split(pattern, "**")
-		if len(parts) == 2 {
-			prefix := strings.TrimSuffix(parts[0], "/")
-			suffix := strings.TrimPrefix(parts[1], "/")
-			hasPrefix := prefix == "" || strings.HasPrefix(path, prefix)
-			hasSuffix := suffix == "" || strings.HasSuffix(path, suffix) || matchPattern(suffix, filepath.Base(path))
-			if hasPrefix && hasSuffix {
-				return true
-			}
+func hasPatterns(patterns []string) bool {
+	for _, p := range patterns {
+		if strings.TrimSpace(p) != "" {
+			return true
 		}
 	}
-
-	matched, err := filepath.Match(pattern, path)
-	if err == nil && matched {
-		return true
-	}
-
-	baseMatched, err := filepath.Match(pattern, filepath.Base(path))
-	if err == nil && baseMatched {
-		return true
-	}
-
 	return false
+}
+
+// CheckUnconfiguredPatterns checks if test_patterns or prod_patterns are empty or unconfigured.
+// It returns human-actionable warning messages.
+func CheckUnconfiguredPatterns(cfg *ClassificationConfig) []string {
+	var warnings []string
+	if cfg == nil || !hasPatterns(cfg.TestPatterns) {
+		warnings = append(warnings, "code_metrics.test_patterns is empty or unconfigured: configure 'code_metrics.test_patterns' in .agenticlens-config.yaml")
+	}
+	if cfg == nil || !hasPatterns(cfg.ProdPatterns) {
+		warnings = append(warnings, "code_metrics.prod_patterns is empty or unconfigured: configure 'code_metrics.prod_patterns' in .agenticlens-config.yaml")
+	}
+	return warnings
+}
+
+// Patterns containing a slash are relative to the repository root. A ** path
+// component matches zero or more directories; patterns without slashes match basenames.
+func matchPattern(pattern, path string) bool {
+	pattern = strings.TrimPrefix(filepath.ToSlash(strings.TrimSpace(pattern)), "./")
+	path = filepath.ToSlash(path)
+	if !strings.Contains(pattern, "/") {
+		matched, _ := filepath.Match(pattern, filepath.Base(path))
+		return matched
+	}
+	return matchSegments(strings.Split(pattern, "/"), strings.Split(path, "/"))
+}
+
+func matchSegments(pattern, path []string) bool {
+	if len(pattern) == 0 {
+		return len(path) == 0
+	}
+	if pattern[0] == "**" {
+		return matchSegments(pattern[1:], path) || (len(path) > 0 && matchSegments(pattern, path[1:]))
+	}
+	if len(path) == 0 {
+		return false
+	}
+	matched, _ := filepath.Match(pattern[0], path[0])
+	return matched && matchSegments(pattern[1:], path[1:])
 }
 
 // ClassifyFile classifies a repository file path as ignored, test, prod, or other.
@@ -86,7 +100,6 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 	cleanPath = strings.TrimPrefix(cleanPath, "./")
 	cleanPath = strings.TrimPrefix(cleanPath, "/")
 	baseName := filepath.Base(cleanPath)
-	ext := strings.ToLower(filepath.Ext(cleanPath))
 
 	// 1. Workspace directory check - classify immediately as CategoryIgnored
 	if cfg != nil && strings.TrimSpace(cfg.WorkspacesDir) != "" {
@@ -96,22 +109,35 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 		}
 	}
 
+	// 2. Explicit exclusions
 	if cfg != nil {
 		for _, p := range cfg.Exclude {
 			if matchPattern(p, cleanPath) {
 				return CategoryIgnored
 			}
 		}
+	}
+
+	// 3. Explicit test patterns (take precedence over production rules)
+	if cfg != nil && hasPatterns(cfg.TestPatterns) {
 		for _, p := range cfg.TestPatterns {
 			if matchPattern(p, cleanPath) {
 				return CategoryTest
 			}
 		}
+	}
+
+	// 4. Explicit production patterns
+	if cfg != nil && hasPatterns(cfg.ProdPatterns) {
 		for _, p := range cfg.ProdPatterns {
 			if matchPattern(p, cleanPath) {
 				return CategoryProd
 			}
 		}
+	}
+
+	// 5. Explicit includes
+	if cfg != nil {
 		for _, p := range cfg.Include {
 			if matchPattern(p, cleanPath) {
 				return CategoryProd
@@ -119,57 +145,12 @@ func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
 		}
 	}
 
-	// 2. Specific lockfiles and dotfiles ignored
+	// 6. Specific lockfiles and dotfiles ignored
 	if baseName == "go.sum" || baseName == "package-lock.json" || baseName == "pnpm-lock.yaml" || baseName == "yarn.lock" {
 		return CategoryIgnored
 	}
 	if strings.HasPrefix(baseName, ".") {
 		return CategoryIgnored
-	}
-
-	// 2. Test files detection
-	isTestDir := strings.HasPrefix(cleanPath, "test/") ||
-		strings.HasPrefix(cleanPath, "tests/") ||
-		strings.HasPrefix(cleanPath, "__tests__/") ||
-		strings.Contains(cleanPath, "/test/") ||
-		strings.Contains(cleanPath, "/tests/") ||
-		strings.Contains(cleanPath, "/__tests__/")
-
-	isTestFile := strings.HasSuffix(baseName, "_test.go") ||
-		strings.HasSuffix(baseName, ".test.ts") ||
-		strings.HasSuffix(baseName, ".test.tsx") ||
-		strings.HasSuffix(baseName, ".spec.ts") ||
-		strings.HasSuffix(baseName, ".spec.tsx") ||
-		strings.HasSuffix(baseName, ".test.js") ||
-		strings.HasSuffix(baseName, ".test.jsx") ||
-		strings.HasSuffix(baseName, ".spec.js") ||
-		strings.HasSuffix(baseName, ".spec.jsx") ||
-		strings.HasPrefix(baseName, "test_") && ext == ".py" ||
-		strings.HasSuffix(baseName, "_test.py")
-
-	if isTestDir || isTestFile {
-		return CategoryTest
-	}
-
-	// 3. Production files detection
-	if baseName == "Makefile" {
-		return CategoryProd
-	}
-	prodExtensions := map[string]struct{}{
-		".go":   {},
-		".ts":   {},
-		".tsx":  {},
-		".py":   {},
-		".js":   {},
-		".jsx":  {},
-		".html": {},
-		".css":  {},
-		".scss": {},
-		".sql":  {},
-		".sh":   {},
-	}
-	if _, ok := prodExtensions[ext]; ok {
-		return CategoryProd
 	}
 
 	return CategoryOther

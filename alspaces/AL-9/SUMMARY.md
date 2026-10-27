@@ -30,26 +30,25 @@
 - Production build: `npm run build` and single-binary compilation `bin/agentic-lens` succeeded cleanly.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
+- **Software Development Life Cycle Iterations:** 7
 - **Active Agent Duration:** 5h 37m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 170.2k tokens (85% of 200k healthy ceiling, 4 compactions) | Subagents peak 184.2k (Coder)
+- **Context Window Health:** ELEVATED — Root agent peak 170.2k tokens (85% of 200k healthy ceiling, 4 compactions) | Subagents peak 184.2k (Coder)
 - **Role Effort Distribution (Subagents):** Planner 13.6%, Coder 54.8%, Tester 18.3%, Reviewer 13.3%
 - **Subagent Turn Velocity & Thrashing:** 55.1 avg turns/run (peak: 214 turns) | Planner 44.0, Coder 79.0, Tester 37.8, Reviewer 49.7
 - **Test-to-Production Code Ratio:** 0.7:1 (+1,542 test lines / +2,243 prod lines)
 - **Code Delivered:** +3,786 / -225 lines across 24 code files (excluding docs)
 - **Reasoning Effort:** 235,558 reasoning tokens (53.6% of generated output)
-- **Tool Health & Self-Correction:** 1,078 tool calls (31 self-corrections, 97.1% success rate)
+- **Tool Health & Self-Correction:** 1,078 tool calls (17 self-corrections, 98.4% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 8 execution anomalies detected (4 CRITICAL, 4 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.8k tokens) — Context tokens reached 166.8k in turn 56 (session: ses_eaf08e22bffexSexQrfKUuOmGi), breaching 160k critical ceiling
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k in turn 71 (session: ses_eaf9229aeffe5uoQhcPFCY0dW7), breaching 160k critical ceiling
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k in turn 120 (session: ses_eafa88c8bffemuBhYUUMhNTFJk), breaching 160k critical ceiling
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+82.1k tokens) — Context tokens surged by 82.1k tokens in turn 131 (session: ses_eafa88c8bffemuBhYUUMhNTFJk, total: 82.1k tokens, threshold: 80000)
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+46.7k tokens) — Context tokens surged by 46.7k tokens in turn 60 (session: ses_eaf08e22bffexSexQrfKUuOmGi, total: 46.7k tokens, threshold: 40000)
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+55.1k tokens) — Context tokens surged by 55.1k tokens in turn 86 (session: ses_eaf9229aeffe5uoQhcPFCY0dW7, total: 55.1k tokens, threshold: 40000)
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+52.6k tokens) — Context tokens surged by 52.6k tokens in turn 153 (session: ses_eaf9229aeffe5uoQhcPFCY0dW7, total: 52.6k tokens, threshold: 40000)
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: grep (3 consecutive errors) — Tool 'grep' encountered 3 consecutive execution failures (session: ses_eafa88c8bffemuBhYUUMhNTFJk, turn: 93)
+- **Status:** 7 execution anomalies detected (4 CRITICAL, 3 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.8k tokens) — Context tokens reached 166.8k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+82.1k tokens) — Context tokens surged by 82.1k to 82.1k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+46.7k tokens) — Context tokens surged by 46.7k to 46.7k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+55.1k tokens) — Context tokens surged by 55.1k to 55.1k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+52.6k tokens) — Context tokens surged by 52.6k to 52.6k tokens.
 
 ### Agentic Execution Metrics
 

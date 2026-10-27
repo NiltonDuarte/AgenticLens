@@ -54,8 +54,6 @@ describe('TraceWaterfall Component', () => {
     {
       rule_id: 'TOOL_RETRY_STREAK',
       severity: 'WARNING',
-      title: 'Repeated Tool Failures',
-      description: 'Tool edit failed multiple times.',
       context: {
         tool_name: 'edit',
         turn: 3,
@@ -315,15 +313,11 @@ describe('TraceWaterfall Component', () => {
       {
         rule_id: 'CONTEXT_SATURATION_SPIKE',
         severity: 'CRITICAL',
-        title: 'Empty Context Anomaly',
-        description: 'Context has no fields',
         context: {},
       },
       {
         rule_id: 'SUBAGENT_REWORK_LOOP',
         severity: 'WARNING',
-        title: 'Turn Only Anomaly',
-        description: 'Context has only turn field',
         context: {
           turn: 1,
         },
@@ -363,8 +357,6 @@ describe('TraceWaterfall Component', () => {
       {
         rule_id: 'SUBAGENT_REWORK_LOOP',
         severity: 'CRITICAL',
-        title: 'Rework Loop Detected',
-        description: 'Frequent rework between planner and coder.',
         context: {
           turn: 4,
           role: 'tester',
@@ -474,16 +466,16 @@ describe('TraceWaterfall Component', () => {
       const banner = screen.getByTestId('db-offline-banner');
       expect(banner).toBeInTheDocument();
       expect(
-        screen.getByText('Committed Git Ledger — Local Database Offline')
+        screen.getByText('Committed Anomaly Summaries — Local Source Offline')
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          /Local SQLite database was unavailable or not found\. Showing lightweight execution events recorded in the repository ledger without raw prompt, reasoning, or tool payloads\./i
+          /The local source was unavailable or not found\. The ledger keeps anomaly summaries/i
         )
       ).toBeInTheDocument();
 
       const sourceBadge = screen.getByTestId('waterfall-source-badge');
-      expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
+      expect(sourceBadge).toHaveTextContent('Source: Committed Anomaly Summary');
       expect(sourceBadge).toHaveClass('source-offline');
     });
 
@@ -712,8 +704,6 @@ describe('TraceWaterfall Component', () => {
       {
         rule_id: 'TOOL_RETRY_STREAK',
         severity: 'WARNING',
-        title: 'Repeated Tool Failures',
-        description: 'Edit failed repeatedly.',
         context: {
           tool_name: 'edit',
           turn: 5,
@@ -723,8 +713,6 @@ describe('TraceWaterfall Component', () => {
       {
         rule_id: 'CONTEXT_SATURATION_SPIKE',
         severity: 'CRITICAL',
-        title: 'Context Saturation Spike',
-        description: 'Token count jumped abruptly.',
         context: {
           turn: 5,
           session_id: 's-adv',
@@ -733,8 +721,6 @@ describe('TraceWaterfall Component', () => {
       {
         rule_id: 'TOOL_HIGH_FAILURE_RATE',
         severity: 'WARNING',
-        title: 'High Failure Rate',
-        description: 'Bash failure rate exceeded threshold.',
         context: {
           tool_name: 'bash',
           turn: 4,
@@ -744,8 +730,6 @@ describe('TraceWaterfall Component', () => {
       {
         rule_id: 'SUBAGENT_REWORK_LOOP',
         severity: 'CRITICAL',
-        title: 'Subagent Rework Loop',
-        description: 'Tester called without progress.',
         context: {
           role: 'tester',
           turn: 6,
@@ -754,8 +738,6 @@ describe('TraceWaterfall Component', () => {
       {
         rule_id: 'TOOL_RETRY_STREAK',
         severity: 'WARNING',
-        title: 'Duplicate Retry Streak',
-        description: 'Another retry streak anomaly on turn 10.',
         context: {
           tool_name: 'edit',
           turn: 10,
@@ -1062,8 +1044,6 @@ describe('TraceWaterfall Component', () => {
           {
             rule_id: 'CONTEXT_SATURATION_SPIKE',
             severity: 'CRITICAL',
-            title: 'Uncorrelated Spike',
-            description: 'Uncorrelated anomaly on nonexistent turn 999.',
             context: {
               turn: 999,
             },
@@ -2096,8 +2076,6 @@ describe('TraceWaterfall Component', () => {
       const streakAnomaly: Anomaly = {
         rule_id: 'TOOL_RETRY_STREAK',
         severity: 'WARNING',
-        title: 'Tool retry streak',
-        description: 'Tool read encountered failures',
         context: {
           tool_name: 'read',
           turn: 5,
@@ -2171,8 +2149,6 @@ describe('TraceWaterfall Component', () => {
       const anomalySessionA: Anomaly = {
         rule_id: 'TOOL_RETRY_STREAK',
         severity: 'CRITICAL',
-        title: 'Tool retry streak in Session A',
-        description: 'Failures in session A',
         context: {
           session_id: 'ses-A',
           tool_name: 'bash',
@@ -2374,8 +2350,6 @@ describe('TraceWaterfall Component', () => {
       const streakAnomaly: Anomaly = {
         rule_id: 'TOOL_RETRY_STREAK',
         severity: 'CRITICAL',
-        title: 'Repeated Tool Failures',
-        description: 'Consecutive failures on bash',
         context: {
           session_id: 'ses-wf-streak',
           tool_name: 'bash',

@@ -13,6 +13,13 @@ import (
 	"agenticlens/internal/domain"
 )
 
+func sourceEventID(kind, sourceID string) string {
+	if strings.TrimSpace(sourceID) == "" {
+		return ""
+	}
+	return "opencode:" + kind + ":" + sourceID
+}
+
 type rawTimeInfo struct {
 	Created   *float64 `json:"created"`
 	Completed *float64 `json:"completed"`
@@ -68,6 +75,11 @@ type sessionModelAccumulator struct {
 type toolAccumulator struct {
 	calls  int64
 	errors int64
+}
+
+type toolAccumulatorKey struct {
+	sessionID string
+	toolName  string
 }
 
 func sanitizeSessionID(id string) (string, error) {
@@ -241,6 +253,7 @@ func ExtractFacts(
 	sessionModels := make(map[string]map[string]*sessionModelAccumulator)
 	sessionModelOrders := make(map[string][]string)
 	sessionTurns := make(map[string]int64)
+	sessionUserIterations := make(map[string]int64)
 
 	// 3. Process messages per session
 	for _, s := range sessions {
@@ -270,6 +283,7 @@ func ExtractFacts(
 		var modelOrder []string
 		var totalSessionMsgs int64
 		var sessionAssistantTurn int64
+		var sessionUserTurns int64
 
 		for msgRows.Next() {
 			totalSessionMsgs++
@@ -286,6 +300,11 @@ func ExtractFacts(
 
 			var rawMD rawMessageData
 			if err := json.Unmarshal([]byte(mData.String), &rawMD); err != nil {
+				continue
+			}
+
+			if rawMD.Role != nil && strings.EqualFold(strings.TrimSpace(*rawMD.Role), "user") {
+				sessionUserTurns++
 				continue
 			}
 
@@ -345,6 +364,7 @@ func ExtractFacts(
 			}
 
 			events = append(events, domain.EventFact{
+				EventID:       sourceEventID("message", mid),
 				Timestamp:     msgTS,
 				SessionID:     s.id,
 				MessageID:     msgIDPtr,
@@ -426,6 +446,7 @@ func ExtractFacts(
 		sessionModels[s.id] = byModel
 		sessionModelOrders[s.id] = modelOrder
 		sessionTurns[s.id] = totalSessionMsgs
+		sessionUserIterations[s.id] = sessionUserTurns
 	}
 
 	// 4. Query parts (tool calls and compactions)
@@ -445,7 +466,7 @@ func ExtractFacts(
 	defer partRows.Close()
 
 	compMap := make(map[string]int64)
-	toolMap := make(map[string]*toolAccumulator)
+	toolMap := make(map[toolAccumulatorKey]*toolAccumulator)
 
 	for partRows.Next() {
 		var pid, sid, mid sql.NullString
@@ -474,6 +495,10 @@ func ExtractFacts(
 		mID := ""
 		if mid.Valid {
 			mID = mid.String
+		}
+		partID := ""
+		if pid.Valid {
+			partID = sourceEventID("part", pid.String)
 		}
 
 		role := domain.RoleRootAgent
@@ -506,6 +531,7 @@ func ExtractFacts(
 		if *rawPD.Type == "compaction" {
 			compMap[sID]++
 			events = append(events, domain.EventFact{
+				EventID:       partID,
 				Timestamp:     ts,
 				SessionID:     sID,
 				MessageID:     msgIDPtr,
@@ -522,15 +548,19 @@ func ExtractFacts(
 		}
 
 		if *rawPD.Type == "tool" {
+			if sID == "" {
+				return nil, nil, nil, nil, nil, errors.New("tool part has no owning session ID")
+			}
 			toolName := "unknown"
 			if rawPD.Tool != nil && strings.TrimSpace(*rawPD.Tool) != "" {
 				toolName = strings.TrimSpace(*rawPD.Tool)
 			}
 
-			tAcc, exists := toolMap[toolName]
+			key := toolAccumulatorKey{sessionID: sID, toolName: toolName}
+			tAcc, exists := toolMap[key]
 			if !exists {
 				tAcc = &toolAccumulator{}
-				toolMap[toolName] = tAcc
+				toolMap[key] = tAcc
 			}
 			tAcc.calls++
 
@@ -578,6 +608,7 @@ func ExtractFacts(
 
 			tName := toolName
 			events = append(events, domain.EventFact{
+				EventID:       partID,
 				Timestamp:     ts,
 				SessionID:     sID,
 				MessageID:     msgIDPtr,
@@ -632,8 +663,12 @@ func ExtractFacts(
 			}
 
 			var compactions int64
+			var userIterations int64
 			if idx == 0 {
 				compactions = sessionCompactions
+				if s.parentID == nil {
+					userIterations = sessionUserIterations[s.id]
+				}
 			}
 
 			activeSecs := int64(math.Round(float64(st.activeMS) / 1000.0))
@@ -655,23 +690,28 @@ func ExtractFacts(
 					Reasoning:   st.reasoning,
 					PeakContext: st.peak,
 				},
-				CostUSD:     math.Round(st.cost*1e6) / 1e6,
-				Compactions: compactions,
+				CostUSD:        math.Round(st.cost*1e6) / 1e6,
+				Compactions:    compactions,
+				UserIterations: userIterations,
 			})
 		}
 	}
 
 	// 6. Build tools
 	var tools []domain.ToolFact
-	for tName, tStats := range toolMap {
+	for key, tStats := range toolMap {
 		tools = append(tools, domain.ToolFact{
-			Name:   tName,
-			Calls:  tStats.calls,
-			Errors: tStats.errors,
+			SessionID: key.sessionID,
+			Name:      key.toolName,
+			Calls:     tStats.calls,
+			Errors:    tStats.errors,
 		})
 	}
 
 	sort.Slice(tools, func(i, j int) bool {
+		if tools[i].SessionID != tools[j].SessionID {
+			return tools[i].SessionID < tools[j].SessionID
+		}
 		if tools[i].Calls == tools[j].Calls {
 			return tools[i].Name < tools[j].Name
 		}

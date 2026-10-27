@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/backfill"
+	"agenticlens/internal/adapters/codex"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	adaptershttp "agenticlens/internal/adapters/http"
@@ -34,6 +36,8 @@ func runGenerate(args []string) {
 	}
 
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
+	codeRefFlag := genFlags.String("code-ref", "HEAD", "Git branch or commit to measure against the configured base (defaults to HEAD; committed changes only)")
+	sourceFlag := genFlags.String("source", "opencode", "Telemetry harness to read: opencode or codex")
 	nonceFlag := genFlags.String("nonce", "", "Unique random execution nonce to lock session resolution to")
 	sessionIDFlag := genFlags.String("session-id", "", "Explicit root session ID")
 	ticketTitleFlag := genFlags.String("ticket-title", "", "Human-readable ticket title or descriptive name")
@@ -44,6 +48,7 @@ func runGenerate(args []string) {
 	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update structured JSON ledger")
 	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
+	codexHomeFlag := genFlags.String("codex-home", "", "Path to CODEX_HOME (defaults to $CODEX_HOME or ~/.codex)")
 	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
 	allowEmptyFlag := genFlags.Bool("allow-empty", false, "Allow empty metrics generation even if no root session or invocations are resolved (test escape hatch)")
 
@@ -51,11 +56,20 @@ func runGenerate(args []string) {
 		fmt.Fprintf(os.Stderr, "Error parsing generate flags: %v\n", err)
 		os.Exit(1)
 	}
+	activeSource := strings.ToLower(strings.TrimSpace(*sourceFlag))
+	if activeSource != "opencode" && activeSource != "codex" {
+		fmt.Fprintf(os.Stderr, "Error: unsupported source %q. Use opencode or codex.\n", *sourceFlag)
+		os.Exit(1)
+	}
 
 	var cachedFacts *adapters.ExistingLedgerFacts
 	if *jsonOutputFlag != "" {
 		loaded, err := adapters.LoadExistingFactLedger(*jsonOutputFlag)
-		if err == nil && loaded != nil {
+		if errors.Is(err, adapters.ErrToolSessionIDRequired) {
+			fmt.Fprintf(os.Stderr, "Error loading existing fact ledger: %v\n", err)
+			os.Exit(1)
+		}
+		if loaded != nil {
 			cachedFacts = loaded
 		}
 	}
@@ -156,70 +170,126 @@ func runGenerate(args []string) {
 
 	var knownThreadIDs []string
 	userBySessionID := make(map[string]string)
-	var invocations []domain.InvocationFact
-	var tools []domain.ToolFact
-	var events []domain.EventFact
+	var sessions []domain.SessionFact
 	var fallbackCode *domain.CodeFacts
-	var extractedSteeringTurns int64
 
 	if cachedFacts != nil {
 		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
-		for _, inv := range cachedFacts.Invocations {
+		sessions = append(sessions, cachedFacts.Sessions...)
+		cachedLedger := domain.AgenticFactLedger{Sessions: cachedFacts.Sessions}
+		for _, inv := range cachedLedger.InvocationFacts() {
 			userBySessionID[inv.ID] = inv.User
 		}
-		invocations = append(invocations, cachedFacts.Invocations...)
-		tools = append(tools, cachedFacts.Tools...)
-		events = append(events, cachedFacts.Events...)
 		fallbackCode = cachedFacts.Code
+		if cachedFacts.Migration != nil && strings.Contains(cachedFacts.Migration.Notes, "Removed ") {
+			fmt.Fprintf(os.Stderr, "WARNING: %s\n", cachedFacts.Migration.Notes)
+		}
 	}
 
-	dbClient, err := opencode.OpenDB(*dbPathFlag)
-	if err == nil {
-		defer dbClient.Close()
+	var localInvocations []domain.InvocationFact
+	var localTools []domain.ToolFact
+	var localEvents []domain.EventFact
+	var hasLocalExtraction bool
 
-		rootID, err := opencode.ResolveActiveRootSession(
-			dbClient.DB(),
-			*nonceFlag,
-			activeTicketID,
-			*sessionIDFlag,
-		)
-		if err == nil && rootID != nil && *rootID != "" {
-			alreadyKnown := false
-			for _, id := range knownThreadIDs {
-				if id == *rootID {
-					alreadyKnown = true
-					break
-				}
-			}
-			if !alreadyKnown {
-				knownThreadIDs = append(knownThreadIDs, *rootID)
+	if activeSource == "codex" {
+		codexHome := strings.TrimSpace(*codexHomeFlag)
+		if codexHome == "" {
+			codexHome = strings.TrimSpace(os.Getenv("CODEX_HOME"))
+		}
+		if codexHome == "" {
+			if home, homeErr := os.UserHomeDir(); homeErr == nil {
+				codexHome = filepath.Join(home, ".codex")
 			}
 		}
+		rolloutPaths, discoverErr := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{
+			CodexHome: codexHome, Nonce: *nonceFlag, SessionID: *sessionIDFlag,
+		})
+		if discoverErr != nil {
+			fmt.Fprintf(os.Stderr, "Error discovering Codex sessions: %v\n", discoverErr)
+			os.Exit(1)
+		}
+		transcripts := make([]codex.Transcript, 0, len(rolloutPaths))
+		for _, path := range rolloutPaths {
+			transcript, parseErr := codex.ParseRolloutPath(path)
+			if parseErr != nil {
+				fmt.Fprintf(os.Stderr, "Error reading discovered Codex session: %v\n", parseErr)
+				os.Exit(1)
+			}
+			transcripts = append(transcripts, transcript)
+			knownThreadIDs = append(knownThreadIDs, transcript.ThreadID)
+		}
+		combined, combineErr := codex.CombineTranscripts(transcripts)
+		if combineErr != nil {
+			fmt.Fprintf(os.Stderr, "Error combining Codex session facts: %v\n", combineErr)
+			os.Exit(1)
+		}
+		for _, warning := range combined.Warnings {
+			fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
+		}
+		localInvocations = combined.Invocations
+		localTools = combined.Tools
+		localEvents = combined.Events
+		hasLocalExtraction = true
+		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
+			activeStartedAt = &combined.StartedAt
+		}
+		if strings.TrimSpace(*completedAtFlag) == "" && combined.CompletedAt != "" {
+			activeCompletedAt = &combined.CompletedAt
+		}
+		fmt.Fprintf(os.Stderr, "Discovered %d Codex thread rollout(s) for session %s.\n", len(rolloutPaths), combined.ThreadID)
+	} else {
+		dbClient, dbErr := opencode.OpenDB(*dbPathFlag)
+		if dbErr == nil {
+			defer dbClient.Close()
 
-		if len(knownThreadIDs) > 0 {
-			dbInvs, dbTools, dbEvents, dbStarted, dbCompleted, err := opencode.ExtractFacts(
+			rootID, resolveErr := opencode.ResolveActiveRootSession(
 				dbClient.DB(),
-				knownThreadIDs,
-				currentUser,
-				userBySessionID,
+				*nonceFlag,
+				activeTicketID,
+				*sessionIDFlag,
 			)
-			if err == nil && len(dbInvs) > 0 {
-				invocations = dbInvs
-				tools = dbTools
-				events = dbEvents
-				if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
-					activeStartedAt = dbStarted
+			if resolveErr == nil && rootID != nil && *rootID != "" {
+				alreadyKnown := false
+				for _, id := range knownThreadIDs {
+					if id == *rootID {
+						alreadyKnown = true
+						break
+					}
 				}
-				if strings.TrimSpace(*completedAtFlag) == "" && dbCompleted != nil {
-					activeCompletedAt = dbCompleted
+				if !alreadyKnown {
+					knownThreadIDs = append(knownThreadIDs, *rootID)
 				}
 			}
 
-			if turns, err := opencode.ExtractSteeringTurns(dbClient.DB(), knownThreadIDs); err == nil && turns > 0 {
-				extractedSteeringTurns = turns
+			if len(knownThreadIDs) > 0 {
+				dbInvs, dbTools, dbEvents, dbStarted, dbCompleted, extractErr := opencode.ExtractFacts(
+					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID,
+				)
+				if extractErr == nil && len(dbInvs) > 0 {
+					localInvocations = dbInvs
+					localTools = dbTools
+					localEvents = dbEvents
+					hasLocalExtraction = true
+					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
+						activeStartedAt = dbStarted
+					}
+					if strings.TrimSpace(*completedAtFlag) == "" && dbCompleted != nil {
+						activeCompletedAt = dbCompleted
+					}
+				}
 			}
 		}
 	}
+
+	if hasLocalExtraction {
+		freshSessions, buildErr := domain.SessionsFromFactsWithSource(domain.SourceHarness(activeSource), localInvocations, localTools, localEvents)
+		if buildErr != nil {
+			fmt.Fprintf(os.Stderr, "Error grouping extracted session facts: %v\n", buildErr)
+			os.Exit(1)
+		}
+		sessions = mergeSessions(sessions, freshSessions)
+	}
+	invocations := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 
 	if len(knownThreadIDs) == 0 && len(invocations) == 0 && !*allowEmptyFlag {
 		fmt.Fprintf(os.Stderr, "Error: unable to identify root session for ticket '%s'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted.\n", activeTicketID)
@@ -267,18 +337,30 @@ func runGenerate(args []string) {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		os.Exit(1)
 	}
-	codeFacts, err := git.ComputeCodeFacts(activeTicketID, cfg, fallbackCode)
+	for _, warning := range git.CheckUnconfiguredPatterns(cfg) {
+		fmt.Fprintf(os.Stderr, "WARNING: %s\n", warning)
+	}
+	codeFacts, err := git.ComputeCodeFactsAtRef(strings.TrimSpace(*codeRefFlag), cfg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		if fallbackCode != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: Failed to compute git code facts (%v); falling back to cached code facts\n", err)
+			codeFacts = *fallbackCode
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	if extractedSteeringTurns >= 1 {
-		codeFacts.SDLCIterations = extractedSteeringTurns
-	} else if fallbackCode != nil && fallbackCode.SDLCIterations > 0 {
-		codeFacts.SDLCIterations = fallbackCode.SDLCIterations
-	} else if codeFacts.SDLCIterations <= 0 {
-		codeFacts.SDLCIterations = 1
+	var totalSDLC int64
+	for _, inv := range invocations {
+		if inv.ParentID == nil {
+			totalSDLC += inv.UserIterations
+		}
+	}
+
+	codeFacts.SDLCIterations = totalSDLC
+	if totalSDLC == 0 && cachedFacts != nil && (cachedFacts.SchemaVersion == nil || *cachedFacts.SchemaVersion < 4) {
+		fmt.Fprintf(os.Stderr, "WARNING: Existing fact ledger has schema version < 4 and must be migrated via 'agentic-lens migrate' or 'agentic-lens backfill'.\n")
 	}
 
 	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
@@ -310,17 +392,18 @@ func runGenerate(args []string) {
 		CompletedAt:   activeCompletedAt,
 		UpdatedAt:     updatedAtISO,
 		Code:          codeFacts,
-		Invocations:   invocations,
-		Tools:         tools,
-		Events:        events,
+		Sessions:      sessions,
 	}
 
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 
 	if *jsonOutputFlag != "" {
-		persistedFactLedger := factLedger
-		persistedFactLedger.Events = domain.PruneEventsForPersistence(factLedger)
+		persistedFactLedger, pruneErr := domain.PersistAnomalySummaries(factLedger)
+		if pruneErr != nil {
+			fmt.Fprintf(os.Stderr, "Error preparing session-owned telemetry: %v\n", pruneErr)
+			os.Exit(1)
+		}
 		if err := adapters.SaveFactLedger(*jsonOutputFlag, persistedFactLedger); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
@@ -439,7 +522,7 @@ func runServer(args []string) {
 		}
 	}
 
-	var liveService *live.LiveService
+	liveService := live.NewLiveService(nil, projCfg)
 	if cleanDBPath != "" {
 		if _, err := os.Stat(cleanDBPath); err == nil {
 			busyTimeout := projCfg.Database.BusyTimeoutMs
@@ -499,9 +582,12 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "Usage: agentic-lens backfill [flags]\n\n")
 		fmt.Fprintf(out, "Batch telemetry backfill, Git code facts recomputation, and schema upgrades.\n\n")
 		fmt.Fprintf(out, "Flags:\n")
+		fmt.Fprintf(out, "  --source <harness>     Required telemetry harness to backfill: opencode, codex, or both\n")
+		fmt.Fprintf(out, "  --codex-home <path>    Path to CODEX_HOME (defaults to $CODEX_HOME or ~/.codex)\n")
 		fmt.Fprintf(out, "  --workspaces <path>    Path to root workspaces directory containing agentic_metrics.json ledgers\n")
 		fmt.Fprintf(out, "  --ticket-id <id>       Target single ticket identifier to filter backfill operation\n")
 		fmt.Fprintf(out, "  --recompute-git        Recompute Git code facts and SDLC iterations from repository history\n")
+		fmt.Fprintf(out, "  --code-ref <ref>        Required with --recompute-git; branch or commit to compare with configured base\n")
 		fmt.Fprintf(out, "  --recompute-db         Recompute OpenCode invocations and tool facts from local SQLite DB\n")
 		fmt.Fprintf(out, "  --migrate-schema       Upgrade telemetry ledger schema versions to latest supported version\n")
 		fmt.Fprintf(out, "  --dry-run              Preview planned migrations without writing changes to disk\n")
@@ -515,8 +601,11 @@ func runBackfill(args []string) {
 		return
 	}
 	workspacesFlag := backfillFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	sourceFlag := backfillFlags.String("source", "", "Telemetry harness to backfill: opencode, codex, or both (required)")
+	codexHomeFlag := backfillFlags.String("codex-home", "", "Path to CODEX_HOME (defaults to $CODEX_HOME or ~/.codex)")
 	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
 	recomputeGitFlag := backfillFlags.Bool("recompute-git", false, "Recompute Git code facts and SDLC iterations from repository history")
+	codeRefFlag := backfillFlags.String("code-ref", "", "Git branch or commit to compare with the configured base when recomputing code facts")
 	recomputeDBFlag := backfillFlags.Bool("recompute-db", false, "Recompute OpenCode invocations and tool facts from local SQLite DB")
 	migrateSchemaFlag := backfillFlags.Bool("migrate-schema", false, "Upgrade telemetry ledger schema versions to latest supported version")
 	dryRunFlag := backfillFlags.Bool("dry-run", false, "Preview planned migrations without writing changes to disk")
@@ -528,11 +617,33 @@ func runBackfill(args []string) {
 		fmt.Fprintf(os.Stderr, "Error parsing backfill flags: %v\n", err)
 		os.Exit(1)
 	}
+	cleanSource := strings.ToLower(strings.TrimSpace(*sourceFlag))
+	if cleanSource == "" {
+		fmt.Fprintln(os.Stderr, "Error: --source flag is required for backfill. Specify 'opencode', 'codex', or 'both'.")
+		os.Exit(1)
+	}
+	if cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "both" && cleanSource != "all" {
+		fmt.Fprintf(os.Stderr, "Error: invalid --source %q. Specify 'opencode', 'codex', or 'both'.\n", *sourceFlag)
+		os.Exit(1)
+	}
+	if *recomputeGitFlag {
+		if strings.TrimSpace(*codeRefFlag) == "" {
+			fmt.Fprintln(os.Stderr, "Error: --code-ref is required with --recompute-git")
+			os.Exit(1)
+		}
+		if strings.TrimSpace(*ticketIDFlag) == "" {
+			fmt.Fprintln(os.Stderr, "Error: --ticket-id is required when --recompute-git is specified")
+			os.Exit(1)
+		}
+	}
 
 	opts := backfill.BackfillOptions{
 		WorkspacesDir:   *workspacesFlag,
 		TicketID:        *ticketIDFlag,
+		Source:          cleanSource,
+		CodexHome:       strings.TrimSpace(*codexHomeFlag),
 		RecomputeGit:    *recomputeGitFlag,
+		CodeRef:         strings.TrimSpace(*codeRefFlag),
 		RecomputeDB:     *recomputeDBFlag,
 		MigrateSchema:   *migrateSchemaFlag,
 		DryRun:          *dryRunFlag,
@@ -566,6 +677,9 @@ func runBackfill(args []string) {
 		fmt.Printf("Filter Ticket ID:            %s\n", opts.TicketID)
 	}
 	fmt.Printf("Recompute Git Facts:         %t\n", opts.RecomputeGit)
+	if opts.RecomputeGit {
+		fmt.Printf("Git Code Ref:                %s\n", opts.CodeRef)
+	}
 	fmt.Printf("Recompute OpenCode DB:       %t\n", opts.RecomputeDB)
 	fmt.Printf("Migrate Schema:              %t\n", opts.MigrateSchema)
 	fmt.Printf("Update Markdown Summaries:   %t\n", opts.UpdateSummaries)
@@ -783,11 +897,12 @@ func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly) {
 		return
 	}
 	fmt.Printf("Found %d anomalies for ticket %s:\n\n", len(anomalies), ticketID)
-	header := fmt.Sprintf("%-10s %-28s %-40s %s", "Severity", "Rule ID", "Title", "Description")
+	header := fmt.Sprintf("%-10s %-28s %s", "Severity", "Rule ID", "Summary")
 	fmt.Println(header)
 	fmt.Println(strings.Repeat("-", len(header)))
 	for _, a := range anomalies {
-		fmt.Printf("%-10s %-28s %-40s %s\n", string(a.Severity), string(a.RuleID), a.Title, a.Description)
+		title, description := domain.AnomalyDisplayText(a)
+		fmt.Printf("%-10s %-28s %s — %s\n", string(a.Severity), string(a.RuleID), title, description)
 	}
 }
 
@@ -802,7 +917,7 @@ func printRootUsage() {
 	fmt.Fprintln(out, "Subcommands:")
 	fmt.Fprintln(out, "  init      Scaffold and generate a new .agenticlens-config.yaml configuration")
 	fmt.Fprintln(out, "  server    Start the HTTP dashboard server and API service")
-	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode SQLite DB and Git history")
+	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode or Codex and Git history")
 	fmt.Fprintln(out, "  backfill  Batch telemetry backfill, Git code facts recomputation, and schema upgrades")
 	fmt.Fprintln(out, "  migrate   Universal stepwise schema migration engine for telemetry ledgers")
 	fmt.Fprintln(out, "  version   Print version and build information")
@@ -1136,4 +1251,120 @@ func main() {
 	if *appendFlag == "" && *jsonOutputFlag == "" {
 		fmt.Println(tableMD)
 	}
+}
+
+type invocationKey struct {
+	id    string
+	model string
+}
+
+type toolFactKey struct {
+	sessionID string
+	name      string
+}
+
+func mergeInvocations(cached []domain.InvocationFact, local []domain.InvocationFact) []domain.InvocationFact {
+	merged := make([]domain.InvocationFact, len(cached))
+	copy(merged, cached)
+
+	indexMap := make(map[invocationKey]int)
+	for i, inv := range merged {
+		indexMap[invocationKey{id: inv.ID, model: inv.Model}] = i
+	}
+
+	for _, lInv := range local {
+		k := invocationKey{id: lInv.ID, model: lInv.Model}
+		if idx, exists := indexMap[k]; exists {
+			merged[idx] = lInv
+		} else {
+			indexMap[k] = len(merged)
+			merged = append(merged, lInv)
+		}
+	}
+
+	return merged
+}
+
+func mergeTools(cached []domain.ToolFact, local []domain.ToolFact) []domain.ToolFact {
+	merged := make([]domain.ToolFact, len(cached))
+	copy(merged, cached)
+
+	indexMap := make(map[toolFactKey]int)
+	for i, t := range merged {
+		indexMap[toolFactKey{sessionID: t.SessionID, name: t.Name}] = i
+	}
+
+	for _, lt := range local {
+		key := toolFactKey{sessionID: lt.SessionID, name: lt.Name}
+		if idx, exists := indexMap[key]; exists {
+			merged[idx] = lt
+		} else {
+			indexMap[key] = len(merged)
+			merged = append(merged, lt)
+		}
+	}
+
+	return merged
+}
+
+type eventKey struct {
+	timestamp string
+	sessionID string
+	turn      int64
+	eventType domain.EventType
+}
+
+func mergeEvents(cached []domain.EventFact, local []domain.EventFact) []domain.EventFact {
+	merged := make([]domain.EventFact, len(cached))
+	copy(merged, cached)
+
+	seen := make(map[eventKey]bool)
+	for _, e := range merged {
+		seen[eventKey{
+			timestamp: e.Timestamp,
+			sessionID: e.SessionID,
+			turn:      e.Turn,
+			eventType: e.EventType,
+		}] = true
+	}
+
+	for _, le := range local {
+		k := eventKey{
+			timestamp: le.Timestamp,
+			sessionID: le.SessionID,
+			turn:      le.Turn,
+			eventType: le.EventType,
+		}
+		if !seen[k] {
+			seen[k] = true
+			merged = append(merged, le)
+		}
+	}
+
+	return merged
+}
+
+func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []domain.SessionFact {
+	byID := make(map[string]domain.SessionFact, len(cached)+len(local))
+	for _, session := range cached {
+		byID[session.ID] = session
+	}
+	for _, session := range local {
+		if session.Source == "" {
+			if existing, ok := byID[session.ID]; ok && existing.Source != "" {
+				session.Source = existing.Source
+			}
+		}
+		byID[session.ID] = session
+	}
+	ids := make([]string, 0, len(byID))
+	for id := range byID {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	merged := make([]domain.SessionFact, 0, len(ids))
+	for _, id := range ids {
+		merged = append(merged, byID[id])
+	}
+	return merged
 }

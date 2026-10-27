@@ -177,13 +177,13 @@ func TestGetBuildInfo_IndividualEmptyFallbacks(t *testing.T) {
 	})
 
 	tests := []struct {
-		name         string
-		setVersion   string
-		setCommit    string
-		setDate      string
-		wantVersion  string
-		wantCommit   string
-		wantDate     string
+		name        string
+		setVersion  string
+		setCommit   string
+		setDate     string
+		wantVersion string
+		wantCommit  string
+		wantDate    string
 	}{
 		{
 			name:        "only version empty",

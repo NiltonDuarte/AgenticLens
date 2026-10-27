@@ -1,10 +1,11 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "migration": {
-    "schema_version": 3,
+    "schema_version": 4,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized"
+      "schema_v3_sanitized",
+      "schema_v4_user_iterations"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
@@ -27,31 +28,46 @@
     "files_changed": 5,
     "sdlc_iterations": 1
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "inv-po1-01",
-      "parent_id": null,
-      "role": "planner",
-      "model": "claude-3-5-sonnet",
-      "user": "product-owner",
-      "started_at": "2026-10-14T09:00:00Z",
-      "completed_at": "2026-10-14T11:15:00Z",
-      "active_duration_seconds": 1120,
-      "turns": 3,
-      "tokens": {
-        "input": 180000,
-        "output": 32000,
-        "cache_read": 540000,
-        "reasoning": 0,
-        "peak_context": 70400
-      },
-      "cost_usd": 2.145,
-      "compactions": 0
+      "invocations": [
+        {
+          "id": "inv-po1-01",
+          "parent_id": null,
+          "role": "planner",
+          "model": "claude-3-5-sonnet",
+          "user": "product-owner",
+          "started_at": "2026-10-14T09:00:00Z",
+          "completed_at": "2026-10-14T11:15:00Z",
+          "active_duration_seconds": 1120,
+          "turns": 3,
+          "tokens": {
+            "input": 180000,
+            "output": 32000,
+            "cache_read": 540000,
+            "reasoning": 0,
+            "peak_context": 70400
+          },
+          "cost_usd": 2.145,
+          "compactions": 0,
+          "user_iterations": 1
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "calls": 35,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 8,
+          "errors": 0
+        }
+      ],
+      "events": [],
+      "source": "opencode"
     }
-  ],
-  "tools": [
-    { "name": "read", "calls": 35, "errors": 0 },
-    { "name": "write", "calls": 8, "errors": 0 }
-  ],
-  "events": []
+  ]
 }

@@ -24,11 +24,61 @@ type AnomalyContext struct {
 
 // Anomaly represents a single detected execution health issue or operational degradation.
 type Anomaly struct {
-	RuleID      AnomalyRuleID   `json:"rule_id"`
-	Severity    AnomalySeverity `json:"severity"`
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	Context     AnomalyContext  `json:"context"`
+	RuleID   AnomalyRuleID        `json:"rule_id"`
+	Severity AnomalySeverity      `json:"severity"`
+	Context  AnomalyContext       `json:"context"`
+	Evidence []AnomalyEvidenceRef `json:"evidence,omitempty"`
+}
+
+// AnomalyEvidenceRef identifies a source event without duplicating its session or event payload.
+type AnomalyEvidenceRef struct {
+	SessionID string `json:"session_id"`
+	EventID   string `json:"event_id"`
+}
+
+// AnomalyDisplayText derives concise presentation strings from canonical anomaly facts.
+// It is intentionally outside the persisted Anomaly shape.
+func AnomalyDisplayText(anomaly Anomaly) (string, string) {
+	ctx := anomaly.Context
+	tool := "tool"
+	if ctx.ToolName != nil && strings.TrimSpace(*ctx.ToolName) != "" {
+		tool = *ctx.ToolName
+	}
+	count := int64(0)
+	if ctx.Count != nil {
+		count = *ctx.Count
+	}
+	switch anomaly.RuleID {
+	case RuleToolRetryStreak:
+		if ctx.ToolName != nil && ctx.Count != nil {
+			return fmt.Sprintf("Tool retry streak: %s (%d consecutive errors)", tool, count), fmt.Sprintf("Tool '%s' encountered %d consecutive execution failures.", tool, count)
+		}
+	case RuleToolHighFailureRate:
+		if ctx.ToolName != nil && ctx.Count != nil && ctx.TotalCalls != nil && ctx.FailureRatePct != nil {
+			threshold := ctx.Threshold
+			thresholdText := "configured threshold"
+			if threshold != nil && *threshold != "" {
+				thresholdText = *threshold
+			}
+			return fmt.Sprintf("High tool failure rate: %s (%.1f%%)", tool, *ctx.FailureRatePct), fmt.Sprintf("Tool '%s' failed %d out of %d calls (%.1f%% failure rate, threshold: %s).", tool, count, *ctx.TotalCalls, *ctx.FailureRatePct, thresholdText)
+		}
+	case RuleContextSaturationSpike:
+		if ctx.ContextTokens != nil && ctx.Threshold != nil && *ctx.Threshold == "160000" {
+			return fmt.Sprintf("Context ceiling breached (%s tokens)", FormatTokensK(*ctx.ContextTokens)), fmt.Sprintf("Context tokens reached %s, breaching the 160k critical ceiling.", FormatTokensK(*ctx.ContextTokens))
+		}
+		if ctx.TokenDelta != nil && ctx.ContextTokens != nil {
+			return fmt.Sprintf("Context saturation spike (+%s tokens)", FormatTokensK(*ctx.TokenDelta)), fmt.Sprintf("Context tokens surged by %s to %s tokens.", FormatTokensK(*ctx.TokenDelta), FormatTokensK(*ctx.ContextTokens))
+		}
+	case RuleSubagentReworkLoop:
+		if ctx.Role != nil && ctx.SecondaryRole != nil && ctx.Count != nil {
+			return fmt.Sprintf("Subagent rework loop: %s <-> %s (%d cycles)", *ctx.Role, *ctx.SecondaryRole, count), fmt.Sprintf("Subagent roles '%s' and '%s' alternated for %d consecutive cycles.", *ctx.Role, *ctx.SecondaryRole, count)
+		}
+	}
+	name := strings.ToLower(strings.ReplaceAll(string(anomaly.RuleID), "_", " "))
+	if name == "" {
+		name = "execution anomaly"
+	}
+	return strings.ToUpper(name[:1]) + name[1:], fmt.Sprintf("%s detected; some diagnostic context is unavailable.", name)
 }
 
 func strPtr(s string) *string {
@@ -49,71 +99,99 @@ func float64Ptr(f float64) *float64 {
 
 // detectToolRetryStreaks detects consecutive execution failures of the same tool in the event stream,
 // strictly scoped per session ID.
-func detectToolRetryStreaks(events []EventFact) []Anomaly {
+type retryStreakDetection struct {
+	anomaly      Anomaly
+	eventIndexes []int
+}
+
+func detectToolRetryStreaksWithIndexes(events []EventFact) []retryStreakDetection {
 	if len(events) == 0 {
 		return nil
 	}
-
-	var anomalies []Anomaly
-	var activeTool string
-	var activeSessionID string
-	var consecutiveErrors int64
-	var lastTurn int64
-
-	emitStreak := func() {
-		if consecutiveErrors >= 3 && activeTool != "" && activeSessionID != "" {
-			sev := SeverityWarning
-			thresholdStr := "3"
-			if consecutiveErrors >= 5 {
-				sev = SeverityCritical
-				thresholdStr = "5"
-			}
-			anomaly := Anomaly{
-				RuleID:   RuleToolRetryStreak,
-				Severity: sev,
-				Title:    fmt.Sprintf("Tool retry streak: %s (%d consecutive errors)", activeTool, consecutiveErrors),
-				Description: fmt.Sprintf("Tool '%s' encountered %d consecutive execution failures (session: %s, turn: %d)",
-					activeTool, consecutiveErrors, activeSessionID, lastTurn),
-				Context: AnomalyContext{
-					ToolName:  strPtr(activeTool),
-					Count:     int64Ptr(consecutiveErrors),
-					SessionID: strPtr(activeSessionID),
-					Turn:      int64Ptr(lastTurn),
-					Threshold: strPtr(thresholdStr),
-				},
-			}
-			anomalies = append(anomalies, anomaly)
+	var detections []retryStreakDetection
+	bySession := make(map[string][]int)
+	for index, event := range events {
+		if strings.TrimSpace(event.SessionID) != "" {
+			bySession[event.SessionID] = append(bySession[event.SessionID], index)
 		}
 	}
-
-	for _, event := range events {
-		if event.EventType != EventTypeToolCall || event.ToolName == nil || *event.ToolName == "" {
-			continue
+	sessionIDs := make([]string, 0, len(bySession))
+	for sessionID := range bySession {
+		sessionIDs = append(sessionIDs, sessionID)
+	}
+	sort.Strings(sessionIDs)
+	for _, sessionID := range sessionIDs {
+		indices := bySession[sessionID]
+		sort.SliceStable(indices, func(i, j int) bool {
+			a, b := events[indices[i]], events[indices[j]]
+			if a.Timestamp != b.Timestamp {
+				return a.Timestamp < b.Timestamp
+			}
+			return a.Turn < b.Turn
+		})
+		var activeTool string
+		var consecutiveErrors int64
+		var lastTurn int64
+		var activeEventIndexes []int
+		emitStreak := func() {
+			if consecutiveErrors >= 3 && activeTool != "" {
+				severity, threshold := SeverityWarning, "3"
+				if consecutiveErrors >= 5 {
+					severity, threshold = SeverityCritical, "5"
+				}
+				var evidence []AnomalyEvidenceRef
+				for _, eventIndex := range activeEventIndexes {
+					event := events[eventIndex]
+					if event.SessionID != "" && event.EventID != "" {
+						evidence = append(evidence, AnomalyEvidenceRef{SessionID: event.SessionID, EventID: event.EventID})
+					}
+				}
+				detections = append(detections, retryStreakDetection{
+					anomaly: Anomaly{
+						RuleID: RuleToolRetryStreak, Severity: severity,
+						Context:  AnomalyContext{ToolName: strPtr(activeTool), Count: int64Ptr(consecutiveErrors), SessionID: strPtr(sessionID), Turn: int64Ptr(lastTurn), Threshold: strPtr(threshold)},
+						Evidence: evidence,
+					},
+					eventIndexes: append([]int{}, activeEventIndexes...),
+				})
+			}
+			activeEventIndexes = nil
 		}
-
-		tool := *event.ToolName
-
-		if event.Status == "error" {
-			if tool == activeTool && event.SessionID == activeSessionID {
-				consecutiveErrors++
-				lastTurn = event.Turn
+		for _, eventIndex := range indices {
+			event := events[eventIndex]
+			if event.EventType != EventTypeToolCall || event.ToolName == nil || *event.ToolName == "" {
+				continue
+			}
+			tool := *event.ToolName
+			if event.Status == "error" || event.Status == "failed" {
+				if tool == activeTool {
+					consecutiveErrors++
+					lastTurn = event.Turn
+					activeEventIndexes = append(activeEventIndexes, eventIndex)
+				} else {
+					emitStreak()
+					activeTool = tool
+					consecutiveErrors = 1
+					lastTurn = event.Turn
+					activeEventIndexes = []int{eventIndex}
+				}
 			} else {
 				emitStreak()
-				activeTool = tool
-				activeSessionID = event.SessionID
-				consecutiveErrors = 1
-				lastTurn = event.Turn
+				activeTool = ""
+				consecutiveErrors = 0
 			}
-		} else {
-			// Status is completed or non-error
-			emitStreak()
-			activeTool = ""
-			activeSessionID = ""
-			consecutiveErrors = 0
 		}
+		emitStreak()
 	}
+	return detections
+}
 
-	emitStreak()
+func detectToolRetryStreaks(events []EventFact) []Anomaly {
+	detections := detectToolRetryStreaksWithIndexes(events)
+	anomalies := make([]Anomaly, 0, len(detections))
+	for _, detection := range detections {
+		anomalies = append(anomalies, detection.anomaly)
+	}
 	return anomalies
 }
 
@@ -126,18 +204,21 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 
 	statsMap := make(map[string]*toolStats)
 
-	if len(ledger.Tools) > 0 {
-		for _, t := range ledger.Tools {
+	if len(ledger.ToolFacts()) > 0 {
+		for _, t := range ledger.ToolFacts() {
 			if t.Name == "" {
 				continue
 			}
-			statsMap[t.Name] = &toolStats{
-				calls:  t.Calls,
-				errors: t.Errors,
+			st, ok := statsMap[t.Name]
+			if !ok {
+				st = &toolStats{}
+				statsMap[t.Name] = st
 			}
+			st.calls += t.Calls
+			st.errors += t.Errors
 		}
-	} else if len(ledger.Events) > 0 {
-		for _, e := range ledger.Events {
+	} else if len(ledger.EventFacts()) > 0 {
+		for _, e := range ledger.EventFacts() {
 			if e.EventType != EventTypeToolCall || e.ToolName == nil || *e.ToolName == "" {
 				continue
 			}
@@ -148,7 +229,7 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 				statsMap[name] = st
 			}
 			st.calls++
-			if e.Status == "error" {
+			if e.Status == "error" || e.Status == "failed" {
 				st.errors++
 			}
 		}
@@ -179,9 +260,6 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 			anomaly := Anomaly{
 				RuleID:   RuleToolHighFailureRate,
 				Severity: sev,
-				Title:    fmt.Sprintf("High tool failure rate: %s (%.1f%%)", name, pct),
-				Description: fmt.Sprintf("Tool '%s' failed %d out of %d calls (%.1f%% failure rate, threshold: %s)",
-					name, st.errors, st.calls, pct, thresholdStr),
 				Context: AnomalyContext{
 					ToolName:       strPtr(name),
 					Count:          int64Ptr(st.errors),
@@ -201,9 +279,9 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 	var anomalies []Anomaly
 
-	if len(ledger.Events) > 0 {
+	if len(ledger.EventFacts()) > 0 {
 		sessionEvents := make(map[string][]EventFact)
-		for _, e := range ledger.Events {
+		for _, e := range ledger.EventFacts() {
 			sid := e.SessionID
 			if sid == "" {
 				sid = "default"
@@ -238,9 +316,6 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 						anomaly := Anomaly{
 							RuleID:   RuleContextSaturationSpike,
 							Severity: sev,
-							Title:    fmt.Sprintf("Context saturation spike (+%s tokens)", FormatTokensK(delta)),
-							Description: fmt.Sprintf("Context tokens surged by %s tokens in turn %d (session: %s, total: %s tokens, threshold: %s)",
-								FormatTokensK(delta), ev.Turn, ev.SessionID, FormatTokensK(ev.ContextTokens), thresh),
 							Context: AnomalyContext{
 								SessionID:     strPtr(ev.SessionID),
 								Turn:          int64Ptr(ev.Turn),
@@ -262,9 +337,6 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 					anomaly := Anomaly{
 						RuleID:   RuleContextSaturationSpike,
 						Severity: SeverityCritical,
-						Title:    fmt.Sprintf("Context ceiling breached (%s tokens)", FormatTokensK(ev.ContextTokens)),
-						Description: fmt.Sprintf("Context tokens reached %s in turn %d (session: %s), breaching 160k critical ceiling",
-							FormatTokensK(ev.ContextTokens), ev.Turn, ev.SessionID),
 						Context: AnomalyContext{
 							SessionID:     strPtr(ev.SessionID),
 							Turn:          int64Ptr(ev.Turn),
@@ -278,14 +350,11 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 		}
 	} else {
 		// v1 Fallback: inspect Invocations for PeakContext >= 160,000
-		for _, inv := range ledger.Invocations {
+		for _, inv := range ledger.InvocationFacts() {
 			if inv.Tokens.PeakContext >= 160_000 {
 				anomaly := Anomaly{
 					RuleID:   RuleContextSaturationSpike,
 					Severity: SeverityCritical,
-					Title:    fmt.Sprintf("Context ceiling breached (%s tokens)", FormatTokensK(inv.Tokens.PeakContext)),
-					Description: fmt.Sprintf("Context tokens reached %s in role '%s' (session: %s), breaching 160k critical ceiling",
-						FormatTokensK(inv.Tokens.PeakContext), inv.Role, inv.ID),
 					Context: AnomalyContext{
 						SessionID:     strPtr(inv.ID),
 						Role:          agentRolePtr(AgentRole(inv.Role)),
@@ -301,92 +370,95 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 	return anomalies
 }
 
-// detectSubagentReworkLoops detects cyclic ping-pong role transitions between worker subagents.
+// detectSubagentReworkLoops detects cyclic role alternation within each explicit
+// invocation parent-child group. Independent child groups never share a role stream.
 func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
-	isChildSession := make(map[string]bool)
-	for _, inv := range ledger.Invocations {
-		if inv.ID != "" {
-			isChildSession[inv.ID] = inv.ParentID != nil
-		}
-	}
-
-	var roles []string
-
-	if len(ledger.Events) > 0 {
-		for _, e := range ledger.Events {
-			if isChildSession[e.SessionID] {
-				r := strings.ToLower(strings.TrimSpace(string(e.Role)))
-				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
-					roles = append(roles, r)
-				}
-			}
-		}
-	}
-
-	if len(roles) == 0 {
-		for _, inv := range ledger.Invocations {
-			if inv.ParentID != nil {
-				r := strings.ToLower(strings.TrimSpace(string(inv.Role)))
-				if r != "" && (len(roles) == 0 || roles[len(roles)-1] != r) {
-					roles = append(roles, r)
-				}
-			}
-		}
-	}
-
-	var anomalies []Anomaly
-	n := len(roles)
-	i := 0
-	for i < n-1 {
-		a := roles[i]
-		b := roles[i+1]
-		if a == b {
-			i++
+	childParent := make(map[string]string)
+	invocationRoles := make(map[string][]string)
+	for _, invocation := range ledger.InvocationFacts() {
+		if invocation.ID == "" || invocation.ParentID == nil {
 			continue
 		}
-
-		cycles := 0
-		pos := i
-		for pos+1 < n && roles[pos] == a && roles[pos+1] == b {
-			cycles++
-			pos += 2
+		parent := strings.TrimSpace(*invocation.ParentID)
+		if parent == "" {
+			continue
 		}
-
-		if cycles >= 3 {
-			sev := SeverityWarning
-			thresh := "3"
-			if cycles >= 5 {
-				sev = SeverityCritical
-				thresh = "5"
-			}
-			anomaly := Anomaly{
-				RuleID:   RuleSubagentReworkLoop,
-				Severity: sev,
-				Title:    fmt.Sprintf("Subagent rework loop: %s <-> %s (%d cycles)", a, b, cycles),
-				Description: fmt.Sprintf("Subagent roles '%s' and '%s' alternated for %d consecutive cycles indicating thrashing",
-					a, b, cycles),
-				Context: AnomalyContext{
-					Role:          agentRolePtr(AgentRole(a)),
-					SecondaryRole: agentRolePtr(AgentRole(b)),
-					Count:         int64Ptr(int64(cycles)),
-					Threshold:     strPtr(thresh),
-				},
-			}
-			anomalies = append(anomalies, anomaly)
-			i = pos
-		} else {
-			i++
+		childParent[invocation.ID] = parent
+		role := strings.ToLower(strings.TrimSpace(string(invocation.Role)))
+		if role != "" {
+			invocationRoles[parent] = appendDistinctRole(invocationRoles[parent], role)
 		}
 	}
 
+	eventRoles := make(map[string][]string)
+	for _, event := range ledger.EventFacts() {
+		parent, child := childParent[event.SessionID]
+		if !child {
+			continue
+		}
+		role := strings.ToLower(strings.TrimSpace(string(event.Role)))
+		if role == "" {
+			continue
+		}
+		eventRoles[parent] = appendDistinctRole(eventRoles[parent], role)
+	}
+
+	parents := make([]string, 0, len(childParent))
+	seenParent := make(map[string]bool)
+	for _, parent := range childParent {
+		if !seenParent[parent] {
+			parents = append(parents, parent)
+			seenParent[parent] = true
+		}
+	}
+	sort.Strings(parents)
+	var anomalies []Anomaly
+	for _, parent := range parents {
+		roles := eventRoles[parent]
+		if len(roles) == 0 {
+			roles = invocationRoles[parent]
+		}
+		for i := 0; i < len(roles)-1; {
+			a, b := roles[i], roles[i+1]
+			if a == b {
+				i++
+				continue
+			}
+			cycles, pos := int64(0), i
+			for pos+1 < len(roles) && roles[pos] == a && roles[pos+1] == b {
+				cycles++
+				pos += 2
+			}
+			if cycles >= 3 {
+				severity, threshold := SeverityWarning, "3"
+				if cycles >= 5 {
+					severity, threshold = SeverityCritical, "5"
+				}
+				anomalies = append(anomalies, Anomaly{
+					RuleID: RuleSubagentReworkLoop, Severity: severity,
+					Context: AnomalyContext{Role: agentRolePtr(AgentRole(a)), SecondaryRole: agentRolePtr(AgentRole(b)), Count: int64Ptr(cycles), Threshold: strPtr(threshold)},
+				})
+				i = pos
+			} else {
+				i++
+			}
+		}
+	}
 	return anomalies
+}
+
+func appendDistinctRole(roles []string, role string) []string {
+	if role == "" || (len(roles) > 0 && roles[len(roles)-1] == role) {
+		return roles
+	}
+	return append(roles, role)
 }
 
 // DetectAnomalies evaluates deterministic operational rules against the fact ledger.
 func DetectAnomalies(ledger AgenticFactLedger) []Anomaly {
 	var anomalies []Anomaly
 
-	anomalies = append(anomalies, detectToolRetryStreaks(ledger.Events)...)
+	anomalies = append(anomalies, detectToolRetryStreaks(ledger.EventFacts())...)
 	anomalies = append(anomalies, detectToolHighFailureRates(ledger)...)
 	anomalies = append(anomalies, detectContextSaturationSpikes(ledger)...)
 	anomalies = append(anomalies, detectSubagentReworkLoops(ledger)...)
@@ -395,6 +467,12 @@ func DetectAnomalies(ledger AgenticFactLedger) []Anomaly {
 		return []Anomaly{}
 	}
 
+	sortAnomalies(anomalies)
+
+	return anomalies
+}
+
+func sortAnomalies(anomalies []Anomaly) {
 	sort.SliceStable(anomalies, func(i, j int) bool {
 		a := anomalies[i]
 		b := anomalies[j]
@@ -432,10 +510,8 @@ func DetectAnomalies(ledger AgenticFactLedger) []Anomaly {
 			return toolA < toolB
 		}
 
-		return a.Title < b.Title
+		return string(a.RuleID) < string(b.RuleID)
 	})
-
-	return anomalies
 }
 
 // ComputeFleetAnomalies aggregates operational anomalies, severity counts, and brittle tools across all ledgers.
@@ -483,7 +559,7 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
 	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies int64
 
 	for _, ledger := range ledgers {
-		ticketAnomalies := DetectAnomalies(ledger)
+		ticketAnomalies := RefreshAnomalySummaries(ledger)
 		if len(ticketAnomalies) > 0 {
 			ticketsWithAnomalies++
 		}
@@ -502,22 +578,22 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
 			}
 		}
 
-		if len(ledger.Events) > 0 {
-			for _, e := range ledger.Events {
+		if len(ledger.ToolFacts()) > 0 {
+			for _, t := range ledger.ToolFacts() {
+				if t.Name != "" {
+					tm := getTool(t.Name)
+					tm.calls += t.Calls
+					tm.errors += t.Errors
+				}
+			}
+		} else if len(ledger.EventFacts()) > 0 {
+			for _, e := range ledger.EventFacts() {
 				if e.EventType == EventTypeToolCall && e.ToolName != nil && *e.ToolName != "" {
 					tm := getTool(*e.ToolName)
 					tm.calls++
 					if e.Status == "error" {
 						tm.errors++
 					}
-				}
-			}
-		} else {
-			for _, t := range ledger.Tools {
-				if t.Name != "" {
-					tm := getTool(t.Name)
-					tm.calls += t.Calls
-					tm.errors += t.Errors
 				}
 			}
 		}

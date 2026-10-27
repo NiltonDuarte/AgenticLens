@@ -84,9 +84,21 @@ code_metrics:
   # Files or directories excluded from code volume and diff calculations.
   exclude: []
   # Glob patterns identifying test files, test fixtures, and test utilities.
-  test_patterns: []
+  test_patterns:
+    - "**/*_test.go"
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "**/*.spec.ts"
+    - "**/*.spec.tsx"
+    - "**/testdata/**"
+    - "**/__tests__/**"
   # Glob patterns identifying production runtime code.
-  prod_patterns: []
+  prod_patterns:
+    - "backend/**/*.go"
+    - "web/src/**/*.ts"
+    - "web/src/**/*.tsx"
+    - "web/src/**/*.css"
+    - "web/index.html"
 
 # Bridge definitions mapping agent persona names to canonical AgentRole enums.
 # Canonical domain roles: orchestrator, planner, coder, tester, reviewer.

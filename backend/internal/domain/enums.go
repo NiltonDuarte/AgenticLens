@@ -115,11 +115,11 @@ type TimeWindowPreset string
 
 const (
 	TimeWindowLast24Hours     TimeWindowPreset = "Last 24 Hours"
-	TimeWindowLast7Days        TimeWindowPreset = "Last 7 Days"
-	TimeWindowLast30Days       TimeWindowPreset = "Last 30 Days"
-	TimeWindowLast90Days       TimeWindowPreset = "Last 90 Days"
-	TimeWindowProjectLifetime  TimeWindowPreset = "Project Lifetime"
-	TimeWindowCustomRange      TimeWindowPreset = "Custom Range"
+	TimeWindowLast7Days       TimeWindowPreset = "Last 7 Days"
+	TimeWindowLast30Days      TimeWindowPreset = "Last 30 Days"
+	TimeWindowLast90Days      TimeWindowPreset = "Last 90 Days"
+	TimeWindowProjectLifetime TimeWindowPreset = "Project Lifetime"
+	TimeWindowCustomRange     TimeWindowPreset = "Custom Range"
 )
 
 func orderRolesHelper[T ~string](roles []T, customOrder ...[]T) []T {
@@ -214,10 +214,22 @@ const (
 	EventTypeCompaction  EventType = "compaction"
 )
 
-// Data source provenance constants for execution trace events.
+// SourceHarness identifies the agentic runtime harness (e.g. OpenCode, Codex).
+type SourceHarness string
+
 const (
-	DataSourceLocalSQLite     = "local_sqlite"
-	DataSourceCommittedLedger = "committed_ledger"
+	SourceUnknown  SourceHarness = "unknown"
+	SourceOpenCode SourceHarness = "opencode"
+	SourceCodex    SourceHarness = "codex"
+)
+
+// DataSource identifies the origin and hydration level of telemetry facts.
+type DataSource string
+
+const (
+	DataSourceLocalSQLite     DataSource = "local_sqlite"
+	DataSourceLocalCodex      DataSource = "local_codex"
+	DataSourceCommittedLedger DataSource = "committed_ledger"
 )
 
 // AnomalySeverity defines the severity classification of a detected anomaly.

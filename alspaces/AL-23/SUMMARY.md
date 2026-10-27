@@ -25,9 +25,9 @@
 - Updated `web/src/index.css` with hover and cursor pointer styling for sortable headers.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
+- **Software Development Life Cycle Iterations:** 2
 - **Active Agent Duration:** 1h 9m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 95.5k tokens (48% of 200k healthy ceiling, 1 compactions) | Subagents peak 168.2k (Coder)
+- **Context Window Health:** ELEVATED — Root agent peak 95.5k tokens (48% of 200k healthy ceiling, 1 compactions) | Subagents peak 168.2k (Coder)
 - **Role Effort Distribution (Subagents):** Planner 15.4%, Coder 44.8%, Tester 28.0%, Reviewer 11.9%
 - **Subagent Turn Velocity & Thrashing:** 81.5 avg turns/run (peak: 131 turns) | Planner 61.0, Coder 131.0, Tester 76.0, Reviewer 58.0
 - **Test-to-Production Code Ratio:** 3.3:1 (+845 test lines / +258 prod lines)
@@ -37,8 +37,8 @@
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k in turn 53 (session: ses_eafa00c74ffei46CYWiWOD9HwA), breaching 160k critical ceiling
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+41.3k tokens) — Context tokens surged by 41.3k tokens in turn 60 (session: ses_eafa00c74ffei46CYWiWOD9HwA, total: 41.3k tokens, threshold: 40000)
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k, breaching the 160k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+41.3k tokens) — Context tokens surged by 41.3k to 41.3k tokens.
 
 ### Agentic Execution Metrics
 

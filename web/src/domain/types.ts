@@ -2,10 +2,12 @@ export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL
 
 export type {
   AgentRole,
+  SourceHarness,
 } from '../types/telemetry';
 
 import type {
   AgentRole,
+  SourceHarness,
 } from '../types/telemetry';
 
 export type StandardTicketType =
@@ -57,9 +59,11 @@ export interface InvocationFact {
   readonly tokens: InvocationTokens;
   readonly cost_usd: number;
   readonly compactions: number;
+  readonly user_iterations?: number;
 }
 
 export interface ToolFact {
+  readonly session_id: string;
   readonly name: string;
   readonly calls: number;
   readonly errors: number;
@@ -80,7 +84,6 @@ export type {
 } from '../types/telemetry';
 
 import type {
-  EventFact,
   Anomaly,
   FleetAnomalySummary,
 } from '../types/telemetry';
@@ -106,9 +109,25 @@ export interface AgenticFactLedger {
   readonly completed_at: string | null;
   readonly updated_at: string;
   readonly code: CodeFacts;
+  readonly sessions: readonly SessionFact[];
+  readonly anomalies?: readonly Anomaly[];
+}
+
+export interface SessionFact {
+  readonly id: string;
+  readonly parent_id?: string | null;
+  readonly source?: SourceHarness;
   readonly invocations: readonly InvocationFact[];
-  readonly tools: readonly ToolFact[];
-  readonly events?: readonly EventFact[];
+  readonly tools: readonly Omit<ToolFact, 'session_id'>[];
+  readonly anomalies?: readonly Anomaly[];
+}
+
+export function sessionInvocations(sessions: readonly SessionFact[] | undefined): readonly InvocationFact[] {
+  return sessions?.flatMap((session) => session.invocations ?? []) ?? [];
+}
+
+export function sessionTools(sessions: readonly SessionFact[] | undefined): readonly ToolFact[] {
+  return sessions?.flatMap((session) => (session.tools ?? []).map((tool) => ({ ...tool, session_id: session.id }))) ?? [];
 }
 
 export interface GroupedMetric {

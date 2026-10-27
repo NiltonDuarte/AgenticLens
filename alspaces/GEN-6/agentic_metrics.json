@@ -1,11 +1,11 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "ticket_id": "GEN-6",
   "ticket_title": "Platform Visual Showcase in README with Real Telemetry Artifacts",
   "ticket_type": "chore",
   "started_at": "2026-10-23T11:02:23.520000+00:00",
-  "completed_at": "2026-10-23T11:39:56.521000+00:00",
-  "updated_at": "2026-10-23T11:40:01.679756+00:00",
+  "completed_at": "2026-10-23T11:41:15.815000+00:00",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 36,
     "lines_deleted": 0,
@@ -14,187 +14,141 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 1,
-    "sdlc_iterations": 2
+    "sdlc_iterations": 4
   },
-  "invocations": [
+  "sessions": [
     {
       "id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "parent_id": null,
-      "role": "general",
-      "model": "gemini-3.8-flash",
-      "user": "Nilton Duarte",
-      "started_at": "2026-10-23T11:02:23.859000+00:00",
-      "completed_at": "2026-10-23T11:39:56.521000+00:00",
-      "active_duration_seconds": 1418,
-      "turns": 138,
-      "tokens": {
-        "input": 970363,
-        "output": 10855,
-        "cache_read": 11885738,
-        "reasoning": 17464,
-        "peak_context": 163603
-      },
-      "cost_usd": 1.725399,
-      "compactions": 0
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
+          "parent_id": null,
+          "role": "general",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-23T11:02:23.859000+00:00",
+          "completed_at": "2026-10-23T11:41:15.815000+00:00",
+          "active_duration_seconds": 1497,
+          "turns": 153,
+          "tokens": {
+            "input": 1081035,
+            "output": 12700,
+            "cache_read": 13837233,
+            "reasoning": 18201,
+            "peak_context": 167817
+          },
+          "cost_usd": 1.964447,
+          "compactions": 1,
+          "user_iterations": 4
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 74,
+          "errors": 3
+        },
+        {
+          "name": "edit",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 10,
+          "errors": 1
+        },
+        {
+          "name": "grep",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 32,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_link_pull_request",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_list_thread_pull_requests",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_preview_evaluate",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_preview_navigate",
+          "calls": 5,
+          "errors": 2
+        },
+        {
+          "name": "t3-code_preview_open",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_preview_snapshot",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_preview_status",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "todowrite",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 6,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 128,
+            "context_tokens": 160223,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 148,
+            "token_delta": 42147,
+            "context_tokens": 42147,
+            "threshold": "40000"
+          }
+        }
+      ]
     }
   ],
-  "tools": [
+  "anomalies": [
     {
-      "name": "bash",
-      "calls": 67,
-      "errors": 3
-    },
-    {
-      "name": "read",
-      "calls": 31,
-      "errors": 0
-    },
-    {
-      "name": "glob",
-      "calls": 10,
-      "errors": 1
-    },
-    {
-      "name": "write",
-      "calls": 6,
-      "errors": 0
-    },
-    {
-      "name": "t3-code_preview_navigate",
-      "calls": 5,
-      "errors": 2
-    },
-    {
-      "name": "todowrite",
-      "calls": 5,
-      "errors": 0
-    },
-    {
-      "name": "grep",
-      "calls": 4,
-      "errors": 0
-    },
-    {
-      "name": "t3-code_preview_snapshot",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "t3-code_preview_status",
-      "calls": 2,
-      "errors": 0
-    },
-    {
-      "name": "edit",
-      "calls": 1,
-      "errors": 0
-    },
-    {
-      "name": "t3-code_preview_evaluate",
-      "calls": 1,
-      "errors": 0
-    },
-    {
-      "name": "t3-code_preview_open",
-      "calls": 1,
-      "errors": 0
-    }
-  ],
-  "events": [
-    {
-      "timestamp": "2026-10-23T11:03:43.161000+00:00",
-      "session_id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "message_id": "msg_1686e4c48001isx3eXhsUgd6NF",
-      "turn": 22,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "t3-code_preview_navigate",
-      "status": "error",
-      "duration_ms": 32,
-      "context_tokens": 45497
-    },
-    {
-      "timestamp": "2026-10-23T11:19:49.285000+00:00",
-      "session_id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "message_id": "msg_1687d06cd001y0LDX1A1ohQ3PM",
-      "turn": 52,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "t3-code_preview_navigate",
-      "status": "error",
-      "duration_ms": 43,
-      "context_tokens": 61237
-    },
-    {
-      "timestamp": "2026-10-23T11:19:56.128000+00:00",
-      "session_id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "message_id": "msg_1687d1e79001oMoFWcEzoD50wV",
-      "turn": 54,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "glob",
-      "status": "error",
-      "duration_ms": 6,
-      "context_tokens": 61536
-    },
-    {
-      "timestamp": "2026-10-23T11:29:57.533000+00:00",
-      "session_id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "message_id": "msg_168864c52001kZETw3b60KFa4X",
-      "turn": 80,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "bash",
-      "status": "error",
-      "duration_ms": 155,
-      "context_tokens": 121830
-    },
-    {
-      "timestamp": "2026-10-23T11:30:09.275000+00:00",
-      "session_id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "message_id": "msg_168867661001TuGraMFuxQ0ROa",
-      "turn": 82,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "bash",
-      "status": "error",
-      "duration_ms": 120145,
-      "context_tokens": 122544
-    },
-    {
-      "timestamp": "2026-10-23T11:37:06.584000+00:00",
-      "session_id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "message_id": "msg_1688ce518001QIurm4X22ScQ7K",
-      "turn": 128,
-      "role": "general",
-      "event_type": "turn_message",
-      "status": "completed",
-      "duration_ms": 4826,
-      "context_tokens": 160223
-    },
-    {
-      "timestamp": "2026-10-23T11:37:11.297000+00:00",
-      "session_id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "message_id": "msg_1688ce518001QIurm4X22ScQ7K",
-      "turn": 128,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "todowrite",
-      "status": "completed",
-      "duration_ms": 9,
-      "context_tokens": 160223
-    },
-    {
-      "timestamp": "2026-10-23T11:39:56.447000+00:00",
-      "session_id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
-      "message_id": "msg_1688f6272001QuzV4qnkyMcwaZ",
-      "turn": 135,
-      "role": "general",
-      "event_type": "tool_call",
-      "tool_name": "bash",
-      "status": "error",
-      "duration_ms": 34,
-      "context_tokens": 163603
+      "rule_id": "TOOL_HIGH_FAILURE_RATE",
+      "severity": "WARNING",
+      "context": {
+        "tool_name": "t3-code_preview_navigate",
+        "count": 2,
+        "total_calls": 5,
+        "threshold": "\u003e20%",
+        "failure_rate_pct": 40
+      }
     }
   ]
 }

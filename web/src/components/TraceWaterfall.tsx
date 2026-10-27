@@ -151,7 +151,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
   const handleItemSelect = (ev: EventFact, matchingAnomaly?: Anomaly) => {
     setLocalSelectedEvent(ev);
-    const isFlagged = ev.status === 'error' || Boolean(matchingAnomaly);
+    const isFlagged = ev.status === 'error' || ev.status === 'failed' || Boolean(matchingAnomaly);
     onSelectEvent?.(ev, isFlagged ? matchingAnomaly : undefined);
   };
 
@@ -234,7 +234,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         return false;
       }
       if (filterMode === 'errors_anomalies') {
-        const hasErr = ev.status === 'error';
+        const hasErr = ev.status === 'error' || ev.status === 'failed';
         const hasAnomaly = Boolean(findMatchingAnomaly(ev, anomalies));
         if (!hasErr && !hasAnomaly) {
           return false;
@@ -291,7 +291,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
   // Summary statistics for collapsed bar and header
   const totalEventsCount = events.length;
-  const totalErrorsCount = events.filter((ev) => ev.status === 'error').length;
+  const totalErrorsCount = events.filter((ev) => ev.status === 'error' || ev.status === 'failed').length;
   const totalAnomaliesCount = anomalies ? anomalies.length : 0;
 
   const issuesSummaryText =
@@ -314,7 +314,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
               className={`waterfall-source-badge ${isHydrated ? 'source-hydrated' : 'source-offline'}`}
               data-testid="waterfall-source-badge"
             >
-              {isHydrated ? 'Source: Local SQLite' : 'Source: Committed Ledger'}
+              {isHydrated ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite') : 'Source: Committed Anomaly Summary'}
             </span>
           </div>
 
@@ -358,7 +358,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             className={`waterfall-source-badge ${isHydrated ? 'source-hydrated' : 'source-offline'}`}
             data-testid="waterfall-source-badge"
           >
-            {isHydrated ? 'Source: Local SQLite' : 'Source: Committed Ledger'}
+              {isHydrated ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite') : 'Source: Committed Anomaly Summary'}
           </span>
           <span className="waterfall-counter">
             Showing {filteredEvents.length} of {events.length} events
@@ -446,10 +446,10 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       {(!isHydrated || dataSource === 'committed_ledger') && (
         <div className="db-offline-banner" data-testid="db-offline-banner" role="status">
           <div className="offline-banner-header">
-            <span className="offline-indicator-badge">Committed Git Ledger — Local Database Offline</span>
+                <span className="offline-indicator-badge">Committed Anomaly Summaries — Local Source Offline</span>
           </div>
           <p className="offline-banner-text">
-            Local SQLite database was unavailable or not found. Showing lightweight execution events recorded in the repository ledger without raw prompt, reasoning, or tool payloads.
+                The local source was unavailable or not found. The ledger keeps anomaly summaries; detailed timelines require local session logs.
           </p>
         </div>
       )}
@@ -464,8 +464,8 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
           {filteredEvents.map((ev, idx) => {
             const matchingAnomaly = findMatchingAnomaly(ev, anomalies);
             const isSelected = isSameEvent(activeSelectedEvent, ev);
-            const hasError = ev.status === 'error';
-            const isIssue = ev.status === 'error' || Boolean(matchingAnomaly);
+            const hasError = ev.status === 'error' || ev.status === 'failed';
+            const isIssue = hasError || Boolean(matchingAnomaly);
             const roleClass = `role-pill ${ev.role.toLowerCase()}`;
             const itemKey = `${ev.timestamp}-${ev.turn}-${ev.session_id}-${idx}`;
             const isExpanded = Boolean(expandedKeys[itemKey]) || isSelected;

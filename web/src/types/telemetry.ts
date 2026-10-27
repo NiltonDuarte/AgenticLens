@@ -1,6 +1,8 @@
 export type EventType = 'tool_call' | 'turn_message' | 'compaction';
 
-export type DataSource = 'local_sqlite' | 'committed_ledger';
+export type DataSource = 'local_sqlite' | 'local_codex' | 'committed_ledger';
+
+export type SourceHarness = 'unknown' | 'opencode' | 'codex';
 
 export type AgentRole = string;
 
@@ -16,6 +18,7 @@ export type ConventionalTicketType =
   | 'build';
 
 export interface EventFact {
+  readonly event_id?: string | null | undefined;
   readonly timestamp: string;
   readonly session_id: string;
   readonly message_id?: string | null | undefined;
@@ -38,6 +41,7 @@ export interface WorkspaceEventsResponse {
   readonly is_hydrated: boolean;
   readonly events: readonly EventFact[];
   readonly data_source: DataSource;
+  readonly anomalies?: readonly Anomaly[] | undefined;
 }
 
 export type AnomalySeverity = 'WARNING' | 'CRITICAL';
@@ -65,9 +69,13 @@ export interface AnomalyContext {
 export interface Anomaly {
   readonly rule_id: AnomalyRuleID;
   readonly severity: AnomalySeverity;
-  readonly title: string;
-  readonly description: string;
   readonly context: AnomalyContext;
+  readonly evidence?: readonly AnomalyEvidenceRef[] | undefined;
+}
+
+export interface AnomalyEvidenceRef {
+  readonly session_id: string;
+  readonly event_id: string;
 }
 
 export interface BrittleToolSummary {

@@ -180,10 +180,10 @@ func TestResolveActiveRootSession(t *testing.T) {
 		}
 
 		scenarios := []struct {
-			name        string
-			nonce       string
-			ticketID    string
-			sessionID   string
+			name      string
+			nonce     string
+			ticketID  string
+			sessionID string
 		}{
 			{name: "unmatched nonce and ticket", nonce: "non-existent-nonce", ticketID: "AL-FOREIGN-GHOST", sessionID: ""},
 			{name: "empty nonce and unmatched ticket", nonce: "", ticketID: "AL-FOREIGN-GHOST", sessionID: ""},
@@ -1457,6 +1457,9 @@ func TestExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID(t *test
 	if readTool.Calls != 3 {
 		t.Errorf("expected read calls=3, got %d", readTool.Calls)
 	}
+	if readTool.SessionID != "ses_insp" {
+		t.Errorf("expected read tool session_id ses_insp, got %q", readTool.SessionID)
+	}
 	if readTool.Errors != 1 {
 		t.Errorf("expected read errors=1 (only from status error part), got %d", readTool.Errors)
 	}
@@ -1519,6 +1522,99 @@ func TestExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID(t *test
 				if ev.MessageID == nil || *ev.MessageID != "m_insp_1" {
 					t.Errorf("expected MessageID m_insp_1 for %s, got %v", *ev.ToolName, ev.MessageID)
 				}
+			}
+		}
+	}
+}
+
+func TestExtractFacts_UserIterationsRootAndChild(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed opening in-memory db: %v", err)
+	}
+	defer db.Close()
+
+	createSchema := `
+	CREATE TABLE session (
+		id TEXT PRIMARY KEY,
+		parent_id TEXT,
+		agent TEXT,
+		model TEXT,
+		time_created INTEGER,
+		time_updated INTEGER
+	);
+	CREATE TABLE message (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	CREATE TABLE part (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		message_id TEXT,
+		time_created INTEGER,
+		time_updated INTEGER,
+		data TEXT
+	);
+	`
+	if _, err := db.Exec(createSchema); err != nil {
+		t.Fatalf("failed creating test tables: %v", err)
+	}
+
+	// Root session with 2 models and 3 user messages
+	_, _ = db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES ('root_sess', NULL, 'root', 'gpt-4o', 1000, 2000)`)
+	// Child session with 1 user message
+	_, _ = db.Exec(`INSERT INTO session (id, parent_id, agent, model, time_created, time_updated) VALUES ('child_sess', 'root_sess', 'coder', 'gpt-4o', 1500, 2000)`)
+
+	// Root messages: 3 user messages, assistant msg on model1, assistant msg on model2
+	uData := `{"role": "user"}`
+	a1Data := `{"role": "assistant", "modelID": "model-1", "tokens": {"input": 10}}`
+	a2Data := `{"role": "assistant", "modelID": "model-2", "tokens": {"input": 20}}`
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('rm1', 'root_sess', 1000, 1000, ?),
+		('rm2', 'root_sess', 1100, 1100, ?),
+		('rm3', 'root_sess', 1200, 1200, ?),
+		('rm4', 'root_sess', 1300, 1300, ?),
+		('rm5', 'root_sess', 1400, 1400, ?)`,
+		uData, a1Data, uData, a2Data, uData,
+	)
+
+	// Child messages: 1 user message, 1 assistant message
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
+		('cm1', 'child_sess', 1500, 1500, ?),
+		('cm2', 'child_sess', 1600, 1600, ?)`,
+		uData, a1Data,
+	)
+
+	invs, _, _, _, _, err := opencode.ExtractFacts(db, []string{"root_sess"}, "testuser", nil)
+	if err != nil {
+		t.Fatalf("ExtractFacts failed: %v", err)
+	}
+
+	// Expect 2 invocations for root (model-1, model-2) and 1 invocation for child
+	if len(invs) != 3 {
+		t.Fatalf("expected 3 invocations, got %d", len(invs))
+	}
+
+	for _, inv := range invs {
+		if inv.ID == "root_sess" {
+			if inv.Model == "model-1" {
+				// Primary model on root session gets all user iterations (3)
+				if inv.UserIterations != 3 {
+					t.Errorf("expected primary root invocation to have UserIterations=3, got %d", inv.UserIterations)
+				}
+			} else if inv.Model == "model-2" {
+				// Secondary model on root session gets 0
+				if inv.UserIterations != 0 {
+					t.Errorf("expected secondary root invocation to have UserIterations=0, got %d", inv.UserIterations)
+				}
+			}
+		} else if inv.ID == "child_sess" {
+			// Child session gets 0
+			if inv.UserIterations != 0 {
+				t.Errorf("expected child invocation to have UserIterations=0, got %d", inv.UserIterations)
 			}
 		}
 	}

@@ -51,8 +51,8 @@ func TestClassifyFile_WorkspacesDir(t *testing.T) {
 		}
 
 		categoryCode := git.ClassifyFile("workspaces/AL-39/main.go", nil)
-		if categoryCode != git.CategoryProd {
-			t.Errorf("expected CategoryProd for code inside unconfigured workspaces, got %v", categoryCode)
+		if categoryCode != git.CategoryOther {
+			t.Errorf("expected CategoryOther for code inside unconfigured workspaces when unconfigured, got %v", categoryCode)
 		}
 
 		cfgWs := &git.ClassificationConfig{
@@ -108,25 +108,25 @@ func TestClassifyFile_TestAndProd(t *testing.T) {
 		{
 			name:     "go production file",
 			path:     "backend/internal/domain/config.go",
-			cfg:      nil,
+			cfg:      &git.ClassificationConfig{ProdPatterns: []string{"**/*.go", "**/*.tsx"}},
 			expected: git.CategoryProd,
 		},
 		{
 			name:     "go test file",
 			path:     "backend/internal/domain/config_test.go",
-			cfg:      nil,
+			cfg:      &git.ClassificationConfig{TestPatterns: []string{"**/*_test.go", "**/*.test.tsx"}},
 			expected: git.CategoryTest,
 		},
 		{
 			name:     "typescript production file",
 			path:     "web/src/components/MetricCard.tsx",
-			cfg:      nil,
+			cfg:      &git.ClassificationConfig{ProdPatterns: []string{"**/*.go", "**/*.tsx"}},
 			expected: git.CategoryProd,
 		},
 		{
 			name:     "typescript test file",
 			path:     "web/src/components/MetricCard.test.tsx",
-			cfg:      nil,
+			cfg:      &git.ClassificationConfig{TestPatterns: []string{"**/*_test.go", "**/*.test.tsx"}},
 			expected: git.CategoryTest,
 		},
 		{
@@ -158,10 +158,10 @@ func TestClassifyFile_TestAndProd(t *testing.T) {
 func TestClassifyFile_AdversarialBoundaries(t *testing.T) {
 	t.Parallel()
 
-	t.Run("unconfigured workspaces directory classifies prod and markdown separately", func(t *testing.T) {
+	t.Run("unconfigured workspaces directory classifies unconfigured files as other", func(t *testing.T) {
 		t.Parallel()
-		if cat := git.ClassifyFile("workspaces/file.go", nil); cat != git.CategoryProd {
-			t.Errorf("expected CategoryProd for workspaces/file.go with nil config, got %v", cat)
+		if cat := git.ClassifyFile("workspaces/file.go", nil); cat != git.CategoryOther {
+			t.Errorf("expected CategoryOther for workspaces/file.go with nil config, got %v", cat)
 		}
 		if cat := git.ClassifyFile("workspaces/spec.md", nil); cat != git.CategoryOther {
 			t.Errorf("expected CategoryOther for workspaces/spec.md with nil config, got %v", cat)
@@ -208,4 +208,174 @@ func TestClassifyFile_AdversarialBoundaries(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestClassifyFileTestdataFixtures(t *testing.T) {
+	for _, path := range []string{"testdata/input.json", "src/parser/testdata/rollout.jsonl", "./src/testdata/nested/expected.txt", "src/testdata/example.go"} {
+		if got := git.ClassifyFile(path, &git.ClassificationConfig{TestPatterns: []string{"**/testdata/**"}}); got != git.CategoryTest {
+			t.Errorf("fixture %q: got %s, want test", path, got)
+		}
+	}
+	for _, path := range []string{"src/testdata_backup/input.json", "src/mytestdata/input.json"} {
+		if got := git.ClassifyFile(path, nil); got != git.CategoryOther {
+			t.Errorf("non-fixture %q: got %s, want other", path, got)
+		}
+	}
+	path := "src/testdata/input.json"
+	for _, tc := range []struct {
+		cfg  git.ClassificationConfig
+		want git.FileCategory
+	}{
+		{git.ClassificationConfig{Exclude: []string{path}}, git.CategoryIgnored},
+		{git.ClassificationConfig{ProdPatterns: []string{path}}, git.CategoryProd},
+		{git.ClassificationConfig{WorkspacesDir: "src/testdata"}, git.CategoryIgnored},
+	} {
+		if got := git.ClassifyFile(path, &tc.cfg); got != tc.want {
+			t.Errorf("configuration precedence: got %s, want %s", got, tc.want)
+		}
+	}
+}
+
+func TestClassificationZeroFallbackRules(t *testing.T) {
+	// Under zero runtime fallback heuristics, when TestPatterns and ProdPatterns are empty or unconfigured,
+	// all unconfigured files must be classified as CategoryOther.
+	testCases := []struct {
+		path     string
+		expected git.FileCategory
+	}{
+		{"testdata/input.json", git.CategoryOther},
+		{"__tests__/example.ts", git.CategoryOther},
+		{"src/app_test.go", git.CategoryOther},
+		{"web/app.test.tsx", git.CategoryOther},
+		{"src/flow.spec.ts", git.CategoryOther},
+		{"src/flow.spec.tsx", git.CategoryOther},
+		{"backend/util_test.py", git.CategoryOther},
+		{"backend/test_util.py", git.CategoryOther},
+		{"src/app.go", git.CategoryOther},
+		{"web/app.tsx", git.CategoryOther},
+		{"web/app.ts", git.CategoryOther},
+		{"web/styles.css", git.CategoryOther},
+		{"web/index.html", git.CategoryOther},
+		{"scripts/tool.py", git.CategoryOther},
+		{"scripts/tool.js", git.CategoryOther},
+		{"Makefile", git.CategoryOther},
+		{"README.md", git.CategoryOther},
+		{"docs/guide.txt", git.CategoryOther},
+	}
+
+	configs := []*git.ClassificationConfig{
+		nil,
+		{},
+		{TestPatterns: []string{}, ProdPatterns: []string{}},
+		{TestPatterns: []string{"", "  "}, ProdPatterns: []string{"", "  "}},
+	}
+
+	for _, cfg := range configs {
+		for _, tc := range testCases {
+			got := git.ClassifyFile(tc.path, cfg)
+			if got != tc.expected {
+				t.Errorf("unconfigured %q classified as %s, want %s (cfg: %+v)", tc.path, got, tc.expected, cfg)
+			}
+		}
+	}
+
+	t.Run("explicit test patterns strictly classify without fallbacks", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{
+			TestPatterns: []string{"custom/tests/**/*.go"},
+		}
+		// Standard _test.go is not matched by custom pattern, and without fallbacks classifies as CategoryOther
+		if got := git.ClassifyFile("src/app_test.go", cfg); got != git.CategoryOther {
+			t.Errorf("expected CategoryOther when standard test not in explicit test patterns, got %s", got)
+		}
+		// Custom test pattern matches
+		if got := git.ClassifyFile("custom/tests/helper.go", cfg); got != git.CategoryTest {
+			t.Errorf("expected CategoryTest for custom test pattern, got %s", got)
+		}
+	})
+
+	t.Run("explicit prod patterns strictly classify without fallbacks", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{
+			ProdPatterns: []string{"runtime/**/*.custom"},
+		}
+		// Standard .go file is not in explicit prod patterns, so classifies as CategoryOther
+		if got := git.ClassifyFile("src/app.go", cfg); got != git.CategoryOther {
+			t.Errorf("expected CategoryOther when standard code not in explicit prod patterns, got %s", got)
+		}
+		// Custom prod pattern matches
+		if got := git.ClassifyFile("runtime/main.custom", cfg); got != git.CategoryProd {
+			t.Errorf("expected CategoryProd for custom prod pattern, got %s", got)
+		}
+	})
+}
+
+func TestCheckUnconfiguredPatterns(t *testing.T) {
+	t.Run("nil config returns warnings for test and prod patterns", func(t *testing.T) {
+		warnings := git.CheckUnconfiguredPatterns(nil)
+		if len(warnings) != 2 {
+			t.Fatalf("expected 2 warnings, got %d: %v", len(warnings), warnings)
+		}
+	})
+
+	t.Run("empty config returns warnings for test and prod patterns", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{}
+		warnings := git.CheckUnconfiguredPatterns(cfg)
+		if len(warnings) != 2 {
+			t.Fatalf("expected 2 warnings, got %d: %v", len(warnings), warnings)
+		}
+	})
+
+	t.Run("blank patterns return warnings", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{
+			TestPatterns: []string{" ", ""},
+			ProdPatterns: []string{},
+		}
+		warnings := git.CheckUnconfiguredPatterns(cfg)
+		if len(warnings) != 2 {
+			t.Fatalf("expected 2 warnings, got %d: %v", len(warnings), warnings)
+		}
+	})
+
+	t.Run("fully configured patterns return zero warnings", func(t *testing.T) {
+		cfg := &git.ClassificationConfig{
+			TestPatterns: []string{"**/*_test.go"},
+			ProdPatterns: []string{"**/*.go"},
+		}
+		warnings := git.CheckUnconfiguredPatterns(cfg)
+		if len(warnings) != 0 {
+			t.Fatalf("expected 0 warnings, got %d: %v", len(warnings), warnings)
+		}
+	})
+}
+
+func TestConfiguredPathBoundariesAndMonitoring(t *testing.T) {
+	cfg := &git.ClassificationConfig{
+		SrcFolders:   []string{"application"},
+		TestPatterns: []string{"checks/**/samples/**", "application/**/*_check.custom"},
+		ProdPatterns: []string{"runtime/**/*.custom"},
+		Include:      []string{"build.recipe"},
+	}
+	for _, tc := range []struct {
+		path      string
+		category  git.FileCategory
+		monitored bool
+	}{
+		{"checks/samples/data.json", git.CategoryTest, true},
+		{"checks/unit/samples/nested/data.json", git.CategoryTest, true},
+		{"checks/unit/samples_backup/data.json", git.CategoryOther, false},
+		{"other/checks/samples/data.json", git.CategoryOther, false},
+		{"application/unit/flow_check.custom", git.CategoryTest, true},
+		{"runtime/main.custom", git.CategoryProd, true},
+		{"runtime/nested/main.custom", git.CategoryProd, true},
+		{"runtime_backup/main.custom", git.CategoryOther, false},
+		{"other/runtime/main.custom", git.CategoryOther, false},
+		{"application/unclassified.txt", git.CategoryOther, true},
+		{"build.recipe", git.CategoryProd, true},
+	} {
+		if got := git.ClassifyFile(tc.path, cfg); got != tc.category {
+			t.Errorf("%s: category %s, want %s", tc.path, got, tc.category)
+		}
+		if got := git.IsMonitoredSourcePath(tc.path, cfg.SrcFolders, cfg); got != tc.monitored {
+			t.Errorf("%s: monitored %v, want %v", tc.path, got, tc.monitored)
+		}
+	}
 }

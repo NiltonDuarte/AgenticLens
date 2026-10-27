@@ -3,6 +3,7 @@ package migration_test
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
@@ -43,8 +44,7 @@ func sampleFactLedger() domain.AgenticFactLedger {
 			ProdLinesDeleted: 20,
 			FilesChanged:     5,
 			SDLCIterations:   2,
-		},
-		Invocations: []domain.InvocationFact{
+		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				ID:                    "inv-1",
 				ParentID:              nil,
@@ -66,14 +66,15 @@ func sampleFactLedger() domain.AgenticFactLedger {
 				Compactions: 0,
 			},
 		},
-		Tools: []domain.ToolFact{
-			{
-				Name:   "bash",
-				Calls:  15,
-				Errors: 1,
+			[]domain.ToolFact{
+				{
+					SessionID: "session-fixture",
+					Name:      "bash",
+					Calls:     15,
+					Errors:    1,
+				},
 			},
-		},
-		Events: nil,
+			nil),
 	}
 }
 
@@ -226,8 +227,8 @@ type mockStep struct {
 	apply  func(domain.AgenticFactLedger) (domain.AgenticFactLedger, error)
 }
 
-func (m *mockStep) SourceVersion() int { return m.source }
-func (m *mockStep) TargetVersion() int { return m.target }
+func (m *mockStep) SourceVersion() int  { return m.source }
+func (m *mockStep) TargetVersion() int  { return m.target }
 func (m *mockStep) Description() string { return m.desc }
 func (m *mockStep) Apply(l domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
 	if m.apply != nil {
@@ -388,7 +389,7 @@ func TestStepV1ToV2(t *testing.T) {
 	t.Run("initializes schema version, empty events, and baseline migration info", func(t *testing.T) {
 		initial := sampleFactLedger()
 		initial.SchemaVersion = nil
-		initial.Events = nil
+		setEventFacts(&initial, nil)
 		initial.Migration = nil
 
 		upgraded, err := step.Apply(initial)
@@ -399,11 +400,11 @@ func TestStepV1ToV2(t *testing.T) {
 		if upgraded.SchemaVersion == nil || *upgraded.SchemaVersion != 2 {
 			t.Errorf("expected schema version 2, got %v", upgraded.SchemaVersion)
 		}
-		if upgraded.Events == nil {
-			t.Errorf("expected non-nil events slice")
+		if upgraded.Sessions == nil {
+			t.Errorf("expected non-nil sessions collection")
 		}
-		if len(upgraded.Events) != 0 {
-			t.Errorf("expected 0 events, got %d", len(upgraded.Events))
+		if len(upgraded.EventFacts()) != 0 {
+			t.Errorf("expected 0 events, got %d", len(upgraded.EventFacts()))
 		}
 		if upgraded.Migration == nil {
 			t.Fatalf("expected non-nil migration info")
@@ -435,11 +436,11 @@ func TestStepV1ToV2(t *testing.T) {
 		if upgraded.SchemaVersion == nil || *upgraded.SchemaVersion != 2 {
 			t.Errorf("expected schema version 2, got %v", upgraded.SchemaVersion)
 		}
-		if upgraded.Events == nil {
-			t.Errorf("expected non-nil events slice")
+		if upgraded.Sessions == nil {
+			t.Errorf("expected non-nil sessions collection")
 		}
-		if len(upgraded.Events) != 0 {
-			t.Errorf("expected 0 events, got %d", len(upgraded.Events))
+		if len(upgraded.EventFacts()) != 0 {
+			t.Errorf("expected 0 events, got %d", len(upgraded.EventFacts()))
 		}
 		if upgraded.Migration == nil || upgraded.Migration.SchemaVersion != 2 {
 			t.Errorf("expected migration info initialized with v2")
@@ -470,7 +471,7 @@ func TestStepV1ToV2(t *testing.T) {
 
 	t.Run("preserves existing migration steps and events", func(t *testing.T) {
 		initial := sampleFactLedger()
-		initial.Events = []domain.EventFact{
+		setEventFacts(&initial, []domain.EventFact{
 			{
 				Timestamp: "2026-10-18T10:05:00Z",
 				SessionID: "ses-1",
@@ -479,7 +480,7 @@ func TestStepV1ToV2(t *testing.T) {
 				EventType: domain.EventTypeTurnMessage,
 				Status:    "completed",
 			},
-		}
+		})
 		initial.Migration = &domain.MigrationInfo{
 			SchemaVersion:  1,
 			Status:         domain.MigrationStatusPartial,
@@ -494,8 +495,8 @@ func TestStepV1ToV2(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(upgraded.Events) != 1 {
-			t.Errorf("expected 1 preserved event, got %d", len(upgraded.Events))
+		if len(upgraded.EventFacts()) != 1 {
+			t.Errorf("expected 1 preserved event, got %d", len(upgraded.EventFacts()))
 		}
 		if upgraded.Migration.LastMigratedBy != "test-user" {
 			t.Errorf("expected preserved author, got %s", upgraded.Migration.LastMigratedBy)
@@ -522,7 +523,7 @@ func TestInvariantValidator(t *testing.T) {
 	base := sampleFactLedger()
 	v2 := 2
 	base.SchemaVersion = &v2
-	base.Events = []domain.EventFact{
+	setEventFacts(&base, []domain.EventFact{
 		{
 			Timestamp:     "2026-10-18T10:00:00Z",
 			SessionID:     "ses-1",
@@ -535,7 +536,7 @@ func TestInvariantValidator(t *testing.T) {
 			DurationMs:    int64Ptr(100),
 			ContextTokens: 5000,
 		},
-	}
+	})
 
 	t.Run("identical pre and post passes", func(t *testing.T) {
 		err := validator.Validate(base, base, 2)
@@ -678,14 +679,14 @@ func TestInvariantValidator(t *testing.T) {
 	t.Run("invocations count changes fail", func(t *testing.T) {
 		// dropped
 		m1 := base
-		m1.Invocations = []domain.InvocationFact{}
+		setInvocationFacts(&m1, []domain.InvocationFact{})
 		if err := validator.Validate(base, m1, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for dropped invocations, got %v", err)
 		}
 
 		// added
 		m2 := base
-		m2.Invocations = append(m2.Invocations, m2.Invocations[0])
+		setInvocationFacts(&m2, append(m2.InvocationFacts(), m2.InvocationFacts()[0]))
 		if err := validator.Validate(base, m2, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for added invocations, got %v", err)
 		}
@@ -693,8 +694,9 @@ func TestInvariantValidator(t *testing.T) {
 
 	t.Run("invocation individual field mutations fail", func(t *testing.T) {
 		baseWithParent := base
-		baseWithParent.Invocations = append([]domain.InvocationFact(nil), base.Invocations...)
-		baseWithParent.Invocations[0].ParentID = stringPtr("parent-1")
+		parented := append([]domain.InvocationFact(nil), base.InvocationFacts()...)
+		parented[0].ParentID = stringPtr("parent-1")
+		setInvocationFacts(&baseWithParent, parented)
 
 		cases := []struct {
 			name   string
@@ -722,8 +724,9 @@ func TestInvariantValidator(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
 				m := baseWithParent
-				m.Invocations = append([]domain.InvocationFact(nil), baseWithParent.Invocations...)
-				tc.mutate(&m.Invocations[0])
+				invs := append([]domain.InvocationFact(nil), baseWithParent.InvocationFacts()...)
+				tc.mutate(&invs[0])
+				setInvocationFacts(&m, invs)
 				err := validator.Validate(baseWithParent, m, 2)
 				if !errors.Is(err, migration.ErrInvariantViolation) {
 					t.Errorf("expected ErrInvariantViolation for mutated %s, got %v", tc.name, err)
@@ -735,38 +738,41 @@ func TestInvariantValidator(t *testing.T) {
 	t.Run("tools count and field mutations fail", func(t *testing.T) {
 		// dropped
 		m1 := base
-		m1.Tools = []domain.ToolFact{}
+		setToolFacts(&m1, []domain.ToolFact{})
 		if err := validator.Validate(base, m1, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for dropped tools, got %v", err)
 		}
 
 		// added
 		m2 := base
-		m2.Tools = append(m2.Tools, domain.ToolFact{Name: "git", Calls: 1})
+		setToolFacts(&m2, append(m2.ToolFacts(), domain.ToolFact{SessionID: "session-fixture", Name: "git", Calls: 1}))
 		if err := validator.Validate(base, m2, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for added tools, got %v", err)
 		}
 
 		// name changed
 		m3 := base
-		m3.Tools = append([]domain.ToolFact(nil), base.Tools...)
-		m3.Tools[0].Name = "zsh"
+		tools := append([]domain.ToolFact(nil), base.ToolFacts()...)
+		tools[0].Name = "zsh"
+		setToolFacts(&m3, tools)
 		if err := validator.Validate(base, m3, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for changed tool name, got %v", err)
 		}
 
 		// calls changed
 		m4 := base
-		m4.Tools = append([]domain.ToolFact(nil), base.Tools...)
-		m4.Tools[0].Calls = 999
+		tools = append([]domain.ToolFact(nil), base.ToolFacts()...)
+		tools[0].Calls = 999
+		setToolFacts(&m4, tools)
 		if err := validator.Validate(base, m4, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for changed tool calls, got %v", err)
 		}
 
 		// errors changed
 		m5 := base
-		m5.Tools = append([]domain.ToolFact(nil), base.Tools...)
-		m5.Tools[0].Errors = 999
+		tools = append([]domain.ToolFact(nil), base.ToolFacts()...)
+		tools[0].Errors = 999
+		setToolFacts(&m5, tools)
 		if err := validator.Validate(base, m5, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation for changed tool errors, got %v", err)
 		}
@@ -775,29 +781,29 @@ func TestInvariantValidator(t *testing.T) {
 	t.Run("event invariant rules", func(t *testing.T) {
 		// existing events dropped -> fail
 		mDropped := base
-		mDropped.Events = []domain.EventFact{}
+		setEventFacts(&mDropped, []domain.EventFact{})
 		if err := validator.Validate(base, mDropped, 2); !errors.Is(err, migration.ErrInvariantViolation) {
 			t.Errorf("expected ErrInvariantViolation when events dropped, got %v", err)
 		}
 
 		// new events appended -> allowed and passes!
 		mAppended := base
-		mAppended.Events = append([]domain.EventFact(nil), base.Events...)
-		mAppended.Events = append(mAppended.Events, domain.EventFact{
+		setEventFacts(&mAppended, append([]domain.EventFact(nil), base.EventFacts()...))
+		setEventFacts(&mAppended, append(mAppended.EventFacts(), domain.EventFact{
 			Timestamp: "2026-10-18T10:05:00Z",
 			SessionID: "ses-1",
 			Turn:      2,
 			Role:      "coder",
 			EventType: domain.EventTypeCompaction,
 			Status:    "completed",
-		})
+		}))
 		if err := validator.Validate(base, mAppended, 2); err != nil {
 			t.Errorf("expected appending events to pass invariant validation, got %v", err)
 		}
 
 		// pre-existing event mutations fail
 		baseWithToolEvent := base
-		baseWithToolEvent.Events = []domain.EventFact{
+		setEventFacts(&baseWithToolEvent, []domain.EventFact{
 			{
 				Timestamp:     "2026-10-18T10:00:00Z",
 				SessionID:     "ses-1",
@@ -810,7 +816,7 @@ func TestInvariantValidator(t *testing.T) {
 				DurationMs:    int64Ptr(250),
 				ContextTokens: 5000,
 			},
-		}
+		})
 
 		eventCases := []struct {
 			name   string
@@ -834,8 +840,9 @@ func TestInvariantValidator(t *testing.T) {
 		for _, tc := range eventCases {
 			t.Run("event_"+tc.name, func(t *testing.T) {
 				m := baseWithToolEvent
-				m.Events = append([]domain.EventFact(nil), baseWithToolEvent.Events...)
-				tc.mutate(&m.Events[0])
+				events := append([]domain.EventFact(nil), baseWithToolEvent.EventFacts()...)
+				tc.mutate(&events[0])
+				setEventFacts(&m, events)
 				err := validator.Validate(baseWithToolEvent, m, 2)
 				if !errors.Is(err, migration.ErrInvariantViolation) {
 					t.Errorf("expected ErrInvariantViolation for mutated %s, got %v", tc.name, err)
@@ -857,7 +864,7 @@ func TestInvariantValidator_SchemaV3Rules(t *testing.T) {
 
 	baseV2 := sampleFactLedger()
 	baseV2.SchemaVersion = &v2Ver
-	baseV2.Events = []domain.EventFact{
+	setEventFacts(&baseV2, []domain.EventFact{
 		{
 			Timestamp:     "2026-10-18T10:00:00Z",
 			SessionID:     "ses-1",
@@ -889,11 +896,11 @@ func TestInvariantValidator_SchemaV3Rules(t *testing.T) {
 			DurationMs:    &dur100,
 			ContextTokens: 800,
 		},
-	}
+	})
 
 	validV3 := baseV2
 	validV3.SchemaVersion = &v3Ver
-	validV3.Events = []domain.EventFact{
+	setEventFacts(&validV3, []domain.EventFact{
 		{
 			Timestamp:     "2026-10-18T10:00:01Z",
 			SessionID:     "ses-1",
@@ -916,7 +923,7 @@ func TestInvariantValidator_SchemaV3Rules(t *testing.T) {
 			DurationMs:    &dur100,
 			ContextTokens: 800,
 		},
-	}
+	})
 
 	t.Run("valid v3 pruned events passes validation", func(t *testing.T) {
 		err := validator.Validate(baseV2, validV3, 3)
@@ -927,21 +934,21 @@ func TestInvariantValidator_SchemaV3Rules(t *testing.T) {
 
 	t.Run("v3 migration fails if events count increased", func(t *testing.T) {
 		mIncreased := validV3
-		mIncreased.Events = append([]domain.EventFact(nil), validV3.Events...)
-		mIncreased.Events = append(mIncreased.Events, domain.EventFact{
+		setEventFacts(&mIncreased, append([]domain.EventFact(nil), validV3.EventFacts()...))
+		setEventFacts(&mIncreased, append(mIncreased.EventFacts(), domain.EventFact{
 			Timestamp: "2026-10-18T10:00:03Z",
 			SessionID: "ses-1",
 			Turn:      4,
 			EventType: domain.EventTypeCompaction,
 			Status:    "success",
-		})
-		mIncreased.Events = append(mIncreased.Events, domain.EventFact{
+		}))
+		setEventFacts(&mIncreased, append(mIncreased.EventFacts(), domain.EventFact{
 			Timestamp: "2026-10-18T10:00:04Z",
 			SessionID: "ses-1",
 			Turn:      5,
 			EventType: domain.EventTypeCompaction,
 			Status:    "success",
-		})
+		}))
 		// Now len is 4, which is > baseV2 len 3
 		err := validator.Validate(baseV2, mIncreased, 3)
 		if !errors.Is(err, migration.ErrInvariantViolation) {
@@ -951,9 +958,10 @@ func TestInvariantValidator_SchemaV3Rules(t *testing.T) {
 
 	t.Run("v3 migration fails if any retained event has non-nil ErrorMessage", func(t *testing.T) {
 		mWithErr := validV3
-		mWithErr.Events = append([]domain.EventFact(nil), validV3.Events...)
+		events := append([]domain.EventFact(nil), validV3.EventFacts()...)
 		leakStr := "residual sensitive error message"
-		mWithErr.Events[0].ErrorMessage = &leakStr
+		events[0].ErrorMessage = &leakStr
+		setEventFacts(&mWithErr, events)
 
 		err := validator.Validate(baseV2, mWithErr, 3)
 		if !errors.Is(err, migration.ErrInvariantViolation) {
@@ -963,9 +971,10 @@ func TestInvariantValidator_SchemaV3Rules(t *testing.T) {
 
 	t.Run("v3 migration fails if retained event does not correspond to any pre-migration event", func(t *testing.T) {
 		mUnmatched := validV3
-		mUnmatched.Events = append([]domain.EventFact(nil), validV3.Events...)
+		events := append([]domain.EventFact(nil), validV3.EventFacts()...)
 		inventedTool := "synthetic_tool"
-		mUnmatched.Events[0].ToolName = &inventedTool
+		events[0].ToolName = &inventedTool
+		setEventFacts(&mUnmatched, events)
 
 		err := validator.Validate(baseV2, mUnmatched, 3)
 		if !errors.Is(err, migration.ErrInvariantViolation) {
@@ -975,9 +984,10 @@ func TestInvariantValidator_SchemaV3Rules(t *testing.T) {
 
 	t.Run("v3 migration fails if ComputeTotals aggregate metrics change", func(t *testing.T) {
 		mMutatedTotals := validV3
-		mMutatedTotals.Invocations = append([]domain.InvocationFact(nil), validV3.Invocations...)
+		invs := append([]domain.InvocationFact(nil), validV3.InvocationFacts()...)
 		// Mutate cost in invocation
-		mMutatedTotals.Invocations[0].CostUSD = 999.0
+		invs[0].CostUSD = 999.0
+		setInvocationFacts(&mMutatedTotals, invs)
 
 		err := validator.Validate(baseV2, mMutatedTotals, 3)
 		if !errors.Is(err, migration.ErrInvariantViolation) {
@@ -1039,11 +1049,11 @@ func TestEngineMigrate(t *testing.T) {
 		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 2 {
 			t.Errorf("expected schema_version 2, got %v", migrated.SchemaVersion)
 		}
-		if migrated.Events == nil {
-			t.Errorf("expected initialized non-nil events slice")
+		if migrated.Sessions == nil {
+			t.Errorf("expected initialized non-nil sessions collection")
 		}
-		if len(migrated.Events) != 0 {
-			t.Errorf("expected 0 events, got %d", len(migrated.Events))
+		if len(migrated.EventFacts()) != 0 {
+			t.Errorf("expected 0 events, got %d", len(migrated.EventFacts()))
 		}
 		if migrated.Migration == nil {
 			t.Fatalf("expected non-nil migration info")
@@ -1054,11 +1064,11 @@ func TestEngineMigrate(t *testing.T) {
 		if migrated.Code.LinesAdded != 50 {
 			t.Errorf("expected lines_added 50, got %d", migrated.Code.LinesAdded)
 		}
-		if len(migrated.Invocations) != 1 || migrated.Invocations[0].ID != "inv-1" {
+		if len(migrated.InvocationFacts()) != 1 || migrated.InvocationFacts()[0].ID != "inv-1" {
 			t.Errorf("invocations not preserved properly")
 		}
-		if len(migrated.Tools) != 1 || migrated.Tools[0].Name != "read" {
-			t.Errorf("tools not preserved properly")
+		if len(migrated.ToolFacts()) != 0 || migrated.Migration == nil || !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool aggregate") {
+			t.Errorf("expected unscoped tool row to be reported and removed, got tools=%+v migration=%+v", migrated.ToolFacts(), migrated.Migration)
 		}
 	})
 
@@ -1116,8 +1126,8 @@ func TestEngineMigrate(t *testing.T) {
 		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 2 {
 			t.Errorf("expected schema_version 2, got %v", migrated.SchemaVersion)
 		}
-		if migrated.Events == nil || len(migrated.Events) != 0 {
-			t.Errorf("expected empty initialized events slice")
+		if migrated.Sessions == nil || len(migrated.EventFacts()) != 0 {
+			t.Errorf("expected empty initialized sessions collection")
 		}
 	})
 
@@ -1161,8 +1171,8 @@ func TestEngineMigrate(t *testing.T) {
 	})
 
 	t.Run("missing migration step returns ErrMissingStep", func(t *testing.T) {
-		// Default engine only has 1->2. Asking for version 4 should fail with missing step.
-		_, err := engine.Migrate([]byte(unversionedJSON), 4)
+		// Default engine only has 1->2, 2->3, 3->4. Asking for version 5 should fail with missing step.
+		_, err := engine.Migrate([]byte(unversionedJSON), 5)
 		if !errors.Is(err, migration.ErrMissingStep) {
 			t.Errorf("expected ErrMissingStep when chain has gap, got %v", err)
 		}
@@ -1292,11 +1302,11 @@ func TestEngineMigrate(t *testing.T) {
 			t.Fatalf("expected schema_version 3, got %v", migrated.SchemaVersion)
 		}
 
-		if len(migrated.Events) != 1 {
-			t.Fatalf("expected 1 event retained after pruning, got %d", len(migrated.Events))
+		if len(migrated.EventFacts()) != 1 {
+			t.Fatalf("expected 1 event retained after pruning, got %d", len(migrated.EventFacts()))
 		}
 
-		retained := migrated.Events[0]
+		retained := migrated.EventFacts()[0]
 		if retained.Turn != 2 || retained.Status != "error" {
 			t.Errorf("expected error tool event retained, got %+v", retained)
 		}
@@ -1403,4 +1413,325 @@ func TestEngineMigrate(t *testing.T) {
 			t.Errorf("expected ErrDowngradeNotAllowed, got %v", errDown)
 		}
 	})
+
+	t.Run("migrates v1 unversioned JSON cleanly to v4", func(t *testing.T) {
+		v1JSON := `{
+			"ticket_id": "AL-100",
+			"ticket_title": "V1 to V4 Chain",
+			"updated_at": "2026-10-18T11:00:00Z",
+			"code": {"lines_added": 20, "sdlc_iterations": 4},
+			"invocations": [
+				{
+					"id": "inv-root",
+					"role": "orchestrator",
+					"model": "claude-3-opus",
+					"user": "developer",
+					"turns": 2,
+					"tokens": {"input": 100, "output": 50},
+					"cost_usd": 0.05
+				},
+				{
+					"id": "inv-child",
+					"parent_id": "inv-root",
+					"role": "coder",
+					"model": "claude-3-opus",
+					"user": "developer",
+					"turns": 1,
+					"tokens": {"input": 50, "output": 25},
+					"cost_usd": 0.02
+				}
+			],
+			"tools": []
+		}`
+
+		migrated, err := engine.Migrate([]byte(v1JSON), 4)
+		if err != nil {
+			t.Fatalf("unexpected error migrating v1 to v4: %v", err)
+		}
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 4 {
+			t.Fatalf("expected schema_version 4, got %v", migrated.SchemaVersion)
+		}
+		if len(migrated.InvocationFacts()) != 2 {
+			t.Fatalf("expected 2 invocations, got %d", len(migrated.InvocationFacts()))
+		}
+		if migrated.InvocationFacts()[0].UserIterations != 4 {
+			t.Errorf("expected primary root invocation to receive 4 iterations from code, got %d", migrated.InvocationFacts()[0].UserIterations)
+		}
+		if migrated.InvocationFacts()[1].UserIterations != 0 {
+			t.Errorf("expected child invocation to receive 0 iterations, got %d", migrated.InvocationFacts()[1].UserIterations)
+		}
+		if migrated.Migration == nil || migrated.Migration.SchemaVersion != 4 {
+			t.Errorf("expected migration info schema_version 4, got %+v", migrated.Migration)
+		}
+	})
+
+	t.Run("migrates v2 JSON cleanly to v4", func(t *testing.T) {
+		v2JSON := `{
+			"schema_version": 2,
+			"ticket_id": "AL-102",
+			"updated_at": "2026-10-18T11:00:00Z",
+			"code": {"lines_added": 30, "sdlc_iterations": 7},
+			"invocations": [
+				{
+					"id": "inv-v2-root",
+					"role": "orchestrator",
+					"model": "gpt-4o",
+					"turns": 4,
+					"tokens": {"input": 200, "output": 100},
+					"cost_usd": 0.10
+				}
+			],
+			"tools": [],
+			"events": []
+		}`
+
+		migrated, err := engine.Migrate([]byte(v2JSON), 4)
+		if err != nil {
+			t.Fatalf("unexpected error migrating v2 to v4: %v", err)
+		}
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 4 {
+			t.Fatalf("expected schema_version 4, got %v", migrated.SchemaVersion)
+		}
+		if migrated.InvocationFacts()[0].UserIterations != 7 {
+			t.Errorf("expected UserIterations 7, got %d", migrated.InvocationFacts()[0].UserIterations)
+		}
+	})
+
+	t.Run("migrates v3 JSON cleanly to v4", func(t *testing.T) {
+		v3JSON := `{
+			"schema_version": 3,
+			"ticket_id": "AL-103",
+			"updated_at": "2026-10-18T11:00:00Z",
+			"code": {"lines_added": 10, "sdlc_iterations": 3},
+			"invocations": [
+				{
+					"id": "inv-v3-root",
+					"role": "orchestrator",
+					"model": "gpt-4o",
+					"turns": 2,
+					"tokens": {"input": 50, "output": 25},
+					"cost_usd": 0.05,
+					"user_iterations": 0
+				}
+			],
+			"tools": [],
+			"events": []
+		}`
+
+		migrated, err := engine.Migrate([]byte(v3JSON), 4)
+		if err != nil {
+			t.Fatalf("unexpected error migrating v3 to v4: %v", err)
+		}
+		if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 4 {
+			t.Fatalf("expected schema_version 4, got %v", migrated.SchemaVersion)
+		}
+		if migrated.InvocationFacts()[0].UserIterations != 3 {
+			t.Errorf("expected UserIterations 3, got %d", migrated.InvocationFacts()[0].UserIterations)
+		}
+	})
+}
+
+func TestStepV3ToV4UserIterations(t *testing.T) {
+	step := migration.NewStepV3ToV4UserIterations()
+	if step.SourceVersion() != 3 || step.TargetVersion() != 4 {
+		t.Errorf("unexpected versions: source %d, target %d", step.SourceVersion(), step.TargetVersion())
+	}
+	if step.Description() == "" {
+		t.Errorf("expected non-empty description")
+	}
+
+	t.Run("upgrades v3 to v4 and assigns Code.SDLCIterations to primary root invocation", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		initial.Code.SDLCIterations = 5
+		setInvocationFacts(&initial, []domain.InvocationFact{
+			{
+				ID:             "root-1",
+				ParentID:       nil,
+				Role:           "orchestrator",
+				Model:          "gpt-4o",
+				UserIterations: 0,
+			},
+			{
+				ID:             "root-2",
+				ParentID:       nil,
+				Role:           "orchestrator",
+				Model:          "claude-3-5-sonnet",
+				UserIterations: 0,
+			},
+			{
+				ID:             "sub-1",
+				ParentID:       stringPtr("root-1"),
+				Role:           "coder",
+				Model:          "gpt-4o",
+				UserIterations: 0,
+			},
+		})
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if upgraded.SchemaVersion == nil || *upgraded.SchemaVersion != 4 {
+			t.Errorf("expected schema version 4, got %v", upgraded.SchemaVersion)
+		}
+		if upgraded.InvocationFacts()[0].UserIterations != 5 {
+			t.Errorf("expected primary root invocation to receive 5 iterations, got %d", upgraded.InvocationFacts()[0].UserIterations)
+		}
+		if upgraded.InvocationFacts()[1].UserIterations != 0 {
+			t.Errorf("expected secondary root invocation to have 0 iterations, got %d", upgraded.InvocationFacts()[1].UserIterations)
+		}
+		if upgraded.InvocationFacts()[2].UserIterations != 0 {
+			t.Errorf("expected subagent invocation to have 0 iterations, got %d", upgraded.InvocationFacts()[2].UserIterations)
+		}
+
+		if upgraded.Migration == nil {
+			t.Fatalf("expected non-nil migration info")
+		}
+		if upgraded.Migration.SchemaVersion != 4 {
+			t.Errorf("expected migration schema version 4, got %d", upgraded.Migration.SchemaVersion)
+		}
+		foundStep := false
+		for _, s := range upgraded.Migration.StepsCompleted {
+			if s == domain.MigrationStepUserIterations {
+				foundStep = true
+				break
+			}
+		}
+		if !foundStep {
+			t.Errorf("expected step %s in steps completed", domain.MigrationStepUserIterations)
+		}
+	})
+
+	t.Run("preserves existing non-zero UserIterations and does not overwrite with Code.SDLCIterations", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		initial.Code.SDLCIterations = 10
+		setInvocationFacts(&initial, []domain.InvocationFact{
+			{
+				ID:             "root-1",
+				ParentID:       nil,
+				Role:           "orchestrator",
+				Model:          "gpt-4o",
+				UserIterations: 3,
+			},
+		})
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if upgraded.InvocationFacts()[0].UserIterations != 3 {
+			t.Errorf("expected UserIterations to remain 3, got %d", upgraded.InvocationFacts()[0].UserIterations)
+		}
+	})
+
+	t.Run("handles empty invocations slice cleanly", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		initial.Code.SDLCIterations = 4
+		setInvocationFacts(&initial, nil)
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if upgraded.SchemaVersion == nil || *upgraded.SchemaVersion != 4 {
+			t.Errorf("expected schema version 4, got %v", upgraded.SchemaVersion)
+		}
+	})
+
+	t.Run("drops legacy events without stable IDs while preserving summary", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		tool := "bash"
+		events := []domain.EventFact{
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed"},
+			{EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed"},
+		}
+		setToolFacts(&initial, []domain.ToolFact{{SessionID: "fixture-session", Name: tool, Calls: 5, Errors: 3}})
+		setEventFacts(&initial, events)
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(upgraded.EventFacts()) != 0 {
+			t.Fatalf("migration retained transient events: %#v", upgraded.EventFacts())
+		}
+		if len(upgraded.AnomalyFacts()) == 0 {
+			t.Fatal("migration dropped detected anomaly summary")
+		}
+	})
+
+	t.Run("drops legacy events without ids when they are not direct evidence", func(t *testing.T) {
+		initial := sampleFactLedger()
+		v3 := 3
+		initial.SchemaVersion = &v3
+		setEventFacts(&initial, []domain.EventFact{{EventType: domain.EventTypeTurnMessage, Status: "completed", ContextTokens: 1000}})
+
+		upgraded, err := step.Apply(initial)
+		if err != nil {
+			t.Fatalf("unselected legacy event without id should not block migration: %v", err)
+		}
+		if len(upgraded.EventFacts()) != 0 {
+			t.Fatalf("unselected legacy event should be pruned, got %#v", upgraded.EventFacts())
+		}
+	})
+}
+
+func TestMigrationDropsUnscopedToolsWithDiagnostic(t *testing.T) {
+	engine := migration.NewEngine(nil)
+	input := `{"schema_version":3,"tools":[{"name":"bash","calls":4,"errors":1}]}`
+	migrated, err := engine.Migrate([]byte(input), 4)
+	if err != nil {
+		t.Fatalf("expected v3 migration to complete, got %v", err)
+	}
+	if migrated.Migration == nil || !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool aggregate") || !strings.Contains(migrated.Migration.Notes, "Re-extract from source logs") {
+		t.Fatalf("expected explicit dropped-tool diagnostic, got %+v", migrated.Migration)
+	}
+	if migrated.Migration.Status != domain.MigrationStatusCompleted || len(migrated.Migration.StepsPending) != 0 {
+		t.Fatalf("expected completed migration when there are no pending steps, got %+v", migrated.Migration)
+	}
+	if len(migrated.ToolFacts()) != 0 || len(migrated.Sessions) != 0 {
+		t.Fatalf("unscoped tool aggregate should not be assigned to a fabricated session: %+v", migrated.Sessions)
+	}
+}
+
+func TestMigrationDroppedToolNotePreservesPartialStatusForPendingSteps(t *testing.T) {
+	engine := migration.NewEngine(nil)
+	input := `{"schema_version":3,"migration":{"schema_version":3,"status":"partial","steps_completed":["git_code_facts"],"steps_pending":["opencode_db"],"last_migrated_at":"2026-10-20T10:00:00Z","last_migrated_by":"tester"},"tools":[{"name":"bash","calls":4,"errors":1}]}`
+	migrated, err := engine.Migrate([]byte(input), 4)
+	if err != nil {
+		t.Fatalf("expected v3 migration to complete with pending external steps, got %v", err)
+	}
+	if migrated.Migration == nil || migrated.Migration.Status != domain.MigrationStatusPartial || len(migrated.Migration.StepsPending) != 1 || migrated.Migration.StepsPending[0] != "opencode_db" {
+		t.Fatalf("expected partial status to remain for a pending step, got %+v", migrated.Migration)
+	}
+	if !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool aggregate") {
+		t.Fatalf("expected explicit dropped-tool note, got %+v", migrated.Migration)
+	}
+}
+
+func TestMigrationEngineNormalizesInterimV4AndDropsUnscopedTools(t *testing.T) {
+	engine := migration.NewEngine(nil)
+	input := `{"schema_version":4,"invocations":[{"id":"root-1","parent_id":null,"role":"orchestrator","model":"model-a","user":"dev","tokens":{}}],"tools":[{"name":"bash","calls":4,"errors":1}],"events":[]}`
+	migrated, err := engine.Migrate([]byte(input), 4)
+	if err != nil {
+		t.Fatalf("expected interim-v4 normalization, got %v", err)
+	}
+	if len(migrated.Sessions) != 1 || migrated.Sessions[0].ID != "root-1" || len(migrated.Sessions[0].Tools) != 0 {
+		t.Fatalf("expected attributable facts migrated and unscoped tool omitted: %+v", migrated.Sessions)
+	}
+	if migrated.Migration == nil || !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool aggregate") {
+		t.Fatalf("expected migration diagnostic, got %+v", migrated.Migration)
+	}
 }

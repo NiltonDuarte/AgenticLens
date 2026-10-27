@@ -28,10 +28,10 @@
 <!-- AGENTIC_METRICS_END -->
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
+- **Software Development Life Cycle Iterations:** 10
 - **Active Agent Duration:** 20m 34s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Orchestrator peak 0 tokens (0% of 200k healthy ceiling, 0 compactions) | Subagents peak 113.8k (General)
-- **Role Effort Distribution (Subagents):** General 100.0%
+- **Context Window Health:** ELEVATED — Root agent peak 113.8k tokens (57% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
