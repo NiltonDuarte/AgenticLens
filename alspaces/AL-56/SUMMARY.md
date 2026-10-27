@@ -147,13 +147,13 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 29 compactions) | Subagents peak 246.7k (Coder_iteration_06)
 - **Role Effort Distribution (Subagents):** Planner 12.7%, Coder 53.6%, Tester 15.1%, Reviewer 18.6%
 - **Subagent Turn Velocity & Thrashing:** 20.9 avg turns/run (peak: 130 turns) | Planner 35.3, Coder 84.3, Tester 36.7, Reviewer 49.3, Child_cli_test 2.0, Coder_iteration_04 7.0, Coder_iteration_05 4.0, Coder_iteration_05_validation 2.0, Coder_iteration_06 13.0, Fix_child_parser 2.0, Planner_iteration_04 6.0, Planner_iteration_05 1.0, Planner_iteration_06 4.0, Planner_iteration_07 1.0, Planner_iteration_08 1.0, Reviewer_iteration_04 1.0, Reviewer_iteration_04_final 1.0, Reviewer_iteration_05 1.0, Reviewer_iteration_05_final 1.0, Reviewer_iteration_05_round2 1.0, Reviewer_iteration_05_round2_restart 1.0, Reviewer_iteration_05_round3 1.0, Reviewer_iteration_06 8.0, Role_mapping_review 1.0, Telemetry_hi 1.0, Tester_iteration_04 3.0, Tester_iteration_05 4.0, Tester_iteration_06 7.0
-- **Test-to-Production Code Ratio:** 2.6:1 (+15,520 test lines / +6,080 prod lines)
-- **Code Delivered:** +21,684 / -16,014 lines across 105 code files (excluding docs)
+- **Test-to-Production Code Ratio:** 2.5:1 (+15,522 test lines / +6,103 prod lines)
+- **Code Delivered:** +21,709 / -16,030 lines across 105 code files (excluding docs)
 - **Reasoning Effort:** 961,553 reasoning tokens (37.2% of generated output)
 - **Tool Health & Self-Correction:** 4,449 tool calls (226 self-corrections, 94.9% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 63 execution anomalies detected (52 CRITICAL, 11 WARNING).
+- **Status:** 69 execution anomalies detected (58 CRITICAL, 11 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+245.3k tokens) — Context tokens surged by 245.3k to 245.3k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (245.3k tokens) — Context tokens reached 245.3k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+137.2k tokens) — Context tokens surged by 137.2k to 137.2k tokens.
@@ -205,6 +205,12 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (245.3k tokens) — Context tokens reached 245.3k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (183.4k tokens) — Context tokens reached 183.4k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (225.1k tokens) — Context tokens reached 225.1k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (169.2k tokens) — Context tokens reached 169.2k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (176.7k tokens) — Context tokens reached 176.7k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (171.6k tokens) — Context tokens reached 171.6k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (244.5k tokens) — Context tokens reached 244.5k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (247.7k tokens) — Context tokens reached 247.7k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (182.6k tokens) — Context tokens reached 182.6k, breaching the 160k critical ceiling.
 - [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: command (5 consecutive errors) — Tool 'command' encountered 5 consecutive execution failures.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k to 148.4k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+63.8k tokens) — Context tokens surged by 63.8k to 63.8k tokens.

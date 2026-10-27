@@ -173,10 +173,17 @@ func (s *LiveService) pollAndBroadcast(ctx context.Context) {
 		return
 	}
 
+	compareTree := tree
+	compareTree.LastRefreshedAt = ""
+	compareData, err := json.Marshal(compareTree)
+	if err != nil {
+		return
+	}
+
 	s.lastTreeMu.Lock()
-	changed := !bytes.Equal(s.lastTreeJSON, data)
+	changed := !bytes.Equal(s.lastTreeJSON, compareData)
 	if changed {
-		s.lastTreeJSON = data
+		s.lastTreeJSON = compareData
 	}
 	s.lastTreeMu.Unlock()
 
