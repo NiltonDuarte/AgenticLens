@@ -11,7 +11,7 @@
 - **Documentation & Verification**: Updated `README.md` and added extensive adversarial unit tests in `backend/internal/domain/anomalies_test.go`, adapter formatter tests, and CLI integration tests in `backend/cmd/agentic-lens/main_test.go`.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
+- **Software Development Life Cycle Iterations:** 3
 - **Active Agent Duration:** 1h 58m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Root agent peak 111.7k tokens (56% of 200k healthy ceiling, 3 compactions) | Subagents peak 168.1k (Reviewer)
 - **Role Effort Distribution (Subagents):** Planner 20.1%, Coder 27.7%, Tester 35.4%, Reviewer 16.8%
@@ -19,20 +19,13 @@
 - **Test-to-Production Code Ratio:** 2.0:1 (+934 test lines / +478 prod lines)
 - **Code Delivered:** +1,412 / -168 lines across 13 code files (excluding docs)
 - **Reasoning Effort:** 134,246 reasoning tokens (53.8% of generated output)
-- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
+- **Tool Health & Self-Correction:** 441 tool calls (8 self-corrections, 98.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 13 execution anomalies detected (9 CRITICAL, 4 WARNING).
+- **Status:** 6 execution anomalies detected (3 CRITICAL, 3 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.7k tokens) — Context tokens reached 166.7k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.2k tokens) — Context tokens reached 166.2k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.1k tokens) — Context tokens reached 168.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.7k tokens) — Context tokens reached 166.7k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.2k tokens) — Context tokens reached 166.2k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.1k tokens) — Context tokens reached 168.1k, breaching the 160k critical ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+52.1k tokens) — Context tokens surged by 52.1k to 60.7k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+45.3k tokens) — Context tokens surged by 45.3k to 45.3k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+66.0k tokens) — Context tokens surged by 66.0k to 66.0k tokens.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: mcp-gateway_mcp-exec (4 consecutive errors) — Tool 'mcp-gateway_mcp-exec' encountered 4 consecutive execution failures.

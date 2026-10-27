@@ -5,7 +5,7 @@
   "ticket_type": "chore",
   "started_at": "2026-10-17T15:31:01.795000+00:00",
   "completed_at": "2026-10-17T15:39:30.399000+00:00",
-  "updated_at": "2026-10-26T21:47:08.841350577Z",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 1
+    "sdlc_iterations": 4
   },
   "sessions": [
     {
@@ -40,10 +40,36 @@
           },
           "cost_usd": 0.190815,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 4
         }
       ],
-      "tools": [],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 3,
+          "errors": 0
+        }
+      ],
       "anomalies": []
     }
   ],

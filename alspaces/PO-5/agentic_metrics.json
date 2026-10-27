@@ -5,7 +5,7 @@
   "ticket_type": "docs",
   "started_at": "2026-10-18T14:31:15.650000+00:00",
   "completed_at": "2026-10-18T15:27:49.603000+00:00",
-  "updated_at": "2026-10-26T21:47:08.841350577Z",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 1
+    "sdlc_iterations": 8
   },
   "sessions": [
     {
@@ -40,36 +40,63 @@
           },
           "cost_usd": 3.624044,
           "compactions": 1,
-          "user_iterations": 1
+          "user_iterations": 8
         }
       ],
-      "tools": [],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 96,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 23,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 18,
+          "errors": 2
+        },
+        {
+          "name": "question",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 94,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "todowrite",
+          "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 14,
+          "errors": 0
+        }
+      ],
       "anomalies": [
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "CRITICAL",
           "context": {
             "turn": 114,
-            "token_delta": 131092,
             "context_tokens": 160352,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 114,
-            "context_tokens": 160352,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "general",
-            "context_tokens": 167973,
             "threshold": "160000"
           }
         },

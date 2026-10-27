@@ -52,7 +52,7 @@
 - Zero emojis and zero `any` verified across all source files.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 2
+- **Software Development Life Cycle Iterations:** 9
 - **Active Agent Duration:** 3h 26m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Root agent peak 172.4k tokens (86% of 200k healthy ceiling, 5 compactions) | Subagents peak 181.8k (Coder)
 - **Role Effort Distribution (Subagents):** Planner 8.8%, Coder 48.0%, Tester 29.8%, Reviewer 13.4%
@@ -60,27 +60,21 @@
 - **Test-to-Production Code Ratio:** 0.6:1 (+3,170 test lines / +5,197 prod lines)
 - **Code Delivered:** +8,367 / -86 lines across 34 code files (excluding docs)
 - **Reasoning Effort:** 194,925 reasoning tokens (46.5% of generated output)
-- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
+- **Tool Health & Self-Correction:** 878 tool calls (16 self-corrections, 98.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 17 execution anomalies detected (10 CRITICAL, 7 WARNING).
+- **Status:** 11 execution anomalies detected (4 CRITICAL, 7 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.6k tokens) — Context tokens reached 163.6k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+85.4k tokens) — Context tokens surged by 85.4k to 85.4k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (172.4k tokens) — Context tokens reached 172.4k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (181.8k tokens) — Context tokens reached 181.8k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.7k tokens) — Context tokens reached 166.7k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (172.4k tokens) — Context tokens reached 172.4k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (181.8k tokens) — Context tokens reached 181.8k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.7k tokens) — Context tokens reached 166.7k, breaching the 160k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.7k tokens) — Context tokens surged by 43.7k to 43.7k tokens.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+52.1k tokens) — Context tokens surged by 52.1k to 139.0k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+48.7k tokens) — Context tokens surged by 48.7k to 48.7k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+75.7k tokens) — Context tokens surged by 75.7k to 75.7k tokens.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+70.7k tokens) — Context tokens surged by 70.7k to 131.6k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+50.1k tokens) — Context tokens surged by 50.1k to 131.6k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+61.1k tokens) — Context tokens surged by 61.1k to 61.1k tokens.
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: t3-code_preview_navigate (3 consecutive errors) — Tool 't3-code_preview_navigate' encountered 3 consecutive execution failures.
+- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: t3-code_preview_evaluate (28.6%) — Tool 't3-code_preview_evaluate' failed 2 out of 7 calls (28.6% failure rate, threshold: >20%).
+- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: t3-code_preview_navigate (33.3%) — Tool 't3-code_preview_navigate' failed 3 out of 9 calls (33.3% failure rate, threshold: >20%).
 
 ### Agentic Execution Metrics
 

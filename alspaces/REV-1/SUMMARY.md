@@ -54,37 +54,26 @@ Dismantled brittle and permissive fallback cascades across AgenticLens, replacin
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 7
-- **Active Agent Duration:** 6h 29m (excludes user wait time)
+- **Active Agent Duration:** 6h 53m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Root agent peak 168.3k tokens (84% of 200k healthy ceiling, 4 compactions) | Subagents peak 168.2k (Coder)
-- **Role Effort Distribution (Subagents):** Planner 12.5%, Coder 62.3%, Tester 15.4%, Reviewer 9.8%
-- **Subagent Turn Velocity & Thrashing:** 87.1 avg turns/run (peak: 187 turns) | Planner 61.0, Coder 130.0, Tester 64.0, Reviewer 50.5
+- **Role Effort Distribution (Subagents):** Planner 12.3%, Coder 62.9%, Tester 15.2%, Reviewer 9.7%
+- **Subagent Turn Velocity & Thrashing:** 88.7 avg turns/run (peak: 187 turns) | Planner 61.0, Coder 134.0, Tester 64.0, Reviewer 50.5
 - **Test-to-Production Code Ratio:** 10.0:1 (+1,111 test lines / +111 prod lines)
 - **Code Delivered:** +2,612 / -272 lines across 38 code files (excluding docs)
-- **Reasoning Effort:** 236,018 reasoning tokens (58.8% of generated output)
-- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
+- **Reasoning Effort:** 237,777 reasoning tokens (58.4% of generated output)
+- **Tool Health & Self-Correction:** 1,062 tool calls (12 self-corrections, 98.9% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 20 execution anomalies detected (15 CRITICAL, 5 WARNING).
+- **Status:** 9 execution anomalies detected (5 CRITICAL, 4 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+84.3k tokens) — Context tokens surged by 84.3k to 162.1k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.1k tokens) — Context tokens reached 162.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+99.1k tokens) — Context tokens surged by 99.1k to 160.2k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+97.6k tokens) — Context tokens surged by 97.6k to 97.6k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.3k tokens) — Context tokens reached 168.3k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.2k tokens) — Context tokens reached 168.2k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.9k tokens) — Context tokens reached 164.9k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.1k tokens) — Context tokens reached 168.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.3k tokens) — Context tokens reached 168.3k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.2k tokens) — Context tokens reached 168.2k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.9k tokens) — Context tokens reached 164.9k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.1k tokens) — Context tokens reached 168.1k, breaching the 160k critical ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+44.6k tokens) — Context tokens surged by 44.6k to 72.8k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+40.5k tokens) — Context tokens surged by 40.5k to 40.5k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+55.5k tokens) — Context tokens surged by 55.5k to 55.5k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+64.3k tokens) — Context tokens surged by 64.3k to 64.3k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+57.0k tokens) — Context tokens surged by 57.0k to 57.0k tokens.
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: read (3 consecutive errors) — Tool 'read' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
 
@@ -93,15 +82,15 @@ Dismantled brittle and permissive fallback cascades across AgenticLens, replacin
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 2,904,445 | 40,016 | 12,817,526 | 81.5% | 168.3k | ELEVATED | $3.38 |
+| **orchestrator** | 1 | 3,080,880 | 42,218 | 14,244,109 | 82.2% | 168.3k | ELEVATED | $3.63 |
 | **planner** | 2 | 628,193 | 20,735 | 6,062,294 | 90.6% | 119.8k | ELEVATED | $1.17 |
-| **coder** | 4 | 2,677,093 | 75,551 | 41,391,953 | 93.9% | 168.2k | ELEVATED | $5.82 |
+| **coder** | 4 | 2,758,457 | 77,103 | 42,481,867 | 93.9% | 168.2k | ELEVATED | $5.98 |
 | **tester** | 2 | 657,709 | 20,869 | 10,046,635 | 93.9% | 127.9k | ELEVATED | $1.44 |
 | **reviewer** | 2 | 668,444 | 8,463 | 4,042,064 | 85.8% | 77.8k | HEALTHY | $0.92 |
-| **Total** | **11** | **7,535,884** | **165,634** | **74,360,472** | **90.8%** | **168.3k** | **ELEVATED** | **$12.74** |
+| **Total** | **11** | **7,793,683** | **169,388** | **76,876,969** | **90.8%** | **168.3k** | **ELEVATED** | **$13.14** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 11 | 7,535,884 | 165,634 | 74,360,472 | 90.8% | $12.74 |
-| **Total** | **11** | **7,535,884** | **165,634** | **74,360,472** | **90.8%** | **$12.74** |
+| **gemini-3.8-flash** | 11 | 7,793,683 | 169,388 | 76,876,969 | 90.8% | $13.14 |
+| **Total** | **11** | **7,793,683** | **169,388** | **76,876,969** | **90.8%** | **$13.14** |

@@ -5,7 +5,7 @@
   "ticket_type": "docs",
   "started_at": "2026-10-17T16:27:43.244000+00:00",
   "completed_at": "2026-10-17T22:40:08.126000+00:00",
-  "updated_at": "2026-10-26T21:47:08.841350577Z",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 1
+    "sdlc_iterations": 8
   },
   "sessions": [
     {
@@ -40,10 +40,51 @@
           },
           "cost_usd": 1.154499,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 8
         }
       ],
-      "tools": [],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 58,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 5,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "question",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 27,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 7,
+          "errors": 0
+        }
+      ],
       "anomalies": []
     }
   ],

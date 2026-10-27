@@ -67,33 +67,25 @@ In Iteration 02, runtime mock mode was completely eliminated from the live obser
 - Code Invariants: 100% compliant with FCIS separation, zero `any` or `interface{}`, and zero emojis.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 2h 2m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 163.1k tokens (82% of 200k healthy ceiling, 2 compactions) | Subagents peak 180.4k (Coder)
+- **Software Development Life Cycle Iterations:** 5
+- **Active Agent Duration:** 2h 5m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 167.5k tokens (84% of 200k healthy ceiling, 3 compactions) | Subagents peak 180.4k (Coder)
 - **Role Effort Distribution (Subagents):** Planner 16.6%, Coder 41.2%, Tester 30.8%, Reviewer 11.5%
 - **Subagent Turn Velocity & Thrashing:** 51.4 avg turns/run (peak: 101 turns) | Planner 38.5, Coder 79.5, Tester 62.5, Reviewer 25.0
 - **Test-to-Production Code Ratio:** 0.9:1 (+2,445 test lines / +2,804 prod lines)
 - **Code Delivered:** +5,250 / -131 lines across 22 code files (excluding docs)
-- **Reasoning Effort:** 146,845 reasoning tokens (45.7% of generated output)
-- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
+- **Reasoning Effort:** 149,917 reasoning tokens (45.8% of generated output)
+- **Tool Health & Self-Correction:** 545 tool calls (11 self-corrections, 98.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 15 execution anomalies detected (9 CRITICAL, 6 WARNING).
+- **Status:** 7 execution anomalies detected (5 CRITICAL, 2 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (175.0k tokens) — Context tokens reached 175.0k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.5k tokens) — Context tokens reached 161.5k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.1k tokens) — Context tokens reached 163.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (180.4k tokens) — Context tokens reached 180.4k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (175.0k tokens) — Context tokens reached 175.0k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.1k tokens) — Context tokens reached 163.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (180.4k tokens) — Context tokens reached 180.4k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (175.0k tokens) — Context tokens reached 175.0k, breaching the 160k critical ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+41.8k tokens) — Context tokens surged by 41.8k to 89.5k tokens.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.7k tokens) — Context tokens surged by 43.7k to 133.2k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+80.4k tokens) — Context tokens surged by 80.4k to 80.4k tokens.
+- [CRITICAL] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: mcp-gateway_mcp-exec (100.0%) — Tool 'mcp-gateway_mcp-exec' failed 5 out of 5 calls (100.0% failure rate, threshold: >=50%).
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+70.7k tokens) — Context tokens surged by 70.7k to 70.7k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+71.4k tokens) — Context tokens surged by 71.4k to 71.4k tokens.
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: mcp-gateway_mcp-exec (3 consecutive errors) — Tool 'mcp-gateway_mcp-exec' encountered 3 consecutive execution failures.
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: read (3 consecutive errors) — Tool 'read' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
 
@@ -102,15 +94,15 @@ In Iteration 02, runtime mock mode was completely eliminated from the live obser
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 2,412,016 | 41,508 | 8,062,555 | 77.0% | 163.1k | ELEVATED | $2.65 |
+| **orchestrator** | 1 | 2,940,995 | 44,078 | 9,479,697 | 76.3% | 167.5k | ELEVATED | $3.17 |
 | **planner** | 2 | 576,868 | 19,942 | 3,736,960 | 86.6% | 134.5k | ELEVATED | $0.88 |
 | **coder** | 2 | 1,083,919 | 65,409 | 12,189,843 | 91.8% | 180.4k | ELEVATED | $2.19 |
 | **tester** | 2 | 1,014,990 | 40,363 | 8,233,424 | 89.0% | 175.0k | ELEVATED | $1.64 |
 | **reviewer** | 2 | 469,786 | 7,398 | 2,396,706 | 83.6% | 118.9k | ELEVATED | $0.61 |
-| **Total** | **9** | **5,557,579** | **174,620** | **34,619,488** | **86.2%** | **180.4k** | **ELEVATED** | **$7.97** |
+| **Total** | **9** | **6,086,558** | **177,190** | **36,036,630** | **85.6%** | **180.4k** | **ELEVATED** | **$8.49** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 9 | 5,557,579 | 174,620 | 34,619,488 | 86.2% | $7.97 |
-| **Total** | **9** | **5,557,579** | **174,620** | **34,619,488** | **86.2%** | **$7.97** |
+| **gemini-3.8-flash** | 9 | 6,086,558 | 177,190 | 36,036,630 | 85.6% | $8.49 |
+| **Total** | **9** | **6,086,558** | **177,190** | **36,036,630** | **85.6%** | **$8.49** |

@@ -27,7 +27,7 @@
 - Created ticket artifacts adhering to repository zero-emoji standard.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 1
+- **Software Development Life Cycle Iterations:** 4
 - **Active Agent Duration:** 2m 49s (excludes user wait time)
 - **Context Window Health:** HEALTHY — Root agent peak 26.3k tokens (13% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
@@ -35,7 +35,7 @@
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
 - **Reasoning Effort:** 5,700 reasoning tokens (58.8% of generated output)
-- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
+- **Tool Health & Self-Correction:** 25 tool calls (0 self-corrections, 100.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).

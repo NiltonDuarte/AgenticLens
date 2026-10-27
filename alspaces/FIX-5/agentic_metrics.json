@@ -4,8 +4,8 @@
   "ticket_title": "Mandate agent-generated literal nonces for telemetry",
   "ticket_type": "fix",
   "started_at": "2026-10-22T18:55:18.080000+00:00",
-  "completed_at": "2026-10-22T19:47:41.698000+00:00",
-  "updated_at": "2026-10-26T21:47:08.841350577Z",
+  "completed_at": "2026-10-22T19:48:54.579000+00:00",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 13,
     "lines_deleted": 15,
@@ -18,92 +18,64 @@
   },
   "sessions": [
     {
-      "id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "source": "opencode",
-      "invocations": [
-        {
-          "id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-          "parent_id": null,
-          "role": "orchestrator",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-22T18:55:18.535000+00:00",
-          "completed_at": "2026-10-22T19:47:41.698000+00:00",
-          "active_duration_seconds": 2307,
-          "turns": 84,
-          "tokens": {
-            "input": 1025162,
-            "output": 16352,
-            "cache_read": 3859202,
-            "reasoning": 16212,
-            "peak_context": 112727
-          },
-          "cost_usd": 1.180427,
-          "compactions": 0,
-          "user_iterations": 3
-        }
-      ],
-      "tools": [],
-      "anomalies": []
-    },
-    {
-      "id": "ses_e9af2260cffex9E9t7CYIW1T9S",
+      "id": "ses_e9ade3f22ffezsNJHrA72OW6fU",
       "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
       "source": "opencode",
       "invocations": [
         {
-          "id": "ses_e9af2260cffex9E9t7CYIW1T9S",
+          "id": "ses_e9ade3f22ffezsNJHrA72OW6fU",
           "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-          "role": "planner",
+          "role": "reviewer",
           "model": "gemini-3.8-flash",
           "user": "Nilton Duarte",
-          "started_at": "2026-10-22T19:19:29.043000+00:00",
-          "completed_at": "2026-10-22T19:25:57.679000+00:00",
-          "active_duration_seconds": 361,
-          "turns": 43,
+          "started_at": "2026-10-22T19:41:13.321000+00:00",
+          "completed_at": "2026-10-22T19:46:07.664000+00:00",
+          "active_duration_seconds": 294,
+          "turns": 40,
           "tokens": {
-            "input": 251032,
-            "output": 6518,
-            "cache_read": 1596329,
-            "reasoning": 17883,
-            "peak_context": 78713
+            "input": 249481,
+            "output": 3044,
+            "cache_read": 1249597,
+            "reasoning": 10651,
+            "peak_context": 66109
           },
-          "cost_usd": 0.399502,
+          "cost_usd": 0.332187,
           "compactions": 0,
           "user_iterations": 0
         }
       ],
-      "tools": [],
-      "anomalies": []
-    },
-    {
-      "id": "ses_e9ae7e4dcffe6ntMMqmmyaZ8ty",
-      "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-      "source": "opencode",
-      "invocations": [
+      "tools": [
         {
-          "id": "ses_e9ae7e4dcffe6ntMMqmmyaZ8ty",
-          "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-          "role": "coder",
-          "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
-          "started_at": "2026-10-22T19:30:41.096000+00:00",
-          "completed_at": "2026-10-22T19:36:05.629000+00:00",
-          "active_duration_seconds": 324,
-          "turns": 66,
-          "tokens": {
-            "input": 388804,
-            "output": 7195,
-            "cache_read": 3329513,
-            "reasoning": 17991,
-            "peak_context": 96903
-          },
-          "cost_usd": 0.635764,
-          "compactions": 0,
-          "user_iterations": 0
+          "name": "glob",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 18,
+          "errors": 0
+        },
+        {
+          "name": "list_mcp_resources",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "mcp-gateway_code-mode",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "mcp-gateway_mcp-find",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 20,
+          "errors": 1
         }
       ],
-      "tools": [],
       "anomalies": []
     },
     {
@@ -133,37 +105,215 @@
           "user_iterations": 0
         }
       ],
-      "tools": [],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 28,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 5,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 12,
+          "errors": 0
+        }
+      ],
       "anomalies": []
     },
     {
-      "id": "ses_e9ade3f22ffezsNJHrA72OW6fU",
+      "id": "ses_e9ae7e4dcffe6ntMMqmmyaZ8ty",
       "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
       "source": "opencode",
       "invocations": [
         {
-          "id": "ses_e9ade3f22ffezsNJHrA72OW6fU",
+          "id": "ses_e9ae7e4dcffe6ntMMqmmyaZ8ty",
           "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
-          "role": "reviewer",
+          "role": "coder",
           "model": "gemini-3.8-flash",
           "user": "Nilton Duarte",
-          "started_at": "2026-10-22T19:41:13.321000+00:00",
-          "completed_at": "2026-10-22T19:46:07.664000+00:00",
-          "active_duration_seconds": 294,
-          "turns": 40,
+          "started_at": "2026-10-22T19:30:41.096000+00:00",
+          "completed_at": "2026-10-22T19:36:05.629000+00:00",
+          "active_duration_seconds": 324,
+          "turns": 66,
           "tokens": {
-            "input": 249481,
-            "output": 3044,
-            "cache_read": 1249597,
-            "reasoning": 10651,
-            "peak_context": 66109
+            "input": 388804,
+            "output": 7195,
+            "cache_read": 3329513,
+            "reasoning": 17991,
+            "peak_context": 96903
           },
-          "cost_usd": 0.332187,
+          "cost_usd": 0.635764,
           "compactions": 0,
           "user_iterations": 0
         }
       ],
-      "tools": [],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 27,
+          "errors": 0
+        },
+        {
+          "name": "edit",
+          "calls": 7,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 27,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "ses_e9af2260cffex9E9t7CYIW1T9S",
+      "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_e9af2260cffex9E9t7CYIW1T9S",
+          "parent_id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+          "role": "planner",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-22T19:19:29.043000+00:00",
+          "completed_at": "2026-10-22T19:25:57.679000+00:00",
+          "active_duration_seconds": 361,
+          "turns": 43,
+          "tokens": {
+            "input": 251032,
+            "output": 6518,
+            "cache_read": 1596329,
+            "reasoning": 17883,
+            "peak_context": 78713
+          },
+          "cost_usd": 0.399502,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "glob",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 11,
+          "errors": 0
+        },
+        {
+          "name": "list_mcp_resources",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "mcp-gateway_mcp-find",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 17,
+          "errors": 1
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_e9b0849c0ffe6WZK8z3tlBeFg3",
+          "parent_id": null,
+          "role": "orchestrator",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-22T18:55:18.535000+00:00",
+          "completed_at": "2026-10-22T19:48:54.579000+00:00",
+          "active_duration_seconds": 2380,
+          "turns": 93,
+          "tokens": {
+            "input": 1067475,
+            "output": 17555,
+            "cache_read": 4974087,
+            "reasoning": 17465,
+            "peak_context": 117258
+          },
+          "cost_usd": 1.304988,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 38,
+          "errors": 1
+        },
+        {
+          "name": "glob",
+          "calls": 9,
+          "errors": 1
+        },
+        {
+          "name": "grep",
+          "calls": 3,
+          "errors": 3
+        },
+        {
+          "name": "question",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 16,
+          "errors": 3
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_link_pull_request",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "task",
+          "calls": 5,
+          "errors": 0
+        },
+        {
+          "name": "todowrite",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 5,
+          "errors": 0
+        }
+      ],
       "anomalies": []
     }
   ],

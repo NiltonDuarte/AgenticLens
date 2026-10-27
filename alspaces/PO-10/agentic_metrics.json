@@ -4,8 +4,8 @@
   "ticket_title": "Tool Execution vs Content Error Disentanglement and Pipeline Parity",
   "ticket_type": "docs",
   "started_at": "2026-10-21T13:02:26.276000+00:00",
-  "completed_at": "2026-10-21T19:09:20.664000+00:00",
-  "updated_at": "2026-10-26T21:47:08.841350577Z",
+  "completed_at": "2026-10-21T19:15:22.797000+00:00",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -28,22 +28,68 @@
           "model": "gemini-3.8-flash",
           "user": "Nilton Duarte",
           "started_at": "2026-10-21T13:02:26.649000+00:00",
-          "completed_at": "2026-10-21T19:09:20.664000+00:00",
-          "active_duration_seconds": 1285,
-          "turns": 126,
+          "completed_at": "2026-10-21T19:15:22.797000+00:00",
+          "active_duration_seconds": 1647,
+          "turns": 136,
           "tokens": {
-            "input": 1292986,
-            "output": 16706,
-            "cache_read": 7757283,
-            "reasoning": 21453,
+            "input": 1536334,
+            "output": 17429,
+            "cache_read": 8631284,
+            "reasoning": 22224,
             "peak_context": 175339
           },
-          "cost_usd": 1.694632,
+          "cost_usd": 1.948296,
           "compactions": 1,
           "user_iterations": 5
         }
       ],
-      "tools": [],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 56,
+          "errors": 4
+        },
+        {
+          "name": "edit",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 11,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 36,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_link_pull_request",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_list_thread_pull_requests",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 5,
+          "errors": 0
+        }
+      ],
       "anomalies": [
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
@@ -56,31 +102,12 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "advisor",
-            "context_tokens": 175339,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 79,
             "token_delta": 45168,
             "context_tokens": 45168,
             "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "WARNING",
-          "context": {
-            "tool_name": "bash",
-            "turn": 108,
-            "count": 3,
-            "threshold": "3"
           }
         }
       ]

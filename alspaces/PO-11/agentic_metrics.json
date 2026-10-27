@@ -4,8 +4,8 @@
   "ticket_title": "live observability refinements, comparison scatter plot, and agent/skill tracking",
   "ticket_type": "docs",
   "started_at": "2026-10-22T12:20:03.117000+00:00",
-  "completed_at": "2026-10-23T13:45:24.536000+00:00",
-  "updated_at": "2026-10-26T21:47:08.841350577Z",
+  "completed_at": "2026-10-23T13:46:46.459000+00:00",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -28,22 +28,78 @@
           "model": "gemini-3.8-flash",
           "user": "Nilton Duarte",
           "started_at": "2026-10-22T12:20:03.554000+00:00",
-          "completed_at": "2026-10-23T13:45:24.536000+00:00",
-          "active_duration_seconds": 4755,
-          "turns": 370,
+          "completed_at": "2026-10-23T13:46:46.459000+00:00",
+          "active_duration_seconds": 4837,
+          "turns": 381,
           "tokens": {
-            "input": 5613043,
-            "output": 125668,
-            "cache_read": 28085768,
-            "reasoning": 57053,
+            "input": 5660197,
+            "output": 127178,
+            "cache_read": 29659559,
+            "reasoning": 57357,
             "peak_context": 170576
           },
-          "cost_usd": 7.001419,
+          "cost_usd": 7.161621,
           "compactions": 2,
           "user_iterations": 17
         }
       ],
-      "tools": [],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 140,
+          "errors": 2
+        },
+        {
+          "name": "edit",
+          "calls": 32,
+          "errors": 1
+        },
+        {
+          "name": "glob",
+          "calls": 16,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 15,
+          "errors": 5
+        },
+        {
+          "name": "question",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 74,
+          "errors": 1
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_link_pull_request",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_list_thread_pull_requests",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "todowrite",
+          "calls": 23,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 42,
+          "errors": 0
+        }
+      ],
       "anomalies": [
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
@@ -68,19 +124,20 @@
           "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "CRITICAL",
           "context": {
-            "role": "advisor",
-            "context_tokens": 170576,
-            "threshold": "160000"
+            "turn": 332,
+            "token_delta": 103465,
+            "context_tokens": 103465,
+            "threshold": "80000"
           }
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
+          "severity": "CRITICAL",
           "context": {
-            "turn": 83,
-            "token_delta": 51504,
-            "context_tokens": 123944,
-            "threshold": "40000"
+            "turn": 352,
+            "token_delta": 130699,
+            "context_tokens": 130699,
+            "threshold": "80000"
           }
         },
         {
@@ -92,29 +149,21 @@
             "context_tokens": 77768,
             "threshold": "40000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 332,
-            "token_delta": 64172,
-            "context_tokens": 103465,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "WARNING",
-          "context": {
-            "tool_name": "grep",
-            "turn": 34,
-            "count": 4,
-            "threshold": "3"
-          }
         }
       ]
     }
   ],
-  "anomalies": []
+  "anomalies": [
+    {
+      "rule_id": "TOOL_HIGH_FAILURE_RATE",
+      "severity": "WARNING",
+      "context": {
+        "tool_name": "grep",
+        "count": 5,
+        "total_calls": 15,
+        "threshold": "\u003e20%",
+        "failure_rate_pct": 33.3
+      }
+    }
+  ]
 }

@@ -3,9 +3,9 @@
   "ticket_id": "AL-56",
   "ticket_title": "Codex session discovery and metrics generation",
   "ticket_type": "feat",
-  "started_at": "2026-10-25T14:06:52.762Z",
-  "completed_at": "2026-10-27T00:31:39.126000+00:00",
-  "updated_at": "2026-10-27T00:32:07.601345+00:00",
+  "started_at": "2026-10-26T09:07:36.861000+00:00",
+  "completed_at": "2026-10-27T08:05:03.859000+00:00",
+  "updated_at": "2026-10-27T08:05:14.604111001Z",
   "code": {
     "lines_added": 21684,
     "lines_deleted": 16014,
@@ -14,7 +14,7 @@
     "prod_lines_added": 6080,
     "prod_lines_deleted": 2858,
     "files_changed": 105,
-    "sdlc_iterations": 130
+    "sdlc_iterations": 41
   },
   "sessions": [
     {
@@ -1851,15 +1851,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 169239,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 106,
@@ -2325,15 +2316,6 @@
             "context_tokens": 161153,
             "threshold": "160000"
           }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 176689,
-            "threshold": "160000"
-          }
         }
       ]
     },
@@ -2430,26 +2412,26 @@
           "model": "gemini-3.8-flash",
           "user": "Nilton Duarte",
           "started_at": "2026-10-26T09:07:37.340000+00:00",
-          "completed_at": "2026-10-27T00:31:39.126000+00:00",
-          "active_duration_seconds": 15219,
-          "turns": 985,
+          "completed_at": "2026-10-27T08:05:03.859000+00:00",
+          "active_duration_seconds": 15736,
+          "turns": 1035,
           "tokens": {
-            "input": 11127324,
-            "output": 117594,
-            "cache_read": 76631012,
-            "reasoning": 172646,
+            "input": 11805449,
+            "output": 121898,
+            "cache_read": 80999277,
+            "reasoning": 180698,
             "peak_context": 171647
           },
-          "cost_usd": 15.181219,
-          "compactions": 6,
-          "user_iterations": 37
+          "cost_usd": 16.063768,
+          "compactions": 7,
+          "user_iterations": 41
         }
       ],
       "tools": [
         {
           "name": "bash",
-          "calls": 315,
-          "errors": 3
+          "calls": 351,
+          "errors": 4
         },
         {
           "name": "edit",
@@ -2463,7 +2445,7 @@
         },
         {
           "name": "grep",
-          "calls": 133,
+          "calls": 135,
           "errors": 5
         },
         {
@@ -2473,7 +2455,7 @@
         },
         {
           "name": "read",
-          "calls": 291,
+          "calls": 296,
           "errors": 1
         },
         {
@@ -2564,15 +2546,6 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "general",
-            "context_tokens": 171647,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
             "turn": 145,
@@ -2618,6 +2591,16 @@
             "turn": 806,
             "token_delta": 64051,
             "context_tokens": 64051,
+            "threshold": "40000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 980,
+            "token_delta": 75155,
+            "context_tokens": 75155,
             "threshold": "40000"
           }
         }
