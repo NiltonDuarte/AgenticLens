@@ -1,5 +1,7 @@
 # fix(backfill): preserve Codex rollout session trees (FIX-8)
 
+Iteration 06 merges the latest `origin/main` into the FIX-8 branch. The merge completed without conflicts and `make` passed.
+
 Iteration 05 regenerates the FIX-8 metrics ledger from the Codex root session using `--source codex`, replacing the earlier empty OpenCode-source ledger.
 
 ## Summary

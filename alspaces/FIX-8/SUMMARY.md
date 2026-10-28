@@ -1,5 +1,9 @@
 # FIX-8 Work Summary
 
+## Iteration 06: Main Branch Sync
+
+Merged `origin/main` into `fix/FIX-8-codex-session-tree-refresh` without conflicts. `make` passed, including Go vet, frontend typecheck and lint, Go race tests, all 727 frontend tests, frontend production build, and multi-platform binary builds. Dependency installation reported six npm audit findings (three moderate, one high, two critical); no dependency changes were made.
+
 ## Iteration 05: Codex Root Session Telemetry
 
 Regenerated telemetry using the AgenticLens CLI's Codex source against the active root rollout, replacing the earlier empty OpenCode-source ledger.
@@ -36,15 +40,15 @@ Added coverage for root-plus-child replacement, single-session replacement, disc
 - Independent review — APPROVED. Review noted no direct test of combine/grouping failure branches; those failures occur before the staged replacement mutates stored sessions.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 13
-- **Active Agent Duration:** 25m 45s (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 14
+- **Active Agent Duration:** 27m 21s (excludes user wait time)
 - **Context Window Health:** ELEVATED — Root agent peak 186.1k tokens (93% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 3.2:1 (+226 test lines / +71 prod lines)
 - **Code Delivered:** +297 / -9 lines across 2 code files (excluding docs)
-- **Reasoning Effort:** 23,518 reasoning tokens (34.6% of generated output)
-- **Tool Health & Self-Correction:** 93 tool calls (6 self-corrections, 93.5% success rate)
+- **Reasoning Effort:** 25,260 reasoning tokens (34.2% of generated output)
+- **Tool Health & Self-Correction:** 102 tool calls (6 self-corrections, 94.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 1 execution anomaly detected (1 CRITICAL).
@@ -55,11 +59,11 @@ Added coverage for root-plus-child replacement, single-session replacement, disc
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 425,897 | 44,530 | 19,487,744 | 97.9% | 186.1k | ELEVATED | $0.00 |
-| **Total** | **1** | **425,897** | **44,530** | **19,487,744** | **97.9%** | **186.1k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 438,953 | 48,627 | 20,592,512 | 97.9% | 186.1k | ELEVATED | $0.00 |
+| **Total** | **1** | **438,953** | **48,627** | **20,592,512** | **97.9%** | **186.1k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 1 | 425,897 | 44,530 | 19,487,744 | 97.9% | $0.00 |
-| **Total** | **1** | **425,897** | **44,530** | **19,487,744** | **97.9%** | **$0.00** |
+| **gpt-6-luna** | 1 | 438,953 | 48,627 | 20,592,512 | 97.9% | $0.00 |
+| **Total** | **1** | **438,953** | **48,627** | **20,592,512** | **97.9%** | **$0.00** |
