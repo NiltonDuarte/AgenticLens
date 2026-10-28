@@ -4,8 +4,8 @@
   "ticket_title": "Backfill Multi-Root Sessions and Require Explicit Command Line Fallbacks",
   "ticket_type": "fix",
   "started_at": "2026-10-28T17:44:06.446000+00:00",
-  "completed_at": "2026-10-28T21:52:43.897000+00:00",
-  "updated_at": "2026-10-28T21:52:55.351948+00:00",
+  "completed_at": "2026-10-28T23:04:43.749000+00:00",
+  "updated_at": "2026-10-28T23:04:53.629229+00:00",
   "code": {
     "lines_added": 2208,
     "lines_deleted": 907,
@@ -14,9 +14,108 @@
     "prod_lines_added": 576,
     "prod_lines_deleted": 336,
     "files_changed": 41,
-    "sdlc_iterations": 17
+    "sdlc_iterations": 20
   },
   "sessions": [
+    {
+      "id": "ses_e7b586772fferGUFzPNahDFTZH",
+      "parent_id": "ses_e7c634fd2ffeNv8k9SBWOV5vtX",
+      "source": "opencode",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "id": "ses_e7b586772fferGUFzPNahDFTZH-inv-1",
+          "role": "coder",
+          "model": "gemini-3.8-flash",
+          "started_at": "2026-10-28T22:35:38.534000+00:00",
+          "completed_at": "2026-10-28T23:04:43.749000+00:00",
+          "active_duration_seconds": 1742,
+          "turns": 314,
+          "tokens": {
+            "input": 1634386,
+            "output": 43836,
+            "cache_read": 27555056,
+            "reasoning": 61981,
+            "peak_context": 168353
+          },
+          "cost_usd": 3.689232,
+          "compactions": 2,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "calls": 151,
+          "errors": 0
+        },
+        {
+          "name": "bash",
+          "calls": 62,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 45,
+          "errors": 1
+        },
+        {
+          "name": "edit",
+          "calls": 40,
+          "errors": 2
+        },
+        {
+          "name": "glob",
+          "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 101,
+            "context_tokens": 160108,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 280,
+            "token_delta": 104228,
+            "context_tokens": 104228,
+            "threshold": "80000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder",
+            "context_tokens": 168353,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 110,
+            "token_delta": 72279,
+            "context_tokens": 72279,
+            "threshold": "40000"
+          }
+        }
+      ]
+    },
     {
       "id": "ses_e7b84d736ffehiItmE7Kv4u374",
       "parent_id": "ses_e7c634fd2ffeNv8k9SBWOV5vtX",
@@ -379,55 +478,55 @@
           "role": "orchestrator",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-28T17:44:06.801000+00:00",
-          "completed_at": "2026-10-28T21:52:43.897000+00:00",
-          "active_duration_seconds": 11912,
-          "turns": 622,
+          "completed_at": "2026-10-28T22:35:27.583000+00:00",
+          "active_duration_seconds": 13096,
+          "turns": 682,
           "tokens": {
-            "input": 4300899,
-            "output": 86432,
-            "cache_read": 47819822,
-            "reasoning": 140669,
+            "input": 4995879,
+            "output": 92275,
+            "cache_read": 51733760,
+            "reasoning": 149992,
             "peak_context": 169194
           },
-          "cost_usd": 7.66379,
+          "cost_usd": 8.535443,
           "compactions": 5,
-          "user_iterations": 17
+          "user_iterations": 20
         }
       ],
       "tools": [
         {
           "name": "bash",
-          "calls": 222,
+          "calls": 244,
           "errors": 2
         },
         {
           "name": "read",
-          "calls": 212,
+          "calls": 229,
           "errors": 0
         },
         {
           "name": "edit",
-          "calls": 72,
+          "calls": 73,
           "errors": 1
         },
         {
           "name": "grep",
-          "calls": 57,
+          "calls": 64,
           "errors": 0
         },
         {
           "name": "write",
-          "calls": 11,
+          "calls": 12,
           "errors": 0
         },
         {
           "name": "task",
-          "calls": 7,
-          "errors": 2
+          "calls": 9,
+          "errors": 3
         },
         {
           "name": "glob",
-          "calls": 6,
+          "calls": 8,
           "errors": 0
         },
         {
@@ -437,12 +536,12 @@
         },
         {
           "name": "question",
-          "calls": 1,
+          "calls": 2,
           "errors": 0
         },
         {
           "name": "t3-code_link_pull_request",
-          "calls": 1,
+          "calls": 2,
           "errors": 0
         }
       ],
@@ -534,10 +633,10 @@
       "severity": "WARNING",
       "context": {
         "tool_name": "task",
-        "count": 2,
-        "total_calls": 7,
+        "count": 3,
+        "total_calls": 9,
         "threshold": "\u003e20%",
-        "failure_rate_pct": 28.6
+        "failure_rate_pct": 33.3
       }
     }
   ]

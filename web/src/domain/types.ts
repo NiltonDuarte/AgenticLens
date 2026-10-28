@@ -48,10 +48,8 @@ export interface InvocationTokens {
 
 export interface InvocationFact {
   readonly id: string;
-  readonly parent_id?: string | null;
   readonly role: AgentRole;
   readonly model: string;
-  readonly user?: string;
   readonly started_at: string | null;
   readonly completed_at: string | null;
   readonly active_duration_seconds: number;

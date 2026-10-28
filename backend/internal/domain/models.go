@@ -223,7 +223,7 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 			}
 			return session, nil
 		}
-		session := &SessionFact{ID: clean, Source: SourceOpenCode, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{}}
+		session := &SessionFact{ID: clean, Source: SourceOpenCode, User: "unknown", Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{}}
 		if parent != nil && strings.TrimSpace(*parent) != "" {
 			p := strings.TrimSpace(*parent)
 			session.ParentID = &p

@@ -447,13 +447,12 @@ func TestScanWorkspaces(t *testing.T) {
     {
       "id": "ses-1",
       "source": "opencode",
+      "user": "test-user",
       "invocations": [
         {
-          "id": "ses-1",
-          "parent_id": null,
+          "id": "ses-1-inv-1",
           "role": "orchestrator",
           "model": "model-x",
-          "user": "test-user",
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 60,
@@ -1161,13 +1160,12 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
     {
       "id": "s1",
       "source": "opencode",
+      "user": "u",
       "invocations": [
         {
-          "id": "s1",
-          "parent_id": null,
+          "id": "s1-inv-1",
           "role": "coder",
           "model": "m",
-          "user": "u",
           "active_duration_seconds": 1,
           "turns": 1,
           "tokens": {
@@ -1263,12 +1261,12 @@ func TestLoadTicketWorkspace(t *testing.T) {
     {
       "id": "ses-1",
       "source": "opencode",
+      "user": "test-dev",
       "invocations": [
         {
-          "id": "ses-1",
+          "id": "ses-1-inv-1",
           "role": "orchestrator",
           "model": "model-1",
-          "user": "test-dev",
           "active_duration_seconds": 90,
           "turns": 3,
           "tokens": {
@@ -1280,7 +1278,6 @@ func TestLoadTicketWorkspace(t *testing.T) {
           },
           "cost_usd": 0.08,
           "compactions": 0,
-          "parent_id": null,
           "started_at": null,
           "completed_at": null,
           "user_iterations": 0
@@ -1952,15 +1949,14 @@ role_mappings:
     {
       "id": "ses-build",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-build",
+          "id": "ses-build-inv-1",
           "role": "build",
           "model": "claude-3-sonnet",
           "cost_usd": 1.5,
           "turns": 3,
-          "parent_id": null,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -1982,15 +1978,15 @@ role_mappings:
     {
       "id": "ses-qa",
       "source": "opencode",
+      "user": "fixture-user",
+      "parent_id": "ses-build",
       "invocations": [
         {
-          "id": "ses-qa",
-          "parent_id": "ses-build",
+          "id": "ses-qa-inv-1",
           "role": "qa-bot",
           "model": "claude-3-haiku",
           "cost_usd": 0.5,
           "turns": 2,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -2007,7 +2003,6 @@ role_mappings:
       ],
       "tools": [],
       "events": [],
-      "parent_id": "ses-build",
       "anomalies": []
     }
   ]
@@ -2121,15 +2116,14 @@ role_mappings:
     {
       "id": "ses-eng",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-eng",
+          "id": "ses-eng-inv-1",
           "role": "sys-engineer",
           "model": "claude-3-sonnet",
           "cost_usd": 1.5,
           "active_duration_seconds": 120,
-          "parent_id": null,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "turns": 0,
@@ -2151,15 +2145,14 @@ role_mappings:
     {
       "id": "ses-test",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-test",
+          "id": "ses-test-inv-1",
           "role": "lead-tester",
           "model": "gpt-4o",
           "cost_usd": 0.8,
           "active_duration_seconds": 60,
-          "parent_id": null,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "turns": 0,

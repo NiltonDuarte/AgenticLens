@@ -543,8 +543,8 @@ func (e *BackfillEngine) processSingleWorkspace(
 									}
 								}
 								for i := range freshCodex {
-									if freshCodex[i].User == "" {
-										if u, ok := existingUsers[freshCodex[i].ID]; ok {
+									if freshCodex[i].User == "" || freshCodex[i].User == "unknown" {
+										if u, ok := existingUsers[freshCodex[i].ID]; ok && strings.TrimSpace(u) != "" {
 											freshCodex[i].User = u
 										}
 									}

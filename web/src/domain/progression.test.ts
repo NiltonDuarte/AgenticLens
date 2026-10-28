@@ -164,13 +164,12 @@ describe('Domain Progression Aggregator', () => {
                     sessions: [
                         {
                             id: "inv-1",
+                            user: 'dev',
                             invocations: [
                                 {
                                     id: 'inv-1',
-                                    parent_id: null,
                                     role: 'coder',
                                     model: 'gpt-4',
-                                    user: 'dev',
                                     started_at: '2026-10-19T09:15:00Z',
                                     completed_at: '2026-10-19T09:20:00Z',
                                     active_duration_seconds: 300,
@@ -184,13 +183,12 @@ describe('Domain Progression Aggregator', () => {
                         },
                         {
                             id: "inv-2",
+                            user: 'dev',
                             invocations: [
                                 {
                                     id: 'inv-2',
-                                    parent_id: null,
                                     role: 'coder',
                                     model: 'gpt-4',
-                                    user: 'dev',
                                     started_at: '2026-10-19T10:15:00Z',
                                     completed_at: '2026-10-19T10:20:00Z',
                                     active_duration_seconds: 300,
@@ -204,13 +202,12 @@ describe('Domain Progression Aggregator', () => {
                         },
                         {
                             id: "inv-3",
+                            user: 'dev',
                             invocations: [
                                 {
                                     id: 'inv-3',
-                                    parent_id: null,
                                     role: 'coder',
                                     model: 'gpt-4',
-                                    user: 'dev',
                                     started_at: '2026-10-19T11:15:00Z',
                                     completed_at: '2026-10-19T11:20:00Z',
                                     active_duration_seconds: 300,
@@ -271,10 +268,8 @@ describe('Domain Progression Aggregator', () => {
         it('defensively calculates cache hit rate when zero tokens are present', () => {
             const zeroInv: InvocationFact = {
                 id: 'zero-inv',
-                parent_id: null,
                 role: 'coder',
                 model: 'test',
-                user: 'dev',
                 started_at: '2026-10-15T10:00:00Z',
                 completed_at: '2026-10-15T10:05:00Z',
                 active_duration_seconds: 10,
@@ -439,13 +434,12 @@ describe('Domain Progression Aggregator', () => {
                     sessions: [
                         {
                             id: "fixture-session",
+                            user: 'agent',
                             invocations: [
                                 {
                                     id: `inv-${id}`,
-                                    parent_id: null,
                                     role: 'coder',
                                     model: 'test-model',
-                                    user: 'agent',
                                     started_at: `${date}T08:00:00Z`,
                                     completed_at: `${date}T10:00:00Z`,
                                     active_duration_seconds: 60,
@@ -551,10 +545,8 @@ describe('Domain Progression Aggregator', () => {
         it('accurately accumulates multiple invocations on the same day and tracks peak context', () => {
             const inv1: InvocationFact = {
                 id: 'inv-1',
-                parent_id: null,
                 role: 'orchestrator',
                 model: 'model-a',
-                user: 'dev',
                 started_at: '2026-10-15T09:00:00Z',
                 completed_at: '2026-10-15T09:10:00Z',
                 active_duration_seconds: 600,
@@ -571,10 +563,8 @@ describe('Domain Progression Aggregator', () => {
             };
             const inv2: InvocationFact = {
                 id: 'inv-2',
-                parent_id: null,
                 role: 'coder',
                 model: 'model-b',
-                user: 'dev',
                 started_at: '2026-10-15T10:00:00Z',
                 completed_at: '2026-10-15T10:15:00Z',
                 active_duration_seconds: 900,
@@ -591,10 +581,8 @@ describe('Domain Progression Aggregator', () => {
             };
             const inv3: InvocationFact = {
                 id: 'inv-3',
-                parent_id: null,
                 role: 'tester',
                 model: 'model-c',
-                user: 'dev',
                 started_at: '2026-10-15T11:00:00Z',
                 completed_at: '2026-10-15T11:05:00Z',
                 active_duration_seconds: 300,
@@ -707,10 +695,8 @@ describe('Domain Progression Aggregator', () => {
         it('handles negative net lines when lines deleted exceeds lines added', () => {
             const inv: InvocationFact = {
                 id: 'refactor-inv',
-                parent_id: null,
                 role: 'coder',
                 model: 'model',
-                user: 'dev',
                 started_at: '2026-10-20T10:00:00Z',
                 completed_at: '2026-10-20T10:10:00Z',
                 active_duration_seconds: 60,
@@ -799,10 +785,8 @@ describe('Domain Progression Aggregator', () => {
             // 100% cache hit: input = 0, cache_read = 500
             const inv100: InvocationFact = {
                 id: 'inv-100',
-                parent_id: null,
                 role: 'coder',
                 model: 'test',
-                user: 'dev',
                 started_at: '2026-10-15T10:00:00Z',
                 completed_at: '2026-10-15T10:05:00Z',
                 active_duration_seconds: 10,
@@ -814,10 +798,8 @@ describe('Domain Progression Aggregator', () => {
             // 0% cache hit: input = 500, cache_read = 0
             const inv0: InvocationFact = {
                 id: 'inv-0',
-                parent_id: null,
                 role: 'coder',
                 model: 'test',
-                user: 'dev',
                 started_at: '2026-10-16T10:00:00Z',
                 completed_at: '2026-10-16T10:05:00Z',
                 active_duration_seconds: 10,
@@ -906,10 +888,8 @@ describe('Domain Progression Aggregator', () => {
         it('safely skips invocations where all date timestamps are corrupted without panicking', () => {
             const corruptInv: InvocationFact = {
                 id: 'corrupt-inv',
-                parent_id: null,
                 role: 'coder',
                 model: 'test',
-                user: 'dev',
                 started_at: 'totally-invalid-timestamp',
                 completed_at: 'another-corrupt-date',
                 active_duration_seconds: 10,
@@ -995,10 +975,8 @@ describe('Domain Progression Aggregator', () => {
         it('does not allocate to time buckets when completed_at is null on invocation and ledger', () => {
             const fallbackInv: InvocationFact = {
                 id: 'fb-inv',
-                parent_id: null,
                 role: 'coder',
                 model: 'test',
-                user: 'dev',
                 started_at: '2026-10-11T10:00:00Z',
                 completed_at: null, // missing
                 active_duration_seconds: 30,
@@ -1105,10 +1083,8 @@ describe('Domain Progression Aggregator', () => {
         it('falls back to ledger completed_at when invocation completed_at is null but ledger is completed', () => {
             const fallbackInv: InvocationFact = {
                 id: 'fb-inv-2',
-                parent_id: null,
                 role: 'coder',
                 model: 'test',
-                user: 'dev',
                 started_at: '2026-10-11T10:00:00Z',
                 completed_at: null, // missing
                 active_duration_seconds: 30,
@@ -1221,10 +1197,8 @@ describe('Domain Progression Aggregator', () => {
             for (const invalidCompleted of invalidCompletedValues) {
                 const invWithoutCompleted: InvocationFact = {
                     id: 'inv-no-completed',
-                    parent_id: null,
                     role: 'coder',
                     model: 'test',
-                    user: 'dev',
                     started_at: '2026-10-15T10:00:00Z',
                     completed_at: null,
                     active_duration_seconds: 30,
@@ -1311,10 +1285,8 @@ describe('Domain Progression Aggregator', () => {
             // Midnight transition: 23:50 on 2026-10-18 and 00:10 on 2026-10-19
             const invLate: InvocationFact = {
                 id: 'inv-late',
-                parent_id: null,
                 role: 'coder',
                 model: 'm',
-                user: 'u',
                 started_at: '2026-10-18T23:50:00Z',
                 completed_at: '2026-10-18T23:55:00Z',
                 active_duration_seconds: 60,
@@ -1325,10 +1297,8 @@ describe('Domain Progression Aggregator', () => {
             };
             const invEarly: InvocationFact = {
                 id: 'inv-early',
-                parent_id: null,
                 role: 'coder',
                 model: 'm',
-                user: 'u',
                 // 02:10 +02:00 is 00:10 UTC on 2026-10-19
                 started_at: '2026-10-19T02:05:00+02:00',
                 completed_at: '2026-10-19T02:10:00+02:00',
@@ -1450,13 +1420,12 @@ describe('Domain Progression Aggregator', () => {
                     sessions: [
                         {
                             id: "fixture-session",
+                            user: 'engineer',
                             invocations: [
                                 {
                                     id: `inv-${id}`,
-                                    parent_id: null,
                                     role: 'coder',
                                     model: 'model-x',
-                                    user: 'engineer',
                                     started_at: `${dateStr}T08:00:00Z`,
                                     completed_at: `${dateStr}T12:00:00Z`,
                                     active_duration_seconds: 3600,

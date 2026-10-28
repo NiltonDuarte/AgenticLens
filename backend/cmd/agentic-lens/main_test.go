@@ -202,6 +202,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		"sessions": [{
 			"id": "ses-anom",
 			"source": "opencode",
+			"user": "test-engineer",
 			"invocations": [],
 			"events": [],
 			"anomalies": [],
@@ -1138,6 +1139,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing
 		"sessions":[{
 			"id":"session-fixture",
 			"source":"opencode",
+			"user":"tester",
 			"invocations":[],
 			"tools":[{"name":"bash","calls":8,"errors":6}],
 			"anomalies":[],
@@ -1809,10 +1811,10 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
     {
       "id": "ses_cached_inv_1",
       "source": "opencode",
+      "user": "engineer",
       "invocations": [
         {
-          "id": "ses_cached_inv_1",
-          "user": "engineer",
+          "id": "ses_cached_inv_1-inv-1",
           "role": "coder",
           "model": "gpt-4o",
           "tokens": {
@@ -1823,7 +1825,6 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
             "peak_context": 0
           },
           "cost_usd": 0.003,
-          "parent_id": null,
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -1872,8 +1873,8 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if len(parsed.ToDomain().InvocationFacts()) != 1 {
 			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
-		if parsed.ToDomain().InvocationFacts()[0].ID != "ses_cached_inv_1" {
-			t.Errorf("expected invocation ID ses_cached_inv_1, got %s", parsed.ToDomain().InvocationFacts()[0].ID)
+		if parsed.ToDomain().InvocationFacts()[0].ID != "ses_cached_inv_1-inv-1" {
+			t.Errorf("expected invocation ID ses_cached_inv_1-inv-1, got %s", parsed.ToDomain().InvocationFacts()[0].ID)
 		}
 	})
 

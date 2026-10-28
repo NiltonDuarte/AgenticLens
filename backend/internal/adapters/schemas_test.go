@@ -37,7 +37,7 @@ func TestValidateRuntimeFactLedgerRejectsIncompleteV4(t *testing.T) {
 }
 
 func TestValidateRuntimeFactLedgerAcceptsCanonicalV4WithoutMigrationMetadata(t *testing.T) {
-	base := `{"schema_version":4,"sessions":[{"id":"s1","source":"opencode","invocations":[{"id":"i1","parent_id":null,"role":"orchestrator","model":"m","user":"u","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
+	base := `{"schema_version":4,"sessions":[{"id":"s1","source":"opencode","user":"u","invocations":[{"id":"s1-inv-1","role":"orchestrator","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(base)); err != nil {
 		t.Fatalf("canonical v4 without workflow metadata should be accepted: %v", err)
 	}
@@ -503,11 +503,12 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 			name    string
 			session adapters.SessionFactDTO
 		}{
-			{"blank tool name", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Calls: 1}}}},
-			{"negative tool calls", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: -1}}}},
-			{"errors exceed calls", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1, Errors: 2}}}},
-			{"duplicate tool name", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1}, {Name: "bash", Calls: 2}}}},
-			{"dangling invocation parent", adapters.SessionFactDTO{ID: "s1", Invocations: []adapters.InvocationFactDTO{{ID: "i1", ParentID: &missingParent}}}},
+			{"blank tool name", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Calls: 1}}}},
+			{"negative tool calls", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: -1}}}},
+			{"errors exceed calls", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1, Errors: 2}}}},
+			{"duplicate tool name", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1}, {Name: "bash", Calls: 2}}}},
+			{"dangling session parent", adapters.SessionFactDTO{ID: "s1", User: "alice", ParentID: &missingParent}},
+			{"blank session user", adapters.SessionFactDTO{ID: "s1", User: "   "}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -678,7 +679,6 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 				ID:    "inv-1",
 				Role:  tc.role,
 				Model: tc.model,
-				User:  "test-user",
 			}
 
 			dom := dto.ToDomain()

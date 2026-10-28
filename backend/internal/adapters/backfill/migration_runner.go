@@ -307,6 +307,9 @@ func validateCurrentLedger(content []byte) error {
 				if _, hasSrc := items[i]["source"]; !hasSrc {
 					items[i]["source"], _ = json.Marshal(domain.SourceOpenCode)
 				}
+				if _, hasUser := items[i]["user"]; !hasUser {
+					items[i]["user"], _ = json.Marshal("unknown")
+				}
 			}
 			raw["sessions"], _ = json.Marshal(items)
 		}

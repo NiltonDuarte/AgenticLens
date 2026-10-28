@@ -37,10 +37,8 @@ func (dto InvocationTokensDTO) ToDomain() domain.InvocationTokens {
 // InvocationFactDTO represents a single invocation fact in JSON boundary serialization.
 type InvocationFactDTO struct {
 	ID                    string              `json:"id"`
-	ParentID              *string             `json:"parent_id,omitempty"`
 	Role                  string              `json:"role"`
 	Model                 string              `json:"model"`
-	User                  string              `json:"user,omitempty"`
 	StartedAt             *string             `json:"started_at"`
 	CompletedAt           *string             `json:"completed_at"`
 	ActiveDurationSeconds int64               `json:"active_duration_seconds"`
@@ -332,10 +330,14 @@ func ValidateRuntimeFactLedger(data []byte) error {
 		if err := json.Unmarshal(rawSession, &session); err != nil {
 			return fmt.Errorf("canonical schema v4 session %d is invalid", si)
 		}
-		for _, required := range []string{"id", "source", "invocations", "tools", "anomalies"} {
+		for _, required := range []string{"id", "source", "user", "invocations", "tools", "anomalies"} {
 			if _, ok := session[required]; !ok {
 				return fmt.Errorf("canonical schema v4 session %d is missing required %s", si, required)
 			}
+		}
+		var sessionUser string
+		if err := json.Unmarshal(session["user"], &sessionUser); err != nil || strings.TrimSpace(sessionUser) == "" {
+			return fmt.Errorf("canonical schema v4 session %d requires a non-empty user", si)
 		}
 		for _, collection := range []string{"tools", "anomalies"} {
 			var values []json.RawMessage
@@ -355,6 +357,12 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			var invocation map[string]json.RawMessage
 			if err := json.Unmarshal(rawInvocation, &invocation); err != nil {
 				return fmt.Errorf("canonical schema v4 invocation %d in session %d is invalid", ii, si)
+			}
+			if _, ok := invocation["user"]; ok {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain user", ii, si)
+			}
+			if _, ok := invocation["parent_id"]; ok {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain parent_id", ii, si)
 			}
 			for _, required := range []string{"id", "role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
 				if _, ok := invocation[required]; !ok {
@@ -463,14 +471,6 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		}
 		user := strings.TrimSpace(session.User)
 		parentID := session.ParentID
-		for _, inv := range session.Invocations {
-			if user == "" && strings.TrimSpace(inv.User) != "" {
-				user = strings.TrimSpace(inv.User)
-			}
-			if parentID == nil && inv.ParentID != nil && strings.TrimSpace(*inv.ParentID) != "" {
-				parentID = inv.ParentID
-			}
-		}
 		sessions[i] = domain.SessionFact{
 			ID:       session.ID,
 			ParentID: parentID,
@@ -548,6 +548,12 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		if currentSchema && strings.TrimSpace(session.Source) == "" {
 			return fmt.Errorf("sessions[%d].source is required", i)
 		}
+		if currentSchema && strings.TrimSpace(session.User) == "" {
+			return fmt.Errorf("sessions[%d].user is required", i)
+		}
+		if session.User != strings.TrimSpace(session.User) {
+			return fmt.Errorf("sessions[%d].user must not have leading or trailing whitespace", i)
+		}
 		if currentSchema && (session.Invocations == nil || session.Tools == nil) {
 			return fmt.Errorf("sessions[%d] requires invocations and tools collections", i)
 		}
@@ -562,14 +568,6 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		for j, inv := range session.Invocations {
 			if strings.TrimSpace(inv.ID) == "" {
 				return fmt.Errorf("sessions[%d].invocations[%d].id is required", i, j)
-			}
-			if inv.ParentID != nil {
-				if *inv.ParentID != strings.TrimSpace(*inv.ParentID) {
-					return fmt.Errorf("sessions[%d].invocations[%d].parent_id must not have leading or trailing whitespace", i, j)
-				}
-				if !seen[*inv.ParentID] {
-					return fmt.Errorf("sessions[%d].invocations[%d].parent_id %q does not identify a session", i, j, *inv.ParentID)
-				}
 			}
 		}
 		for j, tool := range session.Tools {

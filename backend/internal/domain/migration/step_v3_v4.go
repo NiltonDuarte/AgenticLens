@@ -49,6 +49,9 @@ func (s *StepV3ToV4UserIterations) Apply(ledger domain.AgenticFactLedger) (domai
 		if strings.TrimSpace(string(cloned.Sessions[i].Source)) == "" {
 			cloned.Sessions[i].Source = domain.SourceOpenCode
 		}
+		if strings.TrimSpace(cloned.Sessions[i].User) == "" {
+			cloned.Sessions[i].User = "unknown"
+		}
 	}
 
 	// If root invocations have 0 user_iterations and ledger has Code.SDLCIterations,

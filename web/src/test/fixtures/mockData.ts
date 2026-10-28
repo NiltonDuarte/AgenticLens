@@ -437,13 +437,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
             sessions: [
                 {
                     id: "inv-al1-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-01',
-                            parent_id: null,
+                            id: 'inv-al1-01-inv-1',
                             role: 'orchestrator',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-15T10:00:00Z',
                             completed_at: '2026-10-15T10:15:00Z',
                             active_duration_seconds: 420,
@@ -464,13 +463,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 {
                     id: "inv-al1-02",
                     parent_id: "inv-al1-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-02',
-                            parent_id: 'inv-al1-01',
+                            id: 'inv-al1-02-inv-1',
                             role: 'planner',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-15T10:16:00Z',
                             completed_at: '2026-10-15T10:35:00Z',
                             active_duration_seconds: 380,
@@ -491,13 +489,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 {
                     id: "inv-al1-03",
                     parent_id: "inv-al1-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-03',
-                            parent_id: 'inv-al1-01',
+                            id: 'inv-al1-03-inv-1',
                             role: 'coder',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-15T10:40:00Z',
                             completed_at: '2026-10-15T12:00:00Z',
                             active_duration_seconds: 980,
@@ -518,13 +515,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 {
                     id: "inv-al1-04",
                     parent_id: "inv-al1-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-04',
-                            parent_id: 'inv-al1-01',
+                            id: 'inv-al1-04-inv-1',
                             role: 'tester',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-15T12:05:00Z',
                             completed_at: '2026-10-15T13:30:00Z',
                             active_duration_seconds: 410,
@@ -545,13 +541,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 {
                     id: "inv-al1-05",
                     parent_id: "inv-al1-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-05',
-                            parent_id: 'inv-al1-01',
+                            id: 'inv-al1-05-inv-1',
                             role: 'reviewer',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-15T13:35:00Z',
                             completed_at: '2026-10-15T14:30:00Z',
                             active_duration_seconds: 260,
@@ -790,13 +785,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
             sessions: [
               {
                id: 'ses-al2-root',
+               user: 'developer',
                invocations: [
                 {
                     id: 'inv-al2-01',
-                    parent_id: null,
                     role: 'orchestrator',
                     model: 'gpt-4o',
-                    user: 'developer',
                     started_at: '2026-10-16T12:00:00Z',
                     completed_at: '2026-10-16T12:30:00Z',
                     active_duration_seconds: 520,
@@ -813,10 +807,8 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 },
                 {
                     id: 'inv-al2-02',
-                    parent_id: 'inv-al2-01',
                     role: 'coder',
                     model: 'gpt-4o',
-                    user: 'developer',
                     started_at: '2026-10-16T12:35:00Z',
                     completed_at: '2026-10-16T14:30:00Z',
                     active_duration_seconds: 880,
@@ -833,10 +825,8 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 },
                 {
                     id: 'inv-al2-03',
-                    parent_id: 'inv-al2-01',
                     role: 'tester',
                     model: 'gpt-4o',
-                    user: 'developer',
                     started_at: '2026-10-16T14:35:00Z',
                     completed_at: '2026-10-16T16:00:00Z',
                     active_duration_seconds: 580,
@@ -1029,13 +1019,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
             sessions: [
                 {
                     id: "inv-al3-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al3-01',
-                            parent_id: null,
+                            id: 'inv-al3-01-inv-1',
                             role: 'orchestrator',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-16T22:00:00Z',
                             completed_at: '2026-10-16T22:45:00Z',
                             active_duration_seconds: 640,
@@ -1056,13 +1045,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 {
                     id: "inv-al3-02",
                     parent_id: "inv-al3-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al3-02',
-                            parent_id: 'inv-al3-01',
+                            id: 'inv-al3-02-inv-1',
                             role: 'coder',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-16T22:50:00Z',
                             completed_at: '2026-10-17T03:00:00Z',
                             active_duration_seconds: 960,
@@ -1083,13 +1071,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 {
                     id: "inv-al3-03",
                     parent_id: "inv-al3-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al3-03',
-                            parent_id: 'inv-al3-01',
+                            id: 'inv-al3-03-inv-1',
                             role: 'tester',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-17T03:10:00Z',
                             completed_at: '2026-10-17T06:00:00Z',
                             active_duration_seconds: 550,
@@ -1286,13 +1273,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
             sessions: [
                 {
                     id: "inv-po1-01",
+                    user: 'product-owner',
                     invocations: [
                         {
-                            id: 'inv-po1-01',
-                            parent_id: null,
+                            id: 'inv-po1-01-inv-1',
                             role: 'planner',
                             model: 'claude-3-5-sonnet',
-                            user: 'product-owner',
                             started_at: '2026-10-14T09:00:00Z',
                             completed_at: '2026-10-14T11:15:00Z',
                             active_duration_seconds: 1120,
@@ -1453,13 +1439,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
             sessions: [
                 {
                     id: "inv-gen1-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-gen1-01',
-                            parent_id: null,
+                            id: 'inv-gen1-01-inv-1',
                             role: 'orchestrator',
                             model: 'o1-mini',
-                            user: 'developer',
                             started_at: '2026-10-17T07:30:00Z',
                             completed_at: '2026-10-17T08:15:00Z',
                             active_duration_seconds: 720,
@@ -1480,13 +1465,12 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                 {
                     id: "inv-gen1-02",
                     parent_id: "inv-gen1-01",
+                    user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-gen1-02',
-                            parent_id: 'inv-gen1-01',
+                            id: 'inv-gen1-02-inv-1',
                             role: 'coder',
                             model: 'claude-3-5-sonnet',
-                            user: 'developer',
                             started_at: '2026-10-17T08:20:00Z',
                             completed_at: '2026-10-17T09:40:00Z',
                             active_duration_seconds: 1150,

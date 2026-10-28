@@ -227,6 +227,15 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error grouping Codex session facts: %v\n", factErr)
 			os.Exit(1)
 		}
+		for i := range freshCodex {
+			if freshCodex[i].User == "" || freshCodex[i].User == "unknown" {
+				if u, ok := userBySessionID[freshCodex[i].ID]; ok && strings.TrimSpace(u) != "" {
+					freshCodex[i].User = strings.TrimSpace(u)
+				} else if strings.TrimSpace(currentUser) != "" {
+					freshCodex[i].User = strings.TrimSpace(currentUser)
+				}
+			}
+		}
 		freshSessions = freshCodex
 		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
 			activeStartedAt = &combined.StartedAt

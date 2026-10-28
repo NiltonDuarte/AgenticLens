@@ -115,6 +115,9 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 		if strings.TrimSpace(string(ledger.Sessions[i].Source)) == "" {
 			ledger.Sessions[i].Source = domain.SourceOpenCode
 		}
+		if strings.TrimSpace(ledger.Sessions[i].User) == "" {
+			ledger.Sessions[i].User = "unknown"
+		}
 	}
 	return ledger, version, nil
 }

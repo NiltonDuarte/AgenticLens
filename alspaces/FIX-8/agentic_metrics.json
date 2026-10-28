@@ -20,13 +20,12 @@
     {
       "id": "01a18171-3980-7a53-87b6-f8d1c9156789",
       "source": "codex",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "01a18171-3980-7a53-87b6-f8d1c9156789",
-          "parent_id": null,
+          "id": "01a18171-3980-7a53-87b6-f8d1c9156789-inv-1",
           "role": "RootAgent",
           "model": "gpt-6-luna",
-          "user": "",
           "started_at": "2026-10-28T07:37:24.372Z",
           "completed_at": "2026-10-28T09:33:43.287Z",
           "active_duration_seconds": 1752,

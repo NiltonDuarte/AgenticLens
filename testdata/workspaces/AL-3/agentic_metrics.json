@@ -30,13 +30,13 @@
   "sessions": [
     {
       "id": "inv-al3-01",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [
         {
-          "id": "inv-al3-01",
-          "parent_id": null,
+          "id": "inv-al3-01-inv-1",
           "role": "orchestrator",
           "model": "claude-3-5-sonnet",
-          "user": "developer",
           "started_at": "2026-10-16T22:00:00Z",
           "completed_at": "2026-10-16T22:45:00Z",
           "active_duration_seconds": 640,
@@ -76,19 +76,18 @@
         }
       ],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     },
     {
       "id": "inv-al3-02",
       "parent_id": "inv-al3-01",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [
         {
-          "id": "inv-al3-02",
-          "parent_id": "inv-al3-01",
+          "id": "inv-al3-02-inv-1",
           "role": "coder",
           "model": "claude-3-5-sonnet",
-          "user": "developer",
           "started_at": "2026-10-16T22:50:00Z",
           "completed_at": "2026-10-17T03:00:00Z",
           "active_duration_seconds": 960,
@@ -107,19 +106,18 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     },
     {
       "id": "inv-al3-03",
       "parent_id": "inv-al3-01",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [
         {
-          "id": "inv-al3-03",
-          "parent_id": "inv-al3-01",
+          "id": "inv-al3-03-inv-1",
           "role": "tester",
           "model": "claude-3-5-sonnet",
-          "user": "developer",
           "started_at": "2026-10-17T03:10:00Z",
           "completed_at": "2026-10-17T06:00:00Z",
           "active_duration_seconds": 550,
@@ -138,7 +136,6 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     }
   ]
