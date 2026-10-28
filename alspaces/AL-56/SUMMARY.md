@@ -2,6 +2,12 @@
 
 Research branch: `research/codex-openai-metrics`.
 
+## Iteration 10: Breaking schema v4 ingestion boundary
+
+AL-56 now treats schema v4 as structurally incompatible with schemas v1-v3. Ordinary `generate`, workspace loading, and server/API paths reject legacy ledgers before interpreting or merging facts. Operators must explicitly migrate, then run source-backed backfill. Shape-only migration and unavailable/missing source data leave `source_backfill` pending and the ledger runtime-ineligible. Runtime validation requires canonical session-owned structure, session source, required invocation/token fields, non-negative `user_iterations` (including explicit zero), and completed readiness metadata.
+
+Verification: `make` passed, including Go vet and race tests, frontend typecheck/lint and 727 tests, production build, and four platform builds. Independent iteration 10 review approved the change. See `iterations/09/PLAN.md`, `iterations/09/REVIEW.md`, `iterations/10/PLAN.md`, and `iterations/10/REVIEW.md` for the contract delta and review record.
+
 ## Result
 
 AgenticLens can derive meaningful metrics from a Codex rollout without keeping transcript payloads. The implementation adds a Codex JSONL adapter that projects observed thread/model/token usage, turn timing, tool lifecycle outcomes, and compaction events into source-neutral facts, then derives metrics from the schema-v4 ledger. Invocations, per-tool summaries, and retained events are grouped under their owning session; cross-session tool totals are derived from these facts. SDLC iteration totals preserve exact zero and sum primary root-session invocation counts.

@@ -235,5 +235,33 @@ func (e *Engine) applyChain(ledger domain.AgenticFactLedger, sourceVersion int, 
 		current = after
 	}
 
+	if sourceVersion < domain.CurrentSchemaVersion && targetVersion >= domain.CurrentSchemaVersion {
+		migrationInfo := current.Migration
+		if migrationInfo == nil {
+			migrationInfo = &domain.MigrationInfo{StepsCompleted: []string{}, StepsPending: []string{}}
+		}
+		completed := append([]string(nil), migrationInfo.StepsCompleted...)
+		pending := append([]string(nil), migrationInfo.StepsPending...)
+		found := false
+		for _, step := range pending {
+			if step == domain.MigrationStepSourceBackfill {
+				found = true
+				break
+			}
+		}
+		if !found {
+			pending = append(pending, domain.MigrationStepSourceBackfill)
+		}
+		migrationInfo.SchemaVersion = domain.CurrentSchemaVersion
+		migrationInfo.Status = domain.MigrationStatusPartial
+		migrationInfo.StepsCompleted = completed
+		migrationInfo.StepsPending = pending
+		if migrationInfo.Notes != "" {
+			migrationInfo.Notes += "; "
+		}
+		migrationInfo.Notes += "Schema migration changed ledger shape only; run source-backed backfill before runtime ingestion."
+		current.Migration = migrationInfo
+	}
+
 	return current, nil
 }

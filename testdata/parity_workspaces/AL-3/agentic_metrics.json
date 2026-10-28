@@ -4,8 +4,7 @@
     "schema_version": 4,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized",
-      "schema_v4_user_iterations"
+      "source_backfill"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
@@ -191,7 +190,8 @@
           "context_tokens": 91988
         }
       ],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4e98754ffeXdUDxqSl6vzZiY",
@@ -232,7 +232,8 @@
           "context_tokens": 49714
         }
       ],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4e31f2fffevWGCMGO5rMxraz",
@@ -262,7 +263,8 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4e040eaffeRZrI8cYVtrZDvC",
@@ -292,7 +294,8 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4dc7397ffesknCNqW0hOgAFt",
@@ -322,7 +325,8 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4d2ca26ffeJDSO47uyJCY6rL",
@@ -363,7 +367,8 @@
           "context_tokens": 33225
         }
       ],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4d0657fffefOIupm8pfS3ElE",
@@ -393,7 +398,8 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4cfd100ffevW0gblRZ2EWau3",
@@ -423,7 +429,8 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4c63fcdffe6HS77ySfmN3tWQ",
@@ -453,7 +460,8 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     }
   ]
 }

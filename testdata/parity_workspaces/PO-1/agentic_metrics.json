@@ -4,8 +4,7 @@
     "schema_version": 4,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized",
-      "schema_v4_user_iterations"
+      "source_backfill"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
@@ -103,7 +102,8 @@
           "context_tokens": 47888
         }
       ],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     }
   ]
 }

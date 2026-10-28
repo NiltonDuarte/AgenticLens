@@ -2,7 +2,7 @@
 
 ## Goal
 
-Provide first-class Codex session discovery and telemetry extraction in AgenticLens while strictly preserving backward compatibility, extraction fidelity, and non-breakage across existing OpenCode workflows, historical schemas, CLI conventions, and the TypeScript dashboard.
+Provide first-class Codex session discovery and telemetry extraction in AgenticLens while preserving OpenCode workflow behavior and an explicit upgrade path for historical ledgers. Schema v4 has a structurally incompatible ledger shape: ordinary runtime ingestion must not interpret schema v1-v3 as v4.
 
 ## Research & Parity Deliverables
 
@@ -34,8 +34,11 @@ Provide first-class Codex session discovery and telemetry extraction in AgenticL
    - Recomputing Git code facts via --recompute-git strictly requires an explicit --ticket-id and an explicit --code-ref.
    - Batch execution of backfill across multi-ticket workspaces without --ticket-id must reject --recompute-git to prevent applying a single Git commit diff across historical tickets.
    - Schema migration (--migrate-schema) and database recomputation (--recompute-db) without --recompute-git must preserve existing Git code facts without alteration.
-6. Non-Destructive Ledger Loader:
-   - backend/internal/adapters/repository.go (LoadExistingFactLedger) parses both current schema-v4 atomic ledgers and legacy schemas (v1, v2, v3) to preserve historical code facts, root session links, and event streams during incremental runs.
+6. Explicit Legacy Upgrade Boundary (supersedes the prior non-destructive loader invariant):
+   - `LoadExistingFactLedger` and every ordinary server/API/generate ingestion path accept only the current canonical schema-v4 shape. They reject schema v1-v3 with an actionable error directing the operator to the explicit migration and source-backed backfill workflow; they must not parse, merge, normalize, or silently upgrade legacy shapes.
+   - Preserve a supported explicit migration path for v1-v3. The operator first runs schema migration, then runs source-backed backfill for the ledger's declared/selected harness to recover facts that a shape-only transform cannot reconstruct. Migration alone does not make a legacy ledger runtime-ingestion-ready.
+   - Backfill/migration may read legacy shapes only inside their explicit workflow. Preserve recoverable facts and report unrecoverable/missing source data; do not claim successful backfill when source evidence is unavailable. Keep existing backup, dry-run, ticket scoping, and Git-fact preservation guardrails.
+   - After successful source-backed backfill, persist and validate canonical v4, including required v4 atomic/session-owned fields. Ordinary ingestion then accepts the ledger. Malformed, ambiguous, unsupported, or still-incomplete ledgers fail closed without modifying the source file.
 7. Frontend Transparency:
    - All emitted ledgers adhere to schema-v4 domain models in backend/internal/domain/models.go.
    - The TypeScript frontend in web/src/ continues to consume ledgers identically regardless of whether the originating telemetry harness was OpenCode or Codex.
@@ -91,3 +94,16 @@ Codex child rollouts must retain their own first session identity and explicit o
 5. Schema Version 4 Elevation:
    - Schema version is bumped to 4 (CurrentSchemaVersion = 4) to formally incorporate atomic user_iterations on InvocationFact.
    - Historical ledgers created under schema versions 1, 2, and 3 require migration to schema version 4 via migrate-schema or backfill to populate user_iterations and align with the strict schema contract.
+
+## AL-56 v4 Compatibility Change
+
+The earlier invariant in §6 promising that `LoadExistingFactLedger` parses v1-v3 directly conflicts with the requested v4 compatibility boundary and is superseded by the explicit legacy-upgrade invariant above. This is an intentional breaking change to ordinary ingestion. Supported remediation is explicit schema migration followed by source-backed backfill; do not remove or strand that operator path. Server/API reads and `generate` must surface the same actionable legacy-schema rejection, and must not partially merge old facts before failing.
+
+### Acceptance Criteria
+
+- Ordinary server, API, and `generate` existing-ledger loads reject schema v1, v2, and v3 before parsing or merging legacy fact collections; errors identify the detected version and direct operators to the supported migration plus source-backed backfill sequence.
+- Current canonical v4 loads continue to work, including existing OpenCode workflows.
+- Explicit migration remains able to transform supported v1-v3 layouts, with existing dry-run/backup/scope safeguards.
+- A subsequent source-backed backfill can reconstruct source-available facts, report unavailable source data as incomplete/failure, and produce a validated canonical v4 ledger; no ordinary runtime ingestion proceeds on a migrated-only or incomplete ledger.
+- API/server behavior exposes the rejection clearly and consistently without rewriting the ledger. The frontend receives canonical v4 responses only and needs no legacy-shape parser.
+- Regression coverage exercises each legacy version through ordinary loader, generate, and server/API boundaries, plus successful explicit migrate-then-backfill and failure/incomplete-source cases.

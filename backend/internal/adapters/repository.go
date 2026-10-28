@@ -80,6 +80,10 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, err))
 			continue
 		}
+		if err := ValidateRuntimeFactLedger(content); err != nil {
+			scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, err))
+			continue
+		}
 
 		var dto AgenticFactLedgerDTO
 		if err := json.Unmarshal(content, &dto); err != nil {
@@ -253,6 +257,9 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	if err != nil {
 		return nil, fmt.Errorf("reading metrics file for ticket %s: %w", cleanID, err)
 	}
+	if err := ValidateRuntimeFactLedger(content); err != nil {
+		return nil, fmt.Errorf("loading metrics for ticket %s: %w", cleanID, err)
+	}
 
 	var dto AgenticFactLedgerDTO
 	if err := json.Unmarshal(content, &dto); err != nil {
@@ -397,6 +404,9 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading existing ledger at %s: %w", path, err)
+	}
+	if err := ValidateRuntimeFactLedger(data); err != nil {
+		return nil, fmt.Errorf("loading existing ledger at %s: %w", path, err)
 	}
 
 	var raw rawExistingLedger

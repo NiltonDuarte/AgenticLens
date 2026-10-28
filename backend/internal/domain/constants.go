@@ -14,6 +14,7 @@ const (
 	MigrationStepOpenCodeDB      = "opencode_db"
 	MigrationStepSanitizedEvents = "schema_v3_sanitized"
 	MigrationStepUserIterations  = "schema_v4_user_iterations"
+	MigrationStepSourceBackfill  = "source_backfill"
 )
 
 // HealthyCeilingTokens is the threshold constant for a healthy context window (200,000 tokens).

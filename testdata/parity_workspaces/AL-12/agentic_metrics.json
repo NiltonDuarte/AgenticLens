@@ -4,8 +4,7 @@
     "schema_version": 4,
     "status": "completed",
     "steps_completed": [
-      "schema_v3_sanitized",
-      "schema_v4_user_iterations"
+      "source_backfill"
     ],
     "steps_pending": [],
     "last_migrated_at": "2026-10-19T13:00:13.241024505Z",
@@ -179,7 +178,8 @@
           "context_tokens": 71308
         }
       ],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb426400cffelHQ5rlr9Lag0kA",
@@ -209,7 +209,8 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4182dbfffelxbkbXuYflRmg1",
@@ -260,7 +261,8 @@
           "context_tokens": 87196
         }
       ],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb4118b56ffepNt4t7Yu3IwyrB",
@@ -301,7 +303,8 @@
           "context_tokens": 36629
         }
       ],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     },
     {
       "id": "ses_eb40efb55ffellbOoCptgjd9F3",
@@ -331,7 +334,8 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode"
+      "source": "opencode",
+      "anomalies": []
     }
   ]
 }

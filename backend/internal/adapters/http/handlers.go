@@ -2,14 +2,32 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/domain"
 )
+
+func rejectInvalidLedgers(w http.ResponseWriter, errors []string) bool {
+	if len(errors) == 0 {
+		return false
+	}
+	WriteError(w, http.StatusUnprocessableEntity, "invalid_ledger", strings.Join(errors, "; "))
+	return true
+}
+
+func writeWorkspaceLoadError(w http.ResponseWriter, err error) {
+	if errors.Is(err, os.ErrNotExist) {
+		WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")
+		return
+	}
+	WriteError(w, http.StatusUnprocessableEntity, "invalid_ledger", err.Error())
+}
 
 func parseDateBoundary(param string, isEnd bool) (*time.Time, error) {
 	clean := strings.TrimSpace(param)
@@ -122,6 +140,9 @@ func parseMultiQueryParam(values []string) []string {
 func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		report := adapters.ScanWorkspaces(workspacesDir)
+		if rejectInvalidLedgers(w, report.Errors) {
+			return
+		}
 
 		query := r.URL.Query()
 		windowParam := query.Get("window")
@@ -181,7 +202,11 @@ func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.Wo
 		}
 
 		targetLedger, err := adapters.LoadTicketWorkspace(ticketID, workspacesDir)
-		if err != nil || targetLedger == nil {
+		if err != nil {
+			writeWorkspaceLoadError(w, err)
+			return
+		}
+		if targetLedger == nil {
 			WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")
 			return
 		}
@@ -228,7 +253,11 @@ func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydr
 		}
 
 		targetLedger, err := adapters.LoadTicketWorkspace(ticketID, workspacesDir)
-		if err != nil || targetLedger == nil {
+		if err != nil {
+			writeWorkspaceLoadError(w, err)
+			return
+		}
+		if targetLedger == nil {
 			WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")
 			return
 		}
@@ -257,6 +286,9 @@ func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydr
 func FleetHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		report := adapters.ScanWorkspaces(workspacesDir)
+		if rejectInvalidLedgers(w, report.Errors) {
+			return
+		}
 
 		query := r.URL.Query()
 		windowParam := query.Get("window")
@@ -296,6 +328,9 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 func ComparisonHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		report := adapters.ScanWorkspaces(workspacesDir)
+		if rejectInvalidLedgers(w, report.Errors) {
+			return
+		}
 
 		query := r.URL.Query()
 		windowParam := query.Get("window")
@@ -338,6 +373,9 @@ func ComparisonHandler(workspacesDir string) http.HandlerFunc {
 func ProgressionHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		report := adapters.ScanWorkspaces(workspacesDir)
+		if rejectInvalidLedgers(w, report.Errors) {
+			return
+		}
 
 		query := r.URL.Query()
 		windowParam := query.Get("window")

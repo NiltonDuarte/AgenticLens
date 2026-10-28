@@ -2,6 +2,7 @@ package adapters_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -11,6 +12,47 @@ import (
 
 func strPtr(s string) *string {
 	return &s
+}
+
+func TestValidateRuntimeFactLedgerRejectsLegacyVersionsBeforeFacts(t *testing.T) {
+	for _, version := range []int{1, 2, 3} {
+		t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {
+			data := []byte(fmt.Sprintf(`{"schema_version":%d,"invocations":[{"malformed":true}]}`, version))
+			err := adapters.ValidateRuntimeFactLedger(data)
+			if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("version %d", version)) {
+				t.Fatalf("expected version-specific legacy rejection, got %v", err)
+			}
+			if !strings.Contains(err.Error(), "source-backed") {
+				t.Fatalf("expected migration and source-backed backfill guidance, got %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateRuntimeFactLedgerRejectsIncompleteV4(t *testing.T) {
+	data := []byte(`{"schema_version":4,"sessions":[],"migration":{"status":"partial","steps_pending":["source_backfill"]}}`)
+	if err := adapters.ValidateRuntimeFactLedger(data); err == nil || !strings.Contains(err.Error(), "incomplete") {
+		t.Fatalf("expected incomplete v4 rejection, got %v", err)
+	}
+}
+
+func TestValidateRuntimeFactLedgerRequiresCanonicalV4ReadinessAndAtomicFields(t *testing.T) {
+	base := `{"schema_version":4,"migration":{"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"sessions":[{"id":"s1","source":"opencode","invocations":[{"id":"i1","parent_id":null,"role":"orchestrator","model":"m","user":"u","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
+	if err := adapters.ValidateRuntimeFactLedger([]byte(base)); err != nil {
+		t.Fatalf("explicit zero and source-backed readiness should be accepted: %v", err)
+	}
+	for name, data := range map[string]string{
+		"missing migration":        `{"schema_version":4,"sessions":[]}`,
+		"missing source":           strings.Replace(base, `,"source":"opencode"`, "", 1),
+		"missing atomic field":     strings.Replace(base, `,"user_iterations":0`, "", 1),
+		"missing source readiness": strings.Replace(base, `"steps_completed":["source_backfill"]`, `"steps_completed":[]`, 1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := adapters.ValidateRuntimeFactLedger([]byte(data)); err == nil {
+				t.Fatal("expected canonical readiness rejection")
+			}
+		})
+	}
 }
 
 func TestAgenticFactLedgerDTO_PersistsSessionAndTicketAnomalyScopes(t *testing.T) {
