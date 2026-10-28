@@ -44,6 +44,22 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: AL2-4, AL2-5
   - **File**: `alspaces/plan/to-do/AL2-3 multi project configuration schema domain aggregations and multi folder scanner.md`
 
+- **AL2-6**: Model API Pricing Configuration, Domain Rate-Card Cost Approximation Engine, and Hybrid Ledger Ingestion
+  - **Subsystem**: Config / Domain / Adapters / CLI / HTTP / Presentation / Tests
+  - **Phase**: Phase 8 (v2 Cost Modeling & Parity)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL2-7
+  - **File**: `alspaces/plan/to-do/AL2-6 model api pricing configuration and rate card cost approximation engine.md`
+
+- **AL2-8**: Ingest Model Reasoning Effort Variants and Surface Deliberation Settings across Platform Views
+  - **Subsystem**: Domain / Adapters / OpenCode / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 8 (v2 Observability & Models)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
+
 - **AL-44**: Localized Millisecond Timestamp Formatting and Timezone Header in Live Trace Inspector
   - **Subsystem**: Presentation / Web / Formatters / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
@@ -175,6 +191,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: AL2-3, AL2-4
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-5 multi project web dashboard selector cross project fleet overview and comparative analytics.md`
+
+- **AL2-7**: Interactive Cost Estimation Dashboards, Hybrid Fleet Analytics, and Rate-Card Simulation
+  - **Subsystem**: Presentation / Web / Components / State / Analytics / Tests
+  - **Phase**: Phase 8 (v2 Cost Modeling & Parity)
+  - **Status**: Pending
+  - **Blocked by**: AL2-6
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL2-7 interactive cost estimation dashboards hybrid fleet analytics and rate card simulation.md`
 
 ---
 
