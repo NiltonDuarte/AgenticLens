@@ -1,6 +1,6 @@
 # Using OpenCode and Codex with AgenticLens
 
-OpenCode CLI **v2.2.0** is installed in this WSL user environment at `~/.opencode/bin/opencode`. The installer added that directory to `~/.bashrc`. Open a new WSL terminal, or run `source ~/.bashrc`, then check with:
+OpenCode CLI **v1.19.5** is installed in this WSL user environment at `~/.opencode/bin/opencode`. Open a new WSL terminal, or run `source ~/.bashrc`, then check with:
 
 ```sh
 opencode --version
@@ -10,7 +10,7 @@ If the shell cannot find it, run `~/.opencode/bin/opencode` directly.
 
 ## Sign OpenCode in with your ChatGPT plan
 
-OpenCode v2 documents OpenAI sign-in using ChatGPT Plus or Pro, with usage charged against the plan's included usage rather than OpenAI API billing. In the AgenticLens checkout:
+OpenCode 1.x documents OpenAI sign-in using ChatGPT Plus or Pro, with usage charged against the plan's included usage rather than OpenAI API billing. In the AgenticLens checkout:
 
 ```sh
 cd /home/niltonduarte/.t3/worktrees/AgenticLens/t3-c935e1bc
@@ -40,4 +40,4 @@ To inspect Codex login state later, use `codex login status`. OpenCode has its o
 - Review `git status` and `git diff` before switching tools or committing. Keep each tool's sessions distinct so the work is easy to audit.
 - To switch, leave the current session and launch the other CLI from the same repository directory. Neither tool needs a separate clone for sequential work.
 
-OpenCode documentation: [installation](https://opencode.ai/v2/docs/) and [providers](https://opencode.ai/v2/docs/providers/). OpenAI documentation: [ChatGPT plan usage in participating apps](https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites).
+Install OpenCode 1.x with the official installer (`curl -fsSL https://opencode.ai/install | bash`). OpenCode documentation: [installation](https://opencode.ai/docs/) and [providers](https://docs.opencode.ai/docs/providers/). OpenAI documentation: [ChatGPT plan usage in participating apps](https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites).
