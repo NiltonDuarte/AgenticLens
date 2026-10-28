@@ -9,17 +9,17 @@
 - Standardize context ceiling saturation rules using explicit fixed token boundaries: `context_ceiling_warning_tokens` (160,000) and `context_ceiling_critical_tokens` (200,000) across offline and live anomaly evaluators.
 - Dynamically compute elevated context health at `critical_ceiling / 2` across domain health evaluators and workflow efficiency aggregations.
 - Support configurable anomaly thresholds for tool retry streaks, failure rates, context spikes, and tool thrashing.
-- Consolidate source code root boundaries under `code_metrics.source_roots` with bidirectional backward-compatible fallback for `workspaces.src_folders`.
+- Require non-empty `code_metrics.source_roots` as the only source-root configuration. Legacy-only `workspaces.src_folders` configurations fail validation.
 - Update git diff classification and path monitoring to respect `code_metrics.source_roots`.
-- Correct missing-source-roots CLI guidance to recommend `code_metrics.source_roots` while retaining `workspaces.src_folders` as the backward-compatible option.
-- Add CLI regression coverage for the source-roots validation guidance.
+- Update CLI diagnostics, README, and setup documentation to require `code_metrics.source_roots`.
+- Add regression coverage for canonical-root validation, legacy-only YAML/JSON rejection, and generated YAML without `workspaces.src_folders`.
 
 ## Context
 
 - Contract: `alspaces/FIX-11/CONTRACT.md`
 - Summary: `alspaces/FIX-11/SUMMARY.md`
-- Iteration Plans: `alspaces/FIX-11/iterations/01/PLAN.md`, `alspaces/FIX-11/iterations/02/PLAN.md`, `alspaces/FIX-11/iterations/03/PLAN.md`, `alspaces/FIX-11/iterations/04/PLAN.md`
-- Iteration Reviews: `alspaces/FIX-11/iterations/01/REVIEW.md`, `alspaces/FIX-11/iterations/02/REVIEW.md`, `alspaces/FIX-11/iterations/03/REVIEW.md`, `alspaces/FIX-11/iterations/04/REVIEW.md`
+- Iteration Plans: `alspaces/FIX-11/iterations/01/PLAN.md`, `alspaces/FIX-11/iterations/02/PLAN.md`, `alspaces/FIX-11/iterations/03/PLAN.md`, `alspaces/FIX-11/iterations/04/PLAN.md`, `alspaces/FIX-11/iterations/05/PLAN.md`
+- Iteration Reviews: `alspaces/FIX-11/iterations/01/REVIEW.md`, `alspaces/FIX-11/iterations/02/REVIEW.md`, `alspaces/FIX-11/iterations/03/REVIEW.md`, `alspaces/FIX-11/iterations/04/REVIEW.md`, `alspaces/FIX-11/iterations/05/REVIEW.md`
 
 ## Verification
 

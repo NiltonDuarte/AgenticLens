@@ -2,7 +2,7 @@
 
 ## Overview
 
-This change enforces strict, configurable context ceiling thresholds under `anomaly_thresholds`, excising redundant `healthy_ceiling_tokens` across the codebase, establishes `ContextCeilingCriticalTokens` as the single authoritative source of truth for saturation calculations and health grading, enriches live anomaly detection thresholds, and consolidates source roots under `code_metrics.source_roots` in `.agenticlens-config.yaml` with backward-compatible bridging for `workspaces.src_folders`.
+This change enforces strict, configurable context ceiling thresholds under `anomaly_thresholds`, excising redundant `healthy_ceiling_tokens` across the codebase, establishes `ContextCeilingCriticalTokens` as the single authoritative source of truth for saturation calculations and health grading, enriches live anomaly detection thresholds, and requires canonical source roots under `code_metrics.source_roots` with no `workspaces.src_folders` fallback.
 
 ## Domain Changes
 
@@ -20,7 +20,7 @@ This change enforces strict, configurable context ceiling thresholds under `anom
   - Excised `healthy_ceiling_tokens` and `rawMetricsConfig` with zero fallback.
   - Implemented fail-fast validation in `ValidateConfig`: immediately rejects configurations missing or with non-positive `context_ceiling_critical_tokens` or `context_ceiling_warning_tokens`, or where warning exceeds critical tokens.
   - Added root DTO fields for `anomaly_thresholds` and `code_metrics.source_roots`.
-  - Bidirectional bridging between `CodeMetrics.SourceRoots` and `Workspaces.SrcFolders`.
+  - Requires non-empty `CodeMetrics.SourceRoots`; legacy `workspaces.src_folders` input does not satisfy validation.
 - `internal/adapters/config/writer.go`:
   - Serializes root `anomaly_thresholds` and `code_metrics.source_roots`, cleanly omitting `healthy_ceiling_tokens`.
   - Deprecated and removed legacy `metrics` and `workspaces.src_folders` sections.
@@ -44,23 +44,32 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 
 ## Iteration 04: Source Roots Validation Guidance
 
-- Updated the `generate` CLI validation message to recommend `code_metrics.source_roots` and identify `workspaces.src_folders` as the backward-compatible option.
-- Extended the CLI subprocess regression assertion to verify both field names and their canonical/legacy labels.
+- Initially updated the `generate` CLI validation message to identify the canonical field and legacy option; iteration 05 removes legacy acceptance and its fallback.
+- Extended the CLI subprocess regression assertion; iteration 05 updates it to require only `code_metrics.source_roots`.
 - Reviewer verdict: APPROVED (`iterations/04/REVIEW.md`).
 - Focused CLI race test: PASS (`cd backend && GOCACHE=/tmp/agenticlens-go-cache go test -race ./cmd/agentic-lens`).
 - Full backend race suite: PASS through Codex and OpenCode (`GOCACHE=/tmp/agenticlens-go-cache make test`, 12 Go packages).
 - Post-merge `GOCACHE=/tmp/agenticlens-go-cache make`: PASS, including Go vet, TypeScript typecheck/lint, 12 Go race-test packages, 32 frontend test files (734 tests), frontend production build, and four platform builds.
 
+## Iteration 05: Require Canonical Source Roots
+
+- Removed `WorkspacesConfig.SrcFolders`, loader and writer bridging, classifier fallback, and legacy analyzer validation. Missing or legacy-only source roots now fail with a `code_metrics.source_roots` validation error.
+- Updated YAML/JSON fixtures to prove canonical roots are required, `workspaces.src_folders` cannot supply or override them, and generated configuration omits the removed field while preserving workspace directories and artifacts.
+- Updated README and setup instructions to require `code_metrics.source_roots`; amended the ticket contract to remove the backward-compatibility requirements.
+- Reviewer verdict: APPROVED (`iterations/05/REVIEW.md`).
+- Focused backend race tests and post-merge `GOCACHE=/tmp/agenticlens-go-cache make`: PASS. The full make included 12 Go packages, 32 frontend test files (734 tests), typecheck, lint, production build, and four platform builds.
+- `GOCACHE=/tmp/agenticlens-go-cache make test` through OpenCode: PASS (12 Go packages and 734 frontend tests).
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
+- **Software Development Life Cycle Iterations:** 6
 - **Active Agent Duration:** 5h 59m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Root agent peak 126.8k tokens (63% of 200k healthy ceiling, 6 compactions) | Subagents peak 174.1k (Coder)
 - **Role Effort Distribution (Subagents):** Coder 99.6%, Advisor 0.4%
 - **Subagent Turn Velocity & Thrashing:** 121.1 avg turns/run (peak: 273 turns) | Coder 137.1, Advisor 9.0
-- **Test-to-Production Code Ratio:** 1.0:1 (+640 test lines / +652 prod lines)
-- **Code Delivered:** +1,378 / -381 lines across 30 code files (excluding docs)
+- **Test-to-Production Code Ratio:** 1.4:1 (+838 test lines / +610 prod lines)
+- **Code Delivered:** +1,534 / -544 lines across 31 code files (excluding docs)
 - **Reasoning Effort:** 271,420 reasoning tokens (58.4% of generated output)
-- **Tool Health & Self-Correction:** 1,028 tool calls (16 self-corrections, 98.4% success rate)
+- **Tool Health & Self-Correction:** 1,029 tool calls (16 self-corrections, 98.4% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 13 execution anomalies detected (3 CRITICAL, 10 WARNING).
@@ -85,13 +94,14 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 1,877,056 | 12,545 | 4,504,490 | 70.6% | 126.8k | ELEVATED | $1.90 |
+| **orchestrator** | 2 | 1,877,056 | 12,545 | 4,504,490 | 70.6% | 126.8k | ELEVATED | $1.90 |
 | **coder** | 7 | 6,415,490 | 179,886 | 72,309,823 | 91.9% | 174.1k | ELEVATED | $11.81 |
 | **advisor** | 1 | 30,622 | 749 | 120,812 | 79.8% | 24.5k | HEALTHY | $0.04 |
-| **Total** | **9** | **8,323,168** | **193,180** | **76,935,125** | **90.2%** | **174.1k** | **ELEVATED** | **$13.75** |
+| **Total** | **10** | **8,323,168** | **193,180** | **76,935,125** | **90.2%** | **174.1k** | **ELEVATED** | **$13.75** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gemini-3.8-flash** | 9 | 8,323,168 | 193,180 | 76,935,125 | 90.2% | $13.75 |
-| **Total** | **9** | **8,323,168** | **193,180** | **76,935,125** | **90.2%** | **$13.75** |
+| **gpt-6-luna** | 1 | 0 | 0 | 0 | 0.0% | $0.00 |
+| **Total** | **10** | **8,323,168** | **193,180** | **76,935,125** | **90.2%** | **$13.75** |
