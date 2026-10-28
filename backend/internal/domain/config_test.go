@@ -61,12 +61,26 @@ func testProjectConfig() domain.ProjectConfig {
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
 			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
+				StallThresholdSeconds:               120,
+				ErrorRateThreshold:                  0.25,
+				ContextExhaustionPct:                0.85,
+				ConsecutiveErrorsStreakWarning:      3,
+				ConsecutiveErrorsStreakCritical:     5,
+				ContextCeilingApproachRatioWarning:  0.80,
+				ContextCeilingApproachRatioCritical: 1.00,
+				TokenVelocityWarningTokens:          30000,
+				TokenVelocityCriticalTokens:         60000,
+				TokenVelocityWarningDeltaTokens:     40000,
+				TokenVelocityCriticalDeltaTokens:    80000,
+				ToolThrashingMinFailures:            3,
+				ToolThrashingCriticalFailures:       5,
 			},
 		},
+		Metrics: domain.MetricsConfig{
+			HealthyCeilingTokens: 200000,
+		},
 		CodeMetrics: domain.CodeMetricsConfig{
+			SourceRoots:  []string{},
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: []string{},
@@ -145,6 +159,42 @@ func TestDefaultProjectConfig(t *testing.T) {
 	if cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
 		t.Errorf("expected Live.AnomalyThresholds.ContextExhaustionPct 0.85, got %f", cfg.Live.AnomalyThresholds.ContextExhaustionPct)
 	}
+	if cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
+		t.Errorf("expected Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning 3, got %d", cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
+	}
+	if cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakCritical != 5 {
+		t.Errorf("expected Live.AnomalyThresholds.ConsecutiveErrorsStreakCritical 5, got %d", cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakCritical)
+	}
+	if cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning != 0.80 {
+		t.Errorf("expected Live.AnomalyThresholds.ContextCeilingApproachRatioWarning 0.80, got %f", cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning)
+	}
+	if cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioCritical != 1.00 {
+		t.Errorf("expected Live.AnomalyThresholds.ContextCeilingApproachRatioCritical 1.00, got %f", cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioCritical)
+	}
+	if cfg.Live.AnomalyThresholds.TokenVelocityWarningTokens != 30000 {
+		t.Errorf("expected Live.AnomalyThresholds.TokenVelocityWarningTokens 30000, got %d", cfg.Live.AnomalyThresholds.TokenVelocityWarningTokens)
+	}
+	if cfg.Live.AnomalyThresholds.TokenVelocityCriticalTokens != 60000 {
+		t.Errorf("expected Live.AnomalyThresholds.TokenVelocityCriticalTokens 60000, got %d", cfg.Live.AnomalyThresholds.TokenVelocityCriticalTokens)
+	}
+	if cfg.Live.AnomalyThresholds.TokenVelocityWarningDeltaTokens != 40000 {
+		t.Errorf("expected Live.AnomalyThresholds.TokenVelocityWarningDeltaTokens 40000, got %d", cfg.Live.AnomalyThresholds.TokenVelocityWarningDeltaTokens)
+	}
+	if cfg.Live.AnomalyThresholds.TokenVelocityCriticalDeltaTokens != 80000 {
+		t.Errorf("expected Live.AnomalyThresholds.TokenVelocityCriticalDeltaTokens 80000, got %d", cfg.Live.AnomalyThresholds.TokenVelocityCriticalDeltaTokens)
+	}
+	if cfg.Live.AnomalyThresholds.ToolThrashingMinFailures != 3 {
+		t.Errorf("expected Live.AnomalyThresholds.ToolThrashingMinFailures 3, got %d", cfg.Live.AnomalyThresholds.ToolThrashingMinFailures)
+	}
+	if cfg.Live.AnomalyThresholds.ToolThrashingCriticalFailures != 5 {
+		t.Errorf("expected Live.AnomalyThresholds.ToolThrashingCriticalFailures 5, got %d", cfg.Live.AnomalyThresholds.ToolThrashingCriticalFailures)
+	}
+	if cfg.Metrics.HealthyCeilingTokens != 200000 {
+		t.Errorf("expected Metrics.HealthyCeilingTokens 200000, got %d", cfg.Metrics.HealthyCeilingTokens)
+	}
+	if len(cfg.CodeMetrics.SourceRoots) != 0 || cfg.CodeMetrics.SourceRoots == nil {
+		t.Errorf("expected non-nil empty CodeMetrics.SourceRoots, got %v", cfg.CodeMetrics.SourceRoots)
+	}
 	if cfg.CodeMetrics.BaseBranch != "" {
 		t.Errorf("expected empty CodeMetrics.BaseBranch, got %q", cfg.CodeMetrics.BaseBranch)
 	}
@@ -172,6 +222,7 @@ func TestDefaultProjectConfig(t *testing.T) {
 		cfg1.RoleMappings["custom"] = "coder"
 		cfg1.RoleOrder = append(cfg1.RoleOrder, "custom")
 		cfg1.Workspaces.SrcFolders = append(cfg1.Workspaces.SrcFolders, "test")
+		cfg1.CodeMetrics.SourceRoots = append(cfg1.CodeMetrics.SourceRoots, "test")
 
 		cfg2 := domain.DefaultProjectConfig()
 		if len(cfg2.RoleMappings) != 0 {
@@ -182,6 +233,9 @@ func TestDefaultProjectConfig(t *testing.T) {
 		}
 		if len(cfg2.Workspaces.SrcFolders) != 0 {
 			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: SrcFolders len %d", len(cfg2.Workspaces.SrcFolders))
+		}
+		if len(cfg2.CodeMetrics.SourceRoots) != 0 {
+			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: SourceRoots len %d", len(cfg2.CodeMetrics.SourceRoots))
 		}
 	})
 

@@ -14,6 +14,7 @@ type ClassificationConfig struct {
 	TestPatterns  []string `json:"test_patterns"`
 	ProdPatterns  []string `json:"prod_patterns"`
 	BaseBranch    string   `json:"base_branch,omitempty"`
+	SourceRoots   []string `json:"source_roots,omitempty"`
 	SrcFolders    []string `json:"src_folders,omitempty"`
 	WorkspacesDir string   `json:"workspaces_dir,omitempty"`
 }
@@ -25,13 +26,19 @@ func LoadConfig(repoRoot string) (*ClassificationConfig, error) {
 		return nil, err
 	}
 
+	srcs := cfg.CodeMetrics.SourceRoots
+	if len(srcs) == 0 {
+		srcs = cfg.Workspaces.SrcFolders
+	}
+
 	return &ClassificationConfig{
 		Include:       cfg.CodeMetrics.Include,
 		Exclude:       cfg.CodeMetrics.Exclude,
 		TestPatterns:  cfg.CodeMetrics.TestPatterns,
 		ProdPatterns:  cfg.CodeMetrics.ProdPatterns,
 		BaseBranch:    cfg.CodeMetrics.BaseBranch,
-		SrcFolders:    cfg.Workspaces.SrcFolders,
+		SourceRoots:   srcs,
+		SrcFolders:    srcs,
 		WorkspacesDir: cfg.Workspaces.Dir,
 	}, nil
 }

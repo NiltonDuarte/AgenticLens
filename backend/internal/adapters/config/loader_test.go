@@ -2086,6 +2086,18 @@ func TestLoadFromFile(t *testing.T) {
 		if cfg.CodeMetrics.BaseBranch != "origin/main" {
 			t.Errorf("expected base_branch %q, got %q", "origin/main", cfg.CodeMetrics.BaseBranch)
 		}
+		if cfg.Metrics.HealthyCeilingTokens != 200000 {
+			t.Errorf("expected metrics.healthy_ceiling_tokens 200000, got %d", cfg.Metrics.HealthyCeilingTokens)
+		}
+		if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
+			t.Errorf("expected source_roots [web backend], got %v", cfg.CodeMetrics.SourceRoots)
+		}
+		if cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
+			t.Errorf("expected consecutive errors streak warning 3, got %d", cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
+		}
+		if cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning != 0.80 {
+			t.Errorf("expected ceiling approach ratio warning 0.80, got %f", cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning)
+		}
 	})
 
 	t.Run("correctly loads custom base_branch from yaml file", func(t *testing.T) {

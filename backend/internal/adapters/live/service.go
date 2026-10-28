@@ -460,7 +460,11 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 		RecentErrors:    recentErrors,
 		Anomalies:       []domain.LiveAnomalyAlert{},
 	}
-	trace.Anomalies = domain.EvaluateLiveAnomalies(nil, &trace)
+	anomalyOpts := domain.LiveAnomalyOptions{
+		HealthyCeilingTokens: s.cfg.Metrics.HealthyCeilingTokens,
+		Thresholds:           s.cfg.Live.AnomalyThresholds,
+	}
+	trace.Anomalies = domain.EvaluateLiveAnomalies(nil, &trace, anomalyOpts)
 	if trace.Anomalies == nil {
 		trace.Anomalies = []domain.LiveAnomalyAlert{}
 	}

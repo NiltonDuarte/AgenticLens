@@ -116,6 +116,13 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 
 	// Workspaces Settings
 	wsDir := strings.TrimSpace(cfg.Workspaces.Dir)
+	var cleanSourceRoots []string
+	for _, sr := range cfg.CodeMetrics.SourceRoots {
+		clean := strings.TrimSpace(sr)
+		if clean != "" {
+			cleanSourceRoots = append(cleanSourceRoots, clean)
+		}
+	}
 	var cleanSrcFolders []string
 	for _, sf := range cfg.Workspaces.SrcFolders {
 		clean := strings.TrimSpace(sf)
@@ -123,7 +130,12 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 			cleanSrcFolders = append(cleanSrcFolders, clean)
 		}
 	}
-	if len(cleanSrcFolders) == 0 {
+	if len(cleanSourceRoots) == 0 && len(cleanSrcFolders) > 0 {
+		cleanSourceRoots = append([]string(nil), cleanSrcFolders...)
+	} else if len(cleanSrcFolders) == 0 && len(cleanSourceRoots) > 0 {
+		cleanSrcFolders = append([]string(nil), cleanSourceRoots...)
+	}
+	if len(cleanSourceRoots) == 0 {
 		return nil, fmt.Errorf("workspaces.src_folders cannot be empty")
 	}
 
@@ -133,9 +145,11 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	if wsDir != "" {
 		b.WriteString(fmt.Sprintf("  dir: %s\n", wsDir))
 	}
-	b.WriteString("  # Monitored source code folders for project telemetry and change tracking.\n")
-	b.WriteString("  src_folders:")
-	formatStringList(&b, cleanSrcFolders, "    ")
+	if len(cleanSrcFolders) > 0 {
+		b.WriteString("  # Monitored source code folders for project telemetry and change tracking.\n")
+		b.WriteString("  src_folders:")
+		formatStringList(&b, cleanSrcFolders, "    ")
+	}
 	b.WriteString("  # Configured workspace documentation artifacts to read and render in dashboard.\n")
 	artifacts := cfg.Workspaces.Artifacts
 	if len(artifacts) == 0 {
@@ -225,11 +239,56 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("    # Ratio of tool errors to total invocations triggering a high failure anomaly.\n")
 	b.WriteString(fmt.Sprintf("    error_rate_threshold: %0.2f\n", errorRate))
 	b.WriteString("    # Token context window utilization percentage triggering saturation warnings.\n")
-	b.WriteString(fmt.Sprintf("    context_exhaustion_pct: %0.2f\n\n", contextPct))
+	b.WriteString(fmt.Sprintf("    context_exhaustion_pct: %0.2f\n", contextPct))
+	at := cfg.Live.AnomalyThresholds
+	if at.ConsecutiveErrorsStreakWarning > 0 {
+		b.WriteString(fmt.Sprintf("    consecutive_errors_streak_warning: %d\n", at.ConsecutiveErrorsStreakWarning))
+	}
+	if at.ConsecutiveErrorsStreakCritical > 0 {
+		b.WriteString(fmt.Sprintf("    consecutive_errors_streak_critical: %d\n", at.ConsecutiveErrorsStreakCritical))
+	}
+	if at.ContextCeilingApproachRatioWarning > 0 {
+		b.WriteString(fmt.Sprintf("    context_ceiling_approach_ratio_warning: %0.2f\n", at.ContextCeilingApproachRatioWarning))
+	}
+	if at.ContextCeilingApproachRatioCritical > 0 {
+		b.WriteString(fmt.Sprintf("    context_ceiling_approach_ratio_critical: %0.2f\n", at.ContextCeilingApproachRatioCritical))
+	}
+	if at.TokenVelocityWarningTokens > 0 {
+		b.WriteString(fmt.Sprintf("    token_velocity_warning_tokens: %d\n", at.TokenVelocityWarningTokens))
+	}
+	if at.TokenVelocityCriticalTokens > 0 {
+		b.WriteString(fmt.Sprintf("    token_velocity_critical_tokens: %d\n", at.TokenVelocityCriticalTokens))
+	}
+	if at.TokenVelocityWarningDeltaTokens > 0 {
+		b.WriteString(fmt.Sprintf("    token_velocity_warning_delta_tokens: %d\n", at.TokenVelocityWarningDeltaTokens))
+	}
+	if at.TokenVelocityCriticalDeltaTokens > 0 {
+		b.WriteString(fmt.Sprintf("    token_velocity_critical_delta_tokens: %d\n", at.TokenVelocityCriticalDeltaTokens))
+	}
+	if at.ToolThrashingMinFailures > 0 {
+		b.WriteString(fmt.Sprintf("    tool_thrashing_min_failures: %d\n", at.ToolThrashingMinFailures))
+	}
+	if at.ToolThrashingCriticalFailures > 0 {
+		b.WriteString(fmt.Sprintf("    tool_thrashing_critical_failures: %d\n", at.ToolThrashingCriticalFailures))
+	}
+	b.WriteString("\n")
+
+	// Metrics Settings
+	healthyCeiling := cfg.Metrics.HealthyCeilingTokens
+	if healthyCeiling <= 0 {
+		healthyCeiling = domain.HealthyCeilingTokens
+	}
+	b.WriteString("# Performance benchmarks and context health thresholds.\n")
+	b.WriteString("metrics:\n")
+	b.WriteString("  # Healthy context window token ceiling for context saturation and health grading.\n")
+	b.WriteString(fmt.Sprintf("  healthy_ceiling_tokens: %d\n\n", healthyCeiling))
 
 	// Code Metrics Settings
 	b.WriteString("# Git commit diff analysis and code classification glob patterns.\n")
 	b.WriteString("code_metrics:\n")
+	b.WriteString("  # Monitored source code root directories for project telemetry and change tracking.\n")
+	b.WriteString("  source_roots:")
+	formatStringList(&b, cleanSourceRoots, "    ")
 	b.WriteString("  # Specific files or glob patterns explicitly included as production code.\n")
 	b.WriteString("  include:")
 	formatStringList(&b, cfg.CodeMetrics.Include, "    ")
@@ -354,12 +413,26 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
 			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
+				StallThresholdSeconds:               120,
+				ErrorRateThreshold:                  0.25,
+				ContextExhaustionPct:                0.85,
+				ConsecutiveErrorsStreakWarning:      3,
+				ConsecutiveErrorsStreakCritical:     5,
+				ContextCeilingApproachRatioWarning:  0.80,
+				ContextCeilingApproachRatioCritical: 1.00,
+				TokenVelocityWarningTokens:          30000,
+				TokenVelocityCriticalTokens:         60000,
+				TokenVelocityWarningDeltaTokens:     40000,
+				TokenVelocityCriticalDeltaTokens:    80000,
+				ToolThrashingMinFailures:            3,
+				ToolThrashingCriticalFailures:       5,
 			},
 		},
+		Metrics: domain.MetricsConfig{
+			HealthyCeilingTokens: domain.HealthyCeilingTokens,
+		},
 		CodeMetrics: domain.CodeMetricsConfig{
+			SourceRoots:  cleanFolders,
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: append([]string(nil), DefaultTestPatterns...),

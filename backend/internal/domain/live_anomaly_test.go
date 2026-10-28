@@ -1371,4 +1371,102 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 			t.Errorf("expected alert.RuleName to have type LiveAnomalyRuleName with value %s", domain.RuleConsecutiveToolErrors)
 		}
 	})
+
+	t.Run("configurable anomaly options across rules", func(t *testing.T) {
+		opts := domain.LiveAnomalyOptions{
+			HealthyCeilingTokens: 100_000,
+			Thresholds: domain.AnomalyThresholdsConfig{
+				ConsecutiveErrorsStreakWarning:      2,
+				ConsecutiveErrorsStreakCritical:     4,
+				ContextCeilingApproachRatioWarning:  0.70,
+				ContextCeilingApproachRatioCritical: 0.90,
+				TokenVelocityWarningTokens:          10_000,
+				TokenVelocityCriticalTokens:         20_000,
+				TokenVelocityWarningDeltaTokens:     15_000,
+				TokenVelocityCriticalDeltaTokens:    30_000,
+				ToolThrashingMinFailures:            2,
+				ToolThrashingCriticalFailures:       4,
+			},
+		}
+
+		trace := &domain.LiveTraceView{
+			SessionID: "s_opts",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID:        "m1",
+					Role:      "assistant",
+					Timestamp: "2026-10-19T10:00:00Z",
+					Parts: []domain.LivePartFact{
+						{ID: "p1", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+						{ID: "p2", Type: "tool", ToolName: strPtr("bash"), IsError: true},
+					},
+				},
+			},
+		}
+
+		// With default thresholds (warning=3), 2 errors does not trigger alert
+		defaultAlerts := domain.EvaluateConsecutiveToolErrors(trace)
+		if len(defaultAlerts) != 0 {
+			t.Fatalf("expected 0 default alerts for 2 errors, got %d", len(defaultAlerts))
+		}
+
+		// With custom thresholds (warning=2), 2 errors triggers HIGH alert
+		customAlerts := domain.EvaluateConsecutiveToolErrors(trace, 2, 4)
+		if len(customAlerts) != 1 {
+			t.Fatalf("expected 1 custom alert, got %d", len(customAlerts))
+		}
+		if customAlerts[0].Severity != domain.LiveSeverityHigh {
+			t.Errorf("expected severity HIGH, got %s", customAlerts[0].Severity)
+		}
+
+		// Context ceiling approach with custom ceiling 100k and ratio 0.70 (70k threshold)
+		traceCeiling := &domain.LiveTraceView{
+			SessionID: "s_ceil",
+			Messages: []domain.LiveMessageFact{
+				{
+					ID:            "m1",
+					Role:          "assistant",
+					Timestamp:     "2026-10-19T10:00:00Z",
+					ContextTokens: 75_000,
+				},
+			},
+		}
+
+		// Default ceiling (200k, 80% = 160k): 75k produces no alert
+		if alerts := domain.EvaluateContextCeilingApproach(traceCeiling, domain.HealthyCeilingTokens); len(alerts) != 0 {
+			t.Fatalf("expected 0 default ceiling alerts, got %d", len(alerts))
+		}
+
+		// Custom options (100k, 70% = 70k): 75k produces WARNING alert
+		ceilAlerts := domain.EvaluateContextCeilingApproach(traceCeiling, 100_000, 0.70, 0.90)
+		if len(ceilAlerts) != 1 {
+			t.Fatalf("expected 1 ceiling approach alert, got %d", len(ceilAlerts))
+		}
+		if ceilAlerts[0].Severity != domain.LiveSeverityWarning {
+			t.Errorf("expected severity WARNING, got %s", ceilAlerts[0].Severity)
+		}
+
+		// EvaluateLiveAnomalies with opts should trigger both for composite evaluation
+		tree := &domain.LiveSessionTree{
+			RootSessions: []*domain.LiveSessionNode{
+				{
+					ID: "s_opts",
+				},
+			},
+		}
+		compositeAlerts := domain.EvaluateLiveAnomalies(tree, trace, opts)
+		if len(compositeAlerts) != 2 {
+			t.Fatalf("expected 2 alerts (ConsecutiveToolErrors and ToolThrashing) from composite evaluation with opts, got %d", len(compositeAlerts))
+		}
+		alertRules := map[domain.LiveAnomalyRuleName]bool{
+			compositeAlerts[0].RuleName: true,
+			compositeAlerts[1].RuleName: true,
+		}
+		if !alertRules[domain.RuleConsecutiveToolErrors] {
+			t.Errorf("expected rule ConsecutiveToolErrors to be triggered")
+		}
+		if !alertRules[domain.RuleToolThrashing] {
+			t.Errorf("expected rule ToolThrashing to be triggered")
+		}
+	})
 }

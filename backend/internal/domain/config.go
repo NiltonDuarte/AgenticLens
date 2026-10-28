@@ -14,6 +14,7 @@ type ProjectConfig struct {
 	Workspaces   WorkspacesConfig  `json:"workspaces" yaml:"workspaces"`
 	Database     DatabaseConfig    `json:"database" yaml:"database"`
 	Live         LiveConfig        `json:"live" yaml:"live"`
+	Metrics      MetricsConfig     `json:"metrics" yaml:"metrics"`
 	CodeMetrics  CodeMetricsConfig `json:"code_metrics" yaml:"code_metrics"`
 	RoleMappings RoleMappings      `json:"role_mappings" yaml:"role_mappings"`
 	RoleOrder    []string          `json:"role_order" yaml:"role_order"`
@@ -44,12 +45,26 @@ func DefaultProjectConfig() ProjectConfig {
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
 			AnomalyThresholds: AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
+				StallThresholdSeconds:               120,
+				ErrorRateThreshold:                  0.25,
+				ContextExhaustionPct:                0.85,
+				ConsecutiveErrorsStreakWarning:      ConsecutiveToolErrorsStreakWarning,
+				ConsecutiveErrorsStreakCritical:     ConsecutiveToolErrorsStreakCritical,
+				ContextCeilingApproachRatioWarning:  ContextCeilingApproachRatioWarning,
+				ContextCeilingApproachRatioCritical: ContextCeilingApproachRatioCritical,
+				TokenVelocityWarningTokens:          TokenVelocityWarningTokens,
+				TokenVelocityCriticalTokens:         TokenVelocityCriticalTokens,
+				TokenVelocityWarningDeltaTokens:     TokenVelocityWarningDeltaTokens,
+				TokenVelocityCriticalDeltaTokens:    TokenVelocityCriticalDeltaTokens,
+				ToolThrashingMinFailures:            ToolThrashingMinFailures,
+				ToolThrashingCriticalFailures:       ToolThrashingCriticalFailures,
 			},
 		},
+		Metrics: MetricsConfig{
+			HealthyCeilingTokens: HealthyCeilingTokens,
+		},
 		CodeMetrics: CodeMetricsConfig{
+			SourceRoots:  []string{},
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: []string{},
@@ -149,6 +164,11 @@ type WorkspacesConfig struct {
 	Artifacts  []WorkspaceArtifactConfig `json:"artifacts,omitempty" yaml:"artifacts,omitempty"`
 }
 
+// MetricsConfig defines global context window and metrics calculation thresholds.
+type MetricsConfig struct {
+	HealthyCeilingTokens int64 `json:"healthy_ceiling_tokens" yaml:"healthy_ceiling_tokens"`
+}
+
 // DatabaseConfig specifies SQLite database connection and query execution parameters.
 type DatabaseConfig struct {
 	Path           string `json:"path" yaml:"path"`
@@ -159,9 +179,19 @@ type DatabaseConfig struct {
 
 // AnomalyThresholdsConfig defines numerical thresholds for anomaly detection rules.
 type AnomalyThresholdsConfig struct {
-	StallThresholdSeconds int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
-	ErrorRateThreshold    float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
-	ContextExhaustionPct  float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
+	StallThresholdSeconds               int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
+	ErrorRateThreshold                  float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
+	ContextExhaustionPct                float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
+	ConsecutiveErrorsStreakWarning      int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
+	ConsecutiveErrorsStreakCritical     int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
+	ContextCeilingApproachRatioWarning  float64 `json:"context_ceiling_approach_ratio_warning" yaml:"context_ceiling_approach_ratio_warning"`
+	ContextCeilingApproachRatioCritical float64 `json:"context_ceiling_approach_ratio_critical" yaml:"context_ceiling_approach_ratio_critical"`
+	TokenVelocityWarningTokens          int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
+	TokenVelocityCriticalTokens         int64   `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
+	TokenVelocityWarningDeltaTokens     int64   `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
+	TokenVelocityCriticalDeltaTokens    int64   `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
+	ToolThrashingMinFailures            int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
+	ToolThrashingCriticalFailures       int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
 }
 
 // LiveConfig controls real-time session tracking, polling intervals, and anomaly detection.
@@ -175,6 +205,7 @@ type LiveConfig struct {
 // CodeMetricsConfig defines file classification glob patterns for git metrics.
 type CodeMetricsConfig struct {
 	BaseBranch   string   `json:"base_branch,omitempty" yaml:"base_branch,omitempty"`
+	SourceRoots  []string `json:"source_roots,omitempty" yaml:"source_roots,omitempty"`
 	Include      []string `json:"include" yaml:"include"`
 	Exclude      []string `json:"exclude" yaml:"exclude"`
 	TestPatterns []string `json:"test_patterns" yaml:"test_patterns"`

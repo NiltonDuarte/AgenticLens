@@ -50,7 +50,7 @@ func GetBaseHealthStatus(toks int64, ceiling int64) ContextHealthStatus {
 	if toks > ceiling {
 		return ContextHealthBloated
 	}
-	if toks >= 100_000 {
+	if toks >= ceiling/2 {
 		return ContextHealthElevated
 	}
 	return ContextHealthHealthy
@@ -69,7 +69,7 @@ func GetHealthLabel(toks int64, ceiling int64) string {
 		pct := math.Round(float64(toks) / float64(ceiling) * 100.0)
 		return fmt.Sprintf("BLOATED (%.0f%%)", pct)
 	}
-	if toks >= 100_000 {
+	if toks >= ceiling/2 {
 		return string(ContextHealthElevated)
 	}
 	return string(ContextHealthHealthy)

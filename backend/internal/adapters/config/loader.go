@@ -51,15 +51,23 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 		missing = append(missing, "ticket.prefixes")
 	}
 
-	hasSrcFolder := false
-	for _, sf := range cfg.Workspaces.SrcFolders {
-		if strings.TrimSpace(sf) != "" {
-			hasSrcFolder = true
+	hasSourceRoot := false
+	for _, sr := range cfg.CodeMetrics.SourceRoots {
+		if strings.TrimSpace(sr) != "" {
+			hasSourceRoot = true
 			break
 		}
 	}
-	if !hasSrcFolder {
-		missing = append(missing, "workspaces.src_folders")
+	if !hasSourceRoot {
+		for _, sf := range cfg.Workspaces.SrcFolders {
+			if strings.TrimSpace(sf) != "" {
+				hasSourceRoot = true
+				break
+			}
+		}
+	}
+	if !hasSourceRoot {
+		missing = append(missing, "code_metrics.source_roots")
 	}
 
 	if len(missing) > 0 {
@@ -162,9 +170,19 @@ type rawDatabaseConfig struct {
 }
 
 type rawAnomalyThresholdsConfig struct {
-	StallThresholdSeconds *int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
-	ErrorRateThreshold    *float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
-	ContextExhaustionPct  *float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
+	StallThresholdSeconds               *int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
+	ErrorRateThreshold                  *float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
+	ContextExhaustionPct                *float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
+	ConsecutiveErrorsStreakWarning      *int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
+	ConsecutiveErrorsStreakCritical     *int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
+	ContextCeilingApproachRatioWarning  *float64 `json:"context_ceiling_approach_ratio_warning" yaml:"context_ceiling_approach_ratio_warning"`
+	ContextCeilingApproachRatioCritical *float64 `json:"context_ceiling_approach_ratio_critical" yaml:"context_ceiling_approach_ratio_critical"`
+	TokenVelocityWarningTokens          *int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
+	TokenVelocityCriticalTokens         *int64   `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
+	TokenVelocityWarningDeltaTokens     *int64   `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
+	TokenVelocityCriticalDeltaTokens    *int64   `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
+	ToolThrashingMinFailures            *int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
+	ToolThrashingCriticalFailures       *int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
 }
 
 type rawLiveConfig struct {
@@ -174,7 +192,12 @@ type rawLiveConfig struct {
 	AnomalyThresholds      *rawAnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
 }
 
+type rawMetricsConfig struct {
+	HealthyCeilingTokens *int64 `json:"healthy_ceiling_tokens" yaml:"healthy_ceiling_tokens"`
+}
+
 type rawCodeMetricsConfig struct {
+	SourceRoots  []string `json:"source_roots" yaml:"source_roots"`
 	BaseBranch   *string  `json:"base_branch" yaml:"base_branch"`
 	Include      []string `json:"include" yaml:"include"`
 	Exclude      []string `json:"exclude" yaml:"exclude"`
@@ -188,6 +211,7 @@ type rawProjectConfigDTO struct {
 	Workspaces   *rawWorkspacesConfig  `json:"workspaces" yaml:"workspaces"`
 	Database     *rawDatabaseConfig    `json:"database" yaml:"database"`
 	Live         *rawLiveConfig        `json:"live" yaml:"live"`
+	Metrics      *rawMetricsConfig     `json:"metrics" yaml:"metrics"`
 	CodeMetrics  *rawCodeMetricsConfig `json:"code_metrics" yaml:"code_metrics"`
 	RoleMappings map[string]string     `json:"role_mappings" yaml:"role_mappings"`
 	RoleOrder    []string              `json:"role_order" yaml:"role_order"`
@@ -288,19 +312,66 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 			cfg.Live.MaxTraceBufferMessages = *dto.Live.MaxTraceBufferMessages
 		}
 		if dto.Live.AnomalyThresholds != nil {
-			if dto.Live.AnomalyThresholds.StallThresholdSeconds != nil {
-				cfg.Live.AnomalyThresholds.StallThresholdSeconds = *dto.Live.AnomalyThresholds.StallThresholdSeconds
+			at := dto.Live.AnomalyThresholds
+			if at.StallThresholdSeconds != nil {
+				cfg.Live.AnomalyThresholds.StallThresholdSeconds = *at.StallThresholdSeconds
 			}
-			if dto.Live.AnomalyThresholds.ErrorRateThreshold != nil {
-				cfg.Live.AnomalyThresholds.ErrorRateThreshold = *dto.Live.AnomalyThresholds.ErrorRateThreshold
+			if at.ErrorRateThreshold != nil {
+				cfg.Live.AnomalyThresholds.ErrorRateThreshold = *at.ErrorRateThreshold
 			}
-			if dto.Live.AnomalyThresholds.ContextExhaustionPct != nil {
-				cfg.Live.AnomalyThresholds.ContextExhaustionPct = *dto.Live.AnomalyThresholds.ContextExhaustionPct
+			if at.ContextExhaustionPct != nil {
+				cfg.Live.AnomalyThresholds.ContextExhaustionPct = *at.ContextExhaustionPct
+			}
+			if at.ConsecutiveErrorsStreakWarning != nil && *at.ConsecutiveErrorsStreakWarning > 0 {
+				cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning = *at.ConsecutiveErrorsStreakWarning
+			}
+			if at.ConsecutiveErrorsStreakCritical != nil && *at.ConsecutiveErrorsStreakCritical > 0 {
+				cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakCritical = *at.ConsecutiveErrorsStreakCritical
+			}
+			if at.ContextCeilingApproachRatioWarning != nil && *at.ContextCeilingApproachRatioWarning > 0 {
+				cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning = *at.ContextCeilingApproachRatioWarning
+			}
+			if at.ContextCeilingApproachRatioCritical != nil && *at.ContextCeilingApproachRatioCritical > 0 {
+				cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioCritical = *at.ContextCeilingApproachRatioCritical
+			}
+			if at.TokenVelocityWarningTokens != nil && *at.TokenVelocityWarningTokens > 0 {
+				cfg.Live.AnomalyThresholds.TokenVelocityWarningTokens = *at.TokenVelocityWarningTokens
+			}
+			if at.TokenVelocityCriticalTokens != nil && *at.TokenVelocityCriticalTokens > 0 {
+				cfg.Live.AnomalyThresholds.TokenVelocityCriticalTokens = *at.TokenVelocityCriticalTokens
+			}
+			if at.TokenVelocityWarningDeltaTokens != nil && *at.TokenVelocityWarningDeltaTokens > 0 {
+				cfg.Live.AnomalyThresholds.TokenVelocityWarningDeltaTokens = *at.TokenVelocityWarningDeltaTokens
+			}
+			if at.TokenVelocityCriticalDeltaTokens != nil && *at.TokenVelocityCriticalDeltaTokens > 0 {
+				cfg.Live.AnomalyThresholds.TokenVelocityCriticalDeltaTokens = *at.TokenVelocityCriticalDeltaTokens
+			}
+			if at.ToolThrashingMinFailures != nil && *at.ToolThrashingMinFailures > 0 {
+				cfg.Live.AnomalyThresholds.ToolThrashingMinFailures = *at.ToolThrashingMinFailures
+			}
+			if at.ToolThrashingCriticalFailures != nil && *at.ToolThrashingCriticalFailures > 0 {
+				cfg.Live.AnomalyThresholds.ToolThrashingCriticalFailures = *at.ToolThrashingCriticalFailures
 			}
 		}
 	}
 
+	if dto.Metrics != nil {
+		if dto.Metrics.HealthyCeilingTokens != nil && *dto.Metrics.HealthyCeilingTokens > 0 {
+			cfg.Metrics.HealthyCeilingTokens = *dto.Metrics.HealthyCeilingTokens
+		}
+	}
+
 	if dto.CodeMetrics != nil {
+		if dto.CodeMetrics.SourceRoots != nil {
+			var cleanRoots []string
+			for _, r := range dto.CodeMetrics.SourceRoots {
+				t := strings.TrimSpace(r)
+				if t != "" {
+					cleanRoots = append(cleanRoots, t)
+				}
+			}
+			cfg.CodeMetrics.SourceRoots = cleanRoots
+		}
 		if dto.CodeMetrics.BaseBranch != nil && strings.TrimSpace(*dto.CodeMetrics.BaseBranch) != "" {
 			cfg.CodeMetrics.BaseBranch = strings.TrimSpace(*dto.CodeMetrics.BaseBranch)
 		}
@@ -316,6 +387,13 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		if dto.CodeMetrics.ProdPatterns != nil {
 			cfg.CodeMetrics.ProdPatterns = dto.CodeMetrics.ProdPatterns
 		}
+	}
+
+	// Bidirectional fallback between CodeMetrics.SourceRoots and Workspaces.SrcFolders
+	if len(cfg.CodeMetrics.SourceRoots) == 0 && len(cfg.Workspaces.SrcFolders) > 0 {
+		cfg.CodeMetrics.SourceRoots = append([]string(nil), cfg.Workspaces.SrcFolders...)
+	} else if len(cfg.Workspaces.SrcFolders) == 0 && len(cfg.CodeMetrics.SourceRoots) > 0 {
+		cfg.Workspaces.SrcFolders = append([]string(nil), cfg.CodeMetrics.SourceRoots...)
 	}
 
 	if dto.RoleMappings != nil {

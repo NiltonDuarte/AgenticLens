@@ -1,0 +1,357 @@
+{
+  "schema_version": 4,
+  "ticket_id": "FIX-11",
+  "ticket_title": "Configurable Ceilings, Enriched Anomaly Thresholds, and Source Roots Consolidation",
+  "ticket_type": "fix",
+  "started_at": "2026-10-28T18:37:06.986000+00:00",
+  "completed_at": "2026-10-28T19:41:24.290000+00:00",
+  "updated_at": "2026-10-28T19:41:34.470792+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 2
+  },
+  "sessions": [
+    {
+      "id": "ses_e7c1b6a1effe6P5WDfoy27biqf",
+      "parent_id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_e7c1b6a1effe6P5WDfoy27biqf",
+          "parent_id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+          "role": "coder",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-28T19:02:38.324000+00:00",
+          "completed_at": "2026-10-28T19:41:24.290000+00:00",
+          "active_duration_seconds": 2324,
+          "turns": 237,
+          "tokens": {
+            "input": 1230436,
+            "output": 49415,
+            "cache_read": 19187591,
+            "reasoning": 68594,
+            "peak_context": 174107
+          },
+          "cost_usd": 2.80443,
+          "compactions": 2,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 49,
+          "errors": 1
+        },
+        {
+          "name": "edit",
+          "calls": 36,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 33,
+          "errors": 1
+        },
+        {
+          "name": "read",
+          "calls": 106,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 3,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 88,
+            "context_tokens": 172356,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder",
+            "context_tokens": 174107,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 89,
+            "token_delta": 78558,
+            "context_tokens": 78558,
+            "threshold": "40000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 162,
+            "token_delta": 62278,
+            "context_tokens": 62278,
+            "threshold": "40000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ses_e7c28c365ffex5CtaG02lACdBn",
+      "parent_id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_e7c28c365ffex5CtaG02lACdBn",
+          "parent_id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+          "role": "coder",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-28T18:48:03.503000+00:00",
+          "completed_at": "2026-10-28T18:54:50.076000+00:00",
+          "active_duration_seconds": 406,
+          "turns": 56,
+          "tokens": {
+            "input": 243378,
+            "output": 7825,
+            "cache_read": 3279658,
+            "reasoning": 16242,
+            "peak_context": 107255
+          },
+          "cost_usd": 0.518759,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 14,
+          "errors": 2
+        },
+        {
+          "name": "read",
+          "calls": 28,
+          "errors": 0
+        },
+        {
+          "name": "write",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "ses_e7c2be2f8ffe3bCjY7tjVMRqsc",
+      "parent_id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_e7c2be2f8ffe3bCjY7tjVMRqsc",
+          "parent_id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+          "role": "advisor",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-28T18:44:38.807000+00:00",
+          "completed_at": "2026-10-28T18:45:19.931000+00:00",
+          "active_duration_seconds": 41,
+          "turns": 9,
+          "tokens": {
+            "input": 30622,
+            "output": 749,
+            "cache_read": 120812,
+            "reasoning": 2267,
+            "peak_context": 24486
+          },
+          "cost_usd": 0.043337,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_list_thread_pull_requests",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "ses_e7c2cf3ddffe5u862y5IitFXnK",
+      "parent_id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_e7c2cf3ddffe5u862y5IitFXnK",
+          "parent_id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+          "role": "coder",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-28T18:43:28.957000+00:00",
+          "completed_at": "2026-10-28T18:44:29.191000+00:00",
+          "active_duration_seconds": 60,
+          "turns": 11,
+          "tokens": {
+            "input": 52867,
+            "output": 466,
+            "cache_read": 128176,
+            "reasoning": 1160,
+            "peak_context": 30363
+          },
+          "cost_usd": 0.055361,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_list_thread_pull_requests",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "ses_e7c32c7d5ffeMhNNfLaZPyaWVP",
+          "parent_id": null,
+          "role": "orchestrator",
+          "model": "gemini-3.8-flash",
+          "user": "Nilton Duarte",
+          "started_at": "2026-10-28T18:37:07.355000+00:00",
+          "completed_at": "2026-10-28T19:02:18.125000+00:00",
+          "active_duration_seconds": 1293,
+          "turns": 57,
+          "tokens": {
+            "input": 517158,
+            "output": 4315,
+            "cache_read": 2004702,
+            "reasoning": 18108,
+            "peak_context": 79567
+          },
+          "cost_usd": 0.622307,
+          "compactions": 0,
+          "user_iterations": 2
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "glob",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "grep",
+          "calls": 13,
+          "errors": 0
+        },
+        {
+          "name": "question",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "read",
+          "calls": 23,
+          "errors": 0
+        },
+        {
+          "name": "skill",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "task",
+          "calls": 7,
+          "errors": 3
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": [
+    {
+      "rule_id": "TOOL_HIGH_FAILURE_RATE",
+      "severity": "WARNING",
+      "context": {
+        "tool_name": "task",
+        "count": 3,
+        "total_calls": 7,
+        "threshold": "\u003e20%",
+        "failure_rate_pct": 42.9
+      }
+    }
+  ]
+}

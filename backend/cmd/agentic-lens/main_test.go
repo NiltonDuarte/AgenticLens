@@ -1495,7 +1495,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 				StepsCompleted: []string{domain.MigrationStepSourceBackfill},
 				StepsPending:   []string{},
 			},
-			Sessions:      []adapters.SessionFactDTO{},
+			Sessions: []adapters.SessionFactDTO{},
 			Code: adapters.CodeFactsDTO{
 				LinesAdded:       123,
 				LinesDeleted:     45,

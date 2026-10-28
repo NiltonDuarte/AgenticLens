@@ -6,6 +6,11 @@
 # Human-readable name of the project.
 project_name: AgenticLens
 
+# Metrics and context window healthy ceiling configuration.
+metrics:
+  # Ceiling in tokens for healthy context window utilization (defaults to 200,000).
+  healthy_ceiling_tokens: 200000
+
 # Ticket identification and normalization settings.
 ticket:
   # Supported ticket prefix identifiers for this repository.
@@ -29,14 +34,10 @@ ticket:
   # Additional regex patterns to match unconventional ticket naming formats.
   custom_patterns: []
 
-# Workspace storage and source folder definitions.
+# Workspace storage and ticket artifact definitions.
 workspaces:
   # Directory where ticket artifacts and session telemetry ledgers are stored.
   dir: alspaces
-  # Monitored source code folders for project telemetry and change tracking.
-  src_folders:
-    - web
-    - backend
   # Configured documentation and process artifacts tracked inside ticket workspaces.
   artifacts:
     - path: CONTRACT.md
@@ -73,9 +74,27 @@ live:
     error_rate_threshold: 0.25
     # Token context window utilization percentage triggering saturation warnings.
     context_exhaustion_pct: 0.85
+    # Consecutive tool errors thresholds triggering warning and critical alerts.
+    consecutive_tool_errors_streak_warning: 3
+    consecutive_tool_errors_streak_critical: 5
+    # Approach ratio towards healthy context ceiling triggering warning and critical alerts.
+    context_ceiling_approach_ratio_warning: 0.80
+    context_ceiling_approach_ratio_critical: 1.00
+    # Absolute and differential token velocity thresholds.
+    token_velocity_warning_tokens: 30000
+    token_velocity_critical_tokens: 60000
+    token_velocity_warning_delta_tokens: 40000
+    token_velocity_critical_delta_tokens: 80000
+    # Tool thrashing minimum and critical failure frequencies.
+    tool_thrashing_min_failures: 3
+    tool_thrashing_critical_failures: 5
 
 # Git commit diff analysis and code classification glob patterns.
 code_metrics:
+  # Monitored source code folders for project telemetry and change tracking.
+  source_roots:
+    - web
+    - backend
   # Upstream comparison base branch for commit diff extraction (e.g. origin/main or main).
   # If left empty, resolution automatically probes origin/HEAD, origin/main, main, origin/master, and master.
   base_branch: origin/main

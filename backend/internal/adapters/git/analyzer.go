@@ -127,6 +127,24 @@ func ValidateSrcFolders(srcFolders []string) error {
 	return nil
 }
 
+// ValidateSourceRoots verifies that code_metrics.source_roots contains at least one non-empty source directory.
+func ValidateSourceRoots(sourceRoots []string) error {
+	if len(sourceRoots) == 0 {
+		return fmt.Errorf("code_metrics.source_roots is empty or unconfigured: configure 'code_metrics.source_roots' in .agenticlens-config.yaml")
+	}
+	hasNonEmpty := false
+	for _, folder := range sourceRoots {
+		if strings.TrimSpace(folder) != "" {
+			hasNonEmpty = true
+			break
+		}
+	}
+	if !hasNonEmpty {
+		return fmt.Errorf("code_metrics.source_roots is empty or unconfigured: configure 'code_metrics.source_roots' in .agenticlens-config.yaml")
+	}
+	return nil
+}
+
 // IsMonitoredSourcePath reports whether a file path falls within configured source folders or configured test/production inclusion patterns.
 func IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool {
 	cleanPath := filepath.ToSlash(strings.TrimSpace(path))
@@ -136,7 +154,16 @@ func IsMonitoredSourcePath(path string, srcFolders []string, cfg *Classification
 		return false
 	}
 
-	for _, folder := range srcFolders {
+	folders := srcFolders
+	if len(folders) == 0 && cfg != nil {
+		if len(cfg.SourceRoots) > 0 {
+			folders = cfg.SourceRoots
+		} else {
+			folders = cfg.SrcFolders
+		}
+	}
+
+	for _, folder := range folders {
 		normFolder := filepath.ToSlash(strings.TrimSpace(folder))
 		normFolder = strings.Trim(normFolder, "/")
 		if normFolder == "" {
@@ -187,7 +214,15 @@ func ComputeCodeFactsAtRef(codeRef string, cfg *ClassificationConfig) (domain.Co
 			cfg = loaded
 		}
 	}
-	if cfg == nil || len(cfg.SrcFolders) == 0 || ValidateSrcFolders(cfg.SrcFolders) != nil {
+	var srcs []string
+	if cfg != nil {
+		if len(cfg.SourceRoots) > 0 {
+			srcs = cfg.SourceRoots
+		} else {
+			srcs = cfg.SrcFolders
+		}
+	}
+	if cfg == nil || len(srcs) == 0 || ValidateSrcFolders(srcs) != nil {
 		return domain.CodeFacts{}, fmt.Errorf("code metrics require valid configured source folders")
 	}
 
@@ -208,7 +243,7 @@ func ComputeCodeFactsAtRef(codeRef string, cfg *ClassificationConfig) (domain.Co
 	var facts domain.CodeFacts
 	facts.SDLCIterations = 1
 	for _, entry := range ParseNumstatOutput(out) {
-		if !IsMonitoredSourcePath(entry.Path, cfg.SrcFolders, cfg) {
+		if !IsMonitoredSourcePath(entry.Path, srcs, cfg) {
 			continue
 		}
 		category := ClassifyFile(entry.Path, cfg)
