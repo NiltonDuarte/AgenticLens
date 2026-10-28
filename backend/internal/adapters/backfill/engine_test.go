@@ -283,11 +283,12 @@ func TestBackfillEngine_MigrationThenSourceBackfillMakesLedgerReady(t *testing.T
 	dbPath := filepath.Join(tempDir, "opencode.db")
 	setupMockOpenCodeDB(t, dbPath, "source-session", ticketID)
 	report, err := NewEngine().Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      ticketID,
-		RecomputeDB:   true,
-		DBPath:        dbPath,
-		Source:        "opencode",
+		WorkspacesDir:  tempDir,
+		TicketID:       ticketID,
+		RecomputeDB:    true,
+		DBPath:         dbPath,
+		Source:         "opencode",
+		AllowFallbacks: true,
 	})
 	if err != nil {
 		t.Fatalf("source-backed backfill failed: %v", err)
@@ -378,6 +379,9 @@ func TestBackfillEngine_RecomputeDBPreservesExactZeroSteeringTurns(t *testing.T)
 	ledger := domain.AgenticFactLedger{
 		TicketID: &ticketID,
 		Code:     domain.CodeFacts{SDLCIterations: 4},
+		Sessions: sessionFacts([]domain.InvocationFact{
+			{ID: "sess-zero", Role: "orchestrator", Model: "mock"},
+		}, nil, nil),
 	}
 	createTestWorkspace(t, tempDir, ticketID, ledger)
 	dbPath := filepath.Join(tempDir, "opencode.db")
@@ -420,7 +424,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		Code: domain.CodeFacts{
 			LinesAdded: 10,
 		}, Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "inv-a1", Role: "orchestrator", Model: "mock"},
+			{ID: "sess-a1", Role: "orchestrator", Model: "mock"},
 		}, nil, nil),
 	}
 	ledgerB := domain.AgenticFactLedger{
@@ -428,7 +432,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		Code: domain.CodeFacts{
 			LinesAdded: 20,
 		}, Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "inv-b1", Role: "coder", Model: "mock"},
+			{ID: "sess-b1", Role: "coder", Model: "mock"},
 		}, nil, nil),
 	}
 
@@ -484,8 +488,8 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if len(loadedB.Migration.StepsPending) != 2 || !containsMigrationStep(loadedB.Migration.StepsPending, domain.MigrationStepOpenCodeDB) || !containsMigrationStep(loadedB.Migration.StepsPending, domain.MigrationStepSourceBackfill) {
 		t.Errorf("expected steps_pending to contain OpenCode DB and source backfill, got %v", loadedB.Migration.StepsPending)
 	}
-	if len(loadedB.Sessions) != 1 || len(loadedB.Sessions[0].Invocations) != 1 || loadedB.Sessions[0].Invocations[0].ID != "inv-b1" {
-		t.Errorf("expected preserved invocation inv-b1 in session snapshot, got %v", loadedB.Sessions)
+	if len(loadedB.Sessions) != 1 || len(loadedB.Sessions[0].Invocations) != 1 || loadedB.Sessions[0].Invocations[0].ID != "sess-b1" {
+		t.Errorf("expected preserved invocation sess-b1 in session snapshot, got %v", loadedB.Sessions)
 	}
 
 	// Step 2: Developer B on Machine B pulls repo and resumes migration
@@ -1059,5 +1063,250 @@ func TestBackfillEngine_CodexParseFailurePreservesTree(t *testing.T) {
 		if !found || len(session.Tools) != 1 || session.Tools[0].Name != tool {
 			t.Errorf("session %q changed after parse failure: %+v", session.ID, session)
 		}
+	}
+}
+
+func setupMockOpenCodeMultiRootDB(t *testing.T, dbPath string, rootIDs []string, ticketID string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("failed to create mock sqlite db: %v", err)
+	}
+	defer db.Close()
+
+	schema := `
+	CREATE TABLE session (
+		id TEXT PRIMARY KEY,
+		parent_id TEXT,
+		agent TEXT,
+		model TEXT,
+		title TEXT,
+		time_created INTEGER,
+		time_updated INTEGER
+	);
+	CREATE TABLE message (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		data TEXT,
+		time_created INTEGER,
+		time_updated INTEGER
+	);
+	CREATE TABLE part (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		message_id TEXT,
+		data TEXT,
+		time_created INTEGER,
+		time_updated INTEGER
+	);
+	`
+	if _, err := db.Exec(schema); err != nil {
+		t.Fatalf("failed to initialize mock schema: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+	for i, sid := range rootIDs {
+		title := fmt.Sprintf("[%s] Test Session %d", ticketID, i+1)
+		_, err = db.Exec(`INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES (?, NULL, 'orchestrator', 'mock-model', ?, ?, ?)`,
+			sid, title, now-int64(10000*(i+1)), now-int64(1000*(i+1)))
+		if err != nil {
+			t.Fatalf("failed to insert mock session: %v", err)
+		}
+		msgID := fmt.Sprintf("m-%d", i+1)
+		msgData := fmt.Sprintf(`{"role":"assistant","modelID":"gpt-4o","tokens":{"input":1000,"output":200,"cache":{"read":500},"reasoning":50},"cost":0.05,"time":{"created":%d,"completed":%d}}`,
+			now-9000, now-8000)
+		_, err = db.Exec(`INSERT INTO message (id, session_id, data, time_created, time_updated) VALUES (?, ?, ?, ?, ?)`, msgID, sid, msgData, now-9000, now-8000)
+		if err != nil {
+			t.Fatalf("failed to insert mock message: %v", err)
+		}
+	}
+}
+
+func TestBackfillEngine_MultiRootSessionsExtracted(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "AL-MULTI-ROOT"
+	ledger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Sessions: []domain.SessionFact{
+			{
+				ID:     "ses-root-1",
+				Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{
+					{ID: "ses-root-1", Role: "orchestrator", Model: "mock-model"},
+				},
+			},
+			{
+				ID:     "ses-root-2",
+				Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{
+					{ID: "ses-root-2", Role: "orchestrator", Model: "mock-model"},
+				},
+			},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+
+	dbPath := filepath.Join(tempDir, "opencode.db")
+	setupMockOpenCodeMultiRootDB(t, dbPath, []string{"ses-root-1", "ses-root-2"}, ticketID)
+
+	report, err := NewEngine().Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      ticketID,
+		RecomputeDB:   true,
+		DBPath:        dbPath,
+		Source:        "opencode",
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if len(report.Results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(report.Results))
+	}
+	res := report.Results[0]
+	if !res.DBFound {
+		t.Errorf("expected DBFound true, got false")
+	}
+	if !res.DBUpdated {
+		t.Errorf("expected DBUpdated true, got false")
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("reading updated ledger: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("unmarshaling updated ledger: %v", err)
+	}
+
+	if len(parsed.Sessions) != 2 {
+		t.Fatalf("expected 2 sessions preserved, got %d: %+v", len(parsed.Sessions), parsed.Sessions)
+	}
+	sessionIDs := make(map[string]bool)
+	for _, s := range parsed.Sessions {
+		sessionIDs[s.ID] = true
+	}
+	if !sessionIDs["ses-root-1"] || !sessionIDs["ses-root-2"] {
+		t.Errorf("expected both ses-root-1 and ses-root-2 in sessions, got %v", sessionIDs)
+	}
+}
+
+func TestBackfillEngine_StrictSessionTrustRejectsUntrustedTitleFallback(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "AL-REJECT-FALLBACK"
+	ledger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Sessions: []domain.SessionFact{
+			{
+				ID:     "ses-orig-123",
+				Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{
+					{ID: "ses-orig-123", Role: "coder", Model: "mock-model"},
+				},
+			},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+
+	dbPath := filepath.Join(tempDir, "opencode.db")
+	// DB has an unrelated review session matching the ticket title, but NOT matching the session ID
+	setupMockOpenCodeDB(t, dbPath, "ses-review-456", ticketID)
+
+	report, err := NewEngine().Execute(BackfillOptions{
+		WorkspacesDir:  tempDir,
+		TicketID:       ticketID,
+		RecomputeDB:    true,
+		DBPath:         dbPath,
+		Source:         "opencode",
+		Force:          true,
+		AllowFallbacks: false, // Default: no fallbacks
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if len(report.Results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(report.Results))
+	}
+	res := report.Results[0]
+	if res.DBFound {
+		t.Errorf("expected DBFound false when session ID is missing without fallbacks, got true")
+	}
+	if res.DBUpdated {
+		t.Errorf("expected DBUpdated false, got true")
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("reading updated ledger: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("unmarshaling updated ledger: %v", err)
+	}
+
+	// Must preserve original session ID and NOT hijack review session
+	if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "ses-orig-123" {
+		t.Fatalf("expected original session ses-orig-123 preserved intact, got %+v", parsed.Sessions)
+	}
+	if parsed.Migration == nil || parsed.Migration.Status != string(domain.MigrationStatusPartial) {
+		t.Errorf("expected migration status partial, got %v", parsed.Migration)
+	}
+}
+
+func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "AL-EXPLICIT-FALLBACK"
+	ledger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Sessions: []domain.SessionFact{
+			{
+				ID:     "ses-missing-789",
+				Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{
+					{ID: "ses-missing-789", Role: "coder", Model: "mock-model"},
+				},
+			},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+
+	dbPath := filepath.Join(tempDir, "opencode.db")
+	setupMockOpenCodeDB(t, dbPath, "ses-review-999", ticketID)
+
+	report, err := NewEngine().Execute(BackfillOptions{
+		WorkspacesDir:  tempDir,
+		TicketID:       ticketID,
+		RecomputeDB:    true,
+		DBPath:         dbPath,
+		Source:         "opencode",
+		Force:          true,
+		AllowFallbacks: true, // Explicitly enabled
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if len(report.Results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(report.Results))
+	}
+	res := report.Results[0]
+	if !res.DBFound {
+		t.Errorf("expected DBFound true with AllowFallbacks=true, got false")
+	}
+	if !res.DBUpdated {
+		t.Errorf("expected DBUpdated true with AllowFallbacks=true, got false")
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("reading updated ledger: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("unmarshaling updated ledger: %v", err)
+	}
+
+	if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "ses-review-999" {
+		t.Fatalf("expected resolved session ses-review-999 via fallback, got %+v", parsed.Sessions)
 	}
 }

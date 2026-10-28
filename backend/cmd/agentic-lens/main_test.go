@@ -2850,6 +2850,7 @@ func TestCLIHelpCommand(t *testing.T) {
 			"--ticket-id",
 			"--db-path",
 			"--code-ref",
+			"--allow-fallbacks",
 		}
 		for _, flag := range expectedFlags {
 			if !strings.Contains(out, flag) {

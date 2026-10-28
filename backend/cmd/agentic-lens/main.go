@@ -590,6 +590,7 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "  --update-summaries     Idempotently update SUMMARY.md markdown metrics tables\n")
 		fmt.Fprintf(out, "  --db-path <path>       Explicit path to OpenCode SQLite database file\n")
 		fmt.Fprintf(out, "  --force                Force migration and recompute even if ledger is already completed\n")
+		fmt.Fprintf(out, "  --allow-fallbacks      Allow heuristic session discovery fallbacks (title match, workspace commit range) when exact session IDs are not found in DB\n")
 	}
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help" || args[0] == "-help") {
 		backfillFlags.SetOutput(os.Stdout)
@@ -608,6 +609,7 @@ func runBackfill(args []string) {
 	updateSummariesFlag := backfillFlags.Bool("update-summaries", false, "Idempotently update SUMMARY.md markdown metrics tables")
 	dbPathFlag := backfillFlags.String("db-path", "", "Explicit path to OpenCode SQLite database file")
 	forceFlag := backfillFlags.Bool("force", false, "Force migration and recompute even if ledger is already completed")
+	allowFallbacksFlag := backfillFlags.Bool("allow-fallbacks", false, "Allow heuristic session discovery fallbacks (title match, workspace commit range) when exact session IDs are not found in DB")
 
 	if err := backfillFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing backfill flags: %v\n", err)
@@ -646,6 +648,7 @@ func runBackfill(args []string) {
 		UpdateSummaries: *updateSummariesFlag,
 		DBPath:          *dbPathFlag,
 		Force:           *forceFlag,
+		AllowFallbacks:  *allowFallbacksFlag,
 	}
 
 	engine := backfill.NewEngine()
