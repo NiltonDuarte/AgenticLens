@@ -250,12 +250,18 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	if at.ConsecutiveErrorsStreakCritical > 0 {
 		b.WriteString(fmt.Sprintf("  consecutive_errors_streak_critical: %d\n", at.ConsecutiveErrorsStreakCritical))
 	}
-	if at.ContextCeilingWarningTokens > 0 {
-		b.WriteString(fmt.Sprintf("  context_ceiling_warning_tokens: %d\n", at.ContextCeilingWarningTokens))
+	b.WriteString("  # Fixed context ceiling token thresholds triggering warning and critical alerts.\n")
+	b.WriteString("  # context_ceiling_critical_tokens governs context saturation percentage and health status grading.\n")
+	ceilingWarn := at.ContextCeilingWarningTokens
+	if ceilingWarn <= 0 {
+		ceilingWarn = domain.ContextCeilingWarningTokens
 	}
-	if at.ContextCeilingCriticalTokens > 0 {
-		b.WriteString(fmt.Sprintf("  context_ceiling_critical_tokens: %d\n", at.ContextCeilingCriticalTokens))
+	ceilingCrit := at.ContextCeilingCriticalTokens
+	if ceilingCrit <= 0 {
+		ceilingCrit = domain.ContextCeilingCriticalTokens
 	}
+	b.WriteString(fmt.Sprintf("  context_ceiling_warning_tokens: %d\n", ceilingWarn))
+	b.WriteString(fmt.Sprintf("  context_ceiling_critical_tokens: %d\n", ceilingCrit))
 	if at.TokenVelocityWarningTokens > 0 {
 		b.WriteString(fmt.Sprintf("  token_velocity_warning_tokens: %d\n", at.TokenVelocityWarningTokens))
 	}
@@ -275,11 +281,6 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 		b.WriteString(fmt.Sprintf("  tool_thrashing_critical_failures: %d\n", at.ToolThrashingCriticalFailures))
 	}
 	b.WriteString("\n")
-
-	// Healthy Ceiling Tokens Settings
-	healthyCeiling := cfg.EffectiveHealthyCeiling()
-	b.WriteString("# Healthy context window token ceiling for context saturation and health grading.\n")
-	b.WriteString(fmt.Sprintf("healthy_ceiling_tokens: %d\n\n", healthyCeiling))
 
 	// Code Metrics Settings
 	b.WriteString("# Git commit diff analysis and code classification glob patterns.\n")
@@ -411,8 +412,7 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
 		},
-		HealthyCeilingTokens: domain.HealthyCeilingTokens,
-		AnomalyThresholds:    domain.DefaultAnomalyThresholdsConfig(),
+		AnomalyThresholds: domain.DefaultAnomalyThresholdsConfig(),
 		CodeMetrics: domain.CodeMetricsConfig{
 			SourceRoots:  cleanFolders,
 			Include:      []string{},

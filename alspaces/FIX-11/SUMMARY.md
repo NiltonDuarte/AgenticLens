@@ -1,28 +1,28 @@
-# FIX-11 Summary: Configurable Ceilings, Enriched Anomaly Thresholds, and Source Roots Consolidation
+# FIX-11 Summary: Critical Context Ceilings, Enriched Anomaly Thresholds, and Source Roots Consolidation
 
 ## Overview
 
-This change introduces configurable healthy ceiling tokens, enriches live anomaly detection thresholds, and consolidates source roots under `code_metrics.source_roots` in `.agenticlens-config.yaml` while ensuring backward compatibility with legacy `workspaces.src_folders`.
+This change enforces strict, configurable context ceiling thresholds under `anomaly_thresholds`, excising redundant `healthy_ceiling_tokens` across the codebase, establishes `ContextCeilingCriticalTokens` as the single authoritative source of truth for saturation calculations and health grading, enriches live anomaly detection thresholds, and consolidates source roots under `code_metrics.source_roots` in `.agenticlens-config.yaml` with backward-compatible bridging for `workspaces.src_folders`.
 
 ## Domain Changes
 
-- Root `HealthyCeilingTokens` int64 in `ProjectConfig`, defaulting to 200,000 tokens when non-positive, eliminating the redundant `MetricsConfig`.
-- Root `AnomalyThresholds` in `ProjectConfig`, harmonizing offline and live detection under a single configuration block.
-- Standardized fixed token context ceiling thresholds: `ContextCeilingWarningTokens` (160,000) and `ContextCeilingCriticalTokens` (200,000).
+- Excised `healthy_ceiling_tokens` from `ProjectConfig`, `LiveAnomalyOptions`, and manifest templates.
+- Enforced `AnomalyThresholds.ContextCeilingCriticalTokens` as the sole source of truth for context saturation percentage and health grading across all domain aggregations and live stream evaluations.
+- Retained fixed token context ceiling thresholds: `ContextCeilingWarningTokens` (default 160,000) and `ContextCeilingCriticalTokens` (default 200,000).
 - Dynamically calculated elevated context health threshold in `GetBaseHealthStatus` and `GetHealthLabel` as `ceiling / 2`.
-- Propagated configured context ceilings and anomaly thresholds through aggregations (`ComputeWorkflowEfficiency`, `ComputeRoleMetrics`, `ComputeModelMetrics`, `ComputeThreadSummaries`, `RefreshAnomalySummaries`, and `DeriveMetricsLedger`).
+- Propagated configured context ceilings and anomaly thresholds through aggregations (`ComputeWorkflowEfficiencyWithCeiling`, `ComputeRoleMetricsWithCeiling`, `ComputeModelMetrics`, `ComputeThreadSummariesWithCeiling`, `RefreshAnomalySummaries`, and `DeriveMetricsLedger`).
 - Added `LiveAnomalyOptions` and configurable thresholds for all live anomaly rules (consecutive tool errors, token velocity tokens/deltas, tool thrashing counts) in `internal/domain/live_anomaly.go`.
 - Added `SourceRoots []string` to `CodeMetricsConfig`.
 
 ## Adapter Changes
 
 - `internal/adapters/config/loader.go`:
-  - Added root DTO fields for `healthy_ceiling_tokens`, `anomaly_thresholds`, and `code_metrics.source_roots`.
-  - Maintained backward-compatible migration for legacy manifests specifying `metrics.healthy_ceiling_tokens`, `live.anomaly_thresholds`, or ratio-based thresholds.
+  - Excised `healthy_ceiling_tokens` and `rawMetricsConfig` with zero fallback.
+  - Implemented fail-fast validation in `ValidateConfig`: immediately rejects configurations missing or with non-positive `context_ceiling_critical_tokens` or `context_ceiling_warning_tokens`, or where warning exceeds critical tokens.
+  - Added root DTO fields for `anomaly_thresholds` and `code_metrics.source_roots`.
   - Bidirectional bridging between `CodeMetrics.SourceRoots` and `Workspaces.SrcFolders`.
-  - Updated `ValidateConfig` to accept source definitions from either location.
 - `internal/adapters/config/writer.go`:
-  - Serializes root `healthy_ceiling_tokens`, root `anomaly_thresholds`, and `code_metrics.source_roots`.
+  - Serializes root `anomaly_thresholds` and `code_metrics.source_roots`, cleanly omitting `healthy_ceiling_tokens`.
   - Deprecated and removed legacy `metrics` and `workspaces.src_folders` sections.
 - `internal/adapters/git`:
   - Enriched `ClassificationConfig` with `SourceRoots`.
@@ -31,16 +31,16 @@ This change introduces configurable healthy ceiling tokens, enriches live anomal
 - `internal/adapters/live/service.go`:
   - Integrated configured root ceiling and anomaly thresholds into live trace analysis.
 - `.agenticlens-config.yaml`:
-  - Promoted `healthy_ceiling_tokens: 200000` and `anomaly_thresholds` to root level.
-  - Specified `context_ceiling_warning_tokens: 160000` and `context_ceiling_critical_tokens: 200000`.
+  - Dropped `healthy_ceiling_tokens`.
+  - Declared `context_ceiling_warning_tokens: 160000` and `context_ceiling_critical_tokens: 200000` under root `anomaly_thresholds`.
   - Consolidated source paths under `code_metrics.source_roots: [web, backend]`.
 
 ## Verification
 
-- Backend tests with race detector (`go test -race ./...`): PASS
+- Backend tests with race detector (`go test -race -count=1 ./...`): PASS (12 packages)
 - Frontend tests (`vitest run`): 32 test files, 734 tests passed: PASS
-- Static analysis and lint (`make check`): PASS
-- Single binary and multi-platform build (`make build`): PASS
+- Static analysis and lint (`go vet ./...`, `tsc --noEmit`, `eslint`): PASS
+- Production build & multi-platform compilation (`make`): PASS
 
 
 ### Workflow Efficiency

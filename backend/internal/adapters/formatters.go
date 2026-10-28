@@ -226,6 +226,11 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 
 	subPeakRoleStr := titleCase(cwh.SubagentsPeakRole)
 
+	effectiveCeiling := cwh.HealthyCeilingTokens
+	if effectiveCeiling <= 0 {
+		effectiveCeiling = domain.ContextCeilingCriticalTokens
+	}
+
 	lines := []string{
 		"### Workflow Efficiency",
 		fmt.Sprintf("- **Software Development Life Cycle Iterations:** %d", we.SDLCIterations),
@@ -235,7 +240,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 			cwh.Status,
 			rootTokStr,
 			rootPctStr,
-			domain.FormatTokensK(domain.HealthyCeilingTokens),
+			domain.FormatTokensK(effectiveCeiling),
 			cwh.Compactions,
 			subTokStr,
 			subPeakRoleStr,
@@ -332,7 +337,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 			FormatNumber(r.CacheReadTokens),
 			r.CacheHitRatePct,
 			domain.FormatTokensK(r.PeakContextTokens),
-			domain.GetHealthLabel(r.PeakContextTokens, domain.HealthyCeilingTokens),
+			domain.GetHealthLabel(r.PeakContextTokens, effectiveCeiling),
 			r.CostUSD,
 		))
 	}

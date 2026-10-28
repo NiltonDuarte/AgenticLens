@@ -115,7 +115,7 @@ func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 
 // ComputeTotals calculates aggregate invocation metrics from a slice of invocation facts.
 func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric {
-	effCeiling := HealthyCeilingTokens
+	effCeiling := ContextCeilingCriticalTokens
 	if len(ceiling) > 0 && ceiling[0] > 0 {
 		effCeiling = ceiling[0]
 	}
@@ -160,7 +160,7 @@ func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric
 
 // ComputeWorkflowEfficiency derives workflow efficiency profile from an atomic fact ledger.
 func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) WorkflowEfficiency {
-	return ComputeWorkflowEfficiencyWithCeiling(ledger, HealthyCeilingTokens, roleOrder...)
+	return ComputeWorkflowEfficiencyWithCeiling(ledger, ContextCeilingCriticalTokens, roleOrder...)
 }
 
 // ComputeWorkflowEfficiencyWithConfig derives workflow efficiency using project configuration.
@@ -171,7 +171,7 @@ func ComputeWorkflowEfficiencyWithConfig(ledger AgenticFactLedger, cfg ProjectCo
 // ComputeWorkflowEfficiencyWithCeiling derives workflow efficiency profile with an explicit context ceiling.
 func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int64, roleOrder ...[]string) WorkflowEfficiency {
 	if ceiling <= 0 {
-		ceiling = HealthyCeilingTokens
+		ceiling = ContextCeilingCriticalTokens
 	}
 	invs := ledger.InvocationFacts()
 	tools := ledger.ToolFacts()
@@ -427,13 +427,13 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 
 // ComputeRoleMetrics calculates aggregated metrics grouped by agent role using default ceiling.
 func ComputeRoleMetrics(invocations []InvocationFact, roleOrder ...[]string) []RoleMetric {
-	return ComputeRoleMetricsWithCeiling(invocations, HealthyCeilingTokens, roleOrder...)
+	return ComputeRoleMetricsWithCeiling(invocations, ContextCeilingCriticalTokens, roleOrder...)
 }
 
 // ComputeRoleMetricsWithCeiling calculates aggregated metrics grouped by agent role with an explicit context ceiling.
 func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, roleOrder ...[]string) []RoleMetric {
 	if ceiling <= 0 {
-		ceiling = HealthyCeilingTokens
+		ceiling = ContextCeilingCriticalTokens
 	}
 
 	byRole := make(map[AgentRole][]InvocationFact)
@@ -485,7 +485,7 @@ func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, 
 // ComputeModelMetrics calculates aggregated metrics grouped by model, sorted by cost descending
 // with secondary tie-breaking on model name ascending.
 func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []ModelMetric {
-	effCeiling := HealthyCeilingTokens
+	effCeiling := ContextCeilingCriticalTokens
 	if len(ceiling) > 0 && ceiling[0] > 0 {
 		effCeiling = ceiling[0]
 	}
@@ -525,13 +525,13 @@ func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []Model
 
 // ComputeThreadSummaries groups invocations by root session into hierarchical thread execution records.
 func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string) []ThreadExecutionRecord {
-	return ComputeThreadSummariesWithCeiling(invocations, HealthyCeilingTokens, roleOrder...)
+	return ComputeThreadSummariesWithCeiling(invocations, ContextCeilingCriticalTokens, roleOrder...)
 }
 
 // ComputeThreadSummariesWithCeiling groups invocations by root session into hierarchical thread execution records with an explicit ceiling.
 func ComputeThreadSummariesWithCeiling(invocations []InvocationFact, ceiling int64, roleOrder ...[]string) []ThreadExecutionRecord {
 	if ceiling <= 0 {
-		ceiling = HealthyCeilingTokens
+		ceiling = ContextCeilingCriticalTokens
 	}
 
 	if len(invocations) == 0 {
@@ -1015,7 +1015,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 
 // CalculateRoleEffortRollup groups invocations, tokens, and cost across all tickets by agent role.
 func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger, ceiling ...int64) map[string]GroupedMetric {
-	effCeiling := HealthyCeilingTokens
+	effCeiling := ContextCeilingCriticalTokens
 	if len(ceiling) > 0 && ceiling[0] > 0 {
 		effCeiling = ceiling[0]
 	}

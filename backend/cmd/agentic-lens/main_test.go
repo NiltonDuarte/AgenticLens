@@ -577,7 +577,7 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 
 func TestServer_FailsWithoutWorkspacesConfig(t *testing.T) {
 	tempDir := t.TempDir()
-	cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  src_folders:\n    - src\n"
+	cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  src_folders:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -3685,7 +3685,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("custom prefix resolves automatically from project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3730,7 +3730,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("configured prefix overrides default prefix mapping", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\nworkspaces:\n  src_folders:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3775,7 +3775,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("explicit CLI ticket-type flag overrides configured prefix", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3821,7 +3821,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("strict-type succeeds when custom prefix matches in project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\nworkspaces:\n  src_folders:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3885,7 +3885,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("git checkout -b failed: %v", err)
 		}
 
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3952,7 +3952,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 
 		// Configure AL to map to docs in .agenticlens-config.yaml
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\nworkspaces:\n  src_folders:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -4018,6 +4018,9 @@ workspaces:
   dir: "custom_root_ws"
   src_folders:
     - "src"
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config: %v", err)
@@ -4101,6 +4104,9 @@ workspaces:
   dir: "root_ws"
   src_folders:
     - "src"
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		// Legacy config maps ROOTPRIO to "chore" and dir to "legacy_ws"
 		legacyCfg := `
@@ -4113,6 +4119,9 @@ workspaces:
   dir: "legacy_ws"
   src_folders:
     - "src"
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(rootCfg), 0644); err != nil {
 			t.Fatalf("failed writing root config: %v", err)
@@ -4499,7 +4508,7 @@ func TestCLI_Invariants(t *testing.T) {
 		runCmd("add", "README.md")
 		runCmd("commit", "-m", "initial commit")
 
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"DEV\"\nworkspaces:\n  src_folders:\n    - \"src\"\n"
+		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"DEV\"\nworkspaces:\n  src_folders:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -5453,6 +5462,9 @@ workspaces:
   dir: custom_spaces
   src_folders:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatalf("failed writing test config: %v", err)
@@ -5590,6 +5602,9 @@ ticket:
 workspaces:
   src_folders:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(emptyWsDir, ".agenticlens-config.yaml"), []byte(cfgWithoutWs), 0644); err != nil {
 			t.Fatalf("failed writing test config: %v", err)
@@ -5625,6 +5640,9 @@ ticket:
 workspaces:
   src_folders:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(emptyWsDir, ".agenticlens-config.yaml"), []byte(cfgWithoutWs), 0644); err != nil {
 			t.Fatalf("failed writing test config: %v", err)
@@ -5660,6 +5678,9 @@ ticket:
 workspaces:
   src_folders:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(emptyWsDir, ".agenticlens-config.yaml"), []byte(cfgWithoutWs), 0644); err != nil {
 			t.Fatalf("failed writing test config: %v", err)
@@ -5744,6 +5765,9 @@ database:
 code_metrics:
   test_patterns: []
   prod_patterns: []
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatalf("failed writing config: %v", err)
@@ -5807,6 +5831,9 @@ database:
 code_metrics:
   test_patterns: ["*_test.go"]
   prod_patterns: ["*.go"]
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatalf("failed writing config: %v", err)
@@ -6046,6 +6073,9 @@ database:
 code_metrics:
   test_patterns: ["*_test.go"]
   prod_patterns: ["*.go"]
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
 	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
@@ -6253,6 +6283,9 @@ database:
 code_metrics:
   test_patterns: ["*_test.go"]
   prod_patterns: ["*.go"]
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
 	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
@@ -6389,6 +6422,9 @@ database:
 code_metrics:
   test_patterns: ["*_test.go"]
   prod_patterns: ["*.go"]
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
 	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()

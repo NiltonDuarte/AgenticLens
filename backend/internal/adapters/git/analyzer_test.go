@@ -204,6 +204,9 @@ ticket:
 workspaces:
   src_folders:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 code_metrics:
   include:
     - "custom/include/**"

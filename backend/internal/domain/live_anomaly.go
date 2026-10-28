@@ -60,10 +60,9 @@ type toolCallRecord struct {
 	timestamp string
 }
 
-// LiveAnomalyOptions configures threshold limits and context window ceilings for live anomaly evaluation.
+// LiveAnomalyOptions configures threshold limits for live anomaly evaluation.
 type LiveAnomalyOptions struct {
-	Thresholds           AnomalyThresholdsConfig
-	HealthyCeilingTokens int64
+	Thresholds AnomalyThresholdsConfig
 }
 
 // EvaluateConsecutiveToolErrors evaluates the chronological sequence of tool parts in LiveTraceView.
@@ -560,9 +559,6 @@ func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView, opts ...
 		}
 		if t.ToolThrashingCriticalFailures > 0 {
 			thresholds.ToolThrashingCriticalFailures = t.ToolThrashingCriticalFailures
-		}
-		if opt.HealthyCeilingTokens > 0 && t.ContextCeilingCriticalTokens <= 0 {
-			thresholds.ContextCeilingCriticalTokens = opt.HealthyCeilingTokens
 		}
 	}
 

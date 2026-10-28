@@ -51,6 +51,8 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"  stall_threshold_seconds: 120",
 		"  error_rate_threshold: 0.25",
 		"  context_exhaustion_pct: 0.85",
+		"  context_ceiling_warning_tokens: 160000",
+		"  context_ceiling_critical_tokens: 200000",
 		"code_metrics:",
 		"  include: []",
 		"  exclude: []",
@@ -67,6 +69,7 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 	}
 
 	unexpectedSubstrings := []string{
+		"healthy_ceiling_tokens:",
 		"orchestrator: orchestrator",
 		"planner: planner",
 		"- orchestrator",
@@ -151,6 +154,12 @@ func TestGenerateConfigYAML_RoundTrip(t *testing.T) {
 		}
 		if len(loaded.RoleOrder) != len(defaultCfg.RoleOrder) {
 			t.Errorf("expected %d role order, got %d", len(defaultCfg.RoleOrder), len(loaded.RoleOrder))
+		}
+		if loaded.AnomalyThresholds.ContextCeilingCriticalTokens != defaultCfg.AnomalyThresholds.ContextCeilingCriticalTokens {
+			t.Errorf("expected context_ceiling_critical_tokens %d, got %d", defaultCfg.AnomalyThresholds.ContextCeilingCriticalTokens, loaded.AnomalyThresholds.ContextCeilingCriticalTokens)
+		}
+		if loaded.AnomalyThresholds.ContextCeilingWarningTokens != defaultCfg.AnomalyThresholds.ContextCeilingWarningTokens {
+			t.Errorf("expected context_ceiling_warning_tokens %d, got %d", defaultCfg.AnomalyThresholds.ContextCeilingWarningTokens, loaded.AnomalyThresholds.ContextCeilingWarningTokens)
 		}
 	})
 

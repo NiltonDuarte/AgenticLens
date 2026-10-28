@@ -20,12 +20,19 @@ var ErrConfigNotFound = errors.New("configuration file not found")
 // ErrInvalidConfig indicates that the configuration is missing required parameters.
 var ErrInvalidConfig = errors.New("invalid configuration: missing required fields")
 
-// ConfigValidationError specifies missing mandatory fields in the configuration.
+// ConfigValidationError specifies missing mandatory fields or validation errors in the configuration.
 type ConfigValidationError struct {
 	MissingFields []string
+	Message       string
 }
 
 func (e *ConfigValidationError) Error() string {
+	if e.Message != "" {
+		if len(e.MissingFields) > 0 {
+			return fmt.Sprintf("invalid configuration: %s (missing required fields: %s)", e.Message, strings.Join(e.MissingFields, ", "))
+		}
+		return fmt.Sprintf("invalid configuration: %s", e.Message)
+	}
 	return fmt.Sprintf("invalid configuration: missing required fields: %s", strings.Join(e.MissingFields, ", "))
 }
 
@@ -70,9 +77,23 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 		missing = append(missing, "code_metrics.source_roots")
 	}
 
+	if cfg.AnomalyThresholds.ContextCeilingCriticalTokens <= 0 {
+		missing = append(missing, "anomaly_thresholds.context_ceiling_critical_tokens")
+	}
+	if cfg.AnomalyThresholds.ContextCeilingWarningTokens <= 0 {
+		missing = append(missing, "anomaly_thresholds.context_ceiling_warning_tokens")
+	}
+
 	if len(missing) > 0 {
 		return &ConfigValidationError{MissingFields: missing}
 	}
+
+	if cfg.AnomalyThresholds.ContextCeilingWarningTokens > cfg.AnomalyThresholds.ContextCeilingCriticalTokens {
+		return &ConfigValidationError{
+			Message: "anomaly_thresholds.context_ceiling_warning_tokens cannot exceed anomaly_thresholds.context_ceiling_critical_tokens",
+		}
+	}
+
 	return nil
 }
 
@@ -194,10 +215,6 @@ type rawLiveConfig struct {
 	AnomalyThresholds      *rawAnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
 }
 
-type rawMetricsConfig struct {
-	HealthyCeilingTokens *int64 `json:"healthy_ceiling_tokens" yaml:"healthy_ceiling_tokens"`
-}
-
 type rawCodeMetricsConfig struct {
 	SourceRoots  []string `json:"source_roots" yaml:"source_roots"`
 	BaseBranch   *string  `json:"base_branch" yaml:"base_branch"`
@@ -208,21 +225,21 @@ type rawCodeMetricsConfig struct {
 }
 
 type rawProjectConfigDTO struct {
-	ProjectName          *string                     `json:"project_name" yaml:"project_name"`
-	Ticket               *rawTicketConfig            `json:"ticket" yaml:"ticket"`
-	Workspaces           *rawWorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
-	HealthyCeilingTokens *int64                      `json:"healthy_ceiling_tokens" yaml:"healthy_ceiling_tokens"`
-	Database             *rawDatabaseConfig          `json:"database" yaml:"database"`
-	Live                 *rawLiveConfig              `json:"live" yaml:"live"`
-	AnomalyThresholds    *rawAnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
-	Metrics              *rawMetricsConfig           `json:"metrics" yaml:"metrics"`
-	CodeMetrics          *rawCodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
-	RoleMappings         map[string]string           `json:"role_mappings" yaml:"role_mappings"`
-	RoleOrder            []string                    `json:"role_order" yaml:"role_order"`
+	ProjectName       *string                     `json:"project_name" yaml:"project_name"`
+	Ticket            *rawTicketConfig            `json:"ticket" yaml:"ticket"`
+	Workspaces        *rawWorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
+	Database          *rawDatabaseConfig          `json:"database" yaml:"database"`
+	Live              *rawLiveConfig              `json:"live" yaml:"live"`
+	AnomalyThresholds *rawAnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
+	CodeMetrics       *rawCodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
+	RoleMappings      map[string]string           `json:"role_mappings" yaml:"role_mappings"`
+	RoleOrder         []string                    `json:"role_order" yaml:"role_order"`
 }
 
 func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	cfg := domain.DefaultProjectConfig()
+	cfg.AnomalyThresholds.ContextCeilingWarningTokens = 0
+	cfg.AnomalyThresholds.ContextCeilingCriticalTokens = 0
 
 	if dto.ProjectName != nil && strings.TrimSpace(*dto.ProjectName) != "" {
 		cfg.ProjectName = strings.TrimSpace(*dto.ProjectName)
@@ -305,12 +322,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		}
 	}
 
-	if dto.HealthyCeilingTokens != nil && *dto.HealthyCeilingTokens > 0 {
-		cfg.HealthyCeilingTokens = *dto.HealthyCeilingTokens
-	} else if dto.Metrics != nil && dto.Metrics.HealthyCeilingTokens != nil && *dto.Metrics.HealthyCeilingTokens > 0 {
-		cfg.HealthyCeilingTokens = *dto.Metrics.HealthyCeilingTokens
-	}
-
 	if dto.Live != nil {
 		if dto.Live.ActiveThresholdSeconds != nil {
 			cfg.Live.ActiveThresholdSeconds = *dto.Live.ActiveThresholdSeconds
@@ -343,17 +354,13 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		if rawAT.ConsecutiveErrorsStreakCritical != nil && *rawAT.ConsecutiveErrorsStreakCritical > 0 {
 			cfg.AnomalyThresholds.ConsecutiveErrorsStreakCritical = *rawAT.ConsecutiveErrorsStreakCritical
 		}
-		if rawAT.ContextCeilingWarningTokens != nil && *rawAT.ContextCeilingWarningTokens > 0 {
-			cfg.AnomalyThresholds.ContextCeilingWarningTokens = *rawAT.ContextCeilingWarningTokens
-		} else if rawAT.ContextCeilingApproachRatioWarning != nil && *rawAT.ContextCeilingApproachRatioWarning > 0 {
-			effectiveCeiling := cfg.EffectiveHealthyCeiling()
-			cfg.AnomalyThresholds.ContextCeilingWarningTokens = int64(float64(effectiveCeiling) * *rawAT.ContextCeilingApproachRatioWarning)
-		}
-		if rawAT.ContextCeilingCriticalTokens != nil && *rawAT.ContextCeilingCriticalTokens > 0 {
+		if rawAT.ContextCeilingCriticalTokens != nil {
 			cfg.AnomalyThresholds.ContextCeilingCriticalTokens = *rawAT.ContextCeilingCriticalTokens
-		} else if rawAT.ContextCeilingApproachRatioCritical != nil && *rawAT.ContextCeilingApproachRatioCritical > 0 {
-			effectiveCeiling := cfg.EffectiveHealthyCeiling()
-			cfg.AnomalyThresholds.ContextCeilingCriticalTokens = int64(float64(effectiveCeiling) * *rawAT.ContextCeilingApproachRatioCritical)
+		}
+		if rawAT.ContextCeilingWarningTokens != nil {
+			cfg.AnomalyThresholds.ContextCeilingWarningTokens = *rawAT.ContextCeilingWarningTokens
+		} else if rawAT.ContextCeilingApproachRatioWarning != nil && *rawAT.ContextCeilingApproachRatioWarning > 0 && cfg.AnomalyThresholds.ContextCeilingCriticalTokens > 0 {
+			cfg.AnomalyThresholds.ContextCeilingWarningTokens = int64(float64(cfg.AnomalyThresholds.ContextCeilingCriticalTokens) * *rawAT.ContextCeilingApproachRatioWarning)
 		}
 		if rawAT.TokenVelocityWarningTokens != nil && *rawAT.TokenVelocityWarningTokens > 0 {
 			cfg.AnomalyThresholds.TokenVelocityWarningTokens = *rawAT.TokenVelocityWarningTokens

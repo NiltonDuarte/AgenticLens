@@ -5958,9 +5958,9 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 		}
 	})
 
-	t.Run("ComputeWorkflowEfficiencyWithConfig respects cfg.HealthyCeilingTokens", func(t *testing.T) {
+	t.Run("ComputeWorkflowEfficiencyWithConfig respects cfg.AnomalyThresholds.ContextCeilingCriticalTokens", func(t *testing.T) {
 		cfg := domain.DefaultProjectConfig()
-		cfg.HealthyCeilingTokens = customCeiling
+		cfg.AnomalyThresholds.ContextCeilingCriticalTokens = customCeiling
 
 		eff := domain.ComputeWorkflowEfficiencyWithConfig(ledger, cfg)
 		if eff.ContextWindowHealth.HealthyCeilingTokens != customCeiling {
@@ -5968,9 +5968,9 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 		}
 	})
 
-	t.Run("DeriveMetricsLedger propagates cfg.HealthyCeilingTokens", func(t *testing.T) {
+	t.Run("DeriveMetricsLedger propagates cfg.AnomalyThresholds.ContextCeilingCriticalTokens", func(t *testing.T) {
 		cfg := domain.DefaultProjectConfig()
-		cfg.HealthyCeilingTokens = customCeiling
+		cfg.AnomalyThresholds.ContextCeilingCriticalTokens = customCeiling
 
 		derived := domain.DeriveMetricsLedger(ledger, cfg)
 		if derived.Totals.ContextHealth != domain.ContextHealthElevated {

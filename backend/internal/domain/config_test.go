@@ -61,7 +61,6 @@ func testProjectConfig() domain.ProjectConfig {
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
 		},
-		HealthyCeilingTokens: 200000,
 		AnomalyThresholds: domain.AnomalyThresholdsConfig{
 			StallThresholdSeconds:           120,
 			ErrorRateThreshold:              0.25,
@@ -186,9 +185,6 @@ func TestDefaultProjectConfig(t *testing.T) {
 	}
 	if cfg.AnomalyThresholds.ToolThrashingCriticalFailures != 5 {
 		t.Errorf("expected AnomalyThresholds.ToolThrashingCriticalFailures 5, got %d", cfg.AnomalyThresholds.ToolThrashingCriticalFailures)
-	}
-	if cfg.HealthyCeilingTokens != 200000 {
-		t.Errorf("expected HealthyCeilingTokens 200000, got %d", cfg.HealthyCeilingTokens)
 	}
 	if len(cfg.CodeMetrics.SourceRoots) != 0 || cfg.CodeMetrics.SourceRoots == nil {
 		t.Errorf("expected non-nil empty CodeMetrics.SourceRoots, got %v", cfg.CodeMetrics.SourceRoots)

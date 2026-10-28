@@ -9,28 +9,24 @@ import (
 
 // ProjectConfig holds the complete configuration settings for AgenticLens.
 type ProjectConfig struct {
-	ProjectName          string                  `json:"project_name" yaml:"project_name"`
-	Ticket               TicketConfig            `json:"ticket" yaml:"ticket"`
-	Workspaces           WorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
-	HealthyCeilingTokens int64                   `json:"healthy_ceiling_tokens" yaml:"healthy_ceiling_tokens"`
-	Database             DatabaseConfig          `json:"database" yaml:"database"`
-	Live                 LiveConfig              `json:"live" yaml:"live"`
-	AnomalyThresholds    AnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
-	CodeMetrics          CodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
-	RoleMappings         RoleMappings            `json:"role_mappings" yaml:"role_mappings"`
-	RoleOrder            []string                `json:"role_order" yaml:"role_order"`
+	ProjectName       string                  `json:"project_name" yaml:"project_name"`
+	Ticket            TicketConfig            `json:"ticket" yaml:"ticket"`
+	Workspaces        WorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
+	Database          DatabaseConfig          `json:"database" yaml:"database"`
+	Live              LiveConfig              `json:"live" yaml:"live"`
+	AnomalyThresholds AnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
+	CodeMetrics       CodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
+	RoleMappings      RoleMappings            `json:"role_mappings" yaml:"role_mappings"`
+	RoleOrder         []string                `json:"role_order" yaml:"role_order"`
 }
 
 // EffectiveHealthyCeiling returns the configured context ceiling critical tokens,
-// falling back to HealthyCeilingTokens (200,000) when non-positive.
+// falling back to ContextCeilingCriticalTokens domain constant (200,000) when non-positive.
 func (c ProjectConfig) EffectiveHealthyCeiling() int64 {
-	if c.HealthyCeilingTokens > 0 {
-		return c.HealthyCeilingTokens
-	}
 	if c.AnomalyThresholds.ContextCeilingCriticalTokens > 0 {
 		return c.AnomalyThresholds.ContextCeilingCriticalTokens
 	}
-	return HealthyCeilingTokens
+	return ContextCeilingCriticalTokens
 }
 
 // DefaultAnomalyThresholdsConfig returns default numerical thresholds for anomaly detection rules.
@@ -66,7 +62,6 @@ func DefaultProjectConfig() ProjectConfig {
 			SrcFolders: []string{},
 			Artifacts:  []WorkspaceArtifactConfig{},
 		},
-		HealthyCeilingTokens: HealthyCeilingTokens,
 		Database: DatabaseConfig{
 			Path:           "~/.local/share/opencode/opencode.db",
 			QueryTimeoutMs: 5000,

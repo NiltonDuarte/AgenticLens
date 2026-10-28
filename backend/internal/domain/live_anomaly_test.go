@@ -1384,7 +1384,6 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 
 	t.Run("configurable anomaly options across rules", func(t *testing.T) {
 		opts := domain.LiveAnomalyOptions{
-			HealthyCeilingTokens: 100_000,
 			Thresholds: domain.AnomalyThresholdsConfig{
 				ConsecutiveErrorsStreakWarning:  2,
 				ConsecutiveErrorsStreakCritical: 4,

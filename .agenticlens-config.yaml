@@ -6,9 +6,6 @@
 # Human-readable name of the project.
 project_name: AgenticLens
 
-# Healthy context window token ceiling for context saturation and health grading.
-healthy_ceiling_tokens: 200000
-
 # Automated anomaly detection rules governing offline generation and live stream monitoring.
 anomaly_thresholds:
   # Time in seconds without session turn activity before flagging a stall anomaly.

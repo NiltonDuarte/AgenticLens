@@ -461,8 +461,7 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 		Anomalies:       []domain.LiveAnomalyAlert{},
 	}
 	anomalyOpts := domain.LiveAnomalyOptions{
-		HealthyCeilingTokens: s.cfg.EffectiveHealthyCeiling(),
-		Thresholds:           s.cfg.AnomalyThresholds,
+		Thresholds: s.cfg.AnomalyThresholds,
 	}
 	trace.Anomalies = domain.EvaluateLiveAnomalies(nil, &trace, anomalyOpts)
 	if trace.Anomalies == nil {
