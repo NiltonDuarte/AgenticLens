@@ -42,27 +42,29 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 - Static analysis and lint (`go vet ./...`, `tsc --noEmit`, `eslint`): PASS
 - Production build & multi-platform compilation (`make`): PASS
 
-
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 3h 42m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 106.0k tokens (53% of 200k healthy ceiling, 4 compactions) | Subagents peak 174.1k (Coder)
-- **Role Effort Distribution (Subagents):** Coder 99.4%, Advisor 0.6%
-- **Subagent Turn Velocity & Thrashing:** 105.8 avg turns/run (peak: 256 turns) | Coder 125.2, Advisor 9.0
-- **Test-to-Production Code Ratio:** 0.5:1 (+241 test lines / +445 prod lines)
-- **Code Delivered:** +772 / -170 lines across 21 code files (excluding docs)
-- **Reasoning Effort:** 202,197 reasoning tokens (60.5% of generated output)
-- **Tool Health & Self-Correction:** 690 tool calls (11 self-corrections, 98.4% success rate)
+- **Software Development Life Cycle Iterations:** 5
+- **Active Agent Duration:** 5h 59m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 126.8k tokens (63% of 200k healthy ceiling, 6 compactions) | Subagents peak 174.1k (Coder)
+- **Role Effort Distribution (Subagents):** Coder 99.6%, Advisor 0.4%
+- **Subagent Turn Velocity & Thrashing:** 121.1 avg turns/run (peak: 273 turns) | Coder 137.1, Advisor 9.0
+- **Test-to-Production Code Ratio:** 1.0:1 (+637 test lines / +651 prod lines)
+- **Code Delivered:** +1,374 / -377 lines across 30 code files (excluding docs)
+- **Reasoning Effort:** 271,420 reasoning tokens (58.4% of generated output)
+- **Tool Health & Self-Correction:** 1,028 tool calls (16 self-corrections, 98.4% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 7 execution anomalies detected (1 CRITICAL, 6 WARNING).
+- **Status:** 10 execution anomalies detected (3 CRITICAL, 7 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+81.9k tokens) — Context tokens surged by 81.9k to 81.9k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+104.4k tokens) — Context tokens surged by 104.4k to 104.4k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+88.1k tokens) — Context tokens surged by 88.1k to 88.1k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.2k tokens) — Context tokens reached 163.2k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+63.9k tokens) — Context tokens surged by 63.9k to 63.9k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (172.4k tokens) — Context tokens reached 172.4k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+78.6k tokens) — Context tokens surged by 78.6k to 78.6k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+62.3k tokens) — Context tokens surged by 62.3k to 62.3k tokens.
-- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: task (33.3%) — Tool 'task' failed 3 out of 9 calls (33.3% failure rate, threshold: >20%).
+- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: task (27.3%) — Tool 'task' failed 3 out of 11 calls (27.3% failure rate, threshold: >20%).
 
 ### Agentic Execution Metrics
 
@@ -71,13 +73,13 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 1,266,654 | 8,336 | 3,122,514 | 71.1% | 106.0k | ELEVATED | $1.30 |
-| **coder** | 5 | 4,007,427 | 122,801 | 45,218,948 | 91.9% | 174.1k | ELEVATED | $7.52 |
+| **orchestrator** | 1 | 1,877,056 | 12,545 | 4,504,490 | 70.6% | 126.8k | ELEVATED | $1.90 |
+| **coder** | 7 | 6,415,490 | 179,886 | 72,309,823 | 91.9% | 174.1k | ELEVATED | $11.81 |
 | **advisor** | 1 | 30,622 | 749 | 120,812 | 79.8% | 24.5k | HEALTHY | $0.04 |
-| **Total** | **7** | **5,304,703** | **131,886** | **48,462,274** | **90.1%** | **174.1k** | **ELEVATED** | **$8.87** |
+| **Total** | **9** | **8,323,168** | **193,180** | **76,935,125** | **90.2%** | **174.1k** | **ELEVATED** | **$13.75** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 7 | 5,304,703 | 131,886 | 48,462,274 | 90.1% | $8.87 |
-| **Total** | **7** | **5,304,703** | **131,886** | **48,462,274** | **90.1%** | **$8.87** |
+| **gemini-3.8-flash** | 9 | 8,323,168 | 193,180 | 76,935,125 | 90.2% | $13.75 |
+| **Total** | **9** | **8,323,168** | **193,180** | **76,935,125** | **90.2%** | **$13.75** |
