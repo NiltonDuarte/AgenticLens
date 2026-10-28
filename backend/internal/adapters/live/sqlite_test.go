@@ -30,9 +30,9 @@ func testProjectConfig() domain.ProjectConfig {
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir:        "workspaces",
-			SrcFolders: []string{"web", "backend"},
+			Dir: "workspaces",
 		},
+		CodeMetrics: domain.CodeMetricsConfig{SourceRoots: []string{"web", "backend"}},
 		Database: domain.DatabaseConfig{
 			Path:           "~/.local/share/opencode/opencode.db",
 			QueryTimeoutMs: 5000,

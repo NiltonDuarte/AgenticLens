@@ -66,14 +66,6 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 		}
 	}
 	if !hasSourceRoot {
-		for _, sf := range cfg.Workspaces.SrcFolders {
-			if strings.TrimSpace(sf) != "" {
-				hasSourceRoot = true
-				break
-			}
-		}
-	}
-	if !hasSourceRoot {
 		missing = append(missing, "code_metrics.source_roots")
 	}
 
@@ -178,9 +170,8 @@ type rawWorkspaceArtifactConfig struct {
 }
 
 type rawWorkspacesConfig struct {
-	Dir        *string                      `json:"dir" yaml:"dir"`
-	SrcFolders []string                     `json:"src_folders" yaml:"src_folders"`
-	Artifacts  []rawWorkspaceArtifactConfig `json:"artifacts" yaml:"artifacts"`
+	Dir       *string                      `json:"dir" yaml:"dir"`
+	Artifacts []rawWorkspaceArtifactConfig `json:"artifacts" yaml:"artifacts"`
 }
 
 type rawDatabaseConfig struct {
@@ -274,16 +265,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	if dto.Workspaces != nil {
 		if dto.Workspaces.Dir != nil {
 			cfg.Workspaces.Dir = strings.TrimSpace(*dto.Workspaces.Dir)
-		}
-		if dto.Workspaces.SrcFolders != nil {
-			var cleanFolders []string
-			for _, f := range dto.Workspaces.SrcFolders {
-				t := strings.TrimSpace(f)
-				if t != "" {
-					cleanFolders = append(cleanFolders, t)
-				}
-			}
-			cfg.Workspaces.SrcFolders = cleanFolders
 		}
 		if len(dto.Workspaces.Artifacts) > 0 {
 			artifacts := make([]domain.WorkspaceArtifactConfig, 0, len(dto.Workspaces.Artifacts))
@@ -408,13 +389,6 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		if dto.CodeMetrics.ProdPatterns != nil {
 			cfg.CodeMetrics.ProdPatterns = dto.CodeMetrics.ProdPatterns
 		}
-	}
-
-	// Bidirectional fallback between CodeMetrics.SourceRoots and Workspaces.SrcFolders
-	if len(cfg.CodeMetrics.SourceRoots) == 0 && len(cfg.Workspaces.SrcFolders) > 0 {
-		cfg.CodeMetrics.SourceRoots = append([]string(nil), cfg.Workspaces.SrcFolders...)
-	} else if len(cfg.Workspaces.SrcFolders) == 0 && len(cfg.CodeMetrics.SourceRoots) > 0 {
-		cfg.Workspaces.SrcFolders = append([]string(nil), cfg.CodeMetrics.SourceRoots...)
 	}
 
 	if dto.RoleMappings != nil {

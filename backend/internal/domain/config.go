@@ -32,19 +32,19 @@ func (c ProjectConfig) EffectiveHealthyCeiling() int64 {
 // DefaultAnomalyThresholdsConfig returns default numerical thresholds for anomaly detection rules.
 func DefaultAnomalyThresholdsConfig() AnomalyThresholdsConfig {
 	return AnomalyThresholdsConfig{
-		StallThresholdSeconds:           120,
-		ErrorRateThreshold:              0.25,
-		ContextExhaustionPct:            0.85,
-		ConsecutiveErrorsStreakWarning:  ConsecutiveToolErrorsStreakWarning,
-		ConsecutiveErrorsStreakCritical: ConsecutiveToolErrorsStreakCritical,
-		ContextCeilingWarningTokens:     ContextCeilingWarningTokens,
-		ContextCeilingCriticalTokens:    ContextCeilingCriticalTokens,
-		TokenVelocityWarningTokens:      TokenVelocityWarningTokens,
-		TokenVelocityCriticalTokens:     TokenVelocityCriticalTokens,
-		TokenVelocityWarningDeltaTokens: TokenVelocityWarningDeltaTokens,
+		StallThresholdSeconds:            120,
+		ErrorRateThreshold:               0.25,
+		ContextExhaustionPct:             0.85,
+		ConsecutiveErrorsStreakWarning:   ConsecutiveToolErrorsStreakWarning,
+		ConsecutiveErrorsStreakCritical:  ConsecutiveToolErrorsStreakCritical,
+		ContextCeilingWarningTokens:      ContextCeilingWarningTokens,
+		ContextCeilingCriticalTokens:     ContextCeilingCriticalTokens,
+		TokenVelocityWarningTokens:       TokenVelocityWarningTokens,
+		TokenVelocityCriticalTokens:      TokenVelocityCriticalTokens,
+		TokenVelocityWarningDeltaTokens:  TokenVelocityWarningDeltaTokens,
 		TokenVelocityCriticalDeltaTokens: TokenVelocityCriticalDeltaTokens,
-		ToolThrashingMinFailures:        ToolThrashingMinFailures,
-		ToolThrashingCriticalFailures:   ToolThrashingCriticalFailures,
+		ToolThrashingMinFailures:         ToolThrashingMinFailures,
+		ToolThrashingCriticalFailures:    ToolThrashingCriticalFailures,
 	}
 }
 
@@ -58,9 +58,8 @@ func DefaultProjectConfig() ProjectConfig {
 			CustomPatterns:  []string{},
 		},
 		Workspaces: WorkspacesConfig{
-			Dir:        "",
-			SrcFolders: []string{},
-			Artifacts:  []WorkspaceArtifactConfig{},
+			Dir:       "",
+			Artifacts: []WorkspaceArtifactConfig{},
 		},
 		Database: DatabaseConfig{
 			Path:           "~/.local/share/opencode/opencode.db",
@@ -168,11 +167,10 @@ type WorkspaceArtifactConfig struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
-// WorkspacesConfig defines filesystem paths for ticket workspaces, source repositories, and artifacts.
+// WorkspacesConfig defines filesystem paths for ticket workspaces and artifacts.
 type WorkspacesConfig struct {
-	Dir        string                    `json:"dir" yaml:"dir"`
-	SrcFolders []string                  `json:"src_folders" yaml:"src_folders"`
-	Artifacts  []WorkspaceArtifactConfig `json:"artifacts,omitempty" yaml:"artifacts,omitempty"`
+	Dir       string                    `json:"dir" yaml:"dir"`
+	Artifacts []WorkspaceArtifactConfig `json:"artifacts,omitempty" yaml:"artifacts,omitempty"`
 }
 
 // DatabaseConfig specifies SQLite database connection and query execution parameters.
@@ -185,19 +183,19 @@ type DatabaseConfig struct {
 
 // AnomalyThresholdsConfig defines numerical thresholds for anomaly detection rules.
 type AnomalyThresholdsConfig struct {
-	StallThresholdSeconds           int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
-	ErrorRateThreshold              float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
-	ContextExhaustionPct            float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
-	ConsecutiveErrorsStreakWarning  int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
-	ConsecutiveErrorsStreakCritical int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
-	ContextCeilingWarningTokens     int64   `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
-	ContextCeilingCriticalTokens    int64   `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
-	TokenVelocityWarningTokens      int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
-	TokenVelocityCriticalTokens     int64   `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
-	TokenVelocityWarningDeltaTokens int64   `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
-	TokenVelocityCriticalDeltaTokens int64  `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
-	ToolThrashingMinFailures        int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
-	ToolThrashingCriticalFailures   int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
+	StallThresholdSeconds            int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
+	ErrorRateThreshold               float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
+	ContextExhaustionPct             float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
+	ConsecutiveErrorsStreakWarning   int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
+	ConsecutiveErrorsStreakCritical  int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
+	ContextCeilingWarningTokens      int64   `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
+	ContextCeilingCriticalTokens     int64   `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
+	TokenVelocityWarningTokens       int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
+	TokenVelocityCriticalTokens      int64   `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
+	TokenVelocityWarningDeltaTokens  int64   `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
+	TokenVelocityCriticalDeltaTokens int64   `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
+	ToolThrashingMinFailures         int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
+	ToolThrashingCriticalFailures    int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
 }
 
 // LiveConfig controls real-time session tracking and polling intervals.

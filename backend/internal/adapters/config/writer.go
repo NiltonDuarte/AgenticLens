@@ -123,32 +123,15 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 			cleanSourceRoots = append(cleanSourceRoots, clean)
 		}
 	}
-	var cleanSrcFolders []string
-	for _, sf := range cfg.Workspaces.SrcFolders {
-		clean := strings.TrimSpace(sf)
-		if clean != "" {
-			cleanSrcFolders = append(cleanSrcFolders, clean)
-		}
-	}
-	if len(cleanSourceRoots) == 0 && len(cleanSrcFolders) > 0 {
-		cleanSourceRoots = append([]string(nil), cleanSrcFolders...)
-	} else if len(cleanSrcFolders) == 0 && len(cleanSourceRoots) > 0 {
-		cleanSrcFolders = append([]string(nil), cleanSourceRoots...)
-	}
 	if len(cleanSourceRoots) == 0 {
-		return nil, fmt.Errorf("workspaces.src_folders cannot be empty")
+		return nil, fmt.Errorf("code_metrics.source_roots cannot be empty")
 	}
 
-	b.WriteString("# Workspace storage and source folder definitions.\n")
+	b.WriteString("# Workspace storage settings.\n")
 	b.WriteString("workspaces:\n")
 	b.WriteString("  # Directory where ticket artifacts and session telemetry ledgers are stored.\n")
 	if wsDir != "" {
 		b.WriteString(fmt.Sprintf("  dir: %s\n", wsDir))
-	}
-	if len(cleanSrcFolders) > 0 {
-		b.WriteString("  # Monitored source code folders for project telemetry and change tracking.\n")
-		b.WriteString("  src_folders:")
-		formatStringList(&b, cleanSrcFolders, "    ")
 	}
 	b.WriteString("  # Configured workspace documentation artifacts to read and render in dashboard.\n")
 	artifacts := cfg.Workspaces.Artifacts
@@ -397,9 +380,8 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir:        wsDir,
-			SrcFolders: cleanFolders,
-			Artifacts:  artifacts,
+			Dir:       wsDir,
+			Artifacts: artifacts,
 		},
 		Database: domain.DatabaseConfig{
 			Path:           databasePath,

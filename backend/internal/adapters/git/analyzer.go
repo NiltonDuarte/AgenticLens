@@ -109,24 +109,6 @@ func ResolveBaseBranch(repoRoot string, cfg *domain.ProjectConfig) (string, erro
 	return "", fmt.Errorf("unable to resolve upstream base branch: configure 'code_metrics.base_branch' in .agenticlens-config.yaml")
 }
 
-// ValidateSrcFolders verifies that workspaces.src_folders contains at least one non-empty source directory.
-func ValidateSrcFolders(srcFolders []string) error {
-	if len(srcFolders) == 0 {
-		return fmt.Errorf("workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml")
-	}
-	hasNonEmpty := false
-	for _, folder := range srcFolders {
-		if strings.TrimSpace(folder) != "" {
-			hasNonEmpty = true
-			break
-		}
-	}
-	if !hasNonEmpty {
-		return fmt.Errorf("workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml")
-	}
-	return nil
-}
-
 // ValidateSourceRoots verifies that code_metrics.source_roots contains at least one non-empty source directory.
 func ValidateSourceRoots(sourceRoots []string) error {
 	if len(sourceRoots) == 0 {
@@ -146,7 +128,7 @@ func ValidateSourceRoots(sourceRoots []string) error {
 }
 
 // IsMonitoredSourcePath reports whether a file path falls within configured source folders or configured test/production inclusion patterns.
-func IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool {
+func IsMonitoredSourcePath(path string, cfg *ClassificationConfig) bool {
 	cleanPath := filepath.ToSlash(strings.TrimSpace(path))
 	cleanPath = strings.TrimPrefix(cleanPath, "./")
 	cleanPath = strings.TrimPrefix(cleanPath, "/")
@@ -154,13 +136,9 @@ func IsMonitoredSourcePath(path string, srcFolders []string, cfg *Classification
 		return false
 	}
 
-	folders := srcFolders
-	if len(folders) == 0 && cfg != nil {
-		if len(cfg.SourceRoots) > 0 {
-			folders = cfg.SourceRoots
-		} else {
-			folders = cfg.SrcFolders
-		}
+	var folders []string
+	if cfg != nil {
+		folders = cfg.SourceRoots
 	}
 
 	for _, folder := range folders {
@@ -214,16 +192,11 @@ func ComputeCodeFactsAtRef(codeRef string, cfg *ClassificationConfig) (domain.Co
 			cfg = loaded
 		}
 	}
-	var srcs []string
-	if cfg != nil {
-		if len(cfg.SourceRoots) > 0 {
-			srcs = cfg.SourceRoots
-		} else {
-			srcs = cfg.SrcFolders
-		}
+	if cfg == nil {
+		return domain.CodeFacts{}, ValidateSourceRoots(nil)
 	}
-	if cfg == nil || len(srcs) == 0 || ValidateSrcFolders(srcs) != nil {
-		return domain.CodeFacts{}, fmt.Errorf("code metrics require valid configured source folders")
+	if err := ValidateSourceRoots(cfg.SourceRoots); err != nil {
+		return domain.CodeFacts{}, err
 	}
 
 	projectConfig := &domain.ProjectConfig{CodeMetrics: domain.CodeMetricsConfig{BaseBranch: cfg.BaseBranch}}
@@ -243,7 +216,7 @@ func ComputeCodeFactsAtRef(codeRef string, cfg *ClassificationConfig) (domain.Co
 	var facts domain.CodeFacts
 	facts.SDLCIterations = 1
 	for _, entry := range ParseNumstatOutput(out) {
-		if !IsMonitoredSourcePath(entry.Path, srcs, cfg) {
+		if !IsMonitoredSourcePath(entry.Path, cfg) {
 			continue
 		}
 		category := ClassifyFile(entry.Path, cfg)

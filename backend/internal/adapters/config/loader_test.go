@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -12,8 +13,8 @@ import (
 )
 
 const (
-	testValidSuffixYAML = "\nticket:\n  prefixes:\n    - prefix: AL\nworkspaces:\n  src_folders:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
-	testValidSuffixJSON = `,"ticket":{"prefixes":[{"prefix":"AL"}]},"workspaces":{"src_folders":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`
+	testValidSuffixYAML = "\nticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	testValidSuffixJSON = `,"ticket":{"prefixes":[{"prefix":"AL"}]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`
 )
 
 func testProjectConfig() domain.ProjectConfig {
@@ -40,9 +41,8 @@ func testProjectConfig() domain.ProjectConfig {
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir:        "",
-			SrcFolders: []string{"web", "backend"},
-			Artifacts:  []domain.WorkspaceArtifactConfig{},
+			Dir:       "",
+			Artifacts: []domain.WorkspaceArtifactConfig{},
 		},
 		Database: domain.DatabaseConfig{
 			Path:           "~/.local/share/opencode/opencode.db",
@@ -63,6 +63,7 @@ func testProjectConfig() domain.ProjectConfig {
 			ContextCeilingCriticalTokens: 200000,
 		},
 		CodeMetrics: domain.CodeMetricsConfig{
+			SourceRoots:  []string{"web", "backend"},
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: []string{},
@@ -102,9 +103,18 @@ ticket:
     - PAT-(\d+)
 workspaces:
   dir: custom_workspaces
-  src_folders:
+code_metrics:
+  source_roots:
     - frontend
     - services
+  include:
+    - "services/**"
+  exclude:
+    - "legacy/**"
+  test_patterns:
+    - "*_spec.go"
+  prod_patterns:
+    - "*.go"
 database:
   path: /tmp/test.db
   query_timeout_ms: 8000
@@ -120,15 +130,6 @@ anomaly_thresholds:
   context_exhaustion_pct: 0.90
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
-code_metrics:
-  include:
-    - "services/**"
-  exclude:
-    - "legacy/**"
-  test_patterns:
-    - "*_spec.go"
-  prod_patterns:
-    - "*.go"
 role_mappings:
   architect: planner
   qa: tester
@@ -171,8 +172,8 @@ role_order:
 	if cfg.Workspaces.Dir != "custom_workspaces" {
 		t.Errorf("expected custom_workspaces, got %s", cfg.Workspaces.Dir)
 	}
-	if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "frontend" || cfg.Workspaces.SrcFolders[1] != "services" {
-		t.Errorf("unexpected src_folders: %v", cfg.Workspaces.SrcFolders)
+	if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "frontend" || cfg.CodeMetrics.SourceRoots[1] != "services" {
+		t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
 	}
 	if cfg.Database.Path != "/tmp/test.db" {
 		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
@@ -328,7 +329,8 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 database:
   path: /custom/path/db.sqlite
@@ -561,7 +563,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 
 	t.Run("missing project_name returns validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
-		yamlContent := "ticket:\n  prefixes:\n    - prefix: AL\nworkspaces:\n  src_folders:\n    - src\n"
+		yamlContent := "ticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -577,7 +579,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 
 	t.Run("missing prefixes returns validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
-		yamlContent := "project_name: TestProject\nworkspaces:\n  src_folders:\n    - src\n"
+		yamlContent := "project_name: TestProject\ncode_metrics:\n  source_roots:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -591,7 +593,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 		}
 	})
 
-	t.Run("missing src_folders returns validation error", func(t *testing.T) {
+	t.Run("missing source_roots returns validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
 		yamlContent := "project_name: TestProject\nticket:\n  prefixes:\n    - prefix: AL\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
@@ -600,7 +602,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 
 		_, err := config.Load(tempDir)
 		if err == nil {
-			t.Fatalf("expected error for missing src_folders, got nil")
+			t.Fatalf("expected error for missing code_metrics.source_roots, got nil")
 		}
 		if !errors.Is(err, config.ErrInvalidConfig) {
 			t.Errorf("expected ErrInvalidConfig, got %v", err)
@@ -618,7 +620,8 @@ ticket:
     - prefix: AL
 workspaces:
   dir: custom_workspaces_only
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 database:
   read_only: false
@@ -659,8 +662,8 @@ anomaly_thresholds:
 		if len(cfg.Ticket.Prefixes) != 1 || cfg.Ticket.Prefixes[0].Prefix != "AL" {
 			t.Errorf("unexpected ticket prefixes: %v", cfg.Ticket.Prefixes)
 		}
-		if len(cfg.Workspaces.SrcFolders) != 1 || cfg.Workspaces.SrcFolders[0] != "src" {
-			t.Errorf("unexpected src_folders: %v", cfg.Workspaces.SrcFolders)
+		if len(cfg.CodeMetrics.SourceRoots) != 1 || cfg.CodeMetrics.SourceRoots[0] != "src" {
+			t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
 		}
 		if len(cfg.Workspaces.Artifacts) != 0 {
 			t.Errorf("expected zero default artifacts, got: %v", cfg.Workspaces.Artifacts)
@@ -677,8 +680,47 @@ anomaly_thresholds:
 	})
 }
 
-func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
-	t.Run("legacy keys translate and empty values fail required validation", func(t *testing.T) {
+func TestLoad_LegacyWorkspaceSourceFoldersDoNotSatisfySourceRoots(t *testing.T) {
+	tests := []struct {
+		name string
+		file string
+		body string
+	}{
+		{
+			name: "yaml",
+			file: ".agenticlens-config.yaml",
+			body: "project_name: Legacy\nticket:\n  prefixes: [AL]\nworkspaces:\n  src_folders: [src]\n",
+		},
+		{
+			name: "json",
+			file: ".agenticlens-config.json",
+			body: `{"project_name":"Legacy","ticket":{"prefixes":["AL"]},"workspaces":{"src_folders":["src"]}}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, tt.file)
+			if err := os.WriteFile(path, []byte(tt.body), 0644); err != nil {
+				t.Fatal(err)
+			}
+			_, err := config.LoadFromFile(path)
+			if err == nil {
+				t.Fatal("expected legacy-only source roots to fail validation")
+			}
+			var validationErr *config.ConfigValidationError
+			if !errors.As(err, &validationErr) {
+				t.Fatalf("expected ConfigValidationError, got %v", err)
+			}
+			if !slices.Contains(validationErr.MissingFields, "code_metrics.source_roots") {
+				t.Errorf("expected code_metrics.source_roots validation error, got %v", validationErr.MissingFields)
+			}
+		})
+	}
+}
+
+func TestLoad_AdversarialLegacyJSONAndCanonicalPriority(t *testing.T) {
+	t.Run("legacy-only keys fail required validation", func(t *testing.T) {
 		tempDir := t.TempDir()
 
 		legacyEmptyJSON := `{
@@ -699,7 +741,7 @@ func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
 		}
 	})
 
-	t.Run("modern nested keys supersede legacy root keys", func(t *testing.T) {
+	t.Run("canonical roots are retained alongside ignored legacy keys", func(t *testing.T) {
 		tempDir := t.TempDir()
 
 		mixedJSON := `{
@@ -714,6 +756,7 @@ func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
 				"dir": "modern_workspaces",
 				"src_folders": ["modern_web", "modern_backend"]
 			},
+			"code_metrics": {"source_roots": ["canonical_web", "canonical_backend"]},
 			"anomaly_thresholds": {
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
@@ -734,8 +777,8 @@ func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
 		if cfg.Workspaces.Dir != "modern_workspaces" {
 			t.Errorf("expected modern_workspaces, got %s", cfg.Workspaces.Dir)
 		}
-		if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "modern_web" {
-			t.Errorf("expected modern src folders, got %v", cfg.Workspaces.SrcFolders)
+		if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "canonical_web" {
+			t.Errorf("expected canonical source roots, got %v", cfg.CodeMetrics.SourceRoots)
 		}
 	})
 }
@@ -823,7 +866,8 @@ ticket:
     - prefix: PO
       description: Product owner
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
@@ -867,7 +911,8 @@ ticket:
     - GEN
     - PO
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
@@ -912,7 +957,8 @@ ticket:
     - prefix: PO
       description: Product owner
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
@@ -948,7 +994,7 @@ anomaly_thresholds:
 
 		structuredJSON := `{
 			"project_name": "PrefixApp",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
 			"anomaly_thresholds": {
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
@@ -962,7 +1008,7 @@ anomaly_thresholds:
 		}`
 		scalarJSON := `{
 			"project_name": "PrefixApp",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
 			"anomaly_thresholds": {
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
@@ -1008,7 +1054,7 @@ anomaly_thresholds:
 	t.Run("legacy flat JSON with PO prefix rejected", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		legacyJSON := `{"project_name": "LegacyPO", "workspaces": {"src_folders": ["src"]}, "ticket_prefix": "PO"}`
+		legacyJSON := `{"project_name": "LegacyPO", "code_metrics": {"source_roots": ["src"]}, "ticket_prefix": "PO"}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(legacyJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1121,7 +1167,8 @@ ticket:
     - prefix: FIX
       ticket_type: " fix "
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
@@ -1160,7 +1207,7 @@ anomaly_thresholds:
 
 		jsonContent := `{
 			"project_name": "TicketTypeApp",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
 			"anomaly_thresholds": {
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
@@ -1212,7 +1259,7 @@ func TestLoad_RoleOrderParsingAndFallback(t *testing.T) {
 
 		jsonContent := `{
 			"project_name": "JSONRoleOrderProject",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
 			"anomaly_thresholds": {
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
@@ -1250,7 +1297,8 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
@@ -1347,7 +1395,8 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
@@ -1385,7 +1434,7 @@ role_order:
 
 		jsonContent := `{
 			"project_name": "SanitizedJSON",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
 			"anomaly_thresholds": {
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
@@ -1423,7 +1472,8 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
@@ -1467,9 +1517,18 @@ ticket:
     - ROOT-(\d+)
 workspaces:
   dir: root_workspaces
-  src_folders:
+code_metrics:
+  source_roots:
     - web
     - backend
+  include:
+    - "backend/**"
+  exclude:
+    - "vendor/**"
+  test_patterns:
+    - "*_test.go"
+  prod_patterns:
+    - "*.go"
 database:
   path: /tmp/root.db
   query_timeout_ms: 6000
@@ -1485,15 +1544,6 @@ anomaly_thresholds:
   context_exhaustion_pct: 0.80
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
-code_metrics:
-  include:
-    - "backend/**"
-  exclude:
-    - "vendor/**"
-  test_patterns:
-    - "*_test.go"
-  prod_patterns:
-    - "*.go"
 role_mappings:
   architect: planner
   qa: tester
@@ -1529,8 +1579,8 @@ role_order:
 	if cfg.Workspaces.Dir != "root_workspaces" {
 		t.Errorf("expected root_workspaces, got %s", cfg.Workspaces.Dir)
 	}
-	if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "web" || cfg.Workspaces.SrcFolders[1] != "backend" {
-		t.Errorf("unexpected src_folders: %v", cfg.Workspaces.SrcFolders)
+	if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
+		t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
 	}
 	if cfg.Database.Path != "/tmp/root.db" {
 		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
@@ -2080,9 +2130,15 @@ func TestLoad_CodeMetricsBaseBranch(t *testing.T) {
 	t.Run("unmarshals base_branch from yaml", func(t *testing.T) {
 		tempDir := t.TempDir()
 		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		content := `project_name: "TestProject"` + testValidSuffixYAML + `
+		content := `project_name: "TestProject"
+ticket:
+  prefixes: [AL]
 code_metrics:
+  source_roots: [src]
   base_branch: "release/v1.0"
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
 			t.Fatal(err)
@@ -2159,9 +2215,15 @@ func TestLoadFromFile(t *testing.T) {
 	t.Run("correctly loads custom base_branch from yaml file", func(t *testing.T) {
 		tempDir := t.TempDir()
 		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		content := `project_name: "TestProject"` + testValidSuffixYAML + `
+		content := `project_name: "TestProject"
+ticket:
+  prefixes: [AL]
 code_metrics:
+  source_roots: [src]
   base_branch: "origin/release-2.0"
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
 			t.Fatal(err)
@@ -2185,7 +2247,8 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 `
 

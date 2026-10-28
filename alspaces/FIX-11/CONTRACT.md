@@ -10,8 +10,8 @@
 1. Add a dedicated MetricsConfig domain model under ProjectConfig to allow configuring healthy_ceiling_tokens via YAML, defaulting to 200,000 when omitted or non-positive.
 2. Dynamically calculate the elevated context health threshold in GetBaseHealthStatus and GetHealthLabel relative to the effective healthy ceiling (ceiling / 2) rather than the fixed 100,000 token constant.
 3. Enrich AnomalyThresholdsConfig with explicit fields for all live anomaly rules (consecutive tool error streak thresholds, context ceiling approach ratios, token velocity runaway limits and deltas, and tool thrashing counts), falling back safely to domain defaults when omitted or non-positive.
-4. Consolidate source code root boundaries under code_metrics.source_roots, migrating workspaces.src_folders while maintaining backward compatibility for existing configurations.
-5. Update git classification and diff analysis to respect code_metrics.source_roots while continuing to tolerate legacy workspaces.src_folders definitions during transition.
+4. Consolidate source code root boundaries under required code_metrics.source_roots. Configurations that provide roots only through workspaces.src_folders are invalid.
+5. Update git classification and diff analysis to use code_metrics.source_roots exclusively.
 6. Update .agenticlens-config.yaml to declare the metrics section and consolidated code_metrics configuration.
 
 ## Existing System Context
@@ -31,15 +31,14 @@
    - Pure domain models in backend/internal/domain/config.go define ProjectConfig, MetricsConfig, enriched AnomalyThresholdsConfig, and CodeMetricsConfig.
    - Pure aggregations and live anomaly detection in backend/internal/domain/ accept configured ceilings and thresholds, cleanly defaulting to safe constants when non-positive or unconfigured.
    - GetBaseHealthStatus and GetHealthLabel compute elevated status dynamically as ceiling / 2 rather than using a hardcoded 100,000 token literal.
-   - Adapters in backend/internal/adapters/config/ handle serialization, deserialization, validation, and backward-compatible fallbacks without polluting pure domain functions with I/O or YAML decoding mechanics.
+   - Adapters in backend/internal/adapters/config/ handle serialization, deserialization, and validation without polluting pure domain functions with I/O or YAML decoding mechanics.
    - Git analyzer and classifier in backend/internal/adapters/git/ inspect consolidated source roots and glob patterns cleanly.
 2. Typing and Zero Any:
    - Zero interface{} or any permitted across Go backend and TypeScript frontend codebases.
    - Strong typing for all configuration fields, thresholds, and DTOs.
-3. Backward Compatibility:
-   - Config loading seamlessly accepts legacy manifests that supply workspaces.src_folders without code_metrics.source_roots.
-   - Config validation passes if either code_metrics.source_roots or workspaces.src_folders provides valid source directories.
-   - If both are provided, code_metrics.source_roots takes precedence.
+3. Configuration Compatibility:
+   - code_metrics.source_roots is required and is the sole source-root configuration field.
+   - workspaces.dir and workspaces.artifacts remain supported workspace storage settings.
    - Existing telemetry ledgers and live trace evaluators continue functioning identically under default configuration.
 4. Zero Emojis:
    - No emojis permitted in code, comments, docstrings, commit messages, PR drafts, UI strings, logs, or workspace artifacts.
@@ -62,20 +61,20 @@
     - Update live anomaly evaluators (EvaluateConsecutiveToolErrors, EvaluateContextCeilingApproach, EvaluateTokenVelocityRunaway, EvaluateToolThrashing, EvaluateLiveAnomalies) to accept configured thresholds or fall back to established constants when <= 0.
   - backend/internal/adapters/config/loader.go:
     - Add DTO fields for metrics, enriched anomaly thresholds, and code_metrics.source_roots.
-    - Update ValidateConfig to require source roots from either code_metrics.source_roots or workspaces.src_folders.
-    - Implement fallback in mergeConfig: if code_metrics.source_roots is empty, copy from workspaces.src_folders; if workspaces.src_folders is empty, copy from code_metrics.source_roots.
+    - Update ValidateConfig to require at least one non-empty code_metrics.source_roots entry.
+    - Do not accept, copy, or fall back to workspaces.src_folders for source roots.
   - backend/internal/adapters/config/writer.go:
     - Generate YAML with metrics section and code_metrics.source_roots.
-    - Deprecate workspaces.src_folders in comments and omit or maintain as optional legacy compatibility.
+    - Serialize source roots only under code_metrics.source_roots; do not emit or maintain workspaces.src_folders.
   - backend/internal/adapters/git/classifier.go & analyzer.go:
     - Support SourceRoots on ClassificationConfig.
-    - Update path monitoring and validation to inspect SourceRoots, falling back to SrcFolders.
+    - Update path monitoring and validation to inspect SourceRoots exclusively.
   - backend/internal/adapters/live/service.go:
     - Pass configured live anomaly thresholds and metrics ceiling to domain evaluators.
   - .agenticlens-config.yaml:
     - Declare metrics section with healthy_ceiling_tokens: 200000.
     - Declare source_roots under code_metrics: [web, backend].
-    - Remove or deprecate src_folders under workspaces.
+    - Retain workspaces.dir and workspaces.artifacts; do not configure source roots under workspaces.
   - Comprehensive unit and integration test coverage across all modified packages.
 - TypeScript Frontend:
   - web/src/domain/types.ts and web/src/test/fixtures/mockData.ts:
@@ -90,8 +89,8 @@
 1. Metrics Configuration: ProjectConfig supports a metrics section containing healthy_ceiling_tokens int64. DefaultProjectConfig initializes it to 200,000 tokens.
 2. Dynamic Health Status: When ceiling is configured (e.g. 100,000 or 500,000), GetBaseHealthStatus and GetHealthLabel identify ContextHealthElevated starting at ceiling / 2, ContextHealthBloated above ceiling, and ContextHealthCritical above 2 * ceiling. Non-positive ceiling defaults to 200,000.
 3. Live Anomaly Rule Configuration: Live anomaly detection rules for consecutive tool errors, ceiling approach, token velocity, and tool thrashing accept configurable thresholds from AnomalyThresholdsConfig, defaulting safely to domain constants when values are zero or negative.
-4. Source Roots Migration: CodeMetricsConfig includes source_roots []string. Configuration loading accepts code_metrics.source_roots and seamlessly falls back to workspaces.src_folders for legacy configurations.
-5. Config Validation: ValidateConfig succeeds when source roots are specified in either code_metrics.source_roots or workspaces.src_folders, and fails only when neither contains non-empty entries.
+4. Source Roots Configuration: CodeMetricsConfig includes source_roots []string, and code_metrics.source_roots is the sole source-root configuration field.
+5. Config Validation: ValidateConfig succeeds only when code_metrics.source_roots contains at least one non-empty entry. Missing, empty, or blank-only canonical roots fail validation, including when workspaces.src_folders is supplied.
 6. Git Diff Classification: Git change analysis in backend/internal/adapters/git correctly uses configured source_roots to monitor modified paths without regressions in line counts or file categories.
 7. YAML Serialization Parity: GenerateConfigYAML outputs valid YAML matching the updated schema with metrics and code_metrics.source_roots. Round-trip serialization and loading preserves all fields.
 8. Zero Any and Zero Emojis: All Go code and TypeScript types maintain strict typing with zero any or interface{}, and zero emojis exist across the codebase, tests, and artifacts.

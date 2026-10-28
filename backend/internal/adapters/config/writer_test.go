@@ -23,6 +23,9 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 	}
 
 	content := string(data)
+	if strings.Contains(content, "src_folders:") {
+		t.Error("generated YAML must not contain workspaces.src_folders")
+	}
 
 	// Check top-level comments and keys
 	expectedSubstrings := []string{
@@ -35,9 +38,6 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"      ticket_type: docs",
 		"  case_insensitive: true",
 		"workspaces:",
-		"  src_folders:",
-		"    - web",
-		"    - backend",
 		"database:",
 		"  path: ~/.local/share/opencode/opencode.db",
 		"  query_timeout_ms: 5000",
@@ -54,6 +54,9 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"  context_ceiling_warning_tokens: 160000",
 		"  context_ceiling_critical_tokens: 200000",
 		"code_metrics:",
+		"  source_roots:",
+		"    - web",
+		"    - backend",
 		"  include: []",
 		"  exclude: []",
 		"  test_patterns: []",
@@ -137,11 +140,14 @@ func TestGenerateConfigYAML_RoundTrip(t *testing.T) {
 		if len(loaded.Ticket.Prefixes) != len(defaultCfg.Ticket.Prefixes) {
 			t.Fatalf("expected %d prefixes, got %d", len(defaultCfg.Ticket.Prefixes), len(loaded.Ticket.Prefixes))
 		}
+		if len(loaded.CodeMetrics.SourceRoots) != len(defaultCfg.CodeMetrics.SourceRoots) || loaded.CodeMetrics.SourceRoots[0] != defaultCfg.CodeMetrics.SourceRoots[0] {
+			t.Errorf("expected canonical source roots %v, got %v", defaultCfg.CodeMetrics.SourceRoots, loaded.CodeMetrics.SourceRoots)
+		}
 		if loaded.Workspaces.Dir != defaultCfg.Workspaces.Dir {
 			t.Errorf("expected workspaces.dir %q, got %q", defaultCfg.Workspaces.Dir, loaded.Workspaces.Dir)
 		}
-		if len(loaded.Workspaces.SrcFolders) != len(defaultCfg.Workspaces.SrcFolders) {
-			t.Errorf("expected %d src_folders, got %d", len(defaultCfg.Workspaces.SrcFolders), len(loaded.Workspaces.SrcFolders))
+		if len(loaded.Workspaces.Artifacts) != len(defaultCfg.Workspaces.Artifacts) {
+			t.Errorf("expected %d workspace artifacts, got %d", len(defaultCfg.Workspaces.Artifacts), len(loaded.Workspaces.Artifacts))
 		}
 		if loaded.Database.Path != defaultCfg.Database.Path {
 			t.Errorf("expected database.path %q, got %q", defaultCfg.Database.Path, loaded.Database.Path)
@@ -170,7 +176,7 @@ func TestGenerateConfigYAML_RoundTrip(t *testing.T) {
 		emptyCfg := domain.DefaultProjectConfig()
 		emptyCfg.ProjectName = "EmptyRolesProject"
 		emptyCfg.Ticket.Prefixes = []domain.TicketPrefix{{Prefix: "EMPTY"}}
-		emptyCfg.Workspaces.SrcFolders = []string{"src"}
+		emptyCfg.CodeMetrics.SourceRoots = []string{"src"}
 
 		data, err := adaptersconfig.GenerateConfigYAML(emptyCfg)
 		if err != nil {
@@ -229,8 +235,8 @@ func TestGenerateDefaultYAML_Overrides(t *testing.T) {
 	if loaded.Database.Path != "/var/data/opencode.db" {
 		t.Errorf("expected database.path /var/data/opencode.db, got %s", loaded.Database.Path)
 	}
-	if len(loaded.Workspaces.SrcFolders) != 2 || loaded.Workspaces.SrcFolders[0] != "services" {
-		t.Errorf("unexpected src_folders: %v", loaded.Workspaces.SrcFolders)
+	if len(loaded.CodeMetrics.SourceRoots) != 2 || loaded.CodeMetrics.SourceRoots[0] != "services" {
+		t.Errorf("unexpected code_metrics.source_roots: %v", loaded.CodeMetrics.SourceRoots)
 	}
 	if len(loaded.Ticket.Prefixes) != 2 || loaded.Ticket.Prefixes[0].Prefix != "MYAPP" {
 		t.Errorf("unexpected prefixes: %v", loaded.Ticket.Prefixes)
@@ -495,12 +501,12 @@ func TestGenerateConfigYAML_ValidationErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("empty src folders returns error", func(t *testing.T) {
+	t.Run("empty canonical source roots returns error", func(t *testing.T) {
 		cfg := testProjectConfig()
-		cfg.Workspaces.SrcFolders = []string{}
+		cfg.CodeMetrics.SourceRoots = []string{}
 		_, err := adaptersconfig.GenerateConfigYAML(cfg)
 		if err == nil {
-			t.Fatalf("expected error for empty src folders, got nil")
+			t.Fatalf("expected error for empty code_metrics.source_roots, got nil")
 		}
 	})
 

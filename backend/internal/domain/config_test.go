@@ -30,8 +30,7 @@ func testProjectConfig() domain.ProjectConfig {
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir:        "workspaces",
-			SrcFolders: []string{"web", "backend"},
+			Dir: "workspaces",
 			Artifacts: []domain.WorkspaceArtifactConfig{
 				{
 					Path:        "CONTRACT.md",
@@ -62,22 +61,22 @@ func testProjectConfig() domain.ProjectConfig {
 			MaxTraceBufferMessages: 500,
 		},
 		AnomalyThresholds: domain.AnomalyThresholdsConfig{
-			StallThresholdSeconds:           120,
-			ErrorRateThreshold:              0.25,
-			ContextExhaustionPct:            0.85,
-			ConsecutiveErrorsStreakWarning:  3,
-			ConsecutiveErrorsStreakCritical: 5,
-			ContextCeilingWarningTokens:     160000,
-			ContextCeilingCriticalTokens:    200000,
-			TokenVelocityWarningTokens:      30000,
-			TokenVelocityCriticalTokens:     60000,
-			TokenVelocityWarningDeltaTokens: 40000,
+			StallThresholdSeconds:            120,
+			ErrorRateThreshold:               0.25,
+			ContextExhaustionPct:             0.85,
+			ConsecutiveErrorsStreakWarning:   3,
+			ConsecutiveErrorsStreakCritical:  5,
+			ContextCeilingWarningTokens:      160000,
+			ContextCeilingCriticalTokens:     200000,
+			TokenVelocityWarningTokens:       30000,
+			TokenVelocityCriticalTokens:      60000,
+			TokenVelocityWarningDeltaTokens:  40000,
 			TokenVelocityCriticalDeltaTokens: 80000,
-			ToolThrashingMinFailures:        3,
-			ToolThrashingCriticalFailures:   5,
+			ToolThrashingMinFailures:         3,
+			ToolThrashingCriticalFailures:    5,
 		},
 		CodeMetrics: domain.CodeMetricsConfig{
-			SourceRoots:  []string{},
+			SourceRoots:  []string{"web", "backend"},
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: []string{},
@@ -110,9 +109,6 @@ func TestDefaultProjectConfig(t *testing.T) {
 	}
 	if cfg.Workspaces.Dir != "" {
 		t.Errorf("expected empty Workspaces.Dir, got %q", cfg.Workspaces.Dir)
-	}
-	if len(cfg.Workspaces.SrcFolders) != 0 || cfg.Workspaces.SrcFolders == nil {
-		t.Errorf("expected non-nil empty Workspaces.SrcFolders, got %v", cfg.Workspaces.SrcFolders)
 	}
 	if len(cfg.Workspaces.Artifacts) != 0 || cfg.Workspaces.Artifacts == nil {
 		t.Errorf("expected non-nil empty Workspaces.Artifacts, got %v", cfg.Workspaces.Artifacts)
@@ -215,7 +211,6 @@ func TestDefaultProjectConfig(t *testing.T) {
 		cfg1 := domain.DefaultProjectConfig()
 		cfg1.RoleMappings["custom"] = "coder"
 		cfg1.RoleOrder = append(cfg1.RoleOrder, "custom")
-		cfg1.Workspaces.SrcFolders = append(cfg1.Workspaces.SrcFolders, "test")
 		cfg1.CodeMetrics.SourceRoots = append(cfg1.CodeMetrics.SourceRoots, "test")
 
 		cfg2 := domain.DefaultProjectConfig()
@@ -224,9 +219,6 @@ func TestDefaultProjectConfig(t *testing.T) {
 		}
 		if len(cfg2.RoleOrder) != 0 {
 			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: RoleOrder len %d", len(cfg2.RoleOrder))
-		}
-		if len(cfg2.Workspaces.SrcFolders) != 0 {
-			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: SrcFolders len %d", len(cfg2.Workspaces.SrcFolders))
 		}
 		if len(cfg2.CodeMetrics.SourceRoots) != 0 {
 			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: SourceRoots len %d", len(cfg2.CodeMetrics.SourceRoots))
@@ -261,9 +253,8 @@ func TestWorkspaceArtifactConfig(t *testing.T) {
 	}
 
 	wsCfg := domain.WorkspacesConfig{
-		Dir:        "workspaces",
-		SrcFolders: []string{"backend"},
-		Artifacts:  []domain.WorkspaceArtifactConfig{cfg},
+		Dir:       "workspaces",
+		Artifacts: []domain.WorkspaceArtifactConfig{cfg},
 	}
 	if len(wsCfg.Artifacts) != 1 || wsCfg.Artifacts[0].Path != "CONTRACT.md" {
 		t.Errorf("unexpected WorkspacesConfig artifacts: %+v", wsCfg.Artifacts)
@@ -313,8 +304,8 @@ func TestProjectConfig_HelperFixture(t *testing.T) {
 	if cfg.Workspaces.Dir != "workspaces" {
 		t.Errorf("expected Workspaces.Dir workspaces, got %s", cfg.Workspaces.Dir)
 	}
-	if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "web" || cfg.Workspaces.SrcFolders[1] != "backend" {
-		t.Errorf("unexpected Workspaces.SrcFolders: %v", cfg.Workspaces.SrcFolders)
+	if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
+		t.Errorf("unexpected CodeMetrics.SourceRoots: %v", cfg.CodeMetrics.SourceRoots)
 	}
 	if cfg.Database.Path != "~/.local/share/opencode/opencode.db" {
 		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
