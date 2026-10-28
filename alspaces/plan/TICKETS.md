@@ -6,13 +6,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **FIX-9**: Normalize Codex Subagent Names to Canonical AgenticLens Roles
-  - **Subsystem**: Codex / Agent Configuration / Telemetry
-  - **Phase**: Phase 8 (Cross-Harness Agent Identity)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/FIX-9 normalize codex subagent names to canonical roles.md`
+(None)
 
 ---
 

@@ -14,4 +14,4 @@
 
 ## Verification
 
-TOML parsing and `git diff --check` passed. Reviewer approved with no findings. Automated tests were not run.
+TOML parsing and `git diff --check` passed. `make build` completed successfully. Reviewer approved with no findings. Automated tests were not run.
