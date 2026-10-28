@@ -294,13 +294,17 @@ func (e *BackfillEngine) processSingleWorkspace(
 	isCompleted := !needsNormalization && factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
 		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) &&
 		!needsEventBackfill
+	cleanupCompletedMigration := factLedger.Migration != nil &&
+		factLedger.Migration.Status == domain.MigrationStatusCompleted &&
+		len(factLedger.Migration.StepsPending) == 0
 
-	if !opts.Force && isCompleted {
+	if !opts.Force && isCompleted && !opts.RecomputeGit && !cleanupCompletedMigration && factLedger.Migration == nil {
 		result.Skipped = true
 		result.NewStatus = prevStatus
 		return result
 	}
-	if !hasTargetSessions && !opts.RecomputeGit && !needsNormalization {
+	if !hasTargetSessions && !opts.RecomputeGit && !opts.RecomputeDB && !needsNormalization &&
+		factLedger.Migration == nil && !cleanupCompletedMigration {
 		result.Skipped = true
 		result.NewStatus = prevStatus
 		return result
@@ -408,7 +412,6 @@ func (e *BackfillEngine) processSingleWorkspace(
 			}
 
 			if resolvedSessionID != nil && strings.TrimSpace(*resolvedSessionID) != "" {
-				dbSessionFound = true
 				rootID := strings.TrimSpace(*resolvedSessionID)
 				turns, err := opencode.ExtractSteeringTurns(opencodeDB.DB(), []string{rootID})
 				if err == nil {
@@ -421,6 +424,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 					make(map[string]string),
 				)
 				if err == nil && len(invs) > 0 {
+					dbSessionFound = true
 					shouldUpdateInvocations := !hasExistingOpenCodeFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
 					updatedInvocations, updatedTools, updatedEvents := existingOpenCodeInvocations, existingOpenCodeTools, events
 					if shouldUpdateInvocations {
@@ -526,6 +530,19 @@ func (e *BackfillEngine) processSingleWorkspace(
 	factLedger.Sessions = finalSessions
 
 	// 3. Pure Migration State Evaluation
+	if dbSessionFound && factLedger.Migration != nil {
+		completed := append([]string(nil), factLedger.Migration.StepsCompleted...)
+		pending := make([]string, 0, len(factLedger.Migration.StepsPending))
+		for _, step := range factLedger.Migration.StepsPending {
+			if step == domain.MigrationStepSourceBackfill {
+				continue
+			}
+			pending = append(pending, step)
+		}
+		completed = append(completed, domain.MigrationStepSourceBackfill)
+		factLedger.Migration.StepsCompleted = completed
+		factLedger.Migration.StepsPending = pending
+	}
 	evalInput := domain.MigrationEvaluationInput{
 		ExistingMigration:  factLedger.Migration,
 		RecomputeGit:       opts.RecomputeGit,

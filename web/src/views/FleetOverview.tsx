@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import type { FleetSummary, TicketComparisonRow, TimeWindowPreset } from '../domain/types';
+import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
   formatCurrencyUSD,
   formatPercentage,
@@ -14,6 +14,7 @@ import { TicketTable } from '../components/TicketTable';
 import { EmptyState } from '../components/EmptyState';
 import { FleetAnomalyCard } from '../components/FleetAnomalyCard';
 import { MultiSelectDropdown, type MultiSelectOption } from '../components/MultiSelectDropdown';
+import { mergeWorkspaceDiagnostics, WorkspaceLoadWarning } from '../components/WorkspaceLoadWarning';
 
 const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
   { value: 'feature', label: 'Feature' },
@@ -38,6 +39,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
 }) => {
   const [summary, setSummary] = useState<FleetSummary | null>(null);
   const [workspaces, setWorkspaces] = useState<TicketComparisonRow[]>([]);
+  const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -94,6 +96,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
 
       setSummary(fleetRes.data);
       setWorkspaces(workspacesRes.data);
+      setDiagnostics(mergeWorkspaceDiagnostics(fleetRes.diagnostics ?? [], workspacesRes.diagnostics ?? []));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to retrieve telemetry data';
       setErrorMessage(msg);
@@ -178,6 +181,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
 
   return (
     <div>
+      <WorkspaceLoadWarning diagnostics={diagnostics} />
       {/* Date Range Filter Bar */}
       {dateFilterControl}
 

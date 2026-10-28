@@ -214,6 +214,17 @@ describe('Boundary API Client', () => {
             expect(res.data).toHaveLength(1);
             expect(res.data[0]?.ticket_id).toBe('AL-1');
         });
+        it('exposes structured skipped-workspace diagnostics from the response header', async () => {
+            const diagnostics = [{ ticket_id: 'AL-OLD', message: 'Schema version 3 requires migration and source-backed backfill.' }];
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                headers: { get: (name: string) => name === 'X-AgenticLens-Workspace-Diagnostics' ? JSON.stringify(diagnostics) : null },
+                json: async () => [mockAgenticMetricsLedgers['AL-1']!],
+            }));
+            const res = await fetchWorkspaceLedgers();
+            expect(res.data).toHaveLength(1);
+            expect(res.diagnostics).toEqual(diagnostics);
+        });
         it('rejects on network error', async () => {
             vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')));
             await expect(fetchWorkspaceLedgers()).rejects.toThrow('Connection refused');

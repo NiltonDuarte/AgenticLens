@@ -520,8 +520,16 @@ type TicketComparisonRow struct {
 
 // ScanReport holds all ledgers loaded from workspace traversal alongside non-fatal scan errors.
 type ScanReport struct {
-	Ledgers []AgenticMetricsLedger `json:"ledgers"`
-	Errors  []string               `json:"errors"`
+	Ledgers     []AgenticMetricsLedger `json:"ledgers"`
+	Errors      []string               `json:"errors"`
+	Diagnostics []WorkspaceDiagnostic  `json:"diagnostics"`
+	FatalError  string                 `json:"fatal_error,omitempty"`
+}
+
+// WorkspaceDiagnostic describes one skipped ticket ledger without exposing its contents.
+type WorkspaceDiagnostic struct {
+	TicketID string `json:"ticket_id"`
+	Message  string `json:"message"`
 }
 
 // TicketArtifactItem represents a single resolved documentation artifact inside a ticket workspace.

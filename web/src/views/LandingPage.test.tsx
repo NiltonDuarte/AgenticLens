@@ -10,6 +10,20 @@ describe('LandingPage View Component', () => {
     vi.restoreAllMocks();
   });
 
+  it('shows ticket-specific skipped-workspace diagnostics alongside valid workspace data', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: mockFleetSummary });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
+      data: [...mockTicketComparisonRows],
+      diagnostics: [{ ticket_id: 'AL-OLD', message: 'Schema version 3 needs migration and source-backed backfill.' }],
+    });
+
+    render(<LandingPage onNavigate={vi.fn()} onSelectTicket={vi.fn()} />);
+
+    expect(await screen.findByText('Some ticket workspaces were skipped.')).toBeInTheDocument();
+    expect(screen.getByRole('status').textContent).toContain('AL-OLD: Schema version 3 needs migration and source-backed backfill.');
+    expect(screen.getByText('AgenticLens Observability')).toBeInTheDocument();
+  });
+
   it('renders loading indicator initially then displays hero banner and descriptions', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,

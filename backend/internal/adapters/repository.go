@@ -37,23 +37,25 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	targetDir, err := ResolveWorkspacesDir(basePath)
 	if err != nil {
 		return domain.ScanReport{
-			Ledgers: []domain.AgenticMetricsLedger{},
-			Errors:  []string{fmt.Sprintf("Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Workspaces directory is unconfigured or not found: %v", err)},
+			Ledgers:    []domain.AgenticMetricsLedger{},
+			Errors:     []string{fmt.Sprintf("Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Workspaces directory is unconfigured or not found: %v", err)},
+			FatalError: fmt.Sprintf("Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag: %v", err),
 		}
 	}
 
 	fi, err := os.Stat(targetDir)
 	if err != nil || !fi.IsDir() {
 		return domain.ScanReport{
-			Ledgers: []domain.AgenticMetricsLedger{},
-			Errors:  []string{fmt.Sprintf("Workspaces directory not found: %s", targetDir)},
+			Ledgers:    []domain.AgenticMetricsLedger{},
+			Errors:     []string{fmt.Sprintf("Workspaces directory not found: %s", targetDir)},
+			FatalError: fmt.Sprintf("Workspaces directory not found: %s", targetDir),
 		}
 	}
 
 	var metricFiles []string
 	err = filepath.WalkDir(targetDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if !d.IsDir() && d.Name() == "agentic_metrics.json" {
 			metricFiles = append(metricFiles, path)
@@ -62,8 +64,9 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	})
 	if err != nil {
 		return domain.ScanReport{
-			Ledgers: []domain.AgenticMetricsLedger{},
-			Errors:  []string{fmt.Sprintf("Failed walking workspaces directory: %v", err)},
+			Ledgers:    []domain.AgenticMetricsLedger{},
+			Errors:     []string{fmt.Sprintf("Failed walking workspaces directory: %v", err)},
+			FatalError: fmt.Sprintf("Failed walking workspaces directory: %v", err),
 		}
 	}
 
@@ -73,28 +76,45 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 
 	var ledgers []domain.AgenticMetricsLedger
 	var scanErrors []string
+	var diagnostics []domain.WorkspaceDiagnostic
+	addDiagnostic := func(metricFile string, reason error) {
+		ticketID := filepath.Base(filepath.Dir(metricFile))
+		scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, reason))
+		guidance := reason.Error()
+		if !strings.Contains(guidance, "run `agentic-lens") && !strings.Contains(guidance, "resume the explicit") {
+			guidance += "; repair or regenerate this workspace's agentic_metrics.json"
+		}
+		diagnostics = append(diagnostics, domain.WorkspaceDiagnostic{
+			TicketID: ticketID,
+			Message:  fmt.Sprintf("Ticket workspace %s was skipped: %s", ticketID, guidance),
+		})
+	}
 
 	for _, metricFile := range metricFiles {
 		content, err := os.ReadFile(metricFile)
 		if err != nil {
-			scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, err))
+			addDiagnostic(metricFile, err)
+			continue
+		}
+		if err := ValidateRuntimeFactLedger(content); err != nil {
+			addDiagnostic(metricFile, err)
 			continue
 		}
 
 		var dto AgenticFactLedgerDTO
 		if err := json.Unmarshal(content, &dto); err != nil {
-			scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, err))
+			addDiagnostic(metricFile, err)
 			continue
 		}
 		if err := dto.Validate(); err != nil {
-			scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, err))
+			addDiagnostic(metricFile, err)
 			continue
 		}
 
 		factLedger := dto.ToDomain()
 		factLedger, err = domain.PersistAnomalySummaries(factLedger)
 		if err != nil {
-			scanErrors = append(scanErrors, fmt.Sprintf("Failed to normalize %s: %v", metricFile, err))
+			addDiagnostic(metricFile, fmt.Errorf("normalization failed: %w", err))
 			continue
 		}
 
@@ -114,8 +134,9 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	sortedLedgers := domain.SortLedgers(ledgers, domain.SortFieldTicketID, true)
 
 	return domain.ScanReport{
-		Ledgers: sortedLedgers,
-		Errors:  scanErrors,
+		Ledgers:     sortedLedgers,
+		Errors:      scanErrors,
+		Diagnostics: diagnostics,
 	}
 }
 
@@ -252,6 +273,9 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	content, err := os.ReadFile(metricFile)
 	if err != nil {
 		return nil, fmt.Errorf("reading metrics file for ticket %s: %w", cleanID, err)
+	}
+	if err := ValidateRuntimeFactLedger(content); err != nil {
+		return nil, fmt.Errorf("loading metrics for ticket %s: %w", cleanID, err)
 	}
 
 	var dto AgenticFactLedgerDTO
@@ -397,6 +421,9 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading existing ledger at %s: %w", path, err)
+	}
+	if err := ValidateRuntimeFactLedger(data); err != nil {
+		return nil, fmt.Errorf("loading existing ledger at %s: %w", path, err)
 	}
 
 	var raw rawExistingLedger

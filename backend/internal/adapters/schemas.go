@@ -288,6 +288,110 @@ type AgenticFactLedgerDTO struct {
 	Anomalies     []AnomalyDTO      `json:"anomalies"`
 }
 
+// ValidateRuntimeFactLedger rejects legacy or explicitly incomplete ledgers before
+// any fact collections are decoded by ordinary ingestion paths.
+func ValidateRuntimeFactLedger(data []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return fmt.Errorf("decoding ledger metadata: %w", err)
+	}
+	var metadata struct {
+		SchemaVersion *int `json:"schema_version"`
+		Migration     *struct {
+			Status         string   `json:"status"`
+			StepsCompleted []string `json:"steps_completed"`
+			StepsPending   []string `json:"steps_pending"`
+		} `json:"migration"`
+	}
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return fmt.Errorf("decoding ledger metadata: %w", err)
+	}
+	if metadata.SchemaVersion == nil {
+		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+	}
+	if *metadata.SchemaVersion != domain.CurrentSchemaVersion {
+		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
+	}
+	for _, key := range []string{"invocations", "tools", "events"} {
+		if _, exists := fields[key]; exists {
+			return fmt.Errorf("schema v4 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
+		}
+	}
+	sessionsJSON, sessionsExists := fields["sessions"]
+	if !sessionsExists || string(sessionsJSON) == "null" || !json.Valid(sessionsJSON) {
+		return errors.New("canonical schema v4 ledger requires a sessions collection; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+	}
+	if metadata.Migration != nil && (metadata.Migration.Status != string(domain.MigrationStatusCompleted) || len(metadata.Migration.StepsPending) > 0) {
+		return errors.New("schema v4 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
+	}
+	var canonical struct {
+		Sessions []json.RawMessage `json:"sessions"`
+	}
+	if err := json.Unmarshal(sessionsJSON, &canonical.Sessions); err != nil || canonical.Sessions == nil {
+		return errors.New("canonical schema v4 sessions must be an array")
+	}
+	for si, rawSession := range canonical.Sessions {
+		var session map[string]json.RawMessage
+		if err := json.Unmarshal(rawSession, &session); err != nil {
+			return fmt.Errorf("canonical schema v4 session %d is invalid", si)
+		}
+		for _, required := range []string{"id", "source", "invocations", "tools", "anomalies"} {
+			if _, ok := session[required]; !ok {
+				return fmt.Errorf("canonical schema v4 session %d is missing required %s", si, required)
+			}
+		}
+		for _, collection := range []string{"tools", "anomalies"} {
+			var values []json.RawMessage
+			if err := json.Unmarshal(session[collection], &values); err != nil || values == nil {
+				return fmt.Errorf("canonical schema v4 session %d %s must be an array", si, collection)
+			}
+		}
+		var source string
+		if err := json.Unmarshal(session["source"], &source); err != nil || (source != string(domain.SourceOpenCode) && source != string(domain.SourceCodex)) {
+			return fmt.Errorf("canonical schema v4 session %d requires a supported source (opencode or codex)", si)
+		}
+		var invocations []json.RawMessage
+		if err := json.Unmarshal(session["invocations"], &invocations); err != nil || invocations == nil {
+			return fmt.Errorf("canonical schema v4 session %d invocations must be an array", si)
+		}
+		for ii, rawInvocation := range invocations {
+			var invocation map[string]json.RawMessage
+			if err := json.Unmarshal(rawInvocation, &invocation); err != nil {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d is invalid", ii, si)
+			}
+			for _, required := range []string{"id", "parent_id", "role", "model", "user", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
+				if _, ok := invocation[required]; !ok {
+					return fmt.Errorf("canonical schema v4 invocation %d in session %d is missing required %s", ii, si, required)
+				}
+			}
+			var tokens map[string]json.RawMessage
+			if err := json.Unmarshal(invocation["tokens"], &tokens); err != nil || tokens == nil {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d requires token counts", ii, si)
+			}
+			for _, required := range []string{"input", "output", "cache_read", "reasoning", "peak_context"} {
+				if _, ok := tokens[required]; !ok {
+					return fmt.Errorf("canonical schema v4 invocation %d in session %d is missing token count %s", ii, si, required)
+				}
+			}
+			value, ok := invocation["user_iterations"]
+			var count int64
+			if !ok || json.Unmarshal(value, &count) != nil || count < 0 {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d requires a non-negative numeric user_iterations (zero is valid)", ii, si)
+			}
+		}
+	}
+	return nil
+}
+
+func containsString(values []string, wanted string) bool {
+	for _, value := range values {
+		if value == wanted {
+			return true
+		}
+	}
+	return false
+}
+
 // UnmarshalJSON rejects legacy root fact collections at the current schema boundary.
 // They must be passed through the versioned migration engine instead.
 func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {

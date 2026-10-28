@@ -774,6 +774,16 @@ func TestMigrationRunner_BatchV4(t *testing.T) {
 			if !hasV4Step {
 				t.Errorf("expected %s in steps completed for %s", domain.MigrationStepUserIterations, tid)
 			}
+			hasSourceBackfillPending := false
+			for _, step := range dto.Migration.StepsPending {
+				if step == domain.MigrationStepSourceBackfill {
+					hasSourceBackfillPending = true
+					break
+				}
+			}
+			if !hasSourceBackfillPending || dto.Migration.Status != string(domain.MigrationStatusPartial) {
+				t.Errorf("expected shape-only migration to remain partial pending source backfill for %s, got %+v", tid, dto.Migration)
+			}
 		}
 
 		// If the ledger has code.sdlc_iterations > 0 and invocations, primary root invocation must receive user_iterations

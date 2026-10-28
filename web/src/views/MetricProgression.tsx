@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import type { AgenticMetricsLedger, TimeGranularity, TimeWindowPreset } from '../domain/types';
+import type { AgenticMetricsLedger, TimeGranularity, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import { fetchWorkspaceLedgers } from '../api/client';
+import { WorkspaceLoadWarning } from '../components/WorkspaceLoadWarning';
 import { aggregateMetricsOverTime } from '../domain/progression';
 import {
   combineDistinctPrefixes,
@@ -39,6 +40,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
   configuredPrefixes,
 }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
+  const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
   const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
   const [selectedPrefixes, setSelectedPrefixes] = useState<readonly string[]>(['all']);
@@ -72,6 +74,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
           ? await fetchWorkspaceLedgers(preset, undefined, undefined, typesParam, prefixesParam)
           : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
+      setDiagnostics(res.diagnostics ?? []);
       hasLoadedRef.current = true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch telemetry ledgers';
@@ -361,6 +364,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
         </div>
       )}
 
+      <WorkspaceLoadWarning diagnostics={diagnostics} />
       {loading && !hasLoadedRef.current ? (
         <div className="loading-container">
           <div className="loading-spinner" />

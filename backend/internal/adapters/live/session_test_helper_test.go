@@ -10,6 +10,20 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 		if invocations[i].ID == "" {
 			invocations[i].ID = fmt.Sprintf("fixture-session-%d", i)
 		}
+		if invocations[i].Model == "" {
+			invocations[i].Model = "fixture-model"
+		}
+		if invocations[i].User == "" {
+			invocations[i].User = "fixture-user"
+		}
+		if invocations[i].StartedAt == nil {
+			value := "fixture-started"
+			invocations[i].StartedAt = &value
+		}
+		if invocations[i].CompletedAt == nil {
+			value := "fixture-completed"
+			invocations[i].CompletedAt = &value
+		}
 	}
 	for i := range tools {
 		if tools[i].SessionID == "" {
@@ -28,6 +42,11 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 	if err != nil {
 		panic(err)
 	}
+	for i := range sessions {
+		if sessions[i].Anomalies == nil {
+			sessions[i].Anomalies = []domain.Anomaly{}
+		}
+	}
 	return sessions
 }
 
@@ -35,6 +54,20 @@ func sessionFactsWithSource(invocations []domain.InvocationFact, tools []domain.
 	for i := range invocations {
 		if invocations[i].ID == "" {
 			invocations[i].ID = fmt.Sprintf("fixture-session-%d", i)
+		}
+		if invocations[i].Model == "" {
+			invocations[i].Model = "fixture-model"
+		}
+		if invocations[i].User == "" {
+			invocations[i].User = "fixture-user"
+		}
+		if invocations[i].StartedAt == nil {
+			value := "fixture-started"
+			invocations[i].StartedAt = &value
+		}
+		if invocations[i].CompletedAt == nil {
+			value := "fixture-completed"
+			invocations[i].CompletedAt = &value
 		}
 	}
 	for i := range tools {
@@ -54,6 +87,11 @@ func sessionFactsWithSource(invocations []domain.InvocationFact, tools []domain.
 	if err != nil {
 		panic(err)
 	}
+	for i := range sessions {
+		if sessions[i].Anomalies == nil {
+			sessions[i].Anomalies = []domain.Anomaly{}
+		}
+	}
 	return sessions
 }
 
@@ -69,6 +107,11 @@ func setEventFacts(ledger *domain.AgenticFactLedger, events []domain.EventFact) 
 	sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), events)
 	if err != nil {
 		panic(err)
+	}
+	for i := range sessions {
+		if sessions[i].Anomalies == nil {
+			sessions[i].Anomalies = []domain.Anomaly{}
+		}
 	}
 	ledger.Sessions = sessions
 }

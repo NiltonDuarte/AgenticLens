@@ -10,6 +10,23 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 		if invocations[i].ID == "" {
 			invocations[i].ID = fmt.Sprintf("fixture-session-%d", i)
 		}
+		if invocations[i].Role == "" {
+			invocations[i].Role = "orchestrator"
+		}
+		if invocations[i].Model == "" {
+			invocations[i].Model = "fixture-model"
+		}
+		if invocations[i].User == "" {
+			invocations[i].User = "fixture-user"
+		}
+		if invocations[i].StartedAt == nil {
+			value := "fixture-started"
+			invocations[i].StartedAt = &value
+		}
+		if invocations[i].CompletedAt == nil {
+			value := "fixture-completed"
+			invocations[i].CompletedAt = &value
+		}
 	}
 	for i := range tools {
 		if tools[i].SessionID == "" {
@@ -27,6 +44,11 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 	sessions, err := domain.SessionsFromFacts(invocations, tools, events)
 	if err != nil {
 		panic(err)
+	}
+	for i := range sessions {
+		if sessions[i].Anomalies == nil {
+			sessions[i].Anomalies = []domain.Anomaly{}
+		}
 	}
 	return sessions
 }
@@ -52,6 +74,11 @@ func setEventFacts(ledger *domain.AgenticFactLedger, events []domain.EventFact) 
 	if err != nil {
 		panic(err)
 	}
+	for i := range sessions {
+		if sessions[i].Anomalies == nil {
+			sessions[i].Anomalies = []domain.Anomaly{}
+		}
+	}
 	ledger.Sessions = sessions
 }
 
@@ -60,10 +87,32 @@ func setInvocationFacts(ledger *domain.AgenticFactLedger, invocations []domain.I
 		if invocations[i].ID == "" {
 			invocations[i].ID = fmt.Sprintf("fixture-session-%d", i)
 		}
+		if invocations[i].Role == "" {
+			invocations[i].Role = "orchestrator"
+		}
+		if invocations[i].Model == "" {
+			invocations[i].Model = "fixture-model"
+		}
+		if invocations[i].User == "" {
+			invocations[i].User = "fixture-user"
+		}
+		if invocations[i].StartedAt == nil {
+			value := "fixture-started"
+			invocations[i].StartedAt = &value
+		}
+		if invocations[i].CompletedAt == nil {
+			value := "fixture-completed"
+			invocations[i].CompletedAt = &value
+		}
 	}
 	sessions, err := domain.SessionsFromFacts(invocations, ledger.ToolFacts(), ledger.EventFacts())
 	if err != nil {
 		panic(err)
+	}
+	for i := range sessions {
+		if sessions[i].Anomalies == nil {
+			sessions[i].Anomalies = []domain.Anomaly{}
+		}
 	}
 	ledger.Sessions = sessions
 }
@@ -77,6 +126,11 @@ func setToolFacts(ledger *domain.AgenticFactLedger, tools []domain.ToolFact) {
 	sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), tools, ledger.EventFacts())
 	if err != nil {
 		panic(err)
+	}
+	for i := range sessions {
+		if sessions[i].Anomalies == nil {
+			sessions[i].Anomalies = []domain.Anomaly{}
+		}
 	}
 	ledger.Sessions = sessions
 }

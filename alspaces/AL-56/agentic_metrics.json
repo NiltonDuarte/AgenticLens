@@ -1,20 +1,20 @@
 {
   "schema_version": 4,
   "ticket_id": "AL-56",
-  "ticket_title": "Codex session discovery and metrics generation",
+  "ticket_title": "Enforce schema v4 migration boundary and partial workspace loading",
   "ticket_type": "feat",
-  "started_at": "2026-10-26T09:07:36.861000+00:00",
-  "completed_at": "2026-10-27T08:05:03.859000+00:00",
-  "updated_at": "2026-10-28T09:33:19.7007023Z",
+  "started_at": "2026-10-25T14:06:52.762Z",
+  "completed_at": "2026-10-28T14:27:33.149Z",
+  "updated_at": "2026-10-28T14:27:34.176969+00:00",
   "code": {
-    "lines_added": 21709,
-    "lines_deleted": 16030,
-    "test_lines_added": 15522,
-    "test_lines_deleted": 13073,
-    "prod_lines_added": 6103,
-    "prod_lines_deleted": 2873,
-    "files_changed": 105,
-    "sdlc_iterations": 41
+    "lines_added": 1863,
+    "lines_deleted": 304,
+    "test_lines_added": 1504,
+    "test_lines_deleted": 268,
+    "prod_lines_added": 359,
+    "prod_lines_deleted": 36,
+    "files_changed": 53,
+    "sdlc_iterations": 147
   },
   "sessions": [
     {
@@ -134,6 +134,33 @@
           "context": {
             "turn": 3,
             "context_tokens": 161337,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 244535,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 247681,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 182636,
             "threshold": "160000"
           }
         },
@@ -315,7 +342,17 @@
         }
       ],
       "tools": [],
-      "anomalies": []
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder",
+            "context_tokens": 160134,
+            "threshold": "160000"
+          }
+        }
+      ]
     },
     {
       "id": "01a174b1-3b71-73c0-a0b7-6428b55ad981",
@@ -373,6 +410,15 @@
           "context": {
             "turn": 1,
             "context_tokens": 167308,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "role_mapping_review",
+            "context_tokens": 170099,
             "threshold": "160000"
           }
         }
@@ -514,6 +560,15 @@
             "context_tokens": 162219,
             "threshold": "160000"
           }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder_iteration_04",
+            "context_tokens": 243917,
+            "threshold": "160000"
+          }
         }
       ]
     },
@@ -563,6 +618,15 @@
           "context": {
             "turn": 1,
             "context_tokens": 162970,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "tester_iteration_04",
+            "context_tokens": 178114,
             "threshold": "160000"
           }
         }
@@ -624,6 +688,15 @@
           "context": {
             "turn": 1,
             "context_tokens": 163360,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "reviewer_iteration_04_final",
+            "context_tokens": 221820,
             "threshold": "160000"
           }
         }
@@ -720,6 +793,15 @@
           }
         },
         {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder_iteration_05",
+            "context_tokens": 245059,
+            "threshold": "160000"
+          }
+        },
+        {
           "rule_id": "TOOL_RETRY_STREAK",
           "severity": "WARNING",
           "context": {
@@ -789,6 +871,15 @@
             "context_tokens": 164547,
             "threshold": "160000"
           }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "tester_iteration_05",
+            "context_tokens": 186997,
+            "threshold": "160000"
+          }
         }
       ]
     },
@@ -848,6 +939,15 @@
           "context": {
             "turn": 1,
             "context_tokens": 162933,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "reviewer_iteration_05",
+            "context_tokens": 165142,
             "threshold": "160000"
           }
         }
@@ -1003,6 +1103,15 @@
             "context_tokens": 163812,
             "threshold": "160000"
           }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder_iteration_05_validation",
+            "context_tokens": 172208,
+            "threshold": "160000"
+          }
         }
       ]
     },
@@ -1126,6 +1235,15 @@
             "context_tokens": 164229,
             "threshold": "160000"
           }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "reviewer_iteration_05_final",
+            "context_tokens": 176190,
+            "threshold": "160000"
+          }
         }
       ]
     },
@@ -1180,6 +1298,15 @@
           "context": {
             "turn": 1,
             "context_tokens": 188926,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "planner_iteration_06",
+            "context_tokens": 218609,
             "threshold": "160000"
           }
         }
@@ -1241,6 +1368,15 @@
           "context": {
             "turn": 1,
             "context_tokens": 226587,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder_iteration_06",
+            "context_tokens": 246694,
             "threshold": "160000"
           }
         },
@@ -1324,6 +1460,15 @@
             "context_tokens": 239356,
             "threshold": "160000"
           }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "tester_iteration_06",
+            "context_tokens": 243010,
+            "threshold": "160000"
+          }
         }
       ]
     },
@@ -1382,6 +1527,15 @@
           "severity": "CRITICAL",
           "context": {
             "turn": 0,
+            "context_tokens": 245263,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "reviewer_iteration_06",
             "context_tokens": 245263,
             "threshold": "160000"
           }
@@ -1446,6 +1600,15 @@
             "context_tokens": 163785,
             "threshold": "160000"
           }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "planner_iteration_07",
+            "context_tokens": 183406,
+            "threshold": "160000"
+          }
         }
       ]
     },
@@ -1483,7 +1646,81 @@
           "errors": 0
         }
       ],
-      "anomalies": []
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "planner_iteration_08",
+            "context_tokens": 225140,
+            "threshold": "160000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a181f6-4743-7a83-85d0-7a23d68dec8c",
+      "source": "codex",
+      "invocations": [
+        {
+          "id": "01a181f6-4743-7a83-85d0-7a23d68dec8c",
+          "parent_id": null,
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "user": "",
+          "started_at": "2026-10-28T10:02:44.333Z",
+          "completed_at": "2026-10-28T14:27:33.149Z",
+          "active_duration_seconds": 2947,
+          "turns": 9,
+          "tokens": {
+            "input": 1835353,
+            "output": 54061,
+            "cache_read": 31073408,
+            "reasoning": 23180,
+            "peak_context": 245259
+          },
+          "cost_usd": 0,
+          "compactions": 1,
+          "user_iterations": 10
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 71,
+          "errors": 10
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 97,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 5,
+            "context_tokens": 163843,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 245259,
+            "threshold": "160000"
+          }
+        }
+      ]
     },
     {
       "id": "ses_e879f1cebffe3jzoSFoOYdCo79",
@@ -2461,116 +2698,5 @@
       ]
     }
   ],
-  "anomalies": [
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "CRITICAL",
-      "context": {
-        "role": "fix_child_parser",
-        "secondary_role": "child_cli_test",
-        "count": 6,
-        "threshold": "5"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "CRITICAL",
-      "context": {
-        "role": "coder_iteration_05",
-        "secondary_role": "tester_iteration_05",
-        "count": 21,
-        "threshold": "5"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "CRITICAL",
-      "context": {
-        "role": "reviewer_iteration_05_round3",
-        "secondary_role": "coder_iteration_05_validation",
-        "count": 5,
-        "threshold": "5"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "CRITICAL",
-      "context": {
-        "role": "coder_iteration_06",
-        "secondary_role": "tester_iteration_06",
-        "count": 14,
-        "threshold": "5"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "CRITICAL",
-      "context": {
-        "role": "coder_iteration_06",
-        "secondary_role": "tester_iteration_06",
-        "count": 26,
-        "threshold": "5"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "CRITICAL",
-      "context": {
-        "role": "coder_iteration_06",
-        "secondary_role": "tester_iteration_06",
-        "count": 7,
-        "threshold": "5"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "WARNING",
-      "context": {
-        "role": "reviewer_iteration_04_final",
-        "secondary_role": "coder_iteration_04",
-        "count": 4,
-        "threshold": "3"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "WARNING",
-      "context": {
-        "role": "tester_iteration_05",
-        "secondary_role": "reviewer_iteration_05_round2",
-        "count": 4,
-        "threshold": "3"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "WARNING",
-      "context": {
-        "role": "tester_iteration_05",
-        "secondary_role": "reviewer_iteration_05_final",
-        "count": 3,
-        "threshold": "3"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "WARNING",
-      "context": {
-        "role": "tester_iteration_06",
-        "secondary_role": "reviewer_iteration_06",
-        "count": 3,
-        "threshold": "3"
-      }
-    },
-    {
-      "rule_id": "SUBAGENT_REWORK_LOOP",
-      "severity": "WARNING",
-      "context": {
-        "role": "reviewer_iteration_06",
-        "secondary_role": "tester_iteration_06",
-        "count": 4,
-        "threshold": "3"
-      }
-    }
-  ]
+  "anomalies": []
 }

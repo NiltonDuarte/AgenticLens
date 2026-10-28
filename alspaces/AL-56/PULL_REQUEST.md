@@ -1,32 +1,28 @@
-# feat(AL-56): add Codex session discovery, finalize schema v4, and backfill historical workspaces
+# feat(AL-56)!: enforce schema v4 migration and backfill boundary
 
 ## Summary
 
-Adds opt-in Codex rollout discovery and metrics extraction through `agentic-lens generate --source codex`, while keeping OpenCode as the default harness. Session selection requires a literal nonce or explicit thread ID; ambiguous nonces fail, ticket/workspace heuristics are excluded, and linked child rollouts are attributed.
+Declares AL-56 schema v4 as a breaking change. Schema v4 changes the ledger from root-level facts to session-owned invocation, tool, event, and anomaly data. Ordinary runtime ingestion, `generate`, and server/API ledger reads accept canonical schema v4 ledgers, reject v1-v3 without parsing or merging their facts, and reject v4 ledgers that still carry incomplete migration state.
 
-Finalizes schema v4 as a lean session-owned ledger where each session directly encapsulates its model invocations and per-tool call/error summaries. Persisted session facts store only summary data; raw event rows, evidence references, and redundant presentation strings (titles/descriptions) are omitted from storage to eliminate repository bloat. At runtime, trace events and evidence are rebuilt on demand from local source logs (`CODEX_HOME` rollouts for Codex or SQLite for OpenCode) via `/api/v1/tickets/:id/events`, while human-readable anomaly descriptions are dynamically formatted from structured context across CLI, API, and UI.
+Migration metadata is temporary: it supports resuming multi-step migration and source-backed backfill across systems, then the final successful step removes it. Already-complete canonical v4 ledgers need no migration marker. The server scans ticket workspaces independently, returns valid ledgers and aggregates when others fail, and displays persistent warnings identifying skipped ticket workspaces and remediation. A single bad ledger does not make the platform unavailable.
 
-Performs a complete migration and backfill across all 67 historical ticket workspaces under `alspaces/`:
-- Upgrades historical ledgers to schema v4.
-- Re-extracts true session-owned tool facts directly from the local OpenCode SQLite database via `agentic-lens backfill --source opencode --recompute-db --workspaces alspaces --force --update-summaries`.
-- Restores accurate tool metrics across all 67 workspaces, resolving missing tool call and error data in autopsy summaries.
+This release correction also preserves explicit migration support for v1-v3, source-specific OpenCode/Codex backfill, and actionable HTTP/CLI remediation errors.
 
 ## Key Changes
 
-- **Codex Telemetry Extraction**: Rollout discovery by nonce/session ID, child rollout traversal, token usage accounting, and configurable role mapping.
-- **Session-Owned Schema v4**: `SessionFact` holds `invocations` and `tools` (non-nullable arrays). Cross-session tool totals and dashboard metrics are derived on demand.
-- **Event & Evidence Decoupling**: Raw telemetry events are removed from persisted `SessionFact`. Trace inspection is served dynamically from local sources without persisting raw event payloads in git.
-- **Runtime Anomaly Presentation**: Anomaly records persist only `rule_id`, `severity`, and structured `context`. User-facing titles and descriptions are derived deterministically on client and server.
-- **Workspace Backfill**: All 67 ticket workspaces under `alspaces/` upgraded to schema v4 with complete session-level tool accounting and refreshed `SUMMARY.md` markdown autopsies.
-- **Frontend & Dashboard**: Updated TypeScript types, `TicketDeepDive` autopsy view, `AnomalyDrawer`, and trace inspection components to query dedicated trace endpoints and consume session-owned facts.
+- Validate schema version and canonical v4 structure, including session source and non-negative `user_iterations` (zero is valid), before ordinary ingestion.
+- Keep resumable migration metadata only during incomplete migration/backfill; remove it on successful completion and accept metadata-free canonical v4.
+- Reject schema v1, v2, and v3 and incomplete v4 migration state before parsing or merging their facts.
+- Preserve partial workspace and aggregate results, with structured diagnostics exposed to the UI and persistent ticket-specific warnings.
+- Preserve explicit schema migration followed by source-backed backfill as the supported upgrade workflow.
+- Cover rejected-ledger no-write behavior and no-match/unavailable-source backfill behavior with regression tests.
 
-## Verification
+## Review
 
-- `make test`: All Go packages pass with race detector enabled; all 727 Vitest frontend tests pass.
-- `make`: Go vet, TypeScript type check (`tsc --noEmit`), ESLint (`--max-warnings 0`), Vite production bundle, and multi-platform compilation (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`) pass cleanly.
-- Telemetry Verification: Verified across all 67 workspaces that `sessions[].tools` arrays are populated with exact call and error distributions matching detected anomalies.
+Independent reviews and verification are recorded in `alspaces/AL-56/iterations/09/`, `10/`, and `11/`.
 
-## Limits
+## Breaking change and migration
 
-- Codex rollout persistence is private and version-sensitive. Discovery does not tail live sessions.
-- Cost is unavailable in observed Codex rollout data; nullable cost remains a separate follow-up.
+Schema v4 is structurally incompatible with schema v3 and earlier. Ordinary server/API and `generate` loaders no longer parse or merge v1-v3 facts. Operators must run the explicit schema migration and source-backed backfill with the correct harness (`opencode` or `codex`) before using those ledgers. In-progress metadata supports resumption and is removed after the final successful step. If one workspace is invalid, other valid workspaces and aggregates remain available with a warning naming the skipped ticket and reason.
+
+BREAKING CHANGE: Runtime ingestion no longer accepts schema v1-v3 ledgers. Migrate each ledger to schema v4 and complete source-backed backfill before using it; incomplete migration state is rejected until resumed and completed. Invalid ticket workspaces are skipped with a visible warning while valid workspaces continue to load.

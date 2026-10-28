@@ -1698,8 +1698,8 @@ func TestMigrationDropsUnscopedToolsWithDiagnostic(t *testing.T) {
 	if migrated.Migration == nil || !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool aggregate") || !strings.Contains(migrated.Migration.Notes, "Re-extract from source logs") {
 		t.Fatalf("expected explicit dropped-tool diagnostic, got %+v", migrated.Migration)
 	}
-	if migrated.Migration.Status != domain.MigrationStatusCompleted || len(migrated.Migration.StepsPending) != 0 {
-		t.Fatalf("expected completed migration when there are no pending steps, got %+v", migrated.Migration)
+	if migrated.Migration.Status != domain.MigrationStatusPartial || len(migrated.Migration.StepsPending) != 1 || migrated.Migration.StepsPending[0] != domain.MigrationStepSourceBackfill {
+		t.Fatalf("expected source backfill to remain pending after shape migration, got %+v", migrated.Migration)
 	}
 	if len(migrated.ToolFacts()) != 0 || len(migrated.Sessions) != 0 {
 		t.Fatalf("unscoped tool aggregate should not be assigned to a fabricated session: %+v", migrated.Sessions)
@@ -1713,12 +1713,21 @@ func TestMigrationDroppedToolNotePreservesPartialStatusForPendingSteps(t *testin
 	if err != nil {
 		t.Fatalf("expected v3 migration to complete with pending external steps, got %v", err)
 	}
-	if migrated.Migration == nil || migrated.Migration.Status != domain.MigrationStatusPartial || len(migrated.Migration.StepsPending) != 1 || migrated.Migration.StepsPending[0] != "opencode_db" {
-		t.Fatalf("expected partial status to remain for a pending step, got %+v", migrated.Migration)
+	if migrated.Migration == nil || migrated.Migration.Status != domain.MigrationStatusPartial || len(migrated.Migration.StepsPending) != 2 || !migrationHasStep(migrated.Migration.StepsPending, "opencode_db") || !migrationHasStep(migrated.Migration.StepsPending, domain.MigrationStepSourceBackfill) {
+		t.Fatalf("expected both source backfill and OpenCode DB steps to remain pending, got %+v", migrated.Migration)
 	}
 	if !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool aggregate") {
 		t.Fatalf("expected explicit dropped-tool note, got %+v", migrated.Migration)
 	}
+}
+
+func migrationHasStep(steps []string, expected string) bool {
+	for _, step := range steps {
+		if step == expected {
+			return true
+		}
+	}
+	return false
 }
 
 func TestMigrationEngineNormalizesInterimV4AndDropsUnscopedTools(t *testing.T) {

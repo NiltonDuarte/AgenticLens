@@ -375,6 +375,9 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if len(report.Errors) == 0 {
 			t.Fatal("expected error in report, got none")
 		}
+		if report.FatalError == "" {
+			t.Fatal("expected unconfigured workspace directory to be a fatal scan error")
+		}
 		if !strings.Contains(report.Errors[0], "workspaces directory not found") {
 			t.Errorf("expected 'workspaces directory not found' in error, got: %s", report.Errors[0])
 		}
@@ -426,6 +429,7 @@ func TestScanWorkspaces(t *testing.T) {
 	}
 
 	factJSON := `{
+  "schema_version": 4,
   "ticket_id": "TEST-1",
   "ticket_title": "Test Ticket",
   "updated_at": "2026-10-17T15:00:00Z",
@@ -442,12 +446,16 @@ func TestScanWorkspaces(t *testing.T) {
   "sessions": [
     {
       "id": "ses-1",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses-1",
+          "parent_id": null,
           "role": "orchestrator",
           "model": "model-x",
           "user": "test-user",
+          "started_at": null,
+          "completed_at": null,
           "active_duration_seconds": 60,
           "turns": 5,
           "tokens": {
@@ -458,7 +466,8 @@ func TestScanWorkspaces(t *testing.T) {
             "peak_context": 20000
           },
           "cost_usd": 0.05,
-          "compactions": 0
+          "compactions": 0,
+          "user_iterations": 0
         }
       ],
       "tools": [
@@ -468,7 +477,8 @@ func TestScanWorkspaces(t *testing.T) {
           "errors": 0
         }
       ],
-      "events": []
+      "events": [],
+      "anomalies": []
     }
   ]
 }`
@@ -499,6 +509,9 @@ func TestScanWorkspaces(t *testing.T) {
 	}
 	if !strings.Contains(report.Errors[0], "CORRUPT-1") {
 		t.Errorf("expected error to mention CORRUPT-1, got %s", report.Errors[0])
+	}
+	if len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "CORRUPT-1" || !strings.Contains(report.Diagnostics[0].Message, "CORRUPT-1") {
+		t.Fatalf("expected ticket-scoped diagnostic for skipped workspace, got %+v", report.Diagnostics)
 	}
 
 	t.Run("unconfigured workspaces returns empty ledgers with descriptive error", func(t *testing.T) {
@@ -538,7 +551,7 @@ func TestScanWorkspaces_NaturalOrdering(t *testing.T) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		factJSON := `{"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z"}`
+		factJSON := `{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
 		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -576,7 +589,7 @@ func TestScanWorkspaces_AdversarialResilienceAndOrdering(t *testing.T) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		factJSON := `{"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z"}`
+		factJSON := `{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
 		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -823,7 +836,7 @@ func TestScanWorkspacesResilience(t *testing.T) {
 		if err := os.MkdirAll(ticketDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		factJSON := `{"updated_at": "2026-10-17T12:00:00Z"}`
+		factJSON := `{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"updated_at":"2026-10-17T12:00:00Z","sessions":[]}`
 		if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1042,7 +1055,7 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 		if err := os.MkdirAll(validDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(`{"ticket_id": "VALID-1", "updated_at": "2026-10-17T10:00:00Z"}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"VALID-1","updated_at":"2026-10-17T10:00:00Z","sessions":[]}`), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -1132,7 +1145,68 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 	if err := os.MkdirAll(ws, 0700); err != nil {
 		t.Fatal(err)
 	}
-	content := `{"schema_version":4,"ticket_id":"AL-COMPACT","sessions":[{"id":"s1","source":"opencode","invocations":[{"id":"s1","parent_id":null,"role":"coder","model":"m","user":"u","active_duration_seconds":1,"turns":1,"tokens":{"input":10,"output":2,"cache_read":0,"reasoning":0,"peak_context":10},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[{"name":"bash","calls":8,"errors":6}],"events":[{"event_id":"e1","timestamp":"2026-10-26T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"}],"anomalies":[]}]}`
+	content := `
+{
+  "schema_version": 4,
+  "migration": {
+    "schema_version": 4,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
+  "ticket_id": "AL-COMPACT",
+  "sessions": [
+    {
+      "id": "s1",
+      "source": "opencode",
+      "invocations": [
+        {
+          "id": "s1",
+          "parent_id": null,
+          "role": "coder",
+          "model": "m",
+          "user": "u",
+          "active_duration_seconds": 1,
+          "turns": 1,
+          "tokens": {
+            "input": 10,
+            "output": 2,
+            "cache_read": 0,
+            "reasoning": 0,
+            "peak_context": 10
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "calls": 8,
+          "errors": 6
+        }
+      ],
+      "events": [
+        {
+          "event_id": "e1",
+          "timestamp": "2026-10-26T10:00:00Z",
+          "turn": 1,
+          "role": "coder",
+          "event_type": "tool_call",
+          "tool_name": "bash",
+          "status": "error"
+        }
+      ],
+      "anomalies": []
+    }
+  ]
+}
+`
 	if err := os.WriteFile(filepath.Join(ws, "agentic_metrics.json"), []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -1165,8 +1239,17 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	factJSON := `{
+	factJSON := `
+{
   "schema_version": 4,
+  "migration": {
+    "schema_version": 4,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
   "ticket_id": "AL-TARGET",
   "ticket_title": "Target Feature",
   "updated_at": "2026-10-18T12:00:00Z",
@@ -1192,10 +1275,15 @@ func TestLoadTicketWorkspace(t *testing.T) {
             "input": 2000,
             "output": 300,
             "cache_read": 1000,
-            "peak_context": 25000
+            "peak_context": 25000,
+            "reasoning": 0
           },
           "cost_usd": 0.08,
-          "compactions": 0
+          "compactions": 0,
+          "parent_id": null,
+          "started_at": null,
+          "completed_at": null,
+          "user_iterations": 0
         }
       ],
       "tools": [
@@ -1205,10 +1293,12 @@ func TestLoadTicketWorkspace(t *testing.T) {
           "errors": 0
         }
       ],
-      "events": []
+      "events": [],
+      "anomalies": []
     }
   ]
-}`
+}
+`
 
 	if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
@@ -1260,7 +1350,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		if err := os.MkdirAll(noIDDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(noIDDir, "agentic_metrics.json"), []byte(`{"updated_at": "2026-10-18T12:00:00Z"}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(noIDDir, "agentic_metrics.json"), []byte(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"updated_at":"2026-10-18T12:00:00Z","sessions":[]}`), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -1844,27 +1934,54 @@ role_mappings:
 		t.Fatal(err)
 	}
 
-	factJSON := `{
+	factJSON := `
+{
+  "schema_version": 4,
+  "migration": {
+    "schema_version": 4,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
   "ticket_id": "AL-24",
   "ticket_title": "Role Mapping Test",
   "updated_at": "2026-10-18T12:00:00Z",
   "sessions": [
     {
       "id": "ses-build",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses-build",
           "role": "build",
           "model": "claude-3-sonnet",
           "cost_usd": 1.5,
-          "turns": 3
+          "turns": 3,
+          "parent_id": null,
+          "user": "fixture-user",
+          "started_at": null,
+          "completed_at": null,
+          "active_duration_seconds": 0,
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_read": 0,
+            "reasoning": 0,
+            "peak_context": 0
+          },
+          "compactions": 0,
+          "user_iterations": 0
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "anomalies": []
     },
     {
       "id": "ses-qa",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses-qa",
@@ -1872,15 +1989,30 @@ role_mappings:
           "role": "qa-bot",
           "model": "claude-3-haiku",
           "cost_usd": 0.5,
-          "turns": 2
+          "turns": 2,
+          "user": "fixture-user",
+          "started_at": null,
+          "completed_at": null,
+          "active_duration_seconds": 0,
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_read": 0,
+            "reasoning": 0,
+            "peak_context": 0
+          },
+          "compactions": 0,
+          "user_iterations": 0
         }
       ],
       "tools": [],
       "events": [],
-      "parent_id": "ses-build"
+      "parent_id": "ses-build",
+      "anomalies": []
     }
   ]
-}`
+}
+`
 	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -1971,41 +2103,84 @@ role_mappings:
 		t.Fatal(err)
 	}
 
-	factJSON := `{
+	factJSON := `
+{
+  "schema_version": 4,
+  "migration": {
+    "schema_version": 4,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
   "ticket_id": "AL-38",
   "ticket_title": "Root Config Role Mapping Test",
   "updated_at": "2026-10-20T12:00:00Z",
   "sessions": [
     {
       "id": "ses-eng",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses-eng",
           "role": "sys-engineer",
           "model": "claude-3-sonnet",
           "cost_usd": 1.5,
-          "active_duration_seconds": 120
+          "active_duration_seconds": 120,
+          "parent_id": null,
+          "user": "fixture-user",
+          "started_at": null,
+          "completed_at": null,
+          "turns": 0,
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_read": 0,
+            "reasoning": 0,
+            "peak_context": 0
+          },
+          "compactions": 0,
+          "user_iterations": 0
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "anomalies": []
     },
     {
       "id": "ses-test",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses-test",
           "role": "lead-tester",
           "model": "gpt-4o",
           "cost_usd": 0.8,
-          "active_duration_seconds": 60
+          "active_duration_seconds": 60,
+          "parent_id": null,
+          "user": "fixture-user",
+          "started_at": null,
+          "completed_at": null,
+          "turns": 0,
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_read": 0,
+            "reasoning": 0,
+            "peak_context": 0
+          },
+          "compactions": 0,
+          "user_iterations": 0
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "anomalies": []
     }
   ]
-}`
+}
+`
 	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2106,8 +2281,8 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 		if ledger != nil {
 			t.Fatalf("expected nil ledger, got %+v", ledger)
 		}
-		if !strings.Contains(err.Error(), "unmarshaling metrics") {
-			t.Errorf("expected 'unmarshaling metrics' in error, got: %v", err)
+		if !strings.Contains(err.Error(), "decoding ledger metadata") {
+			t.Errorf("expected 'decoding ledger metadata' in error, got: %v", err)
 		}
 	})
 
@@ -2127,8 +2302,8 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 		if ledger != nil {
 			t.Fatalf("expected nil ledger, got %+v", ledger)
 		}
-		if !strings.Contains(err.Error(), "unmarshaling metrics") {
-			t.Errorf("expected 'unmarshaling metrics' in error, got: %v", err)
+		if !strings.Contains(err.Error(), "decoding ledger metadata") {
+			t.Errorf("expected 'decoding ledger metadata' in error, got: %v", err)
 		}
 	})
 

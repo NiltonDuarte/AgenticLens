@@ -65,7 +65,7 @@ func runGenerate(args []string) {
 	var cachedFacts *adapters.ExistingLedgerFacts
 	if *jsonOutputFlag != "" {
 		loaded, err := adapters.LoadExistingFactLedger(*jsonOutputFlag)
-		if errors.Is(err, adapters.ErrToolSessionIDRequired) {
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading existing fact ledger: %v\n", err)
 			os.Exit(1)
 		}
@@ -359,10 +359,6 @@ func runGenerate(args []string) {
 	}
 
 	codeFacts.SDLCIterations = totalSDLC
-	if totalSDLC == 0 && cachedFacts != nil && (cachedFacts.SchemaVersion == nil || *cachedFacts.SchemaVersion < 4) {
-		fmt.Fprintf(os.Stderr, "WARNING: Existing fact ledger has schema version < 4 and must be migrated via 'agentic-lens migrate' or 'agentic-lens backfill'.\n")
-	}
-
 	updatedAtISO := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
 
 	if activeCompletedAt == nil || strings.TrimSpace(*activeCompletedAt) == "" {

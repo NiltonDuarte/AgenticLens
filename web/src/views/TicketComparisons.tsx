@@ -3,8 +3,10 @@ import type {
   AgenticMetricsLedger,
   ComparisonSortField,
   ComparisonSortOrder,
+  WorkspaceDiagnostic,
 } from '../domain/types';
 import { fetchWorkspaceLedgers } from '../api/client';
+import { WorkspaceLoadWarning } from '../components/WorkspaceLoadWarning';
 import {
   combineDistinctPrefixes,
   deriveTicketComparisonRows,
@@ -43,6 +45,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   configuredPrefixes,
 }) => {
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
+  const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
   const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
   const [selectedPrefixes, setSelectedPrefixes] = useState<readonly string[]>(['all']);
@@ -74,6 +77,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         ? await fetchWorkspaceLedgers('all', undefined, undefined, typesParam, prefixesParam)
         : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
+      setDiagnostics(res.diagnostics ?? []);
       hasLoadedRef.current = true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch comparison workspaces';
@@ -212,6 +216,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
 
   return (
     <div className="comparisons-container">
+      <WorkspaceLoadWarning diagnostics={diagnostics} />
       {/* Benchmarking Summary Banner */}
       <div className="kpi-grid">
         <KPICard

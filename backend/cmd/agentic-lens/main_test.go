@@ -50,6 +50,7 @@ func sampleFactJSON(ticketID, title string, duration int64, cost float64) string
 	parent := "ses-orch"
 	ledger := domain.AgenticFactLedger{
 		SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(),
+		Migration:     &domain.MigrationInfo{SchemaVersion: domain.CurrentSchemaVersion, Status: domain.MigrationStatusCompleted, StepsCompleted: []string{domain.MigrationStepSourceBackfill}, StepsPending: []string{}},
 		TicketID:      &ticketID, TicketTitle: &title,
 		TicketType:  func() *domain.ConventionalTicketType { v := domain.TicketTypeFeat; return &v }(),
 		StartedAt:   func() *string { v := "2026-10-17T10:00:00Z"; return &v }(),
@@ -57,8 +58,8 @@ func sampleFactJSON(ticketID, title string, duration int64, cost float64) string
 		UpdatedAt:   "2026-10-17T11:00:00Z",
 		Code:        domain.CodeFacts{LinesAdded: 120, LinesDeleted: 20, TestLinesAdded: 60, ProdLinesAdded: 60, ProdLinesDeleted: 20, FilesChanged: 4, SDLCIterations: 2},
 		Sessions: []domain.SessionFact{
-			{ID: "ses-orch", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{ID: "ses-orch", Role: "orchestrator", Model: "claude-3-sonnet", User: "test-engineer", ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}},
-			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "ses-coder", ParentID: &parent, Role: "coder", Model: "claude-3-opus", User: "test-engineer", ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75}}, Events: []domain.SessionEventFact{}},
+			{ID: "ses-orch", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{ID: "ses-orch", Role: "orchestrator", Model: "claude-3-sonnet", User: "test-engineer", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "ses-coder", ParentID: &parent, Role: "coder", Model: "claude-3-opus", User: "test-engineer", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
 		},
 	}
 	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
@@ -188,12 +189,14 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 
 	// Add a ticket with an anomaly
-	tanomDir := filepath.Join(wsDir, "TICKET-ANOMALY")
+	tanomDir := filepath.Join(wsDir, "AL-ANOMALY")
 	if err := os.MkdirAll(tanomDir, 0755); err != nil {
 		t.Fatalf("failed to create TICKET-ANOMALY dir: %v", err)
 	}
 	anomalyFactJSON := `{
-		"ticket_id": "TICKET-ANOMALY",
+		"schema_version": 4,
+		"migration": {"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},
+		"ticket_id": "AL-ANOMALY",
 		"ticket_title": "Failing Feature",
 		"updated_at": "2026-10-18T10:00:00Z",
 		"sessions": [{
@@ -201,6 +204,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"source": "opencode",
 			"invocations": [],
 			"events": [],
+			"anomalies": [],
 			"tools": [
 			{
 				"name": "bash",
@@ -233,7 +237,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 
 	t.Run("ticket with anomalies formats table", func(t *testing.T) {
 		t.Parallel()
-		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-ANOMALY", "--anomalies")
+		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "AL-ANOMALY", "--anomalies")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -243,7 +247,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		}
 
 		out := stdout.String()
-		if !strings.Contains(out, "Found 1 anomalies for ticket TICKET-ANOMALY:") {
+		if !strings.Contains(out, "Found 1 anomalies for ticket AL-ANOMALY:") {
 			t.Errorf("expected header with count, got: %s", out)
 		}
 		if !strings.Contains(out, "Severity") || !strings.Contains(out, "Rule ID") {
@@ -277,7 +281,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("generate fails closed for legacy aggregate without event evidence", func(t *testing.T) {
+	t.Run("generate rejects legacy aggregate without writing ledger or summary", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "anom_gen.json")
@@ -300,6 +304,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--ticket-id", "AL-GEN-ANOM",
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
+			"--append", filepath.Join(tempDir, "SUMMARY.md"),
 			"--anomalies",
 			"--allow-empty",
 		)
@@ -307,11 +312,18 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("expected source-less aggregate summary to generate: %v stderr=%s", err, stderr.String())
+		if err := cmd.Run(); err == nil {
+			t.Fatal("expected legacy ledger ingestion to fail")
 		}
-		if !strings.Contains(stdout.String(), "TOOL_HIGH_FAILURE_RATE") {
-			t.Fatalf("expected summary in output, got stdout: %s", stdout.String())
+		if !strings.Contains(stderr.String(), "schema version is missing") || !strings.Contains(stderr.String(), "source-backed") {
+			t.Fatalf("expected actionable legacy schema rejection, got stderr: %s", stderr.String())
+		}
+		content, err := os.ReadFile(outJSON)
+		if err != nil || string(content) != seedJSON {
+			t.Fatalf("rejected ingestion modified ledger: err=%v content=%s", err, content)
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, "SUMMARY.md")); !os.IsNotExist(err) {
+			t.Fatalf("rejected ingestion should not create summary, stat err=%v", err)
 		}
 	})
 
@@ -1119,12 +1131,16 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing
 	tempDir := t.TempDir()
 	outJSON := filepath.Join(tempDir, "aggregate.json")
 	seedJSON := `{
+		"schema_version":4,
+		"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},
 		"ticket_id":"AL-GEN-EVIDENCE",
 		"ticket_title":"Aggregate evidence fixture",
 		"sessions":[{
 			"id":"session-fixture",
+			"source":"opencode",
 			"invocations":[],
 			"tools":[{"name":"bash","calls":8,"errors":6}],
+			"anomalies":[],
 			"events":[
 				{"event_id":"failed-1","timestamp":"2026-10-26T10:00:01Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
 				{"event_id":"failed-2","timestamp":"2026-10-26T10:00:02Z","turn":2,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"},
@@ -1218,7 +1234,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("generate with corrupted existing JSON output preserves execution and safely recovers", func(t *testing.T) {
+	t.Run("generate with corrupted existing JSON output fails closed", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "corrupted_existing.json")
@@ -1240,20 +1256,15 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("expected recovery and overwrite on corrupt existing json, err: %v, stderr: %s", err, stderr.String())
+		if err := cmd.Run(); err == nil {
+			t.Fatal("expected corrupt existing ledger to be rejected")
 		}
-
+		if !strings.Contains(stderr.String(), "decoding ledger metadata") {
+			t.Fatalf("expected malformed ledger error, got: %s", stderr.String())
+		}
 		data, err := os.ReadFile(outJSON)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var parsed adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal(data, &parsed); err != nil {
-			t.Fatalf("recovered file must be valid JSON: %v", err)
-		}
-		if parsed.TicketID == nil || *parsed.TicketID != "AL-RECOVER" {
-			t.Errorf("expected AL-RECOVER, got %v", parsed.TicketID)
+		if err != nil || string(data) != "{broken json content!" {
+			t.Fatalf("rejected ingestion changed corrupt ledger: err=%v content=%s", err, data)
 		}
 	})
 
@@ -1478,6 +1489,13 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		existingDTO := adapters.AgenticFactLedgerDTO{
 			TicketID:      &tid,
 			SchemaVersion: &ver,
+			Migration: &adapters.MigrationInfoDTO{
+				SchemaVersion:  domain.CurrentSchemaVersion,
+				Status:         string(domain.MigrationStatusCompleted),
+				StepsCompleted: []string{domain.MigrationStepSourceBackfill},
+				StepsPending:   []string{},
+			},
+			Sessions:      []adapters.SessionFactDTO{},
 			Code: adapters.CodeFactsDTO{
 				LinesAdded:       123,
 				LinesDeleted:     45,
@@ -1775,12 +1793,22 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		db.Close()
 
 		cachedJSON := filepath.Join(tempDir, "cached_with_inv.json")
-		cachedJSONContent := `{
-  "schema_version": 2,
+		cachedJSONContent := `
+{
+  "schema_version": 4,
+  "migration": {
+    "schema_version": 4,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
   "ticket_id": "AL-CACHED-INV",
   "sessions": [
     {
       "id": "ses_cached_inv_1",
+      "source": "opencode",
       "invocations": [
         {
           "id": "ses_cached_inv_1",
@@ -1789,16 +1817,28 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
           "model": "gpt-4o",
           "tokens": {
             "input": 150,
-            "output": 75
+            "output": 75,
+            "cache_read": 0,
+            "reasoning": 0,
+            "peak_context": 0
           },
-          "cost_usd": 0.003
+          "cost_usd": 0.003,
+          "parent_id": null,
+          "started_at": null,
+          "completed_at": null,
+          "active_duration_seconds": 0,
+          "turns": 0,
+          "compactions": 0,
+          "user_iterations": 0
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "anomalies": []
     }
   ]
-}`
+}
+`
 		if err := os.WriteFile(cachedJSON, []byte(cachedJSONContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1858,7 +1898,8 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 
 		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
 		initialJSON := `{
-  "schema_version": 2,
+  "schema_version": 4,
+  "migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
   "ticket_id": "AL-CACHED-NO-INV",
   "ticket_title": "Test Fixture Ticket",
   "sessions": []
@@ -1928,7 +1969,8 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 
 		cachedJSON := filepath.Join(tempDir, "cached_empty.json")
 		initialJSON := `{
-  "schema_version": 2,
+  "schema_version": 4,
+  "migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
   "ticket_id": "AL-EMPTY-BOTH",
   "ticket_title": "Test Fixture Ticket",
   "sessions": []
@@ -2106,6 +2148,20 @@ func TestCLIBackfillCommand(t *testing.T) {
 		if err := cmd.Run(); err != nil {
 			t.Fatalf("backfill failed: %v, stderr: %s", err, stderr.String())
 		}
+		var ticketRow []string
+		for _, line := range strings.Split(stdout.String(), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) > 0 && fields[0] == "TICKET-1" {
+				ticketRow = fields
+				break
+			}
+		}
+		if len(ticketRow) < 4 || ticketRow[3] != "yes" {
+			t.Fatalf("expected the requested Git recompute row to report Git yes, got: %s", stdout.String())
+		}
+		if !strings.Contains(stdout.String(), "Updated: 1") {
+			t.Fatalf("expected TICKET-1 recompute to be applied instead of skipped, got: %s", stdout.String())
+		}
 
 		data, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
 		if err != nil {
@@ -2121,7 +2177,10 @@ func TestCLIBackfillCommand(t *testing.T) {
 			t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 		}
 		if parsed.Migration != nil {
-			t.Errorf("expected migration object to be omitted on completed status, got %v", parsed.Migration)
+			t.Errorf("expected successful final backfill to remove temporary migration metadata, got %v", parsed.Migration)
+		}
+		if strings.Contains(string(data), `"migration"`) {
+			t.Errorf("successful ticket-filtered backfill must omit migration metadata: %s", data)
 		}
 	})
 }
@@ -2512,7 +2571,7 @@ func TestCLIMigrateCommand(t *testing.T) {
 func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 
-		cmd := exec.Command(
+	cmd := exec.Command(
 		cliBinaryPath,
 		"backfill",
 		"--source", "opencode",
@@ -3225,7 +3284,8 @@ func TestCLITicketTypeClassification(t *testing.T) {
 
 		// Create existing fact ledger with legacy "feature"
 		legacyJSON := `{
-  "schema_version": 2,
+  "schema_version": 4,
+  "migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
   "ticket_id": "AL-29",
   "ticket_title": "Test Fixture Ticket",
   "ticket_type": "feature",
@@ -4201,7 +4261,8 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts_ws_title.json")
 		wsCachedJSON := `{
-  "schema_version": 3,
+  "schema_version": 4,
+  "migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
   "ticket_id": "AL-CACHED-WS-TITLE",
   "ticket_title": "   \t\n",
   "sessions": []
@@ -4237,7 +4298,8 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts.json")
 		cachedJSON := `{
-  "schema_version": 3,
+  "schema_version": 4,
+  "migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
   "ticket_id": "AL-CACHED-TITLE",
   "ticket_title": "Cached Fixture Title",
   "sessions": []
@@ -5921,7 +5983,7 @@ code_metrics:
 	if len(idempDTO.ToDomain().InvocationFacts()) != 2 {
 		t.Errorf("idempotency check failed: expected 2 invocations, got %d", len(idempDTO.ToDomain().InvocationFacts()))
 	}
-	// 6. Test strict rejection of fallbacks: verify that older schema ledgers lacking user_iterations emit warning and require migration
+	// 6. Runtime ingestion rejects legacy schemas and requires explicit migration and source backfill.
 	legacyOutJSON := filepath.Join(tempDir, "legacy.json")
 	legacyVer := 3
 	legacyLedger := domain.AgenticFactLedger{
@@ -5957,10 +6019,11 @@ code_metrics:
 	cmdLegacy.Dir = tempDir
 	var legacyStderr bytes.Buffer
 	cmdLegacy.Stderr = &legacyStderr
-	_ = cmdLegacy.Run()
-
-	if !strings.Contains(legacyStderr.String(), "Existing fact ledger has schema version < 4 and must be migrated") {
-		t.Errorf("expected warning for schema version < 4 in stderr, got: %s", legacyStderr.String())
+	if err := cmdLegacy.Run(); err == nil {
+		t.Fatal("expected schema-v3 ledger to be rejected")
+	}
+	if !strings.Contains(legacyStderr.String(), "schema version 3") || !strings.Contains(legacyStderr.String(), "source-backed") {
+		t.Errorf("expected actionable schema-v3 rejection, got: %s", legacyStderr.String())
 	}
 }
 
@@ -6334,7 +6397,7 @@ code_metrics:
 	ticketIDStr := "AL-ZERO-FALLBACK"
 	ticketTitleStr := "Zero Fallback Invariant"
 
-	t.Run("pre-v4 ledger with zero user_iterations emits warning and does not guess", func(t *testing.T) {
+	t.Run("pre-v4 ledgers with zero user_iterations are rejected before accumulation", func(t *testing.T) {
 		for _, ver := range []int{1, 2, 3} {
 			schemaVer := ver
 			ledger := domain.AgenticFactLedger{
@@ -6368,20 +6431,15 @@ code_metrics:
 			cmd.Dir = tempDir
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
-			if err := cmd.Run(); err != nil {
-				t.Fatalf("generate v%d failed: %v", ver, err)
+			if err := cmd.Run(); err == nil {
+				t.Fatalf("generate v%d unexpectedly accepted a legacy ledger", ver)
 			}
-
-			if !strings.Contains(stderr.String(), "Existing fact ledger has schema version < 4 and must be migrated") {
-				t.Errorf("v%d: expected warning for schema version < 4 in stderr, got: %s", ver, stderr.String())
+			if !strings.Contains(stderr.String(), fmt.Sprintf("schema version %d", ver)) || !strings.Contains(stderr.String(), "source-backed") {
+				t.Errorf("v%d: expected actionable schema rejection, got: %s", ver, stderr.String())
 			}
-
-			// A zero exact sum remains zero even when migrating a pre-v4 ledger.
 			raw, _ := os.ReadFile(outJSON)
-			var dto adapters.AgenticFactLedgerDTO
-			_ = json.Unmarshal(raw, &dto)
-			if dto.Code.SDLCIterations != 0 {
-				t.Errorf("v%d: expected SDLCIterations to remain 0, got %d", ver, dto.Code.SDLCIterations)
+			if !bytes.Contains(raw, []byte(fmt.Sprintf(`"schema_version": %d`, ver))) {
+				t.Errorf("v%d: rejected ingestion modified the original ledger: %s", ver, raw)
 			}
 		}
 	})
@@ -6435,7 +6493,7 @@ func TestCLIMigrateReportsDroppedUnscopedToolRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	ledgerPath := filepath.Join(workspace, "agentic_metrics.json")
-	ledger := `{"schema_version":4,"ticket_id":"AL-UNSCOPED","code":{"sdlc_iterations":0},"tools":[{"name":"bash","calls":3,"errors":1}]}`
+	ledger := `{"schema_version":3,"ticket_id":"AL-UNSCOPED","code":{"sdlc_iterations":0},"tools":[{"name":"bash","calls":3,"errors":1}]}`
 	if err := os.WriteFile(ledgerPath, []byte(ledger), 0600); err != nil {
 		t.Fatal(err)
 	}
