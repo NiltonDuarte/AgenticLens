@@ -1,0 +1,69 @@
+{
+  "schema_version": 4,
+  "ticket_id": "PO-13",
+  "ticket_title": "Concurrent OpenCode v1 and v2 support",
+  "ticket_type": "docs",
+  "started_at": "2026-10-28T23:27:50.480Z",
+  "completed_at": "2026-10-28T23:31:01.063Z",
+  "updated_at": "2026-10-28T23:31:01.971361+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 4
+  },
+  "sessions": [
+    {
+      "id": "01a184d7-62c8-7411-a22e-fae8394d91aa",
+      "source": "codex",
+      "invocations": [
+        {
+          "id": "01a184d7-62c8-7411-a22e-fae8394d91aa",
+          "parent_id": null,
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "user": "",
+          "started_at": "2026-10-28T23:27:51.572Z",
+          "completed_at": "2026-10-28T23:31:01.063Z",
+          "active_duration_seconds": 69,
+          "turns": 2,
+          "tokens": {
+            "input": 30286,
+            "output": 4248,
+            "cache_read": 491264,
+            "reasoning": 469,
+            "peak_context": 39930
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 4
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 10,
+          "errors": 3
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": [
+    {
+      "rule_id": "TOOL_HIGH_FAILURE_RATE",
+      "severity": "WARNING",
+      "context": {
+        "tool_name": "command",
+        "count": 3,
+        "total_calls": 10,
+        "threshold": "\u003e20%",
+        "failure_rate_pct": 30
+      }
+    }
+  ]
+}
