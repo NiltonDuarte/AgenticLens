@@ -49,7 +49,7 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 - Reviewer verdict: APPROVED (`iterations/04/REVIEW.md`).
 - Focused CLI race test: PASS (`cd backend && GOCACHE=/tmp/agenticlens-go-cache go test -race ./cmd/agentic-lens`).
 - Full backend race suite: PASS through Codex and OpenCode (`GOCACHE=/tmp/agenticlens-go-cache make test`, 12 Go packages).
-- Frontend tests were not run: `web/node_modules` is absent, so the Makefile skipped `npm test`.
+- Post-merge `GOCACHE=/tmp/agenticlens-go-cache make`: PASS, including Go vet, TypeScript typecheck/lint, 12 Go race-test packages, 32 frontend test files (734 tests), frontend production build, and four platform builds.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 5
@@ -57,13 +57,13 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 - **Context Window Health:** ELEVATED — Root agent peak 126.8k tokens (63% of 200k healthy ceiling, 6 compactions) | Subagents peak 174.1k (Coder)
 - **Role Effort Distribution (Subagents):** Coder 99.6%, Advisor 0.4%
 - **Subagent Turn Velocity & Thrashing:** 121.1 avg turns/run (peak: 273 turns) | Coder 137.1, Advisor 9.0
-- **Test-to-Production Code Ratio:** 1.0:1 (+637 test lines / +651 prod lines)
-- **Code Delivered:** +1,374 / -377 lines across 30 code files (excluding docs)
+- **Test-to-Production Code Ratio:** 1.0:1 (+640 test lines / +652 prod lines)
+- **Code Delivered:** +1,378 / -381 lines across 30 code files (excluding docs)
 - **Reasoning Effort:** 271,420 reasoning tokens (58.4% of generated output)
 - **Tool Health & Self-Correction:** 1,028 tool calls (16 self-corrections, 98.4% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 10 execution anomalies detected (3 CRITICAL, 7 WARNING).
+- **Status:** 13 execution anomalies detected (3 CRITICAL, 10 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+81.9k tokens) — Context tokens surged by 81.9k to 81.9k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+104.4k tokens) — Context tokens surged by 104.4k to 104.4k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+88.1k tokens) — Context tokens surged by 88.1k to 88.1k tokens.
@@ -73,6 +73,9 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+78.6k tokens) — Context tokens surged by 78.6k to 78.6k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+62.3k tokens) — Context tokens surged by 62.3k to 62.3k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.5k tokens) — Context tokens reached 168.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.0k tokens) — Context tokens reached 168.0k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (174.1k tokens) — Context tokens reached 174.1k, breaching the 160k warning ceiling.
 - [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: task (27.3%) — Tool 'task' failed 3 out of 11 calls (27.3% failure rate, threshold: >20%).
 
 ### Agentic Execution Metrics
