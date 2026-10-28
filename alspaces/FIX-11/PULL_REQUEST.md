@@ -11,13 +11,15 @@
 - Support configurable anomaly thresholds for tool retry streaks, failure rates, context spikes, and tool thrashing.
 - Consolidate source code root boundaries under `code_metrics.source_roots` with bidirectional backward-compatible fallback for `workspaces.src_folders`.
 - Update git diff classification and path monitoring to respect `code_metrics.source_roots`.
+- Correct missing-source-roots CLI guidance to recommend `code_metrics.source_roots` while retaining `workspaces.src_folders` as the backward-compatible option.
+- Add CLI regression coverage for the source-roots validation guidance.
 
 ## Context
 
 - Contract: `alspaces/FIX-11/CONTRACT.md`
 - Summary: `alspaces/FIX-11/SUMMARY.md`
-- Iteration Plans: `alspaces/FIX-11/iterations/01/PLAN.md`, `alspaces/FIX-11/iterations/02/PLAN.md`, `alspaces/FIX-11/iterations/03/PLAN.md`
-- Iteration Reviews: `alspaces/FIX-11/iterations/01/REVIEW.md`, `alspaces/FIX-11/iterations/02/REVIEW.md`, `alspaces/FIX-11/iterations/03/REVIEW.md`
+- Iteration Plans: `alspaces/FIX-11/iterations/01/PLAN.md`, `alspaces/FIX-11/iterations/02/PLAN.md`, `alspaces/FIX-11/iterations/03/PLAN.md`, `alspaces/FIX-11/iterations/04/PLAN.md`
+- Iteration Reviews: `alspaces/FIX-11/iterations/01/REVIEW.md`, `alspaces/FIX-11/iterations/02/REVIEW.md`, `alspaces/FIX-11/iterations/03/REVIEW.md`, `alspaces/FIX-11/iterations/04/REVIEW.md`
 
 ## Verification
 

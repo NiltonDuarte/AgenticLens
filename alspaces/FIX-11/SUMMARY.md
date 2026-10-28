@@ -42,6 +42,15 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 - Static analysis and lint (`go vet ./...`, `tsc --noEmit`, `eslint`): PASS
 - Production build & multi-platform compilation (`make`): PASS
 
+## Iteration 04: Source Roots Validation Guidance
+
+- Updated the `generate` CLI validation message to recommend `code_metrics.source_roots` and identify `workspaces.src_folders` as the backward-compatible option.
+- Extended the CLI subprocess regression assertion to verify both field names and their canonical/legacy labels.
+- Reviewer verdict: APPROVED (`iterations/04/REVIEW.md`).
+- Focused CLI race test: PASS (`cd backend && GOCACHE=/tmp/agenticlens-go-cache go test -race ./cmd/agentic-lens`).
+- Full backend race suite: PASS through Codex and OpenCode (`GOCACHE=/tmp/agenticlens-go-cache make test`, 12 Go packages).
+- Frontend tests were not run: `web/node_modules` is absent, so the Makefile skipped `npm test`.
+
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 5
 - **Active Agent Duration:** 5h 59m (excludes user wait time)
