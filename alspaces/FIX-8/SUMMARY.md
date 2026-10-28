@@ -1,5 +1,9 @@
 # FIX-8 Work Summary
 
+## Iteration 03: Configured Workspace Root Reconciliation
+
+Moved the complete FIX-8 ticket workspace and completed specification from `workspaces/` to the configured `alspaces/` root, preserving the ticket history and updating operational links to the new paths.
+
 ## Iteration 02: Configurable Workspace Root
 
 Updated `AGENTS.md` to define `<WORKSPACES_DIR>` from `workspaces.dir` in `.agenticlens-config.yaml`, with `workspaces` as the fallback when the file or key is absent. The current configuration resolves to `alspaces`. Ticket workspaces, plan lifecycle paths, iteration artifacts, telemetry command arguments, and PR command examples now consistently use the configurable root.

@@ -8,8 +8,8 @@ Update `AGENTS.md` to define `<WORKSPACES_DIR>` from `.agenticlens-config.yaml`'
 
 ## Context
 
-- Contract: `workspaces/FIX-8/CONTRACT.md`
-- Work summary: `workspaces/FIX-8/SUMMARY.md`
-- Iteration plan and review: `workspaces/FIX-8/iterations/01/`
+- Contract: `alspaces/FIX-8/CONTRACT.md`
+- Work summary: `alspaces/FIX-8/SUMMARY.md`
+- Iteration plans and reviews: `alspaces/FIX-8/iterations/`
 
 Closes FIX-8.
