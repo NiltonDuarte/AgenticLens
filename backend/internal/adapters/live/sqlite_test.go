@@ -43,11 +43,11 @@ func testProjectConfig() domain.ProjectConfig {
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
+		},
+		AnomalyThresholds: domain.AnomalyThresholdsConfig{
+			StallThresholdSeconds: 120,
+			ErrorRateThreshold:    0.25,
+			ContextExhaustionPct:  0.85,
 		},
 		RoleMappings: domain.RoleMappings{
 			"orchestrator": "orchestrator",

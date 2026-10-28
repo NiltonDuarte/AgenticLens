@@ -211,18 +211,6 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	if maxTrace <= 0 {
 		maxTrace = 500
 	}
-	stallSec := cfg.Live.AnomalyThresholds.StallThresholdSeconds
-	if stallSec <= 0 {
-		stallSec = 120
-	}
-	errorRate := cfg.Live.AnomalyThresholds.ErrorRateThreshold
-	if errorRate <= 0 {
-		errorRate = 0.25
-	}
-	contextPct := cfg.Live.AnomalyThresholds.ContextExhaustionPct
-	if contextPct <= 0 {
-		contextPct = 0.85
-	}
 
 	b.WriteString("# Live session observability and real-time streaming engine configuration.\n")
 	b.WriteString("live:\n")
@@ -231,57 +219,67 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("  # SQLite polling interval in milliseconds for live session updates.\n")
 	b.WriteString(fmt.Sprintf("  poll_interval_ms: %d\n", pollMs))
 	b.WriteString("  # Maximum number of recent trace messages retained in memory buffer per session.\n")
-	b.WriteString(fmt.Sprintf("  max_trace_buffer_messages: %d\n", maxTrace))
-	b.WriteString("  # Numerical thresholds for automated anomaly detection rules.\n")
-	b.WriteString("  anomaly_thresholds:\n")
-	b.WriteString("    # Time in seconds without session turn activity before flagging a stall anomaly.\n")
-	b.WriteString(fmt.Sprintf("    stall_threshold_seconds: %d\n", stallSec))
-	b.WriteString("    # Ratio of tool errors to total invocations triggering a high failure anomaly.\n")
-	b.WriteString(fmt.Sprintf("    error_rate_threshold: %0.2f\n", errorRate))
-	b.WriteString("    # Token context window utilization percentage triggering saturation warnings.\n")
-	b.WriteString(fmt.Sprintf("    context_exhaustion_pct: %0.2f\n", contextPct))
-	at := cfg.Live.AnomalyThresholds
+	b.WriteString(fmt.Sprintf("  max_trace_buffer_messages: %d\n\n", maxTrace))
+
+	// Anomaly Thresholds Settings
+	stallSec := cfg.AnomalyThresholds.StallThresholdSeconds
+	if stallSec <= 0 {
+		stallSec = 120
+	}
+	errorRate := cfg.AnomalyThresholds.ErrorRateThreshold
+	if errorRate <= 0 {
+		errorRate = 0.25
+	}
+	contextPct := cfg.AnomalyThresholds.ContextExhaustionPct
+	if contextPct <= 0 {
+		contextPct = 0.85
+	}
+
+	b.WriteString("# Automated anomaly detection rules governing offline generation and live stream monitoring.\n")
+	b.WriteString("anomaly_thresholds:\n")
+	b.WriteString("  # Time in seconds without session turn activity before flagging a stall anomaly.\n")
+	b.WriteString(fmt.Sprintf("  stall_threshold_seconds: %d\n", stallSec))
+	b.WriteString("  # Ratio of tool errors to total invocations triggering a high failure anomaly.\n")
+	b.WriteString(fmt.Sprintf("  error_rate_threshold: %0.2f\n", errorRate))
+	b.WriteString("  # Token context window utilization percentage triggering saturation warnings.\n")
+	b.WriteString(fmt.Sprintf("  context_exhaustion_pct: %0.2f\n", contextPct))
+	at := cfg.AnomalyThresholds
 	if at.ConsecutiveErrorsStreakWarning > 0 {
-		b.WriteString(fmt.Sprintf("    consecutive_errors_streak_warning: %d\n", at.ConsecutiveErrorsStreakWarning))
+		b.WriteString(fmt.Sprintf("  consecutive_errors_streak_warning: %d\n", at.ConsecutiveErrorsStreakWarning))
 	}
 	if at.ConsecutiveErrorsStreakCritical > 0 {
-		b.WriteString(fmt.Sprintf("    consecutive_errors_streak_critical: %d\n", at.ConsecutiveErrorsStreakCritical))
+		b.WriteString(fmt.Sprintf("  consecutive_errors_streak_critical: %d\n", at.ConsecutiveErrorsStreakCritical))
 	}
-	if at.ContextCeilingApproachRatioWarning > 0 {
-		b.WriteString(fmt.Sprintf("    context_ceiling_approach_ratio_warning: %0.2f\n", at.ContextCeilingApproachRatioWarning))
+	if at.ContextCeilingWarningTokens > 0 {
+		b.WriteString(fmt.Sprintf("  context_ceiling_warning_tokens: %d\n", at.ContextCeilingWarningTokens))
 	}
-	if at.ContextCeilingApproachRatioCritical > 0 {
-		b.WriteString(fmt.Sprintf("    context_ceiling_approach_ratio_critical: %0.2f\n", at.ContextCeilingApproachRatioCritical))
+	if at.ContextCeilingCriticalTokens > 0 {
+		b.WriteString(fmt.Sprintf("  context_ceiling_critical_tokens: %d\n", at.ContextCeilingCriticalTokens))
 	}
 	if at.TokenVelocityWarningTokens > 0 {
-		b.WriteString(fmt.Sprintf("    token_velocity_warning_tokens: %d\n", at.TokenVelocityWarningTokens))
+		b.WriteString(fmt.Sprintf("  token_velocity_warning_tokens: %d\n", at.TokenVelocityWarningTokens))
 	}
 	if at.TokenVelocityCriticalTokens > 0 {
-		b.WriteString(fmt.Sprintf("    token_velocity_critical_tokens: %d\n", at.TokenVelocityCriticalTokens))
+		b.WriteString(fmt.Sprintf("  token_velocity_critical_tokens: %d\n", at.TokenVelocityCriticalTokens))
 	}
 	if at.TokenVelocityWarningDeltaTokens > 0 {
-		b.WriteString(fmt.Sprintf("    token_velocity_warning_delta_tokens: %d\n", at.TokenVelocityWarningDeltaTokens))
+		b.WriteString(fmt.Sprintf("  token_velocity_warning_delta_tokens: %d\n", at.TokenVelocityWarningDeltaTokens))
 	}
 	if at.TokenVelocityCriticalDeltaTokens > 0 {
-		b.WriteString(fmt.Sprintf("    token_velocity_critical_delta_tokens: %d\n", at.TokenVelocityCriticalDeltaTokens))
+		b.WriteString(fmt.Sprintf("  token_velocity_critical_delta_tokens: %d\n", at.TokenVelocityCriticalDeltaTokens))
 	}
 	if at.ToolThrashingMinFailures > 0 {
-		b.WriteString(fmt.Sprintf("    tool_thrashing_min_failures: %d\n", at.ToolThrashingMinFailures))
+		b.WriteString(fmt.Sprintf("  tool_thrashing_min_failures: %d\n", at.ToolThrashingMinFailures))
 	}
 	if at.ToolThrashingCriticalFailures > 0 {
-		b.WriteString(fmt.Sprintf("    tool_thrashing_critical_failures: %d\n", at.ToolThrashingCriticalFailures))
+		b.WriteString(fmt.Sprintf("  tool_thrashing_critical_failures: %d\n", at.ToolThrashingCriticalFailures))
 	}
 	b.WriteString("\n")
 
-	// Metrics Settings
-	healthyCeiling := cfg.Metrics.HealthyCeilingTokens
-	if healthyCeiling <= 0 {
-		healthyCeiling = domain.HealthyCeilingTokens
-	}
-	b.WriteString("# Performance benchmarks and context health thresholds.\n")
-	b.WriteString("metrics:\n")
-	b.WriteString("  # Healthy context window token ceiling for context saturation and health grading.\n")
-	b.WriteString(fmt.Sprintf("  healthy_ceiling_tokens: %d\n\n", healthyCeiling))
+	// Healthy Ceiling Tokens Settings
+	healthyCeiling := cfg.EffectiveHealthyCeiling()
+	b.WriteString("# Healthy context window token ceiling for context saturation and health grading.\n")
+	b.WriteString(fmt.Sprintf("healthy_ceiling_tokens: %d\n\n", healthyCeiling))
 
 	// Code Metrics Settings
 	b.WriteString("# Git commit diff analysis and code classification glob patterns.\n")
@@ -412,25 +410,9 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds:               120,
-				ErrorRateThreshold:                  0.25,
-				ContextExhaustionPct:                0.85,
-				ConsecutiveErrorsStreakWarning:      3,
-				ConsecutiveErrorsStreakCritical:     5,
-				ContextCeilingApproachRatioWarning:  0.80,
-				ContextCeilingApproachRatioCritical: 1.00,
-				TokenVelocityWarningTokens:          30000,
-				TokenVelocityCriticalTokens:         60000,
-				TokenVelocityWarningDeltaTokens:     40000,
-				TokenVelocityCriticalDeltaTokens:    80000,
-				ToolThrashingMinFailures:            3,
-				ToolThrashingCriticalFailures:       5,
-			},
 		},
-		Metrics: domain.MetricsConfig{
-			HealthyCeilingTokens: domain.HealthyCeilingTokens,
-		},
+		HealthyCeilingTokens: domain.HealthyCeilingTokens,
+		AnomalyThresholds:    domain.DefaultAnomalyThresholdsConfig(),
 		CodeMetrics: domain.CodeMetricsConfig{
 			SourceRoots:  cleanFolders,
 			Include:      []string{},

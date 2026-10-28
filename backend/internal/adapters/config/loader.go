@@ -175,6 +175,8 @@ type rawAnomalyThresholdsConfig struct {
 	ContextExhaustionPct                *float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
 	ConsecutiveErrorsStreakWarning      *int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
 	ConsecutiveErrorsStreakCritical     *int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
+	ContextCeilingWarningTokens         *int64   `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
+	ContextCeilingCriticalTokens        *int64   `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
 	ContextCeilingApproachRatioWarning  *float64 `json:"context_ceiling_approach_ratio_warning" yaml:"context_ceiling_approach_ratio_warning"`
 	ContextCeilingApproachRatioCritical *float64 `json:"context_ceiling_approach_ratio_critical" yaml:"context_ceiling_approach_ratio_critical"`
 	TokenVelocityWarningTokens          *int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
@@ -206,15 +208,17 @@ type rawCodeMetricsConfig struct {
 }
 
 type rawProjectConfigDTO struct {
-	ProjectName  *string               `json:"project_name" yaml:"project_name"`
-	Ticket       *rawTicketConfig      `json:"ticket" yaml:"ticket"`
-	Workspaces   *rawWorkspacesConfig  `json:"workspaces" yaml:"workspaces"`
-	Database     *rawDatabaseConfig    `json:"database" yaml:"database"`
-	Live         *rawLiveConfig        `json:"live" yaml:"live"`
-	Metrics      *rawMetricsConfig     `json:"metrics" yaml:"metrics"`
-	CodeMetrics  *rawCodeMetricsConfig `json:"code_metrics" yaml:"code_metrics"`
-	RoleMappings map[string]string     `json:"role_mappings" yaml:"role_mappings"`
-	RoleOrder    []string              `json:"role_order" yaml:"role_order"`
+	ProjectName          *string                     `json:"project_name" yaml:"project_name"`
+	Ticket               *rawTicketConfig            `json:"ticket" yaml:"ticket"`
+	Workspaces           *rawWorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
+	HealthyCeilingTokens *int64                      `json:"healthy_ceiling_tokens" yaml:"healthy_ceiling_tokens"`
+	Database             *rawDatabaseConfig          `json:"database" yaml:"database"`
+	Live                 *rawLiveConfig              `json:"live" yaml:"live"`
+	AnomalyThresholds    *rawAnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
+	Metrics              *rawMetricsConfig           `json:"metrics" yaml:"metrics"`
+	CodeMetrics          *rawCodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
+	RoleMappings         map[string]string           `json:"role_mappings" yaml:"role_mappings"`
+	RoleOrder            []string                    `json:"role_order" yaml:"role_order"`
 }
 
 func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
@@ -301,6 +305,12 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		}
 	}
 
+	if dto.HealthyCeilingTokens != nil && *dto.HealthyCeilingTokens > 0 {
+		cfg.HealthyCeilingTokens = *dto.HealthyCeilingTokens
+	} else if dto.Metrics != nil && dto.Metrics.HealthyCeilingTokens != nil && *dto.Metrics.HealthyCeilingTokens > 0 {
+		cfg.HealthyCeilingTokens = *dto.Metrics.HealthyCeilingTokens
+	}
+
 	if dto.Live != nil {
 		if dto.Live.ActiveThresholdSeconds != nil {
 			cfg.Live.ActiveThresholdSeconds = *dto.Live.ActiveThresholdSeconds
@@ -311,53 +321,57 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		if dto.Live.MaxTraceBufferMessages != nil {
 			cfg.Live.MaxTraceBufferMessages = *dto.Live.MaxTraceBufferMessages
 		}
-		if dto.Live.AnomalyThresholds != nil {
-			at := dto.Live.AnomalyThresholds
-			if at.StallThresholdSeconds != nil {
-				cfg.Live.AnomalyThresholds.StallThresholdSeconds = *at.StallThresholdSeconds
-			}
-			if at.ErrorRateThreshold != nil {
-				cfg.Live.AnomalyThresholds.ErrorRateThreshold = *at.ErrorRateThreshold
-			}
-			if at.ContextExhaustionPct != nil {
-				cfg.Live.AnomalyThresholds.ContextExhaustionPct = *at.ContextExhaustionPct
-			}
-			if at.ConsecutiveErrorsStreakWarning != nil && *at.ConsecutiveErrorsStreakWarning > 0 {
-				cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning = *at.ConsecutiveErrorsStreakWarning
-			}
-			if at.ConsecutiveErrorsStreakCritical != nil && *at.ConsecutiveErrorsStreakCritical > 0 {
-				cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakCritical = *at.ConsecutiveErrorsStreakCritical
-			}
-			if at.ContextCeilingApproachRatioWarning != nil && *at.ContextCeilingApproachRatioWarning > 0 {
-				cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning = *at.ContextCeilingApproachRatioWarning
-			}
-			if at.ContextCeilingApproachRatioCritical != nil && *at.ContextCeilingApproachRatioCritical > 0 {
-				cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioCritical = *at.ContextCeilingApproachRatioCritical
-			}
-			if at.TokenVelocityWarningTokens != nil && *at.TokenVelocityWarningTokens > 0 {
-				cfg.Live.AnomalyThresholds.TokenVelocityWarningTokens = *at.TokenVelocityWarningTokens
-			}
-			if at.TokenVelocityCriticalTokens != nil && *at.TokenVelocityCriticalTokens > 0 {
-				cfg.Live.AnomalyThresholds.TokenVelocityCriticalTokens = *at.TokenVelocityCriticalTokens
-			}
-			if at.TokenVelocityWarningDeltaTokens != nil && *at.TokenVelocityWarningDeltaTokens > 0 {
-				cfg.Live.AnomalyThresholds.TokenVelocityWarningDeltaTokens = *at.TokenVelocityWarningDeltaTokens
-			}
-			if at.TokenVelocityCriticalDeltaTokens != nil && *at.TokenVelocityCriticalDeltaTokens > 0 {
-				cfg.Live.AnomalyThresholds.TokenVelocityCriticalDeltaTokens = *at.TokenVelocityCriticalDeltaTokens
-			}
-			if at.ToolThrashingMinFailures != nil && *at.ToolThrashingMinFailures > 0 {
-				cfg.Live.AnomalyThresholds.ToolThrashingMinFailures = *at.ToolThrashingMinFailures
-			}
-			if at.ToolThrashingCriticalFailures != nil && *at.ToolThrashingCriticalFailures > 0 {
-				cfg.Live.AnomalyThresholds.ToolThrashingCriticalFailures = *at.ToolThrashingCriticalFailures
-			}
-		}
 	}
 
-	if dto.Metrics != nil {
-		if dto.Metrics.HealthyCeilingTokens != nil && *dto.Metrics.HealthyCeilingTokens > 0 {
-			cfg.Metrics.HealthyCeilingTokens = *dto.Metrics.HealthyCeilingTokens
+	rawAT := dto.AnomalyThresholds
+	if rawAT == nil && dto.Live != nil && dto.Live.AnomalyThresholds != nil {
+		rawAT = dto.Live.AnomalyThresholds
+	}
+	if rawAT != nil {
+		if rawAT.StallThresholdSeconds != nil {
+			cfg.AnomalyThresholds.StallThresholdSeconds = *rawAT.StallThresholdSeconds
+		}
+		if rawAT.ErrorRateThreshold != nil {
+			cfg.AnomalyThresholds.ErrorRateThreshold = *rawAT.ErrorRateThreshold
+		}
+		if rawAT.ContextExhaustionPct != nil {
+			cfg.AnomalyThresholds.ContextExhaustionPct = *rawAT.ContextExhaustionPct
+		}
+		if rawAT.ConsecutiveErrorsStreakWarning != nil && *rawAT.ConsecutiveErrorsStreakWarning > 0 {
+			cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning = *rawAT.ConsecutiveErrorsStreakWarning
+		}
+		if rawAT.ConsecutiveErrorsStreakCritical != nil && *rawAT.ConsecutiveErrorsStreakCritical > 0 {
+			cfg.AnomalyThresholds.ConsecutiveErrorsStreakCritical = *rawAT.ConsecutiveErrorsStreakCritical
+		}
+		if rawAT.ContextCeilingWarningTokens != nil && *rawAT.ContextCeilingWarningTokens > 0 {
+			cfg.AnomalyThresholds.ContextCeilingWarningTokens = *rawAT.ContextCeilingWarningTokens
+		} else if rawAT.ContextCeilingApproachRatioWarning != nil && *rawAT.ContextCeilingApproachRatioWarning > 0 {
+			effectiveCeiling := cfg.EffectiveHealthyCeiling()
+			cfg.AnomalyThresholds.ContextCeilingWarningTokens = int64(float64(effectiveCeiling) * *rawAT.ContextCeilingApproachRatioWarning)
+		}
+		if rawAT.ContextCeilingCriticalTokens != nil && *rawAT.ContextCeilingCriticalTokens > 0 {
+			cfg.AnomalyThresholds.ContextCeilingCriticalTokens = *rawAT.ContextCeilingCriticalTokens
+		} else if rawAT.ContextCeilingApproachRatioCritical != nil && *rawAT.ContextCeilingApproachRatioCritical > 0 {
+			effectiveCeiling := cfg.EffectiveHealthyCeiling()
+			cfg.AnomalyThresholds.ContextCeilingCriticalTokens = int64(float64(effectiveCeiling) * *rawAT.ContextCeilingApproachRatioCritical)
+		}
+		if rawAT.TokenVelocityWarningTokens != nil && *rawAT.TokenVelocityWarningTokens > 0 {
+			cfg.AnomalyThresholds.TokenVelocityWarningTokens = *rawAT.TokenVelocityWarningTokens
+		}
+		if rawAT.TokenVelocityCriticalTokens != nil && *rawAT.TokenVelocityCriticalTokens > 0 {
+			cfg.AnomalyThresholds.TokenVelocityCriticalTokens = *rawAT.TokenVelocityCriticalTokens
+		}
+		if rawAT.TokenVelocityWarningDeltaTokens != nil && *rawAT.TokenVelocityWarningDeltaTokens > 0 {
+			cfg.AnomalyThresholds.TokenVelocityWarningDeltaTokens = *rawAT.TokenVelocityWarningDeltaTokens
+		}
+		if rawAT.TokenVelocityCriticalDeltaTokens != nil && *rawAT.TokenVelocityCriticalDeltaTokens > 0 {
+			cfg.AnomalyThresholds.TokenVelocityCriticalDeltaTokens = *rawAT.TokenVelocityCriticalDeltaTokens
+		}
+		if rawAT.ToolThrashingMinFailures != nil && *rawAT.ToolThrashingMinFailures > 0 {
+			cfg.AnomalyThresholds.ToolThrashingMinFailures = *rawAT.ToolThrashingMinFailures
+		}
+		if rawAT.ToolThrashingCriticalFailures != nil && *rawAT.ToolThrashingCriticalFailures > 0 {
+			cfg.AnomalyThresholds.ToolThrashingCriticalFailures = *rawAT.ToolThrashingCriticalFailures
 		}
 	}
 

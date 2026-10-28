@@ -54,11 +54,11 @@ func testProjectConfig() domain.ProjectConfig {
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
+		},
+		AnomalyThresholds: domain.AnomalyThresholdsConfig{
+			StallThresholdSeconds: 120,
+			ErrorRateThreshold:    0.25,
+			ContextExhaustionPct:  0.85,
 		},
 		CodeMetrics: domain.CodeMetricsConfig{
 			Include:      []string{},
@@ -179,8 +179,8 @@ role_order:
 	if cfg.Live.ActiveThresholdSeconds != 400 || cfg.Live.PollIntervalMs != 3000 || cfg.Live.MaxTraceBufferMessages != 800 {
 		t.Errorf("unexpected live config: %+v", cfg.Live)
 	}
-	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 150 || cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.35 || cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.90 {
-		t.Errorf("unexpected anomaly thresholds: %+v", cfg.Live.AnomalyThresholds)
+	if cfg.AnomalyThresholds.StallThresholdSeconds != 150 || cfg.AnomalyThresholds.ErrorRateThreshold != 0.35 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.90 {
+		t.Errorf("unexpected anomaly thresholds: %+v", cfg.AnomalyThresholds)
 	}
 	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "services/**" {
 		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
@@ -642,8 +642,8 @@ live:
 		if cfg.Live.PollIntervalMs != 1234 {
 			t.Errorf("expected PollIntervalMs 1234, got %d", cfg.Live.PollIntervalMs)
 		}
-		if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 45 {
-			t.Errorf("expected StallThresholdSeconds 45, got %d", cfg.Live.AnomalyThresholds.StallThresholdSeconds)
+		if cfg.AnomalyThresholds.StallThresholdSeconds != 45 {
+			t.Errorf("expected StallThresholdSeconds 45, got %d", cfg.AnomalyThresholds.StallThresholdSeconds)
 		}
 
 		// Explicitly configured fields match
@@ -662,8 +662,8 @@ live:
 		if cfg.Live.ActiveThresholdSeconds != 300 || cfg.Live.MaxTraceBufferMessages != 500 {
 			t.Errorf("unexpected live defaults: %+v", cfg.Live)
 		}
-		if cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.25 || cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
-			t.Errorf("unexpected anomaly threshold defaults: %+v", cfg.Live.AnomalyThresholds)
+		if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.85 {
+			t.Errorf("unexpected anomaly threshold defaults: %+v", cfg.AnomalyThresholds)
 		}
 	})
 }
@@ -790,8 +790,8 @@ func assertConfigMatchesDefaults(t *testing.T, actual, expected domain.ProjectCo
 	if actual.Live.ActiveThresholdSeconds != expected.Live.ActiveThresholdSeconds {
 		t.Errorf("Live.ActiveThresholdSeconds mismatch: got %d, expected %d", actual.Live.ActiveThresholdSeconds, expected.Live.ActiveThresholdSeconds)
 	}
-	if actual.Live.AnomalyThresholds.StallThresholdSeconds != expected.Live.AnomalyThresholds.StallThresholdSeconds {
-		t.Errorf("StallThresholdSeconds mismatch: got %d, expected %d", actual.Live.AnomalyThresholds.StallThresholdSeconds, expected.Live.AnomalyThresholds.StallThresholdSeconds)
+	if actual.AnomalyThresholds.StallThresholdSeconds != expected.AnomalyThresholds.StallThresholdSeconds {
+		t.Errorf("StallThresholdSeconds mismatch: got %d, expected %d", actual.AnomalyThresholds.StallThresholdSeconds, expected.AnomalyThresholds.StallThresholdSeconds)
 	}
 }
 
@@ -1485,8 +1485,8 @@ role_order:
 	if cfg.Live.ActiveThresholdSeconds != 250 || cfg.Live.PollIntervalMs != 1500 || cfg.Live.MaxTraceBufferMessages != 600 {
 		t.Errorf("unexpected live config: %+v", cfg.Live)
 	}
-	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 90 || cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.20 || cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.80 {
-		t.Errorf("unexpected anomaly thresholds: %+v", cfg.Live.AnomalyThresholds)
+	if cfg.AnomalyThresholds.StallThresholdSeconds != 90 || cfg.AnomalyThresholds.ErrorRateThreshold != 0.20 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.80 {
+		t.Errorf("unexpected anomaly thresholds: %+v", cfg.AnomalyThresholds)
 	}
 	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "backend/**" {
 		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
@@ -2086,17 +2086,17 @@ func TestLoadFromFile(t *testing.T) {
 		if cfg.CodeMetrics.BaseBranch != "origin/main" {
 			t.Errorf("expected base_branch %q, got %q", "origin/main", cfg.CodeMetrics.BaseBranch)
 		}
-		if cfg.Metrics.HealthyCeilingTokens != 200000 {
-			t.Errorf("expected metrics.healthy_ceiling_tokens 200000, got %d", cfg.Metrics.HealthyCeilingTokens)
+		if cfg.HealthyCeilingTokens != 200000 {
+			t.Errorf("expected healthy_ceiling_tokens 200000, got %d", cfg.HealthyCeilingTokens)
 		}
 		if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
 			t.Errorf("expected source_roots [web backend], got %v", cfg.CodeMetrics.SourceRoots)
 		}
-		if cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
-			t.Errorf("expected consecutive errors streak warning 3, got %d", cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
+		if cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
+			t.Errorf("expected consecutive errors streak warning 3, got %d", cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
 		}
-		if cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning != 0.80 {
-			t.Errorf("expected ceiling approach ratio warning 0.80, got %f", cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning)
+		if cfg.AnomalyThresholds.ContextCeilingWarningTokens != 160000 {
+			t.Errorf("expected ceiling warning tokens 160000, got %d", cfg.AnomalyThresholds.ContextCeilingWarningTokens)
 		}
 	})
 

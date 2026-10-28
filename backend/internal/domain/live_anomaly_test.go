@@ -256,68 +256,78 @@ func TestContextCeilingApproachRule(t *testing.T) {
 	testCases := []struct {
 		name             string
 		tokens           int64
-		ceiling          int64
+		warnTokens       int64
+		critTokens       int64
 		expectedAlerts   int
 		expectedSeverity domain.LiveAnomalySeverity
 	}{
 		{
 			name:           "0 tokens produces zero alerts and no division by zero",
 			tokens:         0,
-			ceiling:        200_000,
+			warnTokens:     160_000,
+			critTokens:     200_000,
 			expectedAlerts: 0,
 		},
 		{
-			name:           "100k tokens (50% of ceiling) produces zero alerts",
+			name:           "100k tokens produces zero alerts",
 			tokens:         100_000,
-			ceiling:        200_000,
+			warnTokens:     160_000,
+			critTokens:     200_000,
 			expectedAlerts: 0,
 		},
 		{
-			name:             "160k tokens (80% of ceiling) triggers WARNING alert",
+			name:             "160k tokens triggers WARNING alert",
 			tokens:           160_000,
-			ceiling:          200_000,
+			warnTokens:     160_000,
+			critTokens:     200_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityWarning,
 		},
 		{
-			name:             "199k tokens (99.5% of ceiling) triggers WARNING alert",
+			name:             "199k tokens triggers WARNING alert",
 			tokens:           199_000,
-			ceiling:          200_000,
+			warnTokens:     160_000,
+			critTokens:     200_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityWarning,
 		},
 		{
-			name:             "200k tokens (100% of ceiling) triggers CRITICAL alert",
+			name:             "200k tokens triggers CRITICAL alert",
 			tokens:           200_000,
-			ceiling:          200_000,
+			warnTokens:     160_000,
+			critTokens:     200_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityCritical,
 		},
 		{
-			name:             "250k tokens (125% of ceiling) triggers CRITICAL alert",
+			name:             "250k tokens triggers CRITICAL alert",
 			tokens:           250_000,
-			ceiling:          200_000,
+			warnTokens:     160_000,
+			critTokens:     200_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityCritical,
 		},
 		{
-			name:             "custom ceiling 100k: 80k triggers WARNING",
+			name:             "custom ceiling: 80k warning, 100k critical: 80k triggers WARNING",
 			tokens:           80_000,
-			ceiling:          100_000,
+			warnTokens:     80_000,
+			critTokens:     100_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityWarning,
 		},
 		{
-			name:             "custom ceiling 100k: 100k triggers CRITICAL",
+			name:             "custom ceiling: 80k warning, 100k critical: 100k triggers CRITICAL",
 			tokens:           100_000,
-			ceiling:          100_000,
+			warnTokens:     80_000,
+			critTokens:     100_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityCritical,
 		},
 		{
 			name:             "fallback ceiling when zero or negative passed",
 			tokens:           160_000,
-			ceiling:          0,
+			warnTokens:     0,
+			critTokens:     0,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityWarning,
 		},
@@ -337,7 +347,7 @@ func TestContextCeilingApproachRule(t *testing.T) {
 				},
 			}
 
-			alerts := domain.EvaluateContextCeilingApproach(trace, tc.ceiling)
+			alerts := domain.EvaluateContextCeilingApproach(trace, tc.warnTokens, tc.critTokens)
 			if len(alerts) != tc.expectedAlerts {
 				t.Fatalf("expected %d alerts, got %d", tc.expectedAlerts, len(alerts))
 			}
@@ -906,27 +916,27 @@ func TestConsecutiveToolErrorsRule_Adversarial(t *testing.T) {
 }
 
 func TestContextCeilingApproachRule_Adversarial(t *testing.T) {
-	t.Run("exact boundary: 159999 tokens on 200k ceiling produces 0 alerts", func(t *testing.T) {
+	t.Run("exact boundary: 159999 tokens on 160k/200k ceiling produces 0 alerts", func(t *testing.T) {
 		trace := &domain.LiveTraceView{
 			SessionID: "s_boundary",
 			Messages: []domain.LiveMessageFact{
 				{ID: "m1", Role: "assistant", ContextTokens: 159_999},
 			},
 		}
-		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		alerts := domain.EvaluateContextCeilingApproach(trace, 160_000, 200_000)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts for 159999 tokens, got %d", len(alerts))
 		}
 	})
 
-	t.Run("exact boundary: 160000 tokens on 200k ceiling produces WARNING", func(t *testing.T) {
+	t.Run("exact boundary: 160000 tokens on 160k/200k ceiling produces WARNING", func(t *testing.T) {
 		trace := &domain.LiveTraceView{
 			SessionID: "s_boundary",
 			Messages: []domain.LiveMessageFact{
 				{ID: "m1", Role: "assistant", ContextTokens: 160_000},
 			},
 		}
-		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		alerts := domain.EvaluateContextCeilingApproach(trace, 160_000, 200_000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert for 160000 tokens, got %d", len(alerts))
 		}
@@ -935,14 +945,14 @@ func TestContextCeilingApproachRule_Adversarial(t *testing.T) {
 		}
 	})
 
-	t.Run("exact boundary: 199999 tokens on 200k ceiling produces WARNING", func(t *testing.T) {
+	t.Run("exact boundary: 199999 tokens on 160k/200k ceiling produces WARNING", func(t *testing.T) {
 		trace := &domain.LiveTraceView{
 			SessionID: "s_boundary",
 			Messages: []domain.LiveMessageFact{
 				{ID: "m1", Role: "assistant", ContextTokens: 199_999},
 			},
 		}
-		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		alerts := domain.EvaluateContextCeilingApproach(trace, 160_000, 200_000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -951,14 +961,14 @@ func TestContextCeilingApproachRule_Adversarial(t *testing.T) {
 		}
 	})
 
-	t.Run("exact boundary: 200000 tokens on 200k ceiling produces CRITICAL", func(t *testing.T) {
+	t.Run("exact boundary: 200000 tokens on 160k/200k ceiling produces CRITICAL", func(t *testing.T) {
 		trace := &domain.LiveTraceView{
 			SessionID: "s_boundary",
 			Messages: []domain.LiveMessageFact{
 				{ID: "m1", Role: "assistant", ContextTokens: 200_000},
 			},
 		}
-		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		alerts := domain.EvaluateContextCeilingApproach(trace, 160_000, 200_000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -967,14 +977,14 @@ func TestContextCeilingApproachRule_Adversarial(t *testing.T) {
 		}
 	})
 
-	t.Run("negative ceiling tokens safely falls back to default 200k ceiling", func(t *testing.T) {
+	t.Run("negative ceiling tokens safely falls back to default 160k/200k ceiling", func(t *testing.T) {
 		trace := &domain.LiveTraceView{
 			SessionID: "s_neg_ceil",
 			Messages: []domain.LiveMessageFact{
 				{ID: "m1", Role: "assistant", ContextTokens: 160_000},
 			},
 		}
-		alerts := domain.EvaluateContextCeilingApproach(trace, -50_000)
+		alerts := domain.EvaluateContextCeilingApproach(trace, -50_000, -100_000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert with fallback ceiling, got %d", len(alerts))
 		}
@@ -992,7 +1002,7 @@ func TestContextCeilingApproachRule_Adversarial(t *testing.T) {
 				{ID: "m3", Timestamp: "2026-10-19T10:10:00Z", ContextTokens: 190_000}, // Peak
 			},
 		}
-		alerts := domain.EvaluateContextCeilingApproach(trace, 200_000)
+		alerts := domain.EvaluateContextCeilingApproach(trace, 160_000, 200_000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -1376,16 +1386,16 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 		opts := domain.LiveAnomalyOptions{
 			HealthyCeilingTokens: 100_000,
 			Thresholds: domain.AnomalyThresholdsConfig{
-				ConsecutiveErrorsStreakWarning:      2,
-				ConsecutiveErrorsStreakCritical:     4,
-				ContextCeilingApproachRatioWarning:  0.70,
-				ContextCeilingApproachRatioCritical: 0.90,
-				TokenVelocityWarningTokens:          10_000,
-				TokenVelocityCriticalTokens:         20_000,
-				TokenVelocityWarningDeltaTokens:     15_000,
-				TokenVelocityCriticalDeltaTokens:    30_000,
-				ToolThrashingMinFailures:            2,
-				ToolThrashingCriticalFailures:       4,
+				ConsecutiveErrorsStreakWarning:  2,
+				ConsecutiveErrorsStreakCritical: 4,
+				ContextCeilingWarningTokens:     70_000,
+				ContextCeilingCriticalTokens:    90_000,
+				TokenVelocityWarningTokens:      10_000,
+				TokenVelocityCriticalTokens:     20_000,
+				TokenVelocityWarningDeltaTokens: 15_000,
+				TokenVelocityCriticalDeltaTokens: 30_000,
+				ToolThrashingMinFailures:        2,
+				ToolThrashingCriticalFailures:   4,
 			},
 		}
 
@@ -1419,7 +1429,7 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 			t.Errorf("expected severity HIGH, got %s", customAlerts[0].Severity)
 		}
 
-		// Context ceiling approach with custom ceiling 100k and ratio 0.70 (70k threshold)
+		// Context ceiling approach with custom thresholds 70k warning and 90k critical
 		traceCeiling := &domain.LiveTraceView{
 			SessionID: "s_ceil",
 			Messages: []domain.LiveMessageFact{
@@ -1432,13 +1442,13 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 			},
 		}
 
-		// Default ceiling (200k, 80% = 160k): 75k produces no alert
-		if alerts := domain.EvaluateContextCeilingApproach(traceCeiling, domain.HealthyCeilingTokens); len(alerts) != 0 {
+		// Default ceiling (160k warning, 200k critical): 75k produces no alert
+		if alerts := domain.EvaluateContextCeilingApproach(traceCeiling, domain.ContextCeilingWarningTokens, domain.ContextCeilingCriticalTokens); len(alerts) != 0 {
 			t.Fatalf("expected 0 default ceiling alerts, got %d", len(alerts))
 		}
 
-		// Custom options (100k, 70% = 70k): 75k produces WARNING alert
-		ceilAlerts := domain.EvaluateContextCeilingApproach(traceCeiling, 100_000, 0.70, 0.90)
+		// Custom options (70k warning, 90k critical): 75k produces WARNING alert
+		ceilAlerts := domain.EvaluateContextCeilingApproach(traceCeiling, 70_000, 90_000)
 		if len(ceilAlerts) != 1 {
 			t.Fatalf("expected 1 ceiling approach alert, got %d", len(ceilAlerts))
 		}

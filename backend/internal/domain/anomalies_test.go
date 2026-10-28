@@ -826,7 +826,7 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 		}
 	})
 
-	t.Run("turn with 160k tokens triggers CRITICAL ceiling breach", func(t *testing.T) {
+	t.Run("turn with 160k tokens triggers WARNING ceiling breach", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 160_000},
 		}),
@@ -840,14 +840,39 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 		if a.RuleID != domain.RuleContextSaturationSpike {
 			t.Errorf("expected RuleContextSaturationSpike, got %s", a.RuleID)
 		}
-		if a.Severity != domain.SeverityCritical {
-			t.Errorf("expected CRITICAL severity, got %s", a.Severity)
+		if a.Severity != domain.SeverityWarning {
+			t.Errorf("expected WARNING severity, got %s", a.Severity)
 		}
 		if a.Context.ContextTokens == nil || *a.Context.ContextTokens != 160_000 {
 			t.Errorf("expected context tokens 160000, got %v", a.Context.ContextTokens)
 		}
 		if a.Context.Threshold == nil || *a.Context.Threshold != "160000" {
 			t.Errorf("expected threshold 160000, got %v", a.Context.Threshold)
+		}
+	})
+
+	t.Run("turn with 200k tokens triggers CRITICAL ceiling breach", func(t *testing.T) {
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+			{SessionID: "s1", Turn: 1, ContextTokens: 200_000},
+		}),
+		}
+
+		anomalies := domain.DetectAnomalies(ledger)
+		if len(anomalies) != 1 {
+			t.Fatalf("expected 1 anomaly for 200k ceiling breach, got %d: %+v", len(anomalies), anomalies)
+		}
+		a := anomalies[0]
+		if a.RuleID != domain.RuleContextSaturationSpike {
+			t.Errorf("expected RuleContextSaturationSpike, got %s", a.RuleID)
+		}
+		if a.Severity != domain.SeverityCritical {
+			t.Errorf("expected CRITICAL severity, got %s", a.Severity)
+		}
+		if a.Context.ContextTokens == nil || *a.Context.ContextTokens != 200_000 {
+			t.Errorf("expected context tokens 200000, got %v", a.Context.ContextTokens)
+		}
+		if a.Context.Threshold == nil || *a.Context.Threshold != "200000" {
+			t.Errorf("expected threshold 200000, got %v", a.Context.Threshold)
 		}
 	})
 
@@ -904,8 +929,8 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 			t.Fatalf("expected 1 anomaly in v1 fallback, got %d: %+v", len(anomalies), anomalies)
 		}
 		a := anomalies[0]
-		if a.Severity != domain.SeverityCritical {
-			t.Errorf("expected CRITICAL severity, got %s", a.Severity)
+		if a.Severity != domain.SeverityWarning {
+			t.Errorf("expected WARNING severity, got %s", a.Severity)
 		}
 		if a.Context.ContextTokens == nil || *a.Context.ContextTokens != 175_000 {
 			t.Errorf("expected 175000 tokens, got %v", a.Context.ContextTokens)
@@ -2007,14 +2032,14 @@ func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
 				{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed", ContextTokens: 16000},
 			}),
 		},
-		// Ticket 2: Context ceiling breach (CRITICAL >= 160k) + High failure rate on git (5 calls, 2 errors = 40.0% -> WARNING, non-consecutive so no retry streak)
+		// Ticket 2: Context ceiling breach (CRITICAL >= 200k) + High failure rate on git (5 calls, 2 errors = 40.0% -> WARNING, non-consecutive so no retry streak)
 		{
 			TicketID: &tid2, Sessions: sessionFacts(nil, nil, []domain.EventFact{
-				{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 100000},
-				{SessionID: "s2", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 120000},
-				{SessionID: "s2", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 135000},
-				{SessionID: "s2", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 150000},
-				{SessionID: "s2", Turn: 5, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 162000}, // Ceiling breach, delta 12k
+				{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 200000},
+				{SessionID: "s2", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 201000},
+				{SessionID: "s2", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 202000},
+				{SessionID: "s2", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 203000},
+				{SessionID: "s2", Turn: 5, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 204000},
 			}),
 		},
 		// Ticket 3: Clean ticket with python tool (2 calls, 1 error, 0 anomalies, error > 0 makes it brittle)

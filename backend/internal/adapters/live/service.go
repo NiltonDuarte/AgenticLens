@@ -247,7 +247,7 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 		return domain.LiveSessionTree{}, fmt.Errorf("fetching active sessions: %w", err)
 	}
 
-	stallThresholdSec := int64(s.cfg.Live.AnomalyThresholds.StallThresholdSeconds)
+	stallThresholdSec := int64(s.cfg.AnomalyThresholds.StallThresholdSeconds)
 	if stallThresholdSec <= 0 {
 		stallThresholdSec = 120
 	}
@@ -461,8 +461,8 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 		Anomalies:       []domain.LiveAnomalyAlert{},
 	}
 	anomalyOpts := domain.LiveAnomalyOptions{
-		HealthyCeilingTokens: s.cfg.Metrics.HealthyCeilingTokens,
-		Thresholds:           s.cfg.Live.AnomalyThresholds,
+		HealthyCeilingTokens: s.cfg.EffectiveHealthyCeiling(),
+		Thresholds:           s.cfg.AnomalyThresholds,
 	}
 	trace.Anomalies = domain.EvaluateLiveAnomalies(nil, &trace, anomalyOpts)
 	if trace.Anomalies == nil {

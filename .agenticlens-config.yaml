@@ -6,10 +6,31 @@
 # Human-readable name of the project.
 project_name: AgenticLens
 
-# Metrics and context window healthy ceiling configuration.
-metrics:
-  # Ceiling in tokens for healthy context window utilization (defaults to 200,000).
-  healthy_ceiling_tokens: 200000
+# Healthy context window token ceiling for context saturation and health grading.
+healthy_ceiling_tokens: 200000
+
+# Automated anomaly detection rules governing offline generation and live stream monitoring.
+anomaly_thresholds:
+  # Time in seconds without session turn activity before flagging a stall anomaly.
+  stall_threshold_seconds: 120
+  # Ratio of tool errors to total invocations triggering a high failure anomaly.
+  error_rate_threshold: 0.25
+  # Token context window utilization percentage triggering saturation warnings.
+  context_exhaustion_pct: 0.85
+  # Consecutive tool errors thresholds triggering warning and critical alerts.
+  consecutive_errors_streak_warning: 3
+  consecutive_errors_streak_critical: 5
+  # Fixed context ceiling token thresholds triggering warning and critical alerts.
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
+  # Absolute and differential token velocity thresholds.
+  token_velocity_warning_tokens: 30000
+  token_velocity_critical_tokens: 60000
+  token_velocity_warning_delta_tokens: 40000
+  token_velocity_critical_delta_tokens: 80000
+  # Tool thrashing minimum and critical failure frequencies.
+  tool_thrashing_min_failures: 3
+  tool_thrashing_critical_failures: 5
 
 # Ticket identification and normalization settings.
 ticket:
@@ -66,28 +87,6 @@ live:
   poll_interval_ms: 2000
   # Maximum number of recent trace messages retained in memory buffer per session.
   max_trace_buffer_messages: 500
-  # Numerical thresholds for automated anomaly detection rules.
-  anomaly_thresholds:
-    # Time in seconds without session turn activity before flagging a stall anomaly.
-    stall_threshold_seconds: 120
-    # Ratio of tool errors to total invocations triggering a high failure anomaly.
-    error_rate_threshold: 0.25
-    # Token context window utilization percentage triggering saturation warnings.
-    context_exhaustion_pct: 0.85
-    # Consecutive tool errors thresholds triggering warning and critical alerts.
-    consecutive_tool_errors_streak_warning: 3
-    consecutive_tool_errors_streak_critical: 5
-    # Approach ratio towards healthy context ceiling triggering warning and critical alerts.
-    context_ceiling_approach_ratio_warning: 0.80
-    context_ceiling_approach_ratio_critical: 1.00
-    # Absolute and differential token velocity thresholds.
-    token_velocity_warning_tokens: 30000
-    token_velocity_critical_tokens: 60000
-    token_velocity_warning_delta_tokens: 40000
-    token_velocity_critical_delta_tokens: 80000
-    # Tool thrashing minimum and critical failure frequencies.
-    tool_thrashing_min_failures: 3
-    tool_thrashing_critical_failures: 5
 
 # Git commit diff analysis and code classification glob patterns.
 code_metrics:

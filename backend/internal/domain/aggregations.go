@@ -165,11 +165,7 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 
 // ComputeWorkflowEfficiencyWithConfig derives workflow efficiency using project configuration.
 func ComputeWorkflowEfficiencyWithConfig(ledger AgenticFactLedger, cfg ProjectConfig) WorkflowEfficiency {
-	effCeiling := cfg.Metrics.HealthyCeilingTokens
-	if effCeiling <= 0 {
-		effCeiling = HealthyCeilingTokens
-	}
-	return ComputeWorkflowEfficiencyWithCeiling(ledger, effCeiling, cfg.RoleOrder)
+	return ComputeWorkflowEfficiencyWithCeiling(ledger, cfg.EffectiveHealthyCeiling(), cfg.RoleOrder)
 }
 
 // ComputeWorkflowEfficiencyWithCeiling derives workflow efficiency profile with an explicit context ceiling.
@@ -745,17 +741,14 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		}
 	}
 
-	effectiveCeiling := cfg.Metrics.HealthyCeilingTokens
-	if effectiveCeiling <= 0 {
-		effectiveCeiling = HealthyCeilingTokens
-	}
+	effectiveCeiling := cfg.EffectiveHealthyCeiling()
 
 	totals := ComputeTotals(mappedInvocations, effectiveCeiling)
 	eff := ComputeWorkflowEfficiencyWithCeiling(mappedFactLedger, effectiveCeiling, cfg.RoleOrder)
 	roles := ComputeRoleMetricsWithCeiling(mappedInvocations, effectiveCeiling, cfg.RoleOrder)
 	models := ComputeModelMetrics(mappedInvocations, effectiveCeiling)
 	threads := ComputeThreadSummariesWithCeiling(mappedInvocations, effectiveCeiling, cfg.RoleOrder)
-	anomalies := RefreshAnomalySummaries(mappedFactLedger)
+	anomalies := RefreshAnomalySummaries(mappedFactLedger, cfg.AnomalyThresholds)
 	for i := range anomalies {
 		if anomalies[i].Context.Role != nil {
 			role := mappings.ResolveRole(string(*anomalies[i].Context.Role))

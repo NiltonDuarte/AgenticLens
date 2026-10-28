@@ -60,24 +60,22 @@ func testProjectConfig() domain.ProjectConfig {
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds:               120,
-				ErrorRateThreshold:                  0.25,
-				ContextExhaustionPct:                0.85,
-				ConsecutiveErrorsStreakWarning:      3,
-				ConsecutiveErrorsStreakCritical:     5,
-				ContextCeilingApproachRatioWarning:  0.80,
-				ContextCeilingApproachRatioCritical: 1.00,
-				TokenVelocityWarningTokens:          30000,
-				TokenVelocityCriticalTokens:         60000,
-				TokenVelocityWarningDeltaTokens:     40000,
-				TokenVelocityCriticalDeltaTokens:    80000,
-				ToolThrashingMinFailures:            3,
-				ToolThrashingCriticalFailures:       5,
-			},
 		},
-		Metrics: domain.MetricsConfig{
-			HealthyCeilingTokens: 200000,
+		HealthyCeilingTokens: 200000,
+		AnomalyThresholds: domain.AnomalyThresholdsConfig{
+			StallThresholdSeconds:           120,
+			ErrorRateThreshold:              0.25,
+			ContextExhaustionPct:            0.85,
+			ConsecutiveErrorsStreakWarning:  3,
+			ConsecutiveErrorsStreakCritical: 5,
+			ContextCeilingWarningTokens:     160000,
+			ContextCeilingCriticalTokens:    200000,
+			TokenVelocityWarningTokens:      30000,
+			TokenVelocityCriticalTokens:     60000,
+			TokenVelocityWarningDeltaTokens: 40000,
+			TokenVelocityCriticalDeltaTokens: 80000,
+			ToolThrashingMinFailures:        3,
+			ToolThrashingCriticalFailures:   5,
 		},
 		CodeMetrics: domain.CodeMetricsConfig{
 			SourceRoots:  []string{},
@@ -150,47 +148,47 @@ func TestDefaultProjectConfig(t *testing.T) {
 	if cfg.Live.MaxTraceBufferMessages != 500 {
 		t.Errorf("expected Live.MaxTraceBufferMessages 500, got %d", cfg.Live.MaxTraceBufferMessages)
 	}
-	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 120 {
-		t.Errorf("expected Live.AnomalyThresholds.StallThresholdSeconds 120, got %d", cfg.Live.AnomalyThresholds.StallThresholdSeconds)
+	if cfg.AnomalyThresholds.StallThresholdSeconds != 120 {
+		t.Errorf("expected AnomalyThresholds.StallThresholdSeconds 120, got %d", cfg.AnomalyThresholds.StallThresholdSeconds)
 	}
-	if cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.25 {
-		t.Errorf("expected Live.AnomalyThresholds.ErrorRateThreshold 0.25, got %f", cfg.Live.AnomalyThresholds.ErrorRateThreshold)
+	if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 {
+		t.Errorf("expected AnomalyThresholds.ErrorRateThreshold 0.25, got %f", cfg.AnomalyThresholds.ErrorRateThreshold)
 	}
-	if cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
-		t.Errorf("expected Live.AnomalyThresholds.ContextExhaustionPct 0.85, got %f", cfg.Live.AnomalyThresholds.ContextExhaustionPct)
+	if cfg.AnomalyThresholds.ContextExhaustionPct != 0.85 {
+		t.Errorf("expected AnomalyThresholds.ContextExhaustionPct 0.85, got %f", cfg.AnomalyThresholds.ContextExhaustionPct)
 	}
-	if cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
-		t.Errorf("expected Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning 3, got %d", cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
+	if cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
+		t.Errorf("expected AnomalyThresholds.ConsecutiveErrorsStreakWarning 3, got %d", cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
 	}
-	if cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakCritical != 5 {
-		t.Errorf("expected Live.AnomalyThresholds.ConsecutiveErrorsStreakCritical 5, got %d", cfg.Live.AnomalyThresholds.ConsecutiveErrorsStreakCritical)
+	if cfg.AnomalyThresholds.ConsecutiveErrorsStreakCritical != 5 {
+		t.Errorf("expected AnomalyThresholds.ConsecutiveErrorsStreakCritical 5, got %d", cfg.AnomalyThresholds.ConsecutiveErrorsStreakCritical)
 	}
-	if cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning != 0.80 {
-		t.Errorf("expected Live.AnomalyThresholds.ContextCeilingApproachRatioWarning 0.80, got %f", cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioWarning)
+	if cfg.AnomalyThresholds.ContextCeilingWarningTokens != 160000 {
+		t.Errorf("expected AnomalyThresholds.ContextCeilingWarningTokens 160000, got %d", cfg.AnomalyThresholds.ContextCeilingWarningTokens)
 	}
-	if cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioCritical != 1.00 {
-		t.Errorf("expected Live.AnomalyThresholds.ContextCeilingApproachRatioCritical 1.00, got %f", cfg.Live.AnomalyThresholds.ContextCeilingApproachRatioCritical)
+	if cfg.AnomalyThresholds.ContextCeilingCriticalTokens != 200000 {
+		t.Errorf("expected AnomalyThresholds.ContextCeilingCriticalTokens 200000, got %d", cfg.AnomalyThresholds.ContextCeilingCriticalTokens)
 	}
-	if cfg.Live.AnomalyThresholds.TokenVelocityWarningTokens != 30000 {
-		t.Errorf("expected Live.AnomalyThresholds.TokenVelocityWarningTokens 30000, got %d", cfg.Live.AnomalyThresholds.TokenVelocityWarningTokens)
+	if cfg.AnomalyThresholds.TokenVelocityWarningTokens != 30000 {
+		t.Errorf("expected AnomalyThresholds.TokenVelocityWarningTokens 30000, got %d", cfg.AnomalyThresholds.TokenVelocityWarningTokens)
 	}
-	if cfg.Live.AnomalyThresholds.TokenVelocityCriticalTokens != 60000 {
-		t.Errorf("expected Live.AnomalyThresholds.TokenVelocityCriticalTokens 60000, got %d", cfg.Live.AnomalyThresholds.TokenVelocityCriticalTokens)
+	if cfg.AnomalyThresholds.TokenVelocityCriticalTokens != 60000 {
+		t.Errorf("expected AnomalyThresholds.TokenVelocityCriticalTokens 60000, got %d", cfg.AnomalyThresholds.TokenVelocityCriticalTokens)
 	}
-	if cfg.Live.AnomalyThresholds.TokenVelocityWarningDeltaTokens != 40000 {
-		t.Errorf("expected Live.AnomalyThresholds.TokenVelocityWarningDeltaTokens 40000, got %d", cfg.Live.AnomalyThresholds.TokenVelocityWarningDeltaTokens)
+	if cfg.AnomalyThresholds.TokenVelocityWarningDeltaTokens != 40000 {
+		t.Errorf("expected AnomalyThresholds.TokenVelocityWarningDeltaTokens 40000, got %d", cfg.AnomalyThresholds.TokenVelocityWarningDeltaTokens)
 	}
-	if cfg.Live.AnomalyThresholds.TokenVelocityCriticalDeltaTokens != 80000 {
-		t.Errorf("expected Live.AnomalyThresholds.TokenVelocityCriticalDeltaTokens 80000, got %d", cfg.Live.AnomalyThresholds.TokenVelocityCriticalDeltaTokens)
+	if cfg.AnomalyThresholds.TokenVelocityCriticalDeltaTokens != 80000 {
+		t.Errorf("expected AnomalyThresholds.TokenVelocityCriticalDeltaTokens 80000, got %d", cfg.AnomalyThresholds.TokenVelocityCriticalDeltaTokens)
 	}
-	if cfg.Live.AnomalyThresholds.ToolThrashingMinFailures != 3 {
-		t.Errorf("expected Live.AnomalyThresholds.ToolThrashingMinFailures 3, got %d", cfg.Live.AnomalyThresholds.ToolThrashingMinFailures)
+	if cfg.AnomalyThresholds.ToolThrashingMinFailures != 3 {
+		t.Errorf("expected AnomalyThresholds.ToolThrashingMinFailures 3, got %d", cfg.AnomalyThresholds.ToolThrashingMinFailures)
 	}
-	if cfg.Live.AnomalyThresholds.ToolThrashingCriticalFailures != 5 {
-		t.Errorf("expected Live.AnomalyThresholds.ToolThrashingCriticalFailures 5, got %d", cfg.Live.AnomalyThresholds.ToolThrashingCriticalFailures)
+	if cfg.AnomalyThresholds.ToolThrashingCriticalFailures != 5 {
+		t.Errorf("expected AnomalyThresholds.ToolThrashingCriticalFailures 5, got %d", cfg.AnomalyThresholds.ToolThrashingCriticalFailures)
 	}
-	if cfg.Metrics.HealthyCeilingTokens != 200000 {
-		t.Errorf("expected Metrics.HealthyCeilingTokens 200000, got %d", cfg.Metrics.HealthyCeilingTokens)
+	if cfg.HealthyCeilingTokens != 200000 {
+		t.Errorf("expected HealthyCeilingTokens 200000, got %d", cfg.HealthyCeilingTokens)
 	}
 	if len(cfg.CodeMetrics.SourceRoots) != 0 || cfg.CodeMetrics.SourceRoots == nil {
 		t.Errorf("expected non-nil empty CodeMetrics.SourceRoots, got %v", cfg.CodeMetrics.SourceRoots)
@@ -343,14 +341,14 @@ func TestProjectConfig_HelperFixture(t *testing.T) {
 	if cfg.Live.MaxTraceBufferMessages != 500 {
 		t.Errorf("expected MaxTraceBufferMessages 500, got %d", cfg.Live.MaxTraceBufferMessages)
 	}
-	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 120 {
-		t.Errorf("expected StallThresholdSeconds 120, got %d", cfg.Live.AnomalyThresholds.StallThresholdSeconds)
+	if cfg.AnomalyThresholds.StallThresholdSeconds != 120 {
+		t.Errorf("expected StallThresholdSeconds 120, got %d", cfg.AnomalyThresholds.StallThresholdSeconds)
 	}
-	if cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.25 {
-		t.Errorf("expected ErrorRateThreshold 0.25, got %f", cfg.Live.AnomalyThresholds.ErrorRateThreshold)
+	if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 {
+		t.Errorf("expected ErrorRateThreshold 0.25, got %f", cfg.AnomalyThresholds.ErrorRateThreshold)
 	}
-	if cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
-		t.Errorf("expected ContextExhaustionPct 0.85, got %f", cfg.Live.AnomalyThresholds.ContextExhaustionPct)
+	if cfg.AnomalyThresholds.ContextExhaustionPct != 0.85 {
+		t.Errorf("expected ContextExhaustionPct 0.85, got %f", cfg.AnomalyThresholds.ContextExhaustionPct)
 	}
 	if cfg.CodeMetrics.BaseBranch != "" {
 		t.Errorf("expected CodeMetrics.BaseBranch to be empty, got %s", cfg.CodeMetrics.BaseBranch)

@@ -21,10 +21,10 @@ func SortEvents(events []EventFact) []EventFact {
 
 // DetectAnomaliesWithEvidence attaches request-local source references to summaries.
 // The references are intended only for local hydrated API responses.
-func DetectAnomaliesWithEvidence(ledger AgenticFactLedger) ([]Anomaly, error) {
+func DetectAnomaliesWithEvidence(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) ([]Anomaly, error) {
 	events := SortEvents(ledger.EventFacts())
-	anomalies := RefreshAnomalySummaries(ledger)
-	selection, err := selectAnomalyEvidence(ledger, events, anomalies)
+	anomalies := RefreshAnomalySummaries(ledger, thresholds...)
+	selection, err := selectAnomalyEvidence(ledger, events, anomalies, thresholds...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func DetectAnomaliesWithEvidence(ledger AgenticFactLedger) ([]Anomaly, error) {
 // RefreshAnomalySummaries recomputes summaries for available source events and
 // merged tool totals while retaining cached session summaries only for sessions
 // with no current event stream.
-func RefreshAnomalySummaries(ledger AgenticFactLedger) []Anomaly {
+func RefreshAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) []Anomaly {
 	cached := ledger.AnomalyFacts()
 	events := ledger.EventFacts()
 	currentSessions := make(map[string]bool)
@@ -59,7 +59,7 @@ func RefreshAnomalySummaries(ledger AgenticFactLedger) []Anomaly {
 			currentSessions[event.SessionID] = true
 		}
 	}
-	detected := DetectAnomalies(ledger)
+	detected := DetectAnomalies(ledger, thresholds...)
 	refreshed := make([]Anomaly, 0, len(cached)+len(detected))
 	for _, anomaly := range detected {
 		if anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "" {
@@ -129,8 +129,8 @@ func anomalyDeduplicationKey(a Anomaly) string {
 
 // PersistAnomalySummaries derives summaries from complete in-memory facts, then
 // removes event rows and evidence references from the canonical ledger.
-func PersistAnomalySummaries(ledger AgenticFactLedger) (AgenticFactLedger, error) {
-	anomalies := RefreshAnomalySummaries(ledger)
+func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
+	anomalies := RefreshAnomalySummaries(ledger, thresholds...)
 	bySession := make(map[string][]Anomaly)
 	var ticket []Anomaly
 	for _, anomaly := range anomalies {
@@ -180,7 +180,7 @@ type anomalyEvidenceSelection struct {
 	refs   map[int][]AnomalyEvidenceRef
 }
 
-func selectAnomalyEvidence(ledger AgenticFactLedger, events []EventFact, anomalies []Anomaly) (anomalyEvidenceSelection, error) {
+func selectAnomalyEvidence(ledger AgenticFactLedger, events []EventFact, anomalies []Anomaly, thresholds ...AnomalyThresholdsConfig) (anomalyEvidenceSelection, error) {
 	selection := anomalyEvidenceSelection{events: make(map[int]bool), refs: make(map[int][]AnomalyEvidenceRef)}
 	add := func(anomalyIndex, eventIndex int) {
 		selection.events[eventIndex] = true
@@ -209,7 +209,8 @@ func selectAnomalyEvidence(ledger AgenticFactLedger, events []EventFact, anomali
 		reworkCandidates[candidate.key] = append(reworkCandidates[candidate.key], candidate)
 	}
 	reworkCandidateOffset := make(map[string]int)
-	retryDetections := detectToolRetryStreaksWithIndexes(events)
+	thresh := resolveAnomalyThresholds(thresholds...)
+	retryDetections := detectToolRetryStreaksWithIndexes(events, thresh)
 	retryDetectionUsed := make([]bool, len(retryDetections))
 	for anomalyIndex, anomaly := range anomalies {
 		sid, turn := "", int64(-1)
