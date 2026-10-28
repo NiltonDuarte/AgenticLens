@@ -1,5 +1,7 @@
 # fix(backfill): preserve Codex rollout session trees (FIX-8)
 
+Iteration 05 regenerates the FIX-8 metrics ledger from the Codex root session using `--source codex`, replacing the earlier empty OpenCode-source ledger.
+
 ## Summary
 
 Refresh each stored Codex root rollout tree once and replace the complete tree session set together. Failed discovery or parsing leaves stored sessions intact, and unrelated Codex and other-source sessions are preserved.

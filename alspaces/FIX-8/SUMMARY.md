@@ -1,5 +1,9 @@
 # FIX-8 Work Summary
 
+## Iteration 05: Codex Root Session Telemetry
+
+Regenerated telemetry using the AgenticLens CLI's Codex source against the active root rollout, replacing the earlier empty OpenCode-source ledger.
+
 ## Iteration 04: Requested Specification Removal
 
 The completed specification `alspaces/plan/done/FIX-8 preserve complete Codex session trees during backfill recomputation.md` was removed at the user's explicit request.
@@ -12,7 +16,7 @@ Moved the complete FIX-8 ticket workspace and completed specification from `work
 
 Updated `AGENTS.md` to define `<WORKSPACES_DIR>` from `workspaces.dir` in `.agenticlens-config.yaml`, with `workspaces` as the fallback when the file or key is absent. The current configuration resolves to `alspaces`. Ticket workspaces, plan lifecycle paths, iteration artifacts, telemetry command arguments, and PR command examples now consistently use the configurable root.
 
-Local session telemetry is empty.
+The earlier empty OpenCode-source telemetry was superseded by Codex-source telemetry in iteration 05.
 
 ## Adapter
 
@@ -32,27 +36,30 @@ Added coverage for root-plus-child replacement, single-session replacement, disc
 - Independent review — APPROVED. Review noted no direct test of combine/grouping failure branches; those failures occur before the staged replacement mutates stored sessions.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 0
-- **Active Agent Duration:** 0m 0s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 0 tokens (0% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 13
+- **Active Agent Duration:** 25m 45s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 186.1k tokens (93% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 3.2:1 (+226 test lines / +71 prod lines)
 - **Code Delivered:** +297 / -9 lines across 2 code files (excluding docs)
-- **Reasoning Effort:** 0 reasoning tokens (0.0% of generated output)
-- **Tool Health & Self-Correction:** 0 tool calls (0 self-corrections, 100.0% success rate)
+- **Reasoning Effort:** 23,518 reasoning tokens (34.6% of generated output)
+- **Tool Health & Self-Correction:** 93 tool calls (6 self-corrections, 93.5% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 1 execution anomaly detected (1 CRITICAL).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k, breaching the 160k critical ceiling.
 
 ### Agentic Execution Metrics
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **Total** | **0** | **0** | **0** | **0** | **0.0%** | **0** | **HEALTHY** | **$0.00** |
+| **rootagent** | 1 | 425,897 | 44,530 | 19,487,744 | 97.9% | 186.1k | ELEVATED | $0.00 |
+| **Total** | **1** | **425,897** | **44,530** | **19,487,744** | **97.9%** | **186.1k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **Total** | **0** | **0** | **0** | **0** | **0.0%** | **$0.00** |
+| **gpt-6-luna** | 1 | 425,897 | 44,530 | 19,487,744 | 97.9% | $0.00 |
+| **Total** | **1** | **425,897** | **44,530** | **19,487,744** | **97.9%** | **$0.00** |
