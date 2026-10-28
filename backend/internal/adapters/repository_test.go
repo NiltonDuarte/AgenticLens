@@ -375,6 +375,9 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if len(report.Errors) == 0 {
 			t.Fatal("expected error in report, got none")
 		}
+		if report.FatalError == "" {
+			t.Fatal("expected unconfigured workspace directory to be a fatal scan error")
+		}
 		if !strings.Contains(report.Errors[0], "workspaces directory not found") {
 			t.Errorf("expected 'workspaces directory not found' in error, got: %s", report.Errors[0])
 		}
@@ -427,7 +430,6 @@ func TestScanWorkspaces(t *testing.T) {
 
 	factJSON := `{
   "schema_version": 4,
-  "migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
   "ticket_id": "TEST-1",
   "ticket_title": "Test Ticket",
   "updated_at": "2026-10-17T15:00:00Z",
@@ -507,6 +509,9 @@ func TestScanWorkspaces(t *testing.T) {
 	}
 	if !strings.Contains(report.Errors[0], "CORRUPT-1") {
 		t.Errorf("expected error to mention CORRUPT-1, got %s", report.Errors[0])
+	}
+	if len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "CORRUPT-1" || !strings.Contains(report.Diagnostics[0].Message, "CORRUPT-1") {
+		t.Fatalf("expected ticket-scoped diagnostic for skipped workspace, got %+v", report.Diagnostics)
 	}
 
 	t.Run("unconfigured workspaces returns empty ledgers with descriptive error", func(t *testing.T) {

@@ -113,6 +113,11 @@ export interface AgenticFactLedger {
   readonly anomalies?: readonly Anomaly[];
 }
 
+export interface WorkspaceDiagnostic {
+  readonly ticket_id: string;
+  readonly message: string;
+}
+
 export interface SessionFact {
   readonly id: string;
   readonly parent_id?: string | null;

@@ -568,10 +568,19 @@ func TestHTTPRejectsLegacySchemaVersionsWithoutPartialPayload(t *testing.T) {
 					}
 					recorder := httptest.NewRecorder()
 					route.handler.ServeHTTP(recorder, req)
-					if recorder.Code != http.StatusUnprocessableEntity {
-						t.Fatalf("expected 422, got %d: %s", recorder.Code, recorder.Body.String())
-					}
 					body := recorder.Body.String()
+					if route.name == "workspace listing" {
+						if recorder.Code != http.StatusOK {
+							t.Fatalf("expected partial workspace listing status 200, got %d: %s", recorder.Code, body)
+						}
+						if strings.Contains(body, "legacy-fact") || !strings.Contains(recorder.Header().Get("X-AgenticLens-Workspace-Diagnostics"), fmt.Sprintf("version %d", version)) {
+							t.Fatalf("expected legacy ledger to be excluded with actionable v%d diagnostic, body=%s diagnostics=%s", version, body, recorder.Header().Get("X-AgenticLens-Workspace-Diagnostics"))
+						}
+						return
+					}
+					if recorder.Code != http.StatusUnprocessableEntity {
+						t.Fatalf("expected 422, got %d: %s", recorder.Code, body)
+					}
 					if !strings.Contains(body, fmt.Sprintf("version %d", version)) || !strings.Contains(body, "source-backed") {
 						t.Fatalf("missing actionable v%d rejection: %s", version, body)
 					}
@@ -581,6 +590,79 @@ func TestHTTPRejectsLegacySchemaVersionsWithoutPartialPayload(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func TestAggregateEndpointsKeepValidDataAndReportSkippedWorkspace(t *testing.T) {
+	wsDir := setupFixtureWorkspaces(t)
+	badDir := filepath.Join(wsDir, "AL-BAD")
+	if err := os.MkdirAll(badDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(badDir, "agentic_metrics.json"), []byte(`{"schema_version":3,"ticket_id":"AL-BAD","invocations":[{"id":"legacy-fact"}],"sessions":[]}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	server := mustNewServer(t, wsDir, fstest.MapFS{"index.html": &fstest.MapFile{Data: []byte("<html></html>")}})
+	ts := httptest.NewServer(server.Handler())
+	t.Cleanup(ts.Close)
+
+	for _, path := range []string{"/api/workspaces", "/api/fleet", "/api/comparison", "/api/progression"} {
+		t.Run(path, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, ts.URL+path, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Origin", "http://localhost:5173")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("expected partial aggregate status 200, got %d", resp.StatusCode)
+			}
+			exposedHeaders := strings.Split(resp.Header.Get("Access-Control-Expose-Headers"), ",")
+			diagnosticsHeaderExposed := false
+			for _, header := range exposedHeaders {
+				if strings.EqualFold(strings.TrimSpace(header), "X-AgenticLens-Workspace-Diagnostics") {
+					diagnosticsHeaderExposed = true
+					break
+				}
+			}
+			if !diagnosticsHeaderExposed {
+				t.Fatalf("expected Access-Control-Expose-Headers to include X-AgenticLens-Workspace-Diagnostics, got %q", resp.Header.Get("Access-Control-Expose-Headers"))
+			}
+			if path == "/api/workspaces" {
+				var ledgers []domain.AgenticMetricsLedger
+				if err := json.NewDecoder(resp.Body).Decode(&ledgers); err != nil {
+					t.Fatalf("decode partial workspace data: %v", err)
+				}
+				if len(ledgers) != 2 {
+					t.Fatalf("expected two accepted workspace ledgers, got %d", len(ledgers))
+				}
+			}
+			var diagnostics []domain.WorkspaceDiagnostic
+			if err := json.Unmarshal([]byte(resp.Header.Get("X-AgenticLens-Workspace-Diagnostics")), &diagnostics); err != nil {
+				t.Fatalf("expected structured workspace diagnostics header: %v", err)
+			}
+			if len(diagnostics) != 1 || diagnostics[0].TicketID != "AL-BAD" || !strings.Contains(diagnostics[0].Message, "version 3") {
+				t.Fatalf("expected actionable diagnostic for AL-BAD, got %+v", diagnostics)
+			}
+		})
+	}
+}
+
+func TestAggregateEndpointFailsWhenWorkspaceScanSetupIsFatal(t *testing.T) {
+	missingWorkspaceRoot := filepath.Join(t.TempDir(), "missing-workspaces")
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
+	adaptershttp.WorkspacesHandler(missingWorkspaceRoot).ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected fatal workspace setup to return 503, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "Workspaces directory not found") {
+		t.Fatalf("expected fatal setup diagnostic in response, got %s", recorder.Body.String())
 	}
 }
 

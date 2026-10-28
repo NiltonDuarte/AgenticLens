@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,12 +14,22 @@ import (
 	"agenticlens/internal/domain"
 )
 
-func rejectInvalidLedgers(w http.ResponseWriter, errors []string) bool {
-	if len(errors) == 0 {
+func rejectFatalWorkspaceScan(w http.ResponseWriter, report domain.ScanReport) bool {
+	if report.FatalError == "" {
 		return false
 	}
-	WriteError(w, http.StatusUnprocessableEntity, "invalid_ledger", strings.Join(errors, "; "))
+	WriteError(w, http.StatusServiceUnavailable, "workspace_scan_failed", report.FatalError)
 	return true
+}
+
+func setWorkspaceDiagnostics(w http.ResponseWriter, diagnostics []domain.WorkspaceDiagnostic) {
+	if len(diagnostics) == 0 {
+		return
+	}
+	encoded, err := json.Marshal(diagnostics)
+	if err == nil {
+		w.Header().Set("X-AgenticLens-Workspace-Diagnostics", string(encoded))
+	}
 }
 
 func writeWorkspaceLoadError(w http.ResponseWriter, err error) {
@@ -140,9 +151,10 @@ func parseMultiQueryParam(values []string) []string {
 func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		report := adapters.ScanWorkspaces(workspacesDir)
-		if rejectInvalidLedgers(w, report.Errors) {
+		if rejectFatalWorkspaceScan(w, report) {
 			return
 		}
+		setWorkspaceDiagnostics(w, report.Diagnostics)
 
 		query := r.URL.Query()
 		windowParam := query.Get("window")
@@ -286,9 +298,10 @@ func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydr
 func FleetHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		report := adapters.ScanWorkspaces(workspacesDir)
-		if rejectInvalidLedgers(w, report.Errors) {
+		if rejectFatalWorkspaceScan(w, report) {
 			return
 		}
+		setWorkspaceDiagnostics(w, report.Diagnostics)
 
 		query := r.URL.Query()
 		windowParam := query.Get("window")
@@ -328,9 +341,10 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 func ComparisonHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		report := adapters.ScanWorkspaces(workspacesDir)
-		if rejectInvalidLedgers(w, report.Errors) {
+		if rejectFatalWorkspaceScan(w, report) {
 			return
 		}
+		setWorkspaceDiagnostics(w, report.Diagnostics)
 
 		query := r.URL.Query()
 		windowParam := query.Get("window")
@@ -373,9 +387,10 @@ func ComparisonHandler(workspacesDir string) http.HandlerFunc {
 func ProgressionHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		report := adapters.ScanWorkspaces(workspacesDir)
-		if rejectInvalidLedgers(w, report.Errors) {
+		if rejectFatalWorkspaceScan(w, report) {
 			return
 		}
+		setWorkspaceDiagnostics(w, report.Diagnostics)
 
 		query := r.URL.Query()
 		windowParam := query.Get("window")

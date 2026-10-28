@@ -548,6 +548,25 @@ body {
   justify-content: space-between;
 }
 
+.workspace-load-warning {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid #b7791f;
+  border-left-width: 4px;
+  border-radius: 0.5rem;
+  color: #f7e5bd;
+  background: rgba(183, 121, 31, 0.16);
+}
+
+.workspace-load-warning ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.workspace-load-warning li + li {
+  margin-top: 0.35rem;
+}
+
 .btn-secondary {
   background-color: var(--bg-surface-elevated);
   color: var(--text-primary);

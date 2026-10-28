@@ -2,6 +2,12 @@
 
 Research branch: `research/codex-openai-metrics`.
 
+## Iteration 11: Temporary migration metadata and partial workspace loading
+
+Canonical schema-v4 ledgers load without migration metadata. Metadata is retained only while a multi-step migration/backfill is incomplete; the successful final step removes it. Ordinary runtime continues to reject v1-v3 and v4 ledgers with incomplete migration state. Workspace scanning now isolates invalid ticket ledgers, keeps valid workspaces and aggregates available, and returns ticket-specific diagnostics. The UI surfaces persistent warnings for skipped workspaces, including actionable migration guidance, while preserving valid data. CORS exposes the diagnostics response header to cross-origin frontend clients.
+
+Verification: `make` passed after the CORS fix: Go vet, Go race tests, frontend typecheck/lint, 32 frontend test files with 734 tests, production bundle, and Linux/macOS amd64/arm64 builds. Iteration 11 independent review is in progress. See `iterations/11/PLAN.md` and `iterations/11/REVIEW.md`.
+
 ## Iteration 10: Breaking schema v4 ingestion boundary
 
 AL-56 now treats schema v4 as structurally incompatible with schemas v1-v3. Ordinary `generate`, workspace loading, and server/API paths reject legacy ledgers before interpreting or merging facts. Operators must explicitly migrate, then run source-backed backfill. Shape-only migration and unavailable/missing source data leave `source_backfill` pending and the ledger runtime-ineligible. Runtime validation requires canonical session-owned structure, session source, required invocation/token fields, non-negative `user_iterations` (including explicit zero), and completed readiness metadata.

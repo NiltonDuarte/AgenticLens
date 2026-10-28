@@ -9,6 +9,20 @@ describe('FleetOverview View Component', () => {
     vi.restoreAllMocks();
   });
 
+  it('shows ticket-specific skipped-workspace diagnostics alongside valid workspace data', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
+      data: mockFleetSummary,
+      diagnostics: [{ ticket_id: 'AL-OLD', message: 'Incomplete migration must be resumed.' }],
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
+
+    render(<FleetOverview />);
+
+    expect(await screen.findByText('Some ticket workspaces were skipped.')).toBeInTheDocument();
+    expect(screen.getByRole('status').textContent).toContain('AL-OLD: Incomplete migration must be resumed.');
+    expect(screen.getByText('Total Cost')).toBeInTheDocument();
+  });
+
   it('renders loading indicator initially then displays KPI values and tables', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
       data: mockFleetSummary,

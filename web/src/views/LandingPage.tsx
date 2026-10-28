@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import type { ActiveTab, FleetSummary, ProjectConfigResponse, TicketComparisonRow } from '../domain/types';
+import type { ActiveTab, FleetSummary, ProjectConfigResponse, TicketComparisonRow, WorkspaceDiagnostic } from '../domain/types';
 import { compareTicketIds, formatCurrencyUSD, formatPercentage } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { EmptyState } from '../components/EmptyState';
 import { InfoTooltip } from '../components/InfoTooltip';
+import { mergeWorkspaceDiagnostics, WorkspaceLoadWarning } from '../components/WorkspaceLoadWarning';
 
 export type QuickLaunchSortField =
   | 'ticket_id'
@@ -29,6 +30,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   const [summary, setSummary] = useState<FleetSummary | null>(null);
   const [workspaces, setWorkspaces] = useState<readonly TicketComparisonRow[]>([]);
+  const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sortField, setSortField] = useState<QuickLaunchSortField>('ticket_id');
@@ -85,6 +87,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       ]);
       setSummary(fleetRes.data);
       setWorkspaces(workspacesRes.data);
+      setDiagnostics(mergeWorkspaceDiagnostics(fleetRes.diagnostics ?? [], workspacesRes.diagnostics ?? []));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to retrieve telemetry data';
       setErrorMessage(msg);
@@ -131,6 +134,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="landing-container">
+      <WorkspaceLoadWarning diagnostics={diagnostics} />
       {/* Hero Section */}
       <section className="landing-hero" aria-label="Observability Platform Overview">
         <div className="hero-badge">Autonomous Multi-Agent Telemetry</div>

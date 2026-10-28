@@ -9,6 +9,19 @@ describe('TicketComparisons View Component', () => {
     vi.restoreAllMocks();
   });
 
+  it('shows ticket-specific skipped-workspace diagnostics alongside valid rows', async () => {
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+      data: Object.values(mockAgenticMetricsLedgers),
+      diagnostics: [{ ticket_id: 'AL-OLD', message: 'Schema version 2 needs migration and source-backed backfill.' }],
+    });
+
+    render(<TicketComparisons />);
+
+    expect(await screen.findByText('Some ticket workspaces were skipped.')).toBeInTheDocument();
+    expect(screen.getByRole('status').textContent).toContain('AL-OLD: Schema version 2 needs migration and source-backed backfill.');
+    expect(screen.getByText('AL-1')).toBeInTheDocument();
+  });
+
   it('renders loading state initially and then displays benchmarking summary KPIs and comparison matrix', async () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({

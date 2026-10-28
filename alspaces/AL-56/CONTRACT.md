@@ -107,3 +107,22 @@ The earlier invariant in §6 promising that `LoadExistingFactLedger` parses v1-v
 - A subsequent source-backed backfill can reconstruct source-available facts, report unavailable source data as incomplete/failure, and produce a validated canonical v4 ledger; no ordinary runtime ingestion proceeds on a migrated-only or incomplete ledger.
 - API/server behavior exposes the rejection clearly and consistently without rewriting the ledger. The frontend receives canonical v4 responses only and needs no legacy-shape parser.
 - Regression coverage exercises each legacy version through ordinary loader, generate, and server/API boundaries, plus successful explicit migrate-then-backfill and failure/incomplete-source cases.
+
+## AL-56 Migration Metadata Lifecycle (Iteration 11)
+
+This section supersedes iteration 10's requirement for a durable universal `source_backfill` readiness marker and any contract wording that requires completed v4 ledgers to retain migration metadata.
+
+- Ordinary runtime accepts a structurally canonical schema-v4 ledger when migration metadata is absent. Canonical v4 structure is the runtime eligibility criterion for completed ledgers; there is no additional persisted `source_backfill` marker requirement.
+- Migration metadata is temporary workflow state. It may be persisted while a multi-step migration or source-backed backfill is in progress so the operator can resume it on another system or in a later step.
+- Any persisted migration-in-progress or incomplete state makes the ledger ineligible for ordinary runtime loading. Runtime rejects it before returning or merging facts and directs the operator to resume the explicit migration/backfill workflow.
+- The successful final migration/backfill step validates and persists canonical v4, then removes all migration metadata before reporting completion. A ledger must not become runtime-ready while an in-progress or incomplete marker remains.
+- Schema v1-v3 remain rejected by ordinary runtime before legacy fact parsing. Their supported route remains explicit schema migration followed by source-backed backfill.
+
+### Iteration 11 Acceptance Criteria
+
+- Ordinary runtime accepts a structurally canonical schema-v4 ledger with no migration metadata, including existing completed v4 ledgers.
+- Ordinary runtime rejects schema v1, v2, and v3 before parsing legacy facts, with detected version and explicit migration plus source-backed backfill guidance.
+- Ordinary runtime rejects any persisted migration-in-progress or incomplete state; the explicit migration workflow can resume that state across systems/steps.
+- Successful completion of the final migration/backfill step removes migration metadata before the ledger is reported as runtime-ready.
+- No custom `source_backfill` marker remains as a universal eligibility requirement for completed v4 ledgers.
+- Tests cover completed v4 without metadata, rejection and resumption of intermediate migration state, deletion of metadata on successful final migration, and v1-v3 pre-parse rejection.

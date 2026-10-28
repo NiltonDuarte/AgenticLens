@@ -321,14 +321,8 @@ func ValidateRuntimeFactLedger(data []byte) error {
 	if !sessionsExists || string(sessionsJSON) == "null" || !json.Valid(sessionsJSON) {
 		return errors.New("canonical schema v4 ledger requires a sessions collection; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
 	}
-	if metadata.Migration == nil {
-		return errors.New("schema v4 ledger is missing migration readiness metadata; run schema migration followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>` before runtime ingestion")
-	}
-	if metadata.Migration.Status != string(domain.MigrationStatusCompleted) || len(metadata.Migration.StepsPending) > 0 {
-		return errors.New("schema v4 ledger is incomplete; run source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>` before runtime ingestion")
-	}
-	if !containsString(metadata.Migration.StepsCompleted, domain.MigrationStepSourceBackfill) {
-		return errors.New("schema v4 ledger is missing source-backed readiness; run source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>` before runtime ingestion")
+	if metadata.Migration != nil && (metadata.Migration.Status != string(domain.MigrationStatusCompleted) || len(metadata.Migration.StepsPending) > 0) {
+		return errors.New("schema v4 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
 	}
 	var canonical struct {
 		Sessions []json.RawMessage `json:"sessions"`
@@ -660,15 +654,6 @@ func ValidateToolFacts(tools []domain.ToolFact) error {
 
 // AgenticFactLedgerDTOFromDomain converts a domain AgenticFactLedger to its DTO for serialization.
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
-	readiness := ledger.Migration
-	if readiness == nil {
-		readiness = &domain.MigrationInfo{
-			SchemaVersion:  domain.CurrentSchemaVersion,
-			Status:         domain.MigrationStatusCompleted,
-			StepsCompleted: []string{domain.MigrationStepSourceBackfill},
-			StepsPending:   []string{},
-		}
-	}
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
 		sessionSource := strings.TrimSpace(string(session.Source))
@@ -687,7 +672,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 
 	return AgenticFactLedgerDTO{
 		SchemaVersion: ledger.SchemaVersion,
-		Migration:     MigrationInfoDTOFromDomain(readiness),
+		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
 		TicketID:      ledger.TicketID,
 		TicketTitle:   ledger.TicketTitle,
 		TicketType:    fromDomainTicketType(ledger.TicketType),

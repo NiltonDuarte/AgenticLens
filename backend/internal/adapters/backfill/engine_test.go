@@ -107,6 +107,87 @@ func setupMockOpenCodeDB(t *testing.T, dbPath string, sessionID string, ticketID
 	}
 }
 
+func TestBackfillEngine_CleansCompletedMigrationMetadata(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "AL-COMPLETED-METADATA"
+	version := domain.CurrentSchemaVersion
+	ledger := domain.AgenticFactLedger{
+		SchemaVersion: &version,
+		TicketID:      &ticketID,
+		Migration: &domain.MigrationInfo{
+			SchemaVersion:  domain.CurrentSchemaVersion,
+			Status:         domain.MigrationStatusCompleted,
+			StepsCompleted: []string{domain.MigrationStepSourceBackfill},
+			StepsPending:   []string{},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+
+	metadataFreeTicket := "AL-COMPLETED-CLEAN"
+	createTestWorkspace(t, tempDir, metadataFreeTicket, domain.AgenticFactLedger{
+		SchemaVersion: &version,
+		TicketID:      &metadataFreeTicket,
+	})
+
+	report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: tempDir})
+	if err != nil {
+		t.Fatalf("backfill execute failed: %v", err)
+	}
+	if report.Updated != 1 || report.Skipped != 1 {
+		t.Fatalf("expected metadata cleanup and metadata-free skip, got %+v", report)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cleaned adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &cleaned); err != nil {
+		t.Fatalf("decode cleaned ledger: %v", err)
+	}
+	if cleaned.Migration != nil || strings.Contains(string(data), `"migration"`) {
+		t.Fatalf("completed migration metadata must be removed: %s", data)
+	}
+	if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+		t.Fatalf("cleaned schema-v4 ledger should be runtime-ready: %v", err)
+	}
+}
+
+func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "AL-RECOMPUTE-COMPLETED"
+	version := domain.CurrentSchemaVersion
+	ledger := domain.AgenticFactLedger{
+		SchemaVersion: &version,
+		TicketID:      &ticketID,
+		Sessions:      sessionFacts([]domain.InvocationFact{{ID: "inv-existing", Role: "coder", Model: "model"}}, nil, nil),
+		Migration: &domain.MigrationInfo{
+			SchemaVersion:  domain.CurrentSchemaVersion,
+			Status:         domain.MigrationStatusCompleted,
+			StepsCompleted: []string{domain.MigrationStepSourceBackfill},
+			StepsPending:   []string{},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+
+	report, err := NewEngine().Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      ticketID,
+		RecomputeDB:   true,
+		DBPath:        filepath.Join(tempDir, "missing.db"),
+		Source:        "opencode",
+	})
+	if err != nil {
+		t.Fatalf("backfill execute failed: %v", err)
+	}
+	if report.Updated != 1 || report.Skipped != 0 || report.Partial != 1 {
+		t.Fatalf("explicit database recompute must process the selected ledger: %+v", report)
+	}
+	if len(report.Results) != 1 || report.Results[0].Skipped {
+		t.Fatalf("selected ledger was silently skipped: %+v", report.Results)
+	}
+}
+
 func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 	tempDir := t.TempDir()
 	tid := "AL-101"
@@ -397,6 +478,9 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if loadedB.Migration == nil || loadedB.Migration.Status != string(domain.MigrationStatusPartial) {
 		t.Errorf("expected status partial, got %v", loadedB.Migration)
 	}
+	if err := adapters.ValidateRuntimeFactLedger(dataB); err == nil {
+		t.Error("runtime must reject a ledger while its source backfill is pending")
+	}
 	if len(loadedB.Migration.StepsPending) != 2 || !containsMigrationStep(loadedB.Migration.StepsPending, domain.MigrationStepOpenCodeDB) || !containsMigrationStep(loadedB.Migration.StepsPending, domain.MigrationStepSourceBackfill) {
 		t.Errorf("expected steps_pending to contain OpenCode DB and source backfill, got %v", loadedB.Migration.StepsPending)
 	}
@@ -440,8 +524,14 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if loadedB2.SchemaVersion == nil || *loadedB2.SchemaVersion != domain.CurrentSchemaVersion {
 		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, loadedB2.SchemaVersion)
 	}
-	if loadedB2.Migration == nil || loadedB2.Migration.Status != string(domain.MigrationStatusCompleted) || !containsMigrationStep(loadedB2.Migration.StepsCompleted, domain.MigrationStepSourceBackfill) || len(loadedB2.Migration.StepsPending) != 0 {
-		t.Errorf("expected completed source_backfill migration marker, got %v", loadedB2.Migration)
+	if loadedB2.Migration != nil {
+		t.Errorf("expected final successful backfill to remove migration metadata, got %v", loadedB2.Migration)
+	}
+	if strings.Contains(string(dataB2), `"migration"`) {
+		t.Errorf("final successful backfill must omit migration metadata: %s", dataB2)
+	}
+	if err := adapters.ValidateRuntimeFactLedger(dataB2); err != nil {
+		t.Errorf("final successful backfill should produce a runtime-ready ledger: %v", err)
 	}
 	if len(loadedB2.Sessions) != 1 || len(loadedB2.Sessions[0].Invocations) != 1 || loadedB2.Sessions[0].Invocations[0].ID != "sess-b1" {
 		t.Errorf("expected refreshed invocation sess-b1 in session snapshot, got %v", loadedB2.Sessions)

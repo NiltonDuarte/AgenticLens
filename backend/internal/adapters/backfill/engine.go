@@ -294,13 +294,17 @@ func (e *BackfillEngine) processSingleWorkspace(
 	isCompleted := !needsNormalization && factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
 		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) &&
 		!needsEventBackfill
+	cleanupCompletedMigration := factLedger.Migration != nil &&
+		factLedger.Migration.Status == domain.MigrationStatusCompleted &&
+		len(factLedger.Migration.StepsPending) == 0
 
-	if !opts.Force && isCompleted {
+	if !opts.Force && isCompleted && !opts.RecomputeGit && !cleanupCompletedMigration && factLedger.Migration == nil {
 		result.Skipped = true
 		result.NewStatus = prevStatus
 		return result
 	}
-	if !hasTargetSessions && !opts.RecomputeGit && !needsNormalization {
+	if !hasTargetSessions && !opts.RecomputeGit && !opts.RecomputeDB && !needsNormalization &&
+		factLedger.Migration == nil && !cleanupCompletedMigration {
 		result.Skipped = true
 		result.NewStatus = prevStatus
 		return result

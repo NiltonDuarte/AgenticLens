@@ -7,6 +7,16 @@ describe('MetricProgression View Component', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });
+    it('shows ticket-specific skipped-workspace diagnostics alongside valid metrics', async () => {
+        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
+            data: Object.values(mockAgenticMetricsLedgers),
+            diagnostics: [{ ticket_id: 'AL-OLD', message: 'Incomplete migration must be resumed.' }],
+        });
+        render(<MetricProgression />);
+        expect(await screen.findByText('Some ticket workspaces were skipped.')).toBeInTheDocument();
+        expect(screen.getByRole('status').textContent).toContain('AL-OLD: Incomplete migration must be resumed.');
+        expect(screen.getByText('Total Invocations')).toBeInTheDocument();
+    });
     it('renders loading state initially and then displays progression KPIs and trend charts', async () => {
         const ledgers = Object.values(mockAgenticMetricsLedgers);
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({

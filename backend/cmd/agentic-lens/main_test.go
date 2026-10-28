@@ -2148,6 +2148,20 @@ func TestCLIBackfillCommand(t *testing.T) {
 		if err := cmd.Run(); err != nil {
 			t.Fatalf("backfill failed: %v, stderr: %s", err, stderr.String())
 		}
+		var ticketRow []string
+		for _, line := range strings.Split(stdout.String(), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) > 0 && fields[0] == "TICKET-1" {
+				ticketRow = fields
+				break
+			}
+		}
+		if len(ticketRow) < 4 || ticketRow[3] != "yes" {
+			t.Fatalf("expected the requested Git recompute row to report Git yes, got: %s", stdout.String())
+		}
+		if !strings.Contains(stdout.String(), "Updated: 1") {
+			t.Fatalf("expected TICKET-1 recompute to be applied instead of skipped, got: %s", stdout.String())
+		}
 
 		data, err := os.ReadFile(filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json"))
 		if err != nil {
@@ -2162,17 +2176,11 @@ func TestCLIBackfillCommand(t *testing.T) {
 		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
 			t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 		}
-		hasSourceBackfill := false
 		if parsed.Migration != nil {
-			for _, step := range parsed.Migration.StepsCompleted {
-				if step == domain.MigrationStepSourceBackfill {
-					hasSourceBackfill = true
-					break
-				}
-			}
+			t.Errorf("expected successful final backfill to remove temporary migration metadata, got %v", parsed.Migration)
 		}
-		if parsed.Migration == nil || parsed.Migration.Status != string(domain.MigrationStatusCompleted) || !hasSourceBackfill || len(parsed.Migration.StepsPending) != 0 {
-			t.Errorf("expected completed source_backfill migration marker, got %v", parsed.Migration)
+		if strings.Contains(string(data), `"migration"`) {
+			t.Errorf("successful ticket-filtered backfill must omit migration metadata: %s", data)
 		}
 	})
 }

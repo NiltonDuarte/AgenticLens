@@ -11,11 +11,25 @@ import type {
   TimeWindowPreset,
   WorkspaceDetail,
   WorkspaceEventsResponse,
+  WorkspaceDiagnostic,
 } from '../domain/types';
 import { deriveTicketComparisonRows } from '../domain/formatters';
 
 export interface ApiResponse<T> {
   readonly data: T;
+  readonly diagnostics?: readonly WorkspaceDiagnostic[];
+}
+
+function diagnosticsFromResponse(res: Response): readonly WorkspaceDiagnostic[] {
+  if (!res.headers) return [];
+  const raw = res.headers.get('X-AgenticLens-Workspace-Diagnostics');
+  if (!raw) return [];
+  try {
+    const value = JSON.parse(raw) as readonly WorkspaceDiagnostic[];
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
 }
 
 function appendMultiParams(params: URLSearchParams, key: string, values?: readonly string[]): void {
@@ -66,7 +80,7 @@ export async function fetchFleetSummary(
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch fleet summary'}`);
     }
     const data = (await res.json()) as FleetSummary;
-    return { data };
+    return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch fleet summary');
   }
@@ -100,8 +114,8 @@ export async function fetchWorkspaceLedgers(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace ledgers'}`);
     }
-    const ledgers = (await res.json()) as readonly AgenticMetricsLedger[];
-    return { data: ledgers };
+    const data = (await res.json()) as readonly AgenticMetricsLedger[];
+    return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch workspace ledgers');
   }
@@ -145,7 +159,7 @@ export async function fetchWorkspaces(
     }
     const ledgers = (await res.json()) as AgenticMetricsLedger[];
     const rows = deriveTicketComparisonRows(ledgers);
-    return { data: rows };
+    return { data: rows, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch workspaces');
   }
@@ -179,8 +193,8 @@ export async function fetchComparisonRows(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch comparison rows'}`);
     }
-    const rows = (await res.json()) as readonly TicketComparisonRow[];
-    return { data: rows };
+    const data = (await res.json()) as readonly TicketComparisonRow[];
+    return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch comparison rows');
   }
@@ -214,8 +228,8 @@ export async function fetchProgressionLedgers(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression ledgers'}`);
     }
-    const ledgers = (await res.json()) as readonly AgenticMetricsLedger[];
-    return { data: ledgers };
+    const data = (await res.json()) as readonly AgenticMetricsLedger[];
+    return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch progression ledgers');
   }
