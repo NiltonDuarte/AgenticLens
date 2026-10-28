@@ -16,10 +16,9 @@ This release correction also preserves explicit migration support for v1-v3, sou
 - Preserve explicit schema migration followed by source-backed backfill as the supported upgrade workflow.
 - Cover rejected-ledger no-write behavior and no-match/unavailable-source backfill behavior with regression tests.
 
-## Verification
+## Review
 
-- `make` passes: Go vet and race-enabled Go tests, frontend typecheck/lint and 727 tests, production bundle, and four platform builds.
-- Independent iteration 10 review: APPROVED.
+Independent iteration 10 review: APPROVED. Implementation and acceptance details are recorded in `alspaces/AL-56/iterations/10/`.
 
 ## Breaking change and migration
 
