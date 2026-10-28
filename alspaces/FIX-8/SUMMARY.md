@@ -1,5 +1,9 @@
 # FIX-8 Work Summary
 
+## Iteration 04: Requested Specification Removal
+
+The completed specification `alspaces/plan/done/FIX-8 preserve complete Codex session trees during backfill recomputation.md` was removed at the user's explicit request.
+
 ## Iteration 03: Configured Workspace Root Reconciliation
 
 Moved the complete FIX-8 ticket workspace and completed specification from `workspaces/` to the configured `alspaces/` root, preserving the ticket history and updating operational links to the new paths.
