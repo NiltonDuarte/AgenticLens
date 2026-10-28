@@ -1,5 +1,11 @@
 # FIX-8 Work Summary
 
+## Iteration 02: Configurable Workspace Root
+
+Updated `AGENTS.md` to define `<WORKSPACES_DIR>` from `workspaces.dir` in `.agenticlens-config.yaml`, with `workspaces` as the fallback when the file or key is absent. The current configuration resolves to `alspaces`. Ticket workspaces, plan lifecycle paths, iteration artifacts, telemetry command arguments, and PR command examples now consistently use the configurable root.
+
+Local session telemetry is empty.
+
 ## Adapter
 
 Updated Codex backfill recomputation to discover each stored root tree once and replace its full refreshed session set only after discovery, parsing, transcript combination, and domain grouping succeed. Failed refreshes retain the stored tree; unrelated Codex and other-source sessions remain unchanged.
