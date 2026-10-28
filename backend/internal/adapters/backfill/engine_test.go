@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
 )
@@ -611,5 +612,230 @@ func TestBackfillEngine_SourceCodexSkipsOpenCodeSessions(t *testing.T) {
 	}
 	if len(opencodeSess.Tools) != 1 || opencodeSess.Tools[0].Calls != 10 {
 		t.Errorf("opencode session was modified during codex backfill: %+v", opencodeSess)
+	}
+}
+
+func TestReplaceCodexTreeReplacesRootAndDescendantsTogether(t *testing.T) {
+	childParent := "root"
+	stored := []domain.SessionFact{
+		{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "stale-root", Calls: 1}}},
+		{ID: "child", ParentID: &childParent, Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "stale-child", Calls: 1}}},
+		{ID: "unrelated", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "keep", Calls: 4}}},
+	}
+	refreshed := []domain.SessionFact{
+		{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "fresh-root", Calls: 2}}},
+		{ID: "child", ParentID: &childParent, Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "fresh-child", Calls: 3}}},
+	}
+
+	replaceCodexTree(&stored, "root", refreshed)
+
+	if len(stored) != 3 {
+		t.Fatalf("expected refreshed root and child plus unrelated session, got %d sessions", len(stored))
+	}
+	byID := make(map[string]domain.SessionFact, len(stored))
+	for _, session := range stored {
+		if _, duplicate := byID[session.ID]; duplicate {
+			t.Fatalf("duplicate session ID %q", session.ID)
+		}
+		byID[session.ID] = session
+	}
+	if byID["root"].Tools[0].Name != "fresh-root" || byID["child"].Tools[0].Name != "fresh-child" {
+		t.Fatalf("tree was not replaced with the complete refreshed set: %+v", byID)
+	}
+	if byID["unrelated"].Tools[0].Name != "keep" || byID["unrelated"].Tools[0].Calls != 4 {
+		t.Fatalf("unrelated Codex session was modified: %+v", byID["unrelated"])
+	}
+}
+
+func TestReplaceCodexTreeReplacesSingleSessionWithoutDuplication(t *testing.T) {
+	stored := []domain.SessionFact{{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "stale"}}}}
+	refreshed := []domain.SessionFact{{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "fresh"}}}}
+
+	replaceCodexTree(&stored, "root", refreshed)
+
+	if len(stored) != 1 || stored[0].ID != "root" || stored[0].Tools[0].Name != "fresh" {
+		t.Fatalf("expected one refreshed root session, got %+v", stored)
+	}
+}
+
+func TestBackfillEngine_CodexDiscoveryFailurePreservesSessions(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "FIX-8-FAILURE"
+	ledger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Sessions: []domain.SessionFact{
+			{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "original-root", Calls: 1}}},
+			{ID: "unrelated", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "keep", Calls: 2}}},
+			{ID: "other-source", Source: domain.SourceOpenCode, Tools: []domain.SessionToolFact{{Name: "unchanged", Calls: 3}}},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+	engine := NewEngine()
+	engine.discoverCodexRollouts = func(codex.DiscoveryOptions) ([]string, error) {
+		return nil, errors.New("discovery failed")
+	}
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      ticketID,
+		Source:        "codex",
+		CodexHome:     tempDir,
+		RecomputeDB:   true,
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if len(report.Results) != 1 || report.Results[0].DBUpdated || report.Results[0].DBFound {
+		t.Fatalf("failed refresh must not report DB update or session found: %+v", report.Results)
+	}
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("failed reading result: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed unmarshaling result: %v", err)
+	}
+	if len(parsed.Sessions) != 3 {
+		t.Fatalf("failed refresh changed session count: %+v", parsed.Sessions)
+	}
+	wantTools := map[string]string{"root": "original-root", "unrelated": "keep", "other-source": "unchanged"}
+	for _, session := range parsed.Sessions {
+		want, found := wantTools[session.ID]
+		if !found || len(session.Tools) != 1 || session.Tools[0].Name != want {
+			t.Errorf("session %q changed after failed refresh: %+v", session.ID, session)
+		}
+	}
+}
+
+func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "FIX-8-TREE"
+	childParent := "root"
+	ledger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Sessions: []domain.SessionFact{
+			{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "stale-root", Calls: 1}}},
+			{ID: "child", ParentID: &childParent, Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "stale-child", Calls: 1}}},
+			{ID: "unrelated-codex", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "keep-codex", Calls: 5}}},
+			{ID: "opencode", Source: domain.SourceOpenCode, Tools: []domain.SessionToolFact{{Name: "keep", Calls: 7}}},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+	engine := NewEngine()
+	discoveries := 0
+	engine.discoverCodexRollouts = func(options codex.DiscoveryOptions) ([]string, error) {
+		if options.SessionID == "unrelated-codex" {
+			return nil, nil
+		}
+		discoveries++
+		if options.SessionID != "root" {
+			t.Fatalf("expected root discovery for child tree, got session %q", options.SessionID)
+		}
+		return []string{"root-rollout"}, nil
+	}
+	engine.parseCodexRollout = func(string) (codex.Transcript, error) {
+		return codex.Transcript{Invocations: []domain.InvocationFact{
+			{ID: "root", Role: "orchestrator", Model: "fresh-model"},
+			{ID: "child", ParentID: &childParent, Role: "coder", Model: "fresh-model"},
+		}, Tools: []domain.ToolFact{
+			{SessionID: "root", Name: "fresh-root", Calls: 2},
+			{SessionID: "child", Name: "fresh-child", Calls: 3},
+		}}, nil
+	}
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      ticketID,
+		Source:        "codex",
+		CodexHome:     tempDir,
+		RecomputeDB:   true,
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if discoveries != 1 {
+		t.Fatalf("expected one rollout tree discovery, got %d", discoveries)
+	}
+	if len(report.Results) != 1 || !report.Results[0].DBUpdated || !report.Results[0].DBFound {
+		t.Fatalf("successful tree refresh was not reported: %+v", report.Results)
+	}
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("failed reading result: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed unmarshaling result: %v", err)
+	}
+	if len(parsed.Sessions) != 4 {
+		t.Fatalf("expected refreshed tree and both unrelated sessions, got %+v", parsed.Sessions)
+	}
+	want := map[string]string{"root": "fresh-root", "child": "fresh-child", "unrelated-codex": "keep-codex", "opencode": "keep"}
+	seen := make(map[string]struct{}, len(want))
+	for _, session := range parsed.Sessions {
+		tool, found := want[session.ID]
+		if !found || len(session.Tools) != 1 || session.Tools[0].Name != tool {
+			t.Errorf("unexpected refreshed session %q: %+v", session.ID, session)
+		}
+		if _, duplicate := seen[session.ID]; duplicate {
+			t.Errorf("duplicate session ID %q", session.ID)
+		}
+		seen[session.ID] = struct{}{}
+	}
+}
+
+func TestBackfillEngine_CodexParseFailurePreservesTree(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "FIX-8-PARSE-FAILURE"
+	childParent := "root"
+	ledger := domain.AgenticFactLedger{
+		TicketID: &ticketID,
+		Sessions: []domain.SessionFact{
+			{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "original-root", Calls: 1}}},
+			{ID: "child", ParentID: &childParent, Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "original-child", Calls: 2}}},
+			{ID: "unrelated-codex", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "keep-codex", Calls: 3}}},
+			{ID: "opencode", Source: domain.SourceOpenCode, Tools: []domain.SessionToolFact{{Name: "keep-opencode", Calls: 4}}},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+	engine := NewEngine()
+	engine.discoverCodexRollouts = func(codex.DiscoveryOptions) ([]string, error) {
+		return []string{"root-rollout"}, nil
+	}
+	engine.parseCodexRollout = func(string) (codex.Transcript, error) {
+		return codex.Transcript{}, errors.New("parse failed")
+	}
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      ticketID,
+		Source:        "codex",
+		CodexHome:     tempDir,
+		RecomputeDB:   true,
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if len(report.Results) != 1 || report.Results[0].DBUpdated || report.Results[0].DBFound {
+		t.Fatalf("failed refresh must not report DB update or session found: %+v", report.Results)
+	}
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("failed reading result: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed unmarshaling result: %v", err)
+	}
+	want := map[string]string{"root": "original-root", "child": "original-child", "unrelated-codex": "keep-codex", "opencode": "keep-opencode"}
+	if len(parsed.Sessions) != len(want) {
+		t.Fatalf("parse failure changed session count: %+v", parsed.Sessions)
+	}
+	for _, session := range parsed.Sessions {
+		tool, found := want[session.ID]
+		if !found || len(session.Tools) != 1 || session.Tools[0].Name != tool {
+			t.Errorf("session %q changed after parse failure: %+v", session.ID, session)
+		}
 	}
 }

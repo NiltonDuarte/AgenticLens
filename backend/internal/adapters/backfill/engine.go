@@ -21,11 +21,19 @@ import (
 
 // BackfillEngine coordinates scanning, Git recomputation, OpenCode SQLite querying,
 // non-destructive fallback preservation, atomic JSON writes, and summary updates.
-type BackfillEngine struct{}
+type BackfillEngine struct {
+	discoverCodexRollouts func(codex.DiscoveryOptions) ([]string, error)
+	parseCodexRollout     func(string) (codex.Transcript, error)
+	combineCodex          func([]codex.Transcript) (codex.Transcript, error)
+}
 
 // NewEngine creates a new BackfillEngine instance.
 func NewEngine() *BackfillEngine {
-	return &BackfillEngine{}
+	return &BackfillEngine{
+		discoverCodexRollouts: codex.DiscoverRolloutPaths,
+		parseCodexRollout:     codex.ParseRolloutPath,
+		combineCodex:          codex.CombineTranscripts,
+	}
 }
 
 // Execute runs the backfill and migration workflow across target workspaces.
@@ -458,23 +466,43 @@ func (e *BackfillEngine) processSingleWorkspace(
 			}
 		}
 		if codexHome != "" {
-			for i, cs := range codexSessions {
-				rolloutPaths, discErr := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{
+			covered := make(map[string]struct{})
+			storedIDs := make(map[string]struct{}, len(codexSessions))
+			for _, session := range codexSessions {
+				storedIDs[session.ID] = struct{}{}
+			}
+			for _, cs := range codexSessions {
+				if cs.ParentID != nil {
+					if _, parentStored := storedIDs[*cs.ParentID]; parentStored {
+						continue
+					}
+				}
+				if _, alreadyCovered := covered[cs.ID]; alreadyCovered {
+					continue
+				}
+				rolloutPaths, discErr := e.discoverCodexRollouts(codex.DiscoveryOptions{
 					CodexHome: codexHome,
 					SessionID: cs.ID,
 				})
 				if discErr == nil && len(rolloutPaths) > 0 {
 					transcripts := make([]codex.Transcript, 0, len(rolloutPaths))
+					parseFailed := false
 					for _, p := range rolloutPaths {
-						if t, parseErr := codex.ParseRolloutPath(p); parseErr == nil {
-							transcripts = append(transcripts, t)
+						t, parseErr := e.parseCodexRollout(p)
+						if parseErr != nil {
+							parseFailed = true
+							break
 						}
+						transcripts = append(transcripts, t)
 					}
-					if len(transcripts) > 0 {
-						if combined, combErr := codex.CombineTranscripts(transcripts); combErr == nil {
+					if !parseFailed && len(transcripts) > 0 {
+						if combined, combErr := e.combineCodex(transcripts); combErr == nil {
 							freshCodex, sErr := domain.SessionsFromFactsWithSource(domain.SourceCodex, combined.Invocations, combined.Tools, combined.Events)
 							if sErr == nil && len(freshCodex) > 0 {
-								codexSessions[i] = freshCodex[0]
+								replaceCodexTree(&codexSessions, cs.ID, freshCodex)
+								for _, refreshed := range freshCodex {
+									covered[refreshed.ID] = struct{}{}
+								}
 								dbSessionFound = true
 								result.DBUpdated = true
 							}
@@ -566,4 +594,38 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	return result
+}
+
+func replaceCodexTree(stored *[]domain.SessionFact, requestedRoot string, refreshed []domain.SessionFact) {
+	refreshedIDs := make(map[string]struct{}, len(refreshed))
+	for _, session := range refreshed {
+		refreshedIDs[session.ID] = struct{}{}
+	}
+	removeIDs := make(map[string]struct{}, len(refreshedIDs)+1)
+	removeIDs[requestedRoot] = struct{}{}
+	for id := range refreshedIDs {
+		removeIDs[id] = struct{}{}
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, session := range *stored {
+			if session.ParentID == nil {
+				continue
+			}
+			if _, parentMatched := removeIDs[*session.ParentID]; parentMatched {
+				if _, exists := removeIDs[session.ID]; !exists {
+					removeIDs[session.ID] = struct{}{}
+					changed = true
+				}
+			}
+		}
+	}
+	result := make([]domain.SessionFact, 0, len(*stored)-len(removeIDs)+len(refreshed))
+	for _, session := range *stored {
+		if _, remove := removeIDs[session.ID]; !remove {
+			result = append(result, session)
+		}
+	}
+	result = append(result, refreshed...)
+	*stored = result
 }

@@ -8,6 +8,12 @@ Mandatory operational policies for all agents and contributors working in this r
 
 Every task, feature, bugfix, or refactoring in this repository must be tracked by an explicit ticket identifier.
 
+### Configurable Workspace Root
+- Define `<WORKSPACES_DIR>` as the `workspaces.dir` value in `.agenticlens-config.yaml`.
+- If `.agenticlens-config.yaml` or the `workspaces.dir` key is absent, use `workspaces` as the fallback.
+- The current configuration sets `workspaces.dir` to `alspaces`, so `<WORKSPACES_DIR>` currently resolves to `alspaces`.
+- Use `<WORKSPACES_DIR>` as the root for all ticket workspaces and plan paths below.
+
 ### Rules
 1. **Mandatory Ticket Identifier**:
    - A ticket ID is strictly required before starting any work. Agents must never begin work without it.
@@ -19,19 +25,21 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
    - Once a ticket is active, every subsequent user prompt must be interpreted as steering feedback for that specific ticket.
    - Agents must create and advance new iterations (`iterations/<NN>/`) as needed to incorporate steering directions.
 4. **Dedicated Workspace Allocation**:
-   - Every ticket must have its isolated workspace under `workspaces/<TICKET_ID>/`.
+   - Every ticket must have its isolated workspace under `<WORKSPACES_DIR>/<TICKET_ID>/`.
    - Never mix artifacts across tickets or leave untracked changes in the working directory.
 5. **Workspace Deliverables Checklist**:
-   - `workspaces/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
-   - `workspaces/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
-   - **Plan Lifecycle Synchronization**: Move specification file from `workspaces/plan/to-do/<TICKET_ID>*.md` to `workspaces/plan/done/`, remove the completed ticket entry from `workspaces/plan/TICKETS.md` (do not create or maintain a Done section; completed specifications remain in `plan/done/`), and unblock downstream tickets (inspect any tickets blocked by `<TICKET_ID>` and promote those whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`).
-   - `workspaces/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger (generated at the very final step of the iteration).
+   - `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
+   - `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
+   - `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md`: Frozen technical contract and acceptance boundaries, when required by the configured artifact list.
+   - **Plan Lifecycle Synchronization**: Move specification file from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` to `<WORKSPACES_DIR>/plan/done/`, remove the completed ticket entry from `<WORKSPACES_DIR>/plan/TICKETS.md` (do not create or maintain a Done section; completed specifications remain in `<WORKSPACES_DIR>/plan/done/`), and unblock downstream tickets (inspect any tickets blocked by `<TICKET_ID>` and promote those whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`).
+   - `<WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger (generated at the very final step of the iteration).
+   - Store iteration plans and reviews under `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md` and `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
 6. **Telemetry Ingestion as the Final Step & Conventional Commit Type Classification**:
    - **Delayed Ingestion Mandate**: Generating telemetry must always be delayed to the very last step of the workflow. Running telemetry early causes subsequent turns, tool calls, compactions, and subagent sessions to be omitted from the ledger.
    - **Literal Nonce Generation**: The agent must generate a unique random nonce directly (by any means, e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly in the command. Shell variables (`$NONCE`) or command substitutions (`$(...)`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs, which causes database searches for the expanded token to fail.
    - Execute AgenticLens CLI with an explicit conventional commit `type` immediately before final commit:
      ```bash
-     ./bin/agentic-lens generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output workspaces/<TICKET_ID>/agentic_metrics.json --append workspaces/<TICKET_ID>/SUMMARY.md
+     ./bin/agentic-lens generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
      ```
    - `<CONVENTIONAL_TYPE>` must match standard conventional commit classifications (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
    - PO tickets (`PO-#`) must strictly use `--ticket-type docs`.
@@ -40,8 +48,8 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
 7. **Pull Request Delivery & Handoff**:
    - Commit all implementation deliverables on the feature branch first (`git add -A && git commit -m "$COMMIT_MSG"`). Git requires a clean working tree before merging.
    - Merge `main` into the feature branch (`git fetch origin main && git merge origin/main --no-edit`) to resolve any upstream conflicts, and verify test suites pass (`make`).
-   - Extract the PR title directly from the first line of `PULL_REQUEST.md` (e.g. `PR_TITLE=$(head -n 1 workspaces/<TICKET_ID>/PULL_REQUEST.md | sed 's/^# *//')`).
-   - Commit final deliverables and telemetry facts on the feature branch, push upstream, and open a GitHub Pull Request via `gh pr create --title "$PR_TITLE" --body-file workspaces/<TICKET_ID>/PULL_REQUEST.md`.
+   - Extract the PR title directly from the first line of `PULL_REQUEST.md` (e.g. `PR_TITLE=$(head -n 1 <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md | sed 's/^# *//')`).
+   - Commit final deliverables and telemetry facts on the feature branch, push upstream, and open a GitHub Pull Request via `gh pr create --title "$PR_TITLE" --body-file <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`.
    - Avoid directly merging or checking out `main` within agent worktrees.
    - The Pull Request URL must be prominently displayed at the top of the final handoff report.
 

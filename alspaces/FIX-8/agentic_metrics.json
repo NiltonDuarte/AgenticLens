@@ -1,0 +1,86 @@
+{
+  "schema_version": 4,
+  "ticket_id": "FIX-8",
+  "ticket_title": "Preserve Codex rollout session trees during backfill",
+  "ticket_type": "fix",
+  "started_at": "2026-10-28T07:37:23.592Z",
+  "completed_at": "2026-10-28T09:33:43.287Z",
+  "updated_at": "2026-10-28T09:33:43.639763+00:00",
+  "code": {
+    "lines_added": 297,
+    "lines_deleted": 9,
+    "test_lines_added": 226,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 71,
+    "prod_lines_deleted": 9,
+    "files_changed": 2,
+    "sdlc_iterations": 16
+  },
+  "sessions": [
+    {
+      "id": "01a18171-3980-7a53-87b6-f8d1c9156789",
+      "source": "codex",
+      "invocations": [
+        {
+          "id": "01a18171-3980-7a53-87b6-f8d1c9156789",
+          "parent_id": null,
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "user": "",
+          "started_at": "2026-10-28T07:37:24.372Z",
+          "completed_at": "2026-10-28T09:33:43.287Z",
+          "active_duration_seconds": 1752,
+          "turns": 13,
+          "tokens": {
+            "input": 459995,
+            "output": 53885,
+            "cache_read": 21887360,
+            "reasoning": 27348,
+            "peak_context": 186136
+          },
+          "cost_usd": 0,
+          "compactions": 1,
+          "user_iterations": 16
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 102,
+          "errors": 6
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 12,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 6,
+            "context_tokens": 161300,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 186136,
+            "threshold": "160000"
+          }
+        }
+      ]
+    }
+  ],
+  "anomalies": []
+}
