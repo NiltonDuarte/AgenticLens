@@ -22,12 +22,11 @@
 - Decomposed the initiative into vertical tracer-bullet Jira tickets under prefix `AL2`:
   - `AL2-6`: Model API Pricing Configuration, Domain Rate-Card Cost Approximation Engine, and Hybrid Ledger Ingestion (Ready)
   - `AL2-7`: Interactive Cost Estimation Dashboards, Hybrid Fleet Analytics, and Rate-Card Simulation (Pending, blocked by AL2-6)
-  - `AL2-8`: Reasoning Effort Telemetry Integration across Fleet KPI Cards, Comparison Tables, and Progression Metrics (Ready)
-- Performed forensic audit of OpenCode SQLite runtime database (`opencode.db`) and confirmed reasoning token tracking:
-  - Table `message`: `tokens.reasoning` JSON property records reasoning tokens per LLM response.
-  - Table `part`: `step-finish` objects track reasoning tokens per execution step.
-  - AgenticLens OpenCode and Codex adapters already extract reasoning tokens into `domain.InvocationTokens.Reasoning` and calculate `WorkflowEfficiency.ReasoningTokens`.
-  - Identified presentation gaps where reasoning effort is missing: Fleet Overview KPI cards, Ticket Comparison Directory rows and columns (`TicketComparisonRow`, `TicketTable.tsx`), cross-ticket comparison cards (`TicketComparisons.tsx`), and progression charts.
+  - `AL2-8`: Ingest Model Reasoning Effort Variants and Surface Deliberation Settings across Platform Views (Ready)
+- Performed forensic audit of OpenCode SQLite runtime database (`opencode.db`) and identified model reasoning effort settings:
+  - OpenCode explicitly records reasoning effort tiers as `variant` in `session.model` (`{"id":"gemini-3.8-flash","providerID":"litellm","variant":"high"}`) and `message.data.model.variant`.
+  - Discovered 1,719 `high`, 89 `medium`, and 1 `low` messages currently stored in the local database.
+  - Scoped `AL2-8` to ingest `variant` into domain facts and present reasoning effort badges across Model Breakdown tables, Deep Dive profile cards, and Live Trace Inspector chips.
 - Created ticket definition files in `alspaces/plan/to-do/`:
   - `alspaces/plan/to-do/AL2-6 model api pricing configuration and rate card cost approximation engine.md`
   - `alspaces/plan/to-do/AL2-7 interactive cost estimation dashboards hybrid fleet analytics and rate card simulation.md`
@@ -48,15 +47,15 @@
 - `alspaces/PO-12/SUMMARY.md`: Session execution log.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 4
-- **Active Agent Duration:** 45m 18s (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 7
+- **Active Agent Duration:** 56m 26s (excludes user wait time)
 - **Context Window Health:** ELEVATED — Root agent peak 167k tokens (84% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 22,948 reasoning tokens (56.3% of generated output)
-- **Tool Health & Self-Correction:** 107 tool calls (1 self-corrections, 99.1% success rate)
+- **Reasoning Effort:** 28,286 reasoning tokens (49.9% of generated output)
+- **Tool Health & Self-Correction:** 149 tool calls (2 self-corrections, 98.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -70,11 +69,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **general** | 1 | 3,186,270 | 17,835 | 6,966,935 | 68.6% | 167k | ELEVATED | $3.07 |
-| **Total** | **1** | **3,186,270** | **17,835** | **6,966,935** | **68.6%** | **167k** | **ELEVATED** | **$3.07** |
+| **general** | 1 | 3,951,555 | 28,385 | 8,545,815 | 68.4% | 167k | ELEVATED | $3.82 |
+| **Total** | **1** | **3,951,555** | **28,385** | **8,545,815** | **68.4%** | **167k** | **ELEVATED** | **$3.82** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 1 | 3,186,270 | 17,835 | 6,966,935 | 68.6% | $3.07 |
-| **Total** | **1** | **3,186,270** | **17,835** | **6,966,935** | **68.6%** | **$3.07** |
+| **gemini-3.8-flash** | 1 | 3,951,555 | 28,385 | 8,545,815 | 68.4% | $3.82 |
+| **Total** | **1** | **3,951,555** | **28,385** | **8,545,815** | **68.4%** | **$3.82** |

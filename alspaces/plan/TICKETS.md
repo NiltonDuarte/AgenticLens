@@ -52,9 +52,9 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: AL2-7
   - **File**: `alspaces/plan/to-do/AL2-6 model api pricing configuration and rate card cost approximation engine.md`
 
-- **AL2-8**: Reasoning Effort Telemetry Integration across Fleet KPI Cards, Comparison Tables, and Progression Metrics
-  - **Subsystem**: Domain / Adapters / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 8 (v2 Observability & Metrics)
+- **AL2-8**: Ingest Model Reasoning Effort Variants and Surface Deliberation Settings across Platform Views
+  - **Subsystem**: Domain / Adapters / OpenCode / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 8 (v2 Observability & Models)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None

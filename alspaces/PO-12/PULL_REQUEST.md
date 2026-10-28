@@ -18,12 +18,10 @@ Codex sessions executed under subscription plans emit `$0.00` or null costs whil
   - Multi-mode cost toggles (`Measured Spend`, `Estimated Equivalent`, `Combined Hybrid`) in Fleet Overview and Ticket Comparisons.
   - Dynamic scatter plot and progression timeline re-projections based on active cost mode.
   - Interactive rate-card simulation drawer for modeling pricing adjustments against historical token traces.
-- **AL2-8**: Reasoning Effort Telemetry Integration across Fleet KPI Cards, Comparison Tables, and Progression Metrics (Ready)
-  - End-to-end exposure of reasoning tokens and ratio in `TicketComparisonRow` across domain models, JSON DTOs, and web views.
-  - Prominent "Reasoning Effort" KPI card in Fleet Overview.
-  - Sortable Reasoning Effort column in the Ticket Directory table (`TicketTable.tsx`).
-  - Reasoning metrics in ticket comparison cards and scatter plot metric pickers.
-  - Verification that OpenCode SQLite database already tracks reasoning tokens in `message` and `part` (`step-finish`) records.
+- **AL2-8**: Ingest Model Reasoning Effort Variants and Surface Deliberation Settings across Platform Views (Ready)
+  - Extract reasoning effort `variant` (`low` | `medium` | `high`) from OpenCode `session.model` and `message.data.model`.
+  - Attach `ReasoningEffort` to domain facts (`InvocationFact`, `SessionFact`, `ModelFact`) and HTTP DTOs.
+  - Surface reasoning effort pill badges (`HIGH`, `MED`, `LOW`) in Model Breakdown tables, Deep Dive cards, and Live Trace Inspector chips.
 
 ## Empirical Findings: AL-56 Cost Analysis
 

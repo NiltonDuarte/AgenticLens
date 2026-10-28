@@ -89,29 +89,30 @@ model_pricing:
    - Status: Pending (Tier 2)
    - Vertical Slice: Multi-mode cost toggles (Measured vs Estimated vs Hybrid) in Fleet Overview and Ticket Comparisons, dynamic scatter plot re-projection, and rate-card simulation drawer.
    - Blocked by: AL2-6
-3. **AL2-8**: Reasoning Effort Telemetry Integration across Fleet KPI Cards, Comparison Tables, and Progression Metrics
+3. **AL2-8**: Ingest Model Reasoning Effort Variants and Surface Deliberation Settings across Platform Views
    - Status: Ready (Tier 1)
-   - Vertical Slice: Exposing reasoning tokens and ratio in `TicketComparisonRow` across domain and DTOs, adding a dedicated Fleet Overview KPI card, sortable Ticket Directory column, cross-ticket comparison cards, and model breakdown telemetry.
+   - Vertical Slice: Parsing `variant` (`low` | `medium` | `high`) from OpenCode `session.model` and `message.data.model`, propagating reasoning effort into domain facts, DTOs, and rendering reasoning effort badges across Model Breakdown tables, Deep Dive profile cards, and Live Trace Inspector.
    - Blocked by: None
 
 ---
 
-## Technical Audit: Reasoning Effort Data in OpenCode & Telemetry Pipelines
+## Technical Audit: Reasoning Effort (`variant`) in OpenCode Database
 
 ### 1. Data Availability in OpenCode
-Audit of the OpenCode SQLite schema and ingestion adapters confirms reasoning tokens are already tracked at runtime:
-- **`message` table**: The JSON payload in the `data` column contains `tokens.reasoning` (e.g. `{"input": 160, "output": 51, "reasoning": 588, "cache": {"read": 22598}}`).
-- **`part` table**: `step-finish` objects record `tokens.reasoning` per step execution.
-- **OpenCode Adapter** (`backend/internal/adapters/opencode/extractor.go`): Deserializes `rawTokensInfo.Reasoning` and aggregates it into session models and `domain.InvocationTokens.Reasoning`.
-- **Codex Adapter** (`backend/internal/adapters/codex/rollout.go`): Directly maps `Usage.Reasoning` to `domain.InvocationTokens.Reasoning`.
+Forensic inspection of the OpenCode SQLite database (`~/.local/share/opencode/opencode.db`) reveals that reasoning effort settings (`low`, `medium`, `high`) are explicitly persisted under the **`variant`** property of the model descriptor:
+- **`session` table (`model` JSON column)**:
+  `{"id": "gemini-3.8-flash", "providerID": "litellm", "variant": "high"}`
+- **`message` table (`data` JSON column)**:
+  `{"providerID": "litellm", "modelID": "gemini-3.8-flash", "variant": "high"}`
+- **Database Frequency Distribution**:
+  - `high`: 1,719 messages
+  - `medium`: 89 messages
+  - `low`: 1 message
+  - `default` / `null`: Unspecified or non-thinking models
 
-### 2. Current vs Missing Presentation Surfaces
-- **Currently Surfaced**:
-  - CLI Markdown Summary (`formatters.go`): Emits `Reasoning Effort: X tokens (Y% of generated output)`.
-  - Ticket Deep Dive Profile Card (`TicketDeepDive.tsx`): Displays `Reasoning Tokens` and `Reasoning Ratio %`.
-  - Live Trace Inspector (`LiveTraceInspector.tsx`): Renders reasoning chips and deliberation blocks.
-- **Missing / Gaps Addressed by AL2-8**:
-  - Fleet Overview KPI Row: Missing reasoning volume card despite `FleetSummary.total_reasoning_tokens` and `overall_reasoning_ratio_pct` already computed in domain aggregations.
-  - Ticket Directory Table (`TicketTable.tsx`): Missing reasoning token column and natural sorting.
-  - Ticket Comparison Matrix (`TicketComparisons.tsx`): Missing reasoning metrics in comparison cards and scatter plot pickers.
-  - Progression Analytics: Missing reasoning series in historical progression charts.
+In addition, quantitative reasoning tokens are tracked in `message.data.tokens.reasoning` and `part.data.tokens.reasoning` (e.g. 554, 218, 588 tokens per invocation), and full thought text is preserved in `part` records where `type = 'reasoning'`.
+
+### 2. Architectural Scope of AL2-8
+- **Extraction**: Extend `backend/internal/adapters/opencode/extractor.go` to parse `variant` from `session.model` and `message.data.model.variant`, mapping into canonical strings (`"low" | "medium" | "high"`).
+- **Domain Modeling**: Add `ReasoningEffort string` to `InvocationFact`, `SessionFact`, and `ModelFact`.
+- **Presentation**: Render reasoning effort badges (`HIGH`, `MED`, `LOW`) in Model Breakdown tables (`ModelBreakdownTable.tsx`), Deep Dive profile cards, and Live Trace chips (`LiveTraceInspector.tsx`).
