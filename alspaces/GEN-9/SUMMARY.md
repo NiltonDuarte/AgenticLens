@@ -14,16 +14,18 @@ Iteration 02: requested metrics from both harnesses. The local Codex CLI rollout
 
 Iteration 03: downgraded OpenCode to v1.19.5 using its official v1 installer. This restores the v1 release line expected by the current AgenticLens OpenCode database extractor. The OpenCode ChatGPT OAuth flow remains available through `/connect` > OpenAI > ChatGPT Plus/Pro; interactive sign-in is still pending.
 
+Iteration 04: stopped the OpenCode background service, purged `~/.opencode`, `~/.local/share/opencode`, `~/.config/opencode`, `~/.cache/opencode`, and `~/.local/state/opencode`, then reinstalled v1.19.5. `opencode db path` initialized a fresh database; schema inspection confirmed it has the v1 `session` table and no v2 `session_v2` table. This reset removed saved OpenCode sessions and credentials, so ChatGPT OAuth must be completed again.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 3m 59s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 87.2k tokens (44% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 7
+- **Active Agent Duration:** 5m 10s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 104.9k tokens (53% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 10,038 reasoning tokens (34.6% of generated output)
-- **Tool Health & Self-Correction:** 36 tool calls (3 self-corrections, 91.7% success rate)
+- **Reasoning Effort:** 15,055 reasoning tokens (36.0% of generated output)
+- **Tool Health & Self-Correction:** 48 tool calls (3 self-corrections, 93.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -33,11 +35,11 @@ Iteration 03: downgraded OpenCode to v1.19.5 using its official v1 installer. Th
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 84,974 | 18,972 | 2,870,016 | 97.1% | 87.2k | HEALTHY | $0.00 |
-| **Total** | **1** | **84,974** | **18,972** | **2,870,016** | **97.1%** | **87.2k** | **HEALTHY** | **$0.00** |
+| **rootagent** | 1 | 103,281 | 26,712 | 4,538,880 | 97.8% | 104.9k | ELEVATED | $0.00 |
+| **Total** | **1** | **103,281** | **26,712** | **4,538,880** | **97.8%** | **104.9k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 1 | 84,974 | 18,972 | 2,870,016 | 97.1% | $0.00 |
-| **Total** | **1** | **84,974** | **18,972** | **2,870,016** | **97.1%** | **$0.00** |
+| **gpt-6-luna** | 1 | 103,281 | 26,712 | 4,538,880 | 97.8% | $0.00 |
+| **Total** | **1** | **103,281** | **26,712** | **4,538,880** | **97.8%** | **$0.00** |

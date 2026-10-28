@@ -8,6 +8,8 @@ opencode --version
 
 If the shell cannot find it, run `~/.opencode/bin/opencode` directly.
 
+The previous OpenCode data, config, cache, and state directories were purged to remove the incompatible v2 database. OpenCode now initializes a fresh v1 database. Sign in again with `/connect` before using OpenAI models.
+
 ## Sign OpenCode in with your ChatGPT plan
 
 OpenCode 1.x documents OpenAI sign-in using ChatGPT Plus or Pro, with usage charged against the plan's included usage rather than OpenAI API billing. In the AgenticLens checkout:
