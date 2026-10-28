@@ -1,0 +1,21 @@
+{
+  "schema_version": 4,
+  "ticket_id": "GEN-9",
+  "ticket_title": "OpenCode install and ChatGPT subscription usage guide",
+  "ticket_type": "chore",
+  "started_at": null,
+  "completed_at": "2026-10-28T22:50:03.579946+00:00",
+  "updated_at": "2026-10-28T22:50:03.579946+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 0
+  },
+  "sessions": [],
+  "anomalies": []
+}
