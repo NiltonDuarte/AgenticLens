@@ -4,8 +4,8 @@
   "ticket_title": "Preserve Codex rollout session trees during backfill",
   "ticket_type": "fix",
   "started_at": "2026-10-28T07:37:23.592Z",
-  "completed_at": "2026-10-28T09:30:09.149Z",
-  "updated_at": "2026-10-28T09:30:10.836239+00:00",
+  "completed_at": "2026-10-28T09:33:43.287Z",
+  "updated_at": "2026-10-28T09:33:43.639763+00:00",
   "code": {
     "lines_added": 297,
     "lines_deleted": 9,
@@ -14,7 +14,7 @@
     "prod_lines_added": 71,
     "prod_lines_deleted": 9,
     "files_changed": 2,
-    "sdlc_iterations": 14
+    "sdlc_iterations": 16
   },
   "sessions": [
     {
@@ -28,25 +28,25 @@
           "model": "gpt-6-luna",
           "user": "",
           "started_at": "2026-10-28T07:37:24.372Z",
-          "completed_at": "2026-10-28T09:30:09.149Z",
-          "active_duration_seconds": 1641,
-          "turns": 11,
+          "completed_at": "2026-10-28T09:33:43.287Z",
+          "active_duration_seconds": 1752,
+          "turns": 13,
           "tokens": {
-            "input": 438953,
-            "output": 48627,
-            "cache_read": 20592512,
-            "reasoning": 25260,
+            "input": 459995,
+            "output": 53885,
+            "cache_read": 21887360,
+            "reasoning": 27348,
             "peak_context": 186136
           },
           "cost_usd": 0,
           "compactions": 1,
-          "user_iterations": 14
+          "user_iterations": 16
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 88,
+          "calls": 102,
           "errors": 6
         },
         {

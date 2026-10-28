@@ -1,5 +1,7 @@
 # fix(backfill): preserve Codex rollout session trees (FIX-8)
 
+Iteration 07 applies the FIX-8 Codex tree backfill to AL-56. It refreshed 17 Codex session records, preserved 39 session IDs and 28 Codex invocations, left all 13 OpenCode records unchanged, and updated AL-56's summary metrics.
+
 Iteration 06 merges the latest `origin/main` into the FIX-8 branch. The merge completed without conflicts and `make` passed.
 
 Iteration 05 regenerates the FIX-8 metrics ledger from the Codex root session using `--source codex`, replacing the earlier empty OpenCode-source ledger.

@@ -1,5 +1,9 @@
 # FIX-8 Work Summary
 
+## Iteration 07: AL-56 Codex Session Backfill
+
+Ran the AgenticLens backfill scoped to AL-56 with `--source codex --recompute-db --force --update-summaries`. The command updated one ledger. It refreshed 17 Codex session records while preserving all 39 session IDs, all 13 OpenCode records unchanged, and all 28 Codex invocations. AL-56's rendered summary metrics were refreshed.
+
 ## Iteration 06: Main Branch Sync
 
 Merged `origin/main` into `fix/FIX-8-codex-session-tree-refresh` without conflicts. `make` passed, including Go vet, frontend typecheck and lint, Go race tests, all 727 frontend tests, frontend production build, and multi-platform binary builds. Dependency installation reported six npm audit findings (three moderate, one high, two critical); no dependency changes were made.
@@ -40,15 +44,15 @@ Added coverage for root-plus-child replacement, single-session replacement, disc
 - Independent review — APPROVED. Review noted no direct test of combine/grouping failure branches; those failures occur before the staged replacement mutates stored sessions.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 14
-- **Active Agent Duration:** 27m 21s (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 16
+- **Active Agent Duration:** 29m 12s (excludes user wait time)
 - **Context Window Health:** ELEVATED — Root agent peak 186.1k tokens (93% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 3.2:1 (+226 test lines / +71 prod lines)
 - **Code Delivered:** +297 / -9 lines across 2 code files (excluding docs)
-- **Reasoning Effort:** 25,260 reasoning tokens (34.2% of generated output)
-- **Tool Health & Self-Correction:** 102 tool calls (6 self-corrections, 94.1% success rate)
+- **Reasoning Effort:** 27,348 reasoning tokens (33.7% of generated output)
+- **Tool Health & Self-Correction:** 116 tool calls (6 self-corrections, 94.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 1 execution anomaly detected (1 CRITICAL).
@@ -59,11 +63,11 @@ Added coverage for root-plus-child replacement, single-session replacement, disc
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 438,953 | 48,627 | 20,592,512 | 97.9% | 186.1k | ELEVATED | $0.00 |
-| **Total** | **1** | **438,953** | **48,627** | **20,592,512** | **97.9%** | **186.1k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 459,995 | 53,885 | 21,887,360 | 97.9% | 186.1k | ELEVATED | $0.00 |
+| **Total** | **1** | **459,995** | **53,885** | **21,887,360** | **97.9%** | **186.1k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 1 | 438,953 | 48,627 | 20,592,512 | 97.9% | $0.00 |
-| **Total** | **1** | **438,953** | **48,627** | **20,592,512** | **97.9%** | **$0.00** |
+| **gpt-6-luna** | 1 | 459,995 | 53,885 | 21,887,360 | 97.9% | $0.00 |
+| **Total** | **1** | **459,995** | **53,885** | **21,887,360** | **97.9%** | **$0.00** |
