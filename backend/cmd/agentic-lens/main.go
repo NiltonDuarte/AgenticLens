@@ -83,7 +83,7 @@ func runGenerate(args []string) {
 			if errors.As(err, &valErr) {
 				for _, f := range valErr.MissingFields {
 					if f == "workspaces.src_folders" || f == "code_metrics.source_roots" {
-						fmt.Fprintf(os.Stderr, "Error: workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml\n")
+						fmt.Fprintf(os.Stderr, "Error: source roots are empty or unconfigured: configure 'code_metrics.source_roots' (recommended) or 'workspaces.src_folders' (backward-compatible) in .agenticlens-config.yaml\n")
 						os.Exit(1)
 					}
 				}

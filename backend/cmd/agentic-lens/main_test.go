@@ -4537,7 +4537,7 @@ func TestCLI_Invariants(t *testing.T) {
 		}
 	})
 
-	t.Run("fatal on empty src_folders", func(t *testing.T) {
+	t.Run("fatal on missing source roots", func(t *testing.T) {
 		tempDir := t.TempDir()
 
 		runCmd := func(args ...string) {
@@ -4578,10 +4578,10 @@ func TestCLI_Invariants(t *testing.T) {
 
 		err := cmd.Run()
 		if err == nil {
-			t.Fatal("expected generate command to fail with empty src_folders, got exit code 0")
+			t.Fatal("expected generate command to fail with missing source roots, got exit code 0")
 		}
 
-		expectedPrompt := "workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml"
+		expectedPrompt := "source roots are empty or unconfigured: configure 'code_metrics.source_roots' (recommended) or 'workspaces.src_folders' (backward-compatible) in .agenticlens-config.yaml"
 		if !strings.Contains(stderr.String(), expectedPrompt) {
 			t.Errorf("expected stderr to contain %q, got %q", expectedPrompt, stderr.String())
 		}
