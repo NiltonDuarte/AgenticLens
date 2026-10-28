@@ -3,9 +3,9 @@
   "ticket_id": "GEN-9",
   "ticket_title": "OpenCode install and ChatGPT subscription usage guide",
   "ticket_type": "chore",
-  "started_at": null,
-  "completed_at": "2026-10-28T22:50:03.579946+00:00",
-  "updated_at": "2026-10-28T22:50:03.579946+00:00",
+  "started_at": "2026-10-28T22:48:31.177Z",
+  "completed_at": "2026-10-28T22:57:21.601Z",
+  "updated_at": "2026-10-28T22:57:22.425459+00:00",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -14,8 +14,44 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 0
+    "sdlc_iterations": 3
   },
-  "sessions": [],
+  "sessions": [
+    {
+      "id": "01a184b3-62a7-71d2-b1ee-5f8d9190072c",
+      "source": "codex",
+      "invocations": [
+        {
+          "id": "01a184b3-62a7-71d2-b1ee-5f8d9190072c",
+          "parent_id": null,
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "user": "",
+          "started_at": "2026-10-28T22:48:32.171Z",
+          "completed_at": "2026-10-28T22:57:21.601Z",
+          "active_duration_seconds": 116,
+          "turns": 2,
+          "tokens": {
+            "input": 65359,
+            "output": 14970,
+            "cache_read": 1870848,
+            "reasoning": 8372,
+            "peak_context": 70071
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 29,
+          "errors": 2
+        }
+      ],
+      "anomalies": []
+    }
+  ],
   "anomalies": []
 }

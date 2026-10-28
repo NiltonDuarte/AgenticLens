@@ -9,3 +9,4 @@ See `alspaces/GEN-9/CONTRACT.md`, `alspaces/GEN-9/USAGE.md`, and `alspaces/GEN-9
 ## Verification
 - Verified the installed OpenCode version and existing Codex ChatGPT login.
 - OpenCode OAuth remains for the user to complete interactively.
+- GEN-9 metrics include one Codex session. No OpenCode session was attributed because the only local OpenCode v2 session is unrelated and the current extractor expects the legacy database schema.
