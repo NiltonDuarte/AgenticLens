@@ -4,16 +4,16 @@
   "ticket_title": "Backfill Multi-Root Sessions and Require Explicit Command Line Fallbacks",
   "ticket_type": "fix",
   "started_at": "2026-10-28T17:44:06.446000+00:00",
-  "completed_at": "2026-10-28T23:04:43.749000+00:00",
-  "updated_at": "2026-10-28T23:04:53.629229+00:00",
+  "completed_at": "2026-10-28T23:08:19.285000+00:00",
+  "updated_at": "2026-10-28T23:08:30.508634+00:00",
   "code": {
-    "lines_added": 2208,
-    "lines_deleted": 907,
-    "test_lines_added": 1546,
-    "test_lines_deleted": 485,
-    "prod_lines_added": 576,
-    "prod_lines_deleted": 336,
-    "files_changed": 41,
+    "lines_added": 2522,
+    "lines_deleted": 1336,
+    "test_lines_added": 1813,
+    "test_lines_deleted": 865,
+    "prod_lines_added": 623,
+    "prod_lines_deleted": 385,
+    "files_changed": 62,
     "sdlc_iterations": 20
   },
   "sessions": [
@@ -28,17 +28,17 @@
           "role": "coder",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-28T22:35:38.534000+00:00",
-          "completed_at": "2026-10-28T23:04:43.749000+00:00",
-          "active_duration_seconds": 1742,
-          "turns": 314,
+          "completed_at": "2026-10-28T23:07:32.374000+00:00",
+          "active_duration_seconds": 1910,
+          "turns": 344,
           "tokens": {
-            "input": 1634386,
-            "output": 43836,
-            "cache_read": 27555056,
-            "reasoning": 61981,
+            "input": 1777406,
+            "output": 46092,
+            "cache_read": 29666070,
+            "reasoning": 64295,
             "peak_context": 168353
           },
-          "cost_usd": 3.689232,
+          "cost_usd": 3.971961,
           "compactions": 2,
           "user_iterations": 0
         }
@@ -46,12 +46,12 @@
       "tools": [
         {
           "name": "read",
-          "calls": 151,
+          "calls": 152,
           "errors": 0
         },
         {
           "name": "bash",
-          "calls": 62,
+          "calls": 89,
           "errors": 0
         },
         {
@@ -67,6 +67,11 @@
         {
           "name": "glob",
           "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "t3-code_link_pull_request",
+          "calls": 1,
           "errors": 0
         },
         {
@@ -478,17 +483,17 @@
           "role": "orchestrator",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-28T17:44:06.801000+00:00",
-          "completed_at": "2026-10-28T22:35:27.583000+00:00",
-          "active_duration_seconds": 13096,
-          "turns": 682,
+          "completed_at": "2026-10-28T23:08:19.285000+00:00",
+          "active_duration_seconds": 15068,
+          "turns": 692,
           "tokens": {
-            "input": 4995879,
-            "output": 92275,
-            "cache_read": 51733760,
-            "reasoning": 149992,
+            "input": 5261607,
+            "output": 93224,
+            "cache_read": 52654100,
+            "reasoning": 151154,
             "peak_context": 169194
           },
-          "cost_usd": 8.535443,
+          "cost_usd": 8.81168,
           "compactions": 5,
           "user_iterations": 20
         }
@@ -496,12 +501,12 @@
       "tools": [
         {
           "name": "bash",
-          "calls": 244,
+          "calls": 248,
           "errors": 2
         },
         {
           "name": "read",
-          "calls": 229,
+          "calls": 233,
           "errors": 0
         },
         {
@@ -520,14 +525,14 @@
           "errors": 0
         },
         {
+          "name": "glob",
+          "calls": 10,
+          "errors": 0
+        },
+        {
           "name": "task",
           "calls": 9,
           "errors": 3
-        },
-        {
-          "name": "glob",
-          "calls": 8,
-          "errors": 0
         },
         {
           "name": "skill",

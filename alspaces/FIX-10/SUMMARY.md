@@ -36,14 +36,14 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 20
-- **Active Agent Duration:** 5h 15m (excludes user wait time)
+- **Active Agent Duration:** 5h 51m (excludes user wait time)
 - **Context Window Health:** ELEVATED — Root agent peak 169.2k tokens (85% of 200k healthy ceiling, 10 compactions) | Subagents peak 168.4k (Coder)
 - **Role Effort Distribution (Subagents):** Coder 100.0%
-- **Subagent Turn Velocity & Thrashing:** 148.2 avg turns/run (peak: 352 turns) | Coder 148.2
-- **Test-to-Production Code Ratio:** 2.7:1 (+1,546 test lines / +576 prod lines)
-- **Code Delivered:** +2,208 / -907 lines across 41 code files (excluding docs)
-- **Reasoning Effort:** 398,844 reasoning tokens (64.3% of generated output)
-- **Tool Health & Self-Correction:** 1,521 tool calls (15 self-corrections, 99.0% success rate)
+- **Subagent Turn Velocity & Thrashing:** 153.2 avg turns/run (peak: 352 turns) | Coder 153.2
+- **Test-to-Production Code Ratio:** 2.9:1 (+1,813 test lines / +623 prod lines)
+- **Code Delivered:** +2,522 / -1,336 lines across 62 code files (excluding docs)
+- **Reasoning Effort:** 402,320 reasoning tokens (64.2% of generated output)
+- **Tool Health & Self-Correction:** 1,560 tool calls (15 self-corrections, 99.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 17 execution anomalies detected (8 CRITICAL, 9 WARNING).
@@ -72,12 +72,12 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 1 | 4,995,879 | 92,275 | 51,733,760 | 91.2% | 169.2k | ELEVATED | $8.54 |
-| **coder** | 6 | 5,011,507 | 129,016 | 73,069,286 | 93.6% | 168.4k | ELEVATED | $10.66 |
-| **Total** | **7** | **10,007,386** | **221,291** | **124,803,046** | **92.6%** | **169.2k** | **ELEVATED** | **$19.19** |
+| **orchestrator** | 1 | 5,261,607 | 93,224 | 52,654,100 | 90.9% | 169.2k | ELEVATED | $8.81 |
+| **coder** | 6 | 5,154,527 | 131,272 | 75,180,300 | 93.6% | 168.4k | ELEVATED | $10.94 |
+| **Total** | **7** | **10,416,134** | **224,496** | **127,834,400** | **92.5%** | **169.2k** | **ELEVATED** | **$19.75** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gemini-3.8-flash** | 7 | 10,007,386 | 221,291 | 124,803,046 | 92.6% | $19.19 |
-| **Total** | **7** | **10,007,386** | **221,291** | **124,803,046** | **92.6%** | **$19.19** |
+| **gemini-3.8-flash** | 7 | 10,416,134 | 224,496 | 127,834,400 | 92.5% | $19.75 |
+| **Total** | **7** | **10,416,134** | **224,496** | **127,834,400** | **92.5%** | **$19.75** |
