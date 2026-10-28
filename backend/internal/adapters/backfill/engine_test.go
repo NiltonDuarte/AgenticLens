@@ -537,7 +537,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if err := adapters.ValidateRuntimeFactLedger(dataB2); err != nil {
 		t.Errorf("final successful backfill should produce a runtime-ready ledger: %v", err)
 	}
-	if len(loadedB2.Sessions) != 1 || len(loadedB2.Sessions[0].Invocations) != 1 || loadedB2.Sessions[0].Invocations[0].ID != "sess-b1" {
+	if len(loadedB2.Sessions) != 1 || len(loadedB2.Sessions[0].Invocations) != 1 || loadedB2.Sessions[0].ID != "sess-b1" {
 		t.Errorf("expected refreshed invocation sess-b1 in session snapshot, got %v", loadedB2.Sessions)
 	}
 }
@@ -962,8 +962,8 @@ func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
 	}
 	engine.parseCodexRollout = func(string) (codex.Transcript, error) {
 		return codex.Transcript{Invocations: []domain.InvocationFact{
-			{ID: "root", Role: "orchestrator", Model: "fresh-model"},
-			{ID: "child", ParentID: &childParent, Role: "coder", Model: "fresh-model"},
+			{ID: "root-inv-1", Role: "orchestrator", Model: "fresh-model"},
+			{ID: "child-inv-1", Role: "coder", Model: "fresh-model"},
 		}, Tools: []domain.ToolFact{
 			{SessionID: "root", Name: "fresh-root", Calls: 2},
 			{SessionID: "child", Name: "fresh-child", Calls: 3},
@@ -1308,5 +1308,125 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 
 	if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "ses-review-999" {
 		t.Fatalf("expected resolved session ses-review-999 via fallback, got %+v", parsed.Sessions)
+	}
+}
+
+func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
+	tempDir := t.TempDir()
+	ticketID := "FIX-10-CODEX-HIERARCHY"
+	parentID := "codex-root"
+	version := domain.CurrentSchemaVersion
+	ledger := domain.AgenticFactLedger{
+		SchemaVersion: &version,
+		TicketID:      &ticketID,
+		Sessions: []domain.SessionFact{
+			{
+				ID:     "codex-root",
+				Source: domain.SourceCodex,
+				User:   "dev-lead",
+				Invocations: []domain.InvocationFact{
+					{ID: "codex-root-inv-1", Role: "orchestrator", Model: "gpt-4"},
+				},
+				Tools: []domain.SessionToolFact{{Name: "bash", Calls: 1}},
+			},
+			{
+				ID:       "codex-child",
+				ParentID: &parentID,
+				Source:   domain.SourceCodex,
+				User:     "dev-subagent",
+				Invocations: []domain.InvocationFact{
+					{ID: "codex-child-inv-1", Role: "coder", Model: "gpt-4"},
+				},
+				Tools: []domain.SessionToolFact{{Name: "edit", Calls: 2}},
+			},
+		},
+	}
+	createTestWorkspace(t, tempDir, ticketID, ledger)
+
+	engine := NewEngine()
+	engine.discoverCodexRollouts = func(options codex.DiscoveryOptions) ([]string, error) {
+		if options.SessionID == "codex-root" {
+			return []string{"root-path", "child-path"}, nil
+		}
+		return nil, nil
+	}
+	engine.parseCodexRollout = func(path string) (codex.Transcript, error) {
+		if path == "root-path" {
+			return codex.Transcript{
+				ThreadID:  "codex-root",
+				SessionID: "codex-root",
+				Invocations: []domain.InvocationFact{
+					{ID: "codex-root-inv-1", Role: "orchestrator", Model: "gpt-4o"},
+				},
+				Tools: []domain.ToolFact{
+					{SessionID: "codex-root", Name: "bash", Calls: 3},
+				},
+			}, nil
+		}
+		return codex.Transcript{
+			ThreadID:     "codex-child",
+			SessionID:    "codex-child",
+			ParentThread: "codex-root",
+			Invocations: []domain.InvocationFact{
+				{ID: "codex-child-inv-1", Role: "coder", Model: "gpt-4o"},
+			},
+			Tools: []domain.ToolFact{
+				{SessionID: "codex-child", Name: "edit", Calls: 5},
+			},
+		}, nil
+	}
+
+	report, err := engine.Execute(BackfillOptions{
+		WorkspacesDir: tempDir,
+		TicketID:      ticketID,
+		Source:        "codex",
+		CodexHome:     tempDir,
+		RecomputeDB:   true,
+		Force:         true,
+	})
+	if err != nil {
+		t.Fatalf("backfill failed: %v", err)
+	}
+	if len(report.Results) != 1 || !report.Results[0].DBUpdated || !report.Results[0].DBFound {
+		t.Fatalf("expected DBUpdated and DBFound true, got: %+v", report.Results)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatalf("reading updated ledger: %v", err)
+	}
+	var parsed adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("unmarshaling updated ledger: %v", err)
+	}
+
+	if len(parsed.Sessions) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(parsed.Sessions))
+	}
+	byID := make(map[string]adapters.SessionFactDTO)
+	for _, s := range parsed.Sessions {
+		byID[s.ID] = s
+	}
+
+	rootSess, hasRoot := byID["codex-root"]
+	if !hasRoot {
+		t.Fatalf("missing codex-root in refreshed sessions: %+v", parsed.Sessions)
+	}
+	if rootSess.ParentID != nil {
+		t.Errorf("expected root ParentID to be nil, got %v", *rootSess.ParentID)
+	}
+	if rootSess.User != "dev-lead" {
+		t.Errorf("expected root User='dev-lead', got %q", rootSess.User)
+	}
+
+	childSess, hasChild := byID["codex-child"]
+	if !hasChild {
+		t.Fatalf("missing codex-child in refreshed sessions: %+v", parsed.Sessions)
+	}
+	if childSess.ParentID == nil || *childSess.ParentID != "codex-root" {
+		t.Fatalf("expected child ParentID='codex-root', got %v", childSess.ParentID)
+	}
+	if childSess.User != "dev-subagent" {
+		t.Errorf("expected child User='dev-subagent', got %q", childSess.User)
 	}
 }

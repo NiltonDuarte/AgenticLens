@@ -37,10 +37,10 @@ func (dto InvocationTokensDTO) ToDomain() domain.InvocationTokens {
 // InvocationFactDTO represents a single invocation fact in JSON boundary serialization.
 type InvocationFactDTO struct {
 	ID                    string              `json:"id"`
-	ParentID              *string             `json:"parent_id"`
+	ParentID              *string             `json:"parent_id,omitempty"`
 	Role                  string              `json:"role"`
 	Model                 string              `json:"model"`
-	User                  string              `json:"user"`
+	User                  string              `json:"user,omitempty"`
 	StartedAt             *string             `json:"started_at"`
 	CompletedAt           *string             `json:"completed_at"`
 	ActiveDurationSeconds int64               `json:"active_duration_seconds"`
@@ -54,10 +54,8 @@ type InvocationFactDTO struct {
 func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 	return domain.InvocationFact{
 		ID:                    dto.ID,
-		ParentID:              dto.ParentID,
 		Role:                  domain.AgentRole(dto.Role),
 		Model:                 dto.Model,
-		User:                  dto.User,
 		StartedAt:             dto.StartedAt,
 		CompletedAt:           dto.CompletedAt,
 		ActiveDurationSeconds: dto.ActiveDurationSeconds,
@@ -73,10 +71,8 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 	return InvocationFactDTO{
 		ID:                    inv.ID,
-		ParentID:              inv.ParentID,
 		Role:                  string(inv.Role),
 		Model:                 inv.Model,
-		User:                  inv.User,
 		StartedAt:             inv.StartedAt,
 		CompletedAt:           inv.CompletedAt,
 		ActiveDurationSeconds: inv.ActiveDurationSeconds,
@@ -149,6 +145,7 @@ type SessionFactDTO struct {
 	ID          string                `json:"id"`
 	ParentID    *string               `json:"parent_id,omitempty"`
 	Source      string                `json:"source,omitempty"`
+	User        string                `json:"user,omitempty"`
 	Invocations []InvocationFactDTO   `json:"invocations"`
 	Tools       []SessionToolFactDTO  `json:"tools"`
 	Events      []SessionEventFactDTO `json:"events,omitempty"`
@@ -359,7 +356,7 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			if err := json.Unmarshal(rawInvocation, &invocation); err != nil {
 				return fmt.Errorf("canonical schema v4 invocation %d in session %d is invalid", ii, si)
 			}
-			for _, required := range []string{"id", "parent_id", "role", "model", "user", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
+			for _, required := range []string{"id", "role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
 				if _, ok := invocation[required]; !ok {
 					return fmt.Errorf("canonical schema v4 invocation %d in session %d is missing required %s", ii, si, required)
 				}
@@ -464,7 +461,22 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		if sessionSource == "" && dto.Source != "" {
 			sessionSource = domain.SourceHarness(strings.TrimSpace(dto.Source))
 		}
-		sessions[i] = domain.SessionFact{ID: session.ID, ParentID: session.ParentID, Source: sessionSource}
+		user := strings.TrimSpace(session.User)
+		parentID := session.ParentID
+		for _, inv := range session.Invocations {
+			if user == "" && strings.TrimSpace(inv.User) != "" {
+				user = strings.TrimSpace(inv.User)
+			}
+			if parentID == nil && inv.ParentID != nil && strings.TrimSpace(*inv.ParentID) != "" {
+				parentID = inv.ParentID
+			}
+		}
+		sessions[i] = domain.SessionFact{
+			ID:       session.ID,
+			ParentID: parentID,
+			Source:   sessionSource,
+			User:     user,
+		}
 		if session.Anomalies != nil {
 			sessions[i].Anomalies = []domain.Anomaly{}
 		}
@@ -657,7 +669,15 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
 		sessionSource := strings.TrimSpace(string(session.Source))
-		sessions[i] = SessionFactDTO{ID: session.ID, ParentID: session.ParentID, Source: sessionSource, Invocations: []InvocationFactDTO{}, Tools: []SessionToolFactDTO{}, Events: []SessionEventFactDTO{}, Anomalies: []AnomalyDTO{}}
+		sessions[i] = SessionFactDTO{
+			ID:          session.ID,
+			ParentID:    session.ParentID,
+			Source:      sessionSource,
+			User:        session.User,
+			Invocations: []InvocationFactDTO{},
+			Tools:       []SessionToolFactDTO{},
+			Anomalies:   []AnomalyDTO{},
+		}
 		for _, inv := range session.Invocations {
 			sessions[i].Invocations = append(sessions[i].Invocations, InvocationFactDTOFromDomain(inv))
 		}

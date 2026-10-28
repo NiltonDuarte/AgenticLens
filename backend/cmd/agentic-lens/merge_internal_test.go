@@ -7,7 +7,6 @@ import (
 )
 
 func TestMergeInvocations_UnitAdversarial(t *testing.T) {
-	parentID := "ses_parent"
 	cached := []domain.InvocationFact{
 		{
 			ID:             "ses_parent",
@@ -20,7 +19,6 @@ func TestMergeInvocations_UnitAdversarial(t *testing.T) {
 		},
 		{
 			ID:             "ses_subagent",
-			ParentID:       &parentID,
 			Role:           domain.RoleUnassignedSubAgent,
 			Model:          "claude-3-5-sonnet",
 			Turns:          2,

@@ -124,12 +124,12 @@ func TestMetricsLedgerUsesCodexThreadIDForInvocationHierarchy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ledger.Facts.InvocationFacts()) != 1 {
-		t.Fatalf("expected one invocation, got %d", len(ledger.Facts.InvocationFacts()))
+	if len(ledger.Facts.Sessions) != 1 {
+		t.Fatalf("expected one session, got %d", len(ledger.Facts.Sessions))
 	}
-	invocation := ledger.Facts.InvocationFacts()[0]
-	if invocation.ID != "child-thread" || invocation.ParentID == nil || *invocation.ParentID != "root-thread" {
-		t.Fatalf("Codex thread hierarchy was not preserved: %#v", invocation)
+	session := ledger.Facts.Sessions[0]
+	if session.ID != "child-thread" || session.ParentID == nil || *session.ParentID != "root-thread" {
+		t.Fatalf("Codex thread hierarchy was not preserved: %#v", session)
 	}
 }
 
@@ -230,8 +230,8 @@ func TestCombineTranscriptsPreservesPerSessionToolFacts(t *testing.T) {
 			Usage:       codex.Usage{Input: 10, CacheRead: 4},
 		},
 		{
-			ThreadID: "child-thread", StartedAt: "2026-10-25T09:00:03Z", UpdatedAt: "2026-10-25T09:00:08Z",
-			Invocations: []domain.InvocationFact{{ID: "child-thread", ParentID: &parentID}},
+			ThreadID: "child-thread", ParentThread: parentID, StartedAt: "2026-10-25T09:00:03Z", UpdatedAt: "2026-10-25T09:00:08Z",
+			Invocations: []domain.InvocationFact{{ID: "child-thread-inv-1"}},
 			Tools:       []domain.ToolFact{{SessionID: "child-thread", Name: "command", Calls: 1}, {SessionID: "child-thread", Name: "search", Calls: 1}},
 			Events:      []domain.EventFact{{Timestamp: "2026-10-25T09:00:01Z", SessionID: "child-thread"}},
 			Usage:       codex.Usage{Input: 20, CacheRead: 7},
@@ -314,7 +314,7 @@ func TestChildRolloutPreservesIdentityAndSkipsInheritedReplay(t *testing.T) {
 			t.Fatalf("inherited model counted: %+v", transcript.Invocations)
 		}
 		inv := transcript.Invocations[0]
-		if inv.ID != "child" || inv.ParentID == nil || *inv.ParentID != "root" || inv.Role != domain.RoleUnassignedSubAgent || inv.Model != "child-model" {
+		if inv.ID != "child-inv-1" || inv.Role != domain.RoleUnassignedSubAgent || inv.Model != "child-model" {
 			t.Fatalf("incorrect child invocation attribution: %+v", inv)
 		}
 		if inv.Turns != 1 || inv.ActiveDurationSeconds != 2 || inv.Compactions != 0 || inv.Tokens.Input != 20 || inv.Tokens.CacheRead != 10 || inv.Tokens.Output != 2 {

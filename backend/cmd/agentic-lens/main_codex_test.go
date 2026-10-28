@@ -163,21 +163,22 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 		if len(ledger.InvocationFacts()) != 2 {
 			t.Fatalf("expected exactly root and child, got %#v", ledger.InvocationFacts())
 		}
-		byID := make(map[string]domain.InvocationFact)
-		for _, invocation := range ledger.InvocationFacts() {
-			byID[invocation.ID] = invocation
+		byID := make(map[string]domain.SessionFact)
+		for _, session := range ledger.Sessions {
+			byID[session.ID] = session
 		}
-		rootInvocation, rootFound := byID["root-fixture"]
-		childInvocation, childFound := byID["child-fixture"]
+		rootSession, rootFound := byID["root-fixture"]
+		childSession, childFound := byID["child-fixture"]
 		if !rootFound || !childFound {
 			t.Fatalf("missing distinct root/child identity: %#v", byID)
 		}
-		if rootInvocation.ParentID != nil || rootInvocation.Role != domain.RoleRootAgent || rootInvocation.Tokens.Input != 80 {
-			t.Fatalf("incorrect root facts: %#v", rootInvocation)
+		if rootSession.ParentID != nil || len(rootSession.Invocations) == 0 || rootSession.Invocations[0].Role != domain.RoleRootAgent || rootSession.Invocations[0].Tokens.Input != 80 {
+			t.Fatalf("incorrect root facts: %#v", rootSession)
 		}
-		if childInvocation.ParentID == nil || *childInvocation.ParentID != "root-fixture" || childInvocation.Role != domain.AgentRole("coder") {
-			t.Fatalf("incorrect child attribution: %#v", childInvocation)
+		if childSession.ParentID == nil || *childSession.ParentID != "root-fixture" || len(childSession.Invocations) == 0 || childSession.Invocations[0].Role != domain.AgentRole("coder") {
+			t.Fatalf("incorrect child attribution: %#v", childSession)
 		}
+		childInvocation := childSession.Invocations[0]
 		if childInvocation.Model != "fixture-model" || childInvocation.Turns != 1 || childInvocation.ActiveDurationSeconds != 2 || childInvocation.Tokens.Input != 20 || childInvocation.Tokens.CacheRead != 10 || childInvocation.Tokens.Output != 2 {
 			t.Fatalf("inherited history leaked into child usage: %#v", childInvocation)
 		}

@@ -756,9 +756,19 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 
 	// 4. Map session IDs to roles
 	sessionRoleMap := make(map[string]domain.AgentRole)
-	for _, inv := range ledger.Facts.InvocationFacts() {
-		if inv.ID != "" && inv.Role != "" {
-			sessionRoleMap[inv.ID] = inv.Role
+	for _, session := range ledger.Facts.Sessions {
+		for _, inv := range session.Invocations {
+			if session.ID != "" && inv.Role != "" {
+				sessionRoleMap[session.ID] = inv.Role
+				break
+			} else if inv.ID != "" && inv.Role != "" {
+				sessID := inv.ID
+				if idx := strings.Index(sessID, "-inv-"); idx > 0 {
+					sessID = sessID[:idx]
+				}
+				sessionRoleMap[sessID] = inv.Role
+				break
+			}
 		}
 	}
 	for _, sid := range verifiedSessions {
@@ -993,24 +1003,22 @@ func (s *LiveService) hydrateCodexEvents(ticketID string, codexSessions []domain
 	seenPaths := make(map[string]bool)
 	expectedThreadIDs := make(map[string]bool)
 	for _, session := range codexSessions {
-		for _, inv := range session.Invocations {
-			threadID := strings.TrimSpace(inv.ID)
-			if threadID == "" {
-				return fallback, nil
-			}
-			expectedThreadIDs[threadID] = true
-			if inv.ParentID != nil {
-				continue
-			}
-			found, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: inv.ID})
-			if err != nil || len(found) == 0 {
-				return fallback, nil
-			}
-			for _, path := range found {
-				if !seenPaths[path] {
-					seenPaths[path] = true
-					paths = append(paths, path)
-				}
+		sessID := strings.TrimSpace(session.ID)
+		if sessID == "" {
+			return fallback, nil
+		}
+		expectedThreadIDs[sessID] = true
+		if session.ParentID != nil {
+			continue
+		}
+		found, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: session.ID})
+		if err != nil || len(found) == 0 {
+			return fallback, nil
+		}
+		for _, path := range found {
+			if !seenPaths[path] {
+				seenPaths[path] = true
+				paths = append(paths, path)
 			}
 		}
 	}
@@ -1047,11 +1055,44 @@ func (s *LiveService) hydrateCodexEvents(ticketID string, codexSessions []domain
 func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, events []domain.EventFact) []domain.Anomaly {
 	transient := facts
 	transient.Anomalies = nil
-	sessions, err := domain.SessionsFromFacts(facts.InvocationFacts(), facts.ToolFacts(), events)
-	if err != nil {
-		return facts.AnomalyFacts()
+	if len(facts.Sessions) > 0 {
+		eventsBySession := make(map[string][]domain.SessionEventFact)
+		for _, ev := range events {
+			eventsBySession[ev.SessionID] = append(eventsBySession[ev.SessionID], domain.SessionEventFact{
+				EventID:          ev.EventID,
+				Timestamp:        ev.Timestamp,
+				MessageID:        ev.MessageID,
+				Turn:             ev.Turn,
+				Role:             ev.Role,
+				EventType:        ev.EventType,
+				ToolName:         ev.ToolName,
+				Status:           ev.Status,
+				ErrorMessage:     ev.ErrorMessage,
+				DurationMs:       ev.DurationMs,
+				ContextTokens:    ev.ContextTokens,
+				PromptContent:    ev.PromptContent,
+				ReasoningContent: ev.ReasoningContent,
+				ToolInput:        ev.ToolInput,
+				ToolOutput:       ev.ToolOutput,
+			})
+		}
+		clonedSessions := make([]domain.SessionFact, len(facts.Sessions))
+		for i, s := range facts.Sessions {
+			clonedSessions[i] = s
+			if evs, ok := eventsBySession[s.ID]; ok {
+				clonedSessions[i].Events = evs
+			} else {
+				clonedSessions[i].Events = append([]domain.SessionEventFact(nil), s.Events...)
+			}
+		}
+		transient.Sessions = clonedSessions
+	} else {
+		sessions, err := domain.SessionsFromFacts(facts.InvocationFacts(), facts.ToolFacts(), events)
+		if err != nil {
+			return facts.AnomalyFacts()
+		}
+		transient.Sessions = sessions
 	}
-	transient.Sessions = sessions
 	anomalies, err := domain.DetectAnomaliesWithEvidence(transient)
 	if err != nil {
 		return facts.AnomalyFacts()

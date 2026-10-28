@@ -47,10 +47,8 @@ func sampleFactLedger() domain.AgenticFactLedger {
 		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				ID:                    "inv-1",
-				ParentID:              nil,
 				Role:                  "orchestrator",
 				Model:                 "claude-3-opus",
-				User:                  "developer",
 				StartedAt:             stringPtr("2026-10-18T10:00:00Z"),
 				CompletedAt:           stringPtr("2026-10-18T10:30:00Z"),
 				ActiveDurationSeconds: 1800,
@@ -693,21 +691,13 @@ func TestInvariantValidator(t *testing.T) {
 	})
 
 	t.Run("invocation individual field mutations fail", func(t *testing.T) {
-		baseWithParent := base
-		parented := append([]domain.InvocationFact(nil), base.InvocationFacts()...)
-		parented[0].ParentID = stringPtr("parent-1")
-		setInvocationFacts(&baseWithParent, parented)
-
 		cases := []struct {
 			name   string
 			mutate func(*domain.InvocationFact)
 		}{
 			{"id", func(i *domain.InvocationFact) { i.ID = "inv-diff" }},
-			{"parent_id_changed", func(i *domain.InvocationFact) { i.ParentID = stringPtr("parent-2") }},
-			{"parent_id_cleared", func(i *domain.InvocationFact) { i.ParentID = nil }},
 			{"role", func(i *domain.InvocationFact) { i.Role = "reviewer" }},
 			{"model", func(i *domain.InvocationFact) { i.Model = "gpt-4o" }},
-			{"user", func(i *domain.InvocationFact) { i.User = "another-user" }},
 			{"started_at", func(i *domain.InvocationFact) { i.StartedAt = stringPtr("2026-01-01T00:00:00Z") }},
 			{"completed_at", func(i *domain.InvocationFact) { i.CompletedAt = stringPtr("2026-01-01T01:00:00Z") }},
 			{"active_duration", func(i *domain.InvocationFact) { i.ActiveDurationSeconds = 9999 }},
@@ -723,11 +713,11 @@ func TestInvariantValidator(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				m := baseWithParent
-				invs := append([]domain.InvocationFact(nil), baseWithParent.InvocationFacts()...)
+				m := base
+				invs := append([]domain.InvocationFact(nil), base.InvocationFacts()...)
 				tc.mutate(&invs[0])
 				setInvocationFacts(&m, invs)
-				err := validator.Validate(baseWithParent, m, 2)
+				err := validator.Validate(base, m, 2)
 				if !errors.Is(err, migration.ErrInvariantViolation) {
 					t.Errorf("expected ErrInvariantViolation for mutated %s, got %v", tc.name, err)
 				}
@@ -1545,29 +1535,44 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		v3 := 3
 		initial.SchemaVersion = &v3
 		initial.Code.SDLCIterations = 5
-		setInvocationFacts(&initial, []domain.InvocationFact{
+		initial.Sessions = []domain.SessionFact{
 			{
-				ID:             "root-1",
-				ParentID:       nil,
-				Role:           "orchestrator",
-				Model:          "gpt-4o",
-				UserIterations: 0,
+				ID:       "root-1",
+				ParentID: nil,
+				Invocations: []domain.InvocationFact{
+					{
+						ID:             "root-1-inv",
+						Role:           "orchestrator",
+						Model:          "gpt-4o",
+						UserIterations: 0,
+					},
+				},
 			},
 			{
-				ID:             "root-2",
-				ParentID:       nil,
-				Role:           "orchestrator",
-				Model:          "claude-3-5-sonnet",
-				UserIterations: 0,
+				ID:       "root-2",
+				ParentID: nil,
+				Invocations: []domain.InvocationFact{
+					{
+						ID:             "root-2-inv",
+						Role:           "orchestrator",
+						Model:          "claude-3-5-sonnet",
+						UserIterations: 0,
+					},
+				},
 			},
 			{
-				ID:             "sub-1",
-				ParentID:       stringPtr("root-1"),
-				Role:           "coder",
-				Model:          "gpt-4o",
-				UserIterations: 0,
+				ID:       "sub-1",
+				ParentID: stringPtr("root-1"),
+				Invocations: []domain.InvocationFact{
+					{
+						ID:             "sub-1-inv",
+						Role:           "coder",
+						Model:          "gpt-4o",
+						UserIterations: 0,
+					},
+				},
 			},
-		})
+		}
 
 		upgraded, err := step.Apply(initial)
 		if err != nil {
@@ -1610,15 +1615,20 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		v3 := 3
 		initial.SchemaVersion = &v3
 		initial.Code.SDLCIterations = 10
-		setInvocationFacts(&initial, []domain.InvocationFact{
+		initial.Sessions = []domain.SessionFact{
 			{
-				ID:             "root-1",
-				ParentID:       nil,
-				Role:           "orchestrator",
-				Model:          "gpt-4o",
-				UserIterations: 3,
+				ID:       "root-1",
+				ParentID: nil,
+				Invocations: []domain.InvocationFact{
+					{
+						ID:             "root-1-inv",
+						Role:           "orchestrator",
+						Model:          "gpt-4o",
+						UserIterations: 3,
+					},
+				},
 			},
-		})
+		}
 
 		upgraded, err := step.Apply(initial)
 		if err != nil {

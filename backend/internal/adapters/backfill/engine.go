@@ -347,25 +347,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	if opts.RecomputeDB && wantsOpenCode && (len(openCodeSessions) > 0 || len(factLedger.Sessions) == 0) {
 		dbAttempted = true
 		if opencodeDB != nil && opencodeDB.DB() != nil {
-			var existingOpenCodeInvocations []domain.InvocationFact
-			var existingOpenCodeTools []domain.ToolFact
-			var existingOpenCodeEvents []domain.EventFact
-			for _, s := range openCodeSessions {
-				existingOpenCodeInvocations = append(existingOpenCodeInvocations, s.Invocations...)
-				for _, t := range s.Tools {
-					existingOpenCodeTools = append(existingOpenCodeTools, domain.ToolFact{SessionID: s.ID, Name: t.Name, Calls: t.Calls, Errors: t.Errors})
-				}
-				for _, e := range s.Events {
-					existingOpenCodeEvents = append(existingOpenCodeEvents, domain.EventFact{
-						EventID: e.EventID, Timestamp: e.Timestamp, MessageID: e.MessageID, Turn: e.Turn,
-						Role: e.Role, EventType: e.EventType, ToolName: e.ToolName, Status: e.Status,
-						ErrorMessage: e.ErrorMessage, DurationMs: e.DurationMs, ContextTokens: e.ContextTokens,
-						PromptContent: e.PromptContent, ReasoningContent: e.ReasoningContent,
-						ToolInput: e.ToolInput, ToolOutput: e.ToolOutput, SessionID: s.ID,
-					})
-				}
-			}
-			hasExistingOpenCodeFacts := len(existingOpenCodeInvocations) > 0 || len(existingOpenCodeEvents) > 0
+			hasExistingOpenCodeFacts := len(openCodeSessions) > 0
 
 			var candidateRootIDs []string
 			seenCandidates := make(map[string]bool)
@@ -384,19 +366,9 @@ func (e *BackfillEngine) processSingleWorkspace(
 					addCandidate(*s.ParentID)
 				}
 			}
-			for _, inv := range existingOpenCodeInvocations {
-				if inv.ParentID == nil || strings.TrimSpace(*inv.ParentID) == "" {
-					addCandidate(inv.ID)
-				} else {
-					addCandidate(*inv.ParentID)
-				}
-			}
 			if len(candidateRootIDs) == 0 {
 				for _, s := range openCodeSessions {
 					addCandidate(s.ID)
-				}
-				for _, inv := range existingOpenCodeInvocations {
-					addCandidate(inv.ID)
 				}
 			}
 
@@ -447,18 +419,17 @@ func (e *BackfillEngine) processSingleWorkspace(
 				if err == nil {
 					factLedger.Code.SDLCIterations = turns
 				}
-				invs, tools, events, stISO, endISO, err := opencode.ExtractFacts(
+				freshSessions, stISO, endISO, err := opencode.ExtractSessions(
 					opencodeDB.DB(),
 					resolvedRootIDs,
 					gitUser,
 					make(map[string]string),
 				)
-				if err == nil && len(invs) > 0 {
+				if err == nil && len(freshSessions) > 0 {
 					if len(candidateRootIDs) == 0 || len(resolvedRootIDs) >= len(candidateRootIDs) {
 						dbSessionFound = true
 					}
 					shouldUpdateInvocations := !hasExistingOpenCodeFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
-					updatedInvocations, updatedTools, updatedEvents := existingOpenCodeInvocations, existingOpenCodeTools, events
 					if shouldUpdateInvocations {
 						if len(candidateRootIDs) > 0 && len(resolvedRootIDs) < len(candidateRootIDs) {
 							// Partial resolution across machines: preserve unresolved session facts
@@ -466,31 +437,22 @@ func (e *BackfillEngine) processSingleWorkspace(
 							for _, rid := range resolvedRootIDs {
 								resolvedSet[rid] = true
 							}
-							for _, inv := range invs {
-								resolvedSet[inv.ID] = true
-								if inv.ParentID != nil && *inv.ParentID != "" {
-									resolvedSet[*inv.ParentID] = true
+							for _, s := range freshSessions {
+								resolvedSet[s.ID] = true
+								if s.ParentID != nil && *s.ParentID != "" {
+									resolvedSet[*s.ParentID] = true
 								}
 							}
-							var mergedInvocations []domain.InvocationFact
-							mergedInvocations = append(mergedInvocations, invs...)
-							for _, exInv := range existingOpenCodeInvocations {
-								if !resolvedSet[exInv.ID] && (exInv.ParentID == nil || !resolvedSet[*exInv.ParentID]) {
-									mergedInvocations = append(mergedInvocations, exInv)
+							var mergedSessions []domain.SessionFact
+							mergedSessions = append(mergedSessions, freshSessions...)
+							for _, exSess := range openCodeSessions {
+								if !resolvedSet[exSess.ID] && (exSess.ParentID == nil || !resolvedSet[*exSess.ParentID]) {
+									mergedSessions = append(mergedSessions, exSess)
 								}
 							}
-							updatedInvocations = mergedInvocations
-
-							var mergedTools []domain.ToolFact
-							mergedTools = append(mergedTools, tools...)
-							for _, exTool := range existingOpenCodeTools {
-								if !resolvedSet[exTool.SessionID] {
-									mergedTools = append(mergedTools, exTool)
-								}
-							}
-							updatedTools = mergedTools
+							openCodeSessions = mergedSessions
 						} else {
-							updatedInvocations, updatedTools = invs, tools
+							openCodeSessions = freshSessions
 						}
 						if stISO != nil {
 							factLedger.StartedAt = stISO
@@ -498,23 +460,27 @@ func (e *BackfillEngine) processSingleWorkspace(
 						if endISO != nil {
 							factLedger.CompletedAt = endISO
 						}
-					}
-					if !shouldUpdateInvocations && factLedger.CompletedAt != nil && *factLedger.CompletedAt != "" {
-						cutoff := *factLedger.CompletedAt
-						var filteredEvents []domain.EventFact
-						for _, ev := range events {
-							if ev.Timestamp <= cutoff {
-								filteredEvents = append(filteredEvents, ev)
+					} else {
+						eventsBySession := make(map[string][]domain.SessionEventFact)
+						var cutoff string
+						if factLedger.CompletedAt != nil && *factLedger.CompletedAt != "" {
+							cutoff = *factLedger.CompletedAt
+						}
+						for _, fs := range freshSessions {
+							var evs []domain.SessionEventFact
+							for _, ev := range fs.Events {
+								if cutoff == "" || ev.Timestamp <= cutoff {
+									evs = append(evs, ev)
+								}
+							}
+							eventsBySession[fs.ID] = evs
+						}
+						for i := range openCodeSessions {
+							if evs, ok := eventsBySession[openCodeSessions[i].ID]; ok {
+								openCodeSessions[i].Events = evs
 							}
 						}
-						updatedEvents = filteredEvents
 					}
-					refreshedSessions, sessionErr := domain.SessionsFromFactsWithSource(domain.SourceOpenCode, updatedInvocations, updatedTools, updatedEvents)
-					if sessionErr != nil {
-						result.Error = fmt.Errorf("grouping refreshed OpenCode session facts: %w", sessionErr)
-						return result
-					}
-					openCodeSessions = refreshedSessions
 					result.DBUpdated = true
 				}
 			}
@@ -564,8 +530,30 @@ func (e *BackfillEngine) processSingleWorkspace(
 					}
 					if !parseFailed && len(transcripts) > 0 {
 						if combined, combErr := e.combineCodex(transcripts); combErr == nil {
-							freshCodex, sErr := domain.SessionsFromFactsWithSource(domain.SourceCodex, combined.Invocations, combined.Tools, combined.Events)
+							freshCodex, sErr := combined.SessionFacts()
 							if sErr == nil && len(freshCodex) > 0 {
+								existingUsers := make(map[string]string)
+								existingParents := make(map[string]*string)
+								for _, s := range codexSessions {
+									if s.User != "" {
+										existingUsers[s.ID] = s.User
+									}
+									if s.ParentID != nil && *s.ParentID != "" {
+										existingParents[s.ID] = s.ParentID
+									}
+								}
+								for i := range freshCodex {
+									if freshCodex[i].User == "" {
+										if u, ok := existingUsers[freshCodex[i].ID]; ok {
+											freshCodex[i].User = u
+										}
+									}
+									if freshCodex[i].ParentID == nil {
+										if p, ok := existingParents[freshCodex[i].ID]; ok {
+											freshCodex[i].ParentID = p
+										}
+									}
+								}
 								replaceCodexTree(&codexSessions, cs.ID, freshCodex)
 								for _, refreshed := range freshCodex {
 									covered[refreshed.ID] = struct{}{}

@@ -204,9 +204,6 @@ func validateSessions(sessions []domain.SessionFact) error {
 			if strings.TrimSpace(inv.ID) == "" {
 				return fmt.Errorf("sessions[%d].invocations[%d].id is required", i, j)
 			}
-			if inv.ParentID != nil && !seen[strings.TrimSpace(*inv.ParentID)] {
-				return fmt.Errorf("sessions[%d].invocations[%d].parent_id %q does not identify a session", i, j, *inv.ParentID)
-			}
 		}
 	}
 	return nil

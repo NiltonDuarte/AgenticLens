@@ -72,10 +72,8 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 		b := beforeInvocations[i]
 		a := afterInvocations[i]
 		if b.ID != a.ID ||
-			!ptrEqual(b.ParentID, a.ParentID) ||
 			b.Role != a.Role ||
 			b.Model != a.Model ||
-			b.User != a.User ||
 			!ptrEqual(b.StartedAt, a.StartedAt) ||
 			!ptrEqual(b.CompletedAt, a.CompletedAt) ||
 			b.ActiveDurationSeconds != a.ActiveDurationSeconds ||

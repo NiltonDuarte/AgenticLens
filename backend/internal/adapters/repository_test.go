@@ -908,8 +908,8 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 		if dom.InvocationFacts()[0].Model != "" {
 			t.Errorf("expected omitted model to remain empty, got %s", dom.InvocationFacts()[0].Model)
 		}
-		if dom.InvocationFacts()[0].User != "" {
-			t.Errorf("expected omitted user to remain empty, got %s", dom.InvocationFacts()[0].User)
+		if dom.Sessions[0].User != "" {
+			t.Errorf("expected omitted user to remain empty, got %s", dom.Sessions[0].User)
 		}
 		if len(dom.ToolFacts()) != 1 {
 			t.Fatalf("expected 1 tool, got %d", len(dom.ToolFacts()))

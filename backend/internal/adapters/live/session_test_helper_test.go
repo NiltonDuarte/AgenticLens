@@ -13,9 +13,6 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 		if invocations[i].Model == "" {
 			invocations[i].Model = "fixture-model"
 		}
-		if invocations[i].User == "" {
-			invocations[i].User = "fixture-user"
-		}
 		if invocations[i].StartedAt == nil {
 			value := "fixture-started"
 			invocations[i].StartedAt = &value
@@ -43,6 +40,9 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 		panic(err)
 	}
 	for i := range sessions {
+		if sessions[i].User == "" {
+			sessions[i].User = "fixture-user"
+		}
 		if sessions[i].Anomalies == nil {
 			sessions[i].Anomalies = []domain.Anomaly{}
 		}
@@ -57,9 +57,6 @@ func sessionFactsWithSource(invocations []domain.InvocationFact, tools []domain.
 		}
 		if invocations[i].Model == "" {
 			invocations[i].Model = "fixture-model"
-		}
-		if invocations[i].User == "" {
-			invocations[i].User = "fixture-user"
 		}
 		if invocations[i].StartedAt == nil {
 			value := "fixture-started"
@@ -88,6 +85,9 @@ func sessionFactsWithSource(invocations []domain.InvocationFact, tools []domain.
 		panic(err)
 	}
 	for i := range sessions {
+		if sessions[i].User == "" {
+			sessions[i].User = "fixture-user"
+		}
 		if sessions[i].Anomalies == nil {
 			sessions[i].Anomalies = []domain.Anomaly{}
 		}

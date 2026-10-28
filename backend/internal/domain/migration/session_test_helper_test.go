@@ -16,9 +16,6 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 		if invocations[i].Model == "" {
 			invocations[i].Model = "fixture-model"
 		}
-		if invocations[i].User == "" {
-			invocations[i].User = "fixture-user"
-		}
 		if invocations[i].StartedAt == nil {
 			value := "fixture-started"
 			invocations[i].StartedAt = &value
@@ -92,9 +89,6 @@ func setInvocationFacts(ledger *domain.AgenticFactLedger, invocations []domain.I
 		}
 		if invocations[i].Model == "" {
 			invocations[i].Model = "fixture-model"
-		}
-		if invocations[i].User == "" {
-			invocations[i].User = "fixture-user"
 		}
 		if invocations[i].StartedAt == nil {
 			value := "fixture-started"

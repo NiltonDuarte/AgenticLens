@@ -691,13 +691,12 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 		}
 	})
 
-	t.Run("empty role model and user remain empty without fallback values", func(t *testing.T) {
+	t.Run("empty role and model remain empty without fallback values", func(t *testing.T) {
 		t.Parallel()
 		dto := adapters.InvocationFactDTO{
 			ID:    "inv-empty",
 			Role:  "",
 			Model: "",
-			User:  "",
 		}
 
 		dom := dto.ToDomain()
@@ -706,9 +705,6 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 		}
 		if dom.Model != "" {
 			t.Errorf("expected empty model to remain empty, got %q", dom.Model)
-		}
-		if dom.User != "" {
-			t.Errorf("expected empty user to remain empty, got %q", dom.User)
 		}
 	})
 

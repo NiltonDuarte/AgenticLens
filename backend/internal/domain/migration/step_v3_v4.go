@@ -60,13 +60,10 @@ func (s *StepV3ToV4UserIterations) Apply(ledger domain.AgenticFactLedger) (domai
 	if totalIterations == 0 && cloned.Code.SDLCIterations > 0 {
 		for i := range cloned.Sessions {
 			if cloned.Sessions[i].ParentID == nil {
-				for j := range cloned.Sessions[i].Invocations {
-					if cloned.Sessions[i].Invocations[j].ParentID == nil {
-						cloned.Sessions[i].Invocations[j].UserIterations = cloned.Code.SDLCIterations
-						break
-					}
+				if len(cloned.Sessions[i].Invocations) > 0 {
+					cloned.Sessions[i].Invocations[0].UserIterations = cloned.Code.SDLCIterations
+					break
 				}
-				break
 			}
 		}
 	}

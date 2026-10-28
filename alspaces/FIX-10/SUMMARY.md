@@ -19,6 +19,13 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - Unit test suite: `make test` passed with 100% success across all backend packages and frontend tests.
 - Target verification: Verified on 10 workspaces in `/Users/guedesduarte/workspace/git/SinkLayerControlPlane.Code`. Multi-root ticket `DPS-11170` successfully retained both root sessions (12 invocations total, $23.55 cost, 25 SDLC iterations), while missing host tickets `DPS-11173`, `DPS-11187`, `DPS-11197`, and `DPS-11199` preserved all historical invocations intact.
 
+## Iteration 02: Normalize Session-Invocation Hierarchy
+- Hoisted `User` and `ParentID` to `SessionFact` as container-level metadata, removing them from `InvocationFact`.
+- Assigned distinct invocation IDs (`<session_id>-inv-<index>`) across OpenCode extraction, Codex rollouts, and schema v4 migration.
+- Updated schema v4 migration step (`step_v3_v4.go`), invariant validator (`validator.go`), and runtime fact validator (`schemas.go`).
+- Updated TypeScript types (`web/src/domain/types.ts`) with `user?: string` on `SessionFact` and optional fields on `InvocationFact` for boundary compatibility.
+- Verified all backend and frontend tests pass via `make`.
+
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 7
 - **Active Agent Duration:** 42m 55s (excludes user wait time)

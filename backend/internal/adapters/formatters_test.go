@@ -13,7 +13,7 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 	parentID := "ses-1"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Sessions: sessionFactsWithInvs([]testInvFact{
 			{
 				ID:                    "ses-1",
 				Role:                  "orchestrator",
@@ -261,7 +261,7 @@ func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {
 	parentID := "ses-orch"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Sessions: sessionFactsWithInvs([]testInvFact{
 			{
 				ID:      "ses-orch",
 				Role:    "orchestrator",

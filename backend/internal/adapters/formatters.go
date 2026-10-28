@@ -161,9 +161,9 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 	totals := ledger.Totals
 
 	contributorSet := make(map[string]struct{})
-	for _, i := range ledger.Facts.InvocationFacts() {
-		if i.User != "" && i.User != "unknown" {
-			contributorSet[i.User] = struct{}{}
+	for _, s := range ledger.Facts.Sessions {
+		if s.User != "" && s.User != "unknown" {
+			contributorSet[s.User] = struct{}{}
 		}
 	}
 	var contributors []string

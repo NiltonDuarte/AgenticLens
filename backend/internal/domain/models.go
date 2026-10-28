@@ -19,10 +19,8 @@ type InvocationTokens struct {
 // InvocationFact represents an atomic execution record for an agent invocation.
 type InvocationFact struct {
 	ID                    string           `json:"id"`
-	ParentID              *string          `json:"parent_id"`
 	Role                  AgentRole        `json:"role"`
 	Model                 string           `json:"model"`
-	User                  string           `json:"user"`
 	StartedAt             *string          `json:"started_at"`
 	CompletedAt           *string          `json:"completed_at"`
 	ActiveDurationSeconds int64            `json:"active_duration_seconds"`
@@ -93,6 +91,7 @@ type SessionFact struct {
 	ID          string             `json:"id"`
 	ParentID    *string            `json:"parent_id,omitempty"`
 	Source      SourceHarness      `json:"source,omitempty"`
+	User        string             `json:"user,omitempty"`
 	Invocations []InvocationFact   `json:"invocations"`
 	Tools       []SessionToolFact  `json:"tools"`
 	Events      []SessionEventFact `json:"events,omitempty"`
@@ -234,7 +233,11 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 		return session, nil
 	}
 	for _, invocation := range invocations {
-		session, err := get(invocation.ID, invocation.ParentID)
+		sessID := invocation.ID
+		if idx := strings.Index(invocation.ID, "-inv-"); idx > 0 {
+			sessID = invocation.ID[:idx]
+		}
+		session, err := get(sessID, nil)
 		if err != nil {
 			return nil, err
 		}
