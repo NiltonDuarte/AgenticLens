@@ -13,8 +13,8 @@ This skill follows the autonomous agentic distribution model: it is completely s
 
 ## Operational Mandates
 - Strict Release-Only Mandate: Never compile binaries from Go/TypeScript source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
-- Binary Placement and Git Protection: Install the multi-platform wrapper script inside `.opencode/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) alongside precompiled platform binaries (`agentic-lens-${OS}-${ARCH}`) and a protective `.gitignore` containing `*` and `!/.gitignore` to prevent committing compiled binaries and cache files to version control.
-- Mandatory User Confirmation Gate: Inspect existing OpenCode agent instructions (`AGENTS.md` or `.opencode/agent/*.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
+- Binary Placement and Git Protection: Install the multi-platform wrapper script inside `.agents/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) alongside precompiled platform binaries (`agentic-lens-${OS}-${ARCH}`) and a protective `.gitignore` containing `*` and `!/.gitignore` to prevent committing compiled binaries and cache files to version control.
+- Mandatory User Confirmation Gate: Inspect existing OpenCode agent instructions (`AGENTS.md` or `.agents/agent/*.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
 
 ---
@@ -50,7 +50,7 @@ esac
 Create the binary directory and ensure a protective `.gitignore` is in place:
 
 ```bash
-BIN_DIR=".opencode/skills/agentic-lens-setup/bin"
+BIN_DIR=".agents/skills/agentic-lens-setup/bin"
 mkdir -p "$BIN_DIR"
 
 if [ ! -f "$BIN_DIR/.gitignore" ]; then
@@ -65,13 +65,13 @@ fi
 #### 1.3 Multi-Platform Wrapper and Binary Installation
 Autonomous agents frequently execute inside containerized Linux sandboxes (such as devcontainers or Docker) while developers interact from macOS or Windows host workstations. To ensure `./bin/agentic-lens` executes seamlessly across both container and host environments, AgenticLens uses a portable POSIX wrapper script at `bin/agentic-lens` that dynamically delegates to native platform executables (`agentic-lens-${OS}-${ARCH}`). If a required platform binary is missing when invoked on the host, the wrapper self-heals by downloading it from GitHub Releases on demand.
 
-If a local downloader script exists at `./.opencode/skills/agentic-lens-setup/scripts/download.sh`, execute it:
+If a local downloader script exists at `./.agents/skills/agentic-lens-setup/scripts/download.sh`, execute it:
 ```bash
 # Basic setup for current execution environment (e.g. Linux container)
-./.opencode/skills/agentic-lens-setup/scripts/download.sh
+./.agents/skills/agentic-lens-setup/scripts/download.sh
 
 # Optional: Pre-download host workstation binary (e.g. macOS Apple Silicon)
-# ./.opencode/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
+# ./.agents/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
 ```
 
 Otherwise, install the wrapper script and platform binary directly from GitHub:
@@ -208,7 +208,7 @@ Present an overview of AgenticLens features to the user:
 
 Inspect the repository for existing OpenCode agent instructions:
 - `AGENTS.md`
-- `.opencode/agent/*.md`
+- `.agents/agent/*.md`
 
 #### Mandatory User Confirmation Gate (HARD STOP)
 Before making any modifications or creating new files, formulate the exact proposed markdown section and present it to the user. Ask for explicit approval using the `question` tool or user prompt.
@@ -251,7 +251,7 @@ When approved by the user, append the following standardized operational policie
 ---
 
 ## Completion Verification Checklist
-- Binary exists at `.opencode/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) and is executable.
+- Binary exists at `.agents/skills/agentic-lens-setup/bin/agentic-lens` (or `./bin/agentic-lens`) and is executable.
 - Protective `.gitignore` exists at binary destination directory.
 - Root `.agenticlens-config.yaml` is present, valid YAML, and non-empty.
 - Verification command reports valid JSON metadata.
