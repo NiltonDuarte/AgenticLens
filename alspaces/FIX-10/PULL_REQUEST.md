@@ -1,22 +1,23 @@
-# fix: support multi-root backfill and gate heuristic fallbacks behind explicit flag
+# fix(backfill): multi-root session backfill, explicit fallbacks, and hierarchy normalization (FIX-10)
 
 ## Summary
-Resolves two telemetry backfill integrity issues in AgenticLens:
+Resolves telemetry backfill integrity issues and normalizes session-invocation hierarchy:
 1. Multi-root session truncation: Discovers and extracts facts across all root sessions present in a ticket ledger rather than stopping at the first root session found.
-2. Unsafe implicit heuristic fallbacks: Strict exact session ID matching is now enforced by default. Heuristic title substring and workspace path resolution are gated behind `--allow-fallbacks`. Missing SQLite sessions preserve existing historical invocations and events intact and are marked `partial` pending subsequent host migration.
+2. Unsafe implicit heuristic fallbacks: Strict exact session ID matching is enforced by default. Heuristic title substring and workspace path resolution are gated behind `--allow-fallbacks`. Missing SQLite sessions preserve existing historical invocations and events intact and are marked `partial` pending host migration.
+3. Schema v4 session-invocation normalization: Hoisted `user` and `parent_id` to container-level `SessionFact`, removed `user` and `parent_id` from `InvocationFact`, and assigned distinct `<session_id>-inv-<index>` invocation IDs across OpenCode, Codex, migration, and frontend types.
 
 ## Changes
-- `backend/internal/adapters/backfill/options.go`: Added `AllowFallbacks bool` to `BackfillOptions`.
-- `backend/cmd/agentic-lens/main.go`: Added `--allow-fallbacks` CLI flag and usage documentation.
-- `backend/internal/adapters/backfill/engine.go`:
-  - Resolved root sessions across all invocations and sessions in the ledger.
-  - Gated heuristic matching behind `opts.AllowFallbacks`.
-  - Preserved historical invocations when sessions cannot be resolved in the local SQLite database.
-- `backend/internal/adapters/backfill/engine_test.go`: Added tests verifying multi-root extraction, strict rejection of untrusted fallbacks, and explicit fallback behavior.
-- `backend/cmd/agentic-lens/main_test.go`: Updated help output test to include `--allow-fallbacks`.
+- `backend/internal/domain/models.go`: Added `User string` to `SessionFact`; removed `ParentID` and `User` from `InvocationFact`.
+- `backend/internal/domain/aggregations.go` & `anomalies.go`: Updated aggregation and anomaly detection routines to evaluate session-level metadata.
+- `backend/internal/domain/migration/`: Updated `step_v3_v4.go` and `validator.go` for user hoisting, distinct invocation IDs, and schema v4 invariants.
+- `backend/internal/adapters/backfill/engine.go`: Multi-root candidate discovery, strict fallback gating behind `AllowFallbacks`, and session-level hierarchy preservation.
+- `backend/cmd/agentic-lens/main.go`: Added `--allow-fallbacks` CLI flag and updated extraction ingestion.
+- `backend/internal/adapters/opencode/extractor.go`: Added `ExtractSessions` producing normalized session containers with distinct invocation IDs.
+- `backend/internal/adapters/codex/rollout.go`: Implemented `SessionFacts()` and thread parent propagation on `Transcript`.
+- `web/src/domain/types.ts`: Synchronized TypeScript interfaces (`user?: string` on `SessionFact`, optional fields on `InvocationFact`).
 
-## Verification
-- Unit test suite: all backend and frontend unit tests passing.
-- Validated backfill against 10 real ticket workspaces:
-  - `DPS-11170`: successfully extracted multiple root sessions (12 invocations, 25 SDLC iterations).
-  - `DPS-11173`, `DPS-11187`, `DPS-11197`, `DPS-11199`: preserved historical invocations intact without title hijacking.
+## Documentation & Verification
+- Technical Contract: `alspaces/FIX-10/CONTRACT.md`
+- Implementation Summary: `alspaces/FIX-10/SUMMARY.md`
+- Unit test suite: `make` passed with 100% success across all backend packages and frontend tests.
+- Backfill validation: Validated against 10 real ticket workspaces (`DPS-11170`, `DPS-11173`, `DPS-11187`, `DPS-11197`, `DPS-11199`).

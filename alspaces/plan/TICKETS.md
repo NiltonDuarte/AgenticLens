@@ -6,13 +6,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **FIX-10**: Backfill Multi-Root Sessions, Require Explicit Fallbacks, and Normalize Session-Invocation Hierarchy
-  - **Subsystem**: Backend / Domain / Adapters / Backfill / CLI / Web / Tests
-  - **Phase**: Phase 7 (v1 Defect Remediation)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/FIX-10-backfill-root-sessions-and-explicit-fallbacks.md`
+(None)
 
 ---
 
