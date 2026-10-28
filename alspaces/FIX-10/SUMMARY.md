@@ -46,7 +46,7 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - **Tool Health & Self-Correction:** 1,560 tool calls (15 self-corrections, 99.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 17 execution anomalies detected (8 CRITICAL, 9 WARNING).
+- **Status:** 22 execution anomalies detected (13 CRITICAL, 9 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k, breaching the 160k critical ceiling.
@@ -55,6 +55,11 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+114.2k tokens) — Context tokens surged by 114.2k to 114.2k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+104.2k tokens) — Context tokens surged by 104.2k to 104.2k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+102.5k tokens) — Context tokens surged by 102.5k to 102.5k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.4k tokens) — Context tokens reached 168.4k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.4k tokens) — Context tokens reached 165.4k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.9k tokens) — Context tokens reached 167.9k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (169.2k tokens) — Context tokens reached 169.2k, breaching the 160k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+49.3k tokens) — Context tokens surged by 49.3k to 49.3k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+57.8k tokens) — Context tokens surged by 57.8k to 57.8k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.3k tokens) — Context tokens surged by 72.3k to 72.3k tokens.
