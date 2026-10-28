@@ -19,12 +19,12 @@ In modern agentic workflows, autonomous agents consume skills natively through M
 #### Step 1: Share Skill Reference with Your Agent
 Provide your autonomous coding agent in OpenCode with the reference to the AgenticLens setup skill. You can either:
 - Point the agent directly to the canonical remote URL:
-  `https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.opencode/skills/agentic-lens-setup/SKILL.md`
-- Or copy `.opencode/skills/agentic-lens-setup/SKILL.md` into your repository.
+  `https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md`
+- Or copy `.agents/skills/agentic-lens-setup/SKILL.md` into your repository.
 
 Prompt your agent:
 ```
-Read the instructions at https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.opencode/skills/agentic-lens-setup/SKILL.md and set up AgenticLens in this repository.
+Read the instructions at https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md and set up AgenticLens in this repository.
 ```
 
 #### Step 2: Autonomous Host Detection and Binary Retrieval
@@ -59,7 +59,7 @@ Autonomous coding agents frequently execute inside sandboxed Linux containers (e
 
 The agent creates the binary destination directory, installs the wrapper script, downloads the native binary, and sets executable permissions:
 ```bash
-DEST_DIR=".opencode/skills/agentic-lens-setup/bin"
+DEST_DIR=".agents/skills/agentic-lens-setup/bin"
 mkdir -p "$DEST_DIR"
 
 # Write protective .gitignore to prevent committing binaries and cache files to version control
@@ -80,19 +80,19 @@ curl -fsSL -o "$DEST_DIR/${BIN_NAME}" "$RELEASE_URL"
 chmod +x "$DEST_DIR/${BIN_NAME}"
 ```
 
-Alternatively, if `.opencode/skills/agentic-lens-setup/scripts/download.sh` is present:
+Alternatively, if `.agents/skills/agentic-lens-setup/scripts/download.sh` is present:
 ```bash
 # Basic setup
-./.opencode/skills/agentic-lens-setup/scripts/download.sh
+./.agents/skills/agentic-lens-setup/scripts/download.sh
 
 # Optional: Pre-download host workstation binary (e.g. macOS Apple Silicon)
-./.opencode/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
+./.agents/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
 ```
 
 #### Step 3: Verify Binary Execution
 The agent validates that the executable operates cleanly on the host system:
 ```bash
-./.opencode/skills/agentic-lens-setup/bin/agentic-lens version --json
+./.agents/skills/agentic-lens-setup/bin/agentic-lens version --json
 ```
 Expected output:
 ```json
@@ -112,7 +112,7 @@ The agent queries the developer or inspects the codebase to determine:
 
 The agent runs `init` to write `.agenticlens-config.yaml`:
 ```bash
-./.opencode/skills/agentic-lens-setup/bin/agentic-lens init \
+./.agents/skills/agentic-lens-setup/bin/agentic-lens init \
   --project-name "BillingService" \
   --ticket-prefixes "BILL,PAY,GEN" \
   --src-folders "services,pkg,cmd" \
@@ -120,7 +120,7 @@ The agent runs `init` to write `.agenticlens-config.yaml`:
 ```
 
 #### Step 5: Mandatory User Confirmation Gate
-Before updating or creating any OpenCode agent policy files (`AGENTS.md` or `.opencode/agent/*.md`), the agent must present the exact policy text to the user and receive explicit approval.
+Before updating or creating any OpenCode agent policy files (`AGENTS.md` or `.agents/agent/*.md`), the agent must present the exact policy text to the user and receive explicit approval.
 
 ---
 
@@ -422,7 +422,7 @@ When AgenticLens processes execution traces, it automatically aggregates tokens,
 
 ### 4.5 Standard Repository Agent Guidelines Policy Block
 
-Below is the standard policy block that can be added to your repository's OpenCode agent instructions file (`AGENTS.md` or `.opencode/agent/*.md`):
+Below is the standard policy block that can be added to your repository's OpenCode agent instructions file (`AGENTS.md` or `.agents/agent/*.md`):
 
 ```markdown
 ## AgenticLens Telemetry Guidelines
@@ -595,7 +595,7 @@ When installing precompiled binaries manually on Unix systems (Linux and macOS):
   ```bash
   xattr -d com.apple.quarantine ./bin/agentic-lens
   ```
-- Store the binary in a dedicated directory (such as `./bin/` or `.opencode/skills/agentic-lens-setup/bin/`) and ensure a protective `.gitignore` contains `*` and `!/.gitignore` to prevent tracking compiled binaries in git.
+- Store the binary in a dedicated directory (such as `./bin/` or `.agents/skills/agentic-lens-setup/bin/`) and ensure a protective `.gitignore` contains `*` and `!/.gitignore` to prevent tracking compiled binaries in git.
 
 ### 6.4 Git Upstream Base Branch Inference and Fallback Probing
 

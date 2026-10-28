@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 REPO="${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}"
-DEST_DIR="${AGENTIC_LENS_BIN_DIR:-.opencode/skills/agentic-lens-setup/bin}"
+DEST_DIR="${AGENTIC_LENS_BIN_DIR:-.agents/skills/agentic-lens-setup/bin}"
 VERSION="${AGENTIC_LENS_VERSION:-latest}"
 LOCAL_BIN="${AGENTIC_LENS_LOCAL_BINARY:-}"
 INCLUDE_HOST=""
@@ -28,7 +28,7 @@ Usage: download-agentic-lens.sh [OPTIONS]
 
 Options:
   --version <version>       Release version to download (default: latest)
-  --dest <dir>              Destination binary directory (default: .opencode/skills/agentic-lens-setup/bin)
+  --dest <dir>              Destination binary directory (default: .agents/skills/agentic-lens-setup/bin)
   --include-host <target>   Pre-download additional host binary (e.g. darwin-arm64, darwin-amd64, linux-amd64)
   --all-platforms           Download binaries for all supported platforms
   --local-bin <path>        Use local prebuilt binary instead of downloading (testing escape hatch)

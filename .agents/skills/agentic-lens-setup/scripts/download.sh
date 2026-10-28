@@ -29,7 +29,7 @@ Usage: download.sh [OPTIONS]
 
 Options:
   --version <version>       Release version to download (default: latest)
-  --dest <dir>              Destination binary directory (default: .opencode/skills/agentic-lens-setup/bin)
+  --dest <dir>              Destination binary directory (default: .agents/skills/agentic-lens-setup/bin)
   --include-host <target>   Pre-download additional host binary (e.g. darwin-arm64, darwin-amd64, linux-amd64)
   --all-platforms           Download binaries for all supported platforms
   --local-bin <path>        Use local prebuilt binary instead of downloading (testing escape hatch)

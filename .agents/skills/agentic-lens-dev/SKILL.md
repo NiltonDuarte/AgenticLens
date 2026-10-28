@@ -5,7 +5,7 @@ description: Use when building features, fixing bugs, or refactoring the standal
 
 # AgenticLens Multi-Agent Development Workflow
 
-Coordinates autonomous development in the standalone **AgenticLens** project across specialized subagents (`planner`, `coder`, `tester`, `reviewer`). Architecture is built in **Go** (core aggregations, boundary adapters, CLI, server) and **TypeScript** (modern web dashboard embedded into the Go binary via `embed.FS`). Persona instructions and layer boundaries live in `.opencode/agent/`.
+Coordinates autonomous development in the standalone **AgenticLens** project across specialized subagents (`planner`, `coder`, `tester`, `reviewer`). Architecture is built in **Go** (core aggregations, boundary adapters, CLI, server) and **TypeScript** (modern web dashboard embedded into the Go binary via `embed.FS`). Persona instructions and layer boundaries live in `.agents/agent/`.
 
 The skill itself uses the AgenticLens CLI application to parse, validate, and render developer telemetry and lifecycle metrics for every development iteration.
 
