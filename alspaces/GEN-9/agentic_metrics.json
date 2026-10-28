@@ -4,8 +4,8 @@
   "ticket_title": "OpenCode install and ChatGPT subscription usage guide",
   "ticket_type": "chore",
   "started_at": "2026-10-28T22:48:31.177Z",
-  "completed_at": "2026-10-28T23:03:37.511Z",
-  "updated_at": "2026-10-28T23:03:38.195879+00:00",
+  "completed_at": "2026-10-28T23:04:39.461Z",
+  "updated_at": "2026-10-28T23:04:40.183024+00:00",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -28,15 +28,15 @@
           "model": "gpt-6-luna",
           "user": "",
           "started_at": "2026-10-28T22:48:32.171Z",
-          "completed_at": "2026-10-28T23:03:37.511Z",
+          "completed_at": "2026-10-28T23:04:39.461Z",
           "active_duration_seconds": 310,
           "turns": 5,
           "tokens": {
-            "input": 103281,
-            "output": 26712,
-            "cache_read": 4538880,
-            "reasoning": 15055,
-            "peak_context": 104937
+            "input": 111973,
+            "output": 29772,
+            "cache_read": 5514240,
+            "reasoning": 17018,
+            "peak_context": 111948
           },
           "cost_usd": 0,
           "compactions": 0,
@@ -46,8 +46,8 @@
       "tools": [
         {
           "name": "command",
-          "calls": 48,
-          "errors": 3
+          "calls": 53,
+          "errors": 4
         }
       ],
       "anomalies": []
