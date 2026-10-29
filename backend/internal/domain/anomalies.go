@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -63,8 +64,16 @@ func AnomalyDisplayText(anomaly Anomaly) (string, string) {
 			return fmt.Sprintf("High tool failure rate: %s (%.1f%%)", tool, *ctx.FailureRatePct), fmt.Sprintf("Tool '%s' failed %d out of %d calls (%.1f%% failure rate, threshold: %s).", tool, count, *ctx.TotalCalls, *ctx.FailureRatePct, thresholdText)
 		}
 	case RuleContextSaturationSpike:
-		if ctx.ContextTokens != nil && ctx.Threshold != nil && *ctx.Threshold == "160000" {
-			return fmt.Sprintf("Context ceiling breached (%s tokens)", FormatTokensK(*ctx.ContextTokens)), fmt.Sprintf("Context tokens reached %s, breaching the 160k critical ceiling.", FormatTokensK(*ctx.ContextTokens))
+		if ctx.ContextTokens != nil && ctx.Threshold != nil && *ctx.Threshold != "" && ctx.TokenDelta == nil {
+			ceilingName := *ctx.Threshold
+			if val, err := strconv.ParseInt(*ctx.Threshold, 10, 64); err == nil {
+				ceilingName = FormatTokensK(val)
+			}
+			sevLabel := "critical"
+			if anomaly.Severity == SeverityWarning {
+				sevLabel = "warning"
+			}
+			return fmt.Sprintf("Context ceiling breached (%s tokens)", FormatTokensK(*ctx.ContextTokens)), fmt.Sprintf("Context tokens reached %s, breaching the %s %s ceiling.", FormatTokensK(*ctx.ContextTokens), ceilingName, sevLabel)
 		}
 		if ctx.TokenDelta != nil && ctx.ContextTokens != nil {
 			return fmt.Sprintf("Context saturation spike (+%s tokens)", FormatTokensK(*ctx.TokenDelta)), fmt.Sprintf("Context tokens surged by %s to %s tokens.", FormatTokensK(*ctx.TokenDelta), FormatTokensK(*ctx.ContextTokens))
@@ -104,7 +113,7 @@ type retryStreakDetection struct {
 	eventIndexes []int
 }
 
-func detectToolRetryStreaksWithIndexes(events []EventFact) []retryStreakDetection {
+func detectToolRetryStreaksWithIndexes(events []EventFact, thresholds AnomalyThresholdsConfig) []retryStreakDetection {
 	if len(events) == 0 {
 		return nil
 	}
@@ -120,6 +129,16 @@ func detectToolRetryStreaksWithIndexes(events []EventFact) []retryStreakDetectio
 		sessionIDs = append(sessionIDs, sessionID)
 	}
 	sort.Strings(sessionIDs)
+
+	warnStreak := int64(thresholds.ConsecutiveErrorsStreakWarning)
+	if warnStreak <= 0 {
+		warnStreak = ConsecutiveToolErrorsStreakWarning
+	}
+	critStreak := int64(thresholds.ConsecutiveErrorsStreakCritical)
+	if critStreak <= 0 {
+		critStreak = ConsecutiveToolErrorsStreakCritical
+	}
+
 	for _, sessionID := range sessionIDs {
 		indices := bySession[sessionID]
 		sort.SliceStable(indices, func(i, j int) bool {
@@ -134,10 +153,10 @@ func detectToolRetryStreaksWithIndexes(events []EventFact) []retryStreakDetectio
 		var lastTurn int64
 		var activeEventIndexes []int
 		emitStreak := func() {
-			if consecutiveErrors >= 3 && activeTool != "" {
-				severity, threshold := SeverityWarning, "3"
-				if consecutiveErrors >= 5 {
-					severity, threshold = SeverityCritical, "5"
+			if consecutiveErrors >= warnStreak && activeTool != "" {
+				severity, threshold := SeverityWarning, strconv.FormatInt(warnStreak, 10)
+				if consecutiveErrors >= critStreak {
+					severity, threshold = SeverityCritical, strconv.FormatInt(critStreak, 10)
 				}
 				var evidence []AnomalyEvidenceRef
 				for _, eventIndex := range activeEventIndexes {
@@ -186,8 +205,8 @@ func detectToolRetryStreaksWithIndexes(events []EventFact) []retryStreakDetectio
 	return detections
 }
 
-func detectToolRetryStreaks(events []EventFact) []Anomaly {
-	detections := detectToolRetryStreaksWithIndexes(events)
+func detectToolRetryStreaks(events []EventFact, thresholds AnomalyThresholdsConfig) []Anomaly {
+	detections := detectToolRetryStreaksWithIndexes(events, thresholds)
 	anomalies := make([]Anomaly, 0, len(detections))
 	for _, detection := range detections {
 		anomalies = append(anomalies, detection.anomaly)
@@ -196,7 +215,7 @@ func detectToolRetryStreaks(events []EventFact) []Anomaly {
 }
 
 // detectToolHighFailureRates detects tools with an excessively high failure rate across the ticket.
-func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
+func detectToolHighFailureRates(ledger AgenticFactLedger, thresholds AnomalyThresholdsConfig) []Anomaly {
 	type toolStats struct {
 		calls  int64
 		errors int64
@@ -276,8 +295,25 @@ func detectToolHighFailureRates(ledger AgenticFactLedger) []Anomaly {
 }
 
 // detectContextSaturationSpikes detects single-turn context surges and critical ceiling breaches.
-func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
+func detectContextSaturationSpikes(ledger AgenticFactLedger, thresholds AnomalyThresholdsConfig) []Anomaly {
 	var anomalies []Anomaly
+
+	warnDelta := thresholds.TokenVelocityWarningDeltaTokens
+	if warnDelta <= 0 {
+		warnDelta = TokenVelocityWarningDeltaTokens
+	}
+	critDelta := thresholds.TokenVelocityCriticalDeltaTokens
+	if critDelta <= 0 {
+		critDelta = TokenVelocityCriticalDeltaTokens
+	}
+	warnCeiling := thresholds.ContextCeilingWarningTokens
+	if warnCeiling <= 0 {
+		warnCeiling = ContextCeilingWarningTokens
+	}
+	critCeiling := thresholds.ContextCeilingCriticalTokens
+	if critCeiling <= 0 {
+		critCeiling = ContextCeilingCriticalTokens
+	}
 
 	if len(ledger.EventFacts()) > 0 {
 		sessionEvents := make(map[string][]EventFact)
@@ -295,7 +331,8 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 		}
 		sort.Strings(sessionIDs)
 
-		ceilingReported := make(map[string]bool)
+		warnCeilingReported := make(map[string]bool)
+		critCeilingReported := make(map[string]bool)
 
 		for _, sid := range sessionIDs {
 			events := sessionEvents[sid]
@@ -306,12 +343,12 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 				// 1. Single-turn jump detection
 				if hasPrev {
 					delta := ev.ContextTokens - prevTokens
-					if delta > 40_000 {
+					if delta > warnDelta {
 						sev := SeverityWarning
-						thresh := "40000"
-						if delta > 80_000 {
+						thresh := fmt.Sprintf("%d", warnDelta)
+						if delta > critDelta {
 							sev = SeverityCritical
-							thresh = "80000"
+							thresh = fmt.Sprintf("%d", critDelta)
 						}
 						anomaly := Anomaly{
 							RuleID:   RuleContextSaturationSpike,
@@ -331,9 +368,10 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 				prevTokens = ev.ContextTokens
 				hasPrev = true
 
-				// 2. Critical ceiling breach detection (160k tokens)
-				if ev.ContextTokens >= 160_000 && !ceilingReported[sid] {
-					ceilingReported[sid] = true
+				// 2. Ceiling breach detection (warning tokens and critical tokens)
+				if ev.ContextTokens >= critCeiling && !critCeilingReported[sid] {
+					critCeilingReported[sid] = true
+					warnCeilingReported[sid] = true
 					anomaly := Anomaly{
 						RuleID:   RuleContextSaturationSpike,
 						Severity: SeverityCritical,
@@ -341,7 +379,20 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 							SessionID:     strPtr(ev.SessionID),
 							Turn:          int64Ptr(ev.Turn),
 							ContextTokens: int64Ptr(ev.ContextTokens),
-							Threshold:     strPtr("160000"),
+							Threshold:     strPtr(fmt.Sprintf("%d", critCeiling)),
+						},
+					}
+					anomalies = append(anomalies, anomaly)
+				} else if ev.ContextTokens >= warnCeiling && !warnCeilingReported[sid] {
+					warnCeilingReported[sid] = true
+					anomaly := Anomaly{
+						RuleID:   RuleContextSaturationSpike,
+						Severity: SeverityWarning,
+						Context: AnomalyContext{
+							SessionID:     strPtr(ev.SessionID),
+							Turn:          int64Ptr(ev.Turn),
+							ContextTokens: int64Ptr(ev.ContextTokens),
+							Threshold:     strPtr(fmt.Sprintf("%d", warnCeiling)),
 						},
 					}
 					anomalies = append(anomalies, anomaly)
@@ -349,9 +400,9 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 			}
 		}
 	} else {
-		// v1 Fallback: inspect Invocations for PeakContext >= 160,000
+		// v1 Fallback: inspect Invocations for PeakContext against warning and critical ceilings
 		for _, inv := range ledger.InvocationFacts() {
-			if inv.Tokens.PeakContext >= 160_000 {
+			if inv.Tokens.PeakContext >= critCeiling {
 				anomaly := Anomaly{
 					RuleID:   RuleContextSaturationSpike,
 					Severity: SeverityCritical,
@@ -359,7 +410,19 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 						SessionID:     strPtr(inv.ID),
 						Role:          agentRolePtr(AgentRole(inv.Role)),
 						ContextTokens: int64Ptr(inv.Tokens.PeakContext),
-						Threshold:     strPtr("160000"),
+						Threshold:     strPtr(fmt.Sprintf("%d", critCeiling)),
+					},
+				}
+				anomalies = append(anomalies, anomaly)
+			} else if inv.Tokens.PeakContext >= warnCeiling {
+				anomaly := Anomaly{
+					RuleID:   RuleContextSaturationSpike,
+					Severity: SeverityWarning,
+					Context: AnomalyContext{
+						SessionID:     strPtr(inv.ID),
+						Role:          agentRolePtr(AgentRole(inv.Role)),
+						ContextTokens: int64Ptr(inv.Tokens.PeakContext),
+						Threshold:     strPtr(fmt.Sprintf("%d", warnCeiling)),
 					},
 				}
 				anomalies = append(anomalies, anomaly)
@@ -454,13 +517,62 @@ func appendDistinctRole(roles []string, role string) []string {
 	return append(roles, role)
 }
 
+func resolveAnomalyThresholds(thresholds ...AnomalyThresholdsConfig) AnomalyThresholdsConfig {
+	def := DefaultAnomalyThresholdsConfig()
+	if len(thresholds) == 0 {
+		return def
+	}
+	t := thresholds[0]
+	if t.StallThresholdSeconds <= 0 {
+		t.StallThresholdSeconds = def.StallThresholdSeconds
+	}
+	if t.ErrorRateThreshold <= 0 {
+		t.ErrorRateThreshold = def.ErrorRateThreshold
+	}
+	if t.ContextExhaustionPct <= 0 {
+		t.ContextExhaustionPct = def.ContextExhaustionPct
+	}
+	if t.ConsecutiveErrorsStreakWarning <= 0 {
+		t.ConsecutiveErrorsStreakWarning = def.ConsecutiveErrorsStreakWarning
+	}
+	if t.ConsecutiveErrorsStreakCritical <= 0 {
+		t.ConsecutiveErrorsStreakCritical = def.ConsecutiveErrorsStreakCritical
+	}
+	if t.ContextCeilingWarningTokens <= 0 {
+		t.ContextCeilingWarningTokens = def.ContextCeilingWarningTokens
+	}
+	if t.ContextCeilingCriticalTokens <= 0 {
+		t.ContextCeilingCriticalTokens = def.ContextCeilingCriticalTokens
+	}
+	if t.TokenVelocityWarningTokens <= 0 {
+		t.TokenVelocityWarningTokens = def.TokenVelocityWarningTokens
+	}
+	if t.TokenVelocityCriticalTokens <= 0 {
+		t.TokenVelocityCriticalTokens = def.TokenVelocityCriticalTokens
+	}
+	if t.TokenVelocityWarningDeltaTokens <= 0 {
+		t.TokenVelocityWarningDeltaTokens = def.TokenVelocityWarningDeltaTokens
+	}
+	if t.TokenVelocityCriticalDeltaTokens <= 0 {
+		t.TokenVelocityCriticalDeltaTokens = def.TokenVelocityCriticalDeltaTokens
+	}
+	if t.ToolThrashingMinFailures <= 0 {
+		t.ToolThrashingMinFailures = def.ToolThrashingMinFailures
+	}
+	if t.ToolThrashingCriticalFailures <= 0 {
+		t.ToolThrashingCriticalFailures = def.ToolThrashingCriticalFailures
+	}
+	return t
+}
+
 // DetectAnomalies evaluates deterministic operational rules against the fact ledger.
-func DetectAnomalies(ledger AgenticFactLedger) []Anomaly {
+func DetectAnomalies(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) []Anomaly {
+	cfg := resolveAnomalyThresholds(thresholds...)
 	var anomalies []Anomaly
 
-	anomalies = append(anomalies, detectToolRetryStreaks(ledger.EventFacts())...)
-	anomalies = append(anomalies, detectToolHighFailureRates(ledger)...)
-	anomalies = append(anomalies, detectContextSaturationSpikes(ledger)...)
+	anomalies = append(anomalies, detectToolRetryStreaks(ledger.EventFacts(), cfg)...)
+	anomalies = append(anomalies, detectToolHighFailureRates(ledger, cfg)...)
+	anomalies = append(anomalies, detectContextSaturationSpikes(ledger, cfg)...)
 	anomalies = append(anomalies, detectSubagentReworkLoops(ledger)...)
 
 	if len(anomalies) == 0 {
@@ -515,7 +627,7 @@ func sortAnomalies(anomalies []Anomaly) {
 }
 
 // ComputeFleetAnomalies aggregates operational anomalies, severity counts, and brittle tools across all ledgers.
-func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
+func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) FleetAnomalySummary {
 	severityCounts := map[string]int64{
 		string(SeverityWarning):  0,
 		string(SeverityCritical): 0,
@@ -559,7 +671,7 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary {
 	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies int64
 
 	for _, ledger := range ledgers {
-		ticketAnomalies := RefreshAnomalySummaries(ledger)
+		ticketAnomalies := RefreshAnomalySummaries(ledger, thresholds...)
 		if len(ticketAnomalies) > 0 {
 			ticketsWithAnomalies++
 		}

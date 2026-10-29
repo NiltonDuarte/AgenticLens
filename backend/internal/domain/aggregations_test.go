@@ -5914,3 +5914,71 @@ func TestAL34_NetLinesGrowthAndGranularityAdversarial(t *testing.T) {
 		}
 	})
 }
+
+func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
+	t.Parallel()
+
+	customCeiling := int64(100_000)
+	invocations := []domain.InvocationFact{
+		{
+			ID:    "inv-1",
+			Role:  "coder",
+			Model: "claude-3-5-sonnet",
+			Tokens: domain.InvocationTokens{
+				PeakContext: 75_000,
+			},
+		},
+	}
+	ledger := domain.AgenticFactLedger{
+		Sessions: sessionFacts(invocations, nil, nil),
+	}
+
+	t.Run("ComputeTotals respects custom ceiling", func(t *testing.T) {
+		totalsDefault := domain.ComputeTotals(invocations)
+		// 75k under 200k default ceiling is HEALTHY (< 100k)
+		if totalsDefault.ContextHealth != domain.ContextHealthHealthy {
+			t.Errorf("expected HEALTHY under default ceiling, got %s", totalsDefault.ContextHealth)
+		}
+
+		totalsCustom := domain.ComputeTotals(invocations, customCeiling)
+		// 75k under 100k custom ceiling is ELEVATED (>= 50k and <= 100k)
+		if totalsCustom.ContextHealth != domain.ContextHealthElevated {
+			t.Errorf("expected ELEVATED under custom ceiling, got %s", totalsCustom.ContextHealth)
+		}
+	})
+
+	t.Run("ComputeWorkflowEfficiencyWithCeiling respects custom ceiling", func(t *testing.T) {
+		effCustom := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, customCeiling)
+		expectedSat := math.Round(75000.0/float64(customCeiling)*1000.0) / 10.0
+		if effCustom.ContextWindowHealth.HealthyCeilingTokens != customCeiling {
+			t.Errorf("expected HealthyCeilingTokens %d, got %d", customCeiling, effCustom.ContextWindowHealth.HealthyCeilingTokens)
+		}
+		if effCustom.ContextWindowHealth.RootSaturationPct != expectedSat {
+			t.Errorf("expected RootSaturationPct %f, got %f", expectedSat, effCustom.ContextWindowHealth.RootSaturationPct)
+		}
+	})
+
+	t.Run("ComputeWorkflowEfficiencyWithConfig respects cfg.AnomalyThresholds.ContextCeilingCriticalTokens", func(t *testing.T) {
+		cfg := domain.DefaultProjectConfig()
+		cfg.AnomalyThresholds.ContextCeilingCriticalTokens = customCeiling
+
+		eff := domain.ComputeWorkflowEfficiencyWithConfig(ledger, cfg)
+		if eff.ContextWindowHealth.HealthyCeilingTokens != customCeiling {
+			t.Errorf("expected HealthyCeilingTokens %d, got %d", customCeiling, eff.ContextWindowHealth.HealthyCeilingTokens)
+		}
+	})
+
+	t.Run("DeriveMetricsLedger propagates cfg.AnomalyThresholds.ContextCeilingCriticalTokens", func(t *testing.T) {
+		cfg := domain.DefaultProjectConfig()
+		cfg.AnomalyThresholds.ContextCeilingCriticalTokens = customCeiling
+
+		derived := domain.DeriveMetricsLedger(ledger, cfg)
+		if derived.Totals.ContextHealth != domain.ContextHealthElevated {
+			t.Errorf("expected Totals.ContextHealth ELEVATED, got %s", derived.Totals.ContextHealth)
+		}
+		if derived.WorkflowEfficiency.ContextWindowHealth.HealthyCeilingTokens != customCeiling {
+			t.Errorf("expected WorkflowEfficiency.ContextWindowHealth.HealthyCeilingTokens %d, got %d",
+				customCeiling, derived.WorkflowEfficiency.ContextWindowHealth.HealthyCeilingTokens)
+		}
+	})
+}

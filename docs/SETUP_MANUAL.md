@@ -244,10 +244,6 @@ ticket:
 
 workspaces:
   dir: workspaces
-  src_folders:
-    - src
-    - pkg
-    - cmd
   artifacts:
     - path: CONTRACT.md
       title: Technical Contract
@@ -273,6 +269,10 @@ live:
 
 code_metrics:
   base_branch: origin/main
+  source_roots:
+    - src
+    - pkg
+    - cmd
   include: []
   exclude: []
   test_patterns: []
@@ -310,7 +310,6 @@ Controls ticket identifier parsing, prefix matching, and normalization.
 #### `workspaces`
 Defines filesystem layout for ticket telemetry and change tracking.
 - **`dir`** (String, Default: `workspaces`): Directory where ticket workspace folders live (e.g. `workspaces/<TICKET_ID>/`).
-- **`src_folders`** (List of Strings, Mandatory during `init`): Monitored source code folders. Git diffs, line additions, and line deletions occurring outside these folders are filtered out when calculating project code metrics.
 - **`artifacts`** (List of Objects, Default: `[]`): Workspace documentation files tracked and displayed in the web dashboard artifact viewer.
   - `path` (String): File path relative to the ticket workspace (e.g. `CONTRACT.md`).
   - `title` (String): Display title in web dashboard tabs.
@@ -336,6 +335,7 @@ Configures real-time session polling and automated anomaly detection.
 #### `code_metrics`
 Configures git commit diff extraction and file classification.
 - **`base_branch`** (String, Optional, Default: automatic probing): Comparison branch for computing diff metrics. If omitted or empty, AgenticLens probes `origin/HEAD`, `origin/main`, `main`, `origin/master`, and `master`.
+- **`source_roots`** (List of Strings, Required): Source code folders monitored for Git changes and code metrics (e.g. `src`, `pkg`, `cmd`).
 - **`include`** (List of Strings, Default: `[]`): Glob patterns explicitly included as production code.
 - **`exclude`** (List of Strings, Default: `[]`): Glob patterns excluded from diff and code volume calculations (e.g. vendor folders, minified assets).
 - **`test_patterns`** (List of Strings, Default: `[]`): Glob patterns identifying test code and fixtures.

@@ -18,6 +18,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Ready
 
+- **AL-59**: Local Developer Configuration and Explicit Multi-Harness Source Selection
+  - **Subsystem**: Config / Adapters / CLI / Documentation / Tests
+  - **Phase**: Phase 8 (Developer Setup / Multi-Harness Support)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-59 local developer configuration and explicit multi-harness source selection.md`
+
 - **AL-42**: Unify Tool Execution Error Classification and Offline-Live Pipeline Parity
   - **Subsystem**: Domain / Adapters / Live / OpenCode / Tests
   - **Phase**: Phase 7 (v1 Defect Remediation)
