@@ -1,0 +1,100 @@
+{
+  "schema_version": 4,
+  "ticket_id": "AL-58",
+  "ticket_title": "Support OpenCode v1 and v2 Concurrently with Dual-Version Test Environments",
+  "ticket_type": "feat",
+  "started_at": "2026-10-28T23:37:29.387Z",
+  "completed_at": "2026-10-29T00:40:13.210Z",
+  "updated_at": "2026-10-29T00:40:13.981064+00:00",
+  "code": {
+    "lines_added": 974,
+    "lines_deleted": 7,
+    "test_lines_added": 364,
+    "test_lines_deleted": 4,
+    "prod_lines_added": 610,
+    "prod_lines_deleted": 3,
+    "files_changed": 7,
+    "sdlc_iterations": 10
+  },
+  "sessions": [
+    {
+      "id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "invocations": [
+        {
+          "id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+          "parent_id": null,
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "user": "",
+          "started_at": "2026-10-28T23:37:30.752Z",
+          "completed_at": "2026-10-29T00:40:13.210Z",
+          "active_duration_seconds": 1145,
+          "turns": 7,
+          "tokens": {
+            "input": 403174,
+            "output": 65995,
+            "cache_read": 23337344,
+            "reasoning": 34073,
+            "peak_context": 230496
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 10
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 80,
+          "errors": 11
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 7,
+          "errors": 0
+        },
+        {
+          "name": "sleep",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 38,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 7,
+            "context_tokens": 206011,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 230496,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 7,
+            "context_tokens": 162206,
+            "threshold": "160000"
+          }
+        }
+      ]
+    }
+  ],
+  "anomalies": []
+}

@@ -6,13 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **AL-58**: Support OpenCode v1 and v2 Concurrently with Dual-Version Test Environments
-  - **Subsystem**: OpenCode / Domain / Adapters / CLI / Config / Tests / Documentation
-  - **Phase**: Phase 8 (OpenCode v2 Compatibility)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-58 support opencode v1 and v2 concurrently with dual version test environments.md`
 
 ---
 
