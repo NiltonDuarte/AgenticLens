@@ -149,11 +149,13 @@ make release-verify
 
 ---
 
-## 7. Ticket Tracking Mandate
+## 7. Ticketed and Ad Hoc Work
 
-Every task or feature must be associated with an explicit ticket ID (e.g. `AL-42`, `GEN-5`) and isolated in `alspaces/<TICKET_ID>/`.
+Work may be ticketed or ad hoc. Use an existing ticket ID and its isolated workspace when the task is associated with a ticket. Do not create a ticket, specification, or workspace solely to satisfy this policy; ad hoc work can proceed without one.
 
-Workspace deliverables must include:
+For ticketed work, workspace deliverables must include:
 - `alspaces/<TICKET_ID>/SUMMARY.md`: Work log, completed changes, and verification.
 - `alspaces/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
 - `alspaces/<TICKET_ID>/agentic_metrics.json`: Final telemetry ledger.
+
+When a matching specification exists under `alspaces/plan/to-do/`, move it to `alspaces/plan/done/` when the ticket is completed. Remove its entry from `alspaces/plan/TICKETS.md` if present. Do not create a ticket, specification, or index entry solely to perform this lifecycle step.

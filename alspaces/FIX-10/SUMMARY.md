@@ -30,7 +30,7 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - Removed legacy `ParentID` and `User` fields from `InvocationFactDTO` in `backend/internal/adapters/schemas.go`.
 - Removed backward-compatibility hoisting loop from `AgenticFactLedgerDTO.ToDomain()`, enforcing pure canonical v4 ingestion without unknown invocation fields.
 - Removed `parent_id` and `user` from TypeScript `InvocationFact` interface in `web/src/domain/types.ts`.
-- Upgraded and normalized all 71 workspace ledgers in `alspaces/*/agentic_metrics.json` and all `testdata/` ledgers to canonical schema v4 with non-empty session users and distinct invocation IDs.
+- Upgraded and normalized all 71 workspace ledgers in `alspaces/*/agentic_metrics.json` and all `testdata/` ledgers to canonical schema v4 with non-empty session users and no synthetic invocation IDs.
 - Updated backend and frontend test suites and fixtures.
 - Verified all 71 workspace ledgers load and validate with zero errors, warnings, or diagnostics.
 
@@ -42,16 +42,24 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - Added regression coverage for Codex/OpenCode source growth, repeated row preservation, session ownership, legacy migrations, strict v4 rejection, and frontend progression.
 - Verification: `make check`, `make test`, and uncached Go race tests passed; 2,361 Go tests/subtests and 737 frontend tests passed. Independent review approved iteration 04. See `iterations/04/IMPLEMENTATION_TEST_EVIDENCE.txt` and `iterations/04/REVIEW.md`.
 
+## Iteration 05: Ticket and Plan Lifecycle Requirements
+
+- Updated `AGENTS.md`, `CONTRIBUTING.md`, and the standard agent policy block in `docs/SETUP_MANUAL.md` to distinguish ticketed work from ad hoc work.
+- Ad hoc tasks no longer require creating a ticket ID, specification, workspace, or ticket-specific telemetry. Ticketed tasks use the existing ticket.
+- Plan lifecycle now moves a matching specification to `plan/done/` only when it exists in `plan/to-do/`, and removes the ticket index entry only when present. No ticket artifacts are created to satisfy lifecycle rules.
+- Reviewer verdict: APPROVED (`alspaces/FIX-10/iterations/05/REVIEW.md`).
+- Documentation consistency search and `git diff --check`: PASS.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 36
-- **Active Agent Duration:** 6h 45m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 37
+- **Active Agent Duration:** 6h 46m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 240.9k tokens (120% of 200k healthy ceiling, 11 compactions) | Subagents peak 168.4k (Coder)
 - **Role Effort Distribution (Subagents):** Coder 100.0%
 - **Subagent Turn Velocity & Thrashing:** 153.2 avg turns/run (peak: 352 turns) | Coder 153.2
 - **Test-to-Production Code Ratio:** 4.2:1 (+2,778 test lines / +664 prod lines)
 - **Code Delivered:** +3,442 / -1,958 lines across 68 code files (excluding docs)
-- **Reasoning Effort:** 436,974 reasoning tokens (59.9% of generated output)
-- **Tool Health & Self-Correction:** 1,718 tool calls (22 self-corrections, 98.7% success rate)
+- **Reasoning Effort:** 442,936 reasoning tokens (59.3% of generated output)
+- **Tool Health & Self-Correction:** 1,730 tool calls (22 self-corrections, 98.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 29 execution anomalies detected (14 CRITICAL, 15 WARNING).
@@ -94,12 +102,12 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 |---|---|---|---|---|---|---|---|---|
 | **orchestrator** | 1 | 5,261,607 | 93,224 | 52,654,100 | 90.9% | 169.2k | ELEVATED | $8.81 |
 | **coder** | 6 | 5,154,527 | 131,272 | 75,180,300 | 93.6% | 168.4k | ELEVATED | $10.94 |
-| **rootagent** | 1 | 395,203 | 68,057 | 31,618,816 | 98.8% | 240.9k | BLOATED (120%) | $0.00 |
-| **Total** | **8** | **10,811,337** | **292,553** | **159,453,216** | **93.7%** | **240.9k** | **BLOATED** | **$19.75** |
+| **rootagent** | 1 | 428,267 | 79,954 | 34,276,608 | 98.8% | 240.9k | BLOATED (120%) | $0.00 |
+| **Total** | **8** | **10,844,401** | **304,450** | **162,111,008** | **93.7%** | **240.9k** | **BLOATED** | **$19.75** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gemini-3.8-flash** | 7 | 10,416,134 | 224,496 | 127,834,400 | 92.5% | $19.75 |
-| **gpt-6-luna** | 1 | 395,203 | 68,057 | 31,618,816 | 98.8% | $0.00 |
-| **Total** | **8** | **10,811,337** | **292,553** | **159,453,216** | **93.7%** | **$19.75** |
+| **gpt-6-luna** | 1 | 428,267 | 79,954 | 34,276,608 | 98.8% | $0.00 |
+| **Total** | **8** | **10,844,401** | **304,450** | **162,111,008** | **93.7%** | **$19.75** |

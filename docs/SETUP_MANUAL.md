@@ -428,15 +428,22 @@ Below is the standard policy block that can be added to your repository's OpenCo
 ## AgenticLens Telemetry Guidelines
 
 1. Ticket Tracking Mandate:
-   - Every task must be tracked by an explicit ticket identifier matching configured prefixes (e.g. PAY-101).
-   - Agents work on one ticket at a time. All turns belong to the active ticket.
+   - Use an existing ticket when the task is associated with one; do not create duplicate tickets.
+   - Ad hoc tasks may proceed without a ticket. Do not create a ticket, specification, or workspace solely to satisfy this policy.
+   - Agents work on one ticket at a time. All turns belong to the active ticket; ad hoc work remains one scoped task.
 
-2. Dedicated Workspace Allocation:
-   - Store task documentation and metrics in `workspaces/<TICKET_ID>/`.
-   - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log).
+2. Plan Lifecycle:
+   - When a matching specification exists under `plan/to-do/`, move it to `plan/done/` when its ticket is completed.
+   - Remove the ticket entry from `plan/TICKETS.md` if present. Do not create a ticket or specification just to complete this step.
 
-3. Delayed Telemetry Ingestion:
+3. Dedicated Workspace Allocation:
+   - For ticketed work, store task documentation and metrics in `workspaces/<TICKET_ID>/`.
+   - Ad hoc work does not require a ticket workspace.
+   - For ticketed work, maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log) as required by the project's artifact list.
+
+4. Delayed Telemetry Ingestion:
    - Ingest telemetry as the very final command before committing code.
+   - Do not create a ticket or workspace solely to generate ticket-specific telemetry for ad hoc work.
    - The agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token. Do not use shell variables (`$NONCE`) because OpenCode records tool inputs into SQLite before subshell expansion occurs:
      ./bin/agentic-lens generate \
        --nonce <GENERATED_NONCE> \

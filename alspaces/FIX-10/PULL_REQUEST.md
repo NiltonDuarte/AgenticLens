@@ -6,6 +6,7 @@ Resolves telemetry backfill integrity issues and normalizes session-invocation h
 2. Unsafe implicit heuristic fallbacks: Strict exact session ID matching is enforced by default. Heuristic title substring and workspace path resolution are gated behind `--allow-fallbacks`. Missing SQLite sessions preserve existing historical invocations and events intact and are marked `partial` pending host migration.
 3. Schema v4 session-invocation normalization: Hoisted `user` and `parent_id` to `SessionFact`; removed synthetic invocation IDs from the schema, extractors, migration, frontend types, and persisted ledgers. Session ownership now comes from the enclosing session, with repeated model rows preserved.
 4. Legacy schema fallback elimination: Removed fallback hoisting and legacy invocation fields from DTOs and TypeScript interfaces, and normalized all 71 workspace ledgers in `alspaces/` to canonical schema v4.
+5. Ticket workflow clarification: Existing tickets retain their workspaces; ad hoc tasks do not require creating tickets or ticket artifacts. Completed specifications move to `plan/done/` only when a matching to-do specification exists.
 
 ## Changes
 - `backend/internal/domain/models.go`: Added `User string` to `SessionFact`; removed `ParentID` and `User` from `InvocationFact`.
