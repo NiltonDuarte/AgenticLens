@@ -4,17 +4,17 @@
   "ticket_title": "Local Developer Configuration and Explicit Multi-Harness Source Selection",
   "ticket_type": "feat",
   "started_at": "2026-10-29T00:23:01.972Z",
-  "completed_at": "2026-10-29T00:43:48.806Z",
-  "updated_at": "2026-10-29T00:43:49.452059+00:00",
+  "completed_at": "2026-10-29T08:41:31.447Z",
+  "updated_at": "2026-10-29T08:41:32.605760+00:00",
   "code": {
-    "lines_added": 570,
+    "lines_added": 592,
     "lines_deleted": 39,
-    "test_lines_added": 281,
+    "test_lines_added": 303,
     "test_lines_deleted": 8,
     "prod_lines_added": 289,
     "prod_lines_deleted": 31,
     "files_changed": 8,
-    "sdlc_iterations": 6
+    "sdlc_iterations": 8
   },
   "sessions": [
     {
@@ -28,35 +28,35 @@
           "model": "gpt-6-luna",
           "user": "",
           "started_at": "2026-10-29T00:23:03.445Z",
-          "completed_at": "2026-10-29T00:43:48.806Z",
-          "active_duration_seconds": 172,
-          "turns": 4,
+          "completed_at": "2026-10-29T08:41:31.447Z",
+          "active_duration_seconds": 1113,
+          "turns": 6,
           "tokens": {
-            "input": 112909,
-            "output": 11016,
-            "cache_read": 2821760,
-            "reasoning": 3608,
-            "peak_context": 72893
+            "input": 221502,
+            "output": 17671,
+            "cache_read": 5309952,
+            "reasoning": 6688,
+            "peak_context": 100572
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 6
+          "user_iterations": 8
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 18,
-          "errors": 2
+          "calls": 36,
+          "errors": 4
         },
         {
           "name": "request_user_input_async",
-          "calls": 5,
+          "calls": 6,
           "errors": 0
         },
         {
           "name": "wait",
-          "calls": 18,
+          "calls": 22,
           "errors": 0
         }
       ],

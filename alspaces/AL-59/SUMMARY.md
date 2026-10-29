@@ -23,16 +23,22 @@
 - Focused config and CLI tests passed, including source precedence, independent source configurations, failure without fallback, legacy OpenCode config, init behavior, and malformed local config handling.
 - Reviewer verdict: APPROVED; no remaining findings.
 
+## Iteration 02 — CI test isolation
+
+- Updated three `generate` CLI tests to use an explicit temporary SQLite database and an isolated `HOME`, removing reliance on a developer or CI runner OpenCode database.
+- Preserved the missing-base-branch and root-config precedence assertions. No production behavior changed.
+- Verification: focused CLI tests, full `go test ./cmd/agentic-lens`, and `make` passed; reviewer approved with no findings.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 6
-- **Active Agent Duration:** 2m 52s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 72.9k tokens (36% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 8
+- **Active Agent Duration:** 18m 33s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 100.6k tokens (50% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
-- **Test-to-Production Code Ratio:** 1.0:1 (+281 test lines / +289 prod lines)
-- **Code Delivered:** +570 / -39 lines across 8 code files (excluding docs)
-- **Reasoning Effort:** 3,608 reasoning tokens (24.7% of generated output)
-- **Tool Health & Self-Correction:** 41 tool calls (2 self-corrections, 95.1% success rate)
+- **Test-to-Production Code Ratio:** 1.0:1 (+303 test lines / +289 prod lines)
+- **Code Delivered:** +592 / -39 lines across 8 code files (excluding docs)
+- **Reasoning Effort:** 6,688 reasoning tokens (27.5% of generated output)
+- **Tool Health & Self-Correction:** 64 tool calls (4 self-corrections, 93.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -42,11 +48,11 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 112,909 | 11,016 | 2,821,760 | 96.2% | 72.9k | HEALTHY | $0.00 |
-| **Total** | **1** | **112,909** | **11,016** | **2,821,760** | **96.2%** | **72.9k** | **HEALTHY** | **$0.00** |
+| **rootagent** | 1 | 221,502 | 17,671 | 5,309,952 | 96.0% | 100.6k | ELEVATED | $0.00 |
+| **Total** | **1** | **221,502** | **17,671** | **5,309,952** | **96.0%** | **100.6k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 1 | 112,909 | 11,016 | 2,821,760 | 96.2% | $0.00 |
-| **Total** | **1** | **112,909** | **11,016** | **2,821,760** | **96.2%** | **$0.00** |
+| **gpt-6-luna** | 1 | 221,502 | 17,671 | 5,309,952 | 96.0% | $0.00 |
+| **Total** | **1** | **221,502** | **17,671** | **5,309,952** | **96.0%** | **$0.00** |
