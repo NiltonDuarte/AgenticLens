@@ -87,6 +87,76 @@ func testProjectConfig() domain.ProjectConfig {
 	}
 }
 
+func TestLoad_LocalTelemetrySourcesMergeAndValidate(t *testing.T) {
+	root := t.TempDir()
+	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(shared), 0600); err != nil {
+		t.Fatal(err)
+	}
+	local := "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ~/private-codex\n    opencode:\n      database_path: ~/opencode.db\n"
+	localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
+	if err := os.WriteFile(localPath, []byte(local), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ProjectName != "Shared" || cfg.Telemetry.DefaultSource != "codex" || cfg.Telemetry.Sources.CodexHome != "~/private-codex" || cfg.Telemetry.Sources.OpenCodeDatabasePath != "~/opencode.db" {
+		t.Fatalf("unexpected merged config: %+v", cfg)
+	}
+	if err := os.WriteFile(localPath, []byte("telemetry:\n  default_source: both\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(localPath, []byte("telemetry:\n  default_source: ''\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), "default_source") {
+		t.Fatalf("expected empty local source validation error, got %v", err)
+	}
+	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), ".agenticlens-config.local.yaml") {
+		t.Fatalf("expected actionable local validation error, got %v", err)
+	}
+	if err := os.WriteFile(localPath, []byte("telemetry: [broken"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), ".agenticlens-config.local.yaml") {
+		t.Fatalf("expected malformed local YAML error, got %v", err)
+	}
+}
+
+func TestLoad_LocalTelemetrySourceCombinations(t *testing.T) {
+	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	for _, tc := range []struct {
+		name       string
+		local      string
+		defaultSrc string
+		opencode   string
+		codex      string
+	}{
+		{name: "Codex only", local: "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ~/codex\n", defaultSrc: "codex", codex: "~/codex"},
+		{name: "OpenCode only", local: "telemetry:\n  sources:\n    opencode:\n      database_path: ~/opencode.db\n", opencode: "~/opencode.db"},
+		{name: "both sources", local: "telemetry:\n  default_source: codex\n  sources:\n    opencode:\n      database_path: ~/opencode.db\n    codex:\n      home: ~/codex\n", defaultSrc: "codex", opencode: "~/opencode.db", codex: "~/codex"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(shared), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.local.yaml"), []byte(tc.local), 0600); err != nil {
+				t.Fatal(err)
+			}
+			cfg, err := config.Load(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.Telemetry.DefaultSource != tc.defaultSrc || cfg.Telemetry.Sources.CodexHome != tc.codex || cfg.Telemetry.Sources.OpenCodeDatabasePath != tc.opencode {
+				t.Fatalf("unexpected source settings: %+v", cfg.Telemetry)
+			}
+		})
+	}
+}
+
 func TestLoad_YAMLConfigurationParsing(t *testing.T) {
 	tempDir := t.TempDir()
 

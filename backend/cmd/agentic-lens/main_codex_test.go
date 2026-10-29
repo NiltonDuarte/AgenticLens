@@ -36,6 +36,10 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 		t.Fatal(err)
 	}
 	home := t.TempDir()
+	localConfig := "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: " + home + "\n"
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(localConfig), 0600); err != nil {
+		t.Fatal(err)
+	}
 	sessions := filepath.Join(home, "sessions")
 	if err := os.MkdirAll(sessions, 0700); err != nil {
 		t.Fatal(err)
@@ -51,7 +55,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 	output := filepath.Join(home, "agentic_metrics.json")
 	generate := func() domain.AgenticFactLedger {
 		t.Helper()
-		cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", home,
+		cmd := exec.Command(cliBinaryPath, "generate",
 			"--session-id", "thread-01", "--ticket-id", ticketID, "--ticket-title", "Codex refresh regression",
 			"--ticket-type", "chore", "--json-output", output)
 		cmd.Dir = project
@@ -191,5 +195,58 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 		if ledger.Code.SDLCIterations != 1 {
 			t.Fatalf("child replay inflated root steering count: %d", ledger.Code.SDLCIterations)
 		}
+	}
+}
+
+func TestGenerateSelectedSourceDoesNotFallback(t *testing.T) {
+	sharedConfig := "project_name: SourceFixture\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\ndatabase:\n  path: ./legacy-opencode.db\n"
+	for _, tc := range []struct {
+		name        string
+		local       string
+		args        []string
+		wantMessage string
+		wantPath    string
+	}{
+		{
+			name:        "omitted source honors Codex-only local default and does not fall back",
+			local:       "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ./missing-codex-home\n    opencode:\n      database_path: ./available-opencode.db\n",
+			wantMessage: "selected Codex source", wantPath: "missing-codex-home",
+		},
+		{
+			name:        "explicit source overrides local default and does not fall back",
+			local:       "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ./available-codex-home\n    opencode:\n      database_path: ./local-opencode.db\n",
+			args:        []string{"--source", "opencode", "--db-path", "./missing-cli-opencode.db"},
+			wantMessage: "selected OpenCode source", wantPath: "missing-cli-opencode.db",
+		},
+		{
+			name:        "legacy shared OpenCode path works without local config",
+			wantMessage: "selected OpenCode source", wantPath: "legacy-opencode.db",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			project := t.TempDir()
+			if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(sharedConfig), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if tc.local != "" {
+				if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(tc.local), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			args := append([]string{"generate"}, tc.args...)
+			args = append(args, "--ticket-id", "TEST-59", "--ticket-title", "Source selection", "--ticket-type", "test", "--json-output", filepath.Join(project, "metrics.json"))
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = project
+			output, err := cmd.CombinedOutput()
+			if err == nil {
+				t.Fatalf("expected selected source failure, output: %s", output)
+			}
+			if !strings.Contains(string(output), tc.wantMessage) || !strings.Contains(string(output), tc.wantPath) {
+				t.Fatalf("expected selected source error containing %q and %q, got:\n%s", tc.wantMessage, tc.wantPath, output)
+			}
+			if _, statErr := os.Stat(filepath.Join(project, "metrics.json")); !os.IsNotExist(statErr) {
+				t.Fatalf("source failure unexpectedly wrote metrics: stat err=%v", statErr)
+			}
+		})
 	}
 }

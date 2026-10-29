@@ -37,7 +37,7 @@ func runGenerate(args []string) {
 
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
 	codeRefFlag := genFlags.String("code-ref", "HEAD", "Git branch or commit to measure against the configured base (defaults to HEAD; committed changes only)")
-	sourceFlag := genFlags.String("source", "opencode", "Telemetry harness to read: opencode or codex")
+	sourceFlag := genFlags.String("source", "", "Telemetry harness to read: opencode or codex (defaults to local configuration, then opencode)")
 	nonceFlag := genFlags.String("nonce", "", "Unique random execution nonce to lock session resolution to")
 	sessionIDFlag := genFlags.String("session-id", "", "Explicit root session ID")
 	ticketTitleFlag := genFlags.String("ticket-title", "", "Human-readable ticket title or descriptive name")
@@ -57,10 +57,6 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 	activeSource := strings.ToLower(strings.TrimSpace(*sourceFlag))
-	if activeSource != "opencode" && activeSource != "codex" {
-		fmt.Fprintf(os.Stderr, "Error: unsupported source %q. Use opencode or codex.\n", *sourceFlag)
-		os.Exit(1)
-	}
 
 	var cachedFacts *adapters.ExistingLedgerFacts
 	if *jsonOutputFlag != "" {
@@ -90,6 +86,11 @@ func runGenerate(args []string) {
 			}
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		}
+		os.Exit(1)
+	}
+	activeSource, err = adaptersconfig.ResolveSource(*sourceFlag, projCfg.Telemetry.DefaultSource)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v.\n", err)
 		os.Exit(1)
 	}
 
@@ -192,27 +193,27 @@ func runGenerate(args []string) {
 	var hasLocalExtraction bool
 
 	if activeSource == "codex" {
-		codexHome := strings.TrimSpace(*codexHomeFlag)
-		if codexHome == "" {
-			codexHome = strings.TrimSpace(os.Getenv("CODEX_HOME"))
+		builtinCodexHome := ""
+		if home, homeErr := os.UserHomeDir(); homeErr == nil {
+			builtinCodexHome = filepath.Join(home, ".codex")
 		}
-		if codexHome == "" {
-			if home, homeErr := os.UserHomeDir(); homeErr == nil {
-				codexHome = filepath.Join(home, ".codex")
-			}
-		}
+		codexHome := adaptersconfig.ResolveCodexHome(*codexHomeFlag, projCfg.Telemetry.Sources.CodexHome, os.Getenv("CODEX_HOME"), builtinCodexHome)
 		rolloutPaths, discoverErr := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{
 			CodexHome: codexHome, Nonce: *nonceFlag, SessionID: *sessionIDFlag,
 		})
 		if discoverErr != nil {
-			fmt.Fprintf(os.Stderr, "Error discovering Codex sessions: %v\n", discoverErr)
+			fmt.Fprintf(os.Stderr, "Error discovering selected Codex source at %s: %v. Check telemetry.sources.codex.home or --codex-home.\n", codexHome, discoverErr)
+			os.Exit(1)
+		}
+		if len(rolloutPaths) == 0 {
+			fmt.Fprintf(os.Stderr, "Error: no matching rollouts found in selected Codex source at %s. Check telemetry.sources.codex.home, --codex-home, and the required --nonce or --session-id.\n", codexHome)
 			os.Exit(1)
 		}
 		transcripts := make([]codex.Transcript, 0, len(rolloutPaths))
 		for _, path := range rolloutPaths {
 			transcript, parseErr := codex.ParseRolloutPath(path)
 			if parseErr != nil {
-				fmt.Fprintf(os.Stderr, "Error reading discovered Codex session: %v\n", parseErr)
+				fmt.Fprintf(os.Stderr, "Error reading selected Codex source rollout %s: %v. Check telemetry.sources.codex.home or --codex-home.\n", path, parseErr)
 				os.Exit(1)
 			}
 			transcripts = append(transcripts, transcript)
@@ -238,7 +239,8 @@ func runGenerate(args []string) {
 		}
 		fmt.Fprintf(os.Stderr, "Discovered %d Codex thread rollout(s) for session %s.\n", len(rolloutPaths), combined.ThreadID)
 	} else {
-		dbClient, dbErr := opencode.OpenDB(*dbPathFlag)
+		dbPath := adaptersconfig.ResolveOpenCodePath(*dbPathFlag, projCfg.Telemetry.Sources.OpenCodeDatabasePath, projCfg.Database.Path)
+		dbClient, dbErr := opencode.OpenDB(dbPath)
 		if dbErr == nil {
 			defer dbClient.Close()
 
@@ -248,6 +250,10 @@ func runGenerate(args []string) {
 				activeTicketID,
 				*sessionIDFlag,
 			)
+			if resolveErr != nil && !errors.Is(resolveErr, opencode.ErrSessionNotFound) {
+				fmt.Fprintf(os.Stderr, "Error querying selected OpenCode source at %s: %v. Check telemetry.sources.opencode.database_path or --db-path.\n", dbPath, resolveErr)
+				os.Exit(1)
+			}
 			if resolveErr == nil && rootID != nil && *rootID != "" {
 				alreadyKnown := false
 				for _, id := range knownThreadIDs {
@@ -265,7 +271,11 @@ func runGenerate(args []string) {
 				dbInvs, dbTools, dbEvents, dbStarted, dbCompleted, extractErr := opencode.ExtractFacts(
 					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID,
 				)
-				if extractErr == nil && len(dbInvs) > 0 {
+				if extractErr != nil {
+					fmt.Fprintf(os.Stderr, "Error reading selected OpenCode source at %s: %v. Check the database and telemetry.sources.opencode.database_path.\n", dbPath, extractErr)
+					os.Exit(1)
+				}
+				if len(dbInvs) > 0 {
 					localInvocations = dbInvs
 					localTools = dbTools
 					localEvents = dbEvents
@@ -278,6 +288,9 @@ func runGenerate(args []string) {
 					}
 				}
 			}
+		} else {
+			fmt.Fprintf(os.Stderr, "Error opening selected OpenCode source at %s: %v. Check telemetry.sources.opencode.database_path or --db-path.\n", dbPath, dbErr)
+			os.Exit(1)
 		}
 	}
 
@@ -503,6 +516,9 @@ func runServer(args []string) {
 
 	dbPath := strings.TrimSpace(*dbPathFlag)
 	if dbPath == "" {
+		dbPath = strings.TrimSpace(projCfg.Telemetry.Sources.OpenCodeDatabasePath)
+	}
+	if dbPath == "" {
 		dbPath = strings.TrimSpace(projCfg.Database.Path)
 	}
 	if dbPath == "" {
@@ -511,12 +527,7 @@ func runServer(args []string) {
 		}
 	}
 
-	cleanDBPath := dbPath
-	if strings.HasPrefix(cleanDBPath, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			cleanDBPath = filepath.Join(home, cleanDBPath[2:])
-		}
-	}
+	cleanDBPath := adaptersconfig.ExpandHomePath(dbPath)
 
 	liveService := live.NewLiveService(nil, projCfg)
 	if cleanDBPath != "" {
@@ -632,19 +643,39 @@ func runBackfill(args []string) {
 			os.Exit(1)
 		}
 	}
+	resolvedDBPath := strings.TrimSpace(*dbPathFlag)
+	resolvedCodexHome := strings.TrimSpace(*codexHomeFlag)
+	cfg, loadErr := adaptersconfig.Load("")
+	if loadErr != nil && !errors.Is(loadErr, adaptersconfig.ErrConfigNotFound) {
+		fmt.Fprintf(os.Stderr, "Error loading project configuration for backfill: %v\n", loadErr)
+		os.Exit(1)
+	}
+	if loadErr == nil {
+		if resolvedDBPath == "" {
+			resolvedDBPath = strings.TrimSpace(cfg.Telemetry.Sources.OpenCodeDatabasePath)
+		}
+		if resolvedDBPath == "" {
+			resolvedDBPath = strings.TrimSpace(cfg.Database.Path)
+		}
+		if resolvedCodexHome == "" {
+			resolvedCodexHome = strings.TrimSpace(cfg.Telemetry.Sources.CodexHome)
+		}
+	}
+	resolvedDBPath = adaptersconfig.ExpandHomePath(resolvedDBPath)
+	resolvedCodexHome = adaptersconfig.ExpandHomePath(resolvedCodexHome)
 
 	opts := backfill.BackfillOptions{
 		WorkspacesDir:   *workspacesFlag,
 		TicketID:        *ticketIDFlag,
 		Source:          cleanSource,
-		CodexHome:       strings.TrimSpace(*codexHomeFlag),
+		CodexHome:       resolvedCodexHome,
 		RecomputeGit:    *recomputeGitFlag,
 		CodeRef:         strings.TrimSpace(*codeRefFlag),
 		RecomputeDB:     *recomputeDBFlag,
 		MigrateSchema:   *migrateSchemaFlag,
 		DryRun:          *dryRunFlag,
 		UpdateSummaries: *updateSummariesFlag,
-		DBPath:          *dbPathFlag,
+		DBPath:          resolvedDBPath,
 		Force:           *forceFlag,
 	}
 
@@ -949,6 +980,12 @@ func runInit(args []string) {
 		fmt.Fprintf(os.Stderr, "Error parsing init flags: %v\n", err)
 		os.Exit(1)
 	}
+	sharedDestination, sharedPathErr := filepath.Abs(filepath.Clean(*outputFlag))
+	localDestination, localPathErr := filepath.Abs(".agenticlens-config.local.yaml")
+	if sharedPathErr == nil && localPathErr == nil && sharedDestination == localDestination {
+		fmt.Fprintln(os.Stderr, "Error: --output cannot target .agenticlens-config.local.yaml; shared and local configuration outputs must be distinct.")
+		os.Exit(1)
+	}
 
 	projectName := strings.TrimSpace(*projectNameFlag)
 	if projectName == "" {
@@ -997,9 +1034,10 @@ func runInit(args []string) {
 		fmt.Fprintf(os.Stderr, "Error generating configuration: %v\n", err)
 		os.Exit(1)
 	}
+	localYAML := []byte("# Machine-local telemetry source settings. Do not commit this file.\ntelemetry:\n  default_source: opencode\n  sources:\n    opencode:\n      database_path: ~/.local/share/opencode/opencode.db\n    codex:\n      home: ~/.codex\n")
 
 	if *dryRunFlag {
-		fmt.Print(string(yamlData))
+		fmt.Printf("# .agenticlens-config.yaml\n%s\n# .agenticlens-config.local.yaml\n%s", string(yamlData), string(localYAML))
 		return
 	}
 
@@ -1008,16 +1046,114 @@ func runInit(args []string) {
 		outputPath = ".agenticlens-config.yaml"
 	}
 
-	if err := adaptersconfig.WriteConfigFile(outputPath, yamlData, *forceFlag); err != nil {
-		if errors.Is(err, adaptersconfig.ErrFileExists) {
-			fmt.Fprintf(os.Stderr, "Error: configuration file already exists at %s. Use --force to overwrite.\n", outputPath)
+	localPath := ".agenticlens-config.local.yaml"
+	for _, path := range []string{outputPath, localPath} {
+		if _, err := os.Stat(path); err == nil && !*forceFlag {
+			fmt.Fprintf(os.Stderr, "Error: configuration file already exists at %s. Use --force to overwrite.\n", path)
+			os.Exit(1)
+		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "Error checking configuration file %s: %v\n", path, err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "Error writing configuration file %s: %v\n", outputPath, err)
+	}
+	if err := writeConfigPair(outputPath, yamlData, localPath, localYAML, *forceFlag); err != nil {
+		if errors.Is(err, adaptersconfig.ErrFileExists) {
+			fmt.Fprintf(os.Stderr, "Error writing configuration files: %v. Use --force to overwrite.\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "Error writing configuration files: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Successfully initialized AgenticLens configuration for '%s' at %s\n", projectName, outputPath)
+	fmt.Printf("Successfully initialized AgenticLens configuration for '%s' at %s and %s\n", projectName, outputPath, localPath)
+}
+
+func writeConfigPair(firstPath string, firstData []byte, secondPath string, secondData []byte, force bool) error {
+	type stagedFile struct{ target, temp string }
+	staged := make([]stagedFile, 0, 2)
+	for _, item := range []struct {
+		path string
+		data []byte
+	}{{firstPath, firstData}, {secondPath, secondData}} {
+		if err := os.MkdirAll(filepath.Dir(item.path), 0755); err != nil {
+			return fmt.Errorf("preparing directory for %s: %w", item.path, err)
+		}
+		file, err := os.CreateTemp(filepath.Dir(item.path), ".agenticlens-config-*.tmp")
+		if err != nil {
+			return fmt.Errorf("staging %s: %w", item.path, err)
+		}
+		if _, err := file.Write(item.data); err != nil {
+			file.Close()
+			os.Remove(file.Name())
+			return fmt.Errorf("staging %s: %w", item.path, err)
+		}
+		if err := file.Close(); err != nil {
+			os.Remove(file.Name())
+			return fmt.Errorf("staging %s: %w", item.path, err)
+		}
+		staged = append(staged, stagedFile{target: item.path, temp: file.Name()})
+	}
+	defer func() {
+		for _, item := range staged {
+			_ = os.Remove(item.temp)
+		}
+	}()
+	backups := make(map[string]string, len(staged))
+	installed := make([]string, 0, len(staged))
+	rollback := func() {
+		for _, path := range installed {
+			_ = os.Remove(path)
+		}
+		for path, backup := range backups {
+			_ = os.Rename(backup, path)
+		}
+	}
+	for _, item := range staged {
+		info, err := os.Stat(item.target)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("checking %s: %w", item.target, err)
+		}
+		if info.IsDir() {
+			return fmt.Errorf("target %s is a directory", item.target)
+		}
+		if !force {
+			return &adaptersconfig.FileExistsError{Path: item.target}
+		}
+		backup, err := os.CreateTemp(filepath.Dir(item.target), ".agenticlens-config-backup-*.tmp")
+		if err != nil {
+			rollback()
+			return fmt.Errorf("preparing backup for %s: %w", item.target, err)
+		}
+		backupPath := backup.Name()
+		if err := backup.Close(); err != nil {
+			os.Remove(backupPath)
+			rollback()
+			return fmt.Errorf("preparing backup for %s: %w", item.target, err)
+		}
+		if err := os.Remove(backupPath); err != nil {
+			rollback()
+			return fmt.Errorf("preparing backup for %s: %w", item.target, err)
+		}
+		if err := os.Rename(item.target, backupPath); err != nil {
+			rollback()
+			return fmt.Errorf("backing up %s: %w", item.target, err)
+		}
+		backups[item.target] = backupPath
+	}
+	for _, item := range staged {
+		if err := os.Rename(item.temp, item.target); err != nil {
+			rollback()
+			return fmt.Errorf("replacing %s: %w", item.target, err)
+		}
+		installed = append(installed, item.target)
+	}
+	for _, backup := range backups {
+		_ = os.Remove(backup)
+	}
+	return nil
 }
 
 func runVersion(args []string) {

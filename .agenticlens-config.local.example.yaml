@@ -1,0 +1,9 @@
+# Sanitized machine-local telemetry source settings.
+# Copy to .agenticlens-config.local.yaml and adjust paths for this machine.
+telemetry:
+  default_source: opencode
+  sources:
+    opencode:
+      database_path: ~/.local/share/opencode/opencode.db
+    codex:
+      home: ~/.codex
