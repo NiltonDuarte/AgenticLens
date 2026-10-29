@@ -104,6 +104,8 @@ type WorkspaceEventsResponse struct {
 	Events     []EventFact `json:"events"`
 	DataSource DataSource  `json:"data_source"`
 	Anomalies  []Anomaly   `json:"anomalies"`
+	// IncludesBaseline prevents later boundaries from treating recorded echoes as new occurrences.
+	IncludesBaseline bool `json:"includes_baseline,omitempty"`
 }
 
 // CodeFacts stores lines of code modified and SDLC iteration counts.

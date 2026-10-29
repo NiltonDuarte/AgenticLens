@@ -112,7 +112,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 		}
 
 		factLedger := dto.ToDomain()
-		factLedger, err = domain.PersistAnomalySummaries(factLedger)
+		factLedger, err = domain.NormalizeLedgerForRead(factLedger)
 		if err != nil {
 			addDiagnostic(metricFile, fmt.Errorf("normalization failed: %w", err))
 			continue
@@ -287,7 +287,7 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	}
 
 	factLedger := dto.ToDomain()
-	factLedger, err = domain.PersistAnomalySummaries(factLedger)
+	factLedger, err = domain.NormalizeLedgerForRead(factLedger)
 	if err != nil {
 		return nil, fmt.Errorf("normalizing metrics for ticket %s: %w", cleanID, err)
 	}

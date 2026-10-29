@@ -3,6 +3,80 @@ import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { TraceWaterfall, matchesAnomaly, findMatchingAnomaly } from './TraceWaterfall';
 import type { EventFact, Anomaly } from '../domain/types';
 
+describe('FIX-12 event facts without payload hydration', () => {
+  const fact: EventFact = {
+    event_id: 'committed-call', timestamp: '2026-10-29T10:00:00Z', session_id: 'committed-session',
+    message_id: 'committed-message', turn: 1, role: 'coder', event_type: 'tool_call',
+    tool_name: 'bash', status: 'error', context_tokens: 2500,
+  };
+
+  it('keeps counts, chronological rows, identifiers, filters, and missing-details copy without hydration', () => {
+    const later: EventFact = { ...fact, event_id: undefined, message_id: undefined, timestamp: '2026-10-29T11:00:00Z',
+      turn: 2, status: 'completed' };
+    render(<TraceWaterfall events={[later, fact]} isHydrated={false} dataSource="committed_ledger" />);
+    expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded');
+    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
+    fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
+    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
+    expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-item-2')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    expect(screen.getAllByTestId(/timeline-item-/).map((item) => item.dataset.testid)).toEqual(['timeline-item-1', 'timeline-item-2']);
+    fireEvent.click(screen.getByRole('button', { name: 'View payload for turn 1' }));
+    expect(screen.getByTestId('payload-details-1')).toHaveTextContent('committed-message');
+    expect(screen.getByTestId('unhydrated-notice')).toHaveTextContent('Payload details unavailable');
+    expect(screen.getByRole('button', { name: 'Copy Message ID' })).toBeInTheDocument();
+    expect(screen.queryByTestId('tool-output-payload-block')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show only errors and anomalies' }));
+    expect(screen.queryByTestId('timeline-item-2')).not.toBeInTheDocument();
+  });
+
+  it.each(['local_sqlite', 'local_codex'] as const)('retains %s payloads alongside a bare committed row', (source) => {
+    const local = { ...fact, tool_input: 'make test', tool_output: 'error detail', prompt_content: 'Run checks', reasoning_content: 'Inspect build' };
+    const bare = { ...fact, event_id: 'unmatched', turn: 2 };
+    render(<TraceWaterfall events={[local, bare]} isHydrated={true} dataSource={source} defaultExpanded={true} />);
+    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent(source === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite');
+    fireEvent.click(screen.getByRole('button', { name: 'View payload for turn 1' }));
+    expect(screen.getByTestId('tool-input-payload-block')).toHaveTextContent('make test');
+    expect(screen.getByTestId('tool-output-payload-block')).toHaveTextContent('error detail');
+    expect(screen.getByTestId('prompt-payload-block')).toHaveTextContent('Run checks');
+    expect(screen.getByTestId('reasoning-payload-block')).toHaveTextContent('Inspect build');
+    fireEvent.click(screen.getByRole('button', { name: 'View payload for turn 2' }));
+    expect(within(screen.getByTestId('payload-details-2')).getByTestId('unhydrated-notice')).toHaveTextContent('Payload details unavailable');
+    expect(within(screen.getByTestId('payload-details-1')).queryByTestId('unhydrated-notice')).not.toBeInTheDocument();
+  });
+
+  it('shows payloads actually supplied by an unhydrated response', () => {
+    render(<TraceWaterfall events={[{ ...fact, tool_output: 'Recorded response detail' }]} isHydrated={false} defaultExpanded={true} />);
+    fireEvent.click(screen.getByRole('button', { name: 'View payload for turn 1' }));
+    expect(screen.getByTestId('tool-output-payload-block')).toHaveTextContent('Recorded response detail');
+    expect(screen.queryByTestId('unhydrated-notice')).not.toBeInTheDocument();
+  });
+
+  it.each(['stable ID', 'no IDs', 'new local ID'] as const)('rebinds an uncontrolled %s selection when its event receives payloads', (identity) => {
+    const baseline: EventFact = {
+      ...fact, event_id: identity === 'stable ID' ? fact.event_id : undefined, message_id: undefined,
+    };
+    const selected = vi.fn();
+    const { rerender } = render(<TraceWaterfall events={[baseline]} defaultExpanded={true} onSelectEvent={selected} />);
+    fireEvent.click(screen.getByTestId('timeline-item-1'));
+    expect(screen.getByTestId('timeline-item-1')).toHaveClass('selected');
+    expect(screen.getByTestId('unhydrated-notice')).toBeInTheDocument();
+    const enriched: EventFact = {
+      ...baseline, event_id: identity === 'new local ID' ? 'local-call' : baseline.event_id,
+      message_id: 'local-message', tool_output: 'new local payload',
+    };
+    rerender(<TraceWaterfall events={[enriched]} defaultExpanded={true} onSelectEvent={selected}
+      isHydrated={true} dataSource="local_sqlite" />);
+    expect(screen.getByTestId('timeline-item-1')).toHaveClass('selected');
+    expect(screen.getByRole('button', { name: 'Hide payload for turn 1' })).toBeInTheDocument();
+    expect(screen.getByTestId('payload-details-1')).toHaveTextContent('local-message');
+    expect(screen.getByTestId('tool-output-payload-block')).toHaveTextContent('new local payload');
+    expect(screen.queryByTestId('unhydrated-notice')).not.toBeInTheDocument();
+    expect(selected).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('TraceWaterfall Component', () => {
   const sampleEvents: readonly EventFact[] = [
     {
@@ -466,16 +540,16 @@ describe('TraceWaterfall Component', () => {
       const banner = screen.getByTestId('db-offline-banner');
       expect(banner).toBeInTheDocument();
       expect(
-        screen.getByText('Committed Anomaly Summaries — Local Source Offline')
+        screen.getByText('Committed Ledger Facts')
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          /The local source was unavailable or not found\. The ledger keeps anomaly summaries/i
+          /Recorded event facts remain visible from the committed ledger/i
         )
       ).toBeInTheDocument();
 
       const sourceBadge = screen.getByTestId('waterfall-source-badge');
-      expect(sourceBadge).toHaveTextContent('Source: Committed Anomaly Summary');
+      expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
       expect(sourceBadge).toHaveClass('source-offline');
     });
 
@@ -547,7 +621,7 @@ describe('TraceWaterfall Component', () => {
 
       expect(screen.getByTestId('payload-details-3')).toBeInTheDocument();
       expect(screen.getByTestId('unhydrated-notice')).toHaveTextContent(
-        'Full payload not captured in Git ledger'
+        'Payload details unavailable for this event.'
       );
     });
 
@@ -580,7 +654,7 @@ describe('TraceWaterfall Component', () => {
       fireEvent.click(viewPayloadBtn);
 
       expect(screen.getByTestId('payload-details-1')).toBeInTheDocument();
-      expect(screen.getByText('Zero payload data captured for this event')).toBeInTheDocument();
+      expect(screen.getByTestId('unhydrated-notice')).toHaveTextContent('Payload details unavailable for this event.');
     });
   });
 

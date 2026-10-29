@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -887,6 +888,142 @@ func TestHydrateWorkspaceEvents_CodexUsesExplicitSourceAndCODEXHome(t *testing.T
 	}
 }
 
+func TestHydrateWorkspaceEventsMixedSourcesPreserveSQLiteDetailsOverCommittedEcho(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		includeCodex bool
+	}{
+		{name: "SQLite only"},
+		{name: "SQLite and Codex", includeCodex: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dbPath := createTestDBFile(t)
+			db, err := sql.Open("sqlite", dbPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := db.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			created := time.Date(2026, 10, 29, 10, 0, 0, 0, time.UTC).UnixMilli()
+			if _, err := db.Exec(`INSERT INTO session (id, agent, model, title, time_created, time_updated)
+				VALUES ('sqlite-session', 'coder', 'test-model', 'FIX-12', ?, ?)`, created, created+25); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data)
+				VALUES ('sqlite-message', 'sqlite-session', ?, ?, '{"role":"assistant","content":"Run checks","tokens":{"input":1200}}')`, created, created+25); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO part (id, session_id, message_id, time_created, time_updated, data)
+				VALUES ('p1', 'sqlite-session', 'sqlite-message', ?, ?, '{"type":"tool","tool":"bash","state":{"status":"completed","input":"make test","output":"SQLite-local output"}}')`, created, created+25); err != nil {
+				t.Fatal(err)
+			}
+			hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := hook.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			home := t.TempDir()
+			tool, recordedMessage, zero := "bash", "committed-message", int64(0)
+			facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
+				ID: "sqlite-session", Source: domain.SourceOpenCode, User: "tester",
+				Invocations: []domain.InvocationFact{{Role: "coder"}}, Tools: []domain.SessionToolFact{},
+				Events: []domain.SessionEventFact{
+					{EventID: "opencode:part:p1", Timestamp: "2026-10-29T10:00:00.000000+00:00", MessageID: &recordedMessage,
+						Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", DurationMs: &zero, ContextTokens: 1200},
+					{EventID: "committed-only", Timestamp: "2026-10-29T09:00:00Z", Turn: 0, Role: "tester",
+						EventType: domain.EventTypeCompaction, Status: "completed", ContextTokens: 800},
+				},
+			}}}
+			if tc.includeCodex {
+				rolloutPath := filepath.Join(home, "sessions", "2026", "10", "29", "rollout-thread.jsonl")
+				if err := os.MkdirAll(filepath.Dir(rolloutPath), 0700); err != nil {
+					t.Fatal(err)
+				}
+				rollout := `{"type":"session_meta","payload":{"id":"codex-session","session_id":"codex-session","timestamp":"2026-10-29T10:00:01Z"}}` + "\n" +
+					`{"timestamp":"2026-10-29T10:00:02Z","type":"event_msg","payload":{"type":"item_completed","turn_id":"turn-1","item":{"id":"cmd-1","type":"CommandExecution","status":"failed","exit_code":1}}}` + "\n"
+				if err := os.WriteFile(rolloutPath, []byte(rollout), 0600); err != nil {
+					t.Fatal(err)
+				}
+				facts.Sessions = append(facts.Sessions, domain.SessionFact{
+					ID: "codex-session", Source: domain.SourceCodex, User: "tester", Invocations: []domain.InvocationFact{{Role: "tester"}},
+				})
+			}
+			before, err := json.Marshal(facts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			service := live.NewLiveServiceWithCodexHome(hook, testProjectConfig(), home)
+			t.Cleanup(func() {
+				if err := service.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			ledger := domain.AgenticMetricsLedger{Facts: facts}
+			response, err := service.HydrateWorkspaceEvents(context.Background(), "FIX-12", ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !response.IsHydrated || !response.IncludesBaseline || response.DataSource != domain.DataSourceLocalSQLite {
+				t.Fatalf("incorrect combined-source provenance: %#v", response)
+			}
+			wantCount := 3
+			if tc.includeCodex {
+				wantCount++
+			}
+			if len(response.Events) != wantCount {
+				t.Fatalf("expected %d baseline/local events, got %#v", wantCount, response.Events)
+			}
+			matched, unmatched, codex := 0, 0, 0
+			for _, event := range response.Events {
+				switch {
+				case event.EventID == "opencode:part:p1":
+					matched++
+					if event.DurationMs == nil || *event.DurationMs != 25 || event.MessageID == nil || *event.MessageID != "sqlite-message" {
+						t.Fatalf("committed echo overwrote SQLite duration/message ID: %#v", event)
+					}
+					if event.ToolInput == nil || *event.ToolInput != "make test" || event.ToolOutput == nil || *event.ToolOutput != "SQLite-local output" {
+						t.Fatalf("combined source lost SQLite payloads: %#v", event)
+					}
+				case event.EventID == "committed-only":
+					unmatched++
+					if !reflect.DeepEqual(event, facts.EventFacts()[0]) {
+						t.Fatalf("unmatched baseline changed: %#v", event)
+					}
+				case event.SessionID == "codex-session":
+					codex++
+					if event.EventID == "" || event.EventType != domain.EventTypeToolCall {
+						t.Fatalf("Codex source occurrence lost: %#v", event)
+					}
+				}
+			}
+			if matched != 1 || unmatched != 1 || (tc.includeCodex && codex != 1) || (!tc.includeCodex && codex != 0) {
+				t.Fatalf("combined trace lost or duplicated source occurrences: %#v", response.Events)
+			}
+			repeated, err := service.HydrateWorkspaceEvents(context.Background(), "FIX-12", ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(repeated, response) {
+				t.Fatalf("repeated source hydration changed the trace: %#v", repeated)
+			}
+			after, err := json.Marshal(facts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(after) != string(before) {
+				t.Fatal("source enrichment mutated the committed input")
+			}
+		})
+	}
+}
+
 func TestHydrateWorkspaceEvents_CodexSucceedsWithMultipleInvocationRows(t *testing.T) {
 	home := t.TempDir()
 	rolloutPath := filepath.Join(home, "sessions", "2026", "10", "26", "rollout-thread.jsonl")
@@ -1054,11 +1191,12 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenAnyRootIsMissing(t *testing.
 		{ID: "root-present", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "orchestrator"}}},
 		{ID: "root-missing", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "orchestrator"}}},
 	}}}
+	ledger.Facts.Sessions[0].Events = []domain.SessionEventFact{{EventID: "committed-root", Timestamp: "2026-10-26T08:00:00Z", Turn: 1, Role: "orchestrator", EventType: domain.EventTypeTurnMessage, Status: "completed"}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-PARTIAL", ledger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.IsHydrated || resp.DataSource != domain.DataSourceCommittedLedger || len(resp.Events) != 0 {
+	if resp.IsHydrated || resp.DataSource != domain.DataSourceCommittedLedger || !reflect.DeepEqual(resp.Events, ledger.Facts.EventFacts()) {
 		t.Fatalf("partial Codex roots were reported as hydrated: %#v", resp)
 	}
 	missingPath := filepath.Join(filepath.Dir(path), "rollout-missing.jsonl")
@@ -1070,7 +1208,7 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenAnyRootIsMissing(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !complete.IsHydrated || complete.DataSource != domain.DataSourceLocalCodex || len(complete.Events) != 1 {
+	if !complete.IsHydrated || complete.DataSource != domain.DataSourceLocalCodex || len(complete.Events) != 2 || complete.Events[0].EventID != "committed-root" {
 		t.Fatalf("complete Codex roots failed to hydrate after restoring the missing rollout: %#v", complete)
 	}
 }
@@ -1105,11 +1243,12 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenChildRolloutIsMissing(t *tes
 		{ID: "child-one", Source: domain.SourceCodex, ParentID: &parent, Invocations: []domain.InvocationFact{{Role: "coder"}}},
 		{ID: "child-two", Source: domain.SourceCodex, ParentID: &parent, Invocations: []domain.InvocationFact{{Role: "tester"}}},
 	}}}
+	ledger.Facts.Sessions[1].Events = []domain.SessionEventFact{{EventID: "committed-child", Timestamp: "2026-10-26T08:00:00Z", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, Status: "error"}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CHILD-PARTIAL", ledger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.IsHydrated || resp.DataSource != domain.DataSourceCommittedLedger || len(resp.Events) != 0 {
+	if resp.IsHydrated || resp.DataSource != domain.DataSourceCommittedLedger || !reflect.DeepEqual(resp.Events, ledger.Facts.EventFacts()) {
 		t.Fatalf("partial Codex child tree was reported as hydrated: %#v", resp)
 	}
 	write("sessions/2026/10/26/rollout-child-two.jsonl", "child-two", "root-thread", false)
@@ -1117,7 +1256,7 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenChildRolloutIsMissing(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !complete.IsHydrated || complete.DataSource != domain.DataSourceLocalCodex || len(complete.Events) != 1 {
+	if !complete.IsHydrated || complete.DataSource != domain.DataSourceLocalCodex || len(complete.Events) != 2 || complete.Events[0].EventID != "committed-child" {
 		t.Fatalf("complete Codex child tree failed to hydrate after restoring the missing rollout: %#v", complete)
 	}
 }
@@ -1133,11 +1272,131 @@ func TestHydrateWorkspaceEvents_SourceLessLedgerStaysUnhydrated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.IsHydrated || resp.DataSource != domain.DataSourceCommittedLedger || len(resp.Events) != 0 {
+	if resp.IsHydrated || resp.DataSource != domain.DataSourceCommittedLedger || !reflect.DeepEqual(resp.Events, ledger.Facts.EventFacts()) {
 		t.Fatalf("source-less ledger was incorrectly hydrated: %#v", resp)
 	}
 	if len(resp.Anomalies) != 1 {
 		t.Fatalf("stored summary should remain available: %#v", resp.Anomalies)
+	}
+}
+
+func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
+	for _, mode := range []string{"nil service", "nil hook", "missing session", "closed database", "missing tables", "empty SQLite session", "missing Codex home", "missing Codex rollout", "empty Codex rollout"} {
+		t.Run(mode, func(t *testing.T) {
+			root := t.TempDir()
+			cfg := testProjectConfig()
+			cfg.Workspaces.Dir = root
+			source := domain.SourceOpenCode
+			if strings.Contains(mode, "Codex") {
+				source = domain.SourceCodex
+			}
+			facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
+				ID: "recorded-session", Source: source, User: "tester", Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{},
+				Events: []domain.SessionEventFact{
+					{EventID: "later", Timestamp: "2026-10-29T11:00:00Z", Turn: 2, Role: "tester", EventType: domain.EventTypeCompaction, Status: "completed", ContextTokens: 2400},
+					{Timestamp: "2026-10-29T10:00:00Z", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, Status: "error", ContextTokens: 1200},
+				},
+				Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning}},
+			}}}
+			ledger := domain.AgenticMetricsLedger{Facts: facts}
+			before, err := json.Marshal(facts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ledgerPath := filepath.Join(root, "agentic_metrics.json")
+			if err := os.WriteFile(ledgerPath, before, 0600); err != nil {
+				t.Fatal(err)
+			}
+			var service *live.LiveService
+			switch mode {
+			case "nil service":
+			case "nil hook":
+				service = live.NewLiveService(nil, cfg)
+			case "missing Codex home", "missing Codex rollout", "empty Codex rollout":
+				home := filepath.Join(t.TempDir(), "codex")
+				if mode != "missing Codex home" {
+					if err := os.MkdirAll(filepath.Join(home, "sessions"), 0700); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if mode == "empty Codex rollout" {
+					content := `{"type":"session_meta","payload":{"id":"recorded-session","session_id":"recorded-session","timestamp":"2026-10-29T10:00:00Z"}}` + "\n"
+					if err := os.WriteFile(filepath.Join(home, "sessions", "rollout-empty.jsonl"), []byte(content), 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				service = live.NewLiveServiceWithCodexHome(nil, cfg, home)
+			default:
+				dbPath := createTestDBFile(t)
+				if mode == "missing tables" || mode == "empty SQLite session" {
+					db, err := sql.Open("sqlite", dbPath)
+					if err != nil {
+						t.Fatal(err)
+					}
+					statement := "DROP TABLE message; DROP TABLE part;"
+					if mode == "empty SQLite session" {
+						statement = `INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES ('recorded-session', NULL, 'coder', 'test-model', 'FIX-12', 1, 1)`
+					}
+					if _, err := db.Exec(statement); err != nil {
+						t.Fatal(err)
+					}
+					if err := db.Close(); err != nil {
+						t.Fatal(err)
+					}
+				}
+				hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if mode == "closed database" {
+					if err := hook.Close(); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					t.Cleanup(func() {
+						if err := hook.Close(); err != nil {
+							t.Error(err)
+						}
+					})
+				}
+				service = live.NewLiveService(hook, cfg)
+			}
+			if service != nil {
+				t.Cleanup(func() {
+					if err := service.Close(); err != nil {
+						t.Error(err)
+					}
+				})
+			}
+			response, err := service.HydrateWorkspaceEvents(context.Background(), "FIX-12", ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if response.TicketID != "FIX-12" || response.IsHydrated || response.DataSource != domain.DataSourceCommittedLedger || !response.IncludesBaseline || !reflect.DeepEqual(response.Events, facts.EventFacts()) || !reflect.DeepEqual(response.Anomalies, facts.AnomalyFacts()) {
+				t.Fatalf("local failure lost recorded facts or provenance: %#v", response)
+			}
+			after, err := os.ReadFile(ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(after) != string(before) {
+				t.Fatal("hydration fallback rewrote committed ledger bytes")
+			}
+			entries, err := os.ReadDir(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 1 {
+				t.Fatalf("hydration wrote workspace files: %#v", entries)
+			}
+			unchanged, err := json.Marshal(facts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(unchanged) != string(before) {
+				t.Fatal("hydration mutated the ledger input")
+			}
+		})
 	}
 }
 
@@ -1183,8 +1442,8 @@ func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
 	if resp.DataSource != domain.DataSourceCommittedLedger {
 		t.Errorf("expected DataSource == %q, got %q", domain.DataSourceCommittedLedger, resp.DataSource)
 	}
-	if len(resp.Events) != 0 {
-		t.Fatalf("expected no persisted fallback events, got %d", len(resp.Events))
+	if !reflect.DeepEqual(resp.Events, ledger.Facts.EventFacts()) {
+		t.Fatalf("missing local session discarded recorded facts: %#v", resp.Events)
 	}
 }
 
@@ -1221,8 +1480,8 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		if resp.DataSource != domain.DataSourceCommittedLedger {
 			t.Errorf("expected DataSource == %q, got %q", domain.DataSourceCommittedLedger, resp.DataSource)
 		}
-		if len(resp.Events) != 0 {
-			t.Errorf("expected no persisted fallback events, got %d", len(resp.Events))
+		if !reflect.DeepEqual(resp.Events, ledgerWithFallback.Facts.EventFacts()) {
+			t.Errorf("nil service discarded recorded fallback events: %#v", resp.Events)
 		}
 	})
 

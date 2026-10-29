@@ -15,6 +15,67 @@ func strPtr(s string) *string {
 	return &s
 }
 
+func TestCanonicalV4NestedEventsReadCompatibilityAndMetadata(t *testing.T) {
+	eventJSON := `{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","message_id":"message-1","turn":2,"role":"tester","event_type":"tool_call","tool_name":"bash","status":"error","duration_ms":0,"context_tokens":1234}`
+	bareJSON := `{"timestamp":"2026-10-29T09:00:00Z","turn":1,"role":"coder","event_type":"turn_message","status":"completed","context_tokens":0}`
+	ledgerJSON := func(collection string) string {
+		return `{"schema_version":4,"ticket_id":"FIX-12","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]` + collection + `}]}`
+	}
+	for _, tc := range []struct {
+		name, collection string
+		count            int
+	}{
+		{"omitted", "", 0}, {"empty", `,"events":[]`, 0}, {"metadata and missing ID", `,"events":[` + eventJSON + `,` + bareJSON + `]`, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data := []byte(ledgerJSON(tc.collection))
+			if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+				t.Fatal(err)
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(data, &dto); err != nil {
+				t.Fatal(err)
+			}
+			if err := dto.Validate(); err != nil {
+				t.Fatal(err)
+			}
+			facts := dto.ToDomain()
+			events := facts.EventFacts()
+			if len(events) != tc.count {
+				t.Fatalf("expected %d events, got %#v", tc.count, events)
+			}
+			if tc.count > 0 {
+				want := domain.EventFact{EventID: "call-1", Timestamp: "2026-10-29T10:00:00Z", SessionID: "owner", MessageID: strPtr("message-1"), Turn: 2, Role: "tester", EventType: domain.EventTypeToolCall, ToolName: strPtr("bash"), Status: "error", DurationMs: new(int64), ContextTokens: 1234}
+				if !reflect.DeepEqual(events[1], want) || events[0].EventID != "" || events[0].SessionID != "owner" {
+					t.Fatalf("nested metadata/owner lost: %#v", events)
+				}
+			}
+			encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(encoded), `"events"`) || strings.Contains(string(encoded), `"evidence"`) {
+				t.Fatalf("writer stopped compacting: %s", encoded)
+			}
+		})
+	}
+	for _, field := range []string{"session_id", "error_message", "prompt_content", "reasoning_content", "tool_input", "tool_output"} {
+		t.Run("reject persisted "+field, func(t *testing.T) {
+			row := strings.Replace(eventJSON, `"event_id":`, `"`+field+`":"unexpected","event_id":`, 1)
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal([]byte(ledgerJSON(`,"events":[`+row+`]`)), &dto); err == nil {
+				t.Fatalf("persisted DTO accepted response-only %s", field)
+			}
+		})
+	}
+	for _, key := range []string{"events", "tools", "invocations"} {
+		data := []byte(strings.Replace(ledgerJSON(""), `"schema_version":4`, `"schema_version":4,"`+key+`":[]`, 1))
+		if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
+			t.Fatalf("accepted ambiguous root %s", key)
+		}
+	}
+}
+
 func TestValidateRuntimeFactLedgerRejectsLegacyVersionsBeforeFacts(t *testing.T) {
 	for _, version := range []int{1, 2, 3} {
 		t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {

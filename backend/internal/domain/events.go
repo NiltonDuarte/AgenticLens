@@ -19,6 +19,125 @@ func SortEvents(events []EventFact) []EventFact {
 	return result
 }
 
+type eventIdentity struct {
+	sessionID string
+	eventID   string
+}
+
+type eventOccurrence struct {
+	sessionID string
+	timestamp string
+	turn      int64
+	eventType EventType
+	toolName  string
+}
+
+func occurrenceOf(event EventFact) eventOccurrence {
+	tool := ""
+	if event.ToolName != nil {
+		tool = *event.ToolName
+	}
+	return eventOccurrence{event.SessionID, event.Timestamp, event.Turn, event.EventType, tool}
+}
+
+// ReconcileEvents enriches recorded facts without discarding unmatched occurrences.
+// Stable IDs take precedence; missing IDs require a unique occurrence on both sides.
+// Inputs represent independent occurrences, not an already reconciled response.
+func ReconcileEvents(baseline, enrichment []EventFact) []EventFact {
+	result := append([]EventFact{}, baseline...)
+	baselineUsed := make([]bool, len(baseline))
+	enrichmentUsed := make([]bool, len(enrichment))
+	byID := make(map[eventIdentity][]int)
+	byOccurrence := make(map[eventOccurrence][]int)
+	for index, event := range baseline {
+		if event.SessionID == "" {
+			continue
+		}
+		if event.EventID != "" {
+			key := eventIdentity{event.SessionID, event.EventID}
+			byID[key] = append(byID[key], index)
+		}
+		key := occurrenceOf(event)
+		byOccurrence[key] = append(byOccurrence[key], index)
+	}
+	for index, event := range enrichment {
+		if event.SessionID == "" || event.EventID == "" {
+			continue
+		}
+		key := eventIdentity{event.SessionID, event.EventID}
+		candidates := byID[key]
+		if len(candidates) == 0 {
+			continue
+		}
+		matched := candidates[0]
+		byID[key] = candidates[1:]
+		baselineUsed[matched], enrichmentUsed[index] = true, true
+		result[matched] = enrichEvent(baseline[matched], event)
+	}
+
+	// Count before matching so consuming one row cannot resolve an ambiguous group.
+	candidate := make([]int, len(enrichment))
+	baselineMatches := make([]int, len(baseline))
+	for index, event := range enrichment {
+		candidate[index] = -1
+		if enrichmentUsed[index] || event.SessionID == "" {
+			continue
+		}
+		count := 0
+		for _, otherIndex := range byOccurrence[occurrenceOf(event)] {
+			other := baseline[otherIndex]
+			if baselineUsed[otherIndex] || (event.EventID != "" && other.EventID != "") {
+				continue
+			}
+			if event.MessageID != nil && *event.MessageID != "" && other.MessageID != nil && *other.MessageID != "" && *event.MessageID != *other.MessageID {
+				continue
+			}
+			count++
+			candidate[index] = otherIndex
+			baselineMatches[otherIndex]++
+		}
+		if count != 1 {
+			candidate[index] = -1
+		}
+	}
+	for index, matched := range candidate {
+		if matched >= 0 && baselineMatches[matched] == 1 {
+			baselineUsed[matched], enrichmentUsed[index] = true, true
+			result[matched] = enrichEvent(baseline[matched], enrichment[index])
+		}
+	}
+
+	for index, event := range enrichment {
+		if !enrichmentUsed[index] {
+			result = append(result, event)
+		}
+	}
+	return SortEvents(result)
+}
+
+func enrichEvent(recorded, local EventFact) EventFact {
+	if recorded.EventID == "" {
+		recorded.EventID = local.EventID
+	}
+	recorded.MessageID = enrichedString(recorded.MessageID, local.MessageID)
+	recorded.ErrorMessage = enrichedString(recorded.ErrorMessage, local.ErrorMessage)
+	recorded.PromptContent = enrichedString(recorded.PromptContent, local.PromptContent)
+	recorded.ReasoningContent = enrichedString(recorded.ReasoningContent, local.ReasoningContent)
+	recorded.ToolInput = enrichedString(recorded.ToolInput, local.ToolInput)
+	recorded.ToolOutput = enrichedString(recorded.ToolOutput, local.ToolOutput)
+	if local.DurationMs != nil {
+		recorded.DurationMs = local.DurationMs
+	}
+	return recorded
+}
+
+func enrichedString(recorded, local *string) *string {
+	if local != nil && *local != "" {
+		return local
+	}
+	return recorded
+}
+
 // DetectAnomaliesWithEvidence attaches request-local source references to summaries.
 // The references are intended only for local hydrated API responses.
 func DetectAnomaliesWithEvidence(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) ([]Anomaly, error) {
@@ -163,6 +282,21 @@ func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 	ledger.Sessions = sessions
 	ledger.Anomalies = ticket
 	return ledger, nil
+}
+
+// NormalizeLedgerForRead retains accepted event facts alongside normalized summaries.
+// Compact persistence continues to use PersistAnomalySummaries instead.
+func NormalizeLedgerForRead(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
+	normalized, err := PersistAnomalySummaries(ledger, thresholds...)
+	if err != nil {
+		return AgenticFactLedger{}, err
+	}
+	for index, session := range ledger.Sessions {
+		if session.Events != nil {
+			normalized.Sessions[index].Events = append([]SessionEventFact{}, session.Events...)
+		}
+	}
+	return normalized, nil
 }
 
 type anomalyEvidenceSelection struct {

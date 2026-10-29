@@ -662,11 +662,26 @@ func formatEpochMilli(ms int64) string {
 // to the committed ledger facts. Zero transient data is persisted to disk.
 func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID string, ledger domain.AgenticMetricsLedger) (domain.WorkspaceEventsResponse, error) {
 	fallbackResp := domain.WorkspaceEventsResponse{
-		TicketID:   ticketID,
-		IsHydrated: false,
-		Events:     []domain.EventFact{},
-		DataSource: domain.DataSourceCommittedLedger,
-		Anomalies:  ledger.Facts.AnomalyFacts(),
+		TicketID:         ticketID,
+		IsHydrated:       false,
+		Events:           domain.SortEvents(ledger.Facts.EventFacts()),
+		DataSource:       domain.DataSourceCommittedLedger,
+		Anomalies:        ledger.Facts.AnomalyFacts(),
+		IncludesBaseline: true,
+	}
+	withLocalEvents := func(events []domain.EventFact, source domain.DataSource) domain.WorkspaceEventsResponse {
+		if len(events) == 0 {
+			return fallbackResp
+		}
+		reconciled := domain.ReconcileEvents(fallbackResp.Events, events)
+		return domain.WorkspaceEventsResponse{
+			TicketID:         ticketID,
+			IsHydrated:       true,
+			Events:           reconciled,
+			DataSource:       source,
+			Anomalies:        hydrateAnomalyAssociations(ledger.Facts, reconciled),
+			IncludesBaseline: true,
+		}
 	}
 
 	var openCodeSessions []domain.SessionFact
@@ -684,15 +699,9 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		return fallbackResp, nil
 	}
 
-	if len(codexSessions) > 0 && len(openCodeSessions) == 0 {
-		return s.hydrateCodexEvents(ticketID, codexSessions, ledger, fallbackResp)
-	}
-
-	if s == nil || s.hook == nil || s.hook.DB() == nil {
-		if len(codexSessions) > 0 {
-			return s.hydrateCodexEvents(ticketID, codexSessions, ledger, fallbackResp)
-		}
-		return fallbackResp, nil
+	codexEvents := s.loadCodexEvents(codexSessions)
+	if len(openCodeSessions) == 0 || s == nil || s.hook == nil || s.hook.DB() == nil {
+		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
 	}
 
 	// 1. Collect session IDs from OpenCode sessions
@@ -713,7 +722,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	}
 
 	if len(sessionIDMap) == 0 {
-		return fallbackResp, nil
+		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
 	}
 
 	// 2. Discover child sub-sessions to gather complete execution tree
@@ -748,7 +757,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	}
 
 	if len(verifiedSessions) == 0 {
-		return fallbackResp, nil
+		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
 	}
 
 	// 4. Map session IDs to roles
@@ -781,11 +790,11 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	// 5. Fetch all messages and parts ordered by time_created ASC
 	rawMsgs, rawParts, err := s.hook.FetchSessionTraceMulti(verifiedSessions)
 	if err != nil {
-		return fallbackResp, nil
+		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
 	}
 
 	if len(rawMsgs) == 0 && len(rawParts) == 0 {
-		return fallbackResp, nil
+		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
 	}
 
 	// Group parts by message ID
@@ -958,36 +967,17 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		sessionConsecutiveErrors[sid] = consecutiveErrors
 	}
 
-	var codexEvents []domain.EventFact
-	if len(codexSessions) > 0 {
-		codexResp, _ := s.hydrateCodexEvents(ticketID, codexSessions, ledger, fallbackResp)
-		if codexResp.IsHydrated {
-			codexEvents = codexResp.Events
-		}
-	}
-
-	allEvents := append(events, codexEvents...)
-	if len(allEvents) == 0 {
-		return fallbackResp, nil
-	}
-
 	dataSource := domain.DataSourceLocalSQLite
 	if len(events) == 0 && len(codexEvents) > 0 {
 		dataSource = domain.DataSourceLocalCodex
 	}
-
-	return domain.WorkspaceEventsResponse{
-		TicketID:   ticketID,
-		IsHydrated: true,
-		Events:     domain.SortEvents(allEvents),
-		DataSource: dataSource,
-		Anomalies:  hydrateAnomalyAssociations(ledger.Facts, allEvents),
-	}, nil
+	// Only source occurrences enter reconciliation; neither source can echo the baseline over the other.
+	return withLocalEvents(append(events, codexEvents...), dataSource), nil
 }
 
-func (s *LiveService) hydrateCodexEvents(ticketID string, codexSessions []domain.SessionFact, ledger domain.AgenticMetricsLedger, fallback domain.WorkspaceEventsResponse) (domain.WorkspaceEventsResponse, error) {
+func (s *LiveService) loadCodexEvents(codexSessions []domain.SessionFact) []domain.EventFact {
 	if s == nil || strings.TrimSpace(s.codexHome) == "" {
-		return fallback, nil
+		return nil
 	}
 	var paths []string
 	seenPaths := make(map[string]bool)
@@ -995,7 +985,7 @@ func (s *LiveService) hydrateCodexEvents(ticketID string, codexSessions []domain
 	for _, session := range codexSessions {
 		sessID := strings.TrimSpace(session.ID)
 		if sessID == "" {
-			return fallback, nil
+			return nil
 		}
 		expectedThreadIDs[sessID] = true
 		if session.ParentID != nil {
@@ -1003,7 +993,7 @@ func (s *LiveService) hydrateCodexEvents(ticketID string, codexSessions []domain
 		}
 		found, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: session.ID})
 		if err != nil || len(found) == 0 {
-			return fallback, nil
+			return nil
 		}
 		for _, path := range found {
 			if !seenPaths[path] {
@@ -1013,14 +1003,14 @@ func (s *LiveService) hydrateCodexEvents(ticketID string, codexSessions []domain
 		}
 	}
 	if len(paths) == 0 {
-		return fallback, nil
+		return nil
 	}
 	var events []domain.EventFact
 	parsedThreadIDs := make(map[string]bool)
 	for _, path := range paths {
 		transcript, err := codex.ParseRolloutPath(path)
 		if err != nil {
-			return fallback, nil
+			return nil
 		}
 		threadID := strings.TrimSpace(transcript.ThreadID)
 		if threadID == "" {
@@ -1033,13 +1023,10 @@ func (s *LiveService) hydrateCodexEvents(ticketID string, codexSessions []domain
 	}
 	for expectedID := range expectedThreadIDs {
 		if !parsedThreadIDs[expectedID] {
-			return fallback, nil
+			return nil
 		}
 	}
-	if len(events) == 0 {
-		return fallback, nil
-	}
-	return domain.WorkspaceEventsResponse{TicketID: ticketID, IsHydrated: true, Events: domain.SortEvents(events), DataSource: domain.DataSourceLocalCodex, Anomalies: hydrateAnomalyAssociations(ledger.Facts, events)}, nil
+	return events
 }
 
 func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, events []domain.EventFact) []domain.Anomaly {

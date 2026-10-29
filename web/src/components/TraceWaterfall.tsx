@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
 import { formatTokensK } from '../domain/formatters';
+import { rebindEvent, sortEvents } from '../domain/events';
 import { AnomalyBadge } from './AnomalyBadge';
 import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
 import { copyTextToClipboard } from '../utils/clipboard';
@@ -60,13 +61,9 @@ const formatEventTypeLabel = (type: string): string => {
 
 const isSameEvent = (a?: EventFact | null, b?: EventFact | null): boolean => {
   if (!a || !b) return false;
-  return (
-    a.timestamp === b.timestamp &&
-    a.turn === b.turn &&
-    a.session_id === b.session_id &&
-    a.event_type === b.event_type &&
-    a.tool_name === b.tool_name
-  );
+  if (a === b) return true;
+  return Boolean(a.session_id && a.event_id && b.event_id &&
+    a.session_id === b.session_id && a.event_id === b.event_id);
 };
 
 export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
@@ -83,11 +80,20 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   const [selectedRoles, setSelectedRoles] = useState<readonly string[]>(['all']);
   const [selectedTools, setSelectedTools] = useState<readonly string[]>(['all']);
   const [selectedAnomalies, setSelectedAnomalies] = useState<readonly string[]>(['all']);
-  const [localSelectedEvent, setLocalSelectedEvent] = useState<EventFact | null>(null);
+  const [localSelection, setLocalSelection] = useState<{
+    readonly event: EventFact;
+    readonly events: readonly EventFact[];
+  } | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const activeSelectedEvent = selectedEvent !== undefined ? selectedEvent : localSelectedEvent;
+  const activeSelectedEvent = selectedEvent !== undefined
+    ? selectedEvent
+    : localSelection ? rebindEvent(localSelection.event, localSelection.events, events) : null;
+  const hasLocalSource = isHydrated && dataSource !== 'committed_ledger';
+  const sourceLabel = hasLocalSource
+    ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite')
+    : 'Source: Committed Ledger';
 
   const handleCopyIdentifier = async (
     idText: string,
@@ -150,20 +156,13 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   };
 
   const handleItemSelect = (ev: EventFact, matchingAnomaly?: Anomaly) => {
-    setLocalSelectedEvent(ev);
+    setLocalSelection({ event: ev, events });
     const isFlagged = ev.status === 'error' || ev.status === 'failed' || Boolean(matchingAnomaly);
     onSelectEvent?.(ev, isFlagged ? matchingAnomaly : undefined);
   };
 
   // Sorted events chronologically
-  const sortedEvents = useMemo(() => {
-    if (!events || events.length === 0) return [];
-    return [...events].sort((a, b) => {
-      const cmp = a.timestamp.localeCompare(b.timestamp);
-      if (cmp !== 0) return cmp;
-      return a.turn - b.turn;
-    });
-  }, [events]);
+  const sortedEvents = useMemo(() => sortEvents(events ?? []), [events]);
 
   // Unique roles for filter dropdown
   const availableRoles = useMemo(() => {
@@ -281,7 +280,21 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
   if (!events || events.length === 0) {
     return (
-      <div className="trace-waterfall-card">
+      <div className="trace-waterfall-card" data-testid="trace-waterfall-card">
+        <div className="waterfall-header">
+          <div className="waterfall-title-group">
+            <h3 className="waterfall-title">Execution Trace Waterfall</h3>
+            <span
+              className={`waterfall-source-badge ${hasLocalSource ? 'source-hydrated' : 'source-offline'}`}
+              data-testid="waterfall-source-badge"
+            >
+              {sourceLabel}
+            </span>
+            <span className="waterfall-summary-stat mono" data-testid="waterfall-event-count">
+              0 Events Recorded
+            </span>
+          </div>
+        </div>
         <div className="trace-empty-state">
           Zero chronological events recorded for this execution trace.
         </div>
@@ -311,10 +324,10 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
           <div className="waterfall-summary-left">
             <h3 className="waterfall-title">Execution Trace Waterfall</h3>
             <span
-              className={`waterfall-source-badge ${isHydrated ? 'source-hydrated' : 'source-offline'}`}
+              className={`waterfall-source-badge ${hasLocalSource ? 'source-hydrated' : 'source-offline'}`}
               data-testid="waterfall-source-badge"
             >
-              {isHydrated ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite') : 'Source: Committed Anomaly Summary'}
+              {sourceLabel}
             </span>
           </div>
 
@@ -355,10 +368,10 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         <div className="waterfall-title-group">
           <h3 className="waterfall-title">Execution Trace Waterfall</h3>
           <span
-            className={`waterfall-source-badge ${isHydrated ? 'source-hydrated' : 'source-offline'}`}
+            className={`waterfall-source-badge ${hasLocalSource ? 'source-hydrated' : 'source-offline'}`}
             data-testid="waterfall-source-badge"
           >
-              {isHydrated ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite') : 'Source: Committed Anomaly Summary'}
+            {sourceLabel}
           </span>
           <span className="waterfall-counter">
             Showing {filteredEvents.length} of {events.length} events
@@ -443,13 +456,13 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       </div>
 
       {/* Dynamic Hydration Fallback Banner */}
-      {(!isHydrated || dataSource === 'committed_ledger') && (
+      {!hasLocalSource && (
         <div className="db-offline-banner" data-testid="db-offline-banner" role="status">
           <div className="offline-banner-header">
-                <span className="offline-indicator-badge">Committed Anomaly Summaries — Local Source Offline</span>
+            <span className="offline-indicator-badge">Committed Ledger Facts</span>
           </div>
           <p className="offline-banner-text">
-                The local source was unavailable or not found. The ledger keeps anomaly summaries; detailed timelines require local session logs.
+            Recorded event facts remain visible from the committed ledger. Additional payload details require a local session source.
           </p>
         </div>
       )}
@@ -529,7 +542,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                         title="Click to open Anomaly Inspector"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLocalSelectedEvent(ev);
+                          setLocalSelection({ event: ev, events });
                           onSelectEvent?.(ev, matchingAnomaly);
                         }}
                       />
@@ -614,55 +627,49 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
                   {isExpanded && (
                     <div className="payload-details-container" data-testid={`payload-details-${ev.turn}`}>
-                      {isHydrated ? (
-                        <>
-                          {ev.message_id && (
-                            <div className="payload-id-row">
-                              <span className="drawer-label">Message ID:</span>
-                              <span className="drawer-val mono">{ev.message_id}</span>
-                              <button
-                                type="button"
-                                className="btn-copy-id"
-                                aria-label="Copy Message ID"
-                                onClick={(e) =>
-                                  handleCopyIdentifier(ev.message_id!, `msg-${itemKey}`, e)
-                                }
-                              >
-                                {copiedId === `msg-${itemKey}` ? 'Copied' : 'Copy'}
-                              </button>
-                            </div>
-                          )}
-                          {ev.prompt_content && (
-                            <div className="payload-block prompt-block" data-testid="prompt-payload-block">
-                              <div className="payload-block-title">Prompt Payload</div>
-                              <pre className="mono payload-content">{ev.prompt_content}</pre>
-                            </div>
-                          )}
-                          {ev.reasoning_content && (
-                            <div className="payload-block reasoning-block" data-testid="reasoning-payload-block">
-                              <div className="payload-block-title">Model Reasoning</div>
-                              <pre className="mono payload-content">{ev.reasoning_content}</pre>
-                            </div>
-                          )}
-                          {ev.tool_input && (
-                            <div className="payload-block tool-input-block" data-testid="tool-input-payload-block">
-                              <div className="payload-block-title">Tool Input</div>
-                              <pre className="mono payload-content">{ev.tool_input}</pre>
-                            </div>
-                          )}
-                          {ev.tool_output && (
-                            <div className="payload-block tool-output-block" data-testid="tool-output-payload-block">
-                              <div className="payload-block-title">Tool Output</div>
-                              <pre className="mono payload-content">{ev.tool_output}</pre>
-                            </div>
-                          )}
-                          {!ev.prompt_content && !ev.reasoning_content && !ev.tool_input && !ev.tool_output && (
-                            <div className="payload-unhydrated-notice">Zero payload data captured for this event</div>
-                          )}
-                        </>
-                      ) : (
+                      {ev.message_id && (
+                        <div className="payload-id-row">
+                          <span className="drawer-label">Message ID:</span>
+                          <span className="drawer-val mono">{ev.message_id}</span>
+                          <button
+                            type="button"
+                            className="btn-copy-id"
+                            aria-label="Copy Message ID"
+                            onClick={(e) =>
+                              handleCopyIdentifier(ev.message_id!, `msg-${itemKey}`, e)
+                            }
+                          >
+                            {copiedId === `msg-${itemKey}` ? 'Copied' : 'Copy'}
+                          </button>
+                        </div>
+                      )}
+                      {ev.prompt_content && (
+                        <div className="payload-block prompt-block" data-testid="prompt-payload-block">
+                          <div className="payload-block-title">Prompt Payload</div>
+                          <pre className="mono payload-content">{ev.prompt_content}</pre>
+                        </div>
+                      )}
+                      {ev.reasoning_content && (
+                        <div className="payload-block reasoning-block" data-testid="reasoning-payload-block">
+                          <div className="payload-block-title">Model Reasoning</div>
+                          <pre className="mono payload-content">{ev.reasoning_content}</pre>
+                        </div>
+                      )}
+                      {ev.tool_input && (
+                        <div className="payload-block tool-input-block" data-testid="tool-input-payload-block">
+                          <div className="payload-block-title">Tool Input</div>
+                          <pre className="mono payload-content">{ev.tool_input}</pre>
+                        </div>
+                      )}
+                      {ev.tool_output && (
+                        <div className="payload-block tool-output-block" data-testid="tool-output-payload-block">
+                          <div className="payload-block-title">Tool Output</div>
+                          <pre className="mono payload-content">{ev.tool_output}</pre>
+                        </div>
+                      )}
+                      {!ev.prompt_content && !ev.reasoning_content && !ev.tool_input && !ev.tool_output && (
                         <div className="payload-unhydrated-notice" data-testid="unhydrated-notice">
-                          Full payload not captured in Git ledger
+                          Payload details unavailable for this event.
                         </div>
                       )}
                     </div>

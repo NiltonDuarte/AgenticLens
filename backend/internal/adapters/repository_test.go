@@ -1,6 +1,7 @@
 package adapters_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
@@ -1208,14 +1209,30 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ledger.Facts.EventFacts()) != 0 {
-		t.Fatalf("legacy events weren't compacted: %#v", ledger.Facts.EventFacts())
+	events := ledger.Facts.EventFacts()
+	if len(events) != 1 || events[0].EventID != "e1" || events[0].SessionID != "s1" || events[0].Status != "error" || events[0].ToolName == nil || *events[0].ToolName != "bash" {
+		t.Fatalf("accepted nested v4 facts were lost on targeted read: %#v", events)
 	}
 	if len(ledger.Facts.ToolFacts()) != 1 || ledger.Facts.ToolFacts()[0].Calls != 8 {
 		t.Fatalf("tool totals changed: %#v", ledger.Facts.ToolFacts())
 	}
 	if len(ledger.Facts.AnomalyFacts()) == 0 {
-		t.Fatal("expected transiently recomputed summary from legacy event rows")
+		t.Fatal("expected normalized summaries alongside recorded event rows")
+	}
+	report := adapters.ScanWorkspaces(temp)
+	if len(report.Diagnostics) != 0 || len(report.Ledgers) != 1 {
+		t.Fatalf("unexpected workspace scan result: %#v", report)
+	}
+	scanned, err := json.Marshal(report.Ledgers[0].Facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := json.Marshal(ledger.Facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(scanned, loaded) {
+		t.Fatalf("scan and targeted loading disagree: %s != %s", scanned, loaded)
 	}
 	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger.Facts))
 	if err != nil {
@@ -1223,6 +1240,13 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
 	}
 	if strings.Contains(string(encoded), `"events"`) || strings.Contains(string(encoded), `"evidence"`) {
 		t.Fatalf("canonical encoding retained rows or refs: %s", encoded)
+	}
+	after, err := os.ReadFile(filepath.Join(ws, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(after, []byte(content)) {
+		t.Fatal("reading or converting the ledger rewrote source bytes")
 	}
 }
 

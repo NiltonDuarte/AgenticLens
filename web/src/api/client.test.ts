@@ -248,6 +248,64 @@ describe('Boundary API Client', () => {
         });
     });
     describe('fetchWorkspaceEvents', () => {
+        const recordedEvent = {
+            timestamp: '2026-10-29T10:00:00Z', session_id: 'recorded', turn: 1,
+            role: 'tester', event_type: 'tool_call', tool_name: 'bash', status: 'error', context_tokens: 0,
+        };
+        const recordedResponse = {
+            ticket_id: 'FIX-12', is_hydrated: false, data_source: 'committed_ledger', events: [recordedEvent],
+        };
+
+        it('accepts optional missing IDs and payloads plus null anomalies in a committed envelope', async () => {
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true,
+                json: async () => ({ ...recordedResponse, anomalies: null }),
+            }));
+            const result = await fetchWorkspaceEvents('FIX-12');
+            expect(result.data.events).toEqual([recordedEvent]);
+            expect(result.data.is_hydrated).toBe(false);
+            expect(result.data.anomalies).toBeUndefined();
+        });
+
+        it('accepts a Codex envelope with valid anomaly evidence and optional event details', async () => {
+            const response = { ...recordedResponse, is_hydrated: true, data_source: 'local_codex',
+                events: [{ ...recordedEvent, event_id: 'call', duration_ms: null, tool_output: 'output' }],
+                anomalies: [{ rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { session_id: 'recorded', turn: 1 },
+                    evidence: [{ session_id: 'recorded', event_id: 'call' }] }],
+            };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => response }));
+            expect((await fetchWorkspaceEvents('FIX-12')).data).toEqual(response);
+        });
+
+        it.each([true, false])('preserves explicit includes_baseline=%s provenance at the HTTP boundary', async (includesBaseline) => {
+            const response = { ...recordedResponse, includes_baseline: includesBaseline,
+                events: [{ ...recordedEvent }, { ...recordedEvent }],
+            };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => response }));
+            expect((await fetchWorkspaceEvents('FIX-12')).data).toEqual(response);
+        });
+
+        it.each([
+            { ...recordedResponse, ticket_id: 'OTHER-1' },
+            { ...recordedResponse, is_hydrated: 'false' },
+            { ...recordedResponse, data_source: 'unknown' },
+            { ...recordedResponse, includes_baseline: 'true' },
+            { ...recordedResponse, includes_baseline: 1 },
+            { ...recordedResponse, includes_baseline: null },
+            { ...recordedResponse, events: null },
+            { ...recordedResponse, events: [{ ...recordedEvent, event_type: 'unknown' }] },
+            { ...recordedResponse, events: [{ ...recordedEvent, turn: '1' }] },
+            { ...recordedResponse, events: [{ ...recordedEvent, duration_ms: '12' }] },
+            { ...recordedResponse, events: [{ ...recordedEvent, tool_output: {} }] },
+            { ...recordedResponse, events: [{ ...recordedEvent, context_tokens: Number.NaN }] },
+            { ...recordedResponse, anomalies: [{}] },
+            { ...recordedResponse, anomalies: [{ rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { turn: '1' } }] },
+            { ...recordedResponse, anomalies: [{ rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: {}, evidence: [null] }] },
+            [{ ...recordedEvent, session_id: null }],
+        ])('rejects malformed enrichment before it reaches the trace: %j', async (payload) => {
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            await expect(fetchWorkspaceEvents('FIX-12')).rejects.toThrow('Invalid workspace events response for FIX-12');
+        });
+
         it('returns hydrated response on successful HTTP 200 response', async () => {
             const mockResponse = {
                 ticket_id: 'AL-8',
