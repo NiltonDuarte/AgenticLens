@@ -4,17 +4,17 @@
 Resolves telemetry backfill integrity issues and normalizes session-invocation hierarchy:
 1. Multi-root session truncation: Discovers and extracts facts across all root sessions present in a ticket ledger rather than stopping at the first root session found.
 2. Unsafe implicit heuristic fallbacks: Strict exact session ID matching is enforced by default. Heuristic title substring and workspace path resolution are gated behind `--allow-fallbacks`. Missing SQLite sessions preserve existing historical invocations and events intact and are marked `partial` pending host migration.
-3. Schema v4 session-invocation normalization: Hoisted `user` and `parent_id` to container-level `SessionFact`, removed `user` and `parent_id` from `InvocationFact`, and assigned distinct `<session_id>-inv-<index>` invocation IDs across OpenCode, Codex, migration, and frontend types.
+3. Schema v4 session-invocation normalization: Hoisted `user` and `parent_id` to `SessionFact`; removed synthetic invocation IDs from the schema, extractors, migration, frontend types, and persisted ledgers. Session ownership now comes from the enclosing session, with repeated model rows preserved.
 4. Legacy schema fallback elimination: Removed fallback hoisting and legacy invocation fields from DTOs and TypeScript interfaces, and normalized all 71 workspace ledgers in `alspaces/` to canonical schema v4.
 
 ## Changes
 - `backend/internal/domain/models.go`: Added `User string` to `SessionFact`; removed `ParentID` and `User` from `InvocationFact`.
 - `backend/internal/domain/aggregations.go` & `anomalies.go`: Updated aggregation and anomaly detection routines to evaluate session-level metadata.
-- `backend/internal/domain/migration/`: Updated `step_v3_v4.go` and `validator.go` for user hoisting, distinct invocation IDs, and schema v4 invariants.
+- `backend/internal/domain/migration/`: Updated `step_v3_v4.go` and `validator.go` for user hoisting and schema v4 invariants without invocation IDs.
 - `backend/internal/adapters/schemas.go`: Removed `ParentID` and `User` from `InvocationFactDTO` and eliminated backward-compatibility hoisting loop.
 - `backend/internal/adapters/backfill/engine.go`: Multi-root candidate discovery, strict fallback gating behind `AllowFallbacks`, and session-level hierarchy preservation.
 - `backend/cmd/agentic-lens/main.go`: Added `--allow-fallbacks` CLI flag and updated extraction ingestion.
-- `backend/internal/adapters/opencode/extractor.go`: Added `ExtractSessions` producing normalized session containers with distinct invocation IDs.
+- `backend/internal/adapters/opencode/extractor.go`: Added `ExtractSessions` producing normalized session containers whose invocation rows have no synthetic IDs.
 - `backend/internal/adapters/codex/rollout.go`: Implemented `SessionFacts()` and thread parent propagation on `Transcript`.
 - `web/src/domain/types.ts`: Removed `parent_id` and `user` from `InvocationFact` interface.
 - `alspaces/*/agentic_metrics.json`: Normalized all 71 production workspace ledgers to canonical schema v4.
@@ -24,3 +24,4 @@ Resolves telemetry backfill integrity issues and normalizes session-invocation h
 - Implementation Summary: `alspaces/FIX-10/SUMMARY.md`
 - Unit test suite: `make` passed with 100% success across all backend packages and frontend tests.
 - Backfill validation: Validated against 10 real ticket workspaces (`DPS-11170`, `DPS-11173`, `DPS-11187`, `DPS-11197`, `DPS-11199`).
+- Iteration 04: `make check`, `make test`, uncached Go race tests, and Codex/OpenCode refresh regressions pass; 2,361 Go tests/subtests and 737 frontend tests pass. See `alspaces/FIX-10/iterations/04/REVIEW.md`.

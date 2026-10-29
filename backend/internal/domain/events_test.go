@@ -283,7 +283,7 @@ func TestPersistAnomalySummariesDropsEventsAndEvidenceButKeepsFacts(t *testing.T
 	facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
 		ID:          sessionID,
 		Source:      domain.SourceCodex,
-		Invocations: []domain.InvocationFact{{ID: sessionID, Role: "orchestrator"}},
+		Invocations: []domain.InvocationFact{{Role: "orchestrator"}},
 		Tools:       []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 6}},
 		Events:      []domain.SessionEventFact{{EventID: "e1", Timestamp: "2026-01-01T00:00:00Z", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}},
 	}}}
@@ -316,8 +316,8 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 		{EventID: "new-3", Timestamp: "2026-10-26T10:00:03Z", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
 	}
 	merged := domain.AgenticFactLedger{Sessions: []domain.SessionFact{
-		{ID: "old-root", Invocations: []domain.InvocationFact{{ID: "old-root", Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 5}}, Anomalies: []domain.Anomaly{oldSummary}},
-		{ID: "new-root", Invocations: []domain.InvocationFact{{ID: "new-root", Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 2, Errors: 1}}, Events: newEvents, Anomalies: []domain.Anomaly{}},
+		{ID: "old-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 5}}, Anomalies: []domain.Anomaly{oldSummary}},
+		{ID: "new-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 2, Errors: 1}}, Events: newEvents, Anomalies: []domain.Anomaly{}},
 	}}
 	persisted, err := domain.PersistAnomalySummaries(merged)
 	if err != nil {

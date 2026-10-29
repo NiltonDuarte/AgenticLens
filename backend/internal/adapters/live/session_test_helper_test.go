@@ -7,9 +7,6 @@ import (
 
 func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, events []domain.EventFact) []domain.SessionFact {
 	for i := range invocations {
-		if invocations[i].ID == "" {
-			invocations[i].ID = fmt.Sprintf("fixture-session-%d", i)
-		}
 		if invocations[i].Model == "" {
 			invocations[i].Model = "fixture-model"
 		}
@@ -35,7 +32,7 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 			events[i].Timestamp = fmt.Sprintf("fixture-%06d", i)
 		}
 	}
-	sessions, err := domain.SessionsFromFacts(invocations, tools, events)
+	sessions, err := domain.SessionsFromFacts(fixtureInvocationSessions(invocations), tools, events)
 	if err != nil {
 		panic(err)
 	}
@@ -52,9 +49,6 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 
 func sessionFactsWithSource(invocations []domain.InvocationFact, tools []domain.ToolFact, events []domain.EventFact, source domain.SourceHarness) []domain.SessionFact {
 	for i := range invocations {
-		if invocations[i].ID == "" {
-			invocations[i].ID = fmt.Sprintf("fixture-session-%d", i)
-		}
 		if invocations[i].Model == "" {
 			invocations[i].Model = "fixture-model"
 		}
@@ -80,7 +74,7 @@ func sessionFactsWithSource(invocations []domain.InvocationFact, tools []domain.
 			events[i].Timestamp = fmt.Sprintf("fixture-%06d", i)
 		}
 	}
-	sessions, err := domain.SessionsFromFactsWithSource(source, invocations, tools, events)
+	sessions, err := domain.SessionsFromFactsWithSource(source, fixtureInvocationSessions(invocations), tools, events)
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +98,7 @@ func setEventFacts(ledger *domain.AgenticFactLedger, events []domain.EventFact) 
 			events[i].Timestamp = fmt.Sprintf("fixture-%06d", i)
 		}
 	}
-	sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), events)
+	sessions, err := domain.SessionsFromFacts(ledger.Sessions, ledger.ToolFacts(), events)
 	if err != nil {
 		panic(err)
 	}
@@ -114,4 +108,11 @@ func setEventFacts(ledger *domain.AgenticFactLedger, events []domain.EventFact) 
 		}
 	}
 	ledger.Sessions = sessions
+}
+
+func fixtureInvocationSessions(invocations []domain.InvocationFact) []domain.SessionFact {
+	if len(invocations) == 0 {
+		return nil
+	}
+	return []domain.SessionFact{{ID: "fixture-session", Source: domain.SourceOpenCode, User: "fixture-user", Invocations: invocations}}
 }

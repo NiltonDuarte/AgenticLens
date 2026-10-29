@@ -58,7 +58,7 @@ type Transcript struct {
 	currentContext int64                   `json:"-"`
 	role           domain.AgentRole        `json:"-"`
 	ParentThread   string                  `json:"parent_thread,omitempty"`
-	parentsByThread map[string]string      `json:"-"`
+	sessions       []domain.SessionFact    `json:"-"`
 	latestTime     string                  `json:"-"`
 }
 
@@ -807,7 +807,6 @@ func (transcript *Transcript) finalizeFacts() {
 			}
 		}
 		transcript.Invocations = append(transcript.Invocations, domain.InvocationFact{
-			ID:                    fmt.Sprintf("%s-inv-%d", transcript.invocationID(), len(transcript.Invocations)+1),
 			Role:                  transcript.role,
 			Model:                 model,
 			StartedAt:             startedAt,
@@ -836,30 +835,20 @@ func (transcript *Transcript) finalizeFacts() {
 	}
 }
 
-func (transcript *Transcript) invocationID() string {
-	if transcript.ThreadID != "" {
-		return transcript.ThreadID
-	}
-	return transcript.SessionID
-}
-
 // SessionFacts converts the transcript invocations, tools, and events into normalized SessionFacts.
 func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
-	sessions, err := domain.SessionsFromFactsWithSource(domain.SourceCodex, transcript.Invocations, transcript.Tools, transcript.Events)
+	owned := transcript.sessions
+	if owned == nil {
+		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, Invocations: transcript.Invocations}
+		if transcript.ParentThread != "" {
+			parent := transcript.ParentThread
+			session.ParentID = &parent
+		}
+		owned = []domain.SessionFact{session}
+	}
+	sessions, err := domain.SessionsFromFactsWithSource(domain.SourceCodex, owned, transcript.Tools, transcript.Events)
 	if err != nil {
 		return nil, fmt.Errorf("grouping Codex facts by session: %w", err)
-	}
-	for i := range sessions {
-		if transcript.parentsByThread != nil {
-			if parent, ok := transcript.parentsByThread[sessions[i].ID]; ok && parent != "" {
-				p := parent
-				sessions[i].ParentID = &p
-			}
-		}
-		if sessions[i].ParentID == nil && transcript.ParentThread != "" && (sessions[i].ID == transcript.ThreadID || sessions[i].ID == transcript.SessionID) {
-			p := transcript.ParentThread
-			sessions[i].ParentID = &p
-		}
 	}
 	return sessions, nil
 }
@@ -914,18 +903,13 @@ func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
 	if len(transcripts) == 0 {
 		return Transcript{}, errors.New("cannot combine an empty Codex transcript set")
 	}
-	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), parentsByThread: make(map[string]string)}
+	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), sessions: []domain.SessionFact{}}
 	for index, transcript := range transcripts {
-		tid := transcript.ThreadID
-		if tid == "" {
-			tid = transcript.SessionID
+		sessions, err := transcript.SessionFacts()
+		if err != nil {
+			return Transcript{}, fmt.Errorf("grouping Codex transcript %d: %w", index, err)
 		}
-		if tid != "" && transcript.ParentThread != "" {
-			combined.parentsByThread[tid] = transcript.ParentThread
-		}
-		for k, v := range transcript.parentsByThread {
-			combined.parentsByThread[k] = v
-		}
+		combined.sessions = append(combined.sessions, sessions...)
 		if index == 0 {
 			// Human steering belongs to the root; child prompts are delegation.
 			combined.SteeringTurns = transcript.SteeringTurns

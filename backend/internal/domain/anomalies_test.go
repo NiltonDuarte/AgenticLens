@@ -58,7 +58,6 @@ func TestDetectAnomalies_CleanSessions(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			TicketID: &tid, Sessions: sessionFacts([]domain.InvocationFact{
 				{
-					ID:   "ses-1",
 					Role: "orchestrator",
 					Tokens: domain.InvocationTokens{
 						Input:       1000,
@@ -67,7 +66,6 @@ func TestDetectAnomalies_CleanSessions(t *testing.T) {
 					},
 				},
 				{
-					ID:   "ses-2",
 					Role: "coder",
 					Tokens: domain.InvocationTokens{
 						Input:       5000,
@@ -883,14 +881,12 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 	t.Run("v1 fallback evaluates PeakContext >= 160k tokens", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
-				ID:   "ses-v1-orch",
 				Role: "orchestrator",
 				Tokens: domain.InvocationTokens{
 					PeakContext: 175_000,
 				},
 			},
 			{
-				ID:   "ses-v1-coder",
 				Role: "coder",
 				Tokens: domain.InvocationTokens{
 					PeakContext: 159_999, // below 160k
@@ -914,14 +910,12 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 
 	t.Run("v1 fallback without events associates anomaly with session ID and persists correctly", func(t *testing.T) {
 		sessionID := "ses-ceiling"
-		invID := "ses-ceiling-inv-1"
 		ledger := domain.AgenticFactLedger{
 			Sessions: []domain.SessionFact{
 				{
 					ID: sessionID,
 					Invocations: []domain.InvocationFact{
 						{
-							ID:   invID,
 							Role: "coder",
 							Tokens: domain.InvocationTokens{
 								PeakContext: 175_000,
@@ -1551,7 +1545,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		}
 	})
 
-	t.Run("boundary: child invocations with empty ID string handled safely in fallback", func(t *testing.T) {
+	t.Run("boundary: child sessions with empty IDs handled safely in fallback", func(t *testing.T) {
 		parent := "root"
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
 			testSession("", &parent, "coder"),
@@ -1572,7 +1566,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			}
 		}
 		if rework == nil {
-			t.Fatalf("child invocations with empty ID in fallback must trigger rework loop, got: %+v", anomalies)
+			t.Fatalf("child sessions with empty IDs in fallback must trigger rework loop, got: %+v", anomalies)
 		}
 		if *rework.Context.Count != 3 {
 			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
@@ -1669,7 +1663,6 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 		toolName := "bash"
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
-				ID:   "ses-0",
 				Role: "orchestrator",
 				Tokens: domain.InvocationTokens{
 					Input:       0,
@@ -1866,7 +1859,7 @@ func TestDetectAnomalies_SortingTieBreakers(t *testing.T) {
 
 	// Context saturation spikes: one with Turn 1, one with Turn nil (from v1 fallback invocation)
 	ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
-		{ID: "inv-v1", Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 180_000}},
+		{Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 180_000}},
 	}, nil, []domain.EventFact{
 		// tool_call with 6 calls and 4 errors -> CRITICAL
 		{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
@@ -2287,7 +2280,6 @@ func TestComputeFleetAnomalies_LegacyV1Fallback(t *testing.T) {
 
 				[]domain.InvocationFact{
 					{
-						ID:   "inv-1",
 						Role: "orchestrator",
 						Tokens: domain.InvocationTokens{
 							PeakContext: 170000, // CRITICAL ceiling breach in v1

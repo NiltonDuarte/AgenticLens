@@ -47,7 +47,6 @@ export interface InvocationTokens {
 }
 
 export interface InvocationFact {
-  readonly id: string;
   readonly role: AgentRole;
   readonly model: string;
   readonly started_at: string | null;

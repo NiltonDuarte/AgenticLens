@@ -440,7 +440,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-01-inv-1',
                             role: 'orchestrator',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-15T10:00:00Z',
@@ -466,7 +465,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-02-inv-1',
                             role: 'planner',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-15T10:16:00Z',
@@ -492,7 +490,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-03-inv-1',
                             role: 'coder',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-15T10:40:00Z',
@@ -518,7 +515,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-04-inv-1',
                             role: 'tester',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-15T12:05:00Z',
@@ -544,7 +540,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al1-05-inv-1',
                             role: 'reviewer',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-15T13:35:00Z',
@@ -788,7 +783,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                user: 'developer',
                invocations: [
                 {
-                    id: 'inv-al2-01',
                     role: 'orchestrator',
                     model: 'gpt-4o',
                     started_at: '2026-10-16T12:00:00Z',
@@ -806,7 +800,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     compactions: 0,
                 },
                 {
-                    id: 'inv-al2-02',
                     role: 'coder',
                     model: 'gpt-4o',
                     started_at: '2026-10-16T12:35:00Z',
@@ -824,7 +817,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     compactions: 0,
                 },
                 {
-                    id: 'inv-al2-03',
                     role: 'tester',
                     model: 'gpt-4o',
                     started_at: '2026-10-16T14:35:00Z',
@@ -1022,7 +1014,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al3-01-inv-1',
                             role: 'orchestrator',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-16T22:00:00Z',
@@ -1048,7 +1039,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al3-02-inv-1',
                             role: 'coder',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-16T22:50:00Z',
@@ -1074,7 +1064,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-al3-03-inv-1',
                             role: 'tester',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-17T03:10:00Z',
@@ -1276,7 +1265,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'product-owner',
                     invocations: [
                         {
-                            id: 'inv-po1-01-inv-1',
                             role: 'planner',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-14T09:00:00Z',
@@ -1442,7 +1430,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-gen1-01-inv-1',
                             role: 'orchestrator',
                             model: 'o1-mini',
                             started_at: '2026-10-17T07:30:00Z',
@@ -1468,7 +1455,6 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                     user: 'developer',
                     invocations: [
                         {
-                            id: 'inv-gen1-02-inv-1',
                             role: 'coder',
                             model: 'claude-3-5-sonnet',
                             started_at: '2026-10-17T08:20:00Z',

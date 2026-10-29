@@ -167,7 +167,6 @@ describe('Domain Progression Aggregator', () => {
                             user: 'dev',
                             invocations: [
                                 {
-                                    id: 'inv-1',
                                     role: 'coder',
                                     model: 'gpt-4',
                                     started_at: '2026-10-19T09:15:00Z',
@@ -186,7 +185,6 @@ describe('Domain Progression Aggregator', () => {
                             user: 'dev',
                             invocations: [
                                 {
-                                    id: 'inv-2',
                                     role: 'coder',
                                     model: 'gpt-4',
                                     started_at: '2026-10-19T10:15:00Z',
@@ -205,7 +203,6 @@ describe('Domain Progression Aggregator', () => {
                             user: 'dev',
                             invocations: [
                                 {
-                                    id: 'inv-3',
                                     role: 'coder',
                                     model: 'gpt-4',
                                     started_at: '2026-10-19T11:15:00Z',
@@ -267,7 +264,6 @@ describe('Domain Progression Aggregator', () => {
         });
         it('defensively calculates cache hit rate when zero tokens are present', () => {
             const zeroInv: InvocationFact = {
-                id: 'zero-inv',
                 role: 'coder',
                 model: 'test',
                 started_at: '2026-10-15T10:00:00Z',
@@ -437,7 +433,6 @@ describe('Domain Progression Aggregator', () => {
                             user: 'agent',
                             invocations: [
                                 {
-                                    id: `inv-${id}`,
                                     role: 'coder',
                                     model: 'test-model',
                                     started_at: `${date}T08:00:00Z`,
@@ -544,7 +539,6 @@ describe('Domain Progression Aggregator', () => {
         });
         it('accurately accumulates multiple invocations on the same day and tracks peak context', () => {
             const inv1: InvocationFact = {
-                id: 'inv-1',
                 role: 'orchestrator',
                 model: 'model-a',
                 started_at: '2026-10-15T09:00:00Z',
@@ -562,7 +556,6 @@ describe('Domain Progression Aggregator', () => {
                 compactions: 0,
             };
             const inv2: InvocationFact = {
-                id: 'inv-2',
                 role: 'coder',
                 model: 'model-b',
                 started_at: '2026-10-15T10:00:00Z',
@@ -580,7 +573,6 @@ describe('Domain Progression Aggregator', () => {
                 compactions: 1,
             };
             const inv3: InvocationFact = {
-                id: 'inv-3',
                 role: 'tester',
                 model: 'model-c',
                 started_at: '2026-10-15T11:00:00Z',
@@ -694,7 +686,6 @@ describe('Domain Progression Aggregator', () => {
         });
         it('handles negative net lines when lines deleted exceeds lines added', () => {
             const inv: InvocationFact = {
-                id: 'refactor-inv',
                 role: 'coder',
                 model: 'model',
                 started_at: '2026-10-20T10:00:00Z',
@@ -784,7 +775,6 @@ describe('Domain Progression Aggregator', () => {
         it('guards cache hit rate calculation edge cases (100% hit rate, 0% hit rate)', () => {
             // 100% cache hit: input = 0, cache_read = 500
             const inv100: InvocationFact = {
-                id: 'inv-100',
                 role: 'coder',
                 model: 'test',
                 started_at: '2026-10-15T10:00:00Z',
@@ -797,7 +787,6 @@ describe('Domain Progression Aggregator', () => {
             };
             // 0% cache hit: input = 500, cache_read = 0
             const inv0: InvocationFact = {
-                id: 'inv-0',
                 role: 'coder',
                 model: 'test',
                 started_at: '2026-10-16T10:00:00Z',
@@ -887,7 +876,6 @@ describe('Domain Progression Aggregator', () => {
         });
         it('safely skips invocations where all date timestamps are corrupted without panicking', () => {
             const corruptInv: InvocationFact = {
-                id: 'corrupt-inv',
                 role: 'coder',
                 model: 'test',
                 started_at: 'totally-invalid-timestamp',
@@ -974,7 +962,6 @@ describe('Domain Progression Aggregator', () => {
         });
         it('does not allocate to time buckets when completed_at is null on invocation and ledger', () => {
             const fallbackInv: InvocationFact = {
-                id: 'fb-inv',
                 role: 'coder',
                 model: 'test',
                 started_at: '2026-10-11T10:00:00Z',
@@ -1082,7 +1069,6 @@ describe('Domain Progression Aggregator', () => {
         });
         it('falls back to ledger completed_at when invocation completed_at is null but ledger is completed', () => {
             const fallbackInv: InvocationFact = {
-                id: 'fb-inv-2',
                 role: 'coder',
                 model: 'test',
                 started_at: '2026-10-11T10:00:00Z',
@@ -1196,7 +1182,6 @@ describe('Domain Progression Aggregator', () => {
             const invalidCompletedValues = ['', '   ', 'not-a-valid-date', '2026-99-99', null];
             for (const invalidCompleted of invalidCompletedValues) {
                 const invWithoutCompleted: InvocationFact = {
-                    id: 'inv-no-completed',
                     role: 'coder',
                     model: 'test',
                     started_at: '2026-10-15T10:00:00Z',
@@ -1284,7 +1269,6 @@ describe('Domain Progression Aggregator', () => {
         it('adversarial: handles midnight transitions, timezone offsets, and empty inputs', () => {
             // Midnight transition: 23:50 on 2026-10-18 and 00:10 on 2026-10-19
             const invLate: InvocationFact = {
-                id: 'inv-late',
                 role: 'coder',
                 model: 'm',
                 started_at: '2026-10-18T23:50:00Z',
@@ -1296,7 +1280,6 @@ describe('Domain Progression Aggregator', () => {
                 compactions: 0,
             };
             const invEarly: InvocationFact = {
-                id: 'inv-early',
                 role: 'coder',
                 model: 'm',
                 // 02:10 +02:00 is 00:10 UTC on 2026-10-19
@@ -1423,7 +1406,6 @@ describe('Domain Progression Aggregator', () => {
                             user: 'engineer',
                             invocations: [
                                 {
-                                    id: `inv-${id}`,
                                     role: 'coder',
                                     model: 'model-x',
                                     started_at: `${dateStr}T08:00:00Z`,

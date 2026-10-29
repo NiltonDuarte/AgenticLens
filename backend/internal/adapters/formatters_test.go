@@ -14,8 +14,7 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
 		Facts: domain.AgenticFactLedger{Sessions: sessionFactsWithInvs([]testInvFact{
-			{
-				ID:                    "ses-1",
+			{SessionID: "ses-1",
 				Role:                  "orchestrator",
 				Model:                 "model-a",
 				User:                  "developer",
@@ -30,7 +29,7 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 				CostUSD: 0.1,
 			},
 			{
-				ID:                    "ses-2",
+				SessionID:             "ses-2",
 				ParentID:              &parentID,
 				Role:                  "coder",
 				Model:                 "model-b",
@@ -262,30 +261,29 @@ func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
 		Facts: domain.AgenticFactLedger{Sessions: sessionFactsWithInvs([]testInvFact{
-			{
-				ID:      "ses-orch",
+			{SessionID: "ses-orch",
 				Role:    "orchestrator",
 				Model:   "model-a",
 				User:    "developer",
 				CostUSD: 1.0,
 			},
 			{
-				ID:       "ses-adv",
-				ParentID: &parentID,
-				Role:     "advisor",
-				Model:    "model-a",
-				User:     "developer",
-				CostUSD:  1.0,
-				Turns:    4,
+				SessionID: "ses-adv",
+				ParentID:  &parentID,
+				Role:      "advisor",
+				Model:     "model-a",
+				User:      "developer",
+				CostUSD:   1.0,
+				Turns:     4,
 			},
 			{
-				ID:       "ses-po",
-				ParentID: &parentID,
-				Role:     "po",
-				Model:    "model-b",
-				User:     "developer",
-				CostUSD:  1.0,
-				Turns:    8,
+				SessionID: "ses-po",
+				ParentID:  &parentID,
+				Role:      "po",
+				Model:     "model-b",
+				User:      "developer",
+				CostUSD:   1.0,
+				Turns:     8,
 			},
 		}, nil, nil),
 		},
@@ -425,7 +423,6 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 		TicketID: &tid,
 		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
-				ID:                    "ses-root-gen",
 				Role:                  "general",
 				ActiveDurationSeconds: 120,
 				Tokens: domain.InvocationTokens{

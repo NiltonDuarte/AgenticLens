@@ -34,7 +34,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-al3-01-inv-1",
           "role": "orchestrator",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-16T22:00:00Z",
@@ -85,7 +84,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-al3-02-inv-1",
           "role": "coder",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-16T22:50:00Z",
@@ -115,7 +113,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-al3-03-inv-1",
           "role": "tester",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-17T03:10:00Z",

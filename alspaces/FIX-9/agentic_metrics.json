@@ -23,7 +23,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "01a1817d-9b92-7460-807f-e09fd59665b8-inv-1",
           "role": "RootAgent",
           "model": "gpt-6-luna",
           "started_at": "2026-10-28T07:50:55.993Z",
@@ -93,7 +92,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "01a18198-ea93-7351-9e24-16d408c4ed5e-inv-1",
           "role": "planner",
           "model": "gpt-6-luna",
           "started_at": "2026-10-28T08:20:44.903Z",

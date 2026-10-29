@@ -58,8 +58,8 @@ func sampleFactJSON(ticketID, title string, duration int64, cost float64) string
 		UpdatedAt:   "2026-10-17T11:00:00Z",
 		Code:        domain.CodeFacts{LinesAdded: 120, LinesDeleted: 20, TestLinesAdded: 60, ProdLinesAdded: 60, ProdLinesDeleted: 20, FilesChanged: 4, SDLCIterations: 2},
 		Sessions: []domain.SessionFact{
-			{ID: "ses-orch", Source: domain.SourceOpenCode, User: "test-engineer", Invocations: []domain.InvocationFact{{ID: "ses-orch-inv-1", Role: "orchestrator", Model: "claude-3-sonnet", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
-			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, User: "test-engineer", Invocations: []domain.InvocationFact{{ID: "ses-coder-inv-1", Role: "coder", Model: "claude-3-opus", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-orch", Source: domain.SourceOpenCode, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "orchestrator", Model: "claude-3-sonnet", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "coder", Model: "claude-3-opus", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
 		},
 	}
 	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
@@ -1497,7 +1497,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 				StepsCompleted: []string{domain.MigrationStepSourceBackfill},
 				StepsPending:   []string{},
 			},
-			Sessions:      []adapters.SessionFactDTO{},
+			Sessions: []adapters.SessionFactDTO{},
 			Code: adapters.CodeFactsDTO{
 				LinesAdded:       123,
 				LinesDeleted:     45,
@@ -1814,7 +1814,6 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
       "user": "engineer",
       "invocations": [
         {
-          "id": "ses_cached_inv_1-inv-1",
           "role": "coder",
           "model": "gpt-4o",
           "tokens": {
@@ -1873,8 +1872,8 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if len(parsed.ToDomain().InvocationFacts()) != 1 {
 			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
-		if parsed.ToDomain().InvocationFacts()[0].ID != "ses_cached_inv_1-inv-1" {
-			t.Errorf("expected invocation ID ses_cached_inv_1-inv-1, got %s", parsed.ToDomain().InvocationFacts()[0].ID)
+		if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "ses_cached_inv_1" {
+			t.Errorf("expected cached session ownership to survive generation, got %+v", parsed.Sessions)
 		}
 	})
 
@@ -5824,8 +5823,7 @@ code_metrics:
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
 		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
-			{
-				ID:             "ses_device_a",
+			{SessionID: "ses_device_a",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				User:           "engineer_a",
@@ -5993,8 +5991,7 @@ code_metrics:
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
 		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
-			{
-				ID:             "ses_legacy",
+			{SessionID: "ses_legacy",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				User:           "engineer_a",
@@ -6062,9 +6059,8 @@ code_metrics:
 		SchemaVersion: &schemaVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-			{
-				ID:             "ses_device_a",
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "ses_device_a",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				Turns:          8,
@@ -6410,9 +6406,8 @@ code_metrics:
 				SchemaVersion: &schemaVer,
 				TicketID:      &ticketIDStr,
 				TicketTitle:   &ticketTitleStr,
-				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-					{
-						ID:             "ses_pre_v4",
+				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+					{SessionID: "ses_pre_v4",
 						Role:           domain.RoleRootAgent,
 						Model:          "gpt-4o",
 						Turns:          5,
@@ -6456,9 +6451,8 @@ code_metrics:
 			SchemaVersion: &schemaVer,
 			TicketID:      &ticketIDStr,
 			TicketTitle:   &ticketTitleStr,
-			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-				{
-					ID:             "ses_v4",
+			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+				{SessionID: "ses_v4",
 					Role:           domain.RoleRootAgent,
 					Model:          "gpt-4o",
 					Turns:          5,

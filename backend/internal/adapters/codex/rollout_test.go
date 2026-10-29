@@ -224,14 +224,14 @@ func TestCombineTranscriptsPreservesPerSessionToolFacts(t *testing.T) {
 	transcripts := []codex.Transcript{
 		{
 			ThreadID: "root-thread", StartedAt: "2026-10-25T09:00:00Z", UpdatedAt: "2026-10-25T09:00:10Z",
-			Invocations: []domain.InvocationFact{{ID: "root-thread"}},
+			Invocations: []domain.InvocationFact{{}},
 			Tools:       []domain.ToolFact{{SessionID: "root-thread", Name: "command", Calls: 2, Errors: 1}},
 			Events:      []domain.EventFact{{Timestamp: "2026-10-25T09:00:02Z", SessionID: "root-thread"}},
 			Usage:       codex.Usage{Input: 10, CacheRead: 4},
 		},
 		{
 			ThreadID: "child-thread", ParentThread: parentID, StartedAt: "2026-10-25T09:00:03Z", UpdatedAt: "2026-10-25T09:00:08Z",
-			Invocations: []domain.InvocationFact{{ID: "child-thread-inv-1"}},
+			Invocations: []domain.InvocationFact{{}},
 			Tools:       []domain.ToolFact{{SessionID: "child-thread", Name: "command", Calls: 1}, {SessionID: "child-thread", Name: "search", Calls: 1}},
 			Events:      []domain.EventFact{{Timestamp: "2026-10-25T09:00:01Z", SessionID: "child-thread"}},
 			Usage:       codex.Usage{Input: 20, CacheRead: 7},
@@ -274,7 +274,8 @@ func TestSteeringTurnsCountUserMessagesWithoutDuplicateRepresentations(t *testin
 		if transcript.SteeringTurns != 2 {
 			t.Fatalf("expected two user inputs, got %d", transcript.SteeringTurns)
 		}
-		combined, err := codex.CombineTranscripts([]codex.Transcript{transcript, {SteeringTurns: 5}})
+		transcript.ThreadID = "root-thread"
+		combined, err := codex.CombineTranscripts([]codex.Transcript{transcript, {ThreadID: "child-thread", ParentThread: "root-thread", SteeringTurns: 5}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -314,7 +315,7 @@ func TestChildRolloutPreservesIdentityAndSkipsInheritedReplay(t *testing.T) {
 			t.Fatalf("inherited model counted: %+v", transcript.Invocations)
 		}
 		inv := transcript.Invocations[0]
-		if inv.ID != "child-inv-1" || inv.Role != domain.RoleUnassignedSubAgent || inv.Model != "child-model" {
+		if inv.Role != domain.RoleUnassignedSubAgent || inv.Model != "child-model" {
 			t.Fatalf("incorrect child invocation attribution: %+v", inv)
 		}
 		if inv.Turns != 1 || inv.ActiveDurationSeconds != 2 || inv.Compactions != 0 || inv.Tokens.Input != 20 || inv.Tokens.CacheRead != 10 || inv.Tokens.Output != 2 {

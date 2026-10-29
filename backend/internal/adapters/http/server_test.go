@@ -37,7 +37,7 @@ func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveServi
 }
 
 func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, invocations int64) string {
-	return fmt.Sprintf(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","user":"tester","invocations":[{"id":"ses-orch-inv-1","role":"orchestrator","model":"claude-3-sonnet","started_at":null,"completed_at":null,"active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"compactions":0,"user_iterations":2}],"tools":[{"name":"bash","calls":5,"errors":0}],"events":[],"anomalies":[]}]}`, ticketID, title, duration, invocations, cost)
+	return fmt.Sprintf(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","user":"tester","invocations":[{"role":"orchestrator","model":"claude-3-sonnet","started_at":null,"completed_at":null,"active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"compactions":0,"user_iterations":2}],"tools":[{"name":"bash","calls":5,"errors":0}],"events":[],"anomalies":[]}]}`, ticketID, title, duration, invocations, cost)
 }
 
 func setupFixtureWorkspaces(t *testing.T) string {
@@ -86,7 +86,6 @@ func setupFixtureWorkspaces(t *testing.T) string {
       "user": "dev",
       "invocations": [
         {
-          "id": "ses-1-inv-1",
           "role": "orchestrator",
           "model": "gpt-4",
           "active_duration_seconds": 60,
@@ -160,7 +159,6 @@ func setupFixtureWorkspaces(t *testing.T) string {
       "user": "dev",
       "invocations": [
         {
-          "id": "ses-2-inv-1",
           "role": "orchestrator",
           "model": "gpt-4",
           "active_duration_seconds": 120,
@@ -1121,7 +1119,6 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
       "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-0-inv-1",
           "role": "orchestrator",
           "active_duration_seconds": 0,
           "turns": 0,
@@ -1616,7 +1613,6 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
       "user": "dev",
       "invocations": [
         {
-          "id": "ses-1-inv-1",
           "role": "orchestrator",
           "model": "gpt-4",
           "active_duration_seconds": 60,
@@ -2299,7 +2295,6 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
       "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses_al33-inv-1",
           "role": "orchestrator",
           "model": "gemini-3.8-flash",
           "started_at": null,
@@ -2367,7 +2362,6 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
       "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses_missing_99-inv-1",
           "role": "coder",
           "model": "gemini-3.8-flash",
           "started_at": null,
@@ -2601,7 +2595,6 @@ func setupMultiFilterWorkspaces(t *testing.T) string {
 			"user": "dev",
 			"invocations": [
 				{
-					"id": "ses-` + tc.id + `-inv-1",
 					"role": "orchestrator",
 					"model": "gpt-4",
 					"started_at": null,
@@ -3270,7 +3263,6 @@ func TestProgressionHandler(t *testing.T) {
       "user": "dev",
       "invocations": [
         {
-          "id": "inv-rec-1-inv-1",
           "role": "coder",
           "model": "gpt-4",
           "started_at": "%s",
@@ -3330,7 +3322,6 @@ func TestProgressionHandler(t *testing.T) {
       "user": "dev",
       "invocations": [
         {
-          "id": "inv-old-1-inv-1",
           "role": "coder",
           "model": "gpt-4",
           "started_at": "%s",
@@ -3472,7 +3463,6 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
       "user": "fixture-user",
       "invocations": [
         {
-          "id": "inv-1-inv-1",
           "started_at": "2026-10-15T09:00:00Z",
           "completed_at": "2026-10-15T18:00:00Z",
           "tokens": {

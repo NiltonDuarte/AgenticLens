@@ -766,7 +766,6 @@ func TestHydrateWorkspaceEvents_SuccessAndZeroDiskWrites(t *testing.T) {
 	ledger := domain.AgenticMetricsLedger{
 		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
-				ID:   "s_al33",
 				Role: "orchestrator",
 			},
 		}, nil, []domain.EventFact{
@@ -874,7 +873,7 @@ func TestHydrateWorkspaceEvents_CodexUsesExplicitSourceAndCODEXHome(t *testing.T
 	service := live.NewLiveServiceWithCodexHome(nil, testProjectConfig(), home)
 	defer service.Close()
 	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
-		ID: "thread-codex", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{ID: "thread-codex", Role: "orchestrator"}},
+		ID: "thread-codex", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "orchestrator"}},
 	}}}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CODEX", ledger)
 	if err != nil {
@@ -888,7 +887,7 @@ func TestHydrateWorkspaceEvents_CodexUsesExplicitSourceAndCODEXHome(t *testing.T
 	}
 }
 
-func TestHydrateWorkspaceEvents_CodexSucceedsWithDistinctInvocationIDs(t *testing.T) {
+func TestHydrateWorkspaceEvents_CodexSucceedsWithMultipleInvocationRows(t *testing.T) {
 	home := t.TempDir()
 	rolloutPath := filepath.Join(home, "sessions", "2026", "10", "26", "rollout-thread.jsonl")
 	if err := os.MkdirAll(filepath.Dir(rolloutPath), 0700); err != nil {
@@ -902,14 +901,14 @@ func TestHydrateWorkspaceEvents_CodexSucceedsWithDistinctInvocationIDs(t *testin
 	service := live.NewLiveServiceWithCodexHome(nil, testProjectConfig(), home)
 	defer service.Close()
 
-	// Invocations have distinct IDs: thread-codex-inv-1 and thread-codex-inv-2
+	// Multiple model rows belong to the same Codex session.
 	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
 		ID:     "thread-codex",
 		Source: domain.SourceCodex,
 		User:   "alice",
 		Invocations: []domain.InvocationFact{
-			{ID: "thread-codex-inv-1", Role: "orchestrator"},
-			{ID: "thread-codex-inv-2", Role: "orchestrator"},
+			{Role: "orchestrator"},
+			{Role: "orchestrator"},
 		},
 	}}}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CODEX-DISTINCT", ledger)
@@ -917,7 +916,7 @@ func TestHydrateWorkspaceEvents_CodexSucceedsWithDistinctInvocationIDs(t *testin
 		t.Fatal(err)
 	}
 	if !resp.IsHydrated || resp.DataSource != domain.DataSourceLocalCodex {
-		t.Fatalf("expected local Codex hydration with distinct invocation IDs, got %#v", resp)
+		t.Fatalf("expected local Codex hydration with distinct model rows, got %#v", resp)
 	}
 	if len(resp.Events) != 1 || resp.Events[0].EventID == "" {
 		t.Fatalf("expected one transient event, got %#v", resp.Events)
@@ -955,7 +954,7 @@ func TestHydrateWorkspaceEvents_AnomalyHydrationRetainsSessionHierarchy(t *testi
 			Source: domain.SourceCodex,
 			User:   "lead",
 			Invocations: []domain.InvocationFact{
-				{ID: "root-thread-inv-1", Role: "orchestrator"},
+				{Role: "orchestrator"},
 			},
 		},
 		{
@@ -964,7 +963,7 @@ func TestHydrateWorkspaceEvents_AnomalyHydrationRetainsSessionHierarchy(t *testi
 			Source:   domain.SourceCodex,
 			User:     "subagent",
 			Invocations: []domain.InvocationFact{
-				{ID: "child-thread-inv-1", Role: "coder"},
+				{Role: "coder"},
 			},
 		},
 	}}}
@@ -1015,7 +1014,6 @@ func TestHydrateWorkspaceEvents_SessionRoleMapUsesSessionID(t *testing.T) {
 					Source: domain.SourceOpenCode,
 					Invocations: []domain.InvocationFact{
 						{
-							ID:   "s_custom-inv-1",
 							Role: "planner",
 						},
 					},
@@ -1053,8 +1051,8 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenAnyRootIsMissing(t *testing.
 	service := live.NewLiveServiceWithCodexHome(nil, testProjectConfig(), home)
 	defer service.Close()
 	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{
-		{ID: "root-present", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{ID: "root-present", Role: "orchestrator"}}},
-		{ID: "root-missing", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{ID: "root-missing", Role: "orchestrator"}}},
+		{ID: "root-present", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "orchestrator"}}},
+		{ID: "root-missing", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "orchestrator"}}},
 	}}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-PARTIAL", ledger)
 	if err != nil {
@@ -1062,6 +1060,18 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenAnyRootIsMissing(t *testing.
 	}
 	if resp.IsHydrated || resp.DataSource != domain.DataSourceCommittedLedger || len(resp.Events) != 0 {
 		t.Fatalf("partial Codex roots were reported as hydrated: %#v", resp)
+	}
+	missingPath := filepath.Join(filepath.Dir(path), "rollout-missing.jsonl")
+	missingRollout := `{"type":"session_meta","payload":{"id":"root-missing","session_id":"root-missing","timestamp":"2026-10-26T09:00:00Z"}}` + "\n"
+	if err := os.WriteFile(missingPath, []byte(missingRollout), 0600); err != nil {
+		t.Fatal(err)
+	}
+	complete, err := service.HydrateWorkspaceEvents(context.Background(), "AL-PARTIAL", ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !complete.IsHydrated || complete.DataSource != domain.DataSourceLocalCodex || len(complete.Events) != 1 {
+		t.Fatalf("complete Codex roots failed to hydrate after restoring the missing rollout: %#v", complete)
 	}
 }
 
@@ -1091,9 +1101,9 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenChildRolloutIsMissing(t *tes
 	defer service.Close()
 	parent := "root-thread"
 	ledger := domain.AgenticMetricsLedger{Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{
-		{ID: "root-thread", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{ID: "root-thread", Role: "orchestrator"}}},
-		{ID: "child-one", Source: domain.SourceCodex, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "child-one", Role: "coder"}}},
-		{ID: "child-two", Source: domain.SourceCodex, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "child-two", Role: "tester"}}},
+		{ID: "root-thread", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "orchestrator"}}},
+		{ID: "child-one", Source: domain.SourceCodex, ParentID: &parent, Invocations: []domain.InvocationFact{{Role: "coder"}}},
+		{ID: "child-two", Source: domain.SourceCodex, ParentID: &parent, Invocations: []domain.InvocationFact{{Role: "tester"}}},
 	}}}
 	resp, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CHILD-PARTIAL", ledger)
 	if err != nil {
@@ -1101,6 +1111,14 @@ func TestHydrateWorkspaceEvents_CodexFailsClosedWhenChildRolloutIsMissing(t *tes
 	}
 	if resp.IsHydrated || resp.DataSource != domain.DataSourceCommittedLedger || len(resp.Events) != 0 {
 		t.Fatalf("partial Codex child tree was reported as hydrated: %#v", resp)
+	}
+	write("sessions/2026/10/26/rollout-child-two.jsonl", "child-two", "root-thread", false)
+	complete, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CHILD-PARTIAL", ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !complete.IsHydrated || complete.DataSource != domain.DataSourceLocalCodex || len(complete.Events) != 1 {
+		t.Fatalf("complete Codex child tree failed to hydrate after restoring the missing rollout: %#v", complete)
 	}
 }
 
@@ -1139,7 +1157,6 @@ func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
 	ledger := domain.AgenticMetricsLedger{
 		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
-				ID:   "s_missing",
 				Role: "orchestrator",
 			},
 		}, nil, []domain.EventFact{
@@ -1177,7 +1194,7 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 
 	ledgerWithFallback := domain.AgenticMetricsLedger{
 		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "ses-hostile", Role: "coder"},
+			{Role: "coder"},
 		}, nil, []domain.EventFact{
 			{
 				Timestamp: "2026-10-19T10:00:00Z",
@@ -1326,9 +1343,10 @@ func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) 
 		defer service.Close()
 
 		corruptLedger := domain.AgenticMetricsLedger{
-			Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
-				{ID: "s_corrupt", Role: "coder"},
-			}, nil, nil),
+			Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
+				ID: "s_corrupt", Source: domain.SourceOpenCode,
+				Invocations: []domain.InvocationFact{{Role: "coder"}},
+			}},
 			},
 		}
 
@@ -1891,9 +1909,10 @@ func TestHydrateWorkspaceEvents_ConsecutiveErrorsSpansTurns(t *testing.T) {
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "s_span_1", Role: "coder"},
-		}, nil, nil),
+		Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
+			ID: "s_span_1", Source: domain.SourceOpenCode,
+			Invocations: []domain.InvocationFact{{Role: "coder"}},
+		}},
 		},
 	}
 
@@ -2001,10 +2020,10 @@ func TestHydrateWorkspaceEvents_MultiSessionIsolationAndStreakReset(t *testing.T
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "s_iso_A", Role: "coder"},
-			{ID: "s_iso_B", Role: "coder"},
-		}, nil, nil),
+		Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{
+			{ID: "s_iso_A", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder"}}},
+			{ID: "s_iso_B", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder"}}},
+		},
 		},
 	}
 
@@ -2103,12 +2122,12 @@ func TestHydrateWorkspaceEvents_FallbackRoleBehaviorForNamelessSessions(t *testi
 
 	ctx := context.Background()
 	ledger := domain.AgenticMetricsLedger{
-		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "s_root_null"},
-			{ID: "s_root_ws"},
-			{ID: "s_child_null"},
-			{ID: "s_child_ws"},
-		}, nil, nil),
+		Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{
+			{ID: "s_root_null", Source: domain.SourceOpenCode},
+			{ID: "s_root_ws", Source: domain.SourceOpenCode},
+			{ID: "s_child_null", Source: domain.SourceOpenCode},
+			{ID: "s_child_ws", Source: domain.SourceOpenCode},
+		},
 		},
 	}
 

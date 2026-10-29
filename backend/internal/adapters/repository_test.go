@@ -450,7 +450,6 @@ func TestScanWorkspaces(t *testing.T) {
       "user": "test-user",
       "invocations": [
         {
-          "id": "ses-1-inv-1",
           "role": "orchestrator",
           "model": "model-x",
           "started_at": null,
@@ -873,9 +872,7 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
     {
       "id": "inv-1",
       "invocations": [
-        {
-          "id": "inv-1"
-        }
+        {}
       ],
       "tools": [],
       "events": []
@@ -1163,7 +1160,6 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
       "user": "u",
       "invocations": [
         {
-          "id": "s1-inv-1",
           "role": "coder",
           "model": "m",
           "active_duration_seconds": 1,
@@ -1264,7 +1260,6 @@ func TestLoadTicketWorkspace(t *testing.T) {
       "user": "test-dev",
       "invocations": [
         {
-          "id": "ses-1-inv-1",
           "role": "orchestrator",
           "model": "model-1",
           "active_duration_seconds": 90,
@@ -1560,12 +1555,12 @@ func TestSaveFactLedger(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			SchemaVersion: &schemaVer,
 			TicketID:      &tid,
-			TicketTitle:   &title, Sessions: sessionFacts([]domain.InvocationFact{
+			TicketTitle:   &title, Sessions: sessionFactsWithInvs([]testInvFact{
 				{
-					ID:      "inv-1",
-					Role:    "coder",
-					Model:   "gemini-3.8-flash",
-					CostUSD: 0.05,
+					SessionID: "inv-1",
+					Role:      "coder",
+					Model:     "gemini-3.8-flash",
+					CostUSD:   0.05,
 				},
 			}, nil, nil),
 		}
@@ -1599,8 +1594,8 @@ func TestSaveFactLedger(t *testing.T) {
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-PERSIST-1" {
 			t.Errorf("expected ticket_id AL-PERSIST-1, got %v", parsed.TicketID)
 		}
-		if len(parsed.InvocationFacts()) != 1 || parsed.InvocationFacts()[0].ID != "inv-1" {
-			t.Errorf("expected 1 invocation with ID inv-1, got %+v", parsed.InvocationFacts())
+		if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "inv-1" || len(parsed.Sessions[0].Invocations) != 1 || parsed.Sessions[0].Invocations[0].Model != "gemini-3.8-flash" {
+			t.Errorf("expected invocation and owning session preserved, got %+v", parsed.Sessions)
 		}
 	})
 
@@ -1952,7 +1947,6 @@ role_mappings:
       "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-build-inv-1",
           "role": "build",
           "model": "claude-3-sonnet",
           "cost_usd": 1.5,
@@ -1982,7 +1976,6 @@ role_mappings:
       "parent_id": "ses-build",
       "invocations": [
         {
-          "id": "ses-qa-inv-1",
           "role": "qa-bot",
           "model": "claude-3-haiku",
           "cost_usd": 0.5,
@@ -2119,7 +2112,6 @@ role_mappings:
       "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-eng-inv-1",
           "role": "sys-engineer",
           "model": "claude-3-sonnet",
           "cost_usd": 1.5,
@@ -2148,7 +2140,6 @@ role_mappings:
       "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-test-inv-1",
           "role": "lead-tester",
           "model": "gpt-4o",
           "cost_usd": 0.8,
@@ -2310,13 +2301,11 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 			TicketID:      &ticketID,
 			TicketTitle:   &ticketTitle, Sessions: sessionFacts([]domain.InvocationFact{
 				{
-					ID:             "ses_1",
 					Role:           domain.RoleRootAgent,
 					Model:          "gpt-4o",
 					UserIterations: 7,
 				},
 				{
-					ID:             "ses_child",
 					Role:           domain.RoleUnassignedSubAgent,
 					Model:          "gpt-4o",
 					UserIterations: 0,

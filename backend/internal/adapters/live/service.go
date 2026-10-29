@@ -699,12 +699,6 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		if trimmed != "" {
 			sessionIDMap[trimmed] = true
 		}
-		for _, inv := range session.Invocations {
-			trimmedInv := strings.TrimSpace(inv.ID)
-			if trimmedInv != "" {
-				sessionIDMap[trimmedInv] = true
-			}
-		}
 	}
 
 	// If no session IDs in ledger, attempt resolution via OpenCode resolver
@@ -760,13 +754,6 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		for _, inv := range session.Invocations {
 			if session.ID != "" && inv.Role != "" {
 				sessionRoleMap[session.ID] = inv.Role
-				break
-			} else if inv.ID != "" && inv.Role != "" {
-				sessID := inv.ID
-				if idx := strings.Index(sessID, "-inv-"); idx > 0 {
-					sessID = sessID[:idx]
-				}
-				sessionRoleMap[sessID] = inv.Role
 				break
 			}
 		}
@@ -1087,7 +1074,7 @@ func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, events []domain.
 		}
 		transient.Sessions = clonedSessions
 	} else {
-		sessions, err := domain.SessionsFromFacts(facts.InvocationFacts(), facts.ToolFacts(), events)
+		sessions, err := domain.SessionsFromFacts(facts.Sessions, facts.ToolFacts(), events)
 		if err != nil {
 			return facts.AnomalyFacts()
 		}

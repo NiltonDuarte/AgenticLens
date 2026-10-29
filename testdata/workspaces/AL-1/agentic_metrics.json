@@ -34,7 +34,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-al1-01-inv-1",
           "role": "orchestrator",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-15T10:00:00Z",
@@ -90,7 +89,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-al1-02-inv-1",
           "role": "planner",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-15T10:16:00Z",
@@ -120,7 +118,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-al1-03-inv-1",
           "role": "coder",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-15T10:40:00Z",
@@ -150,7 +147,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-al1-04-inv-1",
           "role": "tester",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-15T12:05:00Z",
@@ -180,7 +176,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-al1-05-inv-1",
           "role": "reviewer",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-15T13:35:00Z",

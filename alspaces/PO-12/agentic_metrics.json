@@ -22,7 +22,6 @@
       "source": "opencode",
       "invocations": [
         {
-          "id": "ses_e7bd20667ffeD9jgBkVayiieIA-inv-1",
           "role": "general",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-28T20:22:48.347000+00:00",

@@ -356,8 +356,6 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger) []Anomaly {
 					var sid *string
 					if session.ID != "" {
 						sid = strPtr(session.ID)
-					} else if inv.ID != "" {
-						sid = strPtr(inv.ID)
 					}
 					anomaly := Anomaly{
 						RuleID:   RuleContextSaturationSpike,

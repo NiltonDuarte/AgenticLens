@@ -81,12 +81,10 @@ type invocationAccumulator struct {
 }
 
 func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
-	sids := make(map[string]struct{})
 	var inp, out, cache, peak int64
 	var cost float64
 
 	for _, inv := range invs {
-		sids[inv.ID] = struct{}{}
 		inp += inv.Tokens.Input
 		out += inv.Tokens.Output
 		cache += inv.Tokens.CacheRead
@@ -103,7 +101,7 @@ func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 	}
 
 	return invocationAccumulator{
-		invocations:       int64(len(sids)),
+		invocations:       int64(len(invs)),
 		inputTokens:       inp,
 		outputTokens:      out,
 		cacheReadTokens:   cache,
@@ -493,18 +491,8 @@ func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
 	return metrics
 }
 
-// ComputeThreadSummaries groups invocations by root session into hierarchical thread execution records.
-func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string) []ThreadExecutionRecord {
-	if len(invocations) == 0 {
-		return []ThreadExecutionRecord{}
-	}
-	sessions := make([]SessionFact, len(invocations))
-	for i, inv := range invocations {
-		sessions[i] = SessionFact{
-			ID:          inv.ID,
-			Invocations: []InvocationFact{inv},
-		}
-	}
+// ComputeThreadSummaries groups session-owned invocation rows by their root session.
+func ComputeThreadSummaries(sessions []SessionFact, roleOrder ...[]string) []ThreadExecutionRecord {
 	return ComputeThreadSummariesFromSessions(sessions, roleOrder...)
 }
 
@@ -592,13 +580,11 @@ func ComputeThreadSummariesFromSessions(sessions []SessionFact, roleOrder ...[]s
 
 			var modelMetrics []ModelMetric
 			for model, mInvs := range byModel {
-				sids := make(map[string]struct{})
 				var inp, out, cache int64
 				var cost float64
 				var peak int64
 
 				for _, inv := range mInvs {
-					sids[inv.ID] = struct{}{}
 					inp += inv.Tokens.Input
 					out += inv.Tokens.Output
 					cache += inv.Tokens.CacheRead
@@ -617,7 +603,7 @@ func ComputeThreadSummariesFromSessions(sessions []SessionFact, roleOrder ...[]s
 
 				modelMetrics = append(modelMetrics, ModelMetric{
 					Model:             model,
-					Invocations:       int64(len(sids)),
+					Invocations:       int64(len(mInvs)),
 					InputTokens:       inp,
 					OutputTokens:      out,
 					CacheReadTokens:   cache,

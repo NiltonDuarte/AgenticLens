@@ -24,7 +24,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb48d0929ffeWkxCRSfpKj1Yql-inv-1",
           "role": "coder",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-17T19:59:47.936000+00:00",
@@ -69,7 +68,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb491be70ffefMjZwuDQeakO6X-inv-1",
           "role": "planner",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-17T19:54:39.385000+00:00",
@@ -119,7 +117,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb49e8e35ffe4tOlB0urEsJTAm-inv-1",
           "role": "planner",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-17T19:40:39.769000+00:00",
@@ -184,7 +181,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb49f4c12ffeqKe8SwAW27I9yb-inv-1",
           "role": "general",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-17T19:39:51.480000+00:00",

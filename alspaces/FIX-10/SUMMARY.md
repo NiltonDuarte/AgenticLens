@@ -34,6 +34,14 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - Updated backend and frontend test suites and fixtures.
 - Verified all 71 workspace ledgers load and validate with zero errors, warnings, or diagnostics.
 
+## Iteration 04: Remove Synthetic Invocation IDs
+
+- Removed `sessions[].invocations[].id` from the Go and TypeScript contracts, DTO serialization, canonical schema validation, and all 89 persisted production/test ledgers (604 rows); schema v4 now rejects the removed key.
+- Replaced synthetic-ID ownership inference with explicit enclosing session ownership across extraction, migration, anomaly attribution, hydration, aggregation, and thread summaries. Multiple rows within one session remain distinct.
+- Changed refresh merges to replace the refreshed session's full cumulative snapshot, preventing double counting as Codex or OpenCode sessions grow while retaining other sessions and duplicate rows in the fresh snapshot.
+- Added regression coverage for Codex/OpenCode source growth, repeated row preservation, session ownership, legacy migrations, strict v4 rejection, and frontend progression.
+- Verification: `make check`, `make test`, and uncached Go race tests passed; 2,361 Go tests/subtests and 737 frontend tests passed. Independent review approved iteration 04. See `iterations/04/IMPLEMENTATION_TEST_EVIDENCE.txt` and `iterations/04/REVIEW.md`.
+
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 20
 - **Active Agent Duration:** 5h 51m (excludes user wait time)

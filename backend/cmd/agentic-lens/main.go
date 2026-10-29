@@ -1253,36 +1253,9 @@ func main() {
 	}
 }
 
-type invocationKey struct {
-	id    string
-	model string
-}
-
 type toolFactKey struct {
 	sessionID string
 	name      string
-}
-
-func mergeInvocations(cached []domain.InvocationFact, local []domain.InvocationFact) []domain.InvocationFact {
-	merged := make([]domain.InvocationFact, len(cached))
-	copy(merged, cached)
-
-	indexMap := make(map[invocationKey]int)
-	for i, inv := range merged {
-		indexMap[invocationKey{id: inv.ID, model: inv.Model}] = i
-	}
-
-	for _, lInv := range local {
-		k := invocationKey{id: lInv.ID, model: lInv.Model}
-		if idx, exists := indexMap[k]; exists {
-			merged[idx] = lInv
-		} else {
-			indexMap[k] = len(merged)
-			merged = append(merged, lInv)
-		}
-	}
-
-	return merged
 }
 
 func mergeTools(cached []domain.ToolFact, local []domain.ToolFact) []domain.ToolFact {
@@ -1349,9 +1322,10 @@ func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []do
 	for _, session := range cached {
 		byID[session.ID] = session
 	}
+	// Each extracted session is authoritative, including repeated or empty invocation rows.
 	for _, session := range local {
-		if session.Source == "" {
-			if existing, ok := byID[session.ID]; ok && existing.Source != "" {
+		if existing, ok := byID[session.ID]; ok {
+			if session.Source == "" && existing.Source != "" {
 				session.Source = existing.Source
 			}
 		}

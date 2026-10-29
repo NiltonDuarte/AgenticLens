@@ -18,7 +18,6 @@ type InvocationTokens struct {
 
 // InvocationFact represents an atomic execution record for an agent invocation.
 type InvocationFact struct {
-	ID                    string           `json:"id"`
 	Role                  AgentRole        `json:"role"`
 	Model                 string           `json:"model"`
 	StartedAt             *string          `json:"started_at"`
@@ -208,8 +207,10 @@ func (ledger AgenticFactLedger) EventFacts() []EventFact {
 	return SortEvents(result)
 }
 
-// SessionsFromFacts builds the canonical session tree from extracted atomic facts.
-func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
+// SessionsFromFacts combines session-owned invocation rows with attributed tools
+// and events. Session metadata and row ownership come from invocationSessions;
+// tools and events replace their corresponding nested collections.
+func SessionsFromFacts(invocationSessions []SessionFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
 	byID := make(map[string]*SessionFact)
 	order := make([]string, 0)
 	get := func(id string, parent *string) (*SessionFact, error) {
@@ -220,6 +221,10 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 		if session, ok := byID[clean]; ok {
 			if parent != nil && session.ParentID != nil && *session.ParentID != *parent {
 				return nil, fmt.Errorf("session %q has conflicting parent identities", clean)
+			}
+			if parent != nil && session.ParentID == nil && strings.TrimSpace(*parent) != "" {
+				p := strings.TrimSpace(*parent)
+				session.ParentID = &p
 			}
 			return session, nil
 		}
@@ -232,16 +237,19 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 		order = append(order, clean)
 		return session, nil
 	}
-	for _, invocation := range invocations {
-		sessID := invocation.ID
-		if idx := strings.Index(invocation.ID, "-inv-"); idx > 0 {
-			sessID = invocation.ID[:idx]
-		}
-		session, err := get(sessID, nil)
+	for _, owned := range invocationSessions {
+		session, err := get(owned.ID, owned.ParentID)
 		if err != nil {
 			return nil, err
 		}
-		session.Invocations = append(session.Invocations, invocation)
+		if owned.Source != "" {
+			session.Source = owned.Source
+		}
+		if owned.User != "" {
+			session.User = owned.User
+		}
+		session.Invocations = append(session.Invocations, owned.Invocations...)
+		session.Anomalies = append(session.Anomalies, owned.Anomalies...)
 	}
 	for _, tool := range tools {
 		session, err := get(tool.SessionID, nil)
@@ -289,8 +297,8 @@ func SessionsFromFacts(invocations []InvocationFact, tools []ToolFact, events []
 }
 
 // SessionsFromFactsWithSource builds the canonical session tree and tags each session with the given source provenance.
-func SessionsFromFactsWithSource(source SourceHarness, invocations []InvocationFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
-	sessions, err := SessionsFromFacts(invocations, tools, events)
+func SessionsFromFactsWithSource(source SourceHarness, invocationSessions []SessionFact, tools []ToolFact, events []EventFact) ([]SessionFact, error) {
+	sessions, err := SessionsFromFacts(invocationSessions, tools, events)
 	if err != nil {
 		return nil, err
 	}

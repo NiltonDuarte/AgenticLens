@@ -24,7 +24,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea062d95cffeSOtl8kODc5qIf8-inv-1",
           "role": "coder",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T17:58:17.010000+00:00",
@@ -114,7 +113,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea0671888ffeqPbGqKQzMjaO00-inv-1",
           "role": "reviewer",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T17:53:38.697000+00:00",
@@ -179,7 +177,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea06b025effeMczhmubylHJTtw-inv-1",
           "role": "tester",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T17:49:22.254000+00:00",
@@ -229,7 +226,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea0792dbfffeEhkwbTIQ6z2X1E-inv-1",
           "role": "coder",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T17:33:53.625000+00:00",
@@ -294,7 +290,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea11bb0b4ffeLrcSDVV0v4qgU3-inv-1",
           "role": "planner",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T14:36:23.307000+00:00",
@@ -354,7 +349,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea1416804ffeoK0BDxmI0F15Js-inv-1",
           "role": "coder",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T13:55:11.497000+00:00",
@@ -399,7 +393,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea1490dd7ffeWTqY5lK9D98zaq-inv-1",
           "role": "reviewer",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T13:46:50.295000+00:00",
@@ -459,7 +452,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea1534ff3ffe0XcOy270OG7Yvo-inv-1",
           "role": "tester",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T13:35:38.022000+00:00",
@@ -514,7 +506,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea1699b13ffeeKDYzCAellSCs3-inv-1",
           "role": "coder",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T13:11:16.997000+00:00",
@@ -589,7 +580,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea17bbe74ffef0as99U4IUVtW1-inv-1",
           "role": "planner",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T12:51:28.285000+00:00",
@@ -653,7 +643,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea1a4b28affeowyXAPpI4V07XM-inv-1",
           "role": "orchestrator",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-21T12:06:44.901000+00:00",

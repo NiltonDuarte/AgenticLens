@@ -23,7 +23,6 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eaaced537ffexVp8rcG77E6xCJ-inv-1",
           "role": "general",
           "model": "gemini-3.8-flash",
           "started_at": "2026-10-19T17:24:08.414000+00:00",

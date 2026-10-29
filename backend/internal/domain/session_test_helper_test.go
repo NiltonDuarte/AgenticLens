@@ -7,9 +7,6 @@ import (
 
 func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, events []domain.EventFact) []domain.SessionFact {
 	for i := range invocations {
-		if invocations[i].ID == "" {
-			invocations[i].ID = fmt.Sprintf("fixture-session-%d", i)
-		}
 		if invocations[i].Model == "" {
 			invocations[i].Model = "fixture-model"
 		}
@@ -35,7 +32,7 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 			events[i].Timestamp = fmt.Sprintf("fixture-%06d", i)
 		}
 	}
-	sessions, err := domain.SessionsFromFacts(invocations, tools, events)
+	sessions, err := domain.SessionsFromFacts(fixtureInvocationSessions(invocations), tools, events)
 	if err != nil {
 		panic(err)
 	}
@@ -83,7 +80,7 @@ func withActiveDuration(secs int64) testSessionOpt {
 }
 
 type testInvFact struct {
-	ID                    string
+	SessionID             string
 	ParentID              *string
 	Role                  domain.AgentRole
 	Model                 string
@@ -101,11 +98,10 @@ type testInvFact struct {
 func sessionFactsWithInvs(invs []testInvFact, tools []domain.ToolFact, events []domain.EventFact) []domain.SessionFact {
 	var sessions []domain.SessionFact
 	for i, inv := range invs {
-		sessID := inv.ID
+		sessID := inv.SessionID
 		if sessID == "" {
 			sessID = fmt.Sprintf("fixture-session-%d", i)
 		}
-		invID := fmt.Sprintf("%s-inv-1", sessID)
 		sessUser := inv.User
 		if sessUser == "" {
 			sessUser = "fixture-user"
@@ -131,7 +127,6 @@ func sessionFactsWithInvs(invs []testInvFact, tools []domain.ToolFact, events []
 			User:     sessUser,
 			Invocations: []domain.InvocationFact{
 				{
-					ID:                    invID,
 					Role:                  inv.Role,
 					Model:                 model,
 					StartedAt:             startedAt,
@@ -161,7 +156,6 @@ func testSession(id string, parentID *string, role domain.AgentRole, opts ...tes
 		User:     "fixture-user",
 		Invocations: []domain.InvocationFact{
 			{
-				ID:    id + "-inv-1",
 				Role:  role,
 				Model: "fixture-model",
 			},
@@ -223,39 +217,24 @@ func sessionFactsFromSessions(sessions []domain.SessionFact, tools []domain.Tool
 }
 
 func setEventFacts(ledger *domain.AgenticFactLedger, events []domain.EventFact) {
-	if events == nil {
-		for i := range ledger.Sessions {
-			ledger.Sessions[i].Events = nil
-		}
-		return
-	}
-	sessMap := make(map[string]*domain.SessionFact, len(ledger.Sessions))
-	for i := range ledger.Sessions {
-		ledger.Sessions[i].Events = []domain.SessionEventFact{}
-		sessMap[ledger.Sessions[i].ID] = &ledger.Sessions[i]
-	}
 	for i := range events {
-		ev := events[i]
-		if ev.SessionID == "" {
-			ev.SessionID = "fixture-session"
+		if events[i].SessionID == "" {
+			events[i].SessionID = "fixture-session"
 		}
-		if ev.Timestamp == "" {
-			ev.Timestamp = fmt.Sprintf("fixture-%06d", i)
-		}
-		if sess, ok := sessMap[ev.SessionID]; ok {
-			sess.Events = append(sess.Events, domain.SessionEventFact{
-				EventID:       ev.EventID,
-				Timestamp:     ev.Timestamp,
-				MessageID:     ev.MessageID,
-				Turn:          ev.Turn,
-				Role:          ev.Role,
-				EventType:     ev.EventType,
-				ToolName:      ev.ToolName,
-				Status:        ev.Status,
-				ErrorMessage:  ev.ErrorMessage,
-				DurationMs:    ev.DurationMs,
-				ContextTokens: ev.ContextTokens,
-			})
+		if events[i].Timestamp == "" {
+			events[i].Timestamp = fmt.Sprintf("fixture-%06d", i)
 		}
 	}
+	sessions, err := domain.SessionsFromFacts(ledger.Sessions, ledger.ToolFacts(), events)
+	if err != nil {
+		panic(err)
+	}
+	ledger.Sessions = sessions
+}
+
+func fixtureInvocationSessions(invocations []domain.InvocationFact) []domain.SessionFact {
+	if len(invocations) == 0 {
+		return nil
+	}
+	return []domain.SessionFact{{ID: "fixture-session", Source: domain.SourceOpenCode, User: "fixture-user", Invocations: invocations}}
 }

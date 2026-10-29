@@ -160,7 +160,7 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 	ledger := domain.AgenticFactLedger{
 		SchemaVersion: &version,
 		TicketID:      &ticketID,
-		Sessions:      sessionFacts([]domain.InvocationFact{{ID: "inv-existing", Role: "coder", Model: "model"}}, nil, nil),
+		Sessions:      sessionFactsWithInvs([]testInvFact{{SessionID: "inv-existing", Role: "coder", Model: "model"}}, nil, nil),
 		Migration: &domain.MigrationInfo{
 			SchemaVersion:  domain.CurrentSchemaVersion,
 			Status:         domain.MigrationStatusCompleted,
@@ -195,8 +195,8 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 		TicketID: &tid,
 		Code: domain.CodeFacts{
 			LinesAdded: 50,
-		}, Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "inv-1", Role: "orchestrator", Model: "gpt-4o"},
+		}, Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "inv-1", Role: "orchestrator", Model: "gpt-4o"},
 		}, nil, nil),
 	}
 	createTestWorkspace(t, tempDir, tid, origLedger)
@@ -379,8 +379,8 @@ func TestBackfillEngine_RecomputeDBPreservesExactZeroSteeringTurns(t *testing.T)
 	ledger := domain.AgenticFactLedger{
 		TicketID: &ticketID,
 		Code:     domain.CodeFacts{SDLCIterations: 4},
-		Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "sess-zero", Role: "orchestrator", Model: "mock"},
+		Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "sess-zero", Role: "orchestrator", Model: "mock"},
 		}, nil, nil),
 	}
 	createTestWorkspace(t, tempDir, ticketID, ledger)
@@ -423,16 +423,16 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		TicketID: &tidA,
 		Code: domain.CodeFacts{
 			LinesAdded: 10,
-		}, Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "sess-a1", Role: "orchestrator", Model: "mock"},
+		}, Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "sess-a1", Role: "orchestrator", Model: "mock"},
 		}, nil, nil),
 	}
 	ledgerB := domain.AgenticFactLedger{
 		TicketID: &tidB,
 		Code: domain.CodeFacts{
 			LinesAdded: 20,
-		}, Sessions: sessionFacts([]domain.InvocationFact{
-			{ID: "sess-b1", Role: "coder", Model: "mock"},
+		}, Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "sess-b1", Role: "coder", Model: "mock"},
 		}, nil, nil),
 	}
 
@@ -488,7 +488,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if len(loadedB.Migration.StepsPending) != 2 || !containsMigrationStep(loadedB.Migration.StepsPending, domain.MigrationStepOpenCodeDB) || !containsMigrationStep(loadedB.Migration.StepsPending, domain.MigrationStepSourceBackfill) {
 		t.Errorf("expected steps_pending to contain OpenCode DB and source backfill, got %v", loadedB.Migration.StepsPending)
 	}
-	if len(loadedB.Sessions) != 1 || len(loadedB.Sessions[0].Invocations) != 1 || loadedB.Sessions[0].Invocations[0].ID != "sess-b1" {
+	if len(loadedB.Sessions) != 1 || len(loadedB.Sessions[0].Invocations) != 1 {
 		t.Errorf("expected preserved invocation sess-b1 in session snapshot, got %v", loadedB.Sessions)
 	}
 
@@ -692,7 +692,7 @@ func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
 				ID:     "codex-root-1",
 				Source: domain.SourceCodex,
 				Invocations: []domain.InvocationFact{
-					{ID: "codex-root-1", Role: "orchestrator", Model: "gpt-4o"},
+					{Role: "orchestrator", Model: "gpt-4o"},
 				},
 				Tools: []domain.SessionToolFact{
 					{Name: "exec", Calls: 3},
@@ -702,7 +702,7 @@ func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
 				ID:     "opencode-root-1",
 				Source: domain.SourceOpenCode,
 				Invocations: []domain.InvocationFact{
-					{ID: "opencode-root-1", Role: "orchestrator", Model: "mock-model"},
+					{Role: "orchestrator", Model: "mock-model"},
 				},
 				Tools: []domain.SessionToolFact{},
 			},
@@ -780,7 +780,7 @@ func TestBackfillEngine_SourceCodexSkipsOpenCodeSessions(t *testing.T) {
 				ID:     "codex-root-2",
 				Source: domain.SourceCodex,
 				Invocations: []domain.InvocationFact{
-					{ID: "codex-root-2", Role: "orchestrator", Model: "gpt-4o"},
+					{Role: "orchestrator", Model: "gpt-4o"},
 				},
 				Tools: []domain.SessionToolFact{
 					{Name: "exec", Calls: 5},
@@ -790,7 +790,7 @@ func TestBackfillEngine_SourceCodexSkipsOpenCodeSessions(t *testing.T) {
 				ID:     "opencode-root-2",
 				Source: domain.SourceOpenCode,
 				Invocations: []domain.InvocationFact{
-					{ID: "opencode-root-2", Role: "orchestrator", Model: "claude-3-5-sonnet"},
+					{Role: "orchestrator", Model: "claude-3-5-sonnet"},
 				},
 				Tools: []domain.SessionToolFact{
 					{Name: "bash", Calls: 10},
@@ -961,13 +961,18 @@ func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
 		return []string{"root-rollout"}, nil
 	}
 	engine.parseCodexRollout = func(string) (codex.Transcript, error) {
-		return codex.Transcript{Invocations: []domain.InvocationFact{
-			{ID: "root-inv-1", Role: "orchestrator", Model: "fresh-model"},
-			{ID: "child-inv-1", Role: "coder", Model: "fresh-model"},
-		}, Tools: []domain.ToolFact{
-			{SessionID: "root", Name: "fresh-root", Calls: 2},
-			{SessionID: "child", Name: "fresh-child", Calls: 3},
-		}}, nil
+		return codex.CombineTranscripts([]codex.Transcript{
+			{
+				ThreadID:    "root",
+				Invocations: []domain.InvocationFact{{Role: "orchestrator", Model: "fresh-model"}},
+				Tools:       []domain.ToolFact{{SessionID: "root", Name: "fresh-root", Calls: 2}},
+			},
+			{
+				ThreadID: "child", ParentThread: "root",
+				Invocations: []domain.InvocationFact{{Role: "coder", Model: "fresh-model"}},
+				Tools:       []domain.ToolFact{{SessionID: "child", Name: "fresh-child", Calls: 3}},
+			},
+		})
 	}
 	report, err := engine.Execute(BackfillOptions{
 		WorkspacesDir: tempDir,
@@ -1132,14 +1137,14 @@ func TestBackfillEngine_MultiRootSessionsExtracted(t *testing.T) {
 				ID:     "ses-root-1",
 				Source: domain.SourceOpenCode,
 				Invocations: []domain.InvocationFact{
-					{ID: "ses-root-1", Role: "orchestrator", Model: "mock-model"},
+					{Role: "orchestrator", Model: "mock-model"},
 				},
 			},
 			{
 				ID:     "ses-root-2",
 				Source: domain.SourceOpenCode,
 				Invocations: []domain.InvocationFact{
-					{ID: "ses-root-2", Role: "orchestrator", Model: "mock-model"},
+					{Role: "orchestrator", Model: "mock-model"},
 				},
 			},
 		},
@@ -1202,7 +1207,7 @@ func TestBackfillEngine_StrictSessionTrustRejectsUntrustedTitleFallback(t *testi
 				ID:     "ses-orig-123",
 				Source: domain.SourceOpenCode,
 				Invocations: []domain.InvocationFact{
-					{ID: "ses-orig-123", Role: "coder", Model: "mock-model"},
+					{Role: "coder", Model: "mock-model"},
 				},
 			},
 		},
@@ -1264,7 +1269,7 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 				ID:     "ses-missing-789",
 				Source: domain.SourceOpenCode,
 				Invocations: []domain.InvocationFact{
-					{ID: "ses-missing-789", Role: "coder", Model: "mock-model"},
+					{Role: "coder", Model: "mock-model"},
 				},
 			},
 		},
@@ -1325,7 +1330,7 @@ func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
 				Source: domain.SourceCodex,
 				User:   "dev-lead",
 				Invocations: []domain.InvocationFact{
-					{ID: "codex-root-inv-1", Role: "orchestrator", Model: "gpt-4"},
+					{Role: "orchestrator", Model: "gpt-4"},
 				},
 				Tools: []domain.SessionToolFact{{Name: "bash", Calls: 1}},
 			},
@@ -1335,7 +1340,7 @@ func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
 				Source:   domain.SourceCodex,
 				User:     "dev-subagent",
 				Invocations: []domain.InvocationFact{
-					{ID: "codex-child-inv-1", Role: "coder", Model: "gpt-4"},
+					{Role: "coder", Model: "gpt-4"},
 				},
 				Tools: []domain.SessionToolFact{{Name: "edit", Calls: 2}},
 			},
@@ -1356,7 +1361,7 @@ func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
 				ThreadID:  "codex-root",
 				SessionID: "codex-root",
 				Invocations: []domain.InvocationFact{
-					{ID: "codex-root-inv-1", Role: "orchestrator", Model: "gpt-4o"},
+					{Role: "orchestrator", Model: "gpt-4o"},
 				},
 				Tools: []domain.ToolFact{
 					{SessionID: "codex-root", Name: "bash", Calls: 3},
@@ -1368,7 +1373,7 @@ func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
 			SessionID:    "codex-child",
 			ParentThread: "codex-root",
 			Invocations: []domain.InvocationFact{
-				{ID: "codex-child-inv-1", Role: "coder", Model: "gpt-4o"},
+				{Role: "coder", Model: "gpt-4o"},
 			},
 			Tools: []domain.ToolFact{
 				{SessionID: "codex-child", Name: "edit", Calls: 5},

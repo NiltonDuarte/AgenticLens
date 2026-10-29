@@ -34,7 +34,6 @@
       "user": "product-owner",
       "invocations": [
         {
-          "id": "inv-po1-01-inv-1",
           "role": "planner",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-14T09:00:00Z",

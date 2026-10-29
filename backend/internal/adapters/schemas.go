@@ -36,7 +36,6 @@ func (dto InvocationTokensDTO) ToDomain() domain.InvocationTokens {
 
 // InvocationFactDTO represents a single invocation fact in JSON boundary serialization.
 type InvocationFactDTO struct {
-	ID                    string              `json:"id"`
 	Role                  string              `json:"role"`
 	Model                 string              `json:"model"`
 	StartedAt             *string             `json:"started_at"`
@@ -51,7 +50,6 @@ type InvocationFactDTO struct {
 
 func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 	return domain.InvocationFact{
-		ID:                    dto.ID,
 		Role:                  domain.AgentRole(dto.Role),
 		Model:                 dto.Model,
 		StartedAt:             dto.StartedAt,
@@ -68,7 +66,6 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 // InvocationFactDTOFromDomain converts domain.InvocationFact to InvocationFactDTO.
 func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 	return InvocationFactDTO{
-		ID:                    inv.ID,
 		Role:                  string(inv.Role),
 		Model:                 inv.Model,
 		StartedAt:             inv.StartedAt,
@@ -358,13 +355,16 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			if err := json.Unmarshal(rawInvocation, &invocation); err != nil {
 				return fmt.Errorf("canonical schema v4 invocation %d in session %d is invalid", ii, si)
 			}
+			if _, ok := invocation["id"]; ok {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain id", ii, si)
+			}
 			if _, ok := invocation["user"]; ok {
 				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain user", ii, si)
 			}
 			if _, ok := invocation["parent_id"]; ok {
 				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain parent_id", ii, si)
 			}
-			for _, required := range []string{"id", "role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
+			for _, required := range []string{"role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
 				if _, ok := invocation[required]; !ok {
 					return fmt.Errorf("canonical schema v4 invocation %d in session %d is missing required %s", ii, si, required)
 				}
@@ -563,11 +563,6 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 			}
 			if !seen[*session.ParentID] {
 				return fmt.Errorf("sessions[%d].parent_id %q does not identify a session", i, *session.ParentID)
-			}
-		}
-		for j, inv := range session.Invocations {
-			if strings.TrimSpace(inv.ID) == "" {
-				return fmt.Errorf("sessions[%d].invocations[%d].id is required", i, j)
 			}
 		}
 		for j, tool := range session.Tools {

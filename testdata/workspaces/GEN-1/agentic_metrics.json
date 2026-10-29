@@ -34,7 +34,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-gen1-01-inv-1",
           "role": "orchestrator",
           "model": "o1-mini",
           "started_at": "2026-10-17T07:30:00Z",
@@ -85,7 +84,6 @@
       "user": "developer",
       "invocations": [
         {
-          "id": "inv-gen1-02-inv-1",
           "role": "coder",
           "model": "claude-3-5-sonnet",
           "started_at": "2026-10-17T08:20:00Z",

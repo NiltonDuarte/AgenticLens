@@ -723,7 +723,6 @@ func ExtractSessions(
 			activeSecs := int64(math.Round(float64(st.activeMS) / 1000.0))
 
 			invocations = append(invocations, domain.InvocationFact{
-				ID:                    fmt.Sprintf("%s-inv-%d", s.id, idx+1),
 				Role:                  role,
 				Model:                 mName,
 				StartedAt:             &stISO,
