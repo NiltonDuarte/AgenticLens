@@ -7,6 +7,7 @@ export type {
 
 import type {
   AgentRole,
+  EventFact,
   SourceHarness,
 } from '../types/telemetry';
 
@@ -122,8 +123,22 @@ export interface SessionFact {
   readonly user?: string;
   readonly invocations: readonly InvocationFact[];
   readonly tools: readonly Omit<ToolFact, 'session_id'>[];
+  readonly events?: readonly SessionEventFact[];
   readonly anomalies?: readonly Anomaly[];
 }
+
+export type SessionEventFact = Pick<EventFact,
+  | 'event_id'
+  | 'timestamp'
+  | 'message_id'
+  | 'turn'
+  | 'role'
+  | 'event_type'
+  | 'tool_name'
+  | 'status'
+  | 'duration_ms'
+  | 'context_tokens'
+>;
 
 export function sessionInvocations(sessions: readonly SessionFact[] | undefined): readonly InvocationFact[] {
   return sessions?.flatMap((session) => session.invocations ?? []) ?? [];

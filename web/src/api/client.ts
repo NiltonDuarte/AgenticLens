@@ -280,6 +280,45 @@ export async function fetchProjectConfig(): Promise<ApiResponse<ProjectConfigRes
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === 'string';
+}
+
+function isOptionalNumber(value: unknown): boolean {
+  return value === undefined || (typeof value === 'number' && Number.isFinite(value));
+}
+
+function isEventFact(value: unknown): value is EventFact {
+  if (!isRecord(value)) return false;
+  return typeof value.timestamp === 'string' && typeof value.session_id === 'string' &&
+    typeof value.turn === 'number' && Number.isFinite(value.turn) &&
+    typeof value.role === 'string' && typeof value.status === 'string' &&
+    (value.event_type === 'tool_call' || value.event_type === 'turn_message' || value.event_type === 'compaction') &&
+    typeof value.context_tokens === 'number' && Number.isFinite(value.context_tokens) &&
+    ['event_id', 'message_id', 'tool_name', 'error_message', 'prompt_content',
+      'reasoning_content', 'tool_input', 'tool_output'].every((field) => isOptionalString(value[field])) &&
+    (value.duration_ms === null || isOptionalNumber(value.duration_ms));
+}
+
+function isAnomaly(value: unknown): value is Anomaly {
+  if (!isRecord(value) || !isRecord(value.context)) return false;
+  if (value.severity !== 'WARNING' && value.severity !== 'CRITICAL') return false;
+  if (value.rule_id !== 'TOOL_RETRY_STREAK' && value.rule_id !== 'TOOL_HIGH_FAILURE_RATE' &&
+    value.rule_id !== 'CONTEXT_SATURATION_SPIKE' && value.rule_id !== 'SUBAGENT_REWORK_LOOP') return false;
+  const context = value.context;
+  if (!['tool_name', 'session_id', 'threshold'].every((field) =>
+    context[field] === undefined || typeof context[field] === 'string')) return false;
+  if (!isOptionalString(context.role) || !isOptionalString(context.secondary_role)) return false;
+  if (!['turn', 'count', 'total_calls', 'token_delta', 'context_tokens', 'failure_rate_pct'].every((field) =>
+    isOptionalNumber(context[field]))) return false;
+  return value.evidence === undefined || (Array.isArray(value.evidence) && value.evidence.every((ref: unknown) =>
+    isRecord(ref) && typeof ref.session_id === 'string' && typeof ref.event_id === 'string'));
+}
+
 export async function fetchWorkspaceEvents(
   ticketId: string
 ): Promise<ApiResponse<WorkspaceEventsResponse>> {
@@ -299,15 +338,32 @@ export async function fetchWorkspaceEvents(
       !Array.isArray(rawData) &&
       'is_hydrated' in rawData
     ) {
-      const resp = rawData as WorkspaceEventsResponse;
-      return { data: resp };
+      const resp = rawData as Record<string, unknown>;
+      if (resp.ticket_id !== ticketId || typeof resp.is_hydrated !== 'boolean' ||
+        (resp.includes_baseline !== undefined && typeof resp.includes_baseline !== 'boolean') ||
+        (resp.data_source !== 'committed_ledger' && resp.data_source !== 'local_sqlite' && resp.data_source !== 'local_codex') ||
+        !Array.isArray(resp.events) || !resp.events.every(isEventFact) ||
+        (resp.anomalies != null && (!Array.isArray(resp.anomalies) || !resp.anomalies.every(isAnomaly)))) {
+        throw new Error(`Invalid workspace events response for ${ticketId}`);
+      }
+      return {
+        data: {
+          ticket_id: ticketId,
+          is_hydrated: resp.is_hydrated,
+          events: resp.events,
+          data_source: resp.data_source,
+          ...(resp.includes_baseline === undefined ? {} : { includes_baseline: resp.includes_baseline }),
+          ...(resp.anomalies == null ? {} : { anomalies: resp.anomalies as readonly Anomaly[] }),
+        },
+      };
     }
     if (Array.isArray(rawData)) {
+      if (!rawData.every(isEventFact)) throw new Error(`Invalid workspace events response for ${ticketId}`);
       return {
         data: {
           ticket_id: ticketId,
           is_hydrated: false,
-          events: rawData as readonly EventFact[],
+          events: rawData,
           data_source: 'committed_ledger',
         },
       };

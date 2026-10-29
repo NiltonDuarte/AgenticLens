@@ -275,16 +275,30 @@ func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydr
 		}
 
 		fallbackResp := domain.WorkspaceEventsResponse{
-			TicketID:   ticketID,
-			IsHydrated: false,
-			Events:     []domain.EventFact{},
-			DataSource: domain.DataSourceCommittedLedger,
-			Anomalies:  targetLedger.Facts.AnomalyFacts(),
+			TicketID:         ticketID,
+			IsHydrated:       false,
+			Events:           domain.SortEvents(targetLedger.Facts.EventFacts()),
+			DataSource:       domain.DataSourceCommittedLedger,
+			Anomalies:        targetLedger.Facts.AnomalyFacts(),
+			IncludesBaseline: true,
 		}
 
 		if h != nil {
 			hydratedResp, err := h.HydrateWorkspaceEvents(r.Context(), ticketID, *targetLedger)
-			if err == nil && hydratedResp.IsHydrated {
+			if err == nil && len(hydratedResp.Events) > 0 {
+				hydratedResp.TicketID = ticketID
+				if !hydratedResp.IncludesBaseline {
+					hydratedResp.Events = domain.ReconcileEvents(fallbackResp.Events, hydratedResp.Events)
+				} else {
+					hydratedResp.Events = domain.SortEvents(hydratedResp.Events)
+				}
+				hydratedResp.IncludesBaseline = true
+				if !hydratedResp.IsHydrated {
+					hydratedResp.DataSource = domain.DataSourceCommittedLedger
+				}
+				if hydratedResp.Anomalies == nil {
+					hydratedResp.Anomalies = fallbackResp.Anomalies
+				}
 				WriteEventsResponse(w, hydratedResp)
 				return
 			}

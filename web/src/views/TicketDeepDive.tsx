@@ -7,6 +7,7 @@ import type {
   WorkspaceDetail,
 } from '../domain/types';
 import { sessionTools } from '../domain/types';
+import { rebindEvent, sessionEvents, selectWorkspaceEvents } from '../domain/events';
 import {
   fetchWorkspaceById,
   fetchWorkspaceEvents,
@@ -31,8 +32,7 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { getRoleColor, getModelColor } from '../utils/theme';
 import { TraceWaterfall } from '../components/TraceWaterfall';
 import { AnomalyDrawer } from '../components/AnomalyDrawer';
-import { formatAnomaly } from '../domain/anomalies';
-import { AnomalyBadge } from '../components/AnomalyBadge';
+import { findMatchingAnomaly, rebindAnomaly } from '../domain/anomalies';
 import { InfoTooltip } from '../components/InfoTooltip';
 
 export interface TicketDeepDiveProps {
@@ -50,31 +50,45 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
   const [dataSource, setDataSource] = useState<DataSource>('committed_ledger');
   const [traceAnomalies, setTraceAnomalies] = useState<readonly Anomaly[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<EventFact | null>(null);
-  const [selectedAnomaly, setSelectedAnomaly] = useState<Anomaly | null>(null);
+  const [selection, setSelection] = useState<{
+    readonly event: EventFact | null;
+    readonly anomaly: Anomaly | null;
+  }>({ event: null, anomaly: null });
+  const { event: selectedEvent, anomaly: selectedAnomaly } = selection;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(selectedTicketId ?? null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const ledgersRef = useRef<readonly AgenticMetricsLedger[]>([]);
+  const requestGenerationRef = useRef(0);
 
   // Sync activeTicketId when parent prop changes
   useEffect(() => {
-    if (selectedTicketId && selectedTicketId !== activeTicketId) {
+    if (selectedTicketId) {
       setActiveTicketId(selectedTicketId);
     }
-  }, [selectedTicketId, activeTicketId]);
+  }, [selectedTicketId]);
 
   const loadData = useCallback(async (forceReloadFleet = false) => {
+    const generation = ++requestGenerationRef.current;
+    const isCurrentRequest = () => generation === requestGenerationRef.current;
     setLoading(true);
     setError(null);
+    setDetail(null);
+    setEvents([]);
+    setTraceAnomalies([]);
+    setIsHydrated(false);
+    setDataSource('committed_ledger');
+    setSelection({ event: null, anomaly: null });
+    setIsDrawerOpen(false);
     try {
       let currentLedgers = ledgersRef.current;
 
       // Only fetch fleet catalog if in-memory cache is empty or explicitly forced
       if (forceReloadFleet || currentLedgers.length === 0) {
         const ledgersRes = await fetchWorkspaceLedgers('all');
+        if (!isCurrentRequest()) return;
         currentLedgers = ledgersRes.data;
         ledgersRef.current = currentLedgers;
         setLedgers(currentLedgers);
@@ -88,49 +102,60 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 
       if (targetId) {
         const detailRes = await fetchWorkspaceById(targetId);
+        if (!isCurrentRequest()) return;
+        const baseline = sessionEvents(detailRes.data.ledger?.facts?.sessions);
         setDetail(detailRes.data);
+        setEvents(baseline);
+        setTraceAnomalies(detailRes.data.anomalies ?? []);
+        setLoading(false);
 
-        let loadedEvents: readonly EventFact[] = [];
-        let loadedAnomalies: readonly Anomaly[] = detailRes.data.anomalies ?? [];
-        let hydrated = false;
-        let source: DataSource = 'committed_ledger';
+        // Enrichment is optional: committed facts are already visible while it runs.
         try {
           const eventsRes = await fetchWorkspaceEvents(targetId);
-          if (eventsRes.data && eventsRes.data.events && eventsRes.data.events.length > 0) {
-            loadedEvents = eventsRes.data.events;
-          }
-          if (eventsRes.data?.anomalies) loadedAnomalies = eventsRes.data.anomalies;
-          hydrated = eventsRes.data?.is_hydrated ?? false;
-          source = eventsRes.data?.data_source ?? 'committed_ledger';
+          if (!isCurrentRequest()) return;
+          if (eventsRes.data.ticket_id !== targetId) return;
+          const selected = selectWorkspaceEvents(baseline, eventsRes.data);
+          const anomalies = eventsRes.data.anomalies ?? detailRes.data.anomalies ?? [];
+          setEvents(selected.events);
+          setIsHydrated(selected.is_hydrated);
+          setDataSource(selected.data_source);
+          setTraceAnomalies(anomalies);
+          setSelection((current) => {
+            const event = rebindEvent(current.event, baseline, selected.events);
+            const sameRule = current.anomaly
+              ? anomalies.filter((anomaly) => anomaly.rule_id === current.anomaly?.rule_id)
+              : anomalies;
+            return {
+              event,
+              anomaly: event
+                ? findMatchingAnomaly(event, sameRule) ?? findMatchingAnomaly(event, anomalies) ?? null
+                : rebindAnomaly(current.anomaly, anomalies),
+            };
+          });
         } catch {
-          // Gracefully keep empty events if fetch fails
+          // Keep this request's committed facts and summaries if enrichment fails.
         }
-
-        setEvents(loadedEvents);
-        setTraceAnomalies(loadedAnomalies);
-        setIsHydrated(hydrated);
-        setDataSource(source);
-      } else {
-        setDetail(null);
-        setEvents([]);
-        setTraceAnomalies([]);
-        setIsHydrated(false);
-        setDataSource('committed_ledger');
       }
     } catch (err: unknown) {
+      if (!isCurrentRequest()) return;
       const msg = err instanceof Error ? err.message : 'Failed to load ticket details';
       setError(msg);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }, [activeTicketId]);
 
+  const invalidateRequests = useCallback(() => {
+    requestGenerationRef.current += 1;
+  }, []);
+
   useEffect(() => {
-    loadData(false);
-  }, [loadData]);
+    void loadData(false);
+    return invalidateRequests;
+  }, [loadData, invalidateRequests]);
 
   const handleRefresh = useCallback(() => {
-    loadData(true);
+    void loadData(true);
   }, [loadData]);
 
   const handleSelectTicket = (ticketId: string) => {
@@ -139,15 +164,14 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   };
 
   const handleSelectEvent = (event: EventFact, anomaly?: Anomaly) => {
-    setSelectedEvent(event);
-    const isFlagged = Boolean(anomaly) || event.status === 'error';
-    if (isFlagged) {
-      setSelectedAnomaly(anomaly ?? null);
-      setIsDrawerOpen(true);
-    } else {
-      setSelectedAnomaly(null);
-      setIsDrawerOpen(false);
-    }
+    setSelection({ event, anomaly: anomaly ?? null });
+    const isFlagged = Boolean(anomaly) || event.status === 'error' || event.status === 'failed';
+    setIsDrawerOpen(isFlagged);
+  };
+
+  const handleSelectAnomaly = (anomaly: Anomaly) => {
+    setSelection({ event: null, anomaly });
+    setIsDrawerOpen(true);
   };
 
   if (loading) {
@@ -601,64 +625,25 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         </div>
       </div>
 
-      {/* Row 6: Visual Trace Waterfall or Legacy v1 Fallback */}
-      {events && events.length > 0 ? (
-        <TraceWaterfall
-          events={events}
-          isHydrated={isHydrated}
-          dataSource={dataSource}
-          anomalies={traceAnomalies}
-          selectedEvent={selectedEvent}
-          onSelectEvent={handleSelectEvent}
-        />
-      ) : (
+      {/* Row 6: Recorded trace and independent schema metadata */}
+      {ledger.facts?.schema_version === 1 && (
         <div className="legacy-fallback-banner" data-testid="legacy-fallback-banner">
           <h4 className="legacy-banner-title">Legacy Telemetry Schema Notice</h4>
           <p className="legacy-banner-text">
-            Chronological trace waterfall is unavailable for legacy v1 telemetry ledgers. Aggregate workspace anomalies and thread records are displayed below.
+            This telemetry identifies schema v1. Available recorded events, aggregate anomalies, and thread records are displayed below.
           </p>
-          {detail.anomalies && detail.anomalies.length > 0 && (
-            <div className="legacy-anomalies-section">
-              <span className="legacy-anomalies-heading">Detected Workspace Anomalies:</span>
-              <div className="legacy-anomalies-list">
-                {detail.anomalies.map((a, i) => (
-                  (() => {
-                    const display = formatAnomaly(a);
-                    return (
-                  <div
-                    key={`${a.rule_id}-${i}`}
-                    className="legacy-anomaly-item"
-                    onClick={() => {
-                      setSelectedAnomaly(a);
-                      setSelectedEvent(null);
-                      setIsDrawerOpen(true);
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setSelectedAnomaly(a);
-                        setSelectedEvent(null);
-                        setIsDrawerOpen(true);
-                      }
-                    }}
-                    aria-label={`Inspect anomaly: ${display.title}`}
-                  >
-                    <div className="legacy-anomaly-info">
-                      <span className="legacy-anomaly-title">{display.title}</span>
-                      <span className="legacy-anomaly-desc">{display.description}</span>
-                    </div>
-                    <AnomalyBadge severity={a.severity} label={a.severity} size="sm" />
-                  </div>
-                    );
-                  })()
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
+      <TraceWaterfall
+        key={`trace-${requestGenerationRef.current}`}
+        events={events}
+        isHydrated={isHydrated}
+        dataSource={dataSource}
+        anomalies={traceAnomalies}
+        selectedEvent={selectedEvent}
+        onSelectEvent={handleSelectEvent}
+        onSelectAnomaly={handleSelectAnomaly}
+      />
 
       {/* Row 7: Session Thread Logs */}
       <ThreadViewer threads={ledger.threads} />
@@ -668,7 +653,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 
       {/* Anomaly Inspection Drawer */}
       <AnomalyDrawer
-        isOpen={isDrawerOpen}
+        key={`anomaly-drawer-${requestGenerationRef.current}`}
+        isOpen={isDrawerOpen && Boolean(selectedEvent || selectedAnomaly)}
         onClose={() => setIsDrawerOpen(false)}
         anomaly={selectedAnomaly}
         event={selectedEvent}

@@ -1,0 +1,141 @@
+{
+  "schema_version": 4,
+  "ticket_id": "FIX-12",
+  "ticket_title": "Render ledger waterfall without hydration",
+  "ticket_type": "fix",
+  "started_at": "2026-10-29T11:09:43.510Z",
+  "completed_at": "2026-10-29T13:37:52.938Z",
+  "updated_at": "2026-10-29T13:37:54.648771+00:00",
+  "code": {
+    "lines_added": 2518,
+    "lines_deleted": 489,
+    "test_lines_added": 1757,
+    "test_lines_deleted": 130,
+    "prod_lines_added": 675,
+    "prod_lines_deleted": 273,
+    "files_changed": 27,
+    "sdlc_iterations": 18
+  },
+  "sessions": [
+    {
+      "id": "01a18759-f52b-7e43-a160-2ee1d4cea623",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-29T11:09:43.510Z",
+          "completed_at": "2026-10-29T12:21:54.546Z",
+          "active_duration_seconds": 389,
+          "turns": 2,
+          "tokens": {
+            "input": 117462,
+            "output": 19876,
+            "cache_read": 7414528,
+            "reasoning": 8633,
+            "peak_context": 95412
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 6
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 28,
+          "errors": 2
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "sleep",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 55,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1876d-8c77-76f0-b150-66c99bf49bd3",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-29T11:31:06.448Z",
+          "completed_at": "2026-10-29T13:37:52.938Z",
+          "active_duration_seconds": 1745,
+          "turns": 11,
+          "tokens": {
+            "input": 235955,
+            "output": 74128,
+            "cache_read": 18809216,
+            "reasoning": 32952,
+            "peak_context": 305398
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 12
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 118,
+          "errors": 14
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 3,
+            "context_tokens": 200051,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 305398,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 1,
+            "context_tokens": 161192,
+            "threshold": "160000"
+          }
+        }
+      ]
+    }
+  ],
+  "anomalies": []
+}
