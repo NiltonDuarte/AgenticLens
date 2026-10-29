@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -346,112 +347,140 @@ func (e *BackfillEngine) processSingleWorkspace(
 	if opts.RecomputeDB && wantsOpenCode && (len(openCodeSessions) > 0 || len(factLedger.Sessions) == 0) {
 		dbAttempted = true
 		if opencodeDB != nil && opencodeDB.DB() != nil {
-			var existingOpenCodeInvocations []domain.InvocationFact
-			var existingOpenCodeTools []domain.ToolFact
-			var existingOpenCodeEvents []domain.EventFact
+			hasExistingOpenCodeFacts := len(openCodeSessions) > 0
+
+			var candidateRootIDs []string
+			seenCandidates := make(map[string]bool)
+			addCandidate := func(id string) {
+				clean := strings.TrimSpace(id)
+				if clean != "" && !seenCandidates[clean] {
+					seenCandidates[clean] = true
+					candidateRootIDs = append(candidateRootIDs, clean)
+				}
+			}
+
 			for _, s := range openCodeSessions {
-				existingOpenCodeInvocations = append(existingOpenCodeInvocations, s.Invocations...)
-				for _, t := range s.Tools {
-					existingOpenCodeTools = append(existingOpenCodeTools, domain.ToolFact{SessionID: s.ID, Name: t.Name, Calls: t.Calls, Errors: t.Errors})
-				}
-				for _, e := range s.Events {
-					existingOpenCodeEvents = append(existingOpenCodeEvents, domain.EventFact{
-						EventID: e.EventID, Timestamp: e.Timestamp, MessageID: e.MessageID, Turn: e.Turn,
-						Role: e.Role, EventType: e.EventType, ToolName: e.ToolName, Status: e.Status,
-						ErrorMessage: e.ErrorMessage, DurationMs: e.DurationMs, ContextTokens: e.ContextTokens,
-						PromptContent: e.PromptContent, ReasoningContent: e.ReasoningContent,
-						ToolInput: e.ToolInput, ToolOutput: e.ToolOutput, SessionID: s.ID,
-					})
-				}
-			}
-			hasExistingOpenCodeFacts := len(existingOpenCodeInvocations) > 0 || len(existingOpenCodeEvents) > 0
-
-			var resolvedSessionID *string
-			var existingSessionID string
-			for _, inv := range existingOpenCodeInvocations {
-				if inv.ParentID == nil || strings.TrimSpace(*inv.ParentID) == "" {
-					existingSessionID = strings.TrimSpace(inv.ID)
-					break
-				}
-			}
-			if existingSessionID == "" && len(existingOpenCodeInvocations) > 0 {
-				if existingOpenCodeInvocations[0].ParentID != nil && strings.TrimSpace(*existingOpenCodeInvocations[0].ParentID) != "" {
-					existingSessionID = strings.TrimSpace(*existingOpenCodeInvocations[0].ParentID)
+				if s.ParentID == nil || strings.TrimSpace(*s.ParentID) == "" {
+					addCandidate(s.ID)
 				} else {
-					existingSessionID = strings.TrimSpace(existingOpenCodeInvocations[0].ID)
+					addCandidate(*s.ParentID)
+				}
+			}
+			if len(candidateRootIDs) == 0 {
+				for _, s := range openCodeSessions {
+					addCandidate(s.ID)
 				}
 			}
 
-			if existingSessionID != "" {
-				var validID string
-				err := opencodeDB.DB().QueryRow("SELECT id FROM session WHERE id = ? LIMIT 1", existingSessionID).Scan(&validID)
-				if err == nil && validID != "" {
-					resolvedSessionID = &validID
-				}
-			}
-
-			// Strategy 2: Ticket ID matching against root session titles
-			if resolvedSessionID == nil {
-				sid, err := opencode.ResolveActiveRootSession(opencodeDB.DB(), "", ticketID, "")
-				if err == nil && sid != nil && strings.TrimSpace(*sid) != "" {
-					resolvedSessionID = sid
-				}
-			}
-
-			// Strategy 3: Workspace path match constrained by commit date and timestamp range
-			if resolvedSessionID == nil {
-				minSec, maxSec, found := git.GetWorkspaceCommitTimeRange(workspaceDir)
-				if found {
-					minMs := (minSec - 86400) * 1000
-					maxMs := (maxSec + 7200) * 1000
-					sid, err := opencode.ResolveSessionByWorkspacePath(opencodeDB.DB(), ticketID, minMs, maxMs)
-					if err == nil && sid != nil && strings.TrimSpace(*sid) != "" {
-						resolvedSessionID = sid
+			// Validate and resolve candidate IDs against the local SQLite database
+			var resolvedRootIDs []string
+			seenRoots := make(map[string]bool)
+			for _, cid := range candidateRootIDs {
+				if rootID, found := resolveSessionRootInDB(opencodeDB.DB(), cid); found && rootID != "" {
+					if !seenRoots[rootID] {
+						seenRoots[rootID] = true
+						resolvedRootIDs = append(resolvedRootIDs, rootID)
 					}
 				}
 			}
 
-			if resolvedSessionID != nil && strings.TrimSpace(*resolvedSessionID) != "" {
-				rootID := strings.TrimSpace(*resolvedSessionID)
-				turns, err := opencode.ExtractSteeringTurns(opencodeDB.DB(), []string{rootID})
+			// Strategy 2 & 3: Heuristic fallbacks ONLY when explicitly allowed via CLI flag
+			if len(resolvedRootIDs) == 0 && opts.AllowFallbacks {
+				// Strategy 2: Ticket ID matching against root session titles
+				sid, err := opencode.ResolveActiveRootSession(opencodeDB.DB(), "", ticketID, "")
+				if err == nil && sid != nil && strings.TrimSpace(*sid) != "" {
+					cleanSID := strings.TrimSpace(*sid)
+					if !seenRoots[cleanSID] {
+						seenRoots[cleanSID] = true
+						resolvedRootIDs = append(resolvedRootIDs, cleanSID)
+					}
+				}
+
+				// Strategy 3: Workspace path match constrained by commit date and timestamp range
+				if len(resolvedRootIDs) == 0 {
+					minSec, maxSec, found := git.GetWorkspaceCommitTimeRange(workspaceDir)
+					if found {
+						minMs := (minSec - 86400) * 1000
+						maxMs := (maxSec + 7200) * 1000
+						sid, err := opencode.ResolveSessionByWorkspacePath(opencodeDB.DB(), ticketID, minMs, maxMs)
+						if err == nil && sid != nil && strings.TrimSpace(*sid) != "" {
+							cleanSID := strings.TrimSpace(*sid)
+							if !seenRoots[cleanSID] {
+								seenRoots[cleanSID] = true
+								resolvedRootIDs = append(resolvedRootIDs, cleanSID)
+							}
+						}
+					}
+				}
+			}
+
+			if len(resolvedRootIDs) > 0 {
+				turns, err := opencode.ExtractSteeringTurns(opencodeDB.DB(), resolvedRootIDs)
 				if err == nil {
 					factLedger.Code.SDLCIterations = turns
 				}
-				invs, tools, events, stISO, endISO, err := opencode.ExtractFacts(
+				freshSessions, stISO, endISO, err := opencode.ExtractSessions(
 					opencodeDB.DB(),
-					[]string{rootID},
+					resolvedRootIDs,
 					gitUser,
 					make(map[string]string),
 				)
-				if err == nil && len(invs) > 0 {
-					dbSessionFound = true
+				if err == nil && len(freshSessions) > 0 {
+					if len(candidateRootIDs) == 0 || len(resolvedRootIDs) >= len(candidateRootIDs) {
+						dbSessionFound = true
+					}
 					shouldUpdateInvocations := !hasExistingOpenCodeFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
-					updatedInvocations, updatedTools, updatedEvents := existingOpenCodeInvocations, existingOpenCodeTools, events
 					if shouldUpdateInvocations {
-						updatedInvocations, updatedTools = invs, tools
+						if len(candidateRootIDs) > 0 && len(resolvedRootIDs) < len(candidateRootIDs) {
+							// Partial resolution across machines: preserve unresolved session facts
+							resolvedSet := make(map[string]bool)
+							for _, rid := range resolvedRootIDs {
+								resolvedSet[rid] = true
+							}
+							for _, s := range freshSessions {
+								resolvedSet[s.ID] = true
+								if s.ParentID != nil && *s.ParentID != "" {
+									resolvedSet[*s.ParentID] = true
+								}
+							}
+							var mergedSessions []domain.SessionFact
+							mergedSessions = append(mergedSessions, freshSessions...)
+							for _, exSess := range openCodeSessions {
+								if !resolvedSet[exSess.ID] && (exSess.ParentID == nil || !resolvedSet[*exSess.ParentID]) {
+									mergedSessions = append(mergedSessions, exSess)
+								}
+							}
+							openCodeSessions = mergedSessions
+						} else {
+							openCodeSessions = freshSessions
+						}
 						if stISO != nil {
 							factLedger.StartedAt = stISO
 						}
 						if endISO != nil {
 							factLedger.CompletedAt = endISO
 						}
-					}
-					if !shouldUpdateInvocations && factLedger.CompletedAt != nil && *factLedger.CompletedAt != "" {
-						cutoff := *factLedger.CompletedAt
-						var filteredEvents []domain.EventFact
-						for _, ev := range events {
-							if ev.Timestamp <= cutoff {
-								filteredEvents = append(filteredEvents, ev)
+					} else {
+						eventsBySession := make(map[string][]domain.SessionEventFact)
+						var cutoff string
+						if factLedger.CompletedAt != nil && *factLedger.CompletedAt != "" {
+							cutoff = *factLedger.CompletedAt
+						}
+						for _, fs := range freshSessions {
+							var evs []domain.SessionEventFact
+							for _, ev := range fs.Events {
+								if cutoff == "" || ev.Timestamp <= cutoff {
+									evs = append(evs, ev)
+								}
+							}
+							eventsBySession[fs.ID] = evs
+						}
+						for i := range openCodeSessions {
+							if evs, ok := eventsBySession[openCodeSessions[i].ID]; ok {
+								openCodeSessions[i].Events = evs
 							}
 						}
-						updatedEvents = filteredEvents
 					}
-					refreshedSessions, sessionErr := domain.SessionsFromFactsWithSource(domain.SourceOpenCode, updatedInvocations, updatedTools, updatedEvents)
-					if sessionErr != nil {
-						result.Error = fmt.Errorf("grouping refreshed OpenCode session facts: %w", sessionErr)
-						return result
-					}
-					openCodeSessions = refreshedSessions
 					result.DBUpdated = true
 				}
 			}
@@ -501,8 +530,30 @@ func (e *BackfillEngine) processSingleWorkspace(
 					}
 					if !parseFailed && len(transcripts) > 0 {
 						if combined, combErr := e.combineCodex(transcripts); combErr == nil {
-							freshCodex, sErr := domain.SessionsFromFactsWithSource(domain.SourceCodex, combined.Invocations, combined.Tools, combined.Events)
+							freshCodex, sErr := combined.SessionFacts()
 							if sErr == nil && len(freshCodex) > 0 {
+								existingUsers := make(map[string]string)
+								existingParents := make(map[string]*string)
+								for _, s := range codexSessions {
+									if s.User != "" {
+										existingUsers[s.ID] = s.User
+									}
+									if s.ParentID != nil && *s.ParentID != "" {
+										existingParents[s.ID] = s.ParentID
+									}
+								}
+								for i := range freshCodex {
+									if freshCodex[i].User == "" || freshCodex[i].User == "unknown" {
+										if u, ok := existingUsers[freshCodex[i].ID]; ok && strings.TrimSpace(u) != "" {
+											freshCodex[i].User = u
+										}
+									}
+									if freshCodex[i].ParentID == nil {
+										if p, ok := existingParents[freshCodex[i].ID]; ok {
+											freshCodex[i].ParentID = p
+										}
+									}
+								}
 								replaceCodexTree(&codexSessions, cs.ID, freshCodex)
 								for _, refreshed := range freshCodex {
 									covered[refreshed.ID] = struct{}{}
@@ -645,4 +696,27 @@ func replaceCodexTree(stored *[]domain.SessionFact, requestedRoot string, refres
 	}
 	result = append(result, refreshed...)
 	*stored = result
+}
+
+func resolveSessionRootInDB(db *sql.DB, id string) (string, bool) {
+	curr := strings.TrimSpace(id)
+	if curr == "" || db == nil {
+		return "", false
+	}
+	visited := make(map[string]bool)
+	for {
+		if visited[curr] {
+			return curr, true
+		}
+		visited[curr] = true
+		var parentID sql.NullString
+		err := db.QueryRow("SELECT parent_id FROM session WHERE id = ? LIMIT 1", curr).Scan(&parentID)
+		if err != nil {
+			return "", false
+		}
+		if !parentID.Valid || strings.TrimSpace(parentID.String) == "" {
+			return curr, true
+		}
+		curr = strings.TrimSpace(parentID.String)
+	}
 }

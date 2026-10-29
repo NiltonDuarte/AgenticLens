@@ -359,6 +359,28 @@ func TestExtractFacts(t *testing.T) {
 		t.Fatalf("ExtractFacts failed: %v", err)
 	}
 
+	sessions, _, _, sErr := opencode.ExtractSessions(
+		db,
+		[]string{"ses_root"},
+		"test-user",
+		map[string]string{"ses_child": "test-user"},
+	)
+	if sErr != nil {
+		t.Fatalf("ExtractSessions failed: %v", sErr)
+	}
+	if len(sessions) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(sessions))
+	}
+	if sessions[0].User != "test-user" || sessions[1].User != "test-user" {
+		t.Errorf("expected session user test-user, got %s and %s", sessions[0].User, sessions[1].User)
+	}
+	if sessions[0].ParentID != nil {
+		t.Errorf("expected nil parent for root session, got %v", *sessions[0].ParentID)
+	}
+	if sessions[1].ParentID == nil || *sessions[1].ParentID != "ses_root" {
+		t.Errorf("expected parent ses_root for child session")
+	}
+
 	if startedAt == nil || completedAt == nil {
 		t.Fatalf("expected valid start and completed timestamps")
 	}
@@ -369,11 +391,8 @@ func TestExtractFacts(t *testing.T) {
 
 	// Invocations: ses_root (build) and ses_child (coder)
 	rootInv := invocations[0]
-	if rootInv.ID != "ses_root" || rootInv.Role != "build" {
-		t.Errorf("expected root invocation role build, got ID=%s Role=%s", rootInv.ID, rootInv.Role)
-	}
-	if rootInv.User != "test-user" {
-		t.Errorf("expected user test-user, got %s", rootInv.User)
+	if rootInv.Role != "build" {
+		t.Errorf("expected root invocation role build, got Role=%s", rootInv.Role)
 	}
 	if rootInv.Compactions != 2 {
 		t.Errorf("expected 2 compactions on root invocation, got %d", rootInv.Compactions)
@@ -392,11 +411,8 @@ func TestExtractFacts(t *testing.T) {
 	}
 
 	childInv := invocations[1]
-	if childInv.ID != "ses_child" || childInv.Role != "coder" {
-		t.Errorf("expected child invocation role coder, got ID=%s Role=%s", childInv.ID, childInv.Role)
-	}
-	if childInv.User != "test-user" {
-		t.Errorf("expected user test-user, got %s", childInv.User)
+	if childInv.Role != "coder" {
+		t.Errorf("expected child invocation role coder, got Role=%s", childInv.Role)
 	}
 	if childInv.Compactions != 0 {
 		t.Errorf("expected 0 compactions on child, got %d", childInv.Compactions)
@@ -1110,7 +1126,7 @@ func TestExtractFacts_RawPersonaPreservation(t *testing.T) {
 	}
 
 	t.Run("preserves raw personas for build and security-scanner", func(t *testing.T) {
-		invocations, tools, events, _, _, err := opencode.ExtractFacts(
+		sessions, _, _, err := opencode.ExtractSessions(
 			db,
 			[]string{"ses_root_build"},
 			"test-user",
@@ -1120,16 +1136,23 @@ func TestExtractFacts_RawPersonaPreservation(t *testing.T) {
 			t.Fatalf("ExtractFacts failed: %v", err)
 		}
 
+		ledger := domain.AgenticFactLedger{Sessions: sessions}
+		invocations, tools, events := ledger.InvocationFacts(), ledger.ToolFacts(), ledger.EventFacts()
+
 		if len(invocations) != 2 {
 			t.Fatalf("expected 2 invocations, got %d", len(invocations))
 		}
 
 		var rootInv, childInv *domain.InvocationFact
-		for i := range invocations {
-			if invocations[i].ID == "ses_root_build" {
-				rootInv = &invocations[i]
-			} else if invocations[i].ID == "ses_child_sec" {
-				childInv = &invocations[i]
+		for i := range sessions {
+			if len(sessions[i].Invocations) != 1 {
+				t.Fatalf("expected one model row for session %s, got %+v", sessions[i].ID, sessions[i].Invocations)
+			}
+			switch sessions[i].ID {
+			case "ses_root_build":
+				rootInv = &sessions[i].Invocations[0]
+			case "ses_child_sec":
+				childInv = &sessions[i].Invocations[0]
 			}
 		}
 
@@ -1169,7 +1192,7 @@ func TestExtractFacts_RawPersonaPreservation(t *testing.T) {
 	})
 
 	t.Run("empty agent fallback for root and child", func(t *testing.T) {
-		invocations, _, events, _, _, err := opencode.ExtractFacts(
+		sessions, _, _, err := opencode.ExtractSessions(
 			db,
 			[]string{"ses_root_empty"},
 			"test-user",
@@ -1179,16 +1202,23 @@ func TestExtractFacts_RawPersonaPreservation(t *testing.T) {
 			t.Fatalf("ExtractFacts failed: %v", err)
 		}
 
+		ledger := domain.AgenticFactLedger{Sessions: sessions}
+		invocations, events := ledger.InvocationFacts(), ledger.EventFacts()
+
 		if len(invocations) != 2 {
 			t.Fatalf("expected 2 invocations, got %d", len(invocations))
 		}
 
 		var rootInv, childInv *domain.InvocationFact
-		for i := range invocations {
-			if invocations[i].ID == "ses_root_empty" {
-				rootInv = &invocations[i]
-			} else if invocations[i].ID == "ses_child_empty" {
-				childInv = &invocations[i]
+		for i := range sessions {
+			if len(sessions[i].Invocations) != 1 {
+				t.Fatalf("expected one model row for session %s, got %+v", sessions[i].ID, sessions[i].Invocations)
+			}
+			switch sessions[i].ID {
+			case "ses_root_empty":
+				rootInv = &sessions[i].Invocations[0]
+			case "ses_child_empty":
+				childInv = &sessions[i].Invocations[0]
 			}
 		}
 
@@ -1245,7 +1275,7 @@ func TestExtractFacts_AdversarialPersonaPreservationAndWhitespace(t *testing.T) 
 		t.Fatalf("failed inserting tool part: %v", err)
 	}
 
-	invocations, _, events, _, _, err := opencode.ExtractFacts(
+	sessions, _, _, err := opencode.ExtractSessions(
 		db,
 		[]string{"ses_root_ws"},
 		"test-user",
@@ -1255,13 +1285,19 @@ func TestExtractFacts_AdversarialPersonaPreservationAndWhitespace(t *testing.T) 
 		t.Fatalf("ExtractFacts failed: %v", err)
 	}
 
+	ledger := domain.AgenticFactLedger{Sessions: sessions}
+	invocations, events := ledger.InvocationFacts(), ledger.EventFacts()
+
 	if len(invocations) != 3 {
 		t.Fatalf("expected 3 invocations, got %d", len(invocations))
 	}
 
 	invMap := make(map[string]domain.InvocationFact)
-	for _, inv := range invocations {
-		invMap[inv.ID] = inv
+	for _, session := range sessions {
+		if len(session.Invocations) != 1 {
+			t.Fatalf("expected one model row for session %s, got %+v", session.ID, session.Invocations)
+		}
+		invMap[session.ID] = session.Invocations[0]
 	}
 
 	// Assert whitespace was trimmed and raw personas preserved without coercion
@@ -1588,34 +1624,28 @@ func TestExtractFacts_UserIterationsRootAndChild(t *testing.T) {
 		uData, a1Data,
 	)
 
-	invs, _, _, _, _, err := opencode.ExtractFacts(db, []string{"root_sess"}, "testuser", nil)
+	sessions, _, _, err := opencode.ExtractSessions(db, []string{"root_sess"}, "testuser", nil)
 	if err != nil {
 		t.Fatalf("ExtractFacts failed: %v", err)
 	}
+
+	invs := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 
 	// Expect 2 invocations for root (model-1, model-2) and 1 invocation for child
 	if len(invs) != 3 {
 		t.Fatalf("expected 3 invocations, got %d", len(invs))
 	}
 
-	for _, inv := range invs {
-		if inv.ID == "root_sess" {
-			if inv.Model == "model-1" {
-				// Primary model on root session gets all user iterations (3)
-				if inv.UserIterations != 3 {
-					t.Errorf("expected primary root invocation to have UserIterations=3, got %d", inv.UserIterations)
-				}
-			} else if inv.Model == "model-2" {
-				// Secondary model on root session gets 0
-				if inv.UserIterations != 0 {
-					t.Errorf("expected secondary root invocation to have UserIterations=0, got %d", inv.UserIterations)
-				}
+	for _, session := range sessions {
+		for _, inv := range session.Invocations {
+			want := int64(0)
+			if session.ID == "root_sess" && inv.Model == "model-1" {
+				want = 3
 			}
-		} else if inv.ID == "child_sess" {
-			// Child session gets 0
-			if inv.UserIterations != 0 {
-				t.Errorf("expected child invocation to have UserIterations=0, got %d", inv.UserIterations)
+			if inv.UserIterations != want {
+				t.Errorf("session %s model %s: expected UserIterations=%d, got %d", session.ID, inv.Model, want, inv.UserIterations)
 			}
 		}
 	}
+
 }

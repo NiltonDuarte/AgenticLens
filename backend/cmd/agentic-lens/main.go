@@ -177,9 +177,8 @@ func runGenerate(args []string) {
 	if cachedFacts != nil {
 		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
 		sessions = append(sessions, cachedFacts.Sessions...)
-		cachedLedger := domain.AgenticFactLedger{Sessions: cachedFacts.Sessions}
-		for _, inv := range cachedLedger.InvocationFacts() {
-			userBySessionID[inv.ID] = inv.User
+		for _, s := range cachedFacts.Sessions {
+			userBySessionID[s.ID] = s.User
 		}
 		fallbackCode = cachedFacts.Code
 		if cachedFacts.Migration != nil && strings.Contains(cachedFacts.Migration.Notes, "Removed ") {
@@ -187,10 +186,7 @@ func runGenerate(args []string) {
 		}
 	}
 
-	var localInvocations []domain.InvocationFact
-	var localTools []domain.ToolFact
-	var localEvents []domain.EventFact
-	var hasLocalExtraction bool
+	var freshSessions []domain.SessionFact
 
 	if activeSource == "codex" {
 		builtinCodexHome := ""
@@ -227,10 +223,21 @@ func runGenerate(args []string) {
 		for _, warning := range combined.Warnings {
 			fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
 		}
-		localInvocations = combined.Invocations
-		localTools = combined.Tools
-		localEvents = combined.Events
-		hasLocalExtraction = true
+		freshCodex, factErr := combined.SessionFacts()
+		if factErr != nil {
+			fmt.Fprintf(os.Stderr, "Error grouping Codex session facts: %v\n", factErr)
+			os.Exit(1)
+		}
+		for i := range freshCodex {
+			if freshCodex[i].User == "" || freshCodex[i].User == "unknown" {
+				if u, ok := userBySessionID[freshCodex[i].ID]; ok && strings.TrimSpace(u) != "" {
+					freshCodex[i].User = strings.TrimSpace(u)
+				} else if strings.TrimSpace(currentUser) != "" {
+					freshCodex[i].User = strings.TrimSpace(currentUser)
+				}
+			}
+		}
+		freshSessions = freshCodex
 		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
 			activeStartedAt = &combined.StartedAt
 		}
@@ -268,18 +275,15 @@ func runGenerate(args []string) {
 			}
 
 			if len(knownThreadIDs) > 0 {
-				dbInvs, dbTools, dbEvents, dbStarted, dbCompleted, extractErr := opencode.ExtractFacts(
+				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessions(
 					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID,
 				)
 				if extractErr != nil {
 					fmt.Fprintf(os.Stderr, "Error reading selected OpenCode source at %s: %v. Check the database and telemetry.sources.opencode.database_path.\n", dbPath, extractErr)
 					os.Exit(1)
 				}
-				if len(dbInvs) > 0 {
-					localInvocations = dbInvs
-					localTools = dbTools
-					localEvents = dbEvents
-					hasLocalExtraction = true
+				if len(extractedSessions) > 0 {
+					freshSessions = extractedSessions
 					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
 						activeStartedAt = dbStarted
 					}
@@ -294,12 +298,7 @@ func runGenerate(args []string) {
 		}
 	}
 
-	if hasLocalExtraction {
-		freshSessions, buildErr := domain.SessionsFromFactsWithSource(domain.SourceHarness(activeSource), localInvocations, localTools, localEvents)
-		if buildErr != nil {
-			fmt.Fprintf(os.Stderr, "Error grouping extracted session facts: %v\n", buildErr)
-			os.Exit(1)
-		}
+	if len(freshSessions) > 0 {
 		sessions = mergeSessions(sessions, freshSessions)
 	}
 	invocations := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
@@ -365,9 +364,11 @@ func runGenerate(args []string) {
 	}
 
 	var totalSDLC int64
-	for _, inv := range invocations {
-		if inv.ParentID == nil {
-			totalSDLC += inv.UserIterations
+	for _, s := range sessions {
+		if s.ParentID == nil {
+			for _, inv := range s.Invocations {
+				totalSDLC += inv.UserIterations
+			}
 		}
 	}
 
@@ -601,6 +602,7 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "  --update-summaries     Idempotently update SUMMARY.md markdown metrics tables\n")
 		fmt.Fprintf(out, "  --db-path <path>       Explicit path to OpenCode SQLite database file\n")
 		fmt.Fprintf(out, "  --force                Force migration and recompute even if ledger is already completed\n")
+		fmt.Fprintf(out, "  --allow-fallbacks      Allow heuristic session discovery fallbacks (title match, workspace commit range) when exact session IDs are not found in DB\n")
 	}
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help" || args[0] == "-help") {
 		backfillFlags.SetOutput(os.Stdout)
@@ -619,6 +621,7 @@ func runBackfill(args []string) {
 	updateSummariesFlag := backfillFlags.Bool("update-summaries", false, "Idempotently update SUMMARY.md markdown metrics tables")
 	dbPathFlag := backfillFlags.String("db-path", "", "Explicit path to OpenCode SQLite database file")
 	forceFlag := backfillFlags.Bool("force", false, "Force migration and recompute even if ledger is already completed")
+	allowFallbacksFlag := backfillFlags.Bool("allow-fallbacks", false, "Allow heuristic session discovery fallbacks (title match, workspace commit range) when exact session IDs are not found in DB")
 
 	if err := backfillFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing backfill flags: %v\n", err)
@@ -677,6 +680,7 @@ func runBackfill(args []string) {
 		UpdateSummaries: *updateSummariesFlag,
 		DBPath:          resolvedDBPath,
 		Force:           *forceFlag,
+		AllowFallbacks:  *allowFallbacksFlag,
 	}
 
 	engine := backfill.NewEngine()
@@ -1385,36 +1389,9 @@ func main() {
 	}
 }
 
-type invocationKey struct {
-	id    string
-	model string
-}
-
 type toolFactKey struct {
 	sessionID string
 	name      string
-}
-
-func mergeInvocations(cached []domain.InvocationFact, local []domain.InvocationFact) []domain.InvocationFact {
-	merged := make([]domain.InvocationFact, len(cached))
-	copy(merged, cached)
-
-	indexMap := make(map[invocationKey]int)
-	for i, inv := range merged {
-		indexMap[invocationKey{id: inv.ID, model: inv.Model}] = i
-	}
-
-	for _, lInv := range local {
-		k := invocationKey{id: lInv.ID, model: lInv.Model}
-		if idx, exists := indexMap[k]; exists {
-			merged[idx] = lInv
-		} else {
-			indexMap[k] = len(merged)
-			merged = append(merged, lInv)
-		}
-	}
-
-	return merged
 }
 
 func mergeTools(cached []domain.ToolFact, local []domain.ToolFact) []domain.ToolFact {
@@ -1481,9 +1458,10 @@ func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []do
 	for _, session := range cached {
 		byID[session.ID] = session
 	}
+	// Each extracted session is authoritative, including repeated or empty invocation rows.
 	for _, session := range local {
-		if session.Source == "" {
-			if existing, ok := byID[session.ID]; ok && existing.Source != "" {
+		if existing, ok := byID[session.ID]; ok {
+			if session.Source == "" && existing.Source != "" {
 				session.Source = existing.Source
 			}
 		}

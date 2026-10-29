@@ -5,7 +5,7 @@
   "ticket_type": "feat",
   "started_at": "2026-10-29T00:23:01.972Z",
   "completed_at": "2026-10-29T08:41:31.447Z",
-  "updated_at": "2026-10-29T08:41:32.605760+00:00",
+  "updated_at": "2026-10-29T10:53:32.802068518Z",
   "code": {
     "lines_added": 592,
     "lines_deleted": 39,
@@ -20,23 +20,21 @@
     {
       "id": "01a18509-ea45-7ba0-834d-ea18d828b3c5",
       "source": "codex",
+      "user": "unknown",
       "invocations": [
         {
-          "id": "01a18509-ea45-7ba0-834d-ea18d828b3c5",
-          "parent_id": null,
           "role": "RootAgent",
           "model": "gpt-6-luna",
-          "user": "",
           "started_at": "2026-10-29T00:23:03.445Z",
-          "completed_at": "2026-10-29T08:41:31.447Z",
-          "active_duration_seconds": 1113,
+          "completed_at": "2026-10-29T08:44:39.737Z",
+          "active_duration_seconds": 1527,
           "turns": 6,
           "tokens": {
-            "input": 221502,
-            "output": 17671,
-            "cache_read": 5309952,
-            "reasoning": 6688,
-            "peak_context": 100572
+            "input": 233355,
+            "output": 19176,
+            "cache_read": 6455680,
+            "reasoning": 7408,
+            "peak_context": 110455
           },
           "cost_usd": 0,
           "compactions": 0,
@@ -46,8 +44,8 @@
       "tools": [
         {
           "name": "command",
-          "calls": 36,
-          "errors": 4
+          "calls": 44,
+          "errors": 5
         },
         {
           "name": "request_user_input_async",

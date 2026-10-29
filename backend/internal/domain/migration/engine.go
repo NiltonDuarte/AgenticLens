@@ -36,10 +36,19 @@ type versionProbe struct {
 }
 
 type legacyFactCollections struct {
-	Source      domain.SourceHarness    `json:"source"`
-	Invocations []domain.InvocationFact `json:"invocations"`
-	Tools       []domain.ToolFact       `json:"tools"`
-	Events      []domain.EventFact      `json:"events"`
+	Source      domain.SourceHarness      `json:"source"`
+	Invocations []legacySessionInvocation `json:"invocations"`
+	Tools       []domain.ToolFact         `json:"tools"`
+	Events      []domain.EventFact        `json:"events"`
+}
+
+// Legacy flat ledgers stored session metadata alongside each invocation row.
+// Move that metadata to its owner without interpreting synthetic ID suffixes.
+type legacySessionInvocation struct {
+	domain.InvocationFact
+	SessionID string  `json:"id"`
+	ParentID  *string `json:"parent_id"`
+	User      string  `json:"user"`
 }
 
 func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
@@ -56,6 +65,21 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 	for _, key := range []string{"invocations", "tools", "events"} {
 		if _, hasLegacy := rootFields[key]; hasSessions && hasLegacy {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("mixed ledger shape: canonical sessions cannot coexist with root-level legacy %s; remove ambiguity before migration", key)
+		}
+	}
+	if hasSessions && version >= domain.CurrentSchemaVersion {
+		var canonical []struct {
+			Invocations []map[string]json.RawMessage `json:"invocations"`
+		}
+		if err := json.Unmarshal(rootFields["sessions"], &canonical); err != nil {
+			return domain.AgenticFactLedger{}, 0, fmt.Errorf("decoding canonical sessions: %w", err)
+		}
+		for si, session := range canonical {
+			for ii, row := range session.Invocations {
+				if _, exists := row["id"]; exists {
+					return domain.AgenticFactLedger{}, 0, fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain id", ii, si)
+				}
+			}
 		}
 	}
 	if err := json.Unmarshal(input, &ledger); err != nil {
@@ -75,7 +99,14 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 			}
 			attributed = append(attributed, tool)
 		}
-		sessions, err := domain.SessionsFromFacts(legacy.Invocations, attributed, legacy.Events)
+		owned := make([]domain.SessionFact, 0, len(legacy.Invocations))
+		for _, row := range legacy.Invocations {
+			owned = append(owned, domain.SessionFact{
+				ID: row.SessionID, ParentID: row.ParentID, User: row.User,
+				Invocations: []domain.InvocationFact{row.InvocationFact},
+			})
+		}
+		sessions, err := domain.SessionsFromFacts(owned, attributed, legacy.Events)
 		if err != nil {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("normalizing legacy fact collections: %w", err)
 		}
@@ -114,6 +145,9 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 	for i := range ledger.Sessions {
 		if strings.TrimSpace(string(ledger.Sessions[i].Source)) == "" {
 			ledger.Sessions[i].Source = domain.SourceOpenCode
+		}
+		if strings.TrimSpace(ledger.Sessions[i].User) == "" {
+			ledger.Sessions[i].User = "unknown"
 		}
 	}
 	return ledger, version, nil
@@ -199,14 +233,6 @@ func validateSessions(sessions []domain.SessionFact) error {
 	for i, session := range sessions {
 		if session.ParentID != nil && !seen[strings.TrimSpace(*session.ParentID)] {
 			return fmt.Errorf("sessions[%d].parent_id %q does not identify a session", i, *session.ParentID)
-		}
-		for j, inv := range session.Invocations {
-			if strings.TrimSpace(inv.ID) == "" {
-				return fmt.Errorf("sessions[%d].invocations[%d].id is required", i, j)
-			}
-			if inv.ParentID != nil && !seen[strings.TrimSpace(*inv.ParentID)] {
-				return fmt.Errorf("sessions[%d].invocations[%d].parent_id %q does not identify a session", i, j, *inv.ParentID)
-			}
 		}
 	}
 	return nil

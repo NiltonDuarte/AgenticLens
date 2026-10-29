@@ -23,6 +23,53 @@ func int64Ptr(i int64) *int64 {
 	return &i
 }
 
+func TestCanonicalV4MigrationRejectsRemovedInvocationKey(t *testing.T) {
+	base := `{"schema_version":4,"sessions":[{"id":"owner","source":"opencode","user":"alice","invocations":[{"role":"coder","model":"model-a","tokens":{"input":10},"cost_usd":0.1},{"role":"coder","model":"model-a","tokens":{"input":20},"cost_usd":0.2}],"tools":[],"anomalies":[]}]}`
+	engine := migration.NewEngine(nil)
+	ledger, err := engine.Migrate([]byte(base), domain.CurrentSchemaVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ledger.Sessions) != 1 || ledger.Sessions[0].ID != "owner" || len(ledger.Sessions[0].Invocations) != 2 || ledger.Sessions[0].Invocations[0].Tokens.Input != 10 || ledger.Sessions[0].Invocations[1].Tokens.Input != 20 {
+		t.Fatalf("canonical rows changed during an idempotent migration: %+v", ledger.Sessions)
+	}
+	for _, value := range []string{`"obsolete"`, `""`, `null`} {
+		data := strings.Replace(base, `"role":`, `"id":`+value+`,"role":`, 1)
+		if _, err := engine.Migrate([]byte(data), domain.CurrentSchemaVersion); err == nil || !strings.Contains(err.Error(), "must not contain id") {
+			t.Errorf("expected removed invocation key rejection for %s, got %v", value, err)
+		}
+	}
+}
+
+func TestMigrationInvariantPreservesSessionOwnership(t *testing.T) {
+	version, target := 1, 2
+	rootID := "owner"
+	before := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{
+		{ID: rootID, Source: domain.SourceOpenCode, User: "alice", Invocations: []domain.InvocationFact{{Role: "coder", Model: "model-a"}}},
+		{ID: "child", ParentID: &rootID, Source: domain.SourceOpenCode, User: "alice"},
+	}}
+	for name, mutate := range map[string]func([]domain.SessionFact){
+		"session ID": func(s []domain.SessionFact) { s[0].ID = "other" },
+		"parent ID":  func(s []domain.SessionFact) { s[1].ParentID = nil },
+		"source":     func(s []domain.SessionFact) { s[0].Source = domain.SourceCodex },
+		"user":       func(s []domain.SessionFact) { s[0].User = "bob" },
+		"move rows": func(s []domain.SessionFact) {
+			s[1].Invocations = s[0].Invocations
+			s[0].Invocations = nil
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			after := before
+			after.SchemaVersion = &target
+			after.Sessions = append([]domain.SessionFact(nil), before.Sessions...)
+			mutate(after.Sessions)
+			if err := migration.NewInvariantValidator().Validate(before, after, target); !errors.Is(err, migration.ErrInvariantViolation) {
+				t.Fatalf("expected session ownership violation, got %v", err)
+			}
+		})
+	}
+}
+
 func ticketTypePtr(tt domain.ConventionalTicketType) *domain.ConventionalTicketType {
 	return &tt
 }
@@ -46,11 +93,8 @@ func sampleFactLedger() domain.AgenticFactLedger {
 			SDLCIterations:   2,
 		}, Sessions: sessionFacts([]domain.InvocationFact{
 			{
-				ID:                    "inv-1",
-				ParentID:              nil,
 				Role:                  "orchestrator",
 				Model:                 "claude-3-opus",
-				User:                  "developer",
 				StartedAt:             stringPtr("2026-10-18T10:00:00Z"),
 				CompletedAt:           stringPtr("2026-10-18T10:30:00Z"),
 				ActiveDurationSeconds: 1800,
@@ -693,21 +737,12 @@ func TestInvariantValidator(t *testing.T) {
 	})
 
 	t.Run("invocation individual field mutations fail", func(t *testing.T) {
-		baseWithParent := base
-		parented := append([]domain.InvocationFact(nil), base.InvocationFacts()...)
-		parented[0].ParentID = stringPtr("parent-1")
-		setInvocationFacts(&baseWithParent, parented)
-
 		cases := []struct {
 			name   string
 			mutate func(*domain.InvocationFact)
 		}{
-			{"id", func(i *domain.InvocationFact) { i.ID = "inv-diff" }},
-			{"parent_id_changed", func(i *domain.InvocationFact) { i.ParentID = stringPtr("parent-2") }},
-			{"parent_id_cleared", func(i *domain.InvocationFact) { i.ParentID = nil }},
 			{"role", func(i *domain.InvocationFact) { i.Role = "reviewer" }},
 			{"model", func(i *domain.InvocationFact) { i.Model = "gpt-4o" }},
-			{"user", func(i *domain.InvocationFact) { i.User = "another-user" }},
 			{"started_at", func(i *domain.InvocationFact) { i.StartedAt = stringPtr("2026-01-01T00:00:00Z") }},
 			{"completed_at", func(i *domain.InvocationFact) { i.CompletedAt = stringPtr("2026-01-01T01:00:00Z") }},
 			{"active_duration", func(i *domain.InvocationFact) { i.ActiveDurationSeconds = 9999 }},
@@ -723,11 +758,11 @@ func TestInvariantValidator(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				m := baseWithParent
-				invs := append([]domain.InvocationFact(nil), baseWithParent.InvocationFacts()...)
+				m := base
+				invs := append([]domain.InvocationFact(nil), base.InvocationFacts()...)
 				tc.mutate(&invs[0])
 				setInvocationFacts(&m, invs)
-				err := validator.Validate(baseWithParent, m, 2)
+				err := validator.Validate(base, m, 2)
 				if !errors.Is(err, migration.ErrInvariantViolation) {
 					t.Errorf("expected ErrInvariantViolation for mutated %s, got %v", tc.name, err)
 				}
@@ -1064,7 +1099,7 @@ func TestEngineMigrate(t *testing.T) {
 		if migrated.Code.LinesAdded != 50 {
 			t.Errorf("expected lines_added 50, got %d", migrated.Code.LinesAdded)
 		}
-		if len(migrated.InvocationFacts()) != 1 || migrated.InvocationFacts()[0].ID != "inv-1" {
+		if len(migrated.InvocationFacts()) != 1 || len(migrated.Sessions) != 1 || migrated.Sessions[0].ID != "inv-1" {
 			t.Errorf("invocations not preserved properly")
 		}
 		if len(migrated.ToolFacts()) != 0 || migrated.Migration == nil || !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool aggregate") {
@@ -1545,29 +1580,41 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		v3 := 3
 		initial.SchemaVersion = &v3
 		initial.Code.SDLCIterations = 5
-		setInvocationFacts(&initial, []domain.InvocationFact{
+		initial.Sessions = []domain.SessionFact{
 			{
-				ID:             "root-1",
-				ParentID:       nil,
-				Role:           "orchestrator",
-				Model:          "gpt-4o",
-				UserIterations: 0,
+				ID:       "root-1",
+				ParentID: nil,
+				Invocations: []domain.InvocationFact{
+					{
+						Role:           "orchestrator",
+						Model:          "gpt-4o",
+						UserIterations: 0,
+					},
+				},
 			},
 			{
-				ID:             "root-2",
-				ParentID:       nil,
-				Role:           "orchestrator",
-				Model:          "claude-3-5-sonnet",
-				UserIterations: 0,
+				ID:       "root-2",
+				ParentID: nil,
+				Invocations: []domain.InvocationFact{
+					{
+						Role:           "orchestrator",
+						Model:          "claude-3-5-sonnet",
+						UserIterations: 0,
+					},
+				},
 			},
 			{
-				ID:             "sub-1",
-				ParentID:       stringPtr("root-1"),
-				Role:           "coder",
-				Model:          "gpt-4o",
-				UserIterations: 0,
+				ID:       "sub-1",
+				ParentID: stringPtr("root-1"),
+				Invocations: []domain.InvocationFact{
+					{
+						Role:           "coder",
+						Model:          "gpt-4o",
+						UserIterations: 0,
+					},
+				},
 			},
-		})
+		}
 
 		upgraded, err := step.Apply(initial)
 		if err != nil {
@@ -1610,15 +1657,19 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		v3 := 3
 		initial.SchemaVersion = &v3
 		initial.Code.SDLCIterations = 10
-		setInvocationFacts(&initial, []domain.InvocationFact{
+		initial.Sessions = []domain.SessionFact{
 			{
-				ID:             "root-1",
-				ParentID:       nil,
-				Role:           "orchestrator",
-				Model:          "gpt-4o",
-				UserIterations: 3,
+				ID:       "root-1",
+				ParentID: nil,
+				Invocations: []domain.InvocationFact{
+					{
+						Role:           "orchestrator",
+						Model:          "gpt-4o",
+						UserIterations: 3,
+					},
+				},
 			},
-		})
+		}
 
 		upgraded, err := step.Apply(initial)
 		if err != nil {

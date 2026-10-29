@@ -21,13 +21,11 @@
       "id": "ses_eafbfd6dbffeFryu2NnNI1lRBe",
       "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eafbfd6dbffeFryu2NnNI1lRBe",
-          "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
           "role": "reviewer",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T18:22:24.560000+00:00",
           "completed_at": "2026-10-18T18:25:55.737000+00:00",
           "active_duration_seconds": 211,
@@ -92,13 +90,11 @@
       "id": "ses_eafc5f604ffe4Pjz6gc69yujl8",
       "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eafc5f604ffe4Pjz6gc69yujl8",
-          "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
           "role": "tester",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T18:15:43.365000+00:00",
           "completed_at": "2026-10-18T18:22:01.625000+00:00",
           "active_duration_seconds": 378,
@@ -143,13 +139,11 @@
       "id": "ses_eafd53e9affe451sg4a9n4ccg1",
       "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eafd53e9affe451sg4a9n4ccg1",
-          "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
           "role": "coder",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T17:59:01.754000+00:00",
           "completed_at": "2026-10-18T18:15:33.098000+00:00",
           "active_duration_seconds": 991,
@@ -224,13 +218,11 @@
       "id": "ses_eaffabe1effecqKoVM46vyk46p",
       "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eaffabe1effecqKoVM46vyk46p",
-          "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
           "role": "planner",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T17:18:04.269000+00:00",
           "completed_at": "2026-10-18T17:23:53.989000+00:00",
           "active_duration_seconds": 333,
@@ -300,13 +292,11 @@
       "id": "ses_eb02247aeffeVsLHvsrom4QExW",
       "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb02247aeffeVsLHvsrom4QExW",
-          "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
           "role": "reviewer",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T16:34:53.153000+00:00",
           "completed_at": "2026-10-18T16:38:11.518000+00:00",
           "active_duration_seconds": 198,
@@ -366,13 +356,11 @@
       "id": "ses_eb02d2a50ffeZtlYATgbSGQRBj",
       "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb02d2a50ffeZtlYATgbSGQRBj",
-          "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
           "role": "tester",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T16:22:59.779000+00:00",
           "completed_at": "2026-10-18T16:34:37.111000+00:00",
           "active_duration_seconds": 697,
@@ -417,13 +405,11 @@
       "id": "ses_eb03fcb71ffeiZ2Dqir1Q9JuCD",
       "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb03fcb71ffeiZ2Dqir1Q9JuCD",
-          "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
           "role": "coder",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T16:02:38.878000+00:00",
           "completed_at": "2026-10-18T16:22:38.842000+00:00",
           "active_duration_seconds": 1198,
@@ -498,13 +484,11 @@
       "id": "ses_eb0c39cdcffekE6PQCieE5AuLw",
       "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb0c39cdcffekE6PQCieE5AuLw",
-          "parent_id": "ses_eb0c8806effelC65a0Zb4o2qli",
           "role": "planner",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T13:38:40.125000+00:00",
           "completed_at": "2026-10-18T13:46:55.244000+00:00",
           "active_duration_seconds": 475,
@@ -583,13 +567,11 @@
     {
       "id": "ses_eb0c8806effelC65a0Zb4o2qli",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb0c8806effelC65a0Zb4o2qli",
-          "parent_id": null,
           "role": "orchestrator",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T13:33:20.048000+00:00",
           "completed_at": "2026-10-18T18:39:17.606000+00:00",
           "active_duration_seconds": 16137,

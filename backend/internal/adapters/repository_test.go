@@ -447,13 +447,11 @@ func TestScanWorkspaces(t *testing.T) {
     {
       "id": "ses-1",
       "source": "opencode",
+      "user": "test-user",
       "invocations": [
         {
-          "id": "ses-1",
-          "parent_id": null,
           "role": "orchestrator",
           "model": "model-x",
-          "user": "test-user",
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 60,
@@ -874,9 +872,7 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
     {
       "id": "inv-1",
       "invocations": [
-        {
-          "id": "inv-1"
-        }
+        {}
       ],
       "tools": [],
       "events": []
@@ -908,8 +904,8 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 		if dom.InvocationFacts()[0].Model != "" {
 			t.Errorf("expected omitted model to remain empty, got %s", dom.InvocationFacts()[0].Model)
 		}
-		if dom.InvocationFacts()[0].User != "" {
-			t.Errorf("expected omitted user to remain empty, got %s", dom.InvocationFacts()[0].User)
+		if dom.Sessions[0].User != "" {
+			t.Errorf("expected omitted user to remain empty, got %s", dom.Sessions[0].User)
 		}
 		if len(dom.ToolFacts()) != 1 {
 			t.Fatalf("expected 1 tool, got %d", len(dom.ToolFacts()))
@@ -1161,13 +1157,11 @@ func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
     {
       "id": "s1",
       "source": "opencode",
+      "user": "u",
       "invocations": [
         {
-          "id": "s1",
-          "parent_id": null,
           "role": "coder",
           "model": "m",
-          "user": "u",
           "active_duration_seconds": 1,
           "turns": 1,
           "tokens": {
@@ -1263,12 +1257,11 @@ func TestLoadTicketWorkspace(t *testing.T) {
     {
       "id": "ses-1",
       "source": "opencode",
+      "user": "test-dev",
       "invocations": [
         {
-          "id": "ses-1",
           "role": "orchestrator",
           "model": "model-1",
-          "user": "test-dev",
           "active_duration_seconds": 90,
           "turns": 3,
           "tokens": {
@@ -1280,7 +1273,6 @@ func TestLoadTicketWorkspace(t *testing.T) {
           },
           "cost_usd": 0.08,
           "compactions": 0,
-          "parent_id": null,
           "started_at": null,
           "completed_at": null,
           "user_iterations": 0
@@ -1563,12 +1555,12 @@ func TestSaveFactLedger(t *testing.T) {
 		ledger := domain.AgenticFactLedger{
 			SchemaVersion: &schemaVer,
 			TicketID:      &tid,
-			TicketTitle:   &title, Sessions: sessionFacts([]domain.InvocationFact{
+			TicketTitle:   &title, Sessions: sessionFactsWithInvs([]testInvFact{
 				{
-					ID:      "inv-1",
-					Role:    "coder",
-					Model:   "gemini-3.8-flash",
-					CostUSD: 0.05,
+					SessionID: "inv-1",
+					Role:      "coder",
+					Model:     "gemini-3.8-flash",
+					CostUSD:   0.05,
 				},
 			}, nil, nil),
 		}
@@ -1602,8 +1594,8 @@ func TestSaveFactLedger(t *testing.T) {
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-PERSIST-1" {
 			t.Errorf("expected ticket_id AL-PERSIST-1, got %v", parsed.TicketID)
 		}
-		if len(parsed.InvocationFacts()) != 1 || parsed.InvocationFacts()[0].ID != "inv-1" {
-			t.Errorf("expected 1 invocation with ID inv-1, got %+v", parsed.InvocationFacts())
+		if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "inv-1" || len(parsed.Sessions[0].Invocations) != 1 || parsed.Sessions[0].Invocations[0].Model != "gemini-3.8-flash" {
+			t.Errorf("expected invocation and owning session preserved, got %+v", parsed.Sessions)
 		}
 	})
 
@@ -1956,15 +1948,13 @@ role_mappings:
     {
       "id": "ses-build",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-build",
           "role": "build",
           "model": "claude-3-sonnet",
           "cost_usd": 1.5,
           "turns": 3,
-          "parent_id": null,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -1986,15 +1976,14 @@ role_mappings:
     {
       "id": "ses-qa",
       "source": "opencode",
+      "user": "fixture-user",
+      "parent_id": "ses-build",
       "invocations": [
         {
-          "id": "ses-qa",
-          "parent_id": "ses-build",
           "role": "qa-bot",
           "model": "claude-3-haiku",
           "cost_usd": 0.5,
           "turns": 2,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -2011,7 +2000,6 @@ role_mappings:
       ],
       "tools": [],
       "events": [],
-      "parent_id": "ses-build",
       "anomalies": []
     }
   ]
@@ -2129,15 +2117,13 @@ role_mappings:
     {
       "id": "ses-eng",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-eng",
           "role": "sys-engineer",
           "model": "claude-3-sonnet",
           "cost_usd": 1.5,
           "active_duration_seconds": 120,
-          "parent_id": null,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "turns": 0,
@@ -2159,15 +2145,13 @@ role_mappings:
     {
       "id": "ses-test",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-test",
           "role": "lead-tester",
           "model": "gpt-4o",
           "cost_usd": 0.8,
           "active_duration_seconds": 60,
-          "parent_id": null,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "turns": 0,
@@ -2325,13 +2309,11 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 			TicketID:      &ticketID,
 			TicketTitle:   &ticketTitle, Sessions: sessionFacts([]domain.InvocationFact{
 				{
-					ID:             "ses_1",
 					Role:           domain.RoleRootAgent,
 					Model:          "gpt-4o",
 					UserIterations: 7,
 				},
 				{
-					ID:             "ses_child",
 					Role:           domain.RoleUnassignedSubAgent,
 					Model:          "gpt-4o",
 					UserIterations: 0,

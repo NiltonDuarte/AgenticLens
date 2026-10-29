@@ -58,8 +58,8 @@ func sampleFactJSON(ticketID, title string, duration int64, cost float64) string
 		UpdatedAt:   "2026-10-17T11:00:00Z",
 		Code:        domain.CodeFacts{LinesAdded: 120, LinesDeleted: 20, TestLinesAdded: 60, ProdLinesAdded: 60, ProdLinesDeleted: 20, FilesChanged: 4, SDLCIterations: 2},
 		Sessions: []domain.SessionFact{
-			{ID: "ses-orch", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{ID: "ses-orch", Role: "orchestrator", Model: "claude-3-sonnet", User: "test-engineer", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
-			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "ses-coder", ParentID: &parent, Role: "coder", Model: "claude-3-opus", User: "test-engineer", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-orch", Source: domain.SourceOpenCode, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "orchestrator", Model: "claude-3-sonnet", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "coder", Model: "claude-3-opus", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
 		},
 	}
 	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
@@ -218,6 +218,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		"sessions": [{
 			"id": "ses-anom",
 			"source": "opencode",
+			"user": "test-engineer",
 			"invocations": [],
 			"events": [],
 			"anomalies": [],
@@ -1154,6 +1155,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing
 		"sessions":[{
 			"id":"session-fixture",
 			"source":"opencode",
+			"user":"tester",
 			"invocations":[],
 			"tools":[{"name":"bash","calls":8,"errors":6}],
 			"anomalies":[],
@@ -1825,10 +1827,9 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
     {
       "id": "ses_cached_inv_1",
       "source": "opencode",
+      "user": "engineer",
       "invocations": [
         {
-          "id": "ses_cached_inv_1",
-          "user": "engineer",
           "role": "coder",
           "model": "gpt-4o",
           "tokens": {
@@ -1839,7 +1840,6 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
             "peak_context": 0
           },
           "cost_usd": 0.003,
-          "parent_id": null,
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -1888,8 +1888,8 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if len(parsed.ToDomain().InvocationFacts()) != 1 {
 			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
-		if parsed.ToDomain().InvocationFacts()[0].ID != "ses_cached_inv_1" {
-			t.Errorf("expected invocation ID ses_cached_inv_1, got %s", parsed.ToDomain().InvocationFacts()[0].ID)
+		if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "ses_cached_inv_1" {
+			t.Errorf("expected cached session ownership to survive generation, got %+v", parsed.Sessions)
 		}
 	})
 
@@ -2891,6 +2891,7 @@ func TestCLIHelpCommand(t *testing.T) {
 			"--ticket-id",
 			"--db-path",
 			"--code-ref",
+			"--allow-fallbacks",
 		}
 		for _, flag := range expectedFlags {
 			if !strings.Contains(out, flag) {
@@ -5980,9 +5981,8 @@ anomaly_thresholds:
 		SchemaVersion: &schemaVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-			{
-				ID:             "ses_device_a",
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "ses_device_a",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				User:           "engineer_a",
@@ -6099,17 +6099,17 @@ anomaly_thresholds:
 		t.Fatalf("expected 2 merged invocations, got %d", len(mergedDTO.ToDomain().InvocationFacts()))
 	}
 	var foundA, foundB bool
-	for _, inv := range mergedDTO.ToDomain().InvocationFacts() {
-		if inv.ID == "ses_device_a" {
+	for _, s := range mergedDTO.Sessions {
+		if s.ID == "ses_device_a" {
 			foundA = true
-			if inv.UserIterations != 3 {
-				t.Errorf("expected invocation A user_iterations 3, got %d", inv.UserIterations)
+			if len(s.Invocations) > 0 && s.Invocations[0].UserIterations != 3 {
+				t.Errorf("expected invocation A user_iterations 3, got %d", s.Invocations[0].UserIterations)
 			}
 		}
-		if inv.ID == "ses_device_b" {
+		if s.ID == "ses_device_b" {
 			foundB = true
-			if inv.UserIterations != 2 {
-				t.Errorf("expected invocation B user_iterations 2, got %d", inv.UserIterations)
+			if len(s.Invocations) > 0 && s.Invocations[0].UserIterations != 2 {
+				t.Errorf("expected invocation B user_iterations 2, got %d", s.Invocations[0].UserIterations)
 			}
 		}
 	}
@@ -6149,9 +6149,8 @@ anomaly_thresholds:
 		SchemaVersion: &legacyVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-			{
-				ID:             "ses_legacy",
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "ses_legacy",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				User:           "engineer_a",
@@ -6222,9 +6221,8 @@ anomaly_thresholds:
 		SchemaVersion: &schemaVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-			{
-				ID:             "ses_device_a",
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "ses_device_a",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				Turns:          8,
@@ -6361,12 +6359,16 @@ anomaly_thresholds:
 		"ses_device_c": 5,
 		"sub_device_c": 0,
 	}
-	for _, inv := range dtoC.ToDomain().InvocationFacts() {
-		expected, exists := expectedIterations[inv.ID]
+	for _, s := range dtoC.Sessions {
+		var userIters int64
+		for _, inv := range s.Invocations {
+			userIters += inv.UserIterations
+		}
+		expected, exists := expectedIterations[s.ID]
 		if !exists {
-			t.Errorf("unexpected invocation %s in merged ledger", inv.ID)
-		} else if inv.UserIterations != expected {
-			t.Errorf("invocation %s expected UserIterations %d, got %d", inv.ID, expected, inv.UserIterations)
+			t.Errorf("unexpected session %s in merged ledger", s.ID)
+		} else if userIters != expected {
+			t.Errorf("session %s expected UserIterations %d, got %d", s.ID, expected, userIters)
 		}
 	}
 
@@ -6572,9 +6574,8 @@ anomaly_thresholds:
 				SchemaVersion: &schemaVer,
 				TicketID:      &ticketIDStr,
 				TicketTitle:   &ticketTitleStr,
-				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-					{
-						ID:             "ses_pre_v4",
+				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+					{SessionID: "ses_pre_v4",
 						Role:           domain.RoleRootAgent,
 						Model:          "gpt-4o",
 						Turns:          5,
@@ -6618,9 +6619,8 @@ anomaly_thresholds:
 			SchemaVersion: &schemaVer,
 			TicketID:      &ticketIDStr,
 			TicketTitle:   &ticketTitleStr,
-			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-				{
-					ID:             "ses_v4",
+			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+				{SessionID: "ses_v4",
 					Role:           domain.RoleRootAgent,
 					Model:          "gpt-4o",
 					Turns:          5,

@@ -30,13 +30,12 @@
   "sessions": [
     {
       "id": "inv-al2-01",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [
         {
-          "id": "inv-al2-01",
-          "parent_id": null,
           "role": "orchestrator",
           "model": "gpt-4o",
-          "user": "developer",
           "started_at": "2026-10-16T12:00:00Z",
           "completed_at": "2026-10-16T12:30:00Z",
           "active_duration_seconds": 520,
@@ -76,19 +75,17 @@
         }
       ],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     },
     {
       "id": "inv-al2-02",
       "parent_id": "inv-al2-01",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [
         {
-          "id": "inv-al2-02",
-          "parent_id": "inv-al2-01",
           "role": "coder",
           "model": "gpt-4o",
-          "user": "developer",
           "started_at": "2026-10-16T12:35:00Z",
           "completed_at": "2026-10-16T14:30:00Z",
           "active_duration_seconds": 880,
@@ -107,19 +104,17 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     },
     {
       "id": "inv-al2-03",
       "parent_id": "inv-al2-01",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [
         {
-          "id": "inv-al2-03",
-          "parent_id": "inv-al2-01",
           "role": "tester",
           "model": "gpt-4o",
-          "user": "developer",
           "started_at": "2026-10-16T14:35:00Z",
           "completed_at": "2026-10-16T16:00:00Z",
           "active_duration_seconds": 580,
@@ -138,11 +133,12 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     },
     {
       "id": "ses-al2-root",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [],
       "tools": [],
       "events": [
@@ -195,7 +191,6 @@
           "context_tokens": 65000
         }
       ],
-      "source": "opencode",
       "anomalies": []
     }
   ]

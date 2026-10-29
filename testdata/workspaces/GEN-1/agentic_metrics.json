@@ -30,13 +30,12 @@
   "sessions": [
     {
       "id": "inv-gen1-01",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [
         {
-          "id": "inv-gen1-01",
-          "parent_id": null,
           "role": "orchestrator",
           "model": "o1-mini",
-          "user": "developer",
           "started_at": "2026-10-17T07:30:00Z",
           "completed_at": "2026-10-17T08:15:00Z",
           "active_duration_seconds": 720,
@@ -76,19 +75,17 @@
         }
       ],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     },
     {
       "id": "inv-gen1-02",
       "parent_id": "inv-gen1-01",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [
         {
-          "id": "inv-gen1-02",
-          "parent_id": "inv-gen1-01",
           "role": "coder",
           "model": "claude-3-5-sonnet",
-          "user": "developer",
           "started_at": "2026-10-17T08:20:00Z",
           "completed_at": "2026-10-17T09:40:00Z",
           "active_duration_seconds": 1150,
@@ -107,11 +104,12 @@
       ],
       "tools": [],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     },
     {
       "id": "ses-gen1-root",
+      "source": "opencode",
+      "user": "developer",
       "invocations": [],
       "tools": [],
       "events": [
@@ -125,7 +123,6 @@
           "context_tokens": 225000
         }
       ],
-      "source": "opencode",
       "anomalies": []
     }
   ]

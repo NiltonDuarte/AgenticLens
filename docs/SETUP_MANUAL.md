@@ -440,14 +440,19 @@ Below is the standard policy block that can be added to your repository's OpenCo
 ## AgenticLens Telemetry Guidelines
 
 1. Ticket Tracking Mandate:
-   - Every task must be tracked by an explicit ticket identifier matching configured prefixes (e.g. PAY-101).
+   - Every task requires a ticket ID and a workspace under `workspaces/<TICKET_ID>/`.
+   - Use an existing ticket when one is provided. For ad hoc work without an ID, assign a `GEN-#` identifier; do not create a planning specification or index entry under `plan/` solely for it.
    - Agents work on one ticket at a time. All turns belong to the active ticket.
 
-2. Dedicated Workspace Allocation:
-   - Store task documentation and metrics in `workspaces/<TICKET_ID>/`.
-   - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log).
+2. Plan Lifecycle:
+   - When a matching specification exists under `plan/to-do/`, move it to `plan/done/` when its ticket is completed.
+   - Remove the ticket entry from `plan/TICKETS.md` if present. Do not create a specification or index entry just to complete this step; ad hoc tickets still have an ID and workspace.
 
-3. Delayed Telemetry Ingestion:
+3. Dedicated Workspace Allocation:
+   - Store task documentation and metrics in `workspaces/<TICKET_ID>/`.
+   - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log) as required by the project's artifact list.
+
+4. Delayed Telemetry Ingestion:
    - Ingest telemetry as the very final command before committing code.
    - The agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token. Do not use shell variables (`$NONCE`) because OpenCode records tool inputs into SQLite before subshell expansion occurs:
      ./bin/agentic-lens generate \

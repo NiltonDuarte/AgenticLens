@@ -5,7 +5,7 @@
   "ticket_type": "docs",
   "started_at": "2026-10-28T23:27:50.480Z",
   "completed_at": "2026-10-28T23:31:01.063Z",
-  "updated_at": "2026-10-28T23:31:01.971361+00:00",
+  "updated_at": "2026-10-29T00:26:34.300163526Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -20,50 +20,36 @@
     {
       "id": "01a184d7-62c8-7411-a22e-fae8394d91aa",
       "source": "codex",
+      "user": "unknown",
       "invocations": [
         {
-          "id": "01a184d7-62c8-7411-a22e-fae8394d91aa",
-          "parent_id": null,
           "role": "RootAgent",
           "model": "gpt-6-luna",
-          "user": "",
           "started_at": "2026-10-28T23:27:51.572Z",
-          "completed_at": "2026-10-28T23:31:01.063Z",
-          "active_duration_seconds": 69,
-          "turns": 2,
+          "completed_at": "2026-10-28T23:34:43.730Z",
+          "active_duration_seconds": 187,
+          "turns": 3,
           "tokens": {
-            "input": 30286,
-            "output": 4248,
-            "cache_read": 491264,
-            "reasoning": 469,
-            "peak_context": 39930
+            "input": 45088,
+            "output": 5685,
+            "cache_read": 1152512,
+            "reasoning": 864,
+            "peak_context": 52533
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 4
+          "user_iterations": 5
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 10,
+          "calls": 18,
           "errors": 3
         }
       ],
       "anomalies": []
     }
   ],
-  "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "WARNING",
-      "context": {
-        "tool_name": "command",
-        "count": 3,
-        "total_calls": 10,
-        "threshold": "\u003e20%",
-        "failure_rate_pct": 30
-      }
-    }
-  ]
+  "anomalies": []
 }

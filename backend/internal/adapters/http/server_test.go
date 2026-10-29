@@ -37,7 +37,7 @@ func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveServi
 }
 
 func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, invocations int64) string {
-	return fmt.Sprintf(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","invocations":[{"id":"ses-orch","parent_id":null,"role":"orchestrator","model":"claude-3-sonnet","user":"tester","started_at":null,"completed_at":null,"active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"compactions":0,"user_iterations":2}],"tools":[{"name":"bash","calls":5,"errors":0}],"events":[],"anomalies":[]}]}`, ticketID, title, duration, invocations, cost)
+	return fmt.Sprintf(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","user":"tester","invocations":[{"role":"orchestrator","model":"claude-3-sonnet","started_at":null,"completed_at":null,"active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"compactions":0,"user_iterations":2}],"tools":[{"name":"bash","calls":5,"errors":0}],"events":[],"anomalies":[]}]}`, ticketID, title, duration, invocations, cost)
 }
 
 func setupFixtureWorkspaces(t *testing.T) string {
@@ -83,12 +83,11 @@ func setupFixtureWorkspaces(t *testing.T) string {
     {
       "id": "ses-1",
       "source": "opencode",
+      "user": "dev",
       "invocations": [
         {
-          "id": "ses-1",
           "role": "orchestrator",
           "model": "gpt-4",
-          "user": "dev",
           "active_duration_seconds": 60,
           "turns": 2,
           "tokens": {
@@ -100,7 +99,6 @@ func setupFixtureWorkspaces(t *testing.T) string {
           },
           "cost_usd": 0.1,
           "compactions": 0,
-          "parent_id": null,
           "started_at": null,
           "completed_at": null,
           "user_iterations": 0
@@ -158,12 +156,11 @@ func setupFixtureWorkspaces(t *testing.T) string {
     {
       "id": "ses-2",
       "source": "opencode",
+      "user": "dev",
       "invocations": [
         {
-          "id": "ses-2",
           "role": "orchestrator",
           "model": "gpt-4",
-          "user": "dev",
           "active_duration_seconds": 120,
           "turns": 4,
           "tokens": {
@@ -175,7 +172,6 @@ func setupFixtureWorkspaces(t *testing.T) string {
           },
           "cost_usd": 0.5,
           "compactions": 0,
-          "parent_id": null,
           "started_at": null,
           "completed_at": null,
           "user_iterations": 0
@@ -1120,9 +1116,9 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
     {
       "id": "ses-0",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses-0",
           "role": "orchestrator",
           "active_duration_seconds": 0,
           "turns": 0,
@@ -1134,9 +1130,7 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
             "peak_context": 0
           },
           "cost_usd": 0.0,
-          "parent_id": null,
           "model": "fixture-model",
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "compactions": 0,
@@ -1616,12 +1610,11 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
     {
       "id": "ses-1",
       "source": "opencode",
+      "user": "dev",
       "invocations": [
         {
-          "id": "ses-1",
           "role": "orchestrator",
           "model": "gpt-4",
-          "user": "dev",
           "active_duration_seconds": 60,
           "turns": 5,
           "tokens": {
@@ -1633,7 +1626,6 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
           },
           "cost_usd": 0.1,
           "compactions": 0,
-          "parent_id": null,
           "started_at": null,
           "completed_at": null,
           "user_iterations": 0
@@ -1731,9 +1723,9 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		"ticket_type": "feature",
 		"started_at": "2026-10-18T10:00:00Z",
 		"sessions": [
-			{"id":"ses-late","source":"opencode","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T12:00:00Z","turn":2,"role":"coder","event_type":"tool_call","status":"success"}],"anomalies":[]},
-			{"id":"ses-early-t2","source":"opencode","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":2,"role":"coder","event_type":"tool_call","status":"success"}],"anomalies":[]},
-			{"id":"ses-early-t1","source":"opencode","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":1,"role":"orchestrator","event_type":"turn_message","status":"success"}],"anomalies":[]}
+			{"id":"ses-late","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T12:00:00Z","turn":2,"role":"coder","event_type":"tool_call","status":"success"}],"anomalies":[]},
+			{"id":"ses-early-t2","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":2,"role":"coder","event_type":"tool_call","status":"success"}],"anomalies":[]},
+			{"id":"ses-early-t1","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":1,"role":"orchestrator","event_type":"turn_message","status":"success"}],"anomalies":[]}
 		]
 	}`
 	if err := os.WriteFile(filepath.Join(w3Dir, "agentic_metrics.json"), []byte(w3JSON), 0644); err != nil {
@@ -1982,8 +1974,8 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		"ticket_id": "AL-TARGETED-VALID",
 		"updated_at": "2026-10-18T10:00:00Z",
 		"sessions": [
-			{"id":"ses-2","source":"opencode","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:10Z","turn":2,"role":"orchestrator","event_type":"tool_call","status":"completed"}],"anomalies":[]},
-			{"id":"ses-1","source":"opencode","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:05Z","turn":1,"role":"orchestrator","event_type":"tool_call","status":"completed"}],"anomalies":[]}
+			{"id":"ses-2","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:10Z","turn":2,"role":"orchestrator","event_type":"tool_call","status":"completed"}],"anomalies":[]},
+			{"id":"ses-1","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:05Z","turn":1,"role":"orchestrator","event_type":"tool_call","status":"completed"}],"anomalies":[]}
 		]
 	}`
 	if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(validJSON), 0644); err != nil {
@@ -2300,13 +2292,11 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
     {
       "id": "ses_al33",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses_al33",
           "role": "orchestrator",
           "model": "gemini-3.8-flash",
-          "parent_id": null,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -2369,13 +2359,11 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
     {
       "id": "ses_missing_99",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "ses_missing_99",
           "role": "coder",
           "model": "gemini-3.8-flash",
-          "parent_id": null,
-          "user": "fixture-user",
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -2604,13 +2592,11 @@ func setupMultiFilterWorkspaces(t *testing.T) string {
 			"sessions": [{
 			"id": "ses-` + tc.id + `",
 			"source": "opencode",
+			"user": "dev",
 			"invocations": [
 				{
-					"id": "ses-` + tc.id + `",
-					"parent_id": null,
 					"role": "orchestrator",
 					"model": "gpt-4",
-					"user": "dev",
 					"started_at": null,
 					"completed_at": null,
 					"active_duration_seconds": 60,
@@ -3274,12 +3260,11 @@ func TestProgressionHandler(t *testing.T) {
     {
       "id": "inv-rec-1",
       "source": "opencode",
+      "user": "dev",
       "invocations": [
         {
-          "id": "inv-rec-1",
           "role": "coder",
           "model": "gpt-4",
-          "user": "dev",
           "started_at": "%s",
           "completed_at": "%s",
           "tokens": {
@@ -3290,7 +3275,6 @@ func TestProgressionHandler(t *testing.T) {
             "peak_context": 2000
           },
           "cost_usd": 0.05,
-          "parent_id": null,
           "active_duration_seconds": 0,
           "turns": 0,
           "compactions": 0,
@@ -3335,12 +3319,11 @@ func TestProgressionHandler(t *testing.T) {
     {
       "id": "inv-old-1",
       "source": "opencode",
+      "user": "dev",
       "invocations": [
         {
-          "id": "inv-old-1",
           "role": "coder",
           "model": "gpt-4",
-          "user": "dev",
           "started_at": "%s",
           "completed_at": "%s",
           "tokens": {
@@ -3351,7 +3334,6 @@ func TestProgressionHandler(t *testing.T) {
             "peak_context": 2000
           },
           "cost_usd": 0.05,
-          "parent_id": null,
           "active_duration_seconds": 0,
           "turns": 0,
           "compactions": 0,
@@ -3478,9 +3460,9 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
     {
       "id": "inv-1",
       "source": "opencode",
+      "user": "fixture-user",
       "invocations": [
         {
-          "id": "inv-1",
           "started_at": "2026-10-15T09:00:00Z",
           "completed_at": "2026-10-15T18:00:00Z",
           "tokens": {
@@ -3491,10 +3473,8 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
             "peak_context": 0
           },
           "cost_usd": 0.05,
-          "parent_id": null,
           "role": "orchestrator",
           "model": "fixture-model",
-          "user": "fixture-user",
           "active_duration_seconds": 0,
           "turns": 0,
           "compactions": 0,

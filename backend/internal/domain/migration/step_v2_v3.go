@@ -34,20 +34,10 @@ func (s *StepV2ToV3Sanitized) Apply(ledger domain.AgenticFactLedger) (domain.Age
 	targetVer := 3
 	cloned.SchemaVersion = &targetVer
 
-	origSourceByID := make(map[string]domain.SourceHarness, len(ledger.Sessions))
-	for _, orig := range ledger.Sessions {
-		origSourceByID[orig.ID] = orig.Source
-	}
-
 	events := legacyV3Events(ledger)
-	sessions, err := domain.SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), events)
+	sessions, err := domain.SessionsFromFacts(ledger.Sessions, ledger.ToolFacts(), events)
 	if err != nil {
 		return domain.AgenticFactLedger{}, err
-	}
-	for i := range sessions {
-		if src, ok := origSourceByID[sessions[i].ID]; ok && src != "" {
-			sessions[i].Source = src
-		}
 	}
 	cloned.Sessions = sessions
 

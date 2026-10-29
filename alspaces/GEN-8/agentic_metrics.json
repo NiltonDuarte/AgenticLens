@@ -20,13 +20,11 @@
     {
       "id": "01a18162-7faf-7731-b8dd-da4b6e7d7b8c",
       "source": "codex",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "01a18162-7faf-7731-b8dd-da4b6e7d7b8c",
-          "parent_id": null,
           "role": "RootAgent",
           "model": "gpt-6-luna",
-          "user": "",
           "started_at": "2026-10-28T07:21:19.220Z",
           "completed_at": "2026-10-28T07:26:33.321Z",
           "active_duration_seconds": 15,
@@ -82,7 +80,7 @@
         "tool_name": "command",
         "count": 3,
         "total_calls": 13,
-        "threshold": "\u003e20%",
+        "threshold": ">20%",
         "failure_rate_pct": 23.1
       }
     }

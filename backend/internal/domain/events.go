@@ -143,32 +143,22 @@ func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 		anomaly.Context.SessionID = nil
 		bySession[sid] = append(bySession[sid], anomaly)
 	}
-	sessions, err := SessionsFromFacts(ledger.InvocationFacts(), ledger.ToolFacts(), nil)
-	if err != nil {
-		return AgenticFactLedger{}, err
-	}
-	origSourceByID := make(map[string]SourceHarness, len(ledger.Sessions))
-	for _, orig := range ledger.Sessions {
-		origSourceByID[orig.ID] = orig.Source
-	}
-	seen := make(map[string]bool, len(sessions))
-	for _, session := range sessions {
-		seen[session.ID] = true
-	}
-	for _, original := range ledger.Sessions {
-		if !seen[original.ID] {
-			sessions = append(sessions, SessionFact{ID: original.ID, ParentID: original.ParentID, Source: original.Source, Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: nil})
-			seen[original.ID] = true
+	sessions := make([]SessionFact, len(ledger.Sessions))
+	for i, orig := range ledger.Sessions {
+		cloned := SessionFact{
+			ID:          orig.ID,
+			ParentID:    orig.ParentID,
+			Source:      orig.Source,
+			User:        orig.User,
+			Invocations: append([]InvocationFact(nil), orig.Invocations...),
+			Tools:       append([]SessionToolFact(nil), orig.Tools...),
+			Events:      nil,
+			Anomalies:   bySession[orig.ID],
 		}
-	}
-	for i := range sessions {
-		if src, ok := origSourceByID[sessions[i].ID]; ok && src != "" {
-			sessions[i].Source = src
+		if cloned.Anomalies == nil {
+			cloned.Anomalies = []Anomaly{}
 		}
-		sessions[i].Anomalies = bySession[sessions[i].ID]
-		if sessions[i].Anomalies == nil {
-			sessions[i].Anomalies = []Anomaly{}
-		}
+		sessions[i] = cloned
 	}
 	ledger.Sessions = sessions
 	ledger.Anomalies = ticket
@@ -361,9 +351,9 @@ func reworkEvidenceKey(first, second string, cycles int64) string {
 // minimal alternating child-role sequence that reaches the recorded cycle count.
 func reworkRoleEvidence(ledger AgenticFactLedger, events []EventFact) []reworkEvidence {
 	childParent := make(map[string]string)
-	for _, invocation := range ledger.InvocationFacts() {
-		if invocation.ID != "" && invocation.ParentID != nil && strings.TrimSpace(*invocation.ParentID) != "" {
-			childParent[invocation.ID] = strings.TrimSpace(*invocation.ParentID)
+	for _, session := range ledger.Sessions {
+		if session.ID != "" && session.ParentID != nil && strings.TrimSpace(*session.ParentID) != "" {
+			childParent[session.ID] = strings.TrimSpace(*session.ParentID)
 		}
 	}
 	type roleEvent struct {

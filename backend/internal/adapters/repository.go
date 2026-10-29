@@ -449,50 +449,11 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		mig = &domMig
 	}
 
-	var sessions []domain.SessionFact
-	droppedTools := 0
-	if len(raw.Sessions) > 0 {
-		dto := AgenticFactLedgerDTO{Sessions: raw.Sessions}
-		if err := dto.Validate(); err != nil {
-			return nil, fmt.Errorf("loading existing ledger at %s: %w", path, err)
-		}
-		sessions = dto.ToDomain().Sessions
-	} else {
-		var invocations []domain.InvocationFact
-		var tools []domain.ToolFact
-		var events []domain.EventFact
-		for _, dto := range raw.Invocations {
-			invocations = append(invocations, dto.ToDomain())
-		}
-		for _, dto := range raw.Tools {
-			if strings.TrimSpace(dto.SessionID) == "" {
-				droppedTools++
-				continue
-			}
-			tools = append(tools, dto.ToDomain())
-		}
-		for _, dto := range raw.Events {
-			events = append(events, dto.ToDomain())
-		}
-		var buildErr error
-		sessions, buildErr = domain.SessionsFromFacts(invocations, tools, events)
-		if buildErr != nil {
-			return nil, fmt.Errorf("loading legacy ledger at %s: %w", path, buildErr)
-		}
+	dto := AgenticFactLedgerDTO{Sessions: raw.Sessions}
+	if err := dto.Validate(); err != nil {
+		return nil, fmt.Errorf("loading existing ledger at %s: %w", path, err)
 	}
-	if droppedTools > 0 {
-		note := fmt.Sprintf("Removed %d unscoped legacy tool aggregate row(s) during schema v4 migration; their original session attribution is unavailable. Re-extract from source logs to recover them.", droppedTools)
-		if mig == nil {
-			mig = &domain.MigrationInfo{SchemaVersion: domain.CurrentSchemaVersion, Status: domain.MigrationStatusPartial, StepsCompleted: []string{}, StepsPending: []string{}, Notes: note}
-		} else {
-			copy := *mig
-			if copy.Notes != "" {
-				copy.Notes += "; "
-			}
-			copy.Notes += note
-			mig = &copy
-		}
-	}
+	sessions := dto.ToDomain().Sessions
 
 	result := &ExistingLedgerFacts{
 		SchemaVersion: raw.SchemaVersion,

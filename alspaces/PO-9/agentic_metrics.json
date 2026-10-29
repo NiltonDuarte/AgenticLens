@@ -20,13 +20,11 @@
     {
       "id": "ses_ea625a1f0ffe2kLBQaSLXc1QYO",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_ea625a1f0ffe2kLBQaSLXc1QYO",
-          "parent_id": null,
           "role": "general",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-20T15:07:25.957000+00:00",
           "completed_at": "2026-10-20T21:01:12.351000+00:00",
           "active_duration_seconds": 2202,
@@ -141,7 +139,7 @@
         "tool_name": "grep",
         "count": 3,
         "total_calls": 13,
-        "threshold": "\u003e20%",
+        "threshold": ">20%",
         "failure_rate_pct": 23.1
       }
     }

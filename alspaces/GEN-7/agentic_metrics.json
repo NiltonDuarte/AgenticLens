@@ -20,13 +20,11 @@
     {
       "id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
-          "parent_id": null,
           "role": "general",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-23T14:15:21.283000+00:00",
           "completed_at": "2026-10-26T09:21:45.698000+00:00",
           "active_duration_seconds": 3042,
