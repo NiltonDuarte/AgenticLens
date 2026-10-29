@@ -14,7 +14,7 @@ Reviewed the current uncommitted iteration 02 delta against `334fe1e9fa14f29f87c
 - `TraceWaterfallProps.onSelectAnomaly` is an optional readonly, concretely typed callback. `web/src/views/TicketDeepDive.tsx:172` clears the selected event, selects the supplied anomaly, and opens the existing view-owned drawer. The former sibling list is removed. Drawer mounting, Close/Escape behavior, and event inspection remain in the view.
 - The raw no-event/no-anomaly branch at `TraceWaterfall.tsx:285` preserves the immediately visible genuine empty state without filters or anomaly placeholders. Populated traces use the existing timeline and filter-empty message, including when every event is filtered out; neither case renders an aggregate fallback list.
 
-The proposed plan described an `emptyTraceContent` slot and a collapsed no-anomaly empty state. The concrete handoff explicitly calls for the typed anomaly callback, and this implementation retains the existing immediately visible no-anomaly empty state. These implementation differences satisfy the original anomaly-placement request and preserve the frozen contract's truthful empty-state and inspection boundaries.
+The iteration 02 plan calls for the typed anomaly callback and preservation of the immediately visible no-anomaly empty state. The implementation follows those decisions and preserves the frozen contract's truthful empty-state and inspection boundaries.
 
 ## State, tests, and engineering standards
 
@@ -40,7 +40,7 @@ Execution results below are supplied evidence, not commands run by this reviewer
 - Parent: T3 browser checks used the actual Vite frontend and real local backend with a canonical summary-only fixture at widths 1280 and 390. They confirmed one nested list, collapse/reopening behavior, one anomaly versus three diagnostic failures, correct once-only mouse/Enter/Space inspection, visible focus, stable focused toggle, and no card overflow or console errors.
 - Parent: production `npm run build` completed. This reviewer independently checked the resulting assets statically as described above.
 
-Full `make` has **not yet run for this delta**. The parent will perform it after the implementation commit and synchronization with main; this approval does not claim that remaining delivery gate has passed.
+Full `make` was pending when this static review was completed. The parent's subsequent verification after the implementation commit and synchronization with main is recorded in `alspaces/FIX-12/SUMMARY.md`; these later execution results are separate from this review's static approval.
 
 No tests, builds, or profiling were executed by this reviewer. Only this `REVIEW.md` was written; no application/test files, other workspace artifacts, commits, telemetry, pushes, or PR creation were performed. Existing PR #52 was registered with this thread through the required linking tool.
 
