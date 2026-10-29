@@ -32,8 +32,7 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { getRoleColor, getModelColor } from '../utils/theme';
 import { TraceWaterfall } from '../components/TraceWaterfall';
 import { AnomalyDrawer } from '../components/AnomalyDrawer';
-import { findMatchingAnomaly, formatAnomaly, rebindAnomaly } from '../domain/anomalies';
-import { AnomalyBadge } from '../components/AnomalyBadge';
+import { findMatchingAnomaly, rebindAnomaly } from '../domain/anomalies';
 import { InfoTooltip } from '../components/InfoTooltip';
 
 export interface TicketDeepDiveProps {
@@ -168,6 +167,11 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     setSelection({ event, anomaly: anomaly ?? null });
     const isFlagged = Boolean(anomaly) || event.status === 'error' || event.status === 'failed';
     setIsDrawerOpen(isFlagged);
+  };
+
+  const handleSelectAnomaly = (anomaly: Anomaly) => {
+    setSelection({ event: null, anomaly });
+    setIsDrawerOpen(true);
   };
 
   if (loading) {
@@ -638,43 +642,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         anomalies={traceAnomalies}
         selectedEvent={selectedEvent}
         onSelectEvent={handleSelectEvent}
+        onSelectAnomaly={handleSelectAnomaly}
       />
-      {events.length === 0 && traceAnomalies.length > 0 && (
-        <div className="legacy-anomalies-section" data-testid="workspace-anomalies">
-          <span className="legacy-anomalies-heading">Detected Workspace Anomalies:</span>
-          <div className="legacy-anomalies-list">
-            {traceAnomalies.map((a, i) => {
-              const display = formatAnomaly(a);
-              return (
-                <div
-                  key={`${a.rule_id}-${i}`}
-                  className="legacy-anomaly-item"
-                  onClick={() => {
-                    setSelection({ event: null, anomaly: a });
-                    setIsDrawerOpen(true);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelection({ event: null, anomaly: a });
-                      setIsDrawerOpen(true);
-                    }
-                  }}
-                  aria-label={`Inspect anomaly: ${display.title}`}
-                >
-                  <div className="legacy-anomaly-info">
-                    <span className="legacy-anomaly-title">{display.title}</span>
-                    <span className="legacy-anomaly-desc">{display.description}</span>
-                  </div>
-                  <AnomalyBadge severity={a.severity} label={a.severity} size="sm" />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Row 7: Session Thread Logs */}
       <ThreadViewer threads={ledger.threads} />

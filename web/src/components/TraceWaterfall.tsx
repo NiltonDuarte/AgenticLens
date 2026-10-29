@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
 import { formatTokensK } from '../domain/formatters';
 import { rebindEvent, sortEvents } from '../domain/events';
@@ -13,6 +13,7 @@ import {
   isToolFailureAnomalyRule,
   matchesAnomaly,
   findMatchingAnomaly,
+  formatAnomaly,
   type AnomalyRule,
   type ToolFailureAnomalyRule,
 } from '../domain/anomalies';
@@ -31,6 +32,7 @@ export interface TraceWaterfallProps {
   readonly anomalies?: readonly Anomaly[] | undefined;
   readonly selectedEvent?: EventFact | null | undefined;
   readonly onSelectEvent?: ((event: EventFact, anomaly?: Anomaly | undefined) => void) | undefined;
+  readonly onSelectAnomaly?: ((anomaly: Anomaly) => void) | undefined;
   readonly isHydrated?: boolean | undefined;
   readonly dataSource?: DataSource | undefined;
   readonly defaultExpanded?: boolean | undefined;
@@ -71,6 +73,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   anomalies,
   selectedEvent,
   onSelectEvent,
+  onSelectAnomaly,
   isHydrated = false,
   dataSource = 'committed_ledger',
   defaultExpanded = false,
@@ -86,6 +89,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   } | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const waterfallBodyId = useId();
 
   const activeSelectedEvent = selectedEvent !== undefined
     ? selectedEvent
@@ -278,7 +282,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     selectedAnomalies,
   ]);
 
-  if (!events || events.length === 0) {
+  if ((!events || events.length === 0) && (!anomalies || anomalies.length === 0)) {
     return (
       <div className="trace-waterfall-card" data-testid="trace-waterfall-card">
         <div className="waterfall-header">
@@ -316,21 +320,23 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
           totalAnomaliesCount === 1 ? 'Anomaly' : 'Anomalies'
         }`;
 
-  // Collapsed View
-  if (!isWaterfallExpanded) {
-    return (
-      <div className="trace-waterfall-card trace-waterfall-collapsed" data-testid="trace-waterfall-collapsed">
-        <div className="waterfall-summary-bar">
-          <div className="waterfall-summary-left">
-            <h3 className="waterfall-title">Execution Trace Waterfall</h3>
-            <span
-              className={`waterfall-source-badge ${hasLocalSource ? 'source-hydrated' : 'source-offline'}`}
-              data-testid="waterfall-source-badge"
-            >
-              {sourceLabel}
-            </span>
-          </div>
+  const renderCard = (body?: React.ReactNode) => (
+    <div
+      className={`trace-waterfall-card${isWaterfallExpanded ? '' : ' trace-waterfall-collapsed'}`}
+      data-testid={isWaterfallExpanded ? 'trace-waterfall-card' : 'trace-waterfall-collapsed'}
+    >
+      <div className="waterfall-summary-bar">
+        <div className="waterfall-summary-left">
+          <h3 className="waterfall-title">Execution Trace Waterfall</h3>
+          <span
+            className={`waterfall-source-badge ${hasLocalSource ? 'source-hydrated' : 'source-offline'}`}
+            data-testid="waterfall-source-badge"
+          >
+            {sourceLabel}
+          </span>
+        </div>
 
+        {(!isWaterfallExpanded || totalEventsCount === 0) && (
           <div className="waterfall-summary-metrics">
             <span className="waterfall-summary-stat mono" data-testid="waterfall-event-count">
               {totalEventsCount} Events Recorded
@@ -344,50 +350,73 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
               {issuesSummaryText}
             </span>
           </div>
+        )}
 
-          <div className="waterfall-summary-right">
-            <button
-              type="button"
-              className="waterfall-toggle-btn"
-              data-testid="waterfall-expand-btn"
-              aria-expanded="false"
-              onClick={() => setIsWaterfallExpanded(true)}
-            >
-              Expand Trace Waterfall
-            </button>
-          </div>
+        <div className="waterfall-summary-right">
+          <button
+            type="button"
+            className="waterfall-toggle-btn"
+            data-testid={isWaterfallExpanded ? 'waterfall-collapse-btn' : 'waterfall-expand-btn'}
+            aria-expanded={isWaterfallExpanded}
+            aria-controls={waterfallBodyId}
+            onClick={() => setIsWaterfallExpanded((expanded) => !expanded)}
+          >
+            {isWaterfallExpanded ? 'Collapse' : 'Expand'} Trace Waterfall
+          </button>
         </div>
       </div>
+
+      <div id={waterfallBodyId} className="waterfall-body" hidden={!isWaterfallExpanded}>
+        {body}
+      </div>
+    </div>
+  );
+
+  if (!isWaterfallExpanded) return renderCard();
+
+  if (totalEventsCount === 0) {
+    return renderCard(
+      <>
+        <div className="trace-empty-state">
+          Zero chronological events recorded for this execution trace.
+        </div>
+        <div className="legacy-anomalies-section" data-testid="workspace-anomalies">
+          <span className="legacy-anomalies-heading">Detected Workspace Anomalies:</span>
+          <div className="legacy-anomalies-list">
+            {anomalies?.map((anomaly, index) => {
+              const display = formatAnomaly(anomaly);
+              return (
+                <button
+                  key={`${anomaly.rule_id}-${index}`}
+                  type="button"
+                  className="legacy-anomaly-item"
+                  onClick={() => onSelectAnomaly?.(anomaly)}
+                  aria-label={`Inspect anomaly: ${display.title}`}
+                >
+                  <span className="legacy-anomaly-info">
+                    <span className="legacy-anomaly-title">{display.title}</span>
+                    <span className="legacy-anomaly-desc">{display.description}</span>
+                  </span>
+                  <AnomalyBadge severity={anomaly.severity} label={anomaly.severity} size="sm" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </>
     );
   }
 
-  // Expanded Full View
-  return (
-    <div className="trace-waterfall-card" data-testid="trace-waterfall-card">
+  return renderCard(
+    <>
       <div className="waterfall-header">
         <div className="waterfall-title-group">
-          <h3 className="waterfall-title">Execution Trace Waterfall</h3>
-          <span
-            className={`waterfall-source-badge ${hasLocalSource ? 'source-hydrated' : 'source-offline'}`}
-            data-testid="waterfall-source-badge"
-          >
-            {sourceLabel}
-          </span>
           <span className="waterfall-counter">
             Showing {filteredEvents.length} of {events.length} events
           </span>
           <span className="waterfall-hint">
             Click any error or anomaly to inspect failure details
           </span>
-          <button
-            type="button"
-            className="waterfall-toggle-btn"
-            data-testid="waterfall-collapse-btn"
-            aria-expanded="true"
-            onClick={() => setIsWaterfallExpanded(false)}
-          >
-            Collapse Trace Waterfall
-          </button>
         </div>
 
         {/* Filter Toolbar */}
@@ -680,6 +709,6 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
           })}
         </div>
       )}
-    </div>
+    </>
   );
 };

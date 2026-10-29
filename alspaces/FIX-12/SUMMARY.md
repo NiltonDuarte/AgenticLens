@@ -18,8 +18,11 @@
 - Reconciled selections update the waterfall and open inspector, including events without IDs. Obsolete responses are ignored.
 - Legacy metadata is informational, and empty traces retain anomaly inspection, threads, and artifacts.
 - Updated committed-ledger source and payload availability copy; regenerated embedded frontend assets.
+- Iteration 02 places summary-only workspace anomalies inside the waterfall's expanded body, with zero-event counts and anomaly totals in the collapsed card. Native inspection buttons retain the view-owned drawer and keyboard access.
 
 ## Verification
+
+### Iteration 01
 
 - Focused frontend: 230 tests passed; typecheck and lint passed.
 - Focused Go race tests: domain, adapters, HTTP, and live packages passed.
@@ -27,11 +30,19 @@
 - Embedded asset package test passed; embedded assets match `web/dist` byte-for-byte.
 - `git diff --check` passed. Reviewer verdict: APPROVED, with no remaining findings.
 
+### Iteration 02
+
+- Focused frontend: `npm test -- src/components/TraceWaterfall.test.tsx src/views/TicketDeepDive.test.tsx` passed all 137 tests (78 component, 59 view). Typecheck and lint passed.
+- Browser verification at widths 1280 and 390 confirmed nested placement, collapse/reopen visibility, accurate anomaly counts, mouse/Enter/Space inspection, visible keyboard focus, and no card overflow or console errors.
+- `npm run build` passed; regenerated frontend and embedded asset trees match byte-for-byte.
+- Full repository verification after upstream synchronization and the iteration review are pending.
+
 ## Delivery
 
 - Ticket: FIX-12; conventional type: `fix`.
 - Implementation, test, and review artifacts are under this ticket workspace.
-- PR URL and final telemetry will be recorded after branch synchronization and delivery.
+- Pull request: https://github.com/NiltonDuarte/AgenticLens/pull/52.
+- Iteration 02 telemetry and delivery will follow final verification and review.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 6

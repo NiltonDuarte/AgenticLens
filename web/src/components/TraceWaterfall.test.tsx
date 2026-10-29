@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { TraceWaterfall, matchesAnomaly, findMatchingAnomaly } from './TraceWaterfall';
 import type { EventFact, Anomaly } from '../domain/types';
 
@@ -137,11 +138,141 @@ describe('TraceWaterfall Component', () => {
     },
   ];
 
-  it('renders empty message when events array is empty', () => {
-    render(<TraceWaterfall events={[]} />);
+  it.each([undefined, []])('renders an immediately visible empty card without anomalies (%s)', (anomalies) => {
+    render(<TraceWaterfall events={[]} anomalies={anomalies} />);
     expect(
       screen.getByText('Zero chronological events recorded for this execution trace.')
-    ).toBeInTheDocument();
+    ).toBeVisible();
+    expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded');
+    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
+    expect(screen.queryByTestId('trace-waterfall-collapsed')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Trace Waterfall/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Filter events by type' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
+  });
+
+  describe('summary-only anomaly disclosure', () => {
+    it.each([
+      ['committed_ledger', false, 'Source: Committed Ledger'],
+      ['local_sqlite', true, 'Source: Local SQLite'],
+      ['local_codex', true, 'Source: Local Codex'],
+    ] as const)('keeps %s summaries and truthful counts inside the disclosure across reopening', async (dataSource, isHydrated, label) => {
+      const user = userEvent.setup();
+      const onSelectEvent = vi.fn();
+      const onSelectAnomaly = vi.fn();
+      const anomalies: readonly Anomaly[] = [...sampleAnomalies, {
+        rule_id: 'CONTEXT_SATURATION_SPIKE', severity: 'CRITICAL',
+        context: { turn: 8, token_delta: 50000, count: 50 },
+      }];
+      render(<TraceWaterfall events={[]} anomalies={anomalies} dataSource={dataSource} isHydrated={isHydrated}
+        onSelectEvent={onSelectEvent} onSelectAnomaly={onSelectAnomaly} />);
+
+      const toggle = screen.getByRole('button', { name: 'Expand Trace Waterfall' });
+      const bodyId = toggle.getAttribute('aria-controls');
+      expect(bodyId).toBeTruthy();
+      const body = document.getElementById(bodyId!);
+      expect(body).toBeInTheDocument();
+      expect(body).not.toBeVisible();
+      expect(toggle).toHaveAttribute('type', 'button');
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded');
+      expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('Zero Errors, 2 Anomalies');
+      expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent(label);
+      expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+      expect(screen.queryByText('Zero chronological events recorded for this execution trace.')).not.toBeInTheDocument();
+      expect(screen.getAllByRole('button')).toEqual([toggle]);
+
+      await user.tab();
+      expect(toggle).toHaveFocus();
+      await user.keyboard('{Enter}');
+      const card = screen.getByTestId('trace-waterfall-card');
+      expect(screen.getByRole('button', { name: 'Collapse Trace Waterfall' })).toBe(toggle);
+      expect(toggle).toHaveFocus();
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(body).toBeVisible();
+      expect(card).toContainElement(screen.getByTestId('workspace-anomalies'));
+      expect(body).toContainElement(screen.getByTestId('workspace-anomalies'));
+      expect(within(card).getByText('Zero chronological events recorded for this execution trace.')).toBeVisible();
+      expect(within(card).getAllByRole('button', { name: /^Inspect anomaly:/ })).toHaveLength(2);
+      expect(within(card).getByText('Detected Workspace Anomalies:')).toBeVisible();
+      expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent(label);
+      expect(screen.queryByRole('group', { name: 'Filter events by type' })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('trace-role-filter')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('trace-tool-filter')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('trace-anomaly-filter')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(/timeline-item-/)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('unhydrated-notice')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /payload for turn/ })).not.toBeInTheDocument();
+
+      await user.keyboard(' ');
+      expect(toggle).toHaveFocus();
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(toggle).toHaveAttribute('aria-controls', bodyId);
+      expect(document.getElementById(bodyId!)).toBe(body);
+      expect(body).not.toBeVisible();
+      expect(screen.getAllByRole('button')).toEqual([toggle]);
+      expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Inspect anomaly:/ })).not.toBeInTheDocument();
+      expect(screen.queryByText('Zero chronological events recorded for this execution trace.')).not.toBeInTheDocument();
+
+      await user.click(toggle);
+      expect(screen.getAllByTestId('workspace-anomalies')).toHaveLength(1);
+      expect(card).toContainElement(screen.getByTestId('workspace-anomalies'));
+      expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('Zero Errors, 2 Anomalies');
+      expect(onSelectEvent).not.toHaveBeenCalled();
+      expect(onSelectAnomaly).not.toHaveBeenCalled();
+    });
+
+    it('honors defaultExpanded and safely activates native anomaly buttons without a callback', async () => {
+      const user = userEvent.setup();
+      render(<TraceWaterfall events={[]} anomalies={sampleAnomalies} defaultExpanded={true} />);
+      const toggle = screen.getByRole('button', { name: 'Collapse Trace Waterfall' });
+      const anomaly = screen.getByRole('button', { name: /^Inspect anomaly: Tool retry streak/ });
+      expect(anomaly.tagName).toBe('BUTTON');
+      expect(anomaly).toHaveAttribute('type', 'button');
+      expect(screen.getByText('Zero chronological events recorded for this execution trace.')).toBeVisible();
+      await user.click(anomaly);
+      await user.keyboard('{Enter}');
+      await user.keyboard(' ');
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await user.click(toggle);
+      expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+    });
+
+    it('forwards each click, Enter, and Space activation exactly once without selecting an event', async () => {
+      const user = userEvent.setup();
+      const onSelectAnomaly = vi.fn();
+      const onSelectEvent = vi.fn();
+      render(<TraceWaterfall events={[]} anomalies={sampleAnomalies} defaultExpanded={true}
+        onSelectAnomaly={onSelectAnomaly} onSelectEvent={onSelectEvent} />);
+      const anomaly = screen.getByRole('button', { name: /^Inspect anomaly: Tool retry streak/ });
+      await user.click(anomaly);
+      expect(onSelectAnomaly).toHaveBeenCalledTimes(1);
+      await user.keyboard('{Enter}');
+      expect(onSelectAnomaly).toHaveBeenCalledTimes(2);
+      await user.keyboard(' ');
+      expect(onSelectAnomaly).toHaveBeenCalledTimes(3);
+      expect(onSelectAnomaly.mock.calls).toEqual([[sampleAnomalies[0]], [sampleAnomalies[0]], [sampleAnomalies[0]]]);
+      expect(onSelectEvent).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Collapse Trace Waterfall' })).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('associates each disclosure with its own body', () => {
+      render(<>
+        <TraceWaterfall events={[]} anomalies={sampleAnomalies} />
+        <TraceWaterfall events={[]} anomalies={sampleAnomalies} />
+      </>);
+      const targets = screen.getAllByRole('button', { name: 'Expand Trace Waterfall' })
+        .map((toggle) => toggle.getAttribute('aria-controls'));
+      expect(new Set(targets).size).toBe(2);
+      for (const target of targets) {
+        expect(target).toBeTruthy();
+        expect(document.getElementById(target!)).toBeInTheDocument();
+      }
+    });
   });
 
   it('renders collapsed summary bar by default with counts and expands when clicked', () => {
@@ -159,6 +290,8 @@ describe('TraceWaterfall Component', () => {
     fireEvent.click(expandBtn);
     expect(screen.queryByTestId('trace-waterfall-collapsed')).not.toBeInTheDocument();
     expect(screen.getByTestId('waterfall-collapse-btn')).toBeInTheDocument();
+    expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Inspect anomaly:/ })).not.toBeInTheDocument();
   });
 
   it('renders clean execution badge in collapsed view when no errors or anomalies exist', () => {
@@ -1139,6 +1272,9 @@ describe('TraceWaterfall Component', () => {
 
         expect(screen.getByText('No events match the selected filters.')).toBeInTheDocument();
         expect(screen.getByText(/Showing 0 of 10 events/)).toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Inspect anomaly:/ })).not.toBeInTheDocument();
+        expect(screen.queryByText('Zero chronological events recorded for this execution trace.')).not.toBeInTheDocument();
 
         // Recover on 'all' via 'No filter'
         fireEvent.click(within(container as HTMLElement).getByRole('checkbox', { name: 'No filter' }));
@@ -2110,8 +2246,12 @@ describe('TraceWaterfall Component', () => {
       expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
     });
 
-    it('expanding reveals filters and timeline; collapsing hides them', () => {
-      render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} />);
+    it('expanding reveals filters and timeline; collapsing preserves filters, selection, and payload expansion', async () => {
+      const user = userEvent.setup();
+      const onSelectEvent = vi.fn();
+      const onSelectAnomaly = vi.fn();
+      render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies}
+        onSelectEvent={onSelectEvent} onSelectAnomaly={onSelectAnomaly} />);
 
       // 1. Initially collapsed
       expect(screen.getByTestId('trace-waterfall-collapsed')).toBeInTheDocument();
@@ -2119,7 +2259,7 @@ describe('TraceWaterfall Component', () => {
 
       // 2. Expand
       const expandBtn = screen.getByTestId('waterfall-expand-btn');
-      fireEvent.click(expandBtn);
+      await user.click(expandBtn);
 
       // Collapsed summary gone; full waterfall revealed
       expect(screen.queryByTestId('trace-waterfall-collapsed')).not.toBeInTheDocument();
@@ -2132,18 +2272,36 @@ describe('TraceWaterfall Component', () => {
       expect(screen.getByRole('button', { name: 'Show only errors and anomalies' })).toBeInTheDocument();
 
       // Switch to All Events to reveal all timeline turns
-      fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+      await user.click(screen.getByRole('button', { name: 'All Events' }));
       expect(screen.getByText('Turn 1')).toBeInTheDocument();
       expect(screen.getByText('Turn 2')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'View payload for turn 2' }));
+      await user.click(screen.getByTestId('timeline-item-3'));
+      expect(screen.getByTestId('payload-details-2')).toBeInTheDocument();
+      expect(screen.getByTestId('timeline-item-3')).toHaveClass('selected');
+      expect(onSelectEvent).toHaveBeenCalledTimes(1);
 
       // 3. Collapse again
-      fireEvent.click(collapseBtn);
+      await user.click(collapseBtn);
 
       // Full view hidden; collapsed summary restored
       expect(screen.getByTestId('trace-waterfall-collapsed')).toBeInTheDocument();
       expect(screen.queryByTestId('waterfall-collapse-btn')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'All Events' })).not.toBeInTheDocument();
       expect(screen.queryByText('Turn 1')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /payload for turn/ })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('payload-details-2')).not.toBeInTheDocument();
+
+      await user.click(screen.getByTestId('waterfall-expand-btn'));
+      expect(screen.getByRole('button', { name: 'All Events' })).toHaveClass('active');
+      expect(screen.getAllByTestId(/timeline-item-/)).toHaveLength(4);
+      expect(screen.getByTestId('timeline-item-3')).toHaveClass('selected');
+      expect(screen.getByTestId('payload-details-2')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Hide payload for turn 2' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Hide payload for turn 3' })).toBeInTheDocument();
+      expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+      expect(onSelectEvent).toHaveBeenCalledTimes(1);
+      expect(onSelectAnomaly).not.toHaveBeenCalled();
     });
 
     it('anomaly matching: TOOL_RETRY_STREAK must NOT match a completed event', () => {
@@ -2288,8 +2446,10 @@ describe('TraceWaterfall Component', () => {
     it('copy ID button copies debug identifier and shows Copied feedback', async () => {
       vi.useFakeTimers();
       const writeTextMock = vi.fn().mockResolvedValue(undefined);
-      Object.assign(navigator, {
-        clipboard: {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        writable: true,
+        value: {
           writeText: writeTextMock,
         },
       });
@@ -2352,8 +2512,10 @@ describe('TraceWaterfall Component', () => {
     it('copies Layer 3 message turn prompt when non-tool_call event is copied', async () => {
       vi.useFakeTimers();
       const writeTextMock = vi.fn().mockResolvedValue(undefined);
-      Object.assign(navigator, {
-        clipboard: {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        writable: true,
+        value: {
           writeText: writeTextMock,
         },
       });
@@ -2400,8 +2562,10 @@ describe('TraceWaterfall Component', () => {
     it('copies Layer 1 prompt with streak details for tool_call events with associated retry anomaly', async () => {
       vi.useFakeTimers();
       const writeTextMock = vi.fn().mockResolvedValue(undefined);
-      Object.assign(navigator, {
-        clipboard: {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        writable: true,
+        value: {
           writeText: writeTextMock,
         },
       });

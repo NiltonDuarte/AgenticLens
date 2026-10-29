@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { TicketDeepDive } from './TicketDeepDive';
 import * as apiClient from '../api/client';
 import { type Anomaly, type EventFact } from '../types/telemetry';
@@ -174,6 +175,7 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
     });
 
     it('rebinds an inspected summary to updated anomaly context while enrichment remains event-free', async () => {
+        const user = userEvent.setup();
         const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
         const anomaly: Anomaly = {
             rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING',
@@ -184,7 +186,10 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         } });
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
         render(<TicketDeepDive selectedTicketId="AL-1" />);
-        fireEvent.click(await screen.findByRole('button', { name: /Inspect anomaly: Tool retry streak/ }));
+        await user.click(await screen.findByRole('button', { name: 'Expand Trace Waterfall' }));
+        const card = screen.getByTestId('trace-waterfall-card');
+        expect(card).toContainElement(screen.getByTestId('workspace-anomalies'));
+        await user.click(within(card).getByRole('button', { name: /Inspect anomaly: Tool retry streak/ }));
         const inspector = screen.getByRole('dialog');
         expect(inspector).toHaveTextContent('3 consecutive errors');
         await act(async () => pending.resolve({ data: {
@@ -194,6 +199,97 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         expect(screen.getByRole('dialog')).toBe(inspector);
         expect(inspector).toHaveTextContent('6 consecutive errors');
         expect(within(inspector).getByText('CRITICAL')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Collapse Trace Waterfall' })).toHaveAttribute('aria-expanded', 'true');
+        expect(card).toContainElement(screen.getByTestId('workspace-anomalies'));
+        expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('Zero Errors, 1 Anomaly');
+        expect(within(card).getByRole('button', { name: /Inspect anomaly: Tool retry streak/ })).toHaveTextContent('CRITICAL');
+        expect(within(inspector).queryByText('Timestamp')).not.toBeInTheDocument();
+        expect(within(inspector).queryByTestId('drawer-tool-output-section')).not.toBeInTheDocument();
+    });
+
+    it.each([false, true])('preserves expanded=%s when an event-free summary receives event enrichment', async (expanded) => {
+        const user = userEvent.setup();
+        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
+        const anomaly: Anomaly = {
+            rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING',
+            context: { session_id: recorded[0]!.session_id, tool_name: 'bash', count: 3 },
+        };
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+            ...makeDetail('AL-1', []), anomalies: [anomaly],
+        } });
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded'));
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+        if (expanded) {
+            await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+            await user.click(screen.getByRole('button', { name: /Inspect anomaly: Tool retry streak/ }));
+        }
+        const inspector = screen.queryByRole('dialog');
+        const toggle = screen.getByRole('button', { name: `${expanded ? 'Collapse' : 'Expand'} Trace Waterfall` });
+        const bodyId = toggle.getAttribute('aria-controls');
+        await act(async () => pending.resolve({ data: {
+            ticket_id: 'AL-1', is_hydrated: true, data_source: 'local_codex',
+            events: [{ ...recorded[0]!, tool_output: 'Enriched failure diagnostics' }],
+            anomalies: [{ ...anomaly, severity: 'CRITICAL', context: { ...anomaly.context, count: 6 } }],
+        } }));
+
+        expect(screen.getByRole('button', { name: `${expanded ? 'Collapse' : 'Expand'} Trace Waterfall` })).toBe(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', String(expanded));
+        expect(toggle).toHaveAttribute('aria-controls', bodyId);
+        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex');
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+        expect(screen.queryByText('Zero chronological events recorded for this execution trace.')).not.toBeInTheDocument();
+        if (expanded) {
+            expect(inspector).not.toBeNull();
+            expect(screen.getByRole('dialog')).toBe(inspector);
+            expect(inspector).toHaveTextContent('6 consecutive errors');
+            expect(within(inspector!).getByText('CRITICAL')).toBeInTheDocument();
+            expect(within(inspector!).queryByText('Timestamp')).not.toBeInTheDocument();
+            expect(within(inspector!).queryByTestId('drawer-tool-output-section')).not.toBeInTheDocument();
+        } else {
+            expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('1 Events Recorded');
+            expect(screen.queryByTestId('timeline-item-1')).not.toBeInTheDocument();
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            await user.click(toggle);
+        }
+        expect(within(screen.getByTestId('trace-waterfall-card')).getByTestId('timeline-item-1')).toBeVisible();
+        expect(screen.getByText('Showing 1 of 1 events')).toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+    });
+
+    it.each([false, true])('never creates a summary list for an event-bearing trace with zero filter matches (hydrated=%s)', async (isHydrated) => {
+        const user = userEvent.setup();
+        const anomaly: Anomaly = {
+            rule_id: 'CONTEXT_SATURATION_SPIKE', severity: 'WARNING', context: { turn: 999, token_delta: 50000 },
+        };
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+            ...makeDetail('AL-1', [recorded[1]!]), anomalies: [anomaly],
+        } });
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockResolvedValue({ data: {
+            ...emptyResponse().data, is_hydrated: isHydrated,
+            data_source: isHydrated ? 'local_codex' : 'committed_ledger', events: [recorded[1]!],
+        } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        await waitFor(() => expect(screen.getByTestId('waterfall-source-badge'))
+            .toHaveTextContent(isHydrated ? 'Source: Local Codex' : 'Source: Committed Ledger'));
+        expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('1 Events Recorded');
+        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+        expect(screen.getByText('No events match the selected filters.')).toBeVisible();
+        expect(screen.getByText('Showing 0 of 1 events')).toBeInTheDocument();
+        expect(screen.queryByText('Zero chronological events recorded for this execution trace.')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Inspect anomaly:/ })).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'All Events' }));
+        expect(screen.getByTestId('timeline-item-2')).toBeVisible();
+        await user.click(screen.getByRole('button', { name: 'Collapse Trace Waterfall' }));
+        expect(screen.queryByTestId('timeline-item-2')).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+        expect(screen.getByRole('button', { name: 'All Events' })).toHaveClass('active');
+        expect(screen.getByTestId('timeline-item-2')).toBeVisible();
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it.each(['local_sqlite', 'local_codex'] as const)('adds partial %s payloads without losing unmatched facts', async (source) => {
@@ -225,6 +321,7 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
     });
 
     it.each(['omitted', 'empty'])('keeps current summary-only anomalies, threads, and artifacts with %s events', async (mode) => {
+        const user = userEvent.setup();
         const detail = makeDetail('AL-1', []);
         vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
             ...detail, anomalies: [{ rule_id: 'CONTEXT_SATURATION_SPIKE', severity: 'WARNING', context: { turn: 5, token_delta: 50000 } }],
@@ -234,15 +331,33 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
             }] } },
         } });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByText('Zero chronological events recorded for this execution trace.')).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded'));
+        expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('Zero Errors, 1 Anomaly');
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+        expect(screen.queryByText('Zero chronological events recorded for this execution trace.')).not.toBeInTheDocument();
         expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
         expect(screen.getByText('Session Execution Threads')).toBeInTheDocument();
         expect(screen.getByText('ses-al1-root')).toBeInTheDocument();
         expect(screen.getByText(/Contract: AL-1/i)).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: /Inspect anomaly: Context saturation spike/ }));
+        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+        const card = screen.getByTestId('trace-waterfall-card');
+        expect(card).toContainElement(screen.getByTestId('workspace-anomalies'));
+        expect(within(card).getByText('Zero chronological events recorded for this execution trace.')).toBeVisible();
+        expect(screen.queryByRole('group', { name: 'Filter events by type' })).not.toBeInTheDocument();
+        expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Collapse Trace Waterfall' }));
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.getByText('Session Execution Threads')).toBeInTheDocument();
+        expect(screen.getByText(/Contract: AL-1/i)).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+        expect(screen.getAllByTestId('workspace-anomalies')).toHaveLength(1);
+        expect(card).toContainElement(screen.getByTestId('workspace-anomalies'));
+        await user.click(within(card).getByRole('button', { name: /Inspect anomaly: Context saturation spike/ }));
         expect(screen.getByRole('dialog')).toHaveTextContent('CONTEXT_SATURATION_SPIKE');
-        fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-        fireEvent.click(screen.getByRole('button', { name: /summary\.md/i }));
+        await user.click(screen.getByRole('button', { name: 'Close' }));
+        await user.click(screen.getByRole('button', { name: /summary\.md/i }));
         expect(screen.getByText(/Summary: AL-1 Completed/i)).toBeInTheDocument();
     });
 
@@ -260,21 +375,35 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
     });
 
-    it('ignores ticket A enrichment after selecting ticket B and clears the prior drawer', async () => {
+    it.each(['recorded', 'summary-only'])('ignores ticket A %s enrichment after selecting ticket B and resets the drawer and disclosure', async (mode) => {
         const pendingA = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
         const bEvent: EventFact = { ...recorded[0]!, event_id: 'b-event', session_id: 'b-session', turn: 8 };
-        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: makeDetail(id, id === 'AL-2' ? [bEvent] : recorded) }));
+        const anomaly: Anomaly = {
+            rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING',
+            context: { session_id: recorded[0]!.session_id, tool_name: 'bash', turn: 1, count: 3 },
+        };
+        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: id === 'AL-2'
+            ? makeDetail(id, [bEvent])
+            : { ...makeDetail(id, mode === 'summary-only' ? [] : recorded), anomalies: [anomaly] },
+        }));
         vi.mocked(apiClient.fetchWorkspaceEvents).mockImplementation((id) => id === 'AL-1' ? pendingA.promise : Promise.resolve({ data: {
             ticket_id: 'AL-2', is_hydrated: true, data_source: 'local_codex', events: [{ ...bEvent, tool_output: 'B details' }],
         } }));
         const { rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
+        await waitFor(() => expect(screen.getByTestId('waterfall-event-count'))
+            .toHaveTextContent(`${mode === 'summary-only' ? 0 : 2} Events Recorded`));
         fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(screen.getByTestId('timeline-item-1'));
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        fireEvent.click(mode === 'summary-only'
+            ? within(screen.getByTestId('trace-waterfall-card')).getByRole('button', { name: /Inspect anomaly: Tool retry streak/ })
+            : screen.getByTestId('timeline-item-1'));
+        expect(screen.getByRole('dialog')).toHaveTextContent('TOOL_RETRY_STREAK');
         rerender(<TicketDeepDive selectedTicketId="AL-2" />);
         await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex'));
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.getByTestId('waterfall-expand-btn')).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByTestId('timeline-item-8')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+        expect(screen.queryByText('Detected Workspace Anomalies:')).not.toBeInTheDocument();
         fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
         fireEvent.click(screen.getByTestId('timeline-item-8'));
         await act(async () => pendingA.resolve({ data: {
@@ -284,7 +413,10 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         expect(screen.getByText('Showing 1 of 1 events')).toBeInTheDocument();
         expect(screen.getByTestId('timeline-item-8')).toHaveClass('selected');
         expect(screen.queryByTestId('timeline-item-1')).not.toBeInTheDocument();
+        expect(screen.getByTestId('waterfall-collapse-btn')).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
         expect(screen.getByRole('dialog')).toHaveTextContent('b-session');
+        expect(screen.getByRole('dialog')).not.toHaveTextContent('TOOL_RETRY_STREAK');
         expect(screen.queryByText('A stale details')).not.toBeInTheDocument();
     });
 
@@ -301,11 +433,18 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh Data' })).toBeInTheDocument());
         fireEvent.click(screen.getByRole('button', { name: 'Refresh Data' }));
         await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
+        expect(screen.getByTestId('waterfall-expand-btn')).toHaveAttribute('aria-expanded', 'false');
+        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
+        fireEvent.click(screen.getByTestId('timeline-item-1'));
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
         rerender(<TicketDeepDive selectedTicketId="AL-2" />);
         await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex'));
+        expect(screen.getByTestId('waterfall-expand-btn')).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         rerender(<TicketDeepDive selectedTicketId="AL-1" />);
         await waitFor(() => expect(apiClient.fetchWorkspaceById).toHaveBeenCalledTimes(4));
         await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex'));
+        expect(screen.getByTestId('waterfall-expand-btn')).toHaveAttribute('aria-expanded', 'false');
         fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
         fireEvent.click(screen.getByTestId('timeline-item-1'));
         await act(async () => pending.resolve({ data: {
@@ -1019,7 +1158,7 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('gemini-2.5-pro')).toBeInTheDocument();
     });
     describe('Waterfall, Legacy Fallback, and AnomalyDrawer Integration', () => {
-        it('renders a current summary-only trace empty state without claiming legacy schema', async () => {
+        it('renders an immediately visible current empty trace without anomalies or a legacy claim', async () => {
             vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
                 data: Object.values(mockAgenticMetricsLedgers),
             });
@@ -1040,9 +1179,16 @@ describe('TicketDeepDive View Component', () => {
             });
             expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
             expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded');
+            expect(screen.queryByTestId('waterfall-expand-btn')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
+            expect(screen.queryByRole('group', { name: 'Filter events by type' })).not.toBeInTheDocument();
+            expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
+            expect(screen.getByText('Session Execution Threads')).toBeInTheDocument();
+            expect(screen.getByText(/Contract: AL-1/i)).toBeInTheDocument();
         });
-        it('keeps aggregate anomaly inspection independent of an empty current trace', async () => {
-            const v1WithAnomalies = {
+        it.each(['click', 'Enter', 'Space'] as const)('opens the view-owned aggregate inspector by %s inside an expanded empty trace', async (activation) => {
+            const user = userEvent.setup();
+            const summaryWithAnomalies = {
                 ...withRecordedEvents(mockWorkspaceDetails['AL-1']!, []),
                 anomalies: [
                     {
@@ -1056,7 +1202,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: v1WithAnomalies,
+                data: summaryWithAnomalies,
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1067,18 +1213,43 @@ describe('TicketDeepDive View Component', () => {
                 },
             });
             render(<TicketDeepDive selectedTicketId="AL-1"/>);
-            await waitFor(() => {
-                expect(screen.getByText('Detected Workspace Anomalies:')).toBeInTheDocument();
-            });
+            await user.click(await screen.findByRole('button', { name: 'Expand Trace Waterfall' }));
+            const card = screen.getByTestId('trace-waterfall-card');
+            const list = within(card).getByTestId('workspace-anomalies');
+            expect(card).toContainElement(list);
+            expect(within(list).getByText('Detected Workspace Anomalies:')).toBeVisible();
             expect(screen.getByText('Context saturation spike (+50k tokens)')).toBeInTheDocument();
             expect(screen.getByText('CRITICAL')).toBeInTheDocument();
             expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
-            // Aggregate anomalies remain inspectable without an event selection.
-            fireEvent.click(screen.getByText('Context saturation spike (+50k tokens)'));
-            await waitFor(() => {
-                expect(screen.getByRole('dialog')).toBeInTheDocument();
-            });
-            expect(screen.getByText('CONTEXT_SATURATION_SPIKE')).toBeInTheDocument();
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            const anomaly = within(list).getByRole('button', { name: /Inspect anomaly: Context saturation spike/ });
+            if (activation === 'click') {
+                await user.click(anomaly);
+            } else {
+                anomaly.focus();
+                await user.keyboard(activation === 'Enter' ? '{Enter}' : ' ');
+            }
+            const inspector = screen.getByRole('dialog');
+            expect(card).not.toContainElement(inspector);
+            expect(inspector).toHaveTextContent('CONTEXT_SATURATION_SPIKE');
+            expect(inspector).toHaveTextContent('Turn 5');
+            expect(within(inspector).getByText('CRITICAL')).toBeInTheDocument();
+            expect(within(inspector).queryByText('Timestamp')).not.toBeInTheDocument();
+            expect(within(inspector).queryByText('Execution Duration')).not.toBeInTheDocument();
+            expect(within(inspector).queryByTestId('drawer-tool-output-section')).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Collapse Trace Waterfall' })).toHaveAttribute('aria-expanded', 'true');
+
+            await user.click(within(inspector).getByRole('button', { name: 'Close' }));
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            expect(list).toBeVisible();
+            await user.click(anomaly);
+            expect(screen.getByRole('dialog')).toHaveTextContent('CONTEXT_SATURATION_SPIKE');
+            await user.keyboard('{Escape}');
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Collapse Trace Waterfall' })).toHaveAttribute('aria-expanded', 'true');
+            await user.click(screen.getByRole('button', { name: 'Collapse Trace Waterfall' }));
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
         });
         it('renders TraceWaterfall component when viewing a ticket with populated events', async () => {
             vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
