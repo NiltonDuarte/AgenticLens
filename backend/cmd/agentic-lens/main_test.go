@@ -155,6 +155,22 @@ func setupIsolatedEmptyDB(t *testing.T) string {
 	return dbPath
 }
 
+func setIsolatedHome(t *testing.T, cmd *exec.Cmd) {
+	t.Helper()
+	homeDir := filepath.Join(t.TempDir(), "isolated-home")
+	if err := os.MkdirAll(homeDir, 0755); err != nil {
+		t.Fatalf("failed creating isolated HOME: %v", err)
+	}
+
+	env := make([]string, 0, len(os.Environ())+1)
+	for _, entry := range os.Environ() {
+		if !strings.HasPrefix(entry, "HOME=") {
+			env = append(env, entry)
+		}
+	}
+	cmd.Env = append(env, "HOME="+homeDir)
+}
+
 func TestCLIListCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
@@ -4056,12 +4072,14 @@ anomaly_thresholds:
 		genCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "MYROOT-5",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
 		genCmd.Stderr = &genStderr
@@ -4162,12 +4180,14 @@ anomaly_thresholds:
 		genCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "ROOTPRIO-1",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
 		genCmd.Stderr = &genStderr
@@ -4545,12 +4565,14 @@ func TestCLI_Invariants(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "DEV-1",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		setIsolatedHome(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
