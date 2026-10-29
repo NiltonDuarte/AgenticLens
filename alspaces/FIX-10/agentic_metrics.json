@@ -4,8 +4,8 @@
   "ticket_title": "Backfill Multi-Root Sessions and Require Explicit Command Line Fallbacks",
   "ticket_type": "fix",
   "started_at": "2026-10-28T17:44:06.801000+00:00",
-  "completed_at": "2026-10-29T10:47:31.268Z",
-  "updated_at": "2026-10-29T10:47:32.758674+00:00",
+  "completed_at": "2026-10-29T10:54:25.082Z",
+  "updated_at": "2026-10-29T10:54:25.969643+00:00",
   "code": {
     "lines_added": 3442,
     "lines_deleted": 1958,
@@ -14,7 +14,7 @@
     "prod_lines_added": 664,
     "prod_lines_deleted": 530,
     "files_changed": 68,
-    "sdlc_iterations": 40
+    "sdlc_iterations": 41
   },
   "sessions": [
     {
@@ -26,25 +26,25 @@
           "role": "RootAgent",
           "model": "gpt-6-luna",
           "started_at": "2026-10-28T23:14:32.942Z",
-          "completed_at": "2026-10-29T10:47:31.268Z",
-          "active_duration_seconds": 3507,
-          "turns": 12,
+          "completed_at": "2026-10-29T10:54:25.082Z",
+          "active_duration_seconds": 3647,
+          "turns": 13,
           "tokens": {
-            "input": 615389,
-            "output": 89007,
-            "cache_read": 39521408,
-            "reasoning": 43765,
+            "input": 634960,
+            "output": 95325,
+            "cache_read": 42510080,
+            "reasoning": 46361,
             "peak_context": 240877
           },
           "cost_usd": 0,
           "compactions": 1,
-          "user_iterations": 20
+          "user_iterations": 21
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 134,
+          "calls": 147,
           "errors": 8
         },
         {

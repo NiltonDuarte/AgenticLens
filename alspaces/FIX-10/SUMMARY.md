@@ -58,16 +58,23 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - Reviewer verdict: APPROVED (`alspaces/FIX-10/iterations/06/REVIEW.md`).
 - Documentation consistency search and `git diff --check`: PASS.
 
+## Iteration 07: Refresh the Merged AL-59 Ledger
+
+- Regenerated `alspaces/AL-59/agentic_metrics.json` from its exact Codex rollout using source-backed backfill.
+- The ledger now has a non-empty session-level user and no invocation `id`, `parent_id`, or `user` fields; its summary metrics were refreshed.
+- Workspace scanner and canonical v4 field validation passed.
+- Reviewer verdict: APPROVED (`alspaces/FIX-10/iterations/07/REVIEW.md`).
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 40
-- **Active Agent Duration:** 6h 49m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 41
+- **Active Agent Duration:** 6h 51m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 240.9k tokens (120% of 200k healthy ceiling, 11 compactions) | Subagents peak 168.4k (Coder)
 - **Role Effort Distribution (Subagents):** Coder 100.0%
 - **Subagent Turn Velocity & Thrashing:** 153.2 avg turns/run (peak: 352 turns) | Coder 153.2
 - **Test-to-Production Code Ratio:** 4.2:1 (+2,778 test lines / +664 prod lines)
 - **Code Delivered:** +3,442 / -1,958 lines across 68 code files (excluding docs)
-- **Reasoning Effort:** 446,085 reasoning tokens (58.7% of generated output)
-- **Tool Health & Self-Correction:** 1,745 tool calls (23 self-corrections, 98.7% success rate)
+- **Reasoning Effort:** 448,681 reasoning tokens (58.4% of generated output)
+- **Tool Health & Self-Correction:** 1,758 tool calls (23 self-corrections, 98.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 29 execution anomalies detected (14 CRITICAL, 15 WARNING).
@@ -110,12 +117,12 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 |---|---|---|---|---|---|---|---|---|
 | **orchestrator** | 1 | 5,261,607 | 93,224 | 52,654,100 | 90.9% | 169.2k | ELEVATED | $8.81 |
 | **coder** | 6 | 5,154,527 | 131,272 | 75,180,300 | 93.6% | 168.4k | ELEVATED | $10.94 |
-| **rootagent** | 1 | 615,389 | 89,007 | 39,521,408 | 98.5% | 240.9k | BLOATED (120%) | $0.00 |
-| **Total** | **8** | **11,031,523** | **313,503** | **167,355,808** | **93.8%** | **240.9k** | **BLOATED** | **$19.75** |
+| **rootagent** | 1 | 634,960 | 95,325 | 42,510,080 | 98.5% | 240.9k | BLOATED (120%) | $0.00 |
+| **Total** | **8** | **11,051,094** | **319,821** | **170,344,480** | **93.9%** | **240.9k** | **BLOATED** | **$19.75** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gemini-3.8-flash** | 7 | 10,416,134 | 224,496 | 127,834,400 | 92.5% | $19.75 |
-| **gpt-6-luna** | 1 | 615,389 | 89,007 | 39,521,408 | 98.5% | $0.00 |
-| **Total** | **8** | **11,031,523** | **313,503** | **167,355,808** | **93.8%** | **$19.75** |
+| **gpt-6-luna** | 1 | 634,960 | 95,325 | 42,510,080 | 98.5% | $0.00 |
+| **Total** | **8** | **11,051,094** | **319,821** | **170,344,480** | **93.9%** | **$19.75** |

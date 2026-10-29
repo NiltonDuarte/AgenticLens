@@ -7,6 +7,7 @@ Resolves telemetry backfill integrity issues and normalizes session-invocation h
 3. Schema v4 session-invocation normalization: Hoisted `user` and `parent_id` to `SessionFact`; removed synthetic invocation IDs from the schema, extractors, migration, frontend types, and persisted ledgers. Session ownership now comes from the enclosing session, with repeated model rows preserved.
 4. Legacy schema fallback elimination: Removed fallback hoisting and legacy invocation fields from DTOs and TypeScript interfaces, and normalized all 71 workspace ledgers in `alspaces/` to canonical schema v4.
 5. Ticket workflow clarification: Every task requires a ticket ID and workspace. Ad hoc tickets may omit a `plan/` specification and index entry; existing to-do specifications move to `plan/done/` when completed.
+6. Canonical ledger refresh: Regenerated the AL-59 metrics ledger from its Codex rollout after the main merge so its session user and invocation rows conform to schema v4.
 
 ## Changes
 - `backend/internal/domain/models.go`: Added `User string` to `SessionFact`; removed `ParentID` and `User` from `InvocationFact`.
