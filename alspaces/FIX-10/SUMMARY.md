@@ -45,21 +45,29 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 ## Iteration 05: Ticket and Plan Lifecycle Requirements
 
 - Updated `AGENTS.md`, `CONTRIBUTING.md`, and the standard agent policy block in `docs/SETUP_MANUAL.md` to distinguish ticketed work from ad hoc work.
-- Ad hoc tasks no longer require creating a ticket ID, specification, workspace, or ticket-specific telemetry. Ticketed tasks use the existing ticket.
+- The initial wording allowed ad hoc work without a ticket ID or workspace; iteration 06 corrects that overbroad exception.
 - Plan lifecycle now moves a matching specification to `plan/done/` only when it exists in `plan/to-do/`, and removes the ticket index entry only when present. No ticket artifacts are created to satisfy lifecycle rules.
 - Reviewer verdict: APPROVED (`alspaces/FIX-10/iterations/05/REVIEW.md`).
 - Documentation consistency search and `git diff --check`: PASS.
 
+## Iteration 06: Require Ticket IDs and Workspaces
+
+- Clarified that every task, including ad hoc work, requires a ticket ID and isolated workspace. Assign a `GEN-#` ID when no ID is provided.
+- Kept planning records optional for ad hoc tickets: move a matching existing specification to `plan/done/` and remove an index entry only when present; do not create either solely for lifecycle compliance.
+- Aligned `AGENTS.md`, `CONTRIBUTING.md`, and `docs/SETUP_MANUAL.md`.
+- Reviewer verdict: APPROVED (`alspaces/FIX-10/iterations/06/REVIEW.md`).
+- Documentation consistency search and `git diff --check`: PASS.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 37
-- **Active Agent Duration:** 6h 46m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 38
+- **Active Agent Duration:** 6h 48m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 240.9k tokens (120% of 200k healthy ceiling, 11 compactions) | Subagents peak 168.4k (Coder)
 - **Role Effort Distribution (Subagents):** Coder 100.0%
 - **Subagent Turn Velocity & Thrashing:** 153.2 avg turns/run (peak: 352 turns) | Coder 153.2
 - **Test-to-Production Code Ratio:** 4.2:1 (+2,778 test lines / +664 prod lines)
 - **Code Delivered:** +3,442 / -1,958 lines across 68 code files (excluding docs)
-- **Reasoning Effort:** 442,936 reasoning tokens (59.3% of generated output)
-- **Tool Health & Self-Correction:** 1,730 tool calls (22 self-corrections, 98.7% success rate)
+- **Reasoning Effort:** 444,679 reasoning tokens (58.9% of generated output)
+- **Tool Health & Self-Correction:** 1,735 tool calls (22 self-corrections, 98.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 29 execution anomalies detected (14 CRITICAL, 15 WARNING).
@@ -102,12 +110,12 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 |---|---|---|---|---|---|---|---|---|
 | **orchestrator** | 1 | 5,261,607 | 93,224 | 52,654,100 | 90.9% | 169.2k | ELEVATED | $8.81 |
 | **coder** | 6 | 5,154,527 | 131,272 | 75,180,300 | 93.6% | 168.4k | ELEVATED | $10.94 |
-| **rootagent** | 1 | 428,267 | 79,954 | 34,276,608 | 98.8% | 240.9k | BLOATED (120%) | $0.00 |
-| **Total** | **8** | **10,844,401** | **304,450** | **162,111,008** | **93.7%** | **240.9k** | **BLOATED** | **$19.75** |
+| **rootagent** | 1 | 440,151 | 85,318 | 35,837,056 | 98.8% | 240.9k | BLOATED (120%) | $0.00 |
+| **Total** | **8** | **10,856,285** | **309,814** | **163,671,456** | **93.8%** | **240.9k** | **BLOATED** | **$19.75** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gemini-3.8-flash** | 7 | 10,416,134 | 224,496 | 127,834,400 | 92.5% | $19.75 |
-| **gpt-6-luna** | 1 | 428,267 | 79,954 | 34,276,608 | 98.8% | $0.00 |
-| **Total** | **8** | **10,844,401** | **304,450** | **162,111,008** | **93.7%** | **$19.75** |
+| **gpt-6-luna** | 1 | 440,151 | 85,318 | 35,837,056 | 98.8% | $0.00 |
+| **Total** | **8** | **10,856,285** | **309,814** | **163,671,456** | **93.8%** | **$19.75** |

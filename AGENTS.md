@@ -6,7 +6,7 @@ Mandatory operational policies for all agents and contributors working in this r
 
 ## 1. Ticketed and Ad Hoc Work
 
-Work may be ticketed or ad hoc. Do not create a ticket, ticket specification, or ticket workspace solely to satisfy this policy. When a task is associated with an existing ticket, follow that ticket's lifecycle and workspace requirements below.
+Every task, feature, bugfix, or refactoring in this repository must have a ticket identifier and an isolated ticket workspace. A planning specification or index entry under `plan/` is not required for an ad hoc ticket.
 
 ### Configurable Workspace Root
 - Define `<WORKSPACES_DIR>` as the `workspaces.dir` value in `.agenticlens-config.yaml`.
@@ -15,21 +15,20 @@ Work may be ticketed or ad hoc. Do not create a ticket, ticket specification, or
 - Use `<WORKSPACES_DIR>` as the root for all ticket workspaces and plan paths below.
 
 ### Rules
-1. **Existing Ticket or Ad Hoc Work**:
-   - If the request identifies an existing ticket, use that ticket ID. Do not create a duplicate ticket or specification.
-   - If no ticket is identified and the task is ad hoc, proceed without creating a ticket ID, ticket specification, or ticket workspace. Ask for clarification only when ticket ownership materially affects scope or dependencies.
-   - Create or register a ticket only when the user explicitly requests ticket creation or the work must enter the project backlog.
+1. **Mandatory Ticket Identifier**:
+   - A ticket ID is required before starting any work. If the request does not provide one, ask the user or assign an ad hoc `GEN-#` identifier using the configured prefixes in `.agenticlens-config.yaml` (fallback: `GEN`).
+   - Use an existing ticket ID when one is provided; do not create a duplicate.
+   - An ad hoc ticket ID does not require a corresponding specification or entry under `<WORKSPACES_DIR>/plan/`.
 2. **Single-Ticket Exclusivity**:
    - Agents are strictly prohibited from working on more than one ticket at a time.
-   - Once work begins on a ticket, the agent is locked to that ticket. Agents must refuse any request to switch to another ticket or work on multiple tickets simultaneously within the same session. Ad hoc work has no ticket lock, but must remain a single scoped task.
+   - Once work begins on a ticket, the agent is locked to that ticket. Agents must refuse any request to switch to another ticket or work on multiple tickets simultaneously within the same session.
 3. **Prompt Steering & Iterations**:
    - Once a ticket is active, every subsequent user prompt must be interpreted as steering feedback for that specific ticket.
    - Agents must create and advance new iterations (`iterations/<NN>/`) as needed to incorporate steering directions.
 4. **Dedicated Workspace Allocation**:
-   - Ticketed work must have its isolated workspace under `<WORKSPACES_DIR>/<TICKET_ID>/`. Ad hoc work does not require a ticket workspace.
+   - Every task must have its isolated workspace under `<WORKSPACES_DIR>/<TICKET_ID>/`, including ad hoc tickets.
    - Never mix artifacts across tickets or leave untracked changes in the working directory.
 5. **Workspace Deliverables Checklist**:
-   - The following workspace deliverables apply to ticketed work; ad hoc tasks do not need a ticket workspace or ticket-specific artifacts.
    - `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
    - `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
    - `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md`: Frozen technical contract and acceptance boundaries, when required by the configured artifact list.
@@ -39,7 +38,7 @@ Work may be ticketed or ad hoc. Do not create a ticket, ticket specification, or
 6. **Telemetry Ingestion as the Final Step & Conventional Commit Type Classification**:
    - **Delayed Ingestion Mandate**: Generating telemetry must always be delayed to the very last step of the workflow. Running telemetry early causes subsequent turns, tool calls, compactions, and subagent sessions to be omitted from the ledger.
    - **Literal Nonce Generation**: The agent must generate a unique random nonce directly (by any means, e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly in the command. Shell variables (`$NONCE`) or command substitutions (`$(...)`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs, which causes database searches for the expanded token to fail.
-   - For ticketed work, execute AgenticLens CLI with an explicit conventional commit `type` immediately before final commit:
+   - Execute AgenticLens CLI with an explicit conventional commit `type` immediately before final commit:
      ```bash
      ./bin/agentic-lens generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
      ```
@@ -47,7 +46,7 @@ Work may be ticketed or ad hoc. Do not create a ticket, ticket specification, or
    - PO tickets (`PO-#`) must strictly use `--ticket-type docs`.
    - Generic tickets (`GEN-#`) must use `--ticket-type chore` unless explicitly a feature (`feat`).
    - Developer tickets must use the corresponding conventional commit type matching their branch prefix (`feat`, `fix`, `refactor`, etc.). Never default all tickets to `feature`.
-   - Do not create a ticket or ticket workspace solely to generate telemetry for ad hoc work. Generate ticket-specific telemetry only when the task has an associated ticket or the user explicitly requests a ticketing strategy.
+   - Ad hoc tickets use their assigned ticket ID and isolated workspace for telemetry. They do not require a specification or index entry under `plan/`.
 7. **Pull Request Delivery & Handoff**:
    - Commit all implementation deliverables on the feature branch first (`git add -A && git commit -m "$COMMIT_MSG"`). Git requires a clean working tree before merging.
    - Merge `main` into the feature branch (`git fetch origin main && git merge origin/main --no-edit`) to resolve any upstream conflicts, and verify test suites pass (`make`).
