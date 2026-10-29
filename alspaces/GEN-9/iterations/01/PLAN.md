@@ -16,6 +16,8 @@ The skill does not need to implement or second-guess the installed repository's 
 
 The user requested implementation of `.agents/skills/agentic-lens-operator/` with focused references that let an agent operate AgenticLens from an adopting repository. The skill must cover each CLI command and its arguments in detail, the embedded dashboard UI, reading and modifying shared and machine-local configuration, migration/backfill coordination, and a last-resort procedure for consulting the public source repository at the tag matching the installed release. The source repository is the last resort after installed command help and local documentation are insufficient.
 
+The user requested that setup install the operator skill and place the executable at the fixed path `.agents/skills/agentic-lens-operator/bin/agentic-lens` (or `.exe` on Windows). The operator skill uses this one canonical location. No binary path setting is added to shared project configuration because the install path is deterministic and is an installation detail.
+
 ## Repository Findings
 
 - `agenticlens migrate` performs stepwise schema migrations across ticket workspace ledgers. Its controls include dry run, backups, ticket filtering, a target schema version, and summary refresh.
@@ -38,4 +40,4 @@ No open questions remain from this discussion. The user decided to preserve part
 
 ## Status
 
-Skill implementation requested by the user and completed. Scope above was approved; no AgenticLens application code was changed.
+Skill implementation requested by the user and completed. Setup now installs the operator skill and places new binaries with it. Scope above was approved; no AgenticLens application code was changed.

@@ -30,4 +30,7 @@ Create a reusable `.agents/skills/agentic-lens-operator/` skill for operating Ag
 - Migration guidance explains partial state, source ownership, local backfill, team coordination, and verification.
 - Configuration reference distinguishes shared project settings from machine-local source paths and explains narrow authorized edits.
 - Last-resort source inspection selects the installed version's matching public release tag or exact commit.
+- Setup installs the operator skill and places new binaries under `.agents/skills/agentic-lens-operator/bin/`.
+- Operator command guidance uses the canonical location directly and reports setup is needed if it is missing.
+- Binary installation location is not duplicated in `.agenticlens-config.yaml`.
 - Skill structure passes the Skill Creator quick validator.

@@ -1,6 +1,8 @@
 # CLI Reference
 
-Use the installed binary path consistently, for example `./bin/agentic-lens`. Paths containing spaces should be quoted. To confirm syntax for the installed version, run `agentic-lens help`, `agentic-lens help <command>`, or `<command> --help` where supported. CLI behavior can evolve; prefer installed help over this reference when it differs, and inspect matching release source only as a last resort.
+Use the canonical executable path `.agents/skills/agentic-lens-operator/bin/agentic-lens` (or `agentic-lens.exe` on Windows) for every command. This is the path installed by the setup skill. If it is missing, explain that setup is needed rather than searching other directories or silently downloading or updating it. Quote the path if the repository path contains spaces.
+
+Examples below use `agentic-lens` as shorthand for the executable path you resolved. To confirm syntax for the installed version, run `<binary> help`, `<binary> help <command>`, or `<binary> <command> --help` where supported. CLI behavior can evolve; prefer installed help over this reference when it differs, and inspect matching release source only as a last resort.
 
 ## Command Map
 
