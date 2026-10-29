@@ -16,7 +16,7 @@ LDFLAGS := -X 'agenticlens/internal/domain.Version=$(VERSION)' \
            -X 'agenticlens/internal/domain.GitCommit=$(GIT_COMMIT)' \
            -X 'agenticlens/internal/domain.BuildDate=$(BUILD_DATE)'
 
-.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean
+.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean opencode-compat-v1 opencode-compat-v2 opencode-compat
 
 all: install check test build
 
@@ -38,6 +38,9 @@ help:
 	@echo "  release-verify      - Verify release checksums and host binary execution"
 	@echo "  release-clean       - Remove release distribution artifacts"
 	@echo "  server              - Build and run HTTP server (PORT=$(PORT))"
+	@echo "  opencode-compat-v1  - Run isolated OpenCode v1 compatibility session (requires local provider)"
+	@echo "  opencode-compat-v2  - Run isolated OpenCode v2 compatibility session (requires local provider)"
+	@echo "  opencode-compat     - Run both isolated sessions and focused adapter/CLI tests"
 	@echo "  serve               - Alias for server target"
 	@echo "  clean               - Remove build and release artifacts"
 
@@ -75,6 +78,15 @@ test-frontend:
 		echo "Testing frontend..."; \
 		(cd $(WEB_DIR) && npm test); \
 	fi
+
+opencode-compat-v1:
+	./scripts/opencode-compat.sh v1
+
+opencode-compat-v2:
+	./scripts/opencode-compat.sh v2
+
+opencode-compat:
+	./scripts/opencode-compat.sh both
 
 build:
 	@if [ -d "$(WEB_DIR)/node_modules" ]; then \

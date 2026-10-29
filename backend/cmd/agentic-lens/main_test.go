@@ -5860,6 +5860,7 @@ code_metrics:
 		parent_id TEXT,
 		agent TEXT,
 		model TEXT,
+		title TEXT,
 		time_created INTEGER,
 		time_updated INTEGER
 	);
@@ -6092,6 +6093,7 @@ code_metrics:
 			parent_id TEXT,
 			agent TEXT,
 			model TEXT,
+			title TEXT,
 			time_created INTEGER,
 			time_updated INTEGER
 		);
@@ -6270,6 +6272,7 @@ code_metrics:
 		parent_id TEXT,
 		agent TEXT,
 		model TEXT,
+		title TEXT,
 		time_created INTEGER,
 		time_updated INTEGER
 	);

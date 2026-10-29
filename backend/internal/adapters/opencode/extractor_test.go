@@ -223,8 +223,8 @@ func TestResolveActiveRootSession(t *testing.T) {
 		if res != nil {
 			t.Fatalf("expected nil session ID on error, got %v", *res)
 		}
-		if !strings.Contains(err.Error(), "resolving session by workspace path fallback") {
-			t.Fatalf("expected wrapped fallback error, got %v", err)
+		if !strings.Contains(err.Error(), "unsupported OpenCode database schema") {
+			t.Fatalf("expected actionable unsupported-schema diagnostic, got %v", err)
 		}
 	})
 
@@ -244,8 +244,8 @@ func TestResolveActiveRootSession(t *testing.T) {
 		if res != nil {
 			t.Fatalf("expected nil session ID on error, got %v", *res)
 		}
-		if !strings.Contains(err.Error(), "resolving session by ticket id") {
-			t.Fatalf("expected wrapped ticket id error, got %v", err)
+		if !strings.Contains(err.Error(), "unsupported OpenCode database schema") {
+			t.Fatalf("expected actionable unsupported-schema diagnostic, got %v", err)
 		}
 	})
 }
@@ -638,6 +638,52 @@ func TestExtractFacts_AdversarialEdgeCases(t *testing.T) {
 			if err == nil {
 				t.Error("expected error querying corrupted sqlite database")
 			}
+		}
+	})
+}
+
+func TestEmptyThreadSelectionStillValidatesSchema(t *testing.T) {
+	unsupportedSchemas := []struct {
+		name string
+		ddl  string
+	}{
+		{name: "unknown empty database"},
+		{name: "malformed partial family", ddl: "CREATE TABLE session (id TEXT);"},
+		{name: "unrelated schema", ddl: "CREATE TABLE unrelated (id TEXT);"},
+	}
+
+	for _, schema := range unsupportedSchemas {
+		t.Run(schema.name, func(t *testing.T) {
+			db, err := sql.Open("sqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if schema.ddl != "" {
+				if _, err := db.Exec(schema.ddl); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			_, _, _, _, _, factsErr := opencode.ExtractFacts(db, nil, "user", nil)
+			if factsErr == nil || !strings.Contains(factsErr.Error(), "unsupported OpenCode database schema") {
+				t.Errorf("ExtractFacts should reject schema, got %v", factsErr)
+			}
+			if count, steeringErr := opencode.ExtractSteeringTurns(db, nil); steeringErr == nil || !strings.Contains(steeringErr.Error(), "unsupported OpenCode database schema") {
+				t.Errorf("ExtractSteeringTurns should reject schema (count %d), got %v", count, steeringErr)
+			}
+		})
+	}
+
+	t.Run("valid empty v1 selection stays empty", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+		invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(db, nil, "user", nil)
+		if err != nil || len(invocations) != 0 || len(tools) != 0 || len(events) != 0 || startedAt != nil || completedAt != nil {
+			t.Fatalf("unexpected empty facts result: invocations=%d tools=%d events=%d start=%v complete=%v err=%v", len(invocations), len(tools), len(events), startedAt, completedAt, err)
+		}
+		if count, err := opencode.ExtractSteeringTurns(db, nil); err != nil || count != 0 {
+			t.Fatalf("unexpected empty steering result: count=%d err=%v", count, err)
 		}
 	})
 }
@@ -1540,6 +1586,7 @@ func TestExtractFacts_UserIterationsRootAndChild(t *testing.T) {
 		parent_id TEXT,
 		agent TEXT,
 		model TEXT,
+		title TEXT,
 		time_created INTEGER,
 		time_updated INTEGER
 	);

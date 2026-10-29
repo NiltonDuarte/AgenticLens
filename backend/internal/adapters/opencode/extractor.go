@@ -45,8 +45,9 @@ type rawMessageData struct {
 }
 
 type rawPartState struct {
-	Status *string `json:"status"`
-	Output *string `json:"output"`
+	Status *string         `json:"status"`
+	Output *string         `json:"output"`
+	Input  json.RawMessage `json:"input"`
 }
 
 type rawPartData struct {
@@ -152,8 +153,15 @@ func ExtractFacts(
 	if db == nil {
 		return nil, nil, nil, nil, nil, errors.New("database connection is nil")
 	}
+	family, familyErr := detectSchema(db)
+	if familyErr != nil {
+		return nil, nil, nil, nil, nil, familyErr
+	}
 	if len(threadIDs) == 0 {
 		return []domain.InvocationFact{}, []domain.ToolFact{}, []domain.EventFact{}, nil, nil, nil
+	}
+	if family == familyV2 {
+		return extractV2Facts(db, threadIDs, defaultUser, userBySessionID)
 	}
 
 	quotedList, err := buildQuotedIDList(threadIDs)
@@ -605,6 +613,14 @@ func ExtractFacts(
 				dur := tUpdated.Int64 - tCreated.Int64
 				durMs = &dur
 			}
+			var toolInput, toolOutput *string
+			if rawPD.State != nil {
+				toolInput = normalizeToolInput(rawPD.State.Input)
+				if rawPD.State.Output != nil {
+					outputValue := *rawPD.State.Output
+					toolOutput = &outputValue
+				}
+			}
 
 			tName := toolName
 			events = append(events, domain.EventFact{
@@ -620,6 +636,8 @@ func ExtractFacts(
 				ErrorMessage:  nil,
 				DurationMs:    durMs,
 				ContextTokens: ctxTokens,
+				ToolInput:     toolInput,
+				ToolOutput:    toolOutput,
 			})
 			continue
 		}
@@ -750,8 +768,24 @@ func ExtractSteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
 	if db == nil {
 		return 0, errors.New("database connection is nil")
 	}
+	family, familyErr := detectSchema(db)
+	if familyErr != nil {
+		return 0, familyErr
+	}
 	if len(threadIDs) == 0 {
 		return 0, nil
+	}
+	if family == familyV2 {
+		quoted, err := buildQuotedIDList(threadIDs)
+		if err != nil {
+			return 0, fmt.Errorf("validating thread ids: %w", err)
+		}
+		var count int64
+		err = db.QueryRow(fmt.Sprintf(`SELECT COUNT(*) FROM session_message WHERE type='user' AND session_id IN (SELECT id FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s))`, quoted, quoted)).Scan(&count)
+		if err != nil {
+			return 0, fmt.Errorf("counting v2 user messages: %w", err)
+		}
+		return count, nil
 	}
 
 	quotedList, err := buildQuotedIDList(threadIDs)

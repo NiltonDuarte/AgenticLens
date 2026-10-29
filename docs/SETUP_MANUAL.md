@@ -2,7 +2,9 @@
 
 AgenticLens is a developer telemetry and observability platform built specifically for OpenCode workflows. It provides real-time monitoring, longitudinal cost and token tracking, automated anomaly detection, and context window health diagnostics across autonomous coding agents running in OpenCode.
 
-AgenticLens operates by extracting execution traces directly from OpenCode's local SQLite database (`~/.local/share/opencode/opencode.db`), specifically querying the `session`, `message`, and `part` tables. Consequently, AgenticLens strictly requires an active OpenCode installation and its local SQLite database; it cannot function without OpenCode and does not support alternative agent harnesses.
+AgenticLens extracts execution traces from OpenCode's local SQLite database, opening it read-only. The supported evidence window is OpenCode v1.19.5 (`session`/`message`/`part`) and npm `@opencode/cli` v2.2.0 (`session_v2`/`session_message`), whose `latest` tag was resolved on 2026-10-29. AgenticLens validates the complete required table and column set and automatically selects exactly one schema family. Partial, mixed, malformed, and unknown schemas fail with diagnostics; schema detection does not identify the exact runtime release. `--db-path` remains the explicit path override and the default path remains `~/.local/share/opencode/opencode.db`; no separate version flag or v2-specific default directory is used.
+
+Compatibility workflows are `make opencode-compat-v1`, `make opencode-compat-v2`, and `make opencode-compat`. They require the corresponding runtime (`OPENCODE_V1_BIN` / `OPENCODE_V2_BIN` can select explicit binaries) and a local deterministic provider already running. The workflows create isolated temporary HOME, XDG data/config/state roots, project roots, and absolute `OPENCODE_DB` paths, then remove them at exit. Ordinary adapter tests use deterministic SQLite fixtures and need no OpenCode installation. Evidence fixtures are sanitized runtime-produced records, not synthesized runtime integration runs. Nonzero native-provider pricing, imported-history extraction after migration, partial migration states, duplicate handling, and releases outside v1.19.5/v2.2.0 are not verified.
 
 This manual serves as the comprehensive, authoritative guide for engineering teams, platform architects, and autonomous coding agents adopting AgenticLens in OpenCode projects.
 
@@ -194,7 +196,7 @@ Open `http://localhost:8085` in your browser to view the Fleet Overview and Live
 
 ## 2. Agnostic Adoption for OpenCode Projects
 
-AgenticLens is engineered specifically for OpenCode environments. It is hardwired to OpenCode internals: its telemetry ingestion engine, session resolver, and live SSE streaming service directly query OpenCode's local SQLite database (`session`, `message`, and `part` tables). It cannot function without an active OpenCode installation and does not support alternative agent harnesses.
+AgenticLens is engineered specifically for OpenCode environments. Its telemetry ingestion engine supports the evidence-backed v1 and v2 SQLite families described above and rejects layouts it cannot identify. It cannot function without an OpenCode database and does not support alternative agent harnesses.
 
 While tightly coupled to OpenCode at the platform layer, AgenticLens imposes zero engineering methodology constraints on adopting teams. Within OpenCode, it is completely agnostic to how teams structure their development workflows.
 
