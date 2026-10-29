@@ -15,4 +15,5 @@ Adds an `agentic-lens-operator` skill for operating an installed AgenticLens rel
 
 - `quick_validate.py` reports the skill is valid.
 - Compared root and `init`, `generate`, `backfill`, `migrate`, `server`, and `version` help with the installed binary.
+- Merged `origin/main`; it was already up to date.
 - No application code or tests were changed or run.
