@@ -7,7 +7,7 @@ description: Autonomous setup skill to bootstrap AgenticLens in OpenCode reposit
 
 Guides autonomous bootstrapping and adoption of AgenticLens in OpenCode software repositories using precompiled release artifacts from GitHub Releases (https://github.com/NiltonDuarte/AgenticLens/releases).
 
-AgenticLens is an observability and developer telemetry platform built specifically for OpenCode workflows. It operates by extracting execution traces directly from OpenCode's local SQLite database (`~/.local/share/opencode/opencode.db`), specifically querying the `session`, `message`, and `part` tables. An active OpenCode installation and its local SQLite database are strictly required. AgenticLens does not support alternative agent harnesses.
+AgenticLens is an observability and developer telemetry platform for OpenCode and Codex workflows. OpenCode traces come from its local SQLite database; Codex traces come from rollout files under the Codex home directory.
 
 This skill follows the autonomous agentic distribution model: it is completely self-contained and executable by any autonomous coding agent reading this manifest directly via shared repository URL or local path.
 
@@ -130,9 +130,9 @@ Inspect the repository and collect configuration parameters from the developer o
 4. Monitored Source Folders:
    - Comma-separated list of source code directories to observe for git metrics and diff volume (e.g. `src,backend,web,lib,pkg`).
    - Strictly mandatory flag (`--src-folders`); no default is provided.
-5. OpenCode SQLite Database Path:
-   - Path to local OpenCode database.
-   - Default: `~/.local/share/opencode/opencode.db`.
+5. Telemetry source settings:
+   - Choose the default harness (`opencode` or `codex`) and review each harness location.
+   - OpenCode uses a SQLite database path (`~/.local/share/opencode/opencode.db`). Codex uses its home/rollout directory (`~/.codex`), not a database.
 
 #### Generating Configuration
 Run the CLI `init` command using the collected parameters:
@@ -156,7 +156,7 @@ Alternatively, review generated YAML with `--dry-run` before writing:
   --dry-run
 ```
 
-This writes a fully commented, valid `.agenticlens-config.yaml` file at the repository root.
+`init` creates `.agenticlens-config.yaml` for shared project settings and `.agenticlens-config.local.yaml` for machine-specific telemetry source settings. Review the local default source and both paths for this machine. The local file must be listed in `.gitignore` before committing; never put credentials in either configuration file. The tracked `.agenticlens-config.local.example.yaml` contains portable sanitized defaults.
 
 ---
 
@@ -165,8 +165,8 @@ This writes a fully commented, valid `.agenticlens-config.yaml` file at the repo
 Present an overview of AgenticLens features to the user:
 
 #### CLI Subcommands
-- `init`: Scaffold and generate `.agenticlens-config.yaml` configuration.
-- `generate`: Ingest session telemetry from OpenCode SQLite DB and git history into `agentic_metrics.json`, and idempotently update markdown summary tables. The executing agent generates a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and passes the literal token to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs.
+- `init`: Scaffold shared `.agenticlens-config.yaml` and ignored machine-local `.agenticlens-config.local.yaml` configuration files.
+- `generate`: Ingest session telemetry from the selected harness and git history into `agentic_metrics.json`, and idempotently update markdown summary tables. `--source` wins over local `telemetry.default_source`; otherwise the local default is used, then OpenCode. Missing sources fail without switching harness. The executing agent generates a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and passes the literal token to `--nonce <GENERATED_NONCE>`.
   ```bash
   "$BIN_DIR/agentic-lens" generate \
     --nonce <GENERATED_NONCE> \

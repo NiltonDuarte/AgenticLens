@@ -181,6 +181,18 @@ type rawDatabaseConfig struct {
 	ReadOnly       *bool   `json:"read_only" yaml:"read_only"`
 }
 
+type rawTelemetryConfig struct {
+	DefaultSource *string `json:"default_source" yaml:"default_source"`
+	Sources       *struct {
+		OpenCode *struct {
+			DatabasePath *string `json:"database_path" yaml:"database_path"`
+		} `json:"opencode" yaml:"opencode"`
+		Codex *struct {
+			Home *string `json:"home" yaml:"home"`
+		} `json:"codex" yaml:"codex"`
+	} `json:"sources" yaml:"sources"`
+}
+
 type rawAnomalyThresholdsConfig struct {
 	StallThresholdSeconds               *int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
 	ErrorRateThreshold                  *float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
@@ -220,6 +232,7 @@ type rawProjectConfigDTO struct {
 	Ticket            *rawTicketConfig            `json:"ticket" yaml:"ticket"`
 	Workspaces        *rawWorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
 	Database          *rawDatabaseConfig          `json:"database" yaml:"database"`
+	Telemetry         *rawTelemetryConfig         `json:"telemetry" yaml:"telemetry"`
 	Live              *rawLiveConfig              `json:"live" yaml:"live"`
 	AnomalyThresholds *rawAnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
 	CodeMetrics       *rawCodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
@@ -500,5 +513,48 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 	if cfgFile == "" {
 		return domain.ProjectConfig{}, ErrConfigNotFound
 	}
-	return LoadFromFile(cfgFile)
+	cfg, err := LoadFromFile(cfgFile)
+	if err != nil {
+		return domain.ProjectConfig{}, err
+	}
+	localPath := filepath.Join(filepath.Dir(cfgFile), ".agenticlens-config.local.yaml")
+	data, err := os.ReadFile(localPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return cfg, nil
+	}
+	if err != nil {
+		return domain.ProjectConfig{}, fmt.Errorf("reading local configuration %s: %w", localPath, err)
+	}
+	var local rawProjectConfigDTO
+	if err := yaml.Unmarshal(data, &local); err != nil {
+		return domain.ProjectConfig{}, fmt.Errorf("decoding local configuration %s: %w", localPath, err)
+	}
+	if local.Telemetry == nil {
+		return cfg, nil
+	}
+	telemetry := local.Telemetry
+	if telemetry.DefaultSource != nil {
+		value := strings.ToLower(strings.TrimSpace(*telemetry.DefaultSource))
+		if value != "opencode" && value != "codex" {
+			return domain.ProjectConfig{}, fmt.Errorf("invalid local configuration %s: telemetry.default_source must be opencode or codex", localPath)
+		}
+		cfg.Telemetry.DefaultSource = value
+	}
+	if telemetry.Sources != nil {
+		if source := telemetry.Sources.OpenCode; source != nil && source.DatabasePath != nil {
+			value := strings.TrimSpace(*source.DatabasePath)
+			if value == "" {
+				return domain.ProjectConfig{}, fmt.Errorf("invalid local configuration %s: telemetry.sources.opencode.database_path cannot be empty", localPath)
+			}
+			cfg.Telemetry.Sources.OpenCodeDatabasePath = value
+		}
+		if source := telemetry.Sources.Codex; source != nil && source.Home != nil {
+			value := strings.TrimSpace(*source.Home)
+			if value == "" {
+				return domain.ProjectConfig{}, fmt.Errorf("invalid local configuration %s: telemetry.sources.codex.home cannot be empty", localPath)
+			}
+			cfg.Telemetry.Sources.CodexHome = value
+		}
+	}
+	return cfg, nil
 }

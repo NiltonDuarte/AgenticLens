@@ -155,6 +155,22 @@ func setupIsolatedEmptyDB(t *testing.T) string {
 	return dbPath
 }
 
+func setIsolatedHome(t *testing.T, cmd *exec.Cmd) {
+	t.Helper()
+	homeDir := filepath.Join(t.TempDir(), "isolated-home")
+	if err := os.MkdirAll(homeDir, 0755); err != nil {
+		t.Fatalf("failed creating isolated HOME: %v", err)
+	}
+
+	env := make([]string, 0, len(os.Environ())+1)
+	for _, entry := range os.Environ() {
+		if !strings.HasPrefix(entry, "HOME=") {
+			env = append(env, entry)
+		}
+	}
+	cmd.Env = append(env, "HOME="+homeDir)
+}
+
 func TestCLIListCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
@@ -301,7 +317,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
-			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-GEN-ANOM",
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
@@ -336,7 +352,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
-			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-GEN-CLEAN",
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
@@ -1158,7 +1174,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing
 	if err := os.WriteFile(outJSON, []byte(seedJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(cliBinaryPath, "generate", "--db-path", filepath.Join(tempDir, "missing.db"), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--allow-empty")
+	cmd := exec.Command(cliBinaryPath, "generate", "--db-path", setupIsolatedEmptyDB(t), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--allow-empty")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -1198,7 +1214,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "fallback.json")
-		nonExistentDB := filepath.Join(tempDir, "missing.db")
+		nonExistentDB := setupIsolatedEmptyDB(t)
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -1678,7 +1694,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
-			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-ALLOW-EMPTY",
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
@@ -2058,7 +2074,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			t.Fatalf("expected exec.ExitError, got %v", err)
 		}
 
-		expectedErr := "Error: unable to identify root session for ticket 'AL-DB-ERR'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted."
+		expectedErr := "Error querying selected OpenCode source"
 		if !strings.Contains(stderr.String(), expectedErr) {
 			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
 		}
@@ -2072,6 +2088,31 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 func TestCLIBackfillCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
+	t.Run("malformed local config is reported before backfill dispatch", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), []byte("telemetry: [broken"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--dry-run")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil {
+			t.Fatal("expected malformed local config to fail")
+		}
+		if !strings.Contains(stderr.String(), "Error loading project configuration for backfill") || !strings.Contains(stderr.String(), ".agenticlens-config.local.yaml") {
+			t.Fatalf("expected actionable local config error, got stderr: %s", stderr.String())
+		}
+		if strings.Contains(stdout.String(), "TELEMETRY BACKFILL") {
+			t.Fatalf("backfill dispatched despite malformed local config: %s", stdout.String())
+		}
+	})
 	t.Run("backfill requires explicit --source flag", func(t *testing.T) {
 		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir)
 		var stdout, stderr bytes.Buffer
@@ -4032,12 +4073,14 @@ anomaly_thresholds:
 		genCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "MYROOT-5",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
 		genCmd.Stderr = &genStderr
@@ -4138,12 +4181,14 @@ anomaly_thresholds:
 		genCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "ROOTPRIO-1",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
 		genCmd.Stderr = &genStderr
@@ -4521,12 +4566,14 @@ func TestCLI_Invariants(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "DEV-1",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		setIsolatedHome(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
@@ -4730,6 +4777,18 @@ func TestInitCommand(t *testing.T) {
 		expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
 		if _, err := os.Stat(expectedPath); err != nil {
 			t.Fatalf("expected config file %s to exist: %v", expectedPath, err)
+		}
+		localPath := filepath.Join(tempDir, ".agenticlens-config.local.yaml")
+		localBytes, readErr := os.ReadFile(localPath)
+		if readErr != nil {
+			t.Fatalf("expected local source config: %v", readErr)
+		}
+		localContent := string(localBytes)
+		if !strings.Contains(localContent, "default_source: opencode") || !strings.Contains(localContent, "database_path: ~/.local/share/opencode/opencode.db") || !strings.Contains(localContent, "home: ~/.codex") {
+			t.Fatalf("unexpected local defaults: %s", localContent)
+		}
+		if strings.Contains(localContent, os.Getenv("HOME")) {
+			t.Fatal("local defaults leaked absolute home path")
 		}
 
 		loaded, err := adaptersconfig.LoadFromFile(expectedPath)
@@ -4994,11 +5053,77 @@ func TestInitCommand(t *testing.T) {
 		if !strings.Contains(outStr, "project_name: DryRunTest") {
 			t.Errorf("expected stdout to contain 'project_name: DryRunTest', got: %s", outStr)
 		}
+		if !strings.Contains(outStr, "# .agenticlens-config.yaml") || !strings.Contains(outStr, "# .agenticlens-config.local.yaml") || !strings.Contains(outStr, "telemetry:") {
+			t.Fatalf("dry run did not label both artifacts: %s", outStr)
+		}
 
 		// Ensure no file was created
 		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
 		if _, err := os.Stat(cfgPath); !os.IsNotExist(err) {
 			t.Errorf("expected %s not to exist after dry-run, but it exists", cfgPath)
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, ".agenticlens-config.local.yaml")); !os.IsNotExist(err) {
+			t.Fatal("dry run created local config")
+		}
+	})
+
+	t.Run("local output collision is rejected", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--output", ".agenticlens-config.local.yaml")
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "must be distinct") {
+			t.Fatalf("expected clear output collision error, got err=%v stderr=%s", err, stderr.String())
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, ".agenticlens-config.local.yaml")); !os.IsNotExist(err) {
+			t.Fatal("collision created local config")
+		}
+	})
+
+	t.Run("existing local settings are protected unless force is explicit", func(t *testing.T) {
+		tempDir := t.TempDir()
+		localPath := filepath.Join(tempDir, ".agenticlens-config.local.yaml")
+		original := "telemetry:\n  default_source: codex\n"
+		if err := os.WriteFile(localPath, []byte(original), 0600); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL")
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "already exists") {
+			t.Fatalf("expected existing local file protection, got err=%v stderr=%s", err, stderr.String())
+		}
+		got, err := os.ReadFile(localPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != original {
+			t.Fatalf("local config changed without --force: %s", got)
+		}
+	})
+
+	t.Run("local write failure does not leave shared config behind", func(t *testing.T) {
+		tempDir := t.TempDir()
+		if err := os.Mkdir(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout, cmd.Stderr = &stdout, &stderr
+		if err := cmd.Run(); err == nil {
+			t.Fatal("expected init to fail on local directory target")
+		}
+		if strings.Contains(stdout.String(), "Successfully initialized") {
+			t.Fatalf("reported success after failure: %s", stdout.String())
+		}
+		if !strings.Contains(stderr.String(), ".agenticlens-config.local.yaml") {
+			t.Fatalf("error did not identify local artifact: %s", stderr.String())
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, ".agenticlens-config.yaml")); !os.IsNotExist(err) {
+			t.Fatal("partial shared config was left after local failure")
 		}
 	})
 
@@ -5790,7 +5915,7 @@ anomaly_thresholds:
 	cmd := exec.Command(
 		cliBinaryPath,
 		"generate",
-		"--db-path", filepath.Join(tempDir, "test.db"),
+		"--db-path", setupIsolatedEmptyDB(t),
 		"--ticket-id", "AL-TEST-WARN",
 		"--ticket-title", "Test Warn Ticket",
 		"--json-output", outJSON,
@@ -6512,6 +6637,7 @@ anomaly_thresholds:
 
 		cmd := exec.Command(
 			cliBinaryPath, "generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", ticketIDStr,
 			"--ticket-title", ticketTitleStr,
 			"--json-output", outJSON,
