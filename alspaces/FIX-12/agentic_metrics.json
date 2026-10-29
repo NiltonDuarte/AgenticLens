@@ -1,0 +1,70 @@
+{
+  "schema_version": 4,
+  "ticket_id": "FIX-12",
+  "ticket_title": "Render ledger waterfall without hydration",
+  "ticket_type": "fix",
+  "started_at": "2026-10-29T11:09:42.070Z",
+  "completed_at": "2026-10-29T12:21:54.546Z",
+  "updated_at": "2026-10-29T12:21:56.492157+00:00",
+  "code": {
+    "lines_added": 2099,
+    "lines_deleted": 417,
+    "test_lines_added": 1398,
+    "test_lines_deleted": 106,
+    "prod_lines_added": 617,
+    "prod_lines_deleted": 227,
+    "files_changed": 24,
+    "sdlc_iterations": 6
+  },
+  "sessions": [
+    {
+      "id": "01a18759-f52b-7e43-a160-2ee1d4cea623",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-29T11:09:43.510Z",
+          "completed_at": "2026-10-29T12:21:54.546Z",
+          "active_duration_seconds": 389,
+          "turns": 2,
+          "tokens": {
+            "input": 117462,
+            "output": 19876,
+            "cache_read": 7414528,
+            "reasoning": 8633,
+            "peak_context": 95412
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 6
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 28,
+          "errors": 2
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "sleep",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 55,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}
