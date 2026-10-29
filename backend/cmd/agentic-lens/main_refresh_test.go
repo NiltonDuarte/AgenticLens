@@ -18,7 +18,7 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 	for _, source := range []domain.SourceHarness{domain.SourceCodex, domain.SourceOpenCode} {
 		t.Run(string(source), func(t *testing.T) {
 			project := t.TempDir()
-			config := "project_name: RefreshFixture\nticket:\n  prefixes: [FIX]\nworkspaces:\n  dir: records\n  src_folders: [src]\n"
+			config := "project_name: RefreshFixture\nticket:\n  prefixes: [FIX]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 			if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 				t.Fatal(err)
 			}

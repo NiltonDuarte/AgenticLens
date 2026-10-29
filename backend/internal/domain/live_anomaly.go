@@ -32,8 +32,8 @@ const (
 const (
 	ConsecutiveToolErrorsStreakWarning        = 3
 	ConsecutiveToolErrorsStreakCritical       = 5
-	ContextCeilingApproachRatioWarning        = 0.80
-	ContextCeilingApproachRatioCritical       = 1.00
+	ContextCeilingWarningTokens         int64 = 160_000
+	ContextCeilingCriticalTokens        int64 = 200_000
 	TokenVelocityWarningTokens          int64 = 30_000
 	TokenVelocityCriticalTokens         int64 = 60_000
 	TokenVelocityWarningDeltaTokens     int64 = 40_000
@@ -60,12 +60,26 @@ type toolCallRecord struct {
 	timestamp string
 }
 
+// LiveAnomalyOptions configures threshold limits for live anomaly evaluation.
+type LiveAnomalyOptions struct {
+	Thresholds AnomalyThresholdsConfig
+}
+
 // EvaluateConsecutiveToolErrors evaluates the chronological sequence of tool parts in LiveTraceView.
 // It triggers when the count of consecutive tool execution failures reaches or exceeds 3.
 // Any successful tool execution immediately resets the consecutive error counter.
-func EvaluateConsecutiveToolErrors(trace *LiveTraceView) []LiveAnomalyAlert {
+func EvaluateConsecutiveToolErrors(trace *LiveTraceView, streakThresholds ...int) []LiveAnomalyAlert {
 	if trace == nil || len(trace.Messages) == 0 {
 		return []LiveAnomalyAlert{}
+	}
+
+	warnStreak := ConsecutiveToolErrorsStreakWarning
+	critStreak := ConsecutiveToolErrorsStreakCritical
+	if len(streakThresholds) > 0 && streakThresholds[0] > 0 {
+		warnStreak = streakThresholds[0]
+	}
+	if len(streakThresholds) > 1 && streakThresholds[1] > 0 {
+		critStreak = streakThresholds[1]
 	}
 
 	streak := 0
@@ -90,12 +104,12 @@ func EvaluateConsecutiveToolErrors(trace *LiveTraceView) []LiveAnomalyAlert {
 		}
 	}
 
-	if streak < ConsecutiveToolErrorsStreakWarning || lastFailingPart == nil {
+	if streak < warnStreak || lastFailingPart == nil {
 		return []LiveAnomalyAlert{}
 	}
 
 	severity := LiveSeverityHigh
-	if streak >= ConsecutiveToolErrorsStreakCritical {
+	if streak >= critStreak {
 		severity = LiveSeverityCritical
 	}
 
@@ -135,18 +149,18 @@ func EvaluateConsecutiveToolErrors(trace *LiveTraceView) []LiveAnomalyAlert {
 }
 
 // EvaluateContextCeilingApproach warns operators when an active session's context token accumulation
-// approaches (>=80%) or breaches (>=100%) the defined healthy context window ceiling.
-func EvaluateContextCeilingApproach(trace *LiveTraceView, ceilingTokens int64) []LiveAnomalyAlert {
+// reaches or exceeds the warning (160,000) or critical (200,000) context ceiling thresholds.
+func EvaluateContextCeilingApproach(trace *LiveTraceView, warningTokens int64, criticalTokens int64) []LiveAnomalyAlert {
 	if trace == nil || len(trace.Messages) == 0 {
 		return []LiveAnomalyAlert{}
 	}
 
-	if ceilingTokens <= 0 {
-		ceilingTokens = HealthyCeilingTokens
+	if warningTokens <= 0 {
+		warningTokens = ContextCeilingWarningTokens
 	}
-
-	warnThreshold := int64(float64(ceilingTokens) * ContextCeilingApproachRatioWarning)
-	critThreshold := ceilingTokens
+	if criticalTokens <= 0 {
+		criticalTokens = ContextCeilingCriticalTokens
+	}
 
 	var peakContext int64
 	for i := range trace.Messages {
@@ -155,15 +169,15 @@ func EvaluateContextCeilingApproach(trace *LiveTraceView, ceilingTokens int64) [
 		}
 	}
 
-	if peakContext < warnThreshold {
+	if peakContext < warningTokens {
 		return []LiveAnomalyAlert{}
 	}
 
 	severity := LiveSeverityWarning
-	targetThreshold := warnThreshold
-	if peakContext >= critThreshold {
+	targetThreshold := warningTokens
+	if peakContext >= criticalTokens {
 		severity = LiveSeverityCritical
-		targetThreshold = critThreshold
+		targetThreshold = criticalTokens
 	}
 
 	var firstBreachMsg *LiveMessageFact
@@ -174,8 +188,8 @@ func EvaluateContextCeilingApproach(trace *LiveTraceView, ceilingTokens int64) [
 		}
 	}
 
-	pct := math.Round(float64(peakContext) / float64(ceilingTokens) * 100.0)
-	ceilingStr := FormatTokensK(ceilingTokens)
+	pct := math.Round(float64(peakContext) / float64(criticalTokens) * 100.0)
+	ceilingStr := FormatTokensK(criticalTokens)
 	msg := fmt.Sprintf("Context window utilization reached %s tokens (%.0f%% of healthy ceiling %s tokens).", FormatTokensK(peakContext), pct, ceilingStr)
 
 	var triggerEvent, ts string
@@ -201,7 +215,7 @@ func EvaluateContextCeilingApproach(trace *LiveTraceView, ceilingTokens int64) [
 }
 
 // EvaluateTokenVelocityRunaway detects sudden token consumption surges in a single turn.
-func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, criticalThreshold int64) []LiveAnomalyAlert {
+func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, criticalThreshold int64, deltaThresholds ...int64) []LiveAnomalyAlert {
 	if trace == nil || len(trace.Messages) == 0 {
 		return []LiveAnomalyAlert{}
 	}
@@ -213,13 +227,24 @@ func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, 
 		criticalThreshold = TokenVelocityCriticalTokens
 	}
 
-	warnDeltaThreshold := warningThreshold * 4 / 3
-	if warnDeltaThreshold < warningThreshold {
-		warnDeltaThreshold = TokenVelocityWarningDeltaTokens
+	warnDeltaThreshold := TokenVelocityWarningDeltaTokens
+	if len(deltaThresholds) > 0 && deltaThresholds[0] > 0 {
+		warnDeltaThreshold = deltaThresholds[0]
+	} else {
+		calc := warningThreshold * 4 / 3
+		if calc >= warningThreshold {
+			warnDeltaThreshold = calc
+		}
 	}
-	critDeltaThreshold := criticalThreshold * 4 / 3
-	if critDeltaThreshold < criticalThreshold {
-		critDeltaThreshold = TokenVelocityCriticalDeltaTokens
+
+	critDeltaThreshold := TokenVelocityCriticalDeltaTokens
+	if len(deltaThresholds) > 1 && deltaThresholds[1] > 0 {
+		critDeltaThreshold = deltaThresholds[1]
+	} else {
+		calc := criticalThreshold * 4 / 3
+		if calc >= criticalThreshold {
+			critDeltaThreshold = calc
+		}
 	}
 
 	var alerts []LiveAnomalyAlert
@@ -293,9 +318,18 @@ func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, 
 
 // EvaluateToolThrashing evaluates the sequence of tool calls in LiveTraceView, tracking repeat invocations
 // of the identical tool name where executions fail without intermediate success.
-func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
+func EvaluateToolThrashing(trace *LiveTraceView, failureThresholds ...int) []LiveAnomalyAlert {
 	if trace == nil || len(trace.Messages) == 0 {
 		return []LiveAnomalyAlert{}
+	}
+
+	minFailures := ToolThrashingMinFailures
+	critFailures := ToolThrashingCriticalFailures
+	if len(failureThresholds) > 0 && failureThresholds[0] > 0 {
+		minFailures = failureThresholds[0]
+	}
+	if len(failureThresholds) > 1 && failureThresholds[1] > 0 {
+		critFailures = failureThresholds[1]
 	}
 
 	var calls []toolCallRecord
@@ -349,7 +383,7 @@ func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
 			}
 		}
 
-		if consecStreak >= ToolThrashingMinFailures {
+		if consecStreak >= minFailures {
 			// Reverse part IDs to chronological order
 			for i, j := 0, len(consecParts)-1; i < j; i, j = i+1, j-1 {
 				consecParts[i], consecParts[j] = consecParts[j], consecParts[i]
@@ -396,7 +430,7 @@ func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
 			}
 		}
 
-		if !hadInterveningSuccess && len(failuresSinceSuccess) >= ToolThrashingMinFailures {
+		if !hadInterveningSuccess && len(failuresSinceSuccess) >= minFailures {
 			existing, exists := candidates[t]
 			if !exists || len(failuresSinceSuccess) > existing.failCount {
 				candidates[t] = thrashCandidate{
@@ -424,7 +458,7 @@ func EvaluateToolThrashing(trace *LiveTraceView) []LiveAnomalyAlert {
 	for _, t := range toolNames {
 		cand := candidates[t]
 		severity := LiveSeverityWarning
-		if cand.failCount >= ToolThrashingCriticalFailures {
+		if cand.failCount >= critFailures {
 			severity = LiveSeverityCritical
 		}
 
@@ -488,14 +522,51 @@ func SortLiveAnomalies(alerts []LiveAnomalyAlert) {
 // Safely handles nil tree or nil trace arguments.
 // Returns a deterministically ordered slice sorted primarily by Severity descending,
 // secondarily by RuleName ascending, and tertiary by Timestamp descending.
-func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView) []LiveAnomalyAlert {
+func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView, opts ...LiveAnomalyOptions) []LiveAnomalyAlert {
 	var collected []LiveAnomalyAlert
 
+	thresholds := DefaultProjectConfig().AnomalyThresholds
+
+	if len(opts) > 0 {
+		opt := opts[0]
+		t := opt.Thresholds
+		if t.ConsecutiveErrorsStreakWarning > 0 {
+			thresholds.ConsecutiveErrorsStreakWarning = t.ConsecutiveErrorsStreakWarning
+		}
+		if t.ConsecutiveErrorsStreakCritical > 0 {
+			thresholds.ConsecutiveErrorsStreakCritical = t.ConsecutiveErrorsStreakCritical
+		}
+		if t.ContextCeilingWarningTokens > 0 {
+			thresholds.ContextCeilingWarningTokens = t.ContextCeilingWarningTokens
+		}
+		if t.ContextCeilingCriticalTokens > 0 {
+			thresholds.ContextCeilingCriticalTokens = t.ContextCeilingCriticalTokens
+		}
+		if t.TokenVelocityWarningTokens > 0 {
+			thresholds.TokenVelocityWarningTokens = t.TokenVelocityWarningTokens
+		}
+		if t.TokenVelocityCriticalTokens > 0 {
+			thresholds.TokenVelocityCriticalTokens = t.TokenVelocityCriticalTokens
+		}
+		if t.TokenVelocityWarningDeltaTokens > 0 {
+			thresholds.TokenVelocityWarningDeltaTokens = t.TokenVelocityWarningDeltaTokens
+		}
+		if t.TokenVelocityCriticalDeltaTokens > 0 {
+			thresholds.TokenVelocityCriticalDeltaTokens = t.TokenVelocityCriticalDeltaTokens
+		}
+		if t.ToolThrashingMinFailures > 0 {
+			thresholds.ToolThrashingMinFailures = t.ToolThrashingMinFailures
+		}
+		if t.ToolThrashingCriticalFailures > 0 {
+			thresholds.ToolThrashingCriticalFailures = t.ToolThrashingCriticalFailures
+		}
+	}
+
 	if trace != nil {
-		collected = append(collected, EvaluateConsecutiveToolErrors(trace)...)
-		collected = append(collected, EvaluateContextCeilingApproach(trace, HealthyCeilingTokens)...)
-		collected = append(collected, EvaluateTokenVelocityRunaway(trace, TokenVelocityWarningTokens, TokenVelocityCriticalTokens)...)
-		collected = append(collected, EvaluateToolThrashing(trace)...)
+		collected = append(collected, EvaluateConsecutiveToolErrors(trace, thresholds.ConsecutiveErrorsStreakWarning, thresholds.ConsecutiveErrorsStreakCritical)...)
+		collected = append(collected, EvaluateContextCeilingApproach(trace, thresholds.ContextCeilingWarningTokens, thresholds.ContextCeilingCriticalTokens)...)
+		collected = append(collected, EvaluateTokenVelocityRunaway(trace, thresholds.TokenVelocityWarningTokens, thresholds.TokenVelocityCriticalTokens, thresholds.TokenVelocityWarningDeltaTokens, thresholds.TokenVelocityCriticalDeltaTokens)...)
+		collected = append(collected, EvaluateToolThrashing(trace, thresholds.ToolThrashingMinFailures, thresholds.ToolThrashingCriticalFailures)...)
 	}
 
 	if tree != nil {

@@ -9,14 +9,43 @@ import (
 
 // ProjectConfig holds the complete configuration settings for AgenticLens.
 type ProjectConfig struct {
-	ProjectName  string            `json:"project_name" yaml:"project_name"`
-	Ticket       TicketConfig      `json:"ticket" yaml:"ticket"`
-	Workspaces   WorkspacesConfig  `json:"workspaces" yaml:"workspaces"`
-	Database     DatabaseConfig    `json:"database" yaml:"database"`
-	Live         LiveConfig        `json:"live" yaml:"live"`
-	CodeMetrics  CodeMetricsConfig `json:"code_metrics" yaml:"code_metrics"`
-	RoleMappings RoleMappings      `json:"role_mappings" yaml:"role_mappings"`
-	RoleOrder    []string          `json:"role_order" yaml:"role_order"`
+	ProjectName       string                  `json:"project_name" yaml:"project_name"`
+	Ticket            TicketConfig            `json:"ticket" yaml:"ticket"`
+	Workspaces        WorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
+	Database          DatabaseConfig          `json:"database" yaml:"database"`
+	Live              LiveConfig              `json:"live" yaml:"live"`
+	AnomalyThresholds AnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
+	CodeMetrics       CodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
+	RoleMappings      RoleMappings            `json:"role_mappings" yaml:"role_mappings"`
+	RoleOrder         []string                `json:"role_order" yaml:"role_order"`
+}
+
+// EffectiveHealthyCeiling returns the configured context ceiling critical tokens,
+// falling back to ContextCeilingCriticalTokens domain constant (200,000) when non-positive.
+func (c ProjectConfig) EffectiveHealthyCeiling() int64 {
+	if c.AnomalyThresholds.ContextCeilingCriticalTokens > 0 {
+		return c.AnomalyThresholds.ContextCeilingCriticalTokens
+	}
+	return ContextCeilingCriticalTokens
+}
+
+// DefaultAnomalyThresholdsConfig returns default numerical thresholds for anomaly detection rules.
+func DefaultAnomalyThresholdsConfig() AnomalyThresholdsConfig {
+	return AnomalyThresholdsConfig{
+		StallThresholdSeconds:            120,
+		ErrorRateThreshold:               0.25,
+		ContextExhaustionPct:             0.85,
+		ConsecutiveErrorsStreakWarning:   ConsecutiveToolErrorsStreakWarning,
+		ConsecutiveErrorsStreakCritical:  ConsecutiveToolErrorsStreakCritical,
+		ContextCeilingWarningTokens:      ContextCeilingWarningTokens,
+		ContextCeilingCriticalTokens:     ContextCeilingCriticalTokens,
+		TokenVelocityWarningTokens:       TokenVelocityWarningTokens,
+		TokenVelocityCriticalTokens:      TokenVelocityCriticalTokens,
+		TokenVelocityWarningDeltaTokens:  TokenVelocityWarningDeltaTokens,
+		TokenVelocityCriticalDeltaTokens: TokenVelocityCriticalDeltaTokens,
+		ToolThrashingMinFailures:         ToolThrashingMinFailures,
+		ToolThrashingCriticalFailures:    ToolThrashingCriticalFailures,
+	}
 }
 
 // DefaultProjectConfig returns a baseline ProjectConfig with pure defaults.
@@ -29,9 +58,8 @@ func DefaultProjectConfig() ProjectConfig {
 			CustomPatterns:  []string{},
 		},
 		Workspaces: WorkspacesConfig{
-			Dir:        "",
-			SrcFolders: []string{},
-			Artifacts:  []WorkspaceArtifactConfig{},
+			Dir:       "",
+			Artifacts: []WorkspaceArtifactConfig{},
 		},
 		Database: DatabaseConfig{
 			Path:           "~/.local/share/opencode/opencode.db",
@@ -43,13 +71,10 @@ func DefaultProjectConfig() ProjectConfig {
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
 		},
+		AnomalyThresholds: DefaultAnomalyThresholdsConfig(),
 		CodeMetrics: CodeMetricsConfig{
+			SourceRoots:  []string{},
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: []string{},
@@ -142,11 +167,10 @@ type WorkspaceArtifactConfig struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
-// WorkspacesConfig defines filesystem paths for ticket workspaces, source repositories, and artifacts.
+// WorkspacesConfig defines filesystem paths for ticket workspaces and artifacts.
 type WorkspacesConfig struct {
-	Dir        string                    `json:"dir" yaml:"dir"`
-	SrcFolders []string                  `json:"src_folders" yaml:"src_folders"`
-	Artifacts  []WorkspaceArtifactConfig `json:"artifacts,omitempty" yaml:"artifacts,omitempty"`
+	Dir       string                    `json:"dir" yaml:"dir"`
+	Artifacts []WorkspaceArtifactConfig `json:"artifacts,omitempty" yaml:"artifacts,omitempty"`
 }
 
 // DatabaseConfig specifies SQLite database connection and query execution parameters.
@@ -159,22 +183,32 @@ type DatabaseConfig struct {
 
 // AnomalyThresholdsConfig defines numerical thresholds for anomaly detection rules.
 type AnomalyThresholdsConfig struct {
-	StallThresholdSeconds int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
-	ErrorRateThreshold    float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
-	ContextExhaustionPct  float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
+	StallThresholdSeconds            int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
+	ErrorRateThreshold               float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
+	ContextExhaustionPct             float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
+	ConsecutiveErrorsStreakWarning   int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
+	ConsecutiveErrorsStreakCritical  int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
+	ContextCeilingWarningTokens      int64   `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
+	ContextCeilingCriticalTokens     int64   `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
+	TokenVelocityWarningTokens       int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
+	TokenVelocityCriticalTokens      int64   `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
+	TokenVelocityWarningDeltaTokens  int64   `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
+	TokenVelocityCriticalDeltaTokens int64   `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
+	ToolThrashingMinFailures         int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
+	ToolThrashingCriticalFailures    int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
 }
 
-// LiveConfig controls real-time session tracking, polling intervals, and anomaly detection.
+// LiveConfig controls real-time session tracking and polling intervals.
 type LiveConfig struct {
-	ActiveThresholdSeconds int                     `json:"active_threshold_seconds" yaml:"active_threshold_seconds"`
-	PollIntervalMs         int                     `json:"poll_interval_ms" yaml:"poll_interval_ms"`
-	MaxTraceBufferMessages int                     `json:"max_trace_buffer_messages" yaml:"max_trace_buffer_messages"`
-	AnomalyThresholds      AnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
+	ActiveThresholdSeconds int `json:"active_threshold_seconds" yaml:"active_threshold_seconds"`
+	PollIntervalMs         int `json:"poll_interval_ms" yaml:"poll_interval_ms"`
+	MaxTraceBufferMessages int `json:"max_trace_buffer_messages" yaml:"max_trace_buffer_messages"`
 }
 
 // CodeMetricsConfig defines file classification glob patterns for git metrics.
 type CodeMetricsConfig struct {
 	BaseBranch   string   `json:"base_branch,omitempty" yaml:"base_branch,omitempty"`
+	SourceRoots  []string `json:"source_roots,omitempty" yaml:"source_roots,omitempty"`
 	Include      []string `json:"include" yaml:"include"`
 	Exclude      []string `json:"exclude" yaml:"exclude"`
 	TestPatterns []string `json:"test_patterns" yaml:"test_patterns"`
