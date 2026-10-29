@@ -48,8 +48,8 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - **Context Window Health:** ELEVATED — Root agent peak 169.2k tokens (85% of 200k healthy ceiling, 10 compactions) | Subagents peak 168.4k (Coder)
 - **Role Effort Distribution (Subagents):** Coder 100.0%
 - **Subagent Turn Velocity & Thrashing:** 153.2 avg turns/run (peak: 352 turns) | Coder 153.2
-- **Test-to-Production Code Ratio:** 2.9:1 (+1,813 test lines / +623 prod lines)
-- **Code Delivered:** +2,522 / -1,336 lines across 62 code files (excluding docs)
+- **Test-to-Production Code Ratio:** 4.2:1 (+2,779 test lines / +664 prod lines)
+- **Code Delivered:** +3,529 / -2,036 lines across 73 code files (excluding docs)
 - **Reasoning Effort:** 402,320 reasoning tokens (64.2% of generated output)
 - **Tool Health & Self-Correction:** 1,560 tool calls (15 self-corrections, 99.0% success rate)
 
