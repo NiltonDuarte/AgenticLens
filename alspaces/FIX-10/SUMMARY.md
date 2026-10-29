@@ -43,18 +43,19 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - Verification: `make check`, `make test`, and uncached Go race tests passed; 2,361 Go tests/subtests and 737 frontend tests passed. Independent review approved iteration 04. See `iterations/04/IMPLEMENTATION_TEST_EVIDENCE.txt` and `iterations/04/REVIEW.md`.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 20
-- **Active Agent Duration:** 5h 51m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 169.2k tokens (85% of 200k healthy ceiling, 10 compactions) | Subagents peak 168.4k (Coder)
+- **Software Development Life Cycle Iterations:** 35
+- **Active Agent Duration:** 6h 41m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 240.9k tokens (120% of 200k healthy ceiling, 11 compactions) | Subagents peak 168.4k (Coder)
 - **Role Effort Distribution (Subagents):** Coder 100.0%
 - **Subagent Turn Velocity & Thrashing:** 153.2 avg turns/run (peak: 352 turns) | Coder 153.2
-- **Test-to-Production Code Ratio:** 4.2:1 (+2,779 test lines / +664 prod lines)
-- **Code Delivered:** +3,529 / -2,036 lines across 73 code files (excluding docs)
-- **Reasoning Effort:** 402,320 reasoning tokens (64.2% of generated output)
-- **Tool Health & Self-Correction:** 1,560 tool calls (15 self-corrections, 99.0% success rate)
+- **Test-to-Production Code Ratio:** 4.2:1 (+2,778 test lines / +664 prod lines)
+- **Code Delivered:** +3,442 / -1,958 lines across 68 code files (excluding docs)
+- **Reasoning Effort:** 436,133 reasoning tokens (60.0% of generated output)
+- **Tool Health & Self-Correction:** 1,711 tool calls (22 self-corrections, 98.7% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 22 execution anomalies detected (13 CRITICAL, 9 WARNING).
+- **Status:** 24 execution anomalies detected (14 CRITICAL, 10 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.2k tokens) — Context tokens reached 201.2k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k, breaching the 160k critical ceiling.
@@ -68,6 +69,7 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.4k tokens) — Context tokens reached 165.4k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.9k tokens) — Context tokens reached 167.9k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (169.2k tokens) — Context tokens reached 169.2k, breaching the 160k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.8k tokens) — Context tokens reached 165.8k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+49.3k tokens) — Context tokens surged by 49.3k to 49.3k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+57.8k tokens) — Context tokens surged by 57.8k to 57.8k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.3k tokens) — Context tokens surged by 72.3k to 72.3k tokens.
@@ -87,10 +89,12 @@ Fixed two critical telemetry backfill data corruption bugs in AgenticLens:
 |---|---|---|---|---|---|---|---|---|
 | **orchestrator** | 1 | 5,261,607 | 93,224 | 52,654,100 | 90.9% | 169.2k | ELEVATED | $8.81 |
 | **coder** | 6 | 5,154,527 | 131,272 | 75,180,300 | 93.6% | 168.4k | ELEVATED | $10.94 |
-| **Total** | **7** | **10,416,134** | **224,496** | **127,834,400** | **92.5%** | **169.2k** | **ELEVATED** | **$19.75** |
+| **rootagent** | 1 | 387,931 | 66,104 | 30,572,416 | 98.7% | 240.9k | BLOATED (120%) | $0.00 |
+| **Total** | **8** | **10,804,065** | **290,600** | **158,406,816** | **93.6%** | **240.9k** | **BLOATED** | **$19.75** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gemini-3.8-flash** | 7 | 10,416,134 | 224,496 | 127,834,400 | 92.5% | $19.75 |
-| **Total** | **7** | **10,416,134** | **224,496** | **127,834,400** | **92.5%** | **$19.75** |
+| **gpt-6-luna** | 1 | 387,931 | 66,104 | 30,572,416 | 98.7% | $0.00 |
+| **Total** | **8** | **10,804,065** | **290,600** | **158,406,816** | **93.6%** | **$19.75** |

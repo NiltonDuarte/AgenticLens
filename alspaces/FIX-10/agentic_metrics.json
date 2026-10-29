@@ -3,20 +3,86 @@
   "ticket_id": "FIX-10",
   "ticket_title": "Backfill Multi-Root Sessions and Require Explicit Command Line Fallbacks",
   "ticket_type": "fix",
-  "started_at": "2026-10-28T17:44:06.446000+00:00",
-  "completed_at": "2026-10-28T23:08:19.285000+00:00",
-  "updated_at": "2026-10-29T00:07:26.013715+00:00",
+  "started_at": "2026-10-28T17:44:06.801000+00:00",
+  "completed_at": "2026-10-29T00:28:59.124Z",
+  "updated_at": "2026-10-29T00:29:01.096429+00:00",
   "code": {
-    "lines_added": 3529,
-    "lines_deleted": 2036,
-    "test_lines_added": 2779,
+    "lines_added": 3442,
+    "lines_deleted": 1958,
+    "test_lines_added": 2778,
     "test_lines_deleted": 1428,
     "prod_lines_added": 664,
-    "prod_lines_deleted": 522,
-    "files_changed": 73,
-    "sdlc_iterations": 20
+    "prod_lines_deleted": 530,
+    "files_changed": 68,
+    "sdlc_iterations": 35
   },
   "sessions": [
+    {
+      "id": "01a184cb-31d1-7240-ba9b-23eea56ed6ce",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-28T23:14:32.942Z",
+          "completed_at": "2026-10-29T00:28:59.124Z",
+          "active_duration_seconds": 3005,
+          "turns": 8,
+          "tokens": {
+            "input": 387931,
+            "output": 66104,
+            "cache_read": 30572416,
+            "reasoning": 33813,
+            "peak_context": 240877
+          },
+          "cost_usd": 0,
+          "compactions": 1,
+          "user_iterations": 15
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 100,
+          "errors": 7
+        },
+        {
+          "name": "wait",
+          "calls": 51,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 5,
+            "context_tokens": 201175,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 240877,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 5,
+            "context_tokens": 165762,
+            "threshold": "160000"
+          }
+        }
+      ]
+    },
     {
       "id": "ses_e7b586772fferGUFzPNahDFTZH",
       "parent_id": "ses_e7c634fd2ffeNv8k9SBWOV5vtX",
@@ -116,6 +182,15 @@
             "token_delta": 72279,
             "context_tokens": 72279,
             "threshold": "40000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "role": "coder",
+            "context_tokens": 168353,
+            "threshold": "160000"
           }
         }
       ]
@@ -239,6 +314,15 @@
             "context_tokens": 160486,
             "threshold": "160000"
           }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "role": "coder",
+            "context_tokens": 160486,
+            "threshold": "160000"
+          }
         }
       ]
     },
@@ -321,6 +405,15 @@
             "token_delta": 49293,
             "context_tokens": 49293,
             "threshold": "40000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "role": "coder",
+            "context_tokens": 165407,
+            "threshold": "160000"
           }
         }
       ]
@@ -419,6 +512,15 @@
             "token_delta": 57779,
             "context_tokens": 57779,
             "threshold": "40000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "role": "coder",
+            "context_tokens": 167868,
+            "threshold": "160000"
           }
         }
       ]
@@ -620,6 +722,15 @@
             "token_delta": 49459,
             "context_tokens": 49459,
             "threshold": "40000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "role": "orchestrator",
+            "context_tokens": 169194,
+            "threshold": "160000"
           }
         }
       ]
