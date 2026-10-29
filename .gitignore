@@ -30,6 +30,7 @@ web/node_modules/**
 *.pfx
 
 # Local databases and SQLite artifacts
+.agenticlens-config.local.yaml
 *.db
 *.db-shm
 *.db-wal
