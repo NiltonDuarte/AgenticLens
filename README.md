@@ -4,6 +4,16 @@
 
 AgenticLens is a specialized observability and engineering intelligence platform built for multi-agent software development workflows. Operating directly against OpenCode execution traces, AgenticLens transforms autonomous coding agents from unpredictable black boxes into observable, accountable, and high-velocity engineering swarms.
 
+## Install AgenticLens with Your Coding Agent
+
+Ask your coding agent to install and configure AgenticLens in the repository. For an OpenCode agent, use this prompt:
+
+```text
+Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Explain the proposed changes and ask before modifying agent policy files.
+```
+
+The setup skill guides the agent through downloading the platform binaries, configuring the repository, and integrating the AgenticLens operator skill. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
+
 ---
 
 ## Why AgenticLens?
@@ -127,29 +137,6 @@ AgenticLens brings rigor to the Autonomous Software Development Life Cycle:
 
 ---
 
-## Quick Start
-
-### Download Precompiled Binary
-
-Download the latest standalone binary for your operating system from GitHub Releases:
-
-```bash
-# Example for Linux x86_64:
-curl -fsSL https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-linux-amd64.tar.gz | tar -xz
-
-# Run the dashboard:
-./agentic-lens server --port 8085
-```
-
-Open `http://localhost:8085` in your browser.
-
-Precompiled binaries are available for:
-- Linux (`x86_64`, `arm64`)
-- macOS (`Intel`, `Apple Silicon`)
-- Windows (`x86_64`)
-
----
-
 ## CLI Overview
 
 AgenticLens provides a unified CLI for automation and local workflows:
@@ -161,8 +148,8 @@ AgenticLens provides a unified CLI for automation and local workflows:
 # Ingest active session telemetry and generate summary markdown block
 ./bin/agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
 
-# Discover the latest matching Codex rollout in CODEX_HOME, including child threads
-./bin/agentic-lens generate --source codex --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
+# Replace ses_abc123 with the Codex root session ID; child threads are discovered from it
+./bin/agentic-lens generate --source codex --session-id ses_abc123 --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
 
 # List all tracked workspaces with detected anomaly counts
 ./bin/agentic-lens --list
@@ -171,7 +158,7 @@ AgenticLens provides a unified CLI for automation and local workflows:
 ./bin/agentic-lens --ticket-id AL-15 --anomalies
 
 # Batch reconcile git facts and database telemetry across historical workspaces
-./bin/agentic-lens backfill --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
+./bin/agentic-lens backfill --source opencode --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
 
 # Run stepwise schema migrations across workspace ledgers
 ./bin/agentic-lens migrate --backup --update-summaries
