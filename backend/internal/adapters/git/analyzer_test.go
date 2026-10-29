@@ -202,9 +202,9 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
-    - src
 code_metrics:
+  source_roots:
+    - src
   include:
     - "custom/include/**"
   exclude:
@@ -213,6 +213,9 @@ code_metrics:
     - "*_test_custom.go"
   prod_patterns:
     - "*.custom_prod"
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 		t.Fatal(err)
@@ -524,13 +527,13 @@ func TestResolveBaseBranch_Unresolvable_FailureInvariant(t *testing.T) {
 	}
 }
 
-func TestValidateSrcFolders(t *testing.T) {
-	expectedMsg := "workspaces.src_folders is empty or unconfigured: configure 'workspaces.src_folders' in .agenticlens-config.yaml"
+func TestValidateSourceRoots(t *testing.T) {
+	expectedMsg := "code_metrics.source_roots is empty or unconfigured: configure 'code_metrics.source_roots' in .agenticlens-config.yaml"
 
 	t.Run("nil slice fails with exact configuration prompt", func(t *testing.T) {
-		err := git.ValidateSrcFolders(nil)
+		err := git.ValidateSourceRoots(nil)
 		if err == nil {
-			t.Fatal("expected error for nil src_folders, got nil")
+			t.Fatal("expected error for nil code_metrics.source_roots, got nil")
 		}
 		if !strings.Contains(err.Error(), expectedMsg) {
 			t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
@@ -538,9 +541,9 @@ func TestValidateSrcFolders(t *testing.T) {
 	})
 
 	t.Run("empty slice fails with exact configuration prompt", func(t *testing.T) {
-		err := git.ValidateSrcFolders([]string{})
+		err := git.ValidateSourceRoots([]string{})
 		if err == nil {
-			t.Fatal("expected error for empty src_folders, got nil")
+			t.Fatal("expected error for empty code_metrics.source_roots, got nil")
 		}
 		if !strings.Contains(err.Error(), expectedMsg) {
 			t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
@@ -554,9 +557,9 @@ func TestValidateSrcFolders(t *testing.T) {
 			{"", "  ", "\t", "\r\n"},
 		}
 		for _, tc := range whitespaceCases {
-			err := git.ValidateSrcFolders(tc)
+			err := git.ValidateSourceRoots(tc)
 			if err == nil {
-				t.Fatalf("expected error for whitespace src_folders %v, got nil", tc)
+				t.Fatalf("expected error for whitespace source_roots %v, got nil", tc)
 			}
 			if !strings.Contains(err.Error(), expectedMsg) {
 				t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
@@ -565,16 +568,16 @@ func TestValidateSrcFolders(t *testing.T) {
 	})
 
 	t.Run("valid slice succeeds", func(t *testing.T) {
-		err := git.ValidateSrcFolders([]string{"backend", "web"})
+		err := git.ValidateSourceRoots([]string{"backend", "web"})
 		if err != nil {
-			t.Errorf("unexpected error for valid src_folders: %v", err)
+			t.Errorf("unexpected error for valid source_roots: %v", err)
 		}
 	})
 
 	t.Run("slice with empty strings but at least one valid folder succeeds", func(t *testing.T) {
-		err := git.ValidateSrcFolders([]string{"", "   ", "services", "\t"})
+		err := git.ValidateSourceRoots([]string{"", "   ", "services", "\t"})
 		if err != nil {
-			t.Errorf("unexpected error for mixed src_folders: %v", err)
+			t.Errorf("unexpected error for mixed source_roots: %v", err)
 		}
 	})
 }
@@ -645,7 +648,11 @@ func TestIsMonitoredSourcePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := git.IsMonitoredSourcePath(tt.path, tt.srcFolders, tt.cfg)
+			cfg := tt.cfg
+			if cfg == nil {
+				cfg = &git.ClassificationConfig{SourceRoots: tt.srcFolders}
+			}
+			actual := git.IsMonitoredSourcePath(tt.path, cfg)
 			if actual != tt.expected {
 				t.Errorf("IsMonitoredSourcePath(%q, %v) = %v, expected %v", tt.path, tt.srcFolders, actual, tt.expected)
 			}
@@ -690,7 +697,7 @@ func TestExplicitCodeRefDoesNotDependOnTicketOrBranchNaming(t *testing.T) {
 	run("add", ".")
 	run("commit", "-m", "implementation under a ticket-free branch")
 	cfg := &git.ClassificationConfig{
-		BaseBranch: "baseline", SrcFolders: []string{"src"},
+		BaseBranch: "baseline", SourceRoots: []string{"src"},
 		TestPatterns: []string{"**/*_test.go", "**/testdata/**"},
 		ProdPatterns: []string{"src/**/*.go", "runtime/**"},
 	}

@@ -349,7 +349,7 @@ func TestCheckUnconfiguredPatterns(t *testing.T) {
 
 func TestConfiguredPathBoundariesAndMonitoring(t *testing.T) {
 	cfg := &git.ClassificationConfig{
-		SrcFolders:   []string{"application"},
+		SourceRoots:  []string{"application"},
 		TestPatterns: []string{"checks/**/samples/**", "application/**/*_check.custom"},
 		ProdPatterns: []string{"runtime/**/*.custom"},
 		Include:      []string{"build.recipe"},
@@ -374,7 +374,7 @@ func TestConfiguredPathBoundariesAndMonitoring(t *testing.T) {
 		if got := git.ClassifyFile(tc.path, cfg); got != tc.category {
 			t.Errorf("%s: category %s, want %s", tc.path, got, tc.category)
 		}
-		if got := git.IsMonitoredSourcePath(tc.path, cfg.SrcFolders, cfg); got != tc.monitored {
+		if got := git.IsMonitoredSourcePath(tc.path, cfg); got != tc.monitored {
 			t.Errorf("%s: monitored %v, want %v", tc.path, got, tc.monitored)
 		}
 	}

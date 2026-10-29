@@ -114,7 +114,12 @@ func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 }
 
 // ComputeTotals calculates aggregate invocation metrics from a slice of invocation facts.
-func ComputeTotals(invocations []InvocationFact) GroupedMetric {
+func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric {
+	effCeiling := ContextCeilingCriticalTokens
+	if len(ceiling) > 0 && ceiling[0] > 0 {
+		effCeiling = ceiling[0]
+	}
+
 	if len(invocations) == 0 {
 		return GroupedMetric{
 			Invocations:       0,
@@ -139,7 +144,7 @@ func ComputeTotals(invocations []InvocationFact) GroupedMetric {
 	}
 
 	acc := accumulateInvocations(invocations)
-	healthStatus := GetBaseHealthStatus(acc.peakContextTokens, HealthyCeilingTokens)
+	healthStatus := GetBaseHealthStatus(acc.peakContextTokens, effCeiling)
 
 	return GroupedMetric{
 		Invocations:       totalInvocations,
@@ -155,6 +160,19 @@ func ComputeTotals(invocations []InvocationFact) GroupedMetric {
 
 // ComputeWorkflowEfficiency derives workflow efficiency profile from an atomic fact ledger.
 func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) WorkflowEfficiency {
+	return ComputeWorkflowEfficiencyWithCeiling(ledger, ContextCeilingCriticalTokens, roleOrder...)
+}
+
+// ComputeWorkflowEfficiencyWithConfig derives workflow efficiency using project configuration.
+func ComputeWorkflowEfficiencyWithConfig(ledger AgenticFactLedger, cfg ProjectConfig) WorkflowEfficiency {
+	return ComputeWorkflowEfficiencyWithCeiling(ledger, cfg.EffectiveHealthyCeiling(), cfg.RoleOrder)
+}
+
+// ComputeWorkflowEfficiencyWithCeiling derives workflow efficiency profile with an explicit context ceiling.
+func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int64, roleOrder ...[]string) WorkflowEfficiency {
+	if ceiling <= 0 {
+		ceiling = ContextCeilingCriticalTokens
+	}
 	invs := ledger.InvocationFacts()
 	tools := ledger.ToolFacts()
 	code := ledger.Code
@@ -333,8 +351,8 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 		rootPeakVal = rootPeak
 	}
 	var rootSatPct float64
-	if HealthyCeilingTokens > 0 {
-		rootSatPct = math.Round(float64(rootPeakVal)/float64(HealthyCeilingTokens)*1000.0) / 10.0
+	if ceiling > 0 {
+		rootSatPct = math.Round(float64(rootPeakVal)/float64(ceiling)*1000.0) / 10.0
 	}
 
 	var subPeak int64
@@ -379,10 +397,10 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 	if subPeak > overallPeak {
 		overallPeak = subPeak
 	}
-	cwhStatus := GetBaseHealthStatus(overallPeak, HealthyCeilingTokens)
+	cwhStatus := GetBaseHealthStatus(overallPeak, ceiling)
 
 	contextWindowHealth := ContextWindowHealth{
-		HealthyCeilingTokens: HealthyCeilingTokens,
+		HealthyCeilingTokens: ceiling,
 		Status:               cwhStatus,
 		RootPeakTokens:       rootPeakVal,
 		RootSaturationPct:    rootSatPct,
@@ -407,8 +425,17 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 	}
 }
 
-// ComputeRoleMetrics calculates aggregated metrics grouped by agent role.
+// ComputeRoleMetrics calculates aggregated metrics grouped by agent role using default ceiling.
 func ComputeRoleMetrics(invocations []InvocationFact, roleOrder ...[]string) []RoleMetric {
+	return ComputeRoleMetricsWithCeiling(invocations, ContextCeilingCriticalTokens, roleOrder...)
+}
+
+// ComputeRoleMetricsWithCeiling calculates aggregated metrics grouped by agent role with an explicit context ceiling.
+func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, roleOrder ...[]string) []RoleMetric {
+	if ceiling <= 0 {
+		ceiling = ContextCeilingCriticalTokens
+	}
+
 	byRole := make(map[AgentRole][]InvocationFact)
 	for _, inv := range invocations {
 		byRole[inv.Role] = append(byRole[inv.Role], inv)
@@ -437,7 +464,7 @@ func ComputeRoleMetrics(invocations []InvocationFact, roleOrder ...[]string) []R
 	var metrics []RoleMetric
 	for _, role := range orderedRoles {
 		acc := accumulateInvocations(byRole[role])
-		health := GetBaseHealthStatus(acc.peakContextTokens, HealthyCeilingTokens)
+		health := GetBaseHealthStatus(acc.peakContextTokens, ceiling)
 
 		metrics = append(metrics, RoleMetric{
 			Role:              role,
@@ -457,7 +484,12 @@ func ComputeRoleMetrics(invocations []InvocationFact, roleOrder ...[]string) []R
 
 // ComputeModelMetrics calculates aggregated metrics grouped by model, sorted by cost descending
 // with secondary tie-breaking on model name ascending.
-func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
+func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []ModelMetric {
+	effCeiling := ContextCeilingCriticalTokens
+	if len(ceiling) > 0 && ceiling[0] > 0 {
+		effCeiling = ceiling[0]
+	}
+
 	byModel := make(map[string][]InvocationFact)
 	for _, inv := range invocations {
 		byModel[inv.Model] = append(byModel[inv.Model], inv)
@@ -466,7 +498,7 @@ func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
 	var metrics []ModelMetric
 	for model, mInvs := range byModel {
 		acc := accumulateInvocations(mInvs)
-		health := GetBaseHealthStatus(acc.peakContextTokens, HealthyCeilingTokens)
+		health := GetBaseHealthStatus(acc.peakContextTokens, effCeiling)
 
 		metrics = append(metrics, ModelMetric{
 			Model:             model,
@@ -493,6 +525,15 @@ func ComputeModelMetrics(invocations []InvocationFact) []ModelMetric {
 
 // ComputeThreadSummaries groups invocations by root session into hierarchical thread execution records.
 func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string) []ThreadExecutionRecord {
+	return ComputeThreadSummariesWithCeiling(invocations, ContextCeilingCriticalTokens, roleOrder...)
+}
+
+// ComputeThreadSummariesWithCeiling groups invocations by root session into hierarchical thread execution records with an explicit ceiling.
+func ComputeThreadSummariesWithCeiling(invocations []InvocationFact, ceiling int64, roleOrder ...[]string) []ThreadExecutionRecord {
+	if ceiling <= 0 {
+		ceiling = ContextCeilingCriticalTokens
+	}
+
 	if len(invocations) == 0 {
 		return []ThreadExecutionRecord{}
 	}
@@ -601,7 +642,7 @@ func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string)
 				if totTok > 0 {
 					hitPct = math.Round(float64(cache)/float64(totTok)*1000.0) / 10.0
 				}
-				health := GetBaseHealthStatus(peak, HealthyCeilingTokens)
+				health := GetBaseHealthStatus(peak, ceiling)
 
 				modelMetrics = append(modelMetrics, ModelMetric{
 					Model:             model,
@@ -700,12 +741,14 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		}
 	}
 
-	totals := ComputeTotals(mappedInvocations)
-	eff := ComputeWorkflowEfficiency(mappedFactLedger, cfg.RoleOrder)
-	roles := ComputeRoleMetrics(mappedInvocations, cfg.RoleOrder)
-	models := ComputeModelMetrics(mappedInvocations)
-	threads := ComputeThreadSummaries(mappedInvocations, cfg.RoleOrder)
-	anomalies := RefreshAnomalySummaries(mappedFactLedger)
+	effectiveCeiling := cfg.EffectiveHealthyCeiling()
+
+	totals := ComputeTotals(mappedInvocations, effectiveCeiling)
+	eff := ComputeWorkflowEfficiencyWithCeiling(mappedFactLedger, effectiveCeiling, cfg.RoleOrder)
+	roles := ComputeRoleMetricsWithCeiling(mappedInvocations, effectiveCeiling, cfg.RoleOrder)
+	models := ComputeModelMetrics(mappedInvocations, effectiveCeiling)
+	threads := ComputeThreadSummariesWithCeiling(mappedInvocations, effectiveCeiling, cfg.RoleOrder)
+	anomalies := RefreshAnomalySummaries(mappedFactLedger, cfg.AnomalyThresholds)
 	for i := range anomalies {
 		if anomalies[i].Context.Role != nil {
 			role := mappings.ResolveRole(string(*anomalies[i].Context.Role))
@@ -971,7 +1014,12 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 }
 
 // CalculateRoleEffortRollup groups invocations, tokens, and cost across all tickets by agent role.
-func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger) map[string]GroupedMetric {
+func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger, ceiling ...int64) map[string]GroupedMetric {
+	effCeiling := ContextCeilingCriticalTokens
+	if len(ceiling) > 0 && ceiling[0] > 0 {
+		effCeiling = ceiling[0]
+	}
+
 	rollup := make(map[string]GroupedMetric)
 	for _, ledger := range ledgers {
 		for _, r := range ledger.Roles {
@@ -993,7 +1041,7 @@ func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger) map[string]Groupe
 		if totTok > 0 {
 			m.CacheHitRatePct = math.Round(float64(m.CacheReadTokens)/float64(totTok)*1000.0) / 10.0
 		}
-		m.ContextHealth = GetBaseHealthStatus(m.PeakContextTokens, HealthyCeilingTokens)
+		m.ContextHealth = GetBaseHealthStatus(m.PeakContextTokens, effCeiling)
 		rollup[role] = m
 	}
 

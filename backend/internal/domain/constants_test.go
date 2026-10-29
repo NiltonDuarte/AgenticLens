@@ -62,14 +62,16 @@ func TestGetBaseHealthStatus(t *testing.T) {
 		{name: "negative ceiling defaults to 200k (bloated)", toks: 200001, ceiling: -50000, expected: domain.ContextHealthBloated},
 
 		// Custom lower ceiling (50,000)
-		{name: "custom 50k ceiling at boundary", toks: 50000, ceiling: 50000, expected: domain.ContextHealthHealthy},
+		{name: "custom 50k ceiling under elevated", toks: 24999, ceiling: 50000, expected: domain.ContextHealthHealthy},
+		{name: "custom 50k ceiling at elevated boundary", toks: 25000, ceiling: 50000, expected: domain.ContextHealthElevated},
+		{name: "custom 50k ceiling at ceiling boundary", toks: 50000, ceiling: 50000, expected: domain.ContextHealthElevated},
 		{name: "custom 50k ceiling bloated", toks: 50001, ceiling: 50000, expected: domain.ContextHealthBloated},
 		{name: "custom 50k ceiling at 2x boundary", toks: 100000, ceiling: 50000, expected: domain.ContextHealthBloated},
 		{name: "custom 50k ceiling critical", toks: 100001, ceiling: 50000, expected: domain.ContextHealthCritical},
 
 		// Custom higher ceiling (500,000)
-		{name: "custom 500k ceiling under 100k", toks: 99999, ceiling: 500000, expected: domain.ContextHealthHealthy},
-		{name: "custom 500k ceiling at 100k elevated", toks: 100000, ceiling: 500000, expected: domain.ContextHealthElevated},
+		{name: "custom 500k ceiling under elevated", toks: 249999, ceiling: 500000, expected: domain.ContextHealthHealthy},
+		{name: "custom 500k ceiling at elevated boundary", toks: 250000, ceiling: 500000, expected: domain.ContextHealthElevated},
 		{name: "custom 500k ceiling at 500k boundary", toks: 500000, ceiling: 500000, expected: domain.ContextHealthElevated},
 		{name: "custom 500k ceiling bloated", toks: 500001, ceiling: 500000, expected: domain.ContextHealthBloated},
 		{name: "custom 500k ceiling critical", toks: 1000001, ceiling: 500000, expected: domain.ContextHealthCritical},

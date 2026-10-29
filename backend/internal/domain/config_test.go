@@ -30,8 +30,7 @@ func testProjectConfig() domain.ProjectConfig {
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir:        "workspaces",
-			SrcFolders: []string{"web", "backend"},
+			Dir: "workspaces",
 			Artifacts: []domain.WorkspaceArtifactConfig{
 				{
 					Path:        "CONTRACT.md",
@@ -60,13 +59,24 @@ func testProjectConfig() domain.ProjectConfig {
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
+		},
+		AnomalyThresholds: domain.AnomalyThresholdsConfig{
+			StallThresholdSeconds:            120,
+			ErrorRateThreshold:               0.25,
+			ContextExhaustionPct:             0.85,
+			ConsecutiveErrorsStreakWarning:   3,
+			ConsecutiveErrorsStreakCritical:  5,
+			ContextCeilingWarningTokens:      160000,
+			ContextCeilingCriticalTokens:     200000,
+			TokenVelocityWarningTokens:       30000,
+			TokenVelocityCriticalTokens:      60000,
+			TokenVelocityWarningDeltaTokens:  40000,
+			TokenVelocityCriticalDeltaTokens: 80000,
+			ToolThrashingMinFailures:         3,
+			ToolThrashingCriticalFailures:    5,
 		},
 		CodeMetrics: domain.CodeMetricsConfig{
+			SourceRoots:  []string{"web", "backend"},
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: []string{},
@@ -99,9 +109,6 @@ func TestDefaultProjectConfig(t *testing.T) {
 	}
 	if cfg.Workspaces.Dir != "" {
 		t.Errorf("expected empty Workspaces.Dir, got %q", cfg.Workspaces.Dir)
-	}
-	if len(cfg.Workspaces.SrcFolders) != 0 || cfg.Workspaces.SrcFolders == nil {
-		t.Errorf("expected non-nil empty Workspaces.SrcFolders, got %v", cfg.Workspaces.SrcFolders)
 	}
 	if len(cfg.Workspaces.Artifacts) != 0 || cfg.Workspaces.Artifacts == nil {
 		t.Errorf("expected non-nil empty Workspaces.Artifacts, got %v", cfg.Workspaces.Artifacts)
@@ -136,14 +143,47 @@ func TestDefaultProjectConfig(t *testing.T) {
 	if cfg.Live.MaxTraceBufferMessages != 500 {
 		t.Errorf("expected Live.MaxTraceBufferMessages 500, got %d", cfg.Live.MaxTraceBufferMessages)
 	}
-	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 120 {
-		t.Errorf("expected Live.AnomalyThresholds.StallThresholdSeconds 120, got %d", cfg.Live.AnomalyThresholds.StallThresholdSeconds)
+	if cfg.AnomalyThresholds.StallThresholdSeconds != 120 {
+		t.Errorf("expected AnomalyThresholds.StallThresholdSeconds 120, got %d", cfg.AnomalyThresholds.StallThresholdSeconds)
 	}
-	if cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.25 {
-		t.Errorf("expected Live.AnomalyThresholds.ErrorRateThreshold 0.25, got %f", cfg.Live.AnomalyThresholds.ErrorRateThreshold)
+	if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 {
+		t.Errorf("expected AnomalyThresholds.ErrorRateThreshold 0.25, got %f", cfg.AnomalyThresholds.ErrorRateThreshold)
 	}
-	if cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
-		t.Errorf("expected Live.AnomalyThresholds.ContextExhaustionPct 0.85, got %f", cfg.Live.AnomalyThresholds.ContextExhaustionPct)
+	if cfg.AnomalyThresholds.ContextExhaustionPct != 0.85 {
+		t.Errorf("expected AnomalyThresholds.ContextExhaustionPct 0.85, got %f", cfg.AnomalyThresholds.ContextExhaustionPct)
+	}
+	if cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
+		t.Errorf("expected AnomalyThresholds.ConsecutiveErrorsStreakWarning 3, got %d", cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
+	}
+	if cfg.AnomalyThresholds.ConsecutiveErrorsStreakCritical != 5 {
+		t.Errorf("expected AnomalyThresholds.ConsecutiveErrorsStreakCritical 5, got %d", cfg.AnomalyThresholds.ConsecutiveErrorsStreakCritical)
+	}
+	if cfg.AnomalyThresholds.ContextCeilingWarningTokens != 160000 {
+		t.Errorf("expected AnomalyThresholds.ContextCeilingWarningTokens 160000, got %d", cfg.AnomalyThresholds.ContextCeilingWarningTokens)
+	}
+	if cfg.AnomalyThresholds.ContextCeilingCriticalTokens != 200000 {
+		t.Errorf("expected AnomalyThresholds.ContextCeilingCriticalTokens 200000, got %d", cfg.AnomalyThresholds.ContextCeilingCriticalTokens)
+	}
+	if cfg.AnomalyThresholds.TokenVelocityWarningTokens != 30000 {
+		t.Errorf("expected AnomalyThresholds.TokenVelocityWarningTokens 30000, got %d", cfg.AnomalyThresholds.TokenVelocityWarningTokens)
+	}
+	if cfg.AnomalyThresholds.TokenVelocityCriticalTokens != 60000 {
+		t.Errorf("expected AnomalyThresholds.TokenVelocityCriticalTokens 60000, got %d", cfg.AnomalyThresholds.TokenVelocityCriticalTokens)
+	}
+	if cfg.AnomalyThresholds.TokenVelocityWarningDeltaTokens != 40000 {
+		t.Errorf("expected AnomalyThresholds.TokenVelocityWarningDeltaTokens 40000, got %d", cfg.AnomalyThresholds.TokenVelocityWarningDeltaTokens)
+	}
+	if cfg.AnomalyThresholds.TokenVelocityCriticalDeltaTokens != 80000 {
+		t.Errorf("expected AnomalyThresholds.TokenVelocityCriticalDeltaTokens 80000, got %d", cfg.AnomalyThresholds.TokenVelocityCriticalDeltaTokens)
+	}
+	if cfg.AnomalyThresholds.ToolThrashingMinFailures != 3 {
+		t.Errorf("expected AnomalyThresholds.ToolThrashingMinFailures 3, got %d", cfg.AnomalyThresholds.ToolThrashingMinFailures)
+	}
+	if cfg.AnomalyThresholds.ToolThrashingCriticalFailures != 5 {
+		t.Errorf("expected AnomalyThresholds.ToolThrashingCriticalFailures 5, got %d", cfg.AnomalyThresholds.ToolThrashingCriticalFailures)
+	}
+	if len(cfg.CodeMetrics.SourceRoots) != 0 || cfg.CodeMetrics.SourceRoots == nil {
+		t.Errorf("expected non-nil empty CodeMetrics.SourceRoots, got %v", cfg.CodeMetrics.SourceRoots)
 	}
 	if cfg.CodeMetrics.BaseBranch != "" {
 		t.Errorf("expected empty CodeMetrics.BaseBranch, got %q", cfg.CodeMetrics.BaseBranch)
@@ -171,7 +211,7 @@ func TestDefaultProjectConfig(t *testing.T) {
 		cfg1 := domain.DefaultProjectConfig()
 		cfg1.RoleMappings["custom"] = "coder"
 		cfg1.RoleOrder = append(cfg1.RoleOrder, "custom")
-		cfg1.Workspaces.SrcFolders = append(cfg1.Workspaces.SrcFolders, "test")
+		cfg1.CodeMetrics.SourceRoots = append(cfg1.CodeMetrics.SourceRoots, "test")
 
 		cfg2 := domain.DefaultProjectConfig()
 		if len(cfg2.RoleMappings) != 0 {
@@ -180,8 +220,8 @@ func TestDefaultProjectConfig(t *testing.T) {
 		if len(cfg2.RoleOrder) != 0 {
 			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: RoleOrder len %d", len(cfg2.RoleOrder))
 		}
-		if len(cfg2.Workspaces.SrcFolders) != 0 {
-			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: SrcFolders len %d", len(cfg2.Workspaces.SrcFolders))
+		if len(cfg2.CodeMetrics.SourceRoots) != 0 {
+			t.Errorf("mutation leaked to subsequent DefaultProjectConfig: SourceRoots len %d", len(cfg2.CodeMetrics.SourceRoots))
 		}
 	})
 
@@ -213,9 +253,8 @@ func TestWorkspaceArtifactConfig(t *testing.T) {
 	}
 
 	wsCfg := domain.WorkspacesConfig{
-		Dir:        "workspaces",
-		SrcFolders: []string{"backend"},
-		Artifacts:  []domain.WorkspaceArtifactConfig{cfg},
+		Dir:       "workspaces",
+		Artifacts: []domain.WorkspaceArtifactConfig{cfg},
 	}
 	if len(wsCfg.Artifacts) != 1 || wsCfg.Artifacts[0].Path != "CONTRACT.md" {
 		t.Errorf("unexpected WorkspacesConfig artifacts: %+v", wsCfg.Artifacts)
@@ -265,8 +304,8 @@ func TestProjectConfig_HelperFixture(t *testing.T) {
 	if cfg.Workspaces.Dir != "workspaces" {
 		t.Errorf("expected Workspaces.Dir workspaces, got %s", cfg.Workspaces.Dir)
 	}
-	if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "web" || cfg.Workspaces.SrcFolders[1] != "backend" {
-		t.Errorf("unexpected Workspaces.SrcFolders: %v", cfg.Workspaces.SrcFolders)
+	if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
+		t.Errorf("unexpected CodeMetrics.SourceRoots: %v", cfg.CodeMetrics.SourceRoots)
 	}
 	if cfg.Database.Path != "~/.local/share/opencode/opencode.db" {
 		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
@@ -289,14 +328,14 @@ func TestProjectConfig_HelperFixture(t *testing.T) {
 	if cfg.Live.MaxTraceBufferMessages != 500 {
 		t.Errorf("expected MaxTraceBufferMessages 500, got %d", cfg.Live.MaxTraceBufferMessages)
 	}
-	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 120 {
-		t.Errorf("expected StallThresholdSeconds 120, got %d", cfg.Live.AnomalyThresholds.StallThresholdSeconds)
+	if cfg.AnomalyThresholds.StallThresholdSeconds != 120 {
+		t.Errorf("expected StallThresholdSeconds 120, got %d", cfg.AnomalyThresholds.StallThresholdSeconds)
 	}
-	if cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.25 {
-		t.Errorf("expected ErrorRateThreshold 0.25, got %f", cfg.Live.AnomalyThresholds.ErrorRateThreshold)
+	if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 {
+		t.Errorf("expected ErrorRateThreshold 0.25, got %f", cfg.AnomalyThresholds.ErrorRateThreshold)
 	}
-	if cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
-		t.Errorf("expected ContextExhaustionPct 0.85, got %f", cfg.Live.AnomalyThresholds.ContextExhaustionPct)
+	if cfg.AnomalyThresholds.ContextExhaustionPct != 0.85 {
+		t.Errorf("expected ContextExhaustionPct 0.85, got %f", cfg.AnomalyThresholds.ContextExhaustionPct)
 	}
 	if cfg.CodeMetrics.BaseBranch != "" {
 		t.Errorf("expected CodeMetrics.BaseBranch to be empty, got %s", cfg.CodeMetrics.BaseBranch)

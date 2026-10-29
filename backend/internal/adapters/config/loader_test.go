@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -12,8 +13,8 @@ import (
 )
 
 const (
-	testValidSuffixYAML = "\nticket:\n  prefixes:\n    - prefix: AL\nworkspaces:\n  src_folders:\n    - src\n"
-	testValidSuffixJSON = `,"ticket":{"prefixes":[{"prefix":"AL"}]},"workspaces":{"src_folders":["src"]}}`
+	testValidSuffixYAML = "\nticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	testValidSuffixJSON = `,"ticket":{"prefixes":[{"prefix":"AL"}]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`
 )
 
 func testProjectConfig() domain.ProjectConfig {
@@ -40,9 +41,8 @@ func testProjectConfig() domain.ProjectConfig {
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir:        "",
-			SrcFolders: []string{"web", "backend"},
-			Artifacts:  []domain.WorkspaceArtifactConfig{},
+			Dir:       "",
+			Artifacts: []domain.WorkspaceArtifactConfig{},
 		},
 		Database: domain.DatabaseConfig{
 			Path:           "~/.local/share/opencode/opencode.db",
@@ -54,13 +54,16 @@ func testProjectConfig() domain.ProjectConfig {
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
+		},
+		AnomalyThresholds: domain.AnomalyThresholdsConfig{
+			StallThresholdSeconds:        120,
+			ErrorRateThreshold:           0.25,
+			ContextExhaustionPct:         0.85,
+			ContextCeilingWarningTokens:  160000,
+			ContextCeilingCriticalTokens: 200000,
 		},
 		CodeMetrics: domain.CodeMetricsConfig{
+			SourceRoots:  []string{"web", "backend"},
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: []string{},
@@ -100,9 +103,18 @@ ticket:
     - PAT-(\d+)
 workspaces:
   dir: custom_workspaces
-  src_folders:
+code_metrics:
+  source_roots:
     - frontend
     - services
+  include:
+    - "services/**"
+  exclude:
+    - "legacy/**"
+  test_patterns:
+    - "*_spec.go"
+  prod_patterns:
+    - "*.go"
 database:
   path: /tmp/test.db
   query_timeout_ms: 8000
@@ -112,19 +124,12 @@ live:
   active_threshold_seconds: 400
   poll_interval_ms: 3000
   max_trace_buffer_messages: 800
-  anomaly_thresholds:
-    stall_threshold_seconds: 150
-    error_rate_threshold: 0.35
-    context_exhaustion_pct: 0.90
-code_metrics:
-  include:
-    - "services/**"
-  exclude:
-    - "legacy/**"
-  test_patterns:
-    - "*_spec.go"
-  prod_patterns:
-    - "*.go"
+anomaly_thresholds:
+  stall_threshold_seconds: 150
+  error_rate_threshold: 0.35
+  context_exhaustion_pct: 0.90
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 role_mappings:
   architect: planner
   qa: tester
@@ -167,8 +172,8 @@ role_order:
 	if cfg.Workspaces.Dir != "custom_workspaces" {
 		t.Errorf("expected custom_workspaces, got %s", cfg.Workspaces.Dir)
 	}
-	if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "frontend" || cfg.Workspaces.SrcFolders[1] != "services" {
-		t.Errorf("unexpected src_folders: %v", cfg.Workspaces.SrcFolders)
+	if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "frontend" || cfg.CodeMetrics.SourceRoots[1] != "services" {
+		t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
 	}
 	if cfg.Database.Path != "/tmp/test.db" {
 		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
@@ -179,8 +184,8 @@ role_order:
 	if cfg.Live.ActiveThresholdSeconds != 400 || cfg.Live.PollIntervalMs != 3000 || cfg.Live.MaxTraceBufferMessages != 800 {
 		t.Errorf("unexpected live config: %+v", cfg.Live)
 	}
-	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 150 || cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.35 || cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.90 {
-		t.Errorf("unexpected anomaly thresholds: %+v", cfg.Live.AnomalyThresholds)
+	if cfg.AnomalyThresholds.StallThresholdSeconds != 150 || cfg.AnomalyThresholds.ErrorRateThreshold != 0.35 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.90 {
+		t.Errorf("unexpected anomaly thresholds: %+v", cfg.AnomalyThresholds)
 	}
 	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "services/**" {
 		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
@@ -324,10 +329,14 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 database:
   path: /custom/path/db.sqlite
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(partialYAML), 0644); err != nil {
 		t.Fatal(err)
@@ -554,7 +563,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 
 	t.Run("missing project_name returns validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
-		yamlContent := "ticket:\n  prefixes:\n    - prefix: AL\nworkspaces:\n  src_folders:\n    - src\n"
+		yamlContent := "ticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -570,7 +579,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 
 	t.Run("missing prefixes returns validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
-		yamlContent := "project_name: TestProject\nworkspaces:\n  src_folders:\n    - src\n"
+		yamlContent := "project_name: TestProject\ncode_metrics:\n  source_roots:\n    - src\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -584,7 +593,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 		}
 	})
 
-	t.Run("missing src_folders returns validation error", func(t *testing.T) {
+	t.Run("missing source_roots returns validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
 		yamlContent := "project_name: TestProject\nticket:\n  prefixes:\n    - prefix: AL\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
@@ -593,7 +602,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 
 		_, err := config.Load(tempDir)
 		if err == nil {
-			t.Fatalf("expected error for missing src_folders, got nil")
+			t.Fatalf("expected error for missing code_metrics.source_roots, got nil")
 		}
 		if !errors.Is(err, config.ErrInvalidConfig) {
 			t.Errorf("expected ErrInvalidConfig, got %v", err)
@@ -611,14 +620,17 @@ ticket:
     - prefix: AL
 workspaces:
   dir: custom_workspaces_only
-  src_folders:
+code_metrics:
+  source_roots:
     - src
 database:
   read_only: false
 live:
   poll_interval_ms: 1234
-  anomaly_thresholds:
-    stall_threshold_seconds: 45
+anomaly_thresholds:
+  stall_threshold_seconds: 45
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(partialContent), 0644); err != nil {
 			t.Fatal(err)
@@ -642,16 +654,16 @@ live:
 		if cfg.Live.PollIntervalMs != 1234 {
 			t.Errorf("expected PollIntervalMs 1234, got %d", cfg.Live.PollIntervalMs)
 		}
-		if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 45 {
-			t.Errorf("expected StallThresholdSeconds 45, got %d", cfg.Live.AnomalyThresholds.StallThresholdSeconds)
+		if cfg.AnomalyThresholds.StallThresholdSeconds != 45 {
+			t.Errorf("expected StallThresholdSeconds 45, got %d", cfg.AnomalyThresholds.StallThresholdSeconds)
 		}
 
 		// Explicitly configured fields match
 		if len(cfg.Ticket.Prefixes) != 1 || cfg.Ticket.Prefixes[0].Prefix != "AL" {
 			t.Errorf("unexpected ticket prefixes: %v", cfg.Ticket.Prefixes)
 		}
-		if len(cfg.Workspaces.SrcFolders) != 1 || cfg.Workspaces.SrcFolders[0] != "src" {
-			t.Errorf("unexpected src_folders: %v", cfg.Workspaces.SrcFolders)
+		if len(cfg.CodeMetrics.SourceRoots) != 1 || cfg.CodeMetrics.SourceRoots[0] != "src" {
+			t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
 		}
 		if len(cfg.Workspaces.Artifacts) != 0 {
 			t.Errorf("expected zero default artifacts, got: %v", cfg.Workspaces.Artifacts)
@@ -662,14 +674,53 @@ live:
 		if cfg.Live.ActiveThresholdSeconds != 300 || cfg.Live.MaxTraceBufferMessages != 500 {
 			t.Errorf("unexpected live defaults: %+v", cfg.Live)
 		}
-		if cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.25 || cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.85 {
-			t.Errorf("unexpected anomaly threshold defaults: %+v", cfg.Live.AnomalyThresholds)
+		if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.85 {
+			t.Errorf("unexpected anomaly threshold defaults: %+v", cfg.AnomalyThresholds)
 		}
 	})
 }
 
-func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
-	t.Run("legacy keys translate and empty values fail required validation", func(t *testing.T) {
+func TestLoad_LegacyWorkspaceSourceFoldersDoNotSatisfySourceRoots(t *testing.T) {
+	tests := []struct {
+		name string
+		file string
+		body string
+	}{
+		{
+			name: "yaml",
+			file: ".agenticlens-config.yaml",
+			body: "project_name: Legacy\nticket:\n  prefixes: [AL]\nworkspaces:\n  src_folders: [src]\n",
+		},
+		{
+			name: "json",
+			file: ".agenticlens-config.json",
+			body: `{"project_name":"Legacy","ticket":{"prefixes":["AL"]},"workspaces":{"src_folders":["src"]}}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, tt.file)
+			if err := os.WriteFile(path, []byte(tt.body), 0644); err != nil {
+				t.Fatal(err)
+			}
+			_, err := config.LoadFromFile(path)
+			if err == nil {
+				t.Fatal("expected legacy-only source roots to fail validation")
+			}
+			var validationErr *config.ConfigValidationError
+			if !errors.As(err, &validationErr) {
+				t.Fatalf("expected ConfigValidationError, got %v", err)
+			}
+			if !slices.Contains(validationErr.MissingFields, "code_metrics.source_roots") {
+				t.Errorf("expected code_metrics.source_roots validation error, got %v", validationErr.MissingFields)
+			}
+		})
+	}
+}
+
+func TestLoad_AdversarialLegacyJSONAndCanonicalPriority(t *testing.T) {
+	t.Run("legacy-only keys fail required validation", func(t *testing.T) {
 		tempDir := t.TempDir()
 
 		legacyEmptyJSON := `{
@@ -690,7 +741,7 @@ func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
 		}
 	})
 
-	t.Run("modern nested keys supersede legacy root keys", func(t *testing.T) {
+	t.Run("canonical roots are retained alongside ignored legacy keys", func(t *testing.T) {
 		tempDir := t.TempDir()
 
 		mixedJSON := `{
@@ -704,6 +755,11 @@ func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
 			"workspaces": {
 				"dir": "modern_workspaces",
 				"src_folders": ["modern_web", "modern_backend"]
+			},
+			"code_metrics": {"source_roots": ["canonical_web", "canonical_backend"]},
+			"anomaly_thresholds": {
+				"context_ceiling_warning_tokens": 160000,
+				"context_ceiling_critical_tokens": 200000
 			}
 		}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(mixedJSON), 0644); err != nil {
@@ -721,8 +777,8 @@ func TestLoad_AdversarialLegacyJSONTranslationAndPriority(t *testing.T) {
 		if cfg.Workspaces.Dir != "modern_workspaces" {
 			t.Errorf("expected modern_workspaces, got %s", cfg.Workspaces.Dir)
 		}
-		if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "modern_web" {
-			t.Errorf("expected modern src folders, got %v", cfg.Workspaces.SrcFolders)
+		if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "canonical_web" {
+			t.Errorf("expected canonical source roots, got %v", cfg.CodeMetrics.SourceRoots)
 		}
 	})
 }
@@ -790,8 +846,8 @@ func assertConfigMatchesDefaults(t *testing.T, actual, expected domain.ProjectCo
 	if actual.Live.ActiveThresholdSeconds != expected.Live.ActiveThresholdSeconds {
 		t.Errorf("Live.ActiveThresholdSeconds mismatch: got %d, expected %d", actual.Live.ActiveThresholdSeconds, expected.Live.ActiveThresholdSeconds)
 	}
-	if actual.Live.AnomalyThresholds.StallThresholdSeconds != expected.Live.AnomalyThresholds.StallThresholdSeconds {
-		t.Errorf("StallThresholdSeconds mismatch: got %d, expected %d", actual.Live.AnomalyThresholds.StallThresholdSeconds, expected.Live.AnomalyThresholds.StallThresholdSeconds)
+	if actual.AnomalyThresholds.StallThresholdSeconds != expected.AnomalyThresholds.StallThresholdSeconds {
+		t.Errorf("StallThresholdSeconds mismatch: got %d, expected %d", actual.AnomalyThresholds.StallThresholdSeconds, expected.AnomalyThresholds.StallThresholdSeconds)
 	}
 }
 
@@ -810,8 +866,12 @@ ticket:
     - prefix: PO
       description: Product owner
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -851,8 +911,12 @@ ticket:
     - GEN
     - PO
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -893,8 +957,12 @@ ticket:
     - prefix: PO
       description: Product owner
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -926,7 +994,11 @@ workspaces:
 
 		structuredJSON := `{
 			"project_name": "PrefixApp",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
+			"anomaly_thresholds": {
+				"context_ceiling_warning_tokens": 160000,
+				"context_ceiling_critical_tokens": 200000
+			},
 			"ticket": {
 				"prefixes": [
 					{"prefix": "AL", "description": "Core features"},
@@ -936,7 +1008,11 @@ workspaces:
 		}`
 		scalarJSON := `{
 			"project_name": "PrefixApp",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
+			"anomaly_thresholds": {
+				"context_ceiling_warning_tokens": 160000,
+				"context_ceiling_critical_tokens": 200000
+			},
 			"ticket": {
 				"prefixes": ["AL", "PO"]
 			}
@@ -978,7 +1054,7 @@ workspaces:
 	t.Run("legacy flat JSON with PO prefix rejected", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		legacyJSON := `{"project_name": "LegacyPO", "workspaces": {"src_folders": ["src"]}, "ticket_prefix": "PO"}`
+		legacyJSON := `{"project_name": "LegacyPO", "code_metrics": {"source_roots": ["src"]}, "ticket_prefix": "PO"}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(legacyJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1091,8 +1167,12 @@ ticket:
     - prefix: FIX
       ticket_type: " fix "
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -1127,7 +1207,11 @@ workspaces:
 
 		jsonContent := `{
 			"project_name": "TicketTypeApp",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
+			"anomaly_thresholds": {
+				"context_ceiling_warning_tokens": 160000,
+				"context_ceiling_critical_tokens": 200000
+			},
 			"ticket": {
 				"prefixes": [
 					{"prefix": "AL", "description": "Core"},
@@ -1175,7 +1259,11 @@ func TestLoad_RoleOrderParsingAndFallback(t *testing.T) {
 
 		jsonContent := `{
 			"project_name": "JSONRoleOrderProject",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
+			"anomaly_thresholds": {
+				"context_ceiling_warning_tokens": 160000,
+				"context_ceiling_critical_tokens": 200000
+			},
 			"ticket": {"prefixes": [{"prefix": "AL"}]},
 			"role_order": ["tester", "researcher", "developer", "coder"]
 		}`
@@ -1209,8 +1297,12 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 role_order:
   - lead-qa
   - architect
@@ -1303,8 +1395,12 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 role_order:
   - "  TESTER  "
   - "   "
@@ -1338,7 +1434,11 @@ role_order:
 
 		jsonContent := `{
 			"project_name": "SanitizedJSON",
-			"workspaces": {"src_folders": ["src"]},
+			"code_metrics": {"source_roots": ["src"]},
+			"anomaly_thresholds": {
+				"context_ceiling_warning_tokens": 160000,
+				"context_ceiling_critical_tokens": 200000
+			},
 			"ticket": {"prefixes": [{"prefix": "AL"}]},
 			"role_order": ["  LEAD-QA  ", "  \n  ", "", "ArChItEcT"]
 		}`
@@ -1372,8 +1472,12 @@ ticket:
   prefixes:
     - prefix: AL
 workspaces:
-  src_folders:
+code_metrics:
+  source_roots:
     - src
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 role_order:
   - "   "
   - "\t"
@@ -1413,9 +1517,18 @@ ticket:
     - ROOT-(\d+)
 workspaces:
   dir: root_workspaces
-  src_folders:
+code_metrics:
+  source_roots:
     - web
     - backend
+  include:
+    - "backend/**"
+  exclude:
+    - "vendor/**"
+  test_patterns:
+    - "*_test.go"
+  prod_patterns:
+    - "*.go"
 database:
   path: /tmp/root.db
   query_timeout_ms: 6000
@@ -1425,19 +1538,12 @@ live:
   active_threshold_seconds: 250
   poll_interval_ms: 1500
   max_trace_buffer_messages: 600
-  anomaly_thresholds:
-    stall_threshold_seconds: 90
-    error_rate_threshold: 0.20
-    context_exhaustion_pct: 0.80
-code_metrics:
-  include:
-    - "backend/**"
-  exclude:
-    - "vendor/**"
-  test_patterns:
-    - "*_test.go"
-  prod_patterns:
-    - "*.go"
+anomaly_thresholds:
+  stall_threshold_seconds: 90
+  error_rate_threshold: 0.20
+  context_exhaustion_pct: 0.80
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 role_mappings:
   architect: planner
   qa: tester
@@ -1473,8 +1579,8 @@ role_order:
 	if cfg.Workspaces.Dir != "root_workspaces" {
 		t.Errorf("expected root_workspaces, got %s", cfg.Workspaces.Dir)
 	}
-	if len(cfg.Workspaces.SrcFolders) != 2 || cfg.Workspaces.SrcFolders[0] != "web" || cfg.Workspaces.SrcFolders[1] != "backend" {
-		t.Errorf("unexpected src_folders: %v", cfg.Workspaces.SrcFolders)
+	if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
+		t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
 	}
 	if cfg.Database.Path != "/tmp/root.db" {
 		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
@@ -1485,8 +1591,8 @@ role_order:
 	if cfg.Live.ActiveThresholdSeconds != 250 || cfg.Live.PollIntervalMs != 1500 || cfg.Live.MaxTraceBufferMessages != 600 {
 		t.Errorf("unexpected live config: %+v", cfg.Live)
 	}
-	if cfg.Live.AnomalyThresholds.StallThresholdSeconds != 90 || cfg.Live.AnomalyThresholds.ErrorRateThreshold != 0.20 || cfg.Live.AnomalyThresholds.ContextExhaustionPct != 0.80 {
-		t.Errorf("unexpected anomaly thresholds: %+v", cfg.Live.AnomalyThresholds)
+	if cfg.AnomalyThresholds.StallThresholdSeconds != 90 || cfg.AnomalyThresholds.ErrorRateThreshold != 0.20 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.80 {
+		t.Errorf("unexpected anomaly thresholds: %+v", cfg.AnomalyThresholds)
 	}
 	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "backend/**" {
 		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
@@ -2024,9 +2130,15 @@ func TestLoad_CodeMetricsBaseBranch(t *testing.T) {
 	t.Run("unmarshals base_branch from yaml", func(t *testing.T) {
 		tempDir := t.TempDir()
 		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		content := `project_name: "TestProject"` + testValidSuffixYAML + `
+		content := `project_name: "TestProject"
+ticket:
+  prefixes: [AL]
 code_metrics:
+  source_roots: [src]
   base_branch: "release/v1.0"
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
 			t.Fatal(err)
@@ -2086,14 +2198,32 @@ func TestLoadFromFile(t *testing.T) {
 		if cfg.CodeMetrics.BaseBranch != "origin/main" {
 			t.Errorf("expected base_branch %q, got %q", "origin/main", cfg.CodeMetrics.BaseBranch)
 		}
+		if cfg.AnomalyThresholds.ContextCeilingCriticalTokens != 200000 {
+			t.Errorf("expected context_ceiling_critical_tokens 200000, got %d", cfg.AnomalyThresholds.ContextCeilingCriticalTokens)
+		}
+		if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
+			t.Errorf("expected source_roots [web backend], got %v", cfg.CodeMetrics.SourceRoots)
+		}
+		if cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
+			t.Errorf("expected consecutive errors streak warning 3, got %d", cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
+		}
+		if cfg.AnomalyThresholds.ContextCeilingWarningTokens != 160000 {
+			t.Errorf("expected ceiling warning tokens 160000, got %d", cfg.AnomalyThresholds.ContextCeilingWarningTokens)
+		}
 	})
 
 	t.Run("correctly loads custom base_branch from yaml file", func(t *testing.T) {
 		tempDir := t.TempDir()
 		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		content := `project_name: "TestProject"` + testValidSuffixYAML + `
+		content := `project_name: "TestProject"
+ticket:
+  prefixes: [AL]
 code_metrics:
+  source_roots: [src]
   base_branch: "origin/release-2.0"
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 `
 		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
 			t.Fatal(err)
@@ -2104,6 +2234,160 @@ code_metrics:
 		}
 		if cfg.CodeMetrics.BaseBranch != "origin/release-2.0" {
 			t.Errorf("expected base_branch %q, got %q", "origin/release-2.0", cfg.CodeMetrics.BaseBranch)
+		}
+	})
+}
+
+func TestLoad_ContextCeilingValidation(t *testing.T) {
+	t.Parallel()
+
+	baseConfig := `
+project_name: CeilingValidationApp
+ticket:
+  prefixes:
+    - prefix: AL
+workspaces:
+code_metrics:
+  source_roots:
+    - src
+`
+
+	t.Run("missing context_ceiling_critical_tokens returns validation error", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		yamlContent := baseConfig + `
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+`
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, config.ErrInvalidConfig) {
+			t.Errorf("expected ErrInvalidConfig, got %v", err)
+		}
+		if !strings.Contains(err.Error(), "anomaly_thresholds.context_ceiling_critical_tokens") {
+			t.Errorf("expected missing critical tokens in error message, got %v", err)
+		}
+	})
+
+	t.Run("missing context_ceiling_warning_tokens returns validation error", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		yamlContent := baseConfig + `
+anomaly_thresholds:
+  context_ceiling_critical_tokens: 200000
+`
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, config.ErrInvalidConfig) {
+			t.Errorf("expected ErrInvalidConfig, got %v", err)
+		}
+		if !strings.Contains(err.Error(), "anomaly_thresholds.context_ceiling_warning_tokens") {
+			t.Errorf("expected missing warning tokens in error message, got %v", err)
+		}
+	})
+
+	t.Run("non-positive context_ceiling_critical_tokens returns validation error", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		yamlContent := baseConfig + `
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 0
+`
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, config.ErrInvalidConfig) {
+			t.Errorf("expected ErrInvalidConfig, got %v", err)
+		}
+	})
+
+	t.Run("non-positive context_ceiling_warning_tokens returns validation error", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		yamlContent := baseConfig + `
+anomaly_thresholds:
+  context_ceiling_warning_tokens: -10
+  context_ceiling_critical_tokens: 200000
+`
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, config.ErrInvalidConfig) {
+			t.Errorf("expected ErrInvalidConfig, got %v", err)
+		}
+	})
+
+	t.Run("warning tokens exceeding critical tokens returns validation error", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		yamlContent := baseConfig + `
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 250000
+  context_ceiling_critical_tokens: 200000
+`
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := config.Load(tempDir)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, config.ErrInvalidConfig) {
+			t.Errorf("expected ErrInvalidConfig, got %v", err)
+		}
+		if !strings.Contains(err.Error(), "cannot exceed") {
+			t.Errorf("expected relationship error message, got %v", err)
+		}
+	})
+
+	t.Run("valid ceiling tokens loads successfully", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		yamlContent := baseConfig + `
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
+`
+		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := config.Load(tempDir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.AnomalyThresholds.ContextCeilingWarningTokens != 160000 {
+			t.Errorf("expected warning tokens 160000, got %d", cfg.AnomalyThresholds.ContextCeilingWarningTokens)
+		}
+		if cfg.AnomalyThresholds.ContextCeilingCriticalTokens != 200000 {
+			t.Errorf("expected critical tokens 200000, got %d", cfg.AnomalyThresholds.ContextCeilingCriticalTokens)
+		}
+		if cfg.EffectiveHealthyCeiling() != 200000 {
+			t.Errorf("expected EffectiveHealthyCeiling 200000, got %d", cfg.EffectiveHealthyCeiling())
 		}
 	})
 }

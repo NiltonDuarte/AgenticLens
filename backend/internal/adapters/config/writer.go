@@ -116,26 +116,23 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 
 	// Workspaces Settings
 	wsDir := strings.TrimSpace(cfg.Workspaces.Dir)
-	var cleanSrcFolders []string
-	for _, sf := range cfg.Workspaces.SrcFolders {
-		clean := strings.TrimSpace(sf)
+	var cleanSourceRoots []string
+	for _, sr := range cfg.CodeMetrics.SourceRoots {
+		clean := strings.TrimSpace(sr)
 		if clean != "" {
-			cleanSrcFolders = append(cleanSrcFolders, clean)
+			cleanSourceRoots = append(cleanSourceRoots, clean)
 		}
 	}
-	if len(cleanSrcFolders) == 0 {
-		return nil, fmt.Errorf("workspaces.src_folders cannot be empty")
+	if len(cleanSourceRoots) == 0 {
+		return nil, fmt.Errorf("code_metrics.source_roots cannot be empty")
 	}
 
-	b.WriteString("# Workspace storage and source folder definitions.\n")
+	b.WriteString("# Workspace storage settings.\n")
 	b.WriteString("workspaces:\n")
 	b.WriteString("  # Directory where ticket artifacts and session telemetry ledgers are stored.\n")
 	if wsDir != "" {
 		b.WriteString(fmt.Sprintf("  dir: %s\n", wsDir))
 	}
-	b.WriteString("  # Monitored source code folders for project telemetry and change tracking.\n")
-	b.WriteString("  src_folders:")
-	formatStringList(&b, cleanSrcFolders, "    ")
 	b.WriteString("  # Configured workspace documentation artifacts to read and render in dashboard.\n")
 	artifacts := cfg.Workspaces.Artifacts
 	if len(artifacts) == 0 {
@@ -197,18 +194,6 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	if maxTrace <= 0 {
 		maxTrace = 500
 	}
-	stallSec := cfg.Live.AnomalyThresholds.StallThresholdSeconds
-	if stallSec <= 0 {
-		stallSec = 120
-	}
-	errorRate := cfg.Live.AnomalyThresholds.ErrorRateThreshold
-	if errorRate <= 0 {
-		errorRate = 0.25
-	}
-	contextPct := cfg.Live.AnomalyThresholds.ContextExhaustionPct
-	if contextPct <= 0 {
-		contextPct = 0.85
-	}
 
 	b.WriteString("# Live session observability and real-time streaming engine configuration.\n")
 	b.WriteString("live:\n")
@@ -217,19 +202,75 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("  # SQLite polling interval in milliseconds for live session updates.\n")
 	b.WriteString(fmt.Sprintf("  poll_interval_ms: %d\n", pollMs))
 	b.WriteString("  # Maximum number of recent trace messages retained in memory buffer per session.\n")
-	b.WriteString(fmt.Sprintf("  max_trace_buffer_messages: %d\n", maxTrace))
-	b.WriteString("  # Numerical thresholds for automated anomaly detection rules.\n")
-	b.WriteString("  anomaly_thresholds:\n")
-	b.WriteString("    # Time in seconds without session turn activity before flagging a stall anomaly.\n")
-	b.WriteString(fmt.Sprintf("    stall_threshold_seconds: %d\n", stallSec))
-	b.WriteString("    # Ratio of tool errors to total invocations triggering a high failure anomaly.\n")
-	b.WriteString(fmt.Sprintf("    error_rate_threshold: %0.2f\n", errorRate))
-	b.WriteString("    # Token context window utilization percentage triggering saturation warnings.\n")
-	b.WriteString(fmt.Sprintf("    context_exhaustion_pct: %0.2f\n\n", contextPct))
+	b.WriteString(fmt.Sprintf("  max_trace_buffer_messages: %d\n\n", maxTrace))
+
+	// Anomaly Thresholds Settings
+	stallSec := cfg.AnomalyThresholds.StallThresholdSeconds
+	if stallSec <= 0 {
+		stallSec = 120
+	}
+	errorRate := cfg.AnomalyThresholds.ErrorRateThreshold
+	if errorRate <= 0 {
+		errorRate = 0.25
+	}
+	contextPct := cfg.AnomalyThresholds.ContextExhaustionPct
+	if contextPct <= 0 {
+		contextPct = 0.85
+	}
+
+	b.WriteString("# Automated anomaly detection rules governing offline generation and live stream monitoring.\n")
+	b.WriteString("anomaly_thresholds:\n")
+	b.WriteString("  # Time in seconds without session turn activity before flagging a stall anomaly.\n")
+	b.WriteString(fmt.Sprintf("  stall_threshold_seconds: %d\n", stallSec))
+	b.WriteString("  # Ratio of tool errors to total invocations triggering a high failure anomaly.\n")
+	b.WriteString(fmt.Sprintf("  error_rate_threshold: %0.2f\n", errorRate))
+	b.WriteString("  # Token context window utilization percentage triggering saturation warnings.\n")
+	b.WriteString(fmt.Sprintf("  context_exhaustion_pct: %0.2f\n", contextPct))
+	at := cfg.AnomalyThresholds
+	if at.ConsecutiveErrorsStreakWarning > 0 {
+		b.WriteString(fmt.Sprintf("  consecutive_errors_streak_warning: %d\n", at.ConsecutiveErrorsStreakWarning))
+	}
+	if at.ConsecutiveErrorsStreakCritical > 0 {
+		b.WriteString(fmt.Sprintf("  consecutive_errors_streak_critical: %d\n", at.ConsecutiveErrorsStreakCritical))
+	}
+	b.WriteString("  # Fixed context ceiling token thresholds triggering warning and critical alerts.\n")
+	b.WriteString("  # context_ceiling_critical_tokens governs context saturation percentage and health status grading.\n")
+	ceilingWarn := at.ContextCeilingWarningTokens
+	if ceilingWarn <= 0 {
+		ceilingWarn = domain.ContextCeilingWarningTokens
+	}
+	ceilingCrit := at.ContextCeilingCriticalTokens
+	if ceilingCrit <= 0 {
+		ceilingCrit = domain.ContextCeilingCriticalTokens
+	}
+	b.WriteString(fmt.Sprintf("  context_ceiling_warning_tokens: %d\n", ceilingWarn))
+	b.WriteString(fmt.Sprintf("  context_ceiling_critical_tokens: %d\n", ceilingCrit))
+	if at.TokenVelocityWarningTokens > 0 {
+		b.WriteString(fmt.Sprintf("  token_velocity_warning_tokens: %d\n", at.TokenVelocityWarningTokens))
+	}
+	if at.TokenVelocityCriticalTokens > 0 {
+		b.WriteString(fmt.Sprintf("  token_velocity_critical_tokens: %d\n", at.TokenVelocityCriticalTokens))
+	}
+	if at.TokenVelocityWarningDeltaTokens > 0 {
+		b.WriteString(fmt.Sprintf("  token_velocity_warning_delta_tokens: %d\n", at.TokenVelocityWarningDeltaTokens))
+	}
+	if at.TokenVelocityCriticalDeltaTokens > 0 {
+		b.WriteString(fmt.Sprintf("  token_velocity_critical_delta_tokens: %d\n", at.TokenVelocityCriticalDeltaTokens))
+	}
+	if at.ToolThrashingMinFailures > 0 {
+		b.WriteString(fmt.Sprintf("  tool_thrashing_min_failures: %d\n", at.ToolThrashingMinFailures))
+	}
+	if at.ToolThrashingCriticalFailures > 0 {
+		b.WriteString(fmt.Sprintf("  tool_thrashing_critical_failures: %d\n", at.ToolThrashingCriticalFailures))
+	}
+	b.WriteString("\n")
 
 	// Code Metrics Settings
 	b.WriteString("# Git commit diff analysis and code classification glob patterns.\n")
 	b.WriteString("code_metrics:\n")
+	b.WriteString("  # Monitored source code root directories for project telemetry and change tracking.\n")
+	b.WriteString("  source_roots:")
+	formatStringList(&b, cleanSourceRoots, "    ")
 	b.WriteString("  # Specific files or glob patterns explicitly included as production code.\n")
 	b.WriteString("  include:")
 	formatStringList(&b, cfg.CodeMetrics.Include, "    ")
@@ -339,9 +380,8 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir:        wsDir,
-			SrcFolders: cleanFolders,
-			Artifacts:  artifacts,
+			Dir:       wsDir,
+			Artifacts: artifacts,
 		},
 		Database: domain.DatabaseConfig{
 			Path:           databasePath,
@@ -353,13 +393,10 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
 			MaxTraceBufferMessages: 500,
-			AnomalyThresholds: domain.AnomalyThresholdsConfig{
-				StallThresholdSeconds: 120,
-				ErrorRateThreshold:    0.25,
-				ContextExhaustionPct:  0.85,
-			},
 		},
+		AnomalyThresholds: domain.DefaultAnomalyThresholdsConfig(),
 		CodeMetrics: domain.CodeMetricsConfig{
+			SourceRoots:  cleanFolders,
 			Include:      []string{},
 			Exclude:      []string{},
 			TestPatterns: append([]string(nil), DefaultTestPatterns...),
