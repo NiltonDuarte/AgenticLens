@@ -68,7 +68,7 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 - **Subagent Turn Velocity & Thrashing:** 121.1 avg turns/run (peak: 273 turns) | Coder 137.1, Advisor 9.0
 - **Test-to-Production Code Ratio:** 1.4:1 (+838 test lines / +610 prod lines)
 - **Code Delivered:** +1,534 / -544 lines across 31 code files (excluding docs)
-- **Reasoning Effort:** 271,420 reasoning tokens (58.4% of generated output)
+- **Reasoning Effort:** 271,488 reasoning tokens (58.4% of generated output)
 - **Tool Health & Self-Correction:** 1,029 tool calls (16 self-corrections, 98.4% success rate)
 
 ### Anomalies & Health Flags
@@ -94,14 +94,14 @@ This change enforces strict, configurable context ceiling thresholds under `anom
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **orchestrator** | 2 | 1,877,056 | 12,545 | 4,504,490 | 70.6% | 126.8k | ELEVATED | $1.90 |
+| **orchestrator** | 2 | 1,884,827 | 12,687 | 4,511,658 | 70.5% | 126.8k | ELEVATED | $1.90 |
 | **coder** | 7 | 6,415,490 | 179,886 | 72,309,823 | 91.9% | 174.1k | ELEVATED | $11.81 |
 | **advisor** | 1 | 30,622 | 749 | 120,812 | 79.8% | 24.5k | HEALTHY | $0.04 |
-| **Total** | **10** | **8,323,168** | **193,180** | **76,935,125** | **90.2%** | **174.1k** | **ELEVATED** | **$13.75** |
+| **Total** | **10** | **8,330,939** | **193,322** | **76,942,293** | **90.2%** | **174.1k** | **ELEVATED** | **$13.75** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gemini-3.8-flash** | 9 | 8,323,168 | 193,180 | 76,935,125 | 90.2% | $13.75 |
-| **gpt-6-luna** | 1 | 0 | 0 | 0 | 0.0% | $0.00 |
-| **Total** | **10** | **8,323,168** | **193,180** | **76,935,125** | **90.2%** | **$13.75** |
+| **gpt-6-luna** | 1 | 7,771 | 142 | 7,168 | 48.0% | $0.00 |
+| **Total** | **10** | **8,330,939** | **193,322** | **76,942,293** | **90.2%** | **$13.75** |
