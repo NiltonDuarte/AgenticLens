@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact, LiveAnomalyAlert } from '../domain/live';
 import { formatTokensK } from '../domain/formatters';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { findMatchingLiveAlert, extractStreakCount } from '../domain/anomalies';
+import { orderLiveMessages, type LiveMessageOrder } from '../domain/liveMessageOrdering';
 import {
   generateSessionOverviewPrompt,
   generateMessageTurnPrompt,
@@ -254,6 +255,27 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   onClose,
 }) => {
   const [isSessionCopied, setIsSessionCopied] = useState(false);
+  const [messageOrder, setMessageOrder] = useState<LiveMessageOrder>('latest-first');
+  const [newTurnsAvailable, setNewTurnsAvailable] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const pausedAtReadingPosition = useRef(false);
+  const previousMessageCount = useRef(trace?.messages.length ?? 0);
+  const previousScrollHeight = useRef(0);
+
+  useLayoutEffect(() => {
+    const list = messageListRef.current;
+    const currentCount = trace?.messages.length ?? 0;
+    if (list && currentCount > previousMessageCount.current && pausedAtReadingPosition.current) {
+      if (messageOrder === 'latest-first') {
+        list.scrollTop += list.scrollHeight - previousScrollHeight.current;
+        setNewTurnsAvailable(true);
+      } else {
+        setNewTurnsAvailable(true);
+      }
+    }
+    previousMessageCount.current = currentCount;
+    if (list) previousScrollHeight.current = list.scrollHeight;
+  }, [trace?.messages.length, messageOrder]);
 
   if (!sessionNode) {
     return (
@@ -382,27 +404,101 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
       )}
 
       {trace && (
-        <section className="inspector-messages-section" aria-label="Chronological Message Turns">
-          <h4 className="messages-heading">
-            Execution Message Stream ({trace.messages.length} turns)
-          </h4>
+        <section className="inspector-messages-section" aria-label="Message Turns">
+          <div className="messages-heading">
+            <h4>Execution Message Stream ({trace.messages.length} turns)</h4>
+            {trace.messages.length > 0 && (
+              <div className="messages-controls">
+                <span className="message-order-label" aria-live="polite">
+                  {messageOrder === 'latest-first' ? 'Latest First' : 'Oldest First'}
+                </span>
+                <button
+                  type="button"
+                  className="inspector-message-control"
+                  data-testid="turn-order-toggle-btn"
+                  aria-label={`Switch to ${messageOrder === 'latest-first' ? 'Oldest First' : 'Latest First'}`}
+                  onClick={() => {
+                    setMessageOrder((current) => current === 'latest-first' ? 'oldest-first' : 'latest-first');
+                    setNewTurnsAvailable(false);
+                  }}
+                >
+                  Switch Order
+                </button>
+                <button
+                  type="button"
+                  className="inspector-message-control"
+                  data-testid="scroll-to-top-btn"
+                  onClick={() => {
+                    const list = messageListRef.current;
+                    if (!list) return;
+                    if (typeof list.scrollTo === 'function') list.scrollTo({ top: 0, behavior: 'smooth' });
+                    else list.scrollTop = 0;
+                    pausedAtReadingPosition.current = false;
+                    setNewTurnsAvailable(false);
+                  }}
+                >Scroll to Top</button>
+                <button
+                  type="button"
+                  className="inspector-message-control"
+                  data-testid="scroll-to-bottom-btn"
+                  onClick={() => {
+                    const list = messageListRef.current;
+                    if (!list) return;
+                    if (typeof list.scrollTo === 'function') list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
+                    else list.scrollTop = list.scrollHeight;
+                    pausedAtReadingPosition.current = false;
+                    setNewTurnsAvailable(false);
+                  }}
+                >Scroll to Bottom</button>
+              </div>
+            )}
+          </div>
           {trace.messages.length === 0 ? (
             <div className="inspector-no-messages">
               No message turns recorded for this session yet.
             </div>
           ) : (
-            <div className="inspector-messages-list">
-              {trace.messages.map((msg, idx) => (
-                <LiveMessageTurnItem
-                  key={msg.id || `msg-${idx}`}
-                  message={msg}
-                  turnIndex={idx}
-                  sessionId={sessionNode.id}
-                  model={sessionNode.model}
-                  anomalies={trace.anomalies}
-                />
-              ))}
-            </div>
+            <>
+              {newTurnsAvailable && (
+                <button
+                  type="button"
+                  className="new-turns-available"
+                  onClick={() => {
+                    const list = messageListRef.current;
+                    if (!list) return;
+                    const latestAtTop = messageOrder === 'latest-first';
+                    if (typeof list.scrollTo === 'function') list.scrollTo({ top: latestAtTop ? 0 : list.scrollHeight, behavior: 'smooth' });
+                    else list.scrollTop = latestAtTop ? 0 : list.scrollHeight;
+                    pausedAtReadingPosition.current = false;
+                    setNewTurnsAvailable(false);
+                  }}
+                >New turns available. Jump to latest</button>
+              )}
+              <div
+                ref={messageListRef}
+                className="inspector-messages-list"
+                onScroll={(event) => {
+                  const list = event.currentTarget;
+                  previousScrollHeight.current = list.scrollHeight;
+                  const distanceFromLatest = messageOrder === 'latest-first'
+                    ? list.scrollTop
+                    : list.scrollHeight - list.clientHeight - list.scrollTop;
+                  pausedAtReadingPosition.current = distanceFromLatest > 50;
+                  if (!pausedAtReadingPosition.current) setNewTurnsAvailable(false);
+                }}
+              >
+                {orderLiveMessages(trace.messages, messageOrder).map(({ message: msg, turnIndex: idx }) => (
+                  <LiveMessageTurnItem
+                    key={msg.id || `msg-${idx}`}
+                    message={msg}
+                    turnIndex={idx}
+                    sessionId={sessionNode.id}
+                    model={sessionNode.model}
+                    anomalies={trace.anomalies}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </section>
       )}

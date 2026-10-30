@@ -49,7 +49,7 @@ describe('LiveTraceInspector Component', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders chronological message stream with role tags and formatted token summaries', () => {
+  it('renders latest-first message stream with role tags and formatted token summaries', () => {
     render(
       <LiveTraceInspector
         sessionNode={mockNode}
@@ -66,6 +66,8 @@ describe('LiveTraceInspector Component', () => {
     expect(screen.getByTestId('message-turn-1')).toBeInTheDocument();
     expect(screen.getByTestId('message-turn-2')).toBeInTheDocument();
     expect(screen.getByTestId('message-turn-3')).toBeInTheDocument();
+    const messageList = document.querySelector('.inspector-messages-list');
+    expect(messageList?.firstElementChild).toHaveAttribute('data-testid', 'message-turn-3');
 
     expect(
       screen.getByText('Implement Live Observability Dashboard components and streaming client for ticket AL-20.')
@@ -85,10 +87,12 @@ describe('LiveTraceInspector Component', () => {
     const bubbles = screen.getAllByTestId('reasoning-bubble');
     expect(bubbles.length).toBeGreaterThan(0);
 
-    // First bubble reasoning is long (> 300 chars), so initially shows 'Show Reasoning'
-    const firstBubble = bubbles[0]!;
-    const toggleBtn = within(firstBubble).getByRole('button');
-    expect(toggleBtn).toHaveTextContent('Show Reasoning');
+    // Find a collapsed long reasoning bubble without depending on display order.
+    const collapsedBubble = bubbles.find((bubble) =>
+      within(bubble).getByRole('button').textContent?.includes('Show Reasoning'),
+    );
+    expect(collapsedBubble).toBeDefined();
+    const toggleBtn = within(collapsedBubble!).getByRole('button');
 
     // Click to show reasoning
     fireEvent.click(toggleBtn);
@@ -158,7 +162,7 @@ describe('LiveTraceInspector Component', () => {
     expect(screen.queryByRole('region', { name: /failed tool calls/i })).not.toBeInTheDocument();
   });
 
-  it('strictly preserves chronological message turn order across system, user, and assistant turns', () => {
+  it('preserves source turn identity across system, user, and assistant turns', () => {
     const chronologicalTrace: LiveTraceView = {
       session_id: 'ses-order-test',
       messages: [
@@ -234,6 +238,58 @@ describe('LiveTraceInspector Component', () => {
 
     expect(within(turns[2]!).getByText('ASSISTANT')).toBeInTheDocument();
     expect(within(turns[2]!).getByText('Turn 2: Assistant response generated.')).toBeInTheDocument();
+    expect(screen.getByTestId('message-turn-2').querySelector('.turn-number-badge')).toHaveTextContent('Turn 3');
+    expect(screen.getByTestId('message-turn-0').querySelector('.turn-number-badge')).toHaveTextContent('Turn 1');
+  });
+
+  it('toggles between latest-first and oldest-first without changing logical turn numbers', () => {
+    render(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+
+    const messageList = document.querySelector('.inspector-messages-list');
+    expect(messageList?.firstElementChild).toHaveAttribute('data-testid', 'message-turn-3');
+    fireEvent.click(screen.getByTestId('turn-order-toggle-btn'));
+    expect(messageList?.firstElementChild).toHaveAttribute('data-testid', 'message-turn-0');
+    expect(screen.getByTestId('message-turn-0').querySelector('.turn-number-badge')).toHaveTextContent('Turn 1');
+    expect(screen.getByTestId('message-turn-3').querySelector('.turn-number-badge')).toHaveTextContent('Turn 4');
+  });
+
+  it('preserves the reading position and offers a jump when new turns arrive while paused', () => {
+    const initialTrace: LiveTraceView = { ...mockLiveTraceView, messages: mockLiveTraceView.messages.slice(0, 2) };
+    const { rerender } = render(
+      <LiveTraceInspector sessionNode={mockNode} trace={initialTrace} loading={false} onClose={vi.fn()} />
+    );
+    const messageList = document.querySelector('.inspector-messages-list') as HTMLDivElement;
+    Object.defineProperties(messageList, {
+      scrollHeight: { configurable: true, value: 200 },
+      clientHeight: { configurable: true, value: 100 },
+    });
+    messageList.scrollTop = 80;
+    fireEvent.scroll(messageList);
+    Object.defineProperty(messageList, 'scrollHeight', { configurable: true, value: 300 });
+
+    rerender(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+
+    expect(messageList.scrollTop).toBe(180);
+    expect(screen.getByRole('button', { name: /new turns available/i })).toBeInTheDocument();
+  });
+
+  it('quick navigation buttons scroll to each end of the message list', () => {
+    render(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+    const messageList = document.querySelector('.inspector-messages-list') as HTMLDivElement;
+    Object.defineProperty(messageList, 'scrollHeight', { configurable: true, value: 500 });
+    const scrollTo = vi.fn();
+    messageList.scrollTo = scrollTo;
+
+    fireEvent.click(screen.getByTestId('scroll-to-top-btn'));
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: 'smooth' });
+    fireEvent.click(screen.getByTestId('scroll-to-bottom-btn'));
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 500, behavior: 'smooth' });
   });
 
   it('handles short model reasoning blocks by showing full deliberation initially with Hide Reasoning button', () => {
