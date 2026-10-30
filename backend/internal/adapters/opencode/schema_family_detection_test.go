@@ -2,7 +2,6 @@ package opencode_test
 
 import (
 	"database/sql"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -21,7 +20,8 @@ func TestSchemaFamilyRejectsPartialAndMixedLayouts(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "test.db"))
+			t.Parallel()
+			db, err := sql.Open("sqlite", ":memory:")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -50,7 +50,8 @@ func TestSchemaFamilyRejectsEveryRequiredTableColumnOmission(t *testing.T) {
 	for table, columns := range tables {
 		for _, omitted := range columns {
 			t.Run(table+"_missing_"+omitted, func(t *testing.T) {
-				db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "test.db"))
+				t.Parallel()
+				db, err := sql.Open("sqlite", ":memory:")
 				if err != nil {
 					t.Fatal(err)
 				}

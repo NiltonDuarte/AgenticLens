@@ -52,25 +52,6 @@ type schemaV1PartData struct {
 	State *schemaV1PartState `json:"state"`
 }
 
-// extractSchemaV1Sessions queries and builds normalized domain.SessionFact trees directly from OpenCode SQLite.
-func schemaV1TableHasColumn(db *sql.DB, tableName, columnName string) bool {
-	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", tableName))
-	if err != nil {
-		return false
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var cid int
-		var name, ctype string
-		var notnull, pk int
-		var dflt sql.NullString
-		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err == nil && strings.EqualFold(name, columnName) {
-			return true
-		}
-	}
-	return false
-}
-
 func extractSchemaV1Sessions(
 	db *sql.DB,
 	threadIDs []string,
@@ -81,16 +62,6 @@ func extractSchemaV1Sessions(
 	quotedList, err := buildQuotedIDList(threadIDs)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: validating thread ids: %w", err)
-	}
-
-	msgTimeUpdatedCol := "0 AS time_updated"
-	if schemaV1TableHasColumn(db, "message", "time_updated") {
-		msgTimeUpdatedCol = "m.time_updated"
-	}
-
-	partTimeUpdatedCol := "0 AS time_updated"
-	if schemaV1TableHasColumn(db, "part", "time_updated") {
-		partTimeUpdatedCol = "p.time_updated"
 	}
 
 	// 1. Earliest start time and latest completed time across sessions
@@ -190,12 +161,12 @@ func extractSchemaV1Sessions(
 		}
 		sessionRoleMap[s.id] = role
 
-		qMsgs := fmt.Sprintf(`
-			SELECT m.id, m.time_created, %s, m.data
+		qMsgs := `
+			SELECT m.id, m.time_created, m.time_updated, m.data
 			FROM message m
 			WHERE m.session_id = ?
 			ORDER BY m.time_created ASC
-		`, msgTimeUpdatedCol)
+		`
 		msgRows, err := db.Query(qMsgs, s.id)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: querying messages for session %s: %w", s.id, err)
@@ -373,13 +344,13 @@ func extractSchemaV1Sessions(
 
 	// 4. Query parts (tool calls and compactions)
 	qParts := fmt.Sprintf(`
-		SELECT p.id, p.session_id, p.message_id, p.time_created, %s, p.data
+		SELECT p.id, p.session_id, p.message_id, p.time_created, p.time_updated, p.data
 		FROM part p
 		JOIN session s ON p.session_id = s.id
 		WHERE (s.id IN (%s) OR s.parent_id IN (%s))
 		  AND (p.data LIKE '%%"type":"tool"%%' OR p.data LIKE '%%"type":"compaction"%%')
 		ORDER BY p.time_created ASC
-	`, partTimeUpdatedCol, quotedList, quotedList)
+	`, quotedList, quotedList)
 
 	partRows, err := db.Query(qParts)
 	if err != nil {
