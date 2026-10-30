@@ -184,7 +184,7 @@ func TestSchemaV1ExtractFacts(t *testing.T) {
 	}
 
 	ev3 := events[3] // t2 tool call (bash error)
-	if ev3.EventType != domain.EventTypeToolCall || ev3.Status != "error" || ev3.ErrorMessage != nil {
+	if ev3.EventType != domain.EventTypeToolCall || ev3.Status != "error" || ev3.ErrorMessage == nil {
 		t.Errorf("unexpected event 3: %+v", ev3)
 	}
 
@@ -194,7 +194,7 @@ func TestSchemaV1ExtractFacts(t *testing.T) {
 	}
 
 	ev8 := events[8] // t4 tool call (read error)
-	if ev8.EventType != domain.EventTypeToolCall || ev8.Status != "error" || ev8.ErrorMessage != nil {
+	if ev8.EventType != domain.EventTypeToolCall || ev8.Status != "error" || ev8.ErrorMessage == nil {
 		t.Errorf("unexpected event 8: %+v", ev8)
 	}
 }
@@ -494,13 +494,13 @@ func TestSchemaV1ExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 	if bash, ok := toolMap["bash"]; !ok || bash.Calls != 2 || bash.Errors != 1 {
 		t.Errorf("expected bash calls=2 errors=1, got: %+v", bash)
 	}
-	// python: 1 call, 1 error (due to Traceback)
-	if py, ok := toolMap["python"]; !ok || py.Calls != 1 || py.Errors != 1 {
-		t.Errorf("expected python calls=1 errors=1 (Traceback), got: %+v", py)
+	// Python traceback text in a completed result is semantic output, not an execution failure.
+	if py, ok := toolMap["python"]; !ok || py.Calls != 1 || py.Errors != 0 {
+		t.Errorf("expected python calls=1 errors=0 for completed output, got: %+v", py)
 	}
-	// read: 1 call, 1 error (due to Error: prefix)
-	if rd, ok := toolMap["read"]; !ok || rd.Calls != 1 || rd.Errors != 1 {
-		t.Errorf("expected read calls=1 errors=1 (Error: prefix), got: %+v", rd)
+	// Error wording in a successful read result remains successful.
+	if rd, ok := toolMap["read"]; !ok || rd.Calls != 1 || rd.Errors != 0 {
+		t.Errorf("expected read calls=1 errors=0 for successful output, got: %+v", rd)
 	}
 	// edit: 1 call, 1 error (due to Error: prefix)
 	if ed, ok := toolMap["edit"]; !ok || ed.Calls != 1 || ed.Errors != 1 {
@@ -533,8 +533,8 @@ func TestSchemaV1ExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 
 	// Verify Status Error Tool Call
 	statErrEv := events[2] // p_stat_err
-	if statErrEv.Status != "error" || statErrEv.ErrorMessage != nil {
-		t.Errorf("expected status error tool call with nil error message, got: %+v", statErrEv)
+	if statErrEv.Status != "error" || statErrEv.ErrorMessage == nil {
+		t.Errorf("expected status error tool call with sanitized error message, got: %+v", statErrEv)
 	}
 	if statErrEv.DurationMs == nil || *statErrEv.DurationMs != 0 {
 		t.Errorf("expected 0ms duration, got: %v", statErrEv.DurationMs)
@@ -542,8 +542,8 @@ func TestSchemaV1ExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 
 	// Verify Traceback Detection Tool Call
 	traceEv := events[3] // p_traceback
-	if traceEv.Status != "error" || traceEv.ErrorMessage != nil {
-		t.Errorf("expected Traceback detection error with nil error message, got: %+v", traceEv)
+	if traceEv.Status != "completed" || traceEv.ErrorMessage != nil {
+		t.Errorf("expected completed status for semantic traceback text, got: %+v", traceEv)
 	}
 	if traceEv.DurationMs == nil || *traceEv.DurationMs != 200 {
 		t.Errorf("expected 200ms duration, got: %v", traceEv.DurationMs)
@@ -551,14 +551,14 @@ func TestSchemaV1ExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 
 	// Verify Error: Prefix Detection Tool Call
 	errPrefixEv := events[4] // p_err_prefix
-	if errPrefixEv.Status != "error" || errPrefixEv.ErrorMessage != nil {
-		t.Errorf("expected Error: prefix detection with nil error message, got: %+v", errPrefixEv)
+	if errPrefixEv.Status != "completed" || errPrefixEv.ErrorMessage != nil {
+		t.Errorf("expected completed status for semantic error text, got: %+v", errPrefixEv)
 	}
 
 	// Verify Long Error Message sets ErrorMessage to nil
 	longErrEv := events[5] // p_long_err
-	if longErrEv.Status != "error" || longErrEv.ErrorMessage != nil {
-		t.Fatalf("expected long error to be flagged as error with nil ErrorMessage, got: %+v", longErrEv)
+	if longErrEv.Status != "error" || longErrEv.ErrorMessage == nil || len(*longErrEv.ErrorMessage) > 2048 {
+		t.Fatalf("expected long execution error with message capped at 2048 characters, got: %+v", longErrEv)
 	}
 
 	// Verify Inverted Timestamps yields nil DurationMs
@@ -603,8 +603,8 @@ func TestSchemaV1ExtractFacts_Sub4096ErrorPreservation(t *testing.T) {
 	if ev.Status != "error" {
 		t.Fatalf("expected error event, got: %+v", ev)
 	}
-	if ev.ErrorMessage != nil {
-		t.Errorf("expected ErrorMessage nil under zero message persistence, got: %s", *ev.ErrorMessage)
+	if ev.ErrorMessage == nil || len(*ev.ErrorMessage) > 2048 {
+		t.Errorf("expected sanitized error message capped at 2048 characters, got: %v", ev.ErrorMessage)
 	}
 	if ev.ToolName == nil || *ev.ToolName != "edit" {
 		t.Errorf("expected tool_name 'edit', got %v", ev.ToolName)
@@ -676,7 +676,7 @@ func TestSchemaV1ExtractFacts_ErrorPayloadAdversarialBoundaries(t *testing.T) {
 			name:           "empty_status_with_error_prefix_handled",
 			partID:         "p_err_prefix_clean",
 			partJSON:       `{"type":"tool","tool":"bash","state":{"output":"Error: simple failure"}}`,
-			expectedStatus: "error",
+			expectedStatus: "completed",
 		},
 	}
 
@@ -712,8 +712,8 @@ func TestSchemaV1ExtractFacts_ErrorPayloadAdversarialBoundaries(t *testing.T) {
 			if ev.Status != tc.expectedStatus {
 				t.Errorf("status mismatch: expected %q, got %q", tc.expectedStatus, ev.Status)
 			}
-			if ev.ErrorMessage != nil {
-				t.Errorf("expected ErrorMessage nil under zero message persistence, got %q", *ev.ErrorMessage)
+			if ev.Status == "error" && (ev.ErrorMessage == nil || len(*ev.ErrorMessage) > 2048) {
+				t.Errorf("expected sanitized execution error message capped at 2048 characters, got %v", ev.ErrorMessage)
 			}
 			if ev.ToolName == nil || *ev.ToolName != "bash" {
 				t.Errorf("expected tool name bash, got %v", ev.ToolName)
@@ -1202,10 +1202,10 @@ func TestSchemaV1ExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID
 		t.Errorf("expected grep errors=0, got %+v", grepTool)
 	}
 
-	// glob: 1 call completed -> 0 errors despite "panic:" in output
+	// A panic signature indicates a process crash even when the persisted status says completed.
 	globTool, ok := toolMap["glob"]
-	if !ok || globTool.Errors != 0 {
-		t.Errorf("expected glob errors=0, got %+v", globTool)
+	if !ok || globTool.Errors != 1 {
+		t.Errorf("expected glob errors=1 for crash signature, got %+v", globTool)
 	}
 
 	// webfetch: 1 call completed -> 0 errors despite "Error:" in output
@@ -1214,10 +1214,10 @@ func TestSchemaV1ExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID
 		t.Errorf("expected webfetch errors=0, got %+v", webfetchTool)
 	}
 
-	// bash: 1 call completed with "syntax error" -> non-inspection tool, so it MUST flag as error
+	// Bash completed successfully; semantic error wording does not change execution status.
 	bashTool, ok := toolMap["bash"]
-	if !ok || bashTool.Errors != 1 {
-		t.Errorf("expected bash errors=1 (syntax error on non-inspection tool), got %+v", bashTool)
+	if !ok || bashTool.Errors != 0 {
+		t.Errorf("expected bash errors=0 for completed execution, got %+v", bashTool)
 	}
 
 	// Verify EventFact message_id propagation and statuses
@@ -1247,7 +1247,11 @@ func TestSchemaV1ExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID
 						t.Errorf("expected error status for read tool on m_insp_2 with file not found, got %s", ev.Status)
 					}
 				}
-			case "grep", "glob", "webfetch":
+			case "glob":
+				if ev.Status != "error" {
+					t.Errorf("expected error status for glob crash signature, got %s", ev.Status)
+				}
+			case "grep", "webfetch":
 				if ev.Status != "completed" {
 					t.Errorf("expected completed status for %s, got %s", *ev.ToolName, ev.Status)
 				}
