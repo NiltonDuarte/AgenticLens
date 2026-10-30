@@ -10,13 +10,13 @@ import (
 type schemaFamily string
 
 const (
-	familyV1 schemaFamily = "v1"
-	familyV2 schemaFamily = "v2"
+	schemaFamilyV1 schemaFamily = "v1"
+	schemaFamilyV2 schemaFamily = "v2"
 )
 
 var requiredColumns = map[schemaFamily]map[string][]string{
-	familyV1: {"session": {"id", "parent_id", "agent", "model", "title", "time_created", "time_updated"}, "message": {"id", "session_id", "time_created", "time_updated", "data"}, "part": {"id", "session_id", "message_id", "time_created", "time_updated", "data"}},
-	familyV2: {"session_v2": {"id", "parent_id", "agent", "model", "title", "time_created", "time_updated"}, "session_message": {"id", "session_id", "type", "seq", "time_created", "time_updated", "data"}},
+	schemaFamilyV1: {"session": {"id", "parent_id", "agent", "model", "title", "time_created", "time_updated"}, "message": {"id", "session_id", "time_created", "time_updated", "data"}, "part": {"id", "session_id", "message_id", "time_created", "time_updated", "data"}},
+	schemaFamilyV2: {"session_v2": {"id", "parent_id", "agent", "model", "title", "time_created", "time_updated"}, "session_message": {"id", "session_id", "type", "seq", "time_created", "time_updated", "data"}},
 }
 
 func tableColumns(db *sql.DB) (map[string]map[string]bool, error) {
@@ -61,12 +61,12 @@ func tableColumns(db *sql.DB) (map[string]map[string]bool, error) {
 	return out, nil
 }
 
-func detectSchema(db *sql.DB) (schemaFamily, error) {
+func detectSchemaFamily(db *sql.DB) (schemaFamily, error) {
 	all, err := tableColumns(db)
 	if err != nil {
 		return "", err
 	}
-	complete := map[schemaFamily]bool{familyV1: true, familyV2: true}
+	complete := map[schemaFamily]bool{schemaFamilyV1: true, schemaFamilyV2: true}
 	present := map[schemaFamily]bool{}
 	var issues []string
 	for family, tables := range requiredColumns {
@@ -99,24 +99,24 @@ func detectSchema(db *sql.DB) (schemaFamily, error) {
 			}
 		}
 	}
-	if (present[familyV1] && present[familyV2]) || (complete[familyV1] && present[familyV2]) || (complete[familyV2] && present[familyV1]) {
+	if (present[schemaFamilyV1] && present[schemaFamilyV2]) || (complete[schemaFamilyV1] && present[schemaFamilyV2]) || (complete[schemaFamilyV2] && present[schemaFamilyV1]) {
 		observed := make([]string, 0, len(all))
 		for name := range all {
 			observed = append(observed, name)
 		}
 		sort.Strings(observed)
-		return "", fmt.Errorf("unsupported mixed OpenCode schema: observed tables [%s], incomplete structures [%s]; v1 requires session/message/part and v2 requires session_v2/session_message. Inspect or select a clean database", strings.Join(observed, ", "), strings.Join(issues, "; "))
+		return "", fmt.Errorf("unsupported mixed OpenCode schema family layout: observed tables [%s], incomplete structures [%s]; v1 requires session/message/part and v2 requires session_v2/session_message. Inspect or select a clean database", strings.Join(observed, ", "), strings.Join(issues, "; "))
 	}
-	if complete[familyV1] {
-		return familyV1, nil
+	if complete[schemaFamilyV1] {
+		return schemaFamilyV1, nil
 	}
-	if complete[familyV2] {
-		return familyV2, nil
+	if complete[schemaFamilyV2] {
+		return schemaFamilyV2, nil
 	}
 	observed := make([]string, 0, len(all))
 	for name := range all {
 		observed = append(observed, name)
 	}
 	sort.Strings(observed)
-	return "", fmt.Errorf("unsupported OpenCode database schema: observed tables [%s]; missing or incomplete required structures [%s]. Supported families require complete v1 session/message/part or v2 session_v2/session_message layouts; use --db-path to point to a supported database", strings.Join(observed, ", "), strings.Join(issues, "; "))
+	return "", fmt.Errorf("unsupported OpenCode database schema family layout: observed tables [%s]; missing or incomplete required structures [%s]. Supported schema families require complete v1 session/message/part or v2 session_v2/session_message layouts; use --db-path to point to a supported database", strings.Join(observed, ", "), strings.Join(issues, "; "))
 }

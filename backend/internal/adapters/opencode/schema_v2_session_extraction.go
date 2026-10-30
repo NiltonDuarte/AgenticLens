@@ -1,7 +1,6 @@
 package opencode
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -12,17 +11,17 @@ import (
 	"agenticlens/internal/domain"
 )
 
-type v2Session struct {
+type schemaV2SessionRow struct {
 	id               string
 	parent           sql.NullString
 	agent, model     sql.NullString
 	created, updated int64
 }
-type v2Message struct {
+type schemaV2MessageRow struct {
 	id, kind, data        string
 	seq, created, updated int64
 }
-type v2Payload struct {
+type schemaV2MessagePayload struct {
 	Time struct {
 		Created   *int64 `json:"created"`
 		Completed *int64 `json:"completed"`
@@ -59,27 +58,31 @@ type v2Payload struct {
 	} `json:"content"`
 }
 
-func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string) ([]domain.SessionFact, *string, *string, error) {
+type schemaV2ModelJSON struct {
+	ID *string `json:"id"`
+}
+
+func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string) ([]domain.SessionFact, *string, *string, error) {
 	ids, err := buildQuotedIDList(roots)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
 	}
 	rows, err := db.Query(fmt.Sprintf(`SELECT id,parent_id,agent,model,time_created,time_updated FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s) ORDER BY time_created,id`, ids, ids))
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("querying v2 sessions: %w", err)
+		return nil, nil, nil, fmt.Errorf("querying OpenCode schema family v2 sessions: %w", err)
 	}
-	var sessions []v2Session
+	var sessions []schemaV2SessionRow
 	for rows.Next() {
-		var s v2Session
+		var s schemaV2SessionRow
 		if err := rows.Scan(&s.id, &s.parent, &s.agent, &s.model, &s.created, &s.updated); err != nil {
 			rows.Close()
-			return nil, nil, nil, fmt.Errorf("scanning v2 session: %w", err)
+			return nil, nil, nil, fmt.Errorf("scanning OpenCode schema family v2 session: %w", err)
 		}
 		sessions = append(sessions, s)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return nil, nil, nil, fmt.Errorf("iterating v2 sessions: %w", err)
+		return nil, nil, nil, fmt.Errorf("iterating OpenCode schema family v2 sessions: %w", err)
 	}
 	rows.Close()
 	var start, end *string
@@ -112,20 +115,20 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 		}
 		mr, e := db.Query(`SELECT id,type,seq,time_created,time_updated,data FROM session_message WHERE session_id=? ORDER BY seq,time_created,id`, s.id)
 		if e != nil {
-			return nil, nil, nil, fmt.Errorf("querying v2 messages for session %s: %w", s.id, e)
+			return nil, nil, nil, fmt.Errorf("querying OpenCode schema family v2 messages for session %s: %w", s.id, e)
 		}
-		var msgs []v2Message
+		var msgs []schemaV2MessageRow
 		for mr.Next() {
-			var m v2Message
+			var m schemaV2MessageRow
 			if e := mr.Scan(&m.id, &m.kind, &m.seq, &m.created, &m.updated, &m.data); e != nil {
 				mr.Close()
-				return nil, nil, nil, fmt.Errorf("scanning v2 message in session %s: %w", s.id, e)
+				return nil, nil, nil, fmt.Errorf("scanning OpenCode schema family v2 message in session %s: %w", s.id, e)
 			}
 			msgs = append(msgs, m)
 		}
 		if e := mr.Err(); e != nil {
 			mr.Close()
-			return nil, nil, nil, fmt.Errorf("iterating v2 messages in session %s: %w", s.id, e)
+			return nil, nil, nil, fmt.Errorf("iterating OpenCode schema family v2 messages in session %s: %w", s.id, e)
 		}
 		mr.Close()
 		models := map[string]*sessionModelAccumulator{}
@@ -134,9 +137,9 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 		lookup := map[string]int64{}
 		toolStats := map[string]*toolAccumulator{}
 		for _, m := range msgs {
-			var p v2Payload
+			var p schemaV2MessagePayload
 			if e := json.Unmarshal([]byte(m.data), &p); e != nil {
-				return nil, nil, nil, fmt.Errorf("decoding v2 %s message %s in session %s: %w", m.kind, m.id, s.id, e)
+				return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: decoding %s message %s in session %s: %w", m.kind, m.id, s.id, e)
 			}
 			ts := m.created
 			if p.Time.Created != nil {
@@ -156,7 +159,7 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 				continue
 			case "assistant":
 				if p.Model.ID == "" {
-					return nil, nil, nil, fmt.Errorf("v2 assistant message %s in session %s is missing model.id", m.id, s.id)
+					return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: assistant message %s in session %s is missing model.id", m.id, s.id)
 				}
 				assistantTurns++
 				lookup[m.id] = assistantTurns
@@ -183,9 +186,9 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 				}
 				ctx := int64(0)
 				if p.Tokens != nil {
-					ctx = value(p.Tokens.Input)
+					ctx = schemaV2Value(p.Tokens.Input)
 					if p.Tokens.Cache != nil {
-						ctx += value(p.Tokens.Cache.Read)
+						ctx += schemaV2Value(p.Tokens.Cache.Read)
 					}
 				}
 				if ctx > acc.peak {
@@ -225,23 +228,23 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 				}
 				var assistantText *string
 				if len(messageText) > 0 {
-					assistantText = stringPointer(strings.Join(messageText, "\n"))
+					assistantText = schemaV2StringPointer(strings.Join(messageText, "\n"))
 				}
 				events = append(events, domain.EventFact{EventID: sourceEventID("message", m.id), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeTurnMessage, Status: "completed", DurationMs: dp, ContextTokens: ctx, PromptContent: assistantText})
 				for _, part := range p.Content {
 					if part.Type != "text" && part.Type != "tool" {
-						return nil, nil, nil, fmt.Errorf("unsupported v2 assistant content type %q in message %s session %s", part.Type, m.id, s.id)
+						return nil, nil, nil, fmt.Errorf("unsupported OpenCode schema family v2: assistant content type %q in message %s session %s", part.Type, m.id, s.id)
 					}
 					if part.Type != "tool" {
 						continue
 					}
 					name := strings.TrimSpace(part.Name)
 					if name == "" {
-						return nil, nil, nil, fmt.Errorf("v2 tool content in message %s session %s has no name", m.id, s.id)
+						return nil, nil, nil, fmt.Errorf("OpenCode schema family v2 tool content in message %s session %s has no name", m.id, s.id)
 					}
 					stat := strings.ToLower(part.State.Status)
 					if stat == "" {
-						return nil, nil, nil, fmt.Errorf("v2 tool %s in message %s session %s is missing state.status", name, m.id, s.id)
+						return nil, nil, nil, fmt.Errorf("OpenCode schema family v2 tool %s in message %s session %s is missing state.status", name, m.id, s.id)
 					}
 					var failed bool
 					switch stat {
@@ -249,7 +252,7 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 					case "error", "failed":
 						failed = true
 					default:
-						return nil, nil, nil, fmt.Errorf("unsupported v2 tool status %q for tool %s in message %s session %s", stat, name, m.id, s.id)
+						return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: unsupported tool status %q for tool %s in message %s session %s", stat, name, m.id, s.id)
 					}
 					ta, ok := toolStats[name]
 					if !ok {
@@ -273,23 +276,23 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 					outputParts := make([]string, 0, len(part.State.Content))
 					for _, c := range part.State.Content {
 						if c.Type != "text" {
-							return nil, nil, nil, fmt.Errorf("unsupported v2 tool result type %q in tool %s message %s session %s", c.Type, name, m.id, s.id)
+							return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: unsupported tool result type %q in tool %s message %s session %s", c.Type, name, m.id, s.id)
 						}
 						outputParts = append(outputParts, c.Text)
 					}
 					output := strings.Join(outputParts, "\n")
 					input := normalizeToolInput(part.State.Input)
-					events = append(events, domain.EventFact{EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: stringPointer(output)})
+					events = append(events, domain.EventFact{EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: schemaV2StringPointer(output)})
 				}
 			default:
-				return nil, nil, nil, fmt.Errorf("unsupported v2 message type %q for message %s in session %s", m.kind, m.id, s.id)
+				return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: unsupported message type %q for message %s in session %s", m.kind, m.id, s.id)
 			}
 		}
 		model := strings.TrimSpace(s.model.String)
 		if len(models) == 0 {
 			fallback := "default"
 			if model != "" {
-				var raw rawModelJSON
+				var raw schemaV2ModelJSON
 				if err := json.Unmarshal([]byte(model), &raw); err == nil && raw.ID != nil && strings.TrimSpace(*raw.ID) != "" {
 					fallback = strings.TrimSpace(*raw.ID)
 				} else {
@@ -321,7 +324,7 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 			if i == 0 && !s.parent.Valid {
 				iterations = userTurns
 			}
-			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: strptr(formatEpochMilli(first)), CompletedAt: strptr(formatEpochMilli(last)), ActiveDurationSeconds: int64(math.Round(float64(a.activeMS) / 1000)), Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, UserIterations: iterations})
+			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: schemaV2StringPointer(formatEpochMilli(first)), CompletedAt: schemaV2StringPointer(formatEpochMilli(last)), ActiveDurationSeconds: int64(math.Round(float64(a.activeMS) / 1000)), Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, UserIterations: iterations})
 		}
 		var parent *string
 		if s.parent.Valid {
@@ -344,40 +347,28 @@ func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySes
 	})
 	result, err := domain.SessionsFromFactsWithSource(domain.SourceOpenCode, invocationSessions, tools, events)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("grouping v2 OpenCode facts into sessions: %w", err)
+		return nil, nil, nil, fmt.Errorf("grouping OpenCode schema family v2 facts into sessions: %w", err)
 	}
 	return result, start, end, nil
 }
 
-func normalizeToolInput(raw json.RawMessage) *string {
-	if len(bytes.TrimSpace(raw)) == 0 || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
-		return nil
-	}
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(raw, &fields) == nil {
-		if path, ok := fields["path"]; ok {
-			canonical, _ := json.Marshal(struct {
-				Path json.RawMessage `json:"path"`
-			}{path})
-			v := string(canonical)
-			return &v
-		}
-		if path, ok := fields["filePath"]; ok {
-			canonical, _ := json.Marshal(struct {
-				Path json.RawMessage `json:"path"`
-			}{path})
-			v := string(canonical)
-			return &v
-		}
-	}
-	v := string(raw)
-	return &v
-}
-func stringPointer(s string) *string { return &s }
-func value(v *int64) int64 {
+func schemaV2StringPointer(s string) *string { return &s }
+func schemaV2Value(v *int64) int64 {
 	if v == nil {
 		return 0
 	}
 	return *v
 }
-func strptr(s string) *string { return &s }
+
+func countSchemaV2SteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
+	quoted, err := buildQuotedIDList(threadIDs)
+	if err != nil {
+		return 0, fmt.Errorf("validating thread ids: %w", err)
+	}
+	var count int64
+	err = db.QueryRow(fmt.Sprintf(`SELECT COUNT(*) FROM session_message WHERE type='user' AND session_id IN (SELECT id FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s))`, quoted, quoted)).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting OpenCode schema family v2 user messages: %w", err)
+	}
+	return count, nil
+}
