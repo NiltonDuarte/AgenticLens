@@ -3,6 +3,7 @@ package adapters_test
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -12,6 +13,67 @@ import (
 
 func strPtr(s string) *string {
 	return &s
+}
+
+func TestCanonicalV4NestedEventsReadCompatibilityAndMetadata(t *testing.T) {
+	eventJSON := `{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","message_id":"message-1","turn":2,"role":"tester","event_type":"tool_call","tool_name":"bash","status":"error","duration_ms":0,"context_tokens":1234}`
+	bareJSON := `{"timestamp":"2026-10-29T09:00:00Z","turn":1,"role":"coder","event_type":"turn_message","status":"completed","context_tokens":0}`
+	ledgerJSON := func(collection string) string {
+		return `{"schema_version":4,"ticket_id":"FIX-12","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]` + collection + `}]}`
+	}
+	for _, tc := range []struct {
+		name, collection string
+		count            int
+	}{
+		{"omitted", "", 0}, {"empty", `,"events":[]`, 0}, {"metadata and missing ID", `,"events":[` + eventJSON + `,` + bareJSON + `]`, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data := []byte(ledgerJSON(tc.collection))
+			if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+				t.Fatal(err)
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(data, &dto); err != nil {
+				t.Fatal(err)
+			}
+			if err := dto.Validate(); err != nil {
+				t.Fatal(err)
+			}
+			facts := dto.ToDomain()
+			events := facts.EventFacts()
+			if len(events) != tc.count {
+				t.Fatalf("expected %d events, got %#v", tc.count, events)
+			}
+			if tc.count > 0 {
+				want := domain.EventFact{EventID: "call-1", Timestamp: "2026-10-29T10:00:00Z", SessionID: "owner", MessageID: strPtr("message-1"), Turn: 2, Role: "tester", EventType: domain.EventTypeToolCall, ToolName: strPtr("bash"), Status: "error", DurationMs: new(int64), ContextTokens: 1234}
+				if !reflect.DeepEqual(events[1], want) || events[0].EventID != "" || events[0].SessionID != "owner" {
+					t.Fatalf("nested metadata/owner lost: %#v", events)
+				}
+			}
+			encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(encoded), `"events"`) || strings.Contains(string(encoded), `"evidence"`) {
+				t.Fatalf("writer stopped compacting: %s", encoded)
+			}
+		})
+	}
+	for _, field := range []string{"session_id", "error_message", "prompt_content", "reasoning_content", "tool_input", "tool_output"} {
+		t.Run("reject persisted "+field, func(t *testing.T) {
+			row := strings.Replace(eventJSON, `"event_id":`, `"`+field+`":"unexpected","event_id":`, 1)
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal([]byte(ledgerJSON(`,"events":[`+row+`]`)), &dto); err == nil {
+				t.Fatalf("persisted DTO accepted response-only %s", field)
+			}
+		})
+	}
+	for _, key := range []string{"events", "tools", "invocations"} {
+		data := []byte(strings.Replace(ledgerJSON(""), `"schema_version":4`, `"schema_version":4,"`+key+`":[]`, 1))
+		if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
+			t.Fatalf("accepted ambiguous root %s", key)
+		}
+	}
 }
 
 func TestValidateRuntimeFactLedgerRejectsLegacyVersionsBeforeFacts(t *testing.T) {
@@ -37,7 +99,7 @@ func TestValidateRuntimeFactLedgerRejectsIncompleteV4(t *testing.T) {
 }
 
 func TestValidateRuntimeFactLedgerAcceptsCanonicalV4WithoutMigrationMetadata(t *testing.T) {
-	base := `{"schema_version":4,"sessions":[{"id":"s1","source":"opencode","invocations":[{"id":"i1","parent_id":null,"role":"orchestrator","model":"m","user":"u","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
+	base := `{"schema_version":4,"sessions":[{"id":"s1","source":"opencode","user":"u","invocations":[{"role":"orchestrator","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(base)); err != nil {
 		t.Fatalf("canonical v4 without workflow metadata should be accepted: %v", err)
 	}
@@ -48,6 +110,74 @@ func TestValidateRuntimeFactLedgerAcceptsCanonicalV4WithoutMigrationMetadata(t *
 		t.Run(name, func(t *testing.T) {
 			if err := adapters.ValidateRuntimeFactLedger([]byte(data)); err == nil {
 				t.Fatal("expected canonical v4 shape rejection")
+			}
+		})
+	}
+	for _, value := range []string{`"obsolete"`, `""`, `null`, `0`, `{}`} {
+		t.Run("reject removed invocation key "+value, func(t *testing.T) {
+			data := strings.Replace(base, `"role":`, `"id":`+value+`,"role":`, 1)
+			if err := adapters.ValidateRuntimeFactLedger([]byte(data)); err == nil || !strings.Contains(err.Error(), "must not contain id") {
+				t.Fatalf("expected explicit removed-key rejection, got %v", err)
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal([]byte(data), &dto); err == nil {
+				t.Fatal("DTO decoding accepted the removed invocation key")
+			}
+		})
+	}
+}
+
+func TestInvocationSerializationPreservesRowsAndSessionOwnershipWithoutID(t *testing.T) {
+	version := domain.CurrentSchemaVersion
+	rootID := "opaque-owner"
+	started, completed := "2026-10-28T10:00:00Z", "2026-10-28T10:01:00Z"
+	rows := []domain.InvocationFact{
+		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 10}, CostUSD: 0.25},
+		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 20}, CostUSD: 0.50},
+		{Role: "reviewer", Model: "model-b", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 30}, CostUSD: 0.75},
+	}
+	facts := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{
+		{ID: rootID, Source: domain.SourceCodex, User: "alice", Invocations: rows, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}},
+		{ID: "opaque-child", ParentID: &rootID, Source: domain.SourceCodex, User: "alice", Invocations: rows[:1], Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}},
+	}, Anomalies: []domain.Anomaly{}}
+	domainJSON, err := json.Marshal(facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dtoJSON, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, data := range map[string][]byte{"domain": domainJSON, "DTO": dtoJSON} {
+		t.Run(name, func(t *testing.T) {
+			if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+				t.Fatalf("serialized rows are not canonical v4: %v", err)
+			}
+			var shape struct {
+				Sessions []struct {
+					Invocations []map[string]json.RawMessage `json:"invocations"`
+				} `json:"sessions"`
+			}
+			if err := json.Unmarshal(data, &shape); err != nil {
+				t.Fatal(err)
+			}
+			for si, session := range shape.Sessions {
+				for ii, row := range session.Invocations {
+					if _, exists := row["id"]; exists {
+						t.Fatalf("session %d row %d serialized the removed key", si, ii)
+					}
+				}
+			}
+			var decoded adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(data, &decoded); err != nil {
+				t.Fatal(err)
+			}
+			got := decoded.ToDomain()
+			if len(got.Sessions) != 2 || got.Sessions[0].ID != rootID || got.Sessions[1].ID != "opaque-child" || got.Sessions[1].ParentID == nil || *got.Sessions[1].ParentID != rootID {
+				t.Fatalf("session ownership changed: %+v", got.Sessions)
+			}
+			if !reflect.DeepEqual(got.Sessions[0].Invocations, rows) || !reflect.DeepEqual(got.Sessions[1].Invocations, rows[:1]) {
+				t.Fatalf("invocation rows changed during serialization: %+v", got.Sessions)
 			}
 		})
 	}
@@ -503,11 +633,12 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 			name    string
 			session adapters.SessionFactDTO
 		}{
-			{"blank tool name", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Calls: 1}}}},
-			{"negative tool calls", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: -1}}}},
-			{"errors exceed calls", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1, Errors: 2}}}},
-			{"duplicate tool name", adapters.SessionFactDTO{ID: "s1", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1}, {Name: "bash", Calls: 2}}}},
-			{"dangling invocation parent", adapters.SessionFactDTO{ID: "s1", Invocations: []adapters.InvocationFactDTO{{ID: "i1", ParentID: &missingParent}}}},
+			{"blank tool name", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Calls: 1}}}},
+			{"negative tool calls", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: -1}}}},
+			{"errors exceed calls", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1, Errors: 2}}}},
+			{"duplicate tool name", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1}, {Name: "bash", Calls: 2}}}},
+			{"dangling session parent", adapters.SessionFactDTO{ID: "s1", User: "alice", ParentID: &missingParent}},
+			{"blank session user", adapters.SessionFactDTO{ID: "s1", User: "   "}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -675,10 +806,8 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 
 		for _, tc := range customCases {
 			dto := adapters.InvocationFactDTO{
-				ID:    "inv-1",
 				Role:  tc.role,
 				Model: tc.model,
-				User:  "test-user",
 			}
 
 			dom := dto.ToDomain()
@@ -691,13 +820,11 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 		}
 	})
 
-	t.Run("empty role model and user remain empty without fallback values", func(t *testing.T) {
+	t.Run("empty role and model remain empty without fallback values", func(t *testing.T) {
 		t.Parallel()
 		dto := adapters.InvocationFactDTO{
-			ID:    "inv-empty",
 			Role:  "",
 			Model: "",
-			User:  "",
 		}
 
 		dom := dto.ToDomain()
@@ -706,9 +833,6 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 		}
 		if dom.Model != "" {
 			t.Errorf("expected empty model to remain empty, got %q", dom.Model)
-		}
-		if dom.User != "" {
-			t.Errorf("expected empty user to remain empty, got %q", dom.User)
 		}
 	})
 

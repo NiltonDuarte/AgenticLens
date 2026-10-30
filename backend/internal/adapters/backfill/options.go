@@ -14,6 +14,7 @@ type BackfillOptions struct {
 	DBPath          string
 	Force           bool
 	MigrateSchema   bool
+	AllowFallbacks  bool
 }
 
 // MigrationOptions specifies parameters for standalone universal schema migration.

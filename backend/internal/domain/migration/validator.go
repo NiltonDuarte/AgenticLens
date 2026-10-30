@@ -62,7 +62,19 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 			ErrInvariantViolation, before.Code, after.Code)
 	}
 
-	// 5. Invocations invariant
+	// 5. Session ownership and invocation invariants
+	if len(before.Sessions) != len(after.Sessions) {
+		return fmt.Errorf("%w: session count changed from %d to %d", ErrInvariantViolation, len(before.Sessions), len(after.Sessions))
+	}
+	for i, b := range before.Sessions {
+		a := after.Sessions[i]
+		if b.ID != a.ID || !ptrEqual(b.ParentID, a.ParentID) || b.Source != a.Source || b.User != a.User {
+			return fmt.Errorf("%w: session[%d] identity or ownership modified", ErrInvariantViolation, i)
+		}
+		if len(b.Invocations) != len(a.Invocations) {
+			return fmt.Errorf("%w: session[%d] invocation count changed from %d to %d", ErrInvariantViolation, i, len(b.Invocations), len(a.Invocations))
+		}
+	}
 	afterInvocations, beforeInvocations := after.InvocationFacts(), before.InvocationFacts()
 	if len(afterInvocations) != len(beforeInvocations) {
 		return fmt.Errorf("%w: invocation count changed from %d to %d",
@@ -71,11 +83,8 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 	for i := range beforeInvocations {
 		b := beforeInvocations[i]
 		a := afterInvocations[i]
-		if b.ID != a.ID ||
-			!ptrEqual(b.ParentID, a.ParentID) ||
-			b.Role != a.Role ||
+		if b.Role != a.Role ||
 			b.Model != a.Model ||
-			b.User != a.User ||
 			!ptrEqual(b.StartedAt, a.StartedAt) ||
 			!ptrEqual(b.CompletedAt, a.CompletedAt) ||
 			b.ActiveDurationSeconds != a.ActiveDurationSeconds ||
@@ -84,8 +93,8 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 			b.CostUSD != a.CostUSD ||
 			b.Compactions != a.Compactions ||
 			(expectedTargetVersion < 4 && b.UserIterations != a.UserIterations) {
-			return fmt.Errorf("%w: invocation[%d] (ID %s) data modified",
-				ErrInvariantViolation, i, b.ID)
+			return fmt.Errorf("%w: invocation[%d] data modified",
+				ErrInvariantViolation, i)
 		}
 	}
 
@@ -193,7 +202,7 @@ func ptrEqual[T comparable](a, b *T) bool {
 	return *a == *b
 }
 
-func ptrString[T any](p *T) string {
+func ptrString[T comparable](p *T) string {
 	if p == nil {
 		return "<nil>"
 	}

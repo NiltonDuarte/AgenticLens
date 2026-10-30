@@ -25,7 +25,6 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                         id: "ses-1",
                         invocations: [
                             {
-                                id: 'ses-1',
                                 parent_id: null,
                                 role: 'orchestrator',
                                 model: 'gemini-3.8-flash',
@@ -157,7 +156,6 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                         id: "root-ses",
                         invocations: [
                             {
-                                id: 'root-ses',
                                 parent_id: null,
                                 role: 'orchestrator',
                                 model: 'claude-3-5-sonnet',
@@ -177,7 +175,6 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                         parent_id: "root-ses",
                         invocations: [
                             {
-                                id: 'sub-ses',
                                 parent_id: 'root-ses',
                                 role: 'coder',
                                 model: 'claude-3-5-sonnet',
@@ -218,7 +215,6 @@ describe('Multi-Version Schema Evolution and Migration Types', () => {
                         id: "legacy-root",
                         invocations: [
                             {
-                                id: 'legacy-root',
                                 parent_id: null,
                                 role: 'orchestrator',
                                 model: 'gpt-4o',

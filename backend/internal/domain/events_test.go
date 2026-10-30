@@ -283,7 +283,7 @@ func TestPersistAnomalySummariesDropsEventsAndEvidenceButKeepsFacts(t *testing.T
 	facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{
 		ID:          sessionID,
 		Source:      domain.SourceCodex,
-		Invocations: []domain.InvocationFact{{ID: sessionID, Role: "orchestrator"}},
+		Invocations: []domain.InvocationFact{{Role: "orchestrator"}},
 		Tools:       []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 6}},
 		Events:      []domain.SessionEventFact{{EventID: "e1", Timestamp: "2026-01-01T00:00:00Z", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}},
 	}}}
@@ -316,8 +316,8 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 		{EventID: "new-3", Timestamp: "2026-10-26T10:00:03Z", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
 	}
 	merged := domain.AgenticFactLedger{Sessions: []domain.SessionFact{
-		{ID: "old-root", Invocations: []domain.InvocationFact{{ID: "old-root", Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 5}}, Anomalies: []domain.Anomaly{oldSummary}},
-		{ID: "new-root", Invocations: []domain.InvocationFact{{ID: "new-root", Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 2, Errors: 1}}, Events: newEvents, Anomalies: []domain.Anomaly{}},
+		{ID: "old-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 5}}, Anomalies: []domain.Anomaly{oldSummary}},
+		{ID: "new-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 2, Errors: 1}}, Events: newEvents, Anomalies: []domain.Anomaly{}},
 	}}
 	persisted, err := domain.PersistAnomalySummaries(merged)
 	if err != nil {
@@ -457,6 +457,152 @@ func TestWorkspaceEventsResponseSerialization(t *testing.T) {
 
 func ptrString(v string) *string { return &v }
 func ptrInt64(v int64) *int64    { return &v }
+
+func TestNormalizeLedgerForReadPreservesFactsAndScopesWithoutMutation(t *testing.T) {
+	tool := "bash"
+	first := domain.SessionEventFact{EventID: "first", Timestamp: "2026-10-29T10:00:00Z", MessageID: ptrString("message"), Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error", DurationMs: ptrInt64(12), ContextTokens: 2400}
+	tie := first
+	tie.EventID = "tie"
+	late := first
+	late.EventID, late.Timestamp, late.Turn = "late", "2026-10-29T11:00:00Z", 3
+	other := first
+	other.EventID, other.Status = "other-owner", "completed"
+	facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{
+		{ID: "owner-a", Source: domain.SourceOpenCode, User: "tester", Invocations: []domain.InvocationFact{{Role: "coder"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 8, Errors: 6}}, Events: []domain.SessionEventFact{late, first, tie}},
+		{ID: "owner-b", Source: domain.SourceCodex, User: "tester", Events: []domain.SessionEventFact{other}},
+	}}
+	before, err := json.Marshal(facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, err := domain.NormalizeLedgerForRead(facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(read.Sessions[0].Events, facts.Sessions[0].Events) || !reflect.DeepEqual(read.Sessions[1].Events, facts.Sessions[1].Events) {
+		t.Fatalf("read projection lost nested event metadata: %#v", read.Sessions)
+	}
+	events := read.EventFacts()
+	if len(events) != 4 {
+		t.Fatalf("expected four facts, got %#v", events)
+	}
+	for i, id := range []string{"first", "tie", "other-owner", "late"} {
+		if events[i].EventID != id {
+			t.Fatalf("unstable chronological order: %#v", events)
+		}
+	}
+	if events[0].SessionID != "owner-a" || events[2].SessionID != "owner-b" {
+		t.Fatalf("session owners were not restored: %#v", events)
+	}
+	if len(read.Sessions[0].Anomalies) == 0 || len(read.Anomalies) == 0 {
+		t.Fatalf("normalized session/ticket summaries missing: %#v", read)
+	}
+	for _, session := range read.Sessions {
+		for _, anomaly := range session.Anomalies {
+			if anomaly.Context.SessionID != nil || len(anomaly.Evidence) != 0 {
+				t.Fatalf("nested summary repeated scope/evidence: %#v", anomaly)
+			}
+		}
+	}
+	for _, anomaly := range read.Anomalies {
+		if anomaly.Context.SessionID != nil || len(anomaly.Evidence) != 0 {
+			t.Fatalf("ticket summary acquired local scope/evidence: %#v", anomaly)
+		}
+	}
+	if !reflect.DeepEqual(read.InvocationFacts(), facts.InvocationFacts()) || !reflect.DeepEqual(read.ToolFacts(), facts.ToolFacts()) {
+		t.Fatal("read normalization changed invocation or tool totals")
+	}
+	after, err := json.Marshal(facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(before) != string(after) {
+		t.Fatal("normalization mutated the input")
+	}
+	read.Sessions[0].Events[0].Status = "changed"
+	if facts.Sessions[0].Events[0].Status != "error" {
+		t.Fatal("read projection shares the input event slice")
+	}
+}
+
+func TestNormalizeLedgerForReadEmptyEvents(t *testing.T) {
+	for _, facts := range []domain.AgenticFactLedger{
+		{}, {Sessions: []domain.SessionFact{}}, {Sessions: []domain.SessionFact{{ID: "omitted"}}},
+		{Sessions: []domain.SessionFact{{ID: "empty", Events: []domain.SessionEventFact{}}}},
+	} {
+		read, err := domain.NormalizeLedgerForRead(facts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(read.EventFacts()) != 0 || read.SchemaVersion != nil {
+			t.Fatalf("empty facts synthesized events or schema: %#v", read)
+		}
+	}
+}
+
+func TestReconcileEventsEnrichesPartialTraceWithoutLoss(t *testing.T) {
+	first := domain.EventFact{EventID: "call", SessionID: "owner", Timestamp: "2026-10-29T10:00:00Z", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: ptrString("bash"), Status: "error", ContextTokens: 1200, DurationMs: ptrInt64(10)}
+	unmatched := first
+	unmatched.EventID, unmatched.Turn = "unmatched", 3
+	local := first
+	local.MessageID, local.DurationMs = ptrString("message"), ptrInt64(0)
+	local.PromptContent, local.ReasoningContent = ptrString("Run checks"), ptrString("Inspect failures")
+	local.ToolInput, local.ToolOutput, local.ErrorMessage = ptrString("make"), ptrString("failed"), ptrString("exit 1")
+	additional := local
+	additional.EventID, additional.SessionID, additional.Turn = "local-only", "other", 1
+	baseline, enrichment := []domain.EventFact{unmatched, first}, []domain.EventFact{additional, local}
+	beforeBaseline, beforeEnrichment := append([]domain.EventFact{}, baseline...), append([]domain.EventFact{}, enrichment...)
+	merged := domain.ReconcileEvents(baseline, enrichment)
+	if !reflect.DeepEqual(merged, []domain.EventFact{additional, local, unmatched}) {
+		t.Fatalf("partial enrichment lost facts/details: %#v", merged)
+	}
+	if !reflect.DeepEqual(domain.ReconcileEvents(merged, enrichment), merged) || !reflect.DeepEqual(domain.ReconcileEvents(baseline, merged), merged) {
+		t.Fatal("reconciliation duplicated rows when repeated at the HTTP boundary")
+	}
+	if !reflect.DeepEqual(baseline, beforeBaseline) || !reflect.DeepEqual(enrichment, beforeEnrichment) {
+		t.Fatal("reconciliation mutated an input")
+	}
+}
+
+func TestReconcileEventsIdentityAndAmbiguity(t *testing.T) {
+	base := domain.EventFact{EventID: "id", SessionID: "session", Timestamp: "2026-10-29T10:00:00Z", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: ptrString("bash"), Status: "error", MessageID: ptrString("message")}
+	bare := base
+	bare.EventID = ""
+	local := base
+	local.ToolOutput = ptrString("details")
+	changed := func(change func(*domain.EventFact)) domain.EventFact { event := local; change(&event); return event }
+	tests := []struct {
+		name                 string
+		baseline, enrichment []domain.EventFact
+		count                int
+	}{
+		{"empty", nil, nil, 0},
+		{"baseline only", []domain.EventFact{base}, nil, 1},
+		{"local only", nil, []domain.EventFact{local}, 1},
+		{"same ID", []domain.EventFact{base}, []domain.EventFact{local}, 1},
+		{"missing ID unique", []domain.EventFact{bare}, []domain.EventFact{local}, 1},
+		{"different IDs", []domain.EventFact{base}, []domain.EventFact{changed(func(e *domain.EventFact) { e.EventID = "different" })}, 2},
+		{"different sessions", []domain.EventFact{base}, []domain.EventFact{changed(func(e *domain.EventFact) { e.SessionID = "other" })}, 2},
+		{"different timestamp", []domain.EventFact{bare}, []domain.EventFact{changed(func(e *domain.EventFact) { e.Timestamp = "later" })}, 2},
+		{"different turn", []domain.EventFact{bare}, []domain.EventFact{changed(func(e *domain.EventFact) { e.Turn = 2 })}, 2},
+		{"different event type", []domain.EventFact{bare}, []domain.EventFact{changed(func(e *domain.EventFact) { e.EventType = domain.EventTypeTurnMessage })}, 2},
+		{"different tool", []domain.EventFact{bare}, []domain.EventFact{changed(func(e *domain.EventFact) { e.ToolName = ptrString("read") })}, 2},
+		{"different message", []domain.EventFact{bare}, []domain.EventFact{changed(func(e *domain.EventFact) { e.MessageID = ptrString("other") })}, 2},
+		{"ambiguous baseline", []domain.EventFact{bare, bare}, []domain.EventFact{local}, 3},
+		{"ambiguous local", []domain.EventFact{bare}, []domain.EventFact{local, changed(func(e *domain.EventFact) { e.EventID = "other" })}, 3},
+		{"identical fresh row ambiguous against baseline", []domain.EventFact{bare, bare}, []domain.EventFact{bare}, 3},
+		{"identical fresh rows ambiguous against one baseline", []domain.EventFact{bare}, []domain.EventFact{bare, bare}, 3},
+		{"identical ambiguous independent collections", []domain.EventFact{bare, bare}, []domain.EventFact{bare, bare}, 4},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			merged := domain.ReconcileEvents(tc.baseline, tc.enrichment)
+			if merged == nil || len(merged) != tc.count {
+				t.Fatalf("expected %d distinct events, got %#v", tc.count, merged)
+			}
+		})
+	}
+}
 
 func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 	t.Parallel()

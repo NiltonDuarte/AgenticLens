@@ -30,13 +30,12 @@
   "sessions": [
     {
       "id": "ses_eb58319dcffebJ83wNO5KvVhy6",
+      "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb58319dcffebJ83wNO5KvVhy6",
-          "parent_id": null,
           "role": "general",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T15:31:02.159000+00:00",
           "completed_at": "2026-10-17T15:39:30.399000+00:00",
           "active_duration_seconds": 169,
@@ -81,7 +80,6 @@
         }
       ],
       "events": [],
-      "source": "opencode",
       "anomalies": []
     }
   ]

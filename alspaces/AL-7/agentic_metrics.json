@@ -21,13 +21,11 @@
       "id": "ses_eb1674d57ffer3yZnHLhOY7oku",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb1674d57ffer3yZnHLhOY7oku",
-          "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
           "role": "reviewer",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T10:39:52.497000+00:00",
           "completed_at": "2026-10-18T10:45:00.359000+00:00",
           "active_duration_seconds": 308,
@@ -92,13 +90,11 @@
       "id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb1775ee4ffemXyqBNsPuM08Tp",
-          "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
           "role": "tester",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T10:22:19.438000+00:00",
           "completed_at": "2026-10-18T10:39:46.088000+00:00",
           "active_duration_seconds": 1046,
@@ -173,13 +169,11 @@
       "id": "ses_eb183cc93ffeqoQN9Hlevo3825",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb183cc93ffeqoQN9Hlevo3825",
-          "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
           "role": "coder",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T10:08:44.930000+00:00",
           "completed_at": "2026-10-18T10:22:10.495000+00:00",
           "active_duration_seconds": 805,
@@ -254,13 +248,11 @@
       "id": "ses_eb18741bdffeB86InRZ5cqbZZK",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb18741bdffeB86InRZ5cqbZZK",
-          "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
           "role": "planner",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T10:04:58.314000+00:00",
           "completed_at": "2026-10-18T10:06:23.751000+00:00",
           "active_duration_seconds": 85,
@@ -300,13 +292,11 @@
       "id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb19b6a25ffedH6iVtv24Rw61g",
-          "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
           "role": "planner",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T09:42:57.265000+00:00",
           "completed_at": "2026-10-18T09:47:14.270000+00:00",
           "active_duration_seconds": 257,
@@ -382,13 +372,11 @@
       "id": "ses_eb19fe224ffeHDZBPwa1woE6w1",
       "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb19fe224ffeHDZBPwa1woE6w1",
-          "parent_id": "ses_eb1a7f353ffetemGi7xYk76UIH",
           "role": "planner",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T09:38:04.398000+00:00",
           "completed_at": "2026-10-18T09:42:46.418000+00:00",
           "active_duration_seconds": 282,
@@ -447,13 +435,11 @@
     {
       "id": "ses_eb1a7f353ffetemGi7xYk76UIH",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb1a7f353ffetemGi7xYk76UIH",
-          "parent_id": null,
           "role": "orchestrator",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T09:29:16.056000+00:00",
           "completed_at": "2026-10-18T12:33:43.263000+00:00",
           "active_duration_seconds": 4343,

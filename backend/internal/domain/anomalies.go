@@ -400,29 +400,27 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger, thresholds AnomalyT
 			}
 		}
 	} else {
-		// v1 Fallback: inspect Invocations for PeakContext against warning and critical ceilings
-		for _, inv := range ledger.InvocationFacts() {
-			if inv.Tokens.PeakContext >= critCeiling {
-				anomaly := Anomaly{
-					RuleID:   RuleContextSaturationSpike,
-					Severity: SeverityCritical,
-					Context: AnomalyContext{
-						SessionID:     strPtr(inv.ID),
-						Role:          agentRolePtr(AgentRole(inv.Role)),
-						ContextTokens: int64Ptr(inv.Tokens.PeakContext),
-						Threshold:     strPtr(fmt.Sprintf("%d", critCeiling)),
-					},
+		// v1 Fallback: inspect session-owned invocations against warning and critical ceilings.
+		for _, session := range ledger.Sessions {
+			for _, inv := range session.Invocations {
+				severity, threshold := SeverityWarning, warnCeiling
+				if inv.Tokens.PeakContext >= critCeiling {
+					severity, threshold = SeverityCritical, critCeiling
+				} else if inv.Tokens.PeakContext < warnCeiling {
+					continue
 				}
-				anomalies = append(anomalies, anomaly)
-			} else if inv.Tokens.PeakContext >= warnCeiling {
+				var sid *string
+				if session.ID != "" {
+					sid = strPtr(session.ID)
+				}
 				anomaly := Anomaly{
 					RuleID:   RuleContextSaturationSpike,
-					Severity: SeverityWarning,
+					Severity: severity,
 					Context: AnomalyContext{
-						SessionID:     strPtr(inv.ID),
+						SessionID:     sid,
 						Role:          agentRolePtr(AgentRole(inv.Role)),
 						ContextTokens: int64Ptr(inv.Tokens.PeakContext),
-						Threshold:     strPtr(fmt.Sprintf("%d", warnCeiling)),
+						Threshold:     strPtr(fmt.Sprintf("%d", threshold)),
 					},
 				}
 				anomalies = append(anomalies, anomaly)
@@ -438,18 +436,22 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger, thresholds AnomalyT
 func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 	childParent := make(map[string]string)
 	invocationRoles := make(map[string][]string)
-	for _, invocation := range ledger.InvocationFacts() {
-		if invocation.ID == "" || invocation.ParentID == nil {
+	for _, session := range ledger.Sessions {
+		if session.ParentID == nil {
 			continue
 		}
-		parent := strings.TrimSpace(*invocation.ParentID)
+		parent := strings.TrimSpace(*session.ParentID)
 		if parent == "" {
 			continue
 		}
-		childParent[invocation.ID] = parent
-		role := strings.ToLower(strings.TrimSpace(string(invocation.Role)))
-		if role != "" {
-			invocationRoles[parent] = appendDistinctRole(invocationRoles[parent], role)
+		if session.ID != "" {
+			childParent[session.ID] = parent
+		}
+		for _, invocation := range session.Invocations {
+			role := strings.ToLower(strings.TrimSpace(string(invocation.Role)))
+			if role != "" {
+				invocationRoles[parent] = appendDistinctRole(invocationRoles[parent], role)
+			}
 		}
 	}
 
@@ -469,6 +471,12 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 	parents := make([]string, 0, len(childParent))
 	seenParent := make(map[string]bool)
 	for _, parent := range childParent {
+		if !seenParent[parent] {
+			parents = append(parents, parent)
+			seenParent[parent] = true
+		}
+	}
+	for parent := range invocationRoles {
 		if !seenParent[parent] {
 			parents = append(parents, parent)
 			seenParent[parent] = true

@@ -39,11 +39,7 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 			t.Fatal(err)
 		}
 	}
-	invocations, tools, events, _, _, err := opencode.ExtractFacts(db, []string{"shared-session"}, "test", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	opencodeSessions, err := domain.SessionsFromFacts(invocations, tools, events)
+	opencodeSessions, _, _, err := opencode.ExtractSessions(db, []string{"shared-session"}, "test", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

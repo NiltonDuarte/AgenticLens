@@ -58,8 +58,8 @@ func sampleFactJSON(ticketID, title string, duration int64, cost float64) string
 		UpdatedAt:   "2026-10-17T11:00:00Z",
 		Code:        domain.CodeFacts{LinesAdded: 120, LinesDeleted: 20, TestLinesAdded: 60, ProdLinesAdded: 60, ProdLinesDeleted: 20, FilesChanged: 4, SDLCIterations: 2},
 		Sessions: []domain.SessionFact{
-			{ID: "ses-orch", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{ID: "ses-orch", Role: "orchestrator", Model: "claude-3-sonnet", User: "test-engineer", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
-			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, Invocations: []domain.InvocationFact{{ID: "ses-coder", ParentID: &parent, Role: "coder", Model: "claude-3-opus", User: "test-engineer", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-orch", Source: domain.SourceOpenCode, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "orchestrator", Model: "claude-3-sonnet", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "coder", Model: "claude-3-opus", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
 		},
 	}
 	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
@@ -155,6 +155,22 @@ func setupIsolatedEmptyDB(t *testing.T) string {
 	return dbPath
 }
 
+func setIsolatedHome(t *testing.T, cmd *exec.Cmd) {
+	t.Helper()
+	homeDir := filepath.Join(t.TempDir(), "isolated-home")
+	if err := os.MkdirAll(homeDir, 0755); err != nil {
+		t.Fatalf("failed creating isolated HOME: %v", err)
+	}
+
+	env := make([]string, 0, len(os.Environ())+1)
+	for _, entry := range os.Environ() {
+		if !strings.HasPrefix(entry, "HOME=") {
+			env = append(env, entry)
+		}
+	}
+	cmd.Env = append(env, "HOME="+homeDir)
+}
+
 func TestCLIListCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
@@ -202,6 +218,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		"sessions": [{
 			"id": "ses-anom",
 			"source": "opencode",
+			"user": "test-engineer",
 			"invocations": [],
 			"events": [],
 			"anomalies": [],
@@ -300,7 +317,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
-			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-GEN-ANOM",
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
@@ -335,7 +352,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
-			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-GEN-CLEAN",
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
@@ -1138,6 +1155,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing
 		"sessions":[{
 			"id":"session-fixture",
 			"source":"opencode",
+			"user":"tester",
 			"invocations":[],
 			"tools":[{"name":"bash","calls":8,"errors":6}],
 			"anomalies":[],
@@ -1156,7 +1174,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing
 	if err := os.WriteFile(outJSON, []byte(seedJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(cliBinaryPath, "generate", "--db-path", filepath.Join(tempDir, "missing.db"), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--allow-empty")
+	cmd := exec.Command(cliBinaryPath, "generate", "--db-path", setupIsolatedEmptyDB(t), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--allow-empty")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -1196,7 +1214,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "fallback.json")
-		nonExistentDB := filepath.Join(tempDir, "missing.db")
+		nonExistentDB := setupIsolatedEmptyDB(t)
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -1676,7 +1694,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
-			"--db-path", filepath.Join(tempDir, "missing.db"),
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "AL-ALLOW-EMPTY",
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", outJSON,
@@ -1809,10 +1827,9 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
     {
       "id": "ses_cached_inv_1",
       "source": "opencode",
+      "user": "engineer",
       "invocations": [
         {
-          "id": "ses_cached_inv_1",
-          "user": "engineer",
           "role": "coder",
           "model": "gpt-4o",
           "tokens": {
@@ -1823,7 +1840,6 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
             "peak_context": 0
           },
           "cost_usd": 0.003,
-          "parent_id": null,
           "started_at": null,
           "completed_at": null,
           "active_duration_seconds": 0,
@@ -1872,8 +1888,8 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if len(parsed.ToDomain().InvocationFacts()) != 1 {
 			t.Fatalf("expected 1 invocation from cached facts, got %d", len(parsed.ToDomain().InvocationFacts()))
 		}
-		if parsed.ToDomain().InvocationFacts()[0].ID != "ses_cached_inv_1" {
-			t.Errorf("expected invocation ID ses_cached_inv_1, got %s", parsed.ToDomain().InvocationFacts()[0].ID)
+		if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "ses_cached_inv_1" {
+			t.Errorf("expected cached session ownership to survive generation, got %+v", parsed.Sessions)
 		}
 	})
 
@@ -2058,7 +2074,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			t.Fatalf("expected exec.ExitError, got %v", err)
 		}
 
-		expectedErr := "Error: unable to identify root session for ticket 'AL-DB-ERR'. Provide --session-id, --nonce, or ensure workspace files exist in OpenCode database. Telemetry generation aborted."
+		expectedErr := "Error querying selected OpenCode source"
 		if !strings.Contains(stderr.String(), expectedErr) {
 			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
 		}
@@ -2072,6 +2088,31 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 func TestCLIBackfillCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
+	t.Run("malformed local config is reported before backfill dispatch", func(t *testing.T) {
+		t.Parallel()
+		tempDir := t.TempDir()
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), []byte("telemetry: [broken"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--dry-run")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil {
+			t.Fatal("expected malformed local config to fail")
+		}
+		if !strings.Contains(stderr.String(), "Error loading project configuration for backfill") || !strings.Contains(stderr.String(), ".agenticlens-config.local.yaml") {
+			t.Fatalf("expected actionable local config error, got stderr: %s", stderr.String())
+		}
+		if strings.Contains(stdout.String(), "TELEMETRY BACKFILL") {
+			t.Fatalf("backfill dispatched despite malformed local config: %s", stdout.String())
+		}
+	})
 	t.Run("backfill requires explicit --source flag", func(t *testing.T) {
 		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir)
 		var stdout, stderr bytes.Buffer
@@ -2850,6 +2891,7 @@ func TestCLIHelpCommand(t *testing.T) {
 			"--ticket-id",
 			"--db-path",
 			"--code-ref",
+			"--allow-fallbacks",
 		}
 		for _, flag := range expectedFlags {
 			if !strings.Contains(out, flag) {
@@ -4031,12 +4073,14 @@ anomaly_thresholds:
 		genCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "MYROOT-5",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
 		genCmd.Stderr = &genStderr
@@ -4137,12 +4181,14 @@ anomaly_thresholds:
 		genCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "ROOTPRIO-1",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
 		genCmd.Stderr = &genStderr
@@ -4520,12 +4566,14 @@ func TestCLI_Invariants(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", "DEV-1",
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		setIsolatedHome(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
@@ -4729,6 +4777,18 @@ func TestInitCommand(t *testing.T) {
 		expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
 		if _, err := os.Stat(expectedPath); err != nil {
 			t.Fatalf("expected config file %s to exist: %v", expectedPath, err)
+		}
+		localPath := filepath.Join(tempDir, ".agenticlens-config.local.yaml")
+		localBytes, readErr := os.ReadFile(localPath)
+		if readErr != nil {
+			t.Fatalf("expected local source config: %v", readErr)
+		}
+		localContent := string(localBytes)
+		if !strings.Contains(localContent, "default_source: opencode") || !strings.Contains(localContent, "database_path: ~/.local/share/opencode/opencode.db") || !strings.Contains(localContent, "home: ~/.codex") {
+			t.Fatalf("unexpected local defaults: %s", localContent)
+		}
+		if strings.Contains(localContent, os.Getenv("HOME")) {
+			t.Fatal("local defaults leaked absolute home path")
 		}
 
 		loaded, err := adaptersconfig.LoadFromFile(expectedPath)
@@ -4993,11 +5053,77 @@ func TestInitCommand(t *testing.T) {
 		if !strings.Contains(outStr, "project_name: DryRunTest") {
 			t.Errorf("expected stdout to contain 'project_name: DryRunTest', got: %s", outStr)
 		}
+		if !strings.Contains(outStr, "# .agenticlens-config.yaml") || !strings.Contains(outStr, "# .agenticlens-config.local.yaml") || !strings.Contains(outStr, "telemetry:") {
+			t.Fatalf("dry run did not label both artifacts: %s", outStr)
+		}
 
 		// Ensure no file was created
 		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
 		if _, err := os.Stat(cfgPath); !os.IsNotExist(err) {
 			t.Errorf("expected %s not to exist after dry-run, but it exists", cfgPath)
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, ".agenticlens-config.local.yaml")); !os.IsNotExist(err) {
+			t.Fatal("dry run created local config")
+		}
+	})
+
+	t.Run("local output collision is rejected", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--output", ".agenticlens-config.local.yaml")
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "must be distinct") {
+			t.Fatalf("expected clear output collision error, got err=%v stderr=%s", err, stderr.String())
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, ".agenticlens-config.local.yaml")); !os.IsNotExist(err) {
+			t.Fatal("collision created local config")
+		}
+	})
+
+	t.Run("existing local settings are protected unless force is explicit", func(t *testing.T) {
+		tempDir := t.TempDir()
+		localPath := filepath.Join(tempDir, ".agenticlens-config.local.yaml")
+		original := "telemetry:\n  default_source: codex\n"
+		if err := os.WriteFile(localPath, []byte(original), 0600); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL")
+		cmd.Dir = tempDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "already exists") {
+			t.Fatalf("expected existing local file protection, got err=%v stderr=%s", err, stderr.String())
+		}
+		got, err := os.ReadFile(localPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != original {
+			t.Fatalf("local config changed without --force: %s", got)
+		}
+	})
+
+	t.Run("local write failure does not leave shared config behind", func(t *testing.T) {
+		tempDir := t.TempDir()
+		if err := os.Mkdir(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
+		cmd.Dir = tempDir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout, cmd.Stderr = &stdout, &stderr
+		if err := cmd.Run(); err == nil {
+			t.Fatal("expected init to fail on local directory target")
+		}
+		if strings.Contains(stdout.String(), "Successfully initialized") {
+			t.Fatalf("reported success after failure: %s", stdout.String())
+		}
+		if !strings.Contains(stderr.String(), ".agenticlens-config.local.yaml") {
+			t.Fatalf("error did not identify local artifact: %s", stderr.String())
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, ".agenticlens-config.yaml")); !os.IsNotExist(err) {
+			t.Fatal("partial shared config was left after local failure")
 		}
 	})
 
@@ -5789,7 +5915,7 @@ anomaly_thresholds:
 	cmd := exec.Command(
 		cliBinaryPath,
 		"generate",
-		"--db-path", filepath.Join(tempDir, "test.db"),
+		"--db-path", setupIsolatedEmptyDB(t),
 		"--ticket-id", "AL-TEST-WARN",
 		"--ticket-title", "Test Warn Ticket",
 		"--json-output", outJSON,
@@ -5855,9 +5981,8 @@ anomaly_thresholds:
 		SchemaVersion: &schemaVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-			{
-				ID:             "ses_device_a",
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "ses_device_a",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				User:           "engineer_a",
@@ -5975,17 +6100,17 @@ anomaly_thresholds:
 		t.Fatalf("expected 2 merged invocations, got %d", len(mergedDTO.ToDomain().InvocationFacts()))
 	}
 	var foundA, foundB bool
-	for _, inv := range mergedDTO.ToDomain().InvocationFacts() {
-		if inv.ID == "ses_device_a" {
+	for _, s := range mergedDTO.Sessions {
+		if s.ID == "ses_device_a" {
 			foundA = true
-			if inv.UserIterations != 3 {
-				t.Errorf("expected invocation A user_iterations 3, got %d", inv.UserIterations)
+			if len(s.Invocations) > 0 && s.Invocations[0].UserIterations != 3 {
+				t.Errorf("expected invocation A user_iterations 3, got %d", s.Invocations[0].UserIterations)
 			}
 		}
-		if inv.ID == "ses_device_b" {
+		if s.ID == "ses_device_b" {
 			foundB = true
-			if inv.UserIterations != 2 {
-				t.Errorf("expected invocation B user_iterations 2, got %d", inv.UserIterations)
+			if len(s.Invocations) > 0 && s.Invocations[0].UserIterations != 2 {
+				t.Errorf("expected invocation B user_iterations 2, got %d", s.Invocations[0].UserIterations)
 			}
 		}
 	}
@@ -6025,9 +6150,8 @@ anomaly_thresholds:
 		SchemaVersion: &legacyVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-			{
-				ID:             "ses_legacy",
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "ses_legacy",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				User:           "engineer_a",
@@ -6098,9 +6222,8 @@ anomaly_thresholds:
 		SchemaVersion: &schemaVer,
 		TicketID:      &ticketIDStr,
 		TicketTitle:   &ticketTitleStr,
-		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-			{
-				ID:             "ses_device_a",
+		UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+			{SessionID: "ses_device_a",
 				Role:           domain.RoleRootAgent,
 				Model:          "claude-3-5-sonnet",
 				Turns:          8,
@@ -6238,12 +6361,16 @@ anomaly_thresholds:
 		"ses_device_c": 5,
 		"sub_device_c": 0,
 	}
-	for _, inv := range dtoC.ToDomain().InvocationFacts() {
-		expected, exists := expectedIterations[inv.ID]
+	for _, s := range dtoC.Sessions {
+		var userIters int64
+		for _, inv := range s.Invocations {
+			userIters += inv.UserIterations
+		}
+		expected, exists := expectedIterations[s.ID]
 		if !exists {
-			t.Errorf("unexpected invocation %s in merged ledger", inv.ID)
-		} else if inv.UserIterations != expected {
-			t.Errorf("invocation %s expected UserIterations %d, got %d", inv.ID, expected, inv.UserIterations)
+			t.Errorf("unexpected session %s in merged ledger", s.ID)
+		} else if userIters != expected {
+			t.Errorf("session %s expected UserIterations %d, got %d", s.ID, expected, userIters)
 		}
 	}
 
@@ -6450,9 +6577,8 @@ anomaly_thresholds:
 				SchemaVersion: &schemaVer,
 				TicketID:      &ticketIDStr,
 				TicketTitle:   &ticketTitleStr,
-				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-					{
-						ID:             "ses_pre_v4",
+				UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+					{SessionID: "ses_pre_v4",
 						Role:           domain.RoleRootAgent,
 						Model:          "gpt-4o",
 						Turns:          5,
@@ -6496,9 +6622,8 @@ anomaly_thresholds:
 			SchemaVersion: &schemaVer,
 			TicketID:      &ticketIDStr,
 			TicketTitle:   &ticketTitleStr,
-			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFacts([]domain.InvocationFact{
-				{
-					ID:             "ses_v4",
+			UpdatedAt:     "2026-10-25T10:00:00.000000+00:00", Sessions: sessionFactsWithInvs([]testInvFact{
+				{SessionID: "ses_v4",
 					Role:           domain.RoleRootAgent,
 					Model:          "gpt-4o",
 					Turns:          5,
@@ -6515,6 +6640,7 @@ anomaly_thresholds:
 
 		cmd := exec.Command(
 			cliBinaryPath, "generate",
+			"--db-path", setupIsolatedEmptyDB(t),
 			"--ticket-id", ticketIDStr,
 			"--ticket-title", ticketTitleStr,
 			"--json-output", outJSON,

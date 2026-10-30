@@ -36,11 +36,8 @@ func (dto InvocationTokensDTO) ToDomain() domain.InvocationTokens {
 
 // InvocationFactDTO represents a single invocation fact in JSON boundary serialization.
 type InvocationFactDTO struct {
-	ID                    string              `json:"id"`
-	ParentID              *string             `json:"parent_id"`
 	Role                  string              `json:"role"`
 	Model                 string              `json:"model"`
-	User                  string              `json:"user"`
 	StartedAt             *string             `json:"started_at"`
 	CompletedAt           *string             `json:"completed_at"`
 	ActiveDurationSeconds int64               `json:"active_duration_seconds"`
@@ -53,11 +50,8 @@ type InvocationFactDTO struct {
 
 func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 	return domain.InvocationFact{
-		ID:                    dto.ID,
-		ParentID:              dto.ParentID,
 		Role:                  domain.AgentRole(dto.Role),
 		Model:                 dto.Model,
-		User:                  dto.User,
 		StartedAt:             dto.StartedAt,
 		CompletedAt:           dto.CompletedAt,
 		ActiveDurationSeconds: dto.ActiveDurationSeconds,
@@ -72,11 +66,8 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 // InvocationFactDTOFromDomain converts domain.InvocationFact to InvocationFactDTO.
 func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 	return InvocationFactDTO{
-		ID:                    inv.ID,
-		ParentID:              inv.ParentID,
 		Role:                  string(inv.Role),
 		Model:                 inv.Model,
-		User:                  inv.User,
 		StartedAt:             inv.StartedAt,
 		CompletedAt:           inv.CompletedAt,
 		ActiveDurationSeconds: inv.ActiveDurationSeconds,
@@ -149,6 +140,7 @@ type SessionFactDTO struct {
 	ID          string                `json:"id"`
 	ParentID    *string               `json:"parent_id,omitempty"`
 	Source      string                `json:"source,omitempty"`
+	User        string                `json:"user,omitempty"`
 	Invocations []InvocationFactDTO   `json:"invocations"`
 	Tools       []SessionToolFactDTO  `json:"tools"`
 	Events      []SessionEventFactDTO `json:"events,omitempty"`
@@ -335,10 +327,14 @@ func ValidateRuntimeFactLedger(data []byte) error {
 		if err := json.Unmarshal(rawSession, &session); err != nil {
 			return fmt.Errorf("canonical schema v4 session %d is invalid", si)
 		}
-		for _, required := range []string{"id", "source", "invocations", "tools", "anomalies"} {
+		for _, required := range []string{"id", "source", "user", "invocations", "tools", "anomalies"} {
 			if _, ok := session[required]; !ok {
 				return fmt.Errorf("canonical schema v4 session %d is missing required %s", si, required)
 			}
+		}
+		var sessionUser string
+		if err := json.Unmarshal(session["user"], &sessionUser); err != nil || strings.TrimSpace(sessionUser) == "" {
+			return fmt.Errorf("canonical schema v4 session %d requires a non-empty user", si)
 		}
 		for _, collection := range []string{"tools", "anomalies"} {
 			var values []json.RawMessage
@@ -359,7 +355,16 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			if err := json.Unmarshal(rawInvocation, &invocation); err != nil {
 				return fmt.Errorf("canonical schema v4 invocation %d in session %d is invalid", ii, si)
 			}
-			for _, required := range []string{"id", "parent_id", "role", "model", "user", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
+			if _, ok := invocation["id"]; ok {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain id", ii, si)
+			}
+			if _, ok := invocation["user"]; ok {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain user", ii, si)
+			}
+			if _, ok := invocation["parent_id"]; ok {
+				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain parent_id", ii, si)
+			}
+			for _, required := range []string{"role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
 				if _, ok := invocation[required]; !ok {
 					return fmt.Errorf("canonical schema v4 invocation %d in session %d is missing required %s", ii, si, required)
 				}
@@ -464,7 +469,14 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		if sessionSource == "" && dto.Source != "" {
 			sessionSource = domain.SourceHarness(strings.TrimSpace(dto.Source))
 		}
-		sessions[i] = domain.SessionFact{ID: session.ID, ParentID: session.ParentID, Source: sessionSource}
+		user := strings.TrimSpace(session.User)
+		parentID := session.ParentID
+		sessions[i] = domain.SessionFact{
+			ID:       session.ID,
+			ParentID: parentID,
+			Source:   sessionSource,
+			User:     user,
+		}
 		if session.Anomalies != nil {
 			sessions[i].Anomalies = []domain.Anomaly{}
 		}
@@ -536,6 +548,12 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		if currentSchema && strings.TrimSpace(session.Source) == "" {
 			return fmt.Errorf("sessions[%d].source is required", i)
 		}
+		if currentSchema && strings.TrimSpace(session.User) == "" {
+			return fmt.Errorf("sessions[%d].user is required", i)
+		}
+		if session.User != strings.TrimSpace(session.User) {
+			return fmt.Errorf("sessions[%d].user must not have leading or trailing whitespace", i)
+		}
 		if currentSchema && (session.Invocations == nil || session.Tools == nil) {
 			return fmt.Errorf("sessions[%d] requires invocations and tools collections", i)
 		}
@@ -545,19 +563,6 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 			}
 			if !seen[*session.ParentID] {
 				return fmt.Errorf("sessions[%d].parent_id %q does not identify a session", i, *session.ParentID)
-			}
-		}
-		for j, inv := range session.Invocations {
-			if strings.TrimSpace(inv.ID) == "" {
-				return fmt.Errorf("sessions[%d].invocations[%d].id is required", i, j)
-			}
-			if inv.ParentID != nil {
-				if *inv.ParentID != strings.TrimSpace(*inv.ParentID) {
-					return fmt.Errorf("sessions[%d].invocations[%d].parent_id must not have leading or trailing whitespace", i, j)
-				}
-				if !seen[*inv.ParentID] {
-					return fmt.Errorf("sessions[%d].invocations[%d].parent_id %q does not identify a session", i, j, *inv.ParentID)
-				}
 			}
 		}
 		for j, tool := range session.Tools {
@@ -657,7 +662,15 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
 		sessionSource := strings.TrimSpace(string(session.Source))
-		sessions[i] = SessionFactDTO{ID: session.ID, ParentID: session.ParentID, Source: sessionSource, Invocations: []InvocationFactDTO{}, Tools: []SessionToolFactDTO{}, Events: []SessionEventFactDTO{}, Anomalies: []AnomalyDTO{}}
+		sessions[i] = SessionFactDTO{
+			ID:          session.ID,
+			ParentID:    session.ParentID,
+			Source:      sessionSource,
+			User:        session.User,
+			Invocations: []InvocationFactDTO{},
+			Tools:       []SessionToolFactDTO{},
+			Anomalies:   []AnomalyDTO{},
+		}
 		for _, inv := range session.Invocations {
 			sessions[i].Invocations = append(sessions[i].Invocations, InvocationFactDTOFromDomain(inv))
 		}

@@ -81,12 +81,10 @@ type invocationAccumulator struct {
 }
 
 func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
-	sids := make(map[string]struct{})
 	var inp, out, cache, peak int64
 	var cost float64
 
 	for _, inv := range invs {
-		sids[inv.ID] = struct{}{}
 		inp += inv.Tokens.Input
 		out += inv.Tokens.Output
 		cache += inv.Tokens.CacheRead
@@ -103,7 +101,7 @@ func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 	}
 
 	return invocationAccumulator{
-		invocations:       int64(len(sids)),
+		invocations:       int64(len(invs)),
 		inputTokens:       inp,
 		outputTokens:      out,
 		cacheReadTokens:   cache,
@@ -173,7 +171,6 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 	if ceiling <= 0 {
 		ceiling = ContextCeilingCriticalTokens
 	}
-	invs := ledger.InvocationFacts()
 	tools := ledger.ToolFacts()
 	code := ledger.Code
 
@@ -189,32 +186,35 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 	subPeaks := make(map[AgentRole]int64)
 	roleTurns := make(map[AgentRole][]int64)
 
-	for _, inv := range invs {
-		activeDurationSeconds += inv.ActiveDurationSeconds
-		totReasoning += inv.Tokens.Reasoning
-		totOutput += inv.Tokens.Output
-		totCompactions += inv.Compactions
+	for _, session := range ledger.Sessions {
+		isRoot := session.ParentID == nil || strings.TrimSpace(*session.ParentID) == ""
+		for _, inv := range session.Invocations {
+			activeDurationSeconds += inv.ActiveDurationSeconds
+			totReasoning += inv.Tokens.Reasoning
+			totOutput += inv.Tokens.Output
+			totCompactions += inv.Compactions
 
-		if curr, exists := rolePeaks[inv.Role]; !exists || inv.Tokens.PeakContext > curr {
-			rolePeaks[inv.Role] = inv.Tokens.PeakContext
-		}
+			if curr, exists := rolePeaks[inv.Role]; !exists || inv.Tokens.PeakContext > curr {
+				rolePeaks[inv.Role] = inv.Tokens.PeakContext
+			}
 
-		if inv.ParentID == nil {
-			if !hasRoot || inv.Tokens.PeakContext > rootPeak {
-				rootPeak = inv.Tokens.PeakContext
+			if isRoot {
+				if !hasRoot || inv.Tokens.PeakContext > rootPeak {
+					rootPeak = inv.Tokens.PeakContext
+				}
+				hasRoot = true
+			} else {
+				role := inv.Role
+				if strings.TrimSpace(string(role)) == "" {
+					role = RoleUnassignedSubAgent
+				}
+				subCosts[string(role)] += inv.CostUSD
+				totSubCost += inv.CostUSD
+				if curr, exists := subPeaks[role]; !exists || inv.Tokens.PeakContext > curr {
+					subPeaks[role] = inv.Tokens.PeakContext
+				}
+				roleTurns[role] = append(roleTurns[role], inv.Turns)
 			}
-			hasRoot = true
-		} else {
-			role := inv.Role
-			if strings.TrimSpace(string(role)) == "" {
-				role = RoleUnassignedSubAgent
-			}
-			subCosts[string(role)] += inv.CostUSD
-			totSubCost += inv.CostUSD
-			if curr, exists := subPeaks[role]; !exists || inv.Tokens.PeakContext > curr {
-				subPeaks[role] = inv.Tokens.PeakContext
-			}
-			roleTurns[role] = append(roleTurns[role], inv.Turns)
 		}
 	}
 
@@ -523,65 +523,65 @@ func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []Model
 	return metrics
 }
 
-// ComputeThreadSummaries groups invocations by root session into hierarchical thread execution records.
-func ComputeThreadSummaries(invocations []InvocationFact, roleOrder ...[]string) []ThreadExecutionRecord {
-	return ComputeThreadSummariesWithCeiling(invocations, ContextCeilingCriticalTokens, roleOrder...)
+// ComputeThreadSummaries groups session-owned invocation rows by their root session.
+func ComputeThreadSummaries(sessions []SessionFact, roleOrder ...[]string) []ThreadExecutionRecord {
+	return ComputeThreadSummariesWithCeiling(sessions, ContextCeilingCriticalTokens, roleOrder...)
 }
 
-// ComputeThreadSummariesWithCeiling groups invocations by root session into hierarchical thread execution records with an explicit ceiling.
-func ComputeThreadSummariesWithCeiling(invocations []InvocationFact, ceiling int64, roleOrder ...[]string) []ThreadExecutionRecord {
+// ComputeThreadSummariesFromSessions groups sessions by root session into hierarchical thread execution records.
+func ComputeThreadSummariesFromSessions(sessions []SessionFact, roleOrder ...[]string) []ThreadExecutionRecord {
+	return ComputeThreadSummaries(sessions, roleOrder...)
+}
+
+// ComputeThreadSummariesWithCeiling groups session-owned invocation rows by their root session with an explicit context ceiling.
+func ComputeThreadSummariesWithCeiling(sessions []SessionFact, ceiling int64, roleOrder ...[]string) []ThreadExecutionRecord {
 	if ceiling <= 0 {
 		ceiling = ContextCeilingCriticalTokens
 	}
 
-	if len(invocations) == 0 {
+	if len(sessions) == 0 {
 		return []ThreadExecutionRecord{}
 	}
 
-	idToParent := make(map[string]*string)
-	idToUser := make(map[string]string)
-	for _, inv := range invocations {
-		idToParent[inv.ID] = inv.ParentID
-		idToUser[inv.ID] = inv.User
+	sessionByID := make(map[string]SessionFact, len(sessions))
+	for _, s := range sessions {
+		sessionByID[s.ID] = s
 	}
 
-	resolveRoot := func(inv InvocationFact) string {
-		curr := inv.ID
+	resolveRoot := func(s SessionFact) string {
+		curr := s.ID
 		visited := make(map[string]struct{})
 		for {
-			parentPtr, ok := idToParent[curr]
-			if !ok || parentPtr == nil {
+			sess, ok := sessionByID[curr]
+			if !ok || sess.ParentID == nil || strings.TrimSpace(*sess.ParentID) == "" {
 				break
 			}
 			if _, seen := visited[curr]; seen {
 				break
 			}
 			visited[curr] = struct{}{}
-			curr = *parentPtr
-		}
-		if _, seen := visited[curr]; !seen {
-			if _, ok := idToParent[curr]; !ok && inv.ParentID != nil {
-				return *inv.ParentID
-			}
+			curr = strings.TrimSpace(*sess.ParentID)
 		}
 		return curr
 	}
 
 	threadGroups := make(map[string][]InvocationFact)
-	for _, inv := range invocations {
-		rootID := resolveRoot(inv)
-		threadGroups[rootID] = append(threadGroups[rootID], inv)
+	threadUsers := make(map[string]string)
+	for _, s := range sessions {
+		rootID := resolveRoot(s)
+		threadGroups[rootID] = append(threadGroups[rootID], s.Invocations...)
+		if s.ID == rootID && s.User != "" {
+			threadUsers[rootID] = s.User
+		} else if threadUsers[rootID] == "" && s.User != "" {
+			threadUsers[rootID] = s.User
+		}
 	}
 
 	var records []ThreadExecutionRecord
 	for rootID, threadInvs := range threadGroups {
-		threadUser, ok := idToUser[rootID]
-		if !ok || threadUser == "" {
-			if len(threadInvs) > 0 && threadInvs[0].User != "" {
-				threadUser = threadInvs[0].User
-			} else {
-				threadUser = "unknown"
-			}
+		threadUser := threadUsers[rootID]
+		if threadUser == "" {
+			threadUser = "unknown"
 		}
 
 		var compactions int64
@@ -621,13 +621,11 @@ func ComputeThreadSummariesWithCeiling(invocations []InvocationFact, ceiling int
 
 			var modelMetrics []ModelMetric
 			for model, mInvs := range byModel {
-				sids := make(map[string]struct{})
 				var inp, out, cache int64
 				var cost float64
 				var peak int64
 
 				for _, inv := range mInvs {
-					sids[inv.ID] = struct{}{}
 					inp += inv.Tokens.Input
 					out += inv.Tokens.Output
 					cache += inv.Tokens.CacheRead
@@ -646,7 +644,7 @@ func ComputeThreadSummariesWithCeiling(invocations []InvocationFact, ceiling int
 
 				modelMetrics = append(modelMetrics, ModelMetric{
 					Model:             model,
-					Invocations:       int64(len(sids)),
+					Invocations:       int64(len(mInvs)),
 					InputTokens:       inp,
 					OutputTokens:      out,
 					CacheReadTokens:   cache,
@@ -710,35 +708,22 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	}
 
 	mappedFactLedger := factLedger
-	persistedSessionAnomalies := make(map[string][]Anomaly, len(factLedger.Sessions))
-	origSourceByID := make(map[string]SourceHarness, len(factLedger.Sessions))
-	for _, session := range factLedger.Sessions {
-		persistedSessionAnomalies[session.ID] = session.Anomalies
-		origSourceByID[session.ID] = session.Source
-	}
-	var err error
-	mappedFactLedger.Sessions, err = SessionsFromFacts(mappedInvocations, factLedger.ToolFacts(), mappedEvents)
-	if err != nil {
-		mappedFactLedger.Sessions = factLedger.Sessions
-	} else {
-		mappedSessionIDs := make(map[string]bool, len(mappedFactLedger.Sessions))
-		for i := range mappedFactLedger.Sessions {
-			mappedSessionIDs[mappedFactLedger.Sessions[i].ID] = true
-			if src, exists := origSourceByID[mappedFactLedger.Sessions[i].ID]; exists && src != "" {
-				mappedFactLedger.Sessions[i].Source = src
-			}
-			if summaries, exists := persistedSessionAnomalies[mappedFactLedger.Sessions[i].ID]; exists {
-				mappedFactLedger.Sessions[i].Anomalies = summaries
+	mappedFactLedger.Sessions = make([]SessionFact, len(factLedger.Sessions))
+	for i, session := range factLedger.Sessions {
+		mappedSession := session
+		mappedSession.Invocations = make([]InvocationFact, len(session.Invocations))
+		for j, inv := range session.Invocations {
+			mappedSession.Invocations[j] = inv
+			mappedSession.Invocations[j].Role = mappings.ResolveRole(string(inv.Role))
+		}
+		if session.Events != nil {
+			mappedSession.Events = make([]SessionEventFact, len(session.Events))
+			for k, ev := range session.Events {
+				mappedSession.Events[k] = ev
+				mappedSession.Events[k].Role = mappings.ResolveRole(string(ev.Role))
 			}
 		}
-		for _, original := range factLedger.Sessions {
-			if !mappedSessionIDs[original.ID] {
-				mappedFactLedger.Sessions = append(mappedFactLedger.Sessions, SessionFact{
-					ID: original.ID, ParentID: original.ParentID, Source: original.Source, Anomalies: original.Anomalies,
-					Invocations: []InvocationFact{}, Tools: []SessionToolFact{}, Events: []SessionEventFact{},
-				})
-			}
-		}
+		mappedFactLedger.Sessions[i] = mappedSession
 	}
 
 	effectiveCeiling := cfg.EffectiveHealthyCeiling()
@@ -747,7 +732,7 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	eff := ComputeWorkflowEfficiencyWithCeiling(mappedFactLedger, effectiveCeiling, cfg.RoleOrder)
 	roles := ComputeRoleMetricsWithCeiling(mappedInvocations, effectiveCeiling, cfg.RoleOrder)
 	models := ComputeModelMetrics(mappedInvocations, effectiveCeiling)
-	threads := ComputeThreadSummariesWithCeiling(mappedInvocations, effectiveCeiling, cfg.RoleOrder)
+	threads := ComputeThreadSummariesWithCeiling(mappedFactLedger.Sessions, effectiveCeiling, cfg.RoleOrder)
 	anomalies := RefreshAnomalySummaries(mappedFactLedger, cfg.AnomalyThresholds)
 	for i := range anomalies {
 		if anomalies[i].Context.Role != nil {

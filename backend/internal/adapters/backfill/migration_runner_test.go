@@ -143,7 +143,7 @@ func TestMigrationRunner_Batch(t *testing.T) {
 	if al1DTO.Code.LinesAdded != 120 {
 		t.Errorf("expected AL-1 lines_added 120, got %d", al1DTO.Code.LinesAdded)
 	}
-	if len(al1DTO.Sessions) != 1 || len(al1DTO.Sessions[0].Invocations) != 1 || al1DTO.Sessions[0].Invocations[0].ID != "inv-1" {
+	if len(al1DTO.Sessions) != 1 || len(al1DTO.Sessions[0].Invocations) != 1 || al1DTO.Sessions[0].ID != "inv-1" {
 		t.Errorf("expected AL-1 invocation preserved")
 	}
 
@@ -890,7 +890,7 @@ func TestMigrationRunner_ValidatesCanonicalV4BeforeUpToDateFastPath(t *testing.T
 		},
 		{
 			name:     "padded invocation parent ID",
-			sessions: `[{"id":"root","invocations":[],"tools":[],"events":[]},{"id":"child","invocations":[{"id":"child","parent_id":" root ","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
+			sessions: `[{"id":"root","invocations":[],"tools":[],"events":[]},{"id":"child","invocations":[{"parent_id":" root ","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
 		},
 		{
 			name:     "duplicate session IDs",
@@ -910,7 +910,7 @@ func TestMigrationRunner_ValidatesCanonicalV4BeforeUpToDateFastPath(t *testing.T
 		},
 		{
 			name:     "dangling invocation parent",
-			sessions: `[{"id":"s1","invocations":[{"id":"inv-1","parent_id":"missing","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
+			sessions: `[{"id":"s1","invocations":[{"parent_id":"missing","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
 		},
 	}
 

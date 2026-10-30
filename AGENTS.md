@@ -4,9 +4,9 @@ Mandatory operational policies for all agents and contributors working in this r
 
 ---
 
-## 1. Ticket Tracking Mandate (Zero Untracked Work)
+## 1. Ticketed and Ad Hoc Work
 
-Every task, feature, bugfix, or refactoring in this repository must be tracked by an explicit ticket identifier.
+Every task, feature, bugfix, or refactoring in this repository must have a ticket identifier and an isolated ticket workspace. A planning specification or index entry under `plan/` is not required for an ad hoc ticket.
 
 ### Configurable Workspace Root
 - Define `<WORKSPACES_DIR>` as the `workspaces.dir` value in `.agenticlens-config.yaml`.
@@ -16,8 +16,9 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
 
 ### Rules
 1. **Mandatory Ticket Identifier**:
-   - A ticket ID is strictly required before starting any work. Agents must never begin work without it.
-   - If missing from the initial request, the agent must prompt the user or immediately generate a `GEN-#` ticket (using configured prefixes from `.agenticlens-config.yaml`, fallback: `GEN`). Formats: `<PREFIX>-<ID>` (e.g. `AL-42`, `GEN-42`, or `PO-2`).
+   - A ticket ID is required before starting any work. If the request does not provide one, ask the user or assign an ad hoc `GEN-#` identifier using the configured prefixes in `.agenticlens-config.yaml` (fallback: `GEN`).
+   - Use an existing ticket ID when one is provided; do not create a duplicate.
+   - An ad hoc ticket ID does not require a corresponding specification or entry under `<WORKSPACES_DIR>/plan/`.
 2. **Single-Ticket Exclusivity**:
    - Agents are strictly prohibited from working on more than one ticket at a time.
    - Once work begins on a ticket, the agent is locked to that ticket. Agents must refuse any request to switch to another ticket or work on multiple tickets simultaneously within the same session.
@@ -25,13 +26,13 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
    - Once a ticket is active, every subsequent user prompt must be interpreted as steering feedback for that specific ticket.
    - Agents must create and advance new iterations (`iterations/<NN>/`) as needed to incorporate steering directions.
 4. **Dedicated Workspace Allocation**:
-   - Every ticket must have its isolated workspace under `<WORKSPACES_DIR>/<TICKET_ID>/`.
+   - Every task must have its isolated workspace under `<WORKSPACES_DIR>/<TICKET_ID>/`, including ad hoc tickets.
    - Never mix artifacts across tickets or leave untracked changes in the working directory.
 5. **Workspace Deliverables Checklist**:
    - `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
    - `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
    - `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md`: Frozen technical contract and acceptance boundaries, when required by the configured artifact list.
-   - **Plan Lifecycle Synchronization**: Move specification file from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` to `<WORKSPACES_DIR>/plan/done/`, remove the completed ticket entry from `<WORKSPACES_DIR>/plan/TICKETS.md` (do not create or maintain a Done section; completed specifications remain in `<WORKSPACES_DIR>/plan/done/`), and unblock downstream tickets (inspect any tickets blocked by `<TICKET_ID>` and promote those whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`).
+   - **Plan Lifecycle Synchronization**: When a matching specification exists in `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md`, move it to `<WORKSPACES_DIR>/plan/done/` when the ticket is completed. Remove the completed ticket entry from `<WORKSPACES_DIR>/plan/TICKETS.md` only if one exists; do not create a specification, ticket entry, or Done section just to satisfy this lifecycle rule. For ticketed work, unblock downstream tickets whose dependencies are now fully satisfied by promoting them to `## Ready` with `Status: Ready`.
    - `<WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger (generated at the very final step of the iteration).
    - Store iteration plans and reviews under `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md` and `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
 6. **Telemetry Ingestion as the Final Step & Conventional Commit Type Classification**:
@@ -45,6 +46,7 @@ Every task, feature, bugfix, or refactoring in this repository must be tracked b
    - PO tickets (`PO-#`) must strictly use `--ticket-type docs`.
    - Generic tickets (`GEN-#`) must use `--ticket-type chore` unless explicitly a feature (`feat`).
    - Developer tickets must use the corresponding conventional commit type matching their branch prefix (`feat`, `fix`, `refactor`, etc.). Never default all tickets to `feature`.
+   - Ad hoc tickets use their assigned ticket ID and isolated workspace for telemetry. They do not require a specification or index entry under `plan/`.
 7. **Pull Request Delivery & Handoff**:
    - Commit all implementation deliverables on the feature branch first (`git add -A && git commit -m "$COMMIT_MSG"`). Git requires a clean working tree before merging.
    - Merge `main` into the feature branch (`git fetch origin main && git merge origin/main --no-edit`) to resolve any upstream conflicts, and verify test suites pass (`make`).

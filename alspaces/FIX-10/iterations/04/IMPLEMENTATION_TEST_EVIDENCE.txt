@@ -1,0 +1,206 @@
+FIX-10 iteration 04 implementation completion evidence
+
+Completed the approved removal of persisted invocation identity while retaining
+the shared implementation and historical-ledger normalization already present.
+
+Implementation outcomes
+- Invocation grouping takes explicit SessionFact owners instead of guessing an
+  owner from flat metric rows or generating an unattributed session.
+- Codex transcript combination carries each thread's invocation rows and parent
+  metadata through session-owned facts, including root/child hierarchies.
+- Session refreshes replace each owner's prior invocation rows with the
+  authoritative extracted snapshot. Repeated indistinguishable rows remain
+  separate, repeated refreshes are idempotent, and other sessions stay isolated.
+- Thread summaries consume sessions. Migration preserves session identity,
+  parent, source, user, and per-session invocation counts.
+- Canonical v4 runtime/DTO and migration boundaries reject the removed key,
+  including empty and null values. Domain and DTO serialization omit it.
+- Repaired stale invocation fields, assertions, raw JSON fixtures, ownership
+  fixtures, and frontend fixtures. Restored unrelated message IDs removed by
+  the earlier incomplete edits.
+- Legacy flat migration inputs move their explicit session metadata to owners
+  without parsing synthetic naming conventions.
+
+Changed files in this completion pass
+The following 34 paths differ from the content hashes captured at the start of
+this pass. Earlier shared changes remain present. A file restored to its
+correct HEAD contents can appear here even if git diff no longer lists it.
+- backend/cmd/agentic-lens/main.go
+- backend/cmd/agentic-lens/main_test.go
+- backend/cmd/agentic-lens/merge_internal_test.go
+- backend/cmd/agentic-lens/session_test_helper_test.go
+- backend/internal/adapters/backfill/engine_test.go
+- backend/internal/adapters/backfill/migration_runner_test.go
+- backend/internal/adapters/backfill/session_test_helper_test.go
+- backend/internal/adapters/codex/retention_test.go
+- backend/internal/adapters/codex/rollout.go
+- backend/internal/adapters/codex/rollout_test.go
+- backend/internal/adapters/formatters_test.go
+- backend/internal/adapters/http/server_test.go
+- backend/internal/adapters/live/service.go
+- backend/internal/adapters/live/session_test_helper_test.go
+- backend/internal/adapters/live/sqlite_test.go
+- backend/internal/adapters/opencode/extractor_test.go
+- backend/internal/adapters/repository.go
+- backend/internal/adapters/repository_test.go
+- backend/internal/adapters/schemas_test.go
+- backend/internal/adapters/session_test_helper_test.go
+- backend/internal/domain/aggregations.go
+- backend/internal/domain/aggregations_test.go
+- backend/internal/domain/anomalies_test.go
+- backend/internal/domain/live_test.go
+- backend/internal/domain/migration/engine.go
+- backend/internal/domain/migration/engine_test.go
+- backend/internal/domain/migration/session_test_helper_test.go
+- backend/internal/domain/migration/step_v2_v3.go
+- backend/internal/domain/migration/validator.go
+- backend/internal/domain/models.go
+- backend/internal/domain/session_facts_test.go
+- backend/internal/domain/session_test_helper_test.go
+- web/src/domain/progression.test.ts
+- web/src/test/fixtures/mockData.ts
+- alspaces/FIX-10/iterations/04/IMPLEMENTATION_TEST_EVIDENCE.txt (this evidence; newly added)
+
+Initial implementation verification commands and outcomes
+- cd web && npm ci
+  PASS: installed the lockfile dependencies. Node v24.22.1, npm 11.19.1.
+  web/node_modules was absent initially. The documented scripts now resolve
+  the installed tsc and vitest executables; package-lock.json is unchanged.
+- cd backend && go test ./...
+  PASS: all 12 packages; final rerun after all Go edits passed.
+- cd backend && go test -race ./...
+  PASS: all 12 packages; final rerun after all Go edits passed.
+- cd backend && go vet ./...
+  PASS: final rerun after all Go edits passed.
+- cd web && npm run typecheck
+  PASS: tsc --noEmit.
+- make check
+  PASS: Go vet, frontend typecheck, ESLint with zero allowed warnings,
+  and git diff --check.
+- make test
+  PASS: Go race suite plus frontend npm test.
+- cd web && npm test
+  PASS, including the final run through make test: 32 files, 734 tests.
+  Vitest emitted React act warnings from MetricProgression tests and exited 0.
+- git diff --check
+  PASS.
+
+Static and data audits
+- rg over Go/TypeScript source found no removed invocation field references,
+  synthetic invocation naming fragments, identity generator helpers, or
+  unattributed-session fallback.
+  Command:
+  rg -n -g '*.go' -g '*.ts' -g '*.tsx' -- '-inv-|InvocationFact\.ID|InvocationFactDTO\.ID|inv\.ID|invocation\.ID|invocationID|invocation\.id|inv\.id|unattributed-session' backend web/src
+  Outcome: no matches (expected rg exit status 1).
+- Structured JSON audit inspected tracked complete ledger payloads: 626
+  session-owned invocation rows, comprising 604 persisted ledger rows and 22
+  rows in complete Go raw JSON ledger literals from tracked tests. Zero
+  remaining invocation id keys were found.
+  Two additional rows occur in standalone session-array fixture fragments;
+  these are excluded from the complete-ledger total and also omit id.
+- Historical-ledger comparison against HEAD, removing only each nested
+  invocation id from the expected input:
+  alspaces: 72 files, 536 rows.
+  testdata/parity_workspaces: 12 files, 54 rows.
+  testdata/workspaces: 5 files, 14 rows.
+  Total: 89 ledgers, 604 rows. All other JSON values are identical to HEAD.
+  These ledger changes predated this pass and were preserved without edits.
+- Protected artifact hashes match this pass's starting snapshot: PLAN.md,
+  CONTRACT.md, SUMMARY.md, agentic_metrics.json, and PULL_REQUEST.md.
+
+Delivery state
+Initial completion pass: 35 files changed, comprising 34 implementation/test
+files and this evidence.
+No repository commits were created.
+
+Reviewer/tester handoff cleanup
+- Restored all 46 accidentally deleted LiveMessageFact.ID fixture values in
+  backend/internal/domain/live_anomaly_test.go exactly from HEAD. The entire
+  file now matches HEAD byte for byte.
+- Renamed the stale Codex hydration test to describe multiple invocation rows.
+  Corrected the empty-ID fallback test label and assertion to identify session
+  IDs. Deliberate v4 removed-key rejection coverage is unchanged.
+- Reconciled the static audit with the independent tester: 604 persisted rows
+  plus 22 complete raw ledger literal rows equals 626. The earlier count also
+  included two standalone array-fragment rows, which are reported separately.
+
+Files changed during cleanup
+- backend/internal/domain/live_anomaly_test.go
+- backend/internal/domain/anomalies_test.go
+- backend/internal/adapters/live/sqlite_test.go
+- alspaces/FIX-10/iterations/04/IMPLEMENTATION_TEST_EVIDENCE.txt
+
+Cleanup verification
+- cd backend && go test ./internal/domain
+  PASS: agenticlens/internal/domain, 0.040s.
+- git diff --check
+  PASS.
+- Protected summary, metrics, PR, contract, and plan artifacts remain unchanged.
+  No repository commits were created.
+
+Reviewer CHANGES_REQUESTED rework (P1 and P2)
+- Removed mergeInvocations, its matching key, and its timestamp dereference
+  helper. mergeSessions now retains each fresh owner's complete invocation
+  snapshot verbatim, replacing superseded aggregates. Owners without a fresh
+  snapshot retain their existing facts.
+- Replaced obsolete partial-row merge expectations with owner-snapshot tests
+  for growing usage, active-to-completed transitions, model changes, empty/nil
+  authoritative snapshots, initial extraction, and unresolved sessions.
+- Multiplicity coverage now includes three exactly identical fresh rows,
+  additional model/role/timestamp variants, unchanged repeated refreshes,
+  another session's preservation, and input immutability.
+- Added CLI regressions for Codex and OpenCode using real rollout files and
+  SQLite respectively. Each source advances from an active first turn to its
+  completion, then gains another turn. Every stage is compared with generation
+  into a fresh ledger and repeated unchanged generation.
+  Initial completed aggregate: input 40, output 25, one turn, five active
+  seconds, completion 2026-10-25T09:00:07Z.
+  Grown aggregate: exactly one row, input 240, output 75, two turns, seven
+  active seconds, completion 2026-10-25T09:01:02Z.
+- Restored enclosing SessionFact IDs root-present, root-missing, root-thread,
+  child-one, and child-two in the missing-rollout hydration tests. Both cases
+  also supply the missing rollout afterward and assert successful hydration,
+  establishing that their earlier fallback depends on missing source data.
+- Restored LiveMessageFact IDs m1, the w%d_m%d concurrent writer IDs, and msg_1.
+  backend/internal/adapters/http/live_handlers_test.go now matches HEAD.
+  backend/internal/domain/live_anomaly_test.go remains identical to HEAD.
+
+Rework verification commands and exact outcomes
+- Before the production fix:
+  cd backend && go test ./cmd/agentic-lens -run '^TestCLIGenerate_SessionRefreshMatchesFreshExtraction$' -count=1 -v
+  Expected FAIL (exit 1): both sources passed the active stage and failed
+  completed/source_growth because prior aggregates were retained alongside
+  the authoritative snapshot. This demonstrates regression sensitivity.
+- After the production fix:
+  cd backend && go test ./cmd/agentic-lens -run '^(TestCLIGenerate_(SessionRefreshMatchesFreshExtraction|MultiDeviceInvocationsMergeAndSDLC|ThreeDeviceHandoffAccumulation|InvocationsUpdateInPlaceOnSameDevice)|TestGenerateCodexRefreshReplacesSnapshotAndCapturesModelChange|TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage|TestMergeSessions.*)$' -count=1 -v
+  PASS (exit 0): agenticlens/cmd/agentic-lens, 2.666s. Includes both sources'
+  active/completed/growth cases, fresh extraction equality, idempotency,
+  repeated rows, model changes, child ownership, and cross-device preservation.
+- cd backend && go test ./internal/adapters/live ./internal/adapters/http -run '^(TestHydrateWorkspaceEvents_Codex.*|TestTraceBuffer_(NegativeCapacityDefaultsSafely|AdversarialConcurrentReadWrite)|TestLiveTraceHandler_SuccessAndNotFound)$' -count=1 -v
+  PASS (exit 0): live 0.032s; http 0.017s. Both restored missing-rollout tests
+  passed their failure and subsequent success assertions.
+- cd backend && go test ./... -count=1
+  PASS (exit 0): all 12 packages; CLI package 4.911s.
+- cd backend && go test -race ./... -count=1
+  PASS (exit 0): all 12 packages; CLI package 6.806s; no race reports.
+- cd backend && go vet ./...
+  PASS (exit 0), no diagnostics.
+- git diff --check
+  PASS (exit 0), no diagnostics.
+- gofmt -l on all five Go files changed by this rework
+  PASS (exit 0), no paths reported.
+- Frontend checks were not rerun: this rework changed no frontend files.
+
+Files changed by this reviewer rework, relative to its starting content hashes
+- backend/cmd/agentic-lens/main.go
+- backend/cmd/agentic-lens/main_refresh_test.go (new)
+- backend/cmd/agentic-lens/merge_internal_test.go
+- backend/internal/adapters/live/sqlite_test.go
+- backend/internal/adapters/http/live_handlers_test.go (restored to HEAD)
+- alspaces/FIX-10/iterations/04/IMPLEMENTATION_TEST_EVIDENCE.txt
+
+All other tracked and untracked repository files match their starting hashes,
+including plan, contract, summary, metrics, PR, and reviewer artifacts. Prior
+invocation-ID removal changes are preserved. HEAD is unchanged; no commits,
+telemetry ingestion, or PR operations were performed in this rework.
+

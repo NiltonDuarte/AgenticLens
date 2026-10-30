@@ -13,6 +13,7 @@ type ProjectConfig struct {
 	Ticket            TicketConfig            `json:"ticket" yaml:"ticket"`
 	Workspaces        WorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
 	Database          DatabaseConfig          `json:"database" yaml:"database"`
+	Telemetry         TelemetryConfig         `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	Live              LiveConfig              `json:"live" yaml:"live"`
 	AnomalyThresholds AnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
 	CodeMetrics       CodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
@@ -179,6 +180,18 @@ type DatabaseConfig struct {
 	QueryTimeoutMs int    `json:"query_timeout_ms" yaml:"query_timeout_ms"`
 	BusyTimeoutMs  int    `json:"busy_timeout_ms" yaml:"busy_timeout_ms"`
 	ReadOnly       bool   `json:"read_only" yaml:"read_only"`
+}
+
+// TelemetryConfig contains optional machine-local telemetry source preferences.
+type TelemetryConfig struct {
+	DefaultSource string               `json:"default_source,omitempty" yaml:"default_source,omitempty"`
+	Sources       TelemetrySourcePaths `json:"sources,omitempty" yaml:"sources,omitempty"`
+}
+
+// TelemetrySourcePaths keeps independent locations for each supported harness.
+type TelemetrySourcePaths struct {
+	OpenCodeDatabasePath string `json:"database_path,omitempty" yaml:"database_path,omitempty"`
+	CodexHome            string `json:"home,omitempty" yaml:"home,omitempty"`
 }
 
 // AnomalyThresholdsConfig defines numerical thresholds for anomaly detection rules.

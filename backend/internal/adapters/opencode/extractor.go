@@ -143,30 +143,30 @@ func tableHasColumn(db *sql.DB, tableName, columnName string) bool {
 	return false
 }
 
-// ExtractFacts queries invocation, tool, and chronological event facts from OpenCode SQLite database for given root threads.
-func ExtractFacts(
+// ExtractSessions queries and builds normalized domain.SessionFact trees directly from OpenCode SQLite.
+func ExtractSessions(
 	db *sql.DB,
 	threadIDs []string,
 	defaultUser string,
 	userBySessionID map[string]string,
-) ([]domain.InvocationFact, []domain.ToolFact, []domain.EventFact, *string, *string, error) {
+) ([]domain.SessionFact, *string, *string, error) {
 	if db == nil {
-		return nil, nil, nil, nil, nil, errors.New("database connection is nil")
+		return nil, nil, nil, errors.New("database connection is nil")
 	}
 	family, familyErr := detectSchema(db)
 	if familyErr != nil {
-		return nil, nil, nil, nil, nil, familyErr
+		return nil, nil, nil, familyErr
 	}
 	if len(threadIDs) == 0 {
-		return []domain.InvocationFact{}, []domain.ToolFact{}, []domain.EventFact{}, nil, nil, nil
+		return []domain.SessionFact{}, nil, nil, nil
 	}
 	if family == familyV2 {
-		return extractV2Facts(db, threadIDs, defaultUser, userBySessionID)
+		return extractV2Sessions(db, threadIDs, defaultUser, userBySessionID)
 	}
 
 	quotedList, err := buildQuotedIDList(threadIDs)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
+		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
 	}
 
 	msgTimeUpdatedCol := "0 AS time_updated"
@@ -189,7 +189,7 @@ func ExtractFacts(
 	var minCreated, maxUpdated sql.NullInt64
 	err = db.QueryRow(qTimes).Scan(&minCreated, &maxUpdated)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, nil, nil, nil, fmt.Errorf("querying session time boundaries: %w", err)
+		return nil, nil, nil, fmt.Errorf("querying session time boundaries: %w", err)
 	}
 
 	var startedAtISO, completedAtISO *string
@@ -212,7 +212,7 @@ func ExtractFacts(
 
 	sessRows, err := db.Query(qSess)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("querying sessions: %w", err)
+		return nil, nil, nil, fmt.Errorf("querying sessions: %w", err)
 	}
 	defer sessRows.Close()
 
@@ -230,7 +230,7 @@ func ExtractFacts(
 		var pid, agent, model sql.NullString
 		var timeCreated int64
 		if err := sessRows.Scan(&sid, &pid, &agent, &model, &timeCreated); err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("scanning session row: %w", err)
+			return nil, nil, nil, fmt.Errorf("scanning session row: %w", err)
 		}
 		var parentPtr *string
 		if pid.Valid && strings.TrimSpace(pid.String) != "" {
@@ -246,7 +246,7 @@ func ExtractFacts(
 		})
 	}
 	if err := sessRows.Err(); err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("iterating session rows: %w", err)
+		return nil, nil, nil, fmt.Errorf("iterating session rows: %w", err)
 	}
 
 	type msgMeta struct {
@@ -284,7 +284,7 @@ func ExtractFacts(
 		`, msgTimeUpdatedCol)
 		msgRows, err := db.Query(qMsgs, s.id)
 		if err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("querying messages for session %s: %w", s.id, err)
+			return nil, nil, nil, fmt.Errorf("querying messages for session %s: %w", s.id, err)
 		}
 
 		byModel := make(map[string]*sessionModelAccumulator)
@@ -300,7 +300,7 @@ func ExtractFacts(
 			var mData sql.NullString
 			if err := msgRows.Scan(&mid, &mCreated, &mUpdated, &mData); err != nil {
 				msgRows.Close()
-				return nil, nil, nil, nil, nil, fmt.Errorf("scanning message row: %w", err)
+				return nil, nil, nil, fmt.Errorf("scanning message row: %w", err)
 			}
 			if !mData.Valid || strings.TrimSpace(mData.String) == "" {
 				continue
@@ -469,7 +469,7 @@ func ExtractFacts(
 
 	partRows, err := db.Query(qParts)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("querying parts: %w", err)
+		return nil, nil, nil, fmt.Errorf("querying parts: %w", err)
 	}
 	defer partRows.Close()
 
@@ -481,7 +481,7 @@ func ExtractFacts(
 		var tCreated, tUpdated sql.NullInt64
 		var pData sql.NullString
 		if err := partRows.Scan(&pid, &sid, &mid, &tCreated, &tUpdated, &pData); err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("scanning part row: %w", err)
+			return nil, nil, nil, fmt.Errorf("scanning part row: %w", err)
 		}
 		if !pData.Valid || strings.TrimSpace(pData.String) == "" {
 			continue
@@ -557,7 +557,7 @@ func ExtractFacts(
 
 		if *rawPD.Type == "tool" {
 			if sID == "" {
-				return nil, nil, nil, nil, nil, errors.New("tool part has no owning session ID")
+				return nil, nil, nil, errors.New("tool part has no owning session ID")
 			}
 			toolName := "unknown"
 			if rawPD.Tool != nil && strings.TrimSpace(*rawPD.Tool) != "" {
@@ -643,11 +643,59 @@ func ExtractFacts(
 		}
 	}
 	if err := partRows.Err(); err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("iterating part rows: %w", err)
+		return nil, nil, nil, fmt.Errorf("iterating part rows: %w", err)
 	}
 
-	// 5. Build invocations
-	var invocations []domain.InvocationFact
+	// 5. Build tools per session
+	toolsBySession := make(map[string][]domain.SessionToolFact)
+	for key, tStats := range toolMap {
+		toolsBySession[key.sessionID] = append(toolsBySession[key.sessionID], domain.SessionToolFact{
+			Name:   key.toolName,
+			Calls:  tStats.calls,
+			Errors: tStats.errors,
+		})
+	}
+	for sid := range toolsBySession {
+		sort.Slice(toolsBySession[sid], func(i, j int) bool {
+			if toolsBySession[sid][i].Calls == toolsBySession[sid][j].Calls {
+				return toolsBySession[sid][i].Name < toolsBySession[sid][j].Name
+			}
+			return toolsBySession[sid][i].Calls > toolsBySession[sid][j].Calls
+		})
+	}
+
+	// 6. Build events per session
+	eventsBySession := make(map[string][]domain.SessionEventFact)
+	for _, ev := range events {
+		eventsBySession[ev.SessionID] = append(eventsBySession[ev.SessionID], domain.SessionEventFact{
+			EventID:          ev.EventID,
+			Timestamp:        ev.Timestamp,
+			MessageID:        ev.MessageID,
+			Turn:             ev.Turn,
+			Role:             ev.Role,
+			EventType:        ev.EventType,
+			ToolName:         ev.ToolName,
+			Status:           ev.Status,
+			ErrorMessage:     ev.ErrorMessage,
+			DurationMs:       ev.DurationMs,
+			ContextTokens:    ev.ContextTokens,
+			PromptContent:    ev.PromptContent,
+			ReasoningContent: ev.ReasoningContent,
+			ToolInput:        ev.ToolInput,
+			ToolOutput:       ev.ToolOutput,
+		})
+	}
+	for sid := range eventsBySession {
+		sort.SliceStable(eventsBySession[sid], func(i, j int) bool {
+			if eventsBySession[sid][i].Timestamp != eventsBySession[sid][j].Timestamp {
+				return eventsBySession[sid][i].Timestamp < eventsBySession[sid][j].Timestamp
+			}
+			return eventsBySession[sid][i].Turn < eventsBySession[sid][j].Turn
+		})
+	}
+
+	// 7. Build sessions and invocations
+	var sessionFacts []domain.SessionFact
 	for _, s := range sessions {
 		sessionUser := defaultUser
 		if u, ok := userBySessionID[s.id]; ok && strings.TrimSpace(u) != "" {
@@ -659,6 +707,7 @@ func ExtractFacts(
 		totalSessionMsgs := sessionTurns[s.id]
 		sessionCompactions := compMap[s.id]
 
+		var invocations []domain.InvocationFact
 		for idx, mName := range modelOrder {
 			st := byModel[mName]
 			fTS := s.timeCreated
@@ -692,11 +741,8 @@ func ExtractFacts(
 			activeSecs := int64(math.Round(float64(st.activeMS) / 1000.0))
 
 			invocations = append(invocations, domain.InvocationFact{
-				ID:                    s.id,
-				ParentID:              s.parentID,
 				Role:                  role,
 				Model:                 mName,
-				User:                  sessionUser,
 				StartedAt:             &stISO,
 				CompletedAt:           &endISO,
 				ActiveDurationSeconds: activeSecs,
@@ -713,19 +759,59 @@ func ExtractFacts(
 				UserIterations: userIterations,
 			})
 		}
-	}
 
-	// 6. Build tools
-	var tools []domain.ToolFact
-	for key, tStats := range toolMap {
-		tools = append(tools, domain.ToolFact{
-			SessionID: key.sessionID,
-			Name:      key.toolName,
-			Calls:     tStats.calls,
-			Errors:    tStats.errors,
+		sTools := toolsBySession[s.id]
+		if sTools == nil {
+			sTools = []domain.SessionToolFact{}
+		}
+		sEvents := eventsBySession[s.id]
+		if sEvents == nil {
+			sEvents = []domain.SessionEventFact{}
+		}
+
+		sessionFacts = append(sessionFacts, domain.SessionFact{
+			ID:          s.id,
+			ParentID:    s.parentID,
+			Source:      domain.SourceOpenCode,
+			User:        sessionUser,
+			Invocations: invocations,
+			Tools:       sTools,
+			Events:      sEvents,
+			Anomalies:   []domain.Anomaly{},
 		})
 	}
 
+	// 8. Determine overall completed timestamp
+	var maxCompleted *string
+	for _, sf := range sessionFacts {
+		for _, inv := range sf.Invocations {
+			if inv.CompletedAt != nil && *inv.CompletedAt != "" {
+				if maxCompleted == nil || *inv.CompletedAt > *maxCompleted {
+					maxCompleted = inv.CompletedAt
+				}
+			}
+		}
+	}
+	if maxCompleted != nil {
+		completedAtISO = maxCompleted
+	}
+
+	return sessionFacts, startedAtISO, completedAtISO, nil
+}
+
+// ExtractFacts queries invocation, tool, and chronological event facts from OpenCode SQLite database for given root threads.
+func ExtractFacts(
+	db *sql.DB,
+	threadIDs []string,
+	defaultUser string,
+	userBySessionID map[string]string,
+) ([]domain.InvocationFact, []domain.ToolFact, []domain.EventFact, *string, *string, error) {
+	sessions, startedAtISO, completedAtISO, err := ExtractSessions(db, threadIDs, defaultUser, userBySessionID)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	ledger := domain.AgenticFactLedger{Sessions: sessions}
+	tools := ledger.ToolFacts()
 	sort.Slice(tools, func(i, j int) bool {
 		if tools[i].SessionID != tools[j].SessionID {
 			return tools[i].SessionID < tools[j].SessionID
@@ -735,8 +821,7 @@ func ExtractFacts(
 		}
 		return tools[i].Calls > tools[j].Calls
 	})
-
-	// 7. Chronological sort of events
+	events := ledger.EventFacts()
 	sort.SliceStable(events, func(i, j int) bool {
 		if events[i].Timestamp != events[j].Timestamp {
 			return events[i].Timestamp < events[j].Timestamp
@@ -746,21 +831,7 @@ func ExtractFacts(
 		}
 		return events[i].SessionID < events[j].SessionID
 	})
-
-	// 8. Determine overall completed timestamp
-	var maxCompleted *string
-	for _, inv := range invocations {
-		if inv.CompletedAt != nil && *inv.CompletedAt != "" {
-			if maxCompleted == nil || *inv.CompletedAt > *maxCompleted {
-				maxCompleted = inv.CompletedAt
-			}
-		}
-	}
-	if maxCompleted != nil {
-		completedAtISO = maxCompleted
-	}
-
-	return invocations, tools, events, startedAtISO, completedAtISO, nil
+	return ledger.InvocationFacts(), tools, events, startedAtISO, completedAtISO, nil
 }
 
 // ExtractSteeringTurns calculates human steering turns from message records for given root threads.

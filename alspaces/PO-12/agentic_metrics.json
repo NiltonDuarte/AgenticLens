@@ -22,11 +22,8 @@
       "source": "opencode",
       "invocations": [
         {
-          "id": "ses_e7bd20667ffeD9jgBkVayiieIA",
-          "parent_id": null,
           "role": "general",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-28T20:22:48.347000+00:00",
           "completed_at": "2026-10-28T22:58:03.789000+00:00",
           "active_duration_seconds": 3538,
@@ -114,7 +111,8 @@
             "threshold": "40000"
           }
         }
-      ]
+      ],
+      "user": "Nilton Duarte"
     }
   ],
   "anomalies": []

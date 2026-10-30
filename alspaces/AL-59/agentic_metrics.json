@@ -1,0 +1,65 @@
+{
+  "schema_version": 4,
+  "ticket_id": "AL-59",
+  "ticket_title": "Local Developer Configuration and Explicit Multi-Harness Source Selection",
+  "ticket_type": "feat",
+  "started_at": "2026-10-29T00:23:01.972Z",
+  "completed_at": "2026-10-29T08:41:31.447Z",
+  "updated_at": "2026-10-29T10:53:32.802068518Z",
+  "code": {
+    "lines_added": 592,
+    "lines_deleted": 39,
+    "test_lines_added": 303,
+    "test_lines_deleted": 8,
+    "prod_lines_added": 289,
+    "prod_lines_deleted": 31,
+    "files_changed": 8,
+    "sdlc_iterations": 8
+  },
+  "sessions": [
+    {
+      "id": "01a18509-ea45-7ba0-834d-ea18d828b3c5",
+      "source": "codex",
+      "user": "unknown",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-29T00:23:03.445Z",
+          "completed_at": "2026-10-29T08:44:39.737Z",
+          "active_duration_seconds": 1527,
+          "turns": 6,
+          "tokens": {
+            "input": 233355,
+            "output": 19176,
+            "cache_read": 6455680,
+            "reasoning": 7408,
+            "peak_context": 110455
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 8
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 44,
+          "errors": 5
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 22,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}

@@ -20,13 +20,11 @@
     {
       "id": "01a1817d-9b92-7460-807f-e09fd59665b8",
       "source": "codex",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "01a1817d-9b92-7460-807f-e09fd59665b8",
-          "parent_id": null,
           "role": "RootAgent",
           "model": "gpt-6-luna",
-          "user": "",
           "started_at": "2026-10-28T07:50:55.993Z",
           "completed_at": "2026-10-28T08:57:19.412Z",
           "active_duration_seconds": 298,
@@ -91,13 +89,11 @@
       "id": "01a18198-ea93-7351-9e24-16d408c4ed5e",
       "parent_id": "01a1817d-9b92-7460-807f-e09fd59665b8",
       "source": "codex",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "01a18198-ea93-7351-9e24-16d408c4ed5e",
-          "parent_id": "01a1817d-9b92-7460-807f-e09fd59665b8",
           "role": "planner",
           "model": "gpt-6-luna",
-          "user": "",
           "started_at": "2026-10-28T08:20:44.903Z",
           "completed_at": "2026-10-28T08:22:16.070Z",
           "active_duration_seconds": 61,

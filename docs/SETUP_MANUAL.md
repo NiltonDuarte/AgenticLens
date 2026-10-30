@@ -1,10 +1,11 @@
 # AgenticLens Platform Setup Manual and Telemetry Integration Guide
 
-AgenticLens is a developer telemetry and observability platform built specifically for OpenCode workflows. It provides real-time monitoring, longitudinal cost and token tracking, automated anomaly detection, and context window health diagnostics across autonomous coding agents running in OpenCode.
+AgenticLens is a developer telemetry and observability platform for OpenCode and Codex workflows. It provides real-time monitoring for OpenCode and offline telemetry ingestion from either harness.
 
-AgenticLens extracts execution traces from OpenCode's local SQLite database, opening it read-only. The supported evidence window is OpenCode v1.19.5 (`session`/`message`/`part`) and npm `@opencode/cli` v2.2.0 (`session_v2`/`session_message`), whose `latest` tag was resolved on 2026-10-29. AgenticLens validates the complete required table and column set and automatically selects exactly one schema family. Partial, mixed, malformed, and unknown schemas fail with diagnostics; schema detection does not identify the exact runtime release. `--db-path` remains the explicit path override and the default path remains `~/.local/share/opencode/opencode.db`; no separate version flag or v2-specific default directory is used.
+OpenCode traces are extracted read-only from its local SQLite database (`~/.local/share/opencode/opencode.db`). The supported evidence window is OpenCode v1.19.5 (`session`/`message`/`part`) and npm `@opencode/cli` v2.2.0 (`session_v2`/`session_message`), whose `latest` tag was resolved on 2026-10-29. AgenticLens validates the complete required table and column set and automatically selects exactly one schema family. Partial, mixed, malformed, and unknown schemas fail with diagnostics; schema detection does not identify the exact runtime release. `--db-path` remains the explicit path override and the default OpenCode database path remains unchanged.
 
 Compatibility workflows are `make opencode-compat-v1`, `make opencode-compat-v2`, and `make opencode-compat`. They require the corresponding runtime (`OPENCODE_V1_BIN` / `OPENCODE_V2_BIN` can select explicit binaries) and a local deterministic provider already running. The workflows create isolated temporary HOME, XDG data/config/state roots, project roots, and absolute `OPENCODE_DB` paths, then remove them at exit. Ordinary adapter tests use deterministic SQLite fixtures and need no OpenCode installation. Evidence fixtures are sanitized runtime-produced records, not synthesized runtime integration runs. Nonzero native-provider pricing, imported-history extraction after migration, partial migration states, duplicate handling, and releases outside v1.19.5/v2.2.0 are not verified.
+Codex traces are read from rollout files beneath a Codex home directory (`~/.codex`). OpenCode and Codex are independent sources; selecting one never falls back to the other.
 
 This manual serves as the comprehensive, authoritative guide for engineering teams, platform architects, and autonomous coding agents adopting AgenticLens in OpenCode projects.
 
@@ -112,7 +113,7 @@ The agent queries the developer or inspects the codebase to determine:
 - Monitored source code folders (e.g. `services,pkg,cmd`)
 - Workspaces directory (default: `workspaces`)
 
-The agent runs `init` to write `.agenticlens-config.yaml`:
+The agent runs `init` to write shared `.agenticlens-config.yaml` and machine-local `.agenticlens-config.local.yaml`:
 ```bash
 ./.agents/skills/agentic-lens-setup/bin/agentic-lens init \
   --project-name "BillingService" \
@@ -196,7 +197,7 @@ Open `http://localhost:8085` in your browser to view the Fleet Overview and Live
 
 ## 2. Agnostic Adoption for OpenCode Projects
 
-AgenticLens is engineered specifically for OpenCode environments. Its telemetry ingestion engine supports the evidence-backed v1 and v2 SQLite families described above and rejects layouts it cannot identify. It cannot function without an OpenCode database and does not support alternative agent harnesses.
+Live SSE streaming reads OpenCode's local SQLite database and supports the evidence-backed v1 and v2 schema families described above, rejecting layouts it cannot identify. Offline generation also supports Codex rollout files. Choose a source explicitly or configure the machine-local default; the selected source is never silently changed after a read or discovery failure.
 
 While tightly coupled to OpenCode at the platform layer, AgenticLens imposes zero engineering methodology constraints on adopting teams. Within OpenCode, it is completely agnostic to how teams structure their development workflows.
 
@@ -215,9 +216,21 @@ Adopting repositories configure AgenticLens to align with their existing organiz
 
 ---
 
-## 3. Configuration Reference (.agenticlens-config.yaml)
+## 3. Configuration Reference
 
-AgenticLens is configured through a YAML manifest located at the repository root (`.agenticlens-config.yaml`).
+Shared project settings live in `.agenticlens-config.yaml`. Machine-specific source settings live in optional `.agenticlens-config.local.yaml`, which is ignored by Git. Review its default harness and paths, verify it is ignored before committing, and never put credentials in either file. The sanitized `.agenticlens-config.local.example.yaml` can be copied as a starting point.
+
+```yaml
+telemetry:
+  default_source: opencode
+  sources:
+    opencode:
+      database_path: ~/.local/share/opencode/opencode.db
+    codex:
+      home: ~/.codex
+```
+
+`generate --source` takes precedence over `telemetry.default_source`; if omitted, the configured default is selected and OpenCode is the built-in default. Path precedence is CLI override, local harness path, legacy shared `database.path` for OpenCode, then adapter default. OpenCode `database_path` is SQLite; Codex `home` is a rollout directory. A selected source that is unavailable fails with an actionable error and does not switch harnesses.
 
 ### 3.1 Complete Configuration Schema Example
 
@@ -430,14 +443,19 @@ Below is the standard policy block that can be added to your repository's OpenCo
 ## AgenticLens Telemetry Guidelines
 
 1. Ticket Tracking Mandate:
-   - Every task must be tracked by an explicit ticket identifier matching configured prefixes (e.g. PAY-101).
+   - Every task requires a ticket ID and a workspace under `workspaces/<TICKET_ID>/`.
+   - Use an existing ticket when one is provided. For ad hoc work without an ID, assign a `GEN-#` identifier; do not create a planning specification or index entry under `plan/` solely for it.
    - Agents work on one ticket at a time. All turns belong to the active ticket.
 
-2. Dedicated Workspace Allocation:
-   - Store task documentation and metrics in `workspaces/<TICKET_ID>/`.
-   - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log).
+2. Plan Lifecycle:
+   - When a matching specification exists under `plan/to-do/`, move it to `plan/done/` when its ticket is completed.
+   - Remove the ticket entry from `plan/TICKETS.md` if present. Do not create a specification or index entry just to complete this step; ad hoc tickets still have an ID and workspace.
 
-3. Delayed Telemetry Ingestion:
+3. Dedicated Workspace Allocation:
+   - Store task documentation and metrics in `workspaces/<TICKET_ID>/`.
+   - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log) as required by the project's artifact list.
+
+4. Delayed Telemetry Ingestion:
    - Ingest telemetry as the very final command before committing code.
    - The agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token. Do not use shell variables (`$NONCE`) because OpenCode records tool inputs into SQLite before subshell expansion occurs:
      ./bin/agentic-lens generate \
@@ -458,7 +476,7 @@ AgenticLens provides a unified command-line interface and an embedded web dashbo
 ### 5.1 CLI Subcommands Reference
 
 #### `agentic-lens init`
-Scaffolds and writes `.agenticlens-config.yaml` at the repository root.
+Scaffolds `.agenticlens-config.yaml` and `.agenticlens-config.local.yaml` at the repository root. The local file contains only source settings and is Git-ignored.
 - Flags:
   - `--project-name <NAME>` (Required): Human-readable name of the project.
   - `--ticket-prefixes <LIST>` (Required): Comma-separated list of ticket prefixes (e.g. `PAY,SEC,OPS`).

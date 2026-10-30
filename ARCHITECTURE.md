@@ -124,7 +124,7 @@ The telemetry backfill engine provides batch reconciliation across workspaces, r
 - `--ticket-id <id>`: Filter backfill execution to a single ticket identifier.
 - `--recompute-git`: Recompute Git code facts (lines added/deleted, test/prod breakdown, files changed, and SDLC iterations) from repository history.
 - `--recompute-db`: Recompute OpenCode invocations, turn counts, token metrics, and tool facts from local SQLite DB.
-- `--migrate-schema`: Upgrade telemetry ledger schema versions to latest supported version (v2).
+- `--migrate-schema`: Upgrade telemetry ledgers through the supported migration steps.
 - `--dry-run`: Preview planned changes and modifications without writing changes to disk.
 - `--update-summaries`: Idempotently update `SUMMARY.md` markdown metrics tables in processed workspace directories.
 - `--db-path <path>`: Explicit path to OpenCode SQLite database file.
@@ -134,20 +134,20 @@ The telemetry backfill engine provides batch reconciliation across workspaces, r
 
 ```bash
 # Dry-run preview of Git code facts recomputation across all workspaces
-./bin/agentic-lens backfill --workspaces alspaces --recompute-git --dry-run
+./bin/agentic-lens backfill --source opencode --workspaces alspaces --recompute-git --dry-run
 
 # Full batch telemetry backfill with schema migration and summary table updates
-./bin/agentic-lens backfill --workspaces alspaces --recompute-git --recompute-db --migrate-schema --update-summaries
+./bin/agentic-lens backfill --source opencode --workspaces alspaces --recompute-git --recompute-db --migrate-schema --update-summaries
 
 # Single ticket targeted backfill with Git facts recomputation and schema migration
-./bin/agentic-lens backfill --workspaces alspaces --ticket-id AL-15 --recompute-git --migrate-schema --update-summaries
+./bin/agentic-lens backfill --source opencode --workspaces alspaces --ticket-id AL-15 --recompute-git --migrate-schema --update-summaries
 ```
 
 ---
 
 ## 5. Universal Schema Migration Engine (`agentic-lens migrate`)
 
-The universal schema migration engine provides stepwise multi-version schema upgrades for `agentic_metrics.json` ledgers, transitioning historical unversioned (v1) ledgers to schema version 2 (and subsequent schemas) cleanly and deterministically.
+The migration engine provides stepwise upgrades for `agentic_metrics.json` ledgers, transitioning historical unversioned ledgers through the supported migration steps.
 
 ### 5.1 Core Architectural Invariants
 
@@ -161,7 +161,7 @@ The universal schema migration engine provides stepwise multi-version schema upg
 
 - `--workspaces <path>`: Path to root workspaces directory containing `agentic_metrics.json` ledgers.
 - `--ticket-id <id>`: Target a single ticket identifier for migration.
-- `--target-version <int>`: Target schema version integer (defaults to current version: 2).
+- `--target-version <int>`: Target migration version integer. By default, the installed CLI selects its current supported version.
 - `--dry-run`: Preview planned version transitions without modifying files on disk.
 - `--backup`: Create `.bak` backup copy of original `agentic_metrics.json` file prior to overwriting.
 - `--update-summaries`: Idempotently update `SUMMARY.md` markdown metrics tables in migrated workspaces.
@@ -172,7 +172,7 @@ The universal schema migration engine provides stepwise multi-version schema upg
 # Dry-run preview of pending schema migrations across all workspaces
 ./bin/agentic-lens migrate --workspaces alspaces --dry-run
 
-# Batch upgrade all historical workspaces to version 2 with backup file generation
+# Batch upgrade historical workspaces with backup file generation
 ./bin/agentic-lens migrate --workspaces alspaces --backup
 
 # Migrate single ticket workspace with backup creation and summary table regeneration

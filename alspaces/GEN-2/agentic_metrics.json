@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
   "ticket_id": "GEN-2",
-  "ticket_title": "Agent Single-Ticket Exclusivity \u0026 Steering Mandate",
+  "ticket_title": "Agent Single-Ticket Exclusivity & Steering Mandate",
   "ticket_type": "chore",
   "started_at": "2026-10-17T16:15:51.795000+00:00",
   "completed_at": "2026-10-17T16:17:40.613000+00:00",
@@ -20,13 +20,11 @@
     {
       "id": "ses_eb55a0e0cffe31ieoLkBnwIe35",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb55a0e0cffe31ieoLkBnwIe35",
-          "parent_id": null,
           "role": "general",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T16:15:52.264000+00:00",
           "completed_at": "2026-10-17T16:17:40.613000+00:00",
           "active_duration_seconds": 108,

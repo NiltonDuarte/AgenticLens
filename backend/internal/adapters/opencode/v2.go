@@ -59,27 +59,27 @@ type v2Payload struct {
 	} `json:"content"`
 }
 
-func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string) ([]domain.InvocationFact, []domain.ToolFact, []domain.EventFact, *string, *string, error) {
+func extractV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string) ([]domain.SessionFact, *string, *string, error) {
 	ids, err := buildQuotedIDList(roots)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
+		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
 	}
 	rows, err := db.Query(fmt.Sprintf(`SELECT id,parent_id,agent,model,time_created,time_updated FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s) ORDER BY time_created,id`, ids, ids))
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("querying v2 sessions: %w", err)
+		return nil, nil, nil, fmt.Errorf("querying v2 sessions: %w", err)
 	}
 	var sessions []v2Session
 	for rows.Next() {
 		var s v2Session
 		if err := rows.Scan(&s.id, &s.parent, &s.agent, &s.model, &s.created, &s.updated); err != nil {
 			rows.Close()
-			return nil, nil, nil, nil, nil, fmt.Errorf("scanning v2 session: %w", err)
+			return nil, nil, nil, fmt.Errorf("scanning v2 session: %w", err)
 		}
 		sessions = append(sessions, s)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return nil, nil, nil, nil, nil, fmt.Errorf("iterating v2 sessions: %w", err)
+		return nil, nil, nil, fmt.Errorf("iterating v2 sessions: %w", err)
 	}
 	rows.Close()
 	var start, end *string
@@ -98,7 +98,7 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 		v2 := formatEpochMilli(maxUpdated)
 		end = &v2
 	}
-	var invs []domain.InvocationFact
+	var invocationSessions []domain.SessionFact
 	var tools []domain.ToolFact
 	var events []domain.EventFact
 	for _, s := range sessions {
@@ -112,20 +112,20 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 		}
 		mr, e := db.Query(`SELECT id,type,seq,time_created,time_updated,data FROM session_message WHERE session_id=? ORDER BY seq,time_created,id`, s.id)
 		if e != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("querying v2 messages for session %s: %w", s.id, e)
+			return nil, nil, nil, fmt.Errorf("querying v2 messages for session %s: %w", s.id, e)
 		}
 		var msgs []v2Message
 		for mr.Next() {
 			var m v2Message
 			if e := mr.Scan(&m.id, &m.kind, &m.seq, &m.created, &m.updated, &m.data); e != nil {
 				mr.Close()
-				return nil, nil, nil, nil, nil, fmt.Errorf("scanning v2 message in session %s: %w", s.id, e)
+				return nil, nil, nil, fmt.Errorf("scanning v2 message in session %s: %w", s.id, e)
 			}
 			msgs = append(msgs, m)
 		}
 		if e := mr.Err(); e != nil {
 			mr.Close()
-			return nil, nil, nil, nil, nil, fmt.Errorf("iterating v2 messages in session %s: %w", s.id, e)
+			return nil, nil, nil, fmt.Errorf("iterating v2 messages in session %s: %w", s.id, e)
 		}
 		mr.Close()
 		models := map[string]*sessionModelAccumulator{}
@@ -136,7 +136,7 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 		for _, m := range msgs {
 			var p v2Payload
 			if e := json.Unmarshal([]byte(m.data), &p); e != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("decoding v2 %s message %s in session %s: %w", m.kind, m.id, s.id, e)
+				return nil, nil, nil, fmt.Errorf("decoding v2 %s message %s in session %s: %w", m.kind, m.id, s.id, e)
 			}
 			ts := m.created
 			if p.Time.Created != nil {
@@ -156,7 +156,7 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 				continue
 			case "assistant":
 				if p.Model.ID == "" {
-					return nil, nil, nil, nil, nil, fmt.Errorf("v2 assistant message %s in session %s is missing model.id", m.id, s.id)
+					return nil, nil, nil, fmt.Errorf("v2 assistant message %s in session %s is missing model.id", m.id, s.id)
 				}
 				assistantTurns++
 				lookup[m.id] = assistantTurns
@@ -230,18 +230,18 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 				events = append(events, domain.EventFact{EventID: sourceEventID("message", m.id), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeTurnMessage, Status: "completed", DurationMs: dp, ContextTokens: ctx, PromptContent: assistantText})
 				for _, part := range p.Content {
 					if part.Type != "text" && part.Type != "tool" {
-						return nil, nil, nil, nil, nil, fmt.Errorf("unsupported v2 assistant content type %q in message %s session %s", part.Type, m.id, s.id)
+						return nil, nil, nil, fmt.Errorf("unsupported v2 assistant content type %q in message %s session %s", part.Type, m.id, s.id)
 					}
 					if part.Type != "tool" {
 						continue
 					}
 					name := strings.TrimSpace(part.Name)
 					if name == "" {
-						return nil, nil, nil, nil, nil, fmt.Errorf("v2 tool content in message %s session %s has no name", m.id, s.id)
+						return nil, nil, nil, fmt.Errorf("v2 tool content in message %s session %s has no name", m.id, s.id)
 					}
 					stat := strings.ToLower(part.State.Status)
 					if stat == "" {
-						return nil, nil, nil, nil, nil, fmt.Errorf("v2 tool %s in message %s session %s is missing state.status", name, m.id, s.id)
+						return nil, nil, nil, fmt.Errorf("v2 tool %s in message %s session %s is missing state.status", name, m.id, s.id)
 					}
 					var failed bool
 					switch stat {
@@ -249,7 +249,7 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 					case "error", "failed":
 						failed = true
 					default:
-						return nil, nil, nil, nil, nil, fmt.Errorf("unsupported v2 tool status %q for tool %s in message %s session %s", stat, name, m.id, s.id)
+						return nil, nil, nil, fmt.Errorf("unsupported v2 tool status %q for tool %s in message %s session %s", stat, name, m.id, s.id)
 					}
 					ta, ok := toolStats[name]
 					if !ok {
@@ -273,7 +273,7 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 					outputParts := make([]string, 0, len(part.State.Content))
 					for _, c := range part.State.Content {
 						if c.Type != "text" {
-							return nil, nil, nil, nil, nil, fmt.Errorf("unsupported v2 tool result type %q in tool %s message %s session %s", c.Type, name, m.id, s.id)
+							return nil, nil, nil, fmt.Errorf("unsupported v2 tool result type %q in tool %s message %s session %s", c.Type, name, m.id, s.id)
 						}
 						outputParts = append(outputParts, c.Text)
 					}
@@ -282,7 +282,7 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 					events = append(events, domain.EventFact{EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: stringPointer(output)})
 				}
 			default:
-				return nil, nil, nil, nil, nil, fmt.Errorf("unsupported v2 message type %q for message %s in session %s", m.kind, m.id, s.id)
+				return nil, nil, nil, fmt.Errorf("unsupported v2 message type %q for message %s in session %s", m.kind, m.id, s.id)
 			}
 		}
 		model := strings.TrimSpace(s.model.String)
@@ -303,6 +303,7 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 		if value, ok := userBySession[s.id]; ok && strings.TrimSpace(value) != "" {
 			user = strings.TrimSpace(value)
 		}
+		var invocations []domain.InvocationFact
 		for i, name := range order {
 			a := models[name]
 			first, last := s.created, s.created
@@ -316,17 +317,18 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 			if len(order) > 1 {
 				turns = a.asstMsgs
 			}
-			var parent *string
-			if s.parent.Valid {
-				v := s.parent.String
-				parent = &v
-			}
 			var iterations int64
 			if i == 0 && !s.parent.Valid {
 				iterations = userTurns
 			}
-			invs = append(invs, domain.InvocationFact{ID: s.id, ParentID: parent, Role: role, Model: name, User: user, StartedAt: strptr(formatEpochMilli(first)), CompletedAt: strptr(formatEpochMilli(last)), ActiveDurationSeconds: int64(math.Round(float64(a.activeMS) / 1000)), Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, UserIterations: iterations})
+			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: strptr(formatEpochMilli(first)), CompletedAt: strptr(formatEpochMilli(last)), ActiveDurationSeconds: int64(math.Round(float64(a.activeMS) / 1000)), Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, UserIterations: iterations})
 		}
+		var parent *string
+		if s.parent.Valid {
+			v := s.parent.String
+			parent = &v
+		}
+		invocationSessions = append(invocationSessions, domain.SessionFact{ID: s.id, ParentID: parent, Source: domain.SourceOpenCode, User: user, Invocations: invocations})
 		for name, a := range toolStats {
 			tools = append(tools, domain.ToolFact{SessionID: s.id, Name: name, Calls: a.calls, Errors: a.errors})
 		}
@@ -340,7 +342,11 @@ func extractV2Facts(db *sql.DB, roots []string, defaultUser string, userBySessio
 	sort.SliceStable(events, func(i, j int) bool {
 		return events[i].Timestamp < events[j].Timestamp
 	})
-	return invs, tools, events, start, end, nil
+	result, err := domain.SessionsFromFactsWithSource(domain.SourceOpenCode, invocationSessions, tools, events)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("grouping v2 OpenCode facts into sessions: %w", err)
+	}
+	return result, start, end, nil
 }
 
 func normalizeToolInput(raw json.RawMessage) *string {

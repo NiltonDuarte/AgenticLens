@@ -159,6 +159,19 @@ export function findMatchingAnomaly(
   return anomalies.find((a) => matchesAnomaly(event, a));
 }
 
+/** Rebind a selected summary only when its rule and occurrence context identify one counterpart. */
+export function rebindAnomaly(selected: Anomaly | null, anomalies: readonly Anomaly[]): Anomaly | null {
+  if (!selected) return null;
+  if (anomalies.includes(selected)) return selected;
+  const matches = anomalies.filter((anomaly) => anomaly.rule_id === selected.rule_id &&
+    anomaly.context.session_id === selected.context.session_id &&
+    anomaly.context.turn === selected.context.turn &&
+    anomaly.context.tool_name === selected.context.tool_name &&
+    anomaly.context.role === selected.context.role &&
+    anomaly.context.secondary_role === selected.context.secondary_role);
+  return matches.length === 1 ? matches[0] ?? null : null;
+}
+
 /**
  * Extracts numeric streak or failure count from an Anomaly or LiveAnomalyAlert.
  */

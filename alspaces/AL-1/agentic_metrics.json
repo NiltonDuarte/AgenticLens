@@ -21,13 +21,11 @@
       "id": "ses_eb5793378ffeoFdIOwpmnkSsb2",
       "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb5793378ffeoFdIOwpmnkSsb2",
-          "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
           "role": "reviewer",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T15:41:50.611000+00:00",
           "completed_at": "2026-10-17T15:42:41.803000+00:00",
           "active_duration_seconds": 51,
@@ -77,13 +75,11 @@
       "id": "ses_eb57a0384ffey00goAPTFBEwWE",
       "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb57a0384ffey00goAPTFBEwWE",
-          "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
           "role": "coder",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T15:40:57.350000+00:00",
           "completed_at": "2026-10-17T15:41:47.050000+00:00",
           "active_duration_seconds": 50,
@@ -128,13 +124,11 @@
       "id": "ses_eb57ca888ffehgXBrf03JesiLP",
       "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb57ca888ffehgXBrf03JesiLP",
-          "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
           "role": "reviewer",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T15:38:04.036000+00:00",
           "completed_at": "2026-10-17T15:40:39.862000+00:00",
           "active_duration_seconds": 156,
@@ -184,13 +178,11 @@
       "id": "ses_eb580d2c3ffejsIgYKb4f4ag5I",
       "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb580d2c3ffejsIgYKb4f4ag5I",
-          "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
           "role": "tester",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T15:33:31.087000+00:00",
           "completed_at": "2026-10-17T15:37:55.462000+00:00",
           "active_duration_seconds": 264,
@@ -245,13 +237,11 @@
       "id": "ses_eb58a5bedffekTQXwVA5GPNF6n",
       "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb58a5bedffekTQXwVA5GPNF6n",
-          "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
           "role": "coder",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T15:23:06.141000+00:00",
           "completed_at": "2026-10-17T15:33:20.334000+00:00",
           "active_duration_seconds": 614,
@@ -306,13 +296,11 @@
       "id": "ses_eb5908270ffegG27XMtntpLNCW",
       "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb5908270ffegG27XMtntpLNCW",
-          "parent_id": "ses_eb5918abaffev3W1MkOJYNMZCB",
           "role": "planner",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T15:16:23.067000+00:00",
           "completed_at": "2026-10-17T15:18:40.360000+00:00",
           "active_duration_seconds": 137,
@@ -356,13 +344,11 @@
     {
       "id": "ses_eb5918abaffev3W1MkOJYNMZCB",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb5918abaffev3W1MkOJYNMZCB",
-          "parent_id": null,
           "role": "general",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-17T15:15:15.731000+00:00",
           "completed_at": "2026-10-17T16:05:30.761000+00:00",
           "active_duration_seconds": 2167,

@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
   "ticket_id": "PO-5",
-  "ticket_title": "Natural Ticket Ordering, Dynamic Roles \u0026 Models, Contextual Info Icons, Date \u0026 Type Filtering, Custom Windows",
+  "ticket_title": "Natural Ticket Ordering, Dynamic Roles & Models, Contextual Info Icons, Date & Type Filtering, Custom Windows",
   "ticket_type": "docs",
   "started_at": "2026-10-18T14:31:15.650000+00:00",
   "completed_at": "2026-10-18T15:27:49.603000+00:00",
@@ -20,13 +20,11 @@
     {
       "id": "ses_eb093763dffecfxgm4McNeZmfl",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
-          "id": "ses_eb093763dffecfxgm4McNeZmfl",
-          "parent_id": null,
           "role": "general",
           "model": "gemini-3.8-flash",
-          "user": "Nilton Duarte",
           "started_at": "2026-10-18T14:31:16.103000+00:00",
           "completed_at": "2026-10-18T15:27:49.603000+00:00",
           "active_duration_seconds": 1447,

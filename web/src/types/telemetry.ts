@@ -42,6 +42,8 @@ export interface WorkspaceEventsResponse {
   readonly events: readonly EventFact[];
   readonly data_source: DataSource;
   readonly anomalies?: readonly Anomaly[] | undefined;
+  /** The events already include the committed ledger baseline. */
+  readonly includes_baseline?: boolean | undefined;
 }
 
 export type AnomalySeverity = 'WARNING' | 'CRITICAL';

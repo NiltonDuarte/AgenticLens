@@ -1089,16 +1089,18 @@ func TestStructuralClassificationParityOnWorkspaces(t *testing.T) {
 			var hasChild bool
 			var expChildPeak int64
 
-			for _, inv := range facts.InvocationFacts() {
-				if inv.ParentID == nil {
-					hasRoot = true
-					if inv.Tokens.PeakContext > expRootPeak {
-						expRootPeak = inv.Tokens.PeakContext
-					}
-				} else {
-					hasChild = true
-					if inv.Tokens.PeakContext > expChildPeak {
-						expChildPeak = inv.Tokens.PeakContext
+			for _, session := range facts.Sessions {
+				for _, inv := range session.Invocations {
+					if session.ParentID == nil {
+						hasRoot = true
+						if inv.Tokens.PeakContext > expRootPeak {
+							expRootPeak = inv.Tokens.PeakContext
+						}
+					} else {
+						hasChild = true
+						if inv.Tokens.PeakContext > expChildPeak {
+							expChildPeak = inv.Tokens.PeakContext
+						}
 					}
 				}
 			}

@@ -57,7 +57,8 @@ type Transcript struct {
 	currentModel   string                  `json:"-"`
 	currentContext int64                   `json:"-"`
 	role           domain.AgentRole        `json:"-"`
-	parentThread   string                  `json:"-"`
+	ParentThread   string                  `json:"parent_thread,omitempty"`
+	sessions       []domain.SessionFact    `json:"-"`
 	latestTime     string                  `json:"-"`
 }
 
@@ -234,7 +235,7 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 		// that replay until the thread-settings event identifies this child thread.
 		if record.Type == "session_meta" && transcript.ThreadID != "" {
 			metadata, err := decodeSessionMetadata(record.Payload)
-			if err == nil && metadata.ID != "" && metadata.ID != transcript.ThreadID && transcript.parentThread != "" {
+			if err == nil && metadata.ID != "" && metadata.ID != transcript.ThreadID && transcript.ParentThread != "" {
 				inheritedHistory = true
 			}
 			continue
@@ -346,7 +347,7 @@ func readSessionMetadata(payload json.RawMessage, transcript *Transcript) error 
 	transcript.Source = metadata.SourceName
 	transcript.CodexVersion = metadata.CLIVersion
 	transcript.Provider = metadata.Provider
-	transcript.parentThread = metadata.ParentID
+	transcript.ParentThread = metadata.ParentID
 	if metadata.ParentID != "" {
 		transcript.role = domain.RoleUnassignedSubAgent
 	}
@@ -795,26 +796,27 @@ func (transcript *Transcript) finalizeFacts() {
 			completed := transcript.CompletedAt
 			completedAt = &completed
 		}
-		parent := transcript.parentThread
-		var parentID *string
-		if parent != "" {
-			parentID = &parent
-		}
 		turns := int64(len(usage.turns))
 		activeSeconds := int64(math.Round(float64(usage.activeMillis) / 1000))
 		compactions := int64(0)
 		userIterations := int64(0)
 		if len(transcript.Invocations) == 0 {
 			compactions = transcript.compactions
-			if transcript.parentThread == "" {
+			if transcript.ParentThread == "" {
 				userIterations = transcript.SteeringTurns
 			}
 		}
 		transcript.Invocations = append(transcript.Invocations, domain.InvocationFact{
-			ID: transcript.invocationID(), ParentID: parentID, Role: transcript.role, Model: model,
-			StartedAt: startedAt, CompletedAt: completedAt, ActiveDurationSeconds: activeSeconds, Turns: turns,
-			Tokens: usage.usage.ToInvocationTokens(), CostUSD: 0, Compactions: compactions,
-			UserIterations: userIterations,
+			Role:                  transcript.role,
+			Model:                 model,
+			StartedAt:             startedAt,
+			CompletedAt:           completedAt,
+			ActiveDurationSeconds: activeSeconds,
+			Turns:                 turns,
+			Tokens:                usage.usage.ToInvocationTokens(),
+			CostUSD:               0,
+			Compactions:           compactions,
+			UserIterations:        userIterations,
 		})
 	}
 	for name, stats := range transcript.toolUsage {
@@ -833,11 +835,22 @@ func (transcript *Transcript) finalizeFacts() {
 	}
 }
 
-func (transcript *Transcript) invocationID() string {
-	if transcript.ThreadID != "" {
-		return transcript.ThreadID
+// SessionFacts converts the transcript invocations, tools, and events into normalized SessionFacts.
+func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
+	owned := transcript.sessions
+	if owned == nil {
+		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, Invocations: transcript.Invocations}
+		if transcript.ParentThread != "" {
+			parent := transcript.ParentThread
+			session.ParentID = &parent
+		}
+		owned = []domain.SessionFact{session}
 	}
-	return transcript.SessionID
+	sessions, err := domain.SessionsFromFactsWithSource(domain.SourceCodex, owned, transcript.Tools, transcript.Events)
+	if err != nil {
+		return nil, fmt.Errorf("grouping Codex facts by session: %w", err)
+	}
+	return sessions, nil
 }
 
 // ToMetricsLedger maps one Codex thread into AgenticLens facts and uses the existing pure aggregation pipeline.
@@ -866,9 +879,9 @@ func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticke
 		value := transcript.CompletedAt
 		completedAt = &value
 	}
-	sessions, err := domain.SessionsFromFactsWithSource(domain.SourceCodex, transcript.Invocations, transcript.Tools, transcript.Events)
+	sessions, err := transcript.SessionFacts()
 	if err != nil {
-		return domain.AgenticMetricsLedger{}, fmt.Errorf("grouping Codex facts by session: %w", err)
+		return domain.AgenticMetricsLedger{}, err
 	}
 	facts := domain.AgenticFactLedger{
 		SchemaVersion: &version, TicketID: ticketIDPtr, TicketTitle: titlePtr, TicketType: ticketTypePtr,
@@ -890,8 +903,13 @@ func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
 	if len(transcripts) == 0 {
 		return Transcript{}, errors.New("cannot combine an empty Codex transcript set")
 	}
-	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64)}
+	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), sessions: []domain.SessionFact{}}
 	for index, transcript := range transcripts {
+		sessions, err := transcript.SessionFacts()
+		if err != nil {
+			return Transcript{}, fmt.Errorf("grouping Codex transcript %d: %w", index, err)
+		}
+		combined.sessions = append(combined.sessions, sessions...)
 		if index == 0 {
 			// Human steering belongs to the root; child prompts are delegation.
 			combined.SteeringTurns = transcript.SteeringTurns
