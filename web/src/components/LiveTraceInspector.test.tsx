@@ -133,6 +133,81 @@ describe('LiveTraceInspector Component', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('middle-truncates visible message and part IDs while titles and copied prompts retain full IDs', async () => {
+    vi.useFakeTimers();
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const messageId = 'ses_0192a83e-unique-x-304a';
+    const partId = 'part_1234567_middle_987654';
+    const trace: LiveTraceView = {
+      session_id: 'ses-truncation-test',
+      messages: [
+        {
+          id: messageId,
+          role: 'assistant',
+          content: 'Identifier truncation check',
+          timestamp: '2026-10-31T12:00:00Z',
+          parts: [
+            {
+              id: partId,
+              type: 'tool',
+              tool_name: 'bash',
+              status: 'completed',
+              is_error: false,
+              severity: 'none',
+              input_snippet: 'true',
+              output_snippet: '',
+            },
+          ],
+          total_tokens: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          cache_read_tokens: 0,
+          reasoning_tokens: 0,
+          context_tokens: 0,
+        },
+      ],
+      total_tool_calls: 1,
+      failed_tool_calls: 0,
+      recent_errors: [],
+      anomalies: [],
+    };
+
+    render(
+      <LiveTraceInspector
+        sessionNode={mockNode}
+        trace={trace}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    const messageToken = screen.getByText('ses_0192...x-304a');
+    expect(messageToken).toHaveAttribute('title', messageId);
+    const partToken = screen.getByText('part_123...987654');
+    expect(partToken).toHaveAttribute('title', partId);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /copy turn 1 debug prompt/i }));
+    });
+    expect(writeTextMock.mock.calls[0]?.[0]).toContain(`message \`${messageId}\``);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(partId) }));
+    });
+    expect(writeTextMock.mock.calls[1]?.[0]).toContain(`part \`${partId}\``);
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+    vi.useRealTimers();
+  });
+
   it('renders safely when trace contains zero messages or tool calls', () => {
     const emptyTrace: LiveTraceView = {
       session_id: 'ses-al20-coder',

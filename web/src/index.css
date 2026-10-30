@@ -4813,6 +4813,10 @@ th.num-col .th-content {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .turn-role-pill {
@@ -4983,6 +4987,10 @@ th.num-col .th-content {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
@@ -4995,6 +5003,11 @@ th.num-col .th-content {
 }
 
 .debug-id-token.mono {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 1;
   font-family: var(--font-mono);
 }
 

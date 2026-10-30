@@ -8,6 +8,24 @@ import type {
 
 export const HEALTHY_CEILING_TOKENS = 200_000;
 
+export function truncateMiddle(
+  str: string,
+  maxLeading = 8,
+  maxTrailing = 6
+): string {
+  const leading = Number.isFinite(maxLeading) && maxLeading >= 0
+    ? Math.floor(maxLeading)
+    : 8;
+  const trailing = Number.isFinite(maxTrailing) && maxTrailing >= 0
+    ? Math.floor(maxTrailing)
+    : 6;
+
+  if (str.length <= leading + trailing) {
+    return str;
+  }
+  return `${str.slice(0, leading)}...${trailing === 0 ? '' : str.slice(-trailing)}`;
+}
+
 export function formatTokensK(toks: number): string {
   if (!Number.isFinite(toks) || toks < 0) {
     return '0';
