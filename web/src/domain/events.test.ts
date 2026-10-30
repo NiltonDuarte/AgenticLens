@@ -8,6 +8,8 @@ import {
     type EventFact,
     type EventType,
     type SessionFact,
+    ledgerSkills,
+    ledgerTaskLinks,
 } from './types';
 describe('Event Telemetry and Schema Evolution Contracts', () => {
     describe('Legacy and Backward Compatibility Boundaries', () => {
@@ -28,6 +30,24 @@ describe('Event Telemetry and Schema Evolution Contracts', () => {
             const parsed: AgenticFactLedger = JSON.parse(legacyPayload);
             expect(parsed.ticket_id).toBe('AL-LEGACY');
             expect(parsed.sessions).toEqual([]);
+            expect(ledgerSkills(parsed)).toEqual([]);
+            expect(ledgerTaskLinks(parsed)).toEqual([]);
+        });
+        it('reads additive skill and task facts while keeping legacy omissions empty', () => {
+            const payload: AgenticFactLedger = {
+                schema_version: 4,
+                ticket_id: 'AL-51', ticket_title: null, ticket_type: 'feat',
+                started_at: null, completed_at: null, updated_at: '',
+                code: { lines_added: 0, lines_deleted: 0, test_lines_added: 0, test_lines_deleted: 0,
+                    prod_lines_added: 0, prod_lines_deleted: 0, files_changed: 0, sdlc_iterations: 0 },
+                sessions: [],
+                skills: [{ name: 'agentic-lens-dev', turn_index: 1, message_index: 0, caller_role: 'coder',
+                    timestamp: '2026-10-31T10:00:00Z', success: true }],
+                task_links: [{ subagent_type: 'tester', description: 'Run checks', parent_turn: 2,
+                    child_session_id: 'child-1', timestamp: '2026-10-31T10:01:00Z' }],
+            };
+            expect(ledgerSkills(payload)).toHaveLength(1);
+            expect(ledgerTaskLinks(payload)[0]?.child_session_id).toBe('child-1');
         });
         it('handles undefined tools and invocations in session helpers without throwing', () => {
             const sessionsWithoutArrays = [

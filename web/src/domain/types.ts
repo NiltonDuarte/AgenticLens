@@ -97,6 +97,26 @@ export interface CodeFacts {
   readonly sdlc_iterations: number;
 }
 
+export interface SkillFact {
+  readonly name: string;
+  readonly turn_index: number;
+  readonly message_index: number;
+  readonly caller_role: string;
+  readonly timestamp: string;
+  readonly success: boolean;
+  readonly error?: string;
+}
+
+export interface TaskLinkFact {
+  readonly subagent_type: string;
+  readonly description: string;
+  readonly parent_turn: number;
+  readonly child_session_id?: string;
+  readonly timestamp: string;
+  readonly duration_ms?: number;
+  readonly cost_usd?: number;
+}
+
 export interface AgenticFactLedger {
   readonly schema_version?: number;
   readonly migration?: MigrationInfo;
@@ -109,6 +129,16 @@ export interface AgenticFactLedger {
   readonly code: CodeFacts;
   readonly sessions: readonly SessionFact[];
   readonly anomalies?: readonly Anomaly[];
+  readonly skills?: readonly SkillFact[];
+  readonly task_links?: readonly TaskLinkFact[];
+}
+
+export function ledgerSkills(ledger: Pick<AgenticFactLedger, 'skills'> | undefined): readonly SkillFact[] {
+  return ledger?.skills ?? [];
+}
+
+export function ledgerTaskLinks(ledger: Pick<AgenticFactLedger, 'task_links'> | undefined): readonly TaskLinkFact[] {
+  return ledger?.task_links ?? [];
 }
 
 export interface WorkspaceDiagnostic {

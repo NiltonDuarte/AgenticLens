@@ -172,11 +172,15 @@ func runGenerate(args []string) {
 	var knownThreadIDs []string
 	userBySessionID := make(map[string]string)
 	var sessions []domain.SessionFact
+	var skills []domain.SkillFact
+	var taskLinks []domain.TaskLinkFact
 	var fallbackCode *domain.CodeFacts
 
 	if cachedFacts != nil {
 		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
 		sessions = append(sessions, cachedFacts.Sessions...)
+		skills = append(skills, cachedFacts.Skills...)
+		taskLinks = append(taskLinks, cachedFacts.TaskLinks...)
 		for _, s := range cachedFacts.Sessions {
 			userBySessionID[s.ID] = s.User
 		}
@@ -276,6 +280,7 @@ func runGenerate(args []string) {
 				}
 				if len(extractedSessions) > 0 {
 					freshSessions = extractedSessions
+					skills, taskLinks = opencode.ExtractSkillTaskFacts(extractedSessions)
 					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
 						activeStartedAt = dbStarted
 					}
@@ -395,6 +400,8 @@ func runGenerate(args []string) {
 		UpdatedAt:     updatedAtISO,
 		Code:          codeFacts,
 		Sessions:      sessions,
+		Skills:        skills,
+		TaskLinks:     taskLinks,
 	}
 
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)

@@ -481,7 +481,7 @@ func extractSchemaV1Sessions(
 			if (cleanTool == "read" || cleanTool == "grep" || cleanTool == "glob" || cleanTool == "webfetch") && cleanStat == "completed" {
 				isError = false
 			} else {
-				isError = stat == "error" || strings.Contains(out, "Traceback") || strings.HasPrefix(trimmedOut, "Error:") || strings.Contains(outPrefix, "Error:")
+				isError = cleanStat == "error" || cleanStat == "failed" || strings.Contains(out, "Traceback") || strings.HasPrefix(trimmedOut, "Error:") || strings.Contains(outPrefix, "Error:")
 			}
 
 			if isError {

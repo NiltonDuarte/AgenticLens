@@ -111,6 +111,21 @@ describe('Live Domain Models and Serialization Contracts', () => {
       expect(part.severity).toBe('none');
     });
 
+    it('deserializes skill and task delegation attributes while preserving legacy omission', () => {
+      const legacy = JSON.parse(JSON.stringify({ id: 'legacy', type: 'tool', status: 'completed', is_error: false })) as LivePartFact;
+      expect(legacy.skill_name).toBeUndefined();
+      expect(legacy.child_session_id).toBeUndefined();
+      expect(legacy.subagent_type).toBeUndefined();
+
+      const augmented = JSON.parse(JSON.stringify({
+        id: 'task-part', type: 'tool', tool_name: 'task', status: 'completed', is_error: false,
+        skill_name: 'agentic-lens-dev', subagent_type: 'coder', child_session_id: 'child-session',
+      })) as LivePartFact;
+      expect(augmented.skill_name).toBe('agentic-lens-dev');
+      expect(augmented.subagent_type).toBe('coder');
+      expect(augmented.child_session_id).toBe('child-session');
+    });
+
     it('deserializes failing tool part with error message and high severity', () => {
       const payload = JSON.stringify({
         id: 'part_fail_01',

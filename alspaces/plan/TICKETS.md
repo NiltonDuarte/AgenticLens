@@ -5,7 +5,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## In Progress
-
+- **AL-51**: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
+  - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
+  - **Phase**: Phase 8 (v2 Observability / Skills)
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: AL-52, AL-53, AL-54
+  - **File**: `alspaces/plan/to-do/AL-51 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
 
 ---
 
@@ -115,41 +121,33 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-50 audit and streamline debug prompt generation and sanitization.md`
 
-- **AL-51**: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
-  - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-52, AL-53, AL-54
-  - **File**: `alspaces/plan/to-do/AL-51 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
-
----
-
-## Blocked
-
 - **AL-52**: Rich Timeline Badges and Subagent Session Linking in Trace Views
   - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-51
+  - **Status**: Ready
+  - **Blocked by**: None
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-52 rich timeline badges and subagent session linking in trace views.md`
 
 - **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
   - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-51
+  - **Status**: Ready
+  - **Blocked by**: None
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-53 dedicated skills and subagents autopsy panel in ticket deep dive.md`
 
 - **AL-54**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
   - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-51
+  - **Status**: Ready
+  - **Blocked by**: None
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
+
+---
+
+## Blocked
 
 - **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
   - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests

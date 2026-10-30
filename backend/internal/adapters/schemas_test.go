@@ -11,6 +11,27 @@ import (
 	"agenticlens/internal/domain"
 )
 
+func TestAgenticFactLedgerDTOPreservesSkillAndTaskFacts(t *testing.T) {
+	version := domain.CurrentSchemaVersion
+	want := domain.AgenticFactLedger{
+		SchemaVersion: &version,
+		Skills:        []domain.SkillFact{{Name: "agentic-lens-dev", TurnIndex: 1, MessageIndex: 0, CallerRole: "coder", Timestamp: "2026-10-31T10:00:00Z", Success: true}},
+		TaskLinks:     []domain.TaskLinkFact{{SubagentType: "tester", Description: "Run tests", ParentTurn: 2, ChildSession: "child-1", Timestamp: "2026-10-31T10:01:00Z"}},
+	}
+	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(want))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	got := decoded.ToDomain()
+	if len(got.Skills) != 1 || got.Skills[0] != want.Skills[0] || len(got.TaskLinks) != 1 || got.TaskLinks[0] != want.TaskLinks[0] {
+		t.Fatalf("DTO round trip got %+v, want %+v", got, want)
+	}
+}
+
 func strPtr(s string) *string {
 	return &s
 }

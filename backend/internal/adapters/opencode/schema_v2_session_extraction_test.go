@@ -81,6 +81,60 @@ func TestSchemaV2SessionRuntimeEvidenceExtractsNormalizedFacts(t *testing.T) {
 	}
 }
 
+func TestSchemaV2ExtractsSkillAndTaskFactsWithExplicitChildSession(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	createSchemaV2TestDB(t, db)
+	if _, err := db.Exec(`INSERT INTO session_v2 VALUES('ses_child','ses_root','coder','mock-model','child',1793231971000,1793231971000)`); err != nil {
+		t.Fatal(err)
+	}
+	payload := `{"time":{"created":1793231970238,"completed":1793231970358},"agent":"build","model":{"id":"mock-model"},"content":[{"type":"tool","id":"skill-call","name":"skill","state":{"status":"completed","input":{"name":"agentic-lens-dev"},"content":[{"type":"text","text":"loaded"}],"time":{"created":1793231970288,"completed":1793231970300}}},{"type":"tool","id":"task-call","name":"task","state":{"status":"completed","input":{"subagent_type":"coder","description":"Implement AL-51"},"content":[{"type":"text","text":"{\"session_id\":\"ses_child\"}"}],"time":{"created":1793231970301,"completed":1793231970345}}}],"cost":0,"tokens":{"input":23,"output":11}}`
+	if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id='a1'`, payload); err != nil {
+		t.Fatal(err)
+	}
+	sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skills, tasks := opencode.ExtractSkillTaskFacts(sessions)
+	if len(skills) != 1 || skills[0].Name != "agentic-lens-dev" || skills[0].TurnIndex != 1 || skills[0].MessageIndex != 1 || skills[0].CallerRole != "build" || !skills[0].Success {
+		t.Fatalf("unexpected skill facts: %+v sessions=%+v", skills, sessions)
+	}
+	if len(tasks) != 1 || tasks[0].SubagentType != "coder" || tasks[0].Description != "Implement AL-51" || tasks[0].ParentTurn != 1 || tasks[0].ChildSession != "ses_child" {
+		t.Fatalf("unexpected task facts: %+v", tasks)
+	}
+}
+
+func TestSchemaV2MalformedOrIncompleteSkillTaskInputsPreserveOtherFacts(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	createSchemaV2TestDB(t, db)
+	payload := `{"time":{"created":1793231970238,"completed":1793231970358},"agent":"build","model":{"id":"mock-model"},"content":[{"type":"tool","id":"bad-skill","name":"skill","state":{"status":"completed","input":"{bad"}},{"type":"tool","id":"missing-name","name":"skill","state":{"status":"completed","input":{}}},{"type":"tool","id":"partial-task","name":"task","state":{"status":"completed","input":{"subagent_type":"coder"}}}],"cost":0,"tokens":{"input":23,"output":11}}`
+	if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id='a1'`, payload); err != nil {
+		t.Fatal(err)
+	}
+	sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) != 1 || len(sessions[0].Invocations) == 0 || len(sessions[0].Events) < 4 {
+		t.Fatalf("optional input handling lost session, invocation, or event facts: %+v", sessions)
+	}
+	skills, tasks := opencode.ExtractSkillTaskFacts(sessions)
+	if len(skills) != 0 {
+		t.Errorf("malformed or unnamed skill input should be skipped, got %+v", skills)
+	}
+	if len(tasks) != 1 || tasks[0].SubagentType != "coder" || tasks[0].Description != "" {
+		t.Errorf("expected task fact to preserve only available fields, got %+v", tasks)
+	}
+}
+
 func TestSchemaV2SessionEmptySessionProducesEmptyFacts(t *testing.T) {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
