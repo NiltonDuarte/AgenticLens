@@ -228,15 +228,7 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error grouping Codex session facts: %v\n", factErr)
 			os.Exit(1)
 		}
-		for i := range freshCodex {
-			if freshCodex[i].User == "" || freshCodex[i].User == "unknown" {
-				if u, ok := userBySessionID[freshCodex[i].ID]; ok && strings.TrimSpace(u) != "" {
-					freshCodex[i].User = strings.TrimSpace(u)
-				} else if strings.TrimSpace(currentUser) != "" {
-					freshCodex[i].User = strings.TrimSpace(currentUser)
-				}
-			}
-		}
+		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
 		freshSessions = freshCodex
 		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
 			activeStartedAt = &combined.StartedAt
@@ -437,6 +429,12 @@ func runGenerate(args []string) {
 		fmt.Printf("Metrics table successfully updated in %s\n", *appendFlag)
 	} else if *jsonOutputFlag == "" && !*anomaliesFlag {
 		fmt.Println(tableMD)
+	}
+}
+
+func resolveCodexSessionUsers(fresh []domain.SessionFact, existingUsers map[string]string, gitUser string) {
+	for i := range fresh {
+		fresh[i].User = git.ResolveSessionUser(fresh[i].User, existingUsers[fresh[i].ID], gitUser)
 	}
 }
 
