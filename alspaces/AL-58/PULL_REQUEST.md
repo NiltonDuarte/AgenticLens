@@ -5,6 +5,7 @@
 - Detect supported OpenCode storage families from complete SQLite table and column sets, with actionable errors for unsupported, partial, and mixed schemas.
 - Extract v2 sessions, messages, tools, and telemetry into the existing normalized facts while preserving v1 behavior and read-only database access.
 - Separate shared dispatch and detection from v1/v2-specific extraction and resolution files; versioned filenames, symbols, diagnostics, and tests identify both family and responsibility.
+- Remove redundant v1 schema metadata queries and run synthetic schema rejection tests against parallel, in-memory SQLite databases.
 - Add isolated per-version and combined compatibility workflows, runtime-derived fixtures, and setup/architecture documentation.
 
 ## Context
