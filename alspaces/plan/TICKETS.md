@@ -75,14 +75,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-45 debug id token overflow truncation and containment.md`
 
-- **AL-46**: Collapsible Failed Tool Calls Section with Default-Collapsed State in Live Inspector
-  - **Subsystem**: Presentation / Web / Components / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-46 collapsible failed tool calls section in live inspector.md`
-
 - **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
   - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
