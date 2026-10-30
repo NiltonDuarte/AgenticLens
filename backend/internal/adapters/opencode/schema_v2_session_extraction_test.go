@@ -1,0 +1,180 @@
+package opencode_test
+
+import (
+	"database/sql"
+	"testing"
+
+	"agenticlens/internal/adapters/opencode"
+	"agenticlens/internal/domain"
+	_ "modernc.org/sqlite"
+)
+
+func createSchemaV2TestDB(t *testing.T, db *sql.DB) {
+	t.Helper()
+	_, err := db.Exec(`CREATE TABLE session_v2(id TEXT PRIMARY KEY,parent_id TEXT,agent TEXT,model TEXT,title TEXT,time_created INTEGER,time_updated INTEGER);
+CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq INTEGER,time_created INTEGER,time_updated INTEGER,data TEXT);
+INSERT INTO session_v2 VALUES('ses_root',NULL,'build','{"id":"mock-model","providerID":"al58local"}','AL-58 v2',1793231969869,1793231970472);
+INSERT INTO session_message VALUES
+('u','ses_root','user',5,1793231970186,1793231970189,'{"time":{"created":1793231970186},"text":"\"Read marker.txt and report its contents.\""}'),
+('a1','ses_root','assistant',6,1793231970238,1793231970363,'{"time":{"created":1793231970238,"completed":1793231970358},"agent":"build","model":{"id":"mock-model","providerID":"al58local"},"content":[{"type":"tool","id":"call1","name":"read","state":{"status":"completed","input":{"path":"marker.txt"},"content":[{"type":"text","text":"found marker"}],"time":{"created":1793231970288,"completed":1793231970345}}}],"cost":0,"tokens":{"input":23,"output":11,"reasoning":0,"cache":{"read":0,"write":0}}}'),
+('a2','ses_root','assistant',13,1793231970413,1793231970476,'{"time":{"created":1793231970413,"completed":1793231970472},"model":{"id":"mock-model","providerID":"al58local"},"content":[{"type":"text","text":"AL-58 deterministic runtime reply."}],"cost":0,"tokens":{"input":23,"output":11,"reasoning":0,"cache":{"read":0,"write":0}}}'),
+('i','ses_root','idle',18,1793231970482,1793231970485,'{"time":{"created":1793231970482},"outcome":"succeeded"}');`)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSchemaV2SessionRuntimeEvidenceExtractsNormalizedFacts(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	createSchemaV2TestDB(t, db)
+	id, err := opencode.ResolveActiveRootSession(db, "", "AL-58", "")
+	if err != nil || id == nil || *id != "ses_root" {
+		t.Fatalf("resolve=%v err=%v", id, err)
+	}
+	invs, tools, events, start, end, err := opencode.ExtractFacts(db, []string{"ses_root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(invs) != 1 || invs[0].Model != "mock-model" || invs[0].Tokens.Input != 46 || invs[0].Tokens.Output != 22 || invs[0].CostUSD != 0 {
+		t.Fatalf("unexpected v2 invocation: %+v", invs)
+	}
+	if start == nil || end == nil || len(tools) != 1 || tools[0].Name != "read" || tools[0].Calls != 1 || tools[0].Errors != 0 {
+		t.Fatalf("unexpected bounds/tools: %v %v %+v", start, end, tools)
+	}
+	turns, err := opencode.ExtractSteeringTurns(db, []string{"ses_root"})
+	if err != nil || turns != 1 {
+		t.Fatalf("user turns=%d err=%v", turns, err)
+	}
+	var assistant, tool int
+	for _, e := range events {
+		if e.EventType == domain.EventTypeTurnMessage && e.MessageID != nil && *e.MessageID != "u" {
+			assistant++
+		}
+		if e.EventType == domain.EventTypeToolCall && e.ToolName != nil && *e.ToolName == "read" && e.Status == "completed" {
+			tool++
+			if e.ToolInput == nil || *e.ToolInput != `{"path":"marker.txt"}` || e.ToolOutput == nil || !containsSubstring(*e.ToolOutput, "found marker") {
+				t.Fatalf("tool input/result were not normalized: %+v", e)
+			}
+		}
+	}
+	if assistant != 2 || tool != 1 {
+		t.Fatalf("assistant=%d successful read=%d events=%+v", assistant, tool, events)
+	}
+	var userText, assistantText string
+	for _, event := range events {
+		if event.MessageID == nil {
+			continue
+		}
+		if *event.MessageID == "u" && event.PromptContent != nil {
+			userText = *event.PromptContent
+		}
+		if *event.MessageID == "a2" && event.PromptContent != nil {
+			assistantText = *event.PromptContent
+		}
+	}
+	if userText != `"Read marker.txt and report its contents."` || assistantText != "AL-58 deterministic runtime reply." {
+		t.Fatalf("runtime message text was not preserved exactly: user=%q assistant=%q", userText, assistantText)
+	}
+}
+
+func TestSchemaV2SessionEmptySessionProducesEmptyFacts(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	createSchemaV2TestDB(t, db)
+	if _, err := db.Exec(`INSERT INTO session_v2 VALUES('empty',NULL,'build','mock-model','AL-58 empty',1793231971000,1793231971000)`); err != nil {
+		t.Fatal(err)
+	}
+	invs, tools, events, start, end, err := opencode.ExtractFacts(db, []string{"empty"}, "tester", nil)
+	if err != nil || len(invs) != 1 || len(tools) != 0 || len(events) != 0 || start == nil || end == nil {
+		t.Fatalf("empty session facts inv=%+v tools=%+v events=%+v bounds=%v/%v err=%v", invs, tools, events, start, end, err)
+	}
+}
+
+func TestSchemaV2SessionMalformedJSONAndUnknownMessageVariantFailWithContext(t *testing.T) {
+	for _, tc := range []struct {
+		name, kind, data, want string
+	}{
+		{"malformed_json", "user", "{", "OpenCode schema family v2: decoding user message bad in session ses_root"},
+		{"unknown_variant", "system", `{"text":"unexpected"}`, `OpenCode schema family v2: unsupported message type "system"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, err := sql.Open("sqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			createSchemaV2TestDB(t, db)
+			if _, err := db.Exec(`INSERT INTO session_message VALUES('bad','ses_root',?,20,1793231970500,1793231970500,?)`, tc.kind, tc.data); err != nil {
+				t.Fatal(err)
+			}
+			_, _, _, _, _, err = opencode.ExtractFacts(db, []string{"ses_root"}, "", nil)
+			if err == nil || !containsSubstring(err.Error(), tc.want) {
+				t.Fatalf("expected contextual %q error, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
+func TestSchemaV2SessionToolPendingRunningAndUnknownStatusesFailClosed(t *testing.T) {
+	for _, status := range []string{"pending", "running", "mystery"} {
+		t.Run(status, func(t *testing.T) {
+			db, err := sql.Open("sqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			createSchemaV2TestDB(t, db)
+			payload := `{"time":{"created":1793231970238},"model":{"id":"mock-model"},"content":[{"type":"tool","id":"call1","name":"read","state":{"status":"` + status + `","input":{"path":"marker.txt"}}}]}`
+			if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id='a1'`, payload); err != nil {
+				t.Fatal(err)
+			}
+			_, _, _, _, _, err = opencode.ExtractFacts(db, []string{"ses_root"}, "", nil)
+			if err == nil || !containsSubstring(err.Error(), `OpenCode schema family v2: unsupported tool status "`+status+`"`) {
+				t.Fatalf("status %q should not claim success, got %v", status, err)
+			}
+		})
+	}
+}
+
+func TestSchemaV2SessionTiedTimestampsPreserveSourceAndSameMessageOrder(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	createSchemaV2TestDB(t, db)
+	const tie = int64(1793231970238)
+	if _, err := db.Exec(`UPDATE session_message SET time_created=?,data=CASE id WHEN 'u' THEN '{"time":{"created":1793231970238},"text":"prompt"}' WHEN 'a1' THEN '{"time":{"created":1793231970238,"completed":1793231970238},"model":{"id":"mock-model"},"content":[{"type":"tool","id":"call1","name":"read","state":{"status":"completed","input":{},"content":[]}}]}' ELSE data END WHERE id IN ('u','a1')`, tie); err != nil {
+		t.Fatal(err)
+	}
+	_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_root"}, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tied []string
+	for _, event := range events {
+		if event.MessageID != nil && (*event.MessageID == "u" || *event.MessageID == "a1") {
+			messageID := ""
+			if event.MessageID != nil {
+				messageID = *event.MessageID
+			}
+			tied = append(tied, string(event.EventType)+":"+messageID)
+		}
+	}
+	want := []string{"turn_message:u", "turn_message:a1", "tool_call:a1"}
+	if len(tied) != len(want) {
+		t.Fatalf("same-time source order not preserved: %v", tied)
+	}
+	for i := range want {
+		if tied[i] != want[i] {
+			t.Fatalf("same-time source order=%v, want %v", tied, want)
+		}
+	}
+}

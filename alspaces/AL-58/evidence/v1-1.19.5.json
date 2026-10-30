@@ -1,0 +1,317 @@
+{
+  "runtime": "OpenCode 1.19.5",
+  "platform": "linux x64",
+  "source": "Runtime-produced data from an isolated run using a local deterministic OpenAI-compatible provider",
+  "database": "<isolated-database>",
+  "schema": {
+    "session": {
+      "columns": [
+        "id",
+        "project_id",
+        "workspace_id",
+        "parent_id",
+        "slug",
+        "directory",
+        "path",
+        "title",
+        "version",
+        "share_url",
+        "summary_additions",
+        "summary_deletions",
+        "summary_files",
+        "summary_diffs",
+        "metadata",
+        "cost",
+        "tokens_input",
+        "tokens_output",
+        "tokens_reasoning",
+        "tokens_cache_read",
+        "tokens_cache_write",
+        "revert",
+        "permission",
+        "agent",
+        "model",
+        "time_created",
+        "time_updated",
+        "time_compacting",
+        "time_archived"
+      ],
+      "create_sql": "CREATE TABLE `session` (\n          `id` text PRIMARY KEY,\n          `project_id` text NOT NULL,\n          `workspace_id` text,\n          `parent_id` text,\n          `slug` text NOT NULL,\n          `directory` text NOT NULL,\n          `path` text,\n          `title` text NOT NULL,\n          `version` text NOT NULL,\n          `share_url` text,\n          `summary_additions` integer,\n          `summary_deletions` integer,\n          `summary_files` integer,\n          `summary_diffs` text,\n          `metadata` text,\n          `cost` real DEFAULT 0 NOT NULL,\n          `tokens_input` integer DEFAULT 0 NOT NULL,\n          `tokens_output` integer DEFAULT 0 NOT NULL,\n          `tokens_reasoning` integer DEFAULT 0 NOT NULL,\n          `tokens_cache_read` integer DEFAULT 0 NOT NULL,\n          `tokens_cache_write` integer DEFAULT 0 NOT NULL,\n          `revert` text,\n          `permission` text,\n          `agent` text,\n          `model` text,\n          `time_created` integer NOT NULL,\n          `time_updated` integer NOT NULL,\n          `time_compacting` integer,\n          `time_archived` integer,\n          CONSTRAINT `fk_session_project_id_project_id_fk` FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON DELETE CASCADE\n        )",
+      "runtime_table_row_count": 1
+    },
+    "message": {
+      "columns": [
+        "id",
+        "session_id",
+        "time_created",
+        "time_updated",
+        "data"
+      ],
+      "create_sql": "CREATE TABLE `message` (\n          `id` text PRIMARY KEY,\n          `session_id` text NOT NULL,\n          `time_created` integer NOT NULL,\n          `time_updated` integer NOT NULL,\n          `data` text NOT NULL,\n          CONSTRAINT `fk_message_session_id_session_id_fk` FOREIGN KEY (`session_id`) REFERENCES `session`(`id`) ON DELETE CASCADE\n        )",
+      "runtime_table_row_count": 3
+    },
+    "part": {
+      "columns": [
+        "id",
+        "message_id",
+        "session_id",
+        "time_created",
+        "time_updated",
+        "data"
+      ],
+      "create_sql": "CREATE TABLE `part` (\n          `id` text PRIMARY KEY,\n          `message_id` text NOT NULL,\n          `session_id` text NOT NULL,\n          `time_created` integer NOT NULL,\n          `time_updated` integer NOT NULL,\n          `data` text NOT NULL,\n          CONSTRAINT `fk_part_message_id_message_id_fk` FOREIGN KEY (`message_id`) REFERENCES `message`(`id`) ON DELETE CASCADE\n        )",
+      "runtime_table_row_count": 7
+    }
+  },
+  "session": {
+    "id": "ses_v1_1.19.5_001",
+    "project_id": "global",
+    "workspace_id": null,
+    "parent_id": null,
+    "slug": "proud-panda",
+    "directory": "<isolated-project>",
+    "path": "<isolated-project>",
+    "title": "AL-58 v1.19.5 usage evidence",
+    "version": "1.19.5",
+    "share_url": null,
+    "summary_additions": 0,
+    "summary_deletions": 0,
+    "summary_files": 0,
+    "summary_diffs": null,
+    "metadata": null,
+    "cost": 0.0,
+    "tokens_input": 46,
+    "tokens_output": 22,
+    "tokens_reasoning": 0,
+    "tokens_cache_read": 0,
+    "tokens_cache_write": 0,
+    "revert": null,
+    "permission": "[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]",
+    "agent": "build",
+    "model": "{\"id\":\"mock-model\",\"providerID\":\"al58local\",\"variant\":\"default\"}",
+    "time_created": 1793231953143,
+    "time_updated": 1793231955229,
+    "time_compacting": null,
+    "time_archived": null
+  },
+  "messages": [
+    {
+      "id": "msg_v1_1.19.5_001",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231953229,
+      "time_updated": 1793231955127,
+      "data": {
+        "role": "user",
+        "time": {
+          "created": 1793231953229
+        },
+        "agent": "build",
+        "model": {
+          "providerID": "al58local",
+          "modelID": "mock-model"
+        },
+        "summary": {
+          "diffs": []
+        }
+      }
+    },
+    {
+      "id": "msg_v1_1.19.5_002",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231954056,
+      "time_updated": 1793231955091,
+      "data": {
+        "parentID": "msg_184f41d4d001BzZhelrzE45X17",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "<isolated-project>",
+          "root": "/"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 34,
+          "input": 23,
+          "output": 11,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 0
+          }
+        },
+        "modelID": "mock-model",
+        "providerID": "al58local",
+        "time": {
+          "created": 1793231954056,
+          "completed": 1793231955088
+        },
+        "finish": "tool-calls"
+      }
+    },
+    {
+      "id": "msg_v1_1.19.5_003",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231955101,
+      "time_updated": 1793231955188,
+      "data": {
+        "parentID": "msg_184f41d4d001BzZhelrzE45X17",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "<isolated-project>",
+          "root": "/"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 34,
+          "input": 23,
+          "output": 11,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 0
+          }
+        },
+        "modelID": "mock-model",
+        "providerID": "al58local",
+        "time": {
+          "created": 1793231955101,
+          "completed": 1793231955187
+        },
+        "finish": "stop"
+      }
+    }
+  ],
+  "parts": [
+    {
+      "id": "prt_v1_1_19_5_001",
+      "message_id": "msg_v1_1.19.5_001",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231953249,
+      "time_updated": 1793231953252,
+      "data": {
+        "type": "text",
+        "text": "\"Read marker.txt and report its contents.\""
+      }
+    },
+    {
+      "id": "prt_v1_1_19_5_002",
+      "message_id": "msg_v1_1.19.5_002",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231954980,
+      "time_updated": 1793231954983,
+      "data": {
+        "type": "step-start"
+      }
+    },
+    {
+      "id": "prt_v1_1_19_5_003",
+      "message_id": "msg_v1_1.19.5_002",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231954985,
+      "time_updated": 1793231955067,
+      "data": {
+        "type": "tool",
+        "tool": "read",
+        "callID": "call_al58_read_1",
+        "state": {
+          "status": "completed",
+          "input": {
+            "filePath": "marker.txt"
+          },
+          "output": "<path><isolated-project>/marker.txt</path>\n<type>file</type>\n<content>\n1: AL-58 isolated runtime evidence marker.\n\n(End of file - total 1 lines)\n</content>",
+          "metadata": {
+            "preview": "AL-58 isolated runtime evidence marker.",
+            "truncated": false,
+            "loaded": [],
+            "display": {
+              "type": "file",
+              "path": "<isolated-project>/marker.txt",
+              "text": "AL-58 isolated runtime evidence marker.",
+              "lineStart": 1,
+              "lineEnd": 1,
+              "totalLines": 1,
+              "truncated": false
+            }
+          },
+          "title": "<isolated-project>/marker.txt",
+          "time": {
+            "start": 1793231955006,
+            "end": 1793231955064
+          }
+        }
+      }
+    },
+    {
+      "id": "prt_v1_1_19_5_004",
+      "message_id": "msg_v1_1.19.5_002",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231955076,
+      "time_updated": 1793231955077,
+      "data": {
+        "reason": "tool-calls",
+        "type": "step-finish",
+        "tokens": {
+          "total": 34,
+          "input": 23,
+          "output": 11,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 0
+          }
+        },
+        "cost": 0
+      }
+    },
+    {
+      "id": "prt_v1_1_19_5_005",
+      "message_id": "msg_v1_1.19.5_003",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231955160,
+      "time_updated": 1793231955164,
+      "data": {
+        "type": "step-start"
+      }
+    },
+    {
+      "id": "prt_v1_1_19_5_006",
+      "message_id": "msg_v1_1.19.5_003",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231955167,
+      "time_updated": 1793231955178,
+      "data": {
+        "type": "text",
+        "text": "AL-58 deterministic runtime reply.",
+        "time": {
+          "start": 1793231955167,
+          "end": 1793231955175
+        }
+      }
+    },
+    {
+      "id": "prt_v1_1_19_5_007",
+      "message_id": "msg_v1_1.19.5_003",
+      "session_id": "ses_v1_1.19.5_001",
+      "time_created": 1793231955181,
+      "time_updated": 1793231955182,
+      "data": {
+        "reason": "stop",
+        "type": "step-finish",
+        "tokens": {
+          "total": 34,
+          "input": 23,
+          "output": 11,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 0
+          }
+        },
+        "cost": 0
+      }
+    }
+  ]
+}

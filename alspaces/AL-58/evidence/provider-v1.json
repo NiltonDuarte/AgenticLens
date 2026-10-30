@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "al58local/mock-model",
+  "provider": {
+    "al58local": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "AL-58 local deterministic provider",
+      "options": {
+        "baseURL": "http://127.0.0.1:8766/v1",
+        "apiKey": "al58-local-only"
+      },
+      "models": {
+        "mock-model": {
+          "name": "AL-58 mock model",
+          "tool_call": true,
+          "limit": { "context": 8192, "output": 1024 }
+        }
+      }
+    }
+  }
+}

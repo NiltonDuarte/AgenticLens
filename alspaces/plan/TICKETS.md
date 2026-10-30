@@ -6,7 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-(None)
 
 ---
 
@@ -175,14 +174,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-57 nullable cost values across telemetry ledger aggregates and ui.md`
-
-- **AL-58**: Support OpenCode v1 and v2 Concurrently with Dual-Version Test Environments
-  - **Subsystem**: OpenCode / Domain / Adapters / CLI / Config / Tests / Documentation
-  - **Phase**: Phase 8 (OpenCode v2 Compatibility)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-58 support opencode v1 and v2 concurrently with dual version test environments.md`
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests

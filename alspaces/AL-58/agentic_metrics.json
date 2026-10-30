@@ -1,0 +1,636 @@
+{
+  "schema_version": 4,
+  "ticket_id": "AL-58",
+  "ticket_title": "Support OpenCode v1 and v2 concurrently with dual version test environments",
+  "ticket_type": "feat",
+  "started_at": "2026-10-28T23:37:29.387Z",
+  "completed_at": "2026-10-30T23:15:43.361Z",
+  "updated_at": "2026-10-30T23:15:44.401322+00:00",
+  "code": {
+    "lines_added": 3593,
+    "lines_deleted": 2392,
+    "test_lines_added": 2099,
+    "test_lines_deleted": 1559,
+    "prod_lines_added": 1494,
+    "prod_lines_deleted": 833,
+    "files_changed": 20,
+    "sdlc_iterations": 33
+  },
+  "sessions": [
+    {
+      "id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-28T23:37:30.752Z",
+          "completed_at": "2026-10-30T23:15:43.361Z",
+          "active_duration_seconds": 4940,
+          "turns": 22,
+          "tokens": {
+            "input": 1383053,
+            "output": 150563,
+            "cache_read": 48882048,
+            "reasoning": 82967,
+            "peak_context": 244926
+          },
+          "cost_usd": 0,
+          "compactions": 2,
+          "user_iterations": 33
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 191,
+          "errors": 18
+        },
+        {
+          "name": "followup_task",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "list_agents",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 7,
+          "errors": 0
+        },
+        {
+          "name": "sleep",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "spawn_agent",
+          "calls": 9,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 59,
+          "errors": 0
+        },
+        {
+          "name": "wait_agent",
+          "calls": 11,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 7,
+            "context_tokens": 206011,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 244926,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 7,
+            "context_tokens": 162206,
+            "threshold": "160000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f05-538a-7281-81a4-dc84f772db09",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T22:54:13.508Z",
+          "completed_at": "2026-10-30T22:54:43.063Z",
+          "active_duration_seconds": 30,
+          "turns": 1,
+          "tokens": {
+            "input": 52822,
+            "output": 2566,
+            "cache_read": 1044352,
+            "reasoning": 1053,
+            "peak_context": 222943
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 3,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "context_tokens": 214015,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "planner",
+            "context_tokens": 222943,
+            "threshold": "200000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f06-42a8-7a81-a1d8-3b190bea9232",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T22:55:14.713Z",
+          "completed_at": "2026-10-30T22:56:25.951Z",
+          "active_duration_seconds": 71,
+          "turns": 1,
+          "tokens": {
+            "input": 19833,
+            "output": 4561,
+            "cache_read": 3812736,
+            "reasoning": 1165,
+            "peak_context": 229369
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 10,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "context_tokens": 218795,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder",
+            "context_tokens": 229369,
+            "threshold": "200000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f07-70e2-7dd2-9c47-fc9067d01895",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T22:56:32.106Z",
+          "completed_at": "2026-10-30T22:57:28.246Z",
+          "active_duration_seconds": 56,
+          "turns": 1,
+          "tokens": {
+            "input": 9083,
+            "output": 1445,
+            "cache_read": 1327616,
+            "reasoning": 693,
+            "peak_context": 225257
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 4,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "token_delta": 221584,
+            "context_tokens": 221584,
+            "threshold": "80000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "context_tokens": 221584,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "tester",
+            "context_tokens": 225257,
+            "threshold": "200000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f08-5d1d-7953-801b-b65bce910e45",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T22:57:32.585Z",
+          "completed_at": "2026-10-30T22:57:58.348Z",
+          "active_duration_seconds": 26,
+          "turns": 1,
+          "tokens": {
+            "input": 10435,
+            "output": 1959,
+            "cache_read": 1109120,
+            "reasoning": 996,
+            "peak_context": 226656
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 3,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "token_delta": 219855,
+            "context_tokens": 219855,
+            "threshold": "80000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "context_tokens": 219855,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "reviewer",
+            "context_tokens": 226656,
+            "threshold": "200000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f0f-90b0-7991-af00-6c3492e8cca7",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:05:24.538Z",
+          "completed_at": "2026-10-30T23:06:13.583Z",
+          "active_duration_seconds": 49,
+          "turns": 1,
+          "tokens": {
+            "input": 55398,
+            "output": 5096,
+            "cache_read": 793216,
+            "reasoning": 1643,
+            "peak_context": 244708
+          },
+          "cost_usd": 0,
+          "compactions": 1,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "context_tokens": 237969,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "planner",
+            "context_tokens": 244708,
+            "threshold": "200000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f11-0057-71e2-8231-11015abadff6",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:06:58.667Z",
+          "completed_at": "2026-10-30T23:08:01.686Z",
+          "active_duration_seconds": 63,
+          "turns": 1,
+          "tokens": {
+            "input": 38471,
+            "output": 5938,
+            "cache_read": 822528,
+            "reasoning": 1273,
+            "peak_context": 244529
+          },
+          "cost_usd": 0,
+          "compactions": 1,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 14,
+          "errors": 1
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 0,
+            "token_delta": 244529,
+            "context_tokens": 244529,
+            "threshold": "80000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 0,
+            "context_tokens": 244529,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder",
+            "context_tokens": 244529,
+            "threshold": "200000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f12-1023-7a52-81c8-42d8335bd743",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:08:08.254Z",
+          "completed_at": "2026-10-30T23:11:36.901Z",
+          "active_duration_seconds": 127,
+          "turns": 2,
+          "tokens": {
+            "input": 45427,
+            "output": 4298,
+            "cache_read": 1442688,
+            "reasoning": 1021,
+            "peak_context": 245040
+          },
+          "cost_usd": 0,
+          "compactions": 1,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 14,
+          "errors": 1
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "context_tokens": 244810,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "tester",
+            "context_tokens": 245040,
+            "threshold": "200000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f13-5529-71c3-be59-36e39f8727f0",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:09:31.434Z",
+          "completed_at": "2026-10-30T23:10:40.939Z",
+          "active_duration_seconds": 70,
+          "turns": 1,
+          "tokens": {
+            "input": 31261,
+            "output": 5936,
+            "cache_read": 988160,
+            "reasoning": 1564,
+            "peak_context": 246104
+          },
+          "cost_usd": 0,
+          "compactions": 1,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 11,
+          "errors": 1
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 0,
+            "token_delta": 246104,
+            "context_tokens": 246104,
+            "threshold": "80000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 0,
+            "context_tokens": 246104,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "coder",
+            "context_tokens": 246104,
+            "threshold": "200000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f15-5f2f-7b20-9e21-faadb97f658d",
+      "parent_id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:11:44.999Z",
+          "completed_at": "2026-10-30T23:12:01.450Z",
+          "active_duration_seconds": 16,
+          "turns": 1,
+          "tokens": {
+            "input": 10799,
+            "output": 1766,
+            "cache_read": 189824,
+            "reasoning": 837,
+            "peak_context": 53306
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}

@@ -2,7 +2,10 @@
 
 AgenticLens is a developer telemetry and observability platform for OpenCode and Codex workflows. It provides real-time monitoring for OpenCode and offline telemetry ingestion from either harness.
 
-OpenCode traces are extracted from its local SQLite database (`~/.local/share/opencode/opencode.db`). Codex traces are read from rollout files beneath a Codex home directory (`~/.codex`). These are independent sources; selecting one never falls back to the other.
+OpenCode traces are extracted read-only from its local SQLite database (`~/.local/share/opencode/opencode.db`). The supported evidence window is OpenCode v1.19.5 (`session`/`message`/`part`) and npm `@opencode/cli` v2.2.0 (`session_v2`/`session_message`), whose `latest` tag was resolved on 2026-10-29. AgenticLens validates the complete required table and column set and automatically selects exactly one schema family. Partial, mixed, malformed, and unknown schemas fail with diagnostics; schema detection does not identify the exact runtime release. `--db-path` remains the explicit path override and the default OpenCode database path remains unchanged.
+
+Compatibility workflows are `make opencode-compat-v1`, `make opencode-compat-v2`, and `make opencode-compat`. They require the corresponding runtime (`OPENCODE_V1_BIN` / `OPENCODE_V2_BIN` can select explicit binaries) and a local deterministic provider already running. The workflows create isolated temporary HOME, XDG data/config/state roots, project roots, and absolute `OPENCODE_DB` paths, then remove them at exit. Ordinary adapter tests use deterministic SQLite fixtures and need no OpenCode installation. Evidence fixtures are sanitized runtime-produced records, not synthesized runtime integration runs. Nonzero native-provider pricing, imported-history extraction after migration, partial migration states, duplicate handling, and releases outside v1.19.5/v2.2.0 are not verified.
+Codex traces are read from rollout files beneath a Codex home directory (`~/.codex`). OpenCode and Codex are independent sources; selecting one never falls back to the other.
 
 This manual serves as the comprehensive, authoritative guide for engineering teams, platform architects, and autonomous coding agents adopting AgenticLens in OpenCode projects.
 
@@ -194,7 +197,7 @@ Open `http://localhost:8085` in your browser to view the Fleet Overview and Live
 
 ## 2. Agnostic Adoption for OpenCode Projects
 
-The live SSE streaming service reads OpenCode's local SQLite database (`session`, `message`, and `part` tables). Offline generation also supports Codex rollout files. Choose a source explicitly or configure the machine-local default; the selected source is never silently changed after a read or discovery failure.
+Live SSE streaming reads OpenCode's local SQLite database and supports the evidence-backed v1 and v2 schema families described above, rejecting layouts it cannot identify. Offline generation also supports Codex rollout files. Choose a source explicitly or configure the machine-local default; the selected source is never silently changed after a read or discovery failure.
 
 While tightly coupled to OpenCode at the platform layer, AgenticLens imposes zero engineering methodology constraints on adopting teams. Within OpenCode, it is completely agnostic to how teams structure their development workflows.
 
