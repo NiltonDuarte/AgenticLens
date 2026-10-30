@@ -6,14 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **AL-45**: Debug ID Token Overflow Truncation and Responsive Layout in Message Header
-  - **Subsystem**: Presentation / Web / CSS / Components / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-45 debug id token overflow truncation and containment.md`
-
 ---
 
 ## Ready
@@ -73,14 +65,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-44 localized timestamp and timezone header in live trace inspector.md`
-
-- **AL-45**: Debug ID Token Overflow Truncation and Responsive Layout in Message Header
-  - **Subsystem**: Presentation / Web / CSS / Components / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-45 debug id token overflow truncation and containment.md`
 
 - **AL-46**: Collapsible Failed Tool Calls Section with Default-Collapsed State in Live Inspector
   - **Subsystem**: Presentation / Web / Components / Tests
