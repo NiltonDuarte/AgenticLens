@@ -296,7 +296,7 @@ describe('FailedToolAlertCard Component', () => {
       const copiedText = writeTextMock.mock.calls[0][0];
       expect(copiedText).toContain('# Agent Execution Issue: Tool execution failure on `git`');
       expect(copiedText).toContain('During turn 5 of session `unknown-session`');
-      expect(copiedText).toContain('the agent encountered an execution failure while invoking `git`');
+      expect(copiedText).toContain('```\nThe agent encountered an execution failure while invoking `git`.\n```');
       expect(copiedText).toContain('part `part-single-02`');
       expect(copiedText).toContain('fatal: repository not found');
       expect(copyBtn).toHaveTextContent('Copied');

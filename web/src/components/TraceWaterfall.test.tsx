@@ -2553,8 +2553,8 @@ describe('TraceWaterfall Component', () => {
       const copiedText = writeTextMock.mock.calls[0][0];
       expect(copiedText).toContain('# Turn 2 Review (`assistant`)');
       expect(copiedText).toContain('In turn 2 of session `ses-msg-turn` (message `msg-uuid-turn-9`)');
-      expect(copiedText).toContain('> Analyzing requirements carefully.');
-      expect(copiedText).toContain('Let us start the execution plan.');
+      expect(copiedText).toContain('```\nAnalyzing requirements carefully.\n```');
+      expect(copiedText).toContain('```\nLet us start the execution plan.\n```');
 
       vi.useRealTimers();
     });
