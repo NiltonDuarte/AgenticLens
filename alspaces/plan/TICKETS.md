@@ -6,15 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **AL-50**: Audit and Streamline Debug Prompt Generation and Sanitization Pipeline
-  - **Subsystem**: Presentation / Web / Utils / Tests / Review
-  - **Phase**: Phase 7 (v1 Observability Refactor / Review)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-50 audit and streamline debug prompt generation and sanitization.md`
-
-
 ---
 
 ## Ready

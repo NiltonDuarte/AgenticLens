@@ -5,6 +5,7 @@
 - Simplify debug prompt generation and remove destructive rewriting of captured technical evidence.
 - Keep raw evidence verbatim in defensive Markdown fences and streamline prompt guidance.
 - Update utility and copy-prompt integration coverage.
+- Refresh the embedded frontend bundle.
 
 ## Context
 
