@@ -78,7 +78,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 - **AL-46**: Collapsible Failed Tool Calls Section with Default-Collapsed State in Live Inspector
   - **Subsystem**: Presentation / Web / Components / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-46 collapsible failed tool calls section in live inspector.md`
