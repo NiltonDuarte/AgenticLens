@@ -6,14 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **AL-49**: Reverse Event Chronology and Quick-Scroll Navigation in Live Trace Inspector
-  - **Subsystem**: Presentation / Web / Components / Views / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-49 reverse event ordering and quick scroll navigation in live inspector.md`
-
 ---
 
 ## Ready
