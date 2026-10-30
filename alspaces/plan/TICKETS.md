@@ -91,14 +91,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
 
-- **AL-48**: Interactive Multi-Metric Ticket Scatter Plot in Comparison Matrix View
-  - **Subsystem**: Presentation / Web / Components / Views / Tests
-  - **Phase**: Phase 7 (v1 Feature / Analytics)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-48 multi-metric ticket scatter plot in comparison view.md`
-
 - **AL-49**: Reverse Event Chronology and Quick-Scroll Navigation in Live Trace Inspector
   - **Subsystem**: Presentation / Web / Components / Views / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
