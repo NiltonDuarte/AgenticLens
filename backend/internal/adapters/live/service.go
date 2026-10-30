@@ -593,12 +593,11 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		if toolName != nil {
 			tName = *toolName
 		}
-		isError, severity, errorMessage = domain.ClassifyToolFailure(tName, status, outputSnippet, *consecutiveErrors)
+		classification := domain.ClassifyToolExecution(tName, status, outputSnippet, *consecutiveErrors)
+		isError, severity, errorMessage = classification.IsError, classification.Severity, classification.ErrorMessage
 		if isError {
 			*consecutiveErrors++
-			if status == "completed" {
-				status = "error"
-			}
+			status = "error"
 		} else {
 			*consecutiveErrors = 0
 		}
@@ -1242,7 +1241,8 @@ func convertPartToEventFact(pr RawPartRecord, turn int64, role domain.AgentRole,
 		if toolName != nil {
 			tName = *toolName
 		}
-		isError, _, errorMessage := domain.ClassifyToolFailure(tName, status, outputStr, *consecutiveErrors)
+		classification := domain.ClassifyToolExecution(tName, status, outputStr, *consecutiveErrors)
+		isError, errorMessage := classification.IsError, classification.ErrorMessage
 		if isError {
 			*consecutiveErrors++
 			status = "error"
