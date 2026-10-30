@@ -21,3 +21,5 @@
 - `go test -race ./...` — passed.
 - `make check` — passed (`go vet ./...`).
 - Independent review — APPROVED.
+- `make` — passed, including frontend typecheck, lint, all 820 frontend tests, frontend production build, Go race tests, and multi-platform binary builds.
+- Telemetry generation — blocked: configured OpenCode database has an unsupported mixed schema family layout. No ledger was produced.
