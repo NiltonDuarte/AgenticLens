@@ -6,13 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
-  - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
 
 ---
 

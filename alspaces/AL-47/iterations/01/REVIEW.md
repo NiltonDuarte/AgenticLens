@@ -33,3 +33,8 @@ Reused tester evidence in TESTING.md: full `go test -race ./...` passed; full fr
 Parent still must commit/integrate upstream and run full `make` with the final two frontend cases, then verify rebuilt embedded assets and standalone execution. Approval does not establish those pending gates. Real-browser geometry and deterministic injection of a write exactly between revision observations remain unverified; the pre/post-generation branch was inspected, and race-suite success alone is not claimed as a proof of that interleaving. No measured latency or memory benchmark is claimed.
 
 Verdict: APPROVED for integration and the remaining parent-owned delivery checks.
+
+
+## Parent integration verification
+
+Reviewed implementation committed as `f531208`; upstream merged cleanly at `6968687122d6146010e4255ae46f3ea0f1b6936b`. Upstream modified planning artifacts only, with no application/test changes. Full post-integration `make` passed, including Go vet/race tests, TypeScript typecheck/lint, all 722 frontend tests, canonical frontend embed build, and four platform binaries. Existing MetricProgression act warnings remain; no tests skipped. Embedded `TestGetFS` ran successfully. Generated web/dist and backend/internal/adapters/web/dist match byte for byte. A bounded standalone linux/amd64 HTTP smoke test served identical index plus JS/CSS from an isolated workspace with no Node in PATH and exited cleanly. Built version JSON and generate help passed. Source and test code were unchanged after this verification. Prior browser-geometry and precise concurrent-injection limits remain.
