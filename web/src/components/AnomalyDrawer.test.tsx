@@ -508,7 +508,7 @@ describe('AnomalyDrawer Component', () => {
       const copiedText = writeTextMock.mock.calls[0][0];
       expect(copiedText).toContain('# Agent Execution Issue: Tool retry streak: git (3 consecutive errors)');
       expect(copiedText).toContain('During turn 4 of session `session-123`');
-      expect(copiedText).toContain("tool 'git' encountered 3 consecutive execution failures");
+      expect(copiedText).toContain("```\nTool 'git' encountered 3 consecutive execution failures.\n```");
       expect(copiedText).toContain('### Error Details');
       expect(copiedText).toContain('fatal: destination path already exists');
       expect(copyPromptBtn).toHaveTextContent('Copied');
@@ -561,7 +561,7 @@ describe('AnomalyDrawer Component', () => {
       const copiedText = writeTextMock.mock.calls[0][0];
       expect(copiedText).toContain('# Agent Execution Issue: Tool Execution Failure');
       expect(copiedText).toContain('During turn 7 of session `session-only-event` (agent `tester`)');
-      expect(copiedText).toContain('execution error: tests failed: 2 errors');
+      expect(copiedText).toContain('```\nExecution error: tests failed: 2 errors\n```');
       expect(copiedText).toContain('tests failed: 2 errors');
       expect(copyPromptBtn).toHaveTextContent('Copied');
 

@@ -1,9 +1,27 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateOnly, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, filterLedgersByCompletionDate, canonicalTicketType, extractTicketPrefix, extractDistinctPrefixes, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, filterComparisonRows, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge } from './formatters';
+import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateOnly, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, filterLedgersByCompletionDate, canonicalTicketType, extractTicketPrefix, extractDistinctPrefixes, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, filterComparisonRows, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, TicketComparisonRow, AgentRole, StandardTicketType, TicketType, FailureSeverity, } from './types';
 describe('Domain Pure Formatters', () => {
+    describe('truncateMiddle', () => {
+        it('keeps the default leading and trailing characters around an ellipsis', () => {
+            expect(truncateMiddle('ses_0192a83e-unique-x-304a')).toBe('ses_0192...x-304a');
+        });
+        it('supports custom leading and trailing character counts', () => {
+            expect(truncateMiddle('abcdefghij', 3, 2)).toBe('abc...ij');
+        });
+        it('leaves strings at or below the retained-character cutoff unchanged', () => {
+            expect(truncateMiddle('abcdefghijklmn')).toBe('abcdefghijklmn');
+            expect(truncateMiddle('short')).toBe('short');
+            expect(truncateMiddle('')).toBe('');
+        });
+        it('handles zero and invalid boundary counts safely', () => {
+            expect(truncateMiddle('abcdef', 0, 0)).toBe('...');
+            expect(truncateMiddle('abcdefghij', -1, 2)).toBe('abcdefghij');
+            expect(truncateMiddle('abcdefghij', 3, Number.NaN)).toBe('abc...efghij');
+        });
+    });
     describe('localized timestamps', () => {
         it('formats local clock time with zero padded milliseconds', () => {
             expect(formatLocalTimeWithMs('2026-10-22T14:32:10.007Z')).toMatch(/^\d{2}:\d{2}:\d{2}\.007$/);

@@ -221,6 +221,81 @@ describe('LiveTraceInspector Component', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('middle-truncates visible message and part IDs while titles and copied prompts retain full IDs', async () => {
+    vi.useFakeTimers();
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const messageId = 'ses_0192a83e-unique-x-304a';
+    const partId = 'part_1234567_middle_987654';
+    const trace: LiveTraceView = {
+      session_id: 'ses-truncation-test',
+      messages: [
+        {
+          id: messageId,
+          role: 'assistant',
+          content: 'Identifier truncation check',
+          timestamp: '2026-10-31T12:00:00Z',
+          parts: [
+            {
+              id: partId,
+              type: 'tool',
+              tool_name: 'bash',
+              status: 'completed',
+              is_error: false,
+              severity: 'none',
+              input_snippet: 'true',
+              output_snippet: '',
+            },
+          ],
+          total_tokens: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          cache_read_tokens: 0,
+          reasoning_tokens: 0,
+          context_tokens: 0,
+        },
+      ],
+      total_tool_calls: 1,
+      failed_tool_calls: 0,
+      recent_errors: [],
+      anomalies: [],
+    };
+
+    render(
+      <LiveTraceInspector
+        sessionNode={mockNode}
+        trace={trace}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    const messageToken = screen.getByText('ses_0192...x-304a');
+    expect(messageToken).toHaveAttribute('title', messageId);
+    const partToken = screen.getByText('part_123...987654');
+    expect(partToken).toHaveAttribute('title', partId);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /copy turn 1 debug prompt/i }));
+    });
+    expect(writeTextMock.mock.calls[0]?.[0]).toContain(`message \`${messageId}\``);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(partId) }));
+    });
+    expect(writeTextMock.mock.calls[1]?.[0]).toContain(`part \`${partId}\``);
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+    vi.useRealTimers();
+  });
+
   it('renders safely when trace contains zero messages or tool calls', () => {
     const emptyTrace: LiveTraceView = {
       session_id: 'ses-al20-coder',
@@ -943,9 +1018,9 @@ describe('LiveTraceInspector Component', () => {
     const turnPrompt = writeTextMock.mock.calls[1][0];
     expect(turnPrompt).toContain('# Turn 1 Review (`assistant` / `gemini-3.8-flash`)');
     expect(turnPrompt).toContain('In turn 1 of session `ses-adv-live` (message `msg-adv-1`)');
-    expect(turnPrompt).toContain('> Let me compile the packages and examine failures.');
-    expect(turnPrompt).toContain('Executing build verification step.');
-    expect(turnPrompt).toContain('- `bash` (`part-adv-404`): error');
+    expect(turnPrompt).toContain('```\nLet me compile the packages and examine failures.\n```');
+    expect(turnPrompt).toContain('```\nExecuting build verification step.\n```');
+    expect(turnPrompt).toContain('- bash (part-adv-404): error');
     expect(turnCopyBtn).toHaveTextContent('Copied');
 
     act(() => {
@@ -995,11 +1070,10 @@ describe('LiveTraceInspector Component', () => {
     const issuePrompt = writeTextMock.mock.calls[3][0];
     expect(issuePrompt).toContain('# Agent Execution Issue: Consecutive failures on `bash`');
     expect(issuePrompt).toContain(
-      'During turn 1 of session `ses-adv-live` (agent `assistant` running `gemini-3.8-flash`), the agent experienced 5 consecutive failures while executing `bash`.'
+      'During turn 1 of session `ses-adv-live` (agent `assistant` running `gemini-3.8-flash`); failure part `part-adv-404`.'
     );
-    expect(issuePrompt).toContain('part `part-adv-404`');
     expect(issuePrompt).toContain('### Error Details');
-    expect(issuePrompt).toContain('error[E0432]: unresolved import');
+    expect(issuePrompt).toContain('```\nerror[E0432]: unresolved import\n```');
     expect(failedCardCopyBtn).toHaveTextContent('Copied');
 
     act(() => {

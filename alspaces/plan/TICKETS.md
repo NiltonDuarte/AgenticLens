@@ -6,7 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-
 ---
 
 ## Ready
@@ -51,22 +50,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
-- **AL-44**: Localized Millisecond Timestamp Formatting and Timezone Header in Live Trace Inspector
-  - **Subsystem**: Presentation / Web / Formatters / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-44 localized timestamp and timezone header in live trace inspector.md`
-
-- **AL-45**: Debug ID Token Overflow Truncation and Responsive Layout in Message Header
-  - **Subsystem**: Presentation / Web / CSS / Components / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-45 debug id token overflow truncation and containment.md`
-
 - **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
   - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
@@ -75,24 +58,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
 
-- **AL-50**: Audit and Streamline Debug Prompt Generation and Sanitization Pipeline
-  - **Subsystem**: Presentation / Web / Utils / Tests / Review
-  - **Phase**: Phase 7 (v1 Observability Refactor / Review)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-50 audit and streamline debug prompt generation and sanitization.md`
-
 - **AL-51**: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
-  - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-52, AL-53, AL-54
-  - **File**: `alspaces/plan/to-do/AL-51 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
-
----
-, and Live Stream Ingestion for Skills and Tasks
   - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Ready
