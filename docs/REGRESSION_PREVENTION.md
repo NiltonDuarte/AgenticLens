@@ -1,6 +1,6 @@
 # Preventing recurring regressions
 
-Use this checklist when a change touches the corresponding boundary. Put the selected cases and their results in the active iteration plan and review. Evidence and the complete ticket inventory are in the [REV-3 review](../alspaces/REV-3/iterations/01/REVIEW.md).
+Use this checklist when a change touches the corresponding boundary. Put the selected cases and their results in the active iteration plan and review.
 
 ## Which document owns the rule?
 
@@ -15,7 +15,7 @@ When changing a shared rule, search active instructions, personas, skill referen
 
 Use the [contributor delta format](../CONTRIBUTING.md#71-recording-steering-without-restarting-the-ticket) for material scope changes. Keep the current contract consistent with accepted superseding decisions; do not replay an earlier plan just because it is more detailed. Keep routine merge checks and review fixes within the current iteration when acceptance is unchanged.
 
-The [repository-wide steering review](../alspaces/REV-3/iterations/02/REVIEW.md) distinguishes intentional feature additions from regressions. Repeated iterations are not themselves failures. Missing or consolidated plans are limits on historical evidence, not a reason to fabricate a steering history.
+Distinguish intentional feature additions from regressions. Repeated iterations are not themselves failures. Missing or consolidated plans are limits on historical evidence, not a reason to fabricate a steering history.
 
 ## Before implementation
 

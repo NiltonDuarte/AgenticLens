@@ -68,3 +68,7 @@ Self-review accepted for documentation scope; no independent reviewer was launch
 - Generated web/dist and backend/internal/adapters/web/dist match byte-for-byte. Historical source/tests/skills and other-ticket ledgers remain unchanged.
 - Existing dependency audit findings and React act warnings remain environment observations; no dependencies changed. No browser run, source-backed migration, or new performance profile was needed for the documentation-only delta.
 - Final telemetry targets the same verified Codex root as iteration 01, with zero child sessions expected. Existing session IDs/source must survive the refresh; extraction outcome is recorded in SUMMARY.md. Finalization remains a snapshot before subsequent delivery calls.
+
+### Documentation reference correction
+
+User requested removal of references to this ticket from shared project documentation. Removed the three REV-3 references from CONTRIBUTING.md and docs/REGRESSION_PREVENTION.md, preserving the general guidance and ticket audit records. This is a review correction within iteration 02; acceptance and application behavior are unchanged. Targeted reference/link and whitespace checks replace unnecessary application test repetition; prior full make evidence remains applicable to unchanged code.

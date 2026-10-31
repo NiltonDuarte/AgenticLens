@@ -67,3 +67,7 @@ The generator discovered one Codex rollout and wrote one session with nonempty i
 |---|---|---|---|---|---|---|
 | **gpt-6.1-sol** | 1 | 142,222 | 22,441 | 4,921,472 | 97.2% | $0.00 |
 | **Total** | **1** | **142,222** | **22,441** | **4,921,472** | **97.2%** | **$0.00** |
+
+## Shared documentation reference correction
+
+Removed all three references to this ticket from shared contributor and regression-prevention documentation at the user's request. General guidance remains self-contained; historical ticket records are preserved. Verified no REV-3 references remain in shared Markdown documentation, surviving links resolve, and whitespace checks pass. Application code is unchanged; the previously passing full make result remains applicable.
