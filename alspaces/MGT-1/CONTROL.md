@@ -129,3 +129,18 @@ AL-55 preliminary delta: partial OpenCode skill/task snapshot replacement, share
 ## AL-43 final combined integration handoff
 
 PR#78 new head9e22466b2d31ccd91398b50b08a0faa5a82329e5 fetched and matched GitHub; current-main ancestry bdef2d0 verified. Manager independently confirmed no app/test changes beyond tested71f1203b284dec59de18b1c8d5637af08ba68f09, F3/F4 corrected source unchanged, and protected useLiveTrace/refresh helpers/ThreadViewer/panel/SSE handler+regression unchanged from actual main. Owner reports independent combined review APPROVED, all conflicts combined, focused259 frontend plus concrete SSE/F3/F4 coverage, fresh full make750 frontend tests/35files and all Go checks/race/four builds, matching embedding/standalone assets, five source sessions preserved and clean checkout. AL-55 Ready/None retained. Exact-head CI backend/frontend IN_PROGRESS; no merge attempted. Existing watch active.
+
+## User stop instruction and workspace verification
+
+User requested stopping threads using the current checkout and required native T3 worktree support. Sent top-level interrupt to PO-17 and AL-55; both returned no_active_run (PO-17 subsequently read cancelled, AL-55 completed). No replacements launched or threads resumed. Read each T3 binding and independently checked Git --show-toplevel and --absolute-git-dir:
+
+- Manager: /home/niltonduarte/.t3/worktrees/AgenticLens/t3-19f29886, actual branch chore/MGT-1-ticket-management, gitdir .git/worktrees/t3-19f29886.
+- PO-17: /home/niltonduarte/.t3/worktrees/AgenticLens/docs-PO-17-cost-and-schema-priorities, branch docs/PO-17-cost-and-schema-priorities, distinct gitdir. Cancelled/inactive, proposed files retained only there.
+- AL-55: /home/niltonduarte/.t3/worktrees/AgenticLens/feat-AL-55-migration-backfill-scope, branch feat/AL-55-migration-backfill-scope, distinct gitdir. Completed/inactive, local planning commit1122cac only, no code or pushed PR. Own root/planner telemetry reported verified. Approval remains pending.
+- Existing AL-43: /home/niltonduarte/.t3/worktrees/AgenticLens/t3-7459e9fe, its own branch/gitdir, completed/inactive.
+
+No inspected independent root shares the manager checkout; both new roots were created with workspaceStrategy type worktree and parentThreadId null. Do not claim an observed sharing failure that evidence does not show. They remain inactive under the stop steering; no shell worktree was created, files moved or source restored. T3 manager branch label still shows the old name, while actual Git branch/upstream verify the new name; the attached checkout path is unchanged.
+
+## Management branch rename
+
+User requested updating the branch name. GitHub branch-rename API renamed GEN/review-open-prs-cross-interference-merge-order to chore/MGT-1-ticket-management at published89786ee; local branch renamed and upstream bound to origin/chore/MGT-1-ticket-management. GitHub automatically CLOSED original management PR#80 without merging because its head name changed. Existing management commits and worktree retained. Replacement management PR must carry all subsequent deliverables; #80 cannot be reported as delivering later work. No release PR touched. New PR URL pending delivery.
