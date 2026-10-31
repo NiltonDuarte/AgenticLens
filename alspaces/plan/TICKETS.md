@@ -5,6 +5,8 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## In Progress
+
+
 ---
 
 ## Ready
@@ -65,14 +67,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-45 debug id token overflow truncation and containment.md`
 
-- **AL-46**: Collapsible Failed Tool Calls Section with Default-Collapsed State in Live Inspector
-  - **Subsystem**: Presentation / Web / Components / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-46 collapsible failed tool calls section in live inspector.md`
-
 - **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
   - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
@@ -80,14 +74,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
-
-- **AL-48**: Interactive Multi-Metric Ticket Scatter Plot in Comparison Matrix View
-  - **Subsystem**: Presentation / Web / Components / Views / Tests
-  - **Phase**: Phase 7 (v1 Feature / Analytics)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-48 multi-metric ticket scatter plot in comparison view.md`
 
 - **AL-49**: Reverse Event Chronology and Quick-Scroll Navigation in Live Trace Inspector
   - **Subsystem**: Presentation / Web / Components / Views / Tests
