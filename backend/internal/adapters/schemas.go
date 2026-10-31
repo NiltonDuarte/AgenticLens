@@ -548,6 +548,14 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		mig = &domMig
 	}
 
+	skills := dto.Skills
+	if skills == nil {
+		skills = []domain.SkillFact{}
+	}
+	taskLinks := dto.TaskLinks
+	if taskLinks == nil {
+		taskLinks = []domain.TaskLinkFact{}
+	}
 	return domain.AgenticFactLedger{
 		SchemaVersion: dto.SchemaVersion,
 		Migration:     mig,
@@ -560,8 +568,8 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		Code:          dto.Code.ToDomain(),
 		Sessions:      sessions,
 		Anomalies:     anomaliesToDomain(dto.Anomalies),
-		Skills:        dto.Skills,
-		TaskLinks:     dto.TaskLinks,
+		Skills:        skills,
+		TaskLinks:     taskLinks,
 	}
 }
 
