@@ -61,6 +61,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-67 scope skill and task link facts to their source owners.md`
 
+- **AL-68**: Configure optional skills, task_links and anomalies output for generate
+  - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-68 configure optional metric output for generate.md`
+
 ### Existing ready work
 
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer

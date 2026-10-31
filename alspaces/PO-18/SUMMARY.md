@@ -44,3 +44,7 @@ Telemetry limitation: generation occurs within this still-active Codex turn; the
 ## Iteration 02: granular ownership planning
 
 User requested skills/task_links closer to raw session or invocation data. Added AL-67 (Ready, refactor), updated SPEC and roadmap to eight tickets, and retained existing acceptance/dependency boundaries. No application/test/schema changes or developer workspace created. Ownership must be proven, invocation metrics rows are not assumed to be raw calls, and ambiguous legacy facts remain preserved. Initial iteration status clean at 80396eb; existing PR #90 was open. Original AL-55 evidence remains protected.
+
+## Iteration 03: configurable generate output planning
+
+User requested toggles for task_links, skills and anomalies, with no metric writes when disabled. Added AL-68 (Phase 1, Ready, feature), updating specification/roadmap/PR to nine tickets. Explicit defaults preserve current enabled behavior. Ticket covers nested ownership, retained facts on regeneration, managed Markdown output, disabled-vs-unavailable semantics and independent category behavior; backfill/global redaction remain separate scope. No application/config/test changes, developer workspace or contract. Baseline ce43f8d and initial Git status clean; PR #90 remains open.

@@ -19,10 +19,13 @@ Engineers inspecting historical/live agent activity, analysts comparing tickets,
 
 7. As an engineer, I want skills and task links attached to their source session or invocation so that raw provenance survives aggregation.
 
+8. As an operator, I want independent configuration toggles for optional generate metrics so that disabled skills, task_links and anomalies are omitted from written output.
+
 ## Functional Requirements
 
 - Data ingestion/extraction: AL-62 investigates Codex facts; AL-64 audits OpenCode v1/v2 and Codex capabilities; AL-65 fixes active-turn duration through a snapshot cutoff. Evidence unavailable at execution remains explicit.
 - Granular ownership: AL-67 relocates canonical skills/task_links to source-proven session or invocation ownership, with derived ticket/fleet projections, compatible migration, and explicit unresolved legacy provenance.
+- Generation output policy: AL-68 adds independent enabled-by-default config toggles for skills/task_links/anomalies, applied across emitted ownership scopes and generated summaries, including replacement of previous disabled facts in the target output.
 - Domain aggregations: duration excludes inter-turn gaps and future activity; completed refresh replaces provisional contribution. Missing facts do not establish measured zero. Stored baseline facts survive unavailable hydration/recovery.
 - Presentation: AL-60 searches existing ticket IDs/titles inside Exclude tickets only; AL-61 renders full local dates/times without milliseconds. AL-65 exposes provisional duration consistently. AL-63 verifies live inspector behavior.
 - CLI/recovery: AL-66 researches default source-backed recomputation with exact existing identities, retention when originals are unavailable, and explicit outcomes. It does not enable Force or change defaults.
@@ -43,8 +46,9 @@ Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: pure Go domain
 | AL-65 | Provisional unfinished Codex turn duration fix | Bug | None |
 | AL-66 | Default backfill/Force research recommendation | Research | AL-64 |
 | AL-67 | Source-owned skills/task_links and compatible projections | Refactor | None |
+| AL-68 | Configurable optional metric output for generate | Feature | None |
 
-Execution tiers: Tier 1 = AL-60/61/62/63/65/67; Tier 2 = AL-64; Tier 3 = AL-66. AL-65 is the diagnosed must-fix and can proceed independently. AL-64 consumes AL-62/63 reports; AL-66 consumes the parity report. Blocked tickets may gather independent evidence while their final acceptance awaits dependencies. Do not delay the duration fix behind investigations. Existing AL-57 and AL2 scope is unchanged.
+Execution tiers: Tier 1 = AL-60/61/62/63/65/67/68; Tier 2 = AL-64; Tier 3 = AL-66. AL-65 is the diagnosed must-fix and can proceed independently. AL-64 consumes AL-62/63 reports; AL-66 consumes the parity report. Blocked tickets may gather independent evidence while their final acceptance awaits dependencies. Do not delay the duration fix behind investigations. Existing AL-57 and AL2 scope is unchanged.
 
 ## Evidence and Review Boundaries
 
@@ -55,3 +59,7 @@ The original review worktree was not intended for merge. These planning artifact
 ## Iteration 02 steering: granular fact ownership
 
 Source: user follow-up requesting skills/task_links at session or invocation scope, as close to raw data as possible. AL-67 adds one independently Ready Phase 1 ticket; it does not revise the seven existing ticket boundaries. Canonical facts use their narrowest proven owner; raw occurrence identity must not be confused with role/model metric rows. Ambiguous historical ownership is retained explicitly, never guessed. This supersedes the original seven-ticket count with eight planned tickets and introduces no application changes or new harness capability promise. Original evidence preservation, research-only defaults, existing verification and separate implementation-session requirements remain in force.
+
+## Iteration 03 steering: configurable generate output
+
+Source: user follow-up requesting configuration toggles for task_links, skills and anomalies; disabled metrics must not be written. Add AL-68 independently Ready, increasing delivery to nine tickets. Missing settings retain enabled behavior; explicit false omits that category from generated JSON at every owner and managed summary metrics. On regeneration, omission applies to previously saved disabled facts in that target output too. Preserve unrelated facts, safe writes and source records. No global redaction/backfill-default change is implied. This policy deliberately suppresses configured output; it does not supersede missing-source safeguards for enabled facts. AL-67 remains responsible for granular ownership, and implementation stays in a separate development session.
