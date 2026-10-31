@@ -30,3 +30,15 @@ Verdict: APPROVED
 ## Parent integrated delivery verification
 
 Implementation commit 0605350 merged origin/main (already up to date). Final make passed all static checks, 12 Go race-tested packages, 720 frontend tests without skips and four platform builds. web/dist matches backend/internal/adapters/web/dist; all three generated payloads were found byte for byte in the standalone Linux executable. Standalone version --json passed. Only workspace documentation/lifecycle/telemetry changes follow this tested application commit. No browser geometry claim.
+
+## Routine integration audit
+
+Reviewed merged application commit bc312da81ebae5f0270ff3bb5eb3b36196587ccb against origin/main b1268234cde742705728ea33ee89d30581803c47. This incorporates the merged AL-47 live refresh work (#76) and AL-54 fleet skill analytics (#79). No acceptance boundaries changed and no application rework was needed.
+
+The badge callback still uses LiveObservability.handleSelectSession, now feeding useLiveTrace. The hook resets ownership on selection, ignores obsolete request and push responses, and returns only a trace belonging to the selected session. AL-52's additional trace identity guard is compatible. The inspector retains the upstream session key, so child selection resets parent reading state while ordinary same-session refresh preserves existing message components and scroll anchors. Badge insertion does not remove or rename header, reasoning, input or output anchors, and callback propagation does not alter reasoning controls. Existing refreshed-tree selection, pause/manual-refresh ownership and request coalescing remain under the upstream hook; no new polling or network boundary is introduced. Fleet skill analytics does not alter AL-52 invocation projection or view wiring.
+
+Inspected the retained merged live tests for child loading, refreshed traces, stale work, pause/close and scroll/reasoning behavior. Reviewer git diff --check passed. Parent full make is in progress and must supply the integrated verification result; this source audit does not claim that pending gate has passed. Browser geometry remains unverified.
+
+Integration verdict: APPROVED
+
+Parent final integration gate: make passed against application commit bc312da81ebae5f0270ff3bb5eb3b36196587ccb and base b1268234cde742705728ea33ee89d30581803c47. 736 frontend tests in 35 files, 12 Go race packages, static checks and four platform builds passed. Embedded-assets test passed; diff -qr asset trees and byte-content checks in standalone Linux binary passed, version --json succeeded. Only lifecycle/documentation/telemetry edits follow. No skipped test stages; existing act warnings remain non-fatal. No speculative later-ticket integration.
