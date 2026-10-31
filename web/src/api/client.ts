@@ -2,18 +2,15 @@ import type {
   AgenticMetricsLedger,
   Anomaly,
   BuildInfo,
-  EventFact,
   FleetSummary,
   ProjectConfigResponse,
   TicketComparisonRow,
-  TimeBucketMetric,
-  TimeGranularity,
-  TimeWindowPreset,
   WorkspaceDetail,
   WorkspaceEventsResponse,
   WorkspaceDiagnostic,
 } from '../domain/types';
 import { deriveTicketComparisonRows } from '../domain/formatters';
+import { decodeDetail, decodeFleet, decodeLedgers, isAnomaly, isBuildInfo, isEventFact, isProjectConfig, isRecord } from './validation';
 
 export interface ApiResponse<T> {
   readonly data: T;
@@ -24,11 +21,20 @@ function diagnosticsFromResponse(res: Response): readonly WorkspaceDiagnostic[] 
   if (!res.headers) return [];
   const raw = res.headers.get('X-AgenticLens-Workspace-Diagnostics');
   if (!raw) return [];
+  const warning: WorkspaceDiagnostic = { scope: 'response', message: 'Workspace diagnostics could not be read. Valid workspace data is still shown.' };
   try {
-    const value = JSON.parse(raw) as readonly WorkspaceDiagnostic[];
-    return Array.isArray(value) ? value : [];
+    const value: unknown = JSON.parse(raw);
+    if (!Array.isArray(value)) return [warning];
+    const valid: WorkspaceDiagnostic[] = [];
+    let invalid = false;
+    for (const item of value) {
+      if (isRecord(item) && typeof item.ticket_id === 'string' && typeof item.message === 'string') {
+        valid.push({ ticket_id: item.ticket_id, message: item.message });
+      } else invalid = true;
+    }
+    return invalid ? [...valid, warning] : valid;
   } catch {
-    return [];
+    return [warning];
   }
 }
 
@@ -79,7 +85,7 @@ export async function fetchFleetSummary(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch fleet summary'}`);
     }
-    const data = (await res.json()) as FleetSummary;
+    const data = decodeFleet(await res.json());
     return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch fleet summary');
@@ -114,7 +120,7 @@ export async function fetchWorkspaceLedgers(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace ledgers'}`);
     }
-    const data = (await res.json()) as readonly AgenticMetricsLedger[];
+    const data = decodeLedgers(await res.json());
     return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch workspace ledgers');
@@ -157,81 +163,11 @@ export async function fetchWorkspaces(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspaces'}`);
     }
-    const ledgers = (await res.json()) as AgenticMetricsLedger[];
+    const ledgers = decodeLedgers(await res.json());
     const rows = deriveTicketComparisonRows(ledgers);
     return { data: rows, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch workspaces');
-  }
-}
-
-export async function fetchComparisonRows(
-  windowParam: string = 'all',
-  sinceParam?: string,
-  untilParam?: string,
-  ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
-): Promise<ApiResponse<readonly TicketComparisonRow[]>> {
-  const params = new URLSearchParams();
-  if (windowParam && windowParam !== 'all') {
-    params.set('window', windowParam);
-  }
-  if (sinceParam) {
-    params.set('since', sinceParam);
-  }
-  if (untilParam) {
-    params.set('until', untilParam);
-  }
-  appendMultiParams(params, 'ticket_type', ticketTypes);
-  appendMultiParams(params, 'prefix', prefixes);
-
-  const qs = params.toString() ? `?${params.toString()}` : '';
-  const url = `/api/comparison${qs}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch comparison rows'}`);
-    }
-    const data = (await res.json()) as readonly TicketComparisonRow[];
-    return { data, diagnostics: diagnosticsFromResponse(res) };
-  } catch (err: unknown) {
-    rethrowError(err, 'Failed to fetch comparison rows');
-  }
-}
-
-export async function fetchProgressionLedgers(
-  windowParam: string = 'all',
-  sinceParam?: string,
-  untilParam?: string,
-  ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
-): Promise<ApiResponse<readonly AgenticMetricsLedger[]>> {
-  const params = new URLSearchParams();
-  if (windowParam && windowParam !== 'all') {
-    params.set('window', windowParam);
-  }
-  if (sinceParam) {
-    params.set('since', sinceParam);
-  }
-  if (untilParam) {
-    params.set('until', untilParam);
-  }
-  appendMultiParams(params, 'ticket_type', ticketTypes);
-  appendMultiParams(params, 'prefix', prefixes);
-
-  const qs = params.toString() ? `?${params.toString()}` : '';
-  const url = `/api/progression${qs}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression ledgers'}`);
-    }
-    const data = (await res.json()) as readonly AgenticMetricsLedger[];
-    return { data, diagnostics: diagnosticsFromResponse(res) };
-  } catch (err: unknown) {
-    rethrowError(err, 'Failed to fetch progression ledgers');
   }
 }
 
@@ -247,7 +183,7 @@ export async function fetchWorkspaceById(
       }
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace'}`);
     }
-    const data = (await res.json()) as WorkspaceDetail;
+    const data = decodeDetail(await res.json());
     return { data };
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace ${ticketId}`);
@@ -260,7 +196,8 @@ export async function fetchVersion(): Promise<ApiResponse<BuildInfo>> {
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch build version info'}`);
     }
-    const data = (await res.json()) as BuildInfo;
+    const data: unknown = await res.json();
+    if (!isBuildInfo(data)) throw new Error('Invalid build version response');
     return { data };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch build version info');
@@ -273,50 +210,12 @@ export async function fetchProjectConfig(): Promise<ApiResponse<ProjectConfigRes
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch project configuration'}`);
     }
-    const data = (await res.json()) as ProjectConfigResponse;
+    const data: unknown = await res.json();
+    if (!isProjectConfig(data)) throw new Error('Invalid project configuration response');
     return { data };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch project configuration');
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isOptionalString(value: unknown): boolean {
-  return value === undefined || value === null || typeof value === 'string';
-}
-
-function isOptionalNumber(value: unknown): boolean {
-  return value === undefined || (typeof value === 'number' && Number.isFinite(value));
-}
-
-function isEventFact(value: unknown): value is EventFact {
-  if (!isRecord(value)) return false;
-  return typeof value.timestamp === 'string' && typeof value.session_id === 'string' &&
-    typeof value.turn === 'number' && Number.isFinite(value.turn) &&
-    typeof value.role === 'string' && typeof value.status === 'string' &&
-    (value.event_type === 'tool_call' || value.event_type === 'turn_message' || value.event_type === 'compaction') &&
-    typeof value.context_tokens === 'number' && Number.isFinite(value.context_tokens) &&
-    ['event_id', 'message_id', 'tool_name', 'error_message', 'prompt_content',
-      'reasoning_content', 'tool_input', 'tool_output'].every((field) => isOptionalString(value[field])) &&
-    (value.duration_ms === null || isOptionalNumber(value.duration_ms));
-}
-
-function isAnomaly(value: unknown): value is Anomaly {
-  if (!isRecord(value) || !isRecord(value.context)) return false;
-  if (value.severity !== 'WARNING' && value.severity !== 'CRITICAL') return false;
-  if (value.rule_id !== 'TOOL_RETRY_STREAK' && value.rule_id !== 'TOOL_HIGH_FAILURE_RATE' &&
-    value.rule_id !== 'CONTEXT_SATURATION_SPIKE' && value.rule_id !== 'SUBAGENT_REWORK_LOOP') return false;
-  const context = value.context;
-  if (!['tool_name', 'session_id', 'threshold'].every((field) =>
-    context[field] === undefined || typeof context[field] === 'string')) return false;
-  if (!isOptionalString(context.role) || !isOptionalString(context.secondary_role)) return false;
-  if (!['turn', 'count', 'total_calls', 'token_delta', 'context_tokens', 'failure_rate_pct'].every((field) =>
-    isOptionalNumber(context[field]))) return false;
-  return value.evidence === undefined || (Array.isArray(value.evidence) && value.evidence.every((ref: unknown) =>
-    isRecord(ref) && typeof ref.session_id === 'string' && typeof ref.event_id === 'string'));
 }
 
 export async function fetchWorkspaceEvents(
@@ -331,14 +230,12 @@ export async function fetchWorkspaceEvents(
       }
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace events'}`);
     }
-    const rawData = (await res.json()) as unknown;
+    const rawData: unknown = await res.json();
     if (
-      rawData !== null &&
-      typeof rawData === 'object' &&
-      !Array.isArray(rawData) &&
+      isRecord(rawData) &&
       'is_hydrated' in rawData
     ) {
-      const resp = rawData as Record<string, unknown>;
+      const resp = rawData;
       if (resp.ticket_id !== ticketId || typeof resp.is_hydrated !== 'boolean' ||
         (resp.includes_baseline !== undefined && typeof resp.includes_baseline !== 'boolean') ||
         (resp.data_source !== 'committed_ledger' && resp.data_source !== 'local_sqlite' && resp.data_source !== 'local_codex') ||
@@ -368,74 +265,8 @@ export async function fetchWorkspaceEvents(
         },
       };
     }
-    return {
-      data: {
-        ticket_id: ticketId,
-        is_hydrated: false,
-        events: [],
-        data_source: 'committed_ledger',
-      },
-    };
+    throw new Error(`Invalid workspace events response for ${ticketId}`);
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace events for ${ticketId}`);
-  }
-}
-
-export async function fetchWorkspaceAnomalies(
-  ticketId: string
-): Promise<ApiResponse<readonly Anomaly[]>> {
-  try {
-    const detailRes = await fetchWorkspaceById(ticketId);
-    return {
-      data: detailRes.data.anomalies ?? [],
-    };
-  } catch (err: unknown) {
-    rethrowError(err, `Failed to fetch workspace anomalies for ${ticketId}`);
-  }
-}
-
-export async function fetchProgressionMetrics(params?: {
-  readonly window?: TimeWindowPreset;
-  readonly granularity?: TimeGranularity;
-  readonly startDate?: string;
-  readonly endDate?: string;
-  readonly ticketTypes?: readonly string[];
-  readonly prefixes?: readonly string[];
-}): Promise<ApiResponse<readonly TimeBucketMetric[]>> {
-  const windowParam = params?.window ?? 'all';
-  const granularityParam = params?.granularity ?? 'daily';
-  const startDateParam = params?.startDate;
-  const endDateParam = params?.endDate;
-  const ticketTypes = params?.ticketTypes;
-  const prefixes = params?.prefixes;
-
-  const query = new URLSearchParams();
-  if (windowParam && windowParam !== 'all') {
-    query.set('window', windowParam);
-  }
-  if (granularityParam) {
-    query.set('granularity', granularityParam);
-  }
-  if (startDateParam) {
-    query.set('startDate', startDateParam);
-  }
-  if (endDateParam) {
-    query.set('endDate', endDateParam);
-  }
-  appendMultiParams(query, 'ticket_type', ticketTypes);
-  appendMultiParams(query, 'prefix', prefixes);
-
-  const qs = query.toString() ? `?${query.toString()}` : '';
-  const url = `/api/progression${qs}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression metrics'}`);
-    }
-    const data = (await res.json()) as readonly TimeBucketMetric[];
-    return { data };
-  } catch (err: unknown) {
-    rethrowError(err, 'Failed to fetch progression metrics');
   }
 }

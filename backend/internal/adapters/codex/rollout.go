@@ -893,50 +893,6 @@ func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 	return sessions, nil
 }
 
-// ToMetricsLedger maps one Codex thread into AgenticLens facts and uses the existing pure aggregation pipeline.
-func (transcript Transcript) ToMetricsLedger(ticketID, ticketTitle string, ticketType domain.ConventionalTicketType, cfg domain.ProjectConfig) (domain.AgenticMetricsLedger, error) {
-	version := domain.CurrentSchemaVersion
-	var ticketIDPtr, titlePtr *string
-	var ticketTypePtr *domain.ConventionalTicketType
-	if strings.TrimSpace(ticketID) != "" {
-		value := strings.TrimSpace(ticketID)
-		ticketIDPtr = &value
-	}
-	if strings.TrimSpace(ticketTitle) != "" {
-		value := strings.TrimSpace(ticketTitle)
-		titlePtr = &value
-	}
-	if ticketType != "" {
-		value := ticketType
-		ticketTypePtr = &value
-	}
-	var startedAt, completedAt *string
-	if transcript.StartedAt != "" {
-		value := transcript.StartedAt
-		startedAt = &value
-	}
-	if transcript.CompletedAt != "" {
-		value := transcript.CompletedAt
-		completedAt = &value
-	}
-	sessions, err := transcript.SessionFacts()
-	if err != nil {
-		return domain.AgenticMetricsLedger{}, err
-	}
-	facts := domain.AgenticFactLedger{
-		SchemaVersion: &version, TicketID: ticketIDPtr, TicketTitle: titlePtr, TicketType: ticketTypePtr,
-		StartedAt: startedAt, CompletedAt: completedAt, UpdatedAt: transcript.UpdatedAt,
-		Sessions: sessions,
-	}
-	ledger := domain.DeriveMetricsLedger(facts, cfg)
-	// Metrics and summaries are derived from the complete stream; event rows stay transient.
-	ledger.Facts, err = domain.PersistAnomalySummaries(facts)
-	if err != nil {
-		return domain.AgenticMetricsLedger{}, fmt.Errorf("persisting Codex anomaly evidence: %w", err)
-	}
-	return ledger, nil
-}
-
 // CombineTranscripts merges a discovered root thread and its child threads
 // while preserving per-thread invocation facts and aggregating tool summaries.
 func CombineTranscripts(transcripts []Transcript) (Transcript, error) {

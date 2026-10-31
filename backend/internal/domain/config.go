@@ -215,6 +215,7 @@ type AnomalyThresholdsConfig struct {
 type LiveConfig struct {
 	ActiveThresholdSeconds int `json:"active_threshold_seconds" yaml:"active_threshold_seconds"`
 	PollIntervalMs         int `json:"poll_interval_ms" yaml:"poll_interval_ms"`
+	// MaxTraceBufferMessages is accepted for legacy configuration compatibility; live traces are not truncated.
 	MaxTraceBufferMessages int `json:"max_trace_buffer_messages" yaml:"max_trace_buffer_messages"`
 }
 

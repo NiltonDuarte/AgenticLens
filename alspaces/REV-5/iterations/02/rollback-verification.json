@@ -1,0 +1,6 @@
+{
+  "exit": 1,
+  "stderr": "Error writing configuration files: target .agenticlens-config.local.yaml is a directory",
+  "original_bytes_preserved": true,
+  "temporary_files": []
+}

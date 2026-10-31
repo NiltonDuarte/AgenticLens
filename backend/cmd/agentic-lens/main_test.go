@@ -5145,26 +5145,52 @@ func TestInitCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("local write failure does not leave shared config behind", func(t *testing.T) {
-		tempDir := t.TempDir()
-		if err := os.Mkdir(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), 0700); err != nil {
-			t.Fatal(err)
-		}
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
-		cmd.Dir = tempDir
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout, cmd.Stderr = &stdout, &stderr
-		if err := cmd.Run(); err == nil {
-			t.Fatal("expected init to fail on local directory target")
-		}
-		if strings.Contains(stdout.String(), "Successfully initialized") {
-			t.Fatalf("reported success after failure: %s", stdout.String())
-		}
-		if !strings.Contains(stderr.String(), ".agenticlens-config.local.yaml") {
-			t.Fatalf("error did not identify local artifact: %s", stderr.String())
-		}
-		if _, err := os.Stat(filepath.Join(tempDir, ".agenticlens-config.yaml")); !os.IsNotExist(err) {
-			t.Fatal("partial shared config was left after local failure")
+	t.Run("local write failure preserves shared config state", func(t *testing.T) {
+		for _, existing := range []bool{false, true} {
+			t.Run(fmt.Sprintf("existing=%v", existing), func(t *testing.T) {
+				tempDir := t.TempDir()
+				sharedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
+				original := []byte("project_name: Preserve original\n")
+				if existing {
+					if err := os.WriteFile(sharedPath, original, 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := os.Mkdir(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), 0700); err != nil {
+					t.Fatal(err)
+				}
+				cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
+				cmd.Dir = tempDir
+				var stdout, stderr bytes.Buffer
+				cmd.Stdout, cmd.Stderr = &stdout, &stderr
+				if err := cmd.Run(); err == nil {
+					t.Fatal("expected init to fail on local directory target")
+				}
+				if strings.Contains(stdout.String(), "Successfully initialized") {
+					t.Fatalf("reported success after failure: %s", stdout.String())
+				}
+				if !strings.Contains(stderr.String(), ".agenticlens-config.local.yaml") {
+					t.Fatalf("error did not identify local artifact: %s", stderr.String())
+				}
+				got, err := os.ReadFile(sharedPath)
+				if existing && (err != nil || !bytes.Equal(got, original)) {
+					t.Fatalf("original config was not preserved: data=%q err=%v", got, err)
+				}
+				if !existing && !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("created partial shared config: data=%q err=%v", got, err)
+				}
+				entries, err := os.ReadDir(tempDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantEntries := 1
+				if existing {
+					wantEntries++
+				}
+				if len(entries) != wantEntries {
+					t.Fatalf("unexpected staged/backup files after failure: %v", entries)
+				}
+			})
 		}
 	})
 

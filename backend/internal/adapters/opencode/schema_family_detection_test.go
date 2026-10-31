@@ -29,7 +29,7 @@ func TestSchemaFamilyRejectsPartialAndMixedLayouts(t *testing.T) {
 			if _, err = db.Exec(tc.sql); err != nil {
 				t.Fatal(err)
 			}
-			_, _, _, _, _, err = opencode.ExtractFacts(db, []string{"ses"}, "", nil)
+			_, _, _, err = opencode.ExtractSessions(db, []string{"ses"}, "", nil)
 			if err == nil || !containsSubstring(err.Error(), tc.want) {
 				t.Fatalf("expected %q error, got %v", tc.want, err)
 			}
@@ -74,7 +74,7 @@ func TestSchemaFamilyRejectsEveryRequiredTableColumnOmission(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				_, _, _, _, _, err = opencode.ExtractFacts(db, []string{"s"}, "", nil)
+				_, _, _, err = opencode.ExtractSessions(db, []string{"s"}, "", nil)
 				if err == nil || !containsSubstring(err.Error(), "unsupported mixed OpenCode schema") {
 					t.Fatalf("omitting %s.%s should reject competing/incomplete families, got %v", table, omitted, err)
 				}

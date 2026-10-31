@@ -35,7 +35,11 @@ func TestSchemaV2SessionRuntimeEvidenceExtractsNormalizedFacts(t *testing.T) {
 	if err != nil || id == nil || *id != "ses_root" {
 		t.Fatalf("resolve=%v err=%v", id, err)
 	}
-	invs, tools, events, start, end, err := opencode.ExtractFacts(db, []string{"ses_root"}, "tester", nil)
+	extractedSessions, start, end, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+	invs := extractedFacts.InvocationFacts()
+	tools := extractedFacts.ToolFacts()
+	events := extractedFacts.EventFacts()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +149,11 @@ func TestSchemaV2SessionEmptySessionProducesEmptyFacts(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO session_v2 VALUES('empty',NULL,'build','mock-model','AL-58 empty',1793231971000,1793231971000)`); err != nil {
 		t.Fatal(err)
 	}
-	invs, tools, events, start, end, err := opencode.ExtractFacts(db, []string{"empty"}, "tester", nil)
+	extractedSessions, start, end, err := opencode.ExtractSessions(db, []string{"empty"}, "tester", nil)
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+	invs := extractedFacts.InvocationFacts()
+	tools := extractedFacts.ToolFacts()
+	events := extractedFacts.EventFacts()
 	if err != nil || len(invs) != 1 || len(tools) != 0 || len(events) != 0 || start == nil || end == nil {
 		t.Fatalf("empty session facts inv=%+v tools=%+v events=%+v bounds=%v/%v err=%v", invs, tools, events, start, end, err)
 	}
@@ -168,7 +176,7 @@ func TestSchemaV2SessionMalformedJSONAndUnknownMessageVariantFailWithContext(t *
 			if _, err := db.Exec(`INSERT INTO session_message VALUES('bad','ses_root',?,20,1793231970500,1793231970500,?)`, tc.kind, tc.data); err != nil {
 				t.Fatal(err)
 			}
-			_, _, _, _, _, err = opencode.ExtractFacts(db, []string{"ses_root"}, "", nil)
+			_, _, _, err = opencode.ExtractSessions(db, []string{"ses_root"}, "", nil)
 			if err == nil || !containsSubstring(err.Error(), tc.want) {
 				t.Fatalf("expected contextual %q error, got %v", tc.want, err)
 			}
@@ -189,7 +197,7 @@ func TestSchemaV2SessionToolPendingRunningAndUnknownStatusesFailClosed(t *testin
 			if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id='a1'`, payload); err != nil {
 				t.Fatal(err)
 			}
-			_, _, _, _, _, err = opencode.ExtractFacts(db, []string{"ses_root"}, "", nil)
+			_, _, _, err = opencode.ExtractSessions(db, []string{"ses_root"}, "", nil)
 			if err == nil || !containsSubstring(err.Error(), `OpenCode schema family v2: unsupported tool status "`+status+`"`) {
 				t.Fatalf("status %q should not claim success, got %v", status, err)
 			}
@@ -208,7 +216,9 @@ func TestSchemaV2SessionTiedTimestampsPreserveSourceAndSameMessageOrder(t *testi
 	if _, err := db.Exec(`UPDATE session_message SET time_created=?,data=CASE id WHEN 'u' THEN '{"time":{"created":1793231970238},"text":"prompt"}' WHEN 'a1' THEN '{"time":{"created":1793231970238,"completed":1793231970238},"model":{"id":"mock-model"},"content":[{"type":"tool","id":"call1","name":"read","state":{"status":"completed","input":{},"content":[]}}]}' ELSE data END WHERE id IN ('u','a1')`, tie); err != nil {
 		t.Fatal(err)
 	}
-	_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_root"}, "", nil)
+	extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "", nil)
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+	events := extractedFacts.EventFacts()
 	if err != nil {
 		t.Fatal(err)
 	}

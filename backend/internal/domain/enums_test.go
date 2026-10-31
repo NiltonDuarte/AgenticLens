@@ -107,7 +107,7 @@ func TestNormalizeTicketType(t *testing.T) {
 	}
 }
 
-func TestIsValidTicketType(t *testing.T) {
+func TestNormalizeTicketType_AcceptedAndRejectedSpellings(t *testing.T) {
 	t.Parallel()
 
 	validCases := []string{
@@ -118,8 +118,8 @@ func TestIsValidTicketType(t *testing.T) {
 	}
 
 	for _, input := range validCases {
-		if !domain.IsValidTicketType(input) {
-			t.Errorf("expected IsValidTicketType(%q) to be true", input)
+		if _, ok := domain.NormalizeTicketType(input); !ok {
+			t.Errorf("expected NormalizeTicketType(%q) to be true", input)
 		}
 	}
 
@@ -129,8 +129,8 @@ func TestIsValidTicketType(t *testing.T) {
 	}
 
 	for _, input := range invalidCases {
-		if domain.IsValidTicketType(input) {
-			t.Errorf("expected IsValidTicketType(%q) to be false", input)
+		if _, ok := domain.NormalizeTicketType(input); ok {
+			t.Errorf("expected NormalizeTicketType(%q) to be false", input)
 		}
 	}
 }

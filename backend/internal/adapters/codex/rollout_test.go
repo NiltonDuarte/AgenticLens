@@ -53,7 +53,15 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 	if len(transcript.Events) != 2 || transcript.Events[0].Status != "completed" || transcript.Events[0].DurationMs == nil || *transcript.Events[0].DurationMs != 125 {
 		t.Fatalf("expected privacy-safe paired command event with duration, got %#v", transcript.Events)
 	}
-	ledger, err := transcript.ToMetricsLedger("TEST-101", "Fixture metrics", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	sessions, err := transcript.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	version := domain.CurrentSchemaVersion
+	ticketID := "TEST-101"
+	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
+	ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +128,15 @@ func TestMetricsLedgerUsesCodexThreadIDForInvocationHierarchy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseRollout returned an error: %v", err)
 	}
-	ledger, err := transcript.ToMetricsLedger("TEST-101", "Fixture metrics", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	sessions, err := transcript.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	version := domain.CurrentSchemaVersion
+	ticketID := "TEST-101"
+	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
+	ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)
 	}

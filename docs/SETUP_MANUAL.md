@@ -293,7 +293,7 @@ Specifies local OpenCode SQLite database connectivity parameters.
 Configures real-time session polling and automated anomaly detection.
 - **`active_threshold_seconds`** (Integer, Default: `300`): Sliding window in seconds. Sessions with turn activity within this window are classified as active.
 - **`poll_interval_ms`** (Integer, Default: `2000`): Frequency in milliseconds at which the embedded server polls SQLite for new session turns.
-- **`max_trace_buffer_messages`** (Integer, Default: `500`): Maximum number of recent trace events buffered in server memory per active session for live web streaming.
+- **`max_trace_buffer_messages`** (Integer, Default: `500`): Legacy compatibility setting, still accepted when loading configuration. It does not truncate live trace responses.
 - **`anomaly_thresholds`**:
   - `stall_threshold_seconds` (Integer, Default: `120`): Elapsed seconds without turn activity in an active session before raising a stall anomaly.
   - `error_rate_threshold` (Float, Default: `0.25`): Ratio of tool errors to total invocations triggering a high error rate alert (e.g. 0.25 = 25%).
@@ -623,7 +623,7 @@ In addition to post-turn historical ledgers, AgenticLens provides live observabi
 - The embedded server continuously polls the local OpenCode SQLite database at configurable intervals (`poll_interval_ms`, default 2000 ms).
 - Active sessions are identified based on recent turn activity within a sliding time window (`active_threshold_seconds`, default 300 seconds).
 - Telemetry events, tool calls, and status updates are broadcast to connected browsers via Server-Sent Events (SSE) through the `/api/live/stream` endpoint.
-- An in-memory trace buffer retains recent execution events, providing immediate visibility into subagent handoffs, prompt dispatches, and tool outputs as they occur.
+- Live traces use a source-revision cache to reuse unchanged snapshots, providing visibility into subagent handoffs, prompt dispatches, and tool outputs.
 
 ### A.5 Automated Anomaly Detection
 

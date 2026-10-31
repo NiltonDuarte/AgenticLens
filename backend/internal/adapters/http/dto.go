@@ -156,16 +156,3 @@ func WriteLiveTraceResponse(w http.ResponseWriter, trace domain.LiveTraceView) {
 	}
 	WriteJSON(w, http.StatusOK, trace)
 }
-
-// WriteLiveAnomalyAlertResponse writes a domain.LiveAnomalyAlert as JSON.
-func WriteLiveAnomalyAlertResponse(w http.ResponseWriter, alert domain.LiveAnomalyAlert) {
-	WriteJSON(w, http.StatusOK, alert)
-}
-
-// WriteLiveAnomalyAlertsResponse writes a slice of domain.LiveAnomalyAlert as JSON.
-func WriteLiveAnomalyAlertsResponse(w http.ResponseWriter, alerts []domain.LiveAnomalyAlert) {
-	if alerts == nil {
-		alerts = []domain.LiveAnomalyAlert{}
-	}
-	WriteJSON(w, http.StatusOK, alerts)
-}

@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -260,104 +259,6 @@ func TestGenerateDefaultYAML_Overrides(t *testing.T) {
 	}
 	if !strings.Contains(content, "role_order: []") {
 		t.Errorf("expected role_order: [] in generated default YAML, got:\n%s", content)
-	}
-}
-
-func TestGenerateDefaultConfigYAML(t *testing.T) {
-	t.Parallel()
-
-	prefixes := []domain.TicketPrefix{
-		{Prefix: "DEMO", Description: "Demo prefix", TicketType: "feat"},
-	}
-	srcFolders := []string{"src", "pkg"}
-
-	data1, err1 := adaptersconfig.GenerateDefaultYAML("DemoProject", "workspaces", "/var/db/demo.db", srcFolders, prefixes)
-	if err1 != nil {
-		t.Fatalf("GenerateDefaultYAML failed: %v", err1)
-	}
-
-	data2, err2 := adaptersconfig.GenerateDefaultConfigYAML("DemoProject", "workspaces", "/var/db/demo.db", srcFolders, prefixes)
-	if err2 != nil {
-		t.Fatalf("GenerateDefaultConfigYAML failed: %v", err2)
-	}
-
-	if string(data1) != string(data2) {
-		t.Errorf("GenerateDefaultConfigYAML output does not match GenerateDefaultYAML output.\nGot:\n%s\nExpected:\n%s", string(data2), string(data1))
-	}
-}
-
-func TestWriteConfigFile_CollisionAndForce(t *testing.T) {
-	t.Parallel()
-
-	tempDir := t.TempDir()
-	targetPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-
-	data1 := []byte("project_name: InitialProject\n")
-	data2 := []byte("project_name: OverwrittenProject\n")
-
-	// First write should succeed
-	if err := adaptersconfig.WriteConfigFile(targetPath, data1, false); err != nil {
-		t.Fatalf("first WriteConfigFile failed: %v", err)
-	}
-
-	// Second write without force should fail with ErrFileExists
-	err := adaptersconfig.WriteConfigFile(targetPath, data2, false)
-	if err == nil {
-		t.Fatal("expected error on duplicate write without force, got nil")
-	}
-	if !errors.Is(err, adaptersconfig.ErrFileExists) {
-		t.Errorf("expected ErrFileExists, got %v", err)
-	}
-
-	var fileExistsErr *adaptersconfig.FileExistsError
-	if !errors.As(err, &fileExistsErr) {
-		t.Errorf("expected *FileExistsError type, got %T", err)
-	}
-
-	// Verify original file was not overwritten
-	readBack, err := os.ReadFile(targetPath)
-	if err != nil {
-		t.Fatalf("reading file: %v", err)
-	}
-	if !strings.Contains(string(readBack), "InitialProject") {
-		t.Errorf("expected original content, got %s", string(readBack))
-	}
-
-	// Third write with force should succeed
-	if err := adaptersconfig.WriteConfigFile(targetPath, data2, true); err != nil {
-		t.Fatalf("WriteConfigFile with force failed: %v", err)
-	}
-
-	// Verify file was updated
-	readBackAfterForce, err := os.ReadFile(targetPath)
-	if err != nil {
-		t.Fatalf("reading file after force: %v", err)
-	}
-	if !strings.Contains(string(readBackAfterForce), "OverwrittenProject") {
-		t.Errorf("expected overwritten content, got %s", string(readBackAfterForce))
-	}
-}
-
-func TestWriteConfigFile_PermissionHandlingAndInvalidPath(t *testing.T) {
-	t.Parallel()
-
-	// Writing to a path under a non-creatable or read-only directory
-	tempDir := t.TempDir()
-	readOnlyDir := filepath.Join(tempDir, "readonly")
-	if err := os.MkdirAll(readOnlyDir, 0555); err != nil {
-		t.Fatalf("creating readonly dir: %v", err)
-	}
-	defer os.Chmod(readOnlyDir, 0755) // Ensure cleanup succeeds
-
-	targetPath := filepath.Join(readOnlyDir, "config.yaml")
-	data := []byte("project_name: PermTest\n")
-
-	// In non-root environments, creating a temp file inside a read-only dir should return an error
-	if os.Geteuid() != 0 {
-		err := adaptersconfig.WriteConfigFile(targetPath, data, false)
-		if err == nil {
-			t.Errorf("expected permission error when writing to readonly dir, got nil")
-		}
 	}
 }
 

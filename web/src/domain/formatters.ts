@@ -160,13 +160,6 @@ export function formatLeadTime(seconds: number | null): string {
   return `${mins}m ${remSecs}s`;
 }
 
-export function formatIsoDateOnly(isoString: string | null | undefined): string {
-  if (!isoString || isoString.length < 10) {
-    return 'N/A';
-  }
-  return isoString.slice(0, 10);
-}
-
 export function formatIsoDateTimeShort(isoString: string | null | undefined): string {
   if (!isoString || isoString.length < 10) {
     return 'N/A';
@@ -263,60 +256,6 @@ export function compareTicketCompletionDate(
     return dateB - dateA;
   }
   return compareTicketIds(a.ticket_id ?? '', b.ticket_id ?? '');
-}
-
-export function filterLedgersByCompletionDate<T extends TicketDateComparable>(
-  ledgers: readonly T[],
-  since?: string | number | null,
-  until?: string | number | null
-): T[] {
-  if (!since && !until) {
-    return [...ledgers];
-  }
-
-  let startMs: number | null = null;
-  if (typeof since === 'number' && !Number.isNaN(since)) {
-    startMs = since;
-  } else if (typeof since === 'string' && since.trim().length > 0) {
-    const cleanSince = since.trim();
-    const parsed = cleanSince.length === 10
-      ? Date.parse(`${cleanSince}T00:00:00.000Z`)
-      : Date.parse(cleanSince);
-    if (!Number.isNaN(parsed)) {
-      startMs = parsed;
-    }
-  }
-
-  let endMs: number | null = null;
-  if (typeof until === 'number' && !Number.isNaN(until)) {
-    endMs = until;
-  } else if (typeof until === 'string' && until.trim().length > 0) {
-    const cleanUntil = until.trim();
-    const parsed = cleanUntil.length === 10
-      ? Date.parse(`${cleanUntil}T23:59:59.999Z`)
-      : Date.parse(cleanUntil);
-    if (!Number.isNaN(parsed)) {
-      endMs = parsed;
-    }
-  }
-
-  if (startMs === null && endMs === null) {
-    return [...ledgers];
-  }
-
-  return ledgers.filter((ledger) => {
-    const effectiveMs = getEffectiveCompletionDateMs(ledger);
-    if (effectiveMs === null) {
-      return false;
-    }
-    if (startMs !== null && effectiveMs < startMs) {
-      return false;
-    }
-    if (endMs !== null && effectiveMs > endMs) {
-      return false;
-    }
-    return true;
-  });
 }
 
 export function deriveTicketComparisonRows(
@@ -501,22 +440,6 @@ export function extractTicketPrefix(ticketId: string): string {
 }
 
 /**
- * Extracts distinct ticket prefixes from ledgers, sorted ascending alphabetically.
- */
-export function extractDistinctPrefixes(ledgers: readonly AgenticMetricsLedger[]): readonly string[] {
-  const prefixSet = new Set<string>();
-  for (const ledger of ledgers) {
-    if (ledger.ticket_id) {
-      const p = extractTicketPrefix(ledger.ticket_id);
-      if (p) {
-        prefixSet.add(p);
-      }
-    }
-  }
-  return Array.from(prefixSet).sort((a, b) => a.localeCompare(b));
-}
-
-/**
  * Combines discovered ticket prefixes with configured prefixes, deduplicates,
  * trims tokens, normalizes to uppercase, sorts ascending alphabetically,
  * and falls back to canonical defaults ['AL', 'GEN', 'PO'] if empty.
@@ -593,38 +516,6 @@ export function filterLedgersByPrefixes(
     const p = extractTicketPrefix(ledger.ticket_id);
     return prefixSet.has(p);
   });
-}
-
-/**
- * Pure multi-filter for ticket comparison rows by ticket types and prefixes.
- */
-export function filterComparisonRows(
-  rows: readonly TicketComparisonRow[],
-  types: readonly string[],
-  prefixes: readonly string[]
-): readonly TicketComparisonRow[] {
-  let filtered = rows;
-
-  const normalizedTypes = types.map((t) => t.trim().toLowerCase()).filter(Boolean);
-  if (normalizedTypes.length > 0 && !normalizedTypes.includes('all')) {
-    const canonicalSet = new Set(normalizedTypes.map(canonicalTicketType));
-    filtered = filtered.filter((row) => {
-      if (!row.ticket_type) return false;
-      const rowCanonical = canonicalTicketType(row.ticket_type);
-      return canonicalSet.has(rowCanonical);
-    });
-  }
-
-  const normalizedPrefixes = prefixes.map((p) => p.trim().toUpperCase()).filter(Boolean);
-  if (normalizedPrefixes.length > 0 && !normalizedPrefixes.includes('ALL')) {
-    const prefixSet = new Set(normalizedPrefixes);
-    filtered = filtered.filter((row) => {
-      const p = extractTicketPrefix(row.ticket_id);
-      return prefixSet.has(p);
-    });
-  }
-
-  return filtered;
 }
 
 export function formatChartAxisTimestamp(

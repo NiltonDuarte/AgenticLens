@@ -41,15 +41,6 @@ func (r *Registry) Register(step MigrationStep) error {
 	return nil
 }
 
-// GetStep returns the registered step starting at the given source version, if present.
-func (r *Registry) GetStep(sourceVersion int) (MigrationStep, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	step, ok := r.steps[sourceVersion]
-	return step, ok
-}
-
 // PlanChain resolves a sequential, contiguous chain of migration steps from sourceVersion to targetVersion.
 func (r *Registry) PlanChain(sourceVersion int, targetVersion int) ([]MigrationStep, error) {
 	if sourceVersion == targetVersion {

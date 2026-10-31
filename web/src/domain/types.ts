@@ -141,10 +141,15 @@ export function ledgerTaskLinks(ledger: Pick<AgenticFactLedger, 'task_links'> | 
   return ledger?.task_links ?? [];
 }
 
-export interface WorkspaceDiagnostic {
+export type WorkspaceDiagnostic = {
+  readonly scope?: 'workspace';
   readonly ticket_id: string;
   readonly message: string;
-}
+} | {
+  /** Local response warning, not a rejected ticket or persisted fact. */
+  readonly scope: 'response';
+  readonly message: string;
+};
 
 export interface SessionFact {
   readonly id: string;

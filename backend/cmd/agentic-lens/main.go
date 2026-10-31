@@ -1078,13 +1078,58 @@ func runInit(args []string) {
 	fmt.Printf("Successfully initialized AgenticLens configuration for '%s' at %s and %s\n", projectName, outputPath, localPath)
 }
 
-func writeConfigPair(firstPath string, firstData []byte, secondPath string, secondData []byte, force bool) error {
-	type stagedFile struct{ target, temp string }
-	staged := make([]stagedFile, 0, 2)
-	for _, item := range []struct {
+func writeConfigPair(firstPath string, firstData []byte, secondPath string, secondData []byte, force bool) (resultErr error) {
+	type stagedFile struct {
+		target, temp, backup string
+		installed            bool
+	}
+	items := []struct {
 		path string
 		data []byte
-	}{{firstPath, firstData}, {secondPath, secondData}} {
+	}{{firstPath, firstData}, {secondPath, secondData}}
+	// Validate the complete pair before moving either existing configuration.
+	for _, item := range items {
+		info, err := os.Stat(item.path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("checking %s: %w", item.path, err)
+		}
+		if info.IsDir() {
+			return fmt.Errorf("target %s is a directory", item.path)
+		}
+		if !force {
+			return &adaptersconfig.FileExistsError{Path: item.path}
+		}
+	}
+	staged := make([]stagedFile, 0, len(items))
+	committed := false
+	defer func() {
+		for i := len(staged) - 1; i >= 0; i-- {
+			item := staged[i]
+			if !committed {
+				if item.installed {
+					if err := os.Remove(item.target); err != nil && !errors.Is(err, os.ErrNotExist) {
+						resultErr = errors.Join(resultErr, fmt.Errorf("removing replacement %s: %w", item.target, err))
+					}
+				}
+				if item.backup != "" {
+					if err := os.Rename(item.backup, item.target); err != nil {
+						resultErr = errors.Join(resultErr, fmt.Errorf("restoring %s from %s: %w", item.target, item.backup, err))
+					}
+				}
+			} else if item.backup != "" {
+				if err := os.Remove(item.backup); err != nil {
+					resultErr = errors.Join(resultErr, fmt.Errorf("removing backup %s: %w", item.backup, err))
+				}
+			}
+			if err := os.Remove(item.temp); err != nil && !errors.Is(err, os.ErrNotExist) {
+				resultErr = errors.Join(resultErr, fmt.Errorf("removing staged file %s: %w", item.temp, err))
+			}
+		}
+	}()
+	for _, item := range items {
 		if err := os.MkdirAll(filepath.Dir(item.path), 0755); err != nil {
 			return fmt.Errorf("preparing directory for %s: %w", item.path, err)
 		}
@@ -1092,33 +1137,14 @@ func writeConfigPair(firstPath string, firstData []byte, secondPath string, seco
 		if err != nil {
 			return fmt.Errorf("staging %s: %w", item.path, err)
 		}
-		if _, err := file.Write(item.data); err != nil {
-			file.Close()
-			os.Remove(file.Name())
-			return fmt.Errorf("staging %s: %w", item.path, err)
-		}
-		if err := file.Close(); err != nil {
-			os.Remove(file.Name())
-			return fmt.Errorf("staging %s: %w", item.path, err)
-		}
 		staged = append(staged, stagedFile{target: item.path, temp: file.Name()})
-	}
-	defer func() {
-		for _, item := range staged {
-			_ = os.Remove(item.temp)
-		}
-	}()
-	backups := make(map[string]string, len(staged))
-	installed := make([]string, 0, len(staged))
-	rollback := func() {
-		for _, path := range installed {
-			_ = os.Remove(path)
-		}
-		for path, backup := range backups {
-			_ = os.Rename(backup, path)
+		_, writeErr := file.Write(item.data)
+		if err := errors.Join(writeErr, file.Close()); err != nil {
+			return fmt.Errorf("staging %s: %w", item.path, err)
 		}
 	}
-	for _, item := range staged {
+	for i := range staged {
+		item := &staged[i]
 		info, err := os.Stat(item.target)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
@@ -1134,35 +1160,25 @@ func writeConfigPair(firstPath string, firstData []byte, secondPath string, seco
 		}
 		backup, err := os.CreateTemp(filepath.Dir(item.target), ".agenticlens-config-backup-*.tmp")
 		if err != nil {
-			rollback()
 			return fmt.Errorf("preparing backup for %s: %w", item.target, err)
 		}
 		backupPath := backup.Name()
-		if err := backup.Close(); err != nil {
-			os.Remove(backupPath)
-			rollback()
-			return fmt.Errorf("preparing backup for %s: %w", item.target, err)
-		}
-		if err := os.Remove(backupPath); err != nil {
-			rollback()
+		if err := errors.Join(backup.Close(), os.Remove(backupPath)); err != nil {
 			return fmt.Errorf("preparing backup for %s: %w", item.target, err)
 		}
 		if err := os.Rename(item.target, backupPath); err != nil {
-			rollback()
 			return fmt.Errorf("backing up %s: %w", item.target, err)
 		}
-		backups[item.target] = backupPath
+		item.backup = backupPath
 	}
-	for _, item := range staged {
+	for i := range staged {
+		item := &staged[i]
 		if err := os.Rename(item.temp, item.target); err != nil {
-			rollback()
 			return fmt.Errorf("replacing %s: %w", item.target, err)
 		}
-		installed = append(installed, item.target)
+		item.installed = true
 	}
-	for _, backup := range backups {
-		_ = os.Remove(backup)
-	}
+	committed = true
 	return nil
 }
 
@@ -1393,70 +1409,6 @@ func main() {
 	if *appendFlag == "" && *jsonOutputFlag == "" {
 		fmt.Println(tableMD)
 	}
-}
-
-type toolFactKey struct {
-	sessionID string
-	name      string
-}
-
-func mergeTools(cached []domain.ToolFact, local []domain.ToolFact) []domain.ToolFact {
-	merged := make([]domain.ToolFact, len(cached))
-	copy(merged, cached)
-
-	indexMap := make(map[toolFactKey]int)
-	for i, t := range merged {
-		indexMap[toolFactKey{sessionID: t.SessionID, name: t.Name}] = i
-	}
-
-	for _, lt := range local {
-		key := toolFactKey{sessionID: lt.SessionID, name: lt.Name}
-		if idx, exists := indexMap[key]; exists {
-			merged[idx] = lt
-		} else {
-			indexMap[key] = len(merged)
-			merged = append(merged, lt)
-		}
-	}
-
-	return merged
-}
-
-type eventKey struct {
-	timestamp string
-	sessionID string
-	turn      int64
-	eventType domain.EventType
-}
-
-func mergeEvents(cached []domain.EventFact, local []domain.EventFact) []domain.EventFact {
-	merged := make([]domain.EventFact, len(cached))
-	copy(merged, cached)
-
-	seen := make(map[eventKey]bool)
-	for _, e := range merged {
-		seen[eventKey{
-			timestamp: e.Timestamp,
-			sessionID: e.SessionID,
-			turn:      e.Turn,
-			eventType: e.EventType,
-		}] = true
-	}
-
-	for _, le := range local {
-		k := eventKey{
-			timestamp: le.Timestamp,
-			sessionID: le.SessionID,
-			turn:      le.Turn,
-			eventType: le.EventType,
-		}
-		if !seen[k] {
-			seen[k] = true
-			merged = append(merged, le)
-		}
-	}
-
-	return merged
 }
 
 func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []domain.SessionFact {

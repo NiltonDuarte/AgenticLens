@@ -73,9 +73,9 @@ func TestEmptyThreadSelectionStillValidatesSchema(t *testing.T) {
 				}
 			}
 
-			_, _, _, _, _, factsErr := opencode.ExtractFacts(db, nil, "user", nil)
+			_, _, _, factsErr := opencode.ExtractSessions(db, nil, "user", nil)
 			if factsErr == nil || !strings.Contains(factsErr.Error(), "unsupported OpenCode database schema") {
-				t.Errorf("ExtractFacts should reject schema, got %v", factsErr)
+				t.Errorf("ExtractSessions should reject schema, got %v", factsErr)
 			}
 			if count, steeringErr := opencode.ExtractSteeringTurns(db, nil); steeringErr == nil || !strings.Contains(steeringErr.Error(), "unsupported OpenCode database schema") {
 				t.Errorf("ExtractSteeringTurns should reject schema (count %d), got %v", count, steeringErr)
@@ -86,7 +86,11 @@ func TestEmptyThreadSelectionStillValidatesSchema(t *testing.T) {
 	t.Run("valid empty v1 selection stays empty", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer db.Close()
-		invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(db, nil, "user", nil)
+		extractedSessions, startedAt, completedAt, err := opencode.ExtractSessions(db, nil, "user", nil)
+		extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+		invocations := extractedFacts.InvocationFacts()
+		tools := extractedFacts.ToolFacts()
+		events := extractedFacts.EventFacts()
 		if err != nil || len(invocations) != 0 || len(tools) != 0 || len(events) != 0 || startedAt != nil || completedAt != nil {
 			t.Fatalf("unexpected empty facts result: invocations=%d tools=%d events=%d start=%v complete=%v err=%v", len(invocations), len(tools), len(events), startedAt, completedAt, err)
 		}
@@ -145,7 +149,9 @@ func TestV1FilePathAndV2PathNormalizeToSameToolInput(t *testing.T) {
 		if _, err = db.Exec(`INSERT INTO part VALUES('p','s','m',1050,1080,?)`, toolData); err != nil {
 			t.Fatal(err)
 		}
-		_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"s"}, "user", nil)
+		extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"s"}, "user", nil)
+		extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+		events := extractedFacts.EventFacts()
 		if err != nil {
 			t.Fatal(err)
 		}

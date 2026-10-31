@@ -196,28 +196,6 @@ func (e *Engine) Migrate(input []byte, targetVersion int) (domain.AgenticFactLed
 	return e.applyChain(ledger, sourceVersion, targetVersion)
 }
 
-// MigrateLedger applies migration steps to an already deserialized domain ledger.
-func (e *Engine) MigrateLedger(ledger domain.AgenticFactLedger, targetVersion int) (domain.AgenticFactLedger, error) {
-	if targetVersion < 1 {
-		return domain.AgenticFactLedger{}, fmt.Errorf("%w: target version %d must be at least 1",
-			ErrUnsupportedVersion, targetVersion)
-	}
-
-	sourceVersion := 1
-	if ledger.SchemaVersion != nil && *ledger.SchemaVersion > 1 {
-		sourceVersion = *ledger.SchemaVersion
-	}
-	if err := validateSessions(ledger.Sessions); err != nil {
-		return domain.AgenticFactLedger{}, err
-	}
-
-	if sourceVersion == targetVersion {
-		return ledger, nil
-	}
-
-	return e.applyChain(ledger, sourceVersion, targetVersion)
-}
-
 func validateSessions(sessions []domain.SessionFact) error {
 	seen := make(map[string]bool, len(sessions))
 	for i, session := range sessions {

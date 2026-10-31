@@ -85,7 +85,7 @@ live:
   active_threshold_seconds: 300
   # SQLite polling interval in milliseconds for live session updates.
   poll_interval_ms: 2000
-  # Maximum number of recent trace messages retained in memory buffer per session.
+  # Legacy compatibility setting; full live trace responses are not truncated.
   max_trace_buffer_messages: 500
 
 # Git commit diff analysis and code classification glob patterns.

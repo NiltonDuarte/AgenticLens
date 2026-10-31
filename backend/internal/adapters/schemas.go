@@ -207,23 +207,6 @@ func (dto EventFactDTO) ToDomain() domain.EventFact {
 	}
 }
 
-// EventFactDTOFromDomain converts domain.EventFact to EventFactDTO.
-func EventFactDTOFromDomain(fact domain.EventFact) EventFactDTO {
-	return EventFactDTO{
-		EventID:       fact.EventID,
-		Timestamp:     fact.Timestamp,
-		SessionID:     fact.SessionID,
-		Turn:          fact.Turn,
-		Role:          string(fact.Role),
-		EventType:     string(fact.EventType),
-		ToolName:      fact.ToolName,
-		Status:        fact.Status,
-		ErrorMessage:  fact.ErrorMessage,
-		DurationMs:    fact.DurationMs,
-		ContextTokens: fact.ContextTokens,
-	}
-}
-
 // CodeFactsDTO represents code facts in JSON.
 type CodeFactsDTO struct {
 	LinesAdded       int64 `json:"lines_added"`
@@ -424,15 +407,6 @@ func ValidateRuntimeFactLedger(data []byte) error {
 		}
 	}
 	return nil
-}
-
-func containsString(values []string, wanted string) bool {
-	for _, value := range values {
-		if value == wanted {
-			return true
-		}
-	}
-	return false
 }
 
 // UnmarshalJSON rejects legacy root fact collections at the current schema boundary.
@@ -642,48 +616,6 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 	return nil
 }
 
-func validateAnomalyEvidence(anomaly AnomalyDTO, ownerSession string, nested bool, knownEvents map[string]EventFactDTO, canonical bool) error {
-	seenRefs := make(map[string]bool, len(anomaly.Evidence))
-	for i, ref := range anomaly.Evidence {
-		if strings.TrimSpace(ref.SessionID) == "" || strings.TrimSpace(ref.EventID) == "" {
-			return fmt.Errorf("evidence[%d] requires session_id and event_id", i)
-		}
-		if nested && ref.SessionID != ownerSession {
-			return fmt.Errorf("evidence[%d].session_id must match owning session %q", i, ownerSession)
-		}
-		key := ref.SessionID + "\x00" + ref.EventID
-		if seenRefs[key] {
-			return fmt.Errorf("evidence[%d] duplicates session=%q event_id=%q", i, ref.SessionID, ref.EventID)
-		}
-		seenRefs[key] = true
-		_, found := knownEvents[key]
-		if canonical && !found {
-			return fmt.Errorf("evidence[%d] references missing event session=%q event_id=%q", i, ref.SessionID, ref.EventID)
-		}
-	}
-	if anomaly.RuleID == string(domain.RuleToolHighFailureRate) {
-		if anomaly.Context.Count == nil || int64(len(anomaly.Evidence)) != *anomaly.Context.Count {
-			return errors.New("high tool failure anomaly must reference every failed event in its count")
-		}
-		if canonical {
-			toolName := ""
-			if anomaly.Context.ToolName != nil {
-				toolName = strings.TrimSpace(*anomaly.Context.ToolName)
-			}
-			if toolName == "" {
-				return errors.New("high tool failure anomaly requires a tool_name")
-			}
-			for i, ref := range anomaly.Evidence {
-				event := knownEvents[ref.SessionID+"\x00"+ref.EventID]
-				if event.EventType != string(domain.EventTypeToolCall) || (event.Status != "error" && event.Status != "failed") || event.ToolName == nil || *event.ToolName != toolName {
-					return fmt.Errorf("evidence[%d] must reference a failed tool_call for tool %q", i, toolName)
-				}
-			}
-		}
-	}
-	return nil
-}
-
 // ValidatePersistedEvidence enforces stable source identity on rows about to be written.
 // Read validation remains tolerant of pre-iteration v4 ledgers so they can be normalized.
 func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
@@ -693,16 +625,6 @@ func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
 		}
 	}
 	return dto.Validate()
-}
-
-// ValidateToolFacts enforces session identity for facts before writing a ledger.
-func ValidateToolFacts(tools []domain.ToolFact) error {
-	for i, tool := range tools {
-		if strings.TrimSpace(tool.SessionID) == "" {
-			return fmt.Errorf("%w: tools[%d] is missing; regenerate or re-extract this ledger from source logs", ErrToolSessionIDRequired, i)
-		}
-	}
-	return nil
 }
 
 // AgenticFactLedgerDTOFromDomain converts a domain AgenticFactLedger to its DTO for serialization.
@@ -853,28 +775,6 @@ func AnomalyDTOFromDomain(anomaly domain.Anomaly) AnomalyDTO {
 	}
 }
 
-func evidenceRefsToDomain(items []AnomalyEvidenceRefDTO) []domain.AnomalyEvidenceRef {
-	if items == nil {
-		return nil
-	}
-	result := make([]domain.AnomalyEvidenceRef, len(items))
-	for i, item := range items {
-		result[i] = domain.AnomalyEvidenceRef{SessionID: item.SessionID, EventID: item.EventID}
-	}
-	return result
-}
-
-func evidenceRefsFromDomain(items []domain.AnomalyEvidenceRef) []AnomalyEvidenceRefDTO {
-	if items == nil {
-		return nil
-	}
-	result := make([]AnomalyEvidenceRefDTO, len(items))
-	for i, item := range items {
-		result[i] = AnomalyEvidenceRefDTO{SessionID: item.SessionID, EventID: item.EventID}
-	}
-	return result
-}
-
 func anomaliesToDomain(items []AnomalyDTO) []domain.Anomaly {
 	if items == nil {
 		return nil
@@ -892,102 +792,6 @@ func anomaliesFromDomain(items []domain.Anomaly) []AnomalyDTO {
 		result[i] = AnomalyDTOFromDomain(item)
 	}
 	return result
-}
-
-// BrittleToolSummaryDTO represents brittle tool aggregates in JSON boundary serialization.
-type BrittleToolSummaryDTO struct {
-	ToolName       string  `json:"tool_name"`
-	AnomalyCount   int64   `json:"anomaly_count"`
-	TotalCalls     int64   `json:"total_calls"`
-	ErrorCount     int64   `json:"error_count"`
-	FailureRatePct float64 `json:"failure_rate_pct"`
-}
-
-func (dto BrittleToolSummaryDTO) ToDomain() domain.BrittleToolSummary {
-	return domain.BrittleToolSummary{
-		ToolName:       dto.ToolName,
-		AnomalyCount:   dto.AnomalyCount,
-		TotalCalls:     dto.TotalCalls,
-		ErrorCount:     dto.ErrorCount,
-		FailureRatePct: dto.FailureRatePct,
-	}
-}
-
-// BrittleToolSummaryDTOFromDomain converts domain.BrittleToolSummary to BrittleToolSummaryDTO.
-func BrittleToolSummaryDTOFromDomain(summary domain.BrittleToolSummary) BrittleToolSummaryDTO {
-	return BrittleToolSummaryDTO{
-		ToolName:       summary.ToolName,
-		AnomalyCount:   summary.AnomalyCount,
-		TotalCalls:     summary.TotalCalls,
-		ErrorCount:     summary.ErrorCount,
-		FailureRatePct: summary.FailureRatePct,
-	}
-}
-
-// FleetAnomalySummaryDTO represents the fleet anomaly rollup in JSON boundary serialization.
-type FleetAnomalySummaryDTO struct {
-	TotalAnomalies       int64                   `json:"total_anomalies"`
-	WarningCount         int64                   `json:"warning_count"`
-	CriticalCount        int64                   `json:"critical_count"`
-	SeverityCounts       map[string]int64        `json:"severity_counts"`
-	RuleCounts           map[string]int64        `json:"rule_counts"`
-	TotalTickets         int64                   `json:"total_tickets"`
-	TicketsWithAnomalies int64                   `json:"tickets_with_anomalies"`
-	AnomalyRatePerTicket float64                 `json:"anomaly_rate_per_ticket"`
-	BrittleTools         []BrittleToolSummaryDTO `json:"brittle_tools"`
-}
-
-func (dto FleetAnomalySummaryDTO) ToDomain() domain.FleetAnomalySummary {
-	severityCounts := make(map[string]int64)
-	for k, v := range dto.SeverityCounts {
-		severityCounts[k] = v
-	}
-	ruleCounts := make(map[string]int64)
-	for k, v := range dto.RuleCounts {
-		ruleCounts[k] = v
-	}
-	brittleTools := make([]domain.BrittleToolSummary, len(dto.BrittleTools))
-	for i, bt := range dto.BrittleTools {
-		brittleTools[i] = bt.ToDomain()
-	}
-	return domain.FleetAnomalySummary{
-		TotalAnomalies:       dto.TotalAnomalies,
-		WarningCount:         dto.WarningCount,
-		CriticalCount:        dto.CriticalCount,
-		SeverityCounts:       severityCounts,
-		RuleCounts:           ruleCounts,
-		TotalTickets:         dto.TotalTickets,
-		TicketsWithAnomalies: dto.TicketsWithAnomalies,
-		AnomalyRatePerTicket: dto.AnomalyRatePerTicket,
-		BrittleTools:         brittleTools,
-	}
-}
-
-// FleetAnomalySummaryDTOFromDomain converts domain.FleetAnomalySummary to FleetAnomalySummaryDTO.
-func FleetAnomalySummaryDTOFromDomain(summary domain.FleetAnomalySummary) FleetAnomalySummaryDTO {
-	severityCounts := make(map[string]int64)
-	for k, v := range summary.SeverityCounts {
-		severityCounts[k] = v
-	}
-	ruleCounts := make(map[string]int64)
-	for k, v := range summary.RuleCounts {
-		ruleCounts[k] = v
-	}
-	brittleTools := make([]BrittleToolSummaryDTO, len(summary.BrittleTools))
-	for i, bt := range summary.BrittleTools {
-		brittleTools[i] = BrittleToolSummaryDTOFromDomain(bt)
-	}
-	return FleetAnomalySummaryDTO{
-		TotalAnomalies:       summary.TotalAnomalies,
-		WarningCount:         summary.WarningCount,
-		CriticalCount:        summary.CriticalCount,
-		SeverityCounts:       severityCounts,
-		RuleCounts:           ruleCounts,
-		TotalTickets:         summary.TotalTickets,
-		TicketsWithAnomalies: summary.TicketsWithAnomalies,
-		AnomalyRatePerTicket: summary.AnomalyRatePerTicket,
-		BrittleTools:         brittleTools,
-	}
 }
 
 // AgenticMetricsLedgerDTO represents the computed metrics ledger format in JSON.

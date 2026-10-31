@@ -161,11 +161,6 @@ func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) 
 	return ComputeWorkflowEfficiencyWithCeiling(ledger, ContextCeilingCriticalTokens, roleOrder...)
 }
 
-// ComputeWorkflowEfficiencyWithConfig derives workflow efficiency using project configuration.
-func ComputeWorkflowEfficiencyWithConfig(ledger AgenticFactLedger, cfg ProjectConfig) WorkflowEfficiency {
-	return ComputeWorkflowEfficiencyWithCeiling(ledger, cfg.EffectiveHealthyCeiling(), cfg.RoleOrder)
-}
-
 // ComputeWorkflowEfficiencyWithCeiling derives workflow efficiency profile with an explicit context ceiling.
 func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int64, roleOrder ...[]string) WorkflowEfficiency {
 	if ceiling <= 0 {
@@ -425,11 +420,6 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 	}
 }
 
-// ComputeRoleMetrics calculates aggregated metrics grouped by agent role using default ceiling.
-func ComputeRoleMetrics(invocations []InvocationFact, roleOrder ...[]string) []RoleMetric {
-	return ComputeRoleMetricsWithCeiling(invocations, ContextCeilingCriticalTokens, roleOrder...)
-}
-
 // ComputeRoleMetricsWithCeiling calculates aggregated metrics grouped by agent role with an explicit context ceiling.
 func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, roleOrder ...[]string) []RoleMetric {
 	if ceiling <= 0 {
@@ -521,16 +511,6 @@ func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []Model
 	})
 
 	return metrics
-}
-
-// ComputeThreadSummaries groups session-owned invocation rows by their root session.
-func ComputeThreadSummaries(sessions []SessionFact, roleOrder ...[]string) []ThreadExecutionRecord {
-	return ComputeThreadSummariesWithCeiling(sessions, ContextCeilingCriticalTokens, roleOrder...)
-}
-
-// ComputeThreadSummariesFromSessions groups sessions by root session into hierarchical thread execution records.
-func ComputeThreadSummariesFromSessions(sessions []SessionFact, roleOrder ...[]string) []ThreadExecutionRecord {
-	return ComputeThreadSummaries(sessions, roleOrder...)
 }
 
 // ComputeThreadSummariesWithCeiling groups session-owned invocation rows by their root session with an explicit context ceiling.
@@ -1060,41 +1040,6 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 	return rows
 }
 
-// CalculateRoleEffortRollup groups invocations, tokens, and cost across all tickets by agent role.
-func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger, ceiling ...int64) map[string]GroupedMetric {
-	effCeiling := ContextCeilingCriticalTokens
-	if len(ceiling) > 0 && ceiling[0] > 0 {
-		effCeiling = ceiling[0]
-	}
-
-	rollup := make(map[string]GroupedMetric)
-	for _, ledger := range ledgers {
-		for _, r := range ledger.Roles {
-			curr := rollup[string(r.Role)]
-			curr.Invocations += r.Invocations
-			curr.InputTokens += r.InputTokens
-			curr.OutputTokens += r.OutputTokens
-			curr.CacheReadTokens += r.CacheReadTokens
-			curr.CostUSD = math.Round((curr.CostUSD+r.CostUSD)*10000.0) / 10000.0
-			if r.PeakContextTokens > curr.PeakContextTokens {
-				curr.PeakContextTokens = r.PeakContextTokens
-			}
-			rollup[string(r.Role)] = curr
-		}
-	}
-
-	for role, m := range rollup {
-		totTok := m.InputTokens + m.CacheReadTokens
-		if totTok > 0 {
-			m.CacheHitRatePct = math.Round(float64(m.CacheReadTokens)/float64(totTok)*1000.0) / 10.0
-		}
-		m.ContextHealth = GetBaseHealthStatus(m.PeakContextTokens, effCeiling)
-		rollup[role] = m
-	}
-
-	return rollup
-}
-
 func parseTimestamp(ts *string) (time.Time, bool) {
 	if ts == nil {
 		return time.Time{}, false
@@ -1201,24 +1146,6 @@ func FilterLedgersByTicketTypes(ledgers []AgenticMetricsLedger, ticketTypes []st
 	return filtered
 }
 
-// FilterLedgersByTicketType is a convenience wrapper delegating to FilterLedgersByTicketTypes,
-// supporting comma-delimited strings.
-func FilterLedgersByTicketType(ledgers []AgenticMetricsLedger, ticketType string) []AgenticMetricsLedger {
-	clean := strings.TrimSpace(ticketType)
-	if clean == "" || strings.EqualFold(clean, "all") {
-		return FilterLedgersByTicketTypes(ledgers, nil)
-	}
-	parts := strings.Split(clean, ",")
-	var types []string
-	for _, p := range parts {
-		trimmed := strings.TrimSpace(p)
-		if trimmed != "" {
-			types = append(types, trimmed)
-		}
-	}
-	return FilterLedgersByTicketTypes(ledgers, types)
-}
-
 func isAllASCIIAlpha(s string) bool {
 	if len(s) == 0 {
 		return false
@@ -1304,49 +1231,6 @@ func FilterLedgersByPrefixes(ledgers []AgenticMetricsLedger, prefixes []string) 
 	return filtered
 }
 
-// FilterLedgersByPrefix is a convenience wrapper delegating to FilterLedgersByPrefixes,
-// supporting comma-delimited strings.
-func FilterLedgersByPrefix(ledgers []AgenticMetricsLedger, prefix string) []AgenticMetricsLedger {
-	clean := strings.TrimSpace(prefix)
-	if clean == "" || strings.EqualFold(clean, "all") {
-		return FilterLedgersByPrefixes(ledgers, nil)
-	}
-	parts := strings.Split(clean, ",")
-	var prefixes []string
-	for _, p := range parts {
-		trimmed := strings.TrimSpace(p)
-		if trimmed != "" {
-			prefixes = append(prefixes, trimmed)
-		}
-	}
-	return FilterLedgersByPrefixes(ledgers, prefixes)
-}
-
-// ExtractDistinctPrefixes returns an array of unique non-empty uppercase ticket prefix strings sorted in ascending alphabetical order.
-func ExtractDistinctPrefixes(ledgers []AgenticMetricsLedger) []string {
-	if len(ledgers) == 0 {
-		return []string{}
-	}
-	prefixMap := make(map[string]struct{})
-	for _, ledger := range ledgers {
-		if ledger.TicketID != nil {
-			p := ExtractTicketPrefix(*ledger.TicketID)
-			if p != "" {
-				prefixMap[p] = struct{}{}
-			}
-		}
-	}
-	if len(prefixMap) == 0 {
-		return []string{}
-	}
-	results := make([]string, 0, len(prefixMap))
-	for p := range prefixMap {
-		results = append(results, p)
-	}
-	sort.Strings(results)
-	return results
-}
-
 // FilterLedgersByCompletionDate filters ledgers based on their effective completion date within inclusive bounds.
 // Ledgers lacking a valid date are excluded when boundaries are active.
 // Returns a newly allocated slice.
@@ -1375,131 +1259,6 @@ func FilterLedgersByCompletionDate(ledgers []AgenticMetricsLedger, since, until 
 		filtered = append(filtered, ledger)
 	}
 
-	return filtered
-}
-
-func parseISODate(ts *string) (time.Time, bool) {
-	if ts == nil || len(*ts) < 10 {
-		return time.Time{}, false
-	}
-	clean := (*ts)[:10]
-	t, err := time.Parse("2006-01-02", clean)
-	if err != nil {
-		return time.Time{}, false
-	}
-	return t, true
-}
-
-// GetTicketEffectiveDate resolves the effective date for a ticket strictly based on completed_at.
-// If completed_at is nil, empty, or unparseable, it returns a zero time.Time and false.
-// It never falls back to started_at or updated_at.
-func GetTicketEffectiveDate(completedAt, startedAt *string, updatedAt string) (time.Time, bool) {
-	return parseISODate(completedAt)
-}
-
-// ResolveDatePreset resolves preset string into start and end dates.
-func ResolveDatePreset(preset string, refDate time.Time) (startDate *time.Time, endDate *time.Time) {
-	ref := time.Date(refDate.Year(), refDate.Month(), refDate.Day(), 0, 0, 0, 0, time.UTC)
-	switch TimeWindowPreset(preset) {
-	case TimeWindowLast24Hours:
-		start := refDate.Add(-24 * time.Hour)
-		end := refDate
-		return &start, &end
-	case TimeWindowLast7Days:
-		start := ref.AddDate(0, 0, -7)
-		return &start, &ref
-	case TimeWindowLast30Days:
-		start := ref.AddDate(0, 0, -30)
-		return &start, &ref
-	case TimeWindowLast90Days:
-		start := ref.AddDate(0, 0, -90)
-		return &start, &ref
-	default:
-		return nil, nil
-	}
-}
-
-// FilterLedgersByDateRange filters ledgers based on their effective date within inclusive bounds.
-func FilterLedgersByDateRange(ledgers []AgenticMetricsLedger, startDate, endDate *time.Time) []AgenticMetricsLedger {
-	if startDate == nil && endDate == nil {
-		return ledgers
-	}
-
-	var filtered []AgenticMetricsLedger
-	for _, ledger := range ledgers {
-		t, ok := GetTicketEffectiveDate(ledger.CompletedAt, ledger.StartedAt, ledger.UpdatedAt)
-		if !ok {
-			continue
-		}
-		if startDate != nil && t.Before(*startDate) {
-			continue
-		}
-		if endDate != nil && t.After(*endDate) {
-			continue
-		}
-		filtered = append(filtered, ledger)
-	}
-	return filtered
-}
-
-// FilterLedgersByTimeWindow filters ledgers based on a TimeWindow relative to refDate.
-// For TimeWindowAll or empty windows, it returns a clone of all ledgers.
-func FilterLedgersByTimeWindow(ledgers []AgenticMetricsLedger, window TimeWindow, refDate time.Time) []AgenticMetricsLedger {
-	if window == TimeWindowAll || len(ledgers) == 0 {
-		result := make([]AgenticMetricsLedger, len(ledgers))
-		copy(result, ledgers)
-		return result
-	}
-
-	if window == TimeWindow1D {
-		start := refDate.Add(-24 * time.Hour)
-		var filtered []AgenticMetricsLedger
-		for _, ledger := range ledgers {
-			t, ok := GetLedgerCompletionDate(ledger)
-			if !ok {
-				continue
-			}
-			if !t.Before(start) && !t.After(refDate) {
-				filtered = append(filtered, ledger)
-			}
-		}
-		if filtered == nil {
-			return []AgenticMetricsLedger{}
-		}
-		return filtered
-	}
-
-	var days int
-	switch window {
-	case TimeWindow7D:
-		days = 7
-	case TimeWindow30D:
-		days = 30
-	case TimeWindow90D:
-		days = 90
-	default:
-		result := make([]AgenticMetricsLedger, len(ledgers))
-		copy(result, ledgers)
-		return result
-	}
-
-	ref := time.Date(refDate.Year(), refDate.Month(), refDate.Day(), 23, 59, 59, 999999999, time.UTC)
-	start := time.Date(refDate.Year(), refDate.Month(), refDate.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -days)
-
-	var filtered []AgenticMetricsLedger
-	for _, ledger := range ledgers {
-		t, ok := GetTicketEffectiveDate(ledger.CompletedAt, ledger.StartedAt, ledger.UpdatedAt)
-		if !ok {
-			continue
-		}
-		if !t.Before(start) && !t.After(ref) {
-			filtered = append(filtered, ledger)
-		}
-	}
-
-	if filtered == nil {
-		return []AgenticMetricsLedger{}
-	}
 	return filtered
 }
 

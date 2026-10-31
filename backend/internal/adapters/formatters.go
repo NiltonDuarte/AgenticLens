@@ -5,51 +5,9 @@ import (
 	"math"
 	"sort"
 	"strings"
-	"time"
 
 	"agenticlens/internal/domain"
 )
-
-// FormatISODatetime formats ISO timestamp string into standard YYYY-MM-DD HH:MM UTC format.
-func FormatISODatetime(ts *string) string {
-	if ts == nil || strings.TrimSpace(*ts) == "" {
-		return "N/A"
-	}
-	clean := strings.TrimSpace(*ts)
-	dt, err := time.Parse(time.RFC3339Nano, clean)
-	if err != nil {
-		dt, err = time.Parse(time.RFC3339, clean)
-		if err != nil {
-			return clean
-		}
-	}
-	return dt.UTC().Format("2006-01-02 15:04 UTC")
-}
-
-// FormatCurrency formats USD currency amount.
-func FormatCurrency(amount float64) string {
-	if amount < 10.0 {
-		return fmt.Sprintf("$%.4f", amount)
-	}
-	return fmt.Sprintf("$%.2f", amount)
-}
-
-// FormatPercentage formats percentage value.
-func FormatPercentage(pct float64) string {
-	return fmt.Sprintf("%.1f%%", pct)
-}
-
-// FormatDuration formats duration in seconds into human-readable hours and minutes or minutes and seconds.
-func FormatDuration(seconds int64) string {
-	hours := seconds / 3600
-	rem := seconds % 3600
-	mins := rem / 60
-	secs := rem % 60
-	if hours > 0 {
-		return fmt.Sprintf("%dh %dm", hours, mins)
-	}
-	return fmt.Sprintf("%dm %ds", mins, secs)
-}
 
 // FormatNumber formats an integer with thousands separator commas.
 func FormatNumber(val int64) string {
@@ -85,64 +43,6 @@ func FormatNumber(val int64) string {
 		}
 	}
 	return sb.String()
-}
-
-// FormatCompactNumber formats integer into compact SI notation (e.g. 11.9k, 1.5M).
-func FormatCompactNumber(val int64) string {
-	absVal := val
-	if absVal < 0 {
-		absVal = -absVal
-	}
-	var formatted string
-	if absVal >= 1_000_000 {
-		num := float64(absVal) / 1_000_000.0
-		if num == math.Floor(num) {
-			formatted = fmt.Sprintf("%.0fM", num)
-		} else {
-			formatted = fmt.Sprintf("%.1fM", num)
-		}
-	} else if absVal >= 1_000 {
-		num := float64(absVal) / 1_000.0
-		if num == math.Floor(num) {
-			formatted = fmt.Sprintf("%.0fk", num)
-		} else {
-			formatted = fmt.Sprintf("%.1fk", num)
-		}
-	} else {
-		formatted = fmt.Sprintf("%d", absVal)
-	}
-
-	if val < 0 {
-		return "-" + formatted
-	}
-	return formatted
-}
-
-// FormatCodeDelivery formats code delivered lines added and deleted with compact notation.
-func FormatCodeDelivery(linesAdded, linesDeleted int64) string {
-	return fmt.Sprintf("+%s / -%s", FormatCompactNumber(linesAdded), FormatCompactNumber(linesDeleted))
-}
-
-// FormatTicketLabel formats combined ticket identifier and human-readable title.
-func FormatTicketLabel(ticketID, ticketTitle *string) string {
-	idClean := ""
-	if ticketID != nil {
-		idClean = strings.TrimSpace(*ticketID)
-	}
-	titleClean := ""
-	if ticketTitle != nil {
-		titleClean = strings.TrimSpace(*ticketTitle)
-	}
-	if idClean != "" && titleClean != "" {
-		return fmt.Sprintf("%s - %s", idClean, titleClean)
-	}
-	if idClean != "" {
-		return idClean
-	}
-	if titleClean != "" {
-		return titleClean
-	}
-	return "Unknown"
 }
 
 // titleCase converts lowercase role strings to Title Case (e.g., "orchestrator" -> "Orchestrator").
