@@ -76,7 +76,7 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
   };
 
   return (
-    <div className={`trace-part-item ${part.is_error ? 'part-error' : 'part-normal'}`}>
+    <div className={`trace-part-item ${part.is_error ? 'part-error' : part.has_content_error ? 'part-content-error' : 'part-normal'}`}>
       <div className="part-header">
         <span className="part-type-badge">{part.type}</span>
         {part.tool_name && (
@@ -90,8 +90,9 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
               : undefined}
           availableSessionIds={availableSessionIds} onSelectSession={onSelectSession}
         />
-        <span className={`part-status-badge status-${part.status.toLowerCase()}`}>
-          {part.status}
+        <span className={`part-status-badge ${part.is_error ? "status-error" : part.has_content_error ? "status-content-error" : `status-${part.status.toLowerCase()}`}`}>
+          {part.is_error ? 'EXEC ERROR' : part.has_content_error ? 'CONTENT ERROR' : part.status}
+
         </span>
         {part.id && (
           <div className="debug-id-token-group">
@@ -386,6 +387,8 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
                 </span>
                 <span className={`inspector-stat ${trace.failed_tool_calls > 0 ? 'text-error' : ''}`}>
                   Failed Tools: <strong>{trace.failed_tool_calls}</strong>
+                </span>
+                <span className="inspector-stat text-content-error">Content Errors: <strong>{trace.content_errors ?? trace.messages.flatMap((message) => message.parts).filter((part) => part.has_content_error).length}</strong>
                 </span>
               </>
             )}

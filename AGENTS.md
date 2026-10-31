@@ -71,6 +71,11 @@ For delegated work, name one owner for each writable path, state the role and ac
 
 Specialized roles:
 
+- **Management (`agentic-lens-management`, `MGT-#`)**:
+  - Coordinates existing independent ticket threads, integration dependencies, review corrections and authorized non-release merges. Owns only management artifacts and guidance; each ticket owner retains application implementation and its own telemetry.
+  - Managing ticket threads under one MGT ticket does not switch the manager into those tickets. Follow [the management skill](.agents/skills/agentic-lens-management/SKILL.md) for ownership discovery, exact-head merge gates and asynchronous supervision.
+  - Release PRs are strictly human controlled. Agents must never merge them, enable their auto-merge, or instruct another agent to merge them.
+
 - **Product / Scope Inception (`agentic-lens-po`)**:
   - Elicits requirements and decomposes features into tracer-bullet tickets.
   - Used when creating new tickets, structuring specifications, or defining acceptance criteria.
