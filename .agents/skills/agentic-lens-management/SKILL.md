@@ -46,20 +46,18 @@ Before sending, check:
 - **Portable:** Can another developer understand and review the assignment from the repository and message?
 - **Nonduplicative:** Does the invoked skill already govern this instruction?
 
-Example:
+Message template (replace placeholders and omit optional lines before sending):
 
 ```text
-$agentic-lens-dev
+$<skill-name>
 
-Correct PR #88: keep main’s execution classifier while removing content classification.
-The user approved this correction.
+<Requested outcome for the ticket or PR.>
+<Confirmed approval or changed acceptance criteria, when applicable.>
 
-Add regression coverage proving these completed calls remain successful:
-- read: const timeoutMs = 5000;
-- grep: logs/example.txt: panic: saved example
-- bash: exit code 0\nfixture says permission denied
+<Concrete inputs, observed behavior and expected behavior, when needed.>
+<Accessible repository reference or durable link, when needed.>
 
-Update the PR and report readiness. Leave merging to me.
+<Expected handoff and merge responsibility.>
 ```
 
 Allow independent defect fixes in parallel. Serialize upstream integration and merges where files or dependencies overlap. Send an upstream-update instruction only once its predecessor is actually merged; do not repeatedly restart work to chase every unrelated push. Preserve passed checks for unchanged code and require `make` after actual integration, with embedded assets checked for frontend changes.

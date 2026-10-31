@@ -11,15 +11,15 @@ Verification: integration export A passed typecheck/lint, 736 frontend tests and
 Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is grounded in source session metadata with this exact worktree path. No child agents were spawned. No pre-existing MGT-1 ledger or other-harness facts existed to preserve. Billing cost is unavailable in source; any rendered zero is not a verified charge. Final extraction validates this root and Codex source; raw transcripts stay outside Git.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 69
-- **Active Agent Duration:** 1h 19m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 70
+- **Active Agent Duration:** 1h 20m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 449.9k tokens (225% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 57,721 reasoning tokens (26.9% of generated output)
-- **Tool Health & Self-Correction:** 239 tool calls (13 self-corrections, 94.6% success rate)
+- **Reasoning Effort:** 58,273 reasoning tokens (26.9% of generated output)
+- **Tool Health & Self-Correction:** 243 tool calls (13 self-corrections, 94.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 4 execution anomalies detected (2 CRITICAL, 2 WARNING).
@@ -35,14 +35,14 @@ Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 2 | 736,077 | 156,613 | 77,560,576 | 99.1% | 449.9k | CRITICAL (225%) | $0.00 |
-| **Total** | **2** | **736,077** | **156,613** | **77,560,576** | **99.1%** | **449.9k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 2 | 738,139 | 158,391 | 78,891,008 | 99.1% | 449.9k | CRITICAL (225%) | $0.00 |
+| **Total** | **2** | **738,139** | **158,391** | **78,891,008** | **99.1%** | **449.9k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 2 | 736,077 | 156,613 | 77,560,576 | 99.1% | $0.00 |
-| **Total** | **2** | **736,077** | **156,613** | **77,560,576** | **99.1%** | **$0.00** |
+| **gpt-6.1-sol** | 2 | 738,139 | 158,391 | 78,891,008 | 99.1% | $0.00 |
+| **Total** | **2** | **738,139** | **158,391** | **78,891,008** | **99.1%** | **$0.00** |
 
 ## Iteration 02: management ticket workflow
 
@@ -111,3 +111,5 @@ Fresh exact-head gate: OPEN/non-draft/main/MERGEABLE/CLEAN; all3 CI SUCCESS, no 
 Post-integration make PASSED(exit0) atbf3c4f3/current main9707d41: Go vet/race, frontend typecheck/lint,35files/741tests, canonical embedding and fourplatform builds. Frontend/embed trees identical. Log /tmp/mgt1-post-pr88-make.log. Manager application diff against main empty; no new browser/geometry/release claim. Own87 stays draft/external_review, with no auto-merge.
 
 Updated the management skill with the agreed message contract and necessary/portable/nonduplicative checks. Replaced the example with a self-contained correction brief. Scoped isolation explanations to initial assignment/transfer; historical messages remain evidence. Documentation only, initial Git status clean; no product or thread changes.
+
+User requested a templated example: replaced real PR/classifier/reproduction content in the management skill with placeholders for skill, outcome, approval, evidence and handoff. Optional lines are omitted when unused; approval is never assumed. Documentation-only change; initial status clean.
