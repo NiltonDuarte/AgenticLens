@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
   "ticket_id": "REV-4",
-  "ticket_title": "Prune release guards and consolidate role-ordering coverage",
-  "ticket_type": "test",
+  "ticket_title": "Sort test review by ascending importance score",
+  "ticket_type": "docs",
   "started_at": "2026-10-31T02:17:54.850Z",
-  "completed_at": "2026-10-31T09:27:02.837Z",
-  "updated_at": "2026-10-31T09:27:04.816597+00:00",
+  "completed_at": "2026-10-31T09:38:28.726Z",
+  "updated_at": "2026-10-31T09:38:31.143260+00:00",
   "code": {
     "lines_added": 12,
     "lines_deleted": 1908,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 10,
-    "sdlc_iterations": 5
+    "sdlc_iterations": 6
   },
   "sessions": [
     {
@@ -26,25 +26,25 @@
           "role": "RootAgent",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T02:17:56.414Z",
-          "completed_at": "2026-10-31T09:27:02.837Z",
-          "active_duration_seconds": 1563,
-          "turns": 4,
+          "completed_at": "2026-10-31T09:38:28.726Z",
+          "active_duration_seconds": 2081,
+          "turns": 5,
           "tokens": {
-            "input": 612011,
-            "output": 74983,
-            "cache_read": 27032576,
-            "reasoning": 24427,
-            "peak_context": 319855
+            "input": 618462,
+            "output": 78906,
+            "cache_read": 30259712,
+            "reasoning": 26019,
+            "peak_context": 328949
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 5
+          "user_iterations": 6
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 109,
+          "calls": 115,
           "errors": 2
         },
         {
@@ -98,7 +98,7 @@
           "severity": "CRITICAL",
           "context": {
             "role": "RootAgent",
-            "context_tokens": 319855,
+            "context_tokens": 328949,
             "threshold": "200000"
           }
         },

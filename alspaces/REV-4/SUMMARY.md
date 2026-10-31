@@ -43,15 +43,15 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - Final review inventory checks passed; only REV-4 documentation and generated telemetry are task-owned changes.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 37m 1s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 319.9k tokens (160% of 200k healthy ceiling, 0 compactions) | Subagents peak 330.4k (Reviewer)
+- **Software Development Life Cycle Iterations:** 6
+- **Active Agent Duration:** 45m 39s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 328.9k tokens (165% of 200k healthy ceiling, 0 compactions) | Subagents peak 330.4k (Reviewer)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 12:0 (+12 test lines / +0 prod lines)
 - **Code Delivered:** +12 / -1,908 lines across 10 code files (excluding docs)
-- **Reasoning Effort:** 28,701 reasoning tokens (21.9% of generated output)
-- **Tool Health & Self-Correction:** 192 tool calls (4 self-corrections, 97.9% success rate)
+- **Reasoning Effort:** 30,293 reasoning tokens (22.2% of generated output)
+- **Tool Health & Self-Correction:** 198 tool calls (4 self-corrections, 98.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 17 execution anomalies detected (10 CRITICAL, 7 WARNING).
@@ -84,14 +84,14 @@ Every declaration was inventoried and screened; detailed body/production inspect
 | **coder** | 2 | 66,347 | 5,046 | 3,525,120 | 98.2% | 317.5k | BLOATED (159%) | $0.00 |
 | **tester** | 2 | 75,360 | 10,036 | 5,469,568 | 98.6% | 321.2k | BLOATED (161%) | $0.00 |
 | **reviewer** | 2 | 107,363 | 5,667 | 3,284,864 | 96.8% | 330.4k | BLOATED (165%) | $0.00 |
-| **rootagent** | 1 | 612,011 | 74,983 | 27,032,576 | 97.8% | 319.9k | BLOATED (160%) | $0.00 |
-| **Total** | **9** | **1,328,968** | **102,279** | **41,368,576** | **96.9%** | **330.4k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 618,462 | 78,906 | 30,259,712 | 98.0% | 328.9k | BLOATED (164%) | $0.00 |
+| **Total** | **9** | **1,335,419** | **106,202** | **44,595,712** | **97.1%** | **330.4k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 9 | 1,328,968 | 102,279 | 41,368,576 | 96.9% | $0.00 |
-| **Total** | **9** | **1,328,968** | **102,279** | **41,368,576** | **96.9%** | **$0.00** |
+| **gpt-6.1-sol** | 9 | 1,335,419 | 106,202 | 44,595,712 | 97.1% | $0.00 |
+| **Total** | **9** | **1,335,419** | **106,202** | **44,595,712** | **97.1%** | **$0.00** |
 
 ## Iteration 02: approved candidate deletion
 
@@ -207,3 +207,5 @@ Final iteration 04 telemetry validated: all nine actual Codex source sessions pr
 ### Score ordering follow-up
 
 User requested score_review sorted by score. TEST_SCORES.md now orders all 1,197 entries numerically from 0 through 10, with path/line tie-breakers; SCORE_REVIEW.md links each score group in ascending order. Read-back multiset comparison confirms every source identity, title, score, confidence label, reason and evidence unchanged. No test/application changes. `git diff --check` and numeric ordering checks passed; existing full make results remain valid for unchanged source.
+
+Score-sort delivery: main already up to date; no backend/frontend/Makefile diff from the previously verified a10c61c implementation, so prior full make evidence is reused. Final telemetry preserves all nine Codex root/child source sessions, correct parent IDs and nonempty invocations; type docs.
