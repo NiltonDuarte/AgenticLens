@@ -1109,6 +1109,74 @@ body {
 }
 
 /* Thread Viewer */
+.skills-subagents-card {
+  min-width: 0;
+}
+
+.skills-subagents-heading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.skills-subagents-heading button {
+  flex-wrap: wrap;
+  gap: 8px;
+  font: inherit;
+}
+
+.skills-subagents-table {
+  margin-top: 16px;
+}
+
+.skills-subagents-table caption {
+  padding: 0 0 10px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.skills-subagents-table th[scope="row"],
+.skills-subagents-table .source-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 160px;
+  max-width: 400px;
+  vertical-align: top;
+}
+
+.skills-subagents-table tr:focus-visible,
+.skills-subagents-card button:focus-visible,
+.thread-header-btn:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.skill-status {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.skill-status.success {
+  color: var(--status-green);
+}
+
+.skill-status.failed {
+  color: var(--status-red);
+}
+
+.child-session-jump {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.session-unavailable {
+  display: block;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
 .thread-viewer-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);

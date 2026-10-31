@@ -2,7 +2,7 @@
 
 - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
-- **Status**: Ready
+- **Status**: Done
 - **Blocked by**: None
 - **Blocks**: AL-55
 
