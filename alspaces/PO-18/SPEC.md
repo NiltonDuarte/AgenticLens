@@ -18,11 +18,14 @@ Engineers inspecting historical/live agent activity, analysts comparing tickets,
 6. As an engineer, I want skills and task links attached to their source session or invocation so that raw provenance survives aggregation.
 7. As an operator, I want independent configuration toggles for optional generate metrics so that disabled skills, task_links and anomalies are omitted from written output.
 
+8. As an engineer, I want a source-grounded review of repository interfaces and dependency injection so that OpenCode v1/v2 and Codex share appropriate contracts and each consumer receives the correct implementation.
+
 ## Functional Requirements
 
 - Data ingestion/extraction: AL-62 diagnoses and fixes missing supported Codex facts while delivering granular source ownership; AL-63 audits OpenCode v1/v2 and Codex capabilities; AL-64 fixes the diagnosed Codex active-turn duration bug and investigates/fixes equivalent accounting defects in OpenCode v1 and v2 through a snapshot cutoff. Evidence unavailable at execution remains explicit.
 - Granular ownership: merged AL-62 relocates canonical skills/task_links to source-proven session or invocation ownership, with derived ticket/fleet projections, compatible migration, and explicit unresolved legacy provenance.
 - Generation output policy: AL-66 adds independent enabled-by-default config toggles for skills/task_links/anomalies, applied across emitted ownership scopes and generated summaries, including replacement of previous disabled facts in the target output.
+- Repository architecture: AL-68 reviews existing interfaces, source/schema dispatch and injection across all consumers, with an as-is map, findings and a justified target design. It does not implement an interface refactor.
 - Domain aggregations: duration excludes inter-turn gaps and future activity; completed refresh replaces provisional contribution. Missing facts do not establish measured zero. Stored baseline facts survive unavailable hydration/recovery.
 - Presentation: AL-60 searches existing ticket IDs/titles inside Exclude tickets only; AL-61 renders full local dates/times without milliseconds. AL-64 exposes provisional duration consistently.
 - CLI/recovery: AL-65 researches default source-backed recomputation with exact existing identities, retention when originals are unavailable, and explicit outcomes. It does not enable Force or change defaults.
@@ -42,8 +45,9 @@ Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: pure Go domain
 | AL-64 | Investigate/fix active-turn duration across Codex and OpenCode v1/v2 | Bug | None |
 | AL-65 | Default backfill/Force research recommendation | Research | AL-63 |
 | AL-66 | Configurable optional metric output for generate | Feature | None |
+| AL-68 | Review shared repository contracts and source injection | Architecture review | None |
 
-Execution tiers: Tier 1 = AL-60/61/62/64/66; Tier 2 = AL-63; Tier 3 = AL-65. AL-64 is the diagnosed must-fix and can proceed independently. AL-63 consumes AL-62 diagnosis and fix-verification evidence; AL-65 consumes the parity report. Blocked tickets may gather independent evidence while their final acceptance awaits dependencies. Do not delay the duration fix behind investigations. Existing AL-57 and AL2 scope is unchanged.
+Execution tiers: Tier 1 = AL-60/61/62/64/66/68; Tier 2 = AL-63; Tier 3 = AL-65. AL-64 is the diagnosed must-fix and can proceed independently. AL-63 consumes AL-62 diagnosis and fix-verification evidence; AL-65 consumes the parity report. Blocked tickets may gather independent evidence while their final acceptance awaits dependencies. Do not delay the duration fix behind investigations. Existing AL-57 and AL2 scope is unchanged.
 
 ## Evidence and Review Boundaries
 
@@ -73,8 +77,14 @@ Current dependency chain is AL-62 -> AL-63 -> AL-65. The removed walkthrough no 
 
 Preserve merged AL-62 implementation scope, raw provenance and migration safeguards, disabled-output semantics, research-only backfill defaults, original AL-55 bytes and prior valid code verification. This is a planning-only removal/renumbering; no application or test changes are needed.
 
-## Iteration 06 steering: duration accounting across all three sources
+## Historical iteration 06 steering: duration accounting across all three sources
 
 Source: explicit user correction that AL-64 must also investigate OpenCode v1/v2 and is not limited to Codex. Expand the same Ready fix ticket to source-specific investigation and confirmed-defect remediation across Codex, OpenCode v1 and OpenCode v2. The original Codex bug evidence remains established; equivalent OpenCode defects remain to be demonstrated. Require per-source generation-during-activity, active refresh, completion replacement, cutoff/idle-boundary, persisted output and unchanged-backfill evidence, with unsupported/unexecuted checks distinguished explicitly. Do not manufacture provisional durations where the source does not prove active boundaries.
 
 Supersedes AL-64's Codex-only scope and filename. Preserve seven-ticket numbering, dependencies, known Codex timeline, existing-correct OpenCode calculations, raw fact retention and original AL-55 evidence. This expands duration verification, not the removed live-inspector walkthrough. All application work remains in a separate development session; this update changes planning artifacts only.
+
+## Iteration 07 steering: repository abstraction and injection review
+
+Source: user requests a broader architecture ticket reviewing whether OpenCodeV1/OpenCodeV2/Codex implement a shared interface as far as meaningful, and whether the correct repository is injected. Add AL-68 (Ready, architecture review). AL-67 remains retired into AL-62, so the next unreserved current number is AL-68; its old historical generate-toggle meaning was renumbered to AL-66 in iteration 05. Eight active tickets are now AL-60 through AL-66 and AL-68. Prior counts and mappings remain historical.
+
+The review inventories actual ports, adapters, constructors and source/schema dispatch across generate/backfill/server/hydration/live consumers, including mixed-source routing. Deliver as-is evidence and a proposed shared contract/composition design without fabricating capability parity or authorizing an application refactor. Keep AL-63's behavior audit and AL-62/64/66 implementation scopes separate; no new blocking edges. Preserve all existing guarantees, AL-55 evidence and separate PO/development sessions. Verification impact: new documentation review acceptance covers injection and contract consistency; this planning update establishes no architecture findings or runtime correctness.

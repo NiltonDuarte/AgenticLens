@@ -53,6 +53,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-66 configure optional metric output for generate.md`
 
+- **AL-68**: Review shared telemetry repository interfaces and source injection
+  - **Subsystem**: Architecture / Domain Ports / Source Adapters / Composition / Backfill / Hydration / HTTP and Live Services / Tests
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-68 review telemetry repository interfaces and dependency injection.md`
+
 ### Existing ready work
 
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer

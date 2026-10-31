@@ -60,3 +60,7 @@ User requested removal of AL-63 and adjusted numbers. Deleted the standalone Ope
 ## Iteration 06: expand AL-64 to OpenCode v1/v2
 
 User explicitly expands duration investigation beyond Codex to both OpenCode schema families. AL-64 now owns source-specific investigation, the diagnosed Codex fix and remediation of any confirmed OpenCode accounting defects. Renamed its specification and updated the registry/current SPEC/PR. Require per-source activity/cutoff/completion/refresh evidence; do not assume identical bugs or invent missing boundaries. Seven-ticket numbering/dependencies and removed standalone walkthrough remain unchanged. Baseline 7843683; initial Git status clean, PR #90 open. Planning only; no application/test/config changes or new runtime diagnosis claimed.
+
+## Iteration 07: repository interface and injection review ticket
+
+User requested broader architecture review of a common OpenCode v1/v2/Codex repository interface and correct injection. Added AL-68 (Ready, docs) with evidence-backed interface/implementation/wiring inventory, as-is/target design, mixed-source selection and failure semantics, tests/gaps and staged recommendations. AL-67 remains retired; old historical AL-68 generate toggles are now AL-66. Eight active tickets; no new dependency edges or changes to existing ticket scopes. Baseline ec16b60, initial Git status clean, PR #90 open. This is planning only, with no application changes or claim that the architecture has already been reviewed.
