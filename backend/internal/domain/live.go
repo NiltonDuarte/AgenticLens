@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -350,4 +351,9 @@ func EventsFromLiveTrace(trace *LiveTraceView) []EventFact {
 	}
 
 	return events
+}
+
+// LiveTracesEqual compares the complete source-derived snapshot, including in-place edits.
+func LiveTracesEqual(previous, next LiveTraceView) bool {
+	return reflect.DeepEqual(previous, next)
 }
