@@ -1,0 +1,66 @@
+{
+  "schema_version": 4,
+  "ticket_id": "PO-18",
+  "ticket_title": "Phase 1 post-v2.0 platform follow-up tickets",
+  "ticket_type": "docs",
+  "started_at": "2026-10-31T18:33:46.665Z",
+  "completed_at": "2026-10-31T18:39:10.709Z",
+  "updated_at": "2026-10-31T18:39:11.760582+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 3
+  },
+  "sessions": [
+    {
+      "id": "01a1933d-3d8f-7b83-a161-18a904e5aeb3",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T18:33:47.670Z",
+          "completed_at": "2026-10-31T18:39:10.709Z",
+          "active_duration_seconds": 0,
+          "turns": 1,
+          "tokens": {
+            "input": 52123,
+            "output": 11334,
+            "cache_read": 938112,
+            "reasoning": 1074,
+            "peak_context": 60292
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 23,
+          "errors": 4
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "TOOL_RETRY_STREAK",
+          "severity": "WARNING",
+          "context": {
+            "tool_name": "command",
+            "turn": 1,
+            "count": 4,
+            "threshold": "3"
+          }
+        }
+      ]
+    }
+  ],
+  "anomalies": []
+}
