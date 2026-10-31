@@ -6,8 +6,9 @@ import {
     sessionInvocations,
     type AgenticFactLedger,
     type EventFact,
-    type EventType,
     type SessionFact,
+    ledgerSkills,
+    ledgerTaskLinks,
 } from './types';
 describe('Event Telemetry and Schema Evolution Contracts', () => {
     describe('Legacy and Backward Compatibility Boundaries', () => {
@@ -28,6 +29,24 @@ describe('Event Telemetry and Schema Evolution Contracts', () => {
             const parsed: AgenticFactLedger = JSON.parse(legacyPayload);
             expect(parsed.ticket_id).toBe('AL-LEGACY');
             expect(parsed.sessions).toEqual([]);
+            expect(ledgerSkills(parsed)).toEqual([]);
+            expect(ledgerTaskLinks(parsed)).toEqual([]);
+        });
+        it('reads additive skill and task facts while keeping legacy omissions empty', () => {
+            const payload: AgenticFactLedger = {
+                schema_version: 4,
+                ticket_id: 'AL-51', ticket_title: null, ticket_type: 'feat',
+                started_at: null, completed_at: null, updated_at: '',
+                code: { lines_added: 0, lines_deleted: 0, test_lines_added: 0, test_lines_deleted: 0,
+                    prod_lines_added: 0, prod_lines_deleted: 0, files_changed: 0, sdlc_iterations: 0 },
+                sessions: [],
+                skills: [{ name: 'agentic-lens-dev', turn_index: 1, message_index: 0, caller_role: 'coder',
+                    timestamp: '2026-10-31T10:00:00Z', success: true }],
+                task_links: [{ subagent_type: 'tester', description: 'Run checks', parent_turn: 2,
+                    child_session_id: 'child-1', timestamp: '2026-10-31T10:01:00Z' }],
+            };
+            expect(ledgerSkills(payload)).toHaveLength(1);
+            expect(ledgerTaskLinks(payload)[0]?.child_session_id).toBe('child-1');
         });
         it('handles undefined tools and invocations in session helpers without throwing', () => {
             const sessionsWithoutArrays = [
@@ -37,109 +56,6 @@ describe('Event Telemetry and Schema Evolution Contracts', () => {
             expect(sessionInvocations(sessionsWithoutArrays)).toEqual([]);
             expect(sessionTools(undefined)).toEqual([]);
             expect(sessionInvocations(undefined)).toEqual([]);
-        });
-    });
-    describe('EventFact Type Discrimination and Property Fidelity', () => {
-        const mockEvents: readonly EventFact[] = [
-            {
-                timestamp: '2026-10-18T10:00:01.000000+00:00',
-                session_id: 'ses-orch-1',
-                turn: 1,
-                role: 'orchestrator',
-                event_type: 'turn_message',
-                status: 'completed',
-                duration_ms: 1200,
-                context_tokens: 5000,
-            },
-            {
-                timestamp: '2026-10-18T10:00:02.000000+00:00',
-                session_id: 'ses-orch-1',
-                turn: 1,
-                role: 'orchestrator',
-                event_type: 'tool_call',
-                tool_name: 'bash',
-                status: 'error',
-                error_message: 'Traceback (most recent call last):\n  File script.py, line 2',
-                duration_ms: 450,
-                context_tokens: 5000,
-            },
-            {
-                timestamp: '2026-10-18T10:00:03.000000+00:00',
-                session_id: 'ses-orch-1',
-                turn: 2,
-                role: 'orchestrator',
-                event_type: 'compaction',
-                status: 'completed',
-                context_tokens: 3800,
-            },
-        ];
-        it('correctly discriminates event_type enums', () => {
-            const types: EventType[] = mockEvents.map((e) => e.event_type);
-            expect(types).toEqual(['turn_message', 'tool_call', 'compaction']);
-        });
-        it('preserves tool call error excerpt and execution duration', () => {
-            const toolEvent = mockEvents[1];
-            expect(toolEvent.event_type).toBe('tool_call');
-            expect(toolEvent.tool_name).toBe('bash');
-            expect(toolEvent.status).toBe('error');
-            expect(toolEvent.error_message).toContain('Traceback');
-            expect(toolEvent.duration_ms).toBe(450);
-            expect(toolEvent.context_tokens).toBe(5000);
-        });
-        it('preserves compaction events with turn and context volume', () => {
-            const compEvent = mockEvents[2];
-            expect(compEvent.event_type).toBe('compaction');
-            expect(compEvent.status).toBe('completed');
-            expect(compEvent.turn).toBe(2);
-            expect(compEvent.context_tokens).toBe(3800);
-            expect(compEvent.tool_name).toBeUndefined();
-            expect(compEvent.error_message).toBeUndefined();
-        });
-        it('verifies chronological ascending ordering and turn tie-breaking logic', () => {
-            const unsortedEvents: EventFact[] = [
-                {
-                    timestamp: '2026-10-18T10:00:02.000000+00:00',
-                    session_id: 'ses-1',
-                    turn: 2,
-                    role: 'coder',
-                    event_type: 'turn_message',
-                    status: 'completed',
-                    context_tokens: 8000,
-                },
-                {
-                    timestamp: '2026-10-18T10:00:01.000000+00:00',
-                    session_id: 'ses-1',
-                    turn: 2,
-                    role: 'coder',
-                    event_type: 'compaction',
-                    status: 'completed',
-                    context_tokens: 6000,
-                },
-                {
-                    timestamp: '2026-10-18T10:00:01.000000+00:00',
-                    session_id: 'ses-1',
-                    turn: 1,
-                    role: 'coder',
-                    event_type: 'turn_message',
-                    status: 'completed',
-                    context_tokens: 4000,
-                },
-            ];
-            const sorted = [...unsortedEvents].sort((a, b) => {
-                if (a.timestamp !== b.timestamp) {
-                    return a.timestamp.localeCompare(b.timestamp);
-                }
-                if (a.turn !== b.turn) {
-                    return a.turn - b.turn;
-                }
-                return a.session_id.localeCompare(b.session_id);
-            });
-            expect(sorted[0].turn).toBe(1);
-            expect(sorted[0].event_type).toBe('turn_message');
-            expect(sorted[1].turn).toBe(2);
-            expect(sorted[1].event_type).toBe('compaction');
-            expect(sorted[2].turn).toBe(2);
-            expect(sorted[2].timestamp).toBe('2026-10-18T10:00:02.000000+00:00');
         });
     });
 });
@@ -281,5 +197,29 @@ describe('Recorded event projection and optional enrichment', () => {
             expect(selectWorkspaceEvents([], { ticket_id: 'FIX-12', is_hydrated: hydrated, data_source: source, events: [local] }))
                 .toEqual({ events: [local], is_hydrated: hydrated, data_source: hydrated ? source : 'committed_ledger' });
         }
+    });
+});
+
+describe('additive content evidence reconciliation', () => {
+    const base: EventFact = Object.freeze({event_id:'content-call',session_id:'owner',timestamp:'2026-10-31T10:00:00Z',turn:2,role:'coder',event_type:'tool_call',tool_name:'bash',status:'completed',context_tokens:0});
+    it.each([
+        {name:'older absent flag gains warning',recorded:undefined,local:true,severity:'medium',snippet:'discovered',wantSeverity:'medium',wantSnippet:'discovered'},
+        {name:'older false flag gains warning',recorded:false,local:true,severity:'medium',snippet:'discovered',wantSeverity:'medium',wantSnippet:'discovered'},
+        {name:'false cannot erase recorded evidence',recorded:true,local:false,severity:'low',snippet:'ignored',wantSeverity:'high',wantSnippet:'recorded diagnostic'},
+        {name:'absent cannot erase recorded evidence',recorded:true,local:undefined,severity:undefined,snippet:undefined,wantSeverity:'high',wantSnippet:'recorded diagnostic'},
+        {name:'true empty metadata falls back',recorded:true,local:true,severity:'',snippet:'',wantSeverity:'high',wantSnippet:'recorded diagnostic'},
+        {name:'true none severity falls back',recorded:true,local:true,severity:'none',snippet:undefined,wantSeverity:'high',wantSnippet:'recorded diagnostic'},
+        {name:'true metadata enriches',recorded:true,local:true,severity:'medium',snippet:'local diagnostic',wantSeverity:'medium',wantSnippet:'local diagnostic'},
+    ])('$name through reconciliation and response selection', (tc) => {
+        const recorded=Object.freeze({...base,...(tc.recorded === undefined ? {} : {has_content_error:tc.recorded}),...(tc.recorded ? {content_severity:'high',content_error_snippet:'recorded diagnostic'} : {})});
+        const local=Object.freeze({...base,status:'error',...(tc.local === undefined ? {} : {has_content_error:tc.local}),...(tc.severity === undefined ? {} : {content_severity:tc.severity}),...(tc.snippet === undefined ? {} : {content_error_snippet:tc.snippet}),tool_output:'local raw output'});
+        const baseline=Object.freeze([recorded]); const enrichment=Object.freeze([local]);
+        const before=JSON.stringify({baseline,enrichment});
+        const merged=reconcileEvents(baseline,enrichment);
+        expect(merged).toHaveLength(1);
+        expect(merged[0]).toMatchObject({event_id:base.event_id,session_id:base.session_id,status:'completed',has_content_error:true,content_severity:tc.wantSeverity,content_error_snippet:tc.wantSnippet,tool_output:'local raw output'});
+        expect(reconcileEvents(merged,enrichment)).toEqual(merged);
+        expect(selectWorkspaceEvents(baseline,{ticket_id:'GEN-999',is_hydrated:true,data_source:'local_codex',events:enrichment}).events).toEqual(merged);
+        expect(JSON.stringify({baseline,enrichment})).toBe(before);
     });
 });

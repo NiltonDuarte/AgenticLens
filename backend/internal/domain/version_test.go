@@ -252,39 +252,6 @@ func TestGetBuildInfo_IndividualEmptyFallbacks(t *testing.T) {
 	}
 }
 
-func TestGetBuildInfo_ImmutabilityValueSemantics(t *testing.T) {
-	origVersion := domain.Version
-	origCommit := domain.GitCommit
-	origDate := domain.BuildDate
-	t.Cleanup(func() {
-		domain.Version = origVersion
-		domain.GitCommit = origCommit
-		domain.BuildDate = origDate
-	})
-
-	domain.Version = "v1.0.0"
-	domain.GitCommit = "initial123"
-	domain.BuildDate = "2026-10-18T01:00:00Z"
-
-	snapshot := domain.GetBuildInfo()
-
-	// Mutate package variables
-	domain.Version = "v9.9.9"
-	domain.GitCommit = "mutated456"
-	domain.BuildDate = "2026-12-31T23:59:59Z"
-
-	// Assert snapshot remains untouched
-	if snapshot.Version != "v1.0.0" {
-		t.Errorf("snapshot.Version was mutated: got %q, want v1.0.0", snapshot.Version)
-	}
-	if snapshot.GitCommit != "initial123" {
-		t.Errorf("snapshot.GitCommit was mutated: got %q, want initial123", snapshot.GitCommit)
-	}
-	if snapshot.BuildDate != "2026-10-18T01:00:00Z" {
-		t.Errorf("snapshot.BuildDate was mutated: got %q, want 2026-10-18T01:00:00Z", snapshot.BuildDate)
-	}
-}
-
 func TestBuildInfo_JSONSerializationAndBoundaryResilience(t *testing.T) {
 	t.Parallel()
 	t.Run("marshal standard build info produces expected keys", func(t *testing.T) {

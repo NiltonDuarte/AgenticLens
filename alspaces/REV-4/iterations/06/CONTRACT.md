@@ -1,0 +1,11 @@
+# REV-4 iteration 06 contract delta
+
+Source: user requests documentation updates based on this session's findings, inspired by REV-3. Baseline `790e14c555d29e819dae51bb26a6849824d7bc2a`; initial working tree clean. Existing feature branch and open PR #72 remain the delivery vehicle. Workspace root is the configured `alspaces`.
+
+This adds documentation acceptance to REV-4: translate the observed test-review and consolidation findings into durable contributor and agent guidance. Follow REV-3's evidence-to-rule approach: keep ticket evidence here, concise policy in its canonical shared owner, and links from consumers. Shared guidance does not depend on ticket IDs or historical artifacts. The root contract and completed test decisions remain historical and unchanged.
+
+Authorized writable scope: root contributor/technical/agent/readme Markdown, docs/REGRESSION_PREVENTION.md, repository agent personas, development/review skill guidance and the stale skill-local technical-guidelines copy, plus REV-4 artifacts and final telemetry. This is documentation-only maintenance; no application, tests, schemas, runtime scripts, configuration, dependencies, score changes, new deletions, or new runtime enforcement. No full development-agent cycle is needed under AGENTS.md's documentation exception. Skill metadata, permissions, workflow gates, and unrelated rules are preserved.
+
+Acceptance: explain behavioral test value, evidence-backed coherent consolidation, independent coverage, confidence limits, honest numeric metrics, appropriate adapter fixtures, and verification at the claimed boundary. Align conflicting test instructions rather than leaving competing policies. Keep valid pure-domain, zero-any, zero-emoji, zero-silent-skip, and required delivery invariants. Document classification discrepancies without changing classifier configuration or claiming runtime remediation.
+
+Verification: self-review the evidence-to-rule mapping, changed-path scope, Markdown links/anchors, skill validation, frontmatter preservation, stale wording and whitespace. Commit documentation, integrate origin/main, run the required make gate, record actual results, then refresh and verify existing Codex root/child telemetry at finalization and deliver on the existing PR if still open.

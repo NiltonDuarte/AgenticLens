@@ -431,6 +431,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 					}
 					shouldUpdateInvocations := !hasExistingOpenCodeFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
 					if shouldUpdateInvocations {
+						factLedger.Skills, factLedger.TaskLinks = opencode.ExtractSkillTaskFacts(freshSessions)
 						if len(candidateRootIDs) > 0 && len(resolvedRootIDs) < len(candidateRootIDs) {
 							// Partial resolution across machines: preserve unresolved session facts
 							resolvedSet := make(map[string]bool)
@@ -532,22 +533,14 @@ func (e *BackfillEngine) processSingleWorkspace(
 						if combined, combErr := e.combineCodex(transcripts); combErr == nil {
 							freshCodex, sErr := combined.SessionFacts()
 							if sErr == nil && len(freshCodex) > 0 {
-								existingUsers := make(map[string]string)
 								existingParents := make(map[string]*string)
 								for _, s := range codexSessions {
-									if s.User != "" {
-										existingUsers[s.ID] = s.User
-									}
 									if s.ParentID != nil && *s.ParentID != "" {
 										existingParents[s.ID] = s.ParentID
 									}
 								}
+								resolveCodexSessionUsers(freshCodex, codexSessions, gitUser)
 								for i := range freshCodex {
-									if freshCodex[i].User == "" || freshCodex[i].User == "unknown" {
-										if u, ok := existingUsers[freshCodex[i].ID]; ok && strings.TrimSpace(u) != "" {
-											freshCodex[i].User = u
-										}
-									}
 									if freshCodex[i].ParentID == nil {
 										if p, ok := existingParents[freshCodex[i].ID]; ok {
 											freshCodex[i].ParentID = p
@@ -662,6 +655,18 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	return result
+}
+
+func resolveCodexSessionUsers(fresh []domain.SessionFact, existing []domain.SessionFact, gitUser string) {
+	existingUsers := make(map[string]string, len(existing))
+	for _, session := range existing {
+		if git.IsKnownUser(session.User) {
+			existingUsers[session.ID] = strings.TrimSpace(session.User)
+		}
+	}
+	for i := range fresh {
+		fresh[i].User = git.ResolveSessionUser(fresh[i].User, existingUsers[fresh[i].ID], gitUser)
+	}
 }
 
 func replaceCodexTree(stored *[]domain.SessionFact, requestedRoot string, refreshed []domain.SessionFact) {

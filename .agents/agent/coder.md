@@ -20,6 +20,7 @@ Your responsibility: Write readable, strictly typed, idiomatic Go (Go 1.23+) and
 Mandatory Guidelines:
 - Inspect `.agenticlens-config.yaml` if needed for workspace parameters.
 - Follow `TECHNICAL_GUIDELINES.md` rigorously.
+- Apply [test purpose and proportionality](../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality): extend coherent existing coverage before adding tests. Exercise production behavior, not fixture literals, casts, or copied implementations. Preserve meaningful assertions and identify recipients when consolidating.
 - Respect `<workspaces_dir>/<TICKET_ID>/CONTRACT.md` as the frozen big picture.
 - Implement the specific tasks defined in `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/PLAN.md`.
 - Read review feedback in `iterations/<NN>/REVIEW.md` if rework is required.

@@ -6019,6 +6019,7 @@ anomaly_thresholds:
 		parent_id TEXT,
 		agent TEXT,
 		model TEXT,
+		title TEXT,
 		time_created INTEGER,
 		time_updated INTEGER
 	);
@@ -6252,6 +6253,7 @@ anomaly_thresholds:
 			parent_id TEXT,
 			agent TEXT,
 			model TEXT,
+			title TEXT,
 			time_created INTEGER,
 			time_updated INTEGER
 		);
@@ -6437,6 +6439,7 @@ anomaly_thresholds:
 		parent_id TEXT,
 		agent TEXT,
 		model TEXT,
+		title TEXT,
 		time_created INTEGER,
 		time_updated INTEGER
 	);

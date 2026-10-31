@@ -40,14 +40,21 @@ describe('MultiSelectDropdown Component', () => {
     );
 
     const trigger = screen.getByRole('combobox', { name: 'Ticket Type selector' });
+    const arrow = trigger.querySelector('.multiselect-arrow')!;
+    expect(arrow).toBeInTheDocument();
+    expect(arrow.getAttribute('aria-hidden')).toBe('true');
+    expect(arrow.textContent).toBe('v');
     fireEvent.click(trigger);
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(arrow.textContent).toBe('^');
 
     const listbox = screen.getByRole('listbox', { name: 'Ticket Type' });
     expect(listbox).toBeDefined();
     expect(screen.getByText('Feature')).toBeDefined();
     expect(screen.getByText('Bug')).toBeDefined();
     expect(screen.getByText('Docs')).toBeDefined();
+    fireEvent.click(trigger);
+    expect(arrow.textContent).toBe('v');
   });
 
   it('selects single option when initially all was selected', () => {
@@ -434,31 +441,6 @@ describe('MultiSelectDropdown Component', () => {
 
       // Since all 3 options are now selected, it automatically reverts to ['all']
       expect(handleChange).toHaveBeenCalledWith(['all']);
-    });
-
-    it('renders arrow indicator correctly: v when closed, ^ when open', () => {
-      const handleChange = vi.fn();
-      render(
-        <MultiSelectDropdown
-          id="type-select"
-          label="Ticket Type"
-          options={options}
-          selectedValues={['all']}
-          onChange={handleChange}
-        />
-      );
-
-      const trigger = screen.getByRole('combobox', { name: 'Ticket Type selector' });
-      const arrow = trigger.querySelector('.multiselect-arrow')!;
-      expect(arrow).toBeInTheDocument();
-      expect(arrow.getAttribute('aria-hidden')).toBe('true');
-      expect(arrow.textContent).toBe('v');
-
-      fireEvent.click(trigger);
-      expect(arrow.textContent).toBe('^');
-
-      fireEvent.click(trigger);
-      expect(arrow.textContent).toBe('v');
     });
 
     it('renders accessibility attributes correctly on combobox and listbox', () => {

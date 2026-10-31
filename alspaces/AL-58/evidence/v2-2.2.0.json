@@ -1,0 +1,232 @@
+{
+  "runtime": "OpenCode 2.2.0",
+  "platform": "linux x64",
+  "source": "Runtime-produced data from an isolated run using a local deterministic OpenAI-compatible provider",
+  "database": "<isolated-database>",
+  "schema": {
+    "session_v2": {
+      "columns": [
+        "id",
+        "project_id",
+        "workspace_id",
+        "parent_id",
+        "fork_session_id",
+        "fork_boundary",
+        "slug",
+        "directory",
+        "path",
+        "title",
+        "version",
+        "share_url",
+        "summary_additions",
+        "summary_deletions",
+        "summary_files",
+        "summary_diffs",
+        "metadata",
+        "cost",
+        "tokens_input",
+        "tokens_output",
+        "tokens_reasoning",
+        "tokens_cache_read",
+        "tokens_cache_write",
+        "revert",
+        "permission",
+        "agent",
+        "model",
+        "time_created",
+        "time_updated",
+        "time_idle",
+        "time_viewed",
+        "idle_outcome",
+        "time_compacting",
+        "time_archived",
+        "time_suspended",
+        "resume_attempts"
+      ],
+      "create_sql": "CREATE TABLE `session_v2` (\n          `id` text PRIMARY KEY,\n          `project_id` text NOT NULL,\n          `workspace_id` text,\n          `parent_id` text,\n          `fork_session_id` text,\n          `fork_boundary` text,\n          `slug` text NOT NULL,\n          `directory` text NOT NULL,\n          `path` text,\n          `title` text,\n          `version` text NOT NULL,\n          `share_url` text,\n          `summary_additions` integer,\n          `summary_deletions` integer,\n          `summary_files` integer,\n          `summary_diffs` text,\n          `metadata` text,\n          `cost` real DEFAULT 0 NOT NULL,\n          `tokens_input` integer DEFAULT 0 NOT NULL,\n          `tokens_output` integer DEFAULT 0 NOT NULL,\n          `tokens_reasoning` integer DEFAULT 0 NOT NULL,\n          `tokens_cache_read` integer DEFAULT 0 NOT NULL,\n          `tokens_cache_write` integer DEFAULT 0 NOT NULL,\n          `revert` text,\n          `permission` text,\n          `agent` text,\n          `model` text,\n          `time_created` integer NOT NULL,\n          `time_updated` integer NOT NULL,\n          `time_idle` integer,\n          `time_viewed` integer,\n          `idle_outcome` text,\n          `time_compacting` integer,\n          `time_archived` integer,\n          `time_suspended` integer,\n          `resume_attempts` integer DEFAULT 0 NOT NULL,\n          CONSTRAINT `fk_session_v2_project_id_project_id_fk` FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON DELETE CASCADE\n        )",
+      "runtime_table_row_count": 1
+    },
+    "session_message": {
+      "columns": [
+        "id",
+        "session_id",
+        "type",
+        "seq",
+        "time_created",
+        "time_updated",
+        "data"
+      ],
+      "create_sql": "CREATE TABLE `session_message` (\n          `id` text PRIMARY KEY,\n          `session_id` text NOT NULL,\n          `type` text NOT NULL,\n          `seq` integer NOT NULL,\n          `time_created` integer NOT NULL,\n          `time_updated` integer NOT NULL,\n          `data` text NOT NULL,\n          CONSTRAINT `fk_session_message_session_id_session_v2_id_fk` FOREIGN KEY (`session_id`) REFERENCES `session_v2`(`id`) ON DELETE CASCADE\n        )",
+      "runtime_table_row_count": 4
+    }
+  },
+  "session": {
+    "id": "ses_v2_2.2.0_001",
+    "project_id": "38673a8eefba69452beaa90fe6bfbacd07a3e261",
+    "workspace_id": null,
+    "parent_id": null,
+    "fork_session_id": null,
+    "fork_boundary": null,
+    "slug": "brave-meadow",
+    "directory": "<isolated-project>",
+    "path": "<isolated-project>",
+    "title": "AL-58 v2.2.0 usage evidence",
+    "version": "2.2.0",
+    "share_url": null,
+    "summary_additions": null,
+    "summary_deletions": null,
+    "summary_files": null,
+    "summary_diffs": null,
+    "metadata": null,
+    "cost": 0.0,
+    "tokens_input": 46,
+    "tokens_output": 22,
+    "tokens_reasoning": 0,
+    "tokens_cache_read": 0,
+    "tokens_cache_write": 0,
+    "revert": null,
+    "permission": null,
+    "agent": null,
+    "model": "{\"id\":\"mock-model\",\"providerID\":\"al58local\"}",
+    "time_created": 1793231969869,
+    "time_updated": 1793231970472,
+    "time_idle": 1793231970482,
+    "time_viewed": null,
+    "idle_outcome": "succeeded",
+    "time_compacting": null,
+    "time_archived": null,
+    "time_suspended": null,
+    "resume_attempts": 0
+  },
+  "messages": [
+    {
+      "id": "msg_v2_2.2.0_001",
+      "session_id": "ses_v2_2.2.0_001",
+      "type": "user",
+      "seq": 5,
+      "time_created": 1793231970186,
+      "time_updated": 1793231970189,
+      "data": {
+        "time": {
+          "created": 1793231970186
+        },
+        "text": "\"Read marker.txt and report its contents.\"",
+        "files": []
+      }
+    },
+    {
+      "id": "msg_v2_2.2.0_002",
+      "session_id": "ses_v2_2.2.0_001",
+      "type": "assistant",
+      "seq": 6,
+      "time_created": 1793231970238,
+      "time_updated": 1793231970363,
+      "data": {
+        "time": {
+          "created": 1793231970238,
+          "streamed": 1793231970323,
+          "completed": 1793231970358
+        },
+        "agent": "build",
+        "model": {
+          "id": "mock-model",
+          "providerID": "al58local",
+          "variant": "default"
+        },
+        "content": [
+          {
+            "type": "tool",
+            "id": "call_al58_read_1",
+            "name": "read",
+            "executed": false,
+            "state": {
+              "status": "completed",
+              "input": {
+                "path": "marker.txt"
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Read file marker.txt, lines 1-1\n1: AL-58 isolated runtime evidence marker."
+                }
+              ],
+              "metadata": {
+                "truncated": false
+              }
+            },
+            "time": {
+              "created": 1793231970288,
+              "ran": 1793231970311,
+              "completed": 1793231970345
+            }
+          }
+        ],
+        "finish": "tool-calls",
+        "rawFinish": "tool_calls",
+        "cost": 0,
+        "tokens": {
+          "input": 23,
+          "output": 11,
+          "reasoning": 0,
+          "cache": {
+            "read": 0,
+            "write": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "msg_v2_2.2.0_003",
+      "session_id": "ses_v2_2.2.0_001",
+      "type": "assistant",
+      "seq": 13,
+      "time_created": 1793231970413,
+      "time_updated": 1793231970476,
+      "data": {
+        "time": {
+          "created": 1793231970413,
+          "streamed": 1793231970460,
+          "completed": 1793231970472
+        },
+        "agent": "build",
+        "model": {
+          "id": "mock-model",
+          "providerID": "al58local",
+          "variant": "default"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "AL-58 deterministic runtime reply."
+          }
+        ],
+        "finish": "stop",
+        "rawFinish": "stop",
+        "cost": 0,
+        "tokens": {
+          "input": 23,
+          "output": 11,
+          "reasoning": 0,
+          "cache": {
+            "read": 0,
+            "write": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "msg_v2_2.2.0_004",
+      "session_id": "ses_v2_2.2.0_001",
+      "type": "idle",
+      "seq": 18,
+      "time_created": 1793231970482,
+      "time_updated": 1793231970485,
+      "data": {
+        "time": {
+          "created": 1793231970482
+        },
+        "outcome": "succeeded"
+      }
+    }
+  ]
+}

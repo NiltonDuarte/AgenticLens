@@ -41,6 +41,9 @@ ticket:
     - prefix: GEN
       description: General multi-agent engineering tasks and ad-hoc untracked work
       ticket_type: chore
+    - prefix: MGT
+      description: Management tasks, pull request coordination, integration reviews, and delivery planning
+      ticket_type: chore
     - prefix: PO
       description: Product Owner specifications, requirements definitions, and roadmap breakdowns
       ticket_type: docs

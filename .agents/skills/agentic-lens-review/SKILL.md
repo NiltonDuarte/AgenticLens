@@ -15,7 +15,8 @@ Audits the **AgenticLens** codebase (Go backend/CLI/engine and TypeScript fronte
 - **Deep Modules Over Passthroughs**: A module should provide significant capability behind a compact interface. Flag shallow wrappers that just delegate calls without compressing complexity.
 - **Minimize Reader Load**: Measure maintainability by mental tracing cost. Can a developer answer "where does X come from?" and "what computes X?" in under 30 seconds? If not, flag for simplification.
 - **Domain Modeling Over Scattered Conditionals**: Replace ad-hoc boolean flags, status strings, and nested conditionals with typed value structs, string enums, and exhaustive type switches in Go, and Discriminated Unions in TypeScript.
-- **Microsecond Pure Domain SLA**: Pure domain functions in `internal/domain` must execute in microseconds without disk, network, or clock side effects. Tests must run deterministically with zero artificial delays.
+- **Pure, Deterministic Domain**: Preserve zero I/O and zero mocks in domain tests. Measure performance against an actual requirement; rounded runner timings do not establish a microsecond SLA.
+- **Test Value Before Volume**: Apply [test purpose and proportionality](../../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality) and the [test review checklist](../../../docs/REGRESSION_PREVENTION.md#adding-reviewing-or-reducing-tests). Scores, coverage, counts, and line ratios prioritize inspection; they never authorize automatic deletion or require additional tests.
 
 ---
 
@@ -57,69 +58,28 @@ Execute four inspection tiers against the target scope:
 - **Missing Discriminated Unions / Sum Types**: Are multi-state UI results or Go workflow results represented with multiple optional pointers and boolean flags instead of typed state structs or TypeScript Discriminated Unions?
 - **Shotgun Surgery**: Does adding a new metric dimension require coordinated edits across multiple disconnected files? Gather metric computation into cohesive domain aggregations.
 
-#### Tier 4: Test Suite Performance, Execution Speed & Flakiness
-- **Millisecond Profiling**: Run test suite profiling to identify all tests exceeding 100ms:
+#### Tier 4: Test Value, Performance & Flakiness
+- **Behavior and Coverage**: Identify the production contract and plausible regression each candidate detects. Inspect helpers, compiler checks, and existing peers. Confirm deletion rationales or assertion-to-recipient mappings; preserve distinct ownership and layer coverage. If scores are requested, state the rubric and review confidence without treating a score band as an automatic removal rule.
+- **Boundary Evidence**: Distinguish text/source assertions, rejection guards, compiler contracts, DOM behavior, and real build/release execution. Report exactly which boundary was exercised and what remains unverified.
+- **Measured Bottlenecks**: Profile when performance is in scope or a concrete slowdown warrants investigation. Run from `backend/` after `make web-assets`, using comparable cache, race-detector, and concurrency settings. For example:
   ```bash
-  go test -json ./... | jq -r 'select(.Action=="pass" or .Action=="fail") | select(.Test != null) | "\(.Elapsed)s \(.Package) \(.Test)"' | sort -nr | head -20
+  go test -race -count=1 -json ./... > /tmp/agenticlens-test-profile.jsonl
+  jq -r 'select(.Action=="pass" or .Action=="fail") | select(.Test != null) | "\(.Elapsed)s \(.Package) \(.Test)"' /tmp/agenticlens-test-profile.jsonl | sort -nr | head -20
   ```
-- **Missing Test Parallelism (`t.Parallel()`)**:
-  - Are independent unit tests and table-driven subtests executing serially?
-  - Verify `t.Parallel()` is applied to independent test functions and inside `t.Run()` loops.
-- **Artificial Delays & Sleeps**:
-  - Search for `time.Sleep(...)` across `*_test.go` and `web/**/*.test.ts`.
-  - Banish `time.Sleep`. Replace with deterministic channel synchronization (`select { case <-done: ... case <-time.After(50*time.Millisecond): ... }`), mutex conditions, or polled assertions.
-- **Disk & SQLite I/O Churn**:
-  - Flag tests generating physical on-disk files or temporary database files instead of in-memory representations (`:memory:` or memory-backed filesystems).
-- **Subprocess Spawning in Loops**:
-  - Flag tests shelling out to `exec.Command("git", ...)` or `exec.Command("go", ...)` inside tight test loops. Replace with fast in-memory adapters or static fixtures.
-- **Pure Domain Microsecond SLA**:
-  - All unit tests in `internal/domain` must execute in **microseconds (< 0.001s)** with zero mocks.
-- **Frontend Test Environment Overhead**:
-  - Check for heavy `jsdom` setup on pure utility tests and unmocked component tree mounts.
+  Check the test command exit status separately from report generation. Recorded durations guide diagnosis; they are not a universal speed budget, and summed parent/subtest timings can double-count work.
+- **Safe Parallelism**: Consider `t.Parallel()` only for independent setup and state. Environment, process-global, and linker-metadata mutations require serial execution or effective isolation. Do not parallelize solely to meet a runtime target.
+- **Timing and Synchronization**: Inspect arbitrary sleeps and flaky waits. Prefer deterministic synchronization or controlled timers where practical; an arbitrary short timeout is not a deterministic substitute.
+- **Adapter Fidelity**: Real filesystem, SQLite, and Git fixtures may be essential integration proof. Diagnose redundant setup or subprocess repetition before proposing optimization; in-memory substitutes must preserve the claimed boundary. Keep domain tests pure.
+- **Frontend Environment**: Use a lightweight environment for pure utilities where appropriate, while preserving real component interactions and existing failure oracles. Do not replace meaningful integration coverage solely to reduce duration.
 
 ---
 
 ### 3. Deliver Findings
 
-Output findings as a structured Markdown review report:
+Adapt the report to the actual scope. Include:
 
-```markdown
-# AgenticLens Architecture, Code & Test Review Report: <Scope>
-
-## 1. Executive Summary
-Concise assessment of the audited scope, highlighting the top 1-2 architectural risks, highest-yield code simplifications, and test execution bottlenecks.
-
-## 2. Test Suite Performance Diagnostics
-- **Total Suite Execution Time**: <X.XXs>
-- **Target Execution Time**: <Y.YYs>
-
-### Slowest Tests & Bottlenecks
-| Duration | Package | Test Name | Diagnosed Bottleneck | Recommended Optimization |
-|---|---|---|---|---|
-| 1.45s | `internal/adapters` | `TestScanWorkspaces` | Disk fixture generation | In-memory fixtures + `t.Parallel()` |
-| 0.82s | `internal/adapters` | `TestExtractMetrics` | Subprocess git invocation | In-memory adapter stub |
-
-### Test Performance Findings & Concrete Patches
-1. **<Bottleneck Category 1>**:
-   - Problem: ...
-   - Prescription / Code Patch:
-   ```go
-   // Before vs After
-   ```
-
-## 3. Architecture & Code Smells by Severity
-
-### [High | Medium | Low]: <Finding Title>
-- **Tier**: Tier 1 (Layering) | Tier 2 (Module Depth) | Tier 3 (Domain Modeling)
-- **Affected Files**: `<path/to/file.go>:<line>`
-- **Observed Smell**: Concrete description of the smell, boundary breach, or shallow abstraction.
-- **Subtraction Target**: Exactly what dead code, wrapper, or flag can be eliminated first.
-- **Proposed Target Shape**: Proposed simplified structure (describe types and seams; zero speculative code blocks).
-- **Benefits**: Impact on maintainability, testability, reader load (30-second rule), and runtime performance.
-- **Blast Radius**: What downstream callers or external packages touch this; safety proof needed.
-
-## 4. Top Remediation Recommendations
-Prioritized list of the highest-leverage refactorings and performance improvements to execute first.
-```
-
----
+1. **Assessment and evidence**: audited baseline/diff, inspected paths, observed findings versus inference, and review confidence. Link precise source locations.
+2. **Test decisions, when in scope**: each removal rationale or existing recipient for meaningful assertions, retained independent coverage, and any requested score with its rubric. Use syntax-aware inventory and distinguish declarations from expanded runtime cases.
+3. **Performance, when measured**: commands, environment/cache/race settings, actual results, diagnosed bottlenecks, and proposed changes that preserve fidelity. Omit invented durations or target budgets when profiling was not done.
+4. **Architecture findings by severity**: affected boundary, concrete smell, subtraction opportunity, proposed shape, benefit, blast radius, and evidence required for safety. Preserve the Tier 1-3 checks above.
+5. **Prioritized recommendations and limits**: actual passed/failed/skipped checks, unverified claims, and proposed work within the authorized scope. A passing suite alone does not establish mutation equivalence or justify a deletion threshold.

@@ -11,6 +11,27 @@ import (
 	"agenticlens/internal/domain"
 )
 
+func TestAgenticFactLedgerDTOPreservesSkillAndTaskFacts(t *testing.T) {
+	version := domain.CurrentSchemaVersion
+	want := domain.AgenticFactLedger{
+		SchemaVersion: &version,
+		Skills:        []domain.SkillFact{{Name: "agentic-lens-dev", TurnIndex: 1, MessageIndex: 0, CallerRole: "coder", Timestamp: "2026-10-31T10:00:00Z", Success: true}},
+		TaskLinks:     []domain.TaskLinkFact{{SubagentType: "tester", Description: "Run tests", ParentTurn: 2, ChildSession: "child-1", Timestamp: "2026-10-31T10:01:00Z"}},
+	}
+	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(want))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	got := decoded.ToDomain()
+	if len(got.Skills) != 1 || got.Skills[0] != want.Skills[0] || len(got.TaskLinks) != 1 || got.TaskLinks[0] != want.TaskLinks[0] {
+		t.Fatalf("DTO round trip got %+v, want %+v", got, want)
+	}
+}
+
 func strPtr(s string) *string {
 	return &s
 }
@@ -1339,4 +1360,43 @@ func TestSessionFactDTO_SourceRoundtripAndRequired(t *testing.T) {
 			t.Error("expected error for missing session source, got nil")
 		}
 	})
+}
+
+func TestCanonicalContentDiagnosticsPersistWithoutHydration(t *testing.T) {
+	for _, content := range []bool{false, true} {
+		t.Run(fmt.Sprint(content), func(t *testing.T) {
+			extraTool, extraEvent := "", ""
+			if content {
+				extraTool = `,"content_errors":1`
+				extraEvent = `,"has_content_error":true,"content_severity":"medium","content_error_snippet":"syntax error: bad name"`
+			}
+			raw := `{"schema_version":4,"ticket_id":"GEN-999","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"anomalies":[],"tools":[{"name":"bash","calls":2,"errors":0` + extraTool + `}],"events":[{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"completed","context_tokens":0` + extraEvent + `}]}]}`
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal([]byte(raw), &dto); err != nil {
+				t.Fatal(err)
+			}
+			if err := dto.Validate(); err != nil {
+				t.Fatal(err)
+			}
+			facts := dto.ToDomain()
+			if got := facts.ToolFacts()[0]; got.Errors != 0 || got.ContentErrors != map[bool]int64{false: 0, true: 1}[content] {
+				t.Fatalf("tools=%+v", got)
+			}
+			encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var persisted adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(encoded, &persisted); err != nil {
+				t.Fatal(err)
+			}
+			restored := persisted.ToDomain()
+			if content {
+				events := restored.EventFacts()
+				if len(events) != 1 || !events[0].HasContentError || events[0].Status != "completed" || events[0].ContentErrorSnippet == nil || *events[0].ContentErrorSnippet != "syntax error: bad name" {
+					t.Fatalf("persisted diagnostic lost: %s", encoded)
+				}
+			}
+		})
+	}
 }

@@ -9,11 +9,11 @@ Mandatory technical guidelines for developing AgenticLens using **Go** (backend,
 Dependencies flow strictly inward across layers:
 
 ### Backend (Go)
-1. **CLI / Service Layer (`cmd/agentic-lens/`)**:
+1. **CLI / Service Layer (`backend/cmd/agentic-lens/`)**:
    - Application entrypoint, CLI commands (`scan`, `metrics`, `summary-append`, `server`), HTTP/gRPC server wiring.
-2. **Adapter Layer (`internal/adapters/`)**:
+2. **Adapter Layer (`backend/internal/adapters/`)**:
    - External boundary serialization (JSON encoding/decoding), filesystem repository scanner (`workspaces/` traversal), HTTP handlers, API clients.
-3. **Domain Layer / Functional Core (`internal/domain/`)**:
+3. **Domain Layer / Functional Core (`backend/internal/domain/`)**:
    - Pure domain models, value objects, aggregation algorithms, health score derivations, constants, and typed errors.
    - **Zero External Dependencies**: Must NOT import outer layers (`internal/adapters`, `cmd/`) or network/disk libraries (`net/http`, `os`, `database/sql`).
 
@@ -38,6 +38,27 @@ Dependencies flow strictly inward across layers:
 ### Imperative Shell (Go & TypeScript)
 - The shell handles filesystem traversal, directory scanning, JSON deserialization, HTTP routing, and UI rendering.
 - Errors from the shell must be caught, wrapped with descriptive context (`fmt.Errorf("...: %w", err)`), and handled gracefully.
+
+### Fact Fidelity and Refresh Boundaries
+
+- Required identity and metadata are validated before persistence. Optional or unknown values remain explicit; do not invent completion dates from started/updated dates, assign feature types to unclassified tickets, or represent unavailable measurements as measured zero.
+- Resolve stored sessions by exact identity by default. Heuristic recovery must be explicitly enabled and must not silently overwrite unrelated stored facts.
+- Refresh each source-owned session/tree only after discovery, parsing, and grouping succeed. Preserve all roots, children, legitimate repeated invocation rows, unavailable sessions, and other-harness facts. Replace cumulative snapshots for refreshed owners; repeated refresh of unchanged input must be idempotent.
+- Persisted facts are the baseline for reads. Optional hydration may add information but must not hide accepted baseline data on failure, delay, or partial success. Keep compact persistence transforms separate from read projections; never persist hydrated payloads as a side effect of GET.
+- Reuse canonical domain types and source-backed fields. Do not add a persisted metric with no defined producer or infer execution failure solely from error-like text returned by a successful inspection tool.
+
+### Hierarchy, Evidence, and UI Recovery
+
+- Structural parent linkage determines root/child classification; persona names are raw facts and configured presentation mappings must not rewrite source identity. Count SDLC steering from the source records defined by the telemetry contract, never from iteration directories or a forced minimum.
+- Keep source diagnostic payloads separate from generated explanatory copy. Preserve verbatim evidence except for explicit approved redaction; text cleanup must not change execution semantics.
+- Controls needed to recover from empty filters remain available in empty states. Layout fixes must preserve tooltip visibility, table containment, long-value access, keyboard behavior, and existing collapse defaults together.
+- Distinguish a fatal project setup error from a rejected individual ledger. Preserve valid sibling workspace results and surface per-ticket diagnostics; never count invalid ledgers in aggregates.
+
+### Configuration and Live Work
+
+- Trace shared configuration through loader, validation, writer/templates, CLI, live/offline calculations, API, and UI. Test non-default values end to end. Required settings fail explicitly when absent; do not revive removed configuration aliases implicitly.
+- Polling designs must state a work bound in terms of session count, history size, subscribers, and cadence. Prefer changed-data reads; avoid rebuilding every full trace on unchanged ticks.
+- Failed optional lookups must surface error or partial-data semantics. An unsuccessful lookup is not evidence of an empty result.
 
 ---
 
@@ -85,7 +106,8 @@ AgenticLens deploys as a single, self-contained executable with the TypeScript w
    - Production / Standalone: Serves embedded static assets from `embed.FS` with client-side fallback routing for SPA navigation.
    - Local Development: Vite dev server runs with HMR and proxies API requests (`/api/*`) to the Go backend.
 3. **Build Sequence**:
-   - Production binary build sequence: `cd web && npm run build` followed by `go build ./cmd/agentic-lens`.
+   - Production binary build sequence: `(cd web && npm run build)` followed by `(cd backend && go build -o ../bin/agentic-lens ./cmd/agentic-lens)`.
+   - The frontend build copies assets to `backend/internal/adapters/web/dist/`, the Go embed input. Verify that tree after frontend changes. Respect its Git tracking policy; do not add ignored build output.
    - CI and container builds must compile the frontend first before invoking Go build.
 
 ---
@@ -95,53 +117,40 @@ AgenticLens deploys as a single, self-contained executable with the TypeScript w
 Before submitting any iteration or PR, all quality gates must pass:
 
 ### Automated Verification (Makefile)
-```bash
-# Run all quality checks, tests, and build
-make
 
-# Or run specific stages:
-make check          # Static analysis: go vet, frontend lint/typecheck, git diff check
-make test           # Unit and race-detected test suites (backend and frontend)
-make build          # Single binary build (including frontend bundle if present)
-```
+Run `make` for the full gate. See [contributor build targets](CONTRIBUTING.md#4-makefile-targets-reference) and [verification prerequisites](CONTRIBUTING.md#5-quality-standards-and-invariants). Direct Go commands require `make web-assets` after installing frontend dependencies. Frontend checks from `web/` are `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
 
-### Manual Go Checks
-```bash
-# Verify compilation and format
-go vet ./...
-# Run test suite with race detector
-go test -race ./...
-# Build CLI binary
-go build -o bin/agentic-lens ./cmd/agentic-lens
-```
+### Test Purpose and Proportionality
 
-### TypeScript Checks & Frontend Build
-```bash
-# Typecheck
-npm run typecheck  # or npx tsc --noEmit
-# Linting
-npm run lint
-# Unit tests
-npm test
-# Production frontend build
-npm run build      # Produces web/dist/ for Go embedding
-```
+Prefer table-driven Go tests and Vitest/Jest for TypeScript.
+
+Each test must exercise application behavior or an intentional wire/compiler contract and identify a plausible regression its assertions would detect. Before adding a test, inspect existing cases and helpers. Extend a coherent existing test or table when it can express the missing behavior clearly; add a separate test when it needs distinct setup, ownership, or failure diagnosis. Select boundary cases relevant to the changed contract rather than repeating a generic edge-case checklist for every function.
+
+- Avoid assertions that only confirm fixture literals, direct struct assignments, TypeScript casts, standard-library behavior, or an implementation copied into the test. Exercise the production path and use an independent expected result. A local JSON roundtrip plus a TypeScript cast does not validate an API; actual JSON tags, custom codecs, runtime validators, and negative compiler checks can protect real contracts.
+- Read helper assertions and compiler directives before calling a test assertion-free. Keep important absence/default/override behavior, failure handling, source provenance, ownership, multiplicity, numerical boundaries, accessible interactions, and asynchronous state transitions where the feature depends on them. Coverage of the same feature at different layers is not automatically redundant.
+- Delete a test only with an explicit redundancy or invalid-contract rationale. Before consolidating it, map every meaningful assertion to a named existing recipient exercising the same behavior. Preserve the oracle and setup needed to reach it; retain a separate guard when no coherent recipient exists. Avoid unrelated large test bodies or helper suites created merely to reduce declaration counts.
+- Scores, test counts, coverage percentages, runtime, and test-to-production line ratios guide investigation; none is a creation or deletion quota. If a 0-10 score is requested, state the rubric: 0 identifies a candidate with no useful guard; 10 identifies a critical contract guard. A low score requires inspection, and retained tests keep their honest scores. Report whether a review screened source or examined bodies and peers directly; passing the suite alone does not establish equivalent defect detection.
+
+### Match Verification to the Claimed Boundary
+
+Tests of workflow text, help strings, or copied release logic do not establish successful CI execution. Missing-file/checksum guards prove their rejection path; build, packaging, publishing, download, and host execution need evidence at those boundaries when they are in scope. Describe that limit rather than claiming full release coverage. Likewise, source/CSS assertions do not establish browser geometry, and DOM text alone may not establish accessible behavior.
+
+Domain tests remain pure and deterministic with zero mocks. Real filesystem, SQLite, and Git fixtures are appropriate when testing adapter behavior that depends on them. Preserve those boundaries when optimizing; an in-memory substitute must not erase the behavior under test. Parallelize only independent tests; environment, process-global, and linker-metadata mutation require isolation or serial execution. Replace arbitrary sleeps with deterministic synchronization or controlled timers where practical. Measure performance with comparable cache, race-detector, and concurrency settings; rounded test-runner timings do not establish a microsecond SLA.
+
+### Interpreting Test Metrics
+
+When reporting a line ratio, state source roots, classification patterns, exclusions, and treatment of helpers, fixtures, generated files, comments, and blank lines. Distinguish whole-tree physical source counts from executable lines and per-diff added lines. Configured telemetry classification and an adjusted source estimate may differ; label both rather than silently substituting one for the other. There is no universal good ratio: assess risk coverage, maintenance cost, and actual regressions caught.
+
+### Fixture and Verification Boundaries
+
+Select cases from the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before implementing boundary changes.
+
+- Tests must construct isolated configuration, ledgers, and source fixtures; do not read live `alspaces/` history, developer databases, or depend on actual ticket IDs. A ticket rename must not break tests.
+- Exercise configurable roots and classification patterns, unavailable optional enrichment, malformed records, and partial source trees where relevant. Keep provenance explicit for sanitized real-format fixtures versus synthetic examples.
+- Run focused checks during rework, then the required full `make` gate on the integrated result. Record commands, results, and skipped stages; a conditional Makefile target that ran no frontend checks is not proof they passed.
 
 ### Invariant Checks
 - Verify zero `any` in Go and TypeScript.
 - Verify zero emojis in code, UI, docstrings, and log messages.
 - Verify single binary self-contained execution without Node runtime dependency.
 
----
-
-## Summary Checklist
-
-| Topic | Decision | Rule |
-|---|---|---|
-| **Backend Architecture** | Inward Dependencies | `internal/domain` has zero I/O imports. `internal/adapters` handles JSON and disk. `cmd/` handles CLI/server. |
-| **Separation** | FCIS | Pure deterministic logic in domain; filesystem I/O and HTTP in shell. |
-| **Go Standards** | Go 1.23+, Value Semantics | No `any`/`interface{}`, wrap errors with `%w`, zero unhandled errors. |
-| **Frontend Architecture** | TypeScript Strict | `"strict": true`, zero `any`, Zod/type guards at boundaries. |
-| **Asset Bundling** | Single Binary via `embed.FS` | `web/dist` embedded into Go executable; zero Node.js in production. |
-| **UI & Styling** | Modern Web / Zero Emojis | Pure components, graceful empty states, zero emojis. |
-| **Testing** | Deterministic Pure Core | Table-driven tests in Go with zero mocks for domain. Vitest/Jest for TypeScript. |

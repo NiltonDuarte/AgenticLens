@@ -172,11 +172,15 @@ func runGenerate(args []string) {
 	var knownThreadIDs []string
 	userBySessionID := make(map[string]string)
 	var sessions []domain.SessionFact
+	var skills []domain.SkillFact
+	var taskLinks []domain.TaskLinkFact
 	var fallbackCode *domain.CodeFacts
 
 	if cachedFacts != nil {
 		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
 		sessions = append(sessions, cachedFacts.Sessions...)
+		skills = append(skills, cachedFacts.Skills...)
+		taskLinks = append(taskLinks, cachedFacts.TaskLinks...)
 		for _, s := range cachedFacts.Sessions {
 			userBySessionID[s.ID] = s.User
 		}
@@ -228,15 +232,7 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error grouping Codex session facts: %v\n", factErr)
 			os.Exit(1)
 		}
-		for i := range freshCodex {
-			if freshCodex[i].User == "" || freshCodex[i].User == "unknown" {
-				if u, ok := userBySessionID[freshCodex[i].ID]; ok && strings.TrimSpace(u) != "" {
-					freshCodex[i].User = strings.TrimSpace(u)
-				} else if strings.TrimSpace(currentUser) != "" {
-					freshCodex[i].User = strings.TrimSpace(currentUser)
-				}
-			}
-		}
+		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
 		freshSessions = freshCodex
 		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
 			activeStartedAt = &combined.StartedAt
@@ -284,6 +280,7 @@ func runGenerate(args []string) {
 				}
 				if len(extractedSessions) > 0 {
 					freshSessions = extractedSessions
+					skills, taskLinks = opencode.ExtractSkillTaskFacts(extractedSessions)
 					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
 						activeStartedAt = dbStarted
 					}
@@ -403,6 +400,8 @@ func runGenerate(args []string) {
 		UpdatedAt:     updatedAtISO,
 		Code:          codeFacts,
 		Sessions:      sessions,
+		Skills:        skills,
+		TaskLinks:     taskLinks,
 	}
 
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
@@ -437,6 +436,12 @@ func runGenerate(args []string) {
 		fmt.Printf("Metrics table successfully updated in %s\n", *appendFlag)
 	} else if *jsonOutputFlag == "" && !*anomaliesFlag {
 		fmt.Println(tableMD)
+	}
+}
+
+func resolveCodexSessionUsers(fresh []domain.SessionFact, existingUsers map[string]string, gitUser string) {
+	for i := range fresh {
+		fresh[i].User = git.ResolveSessionUser(fresh[i].User, existingUsers[fresh[i].ID], gitUser)
 	}
 }
 

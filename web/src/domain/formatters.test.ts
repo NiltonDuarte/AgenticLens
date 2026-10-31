@@ -1,9 +1,37 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateOnly, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, filterLedgersByCompletionDate, canonicalTicketType, extractTicketPrefix, extractDistinctPrefixes, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, filterComparisonRows, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, } from './formatters';
+import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateOnly, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, filterLedgersByCompletionDate, canonicalTicketType, extractTicketPrefix, extractDistinctPrefixes, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, filterComparisonRows, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
-import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, TicketComparisonRow, AgentRole, StandardTicketType, TicketType, FailureSeverity, } from './types';
+import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, TicketComparisonRow, } from './types';
 describe('Domain Pure Formatters', () => {
+    describe('truncateMiddle', () => {
+        it('keeps the default leading and trailing characters around an ellipsis', () => {
+            expect(truncateMiddle('ses_0192a83e-unique-x-304a')).toBe('ses_0192...x-304a');
+        });
+        it('supports custom leading and trailing character counts', () => {
+            expect(truncateMiddle('abcdefghij', 3, 2)).toBe('abc...ij');
+        });
+        it('leaves strings at or below the retained-character cutoff unchanged', () => {
+            expect(truncateMiddle('abcdefghijklmn')).toBe('abcdefghijklmn');
+            expect(truncateMiddle('short')).toBe('short');
+            expect(truncateMiddle('')).toBe('');
+        });
+        it('handles zero and invalid boundary counts safely', () => {
+            expect(truncateMiddle('abcdef', 0, 0)).toBe('...');
+            expect(truncateMiddle('abcdefghij', -1, 2)).toBe('abcdefghij');
+            expect(truncateMiddle('abcdefghij', 3, Number.NaN)).toBe('abc...efghij');
+        });
+    });
+    describe('localized timestamps', () => {
+        it('formats local clock time with zero padded milliseconds', () => {
+            expect(formatLocalTimeWithMs('2026-10-22T14:32:10.007Z')).toMatch(/^\d{2}:\d{2}:\d{2}\.007$/);
+        });
+        it('preserves invalid values and includes offset context in tooltip', () => {
+            expect(formatLocalTimeWithMs('invalid')).toBe('invalid');
+            expect(formatLocalDateTimeTooltip('2026-10-22T14:32:10.007Z')).toMatch(/\.007 \[UTC[+-]\d{2}:\d{2}\]$/);
+            expect(getClientTimezoneBadge()).toMatch(/^TZ: /);
+        });
+    });
     describe('formatTokensK', () => {
         it('handles zero and negative gracefully', () => {
             expect(formatTokensK(0)).toBe('0');
@@ -133,6 +161,12 @@ describe('Domain Pure Formatters', () => {
         });
     });
     describe('deriveTicketComparisonRows boundary sorting and empty handling', () => {
+        it('retains distinct sorted recorded skill names in browser rows', () => {
+            const base = mockAgenticMetricsLedgers['AL-1']!;
+            const skill = (name: string) => ({ name, success: true, caller_role: 'coder', timestamp: '2026-01-01T00:00:00Z', turn_index: 0, message_index: 0 });
+            const rows = deriveTicketComparisonRows([{ ...base, facts: { ...base.facts, skills: [skill('beta'), skill('alpha'), skill('beta')] } }]);
+            expect(rows[0]?.skills_used).toEqual(['alpha', 'beta']);
+        });
         it('returns empty array when input is empty', () => {
             expect(deriveTicketComparisonRows([])).toEqual([]);
         });
@@ -220,6 +254,7 @@ describe('Domain Pure Formatters', () => {
             expect(rows[0]?.ticket_id).toBe('unknown');
             expect(rows[0]?.ticket_title).toBe('N/A');
             expect(rows[0]?.lead_duration_formatted).toBe('In Progress');
+            expect(rows[0]?.skills_used).toEqual([]);
         });
         it('handles migrated and partially migrated ledger objects cleanly', () => {
             const migratedLedger = {
@@ -976,65 +1011,6 @@ describe('Domain Pure Formatters', () => {
         it('handles non-finite values defensively', () => {
             expect(formatLinesCompact(NaN)).toBe('0');
             expect(formatLinesCompact(Infinity)).toBe('0');
-        });
-    });
-    describe('Domain Enums and Primitive Obsession Remediation', () => {
-        describe('AgentRole Autocomplete and Custom Persona Extension', () => {
-            it('accepts arbitrary role strings under AgentRole', () => {
-                const coderRole: AgentRole = 'coder';
-                const customRole: AgentRole = 'architect';
-                const dynamicRoles: readonly AgentRole[] = [
-                    coderRole,
-                    customRole,
-                    'security-auditor',
-                    'orchestrator',
-                ];
-                expect(dynamicRoles).toHaveLength(4);
-                expect(dynamicRoles[0]).toBe('coder');
-                expect(dynamicRoles[1]).toBe('architect');
-            });
-        });
-        describe('FailureSeverity Domain Contract', () => {
-            it('accepts all 4 valid severity values', () => {
-                const validSeverities: readonly FailureSeverity[] = ['none', 'low', 'medium', 'high'];
-                expect(validSeverities).toHaveLength(4);
-                for (const sev of validSeverities) {
-                    expect(['none', 'low', 'medium', 'high']).toContain(sev);
-                }
-            });
-        });
-        describe('ContextHealthStatus Classification', () => {
-            it('accepts all 4 health status values', () => {
-                const validStatuses: readonly ContextHealthStatus[] = [
-                    'HEALTHY',
-                    'ELEVATED',
-                    'BLOATED',
-                    'CRITICAL',
-                ];
-                expect(validStatuses).toHaveLength(4);
-            });
-        });
-        describe('ConventionalTicketType and TicketType Extension', () => {
-            it('supports canonical conventional commit types and custom ticket types', () => {
-                const canonicalTypes: readonly StandardTicketType[] = [
-                    'feat',
-                    'fix',
-                    'feature',
-                    'bug',
-                    'chore',
-                    'docs',
-                    'refactor',
-                    'test',
-                    'ci',
-                    'perf',
-                    'build',
-                ];
-                expect(canonicalTypes.length).toBeGreaterThan(0);
-                const customTicketType: TicketType = 'custom-subsystem';
-                const standardType: TicketType = 'feat';
-                expect(customTicketType).toBe('custom-subsystem');
-                expect(standardType).toBe('feat');
-            });
         });
     });
 });

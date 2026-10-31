@@ -1,0 +1,3689 @@
+{
+  "tasks": [
+    {
+      "ticket": "AL-1",
+      "sessions": 7,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "6c07cb1a977e8871892616305727e42941d6ad8fb12ba2f787986bc96c03eb05"
+    },
+    {
+      "ticket": "AL-10",
+      "sessions": 4,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "450e2bf80fb42a5922d17b5dcbdfc43ca961eea06c1dc1c3fc433d280eb4b833"
+    },
+    {
+      "ticket": "AL-11",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "1e64b852d7b17902c0746c8c20448d89651bf0839dbacbb558f5c9076a5ceff3"
+    },
+    {
+      "ticket": "AL-12",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "4f00aeed9393ecfe1a08277c53d3c7ed157fc4822898bcbe2e4f20b2e2c8dd0a"
+    },
+    {
+      "ticket": "AL-13",
+      "sessions": 6,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "a0acec6ff6b9e5364e92403c0c69c77316dd75b9391e297ab743a0b55209352f"
+    },
+    {
+      "ticket": "AL-14",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "77410aa179ff1f2c7dc6bbcac81de0e52f917215402fbb243cfdd02c6f994c9b"
+    },
+    {
+      "ticket": "AL-15",
+      "sessions": 10,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "dbd820519a0c5cf9d9c81fa8e4329e9585aebe04570d2907a13000ecec0633d4"
+    },
+    {
+      "ticket": "AL-16",
+      "sessions": 9,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "523b5f6aeb51f1493ca9501f508017e5e56f195c5f1e66574c1c96d8f3920c3b"
+    },
+    {
+      "ticket": "AL-17",
+      "sessions": 7,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "6d45973f3da5c8572aba10b07324917743377a21b4f67d825a2cda565ba2922b"
+    },
+    {
+      "ticket": "AL-19",
+      "sessions": 9,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "ff0a6ae157338758e0758037f0410c1e2600b5bed28f9b8afe206f7942748f49"
+    },
+    {
+      "ticket": "AL-2",
+      "sessions": 9,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "239e7a5b9411fd38e5c7f74f87f6a77d82a4eb796323be07ec5650016181b055"
+    },
+    {
+      "ticket": "AL-20",
+      "sessions": 9,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "cdbf191ec4fbce7b1b42dfb31b144df6d6d622192ca9d76be1f30a74ff184b43"
+    },
+    {
+      "ticket": "AL-21",
+      "sessions": 10,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "c3c2380204e53d710975c096b5b603bcc81ff7659c600aee4034a6b1721a5eea"
+    },
+    {
+      "ticket": "AL-22",
+      "sessions": 7,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "4e183eb40800bd2188853fadd6c8d5ba5fb6550b6bc14e25620957b7e3f8c60b"
+    },
+    {
+      "ticket": "AL-23",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "2f281bc7ecff98505f8e0525e67f43746c7ea644f15d439abb315741f658b8d4"
+    },
+    {
+      "ticket": "AL-24",
+      "sessions": 11,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "feb81077f0a69457f226237e3cfbdaf7dd0d0283078bedce67bef64514fc2fe9"
+    },
+    {
+      "ticket": "AL-25",
+      "sessions": 19,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "ea5021d5a5f038fdff5a93eb5797108718b2af120b748abfd037e306a6fa0f6d"
+    },
+    {
+      "ticket": "AL-26",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "f30ea7189742109b1a51cee993479fc0e3e36af6cf4bb44baca18cad94d35d92"
+    },
+    {
+      "ticket": "AL-27",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "89de4511ab5b5fe0bbb7f582f796a9ee7d93a48aea9420039be052556130af3d"
+    },
+    {
+      "ticket": "AL-28",
+      "sessions": 11,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "813a430ea5e9045b7c6cf0a7fb32c4214e050f8b39bda467b8ef009ac9d77d1d"
+    },
+    {
+      "ticket": "AL-29",
+      "sessions": 10,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "b0e72bd26f53b69f774b3bba526acc908cd769ee93a597c5c0bcd64390fbbb06"
+    },
+    {
+      "ticket": "AL-3",
+      "sessions": 9,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "48d3c70c39d42c841d7b3dcf2f3a9ee0c97e0f40ebac5907a4a7056c58acc2cd"
+    },
+    {
+      "ticket": "AL-30",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "bf2cd44ee45808fb3d16324555a3702ec8129e1f45f9a3fe497412cabd34fcd7"
+    },
+    {
+      "ticket": "AL-31",
+      "sessions": 17,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "d417b862a073de678c08e43666265582f67c4c33bb38cd397f94670a27c5ce8f"
+    },
+    {
+      "ticket": "AL-32",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "dd06cfc1b88c0f3cf19f0bcbb2341e51183114601356d8ca5cd10756ba347d87"
+    },
+    {
+      "ticket": "AL-33",
+      "sessions": 18,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "b4e1df6de2c9bec1bcd9793539f74a4046cc70a871ede49b38e89889f58997ae"
+    },
+    {
+      "ticket": "AL-34",
+      "sessions": 9,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "0b966d96cd47d3941d42164c87ebe5523cce2e8513d1a1d85922a0dfb7c394fd"
+    },
+    {
+      "ticket": "AL-35",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "6c29eebd01f271e49bd65fbfca0d6355544e51d9be9bc59ffa3ea572fd26f72f"
+    },
+    {
+      "ticket": "AL-36",
+      "sessions": 17,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "1aa9fa431a775d16990f577ab4ee9b9be6700eb3c576c91738b08144ef3e6bce"
+    },
+    {
+      "ticket": "AL-37",
+      "sessions": 18,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "a4c0d86fa100e3e585b9401070842c4c51bcde009611511d61412708f908b1da"
+    },
+    {
+      "ticket": "AL-38",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "49d7fdf366e90a5ba0d7694996b3bd108ba56d922f83e12641e69789f144331b"
+    },
+    {
+      "ticket": "AL-39",
+      "sessions": 23,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "c958400261f864e3af7452bc753fae54bb839f3db3fe0e67126100781e3589cf"
+    },
+    {
+      "ticket": "AL-4",
+      "sessions": 10,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "6ef7c9d46883b20a39111f1f5c9f35c3f110f389a22e7262df534e4ace6a5050"
+    },
+    {
+      "ticket": "AL-40",
+      "sessions": 9,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "c885e9e550b0afba1d092c8b3311bb44acf14da36f949c103c62fff4089affbf"
+    },
+    {
+      "ticket": "AL-41",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "d5686f3802d4eaaa15551d1c555a16f04b2cfdcb77ce72c11cf6d7aa49df8be8"
+    },
+    {
+      "ticket": "AL-45",
+      "sessions": 14,
+      "codex_sessions": 14,
+      "calls": 223,
+      "errors": 14,
+      "compactions": 0,
+      "sha256": "b96964b900b1885c4a3264633eb1d547e52a7e3296295f66480931af2a0f11b1"
+    },
+    {
+      "ticket": "AL-46",
+      "sessions": 9,
+      "codex_sessions": 9,
+      "calls": 109,
+      "errors": 13,
+      "compactions": 0,
+      "sha256": "83d10b7ee2aed2882becd54ae5a1c0e90642a755529de252c0639fd7624cc0cb"
+    },
+    {
+      "ticket": "AL-48",
+      "sessions": 5,
+      "codex_sessions": 5,
+      "calls": 91,
+      "errors": 7,
+      "compactions": 0,
+      "sha256": "5aafca20438b36e00bb5986dee2916f86e2f9cd44b9a73fc51554eef1197a063"
+    },
+    {
+      "ticket": "AL-49",
+      "sessions": 5,
+      "codex_sessions": 5,
+      "calls": 108,
+      "errors": 20,
+      "compactions": 0,
+      "sha256": "90528074a6150928d0be1c23b2eb474de946ebb982b33a08744c75d4de5a9230"
+    },
+    {
+      "ticket": "AL-5",
+      "sessions": 10,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "a409b47a9a792c0b2da731fa8b88a045f4d18fdf96d5fdad864f7176b290833c"
+    },
+    {
+      "ticket": "AL-50",
+      "sessions": 5,
+      "codex_sessions": 5,
+      "calls": 85,
+      "errors": 12,
+      "compactions": 0,
+      "sha256": "57b04ca8d2349677fa279f356bfa0f1eaa83238830efa8746320e645f23303e4"
+    },
+    {
+      "ticket": "AL-51",
+      "sessions": 14,
+      "codex_sessions": 14,
+      "calls": 293,
+      "errors": 30,
+      "compactions": 0,
+      "sha256": "df69c236d4c94eabeefa0f5e81c6ead73f5587c2774af39f9f065ff535388999"
+    },
+    {
+      "ticket": "AL-56",
+      "sessions": 40,
+      "codex_sessions": 27,
+      "calls": 2953,
+      "errors": 207,
+      "compactions": 21,
+      "sha256": "86d927d4abcc458664d8046fb6d92a560820c43af6adf9237c345287d78e30b3"
+    },
+    {
+      "ticket": "AL-58",
+      "sessions": 10,
+      "codex_sessions": 10,
+      "calls": 355,
+      "errors": 21,
+      "compactions": 6,
+      "sha256": "8831345175531f22f49122836bc7da48ff721496990ef5a478058ab797cfe1e4"
+    },
+    {
+      "ticket": "AL-59",
+      "sessions": 1,
+      "codex_sessions": 1,
+      "calls": 72,
+      "errors": 5,
+      "compactions": 0,
+      "sha256": "24e36a056c69f57a1273f8eff5a9b016136a936e6d70bff5e6b52f5588c2a926"
+    },
+    {
+      "ticket": "AL-6",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "55dd5eb66886e9808dc1d3c872597757d9e01569f94f0d9cc22e8df0dd720f44"
+    },
+    {
+      "ticket": "AL-7",
+      "sessions": 7,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "85c43efa28700013517c70aff00f710ce674d65960e43749d85eb24b4de0946c"
+    },
+    {
+      "ticket": "AL-8",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "5d3b2ec2514a5a132ef95406ff116442781b5d53ffaa84a6ac38d387d66a56b6"
+    },
+    {
+      "ticket": "AL-9",
+      "sessions": 16,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "d867f3111909d6db94eab7be7e2b6f02a7d227e6a7196fa2efb816db01b4ae5a"
+    },
+    {
+      "ticket": "FIX-1",
+      "sessions": 11,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "b0f105d26e1e0916a33c4787a2303713b9dc2b63042fa301f79ca45a71b02e42"
+    },
+    {
+      "ticket": "FIX-10",
+      "sessions": 8,
+      "codex_sessions": 1,
+      "calls": 198,
+      "errors": 8,
+      "compactions": 1,
+      "sha256": "087ae37e4b61011a5cfc13779df96bc7b8c176e86c029a6fa4f73983e5c6cda0"
+    },
+    {
+      "ticket": "FIX-11",
+      "sessions": 10,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "0df2f377f65e2ee30619b96696f593bf6655644f759897ae2ac91d30194796fe"
+    },
+    {
+      "ticket": "FIX-12",
+      "sessions": 2,
+      "codex_sessions": 2,
+      "calls": 212,
+      "errors": 16,
+      "compactions": 0,
+      "sha256": "101d72350cda9cce2553a1d8e52791f8c6a3e86bf612dd6afa72698a741e2f5c"
+    },
+    {
+      "ticket": "FIX-13",
+      "sessions": 4,
+      "codex_sessions": 4,
+      "calls": 47,
+      "errors": 6,
+      "compactions": 0,
+      "sha256": "d5aa8a3923449065c33c5d504d003ad7bae24c7d346b685256d200fbe9dbe68f"
+    },
+    {
+      "ticket": "FIX-14",
+      "sessions": 6,
+      "codex_sessions": 6,
+      "calls": 60,
+      "errors": 3,
+      "compactions": 0,
+      "sha256": "5b3ead891c57fdff131088725e02ee92485f0e3cd04e1cfae93aef46ca530df1"
+    },
+    {
+      "ticket": "FIX-2",
+      "sessions": 19,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "979e79073f81266b377ab255cf7b76dfe3825552145a547f383216538986f8b7"
+    },
+    {
+      "ticket": "FIX-3",
+      "sessions": 27,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "75590bfc0279df4b6a4752bf38cc821c2304b3be51c54a71914306647021a939"
+    },
+    {
+      "ticket": "FIX-4",
+      "sessions": 27,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "ce6bd94e9fc9c4b604ef215650f830a56a21f2f45a81cd2068275dd1c27e488c"
+    },
+    {
+      "ticket": "FIX-5",
+      "sessions": 5,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "51bc643598432f69e3b8eda6ce31c5cb0208ca3aae17ea1a32a3b49ad8abcd0d"
+    },
+    {
+      "ticket": "FIX-6",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "fff2786e88f2a0b7760981766e55be67d1943fe071db753b4a5e0b06ebd55a56"
+    },
+    {
+      "ticket": "FIX-7",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "4890f21cf0d47c64740634090ea85a8bbecbd9f7a441ee40fa1e85e41aa5c53a"
+    },
+    {
+      "ticket": "FIX-8",
+      "sessions": 1,
+      "codex_sessions": 1,
+      "calls": 116,
+      "errors": 6,
+      "compactions": 1,
+      "sha256": "e82c2677652c900244cc7ee42a1f23a708bc0b2a5beecc798a2abf2d13419ebe"
+    },
+    {
+      "ticket": "FIX-9",
+      "sessions": 2,
+      "codex_sessions": 2,
+      "calls": 35,
+      "errors": 4,
+      "compactions": 0,
+      "sha256": "9b35872730b32d43f727fc12dc9968a7a77fa8830b44781a8e0f93ee84c991b1"
+    },
+    {
+      "ticket": "GEN-1",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "774a26e4a56120ad3f493c67687c8e4721fbf07b70cd419c4c53651d5a343098"
+    },
+    {
+      "ticket": "GEN-10",
+      "sessions": 1,
+      "codex_sessions": 1,
+      "calls": 46,
+      "errors": 1,
+      "compactions": 0,
+      "sha256": "b1b7303a91cbd3d5c61837be57649e500732e35502b87dfec1c59708a330c618"
+    },
+    {
+      "ticket": "GEN-11",
+      "sessions": 4,
+      "codex_sessions": 4,
+      "calls": 62,
+      "errors": 4,
+      "compactions": 0,
+      "sha256": "33391e7f8f29cfaa92829137c1b8032115c0cd48bf0a9e2570aa95ce7142f3ac"
+    },
+    {
+      "ticket": "GEN-2",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "86e23152681c5e217680b9f632111b78c34bea112beaef381c493206cccbc6c4"
+    },
+    {
+      "ticket": "GEN-3",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "3fbc357ab8f0ac3a27fec959de6b179b5643516aee72c7a1b47016c30f256a82"
+    },
+    {
+      "ticket": "GEN-4",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "66a9cb4b5481c0cc37d44edf0d491ee1ab3b8ead8fdc1ceec6cc3de54aaf3060"
+    },
+    {
+      "ticket": "GEN-5",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "ab5488ceef7000dbc9c1cfd3b4e9351fb1aa6dffacf112a05f1bcb4331a5de6f"
+    },
+    {
+      "ticket": "GEN-6",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "896b5a38d5d9f1c07b1d7dd8fc68745a23235c8f47c56c79aa7b00f0cfb083af"
+    },
+    {
+      "ticket": "GEN-7",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "4e15331155446b7b6282d133baf94e1f13b9be6ed44991ae7f81dc8164da6a0f"
+    },
+    {
+      "ticket": "GEN-8",
+      "sessions": 1,
+      "codex_sessions": 1,
+      "calls": 16,
+      "errors": 3,
+      "compactions": 0,
+      "sha256": "216f119623e58db3249b45e4ca99d81ca2d0564a43af6b7a9a2aa69dd5f58658"
+    },
+    {
+      "ticket": "GEN-9",
+      "sessions": 1,
+      "codex_sessions": 1,
+      "calls": 55,
+      "errors": 5,
+      "compactions": 0,
+      "sha256": "bf31937f9cb6c02e80e94671cf87b616253ada78243e15661db9b65a54c54901"
+    },
+    {
+      "ticket": "PO-1",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "89abe2ff854748cc4f180c5502e909a5d1632317f5c75a79173e025615f1b525"
+    },
+    {
+      "ticket": "PO-10",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "7c61fe9389ca5b7756bfabd6418f263c274d150ba5d74d920fb64cba0d68c2c4"
+    },
+    {
+      "ticket": "PO-11",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "e04aa3abffce34e18541e397f702d94dcc79b5cef514af745597da98d84ca954"
+    },
+    {
+      "ticket": "PO-12",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "16b5300fed4947a6b266e26de37c03441dc9e062bb67cdcab5ea7f856ee3fae7"
+    },
+    {
+      "ticket": "PO-13",
+      "sessions": 1,
+      "codex_sessions": 1,
+      "calls": 18,
+      "errors": 3,
+      "compactions": 0,
+      "sha256": "f6d99f5c312e6af3f1988c7e61b894faa56e6037e6110dd5ce7aa019d4518c45"
+    },
+    {
+      "ticket": "PO-2",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "735daa9131261e6f9bf06cef382d5f2c2b5d88d6fbc73d6b9cd9c81b60197829"
+    },
+    {
+      "ticket": "PO-3",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "be3e0bff8a0e9a9a426f959b8284b3f73e2375fa1c5a853ea8ce30f3c8094441"
+    },
+    {
+      "ticket": "PO-4",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "299321c780d6348766bb452e156eed365f5804402aa4b05502bb64c2a1819c3b"
+    },
+    {
+      "ticket": "PO-5",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "dcc78f15d77e0702e0701b7dac78af397692f0ebf2bf1193ad9fcee5845ff884"
+    },
+    {
+      "ticket": "PO-6",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "82fb45dca443430c418757beba7f810bc710aa4b4ade6e955e725fa576e01b88"
+    },
+    {
+      "ticket": "PO-7",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "27306c35513e1183811c2a53c09d45cef28c8c241a41a75588ce16918c8f5284"
+    },
+    {
+      "ticket": "PO-8",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "e0bc1a9a3572d3c7e05e20d5630b514f9f37887f7999ce2eb570467de49e30c3"
+    },
+    {
+      "ticket": "PO-9",
+      "sessions": 1,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "a932bb303aaa08afbf766173a6305321675b09cf6d32504e6788c63a1a28aefa"
+    },
+    {
+      "ticket": "REV-1",
+      "sessions": 11,
+      "codex_sessions": 0,
+      "calls": 0,
+      "errors": 0,
+      "compactions": 0,
+      "sha256": "a52f239bc8fdb43ed719aa8aa0deeacfdb3902c0db72e198e4988a4dc227affd"
+    }
+  ],
+  "local_sessions": [
+    {
+      "id": "01a17362-baa4-72b3-934d-3cb040c899ea",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-25T15-06-52-01a17362-baa4-72b3-934d-3cb040c899ea.jsonl",
+      "lines": 14472,
+      "user_messages": 94,
+      "selected_commands": 360,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "7857f5912ff49572079752674da13e9aed73f679dbc3afcf959faec266498aed"
+    },
+    {
+      "id": "01a1748d-8e75-7e82-9d07-18241d77cf4b",
+      "ticket": null,
+      "file": "rollout-2026-10-25T20-33-16-01a1748d-8e75-7e82-9d07-18241d77cf4b.jsonl",
+      "lines": 84,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5615f5ffa27599d407aa24c2245e9a39fcae6fec7c9d8e162cf45e0d92ab80ab"
+    },
+    {
+      "id": "01a174a2-debd-7bb2-933f-18c8f3d76c70",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-25T20-56-33-01a174a2-debd-7bb2-933f-18c8f3d76c70.jsonl",
+      "lines": 315,
+      "user_messages": 12,
+      "selected_commands": 44,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3d6a59c8cf79d3ad4f64bca4b89bef2207ad2ed3cd08fe28e0cb6d47f741164a"
+    },
+    {
+      "id": "01a174a4-dd8f-75a1-ba8b-9d78cd357bdc",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-25T20-58-44-01a174a4-dd8f-75a1-ba8b-9d78cd357bdc.jsonl",
+      "lines": 450,
+      "user_messages": 13,
+      "selected_commands": 53,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3c1e583c62c4abf96c2a518d166e59e061d2066ffc0d99344393b0a443c6e321"
+    },
+    {
+      "id": "01a174a5-1271-7791-8474-55e6bf0e84fd",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-25T20-58-57-01a174a5-1271-7791-8474-55e6bf0e84fd.jsonl",
+      "lines": 444,
+      "user_messages": 13,
+      "selected_commands": 54,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "fa8424d55282824d9111ec9a687cbc12ee9e9e71bfa18553c7f78a356ac6b9c2"
+    },
+    {
+      "id": "01a174ad-f5c2-79b1-a5d6-df60b61f6b93",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-25T21-08-40-01a174ad-f5c2-79b1-a5d6-df60b61f6b93.jsonl",
+      "lines": 485,
+      "user_messages": 15,
+      "selected_commands": 51,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a06806352db66e4b3bdc99e0b90126bb8a601e5390f28a2bfeca05e52a975aea"
+    },
+    {
+      "id": "01a174b1-3b71-73c0-a0b7-6428b55ad981",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-25T21-12-14-01a174b1-3b71-73c0-a0b7-6428b55ad981.jsonl",
+      "lines": 537,
+      "user_messages": 16,
+      "selected_commands": 54,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "dda34328c013037e8501d17e076defc01ba119251e63ccb38f2671beb4c3d589"
+    },
+    {
+      "id": "01a17876-b15e-7e01-8575-bd8183cd362e",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T14-46-47-01a17876-b15e-7e01-8575-bd8183cd362e.jsonl",
+      "lines": 307,
+      "user_messages": 1,
+      "selected_commands": 6,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1308c2915e1f274f0a149a484b217fa521f3ef792efa7c7c7df82d092e679cf8"
+    },
+    {
+      "id": "01a17879-2b06-7a51-9d1a-0962c002d9a3",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T14-49-29-01a17879-2b06-7a51-9d1a-0962c002d9a3.jsonl",
+      "lines": 161,
+      "user_messages": 1,
+      "selected_commands": 15,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5bd3e8738e279c8a19f3a23ebcad212a5834d3e1cb04ea7d702b703049deb622"
+    },
+    {
+      "id": "01a17887-026c-7ac0-91f7-cd128bc8ecd6",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T15-04-36-01a17887-026c-7ac0-91f7-cd128bc8ecd6.jsonl",
+      "lines": 1280,
+      "user_messages": 4,
+      "selected_commands": 33,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8372c4f8c0645f9eb404d56dfb5161d9b784ac16d0e8eb5a3c7bfe095eb6fa44"
+    },
+    {
+      "id": "01a1788f-bbe2-7a21-b94e-a0caeeed057e",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T15-14-08-01a1788f-bbe2-7a21-b94e-a0caeeed057e.jsonl",
+      "lines": 777,
+      "user_messages": 4,
+      "selected_commands": 51,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "7754b353d0624cf4fc9a79743a1f390ed4b44e0c167baa119c1099e7de1cd81b"
+    },
+    {
+      "id": "01a17896-6f63-7a41-b321-1db548a94221",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T15-21-27-01a17896-6f63-7a41-b321-1db548a94221.jsonl",
+      "lines": 986,
+      "user_messages": 4,
+      "selected_commands": 26,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "db656ea1db748f58ed9dbc07ad1a973ff1ddbe504cd16264b7dac0de736d2b3d"
+    },
+    {
+      "id": "01a178f6-65f8-7033-b54e-ab9c3b777a3b",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T17-06-16-01a178f6-65f8-7033-b54e-ab9c3b777a3b.jsonl",
+      "lines": 128,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4af61f5c879d7bdc8fc7953bb3d8632908656e999581a6eb27cc1ec3dc0fbb0f"
+    },
+    {
+      "id": "01a17903-9e65-78b2-8413-2fb3d35a68b1",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T17-20-42-01a17903-9e65-78b2-8413-2fb3d35a68b1.jsonl",
+      "lines": 3059,
+      "user_messages": 2,
+      "selected_commands": 63,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b818fe1e4589b8aa788a28595b8efc80a78f9482a0f7627f15758d1889f968b8"
+    },
+    {
+      "id": "01a17924-7d48-7de3-98b7-6a29aad49868",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T17-56-36-01a17924-7d48-7de3-98b7-6a29aad49868.jsonl",
+      "lines": 1074,
+      "user_messages": 2,
+      "selected_commands": 36,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d79ed679da53b5d4684cb7db15013008908ec3531328662a17713f0a172f458d"
+    },
+    {
+      "id": "01a1792e-17ec-7cb1-b062-30f0676256a6",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T18-07-06-01a1792e-17ec-7cb1-b062-30f0676256a6.jsonl",
+      "lines": 578,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "fdea964d1808592f1792e8c5115f14236218936ef50ff3fa24e84790950cb2fc"
+    },
+    {
+      "id": "01a17934-63f3-7ca3-a360-f92b70b28882",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T18-13-59-01a17934-63f3-7ca3-a360-f92b70b28882.jsonl",
+      "lines": 579,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a3dbda3c852e7e540b34dd2c2906cf5bc8b8b58b68b0b9ac69766ec0f24e846c"
+    },
+    {
+      "id": "01a1793c-d001-7e21-a321-6c70d60d2857",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T18-23-10-01a1793c-d001-7e21-a321-6c70d60d2857.jsonl",
+      "lines": 661,
+      "user_messages": 3,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d6a7a1ec7ba27ab5217c5060dec7756839545eead18516658f57bbf43a6df7f1"
+    },
+    {
+      "id": "01a1793d-ec6c-7592-92db-61baab10a62b",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T18-24-23-01a1793d-ec6c-7592-92db-61baab10a62b.jsonl",
+      "lines": 885,
+      "user_messages": 3,
+      "selected_commands": 15,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "26164138ec71b8e0bfd371bd3514e6e3c3437dbd36ed6c74675192508254e665"
+    },
+    {
+      "id": "01a1793f-458c-7233-9583-ac7f631a5f8b",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T18-25-52-01a1793f-458c-7233-9583-ac7f631a5f8b.jsonl",
+      "lines": 715,
+      "user_messages": 3,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "abda1963ed8dd3adb6398cd88d1d4c7e83d7e8e333d9495f9ee48cefe695fda8"
+    },
+    {
+      "id": "01a17943-1953-71e0-9136-27f88405d173",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T18-30-02-01a17943-1953-71e0-9136-27f88405d173.jsonl",
+      "lines": 835,
+      "user_messages": 3,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8781f8055b91be6170aa8724893845b528335d3aa2340154dd1baa6d2d8d0b44"
+    },
+    {
+      "id": "01a17955-edfd-71c3-95d0-7a9055ea8d3e",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T18-50-37-01a17955-edfd-71c3-95d0-7a9055ea8d3e.jsonl",
+      "lines": 994,
+      "user_messages": 4,
+      "selected_commands": 13,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "bddcc327389bf05f0ad244755c151d1da7fddcedf6a316d3aaea47fce11baa86"
+    },
+    {
+      "id": "01a17976-d881-77e1-bc91-009160a00a20",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T19-26-34-01a17976-d881-77e1-bc91-009160a00a20.jsonl",
+      "lines": 6392,
+      "user_messages": 7,
+      "selected_commands": 195,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d3e7e8601c5be6d9dff320ba36022f47d0406f1fc66da0cc5d97d2561cd9c825"
+    },
+    {
+      "id": "01a17982-8f5a-7913-ba87-e230fe9dccb8",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T19-39-21-01a17982-8f5a-7913-ba87-e230fe9dccb8.jsonl",
+      "lines": 2709,
+      "user_messages": 7,
+      "selected_commands": 94,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "39c41577e4a1e48e7b808f6c465a00b577cf479acffb3e046eb4ed29bdb4dd28"
+    },
+    {
+      "id": "01a1798b-2122-74a2-995f-359b2ed68fd8",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T19-48-43-01a1798b-2122-74a2-995f-359b2ed68fd8.jsonl",
+      "lines": 1674,
+      "user_messages": 7,
+      "selected_commands": 22,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4b5943f3a0e9b3161c89bfcf50e53ac81a902c5512e4f8f9a1d401acdb05f7a4"
+    },
+    {
+      "id": "01a179cf-823d-72a2-af9a-47c51661e36d",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T21-03-24-01a179cf-823d-72a2-af9a-47c51661e36d.jsonl",
+      "lines": 665,
+      "user_messages": 9,
+      "selected_commands": 12,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a294bc0ab40567fd7971b31462a59b5367cf8028204f637e768c9e3821fd2601"
+    },
+    {
+      "id": "01a179f3-f6dc-71b0-b520-0ec53f1a79d0",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-26T21-43-14-01a179f3-f6dc-71b0-b520-0ec53f1a79d0.jsonl",
+      "lines": 1012,
+      "user_messages": 11,
+      "selected_commands": 20,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "77bbe53ac2cb53296b60a1dd60d5fcd25c1af3cf0ecafde6fba753b11fed0050"
+    },
+    {
+      "id": "01a18162-7faf-7731-b8dd-da4b6e7d7b8c",
+      "ticket": "GEN-8",
+      "file": "rollout-2026-10-28T08-21-18-01a18162-7faf-7731-b8dd-da4b6e7d7b8c.jsonl",
+      "lines": 301,
+      "user_messages": 4,
+      "selected_commands": 21,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "cce36bfce07798cc84347cef6da2acca03b521602152f3a9689ae8341fcd494e"
+    },
+    {
+      "id": "01a18171-3980-7a53-87b6-f8d1c9156789",
+      "ticket": "FIX-8",
+      "file": "rollout-2026-10-28T08-37-23-01a18171-3980-7a53-87b6-f8d1c9156789.jsonl",
+      "lines": 1656,
+      "user_messages": 16,
+      "selected_commands": 77,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "beb7b45e15477d585ba9d191624e7c6d689f90f86a274c3923efa1b4ae3d0507"
+    },
+    {
+      "id": "01a18173-e6fb-73a3-a363-3ff57d5f536f",
+      "ticket": null,
+      "file": "rollout-2026-10-28T08-40-19-01a18173-e6fb-73a3-a363-3ff57d5f536f.jsonl",
+      "lines": 67,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c9ecb2ebb9558b9fd0643eefc8eb28e58019a4eec975bcc6263dbeaa48412a93"
+    },
+    {
+      "id": "01a18175-e603-7260-8f01-1f0f6a71426b",
+      "ticket": null,
+      "file": "rollout-2026-10-28T08-42-29-01a18175-e603-7260-8f01-1f0f6a71426b.jsonl",
+      "lines": 203,
+      "user_messages": 1,
+      "selected_commands": 10,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "db08f07faf1dd284d57812ef868abddd02970815fe9d4c13d0fc63f65d16c81c"
+    },
+    {
+      "id": "01a18178-5d73-7fb3-aeba-f75798e64f69",
+      "ticket": null,
+      "file": "rollout-2026-10-28T08-45-11-01a18178-5d73-7fb3-aeba-f75798e64f69.jsonl",
+      "lines": 123,
+      "user_messages": 1,
+      "selected_commands": 7,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "0658b87a5efcc46ee858b4181982c975bca0ba96d72a5a0a6fc82790fa55d4e3"
+    },
+    {
+      "id": "01a18179-ca14-7ad0-a7cc-51e23f726ffb",
+      "ticket": null,
+      "file": "rollout-2026-10-28T08-46-44-01a18179-ca14-7ad0-a7cc-51e23f726ffb.jsonl",
+      "lines": 53,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "25b28988e52146aa6ee4d38abdf7f1c35b0ba38e6ef6aa4ba0a5644e826efab2"
+    },
+    {
+      "id": "01a1817d-9b92-7460-807f-e09fd59665b8",
+      "ticket": "FIX-9",
+      "file": "rollout-2026-10-28T08-50-55-01a1817d-9b92-7460-807f-e09fd59665b8.jsonl",
+      "lines": 580,
+      "user_messages": 8,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "de602ab179faa8415db97255c70e5b0fedb38af1077df67b8152133aad889aeb"
+    },
+    {
+      "id": "01a18185-16b4-70d1-9c7d-e590629a9e41",
+      "ticket": null,
+      "file": "rollout-2026-10-28T08-59-05-01a18185-16b4-70d1-9c7d-e590629a9e41.jsonl",
+      "lines": 50,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1049e31c9e3d1555a951ec8314af71a511ec40355ec681748fb73c21d1913f71"
+    },
+    {
+      "id": "01a18185-b022-7352-82cb-175ad8bba512",
+      "ticket": null,
+      "file": "rollout-2026-10-28T08-59-44-01a18185-b022-7352-82cb-175ad8bba512.jsonl",
+      "lines": 46,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6fe34c22c494659f46cceee0673a092843ca5cb281f0e69662366a148196ecd1"
+    },
+    {
+      "id": "01a18186-24c4-7070-9799-0399dfb08c7c",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-00-14-01a18186-24c4-7070-9799-0399dfb08c7c.jsonl",
+      "lines": 32,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "cebaf223289133cc41af58e31da5c44a40767b70d5c5d1ef362f141f145c113f"
+    },
+    {
+      "id": "01a18186-5d25-7e42-bb25-5174f971c1c2",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-00-28-01a18186-5d25-7e42-bb25-5174f971c1c2.jsonl",
+      "lines": 59,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a3140d0bf45a2af987bcb98d5f223bfa25801fd53b7d344986c26d44de9c622f"
+    },
+    {
+      "id": "01a18186-f9a0-7a61-9f4a-e0319ee1ebef",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-01-09-01a18186-f9a0-7a61-9f4a-e0319ee1ebef.jsonl",
+      "lines": 55,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "0d284fae8b1a8b190b34878a10f79fbaefc74809563a97e41de9c6c8fb984b0d"
+    },
+    {
+      "id": "01a18194-96b7-7401-b713-04d23d42347a",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-16-01-01a18194-96b7-7401-b713-04d23d42347a.jsonl",
+      "lines": 64,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "387582731c4ad5ebaf0e0166190ef50aebea1f221ae729a202e1727b21ddec33"
+    },
+    {
+      "id": "01a18195-4bbe-7453-bf96-6ee38c60591b",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-16-47-01a18195-4bbe-7453-bf96-6ee38c60591b.jsonl",
+      "lines": 71,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8a47c748e166aef0166d9b2eb918ecbc614dd8f73c91d2df7c8d03bea1236a80"
+    },
+    {
+      "id": "01a18196-5eb0-7c20-b45d-dea02d85e01c",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-17-57-01a18196-5eb0-7c20-b45d-dea02d85e01c.jsonl",
+      "lines": 64,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "fc0d5f3adb805e2283987af62eb0540594cd982b4fd3512cb467200941b7fb23"
+    },
+    {
+      "id": "01a18197-00cc-7303-b8d8-e4c6d8b9c5ab",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-18-39-01a18197-00cc-7303-b8d8-e4c6d8b9c5ab.jsonl",
+      "lines": 48,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "cc6dd492114c6141d2f0a2077d9066ee335851cfb40a3656e873f9f0cc6714e4"
+    },
+    {
+      "id": "01a18197-6c75-7c91-a4a0-fb931aa2a699",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-19-07-01a18197-6c75-7c91-a4a0-fb931aa2a699.jsonl",
+      "lines": 66,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "cdc8e3da96c5211b325348c8d66665129033be7dc4efd266e2e8d50cc7a91079"
+    },
+    {
+      "id": "01a18198-12a1-7f73-9f0d-a287feb04f96",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-19-49-01a18198-12a1-7f73-9f0d-a287feb04f96.jsonl",
+      "lines": 50,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b0052703d6d1fbd3d85412d9e72a5a78c29b003183455f3d4a46c3ace96b1a7c"
+    },
+    {
+      "id": "01a18198-ea93-7351-9e24-16d408c4ed5e",
+      "ticket": "FIX-9",
+      "file": "rollout-2026-10-28T09-20-44-01a18198-ea93-7351-9e24-16d408c4ed5e.jsonl",
+      "lines": 162,
+      "user_messages": 5,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "86ae96168f60af3578a515ca887e55e3b2f213fe3817a66af5967bcf05542bd6"
+    },
+    {
+      "id": "01a1819b-4efe-7030-999b-3fa8ed3f00bf",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-23-21-01a1819b-4efe-7030-999b-3fa8ed3f00bf.jsonl",
+      "lines": 49,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a8cea2c01cf5c37694725341fc01f48167bdd2589548a6d9fa54c7073a53e183"
+    },
+    {
+      "id": "01a1819b-b53a-78c0-abe0-0c08f53bac07",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-23-47-01a1819b-b53a-78c0-abe0-0c08f53bac07.jsonl",
+      "lines": 46,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d55f7a1223c91a22b839e2d319c785b03b0a0e7879286137f52b60d08f50c045"
+    },
+    {
+      "id": "01a1819b-f7a0-7cf3-83b8-cf0b20b5653d",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-24-04-01a1819b-f7a0-7cf3-83b8-cf0b20b5653d.jsonl",
+      "lines": 39,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "537a8c75c0b7b932cd9e463f463fcd6f0fef8d4296026dfc4c5c5a433cd63dd0"
+    },
+    {
+      "id": "01a1819c-3d5b-7201-91ad-79ca8b27f380",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-24-22-01a1819c-3d5b-7201-91ad-79ca8b27f380.jsonl",
+      "lines": 46,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3717508c76318bbb9d0e42d9edb851c0fce4b311c91bd1af6ed8bbc8d9a72483"
+    },
+    {
+      "id": "01a181b6-bab0-7a71-ae1a-f4e055d985c5",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-53-18-01a181b6-bab0-7a71-ae1a-f4e055d985c5.jsonl",
+      "lines": 75,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1bedaf5f3c61e5b73bd0528a29bc1837f6794178f3d84d0b7b8d1b854104d9a1"
+    },
+    {
+      "id": "01a181b7-c900-75f2-97a1-a48a4e614d51",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-54-27-01a181b7-c900-75f2-97a1-a48a4e614d51.jsonl",
+      "lines": 45,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "77e80e1d389dc0e1146fc275a0c9318166df83132b82faac8f1542cb6fd552d0"
+    },
+    {
+      "id": "01a181b8-75c0-7982-bff0-1794f2d8eefb",
+      "ticket": null,
+      "file": "rollout-2026-10-28T09-55-12-01a181b8-75c0-7982-bff0-1794f2d8eefb.jsonl",
+      "lines": 57,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8cca7745dd2d419fee510614fb93c67abc316ee1d09932665f28769efa65a7f0"
+    },
+    {
+      "id": "01a181f6-4743-7a83-85d0-7a23d68dec8c",
+      "ticket": "AL-56",
+      "file": "rollout-2026-10-28T11-02-43-01a181f6-4743-7a83-85d0-7a23d68dec8c.jsonl",
+      "lines": 1782,
+      "user_messages": 9,
+      "selected_commands": 65,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "9b8d8338269d50c611499c09508c419af75b6a0d9d6d05dd8b5f8e54ac8809e0"
+    },
+    {
+      "id": "01a181ff-05b9-77d3-9aae-d729638241af",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-12-16-01a181ff-05b9-77d3-9aae-d729638241af.jsonl",
+      "lines": 80,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "2c5a2364456bbb5048dd018e9569468afd1c627be68cf4a5d66afa3243fabf18"
+    },
+    {
+      "id": "01a18201-24b6-7621-8e13-35e01b6c1dcf",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-14-35-01a18201-24b6-7621-8e13-35e01b6c1dcf.jsonl",
+      "lines": 232,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b3a09a04571ef18ab960b679c61810865139c3b7c0dc0e3d5d7334c772f9aba8"
+    },
+    {
+      "id": "01a18203-6643-7633-8bdc-b6cee83b657e",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-17-03-01a18203-6643-7633-8bdc-b6cee83b657e.jsonl",
+      "lines": 163,
+      "user_messages": 1,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "0de2543a3d7b78f5588c4650e2646d892db841515147a4c10dd230fab458a621"
+    },
+    {
+      "id": "01a18205-1ed7-7f63-9bd4-e22b78d75796",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-18-56-01a18205-1ed7-7f63-9bd4-e22b78d75796.jsonl",
+      "lines": 320,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "2ace4023aeb64270904d954038fb1c33060991a147b3aac35de8e39c561298cc"
+    },
+    {
+      "id": "01a18208-5cb5-7772-8d5b-9333a695d358",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-22-28-01a18208-5cb5-7772-8d5b-9333a695d358.jsonl",
+      "lines": 76,
+      "user_messages": 1,
+      "selected_commands": 6,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f30983dfd537c346800fa5b7e1fd80100c4db500823e35f93350133755dfea47"
+    },
+    {
+      "id": "01a18209-2a16-7ae2-9e41-70da3c52ca41",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-23-21-01a18209-2a16-7ae2-9e41-70da3c52ca41.jsonl",
+      "lines": 271,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b49b7523a791fef5084afd66ee40d2159172f8dc050a01aaf5b5849d836e23d4"
+    },
+    {
+      "id": "01a1820b-fe68-7ef1-bc5a-e416524818e9",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-26-26-01a1820b-fe68-7ef1-bc5a-e416524818e9.jsonl",
+      "lines": 119,
+      "user_messages": 1,
+      "selected_commands": 7,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ff3865491ced070194b1e4f972250dea178f95a91a73817bc40f4e54c88de1b0"
+    },
+    {
+      "id": "01a1820c-f348-7cd3-85a6-82e18b834468",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-27-29-01a1820c-f348-7cd3-85a6-82e18b834468.jsonl",
+      "lines": 91,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8a8ae5c15af79fb61b245d67761e8391fbf2be2977d94f01c9b7e66797df4234"
+    },
+    {
+      "id": "01a1820d-d5a8-7b13-b8c0-b13eefef35f8",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-28-27-01a1820d-d5a8-7b13-b8c0-b13eefef35f8.jsonl",
+      "lines": 84,
+      "user_messages": 1,
+      "selected_commands": 5,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "87150b6c41a895604814e7f6edee9744f8d16c25e13fbd0b2856f045f2a94b81"
+    },
+    {
+      "id": "01a1820e-bf24-7d83-a646-814718ba5eb5",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-29-26-01a1820e-bf24-7d83-a646-814718ba5eb5.jsonl",
+      "lines": 185,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "507935561583b88bf6f4b14a37b0ec78cc28dd9e199aa26682150384cf30875e"
+    },
+    {
+      "id": "01a18210-9d76-7851-afdd-ddb682fe8b6c",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-31-29-01a18210-9d76-7851-afdd-ddb682fe8b6c.jsonl",
+      "lines": 67,
+      "user_messages": 1,
+      "selected_commands": 6,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "42771a668df9f73cdaa32cf07bcceda1d282b9aa41c50771b83dcca223341a94"
+    },
+    {
+      "id": "01a18211-81f8-7221-846b-f055ea581054",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-32-27-01a18211-81f8-7221-846b-f055ea581054.jsonl",
+      "lines": 55,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f9fa95993b5c1818ee27b9fed92f3856ec5b2b06be069f23dd9e6cb76922dcd4"
+    },
+    {
+      "id": "01a18211-db50-7ca0-ab92-2849f6966872",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-32-50-01a18211-db50-7ca0-ab92-2849f6966872.jsonl",
+      "lines": 79,
+      "user_messages": 1,
+      "selected_commands": 6,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "83eb1d2ecf9cc9c174f9e120e600d7823c23277bee3e4c5e8d31f610979b49d5"
+    },
+    {
+      "id": "01a18212-b905-7c23-b430-d4d708faf0e3",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-33-47-01a18212-b905-7c23-b430-d4d708faf0e3.jsonl",
+      "lines": 60,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e2ce3585d08faed7047e7a12ac9f05e0e6229fc4232384a00c6d0b9e168d3783"
+    },
+    {
+      "id": "01a18213-0dbe-7b81-9e95-200c95f166c7",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-34-09-01a18213-0dbe-7b81-9e95-200c95f166c7.jsonl",
+      "lines": 108,
+      "user_messages": 1,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "15cc4a2ad2f374c52d8ce67f6dfb4f5221c666e87e0606102300a6d2b324189b"
+    },
+    {
+      "id": "01a18214-282c-7c71-a6eb-744ed02f1ff6",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-35-21-01a18214-282c-7c71-a6eb-744ed02f1ff6.jsonl",
+      "lines": 75,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "251a07142b833742fc5ebaa3a61c1f85f5461b3d9a578c9b70d85459b4917746"
+    },
+    {
+      "id": "01a18214-e4cc-76e3-ad4d-f5c5f0b7980b",
+      "ticket": null,
+      "file": "rollout-2026-10-28T11-36-09-01a18214-e4cc-76e3-ad4d-f5c5f0b7980b.jsonl",
+      "lines": 81,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5e2976e654e2925d9dbf71f886f186f37903a39ae3da9c44d2f76aaa9d2c4c16"
+    },
+    {
+      "id": "01a182ab-5574-73f1-8487-05ed6f1001c0",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-20-29-01a182ab-5574-73f1-8487-05ed6f1001c0.jsonl",
+      "lines": 229,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "05f84d3dda9c1812910950ab178edb6d3aadf882d96b8c968c410183d55ad83f"
+    },
+    {
+      "id": "01a182ad-e1b2-7841-8c65-21d967d24a5f",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-23-16-01a182ad-e1b2-7841-8c65-21d967d24a5f.jsonl",
+      "lines": 84,
+      "user_messages": 1,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b33edc27e174d78575304397a2b126974c3d0cc823216cc93a78fa7e3f00f450"
+    },
+    {
+      "id": "01a182ae-ca0f-72e3-ab54-0314e1e7a03e",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-24-15-01a182ae-ca0f-72e3-ab54-0314e1e7a03e.jsonl",
+      "lines": 70,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e3264cedde1b3b0094a46569283c0c2139de09165a86ffdec3fb972eb467f9b5"
+    },
+    {
+      "id": "01a182af-430b-7031-aeba-fe1d5eb4ed5c",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-24-46-01a182af-430b-7031-aeba-fe1d5eb4ed5c.jsonl",
+      "lines": 112,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "49f47538402e586e66d4939a07106992994271fc9f19be1e54d71b0c53e0f0ae"
+    },
+    {
+      "id": "01a182b0-3da0-7692-927b-1237c0f10825",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-25-50-01a182b0-3da0-7692-927b-1237c0f10825.jsonl",
+      "lines": 109,
+      "user_messages": 1,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "bb85c5ed861131a015786aa06af3b8c9c478f8a53b11dad48a35e5f14476da65"
+    },
+    {
+      "id": "01a182b1-6e0f-7bf1-b33b-4a1758f66057",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-27-08-01a182b1-6e0f-7bf1-b33b-4a1758f66057.jsonl",
+      "lines": 245,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "97824357f4b2e6ea3e761265340033d068ef4cd867ffe0f1cad17f4524025148"
+    },
+    {
+      "id": "01a182b4-0017-7300-b8f5-c2e1d94210eb",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-29-57-01a182b4-0017-7300-b8f5-c2e1d94210eb.jsonl",
+      "lines": 121,
+      "user_messages": 1,
+      "selected_commands": 7,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1fa69eb5df3c045f2734037f6b31703caae27af067065c72a1b18b10cd997da9"
+    },
+    {
+      "id": "01a182b5-56fc-7370-a8b9-998241f3fd38",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-31-24-01a182b5-56fc-7370-a8b9-998241f3fd38.jsonl",
+      "lines": 262,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3a22871385a5e639b86c9f143827dd2c8dcf5eeee71772a72ee202a9f03d429a"
+    },
+    {
+      "id": "01a182b7-eccd-7df1-83b5-c47ddf9ad860",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-34-14-01a182b7-eccd-7df1-83b5-c47ddf9ad860.jsonl",
+      "lines": 88,
+      "user_messages": 1,
+      "selected_commands": 6,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "383b744897c1842c0fea7b3eabfabbeb1ac54cd0d2be495555e4a88ded28ecd0"
+    },
+    {
+      "id": "01a182b8-e5d3-7862-834a-2c1167d67eb1",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-35-17-01a182b8-e5d3-7862-834a-2c1167d67eb1.jsonl",
+      "lines": 86,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c1a748204f97592fa78279098e49bbc84f2f41a57a08ab6fbe8124e19e950431"
+    },
+    {
+      "id": "01a182b9-74f6-7e51-99c6-4b7fce0e9621",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-35-54-01a182b9-74f6-7e51-99c6-4b7fce0e9621.jsonl",
+      "lines": 80,
+      "user_messages": 1,
+      "selected_commands": 6,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "7133fb99ec747ef5de96d4ee3e6b72103e90321a413c421fbabf87485c2ddb5c"
+    },
+    {
+      "id": "01a182ba-c1b9-7c83-8ad4-ffed099442e5",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-37-19-01a182ba-c1b9-7c83-8ad4-ffed099442e5.jsonl",
+      "lines": 85,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c4f93ca8dc0853886cc127f93f52965da9b5539a3b525d7408a72303cd09dd9a"
+    },
+    {
+      "id": "01a182c9-d464-7eb0-9f3f-97e6b42ba7cb",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-53-47-01a182c9-d464-7eb0-9f3f-97e6b42ba7cb.jsonl",
+      "lines": 87,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "81f0cf2230b47b9dc37a00fe8eeb6f52ed5902cad3692077db6a8c492dda5690"
+    },
+    {
+      "id": "01a182cd-4e0c-7373-856f-4893de7f024e",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-57-35-01a182cd-4e0c-7373-856f-4893de7f024e.jsonl",
+      "lines": 108,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5f016aed0a5f9968898d5760f0fffc4b0374172cd30e1de956e019e42d63a350"
+    },
+    {
+      "id": "01a182ce-64b7-7b42-9e12-b4834e256697",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-58-46-01a182ce-64b7-7b42-9e12-b4834e256697.jsonl",
+      "lines": 59,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c2662bd745504e042f8a183065e5ecd92b9014e9483627a7f27a285474c73c0b"
+    },
+    {
+      "id": "01a182ce-f0e2-76a0-a41c-58a60420633d",
+      "ticket": null,
+      "file": "rollout-2026-10-28T14-59-22-01a182ce-f0e2-76a0-a41c-58a60420633d.jsonl",
+      "lines": 566,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4d9a40908526588a5813af3cfc808751617045c482a071d0c6ac00944aff8d10"
+    },
+    {
+      "id": "01a182d5-1a0d-77a1-8c1e-192c9cf0c3bc",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-06-06-01a182d5-1a0d-77a1-8c1e-192c9cf0c3bc.jsonl",
+      "lines": 249,
+      "user_messages": 1,
+      "selected_commands": 15,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e5258b915dfbd8c9a82c3006da7e6b5dba349728d3ff7edb98fb406bbbf25d22"
+    },
+    {
+      "id": "01a182d7-cb99-7591-ae79-a8c4837acd3e",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-09-02-01a182d7-cb99-7591-ae79-a8c4837acd3e.jsonl",
+      "lines": 110,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "da8b632fbd757b3d3b53e50196fa6a10605996c931f19971b74ed88ceabbf4ea"
+    },
+    {
+      "id": "01a182d9-2210-7732-94c1-328118b75ed7",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-10-30-01a182d9-2210-7732-94c1-328118b75ed7.jsonl",
+      "lines": 121,
+      "user_messages": 1,
+      "selected_commands": 8,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b4f6d3306421a791e6791c99769c83767edae1b2f6599183d05f3f2d49ce56e6"
+    },
+    {
+      "id": "01a182db-631b-7e32-ba64-463b895353b5",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-12-58-01a182db-631b-7e32-ba64-463b895353b5.jsonl",
+      "lines": 195,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "004cae5f03fb8fc9c07bbf911444a3f54ffae3906e0ab211b38a12f9efaea090"
+    },
+    {
+      "id": "01a182dd-a03e-71e0-93d9-fc927f2b51ca",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-15-24-01a182dd-a03e-71e0-93d9-fc927f2b51ca.jsonl",
+      "lines": 178,
+      "user_messages": 1,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6acbb07e56510506b8c08b5511fb0d0b907424f17d00761d87d9a7fb3184915b"
+    },
+    {
+      "id": "01a182df-9872-7d53-9a49-9ff83181674e",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-17-34-01a182df-9872-7d53-9a49-9ff83181674e.jsonl",
+      "lines": 97,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "dec6ab9c09e00af0677e81e4d52a41dd6a7cf696d47817fa3f2fec4db8749254"
+    },
+    {
+      "id": "01a182e0-aa1c-7303-aad9-5451ec4556cf",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-18-44-01a182e0-aa1c-7303-aad9-5451ec4556cf.jsonl",
+      "lines": 125,
+      "user_messages": 1,
+      "selected_commands": 8,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c9e3139d5d460d497c0e200a4d33543ec27177adbdb30441873a7675ea7057fc"
+    },
+    {
+      "id": "01a182e2-5f78-7b22-906a-f3609a0bd07f",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-20-36-01a182e2-5f78-7b22-906a-f3609a0bd07f.jsonl",
+      "lines": 105,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ed1369975818e3dc754e00f66ef77eb1ff1cd64ef8362161fae65d8efb1a74ca"
+    },
+    {
+      "id": "01a182e3-5c93-7931-acb9-4f353d87d97b",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-21-40-01a182e3-5c93-7931-acb9-4f353d87d97b.jsonl",
+      "lines": 73,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4beab6e2f78bd095396bb30590810b58916b31d0b446c2c597fb1a2daea45071"
+    },
+    {
+      "id": "01a182e3-ff53-7181-93c4-f9b6b90c9454",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-22-22-01a182e3-ff53-7181-93c4-f9b6b90c9454.jsonl",
+      "lines": 157,
+      "user_messages": 1,
+      "selected_commands": 12,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a75b1cc5e237a8796bf1c86dd62d1520a7ad2e097b9e44e24e2daff12d49900f"
+    },
+    {
+      "id": "01a182e6-3819-7680-b0a7-b2719c832680",
+      "ticket": null,
+      "file": "rollout-2026-10-28T15-24-48-01a182e6-3819-7680-b0a7-b2719c832680.jsonl",
+      "lines": 79,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3574c93ee2001cc788f9355b1325b705cf9558def9e557bd2e8bf5f0c3eadc1f"
+    },
+    {
+      "id": "01a184b3-62a7-71d2-b1ee-5f8d9190072c",
+      "ticket": null,
+      "file": "rollout-2026-10-28T23-48-31-01a184b3-62a7-71d2-b1ee-5f8d9190072c.jsonl",
+      "lines": 807,
+      "user_messages": 7,
+      "selected_commands": 15,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "958527709eeac76a9d9a22c42090cd438a27a702992ad7d1b05ea1105d93254d"
+    },
+    {
+      "id": "01a184cb-31d1-7240-ba9b-23eea56ed6ce",
+      "ticket": "FIX-10",
+      "file": "rollout-2026-10-29T00-14-31-01a184cb-31d1-7240-ba9b-23eea56ed6ce.jsonl",
+      "lines": 2434,
+      "user_messages": 19,
+      "selected_commands": 74,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "81eb4865defa5f4aa048377cb9f7c5894f4dab29a28e60243941e82dae5ad3bb"
+    },
+    {
+      "id": "01a184cb-ed10-74b1-bc0d-5bcc63681559",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-15-19-01a184cb-ed10-74b1-bc0d-5bcc63681559.jsonl",
+      "lines": 1561,
+      "user_messages": 14,
+      "selected_commands": 93,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "243003a55f44604f64b45cab98fb770f033c76c5644042f2724932d619548e8a"
+    },
+    {
+      "id": "01a184d4-7202-7b40-8da2-231a007be775",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-24-37-01a184d4-7202-7b40-8da2-231a007be775.jsonl",
+      "lines": 46,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "df172372ccb325acb25eb893b17358565f86da000bcdefdecfe50aeeecb757b0"
+    },
+    {
+      "id": "01a184d5-bfa6-78f3-afee-ae336824b0d8",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-26-03-01a184d5-bfa6-78f3-afee-ae336824b0d8.jsonl",
+      "lines": 64,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d1a0d34b4bfad18847f1dab54e45b5a7d3903cb6da85c827c4eab7174043340a"
+    },
+    {
+      "id": "01a184d6-45cc-7de2-b968-294dadfb0192",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-26-37-01a184d6-45cc-7de2-b968-294dadfb0192.jsonl",
+      "lines": 62,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ca93e3c0dc6515dcd7e7a2d3c35e2429bbe15d009825f1059453698c4091eea1"
+    },
+    {
+      "id": "01a184d6-af5e-7b53-ab81-a01dc97957ef",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-27-04-01a184d6-af5e-7b53-ab81-a01dc97957ef.jsonl",
+      "lines": 76,
+      "user_messages": 1,
+      "selected_commands": 5,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "2bc07ce3f9952a5d0d081ed857a8f3fd7aae2d10c8837139da75166b9a8f615f"
+    },
+    {
+      "id": "01a184d7-4157-7cd0-a902-d221a4159258",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-27-41-01a184d7-4157-7cd0-a902-d221a4159258.jsonl",
+      "lines": 57,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "585d25241abe49455a964284f6303c8b9ad235feb3d7a32fc481d20f99ef589f"
+    },
+    {
+      "id": "01a184d7-62c8-7411-a22e-fae8394d91aa",
+      "ticket": "PO-13",
+      "file": "rollout-2026-10-29T00-27-50-01a184d7-62c8-7411-a22e-fae8394d91aa.jsonl",
+      "lines": 237,
+      "user_messages": 4,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ab95019c56cffa3edeb4b149e74bdc747bd2b75f3e15c8e9f54538a4d9e36783"
+    },
+    {
+      "id": "01a184d8-2c74-7bc1-af01-e07eb408b463",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-28-42-01a184d8-2c74-7bc1-af01-e07eb408b463.jsonl",
+      "lines": 639,
+      "user_messages": 3,
+      "selected_commands": 13,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f909912288f68164a012151963c39c9ca6afbdd3a707491a625bc536fdf58623"
+    },
+    {
+      "id": "01a184de-1ab0-7d91-afe5-4883b64c5572",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-35-10-01a184de-1ab0-7d91-afe5-4883b64c5572.jsonl",
+      "lines": 62,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6d6914e4ee7578a3331cfafbfcf7f1b34160be4ace38937e58404b2e5fa07a2c"
+    },
+    {
+      "id": "01a184de-5c1f-7fc2-aa23-ac85a08aa0ff",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-35-27-01a184de-5c1f-7fc2-aa23-ac85a08aa0ff.jsonl",
+      "lines": 410,
+      "user_messages": 2,
+      "selected_commands": 22,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b3f23e80e1a744cb6ba94a215718c2e02ece2f3b034c43d9ff86795b2d4e42a7"
+    },
+    {
+      "id": "01a184df-c399-75e2-b3b7-5e80d3e0bc4b",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-36-59-01a184df-c399-75e2-b3b7-5e80d3e0bc4b.jsonl",
+      "lines": 83,
+      "user_messages": 1,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "68cb34d614ea66aeb2ec45ede4305150e828ccaab6466b11a461ceca70ddcb0d"
+    },
+    {
+      "id": "01a184e0-3822-7631-a3f3-cb33bb3e947f",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-29T00-37-29-01a184e0-3822-7631-a3f3-cb33bb3e947f.jsonl",
+      "lines": 3233,
+      "user_messages": 30,
+      "selected_commands": 73,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "156fcb4e227bb64f2de4b1bbbda0b80252d6e7a9933e3fd7462a45e515267832"
+    },
+    {
+      "id": "01a184e0-7f31-7170-a2ed-d2224acbb20b",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-37-47-01a184e0-7f31-7170-a2ed-d2224acbb20b.jsonl",
+      "lines": 35,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "dd45c505a696ca537a6cb15552c5bf427b9cbbf5286fb7d67cc960caf99d71c3"
+    },
+    {
+      "id": "01a184e0-86b1-7550-844f-9cc791388e62",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-37-49-01a184e0-86b1-7550-844f-9cc791388e62.jsonl",
+      "lines": 84,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "31bea8342dbae051e9c2471fef8b8a789b164b675964769648443a1555f5a433"
+    },
+    {
+      "id": "01a184e1-8c9c-7a12-b71b-0b114a43e60b",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-38-56-01a184e1-8c9c-7a12-b71b-0b114a43e60b.jsonl",
+      "lines": 301,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "0ee53a295c6a3c92dc88907ca6ba10c70cd64374b991b500eee25ef049650613"
+    },
+    {
+      "id": "01a184e4-203f-75f0-bc1f-8b6d6fa4eb4d",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-41-45-01a184e4-203f-75f0-bc1f-8b6d6fa4eb4d.jsonl",
+      "lines": 82,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "63fa26db34693be806deb9cfaf60ce36cca57ed519e953a145c167bf275fd581"
+    },
+    {
+      "id": "01a184e4-733c-7aa0-a426-9375b7bfadfd",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-42-06-01a184e4-733c-7aa0-a426-9375b7bfadfd.jsonl",
+      "lines": 86,
+      "user_messages": 1,
+      "selected_commands": 7,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "9fc31c8f02f400e98cee85037d60855a0b14c993e5722375833b1ce29c1770fb"
+    },
+    {
+      "id": "01a184e5-23c4-7401-823b-a730cd49e5a1",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-42-51-01a184e5-23c4-7401-823b-a730cd49e5a1.jsonl",
+      "lines": 185,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e5e1942ebd3a97f20a3e939069d17495dd7c7920c6684a3fbcd12341d51dc6db"
+    },
+    {
+      "id": "01a184e5-66b4-7303-952d-882c35750f08",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-43-08-01a184e5-66b4-7303-952d-882c35750f08.jsonl",
+      "lines": 221,
+      "user_messages": 1,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3820713e0b2c8f59d7333681de4c2c96c00885f26b3a0849eaf881ce9e671b59"
+    },
+    {
+      "id": "01a184e6-f8e8-71b3-9ba7-3a40169e8971",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-44-51-01a184e6-f8e8-71b3-9ba7-3a40169e8971.jsonl",
+      "lines": 118,
+      "user_messages": 1,
+      "selected_commands": 19,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ea02996dbca42facf83ab779b2acc3baf324519cd3bbdcaeda4f67d850029da9"
+    },
+    {
+      "id": "01a184e7-a124-7763-8667-1f448ab02dc1",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-45-35-01a184e7-a124-7763-8667-1f448ab02dc1.jsonl",
+      "lines": 249,
+      "user_messages": 1,
+      "selected_commands": 12,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b1b5a6cff6e9a5498961c42b8595866009ae9ff2cf0873cc09be553683555c32"
+    },
+    {
+      "id": "01a184e9-410a-72c2-a938-4412dbc26adb",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-47-21-01a184e9-410a-72c2-a938-4412dbc26adb.jsonl",
+      "lines": 95,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d9ed391bd9991b2f3730f2e53fd0958334be397b5ce52af98ec754095d54e969"
+    },
+    {
+      "id": "01a184ea-20e2-7582-90fd-36bded2f5488",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-48-18-01a184ea-20e2-7582-90fd-36bded2f5488.jsonl",
+      "lines": 101,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "0c1fe6fe9730534349cee55f0093171303dfde3238eb1f113d0f4cb488c75d0d"
+    },
+    {
+      "id": "01a184ea-dd29-74f0-ac5d-fd7283a9766e",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-49-06-01a184ea-dd29-74f0-ac5d-fd7283a9766e.jsonl",
+      "lines": 32,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3f236262d26a11d3f7ddb5145e65e14b3665181f07e3dfe42b9713642c5dde8b"
+    },
+    {
+      "id": "01a184eb-0e3f-7a63-ab73-6cfb7ee4ac56",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-49-19-01a184eb-0e3f-7a63-ab73-6cfb7ee4ac56.jsonl",
+      "lines": 48,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "0e56a996ab800b2909159da46f7ae2a9f1b391d4ac38b731dfeb0ca9276e2a2b"
+    },
+    {
+      "id": "01a184eb-8aef-74b1-b36d-e368bd2e6c8f",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-49-51-01a184eb-8aef-74b1-b36d-e368bd2e6c8f.jsonl",
+      "lines": 32,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "055a1f1ece675e258226f087aefa8c55e73cfe6ccdd6865fbda6c7a6d0df59b9"
+    },
+    {
+      "id": "01a184eb-ab3c-7301-8247-87b4f9eb0660",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-49-59-01a184eb-ab3c-7301-8247-87b4f9eb0660.jsonl",
+      "lines": 62,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5608cbb368f315ecbe0a114ca45ec546d5d77a554b9c7caf4905f8f870b5da34"
+    },
+    {
+      "id": "01a184ed-c058-7fb2-b143-1c6aeffadd14",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-52-16-01a184ed-c058-7fb2-b143-1c6aeffadd14.jsonl",
+      "lines": 100,
+      "user_messages": 4,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6689e5ee68e6697f1d94234e8a303dd0693f3eecacea107edb17018b07f81334"
+    },
+    {
+      "id": "01a184ee-10cc-7ad2-9632-e4ce15a5758d",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-52-36-01a184ee-10cc-7ad2-9632-e4ce15a5758d.jsonl",
+      "lines": 199,
+      "user_messages": 1,
+      "selected_commands": 6,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ba40b9588d21bf3c2502dd162577a6d9e88fe6b027a9d946c28b1dba66dced36"
+    },
+    {
+      "id": "01a184ef-67c4-7842-9ee9-bb20cdcdea1f",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-54-04-01a184ef-67c4-7842-9ee9-bb20cdcdea1f.jsonl",
+      "lines": 57,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a698b5c6cef3e8150b501b3926ef755813fe22eff7393def4839348df542d699"
+    },
+    {
+      "id": "01a184f1-c3ec-75d0-b766-6caf9647c616",
+      "ticket": null,
+      "file": "rollout-2026-10-29T00-56-39-01a184f1-c3ec-75d0-b766-6caf9647c616.jsonl",
+      "lines": 208,
+      "user_messages": 1,
+      "selected_commands": 11,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1fe9b6f4c5c748b1b33cf114c2ac554644b2ce463497de799a3fec152d4a07a3"
+    },
+    {
+      "id": "01a184f5-8822-7e51-958e-2237a69d0eac",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-00-46-01a184f5-8822-7e51-958e-2237a69d0eac.jsonl",
+      "lines": 96,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "69d3bddc27173f85bf7b1313ff75a7dd3e1ef7babe4704d1844a2244f3732218"
+    },
+    {
+      "id": "01a184f5-b18e-78e2-ab9a-a4c45a8f98ad",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-00-56-01a184f5-b18e-78e2-ab9a-a4c45a8f98ad.jsonl",
+      "lines": 222,
+      "user_messages": 1,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d3bb64d87057f0ced89d29c4c6b8386df8e2718efea96a2339d73f84688471ae"
+    },
+    {
+      "id": "01a184f6-4b6e-72c1-8d71-5530a61ed73f",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-01-36-01a184f6-4b6e-72c1-8d71-5530a61ed73f.jsonl",
+      "lines": 32,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "cad0802f55feb84dbf2f25af2958c00681a7119330babd7a751a01b95ef363b8"
+    },
+    {
+      "id": "01a184fb-5c42-7303-8e85-ad174e620292",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-07-08-01a184fb-5c42-7303-8e85-ad174e620292.jsonl",
+      "lines": 62,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ab5e64dba760c69c955ff214bb0f0361d24ca080041bc048382a55d32660089f"
+    },
+    {
+      "id": "01a184fd-0e29-76d0-93ed-bf06bf311d54",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-08-59-01a184fd-0e29-76d0-93ed-bf06bf311d54.jsonl",
+      "lines": 62,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "29ab2b2a5da5e75fb2446c044bb3449070890f969e939db6090b5ba48555ab5c"
+    },
+    {
+      "id": "01a184fe-6bc2-72f3-bd2c-ad3de5b84154",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-10-28-01a184fe-6bc2-72f3-bd2c-ad3de5b84154.jsonl",
+      "lines": 93,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3dc77cfbc3f76409d662c6af541f6da1b2e270208245d48b3e07ab942e4f7433"
+    },
+    {
+      "id": "01a18500-9b2b-7bf3-ac05-bb6a9b4e1885",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-12-51-01a18500-9b2b-7bf3-ac05-bb6a9b4e1885.jsonl",
+      "lines": 281,
+      "user_messages": 3,
+      "selected_commands": 20,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "917c8089a3409977cbc9cefc02fc79bc101f66d0e5f3758d410ee1a437061460"
+    },
+    {
+      "id": "01a18501-839c-7681-8718-899f35e5b803",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-13-51-01a18501-839c-7681-8718-899f35e5b803.jsonl",
+      "lines": 448,
+      "user_messages": 1,
+      "selected_commands": 18,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1cf53c590c29bbc972a17af46da85e74a272bf2081b9db353cf04c1d0a57bd5a"
+    },
+    {
+      "id": "01a18504-7633-78d0-b4a8-7ca1b261d003",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-17-04-01a18504-7633-78d0-b4a8-7ca1b261d003.jsonl",
+      "lines": 238,
+      "user_messages": 2,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "9433bddc5ce35dfccd46966ced606406ba84f70f3aa920a7ba1a3cf8b96df694"
+    },
+    {
+      "id": "01a18509-ea45-7ba0-834d-ea18d828b3c5",
+      "ticket": "AL-59",
+      "file": "rollout-2026-10-29T01-23-01-01a18509-ea45-7ba0-834d-ea18d828b3c5.jsonl",
+      "lines": 727,
+      "user_messages": 7,
+      "selected_commands": 29,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5e0b541965d8f4df0c712f722d788a4d5c18c34c77779d6e231280db10b3e63a"
+    },
+    {
+      "id": "01a1850a-1920-7530-a753-eb591a6face2",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-23-13-01a1850a-1920-7530-a753-eb591a6face2.jsonl",
+      "lines": 79,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "345a609998e02cb85ff38e2e6321c387483b8489d5070c9ae24a10584b33b153"
+    },
+    {
+      "id": "01a1850d-ca90-7550-81ed-26a2ee36eae3",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-27-15-01a1850d-ca90-7550-81ed-26a2ee36eae3.jsonl",
+      "lines": 78,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "9fed81e855b2bef8f369d5751ea1ef2aefc36f3033c9ab79f24231178627bfea"
+    },
+    {
+      "id": "01a1850e-8f5b-7231-a2b8-1cb71cc9fb2b",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-28-06-01a1850e-8f5b-7231-a2b8-1cb71cc9fb2b.jsonl",
+      "lines": 114,
+      "user_messages": 1,
+      "selected_commands": 7,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "87b0ef34502d5855098b28ca6237fcf81d6c8d1867d9a4493dc15d558e96daae"
+    },
+    {
+      "id": "01a1850f-08bd-77f3-8519-ac0177831429",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-28-37-01a1850f-08bd-77f3-8519-ac0177831429.jsonl",
+      "lines": 66,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "39036db7fe792dc6fb87550240afa23972088aa2d167849f219d9e76d74834cc"
+    },
+    {
+      "id": "01a1850f-abda-73f0-8e8b-beba2af736d6",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-29-19-01a1850f-abda-73f0-8e8b-beba2af736d6.jsonl",
+      "lines": 94,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6589109d5b55b09a600fa0fb26ecb2fb81d0c847a21e7cdbb8dbcfee48036f9f"
+    },
+    {
+      "id": "01a18510-523e-7e70-adc7-81eb1d4d18c7",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-30-01-01a18510-523e-7e70-adc7-81eb1d4d18c7.jsonl",
+      "lines": 79,
+      "user_messages": 1,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "aaa1bbc6152358d46f98dd5e05b71ae4121fb6062aeaa570b66e027fe4d3354a"
+    },
+    {
+      "id": "01a18510-d588-7030-9181-781b00f7be5f",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-30-35-01a18510-d588-7030-9181-781b00f7be5f.jsonl",
+      "lines": 664,
+      "user_messages": 1,
+      "selected_commands": 32,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e29cfdd4dac1ca42a47969cc85d2d3a778ebf65c6db1318800a7ba080b949678"
+    },
+    {
+      "id": "01a18510-eab6-7311-985c-d0c6fec02e29",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-30-40-01a18510-eab6-7311-985c-d0c6fec02e29.jsonl",
+      "lines": 117,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b65c8aacfb072118008f52212c02f4ce4efbc9220b6f68b372ae772bbd1ea3a4"
+    },
+    {
+      "id": "01a18512-3514-7022-a831-9906c05a1e9d",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-32-05-01a18512-3514-7022-a831-9906c05a1e9d.jsonl",
+      "lines": 200,
+      "user_messages": 1,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "976e8ed67d05ecc15d640dac32ad1afd9bdf7f451730c5db6fe3e99f2c83808f"
+    },
+    {
+      "id": "01a18514-1e6e-7591-a24f-11e55b0ebccc",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-34-10-01a18514-1e6e-7591-a24f-11e55b0ebccc.jsonl",
+      "lines": 86,
+      "user_messages": 1,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "0242a3855213ded7a3542a0e908f61afce5028b0150677f6f90dc90f3fecf239"
+    },
+    {
+      "id": "01a18514-d574-7f50-aa57-ad9e1f013ffa",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-34-57-01a18514-d574-7f50-aa57-ad9e1f013ffa.jsonl",
+      "lines": 87,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a26ff99bf37f396b8530b26cc21541dbabb69a5be85c307b01b4f4e16f2e999b"
+    },
+    {
+      "id": "01a18517-703c-7ab0-937d-dd6cb2848cc8",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-37-48-01a18517-703c-7ab0-937d-dd6cb2848cc8.jsonl",
+      "lines": 122,
+      "user_messages": 1,
+      "selected_commands": 5,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4b490fac2988f8e7993bf8d40ebeeafa40359ab30ada9823c25950e0cbc63fc6"
+    },
+    {
+      "id": "01a18518-5201-78d2-a420-853e557804d7",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-38-46-01a18518-5201-78d2-a420-853e557804d7.jsonl",
+      "lines": 100,
+      "user_messages": 1,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d262c585357557e48c5f586c4ddadcd91c4b9dbf7dcd4bfa12003df3823756fa"
+    },
+    {
+      "id": "01a18519-37f7-7841-9bd1-c8ba1f49501c",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-39-44-01a18519-37f7-7841-9bd1-c8ba1f49501c.jsonl",
+      "lines": 64,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d4f2815386b67347f2bce9d5b804ad564e531e3b0c9e31706f1b00c0bc168538"
+    },
+    {
+      "id": "01a18519-b13d-7000-8554-6bd9d1b588a6",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-40-15-01a18519-b13d-7000-8554-6bd9d1b588a6.jsonl",
+      "lines": 91,
+      "user_messages": 1,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "14795e4bdcbf9ca25ccf808ed38db7b17bbbd680f59eba0c6f3adbf006501d89"
+    },
+    {
+      "id": "01a1851a-66fd-7ff3-904e-894f6ff28df7",
+      "ticket": null,
+      "file": "rollout-2026-10-29T01-41-02-01a1851a-66fd-7ff3-904e-894f6ff28df7.jsonl",
+      "lines": 67,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c47b4df317c7db6c2af72317e16a865041f5bbcfcedf4092960908db34f1351c"
+    },
+    {
+      "id": "01a186c7-afbe-7fd0-9556-664bda7329c0",
+      "ticket": null,
+      "file": "rollout-2026-10-29T09-29-56-01a186c7-afbe-7fd0-9556-664bda7329c0.jsonl",
+      "lines": 106,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "af2acc0c0ba3ad5638068a4c02cc8e229f0353c8e3b650533137c84370e90b15"
+    },
+    {
+      "id": "01a186ce-ee99-7921-90c7-c9c32a70ccb3",
+      "ticket": null,
+      "file": "rollout-2026-10-29T09-37-50-01a186ce-ee99-7921-90c7-c9c32a70ccb3.jsonl",
+      "lines": 79,
+      "user_messages": 1,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a6089cd2d9d1a2737affe20e17e01a4f98fc53321e915e3657fa417c872da751"
+    },
+    {
+      "id": "01a186cf-99ff-7871-876e-c81946a910ed",
+      "ticket": null,
+      "file": "rollout-2026-10-29T09-38-34-01a186cf-99ff-7871-876e-c81946a910ed.jsonl",
+      "lines": 120,
+      "user_messages": 1,
+      "selected_commands": 16,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3fdb4f830c993c6e12f815f35699ff53d6f7c94acf80202230518e18cd123ced"
+    },
+    {
+      "id": "01a186d1-09ab-7122-b37e-511fa4a7a471",
+      "ticket": null,
+      "file": "rollout-2026-10-29T09-40-08-01a186d1-09ab-7122-b37e-511fa4a7a471.jsonl",
+      "lines": 55,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8b9bab9cd04ae13679188124f020e7069e24bf36b691b132adfd665f62d9dfb6"
+    },
+    {
+      "id": "01a18759-f52b-7e43-a160-2ee1d4cea623",
+      "ticket": "FIX-12",
+      "file": "rollout-2026-10-29T12-09-42-01a18759-f52b-7e43-a160-2ee1d4cea623.jsonl",
+      "lines": 1325,
+      "user_messages": 13,
+      "selected_commands": 32,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ebfa707a5bf0803da278e8bc4b7c5be0ae558724b9058a2e9b39ee00367f1d4e"
+    },
+    {
+      "id": "01a1875a-63e2-7793-a42b-42df3f1aa154",
+      "ticket": null,
+      "file": "rollout-2026-10-29T12-10-10-01a1875a-63e2-7793-a42b-42df3f1aa154.jsonl",
+      "lines": 164,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ac7ac924badf231555095ee7d244261e83e822457f07057e5ecd7b04f7b3709e"
+    },
+    {
+      "id": "01a18763-4fcb-75a2-89a7-b07f26d0f911",
+      "ticket": null,
+      "file": "rollout-2026-10-29T12-19-55-01a18763-4fcb-75a2-89a7-b07f26d0f911.jsonl",
+      "lines": 244,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4472cfd53fe34a1b8512bd14c80c3b8d695019dd65773c15868410672f2bf201"
+    },
+    {
+      "id": "01a1876d-8c77-76f0-b150-66c99bf49bd3",
+      "ticket": "FIX-12",
+      "file": "rollout-2026-10-29T12-31-05-01a1876d-8c77-76f0-b150-66c99bf49bd3.jsonl",
+      "lines": 961,
+      "user_messages": 11,
+      "selected_commands": 48,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f1542ea11a2f5d11d8a695450f693dc92022dac2c3585eab528ce76929bb8e6e"
+    },
+    {
+      "id": "01a18779-edb3-7d31-b381-8381e4e5acf9",
+      "ticket": null,
+      "file": "rollout-2026-10-29T12-44-37-01a18779-edb3-7d31-b381-8381e4e5acf9.jsonl",
+      "lines": 98,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b8180f168a00a1a622c02092ee218f1b238cadfd46b0983046897f9d406ce2b8"
+    },
+    {
+      "id": "01a1877a-9001-7c80-b6ab-f31a36cfef65",
+      "ticket": null,
+      "file": "rollout-2026-10-29T12-45-18-01a1877a-9001-7c80-b6ab-f31a36cfef65.jsonl",
+      "lines": 136,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "784c5e8d87cdbf968ad7f7a88f4afef079395a27b34c81c8aa7692beccae43d9"
+    },
+    {
+      "id": "01a1877b-7fa3-7171-9ebd-0497abc7c7af",
+      "ticket": null,
+      "file": "rollout-2026-10-29T12-46-20-01a1877b-7fa3-7171-9ebd-0497abc7c7af.jsonl",
+      "lines": 187,
+      "user_messages": 1,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "100c055c1456eb94bc61354286e7ad6684f361a7f76ffc851a4c1ba28dc35c4b"
+    },
+    {
+      "id": "01a1877f-7831-7c30-a832-601de88b16e7",
+      "ticket": null,
+      "file": "rollout-2026-10-29T12-50-40-01a1877f-7831-7c30-a832-601de88b16e7.jsonl",
+      "lines": 177,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c05560f043280d0b8570b14a4c98b8117eaa1c343dc681a02549a0453275f079"
+    },
+    {
+      "id": "01a18785-480b-7903-9bb8-bd0de39b9dba",
+      "ticket": null,
+      "file": "rollout-2026-10-29T12-57-01-01a18785-480b-7903-9bb8-bd0de39b9dba.jsonl",
+      "lines": 157,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3db1eb3154bfd117aa8b36127f42dd480e5cce8960670d7788a93b176392c3a9"
+    },
+    {
+      "id": "01a1878b-9d16-7232-8251-de46aad8263b",
+      "ticket": null,
+      "file": "rollout-2026-10-29T13-03-56-01a1878b-9d16-7232-8251-de46aad8263b.jsonl",
+      "lines": 250,
+      "user_messages": 1,
+      "selected_commands": 14,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4b7fed32b866dac14467285ba3dad580bec85ff3fc5c82e8af43771a7dd2f19f"
+    },
+    {
+      "id": "01a18793-3350-7671-9ff2-117eda38b8dd",
+      "ticket": null,
+      "file": "rollout-2026-10-29T13-12-13-01a18793-3350-7671-9ff2-117eda38b8dd.jsonl",
+      "lines": 98,
+      "user_messages": 1,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ae7c6e8a846c702f3ee5f43316b7c3cf0c8371375da50b63bd3a2b093a57f002"
+    },
+    {
+      "id": "01a18795-1d2f-7651-b23a-cfd739fccca9",
+      "ticket": null,
+      "file": "rollout-2026-10-29T13-14-18-01a18795-1d2f-7651-b23a-cfd739fccca9.jsonl",
+      "lines": 145,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f142b267c558942cf4d6af65f349350d5afc9945f8ec791849702f838f720de1"
+    },
+    {
+      "id": "01a187c6-b7ed-7a52-9226-99470e9f872e",
+      "ticket": null,
+      "file": "rollout-2026-10-29T14-08-29-01a187c6-b7ed-7a52-9226-99470e9f872e.jsonl",
+      "lines": 109,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8500bcc9b679633a6f34a5c6834d65d71cd8583d0b260127923f5cb2529a2657"
+    },
+    {
+      "id": "01a187c9-0aac-7172-8297-c5ffe5c259de",
+      "ticket": null,
+      "file": "rollout-2026-10-29T14-11-02-01a187c9-0aac-7172-8297-c5ffe5c259de.jsonl",
+      "lines": 112,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "85266a64505c201e91fa182db74bf66b1a0ed6b1b610ebeb8f557dfbaf77c3f5"
+    },
+    {
+      "id": "01a187cc-cee9-7c92-84cb-26df24c9512c",
+      "ticket": null,
+      "file": "rollout-2026-10-29T14-15-08-01a187cc-cee9-7c92-84cb-26df24c9512c.jsonl",
+      "lines": 120,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "72fe0b00421838d51b5f4b6cb5fe8d0bb96c383ad3780cf2954ab109783acfb7"
+    },
+    {
+      "id": "01a187d1-31cb-7521-b2c8-035f0a2ee2a1",
+      "ticket": null,
+      "file": "rollout-2026-10-29T14-19-56-01a187d1-31cb-7521-b2c8-035f0a2ee2a1.jsonl",
+      "lines": 241,
+      "user_messages": 1,
+      "selected_commands": 7,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "19d62bb11d06128d5dfee0ff3c5c61c3f2a211ee31572cf1e72887f9d1ea234c"
+    },
+    {
+      "id": "01a187db-0a39-7be3-9ca2-397b76824fc9",
+      "ticket": null,
+      "file": "rollout-2026-10-29T14-30-41-01a187db-0a39-7be3-9ca2-397b76824fc9.jsonl",
+      "lines": 118,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6410f7f94665a14e8c68e447e722fbf2b81c75c71171fbd21d8dc7b4dbda8380"
+    },
+    {
+      "id": "01a18812-76b7-73b2-90dc-63f13a17009a",
+      "ticket": null,
+      "file": "rollout-2026-10-29T15-31-13-01a18812-76b7-73b2-90dc-63f13a17009a.jsonl",
+      "lines": 115,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a0378917f55c12bf9b2c8763ec28b5a05dd5c1be1a75c19b1dec5009792af154"
+    },
+    {
+      "id": "01a18815-b4e6-7080-8ea2-203b21db38c1",
+      "ticket": null,
+      "file": "rollout-2026-10-29T15-34-46-01a18815-b4e6-7080-8ea2-203b21db38c1.jsonl",
+      "lines": 146,
+      "user_messages": 1,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b5a9fe3b79f3655efee44f9b75b893c6bca38741191e5bd2655c1ec3806473d6"
+    },
+    {
+      "id": "01a1881e-814b-77a2-bae3-bc84c1a0b1bc",
+      "ticket": null,
+      "file": "rollout-2026-10-29T15-44-22-01a1881e-814b-77a2-bae3-bc84c1a0b1bc.jsonl",
+      "lines": 204,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "391b8154722db147c9e97fe66f2261cc7cca9661c46ba6602874a6128c357da2"
+    },
+    {
+      "id": "01a18887-68ef-7523-92e4-fe41fdde6380",
+      "ticket": "GEN-9",
+      "file": "rollout-2026-10-29T17-38-58-01a18887-68ef-7523-92e4-fe41fdde6380.jsonl",
+      "lines": 799,
+      "user_messages": 12,
+      "selected_commands": 13,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5cd2ce1e608e994ea4c5e161a056ce6f7743705f18bed94f6575006ab2ce8d72"
+    },
+    {
+      "id": "01a188b5-1a07-7163-af04-069719c119fc",
+      "ticket": "GEN-10",
+      "file": "rollout-2026-10-29T18-28-52-01a188b5-1a07-7163-af04-069719c119fc.jsonl",
+      "lines": 550,
+      "user_messages": 6,
+      "selected_commands": 24,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e0f348c796efc7cc211702c8d3a6ed0bff910a7ca948b9215910d33dab4d0a1e"
+    },
+    {
+      "id": "01a18e5e-5a8b-7052-9150-a342bd1c9daf",
+      "ticket": null,
+      "file": "rollout-2026-10-30T20-51-50-01a18e5e-5a8b-7052-9150-a342bd1c9daf.jsonl",
+      "lines": 191,
+      "user_messages": 9,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3ffd2c49eae56e7e6696b991219b40d06414934cfa84e226820302cf6b723227"
+    },
+    {
+      "id": "01a18ec3-c74e-7351-90bf-c983428356a3",
+      "ticket": null,
+      "file": "rollout-2026-10-30T22-42-37-01a18ec3-c74e-7351-90bf-c983428356a3.jsonl",
+      "lines": 142,
+      "user_messages": 1,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d51a49b1ebe56d7bac94e91818b4024b93fafbc6427f0c75b7e03802e989df5e"
+    },
+    {
+      "id": "01a18ecd-fb3f-7710-8e22-b531ddd9e14e",
+      "ticket": null,
+      "file": "rollout-2026-10-30T22-53-46-01a18ecd-fb3f-7710-8e22-b531ddd9e14e.jsonl",
+      "lines": 73,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "2ffb17c6b843af2fac59dcd53388294567c5e1b2895d98f46471dda0fd8d0b5a"
+    },
+    {
+      "id": "01a18ed1-9964-75b1-802e-1d8987f79cc1",
+      "ticket": null,
+      "file": "rollout-2026-10-30T22-57-43-01a18ed1-9964-75b1-802e-1d8987f79cc1.jsonl",
+      "lines": 92,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "461b7f6609dfcf03275e444fa436b634d1ef2098a377b45a6afcc1075766d7a7"
+    },
+    {
+      "id": "01a18ed2-ce98-7eb2-ba63-34cb821c0c2a",
+      "ticket": null,
+      "file": "rollout-2026-10-30T22-59-02-01a18ed2-ce98-7eb2-ba63-34cb821c0c2a.jsonl",
+      "lines": 50,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b532f341c328d73a2ce5f03c427b713e157de2f5fdcf9f545cb7e6263f639dbd"
+    },
+    {
+      "id": "01a18ed5-1f30-76a1-b13b-481717d0d6eb",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-01-34-01a18ed5-1f30-76a1-b13b-481717d0d6eb.jsonl",
+      "lines": 249,
+      "user_messages": 1,
+      "selected_commands": 14,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "22627e62642db5fc7b716754e5676b38603cb6cc6eb1d79b89b6106791f05fb9"
+    },
+    {
+      "id": "01a18ed8-17b9-7a50-bbff-e85c5cea438a",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-04-48-01a18ed8-17b9-7a50-bbff-e85c5cea438a.jsonl",
+      "lines": 111,
+      "user_messages": 1,
+      "selected_commands": 7,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "12da7ca7fb56919a61bbdb33156ff6724e0b8c0a4b7c3c15e1e6b7e5768d6a17"
+    },
+    {
+      "id": "01a18ed9-983e-7810-b5aa-faef17bc6727",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-06-27-01a18ed9-983e-7810-b5aa-faef17bc6727.jsonl",
+      "lines": 118,
+      "user_messages": 1,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "275717d7b0d289b9ea69316b30b21549b1f411155509bbebe3fc6f26beb06338"
+    },
+    {
+      "id": "01a18eda-6ce9-76b1-9a58-0c8730a02eae",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-07-21-01a18eda-6ce9-76b1-9a58-0c8730a02eae.jsonl",
+      "lines": 86,
+      "user_messages": 1,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "82a7af99049850a5ded2678ba4a3a6155034c22427349f5815d99eab13a35a29"
+    },
+    {
+      "id": "01a18edb-3b6c-7e52-8306-1af06209513f",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-08-14-01a18edb-3b6c-7e52-8306-1af06209513f.jsonl",
+      "lines": 96,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6c2c35c1ad008515e9c86bc8c6cc67b153a9bb7615b909bb940ce661153ac2fb"
+    },
+    {
+      "id": "01a18edc-331a-7551-ac65-e1feb3f7785d",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-09-18-01a18edc-331a-7551-ac65-e1feb3f7785d.jsonl",
+      "lines": 94,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "bf22130d020ed90911160c0a2e97530e2e07e4a05b7dc7f1e529ced7c92007c5"
+    },
+    {
+      "id": "01a18edc-e4ef-79d1-922b-3bd608137cfc",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-10-03-01a18edc-e4ef-79d1-922b-3bd608137cfc.jsonl",
+      "lines": 89,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "107a8596203a3f8b837a57ace4bc812f2433aff22240074b46e21484e324dc22"
+    },
+    {
+      "id": "01a18edd-9446-7870-81ff-0c8a2c8749a2",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-10-48-01a18edd-9446-7870-81ff-0c8a2c8749a2.jsonl",
+      "lines": 87,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8d7b02942467104e2182d5a8cda45b6a36d591767cc5a7bdfa258cc3b2574f56"
+    },
+    {
+      "id": "01a18ede-7172-7ee2-8ec3-870be0e1a575",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-11-45-01a18ede-7172-7ee2-8ec3-870be0e1a575.jsonl",
+      "lines": 52,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e801fd089a107cfcbae0b31b2f70c78dbb24a6c604ad8a99aeae958adabccfb2"
+    },
+    {
+      "id": "01a18ede-d177-7580-8a36-7c53161d241a",
+      "ticket": null,
+      "file": "rollout-2026-10-30T23-12-09-01a18ede-d177-7580-8a36-7c53161d241a.jsonl",
+      "lines": 103,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ffd465e707603bab5e5f3c2aaf8aaa9ae351d621a7d52e1ba82501eaea335704"
+    },
+    {
+      "id": "01a18f05-538a-7281-81a4-dc84f772db09",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-30T23-54-13-01a18f05-538a-7281-81a4-dc84f772db09.jsonl",
+      "lines": 547,
+      "user_messages": 13,
+      "selected_commands": 32,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "83f1fbc41a842ee6a918833f33dc36f95258ebb72219a827f0a59c9663d575c3"
+    },
+    {
+      "id": "01a18f06-42a8-7a81-a1d8-3b190bea9232",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-30T23-55-14-01a18f06-42a8-7a81-a1d8-3b190bea9232.jsonl",
+      "lines": 645,
+      "user_messages": 15,
+      "selected_commands": 36,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c3bca840ff746f08b9595c5cbb98912effbe85e3ecfa47e725f61c8ab10db79e"
+    },
+    {
+      "id": "01a18f07-70e2-7dd2-9c47-fc9067d01895",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-30T23-56-31-01a18f07-70e2-7dd2-9c47-fc9067d01895.jsonl",
+      "lines": 581,
+      "user_messages": 15,
+      "selected_commands": 35,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "522f88ef9a01bd32dc1db73642ad4b9656404bc00c6a5b3618b4fe8d5a32ac22"
+    },
+    {
+      "id": "01a18f08-5d1d-7953-801b-b65bce910e45",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-30T23-57-32-01a18f08-5d1d-7953-801b-b65bce910e45.jsonl",
+      "lines": 578,
+      "user_messages": 15,
+      "selected_commands": 32,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3d9571706d6b22b5e592507361138b01d9700e8d2e0e99b7e7f694b94642dd08"
+    },
+    {
+      "id": "01a18f0f-90b0-7991-af00-6c3492e8cca7",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-31T00-05-24-01a18f0f-90b0-7991-af00-6c3492e8cca7.jsonl",
+      "lines": 682,
+      "user_messages": 19,
+      "selected_commands": 37,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "055b3fa94ddfb188b7cd97bf1a09c8e51009526ccde01507b8df653f4e08cd36"
+    },
+    {
+      "id": "01a18f11-0057-71e2-8231-11015abadff6",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-31T00-06-58-01a18f11-0057-71e2-8231-11015abadff6.jsonl",
+      "lines": 747,
+      "user_messages": 21,
+      "selected_commands": 39,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c5af9b6d847fbbb59d048c438c87f94115a4e40ddbe33f517de80d3c02dbc02c"
+    },
+    {
+      "id": "01a18f12-1023-7a52-81c8-42d8335bd743",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-31T00-08-08-01a18f12-1023-7a52-81c8-42d8335bd743.jsonl",
+      "lines": 852,
+      "user_messages": 21,
+      "selected_commands": 50,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ab2621bd77c9efaed10c0e40e6efafa10562fc2131d523c12cb6c8e6c85aae8b"
+    },
+    {
+      "id": "01a18f13-5529-71c3-be59-36e39f8727f0",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-31T00-09-31-01a18f13-5529-71c3-be59-36e39f8727f0.jsonl",
+      "lines": 783,
+      "user_messages": 21,
+      "selected_commands": 40,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d53f4631dc2d139d567f1967ab7c86154cd67be3cd7cee9d9c76c4649815bb53"
+    },
+    {
+      "id": "01a18f15-5f2f-7b20-9e21-faadb97f658d",
+      "ticket": "AL-58",
+      "file": "rollout-2026-10-31T00-11-44-01a18f15-5f2f-7b20-9e21-faadb97f658d.jsonl",
+      "lines": 89,
+      "user_messages": 0,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "8e20cd93e2426d060ec45e3b5e9d09d26abbb3222cb927fd1e51184a1d9d6d05"
+    },
+    {
+      "id": "01a18f20-655c-7c63-8a8c-23d5c172bbae",
+      "ticket": null,
+      "file": "rollout-2026-10-31T00-23-47-01a18f20-655c-7c63-8a8c-23d5c172bbae.jsonl",
+      "lines": 728,
+      "user_messages": 2,
+      "selected_commands": 62,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "cdc71111146583879092f3545f93c1bec74631beaea3f326a1d4f0d9d069f957"
+    },
+    {
+      "id": "01a18f20-8fc7-7b20-aebd-7ac835f4a47c",
+      "ticket": null,
+      "file": "rollout-2026-10-31T00-23-58-01a18f20-8fc7-7b20-aebd-7ac835f4a47c.jsonl",
+      "lines": 532,
+      "user_messages": 2,
+      "selected_commands": 22,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "07b94d7e21a3b1f3623b2ba75b981e1290f5521a8b850c2a6a6afcdef1cc7e58"
+    },
+    {
+      "id": "01a18f20-951e-79a0-a2c0-db7dd684889d",
+      "ticket": null,
+      "file": "rollout-2026-10-31T00-23-59-01a18f20-951e-79a0-a2c0-db7dd684889d.jsonl",
+      "lines": 92,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "86411464685de69e2c1089971f82d17de1dd9365aef0623b15a1a273a252dd40"
+    },
+    {
+      "id": "01a18f21-8ec0-70a1-82c1-533cabbaf43f",
+      "ticket": null,
+      "file": "rollout-2026-10-31T00-25-03-01a18f21-8ec0-70a1-82c1-533cabbaf43f.jsonl",
+      "lines": 481,
+      "user_messages": 8,
+      "selected_commands": 32,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "58000df3b5a30e028870904323f4e7d234c7f777db6bc827f64a060e0dc86f71"
+    },
+    {
+      "id": "01a18f21-ca8c-7911-a9e6-9b198791ddb5",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T00-25-18-01a18f21-ca8c-7911-a9e6-9b198791ddb5.jsonl",
+      "lines": 1080,
+      "user_messages": 5,
+      "selected_commands": 23,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "62dd578c9414fbfe4d47d3ef377377ba8239db536901b48a974dbac7561b41f0"
+    },
+    {
+      "id": "01a18f21-ec89-7080-abdf-d94106c787f0",
+      "ticket": null,
+      "file": "rollout-2026-10-31T00-25-27-01a18f21-ec89-7080-abdf-d94106c787f0.jsonl",
+      "lines": 113,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "2277fc19604e0e11199ac38ab8f5cb33f09a5328dac917a88dc421741c45b404"
+    },
+    {
+      "id": "01a18f22-082a-7631-9631-5c24b856453d",
+      "ticket": null,
+      "file": "rollout-2026-10-31T00-25-34-01a18f22-082a-7631-9631-5c24b856453d.jsonl",
+      "lines": 219,
+      "user_messages": 2,
+      "selected_commands": 5,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "dba2023fbe15bce45901204ad2a0641898ec9465cb6768d54da6df81581c25ce"
+    },
+    {
+      "id": "01a18f22-13e5-7133-b376-31f9464ec86f",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T00-25-37-01a18f22-13e5-7133-b376-31f9464ec86f.jsonl",
+      "lines": 80,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c7069b0fe7c3bba849d4e048d56b1d839e811eb083647c46e2346869f48d86d2"
+    },
+    {
+      "id": "01a18f22-752a-7ea1-a93b-cbfe17b86558",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-26-02-01a18f22-752a-7ea1-a93b-cbfe17b86558.jsonl",
+      "lines": 740,
+      "user_messages": 2,
+      "selected_commands": 46,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e7dd04d6e37d156277c4610d8cb9c673636e481eb1fffa9d6d059654be573c30"
+    },
+    {
+      "id": "01a18f22-9267-7b91-b89a-40b51ccce214",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T00-26-10-01a18f22-9267-7b91-b89a-40b51ccce214.jsonl",
+      "lines": 190,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5973385918e8a174ddc3d97d36a434a48ad6731eca7304cb3513245d29dd0ded"
+    },
+    {
+      "id": "01a18f22-b614-7550-9b1f-9cc0e5b0ceff",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-26-19-01a18f22-b614-7550-9b1f-9cc0e5b0ceff.jsonl",
+      "lines": 84,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "612957f8d67bf6e7cef1125948ba85fcab40d10b39a3ded1fa1fef35b72703b5"
+    },
+    {
+      "id": "01a18f22-e123-7e71-b860-2d18caf9a79f",
+      "ticket": "AL-48",
+      "file": "rollout-2026-10-31T00-26-30-01a18f22-e123-7e71-b860-2d18caf9a79f.jsonl",
+      "lines": 679,
+      "user_messages": 3,
+      "selected_commands": 25,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "7fea7d0ccb36e5a703b771e8b50b32ccbd85b52cf5b894beed9e3943ddd89a71"
+    },
+    {
+      "id": "01a18f23-1864-7802-b9b5-608ea6aa807c",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-26-44-01a18f23-1864-7802-b9b5-608ea6aa807c.jsonl",
+      "lines": 223,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "521417c33280f6888cf20f44d8f8c22d855db045a68f9343d133fedd92c842c5"
+    },
+    {
+      "id": "01a18f23-474f-7f50-83b0-a64af4954d37",
+      "ticket": "AL-49",
+      "file": "rollout-2026-10-31T00-26-56-01a18f23-474f-7f50-83b0-a64af4954d37.jsonl",
+      "lines": 1262,
+      "user_messages": 7,
+      "selected_commands": 98,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "2d68e2749d485c2566278a88ca4b428c833a4c2946922f4e5d28b09f3e093c7d"
+    },
+    {
+      "id": "01a18f23-4d45-78a0-a1f3-3bc8457cd1f6",
+      "ticket": "AL-48",
+      "file": "rollout-2026-10-31T00-26-57-01a18f23-4d45-78a0-a1f3-3bc8457cd1f6.jsonl",
+      "lines": 76,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "12243e2f28607d637d580f33336d481579429c2ab805f6a9e44cc5b1f628803e"
+    },
+    {
+      "id": "01a18f23-7f69-7be0-b506-ed2f067662e7",
+      "ticket": "AL-49",
+      "file": "rollout-2026-10-31T00-27-10-01a18f23-7f69-7be0-b506-ed2f067662e7.jsonl",
+      "lines": 99,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4c8b875da3962caae56c8cda4fb6f41aef9eb9b987512fc69b278760a62a00b1"
+    },
+    {
+      "id": "01a18f23-92ec-7f33-bfa0-8401d9020f82",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T00-27-15-01a18f23-92ec-7f33-bfa0-8401d9020f82.jsonl",
+      "lines": 194,
+      "user_messages": 2,
+      "selected_commands": 10,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6f09965701e4787ab12887ba9cd4de44f330357f0033f5acae17d9260912031e"
+    },
+    {
+      "id": "01a18f23-b32b-7f61-98aa-0d69b2a9753d",
+      "ticket": "AL-50",
+      "file": "rollout-2026-10-31T00-27-23-01a18f23-b32b-7f61-98aa-0d69b2a9753d.jsonl",
+      "lines": 754,
+      "user_messages": 3,
+      "selected_commands": 53,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4c818d8b857c14f4f0ac3de0a96d53df86cf8547b9fbdb18884e41a98f6de7d6"
+    },
+    {
+      "id": "01a18f23-cc6a-78e0-b8a3-a6d088187342",
+      "ticket": "AL-48",
+      "file": "rollout-2026-10-31T00-27-30-01a18f23-cc6a-78e0-b8a3-a6d088187342.jsonl",
+      "lines": 283,
+      "user_messages": 2,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e6731e6d556a5d778388df350cd81b3ea7a5e787ca07cfbf1d2f1e70de434a53"
+    },
+    {
+      "id": "01a18f23-cde9-75f1-8894-ccae235484ff",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T00-27-30-01a18f23-cde9-75f1-8894-ccae235484ff.jsonl",
+      "lines": 115,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d7791ef5fe57d80b001f244eb7e1cd71ba4cfba88e86edca52130cdeb4256007"
+    },
+    {
+      "id": "01a18f23-d00f-7e72-a26b-edcaee377056",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-27-31-01a18f23-d00f-7e72-a26b-edcaee377056.jsonl",
+      "lines": 224,
+      "user_messages": 2,
+      "selected_commands": 16,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1a80cc38b83f945878dc33fad02a0ac9921cd9ce96c6b0c08cdeb757be2f7f6e"
+    },
+    {
+      "id": "01a18f23-db5f-7062-85e0-279774687c5d",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-27-34-01a18f23-db5f-7062-85e0-279774687c5d.jsonl",
+      "lines": 113,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5ba56fead38c25671754958029ebb2770e3a49836050cdc3b8b939c171727849"
+    },
+    {
+      "id": "01a18f23-f262-7881-a4ef-a5df3feeff98",
+      "ticket": "AL-50",
+      "file": "rollout-2026-10-31T00-27-40-01a18f23-f262-7881-a4ef-a5df3feeff98.jsonl",
+      "lines": 68,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "414e78a05286a09334bc58373c212ed74ce5e8b8e3433f9d510110d8bcee6604"
+    },
+    {
+      "id": "01a18f24-2e51-7283-b83e-1c9464a79e24",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-27-55-01a18f24-2e51-7283-b83e-1c9464a79e24.jsonl",
+      "lines": 1173,
+      "user_messages": 9,
+      "selected_commands": 37,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "51aaa6af866531eb27abc268fae773742b3470c41886cee914bea45020c136c4"
+    },
+    {
+      "id": "01a18f24-53e9-7580-b623-2775051abe82",
+      "ticket": "AL-50",
+      "file": "rollout-2026-10-31T00-28-05-01a18f24-53e9-7580-b623-2775051abe82.jsonl",
+      "lines": 403,
+      "user_messages": 2,
+      "selected_commands": 27,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1711bcef1c6f011818c94537c68db389f58c62ba4051b80d3e6928cb125dfe21"
+    },
+    {
+      "id": "01a18f24-542a-74b1-a043-247257b6dbc8",
+      "ticket": "AL-49",
+      "file": "rollout-2026-10-31T00-28-05-01a18f24-542a-74b1-a043-247257b6dbc8.jsonl",
+      "lines": 194,
+      "user_messages": 3,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e267279aa505c30b0cfd431b4fde01c6b92071a208e5f32dabceff4d5bb4f580"
+    },
+    {
+      "id": "01a18f24-82ed-7363-b074-26c48d5d62a7",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-28-17-01a18f24-82ed-7363-b074-26c48d5d62a7.jsonl",
+      "lines": 133,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "9ebcfef30fc715d8cdfd11225e92668f61b36906d087e54fa821f7c894de138b"
+    },
+    {
+      "id": "01a18f24-cd8d-7562-accc-57da3a3a4b25",
+      "ticket": null,
+      "file": "rollout-2026-10-31T00-28-36-01a18f24-cd8d-7562-accc-57da3a3a4b25.jsonl",
+      "lines": 201,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b626d2f11dd4b94e34885a7a70fa7ebd0283c5fa0c003c8d8a543584e3381ef9"
+    },
+    {
+      "id": "01a18f25-7c01-7b83-91dd-f421e763fe0d",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-29-20-01a18f25-7c01-7b83-91dd-f421e763fe0d.jsonl",
+      "lines": 764,
+      "user_messages": 2,
+      "selected_commands": 15,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e9f7372e90826e612dbbc86a867b6faf55c95d30e660819819638d7389f36326"
+    },
+    {
+      "id": "01a18f25-d531-75c0-9824-58964fe7deb4",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-29-43-01a18f25-d531-75c0-9824-58964fe7deb4.jsonl",
+      "lines": 130,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "69b85fe3ea79c1b3c6623a6540edee19b6fb8eabeb8de2a890f3b1457fd9add3"
+    },
+    {
+      "id": "01a18f25-edaa-79b1-976a-ef9978d974b3",
+      "ticket": "AL-49",
+      "file": "rollout-2026-10-31T00-29-50-01a18f25-edaa-79b1-976a-ef9978d974b3.jsonl",
+      "lines": 231,
+      "user_messages": 4,
+      "selected_commands": 11,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4c03a47f0beace67fbba52f92dff908d19aab10a68879513440b2d71093f9540"
+    },
+    {
+      "id": "01a18f26-1165-7a40-b571-bde2bfdc7687",
+      "ticket": "AL-49",
+      "file": "rollout-2026-10-31T00-29-59-01a18f26-1165-7a40-b571-bde2bfdc7687.jsonl",
+      "lines": 145,
+      "user_messages": 4,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c256c6704cb1ba9f527dbd6c52d65d7df07e5cdd296314eec9dc49a9c72f658b"
+    },
+    {
+      "id": "01a18f26-2e2c-7660-a6c3-6e4df2e0da8e",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T00-30-06-01a18f26-2e2c-7660-a6c3-6e4df2e0da8e.jsonl",
+      "lines": 156,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "102eb9c4c070d0ed78ce1630ea28a461068049160ecdf6d4568538b090955864"
+    },
+    {
+      "id": "01a18f26-56fe-7ee2-bc35-709a6470860d",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-30-16-01a18f26-56fe-7ee2-bc35-709a6470860d.jsonl",
+      "lines": 165,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4b713d9392b3d09601f3be7e0801c84aaee99041ac3cd4ce60c03e9c7d2f238a"
+    },
+    {
+      "id": "01a18f26-5bc8-75f0-9c73-9ad60abab7ac",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-30-18-01a18f26-5bc8-75f0-9c73-9ad60abab7ac.jsonl",
+      "lines": 159,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "df2e1a8bcdf8fe8d6fe9a7d085c37fb587523124e657cdfb0554f7faea7620e1"
+    },
+    {
+      "id": "01a18f26-600a-7060-a1ff-9e27f28f7efd",
+      "ticket": null,
+      "file": "rollout-2026-10-31T00-30-19-01a18f26-600a-7060-a1ff-9e27f28f7efd.jsonl",
+      "lines": 236,
+      "user_messages": 2,
+      "selected_commands": 11,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "47dee7a9d20af0e60fc4f20bf70fbd1e499b0ee1bf814f35f97efa4de3417601"
+    },
+    {
+      "id": "01a18f26-eefa-7643-a3d9-6a7317327571",
+      "ticket": "AL-46",
+      "file": "rollout-2026-10-31T00-30-55-01a18f26-eefa-7643-a3d9-6a7317327571.jsonl",
+      "lines": 261,
+      "user_messages": 2,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "c77de7d71ef7fa36edd931dc5e9fffc5b3e94ed90a42d2b8cb61afc65510c4ae"
+    },
+    {
+      "id": "01a18f29-84db-7700-9c8d-a38562b6ccd9",
+      "ticket": "AL-48",
+      "file": "rollout-2026-10-31T00-33-45-01a18f29-84db-7700-9c8d-a38562b6ccd9.jsonl",
+      "lines": 322,
+      "user_messages": 2,
+      "selected_commands": 25,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d7f1a48a5952704405241228c512cba5c6d344ae278c04e742092f18e7cc128c"
+    },
+    {
+      "id": "01a18f29-8864-7381-9c1f-d1da247cc47b",
+      "ticket": "AL-50",
+      "file": "rollout-2026-10-31T00-33-46-01a18f29-8864-7381-9c1f-d1da247cc47b.jsonl",
+      "lines": 409,
+      "user_messages": 2,
+      "selected_commands": 25,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e5de9c53c2d38562f0c23ea17993f948bd138e869b0241dffa3ea52482305c54"
+    },
+    {
+      "id": "01a18f2d-46dc-7833-87cf-808a55e65f4d",
+      "ticket": "AL-48",
+      "file": "rollout-2026-10-31T00-37-51-01a18f2d-46dc-7833-87cf-808a55e65f4d.jsonl",
+      "lines": 209,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "70aa335ff88970e9b90b2d632977d959ae2bc7902f2a6d75e199611a332a0721"
+    },
+    {
+      "id": "01a18f2d-b373-7a50-959e-07c04080eca3",
+      "ticket": "AL-50",
+      "file": "rollout-2026-10-31T00-38-19-01a18f2d-b373-7a50-959e-07c04080eca3.jsonl",
+      "lines": 161,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f31cefe0e16940178561f1c5dd6b6dc76eb45391965cd041db2101a6d7c88ffd"
+    },
+    {
+      "id": "01a18f2e-3cbd-77e1-bcb5-d6da556d9f6f",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-38-54-01a18f2e-3cbd-77e1-bcb5-d6da556d9f6f.jsonl",
+      "lines": 300,
+      "user_messages": 2,
+      "selected_commands": 14,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "4e5a140dbaf0b87ef8c9c0ace6bc7dcaa45875a92415c21e160f7b12c908bd8d"
+    },
+    {
+      "id": "01a18f30-22dd-7e22-aa05-0261c842fcce",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-40-59-01a18f30-22dd-7e22-aa05-0261c842fcce.jsonl",
+      "lines": 225,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "eb220fde7eb215b034c4f1bcd809f2cb4ee763b6e6f174446096f149813320af"
+    },
+    {
+      "id": "01a18f31-0d40-7600-a98a-960113fce249",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-41-58-01a18f31-0d40-7600-a98a-960113fce249.jsonl",
+      "lines": 194,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "2a8efe0a9ac2df7ef24057f5ffc8df9acb50bd66f51da7f7bc2b80ed6d684389"
+    },
+    {
+      "id": "01a18f31-51cb-7ed3-a249-4fd90aaed83d",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-42-16-01a18f31-51cb-7ed3-a249-4fd90aaed83d.jsonl",
+      "lines": 330,
+      "user_messages": 2,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "06ed3560a6cfdd2211a9da8d446ee6a572b7abe823766d1dcb4594c73739c708"
+    },
+    {
+      "id": "01a18f33-0060-7e72-8289-c1c2ecde4d2f",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-44-06-01a18f33-0060-7e72-8289-c1c2ecde4d2f.jsonl",
+      "lines": 241,
+      "user_messages": 2,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "65af4ea936998a4c60554b0f8b1749bf1cbb4f3743c5afd1cc309fd5591dc157"
+    },
+    {
+      "id": "01a18f33-f9c4-73c0-b770-365b59ddc15a",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-45-10-01a18f33-f9c4-73c0-b770-365b59ddc15a.jsonl",
+      "lines": 260,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "9400155ac67a1ab84918002860189c96021b4c60cc0771ee3c8bd4a9a34f3fd8"
+    },
+    {
+      "id": "01a18f34-b15b-7d12-9f3a-8213a11604bc",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-45-57-01a18f34-b15b-7d12-9f3a-8213a11604bc.jsonl",
+      "lines": 232,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a85e061de3acd947e0203a5a8a4f73defc707fd098b7b3c37839cb1a3232163d"
+    },
+    {
+      "id": "01a18f34-fcca-7f02-b61e-bc79afdf7da0",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-46-16-01a18f34-fcca-7f02-b61e-bc79afdf7da0.jsonl",
+      "lines": 311,
+      "user_messages": 2,
+      "selected_commands": 4,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f3bffa7a491abfcd40b4e8dfd88275144b1e10de0cd449ff80f840990a245912"
+    },
+    {
+      "id": "01a18f36-230b-7b10-9bc0-c6bf3c631df3",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-47-32-01a18f36-230b-7b10-9bc0-c6bf3c631df3.jsonl",
+      "lines": 271,
+      "user_messages": 2,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "9ebab94b10df6cb6dd2bb266a97239b42fa73887af245ba23065c623176a129c"
+    },
+    {
+      "id": "01a18f37-2de3-7c20-933e-e5e68c4861d4",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-48-40-01a18f37-2de3-7c20-933e-e5e68c4861d4.jsonl",
+      "lines": 303,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "47172f7767dcead3119ec8da92d90ac281633647bc161bd5ddb8c7960ebcec6b"
+    },
+    {
+      "id": "01a18f38-b344-7b61-ac3d-2ec648563bc0",
+      "ticket": "AL-51",
+      "file": "rollout-2026-10-31T00-50-20-01a18f38-b344-7b61-ac3d-2ec648563bc0.jsonl",
+      "lines": 384,
+      "user_messages": 2,
+      "selected_commands": 6,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "fb8444fcde56f537e2960129389af26c9c45bb881b2d76dbdcb7e3371749874b"
+    },
+    {
+      "id": "01a18f42-7624-78f2-afcc-2dc0a77743fe",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T01-00-59-01a18f42-7624-78f2-afcc-2dc0a77743fe.jsonl",
+      "lines": 248,
+      "user_messages": 4,
+      "selected_commands": 16,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "d0607f09bed5a84d4e16750fa3ba6bac451e8f43fdc0ae2dd98efa56c54b79d7"
+    },
+    {
+      "id": "01a18f42-f978-7761-8d32-663975bdccc8",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T01-01-33-01a18f42-f978-7761-8d32-663975bdccc8.jsonl",
+      "lines": 296,
+      "user_messages": 4,
+      "selected_commands": 16,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5042511beabc73e1528ce12f7b2faea2c8b16faf38530796e879bc3321536c0e"
+    },
+    {
+      "id": "01a18f43-a90b-7212-81c0-c58bba776ef4",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T01-02-18-01a18f43-a90b-7212-81c0-c58bba776ef4.jsonl",
+      "lines": 332,
+      "user_messages": 4,
+      "selected_commands": 17,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5adddb8648746e7e218b8e9e66f05a3b89247737dab8906a0911e896cb49e7ba"
+    },
+    {
+      "id": "01a18f43-ae7a-7dc2-9515-549c72926456",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T01-02-19-01a18f43-ae7a-7dc2-9515-549c72926456.jsonl",
+      "lines": 289,
+      "user_messages": 4,
+      "selected_commands": 18,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "22ada1e3d3e4d485931ef716a00b164ace9063ac6b653780c403eabbb6eb4c4a"
+    },
+    {
+      "id": "01a18f52-031d-75e1-ac6c-85dc85d233fa",
+      "ticket": "GEN-11",
+      "file": "rollout-2026-10-31T01-17-59-01a18f52-031d-75e1-ac6c-85dc85d233fa.jsonl",
+      "lines": 524,
+      "user_messages": 5,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5fc9e297cfa32397858921cda47e320f9725f3221e48d9fb82458f0f2f643381"
+    },
+    {
+      "id": "01a18f58-ef29-7821-94fa-fa76d9a14d29",
+      "ticket": null,
+      "file": "rollout-2026-10-31T01-25-32-01a18f58-ef29-7821-94fa-fa76d9a14d29.jsonl",
+      "lines": 88,
+      "user_messages": 2,
+      "selected_commands": 3,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b313b7952d6e894d9611354aeca4a59daaaa5a3af53a2f48626631ce1f974c66"
+    },
+    {
+      "id": "01a18f59-9ef1-77d1-a3f8-4040f1857eac",
+      "ticket": null,
+      "file": "rollout-2026-10-31T01-26-17-01a18f59-9ef1-77d1-a3f8-4040f1857eac.jsonl",
+      "lines": 141,
+      "user_messages": 1,
+      "selected_commands": 7,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "e3bdb1e4c09ba132c3673773d2114e468d9f381749707b63085904d54eeab9ee"
+    },
+    {
+      "id": "01a18f59-c02c-75d2-915a-6c8ba97f8489",
+      "ticket": "GEN-11",
+      "file": "rollout-2026-10-31T01-26-26-01a18f59-c02c-75d2-915a-6c8ba97f8489.jsonl",
+      "lines": 140,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "efd34f6476ec395438894141444cf990b1d73420caf848f0fdb61f18956cf165"
+    },
+    {
+      "id": "01a18f5a-6208-7180-aa6f-33a3f0aebcab",
+      "ticket": "GEN-11",
+      "file": "rollout-2026-10-31T01-27-07-01a18f5a-6208-7180-aa6f-33a3f0aebcab.jsonl",
+      "lines": 137,
+      "user_messages": 2,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "7d81364a34905771ecf4840220b70aaf40827be802173312187fd17ec5292a06"
+    },
+    {
+      "id": "01a18f5a-f6ff-74c2-bbb0-1d8e80122db4",
+      "ticket": null,
+      "file": "rollout-2026-10-31T01-27-45-01a18f5a-f6ff-74c2-bbb0-1d8e80122db4.jsonl",
+      "lines": 78,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "2001791f0ee344408b11bf7de60d20c070ddae653175b65f9f194615dce87544"
+    },
+    {
+      "id": "01a18f5b-54d8-7de0-adba-11e2a9bd5346",
+      "ticket": "GEN-11",
+      "file": "rollout-2026-10-31T01-28-09-01a18f5b-54d8-7de0-adba-11e2a9bd5346.jsonl",
+      "lines": 182,
+      "user_messages": 4,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "39df86bcf10ef65ec6eca3eedd7efd94f943c59de79cd7d37c00bf58f48c06e2"
+    },
+    {
+      "id": "01a18f5b-6efc-7fd2-b542-205110b07fbb",
+      "ticket": null,
+      "file": "rollout-2026-10-31T01-28-16-01a18f5b-6efc-7fd2-b542-205110b07fbb.jsonl",
+      "lines": 93,
+      "user_messages": 1,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "849f6cfe2d79b896bb49398675be16390c22a986ea3fb9e90c5d172be6607f37"
+    },
+    {
+      "id": "01a18f5c-56c3-78c1-808a-fa150d64c188",
+      "ticket": null,
+      "file": "rollout-2026-10-31T01-29-15-01a18f5c-56c3-78c1-808a-fa150d64c188.jsonl",
+      "lines": 57,
+      "user_messages": 1,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f594e21268c1129dc2b81200aa025472388a1dd027ed674484245c40ca27e4be"
+    },
+    {
+      "id": "01a18f66-acae-72b1-ac60-e94bc2cb9107",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T01-40-33-01a18f66-acae-72b1-ac60-e94bc2cb9107.jsonl",
+      "lines": 361,
+      "user_messages": 5,
+      "selected_commands": 20,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a55ecb59713492700ebc46a78c5bcac8d92b7455f6a2f2849ee8a2acf85255e7"
+    },
+    {
+      "id": "01a18f67-3e27-7723-91cc-45c91d2868ed",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T01-41-10-01a18f67-3e27-7723-91cc-45c91d2868ed.jsonl",
+      "lines": 523,
+      "user_messages": 5,
+      "selected_commands": 22,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "211b7845c05a6d14e6b832943b2fc7f45c82a1478ea76a88a56fcbfabd3c7b09"
+    },
+    {
+      "id": "01a18f6a-4ab2-7d93-a749-9f0f413103f0",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T01-44-30-01a18f6a-4ab2-7d93-a749-9f0f413103f0.jsonl",
+      "lines": 557,
+      "user_messages": 5,
+      "selected_commands": 23,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "6e71be6185fbfe9b938ed54a35a115abf5b476397d59fc08d7c8ede3c7b90431"
+    },
+    {
+      "id": "01a18f6a-525e-7353-8110-5b1364143630",
+      "ticket": "AL-45",
+      "file": "rollout-2026-10-31T01-44-32-01a18f6a-525e-7353-8110-5b1364143630.jsonl",
+      "lines": 486,
+      "user_messages": 5,
+      "selected_commands": 26,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "87e61d7ad247aaf56aa5aa7995a6448a864cc6c520b76ce9054720d4c117ad62"
+    },
+    {
+      "id": "01a18f71-3099-7f92-86cc-fe6936352000",
+      "ticket": "FIX-13",
+      "file": "rollout-2026-10-31T01-52-02-01a18f71-3099-7f92-86cc-fe6936352000.jsonl",
+      "lines": 578,
+      "user_messages": 5,
+      "selected_commands": 38,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "56cd767c2a93ee75493cae697af1cef5242cd8c8ef3f5ecab6d0ac709185eb37"
+    },
+    {
+      "id": "01a18f71-84be-7e22-b62c-94a771bfd96b",
+      "ticket": "FIX-13",
+      "file": "rollout-2026-10-31T01-52-23-01a18f71-84be-7e22-b62c-94a771bfd96b.jsonl",
+      "lines": 72,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "f945fc108c027c4306212212a0c79be5d0406990749e98b66540c7a1ab447030"
+    },
+    {
+      "id": "01a18f74-29ae-7ad3-a44e-8f1868b69921",
+      "ticket": "FIX-13",
+      "file": "rollout-2026-10-31T01-55-17-01a18f74-29ae-7ad3-a44e-8f1868b69921.jsonl",
+      "lines": 212,
+      "user_messages": 5,
+      "selected_commands": 8,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "7809167ac48c3dc4545858b5737156fb7c87976df1adea5a7754898b82182e44"
+    },
+    {
+      "id": "01a18f76-24ef-7050-83be-f1fe5c83ba5e",
+      "ticket": "FIX-13",
+      "file": "rollout-2026-10-31T01-57-27-01a18f76-24ef-7050-83be-f1fe5c83ba5e.jsonl",
+      "lines": 169,
+      "user_messages": 5,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "72e055fc66cc4ae9b091c38ccde2f61a31085e6c6dbdb705265b7c881769cff1"
+    },
+    {
+      "id": "01a18f83-6fd2-7e22-badb-1bf0630a4912",
+      "ticket": "FIX-14",
+      "file": "rollout-2026-10-31T02-11-58-01a18f83-6fd2-7e22-badb-1bf0630a4912.jsonl",
+      "lines": 670,
+      "user_messages": 4,
+      "selected_commands": 49,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ab9c800548129647cf367120315ca6ca3b05f545ec9556ca9a346e207d202dad"
+    },
+    {
+      "id": "01a18f83-a855-75e1-b882-4f9c3e3b859f",
+      "ticket": "FIX-14",
+      "file": "rollout-2026-10-31T02-12-12-01a18f83-a855-75e1-b882-4f9c3e3b859f.jsonl",
+      "lines": 82,
+      "user_messages": 2,
+      "selected_commands": 1,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "1ecfc16d72c41556b7fa07910caf47622cae9b51c94cd659686a266fdc59f949"
+    },
+    {
+      "id": "01a18f84-d7d9-76c3-afc5-5b19354c765b",
+      "ticket": "FIX-14",
+      "file": "rollout-2026-10-31T02-13-30-01a18f84-d7d9-76c3-afc5-5b19354c765b.jsonl",
+      "lines": 96,
+      "user_messages": 3,
+      "selected_commands": 0,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "b203302d8fca86ba4d219b61e08b70bd535bbab9c88c3827f4234d0a077acbc6"
+    },
+    {
+      "id": "01a18f85-e73b-7b30-a9a2-cfefc1e407b9",
+      "ticket": "FIX-14",
+      "file": "rollout-2026-10-31T02-14-39-01a18f85-e73b-7b30-a9a2-cfefc1e407b9.jsonl",
+      "lines": 138,
+      "user_messages": 3,
+      "selected_commands": 10,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "a9ec3a0455f77d96019a4463670fda4c40599c60465a5daa6e5ccb2477911c12"
+    },
+    {
+      "id": "01a18f85-ec1d-7652-91cb-d69373ad8704",
+      "ticket": "FIX-14",
+      "file": "rollout-2026-10-31T02-14-41-01a18f85-ec1d-7652-91cb-d69373ad8704.jsonl",
+      "lines": 134,
+      "user_messages": 3,
+      "selected_commands": 9,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "17a30365e166ad54d96f210e76b7699872ada8fc8be9d6a688395c91ac8b9fb2"
+    },
+    {
+      "id": "01a18f89-1e41-7bf0-bea3-d2067ea2d4b4",
+      "ticket": null,
+      "file": "rollout-2026-10-31T02-18-10-01a18f89-1e41-7bf0-bea3-d2067ea2d4b4.jsonl",
+      "lines": 137,
+      "user_messages": 2,
+      "selected_commands": 5,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "5a3e278d3f2f71232914e23a49f5a461a3accbfac113f1844a83b504c7973ba9"
+    },
+    {
+      "id": "01a18f8c-bea4-7621-84e3-ea052ae4cbbd",
+      "ticket": "FIX-14",
+      "file": "rollout-2026-10-31T02-22-08-01a18f8c-bea4-7621-84e3-ea052ae4cbbd.jsonl",
+      "lines": 301,
+      "user_messages": 4,
+      "selected_commands": 41,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "ec12b676ef2320b10380cca4283a1eeb9256f7eda09313c3fed0ef4a294ddaba"
+    },
+    {
+      "id": "01a18f96-7879-7fd3-8edc-b4be0b7e09a4",
+      "ticket": null,
+      "file": "rollout-2026-10-31T02-32-45-01a18f96-7879-7fd3-8edc-b4be0b7e09a4.jsonl",
+      "lines": 312,
+      "user_messages": 3,
+      "selected_commands": 26,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "af1a308c370f95cea4a718436c8a9a227521e3a4b37f2b9f8ddb7258e93182f6"
+    },
+    {
+      "id": "01a18f9a-e23c-7da0-8132-12725696e1c8",
+      "ticket": null,
+      "file": "rollout-2026-10-31T02-37-34-01a18f9a-e23c-7da0-8132-12725696e1c8.jsonl",
+      "lines": 51,
+      "user_messages": 1,
+      "selected_commands": 2,
+      "review_level": "indexed; selected passages reviewed where cited",
+      "sha256": "3f526a97e0d663ce4522db72594d74802b8e320f933181b3e8f4b15eaf36c71e"
+    }
+  ],
+  "method": "Snapshot 2026-10-31. All alspaces/*/agentic_metrics.json parsed, no testdata. Local ~/.codex/sessions/**/*.jsonl selected by AgenticLens cwd or ledger session ID. Message counts include inherited replay; not unique user turns. Ledger sums are reported facts, not independent accuracy validation. Current audit session is indexed but excluded from findings."
+}

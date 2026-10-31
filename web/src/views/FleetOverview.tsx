@@ -1,3 +1,4 @@
+import { skillSuccessRate } from '../domain/aggregations';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
@@ -108,6 +109,9 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const skillAdoption = summary?.skill_adoption ?? [];
+  const successRate = skillSuccessRate(skillAdoption);
 
   const dateFilterControl = (
     <section className="date-filter-bar" aria-label="Date Range Filter">
@@ -241,6 +245,21 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
               secondary={`${summary.total_files_changed} files touched`}
               tooltip="Cumulative active agent execution time across all tickets (cumulative man-hours)."
             />
+          </section>
+
+          <section className="distribution-row" aria-label="Skill Adoption">
+            <div className="kpi-card">
+              <h2 className="kpi-title">Skill Adoption</h2>
+              <div className="kpi-value mono-number">{skillAdoption.length} unique skills</div>
+              <p>Overall skill success rate: {successRate === null ? 'Unavailable' : formatPercentage(successRate)}</p>
+              {skillAdoption.length === 0 ? <p>No recorded skills</p> : (
+                <ol aria-label="Top skills">
+                  {skillAdoption.slice(0, 3).map((skill) => (
+                    <li key={skill.name}>{skill.name}: {skill.total_invocations} invocations</li>
+                  ))}
+                </ol>
+              )}
+            </div>
           </section>
 
           {/* Fleet Anomaly and Reliability Profile Card */}

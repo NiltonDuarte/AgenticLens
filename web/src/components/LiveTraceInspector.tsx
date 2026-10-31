@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact, LiveAnomalyAlert } from '../domain/live';
-import { formatTokensK } from '../domain/formatters';
+import {
+  formatTokensK,
+  truncateMiddle,
+  formatLocalTimeWithMs,
+  formatLocalDateTimeTooltip,
+  getClientTimezoneBadge,
+} from '../domain/formatters';
+import { TraceInvocationBadge, type ChildSessionNavigation } from './TraceInvocationBadge';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { findMatchingLiveAlert, extractStreakCount } from '../domain/anomalies';
+import { orderLiveMessages, type LiveMessageOrder } from '../domain/liveMessageOrdering';
 import {
   generateSessionOverviewPrompt,
   generateMessageTurnPrompt,
@@ -11,14 +19,14 @@ import {
   translateRuleToPlainEnglish,
 } from '../utils/debugPrompt';
 
-export interface LiveTraceInspectorProps {
+export interface LiveTraceInspectorProps extends ChildSessionNavigation {
   readonly sessionNode: LiveSessionNode | null;
   readonly trace: LiveTraceView | null;
   readonly loading: boolean;
   readonly onClose: () => void;
 }
 
-interface MessageTurnProps {
+interface MessageTurnProps extends ChildSessionNavigation {
   readonly message: LiveMessageFact;
   readonly turnIndex: number;
   readonly sessionId: string;
@@ -26,7 +34,7 @@ interface MessageTurnProps {
   readonly anomalies?: readonly LiveAnomalyAlert[] | undefined;
 }
 
-interface MessagePartProps {
+interface MessagePartProps extends ChildSessionNavigation {
   readonly part: LivePartFact;
   readonly turn: number;
   readonly sessionId: string;
@@ -40,6 +48,8 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
   sessionId,
   messageId,
   consecutiveErrors,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -66,18 +76,27 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
   };
 
   return (
-    <div className={`trace-part-item ${part.is_error ? 'part-error' : 'part-normal'}`}>
+    <div className={`trace-part-item ${part.is_error ? 'part-error' : part.has_content_error ? 'part-content-error' : 'part-normal'}`}>
       <div className="part-header">
         <span className="part-type-badge">{part.type}</span>
         {part.tool_name && (
           <span className="part-tool-name">{part.tool_name}</span>
         )}
-        <span className={`part-status-badge status-${part.status.toLowerCase()}`}>
-          {part.status}
+        <TraceInvocationBadge
+          metadata={part.tool_name === 'skill' && part.skill_name
+            ? { kind: 'skill', name: part.skill_name }
+            : part.tool_name === 'task' && (part.subagent_type || part.child_session_id)
+              ? { kind: 'task', name: part.subagent_type || 'unknown', childSessionId: part.child_session_id }
+              : undefined}
+          availableSessionIds={availableSessionIds} onSelectSession={onSelectSession}
+        />
+        <span className={`part-status-badge ${part.is_error ? "status-error" : part.has_content_error ? "status-content-error" : `status-${part.status.toLowerCase()}`}`}>
+          {part.is_error ? 'EXEC ERROR' : part.has_content_error ? 'CONTENT ERROR' : part.status}
+
         </span>
         {part.id && (
           <div className="debug-id-token-group">
-            <span className="debug-id-token mono">{part.id}</span>
+            <span className="debug-id-token mono" title={part.id}>{truncateMiddle(part.id)}</span>
             <button
               type="button"
               className="btn-copy-id"
@@ -92,7 +111,7 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
       {part.input_snippet && (
         <div className="part-snippet input">
           <span className="part-snippet-label">Input:</span>
-          <pre className="part-code">{part.input_snippet}</pre>
+          <pre className="part-code" data-trace-anchor={`${part.id}:input`}>{part.input_snippet}</pre>
         </div>
       )}
       {part.output_snippet && (
@@ -100,7 +119,7 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
           <span className="part-snippet-label">
             {part.is_error ? 'Error Output:' : 'Output:'}
           </span>
-          <pre className={`part-code ${part.is_error ? 'error' : ''}`}>
+          <pre className={`part-code ${part.is_error ? 'error' : ''}`} data-trace-anchor={`${part.id}:output`}>
             {part.output_snippet}
           </pre>
         </div>
@@ -115,6 +134,8 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
   sessionId,
   model,
   anomalies,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
   const reasoning = message.reasoning_content;
@@ -154,16 +175,18 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
 
   return (
     <div className={`trace-message-turn role-${message.role.toLowerCase()}`} data-testid={`message-turn-${turnIndex}`}>
-      <div className="message-turn-header">
+      <div className="message-turn-header" data-trace-anchor={`${message.id}:header`}>
         <div className="message-turn-meta">
           <span className="turn-number-badge">Turn {turnIndex + 1}</span>
           <span className={`turn-role-pill role-${message.role.toLowerCase()}`}>
             {message.role.toUpperCase()}
           </span>
-          <span className="turn-timestamp">{message.timestamp}</span>
+          <span className="turn-timestamp" title={formatLocalDateTimeTooltip(message.timestamp)}>
+            {formatLocalTimeWithMs(message.timestamp)}
+          </span>
           {message.id && (
             <div className="debug-id-token-group">
-              <span className="debug-id-token mono">{message.id}</span>
+              <span className="debug-id-token mono" title={message.id}>{truncateMiddle(message.id)}</span>
               <button
                 type="button"
                 className="btn-copy-id"
@@ -216,12 +239,12 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
               {showReasoning ? 'Hide Reasoning' : 'Show Reasoning'}
             </button>
           </div>
-          <pre className="reasoning-content">{displayReasoning}</pre>
+          <pre className="reasoning-content" data-trace-anchor={`${message.id}:reasoning`}>{displayReasoning}</pre>
         </div>
       )}
 
       {message.content && message.content.trim().length > 0 && (
-        <div className="message-body-text">{message.content}</div>
+        <div className="message-body-text" data-trace-anchor={`${message.id}:body`}>{message.content}</div>
       )}
 
       {message.parts && message.parts.length > 0 && (
@@ -234,6 +257,8 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
               <LiveMessagePartItem
                 key={part.id}
                 part={part}
+                availableSessionIds={availableSessionIds}
+                onSelectSession={onSelectSession}
                 turn={turnIndex + 1}
                 sessionId={sessionId}
                 messageId={message.id}
@@ -252,8 +277,44 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   trace,
   loading,
   onClose,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isSessionCopied, setIsSessionCopied] = useState(false);
+  const [messageOrder, setMessageOrder] = useState<LiveMessageOrder>('latest-first');
+  const [newTurnsAvailable, setNewTurnsAvailable] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const pausedAtReadingPosition = useRef(false);
+  const previousMessageCount = useRef(trace?.messages.length ?? 0);
+  const previousScrollHeight = useRef(0);
+
+  const readingAnchor = useRef<{ element: HTMLElement; offset: number } | null>(null);
+  const captureReadingAnchor = (list: HTMLDivElement) => {
+    const top = list.getBoundingClientRect().top;
+    const element = Array.from(list.querySelectorAll<HTMLElement>('[data-trace-anchor]'))
+      .find((candidate) => candidate.getBoundingClientRect().bottom > top);
+    readingAnchor.current = element ? { element, offset: element.getBoundingClientRect().top - top } : null;
+  };
+
+  useLayoutEffect(() => {
+    const list = messageListRef.current;
+    const currentCount = trace?.messages.length ?? 0;
+    if (list && pausedAtReadingPosition.current) {
+      const anchor = readingAnchor.current;
+      if (anchor && list.contains(anchor.element)) {
+        list.scrollTop += anchor.element.getBoundingClientRect().top - list.getBoundingClientRect().top - anchor.offset;
+      } else if (messageOrder === 'latest-first') {
+        list.scrollTop += list.scrollHeight - previousScrollHeight.current;
+      }
+      if (currentCount > previousMessageCount.current) setNewTurnsAvailable(true);
+    }
+    previousMessageCount.current = currentCount;
+    if (list) {
+      previousScrollHeight.current = list.scrollHeight;
+      captureReadingAnchor(list);
+    }
+  }, [trace, messageOrder]);
+  const [isFailedToolsExpanded, setIsFailedToolsExpanded] = useState(false);
 
   if (!sessionNode) {
     return (
@@ -299,6 +360,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
     <div className="live-trace-inspector-container" data-testid="live-trace-inspector">
       <div className="inspector-header">
         <div className="inspector-title-group">
+          <span className="inspector-timezone-badge">{getClientTimezoneBadge()}</span>
           <div className="inspector-session-row">
             <span className="inspector-session-id">Session: {sessionNode.id}</span>
             <button
@@ -326,6 +388,8 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
                 <span className={`inspector-stat ${trace.failed_tool_calls > 0 ? 'text-error' : ''}`}>
                   Failed Tools: <strong>{trace.failed_tool_calls}</strong>
                 </span>
+                <span className="inspector-stat text-content-error">Content Errors: <strong>{trace.content_errors ?? trace.messages.flatMap((message) => message.parts).filter((part) => part.has_content_error).length}</strong>
+                </span>
               </>
             )}
           </div>
@@ -349,13 +413,32 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
       {hasFailedTools && trace && trace.recent_errors.length > 0 && (
         <section
           className="inspector-failed-tools-section"
-          aria-label="Failed Tool Calls"
+          aria-labelledby="failed-tools-heading"
         >
-          <h4 className="failed-tools-heading">
-            Failed Tool Calls ({trace.failed_tool_calls})
-          </h4>
-          <div className="failed-tools-cards-list">
-            {trace.recent_errors.map((errorPart, idx) => {
+          <div className="failed-tools-summary">
+            <h4 id="failed-tools-heading" className="failed-tools-heading">
+              <span className="failed-tools-badge">
+                Failed Tool Calls: {trace.failed_tool_calls}
+              </span>
+            </h4>
+            <button
+              type="button"
+              className="failed-tools-toggle-btn"
+              data-testid="failed-tools-toggle-btn"
+              aria-expanded={isFailedToolsExpanded}
+              aria-controls="failed-tools-cards"
+              aria-label={`${isFailedToolsExpanded ? 'Hide' : 'Show'} failed tool call details`}
+              onClick={() => setIsFailedToolsExpanded((expanded) => !expanded)}
+            >
+              {isFailedToolsExpanded ? 'Hide details' : 'Show details'}
+            </button>
+          </div>
+          <div
+            className="failed-tools-cards-list"
+            id="failed-tools-cards"
+            hidden={!isFailedToolsExpanded}
+          >
+            {isFailedToolsExpanded && trace.recent_errors.map((errorPart, idx) => {
               const matchedAlert = findMatchingLiveAlert(errorPart, trace.anomalies);
               const streakCount = extractStreakCount(matchedAlert);
               const parentMsg = trace.messages.find((m) =>
@@ -382,27 +465,104 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
       )}
 
       {trace && (
-        <section className="inspector-messages-section" aria-label="Chronological Message Turns">
-          <h4 className="messages-heading">
-            Execution Message Stream ({trace.messages.length} turns)
-          </h4>
+        <section className="inspector-messages-section" aria-label="Message Turns">
+          <div className="messages-heading">
+            <h4>Execution Message Stream ({trace.messages.length} turns)</h4>
+            {trace.messages.length > 0 && (
+              <div className="messages-controls">
+                <span className="message-order-label" aria-live="polite">
+                  {messageOrder === 'latest-first' ? 'Latest First' : 'Oldest First'}
+                </span>
+                <button
+                  type="button"
+                  className="inspector-message-control"
+                  data-testid="turn-order-toggle-btn"
+                  aria-label={`Switch to ${messageOrder === 'latest-first' ? 'Oldest First' : 'Latest First'}`}
+                  onClick={() => {
+                    setMessageOrder((current) => current === 'latest-first' ? 'oldest-first' : 'latest-first');
+                    setNewTurnsAvailable(false);
+                  }}
+                >
+                  Switch Order
+                </button>
+                <button
+                  type="button"
+                  className="inspector-message-control"
+                  data-testid="scroll-to-top-btn"
+                  onClick={() => {
+                    const list = messageListRef.current;
+                    if (!list) return;
+                    if (typeof list.scrollTo === 'function') list.scrollTo({ top: 0, behavior: 'smooth' });
+                    else list.scrollTop = 0;
+                    pausedAtReadingPosition.current = false;
+                    setNewTurnsAvailable(false);
+                  }}
+                >Scroll to Top</button>
+                <button
+                  type="button"
+                  className="inspector-message-control"
+                  data-testid="scroll-to-bottom-btn"
+                  onClick={() => {
+                    const list = messageListRef.current;
+                    if (!list) return;
+                    if (typeof list.scrollTo === 'function') list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
+                    else list.scrollTop = list.scrollHeight;
+                    pausedAtReadingPosition.current = false;
+                    setNewTurnsAvailable(false);
+                  }}
+                >Scroll to Bottom</button>
+              </div>
+            )}
+          </div>
           {trace.messages.length === 0 ? (
             <div className="inspector-no-messages">
               No message turns recorded for this session yet.
             </div>
           ) : (
-            <div className="inspector-messages-list">
-              {trace.messages.map((msg, idx) => (
-                <LiveMessageTurnItem
-                  key={msg.id || `msg-${idx}`}
-                  message={msg}
-                  turnIndex={idx}
-                  sessionId={sessionNode.id}
-                  model={sessionNode.model}
-                  anomalies={trace.anomalies}
-                />
-              ))}
-            </div>
+            <>
+              {newTurnsAvailable && (
+                <button
+                  type="button"
+                  className="new-turns-available"
+                  onClick={() => {
+                    const list = messageListRef.current;
+                    if (!list) return;
+                    const latestAtTop = messageOrder === 'latest-first';
+                    if (typeof list.scrollTo === 'function') list.scrollTo({ top: latestAtTop ? 0 : list.scrollHeight, behavior: 'smooth' });
+                    else list.scrollTop = latestAtTop ? 0 : list.scrollHeight;
+                    pausedAtReadingPosition.current = false;
+                    setNewTurnsAvailable(false);
+                  }}
+                >New turns available. Jump to latest</button>
+              )}
+              <div
+                ref={messageListRef}
+                className="inspector-messages-list"
+                onScroll={(event) => {
+                  const list = event.currentTarget;
+                  previousScrollHeight.current = list.scrollHeight;
+                  captureReadingAnchor(list);
+                  const distanceFromLatest = messageOrder === 'latest-first'
+                    ? list.scrollTop
+                    : list.scrollHeight - list.clientHeight - list.scrollTop;
+                  pausedAtReadingPosition.current = distanceFromLatest > 50;
+                  if (!pausedAtReadingPosition.current) setNewTurnsAvailable(false);
+                }}
+              >
+                {orderLiveMessages(trace.messages, messageOrder).map(({ message: msg, turnIndex: idx }) => (
+                  <LiveMessageTurnItem
+                    key={msg.id || `msg-${idx}`}
+                    message={msg}
+                    turnIndex={idx}
+                    availableSessionIds={availableSessionIds}
+                    onSelectSession={onSelectSession}
+                    sessionId={sessionNode.id}
+                    model={sessionNode.model}
+                    anomalies={trace.anomalies}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </section>
       )}

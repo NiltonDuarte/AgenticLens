@@ -1,7 +1,6 @@
 package domain_test
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -282,510 +281,35 @@ func TestInferTicketID_AdversarialSuite(t *testing.T) {
 	}
 }
 
-func TestClassifyToolFailure(t *testing.T) {
+func TestClassifyToolExecution(t *testing.T) {
 	tests := []struct {
-		name              string
-		toolName          string
-		status            string
-		output            string
-		consecutiveErrors int
-		expectedIsError   bool
-		expectedSeverity  domain.FailureSeverity
-		expectNilMsg      bool
+		name, tool, status, output string
+		consecutiveErrors          int
+		wantError                  bool
+		wantSeverity               domain.FailureSeverity
 	}{
-		{
-			name:              "python traceback triggers high severity",
-			toolName:          "python",
-			status:            "completed",
-			output:            "Traceback (most recent call last):\n  File main.py, line 2\nZeroDivisionError",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			expectNilMsg:      false,
-		},
-		{
-			name:              "go panic triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "panic: runtime error: index out of range [0] with length 0",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			expectNilMsg:      false,
-		},
-		{
-			name:              "critical segmentation fault triggers high severity",
-			toolName:          "bash",
-			status:            "failed",
-			output:            "segmentation fault (core dumped)",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			expectNilMsg:      false,
-		},
-		{
-			name:              "consecutive errors escalate medium to high",
-			toolName:          "bash",
-			status:            "error",
-			output:            "exit status 1",
-			consecutiveErrors: 2,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			expectNilMsg:      false,
-		},
-		{
-			name:              "missing resource triggers medium severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "cat: file.txt: No such file or directory",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "medium",
-			expectNilMsg:      false,
-		},
-		{
-			name:              "network timeout triggers medium severity",
-			toolName:          "curl",
-			status:            "failed",
-			output:            "curl: (7) Failed to connect: connection refused",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "medium",
-			expectNilMsg:      false,
-		},
-		{
-			name:              "benign empty search on grep triggers low severity",
-			toolName:          "grep",
-			status:            "error",
-			output:            "exit status 1",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "low",
-			expectNilMsg:      false,
-		},
-		{
-			name:              "benign empty search on glob triggers low severity",
-			toolName:          "glob",
-			status:            "completed",
-			output:            "no matches found",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-			expectNilMsg:      true,
-		},
-		{
-			name:              "successful execution returns none severity",
-			toolName:          "bash",
-			status:            "completed",
-			output:            "all tests pass cleanly",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-			expectNilMsg:      true,
-		},
-		{
-			name:              "read tool with status completed containing syntax error is not error",
-			toolName:          "read",
-			status:            "completed",
-			output:            "syntax error: unexpected token in documentation example",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-			expectNilMsg:      true,
-		},
-		{
-			name:              "read tool reading markdown with traceback and panic is not error",
-			toolName:          "read",
-			status:            "completed",
-			output:            "# Error Guide\nTraceback (most recent call last):\npanic: runtime error\nbuild failed\nError: something broke",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-			expectNilMsg:      true,
-		},
-		{
-			name:              "webfetch with status completed containing error text is not error",
-			toolName:          "webfetch",
-			status:            "completed",
-			output:            "HTTP 200 OK - Content: Error: file not found on remote wiki",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-			expectNilMsg:      true,
-		},
-		{
-			name:              "read tool with status error and missing file is error",
-			toolName:          "read",
-			status:            "error",
-			output:            "no such file or directory",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "medium",
-			expectNilMsg:      false,
-		},
-		{
-			name:              "read tool with status error and file not found is error",
-			toolName:          "read",
-			status:            "error",
-			output:            "file not found: /workspace/docs/missing.md",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "medium",
-			expectNilMsg:      false,
-		},
+		{"completed semantic error text", "bash", "completed", "syntax error in documentation", 0, false, domain.SeverityNone},
+		{"completed traceback text", "read", "completed", "Traceback (most recent call last): example", 0, false, domain.SeverityNone},
+		{"explicit status error", "edit", "error", "", 0, true, domain.SeverityMedium},
+		{"explicit failed status", "bash", "failed", "", 0, true, domain.SeverityMedium},
+		{"nonzero exit", "bash", "completed", "exit status 2", 0, true, domain.SeverityMedium},
+		{"grep no match exit one", "grep", "completed", "exit status 1", 0, false, domain.SeverityNone},
+		{"grep no match cannot override explicit error status", "grep", "error", "exit status 1", 0, true, domain.SeverityMedium},
+		{"glob no match cannot override explicit failed status", "glob", "failed", "no matches", 0, true, domain.SeverityMedium},
+		{"glob zero matches", "glob", "completed", "0 matches", 0, false, domain.SeverityNone},
+		{"timeout", "bash", "completed", "operation timed out", 0, true, domain.SeverityMedium},
+		{"permission denied", "bash", "completed", "permission denied", 0, true, domain.SeverityMedium},
+		{"completed panic diagnostic", "bash", "completed", "panic: runtime failure", 0, false, domain.SeverityNone},
+		{"consecutive errors escalate", "bash", "failed", "exit status 1", 2, true, domain.SeverityHigh},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isErr, sev, errMsg := domain.ClassifyToolFailure(tt.toolName, tt.status, tt.output, tt.consecutiveErrors)
-
-			if isErr != tt.expectedIsError {
-				t.Errorf("ClassifyToolFailure() isError = %v, expected %v", isErr, tt.expectedIsError)
+			got := domain.ClassifyToolExecution(tt.tool, tt.status, tt.output, tt.consecutiveErrors)
+			if got.IsError != tt.wantError || got.Severity != tt.wantSeverity {
+				t.Fatalf("got error=%v severity=%s; want error=%v severity=%s", got.IsError, got.Severity, tt.wantError, tt.wantSeverity)
 			}
-			if sev != tt.expectedSeverity {
-				t.Errorf("ClassifyToolFailure() severity = %s, expected %s", sev, tt.expectedSeverity)
-			}
-			if tt.expectNilMsg {
-				if errMsg != nil {
-					t.Errorf("ClassifyToolFailure() expected nil error message, got %s", *errMsg)
-				}
-			} else {
-				if errMsg == nil {
-					t.Errorf("ClassifyToolFailure() expected non-nil error message")
-				}
-			}
-		})
-	}
-}
-
-func TestClassifyToolFailure_ContentInspectionTools_CompletedStatusBypassesContentErrors(t *testing.T) {
-	t.Parallel()
-
-	tools := []string{"read", "grep", "glob", "webfetch", "READ", "Grep", "GLOB", "WebFetch"}
-	statuses := []string{"completed", "Completed", "COMPLETED", "  completed  "}
-	errorOutputs := []struct {
-		name    string
-		content string
-	}{
-		{"syntax error signature", "syntax error: unexpected token < in expression"},
-		{"panic signature", "panic: runtime error: index out of range [5] with length 2"},
-		{"build failed signature", "cargo build: build failed with exit status 1"},
-		{"traceback signature", "Traceback (most recent call last):\n  File 'parser.py', line 12\nKeyError: 'token'"},
-		{"permission denied signature", "sh: /usr/local/bin/curl: permission denied"},
-		{"error prefix signature", "Error: failed to fetch remote repository manifest"},
-		{"multiline combined error document", "# Troubleshooting Guide\nError: compilation failed\nsyntax error: invalid syntax\npanic: nil pointer dereference\nbuild failed\nTraceback (most recent call last):\npermission denied"},
-	}
-
-	for _, tool := range tools {
-		for _, status := range statuses {
-			for _, eo := range errorOutputs {
-				testName := fmt.Sprintf("tool=%s/status=%s/output=%s", tool, strings.TrimSpace(status), eo.name)
-				t.Run(testName, func(t *testing.T) {
-					isErr, sev, errMsg := domain.ClassifyToolFailure(tool, status, eo.content, 0)
-					if isErr {
-						t.Errorf("expected isError=false for %s with status completed, got true", tool)
-					}
-					if sev != domain.SeverityNone {
-						t.Errorf("expected severity=none, got %s", sev)
-					}
-					if errMsg != nil {
-						t.Errorf("expected nil error message, got %v", *errMsg)
-					}
-				})
-			}
-		}
-	}
-
-	// Adversarial: Verify that status="error" or status="failed" does NOT bypass error classification for inspection tools
-	t.Run("inspection tools with status error still return isError=true", func(t *testing.T) {
-		errorCases := []struct {
-			tool     string
-			status   string
-			output   string
-			expected string
-		}{
-			{"read", "error", "file not found", "file not found"},
-			{"read", "failed", "no such file or directory", "no such file or directory"},
-			{"read", "error", "permission denied: cannot open file", "permission denied"},
-			{"grep", "error", "command failed: exit status 2", "command failed"},
-			{"glob", "error", "path does not exist", "path does not exist"},
-			{"webfetch", "error", "connection refused", "connection refused"},
-		}
-
-		for _, tc := range errorCases {
-			t.Run(fmt.Sprintf("%s_%s_%s", tc.tool, tc.status, tc.expected), func(t *testing.T) {
-				isErr, sev, errMsg := domain.ClassifyToolFailure(tc.tool, tc.status, tc.output, 0)
-				if !isErr {
-					t.Errorf("expected isError=true for %s with status=%s, got false", tc.tool, tc.status)
-				}
-				if sev == domain.SeverityNone {
-					t.Errorf("expected severity != none for tool error, got %s", sev)
-				}
-				if errMsg == nil {
-					t.Errorf("expected non-nil error message for %s with status=%s", tc.tool, tc.status)
-				}
-			})
-		}
-	})
-}
-
-func TestClassifyToolFailure_AdversarialSuite(t *testing.T) {
-	tests := []struct {
-		name              string
-		toolName          string
-		status            string
-		output            string
-		consecutiveErrors int
-		expectedIsError   bool
-		expectedSeverity  domain.FailureSeverity
-		assertMsgContains string
-	}{
-		// Fatal Go errors
-		{
-			name:              "go fatal error deadlock triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "fatal error: all goroutines are asleep - deadlock!",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "deadlock",
-		},
-		// Node unhandled promise rejection
-		{
-			name:              "node unhandled promise rejection triggers high severity",
-			toolName:          "node",
-			status:            "completed",
-			output:            "(node:1234) UnhandledPromiseRejection: TypeError: Cannot read properties of undefined",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "UnhandledPromiseRejection",
-		},
-		// Compiler errors
-		{
-			name:              "syntax error in go build triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "backend/main.go:12:3: syntax error: unexpected semicolon, expecting comma or }",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "syntax error",
-		},
-		{
-			name:              "missing package compilation error triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "cannot find package \"example.com/foo/bar\" in any of:\n\t/usr/local/go/src",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "cannot find package",
-		},
-		{
-			name:              "go build error triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "go build ./cmd/agentic-lens: error reading source file",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "go build",
-		},
-		{
-			name:              "compilation error string triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "compilation error: type mismatch in assignment",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "compilation error",
-		},
-		// System faults
-		{
-			name:              "out of memory triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "fatal: out of memory allocating 4194304 bytes",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "out of memory",
-		},
-		{
-			name:              "process killed triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "command terminated: killed by signal 9",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "killed",
-		},
-		{
-			name:              "permission denied triggers high severity",
-			toolName:          "bash",
-			status:            "error",
-			output:            "/bin/sh: /usr/local/bin/deploy: Permission denied",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "Permission denied",
-		},
-		// Consecutive error escalation
-		{
-			name:              "consecutiveErrors 1 remains medium",
-			toolName:          "bash",
-			status:            "error",
-			output:            "exit status 1",
-			consecutiveErrors: 1,
-			expectedIsError:   true,
-			expectedSeverity:  "medium",
-			assertMsgContains: "exit status 1",
-		},
-		{
-			name:              "consecutiveErrors 2 escalates benign empty search to high",
-			toolName:          "grep",
-			status:            "error",
-			output:            "exit status 1",
-			consecutiveErrors: 2,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "exit status 1",
-		},
-		{
-			name:              "consecutiveErrors 5 escalates missing resource to high",
-			toolName:          "bash",
-			status:            "error",
-			output:            "cat: config.json: path does not exist",
-			consecutiveErrors: 5,
-			expectedIsError:   true,
-			expectedSeverity:  "high",
-			assertMsgContains: "path does not exist",
-		},
-		// Timeouts and network errors
-		{
-			name:              "context deadline exceeded triggers medium severity",
-			toolName:          "http",
-			status:            "error",
-			output:            "Get \"http://localhost:8080\": context deadline exceeded",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "medium",
-			assertMsgContains: "context deadline exceeded",
-		},
-		{
-			name:              "io timeout triggers medium severity",
-			toolName:          "tcp",
-			status:            "error",
-			output:            "read tcp 127.0.0.1: i/o timeout",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "medium",
-			assertMsgContains: "i/o timeout",
-		},
-		// Soft user cancellations
-		{
-			name:              "operation canceled triggers low severity",
-			toolName:          "bash",
-			status:            "failed",
-			output:            "operation canceled by interactive prompt",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "low",
-			assertMsgContains: "operation canceled",
-		},
-		{
-			name:              "user cancelled triggers low severity",
-			toolName:          "prompt",
-			status:            "error",
-			output:            "user cancelled confirmation",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "low",
-			assertMsgContains: "user cancelled",
-		},
-		// Benign grep empty matches
-		{
-			name:              "grep 0 matches found triggers low severity",
-			toolName:          "grep",
-			status:            "completed",
-			output:            "0 matches found across files",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-			assertMsgContains: "",
-		},
-		{
-			name:              "glob no matching files triggers low severity",
-			toolName:          "glob",
-			status:            "completed",
-			output:            "no matching files in search directory",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-			assertMsgContains: "",
-		},
-		// Clean / Success outputs with innocent words
-		{
-			name:              "completed with empty output returns none",
-			toolName:          "bash",
-			status:            "completed",
-			output:            "",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-		},
-		{
-			name:              "completed with whitespace only returns none",
-			toolName:          "bash",
-			status:            "completed",
-			output:            "   \n\t  ",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-		},
-		{
-			name:              "completed with text containing terror substring is not an error",
-			toolName:          "bash",
-			status:            "completed",
-			output:            "No terrorism or error detected in system scan",
-			consecutiveErrors: 0,
-			expectedIsError:   false,
-			expectedSeverity:  "none",
-		},
-		// Error status with blank output fallback
-		{
-			name:              "error status with blank output falls back to status string",
-			toolName:          "bash",
-			status:            "error",
-			output:            "",
-			consecutiveErrors: 0,
-			expectedIsError:   true,
-			expectedSeverity:  "medium",
-			assertMsgContains: "error",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			isErr, sev, errMsg := domain.ClassifyToolFailure(tt.toolName, tt.status, tt.output, tt.consecutiveErrors)
-
-			if isErr != tt.expectedIsError {
-				t.Errorf("isError = %v, expected %v", isErr, tt.expectedIsError)
-			}
-			if sev != tt.expectedSeverity {
-				t.Errorf("severity = %s, expected %s", sev, tt.expectedSeverity)
-			}
-			if tt.assertMsgContains != "" {
-				if errMsg == nil {
-					t.Fatalf("expected non-nil error message containing %q, got nil", tt.assertMsgContains)
-				}
-				if !strings.Contains(*errMsg, tt.assertMsgContains) {
-					t.Errorf("error message %q does not contain expected substring %q", *errMsg, tt.assertMsgContains)
-				}
+			if got.IsError != (got.ErrorMessage != nil) {
+				t.Fatalf("error message presence does not match failure state: %#v", got)
 			}
 		})
 	}
@@ -1311,4 +835,37 @@ func TestEventsFromLiveTrace(t *testing.T) {
 			t.Errorf("expected 14000 context tokens propagated to compaction, got %d", comp0.ContextTokens)
 		}
 	})
+}
+
+func TestLiveTracesEqualDetectsInPlaceChanges(t *testing.T) {
+	base := func() domain.LiveTraceView {
+		return domain.LiveTraceView{SessionID: "session", Messages: []domain.LiveMessageFact{{ID: "turn", Content: "before", Parts: []domain.LivePartFact{{ID: "part", Status: "running"}}}}}
+	}
+	cases := []struct {
+		name   string
+		change func(*domain.LiveTraceView)
+	}{
+		{"content", func(trace *domain.LiveTraceView) { trace.Messages[0].Content = "after" }},
+		{"tokens", func(trace *domain.LiveTraceView) { trace.Messages[0].ReasoningTokens = 20 }},
+		{"reasoning", func(trace *domain.LiveTraceView) { text := "thought"; trace.Messages[0].ReasoningContent = &text }},
+		{"tool output", func(trace *domain.LiveTraceView) { trace.Messages[0].Parts[0].OutputSnippet = "result" }},
+		{"tool status", func(trace *domain.LiveTraceView) { trace.Messages[0].Parts[0].Status = "completed" }},
+		{"child link", func(trace *domain.LiveTraceView) { trace.Messages[0].Parts[0].ChildSessionID = "child" }},
+		{"failure count", func(trace *domain.LiveTraceView) { trace.FailedToolCalls = 1 }},
+		{"anomaly", func(trace *domain.LiveTraceView) {
+			trace.Anomalies = []domain.LiveAnomalyAlert{{SessionID: "session", Message: "alert"}}
+		}},
+	}
+	if !domain.LiveTracesEqual(base(), base()) {
+		t.Fatal("equal values should compare equal")
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			before, after := base(), base()
+			tc.change(&after)
+			if domain.LiveTracesEqual(before, after) {
+				t.Fatal("same-count source edit was suppressed")
+			}
+		})
+	}
 }

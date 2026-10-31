@@ -23,6 +23,14 @@ function occurrenceOf(event: EventFact): string {
 function enrichEvent(recorded: EventFact, local: EventFact): EventFact {
   return {
     ...recorded,
+    // Only a positive local warning may replace recorded diagnostic metadata.
+    ...(local.has_content_error ? {
+      has_content_error: true,
+      ...(local.content_severity && local.content_severity !== 'none'
+        ? { content_severity: local.content_severity } : {}),
+      ...(local.content_error_snippet
+        ? { content_error_snippet: local.content_error_snippet } : {}),
+    } : {}),
     event_id: recorded.event_id || local.event_id,
     message_id: local.message_id || recorded.message_id,
     error_message: local.error_message || recorded.error_message,

@@ -1,8 +1,26 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { LiveTraceInspector } from './LiveTraceInspector';
 import type { LiveSessionNode, LiveTraceView, LivePartFact } from '../domain/live';
 import { mockLiveTraceView } from '../test/fixtures/mockData';
+
+const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+
+function mockClipboard(writeText: (text: string) => Promise<void>): void {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText },
+  });
+}
+
+afterEach(() => {
+  if (originalClipboardDescriptor) {
+    Object.defineProperty(navigator, 'clipboard', originalClipboardDescriptor);
+  } else {
+    Reflect.deleteProperty(navigator, 'clipboard');
+  }
+});
 
 describe('LiveTraceInspector Component', () => {
   const mockNode: LiveSessionNode = {
@@ -19,6 +37,57 @@ describe('LiveTraceInspector Component', () => {
     anomalies: [],
     sub_sessions: [],
   };
+
+  it('renders independent execution and semantic error counters', () => {
+    render(<LiveTraceInspector sessionNode={mockNode} trace={{...mockLiveTraceView,failed_tool_calls:1,content_errors:2}} loading={false} onClose={vi.fn()} />);
+    expect(screen.getByText(/Failed Tools:/)).toHaveTextContent('Failed Tools: 1');
+    expect(screen.getByText(/Content Errors:/)).toHaveTextContent('Content Errors: 2');
+  });
+
+  it('keeps warning task navigation, diagnostic copy and execution expansion beside rich invocations', async () => {
+    const select = vi.fn();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    mockClipboard(writeText);
+    const baseMessage = mockLiveTraceView.messages[0];
+    if (!baseMessage) throw new Error('Missing trace fixture message');
+    const failedPart: LivePartFact = { id: 'failed-task', type: 'tool', tool_name: 'bash', status: 'error', is_error: true, error_message: 'exit code 1', output_snippet: 'process failed' };
+    const trace: LiveTraceView = { ...mockLiveTraceView, total_tool_calls: 4, failed_tool_calls: 1, content_errors: 1, recent_errors: [failedPart], messages: [{ ...baseMessage, reasoning_content: 'Inspect the child diagnostic. '.repeat(20), parts: [
+      { id: 'skill-part', type: 'tool', tool_name: 'skill', skill_name: 'agentic-lens-dev', status: 'completed', is_error: false },
+      { id: 'known-task', type: 'tool', tool_name: 'task', subagent_type: 'coder', child_session_id: 'known-child', status: 'completed', is_error: false, has_content_error: true, content_severity: 'medium', content_error_snippet: 'syntax error: child result', output_snippet: 'syntax error: child result' },
+      { id: 'pending-task', type: 'tool', tool_name: 'task', subagent_type: 'tester', child_session_id: 'pending-child', status: 'running', is_error: false },
+      failedPart,
+    ] }] };
+    render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()}
+      availableSessionIds={['known-child']} onSelectSession={select} />);
+    expect(screen.getByText('[skill: agentic-lens-dev]')).toHaveAttribute('title', '[skill: agentic-lens-dev]');
+    const warning = screen.getByText('CONTENT ERROR').closest('.trace-part-item');
+    expect(warning).toHaveClass('part-content-error');
+    expect(screen.getByText('EXEC ERROR').closest('.trace-part-item')).toHaveClass('part-error');
+    expect(screen.getByText(/Failed Tools:/)).toHaveTextContent('Failed Tools: 1');
+    expect(screen.getByText(/Content Errors:/)).toHaveTextContent('Content Errors: 1');
+    expect(screen.getByTestId('failed-tools-toggle-btn')).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
+    expect(screen.getAllByTestId('failed-tool-alert-card')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', {name: 'Show Reasoning'}));
+    expect(screen.getByRole('button', {name: 'Hide Reasoning'})).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole('button', {name: 'Copy tool execution debug prompt for part known-task'})); });
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('syntax error: child result'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('completed'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect child session known-child' }));
+    expect(select).toHaveBeenCalledWith('known-child');
+    expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy child session ID pending-child' })); });
+    expect(writeText).toHaveBeenCalledWith('pending-child');
+    const copyChild = screen.getByRole('button', { name: 'Copy child session ID pending-child' });
+    expect(copyChild).toHaveTextContent('Copied');
+    writeText.mockRejectedValueOnce(new Error('Clipboard denied'));
+    await act(async () => { fireEvent.click(copyChild); });
+    expect(copyChild).toHaveTextContent('Copy failed');
+    expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toHaveTextContent('pending-child');
+    expect(select).toHaveBeenCalledTimes(1);
+
+  });
 
   it('renders placeholder prompt when sessionNode is null', () => {
     render(
@@ -49,7 +118,7 @@ describe('LiveTraceInspector Component', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders chronological message stream with role tags and formatted token summaries', () => {
+  it('renders latest-first message stream with role tags and formatted token summaries', () => {
     render(
       <LiveTraceInspector
         sessionNode={mockNode}
@@ -66,10 +135,33 @@ describe('LiveTraceInspector Component', () => {
     expect(screen.getByTestId('message-turn-1')).toBeInTheDocument();
     expect(screen.getByTestId('message-turn-2')).toBeInTheDocument();
     expect(screen.getByTestId('message-turn-3')).toBeInTheDocument();
+    const messageList = document.querySelector('.inspector-messages-list');
+    expect(messageList?.firstElementChild).toHaveAttribute('data-testid', 'message-turn-3');
 
     expect(
       screen.getByText('Implement Live Observability Dashboard components and streaming client for ticket AL-20.')
     ).toBeInTheDocument();
+
+    const timestamp = screen.getAllByText(/\d{2}:\d{2}:\d{2}\.\d{3}/)[0]!;
+    expect(timestamp).toHaveClass('turn-timestamp');
+    expect(timestamp).toHaveAttribute('title', expect.stringMatching(/\d{4}/));
+    expect(screen.getByText(`TZ: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`)).toHaveClass('inspector-timezone-badge');
+  });
+
+  it('preserves malformed message timestamps as the visible time and tooltip fallback', () => {
+    const malformedTimestamp = 'not-a-valid-timestamp';
+    const trace: LiveTraceView = {
+      ...mockLiveTraceView,
+      messages: mockLiveTraceView.messages.map((message, index) =>
+        index === 0 ? { ...message, timestamp: malformedTimestamp } : message
+      ),
+    };
+
+    render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()} />);
+
+    const timestamp = screen.getByText(malformedTimestamp);
+    expect(timestamp).toHaveClass('turn-timestamp');
+    expect(timestamp).toHaveAttribute('title', malformedTimestamp);
   });
 
   it('renders collapsible model reasoning block with expand/collapse toggle', () => {
@@ -85,10 +177,12 @@ describe('LiveTraceInspector Component', () => {
     const bubbles = screen.getAllByTestId('reasoning-bubble');
     expect(bubbles.length).toBeGreaterThan(0);
 
-    // First bubble reasoning is long (> 300 chars), so initially shows 'Show Reasoning'
-    const firstBubble = bubbles[0]!;
-    const toggleBtn = within(firstBubble).getByRole('button');
-    expect(toggleBtn).toHaveTextContent('Show Reasoning');
+    // Find a collapsed long reasoning bubble without depending on display order.
+    const collapsedBubble = bubbles.find((bubble) =>
+      within(bubble).getByRole('button').textContent?.includes('Show Reasoning'),
+    );
+    expect(collapsedBubble).toBeDefined();
+    const toggleBtn = within(collapsedBubble!).getByRole('button');
 
     // Click to show reasoning
     fireEvent.click(toggleBtn);
@@ -99,7 +193,7 @@ describe('LiveTraceInspector Component', () => {
     expect(toggleBtn).toHaveTextContent('Show Reasoning');
   });
 
-  it('prioritizes failed tool calls in prominent top-level alert cards above message turns', () => {
+  it('shows a prominent collapsed failure summary while keeping the message stream visible', () => {
     render(
       <LiveTraceInspector
         sessionNode={mockNode}
@@ -111,10 +205,55 @@ describe('LiveTraceInspector Component', () => {
 
     const failedSection = screen.getByRole('region', { name: /failed tool calls/i });
     expect(failedSection).toBeInTheDocument();
-    expect(screen.getByText('Failed Tool Calls (3)')).toBeInTheDocument();
+    expect(screen.getByText('Failed Tool Calls: 3')).toBeInTheDocument();
+    const toggle = screen.getByTestId('failed-tools-toggle-btn');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('failed-tool-alert-card')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Message Turns')).toBeInTheDocument();
+    expect(screen.getByText('Execution Message Stream (4 turns)')).toBeInTheDocument();
+  });
 
+  it('expands and collapses failed tool details with the toggle button', () => {
+    render(
+      <LiveTraceInspector
+        sessionNode={mockNode}
+        trace={mockLiveTraceView}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    const toggle = screen.getByTestId('failed-tools-toggle-btn');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const failedCards = screen.getAllByTestId('failed-tool-alert-card');
     expect(failedCards.length).toBe(3);
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('failed-tool-alert-card')).not.toBeInTheDocument();
+  });
+
+  it('supports Enter and Space keyboard activation on the failure toggle', async () => {
+    const user = userEvent.setup();
+    render(
+      <LiveTraceInspector
+        sessionNode={mockNode}
+        trace={mockLiveTraceView}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    const toggle = screen.getByTestId('failed-tools-toggle-btn');
+    toggle.focus();
+    await user.keyboard('{Enter}');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByTestId('failed-tool-alert-card')).toHaveLength(3);
+
+    await user.keyboard(' ');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('failed-tool-alert-card')).not.toBeInTheDocument();
   });
 
   it('invokes onClose when Close button is clicked', () => {
@@ -131,6 +270,81 @@ describe('LiveTraceInspector Component', () => {
     const closeBtn = screen.getByRole('button', { name: /close/i });
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('middle-truncates visible message and part IDs while titles and copied prompts retain full IDs', async () => {
+    vi.useFakeTimers();
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const messageId = 'ses_0192a83e-unique-x-304a';
+    const partId = 'part_1234567_middle_987654';
+    const trace: LiveTraceView = {
+      session_id: 'ses-truncation-test',
+      messages: [
+        {
+          id: messageId,
+          role: 'assistant',
+          content: 'Identifier truncation check',
+          timestamp: '2026-10-31T12:00:00Z',
+          parts: [
+            {
+              id: partId,
+              type: 'tool',
+              tool_name: 'bash',
+              status: 'completed',
+              is_error: false,
+              severity: 'none',
+              input_snippet: 'true',
+              output_snippet: '',
+            },
+          ],
+          total_tokens: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          cache_read_tokens: 0,
+          reasoning_tokens: 0,
+          context_tokens: 0,
+        },
+      ],
+      total_tool_calls: 1,
+      failed_tool_calls: 0,
+      recent_errors: [],
+      anomalies: [],
+    };
+
+    render(
+      <LiveTraceInspector
+        sessionNode={mockNode}
+        trace={trace}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    const messageToken = screen.getByText('ses_0192...x-304a');
+    expect(messageToken).toHaveAttribute('title', messageId);
+    const partToken = screen.getByText('part_123...987654');
+    expect(partToken).toHaveAttribute('title', partId);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /copy turn 1 debug prompt/i }));
+    });
+    expect(writeTextMock.mock.calls[0]?.[0]).toContain(`message \`${messageId}\``);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(partId) }));
+    });
+    expect(writeTextMock.mock.calls[1]?.[0]).toContain(`part \`${partId}\``);
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+    vi.useRealTimers();
   });
 
   it('renders safely when trace contains zero messages or tool calls', () => {
@@ -158,7 +372,7 @@ describe('LiveTraceInspector Component', () => {
     expect(screen.queryByRole('region', { name: /failed tool calls/i })).not.toBeInTheDocument();
   });
 
-  it('strictly preserves chronological message turn order across system, user, and assistant turns', () => {
+  it('preserves source turn identity across system, user, and assistant turns', () => {
     const chronologicalTrace: LiveTraceView = {
       session_id: 'ses-order-test',
       messages: [
@@ -234,6 +448,83 @@ describe('LiveTraceInspector Component', () => {
 
     expect(within(turns[2]!).getByText('ASSISTANT')).toBeInTheDocument();
     expect(within(turns[2]!).getByText('Turn 2: Assistant response generated.')).toBeInTheDocument();
+    expect(screen.getByTestId('message-turn-2').querySelector('.turn-number-badge')).toHaveTextContent('Turn 3');
+    expect(screen.getByTestId('message-turn-0').querySelector('.turn-number-badge')).toHaveTextContent('Turn 1');
+  });
+
+  it('toggles between latest-first and oldest-first without changing logical turn numbers', () => {
+    render(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+
+    const messageList = document.querySelector('.inspector-messages-list');
+    expect(messageList?.firstElementChild).toHaveAttribute('data-testid', 'message-turn-3');
+    fireEvent.click(screen.getByTestId('turn-order-toggle-btn'));
+    expect(messageList?.firstElementChild).toHaveAttribute('data-testid', 'message-turn-0');
+    expect(screen.getByTestId('message-turn-0').querySelector('.turn-number-badge')).toHaveTextContent('Turn 1');
+    expect(screen.getByTestId('message-turn-3').querySelector('.turn-number-badge')).toHaveTextContent('Turn 4');
+  });
+
+  it('preserves the reading position and offers a jump when new turns arrive while paused', () => {
+    const initialTrace: LiveTraceView = { ...mockLiveTraceView, messages: mockLiveTraceView.messages.slice(0, 2) };
+    const { rerender } = render(
+      <LiveTraceInspector sessionNode={mockNode} trace={initialTrace} loading={false} onClose={vi.fn()} />
+    );
+    const messageList = document.querySelector('.inspector-messages-list') as HTMLDivElement;
+    Object.defineProperties(messageList, {
+      scrollHeight: { configurable: true, value: 200 },
+      clientHeight: { configurable: true, value: 100 },
+    });
+    messageList.scrollTop = 80;
+    fireEvent.scroll(messageList);
+    Object.defineProperty(messageList, 'scrollHeight', { configurable: true, value: 300 });
+
+    rerender(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+
+    expect(messageList.scrollTop).toBe(180);
+    expect(screen.getByRole('button', { name: /new turns available/i })).toBeInTheDocument();
+  });
+
+  it.each(['latest-first', 'oldest-first'])('anchors same-turn growth without remounting reasoning in %s order', (order) => {
+    const { rerender } = render(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+    if (order === 'oldest-first') fireEvent.click(screen.getByTestId('turn-order-toggle-btn'));
+    const list = document.querySelector('.inspector-messages-list') as HTMLDivElement;
+    Object.defineProperties(list, {
+      scrollHeight: { configurable: true, value: 1000 }, clientHeight: { configurable: true, value: 100 },
+    });
+    list.getBoundingClientRect = () => new DOMRect(0, 100, 300, 100);
+    const anchors = Array.from(list.querySelectorAll<HTMLElement>('[data-trace-anchor]'));
+    const anchor = anchors[1]!;
+    let top = 110;
+    anchors.forEach((element, index) => { element.getBoundingClientRect = () => new DOMRect(0, index === 1 ? top : 0, 100, 20); });
+    list.scrollTop = 200;
+    fireEvent.scroll(list);
+    const turn = anchor.closest('.trace-message-turn');
+    top = 170;
+    const next = { ...mockLiveTraceView, messages: mockLiveTraceView.messages.map((message) => ({ ...message, content: message.content + ' streamed growth' })) };
+    rerender(<LiveTraceInspector sessionNode={mockNode} trace={next} loading={true} onClose={vi.fn()} />);
+    expect(list.scrollTop).toBe(260);
+    expect(anchor.closest('.trace-message-turn')).toBe(turn);
+    expect(screen.queryByRole('button', { name: /new turns available/i })).not.toBeInTheDocument();
+  });
+
+  it('quick navigation buttons scroll to each end of the message list', () => {
+    render(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+    const messageList = document.querySelector('.inspector-messages-list') as HTMLDivElement;
+    Object.defineProperty(messageList, 'scrollHeight', { configurable: true, value: 500 });
+    const scrollTo = vi.fn();
+    messageList.scrollTo = scrollTo;
+
+    fireEvent.click(screen.getByTestId('scroll-to-top-btn'));
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: 'smooth' });
+    fireEvent.click(screen.getByTestId('scroll-to-bottom-btn'));
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 500, behavior: 'smooth' });
   });
 
   it('handles short model reasoning blocks by showing full deliberation initially with Hide Reasoning button', () => {
@@ -455,11 +746,7 @@ describe('LiveTraceInspector Component', () => {
   it('renders copy buttons for session ID, message turn ID, and part ID with temporary copied feedback', async () => {
     vi.useFakeTimers();
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: writeTextMock,
-      },
-    });
+    mockClipboard(writeTextMock);
 
     const debugTrace: LiveTraceView = {
       session_id: 'ses-debug-1',
@@ -649,6 +936,7 @@ describe('LiveTraceInspector Component', () => {
       />
     );
 
+    fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
     expect(screen.queryByText(/consecutive failures/i)).toBeNull();
   });
 
@@ -706,17 +994,14 @@ describe('LiveTraceInspector Component', () => {
       />
     );
 
+    fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
     expect(screen.getByText('4 Consecutive Failures')).toBeInTheDocument();
   });
 
   it('adversarially tests all 4 layer copy buttons and 2000ms feedback states with streak and error details', async () => {
     vi.useFakeTimers();
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: writeTextMock,
-      },
-    });
+    mockClipboard(writeTextMock);
 
     const errorPart: LivePartFact = {
       id: 'part-adv-404',
@@ -809,9 +1094,9 @@ describe('LiveTraceInspector Component', () => {
     const turnPrompt = writeTextMock.mock.calls[1][0];
     expect(turnPrompt).toContain('# Turn 1 Review (`assistant` / `gemini-3.8-flash`)');
     expect(turnPrompt).toContain('In turn 1 of session `ses-adv-live` (message `msg-adv-1`)');
-    expect(turnPrompt).toContain('> Let me compile the packages and examine failures.');
-    expect(turnPrompt).toContain('Executing build verification step.');
-    expect(turnPrompt).toContain('- `bash` (`part-adv-404`): error');
+    expect(turnPrompt).toContain('```\nLet me compile the packages and examine failures.\n```');
+    expect(turnPrompt).toContain('```\nExecuting build verification step.\n```');
+    expect(turnPrompt).toContain('- bash (part-adv-404): error');
     expect(turnCopyBtn).toHaveTextContent('Copied');
 
     act(() => {
@@ -846,6 +1131,7 @@ describe('LiveTraceInspector Component', () => {
     expect(partCopyBtn).toHaveTextContent('Copy Prompt');
 
     // 4. Failed Tool Alert Card Copy Button (Layer 2)
+    fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
     const failedCardCopyBtn = screen.getByRole('button', {
       name: 'Copy execution issue debug prompt for bash',
     });
@@ -860,11 +1146,10 @@ describe('LiveTraceInspector Component', () => {
     const issuePrompt = writeTextMock.mock.calls[3][0];
     expect(issuePrompt).toContain('# Agent Execution Issue: Consecutive failures on `bash`');
     expect(issuePrompt).toContain(
-      'During turn 1 of session `ses-adv-live` (agent `assistant` running `gemini-3.8-flash`), the agent experienced 5 consecutive failures while executing `bash`.'
+      'During turn 1 of session `ses-adv-live` (agent `assistant` running `gemini-3.8-flash`); failure part `part-adv-404`.'
     );
-    expect(issuePrompt).toContain('part `part-adv-404`');
     expect(issuePrompt).toContain('### Error Details');
-    expect(issuePrompt).toContain('error[E0432]: unresolved import');
+    expect(issuePrompt).toContain('```\nerror[E0432]: unresolved import\n```');
     expect(failedCardCopyBtn).toHaveTextContent('Copied');
 
     act(() => {

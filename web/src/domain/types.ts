@@ -65,6 +65,7 @@ export interface ToolFact {
   readonly name: string;
   readonly calls: number;
   readonly errors: number;
+  readonly content_errors?: number;
 }
 
 export type {
@@ -97,6 +98,26 @@ export interface CodeFacts {
   readonly sdlc_iterations: number;
 }
 
+export interface SkillFact {
+  readonly name: string;
+  readonly turn_index: number;
+  readonly message_index: number;
+  readonly caller_role: string;
+  readonly timestamp: string;
+  readonly success: boolean;
+  readonly error?: string;
+}
+
+export interface TaskLinkFact {
+  readonly subagent_type: string;
+  readonly description: string;
+  readonly parent_turn: number;
+  readonly child_session_id?: string;
+  readonly timestamp: string;
+  readonly duration_ms?: number;
+  readonly cost_usd?: number;
+}
+
 export interface AgenticFactLedger {
   readonly schema_version?: number;
   readonly migration?: MigrationInfo;
@@ -109,6 +130,16 @@ export interface AgenticFactLedger {
   readonly code: CodeFacts;
   readonly sessions: readonly SessionFact[];
   readonly anomalies?: readonly Anomaly[];
+  readonly skills?: readonly SkillFact[];
+  readonly task_links?: readonly TaskLinkFact[];
+}
+
+export function ledgerSkills(ledger: Pick<AgenticFactLedger, 'skills'> | undefined): readonly SkillFact[] {
+  return ledger?.skills ?? [];
+}
+
+export function ledgerTaskLinks(ledger: Pick<AgenticFactLedger, 'task_links'> | undefined): readonly TaskLinkFact[] {
+  return ledger?.task_links ?? [];
 }
 
 export interface WorkspaceDiagnostic {
@@ -128,6 +159,9 @@ export interface SessionFact {
 }
 
 export type SessionEventFact = Pick<EventFact,
+  | 'has_content_error'
+  | 'content_severity'
+  | 'content_error_snippet'
   | 'event_id'
   | 'timestamp'
   | 'message_id'
@@ -180,6 +214,7 @@ export interface CodeDeliveredStats {
 export interface ToolExecutionHealth {
   readonly total_calls: number;
   readonly errors_and_corrections: number;
+  readonly content_errors?: number;
   readonly success_rate_pct: number;
 }
 
@@ -260,7 +295,16 @@ export interface AgenticMetricsLedger {
   readonly anomalies?: readonly Anomaly[];
 }
 
+export interface SkillAdoptionFact {
+  readonly name: string;
+  readonly total_invocations: number;
+  readonly tickets_count: number;
+  readonly failure_count: number;
+  readonly failure_rate: number;
+}
+
 export interface FleetSummary {
+  readonly skill_adoption?: readonly SkillAdoptionFact[];
   readonly total_tickets: number;
   readonly total_cost_usd: number;
   readonly total_invocations: number;
@@ -281,6 +325,7 @@ export interface FleetSummary {
 }
 
 export interface TicketComparisonRow {
+  readonly skills_used?: readonly string[];
   readonly ticket_id: string;
   readonly ticket_type: TicketType | null;
   readonly updated_at: string;

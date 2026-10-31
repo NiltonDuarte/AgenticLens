@@ -710,6 +710,192 @@ func TestFetchSessionTraceMulti_And_ResolveChildSessionIDs(t *testing.T) {
 	}
 }
 
+func TestLiveTraceIncludesSkillAndExplicitTaskChildAttributes(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UnixMilli()
+	if _, err := rwDB.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES
+		('parent',NULL,'orchestrator','model','parent',?,?),('child','parent','coder','model','child',?,?)`, now, now, now+1, now+1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rwDB.Exec(`INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES ('message','parent',?,?,?)`, now+2, now+3, `{"role":"assistant","content":"working"}`); err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range []struct{ id, data string }{
+		{"skill", `{"type":"tool","tool":"skill","state":{"status":"completed","input":{"name":"agentic-lens-dev"},"output":"loaded"}}`},
+		{"task", `{"type":"tool","tool":"task","state":{"status":"completed","input":{"subagent_type":"coder","description":"Implement feature"},"output":{"session_id":"child"}}}`},
+	} {
+		if _, err := rwDB.Exec(`INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES (?, 'parent','message',?,?,?)`, row.id, now+4, now+5, row.data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := rwDB.Close(); err != nil {
+		t.Fatal(err)
+	}
+	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hook.Close()
+	cfg := testProjectConfig()
+	cfg.Live.PollIntervalMs = 50
+	service := live.NewLiveService(hook, cfg)
+	defer service.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	trace, err := service.GetSessionTrace(ctx, "parent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Messages) != 1 || len(trace.Messages[0].Parts) != 2 {
+		t.Fatalf("unexpected live trace: %+v", trace)
+	}
+	if trace.Messages[0].Parts[0].SkillName != "agentic-lens-dev" || trace.Messages[0].Parts[1].SubagentType != "coder" || trace.Messages[0].Parts[1].ChildSessionID != "child" {
+		t.Fatalf("skill/task metadata missing from live trace: %+v", trace.Messages[0].Parts)
+	}
+	payload, err := json.Marshal(trace)
+	if err != nil || !strings.Contains(string(payload), `"skill_name":"agentic-lens-dev"`) || !strings.Contains(string(payload), `"child_session_id":"child"`) {
+		t.Fatalf("serialized trace did not preserve task metadata: %s err=%v", payload, err)
+	}
+	events, unsubscribe := service.Subscribe()
+	defer unsubscribe()
+	service.Start(ctx)
+	select {
+	case event := <-events:
+		for event.Type != live.LiveEventTraceUpdate {
+			select {
+			case event = <-events:
+			case <-ctx.Done():
+				t.Fatal("timed out waiting for trace_update SSE payload")
+			}
+		}
+		if !strings.Contains(string(event.Data), `"skill_name":"agentic-lens-dev"`) || !strings.Contains(string(event.Data), `"child_session_id":"child"`) {
+			t.Fatalf("trace_update payload omitted skill/task metadata: %s", event.Data)
+		}
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for trace_update SSE payload")
+	}
+}
+
+func TestLiveTraceIgnoresMalformedOptionalSkillTaskInput(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UnixMilli()
+	if _, err := rwDB.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES ('optional','root','coder','model','optional',?,?)`, now, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rwDB.Exec(`INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES ('optional-message','optional',?,?,?)`, now+1, now+2, `{"role":"assistant","content":"working"}`); err != nil {
+		t.Fatal(err)
+	}
+	rows := []struct{ id, data string }{
+		{"bad-skill", `{"type":"tool","tool":"skill","state":{"status":"completed","input":"{bad"}}`},
+		{"missing-name", `{"type":"tool","tool":"skill","state":{"status":"completed","input":{}}}`},
+		{"partial-task", `{"type":"tool","tool":"task","state":{"status":"completed","input":{"subagent_type":"coder"}}}`},
+	}
+	for i, row := range rows {
+		if _, err := rwDB.Exec(`INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES (?, 'optional','optional-message',?,?,?)`, row.id, now+3+int64(i), now+4+int64(i), row.data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := rwDB.Close(); err != nil {
+		t.Fatal(err)
+	}
+	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hook.Close()
+	cfg := testProjectConfig()
+	cfg.Live.PollIntervalMs = 50
+	service := live.NewLiveService(hook, cfg)
+	defer service.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	trace, err := service.GetSessionTrace(ctx, "optional")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Messages) != 1 || len(trace.Messages[0].Parts) != 3 {
+		t.Fatalf("malformed optional inputs disrupted trace retrieval: %+v", trace)
+	}
+	parts := trace.Messages[0].Parts
+	if parts[0].SkillName != "" || parts[1].SkillName != "" || parts[2].SubagentType != "coder" {
+		t.Fatalf("unexpected parsed optional attributes: %+v", parts)
+	}
+	payload, err := json.Marshal(trace)
+	if err != nil {
+		t.Fatalf("malformed optional input broke trace serialization: %v", err)
+	}
+	events, unsubscribe := service.Subscribe()
+	defer unsubscribe()
+	service.Start(ctx)
+	for {
+		select {
+		case event := <-events:
+			if event.Type != live.LiveEventTraceUpdate {
+				continue
+			}
+			if !strings.Contains(string(event.Data), `"subagent_type":"coder"`) {
+				t.Fatalf("trace_update omitted the valid partial task field: %s", event.Data)
+			}
+			return
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for trace_update; serialized trace: %s", payload)
+		}
+	}
+}
+
+func TestLiveTraceSurvivesChildSessionLookupFailure(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	rwDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UnixMilli()
+	if _, err := rwDB.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES ('parent',NULL,'orchestrator','model','parent',?,?)`, now, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rwDB.Exec(`INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES ('message','parent',?,?,?)`, now+1, now+2, `{"role":"assistant","content":"working"}`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rwDB.Exec(`INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES ('task','parent','message',?,?,?)`, now+3, now+4, `{"type":"tool","tool":"task","state":{"status":"completed","input":{"subagent_type":"coder","description":"Implement feature"},"output":{"session_id":"child"}}}`); err != nil {
+		t.Fatal(err)
+	}
+	// Keep required trace tables usable while making the optional child lookup fail.
+	if _, err := rwDB.Exec(`ALTER TABLE session DROP COLUMN parent_id`); err != nil {
+		t.Fatalf("failed to arrange child lookup failure: %v", err)
+	}
+	if err := rwDB.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hook.Close()
+	service := live.NewLiveService(hook, testProjectConfig())
+	defer service.Close()
+
+	trace, err := service.GetSessionTrace(context.Background(), "parent")
+	if err != nil {
+		t.Fatalf("GetSessionTrace failed on optional child lookup error: %v", err)
+	}
+	if len(trace.Messages) != 1 || len(trace.Messages[0].Parts) != 1 {
+		t.Fatalf("trace data was not preserved: %+v", trace)
+	}
+	taskPart := trace.Messages[0].Parts[0]
+	if taskPart.SubagentType != "coder" || taskPart.ChildSessionID != "" {
+		t.Fatalf("expected task attributes without an unresolved child id, got %+v", taskPart)
+	}
+}
+
 func TestHydrateWorkspaceEvents_SuccessAndZeroDiskWrites(t *testing.T) {
 	dbPath := createTestDBFile(t)
 	rwDB, err := sql.Open("sqlite", dbPath)
@@ -2414,5 +2600,132 @@ func TestHydrateWorkspaceEvents_FallbackRoleBehaviorForNamelessSessions(t *testi
 	}
 	if r, ok := sessionRoles["s_child_ws"]; !ok || r != domain.RoleUnassignedSubAgent {
 		t.Errorf("s_child_ws: expected %q, got %q (found=%v)", domain.RoleUnassignedSubAgent, r, ok)
+	}
+}
+
+func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	writer, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+	now := time.Now().UnixMilli()
+	if _, err := writer.Exec(`INSERT INTO session (id, title, time_created, time_updated) VALUES ('live', 'live', ?, ?);
+ INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('turn', 'live', ?, ?, '{"role":"assistant","content":"before","tokens":{"input":10}}');`, now, now, now, now); err != nil {
+		t.Fatal(err)
+	}
+	hook, err := live.OpenReadOnlyHook(dbPath, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := live.NewLiveService(hook, testProjectConfig())
+	defer service.Close()
+	ctx := context.Background()
+	if _, err := service.GetSessionTree(ctx); err != nil {
+		t.Fatal(err)
+	}
+	first, err := service.GetSessionTrace(ctx, "live")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := service.GetSessionTrace(ctx, "live")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Messages) != 1 || len(second.Messages) != 1 {
+		t.Fatal("missing source message")
+	}
+	if &first.Messages[0] != &second.Messages[0] {
+		t.Fatal("unchanged source reconstructed trace history")
+	}
+	if _, err := writer.Exec(`UPDATE message SET data = '{"role":"assistant","content":"after","reasoning":"thinking","tokens":{"input":20}}' WHERE id = 'turn'`); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := service.GetSessionTrace(ctx, "live")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed.Messages[0].Content != "after" || changed.Messages[0].InputTokens != 20 || changed.Messages[0].ReasoningContent == nil {
+		t.Fatalf("in-place update did not invalidate snapshot: %+v", changed.Messages[0])
+	}
+	if first.Messages[0].Content != "before" {
+		t.Fatal("new snapshot mutated earlier accepted data")
+	}
+	if _, err := writer.Exec(`DROP TABLE message`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.GetSessionTrace(ctx, "live"); err == nil {
+		t.Fatal("failed source read reported cached success")
+	}
+}
+
+func TestLiveTraceLegacyRevisionRecoveryAndBoundedOnDemandCache(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	writer, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+	// Old source schemas lack optional message and part update timestamps.
+	if _, err := writer.Exec(`ALTER TABLE message DROP COLUMN time_updated; ALTER TABLE part DROP COLUMN time_updated;
+ INSERT INTO session (id, title, time_created, time_updated) VALUES ('one', 'one', 1, 1), ('two', 'two', 1, 1);
+ INSERT INTO message (id, session_id, time_created, data) VALUES ('m1','one',1,'{"role":"assistant","content":"one"}'), ('m2','two',1,'{"role":"assistant","content":"two"}');
+ INSERT INTO part (id, session_id, message_id, time_created, data) VALUES ('p1','one','m1',1,'{"type":"tool","tool":"read","state":{"status":"completed","output":"before"}}');`); err != nil {
+		t.Fatal(err)
+	}
+	hook, err := live.OpenReadOnlyHook(dbPath, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := live.NewLiveService(hook, testProjectConfig())
+	defer service.Close()
+	ctx := context.Background()
+	first, err := service.GetSessionTrace(ctx, "one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.GetSessionTrace(ctx, "two"); err != nil {
+		t.Fatal(err)
+	}
+	evicted, err := service.GetSessionTrace(ctx, "one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if &first.Messages[0] == &evicted.Messages[0] {
+		t.Fatal("multiple undiscovered lookups were retained")
+	}
+	if _, err := writer.Exec(`UPDATE part SET data = '{"type":"tool","tool":"read","state":{"status":"error","output":"failed in place"}}' WHERE id = 'p1'`); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := service.GetSessionTrace(ctx, "one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed.FailedToolCalls != 1 || len(changed.RecentErrors) != 1 || changed.Messages[0].Parts[0].ErrorMessage == nil || *changed.Messages[0].Parts[0].ErrorMessage != "failed in place" {
+		t.Fatalf("legacy in-place tool update not refreshed: %+v", changed)
+	}
+	before, err := hook.SourceRevision(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	if _, err := service.GetSessionTrace(canceled, "one"); err == nil {
+		t.Fatal("canceled revision lookup returned cached success")
+	}
+	after, err := hook.SourceRevision(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.Connection == after.Connection {
+		t.Fatal("observer replacement did not change connection identity")
+	}
+	recovered, err := service.GetSessionTrace(ctx, "one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if &changed.Messages[0] == &recovered.Messages[0] || recovered.FailedToolCalls != 1 {
+		t.Fatal("uncertain source generation reused old cache or lost source facts")
 	}
 }

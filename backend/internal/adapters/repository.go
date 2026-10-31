@@ -367,6 +367,8 @@ type ExistingLedgerFacts struct {
 	RootThreadIDs []string
 	Code          *domain.CodeFacts
 	Sessions      []domain.SessionFact
+	Skills        []domain.SkillFact
+	TaskLinks     []domain.TaskLinkFact
 }
 
 type legacyThreadItem struct {
@@ -400,6 +402,8 @@ type rawExistingLedger struct {
 	CompletedAt        *string                   `json:"completed_at"`
 	Code               *CodeFactsDTO             `json:"code"`
 	Sessions           []SessionFactDTO          `json:"sessions"`
+	Skills             []domain.SkillFact        `json:"skills,omitempty"`
+	TaskLinks          []domain.TaskLinkFact     `json:"task_links,omitempty"`
 	Invocations        []InvocationFactDTO       `json:"invocations"`
 	Tools              []ToolFactDTO             `json:"tools"`
 	Events             []EventFactDTO            `json:"events,omitempty"`
@@ -464,6 +468,8 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		StartedAt:     raw.StartedAt,
 		CompletedAt:   raw.CompletedAt,
 		Sessions:      sessions,
+		Skills:        raw.Skills,
+		TaskLinks:     raw.TaskLinks,
 	}
 
 	// Schema 1: Direct atomic fact schema

@@ -1,0 +1,231 @@
+{
+  "schema_version": 4,
+  "ticket_id": "AL-53",
+  "ticket_title": "Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive",
+  "ticket_type": "feat",
+  "started_at": "2026-10-31T12:48:29.071Z",
+  "completed_at": "2026-10-31T14:27:47.903Z",
+  "updated_at": "2026-10-31T14:27:49.757425+00:00",
+  "code": {
+    "lines_added": 417,
+    "lines_deleted": 16,
+    "test_lines_added": 229,
+    "test_lines_deleted": 15,
+    "prod_lines_added": 188,
+    "prod_lines_deleted": 1,
+    "files_changed": 5,
+    "sdlc_iterations": 7
+  },
+  "sessions": [
+    {
+      "id": "01a19201-1d81-7ee0-b315-cfd8231ba70e",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T12:48:30.358Z",
+          "completed_at": "2026-10-31T14:27:47.903Z",
+          "active_duration_seconds": 1272,
+          "turns": 3,
+          "tokens": {
+            "input": 140408,
+            "output": 26470,
+            "cache_read": 15305088,
+            "reasoning": 3041,
+            "peak_context": 141221
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 7
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 87,
+          "errors": 6
+        },
+        {
+          "name": "followup_task",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 13,
+          "errors": 0
+        },
+        {
+          "name": "spawn_agent",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "wait_agent",
+          "calls": 36,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a19201-59b9-71a0-88f0-43d779a507ee",
+      "parent_id": "01a19201-1d81-7ee0-b315-cfd8231ba70e",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T12:48:44.520Z",
+          "completed_at": "2026-10-31T12:50:26.727Z",
+          "active_duration_seconds": 102,
+          "turns": 1,
+          "tokens": {
+            "input": 65731,
+            "output": 3466,
+            "cache_read": 451328,
+            "reasoning": 62,
+            "peak_context": 67890
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 7,
+          "errors": 1
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a19203-0bcc-7710-a475-256d28fd64bd",
+      "parent_id": "01a19201-1d81-7ee0-b315-cfd8231ba70e",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T12:50:35.649Z",
+          "completed_at": "2026-10-31T14:02:39.316Z",
+          "active_duration_seconds": 183,
+          "turns": 2,
+          "tokens": {
+            "input": 61778,
+            "output": 6791,
+            "cache_read": 1437696,
+            "reasoning": 1090,
+            "peak_context": 88351
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 12,
+          "errors": 2
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a19204-9778-7941-bdde-f2c2962476e5",
+      "parent_id": "01a19201-1d81-7ee0-b315-cfd8231ba70e",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T12:52:16.969Z",
+          "completed_at": "2026-10-31T14:09:48.156Z",
+          "active_duration_seconds": 536,
+          "turns": 3,
+          "tokens": {
+            "input": 100281,
+            "output": 18134,
+            "cache_read": 5238656,
+            "reasoning": 3523,
+            "peak_context": 133528
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 38,
+          "errors": 3
+        },
+        {
+          "name": "send_message",
+          "calls": 11,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a19206-48d8-7ba3-b573-a6cb1048d940",
+      "parent_id": "01a19201-1d81-7ee0-b315-cfd8231ba70e",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T12:54:08.592Z",
+          "completed_at": "2026-10-31T14:05:46.393Z",
+          "active_duration_seconds": 145,
+          "turns": 2,
+          "tokens": {
+            "input": 80369,
+            "output": 4316,
+            "cache_read": 1469568,
+            "reasoning": 393,
+            "peak_context": 105239
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 12,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 4,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}

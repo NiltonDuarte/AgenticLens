@@ -1109,6 +1109,74 @@ body {
 }
 
 /* Thread Viewer */
+.skills-subagents-card {
+  min-width: 0;
+}
+
+.skills-subagents-heading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.skills-subagents-heading button {
+  flex-wrap: wrap;
+  gap: 8px;
+  font: inherit;
+}
+
+.skills-subagents-table {
+  margin-top: 16px;
+}
+
+.skills-subagents-table caption {
+  padding: 0 0 10px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.skills-subagents-table th[scope="row"],
+.skills-subagents-table .source-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 160px;
+  max-width: 400px;
+  vertical-align: top;
+}
+
+.skills-subagents-table tr:focus-visible,
+.skills-subagents-card button:focus-visible,
+.thread-header-btn:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.skill-status {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.skill-status.success {
+  color: var(--status-green);
+}
+
+.skill-status.failed {
+  color: var(--status-red);
+}
+
+.child-session-jump {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.session-unavailable {
+  display: block;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
 .thread-viewer-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -4734,22 +4802,71 @@ th.num-col .th-content {
 .inspector-failed-tools-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--status-red) 36%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--status-red) 7%, var(--bg-surface));
+}
+
+.failed-tools-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
 }
 
 .failed-tools-heading {
-  font-size: 0.875rem;
-  font-weight: 700;
+  margin: 0;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.failed-tools-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--status-red) 55%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-red) 16%, var(--bg-surface));
   color: var(--status-red);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+}
+
+.failed-tools-toggle-btn {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.failed-tools-toggle-btn:hover {
+  border-color: var(--status-red);
+  color: var(--text-primary);
+}
+
+.failed-tools-toggle-btn:focus-visible {
+  outline: 2px solid var(--status-red);
+  outline-offset: 2px;
 }
 
 .failed-tools-cards-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.failed-tools-cards-list[hidden] {
+  display: none;
 }
 
 .inspector-messages-section {
@@ -4766,6 +4883,45 @@ th.num-col .th-content {
   letter-spacing: 0.05em;
 }
 
+.messages-heading h4 {
+  margin: 0;
+}
+
+.messages-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.message-order-label {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.inspector-message-control,
+.new-turns-available {
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.inspector-message-control:hover,
+.new-turns-available:hover {
+  border-color: var(--accent-blue);
+}
+
+.new-turns-available {
+  align-self: flex-start;
+  color: var(--accent-blue);
+}
+
 .inspector-no-messages {
   padding: 24px;
   text-align: center;
@@ -4777,6 +4933,10 @@ th.num-col .th-content {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: min(70vh, 900px);
+  overflow-anchor: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .trace-message-turn {
@@ -4813,6 +4973,10 @@ th.num-col .th-content {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .turn-role-pill {
@@ -4983,6 +5147,10 @@ th.num-col .th-content {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
@@ -4995,6 +5163,11 @@ th.num-col .th-content {
 }
 
 .debug-id-token.mono {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 1;
   font-family: var(--font-mono);
 }
 
@@ -5008,3 +5181,93 @@ th.num-col .th-content {
   padding: 1px 6px;
   border-radius: 4px;
 }
+.ticket-scatter-panel {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border: 1px solid var(--border-color, #263044);
+  border-radius: 0.75rem;
+  background: var(--bg-secondary, #101522);
+}
+.ticket-scatter-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+.ticket-scatter-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; }
+.ticket-scatter-controls label { display: grid; gap: 0.35rem; font-size: 0.8rem; }
+.ticket-scatter-controls select { min-width: 12rem; padding: 0.45rem; }
+.ticket-scatter-recommendation { color: #f2a93b; font-size: 0.82rem; }
+.ticket-scatter-exclusions { margin: 0.8rem 0; }
+.ticket-scatter-exclusions fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.4rem; max-height: 10rem; overflow: auto; border: 1px solid var(--border-color, #263044); }
+.ticket-scatter-exclusions label { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; }
+.ticket-scatter-chart { position: relative; width: 100%; overflow: hidden; }
+.ticket-scatter-chart svg { display: block; width: 100%; min-height: 16rem; }
+.ticket-scatter-axis { stroke: #657085; stroke-width: 1; }
+.ticket-scatter-label { fill: #b6c0d0; font-size: 12px; }
+.ticket-scatter-tick text { fill: #9aa6ba; font-size: 10px; }
+.ticket-scatter-grid { stroke: #354052; stroke-width: 0.6; stroke-dasharray: 2 4; }
+.ticket-scatter-tick line:first-child { opacity: 0.55; }
+.ticket-scatter-point { cursor: pointer; stroke: #101522; stroke-width: 1.5; }
+.ticket-scatter-point:focus { outline: none; stroke: #fff; stroke-width: 3; }
+.ticket-scatter-empty { position: absolute; inset: 40% 0 auto; text-align: center; color: #9aa6ba; }
+.ticket-scatter-legend { display: flex; gap: 1rem; font-size: 0.8rem; }
+.ticket-scatter-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.ticket-scatter-legend i { width: 0.65rem; height: 0.65rem; border-radius: 50%; background: #4ea1ff; }
+.ticket-scatter-legend i.in-progress { background: #f2a93b; }
+
+/* Content diagnostics preserve execution success and use amber independently. */
+.text-content-error, .status-content-error { color: #d99b29; }
+.timeline-node.node-content-error { border: 2px solid #d99b29; background: #8a601c; }
+.timeline-item.item-content-error .timeline-content, .trace-part-item.part-content-error { border-color: #d99b29; }
+.status-content-error { background: rgba(217, 155, 41, 0.12); border-color: #d99b29; }
+.tool-execution-breakdown { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+.tool-execution-breakdown th, .tool-execution-breakdown td { padding: 0.35rem; text-align: left; overflow-wrap: anywhere; }
+
+/* Invocation labels truncate independently so child controls remain available. */
+.trace-invocation-controls .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.trace-invocation-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+.trace-invocation-badge {
+  display: inline-block;
+  min-width: 0;
+  max-width: min(100%, 24rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  padding: 2px 7px;
+  font: 600 12px var(--font-mono);
+  background: var(--bg-surface-elevated);
+}
+.trace-invocation-badge.badge-skill { color: var(--accent-blue); }
+.trace-invocation-badge.badge-task { color: var(--status-green); }
+button.trace-invocation-badge { cursor: pointer; }
+.trace-child-unavailable {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.trace-child-id {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+.trace-child-unavailable button { flex-shrink: 0; }
+.tool-details-group, .part-header { min-width: 0; flex-wrap: wrap; }

@@ -87,10 +87,11 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 
 // ToolFactDTO represents a single tool execution fact in JSON.
 type ToolFactDTO struct {
-	SessionID string `json:"session_id"`
-	Name      string `json:"name"`
-	Calls     int64  `json:"calls"`
-	Errors    int64  `json:"errors"`
+	SessionID     string `json:"session_id"`
+	Name          string `json:"name"`
+	Calls         int64  `json:"calls"`
+	Errors        int64  `json:"errors"`
+	ContentErrors int64  `json:"content_errors,omitempty"`
 }
 
 func (dto ToolFactDTO) ToDomain() domain.ToolFact {
@@ -98,42 +99,49 @@ func (dto ToolFactDTO) ToDomain() domain.ToolFact {
 		SessionID: dto.SessionID,
 		Name:      dto.Name,
 		Calls:     dto.Calls,
-		Errors:    dto.Errors,
+		Errors:    dto.Errors, ContentErrors: dto.ContentErrors,
 	}
 }
 
 // EventFactDTO represents a single chronological event fact in JSON boundary serialization.
 type EventFactDTO struct {
-	EventID       string  `json:"event_id"`
-	Timestamp     string  `json:"timestamp"`
-	SessionID     string  `json:"session_id"`
-	Turn          int64   `json:"turn"`
-	Role          string  `json:"role"`
-	EventType     string  `json:"event_type"`
-	ToolName      *string `json:"tool_name,omitempty"`
-	Status        string  `json:"status"`
-	ErrorMessage  *string `json:"error_message,omitempty"`
-	DurationMs    *int64  `json:"duration_ms,omitempty"`
-	ContextTokens int64   `json:"context_tokens"`
+	HasContentError     bool    `json:"has_content_error,omitempty"`
+	ContentSeverity     string  `json:"content_severity,omitempty"`
+	ContentErrorSnippet *string `json:"content_error_snippet,omitempty"`
+	EventID             string  `json:"event_id"`
+	Timestamp           string  `json:"timestamp"`
+	SessionID           string  `json:"session_id"`
+	Turn                int64   `json:"turn"`
+	Role                string  `json:"role"`
+	EventType           string  `json:"event_type"`
+	ToolName            *string `json:"tool_name,omitempty"`
+	Status              string  `json:"status"`
+	ErrorMessage        *string `json:"error_message,omitempty"`
+	DurationMs          *int64  `json:"duration_ms,omitempty"`
+	ContextTokens       int64   `json:"context_tokens"`
 }
 
 type SessionToolFactDTO struct {
-	Name   string `json:"name"`
-	Calls  int64  `json:"calls"`
-	Errors int64  `json:"errors"`
+	Name          string `json:"name"`
+	Calls         int64  `json:"calls"`
+	Errors        int64  `json:"errors"`
+	ContentErrors int64  `json:"content_errors,omitempty"`
 }
 
 type SessionEventFactDTO struct {
-	EventID       string  `json:"event_id"`
-	Timestamp     string  `json:"timestamp"`
-	MessageID     *string `json:"message_id,omitempty"`
-	Turn          int64   `json:"turn"`
-	Role          string  `json:"role"`
-	EventType     string  `json:"event_type"`
-	ToolName      *string `json:"tool_name,omitempty"`
-	Status        string  `json:"status"`
-	DurationMs    *int64  `json:"duration_ms,omitempty"`
-	ContextTokens int64   `json:"context_tokens"`
+	HasContentError     bool    `json:"has_content_error,omitempty"`
+	ContentSeverity     string  `json:"content_severity,omitempty"`
+	ContentErrorSnippet *string `json:"content_error_snippet,omitempty"`
+	EventID             string  `json:"event_id"`
+	Timestamp           string  `json:"timestamp"`
+	MessageID           *string `json:"message_id,omitempty"`
+	Turn                int64   `json:"turn"`
+	Role                string  `json:"role"`
+	EventType           string  `json:"event_type"`
+	ToolName            *string `json:"tool_name,omitempty"`
+	Status              string  `json:"status"`
+	DurationMs          *int64  `json:"duration_ms,omitempty"`
+	ContextTokens       int64   `json:"context_tokens"`
 }
 
 type SessionFactDTO struct {
@@ -157,14 +165,14 @@ func (dto EventFactDTO) ToDomain() domain.EventFact {
 		status = "completed"
 	}
 	return domain.EventFact{
-		EventID:       dto.EventID,
-		Timestamp:     dto.Timestamp,
-		SessionID:     dto.SessionID,
-		Turn:          dto.Turn,
-		Role:          domain.AgentRole(role),
-		EventType:     domain.EventType(dto.EventType),
-		ToolName:      dto.ToolName,
-		Status:        status,
+		EventID:   dto.EventID,
+		Timestamp: dto.Timestamp,
+		SessionID: dto.SessionID,
+		Turn:      dto.Turn,
+		Role:      domain.AgentRole(role),
+		EventType: domain.EventType(dto.EventType),
+		ToolName:  dto.ToolName,
+		Status:    status, HasContentError: dto.HasContentError, ContentSeverity: dto.ContentSeverity, ContentErrorSnippet: dto.ContentErrorSnippet,
 		ErrorMessage:  dto.ErrorMessage,
 		DurationMs:    dto.DurationMs,
 		ContextTokens: dto.ContextTokens,
@@ -174,14 +182,14 @@ func (dto EventFactDTO) ToDomain() domain.EventFact {
 // EventFactDTOFromDomain converts domain.EventFact to EventFactDTO.
 func EventFactDTOFromDomain(fact domain.EventFact) EventFactDTO {
 	return EventFactDTO{
-		EventID:       fact.EventID,
-		Timestamp:     fact.Timestamp,
-		SessionID:     fact.SessionID,
-		Turn:          fact.Turn,
-		Role:          string(fact.Role),
-		EventType:     string(fact.EventType),
-		ToolName:      fact.ToolName,
-		Status:        fact.Status,
+		EventID:   fact.EventID,
+		Timestamp: fact.Timestamp,
+		SessionID: fact.SessionID,
+		Turn:      fact.Turn,
+		Role:      string(fact.Role),
+		EventType: string(fact.EventType),
+		ToolName:  fact.ToolName,
+		Status:    fact.Status, HasContentError: fact.HasContentError, ContentSeverity: fact.ContentSeverity, ContentErrorSnippet: fact.ContentErrorSnippet,
 		ErrorMessage:  fact.ErrorMessage,
 		DurationMs:    fact.DurationMs,
 		ContextTokens: fact.ContextTokens,
@@ -266,18 +274,20 @@ func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
 
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
-	SchemaVersion *int              `json:"schema_version,omitempty"`
-	Source        string            `json:"source,omitempty"`
-	Migration     *MigrationInfoDTO `json:"migration,omitempty"`
-	TicketID      *string           `json:"ticket_id"`
-	TicketTitle   *string           `json:"ticket_title"`
-	TicketType    *string           `json:"ticket_type"`
-	StartedAt     *string           `json:"started_at"`
-	CompletedAt   *string           `json:"completed_at"`
-	UpdatedAt     string            `json:"updated_at"`
-	Code          CodeFactsDTO      `json:"code"`
-	Sessions      []SessionFactDTO  `json:"sessions"`
-	Anomalies     []AnomalyDTO      `json:"anomalies"`
+	SchemaVersion *int                  `json:"schema_version,omitempty"`
+	Source        string                `json:"source,omitempty"`
+	Migration     *MigrationInfoDTO     `json:"migration,omitempty"`
+	TicketID      *string               `json:"ticket_id"`
+	TicketTitle   *string               `json:"ticket_title"`
+	TicketType    *string               `json:"ticket_type"`
+	StartedAt     *string               `json:"started_at"`
+	CompletedAt   *string               `json:"completed_at"`
+	UpdatedAt     string                `json:"updated_at"`
+	Code          CodeFactsDTO          `json:"code"`
+	Sessions      []SessionFactDTO      `json:"sessions"`
+	Anomalies     []AnomalyDTO          `json:"anomalies"`
+	Skills        []domain.SkillFact    `json:"skills,omitempty"`
+	TaskLinks     []domain.TaskLinkFact `json:"task_links,omitempty"`
 }
 
 // ValidateRuntimeFactLedger rejects legacy or explicitly incomplete ledgers before
@@ -488,13 +498,13 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 			if name == "" {
 				name = "unknown"
 			}
-			sessions[i].Tools = append(sessions[i].Tools, domain.SessionToolFact{Name: name, Calls: tool.Calls, Errors: tool.Errors})
+			sessions[i].Tools = append(sessions[i].Tools, domain.SessionToolFact{Name: name, Calls: tool.Calls, Errors: tool.Errors, ContentErrors: tool.ContentErrors})
 		}
 		for _, event := range session.Events {
 			sessions[i].Events = append(sessions[i].Events, domain.SessionEventFact{
 				EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
 				Role: domain.AgentRole(event.Role), EventType: domain.EventType(event.EventType), ToolName: event.ToolName,
-				Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+				Status: event.Status, HasContentError: event.HasContentError, ContentSeverity: event.ContentSeverity, ContentErrorSnippet: event.ContentErrorSnippet, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 			})
 		}
 		for _, anomaly := range session.Anomalies {
@@ -522,6 +532,8 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		Code:          dto.Code.ToDomain(),
 		Sessions:      sessions,
 		Anomalies:     anomaliesToDomain(dto.Anomalies),
+		Skills:        dto.Skills,
+		TaskLinks:     dto.TaskLinks,
 	}
 }
 
@@ -569,7 +581,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 			if strings.TrimSpace(tool.Name) == "" {
 				return fmt.Errorf("sessions[%d].tools[%d].name is required", i, j)
 			}
-			if tool.Calls < 0 || tool.Errors < 0 || tool.Errors > tool.Calls {
+			if tool.Calls < 0 || tool.Errors < 0 || tool.Errors > tool.Calls || tool.ContentErrors < 0 || tool.ContentErrors > tool.Calls-tool.Errors {
 				return fmt.Errorf("sessions[%d].tools[%d] has invalid calls/errors counts", i, j)
 			}
 		}
@@ -675,7 +687,15 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 			sessions[i].Invocations = append(sessions[i].Invocations, InvocationFactDTOFromDomain(inv))
 		}
 		for _, tool := range session.Tools {
-			sessions[i].Tools = append(sessions[i].Tools, SessionToolFactDTO{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
+			sessions[i].Tools = append(sessions[i].Tools, SessionToolFactDTO{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors, ContentErrors: tool.ContentErrors})
+		}
+		// Retain compact diagnostic evidence while preserving the existing omission
+		// of ordinary transient trace rows and full source payloads.
+		for _, event := range session.Events {
+			if !event.HasContentError {
+				continue
+			}
+			sessions[i].Events = append(sessions[i].Events, SessionEventFactDTO{EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: string(event.Role), EventType: string(event.EventType), ToolName: event.ToolName, Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens, HasContentError: event.HasContentError, ContentSeverity: event.ContentSeverity, ContentErrorSnippet: event.ContentErrorSnippet})
 		}
 		for _, anomaly := range session.Anomalies {
 			anomaly.Context.SessionID = nil
@@ -704,6 +724,8 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		},
 		Sessions:  sessions,
 		Anomalies: anomaliesFromDomain(ledger.Anomalies),
+		Skills:    ledger.Skills,
+		TaskLinks: ledger.TaskLinks,
 	}
 }
 

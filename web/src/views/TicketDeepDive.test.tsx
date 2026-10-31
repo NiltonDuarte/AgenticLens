@@ -7,7 +7,7 @@ import { TicketDeepDive } from './TicketDeepDive';
 import * as apiClient from '../api/client';
 import { type Anomaly, type EventFact } from '../types/telemetry';
 import * as clipboard from '../utils/clipboard';
-import { type AgenticMetricsLedger, type ContextHealthStatus, type WorkspaceDetail, type SessionFact } from '../domain/types';
+import { type AgenticMetricsLedger, type ContextHealthStatus, type WorkspaceDetail, type SessionFact, type SkillFact, type TaskLinkFact } from '../domain/types';
 import { mockAgenticMetricsLedgers, mockWorkspaceDetails, mockAL2Events } from '../test/fixtures/mockData';
 
 function withRecordedEvents(detail: WorkspaceDetail, events: readonly EventFact[]): WorkspaceDetail {
@@ -32,6 +32,164 @@ function deferred<T>() {
     });
     return { promise, resolve, reject };
 }
+
+describe('Skills and subagents autopsy', () => {
+    const timestamp = '2026-10-30T12:34:56.007Z';
+    const skill: SkillFact = {
+        name: 'inspect-source', turn_index: 7, message_index: 2,
+        caller_role: 'orchestrator', timestamp, success: true,
+    };
+    const delegation: TaskLinkFact = {
+        subagent_type: 'coder', description: 'Implement the agreed change', parent_turn: 8, timestamp,
+    };
+    const makeDetail = (skills?: readonly SkillFact[], taskLinks?: readonly TaskLinkFact[]): WorkspaceDetail => {
+        const base = mockWorkspaceDetails['AL-1']!;
+        const facts = { ...base.ledger.facts, schema_version: 4 };
+        delete facts.skills;
+        delete facts.task_links;
+        return { ...base, ledger: { ...base.ledger, facts: {
+            ...facts,
+            ...(skills === undefined ? {} : { skills }),
+            ...(taskLinks === undefined ? {} : { task_links: taskLinks }),
+        } } };
+    };
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: Object.values(mockAgenticMetricsLedgers) });
+        vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Optional source unavailable'));
+    });
+
+    it.each(['omitted', 'empty'] as const)('renders a supported v4 ledger with %s optional collections and keyboard collapse', async (mode) => {
+        const errors = vi.spyOn(console, 'error');
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
+            data: mode === 'omitted' ? makeDetail() : makeDetail([], []),
+        });
+        const user = userEvent.setup();
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const panel = await screen.findByRole('region', { name: /Skills & Subagents/ });
+        const toggle = within(panel).getByRole('button', { name: /Skills & Subagents/ });
+        const empty = within(panel).getByText('No modular skills or subagent delegations recorded for this ticket.');
+        expect(empty).toBeVisible();
+        expect(within(panel).queryByRole('table')).not.toBeInTheDocument();
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        expect(document.getElementById(toggle.getAttribute('aria-controls')!)).toContainElement(empty);
+        toggle.focus();
+        await user.keyboard('{Enter}');
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(empty).not.toBeVisible();
+        await user.keyboard(' ');
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        expect(empty).toBeVisible();
+        expect(errors).not.toHaveBeenCalled();
+    });
+
+    it('preserves repeated skill invocations, recorded status, roles, timestamps and complete diagnostics', async () => {
+        const error = 'Source error: validation failed\n' + 'Detailed diagnostic context '.repeat(12);
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: makeDetail([
+            { ...skill, error: 'Inspection of error text completed successfully' },
+            { ...skill, success: false, caller_role: 'custom-investigator', turn_index: 9, error },
+            { ...skill, name: 'review-change', caller_role: '' },
+        ]) });
+        const user = userEvent.setup();
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const table = await screen.findByRole('table', { name: 'Modular skills' });
+        const rows = within(table).getAllByRole('row').slice(1);
+        expect(rows).toHaveLength(3);
+        screen.getByRole('region', { name: 'Recorded skills' }).focus();
+        await user.tab();
+        expect(rows[0]).toHaveFocus();
+        await user.tab();
+        expect(rows[1]).toHaveFocus();
+        expect(within(table).getAllByRole('rowheader', { name: 'inspect-source' })).toHaveLength(2);
+        const success = within(rows[0]!);
+        expect(success.getByText('Success')).toBeVisible();
+        expect(success.getByText('Orchestrator')).toBeVisible();
+        expect(success.getByText('Inspection of error text completed successfully')).toBeVisible();
+        expect(rows[0]).toHaveTextContent('Turn 7 /');
+        const time = rows[0]!.querySelector('time');
+        expect(time).toHaveAttribute('datetime', timestamp);
+        expect(time).toHaveAttribute('title', expect.stringMatching(/2026.*\.007 \[UTC[+-]\d{2}:\d{2}\]/));
+        expect(time).toHaveTextContent(/\d{2}:\d{2}:\d{2}\.007/);
+        expect(within(rows[1]!).getByText('Failed')).toBeVisible();
+        expect(within(rows[1]!).getByText('custom-investigator')).toBeVisible();
+        expect(rows[1]).toHaveTextContent('Turn 9 /');
+        expect(rows[1]!.lastElementChild?.textContent).toBe(error);
+        expect(within(rows[2]!).getByText('Unknown')).toBeVisible();
+        expect(within(rows[2]!).getByText('None recorded')).toBeVisible();
+        expect(screen.queryByText('No modular skills or subagent delegations recorded for this ticket.')).not.toBeInTheDocument();
+    });
+
+    it('shows delegations without skills, distinguishes missing metrics, and jumps repeatedly to the exact child by keyboard', async () => {
+        const longDescription = 'Preserve the whole task prompt: ' + 'task details '.repeat(30);
+        const detail = makeDetail(undefined, [
+            { ...delegation, description: longDescription, child_session_id: 'child-a', duration_ms: 62500, cost_usd: 1.25 },
+            { ...delegation, description: 'Measured zero', duration_ms: 0, cost_usd: 0 },
+            { ...delegation, description: 'Missing optional measurements', child_session_id: 'child-a-unavailable' },
+            { ...delegation, description: 'Missing optional measurements', child_session_id: 'child-a-unavailable' },
+        ]);
+        const root = detail.ledger.threads[0]!;
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+            ...detail, ledger: { ...detail.ledger, threads: [
+                { ...root, session_id: 'root' }, { ...root, session_id: 'child-ab' }, { ...root, session_id: 'child-a' },
+            ] },
+        } });
+        const user = userEvent.setup();
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const table = await screen.findByRole('table', { name: 'Subagent delegations' });
+        expect(screen.queryByRole('table', { name: 'Modular skills' })).not.toBeInTheDocument();
+        const rows = within(table).getAllByRole('row').slice(1);
+        expect(rows).toHaveLength(4);
+        expect(rows[0]!.children[0]).toHaveTextContent('Coder');
+        expect(rows[0]!.children[1]?.textContent).toBe(longDescription);
+        expect(rows[0]!.children[2]).toHaveTextContent('8');
+        expect(rows[0]!.children[3]).toHaveTextContent('1m 2s');
+        expect(rows[0]!.children[4]).toHaveTextContent('$1.25');
+        expect(rows[1]!.children[3]).toHaveTextContent('0m 0s');
+        expect(rows[1]!.children[4]).toHaveTextContent('$0.00');
+        expect(within(rows[1]!).getByText('Not recorded')).toBeVisible();
+        expect(rows[2]!.children[3]).toHaveTextContent('Unavailable');
+        expect(rows[2]!.children[4]).toHaveTextContent('Unavailable');
+        expect(within(rows[2]!).getByText('child-a-unavailable')).toBeVisible();
+        expect(within(rows[2]!).getByText('Thread unavailable')).toBeVisible();
+        expect(within(rows[2]!).queryByRole('button')).not.toBeInTheDocument();
+        const child = screen.getByRole('button', { name: /^child-a User:/ });
+        const sibling = screen.getByRole('button', { name: /^child-ab User:/ });
+        const parent = screen.getByRole('button', { name: /^root User:/ });
+        expect(parent).toHaveAttribute('aria-expanded', 'true');
+        expect(child).toHaveAttribute('aria-expanded', 'false');
+        expect(sibling).toHaveAttribute('aria-expanded', 'false');
+        const jump = within(table).getByRole('button', { name: 'Jump to child session child-a' });
+        jump.focus();
+        await user.keyboard('{Enter}');
+        expect(child).toHaveFocus();
+        expect(child).toHaveAttribute('aria-expanded', 'true');
+        expect(parent).toHaveAttribute('aria-expanded', 'true');
+        expect(sibling).toHaveAttribute('aria-expanded', 'false');
+        expect(child.parentElement?.querySelector('.thread-body')).toBeVisible();
+        await user.keyboard(' ');
+        expect(child).toHaveAttribute('aria-expanded', 'false');
+        jump.focus();
+        await user.keyboard(' ');
+        expect(child).toHaveFocus();
+        expect(child).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('keeps persisted skill and delegation facts visible before and after optional enrichment fails', async () => {
+        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: makeDetail([skill], [delegation]) });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const skills = await screen.findByRole('table', { name: 'Modular skills' });
+        const tasks = screen.getByRole('table', { name: 'Subagent delegations' });
+        expect(within(skills).getByText('inspect-source')).toBeVisible();
+        expect(within(tasks).getByText('Implement the agreed change')).toBeVisible();
+        await act(async () => pending.reject(new Error('Optional enrichment failed')));
+        expect(skills).toBeVisible();
+        expect(tasks).toBeVisible();
+        expect(screen.queryByText('Optional enrichment failed')).not.toBeInTheDocument();
+    });
+});
 
 describe('FIX-12 committed trace and enrichment lifecycle', () => {
     const recorded: readonly EventFact[] = [
@@ -65,6 +223,10 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         }
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
+        const headerTimes = document.querySelectorAll('time[title]');
+        expect(headerTimes.length).toBeGreaterThan(0);
+        expect(headerTimes[0]).toHaveTextContent(/\d{2}:\d{2}:\d{2}\.\d{3}/);
+        expect(headerTimes[0]).toHaveAttribute('title', expect.stringMatching(/\d{4}/));
         expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
         expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
         expect(screen.queryByText(/Failed to load ticket details|Optional source unavailable/)).not.toBeInTheDocument();
@@ -77,6 +239,102 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
         fireEvent.click(screen.getByTestId('timeline-item-2'));
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('shares exact repeatable child navigation between task badges and the panel and resets it on ticket change', async () => {
+        const event: EventFact = { ...recorded[0]!, tool_name: 'task', status: 'error' };
+        const detail = makeDetail('AL-1', [event]);
+        const baseThread = detail.ledger.threads[0]!;
+        const childId = 'recorded-child-thread-with-the-complete-source-identifier-0123456789';
+        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockImplementation((id) => id === 'AL-1' ? pending.promise : Promise.resolve(emptyResponse(id)));
+        const taskDetail: WorkspaceDetail = {
+            ...detail, ledger: { ...detail.ledger,
+                threads: [{ ...baseThread, session_id: 'parent-thread' },
+                    { ...baseThread, session_id: `${childId}-sibling` }, { ...baseThread, session_id: childId }],
+                facts: { ...detail.ledger.facts, task_links: [{ subagent_type: 'tester', description: 'Verify',
+                    parent_turn: event.turn, timestamp: event.timestamp, child_session_id: childId }] },
+            },
+        };
+        const nextEvent: EventFact = { ...recorded[1]!, session_id: 'next-parent', turn: 42 };
+        const nextDetail = makeDetail('AL-2', [nextEvent]);
+        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: id === 'AL-1' ? taskDetail : {
+            ...nextDetail, ledger: { ...nextDetail.ledger,
+                threads: [{ ...baseThread, session_id: 'next-parent' }, { ...baseThread, session_id: childId }],
+                facts: { ...nextDetail.ledger.facts, task_links: [] },
+            },
+        } }));
+        const user = userEvent.setup();
+        const { rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const header = await screen.findByRole('button', { name: `${childId} User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
+        const parent = screen.getByRole('button', { name: /^parent-thread User:/ });
+        const sibling = screen.getByRole('button', { name: `${childId}-sibling User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
+        const scroll = vi.fn();
+        header.scrollIntoView = scroll;
+        expect(header).toHaveAttribute('aria-expanded', 'false');
+        expect(parent).toHaveAttribute('aria-expanded', 'true');
+        await user.click(screen.getByTestId('waterfall-expand-btn'));
+        await user.click(screen.getByRole('button', { name: 'All Events' }));
+        const badge = screen.getByRole('button', { name: `Inspect child session ${childId}` });
+        const panelJump = within(screen.getByRole('table', { name: 'Subagent delegations' }))
+            .getByRole('button', { name: `Jump to child session ${childId}` });
+        expect(panelJump).toHaveTextContent(childId);
+        const traceItem = screen.getByTestId('timeline-item-1');
+        // Both entry points must reactivate the same child after a manual close.
+        for (const [entryPoint, key] of [[badge, '{Enter}'], [panelJump, ' '], [badge, ' '], [panelJump, '{Enter}']] as const) {
+            entryPoint.focus();
+            await user.keyboard(key);
+            expect(header).toHaveAttribute('aria-expanded', 'true');
+            expect(header).toHaveFocus();
+            expect(header.closest('.thread-accordion-item')?.querySelector('.thread-body')).toBeVisible();
+            expect(parent).toHaveAttribute('aria-expanded', 'true');
+            expect(sibling).toHaveAttribute('aria-expanded', 'false');
+            expect(traceItem).not.toHaveClass('selected');
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            await user.keyboard('{Enter}');
+            expect(header).toHaveAttribute('aria-expanded', 'false');
+        }
+        expect(scroll).toHaveBeenCalledTimes(4);
+        // Leave an active child request and parent inspector to expose stale state on switching.
+        await user.click(panelJump);
+        await user.click(traceItem);
+        expect(traceItem).toHaveClass('selected');
+        expect(screen.getByRole('dialog')).toHaveTextContent('Tool Execution Failure');
+        rerender(<TicketDeepDive selectedTicketId="AL-2" />);
+        const nextHeader = await screen.findByRole('button', { name: `${childId} User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
+        expect(nextHeader).toHaveAttribute('aria-expanded', 'false');
+        expect(nextHeader).not.toHaveFocus();
+        expect(screen.getByRole('button', { name: /^next-parent User:/ })).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^parent-thread User:/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: `Jump to child session ${childId}` })).not.toBeInTheDocument();
+        await act(async () => pending.resolve({ data: {
+            ticket_id: 'AL-1', is_hydrated: true, data_source: 'local_codex', events: [event],
+        } }));
+        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+        await user.click(screen.getByRole('button', { name: 'All Events' }));
+        expect(screen.getByTestId('timeline-item-42')).toBeVisible();
+        expect(screen.queryByTestId('timeline-item-1')).not.toBeInTheDocument();
+        expect(screen.getByText('Showing 1 of 1 events')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: `Inspect child session ${childId}` })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(nextHeader).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('preserves malformed workspace timestamps as the visible time and tooltip fallback', async () => {
+        const malformedTimestamp = 'not-a-valid-timestamp';
+        const detail = makeDetail();
+        const malformedDetail: WorkspaceDetail = {
+            ...detail,
+            ledger: { ...detail.ledger, started_at: malformedTimestamp, updated_at: malformedTimestamp },
+        };
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: malformedDetail });
+
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+
+        await waitFor(() => expect(screen.getAllByText(malformedTimestamp)).toHaveLength(2));
+        const fallbackTimes = screen.getAllByText(malformedTimestamp);
+        fallbackTimes.forEach((timestamp) => expect(timestamp).toHaveAttribute('title', malformedTimestamp));
     });
 
     it.each(['resolve', 'reject'])('renders the baseline before a deferred enrichment request can %s', async (settlement) => {
@@ -797,7 +1055,20 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('Telemetry breakdown of model invocations, token volume, cache hit rate, and spend by agent persona role.')).toBeInTheDocument();
         const roleTooltipId = roleHeaderBtn.getAttribute('aria-describedby');
         expect(roleTooltipId).toBeTruthy();
-        expect(document.getElementById(roleTooltipId!)).toHaveClass('placement-left');
+        const roleBubble = document.getElementById(roleTooltipId!);
+        expect(roleBubble).toHaveClass('placement-left');
+        expect(roleBubble).not.toHaveClass('is-visible');
+        // Mouse hover reveals
+        fireEvent.mouseEnter(roleHeaderBtn);
+        expect(roleBubble).toHaveClass('is-visible');
+        fireEvent.mouseLeave(roleHeaderBtn);
+        expect(roleBubble).not.toHaveClass('is-visible');
+        // Keyboard focus reveals
+        fireEvent.focus(roleHeaderBtn);
+        expect(roleBubble).toHaveClass('is-visible');
+        // Escape dismisses
+        fireEvent.keyDown(roleHeaderBtn, { key: 'Escape' });
+        expect(roleBubble).not.toHaveClass('is-visible');
         // Model table header tooltip
         const modelHeaderBtn = screen.getByRole('button', {
             name: 'Information about Model Resource Consumption',
@@ -806,7 +1077,13 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('Telemetry breakdown of invocations, token volume, cache hit rate, and spend by model family and version.')).toBeInTheDocument();
         const modelTooltipId = modelHeaderBtn.getAttribute('aria-describedby');
         expect(modelTooltipId).toBeTruthy();
-        expect(document.getElementById(modelTooltipId!)).toHaveClass('placement-left');
+        const modelBubble = document.getElementById(modelTooltipId!);
+        expect(modelBubble).toHaveClass('placement-left');
+        expect(modelBubble).not.toHaveClass('is-visible');
+        fireEvent.focus(modelHeaderBtn);
+        expect(modelBubble).toHaveClass('is-visible');
+        fireEvent.blur(modelHeaderBtn);
+        expect(modelBubble).not.toHaveClass('is-visible');
         // Column headers across tables
         const roleColButtons = screen.getAllByRole('button', { name: 'Information about Role' });
         const modelColButtons = screen.getAllByRole('button', { name: 'Information about Model' });
@@ -935,78 +1212,6 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('No session execution threads recorded for this workspace.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Information about Session Execution Threads' })).toBeInTheDocument();
     });
-    it('handles hover and focus on Role and Model Resource Consumption header tooltips with placement-left', async () => {
-        const ledgers = Object.values(mockAgenticMetricsLedgers);
-        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
-            data: ledgers,
-        });
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mockWorkspaceDetails['AL-1']!,
-        });
-        render(<TicketDeepDive selectedTicketId="AL-1"/>);
-        await waitFor(() => {
-            expect(screen.getByText('SDLC Iterations')).toBeInTheDocument();
-        });
-        const roleHeaderBtn = screen.getByRole('button', {
-            name: 'Information about Role Resource Consumption',
-        });
-        const roleBubble = document.getElementById(roleHeaderBtn.getAttribute('aria-describedby')!);
-        expect(roleBubble).toHaveClass('placement-left');
-        expect(roleBubble).not.toHaveClass('is-visible');
-        // Mouse hover reveals
-        fireEvent.mouseEnter(roleHeaderBtn);
-        expect(roleBubble).toHaveClass('is-visible');
-        fireEvent.mouseLeave(roleHeaderBtn);
-        expect(roleBubble).not.toHaveClass('is-visible');
-        // Keyboard focus reveals
-        fireEvent.focus(roleHeaderBtn);
-        expect(roleBubble).toHaveClass('is-visible');
-        // Escape dismisses
-        fireEvent.keyDown(roleHeaderBtn, { key: 'Escape' });
-        expect(roleBubble).not.toHaveClass('is-visible');
-        // Model Resource Consumption tooltip focus
-        const modelHeaderBtn = screen.getByRole('button', {
-            name: 'Information about Model Resource Consumption',
-        });
-        const modelBubble = document.getElementById(modelHeaderBtn.getAttribute('aria-describedby')!);
-        expect(modelBubble).toHaveClass('placement-left');
-        expect(modelBubble).not.toHaveClass('is-visible');
-        fireEvent.focus(modelHeaderBtn);
-        expect(modelBubble).toHaveClass('is-visible');
-        fireEvent.blur(modelHeaderBtn);
-        expect(modelBubble).not.toHaveClass('is-visible');
-    });
-    it('ensures .table-card and .thread-accordion-item in web/src/index.css have overflow: visible to prevent tooltip clipping', () => {
-        const cssPath = path.resolve(__dirname, '../index.css');
-        const cssContent = fs.readFileSync(cssPath, 'utf-8');
-        // Verify .table-card rule explicitly defines overflow: visible and not overflow: hidden
-        const tableCardBlock = cssContent.match(/\.table-card\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(tableCardBlock).toMatch(/overflow:\s*visible;/);
-        expect(tableCardBlock).not.toMatch(/overflow:\s*hidden;/);
-        // Verify .thread-accordion-item rule explicitly defines overflow: visible and not overflow: hidden
-        const threadAccordionBlock = cssContent.match(/\.thread-accordion-item\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(threadAccordionBlock).toMatch(/overflow:\s*visible;/);
-        expect(threadAccordionBlock).not.toMatch(/overflow:\s*hidden;/);
-    });
-    it('ensures .table-responsive, .data-table, and .thread-models-table rules in web/src/index.css satisfy responsive constraints', () => {
-        const cssPath = path.resolve(__dirname, '../index.css');
-        const cssContent = fs.readFileSync(cssPath, 'utf-8');
-        // Verify .table-responsive utility definition
-        const tableResponsiveBlock = cssContent.match(/\.table-responsive\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(tableResponsiveBlock).toMatch(/width:\s*100%;/);
-        expect(tableResponsiveBlock).toMatch(/overflow-x:\s*auto;/);
-        expect(tableResponsiveBlock).toMatch(/-webkit-overflow-scrolling:\s*touch;/);
-        // Verify .data-table min-width and nowrap td
-        const dataTableBlock = cssContent.match(/\.data-table\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(dataTableBlock).toMatch(/min-width:\s*480px;/);
-        const dataTableTdBlock = cssContent.match(/\.data-table\s+td\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(dataTableTdBlock).toMatch(/white-space:\s*nowrap;/);
-        // Verify .thread-models-table min-width and nowrap td
-        const threadModelsTableBlock = cssContent.match(/\.thread-models-table\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(threadModelsTableBlock).toMatch(/min-width:\s*850px;/);
-        const threadModelsTableTdBlock = cssContent.match(/\.thread-models-table\s+td\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(threadModelsTableTdBlock).toMatch(/white-space:\s*nowrap;/);
-    });
     it('wraps Role and Model Resource Consumption tables in .table-responsive containers and keeps headers outside', async () => {
         const ledgers = Object.values(mockAgenticMetricsLedgers);
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
@@ -1046,6 +1251,31 @@ describe('TicketDeepDive View Component', () => {
         });
         const modelBubble = document.getElementById(modelHeaderBtn.getAttribute('aria-describedby')!);
         expect(modelBubble).toHaveClass('placement-left');
+        const cssPath = path.resolve(__dirname, '../index.css');
+        const cssContent = fs.readFileSync(cssPath, 'utf-8');
+        // Verify .table-card rule explicitly defines overflow: visible and not overflow: hidden
+        const tableCardBlock = cssContent.match(/\.table-card\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(tableCardBlock).toMatch(/overflow:\s*visible;/);
+        expect(tableCardBlock).not.toMatch(/overflow:\s*hidden;/);
+        // Verify .thread-accordion-item rule explicitly defines overflow: visible and not overflow: hidden
+        const threadAccordionBlock = cssContent.match(/\.thread-accordion-item\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(threadAccordionBlock).toMatch(/overflow:\s*visible;/);
+        expect(threadAccordionBlock).not.toMatch(/overflow:\s*hidden;/);
+        // Verify .table-responsive utility definition
+        const tableResponsiveBlock = cssContent.match(/\.table-responsive\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(tableResponsiveBlock).toMatch(/width:\s*100%;/);
+        expect(tableResponsiveBlock).toMatch(/overflow-x:\s*auto;/);
+        expect(tableResponsiveBlock).toMatch(/-webkit-overflow-scrolling:\s*touch;/);
+        // Verify .data-table min-width and nowrap td
+        const dataTableBlock = cssContent.match(/\.data-table\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(dataTableBlock).toMatch(/min-width:\s*480px;/);
+        const dataTableTdBlock = cssContent.match(/\.data-table\s+td\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(dataTableTdBlock).toMatch(/white-space:\s*nowrap;/);
+        // Verify .thread-models-table min-width and nowrap td
+        const threadModelsTableBlock = cssContent.match(/\.thread-models-table\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(threadModelsTableBlock).toMatch(/min-width:\s*850px;/);
+        const threadModelsTableTdBlock = cssContent.match(/\.thread-models-table\s+td\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(threadModelsTableTdBlock).toMatch(/white-space:\s*nowrap;/);
     });
     it('renders custom agent roles and arbitrary models in autopsy tables and velocity', async () => {
         const customRoleLedger: AgenticMetricsLedger = {
