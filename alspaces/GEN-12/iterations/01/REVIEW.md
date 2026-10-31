@@ -26,13 +26,13 @@ Change: explicit harness selection, source/root/child validation, preservation o
 
 GEN-10 root `01a188b5-1a07-7163-af04-069719c119fc`, line 499, asks to merge plans/reviews and delete dangling folders. GEN-9 root, lines 190 and 223, asks to merge plans and delete empty folders. AL-56 root, lines 1238 and 1693, corrects accidental ticket changes and excessive research planning.
 
-Change: distinguish acceptance-changing iterations from status/clarification/rework; retain approval across compaction; clarify that documentation maintenance does not require application-development delegation. The existing application development confirmation gate and role boundaries remain intact.
+Change: distinguish acceptance-changing iterations from status/clarification/rework; retain approval across compaction; clarify that documentation maintenance does not require application-development delegation. The application development confirmation gate and role boundaries remain intact. AL-49 root `01a18f23-474f-7f50-83b0-a64af4954d37`, lines 92 and 111, shows explicit pre-approval followed by another approval question. Clarify that existing explicit approval satisfies the gate within its stated scope.
 
 ### 4. Keep optional enrichment optional and ship the verified assets
 
 FIX-12 root `01a18759-f52b-7e43-a160-2ee1d4cea623`, line 19, specifies that hydration is a bonus and stored waterfall data must remain usable. Local rollout `01a18793-3350-7671-9ff2-117eda38b8dd`, line 19, records tester discovery that embedded assets were stale after build artifacts had been restored.
 
-Change: test baseline data with hydration unavailable; preserve canonical embedded assets after frontend changes. Verified current `web/package.json` build copies `web/dist` to `backend/internal/adapters/web/dist`. Fix Go command cwd to `backend/` in technical guidance.
+Change: test baseline data with hydration unavailable; preserve canonical embedded assets after frontend changes. Verified current `web/package.json` build copies `web/dist` to `backend/internal/adapters/web/dist`. Fix Go command cwd to `backend/` in technical guidance. GEN-11 root `01a18f52-031d-75e1-ac6c-85dc85d233fa`, line 17, explicitly requests ignoring generated assets; FIX-13 root `01a18f71-3099-7f92-86cc-fe6936352000`, line 17, reports the missing embed input during CI vet. Current checkout ignores generated assets, so guidance respects current tracking policy rather than requiring generated files to be committed. The first full `make` attempt additionally reproduced a clean-checkout failure: Go vet runs before frontend build and cannot resolve `all:dist`. Documented dependency installation and frontend build before the first full gate.
 
 ### 5. Keep delegation and delivery ownership explicit
 

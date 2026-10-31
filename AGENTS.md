@@ -79,7 +79,7 @@ Specialized roles:
 - **Development Orchestrator (`orchestrator` / `agentic-lens-dev`)**:
   - Coordinates iterations across subagents (`planner` -> `coder` -> `tester` -> `reviewer`).
   - **Orchestrator Non-Execution Invariant**: Orchestrators never write application code directly.
-  - **Mandatory User Confirmation Gate**: Stop and confirm proposed plan with the user via `question` before writing code.
+  - **Mandatory User Confirmation Gate**: Obtain explicit user approval for the proposed scope before writing code, using the available question mechanism when approval is missing. An explicit pre-approval for that scope satisfies the gate; record it and do not ask again. Seek renewed approval when the proposed implementation materially changes the approved boundaries.
 - **Subagents**:
   - `planner`: Contracts, architecture, and zero-code plans.
   - `coder`: Go backend and TypeScript frontend implementation.
@@ -116,7 +116,7 @@ All code must strictly satisfy `TECHNICAL_GUIDELINES.md`:
 - **Name by responsibility and version**: Version-specific adapters and tests should identify both the schema family and responsibility (for example, `schema_v2_session_extraction.go`). Shared logic should not claim to be version-specific. Keep public comments consistent with actual dispatch behavior.
 - **Bound investigation and output**: Use targeted searches and bounded reads. After a repeated failure, inspect the cause and change the hypothesis or command before retrying. Summarize resolved findings and remaining work in the active iteration so a compacted session does not restart discovery.
 - **Coordinate verification**: Record the tested commit or diff, command, result, and environment limitation in the review. Reuse valid results for unchanged code. Re-run affected checks after fixes and the required `make` gate after integration; reviewers need not duplicate a completed suite without a concrete concern. Report skipped stages explicitly.
-- **Keep the shipped UI current**: Frontend changes require the canonical frontend build and verification of the embedded asset tree under `backend/internal/adapters/web/dist/`. Do not restore stale tracked assets merely to reduce the diff. Verify the standalone binary's assets as well as development-source behavior.
+- **Keep the shipped UI current**: Frontend changes require the canonical frontend build and verification of the embedded asset tree under `backend/internal/adapters/web/dist/`. Respect the current tracking policy for generated files; if assets are tracked, do not restore stale versions merely to reduce the diff. Verify the standalone binary's assets as well as development-source behavior.
 - **Close with evidence**: State delivered behavior, verification, remaining limitations, and the correct PR URL. Do not call work complete because a plan exists, a child reports success, or an earlier PR passed checks.
 
 Rationale and session references: [GEN-12 session audit](alspaces/GEN-12/iterations/01/REVIEW.md).

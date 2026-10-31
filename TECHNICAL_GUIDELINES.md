@@ -86,7 +86,7 @@ AgenticLens deploys as a single, self-contained executable with the TypeScript w
    - Local Development: Vite dev server runs with HMR and proxies API requests (`/api/*`) to the Go backend.
 3. **Build Sequence**:
    - Production binary build sequence: `(cd web && npm run build)` followed by `(cd backend && go build -o ../bin/agentic-lens ./cmd/agentic-lens)`.
-   - The frontend build copies assets to `backend/internal/adapters/web/dist/`, the Go embed input. Preserve and review tracked changes there when frontend source changes.
+   - The frontend build copies assets to `backend/internal/adapters/web/dist/`, the Go embed input. Verify that tree after frontend changes. Respect its Git tracking policy; do not add ignored build output.
    - CI and container builds must compile the frontend first before invoking Go build.
 
 ---
@@ -97,6 +97,10 @@ Before submitting any iteration or PR, all quality gates must pass:
 
 ### Automated Verification (Makefile)
 ```bash
+# Bootstrap a clean checkout: Go vet requires the embedded frontend to exist
+make install
+(cd web && npm run build)
+
 # Run all quality checks, tests, and build
 make
 
