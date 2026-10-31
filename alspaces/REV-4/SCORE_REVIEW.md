@@ -177,3 +177,5 @@ Five independent guards remain, with scores unchanged:
 CSS source guards remain unchanged inside the existing responsive-wrapper contract, without claiming browser geometry coverage. Type narrowing still executes through the actual type guard under tsc, and separate negative compiler checks remain. Header aria associations, tooltip presence/absence, metadata precedence and existing callback assertions survive their transfers. Assertions were not merely packed into unrelated large tests to manufacture a count reduction.
 
 See iterations/05/TEST_RESULTS.md and iterations/05/REVIEW.md for independent execution and semantic audits. No mutation-equivalence or blanket deletion guarantee is claimed.
+
+Iteration 05 final gate: full integrated `make` passed, including Go race checks, typecheck/lint, all 712 frontend cases, canonical embedded assets and four binary target builds.

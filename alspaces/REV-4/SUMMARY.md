@@ -43,18 +43,18 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - Final review inventory checks passed; only REV-4 documentation and generated telemetry are task-owned changes.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 6
-- **Active Agent Duration:** 45m 39s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 328.9k tokens (165% of 200k healthy ceiling, 0 compactions) | Subagents peak 330.4k (Reviewer)
+- **Software Development Life Cycle Iterations:** 7
+- **Active Agent Duration:** 1h 11m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 392.4k tokens (196% of 200k healthy ceiling, 0 compactions) | Subagents peak 394.2k (Planner)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
-- **Test-to-Production Code Ratio:** 12:0 (+12 test lines / +0 prod lines)
-- **Code Delivered:** +12 / -1,908 lines across 10 code files (excluding docs)
-- **Reasoning Effort:** 30,293 reasoning tokens (22.2% of generated output)
-- **Tool Health & Self-Correction:** 198 tool calls (4 self-corrections, 98.0% success rate)
+- **Test-to-Production Code Ratio:** 243:0 (+243 test lines / +0 prod lines)
+- **Code Delivered:** +243 / -2,673 lines across 21 code files (excluding docs)
+- **Reasoning Effort:** 70,912 reasoning tokens (26.4% of generated output)
+- **Tool Health & Self-Correction:** 343 tool calls (6 self-corrections, 98.3% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 17 execution anomalies detected (10 CRITICAL, 7 WARNING).
+- **Status:** 19 execution anomalies detected (11 CRITICAL, 8 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+91.9k tokens) — Context tokens surged by 91.9k to 126.8k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+184.7k tokens) — Context tokens surged by 184.7k to 184.7k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.6k tokens) — Context tokens reached 205.6k, breaching the 200k critical ceiling.
@@ -64,6 +64,7 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+307.4k tokens) — Context tokens surged by 307.4k to 307.4k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (307.4k tokens) — Context tokens reached 307.4k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (312.5k tokens) — Context tokens reached 312.5k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (341.1k tokens) — Context tokens reached 341.1k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.7k tokens) — Context tokens reached 203.7k, breaching the 200k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.3k tokens) — Context tokens reached 165.3k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (173.0k tokens) — Context tokens reached 173.0k, breaching the 160k warning ceiling.
@@ -72,6 +73,7 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.5k tokens) — Context tokens reached 161.5k, breaching the 160k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (3 cycles) — Subagent roles 'coder' and 'tester' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer (3 cycles) — Subagent roles 'tester' and 'reviewer' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> tester (4 cycles) — Subagent roles 'reviewer' and 'tester' alternated for 4 consecutive cycles.
 
 ### Agentic Execution Metrics
 
@@ -80,18 +82,18 @@ Every declaration was inventoried and screened; detailed body/production inspect
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 2 | 467,887 | 6,547 | 2,056,448 | 81.5% | 308.4k | BLOATED (154%) | $0.00 |
-| **coder** | 2 | 66,347 | 5,046 | 3,525,120 | 98.2% | 317.5k | BLOATED (159%) | $0.00 |
-| **tester** | 2 | 75,360 | 10,036 | 5,469,568 | 98.6% | 321.2k | BLOATED (161%) | $0.00 |
-| **reviewer** | 2 | 107,363 | 5,667 | 3,284,864 | 96.8% | 330.4k | BLOATED (165%) | $0.00 |
-| **rootagent** | 1 | 618,462 | 78,906 | 30,259,712 | 98.0% | 328.9k | BLOATED (164%) | $0.00 |
-| **Total** | **9** | **1,335,419** | **106,202** | **44,595,712** | **97.1%** | **330.4k** | **BLOATED** | **$0.00** |
+| **planner** | 3 | 569,265 | 23,233 | 7,962,496 | 93.3% | 394.2k | BLOATED (197%) | $0.00 |
+| **coder** | 4 | 208,117 | 20,638 | 5,861,504 | 96.6% | 317.5k | BLOATED (159%) | $0.00 |
+| **tester** | 3 | 154,090 | 22,519 | 7,399,552 | 98.0% | 321.2k | BLOATED (161%) | $0.00 |
+| **reviewer** | 3 | 192,953 | 12,884 | 5,135,616 | 96.4% | 330.4k | BLOATED (165%) | $0.00 |
+| **rootagent** | 1 | 659,152 | 118,546 | 49,086,208 | 98.7% | 392.4k | BLOATED (196%) | $0.00 |
+| **Total** | **14** | **1,783,577** | **197,820** | **75,445,376** | **97.7%** | **394.2k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 9 | 1,335,419 | 106,202 | 44,595,712 | 97.1% | $0.00 |
-| **Total** | **9** | **1,335,419** | **106,202** | **44,595,712** | **97.1%** | **$0.00** |
+| **gpt-6.1-sol** | 14 | 1,783,577 | 197,820 | 75,445,376 | 97.7% | $0.00 |
+| **Total** | **14** | **1,783,577** | **197,820** | **75,445,376** | **97.7%** | **$0.00** |
 
 ## Iteration 02: approved candidate deletion
 
@@ -237,3 +239,18 @@ The two coders own disjoint sets of six and nine test paths. Meaningful layout s
 - No production, runtime, style, workflow, Makefile, schema, dependency or fixture-data changes. No mutation-equivalence claim or guarantee about all possible defects.
 
 Reviewer APPROVED iteration 05 with no blocking findings; independently audited all 47 candidate outcomes and current catalog. Nonblocking stale donor wording was corrected to identify the removed DistributionCard/model smoke cases as historical. No test-diff changes after the approved semantic audit.
+
+### Iteration 05 final integration gate
+
+- Implementation commit: `3ab3ece`; origin/main was already up to date, no merge conflicts or source changes. Reviewed implementation diff fingerprint remained unchanged after integration.
+- Full `make`: exit 0. Dependencies, canonical frontend build, Go vet, frontend typecheck/lint, all-package Go race suite, all 712 frontend cases across 34 files, and four binary targets passed. Valid Go cache results were reused only for unchanged packages.
+- Current embedded index/JS/CSS byte sequences verified in the newly built standalone Linux binary. Generated assets remain ignored under repository tracking policy.
+- Review APPROVED all 35 transfers and seven deletion rationales. Five independent guards remain at unchanged scores; no further bulk deletion is implied by the numeric review.
+- Final telemetry expects 14 real Codex source sessions: original root, eight prior children and five new iteration05 children. Previous nine ledger sessions must be preserved. Actual billed cost remains unavailable; stored zero does not prove free execution.
+- Iteration 05 reviewer source: `01a19165-86df-7583-b269-9d33f17c3100` with parent `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`.
+- Iteration 05 coder source: `01a19160-7c60-7d63-a307-a9361004db75` with parent `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`.
+- Iteration 05 planner source: `01a19156-f4ae-78e0-ac78-db9f009eb204` with parent `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`.
+- Iteration 05 tester source: `01a19162-a314-71b3-8129-474e3427e18c` with parent `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`.
+- Iteration 05 coder source: `01a19160-536d-7353-a8e3-06d46ace1943` with parent `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`.
+
+Final iteration 05 telemetry validated: all 14 actual Codex source sessions present with correct parent IDs and nonempty invocations. All nine prior ledger sessions preserved; original root refreshed and five new children included. Ticket type test. Actual billed cost remains unavailable rather than established zero.
