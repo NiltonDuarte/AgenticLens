@@ -29,3 +29,23 @@ Full make, generated asset-tree equivalence and standalone binary checks remain 
 ## Parent integration verification
 
 At implementation commit 873343d, origin/main was already integrated. Full `make` passed: vet, race suites, typecheck, lint, 714 frontend tests, and four binary builds. Built frontend and embed trees match; standalone binary served matching index, JavaScript and CSS. Generated assets remain ignored. Browser geometry was not assessed. Dependency audit and non-failing React act warnings are recorded in SUMMARY.md.
+
+## Manager findings F3/F4 correction audit
+
+Verdict: APPROVED for the correction diff against 8c4e2dc7a25586b13af6a7af0c0859b73edef65b. This supplements the original review; it does not approve unresolved upstream integration.
+
+### F3 closure
+
+Reviewed backend/internal/domain/events.go and web/src/domain/events.ts and their extended production-path reconciliation tests. Both implementations add positive local warning evidence, permit available positive metadata to enrich older diagnostics, and preserve stored metadata when the local flag is false/absent or positive metadata is empty. Both preserve recorded identity and execution status while retaining existing payload/duration enrichment. Tests exercise legacy absent/false flags, preservation and replacement, idempotence, input immutability, and frontend response selection. The implementations are consistent despite Go's bool representing both absent and false.
+
+### F4 closure
+
+Reviewed codexToolContent and its recordToolContent integration. Classification receives decoded supported text blocks in order, while event.ToolOutput still receives the original output through the unchanged evidence path. Plain string evidence remains unwrapped as before; object/array evidence retains its original JSON bytes. Text and input_text blocks, nested output strings and serialized wrappers are supported; unknown blocks and arbitrary diagnostic keys do not become classified text. Recursion stops at depth eight. The correction does not change execution status or error counters and continues excluding failed invocations from successful content-warning counts.
+
+Production ParseRollout tests compare plain and structured diagnostics, check exact raw evidence independently, and exercise actual MCP lifecycle handling for completed versus failed status. Fixtures are explicitly synthetic examples of supported shapes. This audit does not claim every installed Codex version emits those shapes or establish universal harness compatibility. Source-shape evidence is recorded in SUMMARY.md: coder-reported bounded shape inspection of 20 local rollout files, representative filename and observed input_text/content envelope counts. This provides shape provenance, not a real compiler-error reproduction; raw transcripts remain outside Git. Reviewer inspected the recorded evidence statement, not the private source transcripts.
+
+### Verification and remaining delivery boundaries
+
+Reused tester evidence on the correction diff: affected domain/Codex Go race suites, focused MCP/content-envelope regression rerun, TypeScript typecheck and 31 event-domain tests. Reviewed test assertions and production code rather than relying only on passing status. No product files edited by reviewer, no new test deletions, no added domain I/O or forbidden any/interface{} typing, and no unresolved blocking F3/F4 findings identified.
+
+Parent full make remains the final correction-branch gate. Upstream integration is explicitly on hold until manager confirmation that PRs #75 and #77 merged; integration conflicts, combined UI behavior and the required post-integration gate remain outside this approval. No telemetry, commit, merge or PR action was performed by reviewer.

@@ -27,3 +27,20 @@ The first classifier run failed for standard TypeScript output `src/app.ts(3,2):
 - `git diff --check`: PASS.
 
 No silent skips in these targeted commands. This evidence does not claim browser geometry, standalone embedding, full-suite completion or final telemetry; those remain parent delivery checks. Frontend tests prove DOM and filter behavior rather than visual geometry. Source-format coverage exercises existing fixture families, not external real-runtime compatibility.
+
+## Manager review corrections F3/F4
+
+Baseline 8c4e2dc7a25586b13af6a7af0c0859b73edef65b; verified working correction diff in events.go, events.ts and Codex rollout.go with the following additions to existing test owners. No application changes, upstream integration or telemetry performed by tester.
+
+- F3: Go events_test.go exercises production ReconcileEvents with an older event gaining a warning, negative/missing local metadata preserving stored evidence, positive empty/none fields falling back, and nonempty positive fields enriching metadata. Checks preserved event/session identity, execution status, payload enrichment, idempotence and input immutability. TypeScript events.test.ts covers the corresponding cases, explicitly distinguishes absent versus false flags, and exercises both reconcileEvents and selectWorkspaceEvents.
+- F4: Codex rollout_test.go exercises production ParseRollout for equivalent plain diagnostic strings, MCP-style object content arrays, ordered multiple text blocks, input_text arrays, nested command-output wrappers and serialized wrappers inside text blocks. It checks equivalent flags, snippets, severity and independent counts while retaining exact original ToolOutput. Clean, mixed clean/nontext, nontext-only, unknown-envelope and unknown-block cases remain clean. A separate lifecycle guard checks actual MCP begin/end events: completed output warns; failed execution stays an execution failure without also incrementing successful content warnings. Both preserve the raw envelope and call identity.
+- The structured examples are explicitly synthetic fixtures of supported shapes. They are not claimed to be sanitized runtime evidence; source-shape provenance remains the coder's separately recorded evidence.
+
+Verification on the correction diff:
+
+- `cd backend && go test -race ./internal/domain ./internal/adapters/codex`: PASS.
+- After adding the MCP lifecycle guard, `cd backend && go test -race ./internal/adapters/codex -run 'TestCodex(ContentEnvelopes|MCPContent)' -count=1`: PASS.
+- `cd web && npm run typecheck && npm test -- --run src/domain/events.test.ts`: PASS; 31 tests.
+- `git diff --check`: PASS.
+
+No new product defects found in this correction pass. The initial frontend typecheck rejected explicit undefined optional fields in the new tester fixture; corrected it to represent absence by omitting properties, then reran successfully. Full make and final integration remain parent responsibilities subject to the documented manager hold. These checks prove supported fixture paths, not universal Codex-version compatibility.

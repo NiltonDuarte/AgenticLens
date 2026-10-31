@@ -764,6 +764,47 @@ func codexToolOutput(raw json.RawMessage) string {
 	return string(raw)
 }
 
+// codexToolContent decodes supported result envelopes for classification only.
+// ToolOutput retains the original evidence, including non-text content and JSON.
+func codexToolContent(output string, depth int) string {
+	if depth >= 8 {
+		return ""
+	}
+	var raw json.RawMessage
+	if json.Unmarshal([]byte(output), &raw) != nil {
+		return output
+	}
+	var text string
+	if json.Unmarshal(raw, &text) == nil {
+		return codexToolContent(text, depth+1)
+	}
+	type contentBlock struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	var blocks []contentBlock
+	if json.Unmarshal(raw, &blocks) != nil {
+		var envelope struct {
+			Content []contentBlock `json:"content"`
+			Output  *string        `json:"output"`
+		}
+		if json.Unmarshal(raw, &envelope) != nil {
+			return ""
+		}
+		if envelope.Output != nil {
+			return codexToolContent(*envelope.Output, depth+1)
+		}
+		blocks = envelope.Content
+	}
+	parts := make([]string, 0, len(blocks))
+	for _, block := range blocks {
+		if block.Type == "text" || block.Type == "input_text" {
+			parts = append(parts, codexToolContent(block.Text, depth+1))
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
 func (transcript *Transcript) recordToolContent(index int, output string) {
 	event := &transcript.Events[index]
 	if output != "" {
@@ -772,7 +813,7 @@ func (transcript *Transcript) recordToolContent(index int, output string) {
 	if event.ToolName == nil {
 		return
 	}
-	content := domain.ClassifyCompletedToolContent(*event.ToolName, event.Status, output, event.Status == "error" || event.Status == "failed")
+	content := domain.ClassifyCompletedToolContent(*event.ToolName, event.Status, codexToolContent(output, 0), event.Status == "error" || event.Status == "failed")
 	event.HasContentError = content.HasContentError
 	event.ContentSeverity = string(content.Severity)
 	event.ContentErrorSnippet = content.ErrorSnippet
