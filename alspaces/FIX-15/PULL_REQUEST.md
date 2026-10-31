@@ -1,20 +1,14 @@
-# fix(ci): prepare embedded assets before static checks (FIX-15)
+# fix(ci): prepare embedded assets before Go checks (FIX-15)
 
 ## Overview
 
-Make the shared `make check` path build the frontend bundle before Go vet evaluates packages that embed `backend/internal/adapters/web/dist`. This fixes clean-checkout failures in the release candidate workflow and applies the same ordering to stable release and release-please workflows.
+Make shared Make targets prepare the frontend bundle before Go vet or tests load packages that embed `backend/internal/adapters/web/dist`. This addresses clean-checkout failures in release workflows and local backend Go checks.
 
 ## Summary
 
-- Added `web-assets` target and made `check` depend on it before `vet` and `lint`.
-- Added a clear error when frontend dependencies have not been installed.
-- Reviewed all workflows under `.github/workflows/`; workflow-by-workflow findings are in `alspaces/FIX-15/iterations/01/REVIEW.md`.
+- Added `web-assets`, made `vet` and `test-backend` depend on it, and added a combined `backend-check` target.
+- Updated the CI backend job to call `make backend-check`.
+- Reviewed every workflow under `.github/workflows/`; findings are recorded in `alspaces/FIX-15/iterations/01/REVIEW.md` and `iterations/02/REVIEW.md`.
 
 Contract: [alspaces/FIX-15/CONTRACT.md](alspaces/FIX-15/CONTRACT.md)
 Summary: [alspaces/FIX-15/SUMMARY.md](alspaces/FIX-15/SUMMARY.md)
-
-## Verification
-
-- `npm ci`
-- `make check`
-- Go and frontend test suites were not run.
