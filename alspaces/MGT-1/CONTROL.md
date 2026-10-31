@@ -193,3 +193,9 @@ Latest implementation evidence clarified: earlier orphan-only sibling-loss fixtu
 ## User correction: management PR self-merge prohibited
 
 User challenged own-thread merge#83 while workflow remains active. Manager acknowledged mistake, updated canonical AGENTS/skill, and will deliver later records in a draft follow-up with external merge ownership. Do not self-merge/auto-merge or ask a child to bypass. #83 historical merge unchanged; no reversion requested. #86 AL-55 is a separate owner/product PR at f86fe9ed6614d6467745938300ef4573627eb096, hosted CI running, no merge readiness inferred.
+
+## AL-55 implementation delivery: exact-head CI gate
+
+#86 fetched at f86fe9ed6614d6467745938300ef4573627eb096; main92a6fd2 ancestry verified. Manager read independent REVIEW/TESTING and scoped production diff. Sorted backend path+NUL+bytes+NUL fingerprint independently matches 1e35ecb00c6d62cc751a5af314d7851a6eac43336a931b294a52f6e427bb3c9d across12files; a6cbc25..head backend/web empty. Accepted v4 optional-wire/default-internal collections, conservative complete-tree replacement, all-owner completion, recompute without Force, diagnostics and existing backups remain bounded. Spec moved to done, only AL55 index block removed; AL2-9 retained. No current reviews/comments/unresolved threads. Owner full integrated make9ec21ab and five-session ledger evidence accepted with documented limits, not claimed as manager execution. Backend/frontend checks SUCCESS; binary IN_PROGRESS, so waiting_checks and no merge attempted. Watch will provide subsequent change notification.
+
+Own guidance follow-up stays draft/external_review. Full make completed25fa370/current main92a6fd2, 750frontend tests/35files, Go vet/race, embedding and four builds; skill/diff checks passed. No product files changed by manager. Own telemetry is refreshed only at delivery, never importing independent AL55/PO17 roots.
