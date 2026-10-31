@@ -117,49 +117,12 @@ AgenticLens deploys as a single, self-contained executable with the TypeScript w
 Before submitting any iteration or PR, all quality gates must pass:
 
 ### Automated Verification (Makefile)
-```bash
-# Bootstrap dependencies (Make prepares embedded assets before Go checks)
-make install
 
-# Run all quality checks, tests, and build
-make
-
-# Or run specific stages:
-make backend-check  # Backend vet and race tests, with embedded-asset prerequisite
-make web-assets     # Prepare assets before invoking Go tooling directly
-make check          # Static analysis: go vet, frontend lint/typecheck, git diff check
-make test           # Unit and race-detected test suites (backend and frontend)
-make build          # Single binary build (including frontend bundle if present)
-```
-
-### Manual Go Checks
-
-Run `make web-assets` first with frontend dependencies installed. For routine backend verification, prefer `make backend-check`, which carries this prerequisite.
-
-```bash
-# Verify compilation and format
-(cd backend && go vet ./...)
-# Run test suite with race detector
-(cd backend && go test -race ./...)
-# Build CLI binary
-(cd backend && go build -o ../bin/agentic-lens ./cmd/agentic-lens)
-```
-
-### TypeScript Checks & Frontend Build
-Run these commands from `web/` after installing its dependencies.
-
-```bash
-# Typecheck
-npm run typecheck  # or npx tsc --noEmit
-# Linting
-npm run lint
-# Unit tests
-npm test
-# Production frontend build
-npm run build      # Produces web/dist/ for Go embedding
-```
+Run `make` for the full gate. See [contributor build targets](CONTRIBUTING.md#4-makefile-targets-reference) and [verification prerequisites](CONTRIBUTING.md#5-quality-standards-and-invariants). Direct Go commands require `make web-assets` after installing frontend dependencies. Frontend checks from `web/` are `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
 
 ### Test Purpose and Proportionality
+
+Prefer table-driven Go tests and Vitest/Jest for TypeScript.
 
 Each test must exercise application behavior or an intentional wire/compiler contract and identify a plausible regression its assertions would detect. Before adding a test, inspect existing cases and helpers. Extend a coherent existing test or table when it can express the missing behavior clearly; add a separate test when it needs distinct setup, ownership, or failure diagnosis. Select boundary cases relevant to the changed contract rather than repeating a generic edge-case checklist for every function.
 
@@ -191,16 +154,3 @@ Select cases from the [regression prevention checklist](docs/REGRESSION_PREVENTI
 - Verify zero emojis in code, UI, docstrings, and log messages.
 - Verify single binary self-contained execution without Node runtime dependency.
 
----
-
-## Summary Checklist
-
-| Topic | Decision | Rule |
-|---|---|---|
-| **Backend Architecture** | Inward Dependencies | `internal/domain` has zero I/O imports. `internal/adapters` handles JSON and disk. `cmd/` handles CLI/server. |
-| **Separation** | FCIS | Pure deterministic logic in domain; filesystem I/O and HTTP in shell. |
-| **Go Standards** | Go 1.23+, Value Semantics | No `any`/`interface{}`, wrap errors with `%w`, zero unhandled errors. |
-| **Frontend Architecture** | TypeScript Strict | `"strict": true`, zero `any`, Zod/type guards at boundaries. |
-| **Asset Bundling** | Single Binary via `embed.FS` | `web/dist` embedded into Go executable; zero Node.js in production. |
-| **UI & Styling** | Modern Web / Zero Emojis | Pure components, graceful empty states, zero emojis. |
-| **Testing** | Deterministic Pure Core | Table-driven tests in Go with zero mocks for domain. Vitest/Jest for TypeScript. |

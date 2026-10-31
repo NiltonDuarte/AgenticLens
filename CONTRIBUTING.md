@@ -101,19 +101,7 @@ Select the applicable cases in the [regression prevention checklist](docs/REGRES
 
 After `make install`, use `make backend-check` for backend-only work or `make` for the full gate. Both prepare assets before Go loads embed-dependent packages. Before direct `go vet`, `go test`, or `go run`, run `make web-assets`. Build/CI changes require verification with generated assets absent and on a repeated build; frontend source checks alone do not validate the standalone bundle.
 
-Every contribution must strictly satisfy the architectural invariants defined in [TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md):
-
-1. **Functional Core, Imperative Shell (FCIS)**:
-   - Pure domain functions live in `backend/internal/domain`. Never import file systems, databases, network libraries, or clocks into domain code.
-   - Imperative side effects live in `backend/internal/adapters` and `backend/cmd/agentic-lens`.
-2. **Zero `any`**:
-   - Strictly prohibit `any` and `interface{}` across Go and TypeScript. Use strong typing, concrete structs, and discriminated unions.
-3. **Data Race Free**:
-   - All backend code must pass `go test -race ./...` with zero race conditions.
-4. **Zero Emojis**:
-   - Zero emojis in code, comments, docstrings, commit messages, PR descriptions, UI strings, logs, or workspace artifacts.
-5. **Clean Working Tree**:
-   - Run `git diff --check` to ensure no whitespace errors or merge marker conflicts.
+Follow [TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md) for FCIS boundaries, strict typing, race freedom, and the zero-emoji rule. `git diff --check` must pass.
 
 ### 5.1 Before Adding or Removing Tests
 
@@ -163,15 +151,7 @@ make release-verify
 
 ## 7. Ticketed and Ad Hoc Work
 
-Every task requires a ticket ID and an isolated workspace under `alspaces/<TICKET_ID>/`. For ad hoc work, assign a `GEN-#` ticket ID if none is provided. An ad hoc ticket does not require a specification or index entry under `alspaces/plan/`.
-
-Workspace deliverables must include:
-- `alspaces/<TICKET_ID>/SUMMARY.md`: Work log, completed changes, and verification.
-- `alspaces/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
-- `alspaces/<TICKET_ID>/agentic_metrics.json`: Final telemetry ledger.
-
-When a matching specification exists under `alspaces/plan/to-do/`, move it to `alspaces/plan/done/` when the ticket is completed. Remove its entry from `alspaces/plan/TICKETS.md` if present. Do not create a specification or index entry solely to perform this lifecycle step; ad hoc tickets still require their ID and workspace.
-
+Follow [AGENTS.md](AGENTS.md#1-ticketed-and-ad-hoc-work) for ticket allocation, configured workspace roots, required artifacts, plan lifecycle, final telemetry, and PR delivery. Ad hoc work still requires an ID and workspace, but no planning specification or index entry.
 
 ### 7.1 Recording steering without restarting the ticket
 
