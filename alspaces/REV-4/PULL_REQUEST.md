@@ -1,7 +1,7 @@
-# test(REV-4): remove 50 low-value tests with individual review rationale
+# test(REV-4): remove 50 low-value tests and score the remaining suite
 
-Remove six Go and 44 TypeScript test declarations that only confirm local fixtures/copied implementations or duplicate stronger surviving cases. Delete two files made entirely of type-cast JSON round trips and clean up unused test-local setup/imports. Production behavior is unchanged.
+Remove six Go and 44 TypeScript fixture-only, copied-implementation, and duplicated tests, with 1,610 net test lines deleted. Production behavior is unchanged. REVIEW.md retains every removal rationale and surviving protection.
 
-REVIEW.md records the rationale and retained protection for every removal. TEST_INVENTORY.md preserves historical entries and distinguishes removed tests from retained and conditional candidates. Corrected baseline inventory: 1,253 declarations; reduced suite: 1,203. Boundary, migration, ownership, hydration, security, and negative compiler contracts remain.
+The follow-up numeric review rates all 1,203 remaining declarations from 0 (definitely expendable with named equivalent coverage) to 10 (critical integrity protection). SCORE_REVIEW.md documents the rubric and focused findings; TEST_SCORES.md provides each score, reason and observed source evidence. Focused judgments are distinguished from provisional source-assisted screening; no mutation-equivalence or automatic deletion threshold is claimed. No additional tests are deleted in the scoring iteration.
 
-Scope and implementation boundaries: [CONTRACT.md](alspaces/REV-4/CONTRACT.md), [iteration 02 contract](alspaces/REV-4/iterations/02/CONTRACT.md). Verification and telemetry provenance: [SUMMARY.md](alspaces/REV-4/SUMMARY.md). No controlled speedup or mutation-equivalence claim is made.
+Scope: [CONTRACT.md](alspaces/REV-4/CONTRACT.md) and iteration02/03 contract deltas. Verification, inventory correction, and telemetry provenance: [SUMMARY.md](alspaces/REV-4/SUMMARY.md).

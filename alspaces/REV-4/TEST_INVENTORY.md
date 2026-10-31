@@ -1,5 +1,7 @@
 # REV-4 test-by-test inventory
 
+Historical iteration 01/02 inventory. The current numeric review is [TEST_SCORES.md](TEST_SCORES.md), explained in [SCORE_REVIEW.md](SCORE_REVIEW.md).
+
 Baseline `3481919832272d3a545f8d7a1c6c98a1f678fc58`. Companion to [REVIEW.md](REVIEW.md). One row per baseline declaration, including parameterized declarations. Iteration 02 corrects the original Go inventory omission: 511 Go plus 742 TypeScript declarations, 1,253 total. The 50 REMOVED rows identify iteration 02 deletions; line numbers remain historical. Remaining suite: 505 Go plus 698 TypeScript declarations, 1,203 total. KEEP is a conservative screening disposition, not proof of minimality. Evidence is an observed assertion or named subcase; it is not a mutation result. Source line numbers refer to the baseline.
 
 ## backend/cmd/agentic-lens/main_codex_test.go

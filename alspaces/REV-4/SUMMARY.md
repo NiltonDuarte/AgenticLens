@@ -136,3 +136,14 @@ The same Codex root session continues: `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`. R
 Final extraction must refresh the existing root and include all four children; there are no other-harness sessions in the pre-existing REV-4 ledger. Actual billed cost is unavailable in Codex rollout records; stored zero does not establish free execution. Raw transcripts stay outside Git.
 
 Final iteration02 telemetry validated: exactly five Codex sessions, original root preserved/refreshed and all four expected children with correct parent IDs and nonempty invocations. Ticket type `test`; no pre-existing source sessions lost.
+
+## Iteration 03: numeric importance review
+
+- User requested another review using 0-10 scores instead of binary dispositions. This iteration changes documentation only; it deletes no additional tests.
+- Initial working tree clean at `2e87ab15ffee382b1685bf38f233eca3d76fe72e`; existing PR72 open.
+- SCORE_REVIEW.md defines anchored meanings, manually examined low/high cases, and limitations. TEST_SCORES.md rates all 1,203 current declarations (505 Go and698 TypeScript), with a reason and observed source evidence per row.
+- 97 focused rows, 1,106 provisional source-assisted screened rows. This is not an exhaustive pairwise redundancy or mutation audit; confidence is explicit rather than presenting every rating as a proven deletion decision.
+- Three zero-score residual duplicates and eleven ten-score critical contracts identified. The previous 50 deletions remain historical and are not counted again.
+- Validation: GoAST and TypeScript compilerAST inventory includes multiline signatures/parameterized declarations. All 1,203 rows unique by current file/line, scores within 0-10, every reason/evidence populated. Runtime Go top-level name multiset matches all 505 AST declarations. Exactly 3 zero and 11 ten rows.
+- Fresh ordinary Go profile (`go test -count=1 -json ./...`): 505 top-level tests passed, no failed or skipped events. Profile output remains outside Git. Earlier iteration02 full make/frontend 749 evidence remains valid for unchanged source. Required post-integration make for this documentation iteration follows.
+- Source fingerprint: `cf143e3784fdb64d306ba95b08c69e36eeb86af7c1258179539400dff9e3cf41`.

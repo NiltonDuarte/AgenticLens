@@ -1,5 +1,7 @@
 # REV-4: Repository-wide test necessity review
 
+Iteration 01/02 removal history. For the latest 0-10 ratings of the remaining suite, see [SCORE_REVIEW.md](SCORE_REVIEW.md) and [TEST_SCORES.md](TEST_SCORES.md).
+
 ## Outcome
 
 Iteration 02 applies the user-approved removal of **50 test declarations**: 44 self-confirming or disconnected tests, one redundant repetition test, and five duplicated component cases. Each entry below preserves the original reason and retained protection. Conditional consolidation and rework candidates remain unchanged. Actual deletion and reduced-suite verification are recorded in the iteration 02 completion section.
