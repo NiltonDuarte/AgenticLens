@@ -6,6 +6,9 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+- **AL-44**: Localized Millisecond Timestamp Formatting and Timezone Header in Live Trace Inspector
+  - **Status**: In Progress
+  - **File**: `alspaces/plan/to-do/AL-44 localized timestamp and timezone header in live trace inspector.md`
 
 ---
 

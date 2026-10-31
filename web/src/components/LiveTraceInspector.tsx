@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact, LiveAnomalyAlert } from '../domain/live';
-import { formatTokensK } from '../domain/formatters';
+import { formatTokensK, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge } from '../domain/formatters';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { findMatchingLiveAlert, extractStreakCount } from '../domain/anomalies';
@@ -160,7 +160,7 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
           <span className={`turn-role-pill role-${message.role.toLowerCase()}`}>
             {message.role.toUpperCase()}
           </span>
-          <span className="turn-timestamp">{message.timestamp}</span>
+          <span className="turn-timestamp" title={formatLocalDateTimeTooltip(message.timestamp)}>{formatLocalTimeWithMs(message.timestamp)}</span>
           {message.id && (
             <div className="debug-id-token-group">
               <span className="debug-id-token mono">{message.id}</span>
@@ -299,6 +299,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
     <div className="live-trace-inspector-container" data-testid="live-trace-inspector">
       <div className="inspector-header">
         <div className="inspector-title-group">
+          <span className="inspector-timezone-badge">{getClientTimezoneBadge()}</span>
           <div className="inspector-session-row">
             <span className="inspector-session-id">Session: {sessionNode.id}</span>
             <button

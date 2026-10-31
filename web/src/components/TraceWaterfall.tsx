@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useId } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
-import { formatTokensK } from '../domain/formatters';
+import { formatTokensK, formatLocalTimeWithMs, formatLocalDateTimeTooltip } from '../domain/formatters';
 import { rebindEvent, sortEvents } from '../domain/events';
 import { AnomalyBadge } from './AnomalyBadge';
 import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
@@ -546,7 +546,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                     <span className="event-type-badge">
                       {formatEventTypeLabel(ev.event_type)}
                     </span>
-                    <span className="timeline-timestamp mono">{ev.timestamp}</span>
+                    <span className="timeline-timestamp mono" title={formatLocalDateTimeTooltip(ev.timestamp)}>{formatLocalTimeWithMs(ev.timestamp)}</span>
 
                     {/* Concrete Debug Identifier Badge with Copy Button */}
                     <div className="timeline-id-badge" onClick={(e) => e.stopPropagation()}>
