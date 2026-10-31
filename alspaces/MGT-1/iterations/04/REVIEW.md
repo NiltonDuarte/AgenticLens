@@ -19,3 +19,5 @@ Final original-sequence integration gate: make exited0 at bc288f9, actual maina7
 User accepted partial-refresh/mixed-age policy only, asked to revise remaining scope without specifying the desired delta. Clarification sent through question tool; implementation remains held. PO-17 notified to preserve partial acceptance and avoid inventing changes.
 
 User implementation authorization received and transmitted verbatim/with clarified acceptance to existing AL-55 owner. T3 binding rechecked; no duplicate owner/thread launched. PO-17 given only AL-55 to-do spec and own docs; developer owns index status and cannot move PO-owned spec before handoff. No application code written by manager, no implementation verification claimed yet.
+
+User clarified internal empty-array normalization at file-read boundary while v4 fields remain optional. Passed exact quote and preservation limits to active AL-55 workflow; no new approval request. Required affected read/validation/retention checks to be selected by owner. PO docs handoff remains pending.
