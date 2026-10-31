@@ -1484,7 +1484,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ticketID := "T-100"
 		detail := adaptershttp.WorkspaceDetailResponse{
-			Ledger: adapters.MetricsLedgerResponseDTO{
+			Ledger: adaptershttp.MetricsLedgerResponseDTO{
 				TicketID: &ticketID,
 			},
 		}
@@ -1504,19 +1504,64 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 	t.Run("WriteFleetResponse writes valid JSON", func(t *testing.T) {
 		rec := httptest.NewRecorder()
 		summary := domain.FleetSummary{
-			TotalTickets: 5,
-			TotalCostUSD: 1.25,
+			TotalTickets: 5, TotalCostUSD: 1.25,
+			AnomalySummary: domain.FleetAnomalySummary{
+				TotalAnomalies: 4, WarningCount: 3, CriticalCount: 1,
+				SeverityCounts: map[string]int64{"WARNING": 3, "CRITICAL": 1},
+				RuleCounts:     map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0},
+				TotalTickets:   5, TicketsWithAnomalies: 2, AnomalyRatePerTicket: 0.8,
+				BrittleTools: []domain.BrittleToolSummary{
+					{ToolName: "bash", AnomalyCount: 2, TotalCalls: 20, ErrorCount: 5, FailureRatePct: 25},
+					{ToolName: "git", AnomalyCount: 1, TotalCalls: 10, ErrorCount: 3, FailureRatePct: 30},
+				},
+			},
 		}
 		adaptershttp.WriteFleetResponse(rec, summary)
 		if rec.Code != http.StatusOK {
-			t.Errorf("expected 200, got %d", rec.Code)
+			t.Fatalf("expected 200, got %d", rec.Code)
 		}
 		var parsed domain.FleetSummary
 		if err := json.NewDecoder(rec.Body).Decode(&parsed); err != nil {
-			t.Fatalf("failed decoding fleet: %v", err)
+			t.Fatal(err)
 		}
 		if parsed.TotalTickets != 5 || parsed.TotalCostUSD != 1.25 {
-			t.Errorf("unexpected fleet summary: %+v", parsed)
+			t.Fatalf("unexpected fleet summary: %+v", parsed)
+		}
+		anomaly := parsed.AnomalySummary
+		if anomaly.TotalAnomalies != 4 || anomaly.WarningCount != 3 || anomaly.CriticalCount != 1 || anomaly.TotalTickets != 5 || anomaly.TicketsWithAnomalies != 2 || anomaly.AnomalyRatePerTicket != 0.8 {
+			t.Fatalf("fleet anomaly scalar fields lost: %+v", anomaly)
+		}
+		if !reflect.DeepEqual(anomaly.SeverityCounts, map[string]int64{"WARNING": 3, "CRITICAL": 1}) || !reflect.DeepEqual(anomaly.RuleCounts, map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0}) {
+			t.Fatalf("fleet anomaly maps lost: %+v", anomaly)
+		}
+		if len(anomaly.BrittleTools) != 2 {
+			t.Fatalf("brittle tools lost: %+v", anomaly.BrittleTools)
+		}
+		if got := anomaly.BrittleTools[0]; got.ToolName != "bash" || got.AnomalyCount != 2 || got.TotalCalls != 20 || got.ErrorCount != 5 || got.FailureRatePct != 25 {
+			t.Fatalf("first brittle tool fields lost: %+v", got)
+		}
+		if got := anomaly.BrittleTools[1]; got.ToolName != "git" || got.AnomalyCount != 1 || got.TotalCalls != 10 || got.ErrorCount != 3 || got.FailureRatePct != 30 {
+			t.Fatalf("second brittle tool fields lost: %+v", got)
+		}
+	})
+	t.Run("WriteFleetResponse preserves empty anomaly maps and arrays", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		adaptershttp.WriteFleetResponse(rec, domain.FleetSummary{AnomalySummary: domain.FleetAnomalySummary{
+			SeverityCounts: map[string]int64{"WARNING": 0, "CRITICAL": 0}, RuleCounts: map[string]int64{"TOOL_RETRY_STREAK": 0}, BrittleTools: []domain.BrittleToolSummary{},
+		}})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", rec.Code)
+		}
+		var parsed domain.FleetSummary
+		if err := json.NewDecoder(rec.Body).Decode(&parsed); err != nil {
+			t.Fatal(err)
+		}
+		got := parsed.AnomalySummary
+		if got.TotalAnomalies != 0 || got.WarningCount != 0 || got.CriticalCount != 0 || got.TotalTickets != 0 || got.TicketsWithAnomalies != 0 || got.AnomalyRatePerTicket != 0 {
+			t.Fatalf("empty anomaly scalar values changed: %+v", got)
+		}
+		if !reflect.DeepEqual(got.SeverityCounts, map[string]int64{"WARNING": 0, "CRITICAL": 0}) || !reflect.DeepEqual(got.RuleCounts, map[string]int64{"TOOL_RETRY_STREAK": 0}) || got.BrittleTools == nil || len(got.BrittleTools) != 0 {
+			t.Fatalf("empty anomaly map/array shape changed: %+v", got)
 		}
 	})
 

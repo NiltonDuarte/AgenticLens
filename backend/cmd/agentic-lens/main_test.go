@@ -461,7 +461,7 @@ func TestCLIJsonOutput(t *testing.T) {
 		t.Fatalf("failed reading generated JSON: %v", err)
 	}
 
-	var parsed adapters.SerializedLedgerDTO
+	var parsed adapters.AgenticMetricsLedgerDTO
 	if err := json.Unmarshal(data, &parsed); err != nil {
 		t.Fatalf("invalid json generated: %v", err)
 	}

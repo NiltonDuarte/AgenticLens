@@ -23,6 +23,21 @@ describe('Boundary API Client', () => {
             expect(res.data.total_tickets).toBe(10);
             expect(res.data.total_cost_usd).toBe(99.5);
         });
+        it('treats financial-looking model and role names as opaque map keys', async () => {
+            const names = ['cost_usd', 'cost_summary', 'cost_evidence', 'schema_version', 'known_subtotal_usd'];
+            const amounts = Object.fromEntries(names.map((name, index) => [name, index]));
+            const summaries = Object.fromEntries(names.map((name, index) => [name, {
+                state: 'complete', known_subtotal_usd: index, fully_observed: 1, partial: 0, unavailable: 0, total: 1,
+            }]));
+            const payload = { ...mockFleetSummary, model_costs: amounts, role_costs: amounts, model_cost_summaries: summaries, role_cost_summaries: summaries };
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => payload });
+            vi.stubGlobal('fetch', fetchMock);
+            const response = await fetchFleetSummary();
+            expect(response.data.model_costs).toEqual(amounts);
+            expect(response.data.role_cost_summaries?.cost_summary?.known_subtotal_usd).toBe(1);
+            fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ...payload, model_costs: { ...amounts, cost_summary: null } }) });
+            await expect(fetchFleetSummary()).rejects.toThrow('Invalid cost payload');
+        });
         it('preserves a partial subtotal and rejects contradictory financial metadata', async () => {
             const summary = { ...mockFleetSummary, total_cost_usd: null, cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 0, unavailable: 1, total: 2 } };
             const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => summary });
@@ -202,6 +217,7 @@ describe('Boundary API Client', () => {
             expect(facts[1]!.cost_evidence).toEqual({ state: 'partial', known_subtotal_usd: 2 });
         });
         it.each([
+            { cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
             { cost_usd: 0 },
             { cost_usd: 0, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
             { cost_usd: null, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
@@ -209,7 +225,9 @@ describe('Boundary API Client', () => {
         ])('rejects missing or contradictory v5 invocation evidence: %j', async (cost) => {
             const detail = mockWorkspaceDetails['AL-1']!;
             const session = detail.ledger.facts.sessions[0]!;
-            const invocation = session.invocations[0]!;
+            const invocation: Record<string, unknown> = { ...session.invocations[0]! };
+            delete invocation.cost_usd;
+            delete invocation.cost_evidence;
             const payload = {
                 ...detail,
                 ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5, sessions: [{
@@ -218,6 +236,64 @@ describe('Boundary API Client', () => {
             };
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
             await expect(fetchWorkspaceById('AL-1')).rejects.toThrow('Invalid cost payload');
+        });
+        it.each([
+            {},
+            { cost_usd: null },
+            { cost_usd: 0 },
+            { cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
+            { cost_usd: null, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
+            { cost_usd: 0, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
+        ])('rejects omitted or inconsistent v5 task cost members: %j', async (cost) => {
+            const detail = mockWorkspaceDetails['AL-1']!;
+            const payload = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts,
+                schema_version: 5, sessions: [], task_links: [{ subagent_type: 'coder', description: 'task', parent_turn: 1, timestamp: '2026-01-01T00:00:00Z', ...cost }],
+            } } };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow('Invalid cost payload');
+        });
+        it('accepts explicit v5 task evidence and preserves optional legacy cost presence', async () => {
+            const detail = mockWorkspaceDetails['AL-1']!;
+            const task = { subagent_type: 'coder', description: 'task', parent_turn: 1, timestamp: '2026-01-01T00:00:00Z' };
+            const payload = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5, sessions: [], task_links: [
+                { ...task, cost_usd: 0, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
+                { ...task, cost_usd: null, cost_evidence: { state: 'partial', known_subtotal_usd: 2 } },
+                { ...task, cost_usd: null, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
+            ] } } };
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => payload });
+            vi.stubGlobal('fetch', fetchMock);
+            const tasks = (await fetchWorkspaceById('AL-1')).data.ledger.facts.task_links;
+            expect(tasks?.map((row) => row.cost_usd)).toEqual([0, null, null]);
+            expect(tasks?.[1]?.cost_evidence).toEqual({ state: 'partial', known_subtotal_usd: 2 });
+            const invocation = detail.ledger.facts.sessions[0]!.invocations[0]!;
+            const missingInvocation: Record<string, unknown> = { ...invocation };
+            delete missingInvocation.cost_usd;
+            delete missingInvocation.cost_evidence;
+            const legacy = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 4,
+                sessions: [{ ...detail.ledger.facts.sessions[0]!, invocations: [
+                    { ...invocation, cost_usd: 0 }, { ...invocation, cost_usd: null }, missingInvocation,
+                ] }], task_links: [{ ...task, cost_usd: 0 }, { ...task, cost_usd: null }, task],
+            } } };
+            fetchMock.mockResolvedValue({ ok: true, json: async () => legacy });
+            const facts = (await fetchWorkspaceById('AL-1')).data.ledger.facts;
+            expect(facts.sessions[0]!.invocations.map((row) => row.cost_usd)).toEqual([0, null, undefined]);
+            expect(facts.sessions[0]!.invocations[2]).not.toHaveProperty('cost_usd');
+            expect(facts.task_links?.[0]?.cost_usd).toBe(0);
+            expect(facts.task_links?.[1]?.cost_usd).toBeNull();
+            expect(facts.task_links?.[2]).not.toHaveProperty('cost_usd');
+        });
+        it('leaves source event payloads and artifact metadata opaque', async () => {
+            const detail = mockWorkspaceDetails['AL-1']!;
+            const source = { cost_usd: 'verbatim source text', cost_evidence: 'source metadata', cost_summary: 'not a summary', schema_version: 5 };
+            const payload = { ...detail, artifacts: { ...detail.artifacts, source }, ledger: { ...detail.ledger,
+                workflow_efficiency: { ...detail.ledger.workflow_efficiency, role_effort_distribution_pct: { cost_summary: 25, schema_version: 75 } },
+                facts: { ...detail.ledger.facts, sessions: [{ ...detail.ledger.facts.sessions[0]!, events: [{ source }] }] },
+            } };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            const response = await fetchWorkspaceById('AL-1');
+            expect(response.data.ledger.facts.sessions[0]!.events).toEqual([{ source }]);
+            expect(response.data.artifacts).toEqual(payload.artifacts);
+            expect(response.data.ledger.workflow_efficiency.role_effort_distribution_pct).toEqual({ cost_summary: 25, schema_version: 75 });
         });
         it('returns live detail when backend returns 200 OK', async () => {
             const mockDetail = mockWorkspaceDetails['AL-1']!;
@@ -250,6 +326,20 @@ describe('Boundary API Client', () => {
         });
     });
     describe('fetchWorkspaceLedgers', () => {
+        it.each([
+            ['workspace ledgers', fetchWorkspaceLedgers],
+            ['workspace rows', fetchWorkspaces],
+            ['progression ledgers', fetchProgressionLedgers],
+        ] as const)('selects ledger financial locations for %s', async (_name, request) => {
+            const base = mockAgenticMetricsLedgers['AL-1']!;
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [base] });
+            vi.stubGlobal('fetch', fetchMock);
+            expect((await request()).data).toHaveLength(1);
+            fetchMock.mockResolvedValue({ ok: true, json: async () => [{ ...base, threads: [{ session_id: 'source', user: 'tester', compactions: 0, roles: [{
+                role: 'cost_summary', models: [{ ...base.models[0]!, model: 'cost_usd', cost_usd: -1 }],
+            }] }] }] });
+            await expect(request()).rejects.toThrow('Invalid cost payload');
+        });
         it('returns raw ledgers on successful HTTP 200 response', async () => {
             const dummyLedgers = [mockAgenticMetricsLedgers['AL-1']!];
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -607,6 +697,20 @@ describe('Boundary API Client', () => {
         });
     });
     describe('fetchComparisonRows and fetchProgressionLedgers', () => {
+        it('validates comparison-row coverage without inspecting unrelated metadata', async () => {
+            const row = { ...mockTicketComparisonRows[0]!, cost_usd: null,
+                cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 1, unavailable: 0, total: 2 },
+                source: { cost_usd: 'source text', cost_summary: 'source metadata' },
+            };
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [row] });
+            vi.stubGlobal('fetch', fetchMock);
+            const response = await fetchComparisonRows();
+            expect(response.data[0]).toMatchObject({ cost_usd: null, cost_summary: { known_subtotal_usd: 2 }, source: row.source });
+            fetchMock.mockResolvedValue({ ok: true, json: async () => [{ ...row, cost_summary: { ...row.cost_summary, total: 3 } }] });
+            await expect(fetchComparisonRows()).rejects.toThrow('Invalid cost payload');
+            fetchMock.mockResolvedValue({ ok: true, json: async () => row });
+            await expect(fetchComparisonRows()).rejects.toThrow('Invalid cost payload');
+        });
         it('appends ticket_type and prefix multi-parameters to /api/comparison', async () => {
             const fetchSpy = vi.fn().mockResolvedValue({
                 ok: true,
@@ -752,6 +856,19 @@ describe('Boundary API Client', () => {
             expect(res.data).toHaveLength(1);
             expect(res.data[0]?.bucket_key).toBe('2026-10-19T14:00:00Z');
             expect(fetchSpy).toHaveBeenCalledWith('/api/progression?window=1d&granularity=hourly&startDate=2026-10-19T00%3A00&endDate=2026-10-19T23%3A59');
+            const partial = { ...mockBuckets[0]!, cost_usd: null,
+                cost_summary: { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 5, total: 5 },
+                cumulative_cost_usd: null,
+                cumulative_cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 2, partial: 0, unavailable: 3, total: 5 },
+            };
+            fetchSpy.mockResolvedValue({ ok: true, json: async () => [partial] });
+            const incomplete = await fetchProgressionMetrics();
+            expect(incomplete.data[0]?.cost_usd).toBeNull();
+            expect(incomplete.data[0]?.cumulative_cost_summary?.known_subtotal_usd).toBe(2);
+            fetchSpy.mockResolvedValue({ ok: true, json: async () => [{ ...partial, cumulative_cost_summary: { ...partial.cumulative_cost_summary, total: 6 } }] });
+            await expect(fetchProgressionMetrics()).rejects.toThrow('Invalid cost payload');
+            fetchSpy.mockResolvedValue({ ok: true, json: async () => partial });
+            await expect(fetchProgressionMetrics()).rejects.toThrow('Invalid cost payload');
         });
         it('rejects on network failure', async () => {
             vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')));

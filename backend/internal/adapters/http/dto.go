@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"agenticlens/internal/adapters"
 	"agenticlens/internal/domain"
 )
 
@@ -17,9 +16,9 @@ type ErrorResponse struct {
 
 // WorkspaceDetailResponse represents the serialized workspace detail payload.
 type WorkspaceDetailResponse struct {
-	Ledger    adapters.MetricsLedgerResponseDTO `json:"ledger"`
-	Artifacts domain.TicketArtifacts            `json:"artifacts"`
-	Anomalies []domain.Anomaly                  `json:"anomalies"`
+	Ledger    MetricsLedgerResponseDTO `json:"ledger"`
+	Artifacts domain.TicketArtifacts   `json:"artifacts"`
+	Anomalies []domain.Anomaly         `json:"anomalies"`
 }
 
 // BuildInfoDTO represents the serialized build information payload.
@@ -40,7 +39,7 @@ type ProjectConfigDTO struct {
 
 // ResponsePayload defines the permitted concrete types for JSON responses.
 type ResponsePayload interface {
-	ErrorResponse | []adapters.MetricsLedgerResponseDTO | WorkspaceDetailResponse | adapters.FleetSummaryDTO | []domain.EventFact | domain.WorkspaceEventsResponse | BuildInfoDTO | ProjectConfigDTO | []adapters.TicketComparisonRowDTO | []adapters.TimeBucketMetricDTO | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
+	ErrorResponse | []MetricsLedgerResponseDTO | WorkspaceDetailResponse | FleetSummaryDTO | []domain.EventFact | domain.WorkspaceEventsResponse | BuildInfoDTO | ProjectConfigDTO | []TicketComparisonRowDTO | []TimeBucketMetricDTO | domain.LiveSessionTree | domain.LiveTraceView | domain.LiveAnomalyAlert | []domain.LiveAnomalyAlert
 }
 
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
@@ -75,7 +74,7 @@ func WriteError(w http.ResponseWriter, statusCode int, errCode string, message s
 
 // WriteWorkspacesResponse writes a slice of ledgers as JSON.
 func WriteWorkspacesResponse(w http.ResponseWriter, ledgers []domain.AgenticMetricsLedger) {
-	WriteJSON(w, http.StatusOK, adapters.MetricsLedgerResponseDTOsFromDomain(ledgers))
+	WriteJSON(w, http.StatusOK, MetricsLedgerResponseDTOsFromDomain(ledgers))
 }
 
 // WriteWorkspaceDetailResponse writes a WorkspaceDetailResponse as JSON.
@@ -85,7 +84,7 @@ func WriteWorkspaceDetailResponse(w http.ResponseWriter, detail WorkspaceDetailR
 
 // WriteFleetResponse writes a domain.FleetSummary as JSON.
 func WriteFleetResponse(w http.ResponseWriter, summary domain.FleetSummary) {
-	WriteJSON(w, http.StatusOK, adapters.FleetSummaryDTOFromDomain(summary))
+	WriteJSON(w, http.StatusOK, FleetSummaryDTOFromDomain(summary))
 }
 
 // WriteVersionResponse writes a domain.BuildInfo as JSON.
@@ -122,7 +121,7 @@ func WriteComparisonResponse(w http.ResponseWriter, rows []domain.TicketComparis
 	if rows == nil {
 		rows = []domain.TicketComparisonRow{}
 	}
-	WriteJSON(w, http.StatusOK, adapters.TicketComparisonRowDTOsFromDomain(rows))
+	WriteJSON(w, http.StatusOK, TicketComparisonRowDTOsFromDomain(rows))
 }
 
 // WriteProgressionResponse writes a slice of TimeBucketMetric as JSON.
@@ -130,7 +129,7 @@ func WriteProgressionResponse(w http.ResponseWriter, metrics []domain.TimeBucket
 	if metrics == nil {
 		metrics = []domain.TimeBucketMetric{}
 	}
-	WriteJSON(w, http.StatusOK, adapters.TimeBucketMetricDTOsFromDomain(metrics))
+	WriteJSON(w, http.StatusOK, TimeBucketMetricDTOsFromDomain(metrics))
 }
 
 // WriteLiveSessionTreeResponse writes a domain.LiveSessionTree as JSON.

@@ -1138,7 +1138,7 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 	})
 }
 
-func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
+func TestSessionEventPersistenceAndRepositoryHandling(t *testing.T) {
 	temp := t.TempDir()
 	ws := filepath.Join(temp, "AL-COMPACT")
 	if err := os.MkdirAll(ws, 0700); err != nil {
@@ -1808,7 +1808,7 @@ func TestSaveMetricsLedger(t *testing.T) {
 		}
 
 		// DTO deserialization check
-		var parsed adapters.SerializedLedgerDTO
+		var parsed adapters.AgenticMetricsLedgerDTO
 		if err := json.Unmarshal(data, &parsed); err != nil {
 			t.Fatalf("failed unmarshaling saved metrics ledger: %v", err)
 		}
@@ -1953,7 +1953,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading file failed: %v", err)
 		}
-		var parsed adapters.SerializedLedgerDTO
+		var parsed adapters.AgenticMetricsLedgerDTO
 		if err := json.Unmarshal(data, &parsed); err != nil {
 			t.Fatalf("unmarshaling overwritten file failed: %v, content:\n%s", err, string(data))
 		}

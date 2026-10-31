@@ -1,4 +1,4 @@
-import { readCostResponse } from './costValidation';
+import { readFleetSummaryResponse, readMetricsLedgerArrayResponse, readWorkspaceDetailResponse, readComparisonRowsResponse, readTimeBucketsResponse } from './costValidation';
 import type {
   AgenticMetricsLedger,
   Anomaly,
@@ -80,7 +80,7 @@ export async function fetchFleetSummary(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch fleet summary'}`);
     }
-    const data = await readCostResponse<FleetSummary>(res);
+    const data = await readFleetSummaryResponse(res);
     return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch fleet summary');
@@ -115,7 +115,7 @@ export async function fetchWorkspaceLedgers(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace ledgers'}`);
     }
-    const data = await readCostResponse<readonly AgenticMetricsLedger[]>(res);
+    const data = await readMetricsLedgerArrayResponse(res);
     return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch workspace ledgers');
@@ -158,7 +158,7 @@ export async function fetchWorkspaces(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspaces'}`);
     }
-    const ledgers = await readCostResponse<AgenticMetricsLedger[]>(res);
+    const ledgers = await readMetricsLedgerArrayResponse(res);
     const rows = deriveTicketComparisonRows(ledgers);
     return { data: rows, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
@@ -194,7 +194,7 @@ export async function fetchComparisonRows(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch comparison rows'}`);
     }
-    const data = await readCostResponse<readonly TicketComparisonRow[]>(res);
+    const data = await readComparisonRowsResponse(res);
     return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch comparison rows');
@@ -229,7 +229,7 @@ export async function fetchProgressionLedgers(
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression ledgers'}`);
     }
-    const data = await readCostResponse<readonly AgenticMetricsLedger[]>(res);
+    const data = await readMetricsLedgerArrayResponse(res);
     return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch progression ledgers');
@@ -248,7 +248,7 @@ export async function fetchWorkspaceById(
       }
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace'}`);
     }
-    const data = await readCostResponse<WorkspaceDetail>(res);
+    const data = await readWorkspaceDetailResponse(res);
     return { data };
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace ${ticketId}`);
@@ -434,7 +434,7 @@ export async function fetchProgressionMetrics(params?: {
     if (!res.ok) {
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch progression metrics'}`);
     }
-    const data = await readCostResponse<readonly TimeBucketMetric[]>(res);
+    const data = await readTimeBucketsResponse(res);
     return { data };
   } catch (err: unknown) {
     rethrowError(err, 'Failed to fetch progression metrics');

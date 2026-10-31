@@ -49,8 +49,9 @@ func PartialCost(amount float64) CostEvidence {
 	return CostEvidence{State: CostPartial, KnownSubtotalUSD: CostNumber(amount)}
 }
 
-// EffectiveCost accepts existing in-memory numeric facts as observed. Source
-// extractors and presence-aware boundary decoders explicitly mark missing cost.
+// EffectiveCost accepts existing in-memory numeric facts as observed, including
+// zero. It does not infer wire presence: source extractors and boundary decoders
+// explicitly mark missing/null cost before constructing domain facts.
 func EffectiveCost(amount float64, evidence CostEvidence) CostEvidence {
 	if evidence.State == "" {
 		return ObservedCost(amount)
@@ -130,7 +131,10 @@ func (summary CostSummary) Subtotal() float64 {
 	return *summary.KnownSubtotalUSD
 }
 
-// EffectiveCostSummary supports numeric metrics constructed by older callers.
+// EffectiveCostSummary supports numeric metrics constructed by older in-memory
+// callers. Existing evidence is authoritative; zero amount with zero rows stays
+// empty, while a present row with numeric zero is observed. Wire decoding owns
+// missing-value semantics independently of this compatibility fallback.
 func EffectiveCostSummary(summary CostSummary, amount float64, count int64) CostSummary {
 	if summary.State != "" {
 		return summary

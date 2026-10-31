@@ -404,9 +404,6 @@ type rawExistingLedger struct {
 	Sessions           []SessionFactDTO          `json:"sessions"`
 	Skills             []domain.SkillFact        `json:"skills,omitempty"`
 	TaskLinks          []TaskLinkFactDTO         `json:"task_links,omitempty"`
-	Invocations        []InvocationFactDTO       `json:"invocations"`
-	Tools              []ToolFactDTO             `json:"tools"`
-	Events             []EventFactDTO            `json:"events,omitempty"`
 	Threads            []legacyThreadItem        `json:"threads"`
 	WorkflowEfficiency *legacyWorkflowEfficiency `json:"workflow_efficiency"`
 }
@@ -474,7 +471,7 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 	}
 
 	// Schema 1: Direct atomic fact schema
-	if raw.Code != nil || len(raw.Invocations) > 0 || len(raw.Tools) > 0 || len(raw.Sessions) > 0 || raw.SchemaVersion != nil {
+	if raw.Code != nil || len(raw.Sessions) > 0 || raw.SchemaVersion != nil {
 		var rootIDs []string
 		for _, session := range sessions {
 			if session.ParentID == nil {

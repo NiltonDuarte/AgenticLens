@@ -33,17 +33,24 @@ func TestComputeTotals(t *testing.T) {
 			state                          domain.CostSummaryState
 			known, complete                *float64
 			observed, partial, unavailable int64
+			rounded                        float64
 		}{
-			{"legacy observed zero", []domain.InvocationFact{{CostUSD: 0}}, domain.CostSummaryComplete, domain.CostNumber(0), domain.CostNumber(0), 1, 0, 0},
-			{"mixed zero and unavailable", []domain.InvocationFact{{CostUSD: 0}, {CostEvidence: domain.UnavailableCost()}}, domain.CostSummaryPartial, domain.CostNumber(0), nil, 1, 0, 1},
-			{"partial coalesced and historical", []domain.InvocationFact{{CostEvidence: domain.PartialCost(2)}, {CostUSD: 1}}, domain.CostSummaryPartial, domain.CostNumber(3), nil, 1, 1, 0},
-			{"known total", []domain.InvocationFact{{CostUSD: 7}, {CostUSD: 2}}, domain.CostSummaryComplete, domain.CostNumber(9), domain.CostNumber(9), 2, 0, 0},
-			{"unknown", []domain.InvocationFact{{CostEvidence: domain.UnavailableCost()}}, domain.CostSummaryUnavailable, nil, nil, 0, 0, 1},
-			{"empty", nil, domain.CostSummaryEmpty, nil, nil, 0, 0, 0},
+			{"legacy observed zero", []domain.InvocationFact{{CostUSD: 0}}, domain.CostSummaryComplete, domain.CostNumber(0), domain.CostNumber(0), 1, 0, 0, 0},
+			{"mixed zero and unavailable", []domain.InvocationFact{{CostUSD: 0}, {CostEvidence: domain.UnavailableCost()}}, domain.CostSummaryPartial, domain.CostNumber(0), nil, 1, 0, 1, 0},
+			{"partial coalesced and historical", []domain.InvocationFact{{CostEvidence: domain.PartialCost(2)}, {CostUSD: 1}}, domain.CostSummaryPartial, domain.CostNumber(3), nil, 1, 1, 0, 3},
+			{"known total", []domain.InvocationFact{{CostUSD: 7}, {CostUSD: 2}}, domain.CostSummaryComplete, domain.CostNumber(9), domain.CostNumber(9), 2, 0, 0, 9},
+			{"unknown", []domain.InvocationFact{{CostEvidence: domain.UnavailableCost()}}, domain.CostSummaryUnavailable, nil, nil, 0, 0, 1, 0},
+			{"empty", nil, domain.CostSummaryEmpty, nil, nil, 0, 0, 0, 0},
+			{"tiny complete costs merge before rounding", []domain.InvocationFact{{CostUSD: 0.00004}, {CostUSD: 0.00004}}, domain.CostSummaryComplete, domain.CostNumber(0.00008), domain.CostNumber(0.00008), 2, 0, 0, 0.0001},
+			{"tiny partial contributions merge before rounding", []domain.InvocationFact{{CostEvidence: domain.PartialCost(0.00004)}, {CostUSD: 0.00004}}, domain.CostSummaryPartial, domain.CostNumber(0.00008), nil, 1, 1, 0, 0.0001},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				got := domain.ComputeTotals(tc.invs).CostSummary
+				metric := domain.ComputeTotals(tc.invs)
+				if metric.CostUSD != tc.rounded || metric.Invocations != int64(len(tc.invs)) {
+					t.Fatalf("rounded cost/row count=%+v, want %v/%d", metric, tc.rounded, len(tc.invs))
+				}
+				got := metric.CostSummary
 				if got.State != tc.state || !reflect.DeepEqual(got.KnownSubtotalUSD, tc.known) || !reflect.DeepEqual(got.CompleteAmount(), tc.complete) || got.FullyObserved != tc.observed || got.Partial != tc.partial || got.Unavailable != tc.unavailable || got.Total != int64(len(tc.invs)) {
 					t.Fatalf("cost summary=%+v", got)
 				}
@@ -233,7 +240,7 @@ func TestComputeRoleAndModelMetrics(t *testing.T) {
 	t.Run("tiny complete costs rank before incomplete costs using unrounded amounts", func(t *testing.T) {
 		rows := []domain.InvocationFact{
 			{Role: "coder", Model: "a-cheap", CostUSD: 0.00001},
-			{Role: "coder", Model: "z-expensive", CostUSD: 0.00002},
+			{Role: "coder", Model: "z-expensive", CostUSD: 0.00002, Tokens: domain.InvocationTokens{Input: 100, Output: 10, CacheRead: 300, PeakContext: 75000}},
 			{Role: "coder", Model: "0-unavailable", CostEvidence: domain.UnavailableCost()},
 			{Role: "coder", Model: "1-partial", CostEvidence: domain.PartialCost(9)},
 		}
@@ -250,6 +257,12 @@ func TestComputeRoleAndModelMetrics(t *testing.T) {
 			}
 			if models[0].CostSummary.CompleteAmount() == nil || *models[0].CostSummary.CompleteAmount() != 0.00002 || models[1].CostSummary.CompleteAmount() == nil || *models[1].CostSummary.CompleteAmount() != 0.00001 {
 				t.Fatalf("tiny complete amounts lost: %+v", models)
+			}
+			if models[0].CostUSD != 0 || models[1].CostUSD != 0 || models[2].CostUSD != 0 || models[3].CostUSD != 9 || models[2].CostSummary.State != domain.CostSummaryUnavailable || models[3].CostSummary.Partial != 1 {
+				t.Fatalf("rounded scalar or incomplete evidence changed: %+v", models)
+			}
+			if models[0].Invocations != 1 || models[0].InputTokens != 100 || models[0].OutputTokens != 10 || models[0].CacheReadTokens != 300 || models[0].CacheHitRatePct != 75 || models[0].PeakContextTokens != 75000 || models[0].ContextHealth != domain.ContextHealthHealthy {
+				t.Fatalf("model token/cache/health projection changed: %+v", models[0])
 			}
 		}
 		assertModels(t, domain.ComputeModelMetrics(rows))
@@ -354,6 +367,49 @@ func TestComputeThreadSummaries(t *testing.T) {
 
 func TestCalculateFleetSummary(t *testing.T) {
 	t.Parallel()
+	t.Run("rounded ledger scalars remain distinct from source precision summaries", func(t *testing.T) {
+		ledgers := make([]domain.AgenticMetricsLedger, 0, 2)
+		for _, ticket := range []string{"T-1", "T-2"} {
+			facts := domain.AgenticFactLedger{
+				TicketID: ptr(ticket),
+				Sessions: []domain.SessionFact{{ID: "owner", Invocations: []domain.InvocationFact{{
+					Role: "coder", Model: "model-a", CostUSD: 0.00004,
+					Tokens: domain.InvocationTokens{Input: 100, Output: 10, CacheRead: 100, PeakContext: 75000},
+				}}}},
+			}
+			ledgers = append(ledgers, domain.DeriveMetricsLedger(facts, domain.DefaultProjectConfig()))
+		}
+		fleet := domain.CalculateFleetSummary(ledgers)
+		if fleet.TotalCostUSD != 0 || fleet.RoleCosts["coder"] != 0 || fleet.ModelCosts["model-a"] != 0 {
+			t.Fatalf("rounded ledger projections were recomputed from raw amounts: %+v", fleet)
+		}
+		rollup := domain.CalculateRoleEffortRollup(ledgers, 100000)
+		role, exists := rollup["coder"]
+		if len(rollup) != 1 || !exists || role.CostUSD != 0 || role.Invocations != 2 || role.InputTokens != 200 || role.OutputTokens != 20 || role.CacheReadTokens != 200 || role.CacheHitRatePct != 50 || role.PeakContextTokens != 75000 || role.ContextHealth != domain.ContextHealthElevated {
+			t.Fatalf("nonempty role rollup changed counts, precision or health: %+v", rollup)
+		}
+		for name, summary := range map[string]domain.CostSummary{
+			"fleet": fleet.CostSummary, "fleet role": fleet.RoleCostSummaries["coder"],
+			"fleet model": fleet.ModelCostSummaries["model-a"], "role rollup": role.CostSummary,
+		} {
+			amount := summary.CompleteAmount()
+			if summary.State != domain.CostSummaryComplete || summary.Total != 2 || summary.FullyObserved != 2 || amount == nil || *amount != 0.00008 {
+				t.Errorf("%s lost unrounded observed contributions: %+v", name, summary)
+			}
+		}
+	})
+	t.Run("role rollup preserves legacy zero rows and empty projections", func(t *testing.T) {
+		rollup := domain.CalculateRoleEffortRollup([]domain.AgenticMetricsLedger{{Roles: []domain.RoleMetric{
+			{Role: "coder", Invocations: 1}, {Role: "reviewer"},
+		}}})
+		observed, empty := rollup["coder"], rollup["reviewer"]
+		if amount := observed.CostSummary.CompleteAmount(); amount == nil || *amount != 0 || observed.CostSummary.FullyObserved != 1 || observed.CostSummary.Total != 1 {
+			t.Fatalf("legacy numeric zero with a row became unavailable: %+v", observed)
+		}
+		if empty.CostSummary.State != domain.CostSummaryEmpty || empty.CostSummary.CompleteAmount() != nil || empty.CostSummary.KnownSubtotalUSD != nil || empty.CostSummary.Total != 0 {
+			t.Fatalf("empty legacy projection acquired observed cost: %+v", empty)
+		}
+	})
 	ledgers := []domain.AgenticMetricsLedger{
 		{
 			Totals: domain.GroupedMetric{
@@ -3512,6 +3568,42 @@ func TestResolveDatePreset(t *testing.T) {
 
 func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 	t.Parallel()
+	t.Run("precision and coverage survive cumulative and code-only buckets", func(t *testing.T) {
+		codeDate := "2026-10-19T14:00:00Z"
+		ledgers := []domain.AgenticMetricsLedger{{
+			CompletedAt: &codeDate,
+			Facts: domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "owner", Invocations: []domain.InvocationFact{
+				{CompletedAt: ptr("2026-10-19T11:01:00Z"), CostEvidence: domain.PartialCost(0.00004)},
+				{CompletedAt: ptr("2026-10-19T10:01:00Z"), CostUSD: 0.00004},
+				{CompletedAt: ptr("2026-10-19T12:01:00Z"), CostEvidence: domain.UnavailableCost()},
+				{CompletedAt: ptr("2026-10-19T13:01:00Z"), CostUSD: 0},
+			}}}},
+			WorkflowEfficiency: domain.WorkflowEfficiency{CodeDelivered: domain.CodeDeliveredStats{LinesAdded: 3}},
+		}}
+		buckets := domain.AggregateMetricsOverTime(ledgers, "hourly", nil, nil)
+		if len(buckets) != 5 {
+			t.Fatalf("expected four invocation buckets and a code-only bucket: %+v", buckets)
+		}
+		states := []domain.CostSummaryState{domain.CostSummaryComplete, domain.CostSummaryPartial, domain.CostSummaryUnavailable, domain.CostSummaryComplete, domain.CostSummaryEmpty}
+		cumulativeScalars := []float64{0, 0.0001, 0.0001, 0.0001, 0.0001}
+		for i, bucket := range buckets {
+			if bucket.CostSummary.State != states[i] || bucket.CostUSD != 0 || bucket.CumulativeCostUSD != cumulativeScalars[i] {
+				t.Fatalf("bucket %d rounding or coverage changed: %+v", i, bucket)
+			}
+		}
+		if amount := buckets[0].CumulativeCostSummary.CompleteAmount(); amount == nil || *amount != 0.00004 {
+			t.Fatalf("initial complete contribution lost precision: %+v", buckets[0])
+		}
+		for _, bucket := range buckets[1:] {
+			if bucket.CumulativeCostSummary.CompleteAmount() != nil || bucket.CumulativeCostSummary.KnownSubtotalUSD == nil || *bucket.CumulativeCostSummary.KnownSubtotalUSD != 0.00008 {
+				t.Fatalf("cumulative cost recovered completeness or lost precision: %+v", bucket)
+			}
+		}
+		last := buckets[4]
+		if last.Invocations != 0 || last.CostSummary.KnownSubtotalUSD != nil || last.LinesAdded != 3 || last.CumulativeLinesAdded != 3 || last.CumulativeInvocations != 4 || last.CumulativeCostSummary.FullyObserved != 2 || last.CumulativeCostSummary.Partial != 1 || last.CumulativeCostSummary.Unavailable != 1 {
+			t.Fatalf("code-only bucket altered invocation evidence: %+v", last)
+		}
+	})
 	ts1 := "2026-10-19T10:15:00Z"
 	ts2 := "2026-10-19T10:45:00Z"
 	ts3 := "2026-10-19T11:05:00Z"
@@ -5844,6 +5936,17 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 		// 75k under 100k custom ceiling is ELEVATED (>= 50k and <= 100k)
 		if totalsCustom.ContextHealth != domain.ContextHealthElevated {
 			t.Errorf("expected ELEVATED under custom ceiling, got %s", totalsCustom.ContextHealth)
+		}
+	})
+
+	t.Run("ComputeThreadSummariesWithCeiling preserves per-model health", func(t *testing.T) {
+		threads := domain.ComputeThreadSummariesWithCeiling(ledger.Sessions, customCeiling)
+		if len(threads) != 1 || len(threads[0].Roles) != 1 || len(threads[0].Roles[0].Models) != 1 {
+			t.Fatalf("expected one session-owned model projection: %+v", threads)
+		}
+		model := threads[0].Roles[0].Models[0]
+		if model.ContextHealth != domain.ContextHealthElevated || model.PeakContextTokens != 75000 {
+			t.Fatalf("thread model ignored custom context ceiling: %+v", model)
 		}
 	})
 

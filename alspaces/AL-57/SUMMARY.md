@@ -211,3 +211,20 @@ Final bucket-copy gate passed on 9736d8b: full make, matching frontend/embed tre
 
 
 Copy-correction telemetry verification passed: all seven existing actual Codex sessions, parent/source identity, invocation multiplicity and unavailable cost evidence retained; usage is nonempty. Raw source rollouts remain outside Git.
+
+
+## Iteration 05: validation and serialization ownership plan
+
+Source: user requested a concrete plan before implementation for six demonstrated/structural concerns: frontend shape-inferred cost validation, DTO responsibility/placement, fact codec cohesion, redundant scalar/summary calculations, test-only computed reverse conversions, and duplicated strict decoder mechanics. This is planning authorization only; earlier implementation approval does not bypass the explicit new planning gate.
+
+Baseline 412bc08e3199af04c03009ed60ca1bd3b592dd85 was clean, same AL-57 branch/worktree, PR #89 open. Preserve the frozen financial semantics and accepted iteration 04 filtered-average behavior, historical numeric zero, read-only v4, strict required v5 evidence, source ownership/multiplicity, JSON key order and persisted baseline on failed optional hydration.
+
+Planner owns iterations/05/PLAN.md. Separate read-only explorers trace DTO/reverse-conversion consumers and scalar/summary compatibility/precision; no production/schema/test changes or early telemetry extraction are authorized. The plan must distinguish proposed fixes, necessary retained duplication and broader deferred redesign, with actual assertion recipients and verification boundaries.
+
+
+Iteration 05 planning evidence: both frontend validation defects reproduced through actual API clients. Independent audits confirm computed-metrics ToDomain and its exclusive reverse subtree have only test callers; fact-ledger ToDomain has live repository/backfill consumers. SerializedLedgerDTO has only three test declarations and no production consumer, and validateAnomalyEvidence has none. The plan proposes removing those proven unused paths, preserving independent emitted-JSON and live ingestion assertions.
+
+Scalar audit distinguishes safe local derivation from rounded cross-ledger compatibility. Two source amounts 0.00004 each demonstrate why fleet scalar 0 and raw summary 0.00008 cannot be unified by rounding the merged summary without changing behavior. Broader representation/rounding redesign is explicitly deferred. Current plan 05 and parent checkpoint review await user approval; production files remain unchanged.
+
+
+Iteration 05 approval: user explicitly selected "Approve the full plan" after the concrete plan was presented. All six bounded corrections, justified retentions and deferred broader redesign are accepted. Implementation is now authorized; do not ask for the same permission again. The only preexisting staged changes at this checkpoint are this ticket's planning artifacts. Baseline remains 412bc08e3199af04c03009ed60ca1bd3b592dd85.

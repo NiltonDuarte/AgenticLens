@@ -83,13 +83,13 @@ type invocationAccumulator struct {
 
 func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 	var inp, out, cache, peak int64
-	var cost float64
+	var costSummary CostSummary
 
 	for _, inv := range invs {
 		inp += inv.Tokens.Input
 		out += inv.Tokens.Output
 		cache += inv.Tokens.CacheRead
-		cost += SummaryForCost(inv.CostUSD, inv.CostEvidence).Subtotal()
+		costSummary = MergeCostSummaries(costSummary, SummaryForCost(inv.CostUSD, inv.CostEvidence))
 		if inv.Tokens.PeakContext > peak {
 			peak = inv.Tokens.PeakContext
 		}
@@ -107,8 +107,8 @@ func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 		outputTokens:      out,
 		cacheReadTokens:   cache,
 		cacheHitRatePct:   hitPct,
-		costUSD:           math.Round(cost*10000.0) / 10000.0,
-		costSummary:       SummarizeCost(invs),
+		costUSD:           math.Round(costSummary.Subtotal()*10000.0) / 10000.0,
+		costSummary:       FinalizeCostSummary(costSummary),
 		peakContextTokens: peak,
 	}
 }
@@ -134,21 +134,11 @@ func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric
 		}
 	}
 
-	byRole := make(map[AgentRole][]InvocationFact)
-	for _, inv := range invocations {
-		byRole[inv.Role] = append(byRole[inv.Role], inv)
-	}
-
-	var totalInvocations int64
-	for _, rInvs := range byRole {
-		totalInvocations += accumulateInvocations(rInvs).invocations
-	}
-
 	acc := accumulateInvocations(invocations)
 	healthStatus := GetBaseHealthStatus(acc.peakContextTokens, effCeiling)
 
 	return GroupedMetric{
-		Invocations:       totalInvocations,
+		Invocations:       acc.invocations,
 		InputTokens:       acc.inputTokens,
 		OutputTokens:      acc.outputTokens,
 		CacheReadTokens:   acc.cacheReadTokens,
@@ -642,37 +632,19 @@ func ComputeThreadSummariesWithCeiling(sessions []SessionFact, ceiling int64, ro
 
 			var modelMetrics []ModelMetric
 			for model, mInvs := range byModel {
-				var inp, out, cache int64
-				var cost float64
-				var peak int64
-
-				for _, inv := range mInvs {
-					inp += inv.Tokens.Input
-					out += inv.Tokens.Output
-					cache += inv.Tokens.CacheRead
-					cost += SummaryForCost(inv.CostUSD, inv.CostEvidence).Subtotal()
-					if inv.Tokens.PeakContext > peak {
-						peak = inv.Tokens.PeakContext
-					}
-				}
-
-				totTok := inp + cache
-				var hitPct float64
-				if totTok > 0 {
-					hitPct = math.Round(float64(cache)/float64(totTok)*1000.0) / 10.0
-				}
-				health := GetBaseHealthStatus(peak, ceiling)
+				acc := accumulateInvocations(mInvs)
+				health := GetBaseHealthStatus(acc.peakContextTokens, ceiling)
 
 				modelMetrics = append(modelMetrics, ModelMetric{
 					Model:             model,
-					Invocations:       int64(len(mInvs)),
-					InputTokens:       inp,
-					OutputTokens:      out,
-					CacheReadTokens:   cache,
-					CacheHitRatePct:   hitPct,
-					CostUSD:           math.Round(cost*10000.0) / 10000.0,
-					CostSummary:       SummarizeCost(mInvs),
-					PeakContextTokens: peak,
+					Invocations:       acc.invocations,
+					InputTokens:       acc.inputTokens,
+					OutputTokens:      acc.outputTokens,
+					CacheReadTokens:   acc.cacheReadTokens,
+					CacheHitRatePct:   acc.cacheHitRatePct,
+					CostUSD:           acc.costUSD,
+					CostSummary:       acc.costSummary,
+					PeakContextTokens: acc.peakContextTokens,
 					ContextHealth:     health,
 				})
 			}
@@ -879,6 +851,8 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		}
 	}
 
+	// Scalar compatibility fields sum already-rounded ledger projections;
+	// evidence summaries retain source precision for nullable wire amounts.
 	var totalCostUSD float64
 	var fleetCostSummary CostSummary
 	roleCostSummaries := make(map[AgentRole]CostSummary)
@@ -1117,6 +1091,8 @@ func CalculateRoleEffortRollup(ledgers []AgenticMetricsLedger, ceiling ...int64)
 			curr.InputTokens += r.InputTokens
 			curr.OutputTokens += r.OutputTokens
 			curr.CacheReadTokens += r.CacheReadTokens
+			// Preserve the sum of rounded ledger amounts independently of
+			// the source-precision evidence summary.
 			curr.CostUSD += r.CostUSD
 			curr.CostSummary = MergeCostSummaries(curr.CostSummary, EffectiveCostSummary(r.CostSummary, r.CostUSD, r.Invocations))
 			if r.PeakContextTokens > curr.PeakContextTokens {
@@ -1651,7 +1627,6 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 
 type bucketAccumulator struct {
 	invocations           int64
-	costUSD               float64
 	costSummary           CostSummary
 	inputTokens           int64
 	outputTokens          int64
@@ -1730,7 +1705,6 @@ func AggregateMetricsOverTime(
 			}
 			acc.invocations++
 			acc.costSummary = MergeCostSummaries(acc.costSummary, SummaryForCost(inv.CostUSD, inv.CostEvidence))
-			acc.costUSD = acc.costSummary.Subtotal()
 			acc.inputTokens += inv.Tokens.Input
 			acc.outputTokens += inv.Tokens.Output
 			acc.cacheReadTokens += inv.Tokens.CacheRead
@@ -1788,14 +1762,12 @@ func AggregateMetricsOverTime(
 	}
 	sort.Strings(sortedKeys)
 
-	var runningCumCost float64
 	var cumulativeCostSummary CostSummary
 	var runningCumInput, runningCumOutput, runningCumLinesAdded, runningCumLinesDeleted, runningCumInvocations int64
 
 	var results []TimeBucketMetric
 	for _, bkey := range sortedKeys {
 		acc := accumulators[bkey]
-		runningCumCost += acc.costUSD
 		cumulativeCostSummary = MergeCostSummaries(cumulativeCostSummary, acc.costSummary)
 		runningCumInput += acc.inputTokens
 		runningCumOutput += acc.outputTokens
@@ -1813,7 +1785,7 @@ func AggregateMetricsOverTime(
 			BucketKey:               bkey,
 			BucketDate:              bkey,
 			Invocations:             acc.invocations,
-			CostUSD:                 math.Round(acc.costUSD*10000.0) / 10000.0,
+			CostUSD:                 math.Round(acc.costSummary.Subtotal()*10000.0) / 10000.0,
 			CostSummary:             FinalizeCostSummary(acc.costSummary),
 			InputTokens:             acc.inputTokens,
 			OutputTokens:            acc.outputTokens,
@@ -1826,7 +1798,7 @@ func AggregateMetricsOverTime(
 			NetLinesAdded:           acc.linesAdded - acc.linesDeleted,
 			PeakContextTokens:       acc.peakContextTokens,
 			ActiveDurationSeconds:   acc.activeDurationSeconds,
-			CumulativeCostUSD:       math.Round(runningCumCost*10000.0) / 10000.0,
+			CumulativeCostUSD:       math.Round(cumulativeCostSummary.Subtotal()*10000.0) / 10000.0,
 			CumulativeCostSummary:   FinalizeCostSummary(cumulativeCostSummary),
 			CumulativeInputTokens:   runningCumInput,
 			CumulativeOutputTokens:  runningCumOutput,
