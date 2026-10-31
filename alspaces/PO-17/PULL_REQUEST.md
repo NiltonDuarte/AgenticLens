@@ -1,7 +1,9 @@
-# docs(PO-17): clarify cost evidence and schema planning priorities
+# docs(PO-17): reconcile approved AL-55 backfill scope
 
-Draft; product acceptance pending. AgenticLens currently reports unavailable cost as numeric zero, while overlapping plans disagree about estimates and recreate already-delivered migration work. This documentation proposes explicit evidence, preserved historic values, coverage-aware totals, and sequencing under existing ticket IDs.
+AL-55 still asked developers to recreate schema v4 and add a nonexistent client migration. Replace those stale requirements with the user-approved outcome: safely refresh existing ledgers, preserve unavailable history and whole skill/task snapshots during partial recovery, and report incomplete recovery truthfully.
 
-Current changes are confined to PO-17 analysis and specification. Shared-plan reconciliation requires accepted scope and manager release. AL-55 developer contracts and all application code remain outside this PO delivery. Alternatives and pending decisions are in SPEC.md; evidence and verification are in iterations/01/REVIEW.md.
+Keep v4 fields optional at the file boundary and normalize omitted collections to required empty arrays internally. Explicit recompute works without Force; routine skips, all-required-owner completion, valid baseline eligibility after optional refresh failure, and existing migration-backup/atomic-write interfaces remain the agreed boundaries. No new format or mandatory migration campaign is required.
 
-Validation and independent PO-17 telemetry will be recorded before publication. No implementation or release action is included.
+PO-17 also records the independent AL-57 review and AL2 conflicts. Cost semantics remain proposals, cost changes are deferred, and AL2 development is queued. Only the released AL-55 specification and PO-17 artifacts change; index transitions and all application implementation remain with separate owners. The AL-55 developer receives lifecycle ownership of the spec after this PR merges and manager handoff.
+
+Validation: documentation/path-scope review and integrated full make; detailed results and independent Codex session telemetry are recorded in PO-17 SUMMARY.md and iterations/02/REVIEW.md. This PR specifies future AL-55 behavior; it does not implement or prove those fixes. No release action.
