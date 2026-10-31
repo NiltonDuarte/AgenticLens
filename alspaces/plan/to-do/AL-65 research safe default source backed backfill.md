@@ -1,11 +1,11 @@
-h3. Title: AL-66: Research default source-backed recomputation and the future of Force
+h3. Title: AL-65: Research default source-backed recomputation and the future of Force
 
 *TARGET*: AgenticLens (Backfill CLI semantics / source recovery)
 
 *Phase*: Phase 1 (post-v2.0 platform review)
 *Status*: Blocked
 *Work type*: docs
-*Blocked by*: AL-64
+*Blocked by*: AL-63
 *Blocks*: None
 *Origin*: PO-18; user review dated 2026-10-31, build v2.0.0-rc.106+9707d41-1-g45cb679.
 
@@ -20,7 +20,7 @@ As an operator, I want a recommendation for understandable, safe backfill defaul
 *VERTICAL SLICE SCOPE*
 
 * Domain Core: Evaluate per-session availability, snapshot completeness, preservation, idempotency, and incomplete/mixed-age reporting.
-* Boundary Adapter: Evaluate exact-identity source-backed recovery across OpenCode v1/v2 and Codex using AL-64 evidence; distinguish source refresh, Git recomputation, migration, and ledger processing.
+* Boundary Adapter: Evaluate exact-identity source-backed recovery across OpenCode v1/v2 and Codex using AL-63 evidence; distinguish source refresh, Git recomputation, migration, and ledger processing.
 * Presentation: Propose default behavior, flag/help semantics and available/unavailable recovery diagnostics with concrete command scenarios; this ticket changes no command behavior or help.
 * Quality: Research report with reproducible non-destructive experiments, script compatibility assessment, and an explicit recommendation/approval boundary. No application or test code changes.
 

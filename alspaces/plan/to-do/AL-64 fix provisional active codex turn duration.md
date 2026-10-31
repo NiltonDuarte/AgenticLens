@@ -1,4 +1,4 @@
-h3. Title: AL-65: Include provisional active Codex turn duration at the snapshot cutoff
+h3. Title: AL-64: Include provisional active Codex turn duration at the snapshot cutoff
 
 *TARGET*: AgenticLens (Codex duration extraction / ledger / presentation)
 

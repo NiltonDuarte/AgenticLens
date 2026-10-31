@@ -34,32 +34,24 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
-  - **Blocks**: AL-64
+  - **Blocks**: AL-63
   - **File**: `alspaces/plan/to-do/AL-62 fix codex skill and delegation facts with granular ownership.md`
 
-- **AL-63**: Verify live observability with an active OpenCode session
-  - **Subsystem**: OpenCode live tracing / dashboard
-  - **Phase**: Phase 1 (post-v2.0 platform review)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-64
-  - **File**: `alspaces/plan/to-do/AL-63 verify live observability with active opencode.md`
-
-- **AL-65**: Include provisional active Codex turn duration at the snapshot cutoff
+- **AL-64**: Include provisional active Codex turn duration at the snapshot cutoff
   - **Subsystem**: Codex duration extraction / ledger / presentation
   - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-65 fix provisional active codex turn duration.md`
+  - **File**: `alspaces/plan/to-do/AL-64 fix provisional active codex turn duration.md`
 
-- **AL-68**: Configure optional skills, task_links and anomalies output for generate
+- **AL-66**: Configure optional skills, task_links and anomalies output for generate
   - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests
   - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-68 configure optional metric output for generate.md`
+  - **File**: `alspaces/plan/to-do/AL-66 configure optional metric output for generate.md`
 
 ### Existing ready work
 
@@ -125,21 +117,21 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ### Phase 1 post-v2.0 review: Tier 2-3 (Dependencies)
 
-- **AL-64**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
+- **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
   - **Subsystem**: Multi-source ingestion / hydration / recovery
   - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Blocked
-  - **Blocked by**: AL-62, AL-63
-  - **Blocks**: AL-66
-  - **File**: `alspaces/plan/to-do/AL-64 audit capabilities across opencode v1 v2 and codex.md`
+  - **Blocked by**: AL-62
+  - **Blocks**: AL-65
+  - **File**: `alspaces/plan/to-do/AL-63 audit capabilities across opencode v1 v2 and codex.md`
 
-- **AL-66**: Research default source-backed recomputation and the future of Force
+- **AL-65**: Research default source-backed recomputation and the future of Force
   - **Subsystem**: Backfill CLI semantics / source recovery
   - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Blocked
-  - **Blocked by**: AL-64
+  - **Blocked by**: AL-63
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-66 research safe default source backed backfill.md`
+  - **File**: `alspaces/plan/to-do/AL-65 research safe default source backed backfill.md`
 
 ### Existing blocked work
 

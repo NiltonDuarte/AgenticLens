@@ -1,4 +1,4 @@
-h3. Title: AL-68: Configure optional skills, task_links and anomalies output for generate
+h3. Title: AL-66: Configure optional skills, task_links and anomalies output for generate
 
 *TARGET*: AgenticLens (Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests)
 

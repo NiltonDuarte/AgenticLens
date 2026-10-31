@@ -6,7 +6,7 @@ h3. Title: AL-62: Fix Codex skill and delegation facts with granular source owne
 *Status*: Ready
 *Work type*: fix
 *Blocked by*: None
-*Blocks*: AL-64
+*Blocks*: AL-63
 *Origin*: PO-18 iteration 04; user explicitly requires AL-62 to fix missing facts and merges AL-67's granular data-structure scope into this ticket. AL-67 is retired as merged here.
 
 *CONTEXT*
@@ -43,7 +43,7 @@ As an engineer, I want source-recorded Codex skill and delegation facts to survi
 * Existing ledgers with omitted/empty collections, legacy populated collections, granular collections, and transitional representations have documented compatible behavior. Transitional duplicate projections do not double count facts. Ordinary read/GET does not silently rewrite ledgers; derived views are not independent canonical fact stores.
 * Exact-identity backfill and optional hydration preserve stored granular facts, unresolved legacy history, previous trees and other-source sessions when source records are missing, malformed or partial. Growing snapshots replace their own facts without accumulation; unchanged repeats are stable. Preserve incomplete/mixed-age diagnostics and explicit opt-in heuristic recovery.
 * Persisted facts remain visible with enrichment unavailable, pending or failed. CLI/API/dashboard projections continue to provide existing skill analytics, filters, timeline evidence and child links without requiring a live source; missing evidence is distinguished from known zero/no recorded facts.
-* Schema ownership changes follow expand-contract with compatibility and rollback/preservation considerations recorded before removal of old writes. Coordinate with concurrent schema owners such as AL-57 rather than preselecting a version. Use this ticket's source investigation to implement evidence-backed fixes; AL-64 consumes the delivered verification and is not an upstream dependency. Do not invent missing Codex facts or equal harness capabilities.
+* Schema ownership changes follow expand-contract with compatibility and rollback/preservation considerations recorded before removal of old writes. Coordinate with concurrent schema owners such as AL-57 rather than preselecting a version. Use this ticket's source investigation to implement evidence-backed fixes; AL-63 consumes the delivered verification and is not an upstream dependency. Do not invent missing Codex facts or equal harness capabilities.
 * Pass the required make gate and meaningful regression checks for ownership, multiplicity, ambiguous migration and preservation. Frontend changes require canonical asset build and embedded standalone verification. Tests never use the live AL-55 ledger/workspace as a fixture.
 
 *DEFINITION OF DONE*
