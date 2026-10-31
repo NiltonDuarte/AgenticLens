@@ -4,7 +4,7 @@ User authority: supervise existing PR/ticket threads and merge eligible non-rele
 
 ## Merge sequence
 
-#76 -> #79 -> #75 -> #77 -> #78 after fixes. #81 documentation is assessed independently; #80 carries the management skill and final control record. Re-evaluate each step against the actual current main and head. Only the manager merges. No auto-merge or admin bypass.
+#76 -> #79 -> #75 -> AL-47 startup fix follow-up PR -> #77 -> #78 after fixes. #81 documentation is assessed independently; #80 carries the management skill and final control record. Re-evaluate each step against the actual current main and head. Only the manager merges. No auto-merge or admin bypass.
 
 ## Inventory at iteration 03 start (2026-10-31)
 
@@ -72,3 +72,9 @@ GitHub confirms #75 MERGED at 2026-10-31T14:00:38Z, merge commit 6bc1064943ae22e
 ## AL-53 full-gate failure under investigation
 
 Owner reports integrated local commit 62a7963bb421b3111025fc537bcd91d3d6dc5fe9, unified focusSession navigation and AL-55 Ready/None, independent review APPROVED and 146 focused frontend tests passed. Full make failed TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate after 5.31s: stream context deadline before trace. All other Go packages passed; this is not merge readiness. Owner tester investigates; no push yet. Manager inspected unchanged handler/test and sent a bounded hypothesis: headers flush before initial tree read/subscription; first broadcaster tick could be missed then deduplicated before subscription. This is inference, not confirmed cause. Requested original failure retention and deterministic boundary evidence; production Go fixes, if required, must be routed to existing AL-47 owner. No duplicate tester or speculative application fix launched.
+
+## Confirmed startup defect: priority AL-47 correction
+
+Source: user/AL-53 tester handoff. Manager read /tmp/al53-sse-ordering-proof.log: concrete service first trace published while HTTP initial-tree call is paused before Subscribe; after subscription, session_tree=1/trace_update=0/context deadline; unchanged trace not replayed. Original full-make failure is initial readTrace before mutation. Focused passing retries do not clear this confirmed schedule. No Go diff from main6bc in AL-53.
+
+Routed production fix plus deterministic old-behavior-failing regression to existing AL-47 owner via clientRequestId mgt1-iter03-al47-sse-startup-fix. #76 is merged, so owner must deliver a NEW fix PR on a fix/AL-47 branch in its existing checkout; no new ticket/thread or telemetry-parent relationship. Bounded acceptance preserves event ordering/format, cancellation/unsubscribe, nonblocking broadcast and existing recovery; no generic replay expansion. Use development roles and full real integration verification. AL-53 told to stop duplicate investigation, preserve frontend approval and failure evidence, expose proof setup, and wait for verified fix merge before resuming full gate. Current release exclusion unchanged. New fix PR URL/head pending owner.
