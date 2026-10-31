@@ -66,3 +66,7 @@ The configured Go test profiling command was run. The top individual tests compl
 2. Give child-session lookup failures an explicit error or partial-data contract.
 3. Remove the currently unsupported `TaskLinkFact.CostUSD` field and type the caller role as `AgentRole`.
 4. Make local Go test entry points generate the embedded frontend assets, matching the CI workflow.
+
+### Follow-up verification after merging `origin/main`
+
+The repository `make` target passed on the merged branch. This prepared the embedded frontend assets and passed Go vet, frontend typecheck/lint, the Go race suite across all packages, all 793 frontend tests across 36 files, and multi-platform binary builds. The earlier direct `go test ./...` failure was due to missing generated `dist` assets before running the new prerequisite.
