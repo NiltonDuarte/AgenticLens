@@ -197,3 +197,8 @@ Final telemetry below preserves the existing seven real Codex source sessions an
 
 
 Iteration 04 telemetry verification passed: all seven existing real Codex sessions retained with the same parent/source identities and invocation multiplicity, nonempty usage/tools, schema 5 and established key order. Fresh Codex costs remain unavailable without estimates or invented zero. Raw rollouts remain outside Git.
+
+
+## Iteration 04 review correction: remove bucket subtitle
+
+User asked to remove "time buckets" from the progression cost card. The count describes aggregated intervals, not necessarily visible bars. Remove only that redundant subtitle and update its existing UI expectation; cost states/coverage and time grouping/charts remain unchanged. Baseline c7c87587e9366c44b79f9ec5295a22c70bbfce6c was clean, PR #89 open. No new tests planned for the reversible copy correction; existing owner checks and required delivery gates are reused/run as appropriate.

@@ -49,3 +49,6 @@ Run focused frontend tests/typecheck/lint during fixes, then required integrated
 
 
 Grounding correction from tester: comparison currently fetches the all-time dataset and has no time-window control. Verify its actual search/type/prefix/skill filters and data replacement; existing progression/fleet suites retain ownership of their own window controls. This corrects a plan assumption without expanding scope or requiring renewed approval.
+
+
+Review correction: user explicitly requested removing the "time buckets" subtitle from the progression cost card. Remove that secondary context only; retain visible cost state, accessible coverage, date-range explanation and all chart/time aggregation behavior. This supersedes the earlier requirement to retain that particular context. Update the existing partial-card expectation without adding new tests for a reversible copy-only change. Keep this correction in iteration 04.

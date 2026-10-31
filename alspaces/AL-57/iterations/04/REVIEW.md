@@ -47,3 +47,14 @@ Final verdict: APPROVED.
 ## Parent integrated delivery gate
 
 Implementation 3fb374cfd93aca6bbe26097e35214183ae78e1b8 integrated current origin/main without additional changes. Required full make passed: Go vet/race, frontend typecheck/lint, 761 frontend tests in 35 files, canonical assets and four platform binaries. Standalone smoke verified exact updated assets and implementation version with Node unavailable. Asset trees match. No application changes followed this gate; remaining edits are telemetry/delivery facts.
+
+
+## User copy correction: progression cost-card subtitle
+
+Verdict: APPROVED. Reviewed the exact frontend diff against c7c87587e9366c44b79f9ec5295a22c70bbfce6c. The user explicitly requested removing the "time buckets" subtitle; the appended PLAN.md delta supersedes that prior context requirement without changing financial or aggregation behavior.
+
+The sole production change removes MetricProgression's secondary prop from CostKPICard. The amount, cost summary, invocation count and date-range tooltip remain connected. CostKPICard still renders its own visible partial/unavailable/empty status, and the existing keyboard-accessible tooltip retains full coverage. No bucket/filter/chart/summary calculations or other views changed.
+
+The existing progression test retains its compact $2.00 primary and full tooltip-count assertions; only the obsolete subtitle expectation changes to the remaining exact Known subtotal (partial) state. No regression assertion was deleted and no new test was needed for this bounded copy correction. Coder reports typecheck, lint and all 16 existing progression tests passed. git diff --check passed during this focused review; no duplicate suite or browser geometry check was performed.
+
+Independently recomputed backend/web source SHA256: 460adc0af5b0db02ef39eb57cfeb48367f061ed276d2af9feb7a46ca7a4e7440 across 220 existing files, using the same path/NUL/bytes/NUL method above. No open findings. Parent retains the integrated make/build/embedded-binary/telemetry/PR delivery gates.

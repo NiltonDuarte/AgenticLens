@@ -36,3 +36,9 @@ Baseline: 52234b3c099fe1a6c1b2e1dd3d62c1db08ad7242 plus the shared frontend impl
 - git diff --check: passed.
 
 No production defect was found. No full suite was repeated by the tester because the parent performs the final integrated make gate after review; affected new interaction coverage passed. No browser geometry, standalone-binary behavior, source extraction, final telemetry or PR delivery is claimed by this testing report.
+
+## User review correction: remove progression bucket subtitle
+
+Read-only inspection against c7c8758 confirms the MetricProgression production change removes only the optional time-bucket secondary prop from the cost card. Its amount, summary, invocation count, tooltip and graphs are unchanged. The existing representative partial-card test now requires the exact remaining Known subtotal (partial) secondary text; its exact currency and detailed coverage assertions remain intact. No meaningful behavioral assertion was removed.
+
+Scoped git diff --check passed. Reuse the coder's reported passing typecheck, lint and all 16 existing progression tests (known React act warnings), since inspection found no additional concern. No tests or production files were changed by the tester and no suite was rerun. Parent retains the required integrated make and delivery gate.

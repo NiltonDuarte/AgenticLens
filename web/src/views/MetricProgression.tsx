@@ -394,7 +394,6 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
           amount={summary.spend}
           summary={summary.costSummary}
           invocations={summary.invocations}
-          secondary={`${buckets.length} time buckets`}
           tooltip="Total USD spend across matching date range"
         />
         <KPICard

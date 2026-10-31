@@ -21,7 +21,7 @@ describe('MetricProgression View Component', () => {
         const trigger = await screen.findByRole('button', { name: 'Information about Period Spend' });
         const card = trigger.closest<HTMLElement>('.kpi-card')!;
         expect(card.querySelector('.kpi-value')).toHaveTextContent(/^\$2\.00$/);
-        expect(card.querySelector('.kpi-secondary')).toHaveTextContent('Known subtotal (partial) · 1 time buckets');
+        expect(card.querySelector('.kpi-secondary')).toHaveTextContent(/^Known subtotal \(partial\)$/);
         expect(within(card).getByRole('tooltip')).toHaveTextContent('1 fully observed, 1 partial, 0 unavailable of 2 invocations');
     });
 
