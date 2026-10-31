@@ -6,7 +6,11 @@ Current acceptance is the user's exact instruction routed through MGT-1: "retain
 
 Before writing, verified cwd and Git toplevel /home/niltonduarte/.t3/worktrees/AgenticLens/t3-3f89bda8, branch chore/AL-43-revert-content-classification, clean status and HEAD e91cf0d05348537657c210601c6acc93c01f967d. Fetched origin/main at 3857fa22f49f825c82ced39c3f81f963b7447545. This is PR #88's owner checkout; no manager or original PR #78 checkout is used.
 
-Preserve current-main ClassifyToolExecution exactly. Protect successful read output containing timeoutMs, successful grep output quoting panic, and explicitly zero-exit output quoting permission denied. Keep content-classification removal, strict decode-only retired-field compatibility, raw Codex evidence, AL-55 recovery and nil-array defaults, AL-47 subscription/refresh, and AL-53 navigation. Historical iteration 02 evidence below is superseded only on execution-restoration acceptance. Current verification and final telemetry will follow.
+Preserve current-main ClassifyToolExecution exactly. Protect successful read output containing timeoutMs, successful grep output quoting panic, and explicitly zero-exit output quoting permission denied. Keep content-classification removal, strict decode-only retired-field compatibility, raw Codex evidence, AL-55 recovery and nil-array defaults, AL-47 subscription/refresh, and AL-53 navigation. Historical iteration 02 evidence below is superseded only on execution-restoration acceptance. Independent tester and reviewer approved the correction; F1 is closed. The classifier exactly matches main 3857fa22f49f825c82ced39c3f81f963b7447545, with no content-feature reintroduction. The three supplied successful-output cases are protected in the existing classifier table and real SQLite live/offline parity fixture. The fixture measures eight calls and three genuine failures, retains raw output and no failure metadata for successes, confirms live streak reset/non-escalation, and rejects an offline retry-streak anomaly. Explicit failures, nonzero exits, actual crash, exact timeout/permission and no-match guards remain.
+
+Correction commit 3828f537cd6c448b8b811688e2b0cd693b0a6cd5 was fetched/merged against actual origin/main 3857fa22f49f825c82ced39c3f81f963b7447545 (already up to date). Full make then passed: dependency stages, Go vet/race suites, TypeScript typecheck/lint, 741 frontend tests in 35 files, canonical frontend embedding, and all four Linux/macOS amd64/arm64 builds. Independent focused race verification additionally covered compatibility, Codex evidence and recovery/nil-array/live boundaries. Full integrated application diff against that main reference has SHA-256 5d45600be782aee45c3b243c8e49f35456f88f1b4134cdcf82addb00c403c13c, defined by git diff base...HEAD -- backend web/src. This remains stable through later artifact-only commits.
+
+Generated source/embedded asset trees match and remain ignored; host binary version/help passed. Frontend sources and generated asset names remain unchanged from iteration 02, so its standalone HTTP asset and UI interaction evidence is reused. No new browser/geometry/HTTP measurement of F1 is claimed. Existing non-failing npm audit findings and React act diagnostics remain outside this correction. Final telemetry refresh uses this owner root 01a1928e-9694-7d53-96a0-99bcd82dbdc7, not the manager root; all ten previous session identities, parent links and existing source labels were verified preserved after extraction. The selected owner root and four expected children match source metadata; no manager root or fabricated session was added, no source errors occurred, and no previous other-harness sessions existed. Raw transcripts remain outside Git. Telemetry is an active-session snapshot that excludes subsequent delivery calls; source-projected zero cost is not confirmed billing data. The user's later short brief reaffirmed the same approved scope, retained current progress, and reserved the merge gate for the user.
 
 ## Iteration 02: user-requested feature revert
 
@@ -53,19 +57,20 @@ Specification moved to plan/done and completed ticket removed from index; no dow
 Final explicit Codex extraction found root 01a19201-e9f1-7001-922f-3ff5d6344a64 and all four expected planner/coder/tester/reviewer children. IDs were verified against real rollout metadata; ledger parent links point to that root and all sources are codex. No earlier ledger or other-harness sessions existed to preserve. Raw transcripts remain outside Git. The current root is still active, so its completion/duration and post-extraction handoff calls are snapshot limits. Reported cost is zero in the source projection; actual billing/pricing is unavailable and zero must not be interpreted as confirmed free usage. The rendered rework anomaly is recorded telemetry, not an unresolved test failure.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 10
-- **Active Agent Duration:** 55m 30s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 112.0k tokens (56% of 200k healthy ceiling, 0 compactions) | Subagents peak 146.1k (Reviewer)
+- **Software Development Life Cycle Iterations:** 12
+- **Active Agent Duration:** 1h 13m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 147.6k tokens (74% of 200k healthy ceiling, 0 compactions) | Subagents peak 163.8k (Reviewer)
 - **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 2.3 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 2.5, Tester 2.0, Reviewer 2.5
-- **Test-to-Production Code Ratio:** 0.4:1 (+92 test lines / +226 prod lines)
-- **Code Delivered:** +318 / -710 lines across 36 code files (excluding docs)
-- **Reasoning Effort:** 12,215 reasoning tokens (11.7% of generated output)
-- **Tool Health & Self-Correction:** 364 tool calls (16 self-corrections, 95.6% success rate)
+- **Subagent Turn Velocity & Thrashing:** 2.8 avg turns/run (peak: 4 turns) | Planner 2.5, Coder 3.0, Tester 2.5, Reviewer 3.0
+- **Test-to-Production Code Ratio:** 0.6:1 (+142 test lines / +220 prod lines)
+- **Code Delivered:** +362 / -707 lines across 36 code files (excluding docs)
+- **Reasoning Effort:** 17,469 reasoning tokens (13.1% of generated output)
+- **Tool Health & Self-Correction:** 429 tool calls (16 self-corrections, 96.3% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 1 execution anomaly detected (1 CRITICAL).
+- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer (5 cycles) — Subagent roles 'tester' and 'reviewer' alternated for 5 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.5k tokens) — Context tokens reached 162.5k, breaching the 160k warning ceiling.
 
 ### Agentic Execution Metrics
 
@@ -74,18 +79,18 @@ Final explicit Codex extraction found root 01a19201-e9f1-7001-922f-3ff5d6344a64 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 2 | 188,371 | 8,273 | 1,302,912 | 87.4% | 89.2k | HEALTHY | $0.00 |
-| **coder** | 2 | 186,327 | 26,939 | 7,701,248 | 97.6% | 132.7k | ELEVATED | $0.00 |
-| **tester** | 2 | 166,207 | 17,976 | 5,859,200 | 97.2% | 119.5k | ELEVATED | $0.00 |
-| **reviewer** | 2 | 215,606 | 9,762 | 4,748,416 | 95.7% | 146.1k | ELEVATED | $0.00 |
-| **rootagent** | 2 | 213,906 | 29,215 | 15,780,736 | 98.7% | 112.0k | ELEVATED | $0.00 |
-| **Total** | **10** | **970,417** | **92,165** | **35,392,512** | **97.3%** | **146.1k** | **ELEVATED** | **$0.00** |
+| **planner** | 2 | 283,773 | 10,586 | 1,695,488 | 85.7% | 102.2k | ELEVATED | $0.00 |
+| **coder** | 2 | 297,713 | 32,774 | 9,584,000 | 97.0% | 148.9k | ELEVATED | $0.00 |
+| **tester** | 2 | 191,320 | 21,583 | 7,603,968 | 97.5% | 142.8k | ELEVATED | $0.00 |
+| **reviewer** | 2 | 234,357 | 11,852 | 5,836,288 | 96.1% | 163.8k | ELEVATED | $0.00 |
+| **rootagent** | 2 | 245,089 | 39,495 | 20,917,632 | 98.8% | 147.6k | ELEVATED | $0.00 |
+| **Total** | **10** | **1,252,252** | **116,290** | **45,637,376** | **97.3%** | **163.8k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 10 | 970,417 | 92,165 | 35,392,512 | 97.3% | $0.00 |
-| **Total** | **10** | **970,417** | **92,165** | **35,392,512** | **97.3%** | **$0.00** |
+| **gpt-6.1-sol** | 10 | 1,252,252 | 116,290 | 45,637,376 | 97.3% | $0.00 |
+| **Total** | **10** | **1,252,252** | **116,290** | **45,637,376** | **97.3%** | **$0.00** |
 
 ## Management review corrections F3/F4
 

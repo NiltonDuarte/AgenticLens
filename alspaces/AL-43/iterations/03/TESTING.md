@@ -27,3 +27,7 @@ Canonical embedded assets had been prepared by the coder with make web-assets. I
 ## Handoff and limitations
 
 No blocking finding remains in the tested correction. Full make is intentionally deferred to the parent's required gate after implementation commit and main integration; this focused pass does not replace it. No frontend test rerun, browser, standalone serving, release, hosted-CI or merge claim is made. Existing iteration 02 evidence remains historical for its original classifier, not proof of F1 resolution. Raw execution logs and source sessions remain outside Git.
+
+## Parent integrated full gate
+
+Implementation commit 3828f537cd6c448b8b811688e2b0cd693b0a6cd5 was fetched/merged against actual origin/main 3857fa22f49f825c82ced39c3f81f963b7447545 (already up to date). Full make passed exit 0 with all dependency/check/test/build stages executed: Go vet/race suites, TypeScript typecheck/lint, 741 frontend tests (35 files), canonical assets and four platform builds. Exact main classifier source comparison passed again. Source/embedded asset trees compare identical and stay ignored; host version and command-help execution passed. Existing unchanged frontend/standalone-serving evidence is reused, without a new browser/geometry or F1 HTTP claim. This closes the previously pending parent gate. Subsequent commits change ticket artifacts/telemetry only. Integrated application diff fingerprint against main over backend and web/src: 5d45600be782aee45c3b243c8e49f35456f88f1b4134cdcf82addb00c403c13c.
