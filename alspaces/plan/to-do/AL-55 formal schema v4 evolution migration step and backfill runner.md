@@ -3,8 +3,16 @@
 - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
 - **Status**: Pending
-- **Blocked by**: AL-51, AL-52, AL-53, AL-54
+- **Blocked by**: AL-52, AL-53, AL-54
 - **Blocks**: None
+
+## Planning status (2026-10-31)
+
+Partially superseded; remains blocked by AL-52, AL-53, and AL-54. AL-51 merged in [PR #62](https://github.com/NiltonDuarte/AgenticLens/pull/62), satisfying its ingestion dependency.
+
+AL-56 already shipped schema v4, the Go v3-to-v4 migration, and explicit migration/source-backfill boundaries in [PR #38](https://github.com/NiltonDuarte/AgenticLens/pull/38) and [PR #43](https://github.com/NiltonDuarte/AgenticLens/pull/43). AL-51 deliberately kept skills/task links optional at that version. The existing migration does not establish the proposed required-array contract, so this ticket is not complete.
+
+The scope below records the original proposal and needs replanning before implementation: do not bump to v4 again, replace the existing v3-to-v4 step, or introduce client-side legacy ingestion. `web/src/domain/migration.ts` does not exist in the current application. Reconcile any remaining skill/task normalization and historical backfill with the current schema and AL-51 contract, preserving incomplete source-backfill diagnostics. Do not treat a shape-only upgrade as successful source recovery.
 
 ## Context
 With the skill and task observation features implemented, exercised, and stabilized across Live Observability, Trace Waterfall, Ticket Deep Dive, and Fleet Analytics (AL-51 through AL-54), the schema contracts are mature. Now the domain schema must be formally locked and bumped to Schema Version 4. A formal migration step (`StepV3ToV4`) and backfill runner must be executed to ensure historical ledgers are permanently upgraded and normalized.

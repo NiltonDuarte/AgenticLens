@@ -1,6 +1,6 @@
 # Decomposed Jira Tickets for AgenticLens
 
-Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/plan/to-do/`, and `alspaces/plan/discarded/`.
+Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/plan/to-do/`, and `alspaces/plan/discarded/`. Completed tickets are removed from this index; their specifications remain in `done/`.
 
 ---
 
@@ -58,22 +58,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
 
-- **AL-49**: Reverse Event Chronology and Quick-Scroll Navigation in Live Trace Inspector
-  - **Subsystem**: Presentation / Web / Components / Views / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-49 reverse event ordering and quick scroll navigation in live inspector.md`
-
-- **AL-50**: Audit and Streamline Debug Prompt Generation and Sanitization Pipeline
-  - **Subsystem**: Presentation / Web / Utils / Tests / Review
-  - **Phase**: Phase 7 (v1 Observability Refactor / Review)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-50 audit and streamline debug prompt generation and sanitization.md`
-
 - **AL-52**: Rich Timeline Badges and Subagent Session Linking in Trace Views
   - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
@@ -97,7 +81,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
----
 
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
@@ -107,6 +90,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
 
+- **AL-57**: Represent Unavailable Telemetry Cost as Nullable
+  - **Subsystem**: Domain / Adapters / CLI / Presentation / Tests
+  - **Phase**: Phase 8 (Schema Evolution / Cost Accuracy)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-57 nullable cost values across telemetry ledger aggregates and ui.md`
 
 ---
 
@@ -116,17 +106,9 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-51, AL-52, AL-53, AL-54
+  - **Blocked by**: AL-52, AL-53, AL-54
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
-
-- **AL-57**: Represent Unavailable Telemetry Cost as Nullable
-  - **Subsystem**: Domain / Adapters / CLI / Presentation / Tests
-  - **Phase**: Phase 8 (Schema Evolution / Cost Accuracy)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-57 nullable cost values across telemetry ledger aggregates and ui.md`
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests

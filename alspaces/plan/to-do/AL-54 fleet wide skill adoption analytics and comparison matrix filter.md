@@ -2,9 +2,13 @@
 
 - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
-- **Status**: Pending
-- **Blocked by**: AL-51
+- **Status**: Ready
+- **Blocked by**: None
 - **Blocks**: AL-55
+
+## Planning status (2026-10-31)
+
+AL-51 merged in [PR #62](https://github.com/NiltonDuarte/AgenticLens/pull/62), providing optional skill/task facts and live attributes. Its dependency is satisfied; this presentation work remains open. Supported v4 ledgers may omit those optional fields; ordinary runtime rejects v1-v3 ledgers until explicit migration and source-backed backfill complete.
 
 ## Context
 Engineering managers and lead architects need visibility into modular skill adoption across all tickets: Which skills are leveraged most frequently? Which skills fail or trigger anomalies? Which tickets succeeded without using any specialized skills?

@@ -2,9 +2,13 @@
 
 - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
-- **Status**: Pending
-- **Blocked by**: AL-51
+- **Status**: Ready
+- **Blocked by**: None
 - **Blocks**: AL-55
+
+## Planning status (2026-10-31)
+
+AL-51 merged in [PR #62](https://github.com/NiltonDuarte/AgenticLens/pull/62), providing optional skill/task facts and live attributes. Its dependency is satisfied; this presentation work remains open. Supported v4 ledgers may omit those optional fields; ordinary runtime rejects v1-v3 ledgers until explicit migration and source-backed backfill complete.
 
 ## Context
 When inspecting agent execution traces in the Trace Waterfall or Live Trace Inspector, tool calls for `skill` and `task` appear as generic tool invocations. Operators must expand the JSON arguments manually to understand what skill was loaded or what subagent role was spawned.

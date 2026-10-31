@@ -61,3 +61,9 @@
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 5 | 306,069 | 49,068 | 15,625,984 | 98.1% | $0.00 |
 | **Total** | **5** | **306,069** | **49,068** | **15,625,984** | **98.1%** | **$0.00** |
+
+## Iteration 02: Planning record reconciliation (2026-10-31)
+
+User requested review and updates of the ticket index and to-do folder. Reviewed all 15 remaining specifications against the index, merged PR history, existing contracts, and current source. Removed stale completed AL-49/AL-50 entries, moved AL-57 to Ready, synchronized AL-52/53/54 specifications, and removed completed AL-51 from AL-55 blockers. Annotated partial AL-47 implementation and AL-55's superseded v4 premise. Corrected AL-53 compatibility wording to the existing v4-only runtime. No application or test changes.
+
+Initial Git status was clean at `1d20117711aab96a230679d3cdb9406853fe3f04`. Verification and per-ticket decisions are recorded in `iterations/02/REVIEW.md`; original implementation evidence above remains historical. Current telemetry will be refreshed at final delivery, preserving earlier source sessions.

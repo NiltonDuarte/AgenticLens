@@ -1,17 +1,9 @@
-# feat(live-inspector): reverse event ordering and add quick navigation (AL-49)
+# docs(AL-49): reconcile ticket index and remaining specifications
 
-## Summary
+AL-49 and AL-50 were merged but still appeared as Ready with nonexistent to-do paths. Remove those completed entries, move dependency-free AL-57 to Ready, and synchronize AL-52 through AL-55 with the merged AL-51 prerequisite.
 
-- Render live message turns latest-first by default, with an accessible order toggle.
-- Preserve source-based logical turn numbering and message attribution.
-- Keep the reading position stable during live updates and offer a jump to the latest turn.
-- Add direct scroll-to-top and scroll-to-bottom controls.
+Annotate AL-47's existing streaming implementation and AL-55's overlap with AL-56, preserving unfinished work. Correct AL-53's empty-data acceptance wording to supported v4 ledgers; the runtime already requires explicit migration/backfill for v1-v3.
 
-## Context
+All 15 remaining to-do specifications were reviewed. No remaining ticket is marked complete on partial implementation evidence. The AL-55 original proposal remains recorded and explicitly requires replanning against the shipped v4 boundary.
 
-- Technical contract: `alspaces/AL-49/CONTRACT.md`
-- Work summary: `alspaces/AL-49/SUMMARY.md`
-
-## Scope
-
-Presentation-only changes in the Live Trace Inspector. No backend or API contract changes.
+Validation and per-ticket evidence: `alspaces/AL-49/iterations/02/REVIEW.md`. Documentation-only; no application or test changes.
