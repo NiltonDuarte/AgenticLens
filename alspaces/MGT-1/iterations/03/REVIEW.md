@@ -13,3 +13,5 @@ Supervision checkpoint verification: full make exited 0 at integrated head 7b883
 Supervision uncovered a deterministically reproduced HTTP subscription startup race inherited from AL-47, not AL-53 frontend integration. Original failure retained. Existing AL-47 owner resumed for a separate fix PR before #77; manager changed no product code and did not waive the gate. See CONTROL.md for source proof and instruction IDs.
 
 Inspected #82 real fix/test diff at c7a36d0, including deterministic subscription order, initial-tree ordering, mutation/REST retention and concrete cleanup/error cases. Owner verified old code fails; full local gate/review pass. Exact-head GitHub CI pending, so manager did not merge. #77 must integrate this verified correction and re-run its full gate before readiness.
+
+Original product merge sequence completed through verified #78 mergea77695c. Startup regression fixed in separate#82 before allowing#77/#78 integration. All six product/corrective PRs merged behind exact-head gates; human-closed#81 not counted and human-only release#55 untouched. Replacement management#83 pending its own final sync/checks.
