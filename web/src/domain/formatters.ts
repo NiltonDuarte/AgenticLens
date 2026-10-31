@@ -8,6 +8,21 @@ import type {
 
 export const HEALTHY_CEILING_TOKENS = 200_000;
 
+export function formatSkillStatus(success: boolean): 'Success' | 'Failed' {
+  return success ? 'Success' : 'Failed';
+}
+
+export function formatSubagentRole(role: string): string {
+  switch (role) {
+    case 'orchestrator': return 'Orchestrator';
+    case 'planner': return 'Planner';
+    case 'coder': return 'Coder';
+    case 'tester': return 'Tester';
+    case 'reviewer': return 'Reviewer';
+    default: return role || 'Unknown';
+  }
+}
+
 export function truncateMiddle(
   str: string,
   maxLeading = 8,

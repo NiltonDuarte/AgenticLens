@@ -69,7 +69,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 - **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
   - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-53 dedicated skills and subagents autopsy panel in ticket deep dive.md`
