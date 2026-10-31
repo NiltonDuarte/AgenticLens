@@ -1,0 +1,9 @@
+# PO-17 iteration 02: Approved AL-55 specification delivery
+
+Baseline entering acceptance: PO-17 planning commit 91b1ca8 on bdef2d0. User explicitly approved continuing AL-55 implementation after manager explained the bounded existing-backfill safety scope. Direct follow-up confirms optional persisted-v4 arrays with required internal arrays initialized empty on read, all-owner completion/optional-failure baseline eligibility, recompute without Force/routine skips, and existing backup scope. Earlier choice-2 acceptance of independent complete-tree refresh with retained whole skill/task collections and mixed-age CLI diagnostics remains preserved.
+
+Material delta: former remaining approval hold is superseded for AL-55 only. Acceptance adds explicit required internal read normalization while preserving optional wire fields. Costs remain deferred; AL2 remains queued. No cost design or schema change is approved. Verification impact: developer must cover omitted arrays through real reads as well as existing recovery/recompute cases. PO delivery verifies documentation and the required integrated make gate; it does not implement or claim those future fixes.
+
+Exact path release: existing AL-55 to-do specification plus alspaces/PO-17 only. No index, other shared specs, developer artifacts, application/tests/scripts/config edits. Developer controls index status and is instructed not to move this spec until PO docs merge and manager handoff.
+
+Steps: reconcile approved user outcomes; commit owned documentation; fetch/merge actual origin/main; review path scope and run make; finalize docs; generate independent final Codex telemetry with literal nonce and docs type; verify root/source/no foreign sessions; commit, push, create/link PR and report exact evidence to manager. No merges, watches or release actions.
