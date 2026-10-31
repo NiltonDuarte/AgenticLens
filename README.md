@@ -87,7 +87,9 @@ AgenticLens provides a unified CLI for automation and local workflows:
 ./bin/agentic-lens migrate --backup --update-summaries
 ```
 
-For source selection, exact session identity, committed Git refs, and schema-v4 semantics, see [telemetry source and session selection](docs/SETUP_MANUAL.md#telemetry-source-and-session-selection). For older ledgers, follow [unscoped tool recovery](docs/SETUP_MANUAL.md#recovering-unscoped-tool-totals). Configure file classification using the [code metrics reference](docs/SETUP_MANUAL.md#code-classification-and-interpretation).
+For source selection, exact session identity, committed Git refs, and session ownership semantics, see [telemetry source and session selection](docs/SETUP_MANUAL.md#telemetry-source-and-session-selection). For older ledgers, follow [unscoped tool recovery](docs/SETUP_MANUAL.md#recovering-unscoped-tool-totals). Configure file classification using the [code metrics reference](docs/SETUP_MANUAL.md#code-classification-and-interpretation).
+
+For cost availability, partial subtotals, and v4/v5 compatibility, see [reported cost semantics](docs/COST_SEMANTICS.md).
 
 ## Deep Dive Documentation
 

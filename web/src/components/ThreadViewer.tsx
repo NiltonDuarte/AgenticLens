@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { ThreadExecutionRecord } from '../domain/types';
-import { formatCurrencyUSD, formatPercentage, formatTokensK } from '../domain/formatters';
+import { formatCostUSD, formatPercentage, formatTokensK } from '../domain/formatters';
 import { InfoTooltip } from './InfoTooltip';
 
 export interface ThreadViewerProps {
@@ -208,7 +208,7 @@ export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, focusSessio
                               <td className="num-col">{formatTokensK(m.output_tokens)}</td>
                               <td className="num-col">{formatTokensK(m.cache_read_tokens)}</td>
                               <td className="num-col">{formatPercentage(m.cache_hit_rate_pct)}</td>
-                              <td className="num-col">{formatCurrencyUSD(m.cost_usd)}</td>
+                              <td className="num-col">{formatCostUSD(m.cost_usd, m.cost_summary)}</td>
                               <td className="num-col">{formatTokensK(m.peak_context_tokens)}</td>
                               <td>
                                 <span className={`health-pill mini ${m.context_health.toLowerCase()}`}>

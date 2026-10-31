@@ -17,13 +17,21 @@ type Engine struct {
 }
 
 // NewEngine creates an Engine using the provided registry and standard invariant validator.
-// If the provided registry is nil, a default registry pre-loaded with StepV1ToV2, StepV2ToV3Sanitized, and StepV3ToV4UserIterations is used.
+// If the provided registry is nil, a default registry pre-loaded with StepV1ToV2, StepV2ToV3Sanitized, StepV3ToV4UserIterations, and StepV4ToV5CostEvidence is used.
 func NewEngine(registry *Registry) *Engine {
 	if registry == nil {
 		registry = NewRegistry()
-		_ = registry.Register(NewStepV1ToV2())
-		_ = registry.Register(NewStepV2ToV3Sanitized())
-		_ = registry.Register(NewStepV3ToV4UserIterations())
+		for _, step := range []MigrationStep{
+			NewStepV1ToV2(),
+			NewStepV2ToV3Sanitized(),
+			NewStepV3ToV4UserIterations(),
+			NewStepV4ToV5CostEvidence(),
+		} {
+			if err := registry.Register(step); err != nil {
+				// Built-in steps are static; failure indicates a programming error.
+				panic(fmt.Errorf("registering built-in migration %d -> %d: %w", step.SourceVersion(), step.TargetVersion(), err))
+			}
+		}
 	}
 	return &Engine{
 		registry:  registry,
@@ -56,6 +64,10 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 	if err != nil {
 		return domain.AgenticFactLedger{}, 0, err
 	}
+	input, err = decodeCostPresence(input, version < 5)
+	if err != nil {
+		return domain.AgenticFactLedger{}, 0, err
+	}
 	var ledger domain.AgenticFactLedger
 	var rootFields map[string]json.RawMessage
 	if err := json.Unmarshal(input, &rootFields); err != nil {
@@ -67,7 +79,7 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("mixed ledger shape: canonical sessions cannot coexist with root-level legacy %s; remove ambiguity before migration", key)
 		}
 	}
-	if hasSessions && version >= domain.CurrentSchemaVersion {
+	if hasSessions && version >= 4 {
 		var canonical []struct {
 			Invocations []map[string]json.RawMessage `json:"invocations"`
 		}
@@ -135,7 +147,7 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 			}
 		}
 	}
-	if version >= domain.CurrentSchemaVersion && hasSessions {
+	if version >= 4 && hasSessions {
 		normalized, err := domain.PersistAnomalySummaries(ledger)
 		if err != nil {
 			return domain.AgenticFactLedger{}, 0, fmt.Errorf("sanitizing canonical session events: %w", err)
@@ -261,7 +273,7 @@ func (e *Engine) applyChain(ledger domain.AgenticFactLedger, sourceVersion int, 
 		current = after
 	}
 
-	if sourceVersion < domain.CurrentSchemaVersion && targetVersion >= domain.CurrentSchemaVersion {
+	if sourceVersion < 4 && targetVersion >= 4 {
 		migrationInfo := current.Migration
 		if migrationInfo == nil {
 			migrationInfo = &domain.MigrationInfo{StepsCompleted: []string{}, StepsPending: []string{}}
@@ -278,7 +290,7 @@ func (e *Engine) applyChain(ledger domain.AgenticFactLedger, sourceVersion int, 
 		if !found {
 			pending = append(pending, domain.MigrationStepSourceBackfill)
 		}
-		migrationInfo.SchemaVersion = domain.CurrentSchemaVersion
+		migrationInfo.SchemaVersion = targetVersion
 		migrationInfo.Status = domain.MigrationStatusPartial
 		migrationInfo.StepsCompleted = completed
 		migrationInfo.StepsPending = pending

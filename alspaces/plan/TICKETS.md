@@ -7,6 +7,8 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ## In Progress
 
 
+
+
 ---
 
 ## Ready
@@ -58,14 +60,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-9 evaluate cryptographic signing and verification for telemetry ledgers.md`
-
-- **AL-57**: Represent Unavailable Telemetry Cost as Nullable
-  - **Subsystem**: Domain / Adapters / CLI / Presentation / Tests
-  - **Phase**: Phase 8 (Schema Evolution / Cost Accuracy)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-57 nullable cost values across telemetry ledger aggregates and ui.md`
 
 ---
 

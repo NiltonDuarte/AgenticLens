@@ -30,3 +30,14 @@ Represent cost availability across the full telemetry contract so an actual zero
 * Cost migration is versioned and compatible with the repository's existing migration framework; it does not require AL-55 to complete first.
 * Quality gates pass with `make`.
 * Existing ledgers with numeric costs continue to load and display correctly.
+
+
+*APPROVED DEVELOPMENT CLARIFICATION*
+
+The current user approved the developer contract with the explicit amendment: "remove legacy_unverified type. treat legacy costs as observed. keep it simple". The accepted baseline is alspaces/AL-57/CONTRACT.md and iterations/02/PLAN.md; the earlier iteration 01 proposal is historical.
+
+* Valid historical numeric amounts, including zero and historical Codex zero, are observed in read projections, migration, aggregation and display. There is no special historical cost state, counter or label. Missing/null amounts remain unavailable.
+* Current source extraction distinguishes observed, partial and unavailable evidence. Coalesced invocation rows retain known contributions when some cost-bearing records omit cost.
+* Mixed aggregates show a clearly labeled known subtotal and invocation coverage; their complete total remains unavailable. Cost-dependent ratios require complete, nonzero denominators.
+* Schema v5 persists cost evidence. Canonical v4 remains readable through a read-only compatibility projection; v1-v3 retain explicit migration. Legacy presence must be decoded before scalar defaults. All source ownership, migration backup/atomicity, AL-55 safeguards and non-cost facts remain preserved.
+* CLI/API and the embedded dashboard ship together with nullable complete costs, explicit unavailable/partial states, stable incomplete-last cost ordering and truthful chart gaps. Estimates and rate cards remain excluded.

@@ -1,26 +1,30 @@
+import type { CostSummary } from '../domain/types';
+import { compareCosts } from '../domain/cost';
 import React from 'react';
-import { formatCurrencyUSD, formatPercentage } from '../domain/formatters';
+import { formatCostUSD, formatPercentage } from '../domain/formatters';
 import { getRoleColor, getModelColor, THEME_COLORS } from '../utils/theme';
 import { InfoTooltip } from './InfoTooltip';
 
 export interface DistributionCardProps {
   readonly title: string;
-  readonly items: Readonly<Record<string, number>>;
-  readonly totalCostUSD: number;
+  readonly items: Readonly<Record<string, number | null>>;
+  readonly totalCostUSD: number | null;
+  readonly costSummaries?: Readonly<Record<string, CostSummary>> | undefined;
   readonly colorType?: 'role' | 'model' | 'default';
   readonly tooltip?: string | undefined;
 }
 
 interface SortedItem {
   readonly name: string;
-  readonly cost: number;
-  readonly percentage: number;
+  readonly cost: number | null;
+  readonly percentage: number | null;
 }
 
 export const DistributionCard: React.FC<DistributionCardProps> = ({
   title,
   items,
   totalCostUSD,
+  costSummaries,
   colorType,
   tooltip,
 }) => {
@@ -44,14 +48,14 @@ export const DistributionCard: React.FC<DistributionCardProps> = ({
 
   const sorted: SortedItem[] = Object.entries(items)
     .map(([name, cost]) => {
-      const pct = totalCostUSD > 0 && !isNaN(cost) ? (cost / totalCostUSD) * 100 : 0;
+      const pct = totalCostUSD !== null && totalCostUSD > 0 && cost !== null && Number.isFinite(cost) ? (cost / totalCostUSD) * 100 : null;
       return {
         name,
         cost,
-        percentage: isNaN(pct) ? 0 : pct,
+        percentage: pct,
       };
     })
-    .sort((a, b) => b.cost - a.cost);
+    .sort((a, b) => compareCosts(a.cost, b.cost, false) || a.name.localeCompare(b.name));
 
   return (
     <div className="distribution-card">
@@ -67,9 +71,10 @@ export const DistributionCard: React.FC<DistributionCardProps> = ({
         </div>
       ) : (
         <div className="distribution-list">
+          {(totalCostUSD === null || totalCostUSD === 0) && <p>Cost shares unavailable: a complete, nonzero total is required.</p>}
           {sorted.map((item) => {
             const itemColor = getItemColor(item.name);
-            const clampedPct = Math.min(Math.max(item.percentage, 0), 100);
+            const clampedPct = item.percentage === null ? 0 : Math.min(Math.max(item.percentage, 0), 100);
             return (
               <div key={item.name} className="distribution-item">
                 <div className="distribution-label-row">
@@ -89,11 +94,11 @@ export const DistributionCard: React.FC<DistributionCardProps> = ({
                     <span className="distribution-name">{item.name}</span>
                   </div>
                   <div className="distribution-values mono-number">
-                    <span>{formatCurrencyUSD(item.cost)}</span>
+                    <span>{formatCostUSD(item.cost, costSummaries?.[item.name])}</span>
                     <span>({formatPercentage(item.percentage)})</span>
                   </div>
                 </div>
-                <div className="progress-track" aria-hidden="true">
+                <div className="progress-track" aria-hidden="true" hidden={item.percentage === null}>
                   <div
                     className="progress-fill"
                     style={{

@@ -151,9 +151,27 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.getByText('Role Cost Distribution')).toBeInTheDocument();
       expect(screen.getByText('advisor')).toBeInTheDocument();
       expect(screen.getByText('po')).toBeInTheDocument();
-      const zeroPcts = screen.getAllByText('(0.0%)');
-      expect(zeroPcts.length).toBe(2);
+      const unavailablePcts = screen.getAllByText('(Unavailable)');
+      expect(unavailablePcts.length).toBe(2);
+      expect(screen.getByText(/complete, nonzero total is required/)).toBeInTheDocument();
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+
+    it('shows a partial zero subtotal without inventing shares from an incomplete total', () => {
+      const { container } = render(
+        <DistributionCard
+          title="Mixed Role Costs"
+          items={{ missing: null, known: 2, partial: null }}
+          totalCostUSD={null}
+          costSummaries={{ partial: { state: 'partial', known_subtotal_usd: 0, fully_observed: 0, partial: 1, unavailable: 0, total: 1 } }}
+        />
+      );
+      expect(screen.getByText('$0.00 known subtotal (0/1 observed, 1 partial, 0 unavailable)')).toBeInTheDocument();
+      expect(screen.getAllByText('(Unavailable)')).toHaveLength(3);
+      expect(screen.getByText(/complete, nonzero total is required/)).toBeInTheDocument();
+      expect(container.querySelectorAll('.progress-track:not([hidden])')).toHaveLength(0);
+      const names = Array.from(container.querySelectorAll('.distribution-name')).map((item) => item.textContent);
+      expect(names).toEqual(['known', 'missing', 'partial']);
     });
 
     it('handles single item with 100% cost allocation cleanly', () => {

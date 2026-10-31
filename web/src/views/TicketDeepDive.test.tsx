@@ -175,6 +175,22 @@ describe('Skills and subagents autopsy', () => {
         expect(child).toHaveAttribute('aria-expanded', 'true');
     });
 
+    it('shows auxiliary task partial contributions without claiming invocation coverage', async () => {
+        const detail = makeDetail(undefined, [{
+            ...delegation, description: 'Partially reported task cost', cost_usd: null,
+            cost_evidence: { state: 'partial', known_subtotal_usd: 2 },
+        }]);
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5 } },
+        } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const table = await screen.findByRole('table', { name: 'Subagent delegations' });
+        const row = within(table).getAllByRole('row')[1]!;
+        expect(within(row).getByText('$2.00 known subtotal (partial)')).toBeVisible();
+        expect(row.children[4]).not.toHaveTextContent(/observed|invocation|\d+\/\d+/i);
+        expect(row.children[4]).not.toHaveTextContent('Unavailable');
+    });
+
     it('keeps persisted skill and delegation facts visible before and after optional enrichment fails', async () => {
         const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);

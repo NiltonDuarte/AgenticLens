@@ -14,7 +14,7 @@ import {
   fetchWorkspaceLedgers,
 } from '../api/client';
 import {
-  formatCurrencyUSD,
+  formatCostUSD,
   formatDurationSeconds,
   formatIsoDateTimeShort,
   formatLeadTime,
@@ -294,7 +294,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         />
         <KPICard
           title="Total Cost"
-          value={formatCurrencyUSD(totals.cost_usd)}
+          value={formatCostUSD(totals.cost_usd, totals.cost_summary)}
           secondary={`${totals.invocations} invocations`}
           tooltip="Total USD spend across all model calls"
         />
@@ -525,7 +525,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                       <td className="num-col">{r.invocations}</td>
                       <td className="num-col">{formatTokensK(r.input_tokens + r.output_tokens)}</td>
                       <td className="num-col">{formatPercentage(r.cache_hit_rate_pct)}</td>
-                      <td className="num-col">{formatCurrencyUSD(r.cost_usd)}</td>
+                      <td className="num-col">{formatCostUSD(r.cost_usd, r.cost_summary)}</td>
                     </tr>
                   );
                 })}
@@ -624,7 +624,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                       <td className="num-col">{m.invocations}</td>
                       <td className="num-col">{formatTokensK(m.input_tokens + m.output_tokens)}</td>
                       <td className="num-col">{formatPercentage(m.cache_hit_rate_pct)}</td>
-                      <td className="num-col">{formatCurrencyUSD(m.cost_usd)}</td>
+                      <td className="num-col">{formatCostUSD(m.cost_usd, m.cost_summary)}</td>
                     </tr>
                   );
                 })}

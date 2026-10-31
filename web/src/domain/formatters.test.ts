@@ -67,11 +67,13 @@ describe('Domain Pure Formatters', () => {
     describe('formatCurrencyUSD', () => {
         it('handles zero and negative gracefully', () => {
             expect(formatCurrencyUSD(0)).toBe('$0.00');
+            expect(formatCurrencyUSD(null)).toBe('Unavailable');
+            expect(formatCurrencyUSD(undefined)).toBe('Unavailable');
             expect(formatCurrencyUSD(-5)).toBe('$0.00');
             expect(formatCurrencyUSD(-0.0001)).toBe('$0.00');
-            expect(formatCurrencyUSD(NaN)).toBe('$0.00');
-            expect(formatCurrencyUSD(Infinity)).toBe('$0.00');
-            expect(formatCurrencyUSD(-Infinity)).toBe('$0.00');
+            expect(formatCurrencyUSD(NaN)).toBe('Unavailable');
+            expect(formatCurrencyUSD(Infinity)).toBe('Unavailable');
+            expect(formatCurrencyUSD(-Infinity)).toBe('Unavailable');
         });
         it('formats micro-costs under 1 dollar with 4 decimal places', () => {
             expect(formatCurrencyUSD(0.00001)).toBe('$0.0000');
@@ -351,18 +353,28 @@ describe('Domain Pure Formatters', () => {
             expect(migratedLedger.facts.migration?.status).toBe('partial');
             expect(migratedLedger.facts.migration?.steps_pending).toEqual(['opencode_db']);
         });
+        it('keeps unavailable cost after observed legacy values in both sort directions', () => {
+            const base = Object.values(mockAgenticMetricsLedgers)[0]!;
+            const ledgers = [
+                { ...base, ticket_id: 'TEST-3', totals: { ...base.totals, cost_usd: null } },
+                { ...base, ticket_id: 'TEST-1', totals: { ...base.totals, cost_usd: 0 } },
+                { ...base, ticket_id: 'TEST-2', totals: { ...base.totals, cost_usd: 2 } },
+            ];
+            expect(deriveTicketComparisonRows(ledgers, 'cost_usd', 'asc').map((row) => row.ticket_id)).toEqual(['TEST-1', 'TEST-2', 'TEST-3']);
+            expect(deriveTicketComparisonRows(ledgers, 'cost_usd', 'desc').map((row) => row.ticket_id)).toEqual(['TEST-2', 'TEST-1', 'TEST-3']);
+        });
         it('sorts rows dynamically by comparison sort fields and order', () => {
             const ledgers = Object.values(mockAgenticMetricsLedgers);
             expect(ledgers.length).toBeGreaterThan(1);
             // Sort by cost ascending
             const byCostAsc = deriveTicketComparisonRows(ledgers, 'cost_usd', 'asc');
             for (let i = 0; i < byCostAsc.length - 1; i++) {
-                expect(byCostAsc[i]!.cost_usd).toBeLessThanOrEqual(byCostAsc[i + 1]!.cost_usd);
+                expect(byCostAsc[i]!.cost_usd).toBeLessThanOrEqual(byCostAsc[i + 1]!.cost_usd!);
             }
             // Sort by cost descending
             const byCostDesc = deriveTicketComparisonRows(ledgers, 'cost_usd', 'desc');
             for (let i = 0; i < byCostDesc.length - 1; i++) {
-                expect(byCostDesc[i]!.cost_usd).toBeGreaterThanOrEqual(byCostDesc[i + 1]!.cost_usd);
+                expect(byCostDesc[i]!.cost_usd).toBeGreaterThanOrEqual(byCostDesc[i + 1]!.cost_usd!);
             }
             // Sort by active duration ascending
             const byDurAsc = deriveTicketComparisonRows(ledgers, 'active_duration_seconds', 'asc');

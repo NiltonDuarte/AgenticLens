@@ -36,16 +36,18 @@ func (dto InvocationTokensDTO) ToDomain() domain.InvocationTokens {
 
 // InvocationFactDTO represents a single invocation fact in JSON boundary serialization.
 type InvocationFactDTO struct {
-	Role                  string              `json:"role"`
-	Model                 string              `json:"model"`
-	StartedAt             *string             `json:"started_at"`
-	CompletedAt           *string             `json:"completed_at"`
-	ActiveDurationSeconds int64               `json:"active_duration_seconds"`
-	Turns                 int64               `json:"turns"`
-	Tokens                InvocationTokensDTO `json:"tokens"`
-	CostUSD               float64             `json:"cost_usd"`
-	Compactions           int64               `json:"compactions"`
-	UserIterations        int64               `json:"user_iterations"`
+	Role                  string               `json:"role"`
+	Model                 string               `json:"model"`
+	StartedAt             *string              `json:"started_at"`
+	CompletedAt           *string              `json:"completed_at"`
+	ActiveDurationSeconds int64                `json:"active_duration_seconds"`
+	Turns                 int64                `json:"turns"`
+	Tokens                InvocationTokensDTO  `json:"tokens"`
+	CostUSD               float64              `json:"cost_usd"`
+	CostEvidence          *domain.CostEvidence `json:"cost_evidence"`
+	costAbsent            bool
+	Compactions           int64 `json:"compactions"`
+	UserIterations        int64 `json:"user_iterations"`
 }
 
 func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
@@ -57,7 +59,8 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 		ActiveDurationSeconds: dto.ActiveDurationSeconds,
 		Turns:                 dto.Turns,
 		Tokens:                dto.Tokens.ToDomain(),
-		CostUSD:               dto.CostUSD,
+		CostUSD:               dto.internalCost(),
+		CostEvidence:          dto.evidence(),
 		Compactions:           dto.Compactions,
 		UserIterations:        dto.UserIterations,
 	}
@@ -80,6 +83,8 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 			PeakContext: inv.Tokens.PeakContext,
 		},
 		CostUSD:        inv.CostUSD,
+		CostEvidence:   costEvidencePointer(domain.EffectiveCost(inv.CostUSD, inv.CostEvidence)),
+		costAbsent:     domain.EffectiveCost(inv.CostUSD, inv.CostEvidence).State != domain.CostObserved,
 		Compactions:    inv.Compactions,
 		UserIterations: inv.UserIterations,
 	}
@@ -337,93 +342,93 @@ func ValidateRuntimeFactLedger(data []byte) error {
 		return fmt.Errorf("decoding ledger metadata: %w", err)
 	}
 	if metadata.SchemaVersion == nil {
-		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
 	}
-	if *metadata.SchemaVersion != domain.CurrentSchemaVersion {
-		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
+	if *metadata.SchemaVersion != 4 && *metadata.SchemaVersion != domain.CurrentSchemaVersion {
+		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
 	}
 	for _, key := range []string{"invocations", "tools", "events"} {
 		if _, exists := fields[key]; exists {
-			return fmt.Errorf("schema v4 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
+			return fmt.Errorf("schema v4 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
 		}
 	}
 	sessionsJSON, sessionsExists := fields["sessions"]
 	if !sessionsExists || string(sessionsJSON) == "null" || !json.Valid(sessionsJSON) {
-		return errors.New("canonical schema v4 ledger requires a sessions collection; run `agentic-lens migrate --target-version 4` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+		return errors.New("canonical schema v4/v5 ledger requires a sessions collection; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
 	}
 	if metadata.Migration != nil && (metadata.Migration.Status != string(domain.MigrationStatusCompleted) || len(metadata.Migration.StepsPending) > 0) {
-		return errors.New("schema v4 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
+		return errors.New("schema v4/v5 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
 	}
 	var canonical struct {
 		Sessions []json.RawMessage `json:"sessions"`
 	}
 	if err := json.Unmarshal(sessionsJSON, &canonical.Sessions); err != nil || canonical.Sessions == nil {
-		return errors.New("canonical schema v4 sessions must be an array")
+		return errors.New("canonical schema v4/v5 sessions must be an array")
 	}
 	for si, rawSession := range canonical.Sessions {
 		var session map[string]json.RawMessage
 		if err := json.Unmarshal(rawSession, &session); err != nil {
-			return fmt.Errorf("canonical schema v4 session %d is invalid", si)
+			return fmt.Errorf("canonical schema v4/v5 session %d is invalid", si)
 		}
 		for _, required := range []string{"id", "source", "user", "invocations", "tools", "anomalies"} {
 			if _, ok := session[required]; !ok {
-				return fmt.Errorf("canonical schema v4 session %d is missing required %s", si, required)
+				return fmt.Errorf("canonical schema v4/v5 session %d is missing required %s", si, required)
 			}
 		}
 		var sessionUser string
 		if err := json.Unmarshal(session["user"], &sessionUser); err != nil || strings.TrimSpace(sessionUser) == "" {
-			return fmt.Errorf("canonical schema v4 session %d requires a non-empty user", si)
+			return fmt.Errorf("canonical schema v4/v5 session %d requires a non-empty user", si)
 		}
 		for _, collection := range []string{"tools", "anomalies"} {
 			var values []json.RawMessage
 			if err := json.Unmarshal(session[collection], &values); err != nil || values == nil {
-				return fmt.Errorf("canonical schema v4 session %d %s must be an array", si, collection)
+				return fmt.Errorf("canonical schema v4/v5 session %d %s must be an array", si, collection)
 			}
 		}
 		var source string
 		if err := json.Unmarshal(session["source"], &source); err != nil || (source != string(domain.SourceOpenCode) && source != string(domain.SourceCodex)) {
-			return fmt.Errorf("canonical schema v4 session %d requires a supported source (opencode or codex)", si)
+			return fmt.Errorf("canonical schema v4/v5 session %d requires a supported source (opencode or codex)", si)
 		}
 		var invocations []json.RawMessage
 		if err := json.Unmarshal(session["invocations"], &invocations); err != nil || invocations == nil {
-			return fmt.Errorf("canonical schema v4 session %d invocations must be an array", si)
+			return fmt.Errorf("canonical schema v4/v5 session %d invocations must be an array", si)
 		}
 		for ii, rawInvocation := range invocations {
 			var invocation map[string]json.RawMessage
 			if err := json.Unmarshal(rawInvocation, &invocation); err != nil {
-				return fmt.Errorf("canonical schema v4 invocation %d in session %d is invalid", ii, si)
+				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d is invalid", ii, si)
 			}
 			if _, ok := invocation["id"]; ok {
-				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain id", ii, si)
+				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d must not contain id", ii, si)
 			}
 			if _, ok := invocation["user"]; ok {
-				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain user", ii, si)
+				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d must not contain user", ii, si)
 			}
 			if _, ok := invocation["parent_id"]; ok {
-				return fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain parent_id", ii, si)
+				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d must not contain parent_id", ii, si)
 			}
-			for _, required := range []string{"role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "compactions", "user_iterations"} {
+			for _, required := range []string{"role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "compactions", "user_iterations"} {
 				if _, ok := invocation[required]; !ok {
-					return fmt.Errorf("canonical schema v4 invocation %d in session %d is missing required %s", ii, si, required)
+					return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d is missing required %s", ii, si, required)
 				}
 			}
 			var tokens map[string]json.RawMessage
 			if err := json.Unmarshal(invocation["tokens"], &tokens); err != nil || tokens == nil {
-				return fmt.Errorf("canonical schema v4 invocation %d in session %d requires token counts", ii, si)
+				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d requires token counts", ii, si)
 			}
 			for _, required := range []string{"input", "output", "cache_read", "reasoning", "peak_context"} {
 				if _, ok := tokens[required]; !ok {
-					return fmt.Errorf("canonical schema v4 invocation %d in session %d is missing token count %s", ii, si, required)
+					return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d is missing token count %s", ii, si, required)
 				}
 			}
 			value, ok := invocation["user_iterations"]
 			var count int64
 			if !ok || json.Unmarshal(value, &count) != nil || count < 0 {
-				return fmt.Errorf("canonical schema v4 invocation %d in session %d requires a non-negative numeric user_iterations (zero is valid)", ii, si)
+				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d requires a non-negative numeric user_iterations (zero is valid)", ii, si)
 			}
 		}
 	}
-	return nil
+	return validateWireCostFields(data, *metadata.SchemaVersion >= 5)
 }
 
 func containsString(values []string, wanted string) bool {
@@ -438,6 +443,23 @@ func containsString(values []string, wanted string) bool {
 // UnmarshalJSON rejects legacy root fact collections at the current schema boundary.
 // They must be passed through the versioned migration engine instead.
 func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
+	var version struct {
+		SchemaVersion *int `json:"schema_version"`
+	}
+	if err := json.Unmarshal(data, &version); err != nil {
+		return err
+	}
+	current := version.SchemaVersion != nil && *version.SchemaVersion >= 5
+	if err := validateWireCostFields(data, current); err != nil {
+		return fmt.Errorf("invalid cost fields: %w", err)
+	}
+	if !current {
+		normalized, err := NormalizeLegacyCostJSON(data)
+		if err != nil {
+			return err
+		}
+		data = normalized
+	}
 	type currentDTO AgenticFactLedgerDTO
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
@@ -575,7 +597,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 
 // Validate enforces required fields at the persisted telemetry boundary.
 func (dto AgenticFactLedgerDTO) Validate() error {
-	currentSchema := dto.SchemaVersion != nil && *dto.SchemaVersion >= domain.CurrentSchemaVersion
+	currentSchema := dto.SchemaVersion != nil && *dto.SchemaVersion >= 4
 	if currentSchema && dto.Sessions == nil {
 		return errors.New("sessions collection is required in schema v4")
 	}
@@ -613,6 +635,15 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 				return fmt.Errorf("sessions[%d].parent_id %q does not identify a session", i, *session.ParentID)
 			}
 		}
+		for j, inv := range session.Invocations {
+			var amount *float64
+			if !inv.costAbsent {
+				amount = domain.CostNumber(inv.CostUSD)
+			}
+			if err := validateCost(amount, inv.CostEvidence, dto.SchemaVersion != nil && *dto.SchemaVersion >= 5); err != nil {
+				return fmt.Errorf("sessions[%d].invocations[%d]: %w", i, j, err)
+			}
+		}
 		for j, tool := range session.Tools {
 			if strings.TrimSpace(tool.Name) == "" {
 				return fmt.Errorf("sessions[%d].tools[%d].name is required", i, j)
@@ -632,6 +663,19 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 			if anomaly.Context.SessionID != nil {
 				return fmt.Errorf("sessions[%d].anomalies[%d].context.session_id must be inherited from the owning session", i, j)
 			}
+		}
+	}
+	for i, task := range dto.TaskLinks {
+		var amount *float64
+		if task.CostEvidence.State == domain.CostObserved || task.CostEvidence.State == "" {
+			amount = domain.CostNumber(task.CostUSD)
+		}
+		var evidence *domain.CostEvidence
+		if task.CostEvidence.State != "" {
+			evidence = &task.CostEvidence
+		}
+		if err := validateCost(amount, evidence, dto.SchemaVersion != nil && *dto.SchemaVersion >= 5); err != nil {
+			return fmt.Errorf("task_links[%d]: %w", i, err)
 		}
 	}
 	for i, anomaly := range dto.Anomalies {
@@ -753,7 +797,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		Sessions:  sessions,
 		Anomalies: anomaliesFromDomain(ledger.Anomalies),
 		Skills:    ledger.Skills,
-		TaskLinks: ledger.TaskLinks,
+		TaskLinks: normalizedTaskCosts(ledger.TaskLinks),
 	}
 }
 
@@ -1053,4 +1097,84 @@ func SerializeLedger(ledger domain.AgenticMetricsLedger) AgenticMetricsLedgerDTO
 		Models:             ledger.Models,
 		Anomalies:          anomalies,
 	}
+}
+
+func costEvidencePointer(evidence domain.CostEvidence) *domain.CostEvidence { return &evidence }
+func (dto InvocationFactDTO) evidence() domain.CostEvidence {
+	if dto.CostEvidence != nil {
+		return *dto.CostEvidence
+	}
+	if dto.costAbsent {
+		return domain.UnavailableCost()
+	}
+	return domain.ObservedCost(dto.CostUSD)
+}
+func (dto *InvocationFactDTO) UnmarshalJSON(data []byte) error {
+	type invocationAlias InvocationFactDTO
+	var decoded struct {
+		invocationAlias
+		CostUSD *float64 `json:"cost_usd"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&decoded); err != nil {
+		return err
+	}
+	*dto = InvocationFactDTO(decoded.invocationAlias)
+	dto.costAbsent = decoded.CostUSD == nil
+	if decoded.CostUSD != nil {
+		dto.CostUSD = *decoded.CostUSD
+	}
+	return nil
+}
+func (dto InvocationFactDTO) MarshalJSON() ([]byte, error) {
+	type invocationAlias InvocationFactDTO
+	evidence := dto.evidence()
+	var amount *float64
+	if evidence.State == domain.CostObserved {
+		amount = domain.CostNumber(dto.CostUSD)
+	}
+	return json.Marshal(struct {
+		invocationAlias
+		CostUSD      *float64            `json:"cost_usd"`
+		CostEvidence domain.CostEvidence `json:"cost_evidence"`
+	}{invocationAlias(dto), amount, evidence})
+}
+func normalizedTaskCosts(tasks []domain.TaskLinkFact) []domain.TaskLinkFact {
+	result := append([]domain.TaskLinkFact(nil), tasks...)
+	for i := range result {
+		if result[i].CostEvidence.State == "" {
+			if result[i].CostUSD == 0 {
+				result[i].CostEvidence = domain.UnavailableCost()
+			} else {
+				result[i].CostEvidence = domain.ObservedCost(result[i].CostUSD)
+			}
+		}
+	}
+	return result
+}
+func (dto AgenticFactLedgerDTO) MarshalJSON() ([]byte, error) {
+	type ledgerAlias AgenticFactLedgerDTO
+	data, err := json.Marshal(ledgerAlias(dto))
+	if err != nil {
+		return nil, err
+	}
+	return NormalizeCostJSON(data)
+}
+
+// MarshalJSON applies cost availability to metrics exported outside HTTP too.
+func (dto AgenticMetricsLedgerDTO) MarshalJSON() ([]byte, error) {
+	type metricsAlias AgenticMetricsLedgerDTO
+	data, err := json.Marshal(metricsAlias(dto))
+	if err != nil {
+		return nil, err
+	}
+	return NormalizeCostJSON(data)
+}
+
+func (dto InvocationFactDTO) internalCost() float64 {
+	if dto.CostEvidence != nil && dto.CostEvidence.State == domain.CostPartial && dto.CostEvidence.KnownSubtotalUSD != nil {
+		return *dto.CostEvidence.KnownSubtotalUSD
+	}
+	return dto.CostUSD
 }

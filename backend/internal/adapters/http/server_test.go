@@ -808,6 +808,80 @@ func TestGetWorkspaceDetail(t *testing.T) {
 }
 
 func TestGetFleet(t *testing.T) {
+	t.Run("mixed v4 and v5 evidence survives HTTP reads without ledger rewrites", func(t *testing.T) {
+		root := t.TempDir()
+		inputs := map[string]string{
+			"TEST-0": sampleTestLedgerJSON("TEST-0", "Legacy zero", 1, 0, 1),
+			"TEST-1": strings.Replace(sampleTestLedgerJSON("TEST-1", "Missing amount", 1, 1, 1), `"cost_usd":1.000000,`, "", 1),
+			"TEST-2": strings.ReplaceAll(strings.Replace(sampleTestLedgerJSON("TEST-2", "Partial source", 1, 2, 1), `"cost_usd":2.000000`, `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":2}`, 1), `"schema_version":4`, `"schema_version":5`),
+		}
+		for id, input := range inputs {
+			dir := filepath.Join(root, id)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(input), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		server := httptest.NewServer(mustNewServer(t, root, nil).Handler())
+		defer server.Close()
+		response, err := http.Get(server.URL + "/api/fleet")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			t.Fatalf("fleet status=%d", response.StatusCode)
+		}
+		var fleet struct {
+			Cost          *float64                      `json:"total_cost_usd"`
+			Summary       domain.CostSummary            `json:"cost_summary"`
+			Roles         map[string]*float64           `json:"role_costs"`
+			RoleSummaries map[string]domain.CostSummary `json:"role_cost_summaries"`
+		}
+		if err := json.NewDecoder(response.Body).Decode(&fleet); err != nil {
+			t.Fatal(err)
+		}
+		if fleet.Cost != nil || fleet.Summary.KnownSubtotalUSD == nil || *fleet.Summary.KnownSubtotalUSD != 2 || fleet.Summary.Total != 3 || fleet.Summary.FullyObserved != 1 || fleet.Summary.Partial != 1 || fleet.Summary.Unavailable != 1 {
+			t.Fatalf("wire fleet lost cost evidence: %+v", fleet)
+		}
+		if amount, exists := fleet.Roles["orchestrator"]; !exists || amount != nil || fleet.RoleSummaries["orchestrator"].Total != 3 {
+			t.Fatalf("role wire cost=%+v summary=%+v", fleet.Roles, fleet.RoleSummaries)
+		}
+		for _, order := range []string{"asc", "desc"} {
+			res, err := http.Get(server.URL + "/api/workspaces?sort=cost_usd&order=" + order)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var rows []struct {
+				TicketID string `json:"ticket_id"`
+				Totals   struct {
+					Cost *float64 `json:"cost_usd"`
+				} `json:"totals"`
+			}
+			decodeErr := json.NewDecoder(res.Body).Decode(&rows)
+			if err := res.Body.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if decodeErr != nil {
+				t.Fatal(decodeErr)
+			}
+			if len(rows) != 3 || rows[0].TicketID != "TEST-0" || rows[0].Totals.Cost == nil || *rows[0].Totals.Cost != 0 || rows[1].TicketID != "TEST-1" || rows[2].TicketID != "TEST-2" || rows[1].Totals.Cost != nil || rows[2].Totals.Cost != nil {
+				t.Fatalf("%s wire ordering or null cost=%+v", order, rows)
+			}
+		}
+		for id, input := range inputs {
+			persisted, err := os.ReadFile(filepath.Join(root, id, "agentic_metrics.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(persisted) != input {
+				t.Fatalf("read rewrote %s", id)
+			}
+		}
+	})
+
 	ts, _ := setupTestServer(t)
 
 	t.Run("default fleet summary without params", func(t *testing.T) {

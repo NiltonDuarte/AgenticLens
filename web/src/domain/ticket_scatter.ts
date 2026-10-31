@@ -36,6 +36,7 @@ export interface ScatterPlotData {
   readonly xBounds: ScatterBounds;
   readonly yBounds: ScatterBounds;
   readonly recommendsLogarithmic: boolean;
+  readonly unavailableCount: number;
 }
 
 const formatNumber = (value: number): string => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
@@ -111,12 +112,13 @@ export function deriveScatterPlotData(
   scale: ScatterScale,
   excludedTicketIds: ReadonlySet<string>,
 ): ScatterPlotData {
+  let unavailableCount = 0;
   const activeRows: Array<{ row: TicketComparisonRow; x: number; y: number }> = [];
   for (const row of rows) {
     if (excludedTicketIds.has(row.ticket_id)) continue;
     const rawX = getScatterMetricValue(row, xMetric);
     const rawY = getScatterMetricValue(row, yMetric);
-    if (rawX === null || rawY === null || !Number.isFinite(rawX) || !Number.isFinite(rawY)) continue;
+    if (rawX === null || rawY === null || !Number.isFinite(rawX) || !Number.isFinite(rawY)) { unavailableCount += 1; continue; }
     activeRows.push({ row, x: rawX, y: rawY });
   }
 
@@ -133,5 +135,6 @@ export function deriveScatterPlotData(
     xBounds: getBounds(points.map((point) => point.x)),
     yBounds: getBounds(points.map((point) => point.y)),
     recommendsLogarithmic,
+    unavailableCount,
   };
 }

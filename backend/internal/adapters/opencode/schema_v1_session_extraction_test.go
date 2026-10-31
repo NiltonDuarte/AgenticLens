@@ -1481,3 +1481,65 @@ func TestSchemaV1StrictRecoveryRejectsSkippedRecords(t *testing.T) {
 		})
 	}
 }
+
+func TestSchemaV1CostEvidenceCoalescesReportedAndMissingRecords(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	if _, err := db.Exec(`INSERT INTO session(id,parent_id,agent,model,title,time_created,time_updated) VALUES('cost-root',NULL,'build','model-a','cost evidence',1000,3000);
+ INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES
+ ('cost-a','cost-root',1000,2000,'{"role":"assistant","modelID":"model-a","cost":2}'),
+ ('cost-b','cost-root',2000,3000,'{"role":"assistant","modelID":"model-a"}');`); err != nil {
+		t.Fatal(err)
+	}
+	invs, _, _, _, _, err := opencode.ExtractFacts(db, []string{"cost-root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(invs) != 1 || invs[0].CostEvidence.State != domain.CostPartial || invs[0].CostEvidence.KnownSubtotalUSD == nil || *invs[0].CostEvidence.KnownSubtotalUSD != 2 {
+		t.Fatalf("coalesced cost=%+v", invs)
+	}
+	summary := domain.ComputeTotals(invs).CostSummary
+	if summary.CompleteAmount() != nil || summary.Partial != 1 || summary.Total != 1 {
+		t.Fatalf("partial invocation counted as complete: %+v", summary)
+	}
+	for _, tc := range []struct {
+		name, first, second string
+		state               domain.CostState
+		invalid             bool
+	}{
+		{"explicit zero remains observed", "0", "0", domain.CostObserved, false},
+		{"known zero plus null is partial", "0", "null", domain.CostPartial, false},
+		{"only null is unavailable", "null", "null", domain.CostUnavailable, false},
+		{"negative cost is rejected", "-1", "null", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := db.Exec(`UPDATE message SET data=json_set(data,'$.cost',json(?)) WHERE id=?`, tc.first, "cost-a"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`UPDATE message SET data=json_set(data,'$.cost',json(?)) WHERE id=?`, tc.second, "cost-b"); err != nil {
+				t.Fatal(err)
+			}
+			rows, _, _, _, _, err := opencode.ExtractFacts(db, []string{"cost-root"}, "tester", nil)
+			if tc.invalid {
+				if err == nil {
+					t.Fatalf("invalid source amount was accepted: %+v", rows)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || rows[0].CostEvidence.State != tc.state {
+				t.Fatalf("source availability=%+v", rows)
+			}
+			if tc.state == domain.CostUnavailable {
+				if rows[0].CostEvidence.KnownSubtotalUSD != nil {
+					t.Fatalf("unknown source became known zero: %+v", rows[0])
+				}
+			} else if rows[0].CostEvidence.KnownSubtotalUSD == nil || *rows[0].CostEvidence.KnownSubtotalUSD != 0 {
+				t.Fatalf("known zero contribution lost: %+v", rows[0])
+			}
+		})
+	}
+
+}

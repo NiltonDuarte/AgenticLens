@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { ActiveTab, FleetSummary, ProjectConfigResponse, TicketComparisonRow, WorkspaceDiagnostic } from '../domain/types';
-import { compareTicketIds, formatCurrencyUSD, formatPercentage } from '../domain/formatters';
+import { compareTicketIds, formatCostUSD, formatPercentage } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { EmptyState } from '../components/EmptyState';
 import { InfoTooltip } from '../components/InfoTooltip';
@@ -122,7 +122,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   }
 
   const totalWorkspaces = summary?.total_tickets ?? workspaces.length;
-  const totalSpend = summary ? formatCurrencyUSD(summary.total_cost_usd) : '$0.00';
+  const totalSpend = summary ? formatCostUSD(summary.total_cost_usd, summary.cost_summary) : 'Unavailable';
   const totalIterations = workspaces.reduce(
     (acc, w) => acc + (Number.isFinite(w.sdlc_iterations) ? w.sdlc_iterations : 0),
     0
