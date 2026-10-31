@@ -2367,3 +2367,63 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 		}
 	})
 }
+
+func TestLedgerFileReadsNormalizeOptionalSkillTaskCollections(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		fields   string
+		wantRows int
+		invalid  bool
+	}{
+		{name: "omitted"},
+		{name: "null", fields: `,"skills":null,"task_links":null`},
+		{name: "empty", fields: `,"skills":[],"task_links":[]`},
+		{name: "repeated observations", fields: `,"skills":[{"name":"review","turn_index":1},{"name":"review","turn_index":1}],"task_links":[{"subagent_type":"coder","description":"same"},{"subagent_type":"coder","description":"same"}]`, wantRows: 2},
+		{name: "malformed skills", fields: `,"skills":{}`, invalid: true},
+		{name: "malformed tasks", fields: `,"task_links":"unknown"`, invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			ticket := "CUSTOM-READ"
+			dir := filepath.Join(root, ticket)
+			if err := os.Mkdir(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(dir, "agentic_metrics.json")
+			data := []byte(`{"schema_version":4,"ticket_id":"CUSTOM-READ","sessions":[]` + tc.fields + `}`)
+			if err := os.WriteFile(path, data, 0644); err != nil {
+				t.Fatal(err)
+			}
+			existing, existingErr := adapters.LoadExistingFactLedger(path)
+			workspace, workspaceErr := adapters.LoadTicketWorkspace(ticket, root)
+			if tc.invalid {
+				if existingErr == nil || workspaceErr == nil {
+					t.Fatalf("malformed collections accepted: existing=%v workspace=%v", existingErr, workspaceErr)
+				}
+				return
+			}
+			if existingErr != nil || workspaceErr != nil {
+				t.Fatalf("compatible collection form rejected: existing=%v workspace=%v", existingErr, workspaceErr)
+			}
+			if existing == nil || workspace == nil {
+				t.Fatal("file read returned no ledger")
+			}
+			if existing.Skills == nil || existing.TaskLinks == nil || workspace.Facts.Skills == nil || workspace.Facts.TaskLinks == nil {
+				t.Fatalf("internal collections must be initialized after file read: existing=%+v workspace=%+v", existing, workspace.Facts)
+			}
+			if len(existing.Skills) != tc.wantRows || len(existing.TaskLinks) != tc.wantRows || len(workspace.Facts.Skills) != tc.wantRows || len(workspace.Facts.TaskLinks) != tc.wantRows {
+				t.Fatalf("file read changed row multiplicity: existing skills/tasks=%d/%d workspace=%d/%d", len(existing.Skills), len(existing.TaskLinks), len(workspace.Facts.Skills), len(workspace.Facts.TaskLinks))
+			}
+			if tc.wantRows > 0 && (existing.Skills[1].Name != "review" || workspace.Facts.TaskLinks[1].Description != "same") {
+				t.Fatal("populated observation payload changed")
+			}
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(after, data) {
+				t.Fatal("read normalization rewrote optional wire fields")
+			}
+		})
+	}
+}

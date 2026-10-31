@@ -1438,3 +1438,46 @@ func TestSchemaV1ExtractFacts_UserIterationsRootAndChild(t *testing.T) {
 	}
 
 }
+
+func TestSchemaV1StrictRecoveryRejectsSkippedRecords(t *testing.T) {
+	for _, tc := range []struct {
+		name, message, part string
+		invalid             bool
+	}{
+		{name: "malformed message", message: "{", part: `{"type":"text","text":"ok"}`, invalid: true},
+		{name: "malformed unclassified part", message: `{"role":"assistant","modelID":"model","tokens":{"input":3}}`, part: "{", invalid: true},
+		{name: "whitespace formatted skill", message: `{"role":"assistant","modelID":"model","tokens":{"input":3}}`, part: `{ "type": "tool", "tool": "skill", "state": { "status": "completed", "input": { "name": "formatted" }, "output": "loaded" } }`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db := setupTestDB(t)
+			defer db.Close()
+			if _, err := db.Exec(`INSERT INTO session(id,parent_id,agent,model,title,time_created,time_updated) VALUES('root',NULL,'coder','model','test',1700000000000,1700000001000)`); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('message','root',1700000000000,1700000001000,?)`, tc.message); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO part(id,session_id,message_id,time_created,time_updated,data) VALUES('part','root','message',1700000000001,1700000001000,?)`, tc.part); err != nil {
+				t.Fatal(err)
+			}
+			strict, _, _, err := opencode.ExtractSessionsStrict(db, []string{"root"}, "tester", nil)
+			if tc.invalid {
+				if err == nil || len(strict) > 0 {
+					t.Fatalf("strict recovery certified malformed source: %+v %v", strict, err)
+				}
+				tolerant, _, _, err := opencode.ExtractSessions(db, []string{"root"}, "tester", nil)
+				if err != nil || len(tolerant) != 1 {
+					t.Fatalf("existing tolerant ingestion changed: %+v %v", tolerant, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			skills, _ := opencode.ExtractSkillTaskFacts(strict)
+			if len(skills) != 1 || skills[0].Name != "formatted" || !skills[0].Success {
+				t.Fatalf("strict parsing discarded valid formatted producer record: %+v", skills)
+			}
+		})
+	}
+}

@@ -112,6 +112,16 @@ func normalizeToolInput(raw json.RawMessage) *string {
 
 // ExtractSessions queries and builds normalized domain.SessionFact trees for either supported OpenCode schema family.
 func ExtractSessions(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string) ([]domain.SessionFact, *string, *string, error) {
+	return extractSessions(db, threadIDs, defaultUser, userBySessionID, false)
+}
+
+// ExtractSessionsStrict rejects malformed source records instead of silently
+// omitting them. Backfill uses this boundary before replacing stored snapshots.
+func ExtractSessionsStrict(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string) ([]domain.SessionFact, *string, *string, error) {
+	return extractSessions(db, threadIDs, defaultUser, userBySessionID, true)
+}
+
+func extractSessions(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool) ([]domain.SessionFact, *string, *string, error) {
 	if db == nil {
 		return nil, nil, nil, errors.New("database connection is nil")
 	}
@@ -125,7 +135,7 @@ func ExtractSessions(db *sql.DB, threadIDs []string, defaultUser string, userByS
 	if family == schemaFamilyV2 {
 		return extractSchemaV2Sessions(db, threadIDs, defaultUser, userBySessionID)
 	}
-	return extractSchemaV1Sessions(db, threadIDs, defaultUser, userBySessionID)
+	return extractSchemaV1Sessions(db, threadIDs, defaultUser, userBySessionID, strict)
 }
 
 // ExtractFacts queries invocation, tool, and chronological event facts from OpenCode SQLite database for given root threads.
