@@ -99,7 +99,7 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
       {part.input_snippet && (
         <div className="part-snippet input">
           <span className="part-snippet-label">Input:</span>
-          <pre className="part-code">{part.input_snippet}</pre>
+          <pre className="part-code" data-trace-anchor={`${part.id}:input`}>{part.input_snippet}</pre>
         </div>
       )}
       {part.output_snippet && (
@@ -107,7 +107,7 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
           <span className="part-snippet-label">
             {part.is_error ? 'Error Output:' : 'Output:'}
           </span>
-          <pre className={`part-code ${part.is_error ? 'error' : ''}`}>
+          <pre className={`part-code ${part.is_error ? 'error' : ''}`} data-trace-anchor={`${part.id}:output`}>
             {part.output_snippet}
           </pre>
         </div>
@@ -161,7 +161,7 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
 
   return (
     <div className={`trace-message-turn role-${message.role.toLowerCase()}`} data-testid={`message-turn-${turnIndex}`}>
-      <div className="message-turn-header">
+      <div className="message-turn-header" data-trace-anchor={`${message.id}:header`}>
         <div className="message-turn-meta">
           <span className="turn-number-badge">Turn {turnIndex + 1}</span>
           <span className={`turn-role-pill role-${message.role.toLowerCase()}`}>
@@ -225,12 +225,12 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
               {showReasoning ? 'Hide Reasoning' : 'Show Reasoning'}
             </button>
           </div>
-          <pre className="reasoning-content">{displayReasoning}</pre>
+          <pre className="reasoning-content" data-trace-anchor={`${message.id}:reasoning`}>{displayReasoning}</pre>
         </div>
       )}
 
       {message.content && message.content.trim().length > 0 && (
-        <div className="message-body-text">{message.content}</div>
+        <div className="message-body-text" data-trace-anchor={`${message.id}:body`}>{message.content}</div>
       )}
 
       {message.parts && message.parts.length > 0 && (
@@ -270,20 +270,32 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   const previousMessageCount = useRef(trace?.messages.length ?? 0);
   const previousScrollHeight = useRef(0);
 
+  const readingAnchor = useRef<{ element: HTMLElement; offset: number } | null>(null);
+  const captureReadingAnchor = (list: HTMLDivElement) => {
+    const top = list.getBoundingClientRect().top;
+    const element = Array.from(list.querySelectorAll<HTMLElement>('[data-trace-anchor]'))
+      .find((candidate) => candidate.getBoundingClientRect().bottom > top);
+    readingAnchor.current = element ? { element, offset: element.getBoundingClientRect().top - top } : null;
+  };
+
   useLayoutEffect(() => {
     const list = messageListRef.current;
     const currentCount = trace?.messages.length ?? 0;
-    if (list && currentCount > previousMessageCount.current && pausedAtReadingPosition.current) {
-      if (messageOrder === 'latest-first') {
+    if (list && pausedAtReadingPosition.current) {
+      const anchor = readingAnchor.current;
+      if (anchor && list.contains(anchor.element)) {
+        list.scrollTop += anchor.element.getBoundingClientRect().top - list.getBoundingClientRect().top - anchor.offset;
+      } else if (messageOrder === 'latest-first') {
         list.scrollTop += list.scrollHeight - previousScrollHeight.current;
-        setNewTurnsAvailable(true);
-      } else {
-        setNewTurnsAvailable(true);
       }
+      if (currentCount > previousMessageCount.current) setNewTurnsAvailable(true);
     }
     previousMessageCount.current = currentCount;
-    if (list) previousScrollHeight.current = list.scrollHeight;
-  }, [trace?.messages.length, messageOrder]);
+    if (list) {
+      previousScrollHeight.current = list.scrollHeight;
+      captureReadingAnchor(list);
+    }
+  }, [trace, messageOrder]);
   const [isFailedToolsExpanded, setIsFailedToolsExpanded] = useState(false);
 
   if (!sessionNode) {
@@ -509,6 +521,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
                 onScroll={(event) => {
                   const list = event.currentTarget;
                   previousScrollHeight.current = list.scrollHeight;
+                  captureReadingAnchor(list);
                   const distanceFromLatest = messageOrder === 'latest-first'
                     ? list.scrollTop
                     : list.scrollHeight - list.clientHeight - list.scrollTop;
