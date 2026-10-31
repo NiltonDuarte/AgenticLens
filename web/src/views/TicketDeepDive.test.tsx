@@ -65,6 +65,10 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         }
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
+        const headerTimes = document.querySelectorAll('time[title]');
+        expect(headerTimes.length).toBeGreaterThan(0);
+        expect(headerTimes[0]).toHaveTextContent(/\d{2}:\d{2}:\d{2}\.\d{3}/);
+        expect(headerTimes[0]).toHaveAttribute('title', expect.stringMatching(/\d{4}/));
         expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
         expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
         expect(screen.queryByText(/Failed to load ticket details|Optional source unavailable/)).not.toBeInTheDocument();
@@ -77,6 +81,22 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
         fireEvent.click(screen.getByTestId('timeline-item-2'));
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('preserves malformed workspace timestamps as the visible time and tooltip fallback', async () => {
+        const malformedTimestamp = 'not-a-valid-timestamp';
+        const detail = makeDetail();
+        const malformedDetail: WorkspaceDetail = {
+            ...detail,
+            ledger: { ...detail.ledger, started_at: malformedTimestamp, updated_at: malformedTimestamp },
+        };
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: malformedDetail });
+
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+
+        await waitFor(() => expect(screen.getAllByText(malformedTimestamp)).toHaveLength(2));
+        const fallbackTimes = screen.getAllByText(malformedTimestamp);
+        fallbackTimes.forEach((timestamp) => expect(timestamp).toHaveAttribute('title', malformedTimestamp));
     });
 
     it.each(['resolve', 'reject'])('renders the baseline before a deferred enrichment request can %s', async (settlement) => {

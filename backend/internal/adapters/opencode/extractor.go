@@ -34,8 +34,9 @@ type sessionModelAccumulator struct {
 }
 
 type toolAccumulator struct {
-	calls  int64
-	errors int64
+	calls             int64
+	errors            int64
+	consecutiveErrors int
 }
 
 type toolAccumulatorKey struct {

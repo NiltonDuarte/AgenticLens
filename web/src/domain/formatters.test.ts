@@ -1,9 +1,19 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateOnly, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, filterLedgersByCompletionDate, canonicalTicketType, extractTicketPrefix, extractDistinctPrefixes, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, filterComparisonRows, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, } from './formatters';
+import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateOnly, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, filterLedgersByCompletionDate, canonicalTicketType, extractTicketPrefix, extractDistinctPrefixes, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, filterComparisonRows, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, TicketComparisonRow, AgentRole, StandardTicketType, TicketType, FailureSeverity, } from './types';
 describe('Domain Pure Formatters', () => {
+    describe('localized timestamps', () => {
+        it('formats local clock time with zero padded milliseconds', () => {
+            expect(formatLocalTimeWithMs('2026-10-22T14:32:10.007Z')).toMatch(/^\d{2}:\d{2}:\d{2}\.007$/);
+        });
+        it('preserves invalid values and includes offset context in tooltip', () => {
+            expect(formatLocalTimeWithMs('invalid')).toBe('invalid');
+            expect(formatLocalDateTimeTooltip('2026-10-22T14:32:10.007Z')).toMatch(/\.007 \[UTC[+-]\d{2}:\d{2}\]$/);
+            expect(getClientTimezoneBadge()).toMatch(/^TZ: /);
+        });
+    });
     describe('formatTokensK', () => {
         it('handles zero and negative gracefully', () => {
             expect(formatTokensK(0)).toBe('0');

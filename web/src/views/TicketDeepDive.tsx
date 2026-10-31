@@ -21,6 +21,8 @@ import {
   formatPercentage,
   formatTokensK,
   computeLeadTimeSeconds,
+  formatLocalTimeWithMs,
+  formatLocalDateTimeTooltip,
 } from '../domain/formatters';
 import { aggregateToolUsage } from '../domain/tools';
 import { KPICard } from '../components/KPICard';
@@ -248,15 +250,15 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
             <div className="timestamp-group">
               <span className="timestamp-item">
                 <span className="timestamp-label">Started:</span>{' '}
-                {formatIsoDateTimeShort(ledger.started_at)}
+                {ledger.started_at ? <time title={formatLocalDateTimeTooltip(ledger.started_at)}>{formatLocalTimeWithMs(ledger.started_at)}</time> : formatIsoDateTimeShort(ledger.started_at)}
               </span>
               <span className="timestamp-item">
                 <span className="timestamp-label">Completed:</span>{' '}
-                {ledger.completed_at ? formatIsoDateTimeShort(ledger.completed_at) : 'In Progress'}
+                {ledger.completed_at ? <time title={formatLocalDateTimeTooltip(ledger.completed_at)}>{formatLocalTimeWithMs(ledger.completed_at)}</time> : 'In Progress'}
               </span>
               <span className="timestamp-item">
                 <span className="timestamp-label">Updated:</span>{' '}
-                {formatIsoDateTimeShort(ledger.updated_at)}
+                <time title={formatLocalDateTimeTooltip(ledger.updated_at)}>{formatLocalTimeWithMs(ledger.updated_at)}</time>
               </span>
             </div>
           </div>

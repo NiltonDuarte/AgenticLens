@@ -22,6 +22,7 @@ import { KPICard } from '../components/KPICard';
 import { EmptyState } from '../components/EmptyState';
 import { InfoTooltip } from '../components/InfoTooltip';
 import { MultiSelectDropdown, type MultiSelectOption } from '../components/MultiSelectDropdown';
+import { TicketScatterPlot } from '../components/TicketScatterPlot';
 
 const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
   { value: 'feature', label: 'Feature' },
@@ -287,6 +288,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           Showing {filteredRows.length} of {allRows.length} tickets
         </div>
       </div>
+
+      {ledgers.length > 0 && <TicketScatterPlot rows={filteredRows} onSelectTicket={onSelectTicket} />}
 
       {ledgers.length === 0 ? (
         <EmptyState
