@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
   "ticket_id": "REV-4",
-  "ticket_title": "Integrate main into the REV-4 branch",
-  "ticket_type": "chore",
+  "ticket_title": "Review and reduce low-value tests; document test selection guidance",
+  "ticket_type": "docs",
   "started_at": "2026-10-31T02:17:54.850Z",
-  "completed_at": "2026-10-31T10:44:15.754Z",
-  "updated_at": "2026-10-31T10:44:19.770279+00:00",
+  "completed_at": "2026-10-31T11:01:14.411Z",
+  "updated_at": "2026-10-31T11:01:16.939415+00:00",
   "code": {
     "lines_added": 243,
     "lines_deleted": 2673,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 21,
-    "sdlc_iterations": 10
+    "sdlc_iterations": 11
   },
   "sessions": [
     {
@@ -26,26 +26,26 @@
           "role": "RootAgent",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T02:17:56.414Z",
-          "completed_at": "2026-10-31T10:44:15.754Z",
-          "active_duration_seconds": 3818,
-          "turns": 9,
+          "completed_at": "2026-10-31T11:01:14.411Z",
+          "active_duration_seconds": 3963,
+          "turns": 10,
           "tokens": {
-            "input": 776075,
-            "output": 126800,
-            "cache_read": 57459328,
-            "reasoning": 56495,
-            "peak_context": 417880
+            "input": 858605,
+            "output": 150621,
+            "cache_read": 62753792,
+            "reasoning": 62083,
+            "peak_context": 449851
           },
           "cost_usd": 0,
-          "compactions": 0,
-          "user_iterations": 10
+          "compactions": 1,
+          "user_iterations": 11
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 146,
-          "errors": 2
+          "calls": 189,
+          "errors": 6
         },
         {
           "name": "list_agents",
@@ -98,7 +98,7 @@
           "severity": "CRITICAL",
           "context": {
             "role": "RootAgent",
-            "context_tokens": 417880,
+            "context_tokens": 449851,
             "threshold": "200000"
           }
         },

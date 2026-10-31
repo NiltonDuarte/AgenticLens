@@ -34,3 +34,13 @@ Results and integrated baseline are recorded below after execution. Self-review 
 - Compared the removed skill-local duplicate against the canonical guide: common architecture/invariant content is retained by the canonical owner, which also has current paths, asset prerequisites and newer fidelity rules. The compatibility pointer avoids a second stale copy.
 - Source/config/Makefile diff against the baseline is empty. Setup/PO templates and all historical ticket artifacts are unchanged. The earlier broad fixture/parallelism/microsecond instructions and ratio-quality claim are removed; current scope-based rules remain explicit.
 - Self-review accepted the documentation delta. No mutation-equivalence, runtime-policy enforcement, new release assurance or measured performance improvement is claimed. Full integration results follow.
+
+### Integrated verification
+
+- Tested documentation commit fbc8be3; fetched origin/main and merged with --no-edit: already up to date, no conflicts. The integrated application/test/config/Makefile diff from 790e14c is empty.
+- Full make exited 0: dependency/asset preparation, Go vet and all-package race tests, frontend typecheck/lint, all 712 frontend cases across 34 files, frontend production build and four platform binaries. Existing valid Go cache results were reused. No required stage skipped. Local log: /tmp/rev4-iteration06-make.log (outside Git).
+- web/dist and backend/internal/adapters/web/dist match byte-for-byte; HTML/JS/CSS byte sequences are present in the newly built standalone Linux executable. Generated outputs remain ignored.
+- Existing dependency audit/install-script notices and MetricProgression React act warnings remain environment observations; no dependencies or test behavior changed. Browser execution, release publication and new performance profiling were not performed for this documentation scope.
+- Actual Codex rollout metadata confirms the original root and all 13 earlier children using parent_thread_id. Final telemetry verification must preserve these 14 sessions and their source/invocation facts. Actual billed cost is unavailable; a stored zero does not establish free execution. Extraction remains a snapshot before later delivery calls.
+
+Final iteration 06 telemetry validated: original Codex root plus all 13 prior children, correct parent IDs, codex source and nonempty invocation records; all 14 previous sessions preserved. Conventional type docs. Actual billed cost remains unavailable. No transcript files were added to Git.

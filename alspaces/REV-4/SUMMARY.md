@@ -43,15 +43,15 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - Final review inventory checks passed; only REV-4 documentation and generated telemetry are task-owned changes.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 10
-- **Active Agent Duration:** 1h 38m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 417.9k tokens (209% of 200k healthy ceiling, 0 compactions) | Subagents peak 394.2k (Planner)
+- **Software Development Life Cycle Iterations:** 11
+- **Active Agent Duration:** 1h 40m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 449.9k tokens (225% of 200k healthy ceiling, 1 compactions) | Subagents peak 394.2k (Planner)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 243:0 (+243 test lines / +0 prod lines)
 - **Code Delivered:** +243 / -2,673 lines across 21 code files (excluding docs)
-- **Reasoning Effort:** 75,178 reasoning tokens (26.7% of generated output)
-- **Tool Health & Self-Correction:** 355 tool calls (6 self-corrections, 98.3% success rate)
+- **Reasoning Effort:** 80,766 reasoning tokens (26.0% of generated output)
+- **Tool Health & Self-Correction:** 398 tool calls (10 self-corrections, 97.5% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 19 execution anomalies detected (11 CRITICAL, 8 WARNING).
@@ -86,14 +86,14 @@ Every declaration was inventoried and screened; detailed body/production inspect
 | **coder** | 4 | 208,117 | 20,638 | 5,861,504 | 96.6% | 317.5k | BLOATED (159%) | $0.00 |
 | **tester** | 3 | 154,090 | 22,519 | 7,399,552 | 98.0% | 321.2k | BLOATED (161%) | $0.00 |
 | **reviewer** | 3 | 192,953 | 12,884 | 5,135,616 | 96.4% | 330.4k | BLOATED (165%) | $0.00 |
-| **rootagent** | 1 | 776,075 | 126,800 | 57,459,328 | 98.7% | 417.9k | CRITICAL (209%) | $0.00 |
-| **Total** | **14** | **1,900,500** | **206,074** | **83,818,496** | **97.8%** | **417.9k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 1 | 858,605 | 150,621 | 62,753,792 | 98.7% | 449.9k | CRITICAL (225%) | $0.00 |
+| **Total** | **14** | **1,983,030** | **229,895** | **89,112,960** | **97.8%** | **449.9k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 14 | 1,900,500 | 206,074 | 83,818,496 | 97.8% | $0.00 |
-| **Total** | **14** | **1,900,500** | **206,074** | **83,818,496** | **97.8%** | **$0.00** |
+| **gpt-6.1-sol** | 14 | 1,983,030 | 229,895 | 89,112,960 | 97.8% | $0.00 |
+| **Total** | **14** | **1,983,030** | **229,895** | **89,112,960** | **97.8%** | **$0.00** |
 
 ## Iteration 02: approved candidate deletion
 
@@ -276,3 +276,9 @@ TECHNICAL_GUIDELINES.md now owns test-value and proportionality rules, assertion
 Evidence-to-rule mapping and limits are in iterations/06/REVIEW.md. Shared docs use generic rules without ticket-specific history. No application/tests/configuration/schemas/scripts/dependencies changed, no additional deletions or score changes, and no runtime enforcement or improved CI coverage is claimed. Documentation-only self-review is permitted by AGENTS.md; no new subagents were launched. Skill-creator guidance was used to preserve metadata and keep focused references.
 
 Documentation validation passed: 18 Markdown paths, 13 shared guides, 53 local links/anchors; unchanged skill/persona frontmatter and permissions, no shared ticket references or emojis, both modified skills valid, and clean whitespace. Source/config/Makefile diff against the iteration baseline is empty. Self-review accepted; integration and final telemetry follow.
+
+Iteration 06 integration: documentation commit fbc8be3; origin/main already up to date, no conflicts or application/test/config/Makefile changes. Full make exited 0, including Go vet/race suites, frontend typecheck/lint, all 712 frontend cases across 34 files, production assets and four platform builds; no required stage skipped. Embedded tree matches web/dist and current HTML/JS/CSS bytes appear in the Linux binary. Prior dependency/install-script notices and React act warnings remain observations; no browser/release publication or new performance profile is claimed.
+
+Finalization expects the same 14 real Codex sessions: original root and 13 children, independently checked against actual rollout metadata and parent_thread_id. No other harness was present in the prior ledger; all prior source IDs and nonempty invocations must survive. Telemetry type docs reflects this documentation delta. Actual billed cost remains unavailable; stored zero is not proof of free execution.
+
+Final iteration 06 telemetry validated: original Codex root plus all 13 prior children, correct parent IDs, codex source and nonempty invocation records; all 14 previous sessions preserved. Conventional type docs. Actual billed cost remains unavailable. No transcript files were added to Git.
