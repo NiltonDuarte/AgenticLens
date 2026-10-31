@@ -1,6 +1,6 @@
 # AL-55: Reconciled product acceptance proposal
 
-Status: Choice 2 partial OpenCode policy accepted; choices 1, 3, 4 and 5 remain unfrozen. User selected "Revise before implementation" for the remaining bundle without specifying the desired change. No implementation approval. Documentation belongs to PO-17; this is not an AL-55 developer contract.
+Status: Accepted for the bounded AL-55 scope; earlier choice labels and revision hold below are historical. Explicit user approval to continue implementation and direct confirmation supersede the hold. Persisted v4 fields stay optional; internal reads require arrays, initializing missing collections empty. Current acceptance is in the released AL-55 specification and PO-17 iteration 02. This remains a PO decision record, not a developer contract.
 
 Reviewed baseline bdef2d0 and the independent developer worktree's current CONTRACT.md and iteration review after its planning commit 1122cac. Working proposal text may be newer than that commit. All writes remain in PO-17's assigned worktree.
 

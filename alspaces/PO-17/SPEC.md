@@ -1,6 +1,6 @@
 # PO-17: Cost semantics and schema priorities
 
-Status: Review proposal only. User selected AL-only development, AL2 queued, and deferred all cost changes pending PO review. No cost design or AL-55 implementation is approved; shared-plan release is pending.
+Status: AL-55 bounded scope approved and reconciled in iteration 02; cost design remains a review proposal only. User selected AL-only development, AL2 queued, and deferred all cost changes pending PO review. No cost design is approved. Only the existing AL-55 shared specification and PO-17 docs are released for this PO delivery.
 Baseline: `bdef2d0ef98e37fe259921bc30ba2daefbfda717`.
 
 ## Problem statement
@@ -82,3 +82,7 @@ PO-17 is documentation only. No new developer ticket, developer workspace, CONTR
 User explicitly selected AL-only development and deferred all cost changes pending PO review. This selects a temporary execution hold, not acceptance of the proposed cost semantics. AL2 analysis identifies conflicts only; it authorizes no dispatch. The manager alone routes remaining questions. AL-55_ACCEPTANCE_PROPOSAL.md supersedes the preliminary residual-scope discussion above with five reviewable choices: optional v4 arrays, conservative snapshot retention policy, all-required-owner completion, explicit recompute/Force behavior, and existing backup scope. Choice 2 partial-refresh policy is accepted; choices 1, 3, 4 and 5 remain unfrozen pending the requested revision. The cost dependency graph is conditional future sequencing, never a blocker for conservative AL-55 recovery.
 
 Partial acceptance update (explicit user question-tool result): choice 2 permits independently complete OpenCode session-tree refresh while retaining prior whole skill/task collections, with explicit CLI diagnostics and the mixed-age limitation. Other AL-55 choices are unfrozen: user selected "Revise before implementation" without identifying a change. Manager has requested freeform clarification; no revision or implementation approval is inferred. Costs remain deferred, AL2 queued, and shared-plan/developer-contract edits unauthorized. This decision record refines the current review iteration; it does not start a new implementation plan.
+
+## Current AL-55 approval supersedes earlier holds
+
+Explicit user approval to continue AL-55 implementation and direct confirmation of remaining choices supersede the earlier partial-acceptance/revision hold for AL-55. Wire-v4 skills/tasks remain optional; internal reads require arrays and normalize omitted fields to empty arrays without claiming recovery or forcing a file rewrite. All-needed-owner completion, baseline eligibility on failed optional refresh, recompute without Force/routine skips, and existing backup/atomic-write scope are accepted alongside choice 2. Iteration 02 and the released AL-55 spec are the current delivery record. Historical unresolved-choice text above records discovery only. No AL-57/AL2 cost design is approved.
