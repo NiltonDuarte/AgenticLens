@@ -38,6 +38,34 @@ describe('LiveTraceInspector Component', () => {
     sub_sessions: [],
   };
 
+  it('shows rich live invocations, navigates known children, and copies unavailable identifiers', async () => {
+    const select = vi.fn();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    mockClipboard(writeText);
+    const baseMessage = mockLiveTraceView.messages[0];
+    if (!baseMessage) throw new Error('Missing trace fixture message');
+    const trace: LiveTraceView = { ...mockLiveTraceView, messages: [{ ...baseMessage, parts: [
+      { id: 'skill-part', type: 'tool', tool_name: 'skill', skill_name: 'agentic-lens-dev', status: 'completed', is_error: false },
+      { id: 'known-task', type: 'tool', tool_name: 'task', subagent_type: 'coder', child_session_id: 'known-child', status: 'completed', is_error: false },
+      { id: 'pending-task', type: 'tool', tool_name: 'task', subagent_type: 'tester', child_session_id: 'pending-child', status: 'running', is_error: false },
+    ] }] };
+    render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()}
+      availableSessionIds={['known-child']} onSelectSession={select} />);
+    expect(screen.getByText('[skill: agentic-lens-dev]')).toHaveAttribute('title', '[skill: agentic-lens-dev]');
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect child session known-child' }));
+    expect(select).toHaveBeenCalledWith('known-child');
+    expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy child session ID pending-child' })); });
+    expect(writeText).toHaveBeenCalledWith('pending-child');
+    const copyChild = screen.getByRole('button', { name: 'Copy child session ID pending-child' });
+    expect(copyChild).toHaveTextContent('Copied');
+    writeText.mockRejectedValueOnce(new Error('Clipboard denied'));
+    await act(async () => { fireEvent.click(copyChild); });
+    expect(copyChild).toHaveTextContent('Copy failed');
+    expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toHaveTextContent('pending-child');
+    expect(select).toHaveBeenCalledTimes(1);
+  });
+
   it('renders placeholder prompt when sessionNode is null', () => {
     render(
       <LiveTraceInspector

@@ -44,6 +44,10 @@ function findSessionNode(
   return null;
 }
 
+function sessionIds(nodes: readonly LiveSessionNode[]): readonly string[] {
+  return nodes.flatMap((node) => [node.id, ...sessionIds(node.sub_sessions)]);
+}
+
 export const LiveObservability: React.FC<LiveObservabilityProps> = ({
   onSelectTicket,
 }) => {
@@ -269,7 +273,9 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
         <div className="live-split-pane right-inspector-pane">
           <LiveTraceInspector
             sessionNode={selectedNode}
-            trace={traceView}
+            trace={traceView?.session_id === selectedSessionId ? traceView : null}
+            availableSessionIds={sessionIds(sessionTree.root_sessions)}
+            onSelectSession={handleSelectSession}
             loading={loadingTrace}
             onClose={() => setSelectedSessionId(null)}
           />

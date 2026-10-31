@@ -7,6 +7,7 @@ import {
   formatLocalDateTimeTooltip,
   getClientTimezoneBadge,
 } from '../domain/formatters';
+import { TraceInvocationBadge, type ChildSessionNavigation } from './TraceInvocationBadge';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { findMatchingLiveAlert, extractStreakCount } from '../domain/anomalies';
@@ -18,14 +19,14 @@ import {
   translateRuleToPlainEnglish,
 } from '../utils/debugPrompt';
 
-export interface LiveTraceInspectorProps {
+export interface LiveTraceInspectorProps extends ChildSessionNavigation {
   readonly sessionNode: LiveSessionNode | null;
   readonly trace: LiveTraceView | null;
   readonly loading: boolean;
   readonly onClose: () => void;
 }
 
-interface MessageTurnProps {
+interface MessageTurnProps extends ChildSessionNavigation {
   readonly message: LiveMessageFact;
   readonly turnIndex: number;
   readonly sessionId: string;
@@ -33,7 +34,7 @@ interface MessageTurnProps {
   readonly anomalies?: readonly LiveAnomalyAlert[] | undefined;
 }
 
-interface MessagePartProps {
+interface MessagePartProps extends ChildSessionNavigation {
   readonly part: LivePartFact;
   readonly turn: number;
   readonly sessionId: string;
@@ -47,6 +48,8 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
   sessionId,
   messageId,
   consecutiveErrors,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -79,6 +82,14 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
         {part.tool_name && (
           <span className="part-tool-name">{part.tool_name}</span>
         )}
+        <TraceInvocationBadge
+          metadata={part.tool_name === 'skill' && part.skill_name
+            ? { kind: 'skill', name: part.skill_name }
+            : part.tool_name === 'task' && (part.subagent_type || part.child_session_id)
+              ? { kind: 'task', name: part.subagent_type || 'unknown', childSessionId: part.child_session_id }
+              : undefined}
+          availableSessionIds={availableSessionIds} onSelectSession={onSelectSession}
+        />
         <span className={`part-status-badge status-${part.status.toLowerCase()}`}>
           {part.status}
         </span>
@@ -122,6 +133,8 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
   sessionId,
   model,
   anomalies,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
   const reasoning = message.reasoning_content;
@@ -243,6 +256,8 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
               <LiveMessagePartItem
                 key={part.id}
                 part={part}
+                availableSessionIds={availableSessionIds}
+                onSelectSession={onSelectSession}
                 turn={turnIndex + 1}
                 sessionId={sessionId}
                 messageId={message.id}
@@ -261,6 +276,8 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   trace,
   loading,
   onClose,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isSessionCopied, setIsSessionCopied] = useState(false);
   const [messageOrder, setMessageOrder] = useState<LiveMessageOrder>('latest-first');
@@ -521,6 +538,8 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
                     key={msg.id || `msg-${idx}`}
                     message={msg}
                     turnIndex={idx}
+                    availableSessionIds={availableSessionIds}
+                    onSelectSession={onSelectSession}
                     sessionId={sessionNode.id}
                     model={sessionNode.model}
                     anomalies={trace.anomalies}

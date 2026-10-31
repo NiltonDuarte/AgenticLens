@@ -2,6 +2,9 @@ import React, { useState, useMemo, useId } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
 import { formatTokensK, formatLocalTimeWithMs, formatLocalDateTimeTooltip } from '../domain/formatters';
 import { rebindEvent, sortEvents } from '../domain/events';
+import type { SkillFact, TaskLinkFact } from '../domain/types';
+import { traceBadgeMetadata } from '../domain/traceBadges';
+import { TraceInvocationBadge, type ChildSessionNavigation } from './TraceInvocationBadge';
 import { AnomalyBadge } from './AnomalyBadge';
 import { MultiSelectDropdown, type MultiSelectOption } from './MultiSelectDropdown';
 import { copyTextToClipboard } from '../utils/clipboard';
@@ -27,7 +30,9 @@ export {
   type ToolFailureAnomalyRule,
 };
 
-export interface TraceWaterfallProps {
+export interface TraceWaterfallProps extends ChildSessionNavigation {
+  readonly skills?: readonly SkillFact[] | undefined;
+  readonly taskLinks?: readonly TaskLinkFact[] | undefined;
   readonly events: readonly EventFact[];
   readonly anomalies?: readonly Anomaly[] | undefined;
   readonly selectedEvent?: EventFact | null | undefined;
@@ -70,6 +75,10 @@ const isSameEvent = (a?: EventFact | null, b?: EventFact | null): boolean => {
 
 export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   events,
+  skills,
+  taskLinks,
+  availableSessionIds,
+  onSelectSession,
   anomalies,
   selectedEvent,
   onSelectEvent,
@@ -90,6 +99,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const waterfallBodyId = useId();
+  const badges = useMemo(() => traceBadgeMetadata(events, skills ?? [], taskLinks ?? []), [events, skills, taskLinks]);
 
   const activeSelectedEvent = selectedEvent !== undefined
     ? selectedEvent
@@ -583,6 +593,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                       <div className="tool-details-group">
                         <span className="tool-label">Tool:</span>
                         <span className="tool-name mono">{ev.tool_name ?? 'unknown'}</span>
+                        <TraceInvocationBadge metadata={badges.get(ev)} availableSessionIds={availableSessionIds} onSelectSession={onSelectSession} />
                         <span
                           className={`status-pill ${hasError ? 'status-error' : 'status-success'}`}
                         >
