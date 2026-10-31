@@ -11,15 +11,15 @@ Verification: integration export A passed typecheck/lint, 736 frontend tests and
 Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is grounded in source session metadata with this exact worktree path. No child agents were spawned. No pre-existing MGT-1 ledger or other-harness facts existed to preserve. Billing cost is unavailable in source; any rendered zero is not a verified charge. Final extraction validates this root and Codex source; raw transcripts stay outside Git.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 7
-- **Active Agent Duration:** 9m 28s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 231.9k tokens (116% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 37
+- **Active Agent Duration:** 37m 46s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 367.9k tokens (184% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 7,232 reasoning tokens (18.9% of generated output)
-- **Tool Health & Self-Correction:** 71 tool calls (8 self-corrections, 88.7% success rate)
+- **Reasoning Effort:** 27,361 reasoning tokens (25.1% of generated output)
+- **Tool Health & Self-Correction:** 133 tool calls (8 self-corrections, 94.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -33,14 +33,14 @@ Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 212,318 | 30,963 | 11,487,360 | 98.2% | 231.9k | BLOATED (116%) | $0.00 |
-| **Total** | **1** | **212,318** | **30,963** | **11,487,360** | **98.2%** | **231.9k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 314,618 | 81,765 | 41,168,768 | 99.2% | 367.9k | BLOATED (184%) | $0.00 |
+| **Total** | **1** | **314,618** | **81,765** | **41,168,768** | **99.2%** | **367.9k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 212,318 | 30,963 | 11,487,360 | 98.2% | $0.00 |
-| **Total** | **1** | **212,318** | **30,963** | **11,487,360** | **98.2%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 314,618 | 81,765 | 41,168,768 | 99.2% | $0.00 |
+| **Total** | **1** | **314,618** | **81,765** | **41,168,768** | **99.2%** | **$0.00** |
 
 ## Iteration 02: management ticket workflow
 
@@ -67,3 +67,7 @@ Checkpoint telemetry verified: exactly the original management Codex root; no in
 User explicitly authorized new independent AL development/PO threads with no duplicate owners and question-tool conflict steering. Created/read host-isolated AL-55 planning and PO-17 product-review roots after owner/ref/PR checks. AL-43 existing owner retained. User chose AL-only dispatch and cost deferral pending PO review; AL-57 and AL2 development are held. AL-55 proposes a smaller no-schema/no-cost recovery slice, pending grounded contract/PO reconciliation and explicit approval. Management skill expanded for host worktree binding, duplicate-owner checks, separate PO/developer ownership and steering. Frontmatter validation passed; no product implementation by manager. CONTROL.md records links and instructions. Original non-release PR supervision remains active.
 
 User-requested branch rename: chore/MGT-1-ticket-management now exists locally/remotely with correct upstream. GitHub auto-closed old PR80; replacement management PR will deliver current records. User stop instruction handled: both newly created independent roots are inactive and verified against T3 plus distinct Git worktrees; no inspected root shared this manager checkout. Planning approval/cost deferral holds remain.
+
+Renamed management delivery verification: full make exited0 at implementation1d25762 with mainbdef2d0 integrated; all Go vet/race suites, frontend typecheck/lint, 741 tests/35files, canonical frontend and four binary builds passed. Embedded asset trees match. Subsequent edits are management skill/records only; skill quick_validate and diff checks passed. New roots remain distinct; PO-17 review resumed after user clarification, AL-55 still approval-held. #78 final-head CI is separately pending under existing watch.
+
+Renamed delivery telemetry verified: exactly the original independent management Codex root, no PO/developer root imported or invented child links; no source error. Existing raw source sessions preserved outside Git. Application diff versus current main is empty; management-only paths checked before publishing.
