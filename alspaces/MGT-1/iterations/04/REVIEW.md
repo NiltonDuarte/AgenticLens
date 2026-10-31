@@ -15,3 +15,5 @@ Renamed management delivery verification: full make exited0 at implementation1d2
 Read final PO-17 acceptance proposal at64b7d1f and developer contract at1122cac without altering either worktree. Two concrete question-tool choices submitted for partial-recovery policy and remaining bounded scope; no user answer yet and no AL-55 code released. No nullability/cost architecture accepted.
 
 Final original-sequence integration gate: make exited0 at bc288f9, actual maina77695c included; all Go vet/race packages, frontend typecheck/lint, 750 tests/35files, canonical build and four platform binaries passed. Embedded trees match. Only management config/guidance/records differ from main; no product implementation by manager. Scope approval questions remain pending, so new AL-55 code is not released. Current open PR inventory contains only management#83 and human-only release#55.
+
+User accepted partial-refresh/mixed-age policy only, asked to revise remaining scope without specifying the desired delta. Clarification sent through question tool; implementation remains held. PO-17 notified to preserve partial acceptance and avoid inventing changes.
