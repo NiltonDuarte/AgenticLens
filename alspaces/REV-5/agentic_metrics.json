@@ -1,20 +1,20 @@
 {
   "schema_version": 4,
-  "ticket_id": "GEN-14",
-  "ticket_title": "Code smell and test-only production audit",
-  "ticket_type": "chore",
+  "ticket_id": "REV-5",
+  "ticket_title": "Code smell audit and remediation",
+  "ticket_type": "fix",
   "started_at": "2026-10-31T23:01:20.845Z",
-  "completed_at": "2026-10-31T23:05:35.586Z",
-  "updated_at": "2026-10-31T23:05:36.477372+00:00",
+  "completed_at": "2026-10-31T23:28:16.911Z",
+  "updated_at": "2026-10-31T23:28:18.221471+00:00",
   "code": {
-    "lines_added": 0,
-    "lines_deleted": 0,
-    "test_lines_added": 0,
-    "test_lines_deleted": 0,
-    "prod_lines_added": 0,
-    "prod_lines_deleted": 0,
-    "files_changed": 0,
-    "sdlc_iterations": 3
+    "lines_added": 742,
+    "lines_deleted": 2750,
+    "test_lines_added": 478,
+    "test_lines_deleted": 1336,
+    "prod_lines_added": 264,
+    "prod_lines_deleted": 1414,
+    "files_changed": 48,
+    "sdlc_iterations": 4
   },
   "sessions": [
     {
@@ -26,26 +26,296 @@
           "role": "RootAgent",
           "model": "gpt-6-astra",
           "started_at": "2026-10-31T23:01:23.334Z",
-          "completed_at": "2026-10-31T23:05:35.586Z",
-          "active_duration_seconds": 0,
-          "turns": 1,
+          "completed_at": "2026-10-31T23:28:16.911Z",
+          "active_duration_seconds": 274,
+          "turns": 2,
           "tokens": {
-            "input": 72389,
-            "output": 8362,
-            "cache_read": 1263744,
-            "reasoning": 872,
-            "peak_context": 76979
+            "input": 119449,
+            "output": 26808,
+            "cache_read": 11107584,
+            "reasoning": 8588,
+            "peak_context": 126984
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 3
+          "user_iterations": 4
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 27,
-          "errors": 1
+          "calls": 63,
+          "errors": 2
+        },
+        {
+          "name": "followup_task",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "list_agents",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 13,
+          "errors": 0
+        },
+        {
+          "name": "spawn_agent",
+          "calls": 6,
+          "errors": 0
+        },
+        {
+          "name": "wait_agent",
+          "calls": 26,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1943e-5f6b-7473-a5b9-44dee687d643",
+      "parent_id": "01a19432-3529-73a0-a201-d8b1dbf00473",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6-astra",
+          "started_at": "2026-10-31T23:14:38.121Z",
+          "completed_at": "2026-10-31T23:16:12.590Z",
+          "active_duration_seconds": 94,
+          "turns": 1,
+          "tokens": {
+            "input": 96871,
+            "output": 3388,
+            "cache_read": 567296,
+            "reasoning": 324,
+            "peak_context": 98892
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1943f-cbe8-7d92-91f7-5048d8eb00d6",
+      "parent_id": "01a19432-3529-73a0-a201-d8b1dbf00473",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6-astra",
+          "started_at": "2026-10-31T23:16:11.443Z",
+          "completed_at": "2026-10-31T23:22:12.313Z",
+          "active_duration_seconds": 324,
+          "turns": 2,
+          "tokens": {
+            "input": 61329,
+            "output": 13238,
+            "cache_read": 4141056,
+            "reasoning": 2315,
+            "peak_context": 148081
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 24,
+          "errors": 5
+        },
+        {
+          "name": "send_message",
+          "calls": 5,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1943f-e378-7681-9560-6a653db69307",
+      "parent_id": "01a19432-3529-73a0-a201-d8b1dbf00473",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6-astra",
+          "started_at": "2026-10-31T23:16:17.485Z",
+          "completed_at": "2026-10-31T23:22:53.149Z",
+          "active_duration_seconds": 367,
+          "turns": 2,
+          "tokens": {
+            "input": 69219,
+            "output": 15799,
+            "cache_read": 4806016,
+            "reasoning": 2854,
+            "peak_context": 158336
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 25,
+          "errors": 2
+        },
+        {
+          "name": "send_message",
+          "calls": 6,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a19440-559b-7413-b93f-78d1f15d4149",
+      "parent_id": "01a19432-3529-73a0-a201-d8b1dbf00473",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6-astra",
+          "started_at": "2026-10-31T23:16:46.700Z",
+          "completed_at": "2026-10-31T23:20:01.198Z",
+          "active_duration_seconds": 194,
+          "turns": 1,
+          "tokens": {
+            "input": 54500,
+            "output": 6779,
+            "cache_read": 2303104,
+            "reasoning": 1003,
+            "peak_context": 136880
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 13,
+          "errors": 3
+        },
+        {
+          "name": "send_message",
+          "calls": 4,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a19444-c3d4-7393-82a8-cf821f617656",
+      "parent_id": "01a19432-3529-73a0-a201-d8b1dbf00473",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "gpt-6-astra",
+          "started_at": "2026-10-31T23:21:37.061Z",
+          "completed_at": "2026-10-31T23:24:02.890Z",
+          "active_duration_seconds": 146,
+          "turns": 1,
+          "tokens": {
+            "input": 63780,
+            "output": 4636,
+            "cache_read": 2172416,
+            "reasoning": 928,
+            "peak_context": 144621
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 12,
+          "errors": 2
+        },
+        {
+          "name": "send_message",
+          "calls": 3,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 1,
+            "token_delta": 116021,
+            "context_tokens": 116021,
+            "threshold": "80000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a19447-3ec5-7b82-a101-b7b73ee6414a",
+      "parent_id": "01a19432-3529-73a0-a201-d8b1dbf00473",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6-astra",
+          "started_at": "2026-10-31T23:24:19.673Z",
+          "completed_at": "2026-10-31T23:25:59.821Z",
+          "active_duration_seconds": 100,
+          "turns": 1,
+          "tokens": {
+            "input": 74383,
+            "output": 3099,
+            "cache_read": 1617664,
+            "reasoning": 766,
+            "peak_context": 154518
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 9,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
         }
       ],
       "anomalies": []

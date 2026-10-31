@@ -27,3 +27,7 @@ Reused recorded successful coder domain/adapter race tests and frontend typechec
 Reviewed tracked source/test/guidance diff against the baseline, restricted to backend, web, root configuration, setup manual and operator configuration reference, has SHA-256 2942f53cadaddba750de4546a1dd6716dab1562ae80c41048933dbd9f8837a78. New files were inspected separately: validation.ts SHA-256 4ef51dd2dd5d24de1670defc34a826e72d9fdbdd2c3a5175af695095e3390f0f; config_internal_test.go SHA-256 8c1be09bff8c423835f1426d8dda8228b4b8250ff22a764e85c0883eb412ebb1. These identify the inspected diff, not a coverage or correctness score.
 
 Approval covers implementation and test decisions. Integration, final make, Codex telemetry completeness, commit/push and correct REV-5 PR handoff remain parent responsibilities.
+
+## Parent integration evidence
+
+Post-review commit eb2bba8 integrated with unchanged origin/main. make passed, including Go vet/race checks, frontend typecheck/lint, 745 tests and four platform builds. Rebuilt standalone CLI preserved configuration in the original failure reproducer and served byte-identical built HTML/JS/CSS from an isolated temporary workspace. See SUMMARY.md and verification JSON artifacts. Final changes after this gate are ticket evidence/telemetry only.
