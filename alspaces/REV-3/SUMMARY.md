@@ -39,18 +39,19 @@ The generator discovered one Codex rollout and wrote one session with nonempty i
 - Telemetry finalization targets Codex root 01a18fab-ce5a-7943-8aff-6192c9d8ebdf in ~/.codex, verified against source metadata and this checkout. Expected child sessions: zero. No pre-existing REV-3 sessions from other harnesses exist. Extraction is a finalization snapshot; later commit/push/PR tool calls occur afterward.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 5m 23s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 156.3k tokens (78% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 4
+- **Active Agent Duration:** 10m 56s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 161.2k tokens (81% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 3,800 reasoning tokens (14.5% of generated output)
-- **Tool Health & Self-Correction:** 47 tool calls (2 self-corrections, 95.7% success rate)
+- **Reasoning Effort:** 4,199 reasoning tokens (14.5% of generated output)
+- **Tool Health & Self-Correction:** 53 tool calls (2 self-corrections, 96.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 1 execution anomaly detected (1 WARNING).
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k, breaching the 160k warning ceiling.
 
 ### Agentic Execution Metrics
 
@@ -59,14 +60,14 @@ The generator discovered one Codex rollout and wrote one session with nonempty i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 142,222 | 22,441 | 4,921,472 | 97.2% | 156.3k | ELEVATED | $0.00 |
-| **Total** | **1** | **142,222** | **22,441** | **4,921,472** | **97.2%** | **156.3k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 145,657 | 24,829 | 6,668,800 | 97.9% | 161.2k | ELEVATED | $0.00 |
+| **Total** | **1** | **145,657** | **24,829** | **6,668,800** | **97.9%** | **161.2k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 142,222 | 22,441 | 4,921,472 | 97.2% | $0.00 |
-| **Total** | **1** | **142,222** | **22,441** | **4,921,472** | **97.2%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 145,657 | 24,829 | 6,668,800 | 97.9% | $0.00 |
+| **Total** | **1** | **145,657** | **24,829** | **6,668,800** | **97.9%** | **$0.00** |
 
 ## Shared documentation reference correction
 
