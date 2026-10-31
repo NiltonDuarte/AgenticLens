@@ -4,8 +4,8 @@
   "ticket_title": "Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive",
   "ticket_type": "feat",
   "started_at": "2026-10-31T12:48:29.071Z",
-  "completed_at": "2026-10-31T14:10:35.846Z",
-  "updated_at": "2026-10-31T14:10:37.082401+00:00",
+  "completed_at": "2026-10-31T14:27:47.903Z",
+  "updated_at": "2026-10-31T14:27:49.757425+00:00",
   "code": {
     "lines_added": 417,
     "lines_deleted": 16,
@@ -14,7 +14,7 @@
     "prod_lines_added": 188,
     "prod_lines_deleted": 1,
     "files_changed": 5,
-    "sdlc_iterations": 6
+    "sdlc_iterations": 7
   },
   "sessions": [
     {
@@ -26,26 +26,26 @@
           "role": "RootAgent",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T12:48:30.358Z",
-          "completed_at": "2026-10-31T14:10:35.846Z",
-          "active_duration_seconds": 653,
-          "turns": 2,
+          "completed_at": "2026-10-31T14:27:47.903Z",
+          "active_duration_seconds": 1272,
+          "turns": 3,
           "tokens": {
-            "input": 129269,
-            "output": 20349,
-            "cache_read": 12087936,
-            "reasoning": 2515,
-            "peak_context": 127581
+            "input": 140408,
+            "output": 26470,
+            "cache_read": 15305088,
+            "reasoning": 3041,
+            "peak_context": 141221
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 6
+          "user_iterations": 7
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 71,
-          "errors": 5
+          "calls": 87,
+          "errors": 6
         },
         {
           "name": "followup_task",

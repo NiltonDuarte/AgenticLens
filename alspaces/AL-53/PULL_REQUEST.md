@@ -1,6 +1,6 @@
 # feat(web): add skills and subagents autopsy panel (AL-53)
 
-Integration hold: combined navigation review is approved, but full make exposed an inherited HTTP/SSE startup defect. Manager is routing its correction to AL-47; retain the hold pending that verified fix and a fresh integrated gate. See SUMMARY.md and iterations/01/REVIEW.md.
+Integrated the verified AL-47 startup correction from PR #82. Combined navigation review remains valid; manager retains final merge authority. Historical integration evidence is preserved in SUMMARY.md and iterations/01/REVIEW.md.
 
 
 Ticket Deep Dive now exposes recorded modular skills and subagent delegations in a dedicated collapsible Skills & Subagents card. Operators can inspect invocation turns, roles, source errors, task descriptions, and recorded measurements without searching individual tool spans.
