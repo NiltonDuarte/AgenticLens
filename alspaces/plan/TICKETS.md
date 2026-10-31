@@ -60,6 +60,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
+- **AL2-9**: Evaluate Cryptographic Signing and Verification for Telemetry Ledgers
+  - **Subsystem**: Product / Security / CLI / Documentation
+  - **Phase**: Phase 8 (v2 Security and Provenance Discovery)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL2-9 evaluate cryptographic signing and verification for telemetry ledgers.md`
+
 - **AL-44**: Localized Millisecond Timestamp Formatting and Timezone Header in Live Trace Inspector
   - **Subsystem**: Presentation / Web / Formatters / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
