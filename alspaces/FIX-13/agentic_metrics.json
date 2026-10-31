@@ -1,0 +1,198 @@
+{
+  "schema_version": 4,
+  "ticket_id": "FIX-13",
+  "ticket_title": "Build embedded frontend assets before Go checks",
+  "ticket_type": "fix",
+  "started_at": "2026-10-31T00:52:02.341Z",
+  "completed_at": "2026-10-31T01:00:20.011Z",
+  "updated_at": "2026-10-31T01:00:20.741344+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 6
+  },
+  "sessions": [
+    {
+      "id": "01a18f71-3099-7f92-86cc-fe6936352000",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-31T00:52:03.303Z",
+          "completed_at": "2026-10-31T01:00:20.011Z",
+          "active_duration_seconds": 78,
+          "turns": 4,
+          "tokens": {
+            "input": 67332,
+            "output": 9656,
+            "cache_read": 2585344,
+            "reasoning": 3631,
+            "peak_context": 55465
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 6
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 25,
+          "errors": 5
+        },
+        {
+          "name": "list_agents",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "spawn_agent",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "wait_agent",
+          "calls": 5,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "TOOL_RETRY_STREAK",
+          "severity": "WARNING",
+          "context": {
+            "tool_name": "command",
+            "turn": 4,
+            "count": 3,
+            "threshold": "3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "01a18f71-84be-7e22-b62c-94a771bfd96b",
+      "parent_id": "01a18f71-3099-7f92-86cc-fe6936352000",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-31T00:52:23.958Z",
+          "completed_at": "2026-10-31T00:52:41.038Z",
+          "active_duration_seconds": 17,
+          "turns": 1,
+          "tokens": {
+            "input": 5315,
+            "output": 1478,
+            "cache_read": 123520,
+            "reasoning": 367,
+            "peak_context": 33490
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a18f74-29ae-7ad3-a44e-8f1868b69921",
+      "parent_id": "01a18f71-3099-7f92-86cc-fe6936352000",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-31T00:55:17.216Z",
+          "completed_at": "2026-10-31T00:56:35.549Z",
+          "active_duration_seconds": 78,
+          "turns": 1,
+          "tokens": {
+            "input": 9245,
+            "output": 2138,
+            "cache_read": 650112,
+            "reasoning": 654,
+            "peak_context": 40577
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 5,
+          "errors": 1
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a18f76-24ef-7050-83be-f1fe5c83ba5e",
+      "parent_id": "01a18f71-3099-7f92-86cc-fe6936352000",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-31T00:57:27.080Z",
+          "completed_at": "2026-10-31T00:57:37.089Z",
+          "active_duration_seconds": 10,
+          "turns": 1,
+          "tokens": {
+            "input": 3585,
+            "output": 765,
+            "cache_read": 114816,
+            "reasoning": 221,
+            "peak_context": 40369
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}
