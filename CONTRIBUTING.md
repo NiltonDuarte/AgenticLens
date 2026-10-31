@@ -75,6 +75,8 @@ Open `http://localhost:8085` to view the standalone dashboard.
 | `make install` | Install all backend Go dependencies and frontend npm packages |
 | `make install-backend` | Download Go modules (`go mod download` in `backend/`) |
 | `make install-frontend` | Install web dependencies (`npm install` in `web/`) |
+| `make backend-check` | Prepare embedded assets, run Go vet and backend race tests (shared local/CI entry point) |
+| `make web-assets` | Build frontend and copy assets into the Go embed tree; requires installed web dependencies |
 | `make check` | Run static checks (`go vet`, frontend typecheck, frontend linter, `git diff --check`) |
 | `make test` | Run full test suite across Go backend (with race detector) and TypeScript frontend |
 | `make test-backend` | Run Go test suite with data race detector enabled (`go test -race ./...`) |
@@ -94,6 +96,10 @@ Open `http://localhost:8085` to view the standalone dashboard.
 ---
 
 ## 5. Quality Standards and Invariants
+
+Select the applicable cases in the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before changing extraction, configuration, hydration, live polling, or distribution. Record evidence in the active iteration review.
+
+After `make install`, use `make backend-check` for backend-only work or `make` for the full gate. Both prepare assets before Go loads embed-dependent packages. Before direct `go vet`, `go test`, or `go run`, run `make web-assets`. Build/CI changes require verification with generated assets absent and on a repeated build; frontend source checks alone do not validate the standalone bundle.
 
 Every contribution must strictly satisfy the architectural invariants defined in [TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md):
 
