@@ -11,11 +11,10 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Ready
 
-### Phase 1 post-v2.0 review: Tier 1 (Ready)
+### Post-v2.0 review: Ready
 
 - **AL-60**: Add Search tickets to the comparison exclusion panel
   - **Subsystem**: Dashboard comparisons
-  - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
@@ -23,7 +22,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 - **AL-61**: Show full local historical timestamps in Ticket Deep Dive
   - **Subsystem**: Dashboard historical timestamps
-  - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
@@ -31,7 +29,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 - **AL-62**: Fix Codex skill and delegation facts with granular source ownership
   - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
-  - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: AL-63
@@ -39,7 +36,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 - **AL-64**: Investigate and fix active-turn duration across Codex and OpenCode v1/v2
   - **Subsystem**: Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation
-  - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
@@ -47,7 +43,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 - **AL-66**: Configure optional skills, task_links and anomalies output for generate
   - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests
-  - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
@@ -55,7 +50,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 - **AL-68**: Review shared telemetry repository interfaces and source injection
   - **Subsystem**: Architecture / Domain Ports / Source Adapters / Composition / Backfill / Hydration / HTTP and Live Services / Tests
-  - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
@@ -123,11 +117,10 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Blocked
 
-### Phase 1 post-v2.0 review: Tier 2-3 (Dependencies)
+### Post-v2.0 review: Dependencies
 
 - **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
   - **Subsystem**: Multi-source ingestion / hydration / recovery
-  - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Blocked
   - **Blocked by**: AL-62
   - **Blocks**: AL-65
@@ -135,7 +128,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 - **AL-65**: Research default source-backed recomputation and the future of Force
   - **Subsystem**: Backfill CLI semantics / source recovery
-  - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Blocked
   - **Blocked by**: AL-63
   - **Blocks**: None

@@ -1,6 +1,6 @@
-# docs(PO-18): plan Phase 1 post-v2.0 follow-up tickets
+# docs(PO-18): plan post-v2.0 follow-up tickets
 
-Create eight active Phase 1 tickets: AL-60 through AL-66 and AL-68 (AL-67 remains retired into AL-62):
+Create eight active tickets: AL-60 through AL-66 and AL-68 (AL-67 remains retired into AL-62):
 
 - AL-60: Search tickets within the comparison exclusion panel.
 - AL-61: Show full local historical timestamps.

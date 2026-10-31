@@ -2,7 +2,6 @@ h3. Title: AL-66: Configure optional skills, task_links and anomalies output for
 
 *TARGET*: AgenticLens (Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests)
 
-*Phase*: Phase 1 (post-v2.0 platform review)
 *Status*: Ready
 *Work type*: feat
 *Blocked by*: None

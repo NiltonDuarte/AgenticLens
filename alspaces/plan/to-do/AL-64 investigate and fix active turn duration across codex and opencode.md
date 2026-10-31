@@ -2,7 +2,6 @@ h3. Title: AL-64: Investigate and fix active-turn duration across Codex and Open
 
 *TARGET*: AgenticLens (Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation)
 
-*Phase*: Phase 1 (post-v2.0 platform review)
 *Status*: Ready
 *Work type*: fix
 *Blocked by*: None
@@ -41,7 +40,7 @@ As an operator generating telemetry from Codex, OpenCode v1 or OpenCode v2, I wa
 
 *DELIVERY CONSTRAINTS*
 
-* Phase: Phase 1 (post-v2.0 platform review); use AL identifiers, not AL2.
+* Use AL identifiers, not AL2.
 * Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md. FCIS; Go 1.23+ and TypeScript 5.x strict; zero any/interface{} and zero emojis.
 * Tests and experiments use self-contained fixtures/disposable copies, never live ticket workspaces. Preserve alspaces/AL-55/agentic_metrics.json.
 * No new capability is inferred from missing data. Separate source evidence, recorded observations, and hypotheses.

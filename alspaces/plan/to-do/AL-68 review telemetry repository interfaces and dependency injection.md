@@ -2,7 +2,6 @@ h3. Title: AL-68: Review shared telemetry repository interfaces and source injec
 
 *TARGET*: AgenticLens (Architecture / Domain Ports / OpenCode v1 and v2 / Codex / CLI Composition / Backfill / Hydration / HTTP and Live Services / Tests)
 
-*Phase*: Phase 1 (post-v2.0 platform review)
 *Status*: Ready
 *Work type*: docs
 *Blocked by*: None

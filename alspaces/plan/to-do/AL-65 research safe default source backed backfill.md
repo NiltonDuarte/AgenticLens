@@ -2,7 +2,6 @@ h3. Title: AL-65: Research default source-backed recomputation and the future of
 
 *TARGET*: AgenticLens (Backfill CLI semantics / source recovery)
 
-*Phase*: Phase 1 (post-v2.0 platform review)
 *Status*: Blocked
 *Work type*: docs
 *Blocked by*: AL-63
@@ -36,7 +35,7 @@ As an operator, I want a recommendation for understandable, safe backfill defaul
 
 *DELIVERY CONSTRAINTS*
 
-* Phase: Phase 1 (post-v2.0 platform review); use AL identifiers, not AL2.
+* Use AL identifiers, not AL2.
 * Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md. FCIS; Go 1.23+ and TypeScript 5.x strict; zero any/interface{} and zero emojis.
 * Tests and experiments use self-contained fixtures/disposable copies, never live ticket workspaces. Preserve alspaces/AL-55/agentic_metrics.json.
 * No new capability is inferred from missing data. Separate source evidence, recorded observations, and hypotheses.

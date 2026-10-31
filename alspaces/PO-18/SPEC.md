@@ -1,4 +1,4 @@
-# Feature Specification: Phase 1 post-v2.0 platform follow-up (PO-18)
+# Feature Specification: Post-v2.0 platform follow-up (PO-18)
 
 ## Problem Statement
 
@@ -88,3 +88,7 @@ Supersedes AL-64's Codex-only scope and filename. Preserve seven-ticket numberin
 Source: user requests a broader architecture ticket reviewing whether OpenCodeV1/OpenCodeV2/Codex implement a shared interface as far as meaningful, and whether the correct repository is injected. Add AL-68 (Ready, architecture review). AL-67 remains retired into AL-62, so the next unreserved current number is AL-68; its old historical generate-toggle meaning was renumbered to AL-66 in iteration 05. Eight active tickets are now AL-60 through AL-66 and AL-68. Prior counts and mappings remain historical.
 
 The review inventories actual ports, adapters, constructors and source/schema dispatch across generate/backfill/server/hydration/live consumers, including mixed-source routing. Deliver as-is evidence and a proposed shared contract/composition design without fabricating capability parity or authorizing an application refactor. Keep AL-63's behavior audit and AL-62/64/66 implementation scopes separate; no new blocking edges. Preserve all existing guarantees, AL-55 evidence and separate PO/development sessions. Verification impact: new documentation review acceptance covers injection and contract consistency; this planning update establishes no architecture findings or runtime correctness.
+
+## Iteration 07 review correction: remove redundant phase metadata
+
+Source: user questions the usefulness and precedent of “Phase 1 (post-v2.0 platform review)” on tickets. The canonical ticket template has no Phase field; inspected older AL-48/57/59 definitions also omit it, while the existing registry contains older phase labels. Remove the added Phase field and duplicate phase constraint from all eight active tickets in this batch and their registry entries; simplify this batch's registry headings. Preserve historical records and unrelated roadmap metadata. This is a presentation correction in iteration 07, with no acceptance/dependency change or new iteration. Ticket IDs, types, scope and verification requirements remain intact.
