@@ -11,15 +11,15 @@ Verification: document template/number/link checks and git diff --check passed. 
 Telemetry limitation: generation occurs within this still-active Codex turn; the known accounting defect tracked by AL-65 can omit its duration. Captured facts are a snapshot, not proof that the turn completed. No children were launched or found in source metadata.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 13
-- **Active Agent Duration:** 14m 28s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 125.9k tokens (63% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 14
+- **Active Agent Duration:** 16m 1s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 136.0k tokens (68% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 2,769 reasoning tokens (6.6% of generated output)
-- **Tool Health & Self-Correction:** 60 tool calls (5 self-corrections, 91.7% success rate)
+- **Reasoning Effort:** 3,231 reasoning tokens (6.7% of generated output)
+- **Tool Health & Self-Correction:** 67 tool calls (5 self-corrections, 92.5% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 1 execution anomaly detected (1 WARNING).
@@ -32,14 +32,14 @@ Telemetry limitation: generation occurs within this still-active Codex turn; the
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 99,240 | 39,246 | 6,796,544 | 98.6% | 125.9k | ELEVATED | $0.00 |
-| **Total** | **1** | **99,240** | **39,246** | **6,796,544** | **98.6%** | **125.9k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 105,091 | 45,014 | 8,083,456 | 98.7% | 136.0k | ELEVATED | $0.00 |
+| **Total** | **1** | **105,091** | **45,014** | **8,083,456** | **98.7%** | **136.0k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 99,240 | 39,246 | 6,796,544 | 98.6% | $0.00 |
-| **Total** | **1** | **99,240** | **39,246** | **6,796,544** | **98.6%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 105,091 | 45,014 | 8,083,456 | 98.7% | $0.00 |
+| **Total** | **1** | **105,091** | **45,014** | **8,083,456** | **98.7%** | **$0.00** |
 
 ## Iteration 02: granular ownership planning
 
