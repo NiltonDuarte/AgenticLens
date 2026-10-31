@@ -1,1036 +1,130 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  generateToolExecutionPrompt,
   generateExecutionIssuePrompt,
   generateMessageTurnPrompt,
   generateSessionOverviewPrompt,
-  stripInternalIdentifiers,
+  generateToolExecutionPrompt,
   translateRuleToPlainEnglish,
-  sanitizeTextForPrompt,
-  type ToolExecutionPromptParams,
-  type ExecutionIssuePromptParams,
-  type MessageTurnPromptParams,
 } from './debugPrompt';
 
-describe('debugPrompt Utility Module', () => {
-  describe('stripInternalIdentifiers', () => {
-    it('strips ticket identifiers across arbitrary project prefixes (e.g. PROJ-123, ISSUE-42, AL-20, FIX-3)', () => {
-      const input = 'Resolving issue on ticket PROJ-123 and fixing bug in ISSUE-42 for AL-20 and FIX-3.';
-      const output = stripInternalIdentifiers(input);
-      expect(output).not.toContain('PROJ-123');
-      expect(output).not.toContain('ISSUE-42');
-      expect(output).not.toContain('AL-20');
-      expect(output).not.toContain('FIX-3');
-      expect(output).not.toContain('ticket');
+const assertFencedVerbatim = (prompt: string, content: string, fence = '```'): void => {
+  expect(prompt).toContain(`${fence}\n${content}\n${fence}`);
+};
+
+describe('debug prompt generation', () => {
+  it('preserves tool input and output verbatim, including identifiers, tags, punctuation, and whitespace', () => {
+    const input = '  git checkout fix/FIX-3\n# AL-42 [CRITICAL] TOOL_RETRY_STREAK: keep, exactly.  ';
+    const output = '\tERROR: SeverityHigh; AL-42, fix/FIX-3\n';
+    const prompt = generateToolExecutionPrompt({
+      toolName: 'bash', sessionId: 'session-1', status: 'error', input, output,
     });
 
-    it('strips git branch references such as feat/..., fix/..., and refs/heads/...', () => {
-      const input = 'Switched to branch feat/observability-dash and merged fix/fix-3-clean into main.';
-      const output = stripInternalIdentifiers(input);
-      expect(output).not.toContain('feat/observability-dash');
-      expect(output).not.toContain('fix/fix-3-clean');
-      expect(output).not.toContain('branch');
-    });
-
-    it('returns empty string for empty or nullish text', () => {
-      expect(stripInternalIdentifiers('')).toBe('');
-    });
+    assertFencedVerbatim(prompt, input);
+    assertFencedVerbatim(prompt, output);
+    expect(prompt).not.toContain('OpenCode database');
+    expect(prompt).toContain('### Diagnosis');
   });
 
-  describe('translateRuleToPlainEnglish', () => {
-    it('translates TOOL_RETRY_STREAK and ConsecutiveToolErrors with and without tool', () => {
-      expect(translateRuleToPlainEnglish('TOOL_RETRY_STREAK', 'bash')).toBe(
-        'Consecutive tool failures on `bash`'
-      );
-      expect(translateRuleToPlainEnglish('ConsecutiveToolErrors', 'read')).toBe(
-        'Consecutive tool failures on `read`'
-      );
-      expect(translateRuleToPlainEnglish('TOOL_RETRY_STREAK')).toBe(
-        'Consecutive tool failure streak'
-      );
-      expect(translateRuleToPlainEnglish('ConsecutiveToolErrors')).toBe(
-        'Consecutive tool failure streak'
-      );
+  it('preserves an error message when output is empty and handles absent payloads', () => {
+    const raw = 'compiler: expected "," after expression [HIGH] AL-42';
+    const prompt = generateToolExecutionPrompt({
+      toolName: 'go test', sessionId: 'session-2', status: 'failed', output: '', errorMessage: raw,
     });
 
-    it('translates TOOL_HIGH_FAILURE_RATE with and without tool', () => {
-      expect(translateRuleToPlainEnglish('TOOL_HIGH_FAILURE_RATE', 'curl')).toBe(
-        'High failure rate on `curl`'
-      );
-      expect(translateRuleToPlainEnglish('TOOL_HIGH_FAILURE_RATE')).toBe(
-        'High tool failure rate'
-      );
-    });
-
-    it('translates CONTEXT_SATURATION_SPIKE and ContextCeilingApproach', () => {
-      expect(translateRuleToPlainEnglish('CONTEXT_SATURATION_SPIKE')).toBe(
-        'Context window saturation approach'
-      );
-      expect(translateRuleToPlainEnglish('ContextCeilingApproach')).toBe(
-        'Context window saturation approach'
-      );
-    });
-
-    it('translates SUBAGENT_REWORK_LOOP and ToolThrashing with and without tool', () => {
-      expect(translateRuleToPlainEnglish('SUBAGENT_REWORK_LOOP', 'edit')).toBe(
-        'Repeated tool thrashing on `edit`'
-      );
-      expect(translateRuleToPlainEnglish('ToolThrashing', 'bash')).toBe(
-        'Repeated tool thrashing on `bash`'
-      );
-      expect(translateRuleToPlainEnglish('SUBAGENT_REWORK_LOOP')).toBe(
-        'Repeated tool thrashing'
-      );
-    });
-
-    it('translates TokenVelocityRunaway', () => {
-      expect(translateRuleToPlainEnglish('TokenVelocityRunaway')).toBe(
-        'Rapid token consumption velocity'
-      );
-    });
-
-    it('falls back to cleaned name for unknown rule IDs', () => {
-      expect(translateRuleToPlainEnglish('UNKNOWN_ANOMALY_RULE')).toBe(
-        'UNKNOWN ANOMALY RULE'
-      );
-    });
+    assertFencedVerbatim(prompt, raw);
+    expect(prompt).toContain('(No input payload recorded)');
   });
 
-  describe('sanitizeTextForPrompt', () => {
-    it('strips internal severity tags and brackets', () => {
-      const input = '[CRITICAL] Database connection failed [WARNING] [HIGH] SeverityHigh severity: high';
-      const output = sanitizeTextForPrompt(input);
-      expect(output).not.toContain('[CRITICAL]');
-      expect(output).not.toContain('[WARNING]');
-      expect(output).not.toContain('[HIGH]');
-      expect(output).not.toContain('SeverityHigh');
-      expect(output).not.toContain('severity: high');
+  it('uses defensive fences longer than embedded backtick runs', () => {
+    const raw = '```ts\nconst branch = "fix/FIX-3";\n```';
+    const prompt = generateToolExecutionPrompt({
+      toolName: 'edit', sessionId: 'session-3', status: 'completed', input: raw,
     });
 
-    it('translates embedded rule identifiers and strips ticket IDs in a single pass', () => {
-      const input = '[HIGH] TOOL_RETRY_STREAK detected in ticket FIX-3 branch fix/fix-3-loop.';
-      const output = sanitizeTextForPrompt(input);
-      expect(output).toContain('Consecutive tool failures');
-      expect(output).not.toContain('TOOL_RETRY_STREAK');
-      expect(output).not.toContain('FIX-3');
-      expect(output).not.toContain('fix/fix-3-loop');
-      expect(output).not.toContain('[HIGH]');
-    });
-
-    it('handles empty string gracefully', () => {
-      expect(sanitizeTextForPrompt('')).toBe('');
-    });
+    assertFencedVerbatim(prompt, raw, '````');
   });
 
-  describe('generateToolExecutionPrompt (Layer 1)', () => {
-    it('generates prompt for tool execution failure with consecutive errors', () => {
-      const prompt = generateToolExecutionPrompt({
-        toolName: 'bash',
-        turn: 4,
-        sessionId: 'ses-12345',
-        messageId: 'msg-67890',
-        partId: 'part-abcde',
-        status: 'error',
-        consecutiveErrors: 4,
-        input: 'npm test',
-        output: 'FAIL src/app.test.ts',
-      });
-
-      expect(prompt).toContain('# Tool Execution Failure: `bash`');
-      expect(prompt).toContain(
-        'During turn 4 of session `ses-12345` (message `msg-67890`, part `part-abcde`), the agent executed `bash` and it failed with 4 consecutive failures on this tool.'
-      );
-      expect(prompt).toContain('This data was extracted from the OpenCode database.');
-      expect(prompt).toContain('### Input');
-      expect(prompt).toContain('npm test');
-      expect(prompt).toContain('### Output');
-      expect(prompt).toContain('FAIL src/app.test.ts');
-      expect(prompt).toContain('### What to check');
-      expect(prompt).toContain('- Why did this tool call fail or produce unexpected output?');
-      expect(prompt).toContain(
-        '- Is this a genuine environment issue, invalid arguments from the agent, or a misclassified success?'
-      );
-      expect(prompt).toContain(
-        '- What exact action or command should the agent execute next to recover?'
-      );
+  it('formats success and failure outcomes with optional provenance IDs', () => {
+    const success = generateToolExecutionPrompt({
+      toolName: ' read ', turn: 0, sessionId: 'session-ids', messageId: 'msg-1',
+      partId: 'part-1', status: 'completed', input: 'README.md', output: 'file contents',
     });
+    expect(success).toContain('# Tool Execution: `read`');
+    expect(success).toContain('During turn 0 of session `session-ids` (message `msg-1`, part `part-1`)');
+    expect(success).toContain('and it completed successfully.');
+    assertFencedVerbatim(success, 'file contents');
 
-    it('generates prompt for completed tool execution with success outcome', () => {
-      const prompt = generateToolExecutionPrompt({
-        toolName: 'read',
-        turn: 2,
-        sessionId: 'ses-12345',
-        messageId: 'msg-67890',
-        partId: 'part-abcde',
-        status: 'completed',
-        input: 'README.md',
-        output: 'Contents of file',
-      });
-
-      expect(prompt).toContain('# Tool Execution: `read`');
-      expect(prompt).toContain(
-        'During turn 2 of session `ses-12345` (message `msg-67890`, part `part-abcde`), the agent executed `read` and it completed successfully.'
-      );
-      expect(prompt).toContain('README.md');
-      expect(prompt).toContain('Contents of file');
+    const failure = generateToolExecutionPrompt({
+      toolName: 'bash', sessionId: '', status: 'error', consecutiveErrors: 3,
     });
-
-    it('generates prompt for error status without consecutive errors streak', () => {
-      const prompt = generateToolExecutionPrompt({
-        toolName: 'glob',
-        turn: 1,
-        sessionId: 'ses-12345',
-        status: 'error',
-        consecutiveErrors: 1,
-        input: '**/*.ts',
-        errorMessage: 'path does not exist',
-      });
-
-      expect(prompt).toContain('# Tool Execution Failure: `glob`');
-      expect(prompt).toContain(
-        'During turn 1 of session `ses-12345`, the agent executed `glob` and it failed with an execution error.'
-      );
-      expect(prompt).toContain('path does not exist');
-    });
-
-    it('handles provenance variations: only messageId, only partId, or neither', () => {
-      const promptMsgOnly = generateToolExecutionPrompt({
-        toolName: 'bash',
-        sessionId: 'ses-1',
-        messageId: 'msg-99',
-        status: 'completed',
-      });
-      expect(promptMsgOnly).toContain('In session `ses-1` (message `msg-99`),');
-
-      const promptPartOnly = generateToolExecutionPrompt({
-        toolName: 'bash',
-        sessionId: 'ses-1',
-        partId: 'part-88',
-        status: 'completed',
-      });
-      expect(promptPartOnly).toContain('In session `ses-1` (part `part-88`),');
-
-      const promptNeither = generateToolExecutionPrompt({
-        toolName: 'bash',
-        sessionId: 'ses-1',
-        status: 'completed',
-      });
-      expect(promptNeither).toContain('In session `ses-1`, the agent executed');
-    });
-
-    it('renders fallback text when input and output are empty', () => {
-      const prompt = generateToolExecutionPrompt({
-        toolName: 'read',
-        turn: 1,
-        sessionId: 'ses-1',
-        status: 'completed',
-        input: null,
-        output: '',
-      });
-
-      expect(prompt).toContain('(No input payload recorded)');
-      expect(prompt).toContain('(No output recorded)');
-    });
-
-    it('defensively handles content containing code fence delimiters', () => {
-      const prompt = generateToolExecutionPrompt({
-        toolName: 'bash',
-        turn: 1,
-        sessionId: 'ses-1',
-        status: 'error',
-        input: 'echo "```markdown\ntest\n```"',
-      });
-
-      expect(prompt).toContain('````');
-    });
+    expect(failure).toContain('# Tool Execution Failure: `bash`');
+    expect(failure).toContain('In session `unknown-session`,');
+    expect(failure).toContain('failed with 3 consecutive failures on this tool.');
+    expect(failure).toContain('(No output recorded)');
   });
 
-  describe('generateExecutionIssuePrompt (Layer 2)', () => {
-    it('generates prompt with full context: turn, role, model, partId, and errorDetails', () => {
-      const prompt = generateExecutionIssuePrompt({
-        summary: 'Consecutive failures on `bash`',
-        turn: 5,
-        sessionId: 'ses-alpha',
-        role: 'coder',
-        model: 'gemini-3.8-flash',
-        description: 'Command failed repeatedly due to exit status 2',
-        partId: 'part-err-99',
-        errorDetails: 'gcc: error: no such file or directory',
-      });
-
-      expect(prompt).toContain('# Agent Execution Issue: Consecutive failures on `bash`');
-      expect(prompt).toContain(
-        'During turn 5 of session `ses-alpha` (agent `coder` running `gemini-3.8-flash`), command failed repeatedly due to exit status 2. The last failure was triggered by part `part-err-99`.'
-      );
-      expect(prompt).toContain('This data was extracted from the OpenCode database.');
-      expect(prompt).toContain('### Error Details');
-      expect(prompt).toContain('gcc: error: no such file or directory');
-      expect(prompt).toContain('### What to check');
-      expect(prompt).toContain(
-        '- What is causing this failure pattern (such as an infinite retry loop, incorrect assumptions about the filesystem, or misinterpreting file content as an error)?'
-      );
-      expect(prompt).toContain('- How should the agent break out of this loop and recover?');
+  it('preserves execution issue evidence while keeping only the summary as heading metadata', () => {
+    const description = '  failed, with [CRITICAL] TOOL_HIGH_FAILURE_RATE for AL-42.  ';
+    const details = 'stack: web/src/x.ts:9\nfix/FIX-3 => SeverityHigh\n';
+    const prompt = generateExecutionIssuePrompt({
+      summary: '  [CRITICAL] Issue\nAL-42  ', sessionId: 'session-4', description, errorDetails: details,
     });
 
-    it('handles omitted turn, model, or partId gracefully', () => {
-      const prompt = generateExecutionIssuePrompt({
-        summary: 'Repeated tool thrashing',
-        sessionId: 'ses-beta',
-        role: 'tester',
-        description: 'Rapid alternating edits without verification',
-      });
-
-      expect(prompt).toContain(
-        'In session `ses-beta` (agent `tester`), rapid alternating edits without verification.'
-      );
-      expect(prompt).not.toContain('The last failure was triggered by part');
-      expect(prompt).toContain('(No additional error details recorded)');
-    });
-
-    it('sanitizes summary, description, and error details', () => {
-      const prompt = generateExecutionIssuePrompt({
-        summary: '[CRITICAL] TOOL_RETRY_STREAK on ticket FIX-3',
-        turn: 2,
-        sessionId: 'ses-gamma',
-        description: 'Failed on branch feat/fix-loop for ticket AL-20 with SeverityHigh',
-        errorDetails: 'Build error on branch fix/al20-tests in ticket GEN-42',
-      });
-
-      expect(prompt).not.toContain('[CRITICAL]');
-      expect(prompt).not.toContain('FIX-3');
-      expect(prompt).not.toContain('AL-20');
-      expect(prompt).not.toContain('GEN-42');
-      expect(prompt).not.toContain('feat/fix-loop');
-      expect(prompt).not.toContain('fix/al20-tests');
-      expect(prompt).not.toContain('SeverityHigh');
-      expect(prompt).toContain('Consecutive tool failures');
-    });
+    expect(prompt).toContain('# Agent Execution Issue: [CRITICAL] Issue AL-42');
+    assertFencedVerbatim(prompt, description);
+    assertFencedVerbatim(prompt, details);
+    expect(prompt).not.toContain('OpenCode database');
   });
 
-  describe('generateMessageTurnPrompt (Layer 3)', () => {
-    it('generates prompt with model, deliberation, message body, and executed tools', () => {
-      const prompt = generateMessageTurnPrompt({
-        turn: 3,
-        role: 'assistant',
-        model: 'gemini-3.8-flash',
-        sessionId: 'ses-100',
-        messageId: 'msg-200',
-        reasoningContent: 'I need to check the files first.\nThen edit them.',
-        messageContent: 'I will now inspect the source directory and update the config.',
-        toolsExecuted: [
-          { toolName: 'glob', status: 'completed', partId: 'part-g1' },
-          { toolName: 'edit', status: 'error', partId: 'part-e2' },
-        ],
-      });
-
-      expect(prompt).toContain('# Turn 3 Review (`assistant` / `gemini-3.8-flash`)');
-      expect(prompt).toContain(
-        'In turn 3 of session `ses-100` (message `msg-200`), the agent deliberated and executed tools.'
-      );
-      expect(prompt).toContain('This data was extracted from the OpenCode database.');
-      expect(prompt).toContain('### Model Deliberation');
-      expect(prompt).toContain('> I need to check the files first.');
-      expect(prompt).toContain('> Then edit them.');
-      expect(prompt).toContain('### Message');
-      expect(prompt).toContain(
-        'I will now inspect the source directory and update the config.'
-      );
-      expect(prompt).toContain('### Tools Executed');
-      expect(prompt).toContain('- `glob` (`part-g1`): completed');
-      expect(prompt).toContain('- `edit` (`part-e2`): error');
-      expect(prompt).toContain('### What to check');
-      expect(prompt).toContain(
-        "- Compare the agent's stated plan with the actual tool outcomes in this turn."
-      );
+  it('normalizes only heading metadata and uses safe fallbacks when it is empty', () => {
+    const normalized = generateExecutionIssuePrompt({
+      summary: 'Build failure\nfor AL-42', sessionId: 'session-4', description: '',
+      role: ' coder ', model: ' model-x ',
     });
+    expect(normalized).toContain('# Agent Execution Issue: Build failure for AL-42');
+    expect(normalized).toContain('(agent `coder` running `model-x`)');
+    assertFencedVerbatim(normalized, 'No description recorded.');
+    expect(normalized).toContain('(No additional error details recorded)');
 
-    it('handles turn without model or messageId', () => {
-      const prompt = generateMessageTurnPrompt({
-        turn: 1,
-        role: 'user',
-        sessionId: 'ses-user',
-        messageContent: 'Please start implementation.',
-      });
-
-      expect(prompt).toContain('# Turn 1 Review (`user`)');
-      expect(prompt).toContain('In turn 1 of session `ses-user`, the agent deliberated and executed tools.');
-      expect(prompt).toContain('(No deliberation content recorded)');
-      expect(prompt).toContain('Please start implementation.');
-      expect(prompt).toContain('(No tools executed in this turn)');
-    });
-
-    it('formats tool items without partId', () => {
-      const prompt = generateMessageTurnPrompt({
-        turn: 1,
-        role: 'assistant',
-        sessionId: 'ses-tool-test',
-        toolsExecuted: [
-          { toolName: 'bash', status: 'completed' },
-        ],
-      });
-
-      expect(prompt).toContain('- `bash`: completed');
-    });
+    const fallback = generateExecutionIssuePrompt({ summary: ' \n ', sessionId: 'session-4', description: 'detail' });
+    expect(fallback).toContain('# Agent Execution Issue: Operational Execution Issue');
+    assertFencedVerbatim(fallback, 'detail');
   });
 
-  describe('generateSessionOverviewPrompt (Layer 4)', () => {
-    it('generates prompt with role, model, parent session, turn and tool counts, and flagged issues', () => {
-      const prompt = generateSessionOverviewPrompt({
-        sessionId: 'ses-sub-1',
-        parentId: 'ses-root-0',
-        role: 'coder',
-        model: 'gemini-3.8-flash',
-        status: 'running',
-        turnCount: 8,
-        totalToolCalls: 15,
-        failedToolCalls: 3,
-        flaggedIssues: [
-          'Consecutive tool failures on `bash`',
-          'Context window saturation approach',
-        ],
-      });
-
-      expect(prompt).toContain('# Session Overview: `ses-sub-1`');
-      expect(prompt).toContain(
-        'Session `ses-sub-1` is a `coder` subagent running `gemini-3.8-flash` (parent session: `ses-root-0`). The session is currently **running** after 8 turns and 15 tool executions (3 failed).'
-      );
-      expect(prompt).toContain('This data was extracted from the OpenCode database.');
-      expect(prompt).toContain('### Flagged Issues');
-      expect(prompt).toContain('- Consecutive tool failures on `bash`');
-      expect(prompt).toContain('- Context window saturation approach');
-      expect(prompt).toContain('### What to check');
-      expect(prompt).toContain('- Why did this session stall or accumulate repeated tool failures?');
-      expect(prompt).toContain(
-        '- What guidance or state reset is needed to unblock and resume the agent?'
-      );
-    });
-
-    it('handles session without parentId and with zero flagged issues', () => {
-      const prompt = generateSessionOverviewPrompt({
-        sessionId: 'ses-clean-root',
-        role: 'orchestrator',
-        model: 'gemini-3.8-flash',
-        status: 'completed',
-        turnCount: 4,
-        totalToolCalls: 6,
-        failedToolCalls: 0,
-        flaggedIssues: [],
-      });
-
-      expect(prompt).toContain(
-        'Session `ses-clean-root` is a `orchestrator` subagent running `gemini-3.8-flash`. The session is currently **completed** after 4 turns and 6 tool executions (0 failed).'
-      );
-      expect(prompt).toContain('No flagged issues or anomalies recorded for this session.');
-      expect(prompt).not.toContain('parent session:');
-    });
-
-    it('sanitizes flagged issues removing ticket and branch references', () => {
-      const prompt = generateSessionOverviewPrompt({
-        sessionId: 'ses-sanitized',
-        role: 'tester',
-        model: 'gemini-3.8-flash',
-        status: 'error',
-        turnCount: 2,
-        totalToolCalls: 4,
-        failedToolCalls: 4,
-        flaggedIssues: [
-          '[CRITICAL] Failure in ticket AL-20 on branch fix/al20-run',
-        ],
-      });
-
-      expect(prompt).not.toContain('[CRITICAL]');
-      expect(prompt).not.toContain('AL-20');
-      expect(prompt).not.toContain('fix/al20-run');
-    });
+  it('keeps deterministic rule labels for known IDs and passes unknown IDs through', () => {
+    expect(translateRuleToPlainEnglish('TOOL_RETRY_STREAK', 'bash'))
+      .toBe('Consecutive tool failures on `bash`');
+    expect(translateRuleToPlainEnglish('CONTEXT_SATURATION_SPIKE'))
+      .toBe('Context window saturation approach');
+    expect(translateRuleToPlainEnglish('UNRECOGNIZED_RULE'))
+      .toBe('UNRECOGNIZED_RULE');
   });
 
-  describe('Adversarial Edge Cases & Boundaries', () => {
-    describe('Adversarial Sanitization', () => {
-      it('cleanly strips multiple ticket IDs without leaving orphaned commas or conjunctions', () => {
-        const input = 'FIX-3, AL-42, GEN-10 and PO-5';
-        expect(sanitizeTextForPrompt(input)).toBe('');
-      });
-
-      it('cleanly strips multiple ticket IDs embedded in descriptive sentences', () => {
-        const input = 'Fixing failures across tickets FIX-3, AL-42, GEN-10, and PO-5 in the core subsystem.';
-        const output = sanitizeTextForPrompt(input);
-        expect(output).not.toContain('FIX-3');
-        expect(output).not.toContain('AL-42');
-        expect(output).not.toContain('GEN-10');
-        expect(output).not.toContain('PO-5');
-        expect(output).toContain('Fixing failures across in the core subsystem.');
-      });
-
-      it('cleanly strips branch names like feat/fix-something-branch-123 and refs/heads patterns', () => {
-        const input = 'Deployed from branch feat/fix-something-branch-123 to refs/heads/fix/something-else.';
-        const output = sanitizeTextForPrompt(input);
-        expect(output).not.toContain('feat/fix-something-branch-123');
-        expect(output).not.toContain('fix/something-else');
-        expect(output).not.toContain('refs/heads');
-      });
-
-      it('cleanly strips multiple severity tags without leaving commas or brackets', () => {
-        const input = '[CRITICAL], [HIGH], [WARNING]';
-        expect(sanitizeTextForPrompt(input)).toBe('');
-      });
-
-      it('translates multiple rule IDs while stripping tickets, branches, and severity tags in a single pass', () => {
-        const input =
-          '[CRITICAL] TOOL_RETRY_STREAK detected in ticket FIX-3 on branch feat/fix-something-branch-123 accompanied by [HIGH] CONTEXT_SATURATION_SPIKE.';
-        const output = sanitizeTextForPrompt(input);
-        expect(output).not.toContain('TOOL_RETRY_STREAK');
-        expect(output).not.toContain('CONTEXT_SATURATION_SPIKE');
-        expect(output).not.toContain('FIX-3');
-        expect(output).not.toContain('feat/fix-something-branch-123');
-        expect(output).not.toContain('[CRITICAL]');
-        expect(output).not.toContain('[HIGH]');
-        expect(output).toContain('Consecutive tool failures');
-        expect(output).toContain('Context window saturation approach');
-      });
-
-      it('handles null, undefined, empty string, and whitespace gracefully', () => {
-        expect(sanitizeTextForPrompt('')).toBe('');
-        expect(sanitizeTextForPrompt('   \t\n  ')).toBe('');
-        expect(stripInternalIdentifiers('')).toBe('');
-        expect(stripInternalIdentifiers('   ')).toBe('');
-      });
+  it('preserves reasoning and message bodies byte-for-byte in code fences', () => {
+    const reasoning = 'Plan: inspect AL-42, then run fix/FIX-3.\n[WARNING] Keep this exact.\n';
+    const message = 'The parser reports ",, and or"; rule=TOOL_RETRY_STREAK.  ';
+    const prompt = generateMessageTurnPrompt({
+      turn: 2, role: 'assistant', sessionId: 'session-5', reasoningContent: reasoning, messageContent: message,
     });
 
-    describe('Adversarial Layer 1: generateToolExecutionPrompt', () => {
-      it('handles null/empty inputs, outputs, messages, and error messages', () => {
-        const prompt = generateToolExecutionPrompt({
-          toolName: '',
-          sessionId: 'ses-edge',
-          status: 'completed',
-          input: null,
-          output: undefined,
-          errorMessage: null,
-        });
+    assertFencedVerbatim(prompt, reasoning);
+    assertFencedVerbatim(prompt, message);
+    expect(prompt).toContain('(No tools executed)');
+  });
 
-        expect(prompt).toContain('# Tool Execution: `unknown_tool`');
-        expect(prompt).toContain('In session `ses-edge`, the agent executed `unknown_tool` and it completed successfully.');
-        expect(prompt).toContain('(No input payload recorded)');
-        expect(prompt).toContain('(No output recorded)');
-      });
-
-      it('uses errorMessage when output is absent or empty', () => {
-        const prompt = generateToolExecutionPrompt({
-          toolName: 'bash',
-          sessionId: 'ses-edge',
-          status: 'error',
-          input: 'ls /missing',
-          output: '',
-          errorMessage: 'ls: cannot access /missing: No such file or directory',
-        });
-
-        expect(prompt).toContain('# Tool Execution Failure: `bash`');
-        expect(prompt).toContain('ls: cannot access /missing: No such file or directory');
-      });
-
-      it('handles turn 0 correctly without falling back to omitting turn', () => {
-        const prompt = generateToolExecutionPrompt({
-          toolName: 'read',
-          turn: 0,
-          sessionId: 'ses-turn0',
-          status: 'completed',
-          input: 'config.json',
-        });
-
-        expect(prompt).toContain('During turn 0 of session `ses-turn0`');
-      });
-
-      it('handles consecutive failures edge cases: 0, 1, and values greater than 1', () => {
-        // consecutiveErrors = 0 with error status
-        const prompt0 = generateToolExecutionPrompt({
-          toolName: 'bash',
-          sessionId: 'ses-c0',
-          status: 'error',
-          consecutiveErrors: 0,
-        });
-        expect(prompt0).toContain('failed with an execution error');
-        expect(prompt0).not.toContain('0 consecutive failures');
-
-        // consecutiveErrors = 1 with error status
-        const prompt1 = generateToolExecutionPrompt({
-          toolName: 'bash',
-          sessionId: 'ses-c1',
-          status: 'error',
-          consecutiveErrors: 1,
-        });
-        expect(prompt1).toContain('failed with an execution error');
-        expect(prompt1).not.toContain('1 consecutive failures');
-
-        // consecutiveErrors = 7 with error status
-        const prompt7 = generateToolExecutionPrompt({
-          toolName: 'bash',
-          sessionId: 'ses-c7',
-          status: 'error',
-          consecutiveErrors: 7,
-        });
-        expect(prompt7).toContain('failed with 7 consecutive failures on this tool');
-
-        // consecutiveErrors > 1 with completed status (should ignore consecutiveErrors for success)
-        const promptSuccess = generateToolExecutionPrompt({
-          toolName: 'bash',
-          sessionId: 'ses-ok',
-          status: 'completed',
-          consecutiveErrors: 3,
-        });
-        expect(promptSuccess).toContain('completed successfully');
-      });
-
-      it('defensively handles deeply nested markdown fences within input and output', () => {
-        const nestedInput = '```typescript\nconst x = "```";\nconsole.log(x);\n```';
-        const nestedOutput = '````bash\necho "nested 4 ticks"\n````';
-
-        const prompt = generateToolExecutionPrompt({
-          toolName: 'edit',
-          turn: 1,
-          sessionId: 'ses-fences',
-          status: 'completed',
-          input: nestedInput,
-          output: nestedOutput,
-        });
-
-        // 3 backticks in input must be wrapped in at least 4 backticks
-        expect(prompt).toContain('````\n```typescript');
-        // 4 backticks in output must be wrapped in at least 5 backticks
-        expect(prompt).toContain('`````\n````bash');
-      });
-
-      it('sanitizes multiple ticket IDs and branches embedded within tool input and output', () => {
-        const prompt = generateToolExecutionPrompt({
-          toolName: 'bash',
-          sessionId: 'ses-sec',
-          status: 'error',
-          input: 'git checkout feat/fix-something-branch-123 && echo "ticket FIX-3, AL-42, GEN-10 and PO-5"',
-          output: '[CRITICAL] Error on branch fix/sub-loop: tickets FIX-3 and AL-42 failed',
-        });
-
-        expect(prompt).not.toContain('feat/fix-something-branch-123');
-        expect(prompt).not.toContain('fix/sub-loop');
-        expect(prompt).not.toContain('FIX-3');
-        expect(prompt).not.toContain('AL-42');
-        expect(prompt).not.toContain('GEN-10');
-        expect(prompt).not.toContain('PO-5');
-        expect(prompt).not.toContain('[CRITICAL]');
-      });
+  it('preserves flagged issue evidence and handles sessions without issues', () => {
+    const issue = '[CRITICAL] AL-42 on fix/FIX-3: TOOL_RETRY_STREAK, unchanged.\n';
+    const withIssue = generateSessionOverviewPrompt({
+      sessionId: 'session-6', role: 'tester', model: 'model-x', status: 'error',
+      turnCount: 4, totalToolCalls: 7, failedToolCalls: 2, flaggedIssues: [issue],
     });
+    assertFencedVerbatim(withIssue, issue);
 
-    describe('Adversarial Layer 2: generateExecutionIssuePrompt', () => {
-      it('falls back to generic title when summary consists entirely of ticket IDs or tags', () => {
-        const prompt = generateExecutionIssuePrompt({
-          summary: 'FIX-3, AL-42, GEN-10 and PO-5',
-          sessionId: 'ses-sum-strip',
-          description: 'A tool failure occurred.',
-        });
-
-        expect(prompt).toContain('# Agent Execution Issue: Operational Execution Issue');
-      });
-
-      it('handles turn 0 and omitted role/model/partId', () => {
-        const prompt = generateExecutionIssuePrompt({
-          summary: 'Tool failure',
-          turn: 0,
-          sessionId: 'ses-turn0',
-          description: '',
-          partId: null,
-          errorDetails: null,
-        });
-
-        expect(prompt).toContain('During turn 0 of session `ses-turn0`, an execution issue occurred.');
-        expect(prompt).not.toContain('(agent');
-        expect(prompt).not.toContain('The last failure was triggered by part');
-        expect(prompt).toContain('(No additional error details recorded)');
-      });
-
-      it('defensively wraps markdown code fences inside errorDetails', () => {
-        const prompt = generateExecutionIssuePrompt({
-          summary: 'Compilation error',
-          sessionId: 'ses-err-fence',
-          description: 'Compilation aborted',
-          errorDetails: '```go\nfunc main() { panic("fail") }\n```',
-        });
-
-        expect(prompt).toContain('````\n```go\nfunc main() { panic("fail") }\n```\n````');
-      });
+    const withoutIssue = generateSessionOverviewPrompt({
+      sessionId: 'session-7', role: 'orchestrator', model: 'model-x', status: 'completed',
+      turnCount: 0, totalToolCalls: 0, failedToolCalls: 0, flaggedIssues: [],
     });
-
-    describe('Adversarial Layer 3: generateMessageTurnPrompt', () => {
-      it('handles null/empty deliberations, reasoning tokens, and text body', () => {
-        const prompt = generateMessageTurnPrompt({
-          turn: 0,
-          role: '',
-          sessionId: 'ses-empty-turn',
-          reasoningContent: null,
-          messageContent: '   ',
-          toolsExecuted: [],
-        });
-
-        expect(prompt).toContain('# Turn 0 Review (`assistant`)');
-        expect(prompt).toContain('In turn 0 of session `ses-empty-turn`, the agent deliberated and executed tools.');
-        expect(prompt).toContain('(No deliberation content recorded)');
-        expect(prompt).toContain('(No text message body recorded)');
-        expect(prompt).toContain('(No tools executed in this turn)');
-      });
-
-      it('formats multiline deliberation reasoning with blockquote markdown markers', () => {
-        const prompt = generateMessageTurnPrompt({
-          turn: 1,
-          role: 'coder',
-          model: 'gemini-3.8-flash',
-          sessionId: 'ses-delib',
-          reasoningContent: 'First check inputs.\nSecond run tests.\nThird submit.',
-        });
-
-        expect(prompt).toContain('> First check inputs.');
-        expect(prompt).toContain('> Second run tests.');
-        expect(prompt).toContain('> Third submit.');
-      });
-
-      it('handles toolsExecuted entries with missing fields or status', () => {
-        const prompt = generateMessageTurnPrompt({
-          turn: 1,
-          role: 'assistant',
-          sessionId: 'ses-tools-edge',
-          toolsExecuted: [
-            { toolName: '', status: '', partId: null },
-            { toolName: 'bash', status: 'error', partId: '   ' },
-          ],
-        });
-
-        expect(prompt).toContain('- `unknown_tool`: unknown');
-        expect(prompt).toContain('- `bash`: error');
-      });
-    });
-
-    describe('Adversarial Layer 4: generateSessionOverviewPrompt', () => {
-      it('handles missing parentId (null, empty, whitespace) without parent session note', () => {
-        const promptNull = generateSessionOverviewPrompt({
-          sessionId: 'ses-root-null',
-          parentId: null,
-          role: 'coder',
-          model: 'gemini-3.8-flash',
-          status: 'running',
-          turnCount: 0,
-          totalToolCalls: 0,
-          failedToolCalls: 0,
-        });
-        expect(promptNull).not.toContain('parent session:');
-
-        const promptEmpty = generateSessionOverviewPrompt({
-          sessionId: 'ses-root-empty',
-          parentId: '   ',
-          role: 'coder',
-          model: 'gemini-3.8-flash',
-          status: 'running',
-          turnCount: 0,
-          totalToolCalls: 0,
-          failedToolCalls: 0,
-        });
-        expect(promptEmpty).not.toContain('parent session:');
-      });
-
-      it('handles turnCount 0, totalToolCalls 0, and failedToolCalls 0 correctly', () => {
-        const prompt = generateSessionOverviewPrompt({
-          sessionId: 'ses-zero-counts',
-          role: 'planner',
-          model: 'gemini-3.8-flash',
-          status: 'initialized',
-          turnCount: 0,
-          totalToolCalls: 0,
-          failedToolCalls: 0,
-        });
-
-        expect(prompt).toContain(
-          'Session `ses-zero-counts` is a `planner` subagent running `gemini-3.8-flash`. The session is currently **initialized** after 0 turns and 0 tool executions (0 failed).'
-        );
-      });
-
-      it('falls back to no flagged issues when flaggedIssues contains only stripped tickets/tags', () => {
-        const prompt = generateSessionOverviewPrompt({
-          sessionId: 'ses-issues-strip',
-          role: 'tester',
-          model: 'gemini-3.8-flash',
-          status: 'completed',
-          turnCount: 1,
-          totalToolCalls: 1,
-          failedToolCalls: 0,
-          flaggedIssues: ['FIX-3, AL-42, GEN-10 and PO-5', '[CRITICAL], [HIGH], [WARNING]'],
-        });
-
-        expect(prompt).toContain('No flagged issues or anomalies recorded for this session.');
-      });
-    });
-
-    describe('OpenCode database provenance attribution', () => {
-      const EXPECTED_PROVENANCE = 'This data was extracted from the OpenCode database.';
-
-      describe('Layer 1: generateToolExecutionPrompt parameter combinations', () => {
-        it('includes provenance attribution with full parameters (turn, messageId, partId, consecutive errors)', () => {
-          const prompt = generateToolExecutionPrompt({
-            toolName: 'bash',
-            sessionId: 'ses-prov-full',
-            turn: 5,
-            messageId: 'msg-prov-5',
-            partId: 'part-prov-5',
-            status: 'error',
-            consecutiveErrors: 4,
-            input: 'cat /tmp/test',
-            output: 'No such file',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          const lines = prompt.split('\n');
-          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
-          expect(lines[1]).toContain('During turn 5 of session `ses-prov-full`');
-        });
-
-        it('includes provenance attribution without turn (in session prefix)', () => {
-          const prompt = generateToolExecutionPrompt({
-            toolName: 'read',
-            sessionId: 'ses-no-turn',
-            status: 'completed',
-            messageId: 'msg-1',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          const lines = prompt.split('\n');
-          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
-          expect(lines[1]).toContain('In session `ses-no-turn`');
-        });
-
-        it('includes provenance attribution without sessionId (falls back to unknown-session)', () => {
-          const prompt = generateToolExecutionPrompt({
-            toolName: 'edit',
-            sessionId: '',
-            status: 'completed',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In session `unknown-session`');
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-
-          // Runtime boundary check: completely omitted sessionId
-          const runtimePrompt = generateToolExecutionPrompt({
-            toolName: 'edit',
-            status: 'completed',
-          } as unknown as ToolExecutionPromptParams);
-          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
-          expect(runtimePrompt).toContain('In session `unknown-session`');
-        });
-
-        it('includes provenance attribution with empty payloads and error status', () => {
-          const prompt = generateToolExecutionPrompt({
-            toolName: '',
-            sessionId: '',
-            status: 'error',
-            input: '',
-            output: '',
-            errorMessage: '',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In session `unknown-session`, the agent executed `unknown_tool` and it failed with an execution error. This data was extracted from the OpenCode database.');
-        });
-      });
-
-      describe('Layer 2: generateExecutionIssuePrompt parameter combinations', () => {
-        it('includes provenance attribution with full parameters (turn, role, model, partId)', () => {
-          const prompt = generateExecutionIssuePrompt({
-            summary: 'Thrashing detected',
-            sessionId: 'ses-issue-full',
-            turn: 3,
-            role: 'coder',
-            model: 'gemini-3.8-flash',
-            partId: 'part-issue-3',
-            description: 'Repeated failing edits.',
-            errorDetails: 'conflict on line 42',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          const lines = prompt.split('\n');
-          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
-          expect(lines[1]).toContain('During turn 3 of session `ses-issue-full` (agent `coder` running `gemini-3.8-flash`), repeated failing edits. The last failure was triggered by part `part-issue-3`. This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution without turn', () => {
-          const prompt = generateExecutionIssuePrompt({
-            summary: 'Session anomaly',
-            sessionId: 'ses-issue-noturn',
-            description: 'High failure rate.',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In session `ses-issue-noturn`, high failure rate. This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution without sessionId and with role only', () => {
-          const prompt = generateExecutionIssuePrompt({
-            summary: 'Role issue',
-            sessionId: '',
-            role: 'planner',
-            description: 'Contract mismatch.',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In session `unknown-session` (agent `planner`), contract mismatch. This data was extracted from the OpenCode database.');
-
-          // Runtime boundary check: omitted sessionId
-          const runtimePrompt = generateExecutionIssuePrompt({
-            summary: 'Role issue',
-            role: 'planner',
-            description: 'Contract mismatch.',
-          } as unknown as ExecutionIssuePromptParams);
-          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
-          expect(runtimePrompt).toContain('In session `unknown-session` (agent `planner`), contract mismatch. This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution with model only and without partId', () => {
-          const prompt = generateExecutionIssuePrompt({
-            summary: 'Model issue',
-            sessionId: 'ses-model-only',
-            model: 'gemini-3.8-flash',
-            description: 'Token runaway.',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In session `ses-model-only` (running `gemini-3.8-flash`), token runaway. This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution with minimal empty payload', () => {
-          const prompt = generateExecutionIssuePrompt({
-            summary: '',
-            sessionId: '',
-            description: '',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In session `unknown-session`, an execution issue occurred. This data was extracted from the OpenCode database.');
-
-          // Runtime boundary check: completely omitted properties
-          const runtimePrompt = generateExecutionIssuePrompt({} as unknown as ExecutionIssuePromptParams);
-          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
-          expect(runtimePrompt).toContain('In session `unknown-session`, an execution issue occurred. This data was extracted from the OpenCode database.');
-        });
-      });
-
-      describe('Layer 3: generateMessageTurnPrompt parameter combinations', () => {
-        it('includes provenance attribution with full parameters (messageId, role, model, deliberations, tools)', () => {
-          const prompt = generateMessageTurnPrompt({
-            turn: 7,
-            sessionId: 'ses-turn-full',
-            messageId: 'msg-turn-7',
-            role: 'tester',
-            model: 'gemini-3.8-flash',
-            reasoningContent: 'Running adversarial tests.',
-            messageContent: 'Executing vitest.',
-            toolsExecuted: [{ toolName: 'bash', status: 'completed', partId: 'part-b1' }],
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          const lines = prompt.split('\n');
-          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
-          expect(lines[1]).toContain('In turn 7 of session `ses-turn-full` (message `msg-turn-7`), the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution without messageId', () => {
-          const prompt = generateMessageTurnPrompt({
-            turn: 2,
-            sessionId: 'ses-no-msg',
-            role: 'coder',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In turn 2 of session `ses-no-msg`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution without sessionId and without model', () => {
-          const prompt = generateMessageTurnPrompt({
-            turn: 1,
-            sessionId: '',
-            role: 'orchestrator',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In turn 1 of session `unknown-session`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
-
-          // Runtime boundary check: omitted sessionId
-          const runtimePrompt = generateMessageTurnPrompt({
-            turn: 1,
-            role: 'orchestrator',
-          } as unknown as MessageTurnPromptParams);
-          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
-          expect(runtimePrompt).toContain('In turn 1 of session `unknown-session`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution with minimal empty turn payload', () => {
-          const prompt = generateMessageTurnPrompt({
-            turn: 0,
-            sessionId: '',
-            role: '',
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('In turn 0 of session `unknown-session`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
-
-          // Runtime boundary check: turn only
-          const runtimePrompt = generateMessageTurnPrompt({
-            turn: 0,
-          } as unknown as MessageTurnPromptParams);
-          expect(runtimePrompt).toContain(EXPECTED_PROVENANCE);
-          expect(runtimePrompt).toContain('In turn 0 of session `unknown-session`, the agent deliberated and executed tools. This data was extracted from the OpenCode database.');
-        });
-      });
-
-      describe('Layer 4: generateSessionOverviewPrompt parameter combinations', () => {
-        it('includes provenance attribution with parent session ID', () => {
-          const prompt = generateSessionOverviewPrompt({
-            sessionId: 'ses-child-1',
-            parentId: 'ses-parent-0',
-            role: 'coder',
-            model: 'gemini-3.8-flash',
-            status: 'running',
-            turnCount: 4,
-            totalToolCalls: 10,
-            failedToolCalls: 2,
-            flaggedIssues: ['Tool retry streak'],
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          const lines = prompt.split('\n');
-          expect(lines[1]).toContain(EXPECTED_PROVENANCE);
-          expect(lines[1]).toContain('Session `ses-child-1` is a `coder` subagent running `gemini-3.8-flash` (parent session: `ses-parent-0`). The session is currently **running** after 4 turns and 10 tool executions (2 failed). This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution without parent session ID', () => {
-          const prompt = generateSessionOverviewPrompt({
-            sessionId: 'ses-root-standalone',
-            role: 'orchestrator',
-            model: 'gemini-3.8-flash',
-            status: 'completed',
-            turnCount: 12,
-            totalToolCalls: 25,
-            failedToolCalls: 1,
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('Session `ses-root-standalone` is a `orchestrator` subagent running `gemini-3.8-flash`. The session is currently **completed** after 12 turns and 25 tool executions (1 failed). This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution with zero counts (0 turns, 0 tools, 0 failures)', () => {
-          const prompt = generateSessionOverviewPrompt({
-            sessionId: 'ses-zero-counts',
-            role: 'planner',
-            model: 'gemini-3.8-flash',
-            status: 'initialized',
-            turnCount: 0,
-            totalToolCalls: 0,
-            failedToolCalls: 0,
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('Session `ses-zero-counts` is a `planner` subagent running `gemini-3.8-flash`. The session is currently **initialized** after 0 turns and 0 tool executions (0 failed). This data was extracted from the OpenCode database.');
-        });
-
-        it('includes provenance attribution with empty/omitted optional parameters', () => {
-          const prompt = generateSessionOverviewPrompt({
-            sessionId: '',
-            role: '',
-            model: '',
-            status: '',
-            turnCount: 0,
-            totalToolCalls: 0,
-            failedToolCalls: 0,
-          });
-          expect(prompt).toContain(EXPECTED_PROVENANCE);
-          expect(prompt).toContain('Session `unknown-session` is a `agent` subagent running `unknown-model`. The session is currently **unknown** after 0 turns and 0 tool executions (0 failed). This data was extracted from the OpenCode database.');
-        });
-      });
-    });
+    expect(withoutIssue).toContain('(No flagged issues recorded)');
+    expect(withoutIssue).toContain('after 0 turns and 0 tool executions (0 failed)');
   });
 });

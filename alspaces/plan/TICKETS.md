@@ -6,7 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-
 ---
 
 ## Ready
