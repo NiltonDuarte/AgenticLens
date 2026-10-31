@@ -1,7 +1,0 @@
-# PO-18 iteration 03 plan
-
-Baseline ce43f8d; initial Git status clean. Source: user requests a ticket for generate config toggles, naming task_links/skills/anomalies, and says disabled metrics must not be written. Configuration still uses alspaces and AL prefix; AL-68 unused in workspaces/registry/remote matching heads. Current command help, generation persistence/summary path and config loader inspected read-only.
-
-Acceptance delta: add one independently Ready Phase 1 feature ticket for config-to-output policy, enabled defaults, independent toggles, field omission across nested owners and existing-target regeneration, managed summary behavior and consumer compatibility. Preserve all prior ticket boundaries, AL-55 bytes, explicit unknowns, and PO-only execution. Superseded decision: eight-ticket count becomes nine. No application changes approved in this PO action.
-
-Validate template, numbering, roadmap links, Ready placement, unchanged original specs and AL-55 hash. Reuse completed full make for unchanged application/tests/build; integrate main and reassess only if integration changes those paths. Refresh Codex telemetry at finalization, preserve root/source identity and other sessions, commit/push/update PR #90. Applicable regression cases: false-vs-missing config defaults, configured suppression vs unavailable-source retention, nested owner multiplicity, persisted facts with hydration unavailable, safe writes and unchanged-repeat stability.

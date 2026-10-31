@@ -6,7 +6,7 @@ h3. Title: AL-68: Review shared telemetry repository interfaces and source injec
 *Work type*: docs
 *Blocked by*: None
 *Blocks*: None
-*Origin*: PO-18 iteration 07; user requests a broader architecture review: OpenCodeV1, OpenCodeV2 and Codex should implement the same repository interface as much as possible, and the correct repository should be injected into consumers.
+*Origin*: PO-18 consolidated specification; user requests a broader architecture review: OpenCodeV1, OpenCodeV2 and Codex should implement the same repository interface as much as possible, and the correct repository should be injected into consumers.
 
 *CONTEXT*
 

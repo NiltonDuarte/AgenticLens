@@ -1,94 +1,45 @@
-# Feature Specification: Post-v2.0 platform follow-up (PO-18)
+# PO-18: Post-v2.0 platform follow-up
 
-## Problem Statement
+## Purpose and audience
 
-The 2026-10-31 review of AgenticLens build `v2.0.0-rc.106+9707d41-1-g45cb679` identified two presentation improvements, an active-turn duration accounting bug, missing Codex fact visibility, deferred OpenCode live verification, source capability uncertainty, and confusing backfill defaults. This specification turns those notes into Phase 1 AL tickets. It does not implement fixes or claim verification not performed.
+Engineers, analysts and operators need clearer historical views, reliable source-backed facts, accurate active duration, understandable generation/recovery controls and an assessment of the telemetry repository architecture. This specification consolidates the user's 2026-10-31 review and subsequent corrections into one current plan. Detailed acceptance criteria live in the linked AL tickets.
 
-## Target Personas & Use Cases
+This is PO planning, not application implementation or an independently reviewed development plan. Development runs in separate agentic-lens-dev sessions under the normal contract and approval requirements. The capability audit, backfill research and architecture review deliver evidence/recommendations within their stated boundaries.
 
-Engineers inspecting historical/live agent activity, analysts comparing tickets, and operators recovering telemetry need understandable controls and trustworthy source-backed facts.
+## Planned tickets
 
-## User Stories
-
-1. As an analyst, I want to search ticket choices without changing exclusions so that large comparison panels remain manageable.
-2. As an engineer, I want full local historical timestamps so that dates remain clear without hover.
-3. As an operator, I want source-grounded skill/delegation and capability findings so that unavailable evidence is not mistaken for no usage.
-4. As an operator, I want current-turn duration counted provisionally so that generation reflects elapsed active work.
-5. As an operator, I want safe backfill semantics researched so that available sources refresh while unavailable history survives.
-6. As an engineer, I want skills and task links attached to their source session or invocation so that raw provenance survives aggregation.
-7. As an operator, I want independent configuration toggles for optional generate metrics so that disabled skills, task_links and anomalies are omitted from written output.
-
-8. As an engineer, I want a source-grounded review of repository interfaces and dependency injection so that OpenCode v1/v2 and Codex share appropriate contracts and each consumer receives the correct implementation.
-
-## Functional Requirements
-
-- Data ingestion/extraction: AL-62 diagnoses and fixes missing supported Codex facts while delivering granular source ownership; AL-63 audits OpenCode v1/v2 and Codex capabilities; AL-64 fixes the diagnosed Codex active-turn duration bug and investigates/fixes equivalent accounting defects in OpenCode v1 and v2 through a snapshot cutoff. Evidence unavailable at execution remains explicit.
-- Granular ownership: merged AL-62 relocates canonical skills/task_links to source-proven session or invocation ownership, with derived ticket/fleet projections, compatible migration, and explicit unresolved legacy provenance.
-- Generation output policy: AL-66 adds independent enabled-by-default config toggles for skills/task_links/anomalies, applied across emitted ownership scopes and generated summaries, including replacement of previous disabled facts in the target output.
-- Repository architecture: AL-68 reviews existing interfaces, source/schema dispatch and injection across all consumers, with an as-is map, findings and a justified target design. It does not implement an interface refactor.
-- Domain aggregations: duration excludes inter-turn gaps and future activity; completed refresh replaces provisional contribution. Missing facts do not establish measured zero. Stored baseline facts survive unavailable hydration/recovery.
-- Presentation: AL-60 searches existing ticket IDs/titles inside Exclude tickets only; AL-61 renders full local dates/times without milliseconds. AL-64 exposes provisional duration consistently.
-- CLI/recovery: AL-65 researches default source-backed recomputation with exact existing identities, retention when originals are unavailable, and explicit outcomes. It does not enable Force or change defaults.
-
-## Non-Functional & Architectural Invariants
-
-Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: pure Go domain, I/O in adapters, strict TypeScript, zero any/interface{}, no emojis, self-contained fixtures, compatible fact preservation and meaningful tests. UI-only slices reuse existing domain/API contracts rather than inventing backend work. Research and verification slices trace the whole source-to-presentation path but authorize reports and experiments only. Application changes require a separate agentic-lens-dev session and its approval gate.
-
-## Decomposition & Delivery Roadmap
-
-| Ticket | Outcome | Kind | Blocked by |
+| Ticket | Outcome | Status | Blocked by |
 | --- | --- | --- | --- |
-| AL-60 | Search tickets within comparison exclusion panel | Feature | None |
-| AL-61 | Full local historical dates/times in Ticket Deep Dive | Feature | None |
-| AL-62 | Fix Codex skill/delegation facts with granular ownership | Fix | None |
-| AL-63 | OpenCode v1/v2 and Codex capability matrix | Audit | AL-62 |
-| AL-64 | Investigate/fix active-turn duration across Codex and OpenCode v1/v2 | Bug | None |
-| AL-65 | Default backfill/Force research recommendation | Research | AL-63 |
-| AL-66 | Configurable optional metric output for generate | Feature | None |
-| AL-68 | Review shared repository contracts and source injection | Architecture review | None |
+| [AL-60](../plan/to-do/AL-60%20search%20tickets%20in%20comparison%20exclusion%20panel.md) | Search exclusions by ID/title without changing selections or chart membership. | Ready | None |
+| [AL-61](../plan/to-do/AL-61%20show%20full%20local%20timestamps%20in%20ticket%20deep%20dive.md) | Show full local historical date/time without milliseconds or a hover requirement. | Ready | None |
+| [AL-62](../plan/to-do/AL-62%20fix%20codex%20skill%20and%20delegation%20facts%20with%20granular%20ownership.md) | Diagnose and fix missing source-recorded Codex skill/delegation facts; deliver granular ownership, safe migration and all consumers. | Ready | None |
+| [AL-63](../plan/to-do/AL-63%20audit%20capabilities%20across%20opencode%20v1%20v2%20and%20codex.md) | Audit OpenCode v1/v2 and Codex ingestion, hydration, live capabilities, facts, errors, child navigation and recovery. | Blocked | AL-62 |
+| [AL-64](../plan/to-do/AL-64%20investigate%20and%20fix%20active%20turn%20duration%20across%20codex%20and%20opencode.md) | Fix diagnosed Codex active-turn duration and investigate/fix confirmed OpenCode v1/v2 defects with snapshot/replacement evidence. | Ready | None |
+| [AL-65](../plan/to-do/AL-65%20research%20safe%20default%20source%20backed%20backfill.md) | Research default exact-session source recomputation, unavailable-history preservation and clearer Force semantics. | Blocked | AL-63 |
+| [AL-66](../plan/to-do/AL-66%20configure%20optional%20metric%20output%20for%20generate.md) | Add independent enabled-by-default toggles that omit skills/task_links/anomalies from generated JSON and managed summaries when disabled. | Ready | None |
+| [AL-68](../plan/to-do/AL-68%20review%20telemetry%20repository%20interfaces%20and%20dependency%20injection.md) | Review shared source repository contracts, source/schema selection and injection; deliver as-is architecture, findings and a proposed design. | Ready | None |
 
-Execution tiers: Tier 1 = AL-60/61/62/64/66/68; Tier 2 = AL-63; Tier 3 = AL-65. AL-64 is the diagnosed must-fix and can proceed independently. AL-63 consumes AL-62 diagnosis and fix-verification evidence; AL-65 consumes the parity report. Blocked tickets may gather independent evidence while their final acceptance awaits dependencies. Do not delay the duration fix behind investigations. Existing AL-57 and AL2 scope is unchanged.
+Dependency chain: AL-62 -> AL-63 -> AL-65. Other tickets are independently Ready; do not delay the diagnosed duration fix behind the audits. The shared registry is alspaces/plan/TICKETS.md. Existing AL-57 and AL2 plans are unchanged.
 
-## Evidence and Review Boundaries
+## Functional and compatibility boundaries
 
-The notes are supplied evidence, not new checks run in this PO session. AL-62 preserves the reported 102-ledger observation and AL-55's four children. AL-64 carries the root session, exact timeline and duration delta. The user confirmed chart defaults, axes, point tooltips/navigation, exclusion/restoration, logarithmic rendering, and Skills & Subagents empty-state collapse/reopen. Populated skill analytics/filtering, live behavior, and successful backfill/preservation remain unverified.
+- AL-62 implements fixes, not merely an investigation report. It owns the former AL-67 data-structure work: canonical facts belong to their narrowest source-proven session/invocation owner; ticket/fleet views derive from them. Preserve raw identifiers, repeated occurrences and delegating-parent ownership. Invocation metric rows are not assumed to be raw-call identities. Safely retain ambiguous legacy ownership without guessing or losing facts.
+- AL-63 distinguishes supported-and-verified, supported-but-failing, unsupported, source-unavailable and unexecuted behavior. Include source-backed recovery and missing/malformed-source preservation checks. Do not assume all sources promise equal capabilities.
+- AL-64 covers Codex and both OpenCode schema families independently. Include source-proven unfinished activity through a cutoff, provisional status, replacement after completion, idle/future exclusion and repeat-backfill stability. Equivalent OpenCode defects are not yet established; implement confirmed defects and preserve already-correct behavior. Never invent duration when active boundaries are unavailable.
+- AL-65 researches the user's desired default: follow exact session identities already in a ledger, recompute when original source metrics exist, retain stored facts when unavailable, and make outcomes explicit. Current Force only bypasses completed-ledger skipping; it is not source recomputation or heuristic recovery. No default/flag behavior change is approved by the research ticket.
+- AL-66 applies category toggles across all emitted ownership scopes and compatibility projections, including previously saved disabled facts in regenerated output. Preserve unrelated metrics and user-authored summary prose. Disabled output is distinct from unavailable source data; toggles do not imply global redaction or new backfill behavior.
+- AL-68 reviews actual abstractions and composition across generate, backfill, server, hydration and live consumers, including mixed-source routing. Maximize shared meaningful contracts while preserving optional capabilities and explicit failure/partial semantics. Refactor implementation is separate scope.
 
-The original review worktree was not intended for merge. These planning artifacts alone are eligible for delivery; the original AL-55 ledger must remain byte-identical. No application fix, experimental ledger replacement, original review changes, default backfill change, or forced parity promise is included. No developer AL workspace or CONTRACT.md is created by the PO.
+## Evidence and verification boundaries
 
-## Historical iteration 02 steering: granular fact ownership
+Original review: 2026-10-31, build v2.0.0-rc.106+9707d41-1-g45cb679. User-supplied observations include 102 ledgers without populated top-level skills and AL-55 with a root plus four Codex children. These are not new runtime checks performed by this PO task. AL-62 preserves missing-fact context; AL-64 preserves the exact duration timeline and measured delta.
 
-Source: user follow-up requesting skills/task_links at session or invocation scope, as close to raw data as possible. AL-67 adds one independently Ready Phase 1 ticket; it does not revise the seven existing ticket boundaries. Canonical facts use their narrowest proven owner; raw occurrence identity must not be confused with role/model metric rows. Ambiguous historical ownership is retained explicitly, never guessed. This supersedes the original seven-ticket count with eight planned tickets and introduces no application changes or new harness capability promise. Original evidence preservation, research-only defaults, existing verification and separate implementation-session requirements remain in force.
+The user confirmed chart defaults, axes, point tooltips/navigation, exclusion/restoration, logarithmic rendering and the Skills & Subagents empty-state behavior. Populated skill analytics, successful backfill/preservation and deferred live checks are not established by the notes. The standalone active OpenCode walkthrough was removed; its checklist is not reassigned. The capability matrix still reports live support and evidence gaps.
 
-## Historical iteration 03 steering: configurable generate output
+The original review worktree/evidence is not part of an application merge. Preserve alspaces/AL-55/agentic_metrics.json byte-for-byte. No application, test, schema, runtime script or actual configuration changes are made by this PO delivery. Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: FCIS, strict Go/TypeScript, zero any/interface{}, zero emojis, self-contained fixtures and baseline-fact preservation when optional hydration/recovery fails. Implementation tickets own their necessary regression and embedded-asset checks.
 
-Source: user follow-up requesting configuration toggles for task_links, skills and anomalies; disabled metrics must not be written. Add AL-68 independently Ready, increasing delivery to nine tickets. Missing settings retain enabled behavior; explicit false omits that category from generated JSON at every owner and managed summary metrics. On regeneration, omission applies to previously saved disabled facts in that target output too. Preserve unrelated facts, safe writes and source records. No global redaction/backfill-default change is implied. This policy deliberately suppresses configured output; it does not supersede missing-source safeguards for enabled facts. AL-67 remains responsible for granular ownership, and implementation stays in a separate development session.
+## PO deliverables and decisions
 
-## Historical iteration 04 steering: merge AL-67 into an implementation-owning AL-62
+PO-18 contains SPEC.md (this consolidated plan), SUMMARY.md (delivered planning work and verification facts), PULL_REQUEST.md and source-grounded agentic_metrics.json. Per-user instruction, development-style iteration plans and self-review files are removed. Author validation is not independent plan approval. Earlier revisions remain in Git history.
 
-Source: explicit user correction, “AL-62 must fix, not only investigate. AL-67 changes the data structure. Merge them.” AL-62 now owns diagnosis and implemented missing-fact corrections plus AL-67's granular source ownership, migration, adapters, projections and regression coverage. AL-67 is retired under plan/discarded as merged into AL-62; no separate execution or AL-62-to-AL-67 dependency exists. Eight active Phase 1 tickets remain: AL-60 through AL-66 and AL-68. AL-64 still depends on AL-62/AL-63, with no dependency cycle; AL-68 references merged AL-62 for ownership coordination. Historical iteration 02/03 counts and ownership assignments above are superseded by this decision.
-
-Preserved guarantees: raw occurrence identities and multiplicity, unresolved legacy provenance, unavailable-source preservation, existing OpenCode behavior, no invented Codex evidence, original AL-55 bytes and separate PO/development sessions. Source investigation no longer ends with recommendations; actual fixes and end-to-end regression evidence are required. If source facts are truly unsupported, accurate availability behavior is required rather than fabricated populated data. This planning update does not itself implement or claim verification of a fix.
-
-## Historical iteration 05 steering: remove standalone live walkthrough and renumber
-
-Source: user instruction, “remove AL-63 and adjust the numbers.” Remove the standalone OpenCode live walkthrough definition; its prior specification remains available in Git history rather than a second live AL-63 record. Renumber former AL-64 parity audit to AL-63, former AL-65 duration fix to AL-64, former AL-66 backfill research to AL-65, and former AL-68 generate toggles to AL-66. AL-60/61/62 are unchanged in identity; seven active Phase 1 tickets now run consecutively AL-60 through AL-66.
-
-Current dependency chain is AL-62 -> AL-63 -> AL-65. The removed walkthrough no longer blocks the parity audit, and its detailed walkthrough acceptance is not transferred to another ticket. AL-63 retains the original capability matrix's live-observability coverage with explicit unexecuted/unavailable status where appropriate. AL-64's duration fix and AL-66's toggles remain independently Ready. Retired AL-67 remains merged into AL-62; historical iteration IDs and counts above use their original numbering and are superseded by this mapping.
-
-Preserve merged AL-62 implementation scope, raw provenance and migration safeguards, disabled-output semantics, research-only backfill defaults, original AL-55 bytes and prior valid code verification. This is a planning-only removal/renumbering; no application or test changes are needed.
-
-## Historical iteration 06 steering: duration accounting across all three sources
-
-Source: explicit user correction that AL-64 must also investigate OpenCode v1/v2 and is not limited to Codex. Expand the same Ready fix ticket to source-specific investigation and confirmed-defect remediation across Codex, OpenCode v1 and OpenCode v2. The original Codex bug evidence remains established; equivalent OpenCode defects remain to be demonstrated. Require per-source generation-during-activity, active refresh, completion replacement, cutoff/idle-boundary, persisted output and unchanged-backfill evidence, with unsupported/unexecuted checks distinguished explicitly. Do not manufacture provisional durations where the source does not prove active boundaries.
-
-Supersedes AL-64's Codex-only scope and filename. Preserve seven-ticket numbering, dependencies, known Codex timeline, existing-correct OpenCode calculations, raw fact retention and original AL-55 evidence. This expands duration verification, not the removed live-inspector walkthrough. All application work remains in a separate development session; this update changes planning artifacts only.
-
-## Iteration 07 steering: repository abstraction and injection review
-
-Source: user requests a broader architecture ticket reviewing whether OpenCodeV1/OpenCodeV2/Codex implement a shared interface as far as meaningful, and whether the correct repository is injected. Add AL-68 (Ready, architecture review). AL-67 remains retired into AL-62, so the next unreserved current number is AL-68; its old historical generate-toggle meaning was renumbered to AL-66 in iteration 05. Eight active tickets are now AL-60 through AL-66 and AL-68. Prior counts and mappings remain historical.
-
-The review inventories actual ports, adapters, constructors and source/schema dispatch across generate/backfill/server/hydration/live consumers, including mixed-source routing. Deliver as-is evidence and a proposed shared contract/composition design without fabricating capability parity or authorizing an application refactor. Keep AL-63's behavior audit and AL-62/64/66 implementation scopes separate; no new blocking edges. Preserve all existing guarantees, AL-55 evidence and separate PO/development sessions. Verification impact: new documentation review acceptance covers injection and contract consistency; this planning update establishes no architecture findings or runtime correctness.
-
-## Iteration 07 review correction: remove redundant phase metadata
-
-Source: user questions the usefulness and precedent of “Phase 1 (post-v2.0 platform review)” on tickets. The canonical ticket template has no Phase field; inspected older AL-48/57/59 definitions also omit it, while the existing registry contains older phase labels. Remove the added Phase field and duplicate phase constraint from all eight active tickets in this batch and their registry entries; simplify this batch's registry headings. Preserve historical records and unrelated roadmap metadata. This is a presentation correction in iteration 07, with no acceptance/dependency change or new iteration. Ticket IDs, types, scope and verification requirements remain intact.
+Eight active AL tickets retain their current IDs and acceptance boundaries. AL-67 is retired as merged into AL-62, with its historical definition under plan/discarded. The prior standalone live ticket was removed and later tickets renumbered; current IDs above are authoritative. Redundant phase/prefix metadata was removed. No new iteration folders or developer contracts/workspaces are created for this consolidation.

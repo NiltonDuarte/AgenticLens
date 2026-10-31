@@ -6,7 +6,7 @@ h3. Title: AL-64: Investigate and fix active-turn duration across Codex and Open
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: None
-*Origin*: PO-18 iteration 06; original review dated 2026-10-31, build v2.0.0-rc.106+9707d41-1-g45cb679. User explicitly expands investigation to OpenCode v1 and v2; scope is not limited to Codex.
+*Origin*: PO-18 consolidated specification; original review dated 2026-10-31, build v2.0.0-rc.106+9707d41-1-g45cb679. User explicitly expands investigation to OpenCode v1 and v2; scope is not limited to Codex.
 
 *CONTEXT*
 

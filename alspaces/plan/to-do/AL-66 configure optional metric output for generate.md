@@ -6,7 +6,7 @@ h3. Title: AL-66: Configure optional skills, task_links and anomalies output for
 *Work type*: feat
 *Blocked by*: None
 *Blocks*: None
-*Origin*: PO-18 iteration 03; user requests config toggles for generate features including task_links, skills and anomalies. Disabled metrics must not be written.
+*Origin*: PO-18 consolidated specification; user requests config toggles for generate features including task_links, skills and anomalies. Disabled metrics must not be written.
 
 *CONTEXT*
 
