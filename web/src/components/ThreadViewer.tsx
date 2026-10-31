@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ThreadExecutionRecord } from '../domain/types';
 import { formatCurrencyUSD, formatPercentage, formatTokensK } from '../domain/formatters';
 import { InfoTooltip } from './InfoTooltip';
 
 export interface ThreadViewerProps {
+  readonly focusSession?: { readonly id: string } | undefined;
   readonly threads: readonly ThreadExecutionRecord[];
 }
 
-export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads }) => {
+export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, focusSession }) => {
   const [expandedSessions, setExpandedSessions] = useState<ReadonlySet<string>>(() => {
     // Expand the first thread by default
     if (threads.length > 0 && threads[0]) {
@@ -15,6 +16,14 @@ export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads }) => {
     }
     return new Set();
   });
+
+  const focusedHeader = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!focusSession || !threads.some((thread) => thread.session_id === focusSession.id)) return;
+    setExpandedSessions((previous) => new Set([...previous, focusSession.id]));
+    focusedHeader.current?.focus();
+    focusedHeader.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [focusSession, threads]);
 
   if (!threads || threads.length === 0) {
     return (
@@ -64,6 +73,7 @@ export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads }) => {
           return (
             <div key={thread.session_id} className="thread-accordion-item">
               <button
+                ref={thread.session_id === focusSession?.id ? focusedHeader : undefined}
                 type="button"
                 className={`thread-header-btn ${isExpanded ? 'open' : ''}`}
                 onClick={() => toggleSession(thread.session_id)}

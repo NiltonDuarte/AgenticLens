@@ -124,6 +124,34 @@ describe('LiveObservability View Integration', () => {
     expect(screen.getByText('Execution Message Stream (4 turns)')).toBeInTheDocument();
   });
 
+  it('opens a delegated child and hides the parent stream until the child trace arrives', async () => {
+    const parentId = 'ses-al20-root';
+    const childId = 'ses-al20-coder';
+    const baseMessage = mockLiveTraceView.messages[0]!;
+    const parentTrace = { ...mockLiveTraceView, session_id: parentId, recent_errors: [], failed_tool_calls: 0,
+      messages: [{ ...baseMessage, content: 'Parent delegation evidence', parts: [{ id: 'delegation', type: 'tool',
+        tool_name: 'task', status: 'completed', is_error: false, subagent_type: 'coder', child_session_id: childId }] }] };
+    let finishChild!: (value: Response) => void;
+    const childResponse = new Promise<Response>((resolve) => { finishChild = resolve; });
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes(childId) && url.includes('/trace')) return childResponse;
+      return { ok: true, json: async () => url.includes('/trace') ? parentTrace : mockLiveSessionTree };
+    }));
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const es = MockEventSource.instances[0]!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    fireEvent.click(screen.getByText('AL-20 TypeScript Live Observability Implementation').closest('.live-session-node-card')!);
+    const jump = await screen.findByRole('button', { name: `Inspect child session ${childId}` });
+    expect(screen.getByText('Parent delegation evidence')).toBeInTheDocument();
+    fireEvent.click(jump);
+    expect(screen.getByText(`Loading execution trace for session ${childId}...`)).toBeInTheDocument();
+    expect(screen.queryByText('Parent delegation evidence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Execution Message Stream (1 turns)')).not.toBeInTheDocument();
+    await act(async () => finishChild({ ok: true, json: async () => mockLiveTraceView } as Response));
+    expect(screen.getByText('Execution Message Stream (4 turns)')).toBeInTheDocument();
+    expect(within(screen.getByTestId('live-trace-inspector')).getByText(`Session: ${childId}`)).toBeInTheDocument();
+  });
+
   it('handles pause and resume controls properly', async () => {
     const onSelectTicket = vi.fn();
     render(<LiveObservability onSelectTicket={onSelectTicket} />);

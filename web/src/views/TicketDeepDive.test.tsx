@@ -83,6 +83,30 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
+    it('opens and focuses the recorded child thread from a committed task badge without hydration', async () => {
+        const event: EventFact = { ...recorded[0]!, tool_name: 'task', status: 'completed' };
+        const detail = makeDetail('AL-1', [event]);
+        const baseThread = detail.ledger.threads[0]!;
+        const childId = 'recorded-child-thread';
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+            ...detail, ledger: { ...detail.ledger,
+                threads: [{ ...baseThread, session_id: 'parent-thread' }, { ...baseThread, session_id: childId }],
+                facts: { ...detail.ledger.facts, task_links: [{ subagent_type: 'tester', description: 'Verify',
+                    parent_turn: event.turn, timestamp: event.timestamp, child_session_id: childId }] },
+            },
+        } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const header = await screen.findByRole('button', { name: new RegExp(childId) });
+        expect(header).toHaveAttribute('aria-expanded', 'false');
+        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
+        fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+        fireEvent.click(screen.getByRole('button', { name: `Inspect child session ${childId}` }));
+        expect(header).toHaveAttribute('aria-expanded', 'true');
+        expect(header).toHaveFocus();
+        expect(header.closest('.thread-accordion-item')?.querySelector('.thread-body')).toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
     it('preserves malformed workspace timestamps as the visible time and tooltip fallback', async () => {
         const malformedTimestamp = 'not-a-valid-timestamp';
         const detail = makeDetail();

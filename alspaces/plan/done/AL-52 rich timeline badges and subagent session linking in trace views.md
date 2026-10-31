@@ -2,7 +2,7 @@
 
 - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
-- **Status**: Ready
+- **Status**: Completed
 - **Blocked by**: None
 - **Blocks**: AL-55
 

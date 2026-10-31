@@ -6,7 +6,7 @@ import type {
   EventFact,
   WorkspaceDetail,
 } from '../domain/types';
-import { sessionTools } from '../domain/types';
+import { ledgerSkills, ledgerTaskLinks, sessionTools } from '../domain/types';
 import { rebindEvent, sessionEvents, selectWorkspaceEvents } from '../domain/events';
 import {
   fetchWorkspaceById,
@@ -57,6 +57,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     readonly anomaly: Anomaly | null;
   }>({ event: null, anomaly: null });
   const { event: selectedEvent, anomaly: selectedAnomaly } = selection;
+  const [focusedThread, setFocusedThread] = useState<{ readonly id: string } | undefined>();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(selectedTicketId ?? null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +83,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     setTraceAnomalies([]);
     setIsHydrated(false);
     setDataSource('committed_ledger');
+    setFocusedThread(undefined);
     setSelection({ event: null, anomaly: null });
     setIsDrawerOpen(false);
     try {
@@ -639,6 +641,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       <TraceWaterfall
         key={`trace-${requestGenerationRef.current}`}
         events={events}
+        skills={ledgerSkills(ledger.facts)}
+        taskLinks={ledgerTaskLinks(ledger.facts)}
+        availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
+        onSelectSession={(id) => setFocusedThread({ id })}
         isHydrated={isHydrated}
         dataSource={dataSource}
         anomalies={traceAnomalies}
@@ -648,7 +654,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       />
 
       {/* Row 7: Session Thread Logs */}
-      <ThreadViewer threads={ledger.threads} />
+      <ThreadViewer threads={ledger.threads} focusSession={focusedThread} />
 
       {/* Row 8: Workspace Artifacts */}
       <ArtifactViewer artifacts={artifacts} />
