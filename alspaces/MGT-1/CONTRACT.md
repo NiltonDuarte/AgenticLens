@@ -13,3 +13,5 @@ The user now explicitly authorizes user-proxy control of existing ticket threads
 ## Accepted backlog dispatch scope (iteration 04)
 
 The user now explicitly authorizes new independent top-level T3 threads for unblocked AL-series development tickets and PO tickets as needed for priority and requirement conflicts, while prohibiting duplicate ownership. Use the question tool for decisions requiring user steering. AL-57 needs careful product review before implementation. Scope for AL2 tickets and cost aggregation direction has been asked and remains pending; no answer is inferred. The manager may coordinate multiple owners under MGT-1 without implementing their tickets or mixing telemetry. Preserve ongoing original PR supervision and human-only release control.
+
+Accepted iteration04 user answers supersede the preceding pending-scope note: dispatch AL-series development only; leave AL2 development queued. Defer cost changes pending the PO review. This authorizes neither AL-57 implementation nor a nullable/subtotal/estimation design. AL-55 remains grounding/planning-only until its revised contract is explicitly approved.

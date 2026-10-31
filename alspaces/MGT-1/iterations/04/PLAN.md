@@ -11,3 +11,5 @@ Initial dispatch: allocate PO-17 to product-only AL-55/AL-57/cost-overlap review
 Questions submitted via async question tool: AL-only versus AL2 scope; known subtotal plus unknown/coverage versus strict unknown total versus cost deferral. Pending answers are not approval. PO writes recommendations/proposed specs; AL-55 owns only its developer workspace/grounding until planning handoff. Manager serializes shared-plan changes and later merges.
 
 Verification: thread list plus targeted search and branch/PR checks before each allocation; stable launch request IDs, host worktree binding, read launched threads and record links/run IDs. Launch only after declared prerequisites and accepted scope are true; no application writes by manager or PO. Reuse existing management/PR verification; selected skill frontmatter validation after dispatch instructions change.
+
+User answered the questions: AL-series only; defer cost changes pending PO review. Both new owners received these exact choices. No cost design selected and no AL-55 code gate cleared.
