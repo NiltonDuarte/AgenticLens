@@ -4,6 +4,22 @@ Iteration 03 scored **1,203 declarations** (505 Go and 698 TypeScript). The [cur
 
 Baseline: `2e87ab15ffee382b1685bf38f233eca3d76fe72e`; initial working tree clean. The user requested numeric scores rather than binary dispositions. Iteration 01/02 documents remain intact as historical removal evidence; this is the iteration 03 scoring rubric and findings, with a current-catalog update below.
 
+## Tests sorted by score
+
+The full review entries are ordered from lowest to highest score, with source path and line breaking ties. All ratings and reasons are unchanged.
+
+- [0/10 — 3 tests](TEST_SCORES.md#score-010)
+- 1/10 — no tests
+- [2/10 — 4 tests](TEST_SCORES.md#score-210)
+- [3/10 — 12 tests](TEST_SCORES.md#score-310)
+- [4/10 — 28 tests](TEST_SCORES.md#score-410)
+- [5/10 — 65 tests](TEST_SCORES.md#score-510)
+- [6/10 — 307 tests](TEST_SCORES.md#score-610)
+- [7/10 — 521 tests](TEST_SCORES.md#score-710)
+- [8/10 — 230 tests](TEST_SCORES.md#score-810)
+- [9/10 — 16 tests](TEST_SCORES.md#score-910)
+- [10/10 — 11 tests](TEST_SCORES.md#score-1010)
+
 ## What the number means
 
 The score is the current declaration's **marginal regression-protection value in this repository**, considering the rest of the suite. It is an ordinal engineering judgment, not a measured probability, code-coverage percentage, or mutation score. A small cheap test can score highly; a large slow integration test can also be essential. Passing tests do not establish usefulness.

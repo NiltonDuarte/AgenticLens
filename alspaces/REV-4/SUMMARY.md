@@ -203,3 +203,7 @@ Full post-integration `make` at implementation commit `a10c61c`: exit 0. Canonic
 The current numeric catalog contains 1,197 AST-matching source identities, including all 499 Go tests and 698 TypeScript declarations. Review and test evidence remains in iterations/04/. The implementation fingerprint remains identical to the tester/reviewer snapshot.
 
 Final iteration 04 telemetry validated: all nine actual Codex source sessions present, including original root, four prior children and four new children. Correct parent IDs and nonempty invocations; no prior sessions lost. Conventional type test; billed cost remains unavailable rather than proven zero.
+
+### Score ordering follow-up
+
+User requested score_review sorted by score. TEST_SCORES.md now orders all 1,197 entries numerically from 0 through 10, with path/line tie-breakers; SCORE_REVIEW.md links each score group in ascending order. Read-back multiset comparison confirms every source identity, title, score, confidence label, reason and evidence unchanged. No test/application changes. `git diff --check` and numeric ordering checks passed; existing full make results remain valid for unchanged source.

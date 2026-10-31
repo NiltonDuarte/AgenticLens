@@ -45,3 +45,5 @@ Parent: record each removal and transfer, update score/catalog references as his
 ## Completion evidence
 
 Coder, tester and reviewer completed; reviewer APPROVED. Implementation committed as a10c61c; main already up to date. Full post-integration make passed including all 749 frontend cases and four target builds. Final telemetry and PR update follow.
+
+Follow-up formatting: user requested sorting score_review by score. Sort current catalog numerically ascending, path/line as stable tie-breakers; add ordered score navigation to SCORE_REVIEW.md. Preserve every rating and row payload. This is a review presentation correction within iteration 04; no new scope/iteration or code changes.
