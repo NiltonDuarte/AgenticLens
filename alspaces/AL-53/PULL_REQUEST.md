@@ -1,5 +1,8 @@
 # feat(web): add skills and subagents autopsy panel (AL-53)
 
+Integration hold: combined navigation review is approved, but full make exposed an inherited HTTP/SSE startup defect. Manager is routing its correction to AL-47; retain the hold pending that verified fix and a fresh integrated gate. See SUMMARY.md and iterations/01/REVIEW.md.
+
+
 Ticket Deep Dive now exposes recorded modular skills and subagent delegations in a dedicated collapsible Skills & Subagents card. Operators can inspect invocation turns, roles, source errors, task descriptions, and recorded measurements without searching individual tool spans.
 
 Waterfall badges and delegation rows share a single child-session request contract. Available child-session actions open and focus the exact execution thread, including repeated activation. Missing child threads and unavailable measurements are identified explicitly. Supported v4 ledgers without optional skill/task facts show an empty state, and persisted panel data stays visible when optional trace enrichment fails.

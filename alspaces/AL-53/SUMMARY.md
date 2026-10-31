@@ -1,5 +1,7 @@
 # AL-53 Work Summary
 
+Current integration status: HELD for manager gating. Original delivery checks below predate the main integration; the latest real full make failed on an inherited HTTP/SSE startup gap. See the final integration section.
+
 User preapproved the ticket plan and contract on 2026-10-31 and requested full delivery. Initial Git status was clean on `AL-53/dedicated-skills-subagents-autopsy-panel`, baseline `85a2af94b5036b0918aaf9a7a89aed3a990f2650`. Implementation commit: `f58657c`; both upstream synchronizations were already current.
 
 ## Domain and adapters
@@ -27,19 +29,20 @@ Moved the completed AL-53 specification to `plan/done`, removed its active index
 Expected Codex root `01a19201-1d81-7ee0-b315-cfd8231ba70e`, with planner `01a19201-59b9-71a0-88f0-43d779a507ee`, coder `01a19203-0bcc-7710-a475-256d28fd64bd`, tester `01a19204-9778-7941-bdde-f2c2962476e5`, and reviewer `01a19206-48d8-7ba3-b573-a6cb1048d940`. Identities and parent links were checked against real rollout metadata. No pre-existing ledger or other-harness sessions existed in the new AL-53 workspace. Final extraction validation follows below.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 8m 9s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 80.2k tokens (40% of 200k healthy ceiling, 0 compactions) | Subagents peak 84.4k (Tester)
+- **Software Development Life Cycle Iterations:** 6
+- **Active Agent Duration:** 26m 59s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 127.6k tokens (64% of 200k healthy ceiling, 0 compactions) | Subagents peak 133.5k (Tester)
 - **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
-- **Test-to-Production Code Ratio:** 0.8:1 (+159 test lines / +203 prod lines)
-- **Code Delivered:** +362 / -5 lines across 6 code files (excluding docs)
-- **Reasoning Effort:** 2,666 reasoning tokens (9.5% of generated output)
-- **Tool Health & Self-Correction:** 111 tool calls (5 self-corrections, 95.5% success rate)
+- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 3 turns) | Planner 1.0, Coder 2.0, Tester 3.0, Reviewer 2.0
+- **Test-to-Production Code Ratio:** 1.2:1 (+229 test lines / +188 prod lines)
+- **Code Delivered:** +417 / -16 lines across 5 code files (excluding docs)
+- **Reasoning Effort:** 7,583 reasoning tokens (12.5% of generated output)
+- **Tool Health & Self-Correction:** 215 tool calls (11 self-corrections, 94.9% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 1 execution anomaly detected (1 WARNING).
+- **Status:** 2 execution anomalies detected (2 WARNING).
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer (4 cycles) — Subagent roles 'tester' and 'reviewer' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer (3 cycles) — Subagent roles 'tester' and 'reviewer' alternated for 3 consecutive cycles.
 
 ### Agentic Execution Metrics
 
@@ -49,18 +52,30 @@ Expected Codex root `01a19201-1d81-7ee0-b315-cfd8231ba70e`, with planner `01a192
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 65,731 | 3,466 | 451,328 | 87.3% | 67.9k | HEALTHY | $0.00 |
-| **coder** | 1 | 42,130 | 4,476 | 717,056 | 94.5% | 68.0k | HEALTHY | $0.00 |
-| **tester** | 1 | 57,683 | 6,216 | 1,424,384 | 96.1% | 84.4k | HEALTHY | $0.00 |
-| **reviewer** | 1 | 59,195 | 2,555 | 801,152 | 93.1% | 83.4k | HEALTHY | $0.00 |
-| **rootagent** | 1 | 82,373 | 8,830 | 4,556,160 | 98.2% | 80.2k | HEALTHY | $0.00 |
-| **Total** | **5** | **307,112** | **25,543** | **7,950,080** | **96.3%** | **84.4k** | **HEALTHY** | **$0.00** |
+| **coder** | 1 | 61,778 | 6,791 | 1,437,696 | 95.9% | 88.4k | HEALTHY | $0.00 |
+| **tester** | 1 | 100,281 | 18,134 | 5,238,656 | 98.1% | 133.5k | ELEVATED | $0.00 |
+| **reviewer** | 1 | 80,369 | 4,316 | 1,469,568 | 94.8% | 105.2k | ELEVATED | $0.00 |
+| **rootagent** | 1 | 129,269 | 20,349 | 12,087,936 | 98.9% | 127.6k | ELEVATED | $0.00 |
+| **Total** | **5** | **437,428** | **53,056** | **20,685,184** | **97.9%** | **133.5k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 5 | 307,112 | 25,543 | 7,950,080 | 96.3% | $0.00 |
-| **Total** | **5** | **307,112** | **25,543** | **7,950,080** | **96.3%** | **$0.00** |
+| **gpt-6.1-sol** | 5 | 437,428 | 53,056 | 20,685,184 | 97.9% | $0.00 |
+| **Total** | **5** | **437,428** | **53,056** | **20,685,184** | **97.9%** | **$0.00** |
 
-Final extraction validated all five expected real Codex sessions, exact root/child parent links, Codex source labels, and nonempty invocation records. No previous sessions required preservation. Extraction snapshots exclude later validation, commit and PR-publication bookkeeping.
+## MGT-1 routine main integration (2026-10-31)
 
-Telemetry limits: the current CLI renders $0.00 for these Codex invocation cost fields; no independently priced billing evidence was available, so actual monetary cost is unverified. The generated rework-loop warning is retained as a heuristic diagnostic; execution followed one coder, tester and reviewer pass without product rework.
+Started clean at `57058521c498b9e376bbab5ec2355adec63d7729`; merged actual main `6bc1064943ae22e1b6586a6d145543c6a9cd23f2` as `62a7963bb421b3111025fc537bcd91d3d6dc5fe9`. F1 resolved with one `focusSession: { id }` contract shared by waterfall and panel actions. ThreadViewer matches main exactly; full source IDs, repeated keyboard activation, focus/expansion/scroll, ticket reset and stale-response protection remain. No Go source/test changes versus main. Main live refresh/reading-anchor and fleet adoption/filter paths are preserved. No speculative AL-43 integration.
+
+Independent review APPROVED the combined navigation snapshot `de2cb6d976b8cf09b8dc3344a88b4653df32609ca7872b1df48bd7e46e0de5f0`; 146 relevant frontend tests, typecheck and lint pass. Existing tests' meaningful assertions were preserved and the badge test extended for combined behavior.
+
+F5 resolved: all completed ticket removals retained; AL-55 moved into Ready with Status Ready and no blockers in index and specification. Its existing remaining scope is unchanged. This metadata records prerequisite completion, not AL-55 implementation.
+
+Required full `make` on integrated commit `62a7963` FAILED: HTTP `TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate` at line 805 timed out awaiting its INITIAL trace, before mutation. All other Go race packages passed, along with frontend production build/typecheck/lint and Go vet. Original log: `/tmp/al53-integration-make.log`. Focused race repeats and HTTP suite subsequently passed, but do not supersede the failure. Tester deterministically proved the unchanged runtime subscription gap: headers flush before initial tree read/subscription; a first broadcast during that gap is not replayed on unchanged ticks. Detailed source/fixture evidence is in TESTING.md. No timeout increase, skip, test synchronization bypass or production Go repair was made in AL-53. Concrete blocker sent to manager for the existing AL-47 owner.
+
+Manager retains the hold; no merge or auto-merge is authorized here. Remaining independent checks and final own-ticket telemetry are recorded at handoff.
+
+Remaining independent verification completed: `make test-frontend build` passed (35 files / 741 tests and four platform builds; `/tmp/al53-integration-remaining.log`). Integrated standalone host binary served fresh index/JS/CSS byte-for-byte; embed input matches frontend output, generated output remains ignored. Product/test diff unchanged from merge `62a7963`; subsequent edits are evidence and telemetry only. Original full-gate failure remains authoritative. Manager confirmed AL-47 follow-up ownership; await explicit verified fix-merge instruction before fetching/integrating/re-running full make. Proof source `/tmp/al53-sse-ordering-proof.go` and log `/tmp/al53-sse-ordering-proof.log` are documented in REVIEW.md.
+
+Held-integration telemetry refreshed using explicit Codex source/root and literal nonce. Validated all five prior session IDs, exact root/child parent links and source labels against the previous ledger; all have nonempty invocation records. No previous sessions or harnesses were lost. Snapshot excludes later publication bookkeeping. CLI monetary totals are not independently verified billing evidence.
