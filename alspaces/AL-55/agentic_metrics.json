@@ -1,0 +1,114 @@
+{
+  "schema_version": 4,
+  "ticket_id": "AL-55",
+  "ticket_title": "Historical source backfill scope reconciliation",
+  "ticket_type": "feat",
+  "started_at": "2026-10-31T14:40:11.637Z",
+  "completed_at": "2026-10-31T14:44:37.318Z",
+  "updated_at": "2026-10-31T14:44:38.615322+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 3
+  },
+  "sessions": [
+    {
+      "id": "01a19267-636b-7d61-85c6-db8d3d3eba77",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T14:40:12.485Z",
+          "completed_at": "2026-10-31T14:44:37.318Z",
+          "active_duration_seconds": 0,
+          "turns": 1,
+          "tokens": {
+            "input": 71226,
+            "output": 6113,
+            "cache_read": 1556992,
+            "reasoning": 636,
+            "peak_context": 72916
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 16,
+          "errors": 3
+        },
+        {
+          "name": "followup_task",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "spawn_agent",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "wait_agent",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a19267-a66a-71b1-a7e8-cf880007ce6b",
+      "parent_id": "01a19267-636b-7d61-85c6-db8d3d3eba77",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T14:40:28.831Z",
+          "completed_at": "2026-10-31T14:43:59.295Z",
+          "active_duration_seconds": 196,
+          "turns": 2,
+          "tokens": {
+            "input": 72132,
+            "output": 6286,
+            "cache_read": 775808,
+            "reasoning": 246,
+            "peak_context": 76163
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 10,
+          "errors": 1
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}
