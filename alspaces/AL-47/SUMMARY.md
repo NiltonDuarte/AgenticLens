@@ -71,3 +71,12 @@ New ticket ledger: no prior AL-47 ledger or other-harness sessions to preserve. 
 ## Final telemetry validation
 
 The built CLI reported five Codex rollouts. The generated ledger was checked against all five expected session IDs, Codex source labels, and four child-to-root links; all matched. There was no pre-existing AL-47 ledger, so no other-harness facts were replaced. Generation used a literal nonce, explicit root ID, source codex, type feat, and ticket title. Generated metrics record 18m 39s active duration, 96.9% cache hit rate, and elevated context health with zero root compactions. The renderer prints $0.00, but the extracted sessions carry no source cost fields; this is unavailable billing evidence, not proof that the run was free. No pricing estimate is asserted. Extraction succeeded without a source error. Raw transcripts remain outside Git.
+
+
+## Approved startup correction preparation (2026-10-31)
+
+User/MGT-1 routed a confirmed AL-47 SSE startup defect from the AL-53 integration gate. This remains iteration 01 and preserves the original feature contract and evidence. New clean fix branch `fix/AL-47-sse-startup-subscription` starts at fetched main `6bc1064943ae22e1b6586a6d145543c6a9cd23f2`. Original feature PR #76 is merged (5da845a); correction delivery requires a new PR.
+
+The original failed AL-53 gate occurred before SQLite mutation: HTTP initial readTrace timed out. `/tmp/al53-sse-ordering-proof.log` reports “Observed concrete service publish first trace while HTTP initial-tree call is paused before Subscribe”; “HTTP stream subscribed afterward: session_tree=1 trace_update=0 stream_error=context deadline exceeded”; “Confirmed subscription ordering gap: unchanged trace is not replayed to the late subscriber”. The planner read this real-service/race proof and verified the matching source ordering; it has not independently rerun the proof. Passing repeated package tests does not erase the reproduced schedule.
+
+Appended plan directs a minimal HTTP subscriber registration before connection flush/initial tree computation, retaining initial-tree-first frames and deferred cleanup. Deterministic regression will hold the initial lookup while the concrete SQLite-backed service broadcasts, then prove the queued trace is delivered. No application or test edits, verification, or telemetry extraction performed during this planning step. Existing ledger identities must be preserved; manager owns merges and is not a telemetry child/root. Full make and independent review are required before the new fix PR is handed back.

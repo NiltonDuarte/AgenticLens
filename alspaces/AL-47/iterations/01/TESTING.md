@@ -27,3 +27,28 @@ Full frontend execution emits existing React act warnings in MetricProgression t
 ## Limits and remaining integration checks
 
 No product defect found. This is DOM/state and controlled anchor arithmetic evidence, not real-browser geometry evidence. No deterministic hook forces a SQLite write exactly between pre-read and post-read revision observations; the implementation's generation checks require independent review in addition to race-detector coverage. No standalone binary smoke check, final rebuilt asset equality check, upstream integration, full post-integration make, or telemetry generation performed by tester; parent owns these steps. Final full frontend suite should include the two added parameter cases.
+
+
+## Startup subscription correction verification (2026-10-31)
+
+This is the approved bounded AL-47 correction on `fix/AL-47-sse-startup-subscription`, based on actual main `6bc1064943ae22e1b6586a6d145543c6a9cd23f2`. Original feature evidence above remains historical evidence; it did not exclude the newly controlled startup schedule. The tester changed only `live_handlers_test.go` and this appended evidence. No application code, ticket acceptance, timeout enlargement, skip, or source-harness change was introduced by the tester.
+
+### Retained failing source evidence
+
+AL-53's original full gate `/tmp/al53-integration-make.log` failed `TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate` at `live_handlers_test.go:805`, initial `readTrace()` before the SQLite UPDATE: `stream ended before trace: context deadline exceeded` (5.31s). Its diagnostic `/tmp/al53-sse-ordering-proof.go` and `/tmp/al53-sse-ordering-proof.log` independently controlled the initial-tree pause with the actual handler, concrete service, and real SQLite. The log records `session_tree=1 trace_update=0 stream_error=context deadline exceeded` after observing the first concrete trace publish before HTTP subscription. These external source artifacts were supplied to AL-47; this tester did not rerun the standalone proof or modify AL-53. Focused passing repeats never erase that failed gate; the original failing run's precise interleaving was not instrumented.
+
+### Deterministic regression and lifecycle ownership
+
+The coder extended the existing real WAL SQLite integration case instead of duplicating its fixture and UPDATE/REST oracles. A forwarding wrapper gates only the HTTP initial tree call; the concrete service owns the actual buffered subscription and broadcast. The test waits for the gated HTTP lookup, starts the real configured poller, independently observes its first concrete trace publication, and requires that HTTP already owns its subscription. After releasing the gate, it verifies initial-tree-first delivery, the queued unchanged trace, the original in-place UPDATE with unchanged counts/timestamps, and matching REST recovery facts. No source mutation rescues the initial trace. The coder reported old production ordering fails at line 867 with `concrete service published initial trace before HTTP stream subscription` (0.09s, exit 1), then restored the fixed source and passed the same regression under `-race -count=10`. That old-order failure is coder evidence, not a second independent tester experiment.
+
+The tester added one coherent table with two lifecycle cases: cancellation while the initial-tree call is gated, and an initial-tree error followed by successful concrete broadcaster delivery and cancellation. Both use real LiveService subscription ownership; the cleanup callback delegates concrete removal/closure before signaling completion. The error case uses a service without a database because it tests snapshot-error ownership rather than source extraction; its recovery event still comes through the actual live poller and broadcaster. The existing SQLite regression independently covers source facts. These cases detect leaked early subscriptions and accidental stream termination after an optional initial snapshot error. Existing SSE framing, concurrent-subscriber, and cancellation peers remain unchanged. No test removals or skips.
+
+### Executed commands and boundaries
+
+Final production-plus-test diff SHA-256: `bd7cdce1e044a17425e92be6eda58a38eff3baa69f0c50b8fdbb1fd396c2637a` from `git diff -- backend/internal/adapters/http/live_handlers.go backend/internal/adapters/http/live_handlers_test.go | sha256sum` against the baseline above.
+
+- `cd backend && go test -race ./internal/adapters/http -run 'TestLiveStreamHandler_InitialTreeSubscriptionCleanup|TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate' -count=10`: passed (2.144s), covering ten executions each of the controlled startup case and both lifecycle subcases. Other HTTP tests are explicitly filtered by this focused invocation, not skipped in source.
+- `cd backend && go test -race ./internal/adapters/http ./internal/adapters/live -count=1`: passed, HTTP 2.097s and live 3.293s; all tests in both packages executed. An earlier affected-package pass also succeeded before the stronger tree-error recovery assertion was added.
+- `git diff --check`: passed.
+
+No production defect remains identified in this tested correction. Parent still owns independent review, actual integrated full `make`, rebuilt embed equality and host standalone verification, final own-root telemetry preserving existing source identities, commits, and a new follow-up PR. PR #76 is already merged and does not deliver this correction. This test proves the bounded initial-tree lookup interleaving and ownership; it does not claim generic late-subscriber replay, unbounded event buffering, deployment verification, or new browser geometry coverage.

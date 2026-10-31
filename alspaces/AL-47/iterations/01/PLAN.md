@@ -45,3 +45,34 @@ Review must record contract alignment, engineering invariants, actual source-gen
 ## Proposed decisions for approval
 
 Use the existing SSE full-snapshot protocol plus one selected-active-session REST recovery loop at 2000 ms, including connected mode so dropped frames can recover. Treat only `running` and `active` as periodically polled, retain stalled/completed traces, and reconcile once on a terminal revision transition. Use source-generation cache invalidation rather than invent a new API revision field. Preserve existing AL-49 ordering/navigation and extend only refresh-state preservation. No product ambiguity requires a separate question beyond approval of these boundaries.
+
+
+## Approved startup subscription correction (2026-10-31)
+
+Source: explicit user/MGT-1 routing after the AL-53 tester reproduced an initial-stream failure. This is a review correction to the existing SSE contract, within iteration 01; no new feature, acceptance expansion, or approval gate. User preapproval covers the bounded production fix and deterministic regression. Preserve the original feature plan, successful verification, ledger source identities, and this failed-gate evidence together. Original PR #76 was merged as 5da845a; it cannot deliver this later correction.
+
+Baseline: fetched origin/main `6bc1064943ae22e1b6586a6d145543c6a9cd23f2`, clean checkout, branch `fix/AL-47-sse-startup-subscription`. This base includes #76, #79, and #75. Manager owns merge sequencing, including gating this follow-up before #77 and #78; ticket owner must not merge, enable auto-merge, or touch release PRs.
+
+### Failure evidence and revised implementation decision
+
+The existing `TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate` can time out on its initial readTrace, before the SQLite UPDATE. Repeated focused passes do not exclude that interleaving. Original AL-53 proof at `/tmp/al53-sse-ordering-proof.log` records:
+
+- “Observed concrete service publish first trace while HTTP initial-tree call is paused before Subscribe”
+- “HTTP stream subscribed afterward: session_tree=1 trace_update=0 stream_error=context deadline exceeded”
+- “Confirmed subscription ordering gap: unchanged trace is not replayed to the late subscriber”
+
+The proof used the actual handler, concrete LiveService, real SQLite, and race instrumentation. This is external source evidence read by the planner, not an independently rerun planner reproduction. Do not edit the AL-53 checkout or import the manager's telemetry root.
+
+Grounding: `backend/internal/adapters/http/live_handlers.go:LiveStreamHandler` currently flushes HTTP 200, computes the initial tree, and only then calls Subscribe. `backend/internal/adapters/live/service.go:Subscribe` immediately registers a bounded buffered channel; broadcast uses nonblocking sends, while broadcastTraceUpdates retains lastTraces and deduplicates unchanged snapshots. The first trace can therefore be consumed by no HTTP subscriber and never emitted again without a source change. The prior assumption that flushing connection headers is enough for a subsequent service start is superseded.
+
+### Bounded correction and ownership
+
+1. Coder owns only `backend/internal/adapters/http/live_handlers.go` and focused regression changes in `backend/internal/adapters/http/live_handlers_test.go`. Register the non-nil service subscriber and install its deferred cleanup before flushing success headers or performing the initial tree lookup. Keep unsupported-stream and nil-service behavior intact. Emit the initial session_tree before draining queued live events, preserving the existing frame names, payload formatting, flush behavior, and initial-tree error semantics. No service replay API, cache change, schema change, frontend change, or unrelated cleanup.
+2. Use the existing read-only concrete LiveService and an isolated real WAL SQLite fixture. A narrow test boundary wrapper may block only the HTTP initial tree call and observe subscription ownership, while delegating actual Subscribe/GetSessionTrace/tree reads to the concrete service. It must not replace broadcasting with a synthetic channel.
+3. Deterministically hold the first HTTP tree call. Start the concrete poller only once the HTTP connection is available. Independently observe a real trace publication through another concrete subscription while the HTTP tree call is still blocked, then release the tree. Assert HTTP subscription was already registered, initial session_tree is the first event, and the queued unchanged trace_update arrives with expected source facts. This schedule must fail on the old ordering; prove that by temporarily restoring only the old production ordering in an isolated check or reversible local diff, then restore the fixed source. Do not increase timeouts, skip the existing test, synchronize a test-only subscription before Client.Do, or wait for a source mutation to rescue the initial event.
+4. Tester owns subsequent test refinements and test evidence under iteration 01. Preserve existing initial-tree failure, unsupported/nil service, stream cancellation/unsubscribe, multiple-subscriber, SSE formatting, and REST recovery cases. Extend coherent recipients only where the startup move creates missing coverage; check cancellation while the initial lookup is blocked because cleanup is now owned earlier. Use bounded contexts/channels, not arbitrary sleeps. Reviewer owns an appended correction verdict in REVIEW.md and audits actual production ownership and the regression's old-code failure.
+5. Parent owns artifact updates, commits, fresh upstream integration, final telemetry, new PR creation/linking, and manager handoff. Use fix commit/telemetry classification for this branch while retaining prior feature evidence. Keep the specification in plan/done and do not resurrect a completed index ticket just for this correction.
+
+### Verification impact and preserved guarantees
+
+Run the controlled regression and affected HTTP/live packages with race instrumentation, including repeated execution of the existing in-place-update test. After committing and integrating the required current origin/main, run full make on the actual branch, recording head/base and any integration differences. Canonical make rebuilds frontend assets and standalone binaries even though this correction has no frontend source change; verify embed-tree equality and host binary version/help. Reuse unchanged frontend behavior evidence proportionally; do not claim new browser geometry coverage. Existing active REST recovery, revision caching/work bounds, reasoning/reading state, nonblocking broadcasts, cancellation, source error visibility, and initial tree-before-event ordering remain acceptance guarantees. Retain the original AL-53 failed gate as evidence even when the corrected deterministic test and full gate pass.

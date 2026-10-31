@@ -88,6 +88,15 @@ func LiveStreamHandler(service LiveServiceInterface) http.HandlerFunc {
 			return
 		}
 
+		// Register before exposing the connection or reading its initial snapshot.
+		// Events published during that read stay queued behind the initial tree.
+		var eventsCh <-chan live.LiveEvent
+		if service != nil {
+			var unsubscribe func()
+			eventsCh, unsubscribe = service.Subscribe()
+			defer unsubscribe()
+		}
+
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
@@ -112,10 +121,6 @@ func LiveStreamHandler(service LiveServiceInterface) http.HandlerFunc {
 				flusher.Flush()
 			}
 		}
-
-		// Subscribe to real-time broadcaster
-		eventsCh, unsubscribe := service.Subscribe()
-		defer unsubscribe()
 
 		for {
 			select {
