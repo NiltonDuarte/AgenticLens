@@ -68,13 +68,6 @@ describe('Theme and Design Tokens', () => {
       expect(poColor).toMatch(hexRegex);
     });
 
-    it('returns deterministic hex colors for models via getModelColor', () => {
-      const hexRegex = /^#[0-9a-fA-F]{6}$/;
-      const modelColor = getModelColor('claude-3-7-sonnet');
-      expect(modelColor).toMatch(hexRegex);
-      expect(getModelColor('claude-3-7-sonnet')).toBe(modelColor);
-    });
-
     it('falls back to slate for empty or whitespace strings', () => {
       expect(hashStringToColor('')).toBe(THEME_COLORS.slate);
       expect(hashStringToColor('   ')).toBe(THEME_COLORS.slate);
@@ -83,6 +76,7 @@ describe('Theme and Design Tokens', () => {
     it('handles special characters and complex model tags deterministically', () => {
       const hexRegex = /^#[0-9a-fA-F]{6}$/;
       const complexStrings = [
+        'claude-3-7-sonnet',
         'security/auditor_v2',
         'meta-llama/llama-3.3-70b-instruct:free',
         'deepseek-ai/deepseek-r1-distill-qwen-32b',

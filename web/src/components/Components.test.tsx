@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { EmptyState } from './EmptyState';
 import { KPICard } from './KPICard';
 import { DistributionCard } from './DistributionCard';
-import { InfoTooltip, InfoIcon } from './InfoTooltip';
+import { InfoTooltip } from './InfoTooltip';
 import { Navbar } from './Navbar';
 import { TrendChart } from './TrendChart';
 import { SaturationBar } from './SaturationBar';
@@ -80,22 +80,6 @@ describe('Presentation Components Boundary Tests', () => {
   });
 
   describe('DistributionCard Component', () => {
-    it('handles zero total cost without divide-by-zero distortion', () => {
-      render(
-        <DistributionCard
-          title="Role Cost Distribution"
-          items={{ coder: 0, tester: 0 }}
-          totalCostUSD={0}
-        />
-      );
-
-      expect(screen.getByText('Role Cost Distribution')).toBeInTheDocument();
-      expect(screen.getByText('coder')).toBeInTheDocument();
-      expect(screen.getByText('tester')).toBeInTheDocument();
-      const zeroPcts = screen.getAllByText('(0.0%)');
-      expect(zeroPcts.length).toBeGreaterThanOrEqual(2);
-    });
-
     it('renders empty message when items dictionary is empty', () => {
       render(
         <DistributionCard
@@ -164,40 +148,12 @@ describe('Presentation Components Boundary Tests', () => {
         />
       );
 
+      expect(screen.getByText('Role Cost Distribution')).toBeInTheDocument();
       expect(screen.getByText('advisor')).toBeInTheDocument();
       expect(screen.getByText('po')).toBeInTheDocument();
       const zeroPcts = screen.getAllByText('(0.0%)');
       expect(zeroPcts.length).toBe(2);
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
-    });
-
-    it('renders empty notice when items dictionary is empty', () => {
-      render(
-        <DistributionCard
-          title="Role Cost Distribution"
-          items={{}}
-          totalCostUSD={0}
-        />
-      );
-
-      expect(screen.getByText('No distribution data recorded')).toBeInTheDocument();
-    });
-    it('renders InfoTooltip when tooltip prop is provided', () => {
-      render(
-        <DistributionCard
-          title="Role Breakdown"
-          items={{ coder: 10 }}
-          totalCostUSD={10}
-          tooltip="Detailed explanation of role inference spend"
-        />
-      );
-
-      expect(screen.getByRole('tooltip')).toHaveTextContent(
-        'Detailed explanation of role inference spend'
-      );
-      expect(
-        screen.getByRole('button', { name: 'Information about Role Breakdown' })
-      ).toBeInTheDocument();
     });
 
     it('handles single item with 100% cost allocation cleanly', () => {
@@ -206,23 +162,36 @@ describe('Presentation Components Boundary Tests', () => {
           title="Single Model"
           items={{ 'gemini-3.8-flash': 50.0 }}
           totalCostUSD={50.0}
+          tooltip="Detailed explanation of role inference spend"
         />
       );
 
       expect(screen.getByText('gemini-3.8-flash')).toBeInTheDocument();
       expect(screen.getByText('(100.0%)')).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Detailed explanation of role inference spend'
+      );
+      expect(screen.getByRole('button', { name: 'Information about Single Model' })).toBeInTheDocument();
     });
   });
 
   describe('InfoTooltip Component', () => {
     it('renders trigger button with accessible aria attributes and role="tooltip"', () => {
-      render(<InfoTooltip content="Helpful information" ariaLabel="Help details" />);
+      const { container, rerender } = render(
+        <InfoTooltip content="Helpful information" ariaLabel="Help details" className="header-tip-custom" placement="top" />
+      );
       const button = screen.getByRole('button', { name: 'Help details' });
       expect(button).toBeInTheDocument();
       const tooltip = screen.getByRole('tooltip');
       expect(tooltip).toBeInTheDocument();
       expect(tooltip).toHaveTextContent('Helpful information');
       expect(button).toHaveAttribute('aria-describedby', tooltip.id);
+      expect(container.querySelector('.info-tooltip-container')).toHaveClass('info-tooltip-container', 'header-tip-custom');
+      expect(tooltip).toHaveClass('placement-top');
+      for (const placement of ['bottom', 'left', 'right'] as const) {
+        rerender(<InfoTooltip content="Helpful information" ariaLabel="Help details" className="header-tip-custom" placement={placement} />);
+        expect(screen.getByRole('tooltip')).toHaveClass(`placement-${placement}`);
+      }
     });
 
     it('uses default aria-label when not provided', () => {
@@ -259,6 +228,11 @@ describe('Presentation Components Boundary Tests', () => {
       fireEvent.focus(button);
       expect(tooltip).toHaveClass('is-visible');
 
+      for (const key of ['Enter', 'Tab', 'ArrowDown', ' ']) {
+        fireEvent.keyDown(button, { key });
+        expect(tooltip).toHaveClass('is-visible');
+      }
+
       fireEvent.keyDown(button, { key: 'Escape' });
       expect(tooltip).not.toHaveClass('is-visible');
 
@@ -267,49 +241,6 @@ describe('Presentation Components Boundary Tests', () => {
 
       fireEvent.blur(button);
       expect(tooltip).not.toHaveClass('is-visible');
-    });
-
-    it('retains visibility when non-Escape keys are pressed while focused', () => {
-      render(<InfoTooltip content="Key check" />);
-      const button = screen.getByRole('button', { name: 'Information' });
-      const tooltip = screen.getByRole('tooltip');
-
-      fireEvent.focus(button);
-      expect(tooltip).toHaveClass('is-visible');
-
-      fireEvent.keyDown(button, { key: 'Enter' });
-      expect(tooltip).toHaveClass('is-visible');
-
-      fireEvent.keyDown(button, { key: 'Tab' });
-      expect(tooltip).toHaveClass('is-visible');
-
-      fireEvent.keyDown(button, { key: 'ArrowDown' });
-      expect(tooltip).toHaveClass('is-visible');
-
-      fireEvent.keyDown(button, { key: ' ' });
-      expect(tooltip).toHaveClass('is-visible');
-    });
-
-    it('applies custom className to container element', () => {
-      const { container } = render(
-        <InfoTooltip content="Class test" className="header-tip-custom" />
-      );
-      const wrapper = container.querySelector('.info-tooltip-container');
-      expect(wrapper).toHaveClass('info-tooltip-container', 'header-tip-custom');
-    });
-
-    it('applies custom placement classes correctly', () => {
-      const { rerender } = render(<InfoTooltip content="Top tip" placement="top" />);
-      expect(screen.getByRole('tooltip')).toHaveClass('placement-top');
-
-      rerender(<InfoTooltip content="Bottom tip" placement="bottom" />);
-      expect(screen.getByRole('tooltip')).toHaveClass('placement-bottom');
-
-      rerender(<InfoTooltip content="Left tip" placement="left" />);
-      expect(screen.getByRole('tooltip')).toHaveClass('placement-left');
-
-      rerender(<InfoTooltip content="Right tip" placement="right" />);
-      expect(screen.getByRole('tooltip')).toHaveClass('placement-right');
     });
 
     it('prevents click event propagation to parent elements', () => {
@@ -323,10 +254,6 @@ describe('Presentation Components Boundary Tests', () => {
       fireEvent.click(button);
       expect(parentClick).not.toHaveBeenCalled();
     });
-
-    it('exports InfoIcon alias identically', () => {
-      expect(InfoIcon).toBe(InfoTooltip);
-    });
   });
 
   describe('Navbar Component', () => {
@@ -335,26 +262,6 @@ describe('Presentation Components Boundary Tests', () => {
       commit: 'unknown',
       build_date: 'unknown',
     };
-
-    it('renders workspace pill when workspaces directory is configured', () => {
-      render(
-        <Navbar
-          activeTab="overview"
-          versionInfo={dummyVersion}
-          projectName=""
-          projectConfig={{
-            project_name: 'TestProject',
-            prefixes: [],
-            workspaces_dir: 'custom/workspaces',
-            role_order: [],
-            version: 'v1.0.0',
-          }}
-        />
-      );
-      expect(screen.getByText('custom/workspaces')).toBeInTheDocument();
-      expect(screen.queryByText('Live Server')).not.toBeInTheDocument();
-      expect(screen.queryByText('Mock Mode')).not.toBeInTheDocument();
-    });
 
     it('renders loading state and does not default to workspaces when configuration is missing or empty', () => {
       render(<Navbar activeTab="overview" versionInfo={dummyVersion} projectName="" />);
@@ -390,91 +297,8 @@ describe('Presentation Components Boundary Tests', () => {
     });
 
 
-    it('renders InfoTooltip when tooltip prop is provided in both populated and empty states', () => {
-      const { rerender } = render(
-        <TrendChart
-          title="Spend Velocity"
-          data={[{ date: '2026-10-18', val: 10 }]}
-          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
-          tooltip="Spend velocity trajectory explanation"
-        />
-      );
-
-      expect(
-        screen.getByRole('button', { name: 'Information about Spend Velocity' })
-      ).toBeInTheDocument();
-      expect(screen.getByRole('tooltip')).toHaveTextContent('Spend velocity trajectory explanation');
-
-      // Empty state
-      rerender(
-        <TrendChart
-          title="Spend Velocity"
-          data={[]}
-          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
-          tooltip="Spend velocity trajectory explanation"
-        />
-      );
-
-      expect(
-        screen.getByRole('button', { name: 'Information about Spend Velocity' })
-      ).toBeInTheDocument();
-      expect(screen.getByRole('tooltip')).toHaveTextContent('Spend velocity trajectory explanation');
-    });
-
-    it('does not render InfoTooltip when tooltip prop is omitted or empty in populated and empty states', () => {
-      const { rerender } = render(
-        <TrendChart
-          title="Unannotated Velocity"
-          data={[{ date: '2026-10-18', val: 10 }]}
-          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
-        />
-      );
-
-      expect(
-        screen.queryByRole('button', { name: 'Information about Unannotated Velocity' })
-      ).not.toBeInTheDocument();
-
-      // Empty state without tooltip
-      rerender(
-        <TrendChart
-          title="Unannotated Velocity"
-          data={[]}
-          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
-        />
-      );
-      expect(
-        screen.queryByRole('button', { name: 'Information about Unannotated Velocity' })
-      ).not.toBeInTheDocument();
-
-      // Populated state with empty string tooltip
-      rerender(
-        <TrendChart
-          title="Unannotated Velocity"
-          data={[{ date: '2026-10-18', val: 10 }]}
-          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
-          tooltip=""
-        />
-      );
-      expect(
-        screen.queryByRole('button', { name: 'Information about Unannotated Velocity' })
-      ).not.toBeInTheDocument();
-
-      // Empty state with empty string tooltip
-      rerender(
-        <TrendChart
-          title="Unannotated Velocity"
-          data={[]}
-          series={[{ key: 'val', label: 'Value', color: '#3b82f6' }]}
-          tooltip=""
-        />
-      );
-      expect(
-        screen.queryByRole('button', { name: 'Information about Unannotated Velocity' })
-      ).not.toBeInTheDocument();
-    });
-
     it('handles hover and keyboard focus states on TrendChart InfoTooltip trigger', () => {
-      render(
+      const { rerender } = render(
         <TrendChart
           title="Interactive Velocity"
           data={[{ date: '2026-10-18', val: 10 }]}
@@ -488,6 +312,7 @@ describe('Presentation Components Boundary Tests', () => {
       });
       const bubble = screen.getByRole('tooltip');
 
+      expect(bubble).toHaveTextContent('Detailed explanation of interactive velocity');
       expect(bubble).not.toHaveClass('is-visible');
 
       // Mouse hover
@@ -504,6 +329,20 @@ describe('Presentation Components Boundary Tests', () => {
       // Escape key dismiss
       fireEvent.keyDown(trigger, { key: 'Escape' });
       expect(bubble).not.toHaveClass('is-visible');
+      const chartProps = {
+        title: 'Interactive Velocity',
+        series: [{ key: 'val', label: 'Value', color: '#3b82f6' }],
+      };
+      rerender(<TrendChart {...chartProps} data={[]} tooltip="Detailed explanation of interactive velocity" />);
+      expect(screen.getByRole('button', { name: 'Information about Interactive Velocity' })).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Detailed explanation of interactive velocity');
+
+      for (const data of [[{ date: '2026-10-18', val: 10 }], []]) {
+        rerender(<TrendChart {...chartProps} data={data} />);
+        expect(screen.queryByRole('button', { name: 'Information about Interactive Velocity' })).not.toBeInTheDocument();
+        rerender(<TrendChart {...chartProps} data={data} tooltip="" />);
+        expect(screen.queryByRole('button', { name: 'Information about Interactive Velocity' })).not.toBeInTheDocument();
+      }
     });
 
     it('formats x-axis labels using hourly granularity when provided', () => {
@@ -553,20 +392,18 @@ describe('Presentation Components Boundary Tests', () => {
 
   describe('SaturationBar Component', () => {
     it('renders healthy saturation status and 200k ceiling', () => {
-      render(
-        <SaturationBar
-          contextHealth={{
-            healthy_ceiling_tokens: 200000,
-            status: 'HEALTHY',
-            root_peak_tokens: 50000,
-            root_saturation_pct: 25.0,
-            subagents_peak_tokens: 30000,
-            subagents_peak_role: 'coder',
-            compactions: 0,
-            peak_by_role: { orchestrator: 50000, coder: 30000 },
-          }}
-          healthyCeilingTokens={200000}
-        />
+      const contextHealth = {
+        healthy_ceiling_tokens: 200000,
+        status: 'HEALTHY',
+        root_peak_tokens: 50000,
+        root_saturation_pct: 25.0,
+        subagents_peak_tokens: 30000,
+        subagents_peak_role: 'coder',
+        compactions: 0,
+        peak_by_role: { orchestrator: 50000, coder: 30000 },
+      } as const;
+      const { rerender } = render(
+        <SaturationBar contextHealth={contextHealth} healthyCeilingTokens={200000} />
       );
 
       expect(screen.getByText('HEALTHY')).toBeInTheDocument();
@@ -581,25 +418,13 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.getByRole('tooltip')).toHaveTextContent(
         'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.'
       );
-    });
-
-    it('renders custom tooltip prop on SaturationBar when provided', () => {
-      render(
+      rerender(
         <SaturationBar
-          contextHealth={{
-            healthy_ceiling_tokens: 200000,
-            status: 'HEALTHY',
-            root_peak_tokens: 10000,
-            root_saturation_pct: 5.0,
-            subagents_peak_tokens: 5000,
-            subagents_peak_role: 'none',
-            compactions: 0,
-            peak_by_role: {},
-          }}
+          contextHealth={contextHealth}
+          healthyCeilingTokens={200000}
           tooltip="Custom saturation analysis description"
         />
       );
-
       expect(screen.getByRole('tooltip')).toHaveTextContent(
         'Custom saturation analysis description'
       );
@@ -767,9 +592,9 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.getByText('gemini-3.8-flash')).toBeInTheDocument();
     });
 
-    it('renders InfoTooltip on section header and all 10 column headers of thread models table', () => {
+    it('clicking column header InfoTooltip triggers stops propagation and does not toggle thread details', () => {
       const dummyThread: ThreadExecutionRecord = {
-        session_id: 'ses-root-02',
+        session_id: 'ses-root-03',
         user: 'dev',
         compactions: 0,
         roles: [
@@ -778,13 +603,13 @@ describe('Presentation Components Boundary Tests', () => {
             models: [
               {
                 model: 'claude-3-5-sonnet',
-                invocations: 2,
-                input_tokens: 2000,
-                output_tokens: 400,
-                cache_read_tokens: 1000,
-                cache_hit_rate_pct: 33.3,
-                cost_usd: 1.25,
-                peak_context_tokens: 3500,
+                invocations: 1,
+                input_tokens: 1000,
+                output_tokens: 200,
+                cache_read_tokens: 500,
+                cache_hit_rate_pct: 50.0,
+                cost_usd: 0.5,
+                peak_context_tokens: 1500,
                 context_health: 'HEALTHY',
               },
             ],
@@ -793,6 +618,8 @@ describe('Presentation Components Boundary Tests', () => {
       };
 
       render(<ThreadViewer threads={[dummyThread]} />);
+
+      expect(screen.getByText('claude-3-5-sonnet')).toBeInTheDocument();
 
       // Section header tooltip
       expect(
@@ -834,36 +661,6 @@ describe('Presentation Components Boundary Tests', () => {
         expect(bubble).toHaveClass('placement-bottom');
         expect(bubble).toHaveTextContent(col.content);
       }
-    });
-
-    it('clicking column header InfoTooltip triggers stops propagation and does not toggle thread details', () => {
-      const dummyThread: ThreadExecutionRecord = {
-        session_id: 'ses-root-03',
-        user: 'dev',
-        compactions: 0,
-        roles: [
-          {
-            role: 'orchestrator',
-            models: [
-              {
-                model: 'claude-3-5-sonnet',
-                invocations: 1,
-                input_tokens: 1000,
-                output_tokens: 200,
-                cache_read_tokens: 500,
-                cache_hit_rate_pct: 50.0,
-                cost_usd: 0.5,
-                peak_context_tokens: 1500,
-                context_health: 'HEALTHY',
-              },
-            ],
-          },
-        ],
-      };
-
-      render(<ThreadViewer threads={[dummyThread]} />);
-
-      expect(screen.getByText('claude-3-5-sonnet')).toBeInTheDocument();
 
       // Click column header tooltip button
       const roleTooltipBtn = screen.getByRole('button', { name: 'Information about Role' });

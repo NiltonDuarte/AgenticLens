@@ -41,6 +41,42 @@ describe('MetricProgression View Component', () => {
         expect(screen.getByText('Delivered Code Line Churn & Net Growth')).toBeInTheDocument();
         // Ceiling reference line
         expect(screen.getAllByText(/200k ceiling/i).length).toBeGreaterThan(0);
+        // Chart 1
+        expect(screen.getByRole('button', {
+            name: 'Information about Financial Spend & Cumulative Trajectory ($ USD)',
+        })).toBeInTheDocument();
+        expect(screen.getByText('Historical model inference spend per time period alongside cumulative trajectory in US dollars.')).toBeInTheDocument();
+        // Chart 2
+        expect(screen.getByRole('button', {
+            name: 'Information about Token Volume Distribution',
+        })).toBeInTheDocument();
+        expect(screen.getByText('Distribution of token throughput across input prompts, output completions, and key-value prompt cache reads.')).toBeInTheDocument();
+        // Chart 3
+        expect(screen.getByRole('button', {
+            name: 'Information about Prompt Cache Hit Rate Trajectory (%)',
+        })).toBeInTheDocument();
+        expect(screen.getByText('Percentage of prompt tokens served from prompt cache per bucket against baseline (50%) and target (80%) thresholds.')).toBeInTheDocument();
+        // Chart 4
+        expect(screen.getByRole('button', {
+            name: 'Information about Delivered Code Line Churn & Net Growth',
+        })).toBeInTheDocument();
+        expect(screen.getByText('Volume of production and test code lines added, deleted, and net code growth delivered per time bucket.')).toBeInTheDocument();
+        // Chart 5
+        expect(screen.getByRole('button', {
+            name: 'Information about Peak Context Window Saturation vs Ceiling',
+        })).toBeInTheDocument();
+        expect(screen.getByText('Peak active context tokens per time bucket measured against the standard 200,000 token healthy context ceiling.')).toBeInTheDocument();
+        const trigger = screen.getByRole('button', {
+            name: 'Information about Token Volume Distribution',
+        });
+        const tooltipId = trigger.getAttribute('aria-describedby');
+        expect(tooltipId).toBeTruthy();
+        const bubble = document.getElementById(tooltipId!);
+        expect(bubble).not.toHaveClass('is-visible');
+        fireEvent.focus(trigger);
+        expect(bubble).toHaveClass('is-visible');
+        fireEvent.blur(trigger);
+        expect(bubble).not.toHaveClass('is-visible');
     });
     it('renders SVG chart elements including lines, paths, bars, and interactive hover tooltips', async () => {
         const ledgers = Object.values(mockAgenticMetricsLedgers);
@@ -141,30 +177,6 @@ describe('MetricProgression View Component', () => {
             expect(screen.getByText(/no telemetry invocations or deliverable code records found within the selected time window/i)).toBeInTheDocument();
         });
     });
-    it('toggles granularity between hourly, daily, and weekly', async () => {
-        const ledgers = Object.values(mockAgenticMetricsLedgers);
-        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
-            data: ledgers,
-        });
-        render(<MetricProgression />);
-        await waitFor(() => {
-            expect(screen.getByText('Total Invocations')).toBeInTheDocument();
-        });
-        // Verify Cumulative button is absent
-        expect(screen.queryByRole('button', { name: /^cumulative$/i })).toBeNull();
-        // Toggle to Hourly
-        const hourlyBtn = screen.getByRole('button', { name: /^hourly$/i });
-        fireEvent.click(hourlyBtn);
-        expect(hourlyBtn).toHaveClass('active');
-        // Toggle to Weekly
-        const weeklyBtn = screen.getByRole('button', { name: /^weekly$/i });
-        fireEvent.click(weeklyBtn);
-        expect(weeklyBtn).toHaveClass('active');
-        // Toggle back to Daily
-        const dailyBtn = screen.getByRole('button', { name: /^daily$/i });
-        fireEvent.click(dailyBtn);
-        expect(dailyBtn).toHaveClass('active');
-    });
     it('filters data when selecting time window presets', async () => {
         const ledgers = Object.values(mockAgenticMetricsLedgers);
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
@@ -187,15 +199,6 @@ describe('MetricProgression View Component', () => {
         fireEvent.click(btnLifetime);
         expect(btnLifetime).toHaveClass('active');
     });
-    it('renders zero telemetry state when no ledgers exist', async () => {
-        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
-            data: [],
-        });
-        render(<MetricProgression />);
-        await waitFor(() => {
-            expect(screen.getByText(/zero progression telemetry available/i)).toBeInTheDocument();
-        });
-    });
     it('renders error banner and allows retry when API call fails', async () => {
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockRejectedValueOnce(new Error('Progression network error'));
         render(<MetricProgression />);
@@ -210,62 +213,6 @@ describe('MetricProgression View Component', () => {
         await waitFor(() => {
             expect(screen.getByText('Total Invocations')).toBeInTheDocument();
         });
-    });
-    it('renders InfoTooltip triggers and explanations across all five trend charts', async () => {
-        const ledgers = Object.values(mockAgenticMetricsLedgers);
-        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
-            data: ledgers,
-        });
-        render(<MetricProgression />);
-        await waitFor(() => {
-            expect(screen.getByText('Total Invocations')).toBeInTheDocument();
-        });
-        // Chart 1
-        expect(screen.getByRole('button', {
-            name: 'Information about Financial Spend & Cumulative Trajectory ($ USD)',
-        })).toBeInTheDocument();
-        expect(screen.getByText('Historical model inference spend per time period alongside cumulative trajectory in US dollars.')).toBeInTheDocument();
-        // Chart 2
-        expect(screen.getByRole('button', {
-            name: 'Information about Token Volume Distribution',
-        })).toBeInTheDocument();
-        expect(screen.getByText('Distribution of token throughput across input prompts, output completions, and key-value prompt cache reads.')).toBeInTheDocument();
-        // Chart 3
-        expect(screen.getByRole('button', {
-            name: 'Information about Prompt Cache Hit Rate Trajectory (%)',
-        })).toBeInTheDocument();
-        expect(screen.getByText('Percentage of prompt tokens served from prompt cache per bucket against baseline (50%) and target (80%) thresholds.')).toBeInTheDocument();
-        // Chart 4
-        expect(screen.getByRole('button', {
-            name: 'Information about Delivered Code Line Churn & Net Growth',
-        })).toBeInTheDocument();
-        expect(screen.getByText('Volume of production and test code lines added, deleted, and net code growth delivered per time bucket.')).toBeInTheDocument();
-        // Chart 5
-        expect(screen.getByRole('button', {
-            name: 'Information about Peak Context Window Saturation vs Ceiling',
-        })).toBeInTheDocument();
-        expect(screen.getByText('Peak active context tokens per time bucket measured against the standard 200,000 token healthy context ceiling.')).toBeInTheDocument();
-    });
-    it('handles focus and hover transitions on trend chart tooltips in MetricProgression', async () => {
-        const ledgers = Object.values(mockAgenticMetricsLedgers);
-        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
-            data: ledgers,
-        });
-        render(<MetricProgression />);
-        await waitFor(() => {
-            expect(screen.getByText('Total Invocations')).toBeInTheDocument();
-        });
-        const trigger = screen.getByRole('button', {
-            name: 'Information about Token Volume Distribution',
-        });
-        const tooltipId = trigger.getAttribute('aria-describedby');
-        expect(tooltipId).toBeTruthy();
-        const bubble = document.getElementById(tooltipId!);
-        expect(bubble).not.toHaveClass('is-visible');
-        fireEvent.focus(trigger);
-        expect(bubble).toHaveClass('is-visible');
-        fireEvent.blur(trigger);
-        expect(bubble).not.toHaveClass('is-visible');
     });
     it('filters progression data and updates KPIs when ticket type and prefix filters change', async () => {
         const ledgers = Object.values(mockAgenticMetricsLedgers);

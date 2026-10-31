@@ -575,6 +575,12 @@ func TestEnumsParsing(t *testing.T) {
 	if domain.ParseLedgerSortField("cost") != domain.SortFieldCost {
 		t.Errorf("expected SortFieldCost")
 	}
+	if domain.ParseLedgerSortField("ticket_id") != domain.SortFieldTicketID {
+		t.Errorf("expected SortFieldTicketID, got %v", domain.ParseLedgerSortField("ticket_id"))
+	}
+	if domain.ParseLedgerSortField("completed_at") != domain.SortFieldCompletedAt {
+		t.Errorf("expected SortFieldCompletedAt, got %v", domain.ParseLedgerSortField("completed_at"))
+	}
 	if domain.ParseLedgerSortField("unknown") != domain.SortFieldUpdatedAt {
 		t.Errorf("expected SortFieldUpdatedAt for unknown")
 	}
@@ -1385,73 +1391,6 @@ func TestSortLedgers_TicketID(t *testing.T) {
 				asc[0].UpdatedAt, asc[1].UpdatedAt, asc[2].UpdatedAt)
 		}
 	})
-}
-
-func TestParseLedgerSortField_TicketID(t *testing.T) {
-	t.Parallel()
-	if domain.ParseLedgerSortField("ticket_id") != domain.SortFieldTicketID {
-		t.Errorf("expected SortFieldTicketID, got %v", domain.ParseLedgerSortField("ticket_id"))
-	}
-}
-
-func TestOrderRoles(t *testing.T) {
-	t.Parallel()
-	input := []string{"advisor", "tester", "researcher", "orchestrator", "coder", "advisor"}
-
-	// With custom order:
-	customOrder := []string{"orchestrator", "coder", "tester"}
-	gotCustom := domain.OrderRoles(input, customOrder)
-	expectedCustom := []string{"orchestrator", "coder", "tester", "advisor", "researcher"}
-	if len(gotCustom) != len(expectedCustom) {
-		t.Fatalf("expected len %d, got %d: %v", len(expectedCustom), len(gotCustom), gotCustom)
-	}
-	for i := range expectedCustom {
-		if gotCustom[i] != expectedCustom[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expectedCustom[i], gotCustom[i])
-		}
-	}
-
-	// Default alphabetical sort without custom order:
-	gotAlpha := domain.OrderRoles(input)
-	expectedAlpha := []string{"advisor", "coder", "orchestrator", "researcher", "tester"}
-	if len(gotAlpha) != len(expectedAlpha) {
-		t.Fatalf("expected len %d, got %d: %v", len(expectedAlpha), len(gotAlpha), gotAlpha)
-	}
-	for i := range expectedAlpha {
-		if gotAlpha[i] != expectedAlpha[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expectedAlpha[i], gotAlpha[i])
-		}
-	}
-}
-
-func TestOrderSubagentRoles(t *testing.T) {
-	t.Parallel()
-	input := []string{"advisor", "reviewer", "orchestrator", "general", "build", "root", "po", "planner", "advisor", "General", "BUILD"}
-
-	// With custom order:
-	customOrder := []string{"planner", "reviewer"}
-	gotCustom := domain.OrderSubagentRoles(input, customOrder)
-	expectedCustom := []string{"planner", "reviewer", "BUILD", "General", "advisor", "build", "general", "orchestrator", "po", "root"}
-	if len(gotCustom) != len(expectedCustom) {
-		t.Fatalf("expected len %d, got %d: %v", len(expectedCustom), len(gotCustom), gotCustom)
-	}
-	for i := range expectedCustom {
-		if gotCustom[i] != expectedCustom[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expectedCustom[i], gotCustom[i])
-		}
-	}
-
-	// Default alphabetical sort without custom order:
-	gotAlpha := domain.OrderSubagentRoles(input)
-	expectedAlpha := []string{"BUILD", "General", "advisor", "build", "general", "orchestrator", "planner", "po", "reviewer", "root"}
-	if len(gotAlpha) != len(expectedAlpha) {
-		t.Fatalf("expected len %d, got %d: %v", len(expectedAlpha), len(gotAlpha), gotAlpha)
-	}
-	for i := range expectedAlpha {
-		if gotAlpha[i] != expectedAlpha[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expectedAlpha[i], gotAlpha[i])
-		}
-	}
 }
 
 func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
@@ -2698,13 +2637,6 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			})
 		}
 	})
-}
-
-func TestParseLedgerSortField_CompletedAt(t *testing.T) {
-	t.Parallel()
-	if domain.ParseLedgerSortField("completed_at") != domain.SortFieldCompletedAt {
-		t.Errorf("expected SortFieldCompletedAt, got %v", domain.ParseLedgerSortField("completed_at"))
-	}
 }
 
 func TestGetLedgerCompletionDate(t *testing.T) {

@@ -209,3 +209,31 @@ Final iteration 04 telemetry validated: all nine actual Codex source sessions pr
 User requested score_review sorted by score. TEST_SCORES.md now orders all 1,197 entries numerically from 0 through 10, with path/line tie-breakers; SCORE_REVIEW.md links each score group in ascending order. Read-back multiset comparison confirms every source identity, title, score, confidence label, reason and evidence unchanged. No test/application changes. `git diff --check` and numeric ordering checks passed; existing full make results remain valid for unchanged source.
 
 Score-sort delivery: main already up to date; no backend/frontend/Makefile diff from the previously verified a10c61c implementation, so prior full make evidence is reused. Final telemetry preserves all nine Codex root/child source sessions, correct parent IDs and nonempty invocations; type docs.
+
+## Iteration 05: audit and consolidate scores 0-4
+
+User asks whether all tests scoring 4 or below can confidently be deleted or merged into existing tests. Initial status clean at `0c4d1fea90b8ec259e052c484361299435a7b84c`; PR #72 open. The current numeric catalog contains 47 such declarations across 15 test paths (seven Go, 40 TypeScript).
+
+Scope: assess each candidate against actual assertions and existing coverage, delete proven redundancy and consolidate meaningful small assertions into a natural existing test, preserving important behavior and compiler contracts. A score alone is not a deletion proof; retain any case lacking a defensible consolidation. No production or runtime behavior changes, new standalone replacement tests, or unrelated giant test bodies. Planner records a complete candidate-to-recipient/coverage map before coding. This user request authorizes the bounded consolidation; no repeated approval is needed within those boundaries.
+
+### Iteration 05 confidence audit outcome
+
+Planner inspected all 47 candidate bodies and existing peers. The ledger in iterations/05/CANDIDATES.md identifies 7 proven duplicates/overconstraints for deletion, 35 donors whose useful assertions transfer into named existing tests, and 5 retained independent guards. The expected declaration reduction is 42 (five Go, 37 TypeScript), yielding 1,155 declarations and 712 expanded frontend cases if all selected transfers verify.
+
+Retained at unchanged scores: TestAgentRole_FallbackConstants (2), TestCanonicalTicketTypes (4), all-theme-token hex validity (3), ThreadViewer empty-collection rendering (4), and the substantial view-owned TicketDeepDive tooltip-wiring contract (4). Their independent coverage lacks a clean equivalent recipient; they are not raised above the threshold to manufacture a complete sweep.
+
+The two coders own disjoint sets of six and nine test paths. Meaningful layout source assertions, type narrowing and metadata/tooltip/accessibility oracles must survive their merges. A lower wrapper count alone is not a confidence argument, and no mutation-equivalence proof is claimed.
+
+### Iteration 05 implementation and independent proof
+
+- Executed all 42 selected donor removals: seven duplicates/overconstraints deleted and 35 donors consolidated into already-existing recipients. No new/renamed top-level test, helper suite or parameterized declaration.
+- Fifteen authorized test paths changed; 231 lines added, 765 deleted, 534 net test lines removed. Cumulative REV-4 reduction: 98 fewer declarations and 2,430 net test lines, with preserved contracts distinguished from discarded redundant wrappers.
+- Current declarations: 494 Go + 661 TypeScript = 1,155. Frontend runtime: 712 cases across 34 actual files, all passed with zero failed/pending/todo. Global TypeScript typecheck/lint passed.
+- Independent AST audit: exactly five Go and 37 TypeScript donors removed; only 23 existing receiver bodies changed (two Go, 21 TypeScript), all other bodies unchanged. All 101 helper/TestMain function bodies and all 25 parameterized TS declarations unchanged. Existing negative compiler test bodies unchanged.
+- All 35 merge obligations verified. Four retained guards are byte-identical; L46 retains its 33 original expect statements and gains the explicitly authorized related L47 interactions. The two CSS guard fragments are byte-identical (671 and 1,168 bytes) in their recipient, read once.
+- Coder A focused domain race checks passed; its three affected TS files passed 119 cases. Coder B nine-file run passed 254 cases. Tester separately executed strict typecheck/lint and complete frontend JSON verification. Existing React act warnings came from the unchanged MetricProgression time-window preset case.
+- Test diff SHA-256: `31938d3409d37c6ef17fcb1f8e6cd4308556bd74971f24efbcffa6a693c60fb0`. Canonical current source fingerprint: `3bf8a20521a85c8aa1b55ac1bcb5c022ce82fa7a4f6868dd681b66a1654d1908`. The canonical body fingerprint differs intentionally from the raw JSON snapshot file hash; tester reparsed baseline directly from Git.
+- Numeric catalog refreshed and sorted: 1,155 source identities, same numeric scores for every survivor, only five still scoring 0-4. Confidence labels reflect direct receiver/retained-guard audit (91 Focused, 1,064 Screened); no score promotion clears the threshold.
+- No production, runtime, style, workflow, Makefile, schema, dependency or fixture-data changes. No mutation-equivalence claim or guarantee about all possible defects.
+
+Reviewer APPROVED iteration 05 with no blocking findings; independently audited all 47 candidate outcomes and current catalog. Nonblocking stale donor wording was corrected to identify the removed DistributionCard/model smoke cases as historical. No test-diff changes after the approved semantic audit.

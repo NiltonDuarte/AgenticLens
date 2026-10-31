@@ -143,6 +143,7 @@ func TestOrderSubagentRoles_OrderingAndPreservation(t *testing.T) {
 		input       []string
 		customOrder []string
 		expected    []string
+		defaultWant []string
 	}{
 		{
 			name:        "empty input slice",
@@ -179,6 +180,7 @@ func TestOrderSubagentRoles_OrderingAndPreservation(t *testing.T) {
 			input:       []string{"advisor", "reviewer", "orchestrator", "general", "build", "root", "po", "planner", "advisor", "General", "BUILD"},
 			customOrder: []string{"planner", "reviewer"},
 			expected:    []string{"planner", "reviewer", "BUILD", "General", "advisor", "build", "general", "orchestrator", "po", "root"},
+			defaultWant: []string{"BUILD", "General", "advisor", "build", "general", "orchestrator", "planner", "po", "reviewer", "root"},
 		},
 		{
 			name:        "purely custom roles sorted alphabetically when no custom order",
@@ -216,6 +218,17 @@ func TestOrderSubagentRoles_OrderingAndPreservation(t *testing.T) {
 			for i := range tc.expected {
 				if got[i] != tc.expected[i] {
 					t.Errorf("at index %d: expected %s, got %s", i, tc.expected[i], got[i])
+				}
+			}
+			if tc.defaultWant != nil {
+				gotAlpha := domain.OrderSubagentRoles(tc.input)
+				if len(gotAlpha) != len(tc.defaultWant) {
+					t.Fatalf("default order: expected len %d, got %d: %v", len(tc.defaultWant), len(gotAlpha), gotAlpha)
+				}
+				for i := range tc.defaultWant {
+					if gotAlpha[i] != tc.defaultWant[i] {
+						t.Errorf("default order at index %d: expected %s, got %s", i, tc.defaultWant[i], gotAlpha[i])
+					}
 				}
 			}
 		})

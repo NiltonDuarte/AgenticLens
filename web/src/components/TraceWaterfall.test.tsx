@@ -430,6 +430,7 @@ describe('TraceWaterfall Component', () => {
     );
 
     const badge = screen.getByRole('button', { name: 'WARNING' });
+    expect(badge).toHaveAttribute('title', 'Click to open Anomaly Inspector');
     fireEvent.click(badge);
 
     expect(handleSelect).toHaveBeenCalledTimes(1);
@@ -627,12 +628,6 @@ describe('TraceWaterfall Component', () => {
       expect.objectContaining({ turn: 3, status: 'error' }),
       expect.objectContaining({ rule_id: 'TOOL_RETRY_STREAK' })
     );
-  });
-
-  it('renders AnomalyBadge with title tooltip affordance on anomalous turns', () => {
-    render(<TraceWaterfall events={sampleEvents} anomalies={sampleAnomalies} defaultExpanded={true} />);
-    const badge = screen.getByRole('button', { name: 'WARNING' });
-    expect(badge).toHaveAttribute('title', 'Click to open Anomaly Inspector');
   });
 
   it('renders guidance hint in waterfall toolbar header', () => {

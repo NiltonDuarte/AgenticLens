@@ -75,25 +75,6 @@ describe('FleetOverview View Component', () => {
     expect(screen.queryByText('PO-1')).not.toBeInTheDocument();
   });
 
-  it('displays empty state when total_tickets is zero', async () => {
-    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({
-      data: {
-        ...mockFleetSummary,
-        total_tickets: 0,
-        total_cost_usd: 0,
-      },
-    });
-    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({
-      data: [],
-    });
-
-    render(<FleetOverview />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Zero Telemetry Workspaces Available/i)).toBeInTheDocument();
-    });
-  });
-
   describe('Adversarial & Boundary Scenarios', () => {
     it('displays error banner and allows retry when fetch throws unexpected error', async () => {
       const fetchFleetSpy = vi.spyOn(apiClient, 'fetchFleetSummary')
@@ -125,6 +106,7 @@ describe('FleetOverview View Component', () => {
         data: {
           ...mockFleetSummary,
           total_tickets: 0,
+          total_cost_usd: 0,
         },
         });
       vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({

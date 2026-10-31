@@ -1,9 +1,9 @@
-# test(REV-4): prune low-value tests and consolidate role ordering
+# test(REV-4): prune low-value tests and consolidate coverage
 
-Reduce the suite from 1,253 to 1,197 top-level declarations: delete 55 low-value tests and consolidate one role-ordering wrapper into the existing enum table. Net reduction: 1,896 test lines. No production behavior changes.
+Reduce the suite from 1,253 to 1,155 top-level declarations, with 2,430 net test lines removed. Delete fixture-only checks, copied release logic, duplicate smoke cases and unnecessary wrappers; preserve meaningful role-ordering and UI/boundary contracts in existing tests. Production behavior is unchanged.
 
-Remove fixture-only JSON/type checks, copied release logic, duplicated component cases, the remaining release-verification file, and a redundant date-preset smoke. Release workflow/help strings and missing-input guards did not establish successful CI release/publishing; deleting those guards does not claim to improve release validation. The canonical role cases now share the existing 19-row enum table with both ordering entrypoints, with no new tests or rows.
+The 0-10 review covers the current suite. A direct follow-up audit examined all 47 declarations scoring at most four: seven redundant/overconstrained cases deleted, 35 donor cases consolidated, and five independent guards retained at their original scores. No new top-level tests, helper suites or parameterized declarations were added. Scores are not treated as an automatic deletion threshold, and no mutation-equivalence guarantee is claimed.
 
-REVIEW.md records removal reasons and retained protection. SCORE_REVIEW.md explains the 0-10 rubric and historical findings; TEST_SCORES.md rates all 1,197 current declarations, with evidence and confidence labels. Scores are not an automatic deletion threshold or mutation-equivalence proof.
+CSS guards, compiler narrowing, metadata precedence, tooltip/header wiring and existing callbacks survive their named transfers. REVIEW.md retains earlier removal history; SCORE_REVIEW.md explains scoring and the confidence limits; TEST_SCORES.md lists all 1,155 current entries in ascending order. iterations/05/CANDIDATES.md records every low-score decision and recipient.
 
-Scope: [CONTRACT.md](alspaces/REV-4/CONTRACT.md) and iteration 02/03/04 deltas. Verification and telemetry: [SUMMARY.md](alspaces/REV-4/SUMMARY.md).
+Scope: [CONTRACT.md](alspaces/REV-4/CONTRACT.md) and iteration deltas. Verification and session provenance: [SUMMARY.md](alspaces/REV-4/SUMMARY.md).

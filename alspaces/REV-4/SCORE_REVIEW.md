@@ -1,18 +1,20 @@
 # REV-4 scored test review: iteration 03
 
-Iteration 03 scored **1,203 declarations** (505 Go and 698 TypeScript). The [current catalog](TEST_SCORES.md) is refreshed after iteration 04 to **1,197 declarations** (499 Go and 698 TypeScript), omitting the four deleted release tests, date smoke and consolidated role wrapper. Other ratings are unchanged. The suite still contains 749 expanded frontend runtime cases. The 50 tests deleted in iteration 02 are historical and are not counted again. No tests were changed or deleted during iteration 03 itself. Iteration 04 changes and verification are recorded separately below.
+Iteration 03 originally scored 1,203 declarations. After the earlier targeted deletions and iteration 05 low-score audit, the [current catalog](TEST_SCORES.md) has **1,155 declarations** (494 Go and 661 TypeScript), with 712 expanded frontend cases. Numeric ratings remain unchanged for surviving declarations.
+
+Iteration 05 examined all 47 candidates scoring at most four: **7 deletions, 35 assertion-preserving consolidations, and 5 retained independent guards**. A low score alone was not a proof of redundancy. The five residual scores remain unchanged; they were not promoted merely to clear a threshold. [CANDIDATES.md](iterations/05/CANDIDATES.md) records every candidate and its named protection. Earlier findings below are historical unless labeled with a later iteration; the current catalog is authoritative for membership.
 
 Baseline: `2e87ab15ffee382b1685bf38f233eca3d76fe72e`; initial working tree clean. The user requested numeric scores rather than binary dispositions. Iteration 01/02 documents remain intact as historical removal evidence; this is the iteration 03 scoring rubric and findings, with a current-catalog update below.
 
 ## Tests sorted by score
 
-The full review entries are ordered from lowest to highest score, with source path and line breaking ties. All ratings and reasons are unchanged.
+The current entries are ordered from lowest to highest score, with source path and line breaking ties. Numeric ratings for survivors are unchanged.
 
-- [0/10 — 3 tests](TEST_SCORES.md#score-010)
+- 0/10 — no tests
 - 1/10 — no tests
-- [2/10 — 4 tests](TEST_SCORES.md#score-210)
-- [3/10 — 12 tests](TEST_SCORES.md#score-310)
-- [4/10 — 28 tests](TEST_SCORES.md#score-410)
+- [2/10 — 1 tests](TEST_SCORES.md#score-210)
+- [3/10 — 1 tests](TEST_SCORES.md#score-310)
+- [4/10 — 3 tests](TEST_SCORES.md#score-410)
 - [5/10 — 65 tests](TEST_SCORES.md#score-510)
 - [6/10 — 307 tests](TEST_SCORES.md#score-610)
 - [7/10 — 521 tests](TEST_SCORES.md#score-710)
@@ -142,7 +144,7 @@ Slowest ordinary Go test completions in the fresh profile:
 
 Timing is not a deletion criterion on its own. This ordinary uncached run and the earlier parallel/race runs have different conditions; no speedup is inferred. Broad table declarations can contain both strong boundary checks and weak repeated examples, so a high declaration score does not endorse every subcase. No numeric target runtime is justified by this review.
 
-## Next iteration boundaries
+## Original iteration 03 next-step boundaries (historical)
 
 Start with the three zero-score duplicates if the user requests another deletion pass. For the 2-3 band, inspect exact assertion transfer first: role ordering includes arbitrary/default priorities, tool classification retains a distinct segmentation-fault case (score 5), negative type narrowing needs tsc coverage, CSS regex tests protect a historical issue despite a weak layout oracle, and the basic reference-line smoke retains an otherwise unique label check (score 6).
 
@@ -159,3 +161,19 @@ Canonical role priorities/default order now live in three refined rows of the ex
 TEST_SCORES.md has 1,197 current rows: 499 Go and 698 TypeScript. Six obsolete rows are omitted; all other ratings persist, with refreshed source locations and the enum consolidation rationale. Current basis counts: 96 Focused and 1,101 Screened. The original three zero-score duplicates and eleven critical ten-score contracts remain unchanged. Earlier low-priority rows above document historical judgments, including the now-deleted cases; the current catalog is authoritative for membership.
 
 See iterations/04/TEST_RESULTS.md, iterations/04/REVIEW.md and SUMMARY.md for final verification. No additional deletion is inferred from any remaining score.
+
+## Iteration 05: can every score 0-4 test disappear?
+
+No. Direct inspection supported eliminating 42 of the 47 donor declarations, while preserving their meaningful protection in existing tests. Seven were true duplicates or explicit alias/language overconstraints; 35 used existing recipients with their unique assertions retained. No new standalone tests, parameterized test declarations or helper suites were added.
+
+Five independent guards remain, with scores unchanged:
+
+- **2**: TestAgentRole_FallbackConstants pins both wire-facing fallback labels; consumer tests comparing to those constants do not pin their spelling.
+- **3**: all-theme-token validation checks every exported entry, not only sampled hash outputs.
+- **4**: TestCanonicalTicketTypes checks the actual exported list/order independently of parser acceptance.
+- **4**: ThreadViewer empty collection checks a different render branch from a populated thread expansion.
+- **4**: the substantial TicketDeepDive tooltip-wiring test owns view-specific bindings/cardinality and now also receives related interactions; placing it in a general KPI smoke would obscure the contract.
+
+CSS source guards remain unchanged inside the existing responsive-wrapper contract, without claiming browser geometry coverage. Type narrowing still executes through the actual type guard under tsc, and separate negative compiler checks remain. Header aria associations, tooltip presence/absence, metadata precedence and existing callback assertions survive their transfers. Assertions were not merely packed into unrelated large tests to manufacture a count reduction.
+
+See iterations/05/TEST_RESULTS.md and iterations/05/REVIEW.md for independent execution and semantic audits. No mutation-equivalence or blanket deletion guarantee is claimed.

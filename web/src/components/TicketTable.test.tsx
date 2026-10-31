@@ -262,7 +262,7 @@ describe('TicketTable Component', () => {
   });
 
   describe('Header InfoTooltips and Event Propagation', () => {
-    it('renders InfoTooltip on all 8 table headers with placement="bottom"', () => {
+    it('clicking InfoTooltip trigger on sortable headers stops click propagation and preserves sort order', () => {
       render(<TicketTable rows={sampleRows} />);
 
       const expectedTooltips = [
@@ -284,10 +284,6 @@ describe('TicketTable Component', () => {
         const tooltip = document.getElementById(tooltipId!);
         expect(tooltip).toHaveClass('placement-bottom');
       }
-    });
-
-    it('clicking InfoTooltip trigger on sortable headers stops click propagation and preserves sort order', () => {
-      render(<TicketTable rows={sampleRows} />);
 
       // Initial default order is ticket_id asc naturally: AL-2, AL-10, GEN-9
       let rows = screen.getAllByRole('row');

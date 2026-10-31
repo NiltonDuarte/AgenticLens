@@ -190,14 +190,6 @@ describe('Boundary API Client', () => {
             }));
             await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/HTTP error 500/);
         });
-        it('throws structured error when ticketId does not exist on 404', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 404,
-                statusText: 'Not Found',
-            }));
-            await expect(fetchWorkspaceById('NONEXISTENT-999')).rejects.toThrow('Workspace NONEXISTENT-999 not found');
-        });
         it('throws error on network rejection', async () => {
             vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
             await expect(fetchWorkspaceById('UNKNOWN-TICKET')).rejects.toThrow('Failed to fetch');

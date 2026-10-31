@@ -419,3 +419,9 @@ Final integration gate: full `make` passed at `2a78bad`, including Go race check
 The user accepted deleting the remaining release test file and date-preset smoke, plus consolidating the separate adversarial role-ordering wrapper into the existing enum table. The release guards did not establish successful CI build/package/publish behavior: workflow strings and help text can be present while CI fails, and missing-input diagnostics exercise narrower failure paths. The latter were genuine tests, but the user judged this file's value insufficient.
 
 The date smoke duplicates stronger exact-endpoint coverage in TestResolveDatePreset. The role wrapper moves semantic protection to the enum suite rather than deleting it: existing empty/custom-name cases plus refined canonical full/default/partial-priority rows run through both ordering entrypoints. See iterations/04/PLAN.md for the transfer map and verification reports for the executed changes.
+
+## Iteration 05: low-score consolidation
+
+All 47 declarations scoring 4 or below were individually checked against source and existing coverage. Seven duplicates/overconstraints were deleted and 35 donor wrappers consolidated while retaining meaningful assertions in named existing recipients. Five independent guards remain at their original scores, so the answer to a blanket sweep is no. The complete per-candidate rationale/recipient ledger is iterations/05/CANDIDATES.md, with independent transfer/runtime proof in TEST_RESULTS.md and REVIEW.md.
+
+The current catalog has 1,155 declarations sorted by score. All survivor numeric ratings remain unchanged; only their source references/confidence and receiver explanations reflect the verified consolidation. Test count reduction is not a substitute for behavioral equivalence evidence.
