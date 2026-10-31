@@ -1,0 +1,8 @@
+{
+  "exit": 1,
+  "stderr": "Error writing configuration files: target .agenticlens-config.local.yaml is a directory",
+  "original_path_exists": false,
+  "backup_contents": [
+    "original: preserve-me\n"
+  ]
+}
