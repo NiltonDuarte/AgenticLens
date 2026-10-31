@@ -329,10 +329,11 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 		FilesChanged: code.FilesChanged,
 	}
 
-	var totToolCalls, totToolErrors int64
+	var totToolCalls, totToolErrors, totContentErrors int64
 	for _, t := range tools {
 		totToolCalls += t.Calls
 		totToolErrors += t.Errors
+		totContentErrors += t.ContentErrors
 	}
 
 	toolSuccessRate := 100.0
@@ -342,6 +343,7 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 
 	toolExecution := ToolExecutionHealth{
 		TotalCalls:           totToolCalls,
+		ContentErrors:        totContentErrors,
 		ErrorsAndCorrections: totToolErrors,
 		SuccessRatePct:       toolSuccessRate,
 	}

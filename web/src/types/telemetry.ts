@@ -27,6 +27,9 @@ export interface EventFact {
   readonly event_type: EventType;
   readonly tool_name?: string | null | undefined;
   readonly status: string;
+  readonly has_content_error?: boolean;
+  readonly content_severity?: string;
+  readonly content_error_snippet?: string | null;
   readonly error_message?: string | null | undefined;
   readonly duration_ms?: number | null | undefined;
   readonly context_tokens: number;

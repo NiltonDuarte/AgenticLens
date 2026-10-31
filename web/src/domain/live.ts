@@ -27,6 +27,9 @@ export interface LivePartFact {
   readonly input_snippet?: string;
   readonly output_snippet?: string;
   readonly status: string;
+  readonly has_content_error?: boolean;
+  readonly content_severity?: string;
+  readonly content_error_snippet?: string | null;
   readonly is_error: boolean;
   readonly error_message?: string | null;
   readonly severity?: FailureSeverity;
@@ -55,6 +58,7 @@ export interface LiveTraceView {
   readonly messages: readonly LiveMessageFact[];
   readonly total_tool_calls: number;
   readonly failed_tool_calls: number;
+  readonly content_errors?: number;
   readonly recent_errors: readonly LivePartFact[];
   readonly anomalies: readonly LiveAnomalyAlert[];
 }
@@ -69,6 +73,9 @@ export interface LiveSessionNode {
   readonly time_created: string;
   readonly time_updated: string;
   readonly status: string;
+  readonly has_content_error?: boolean;
+  readonly content_severity?: string;
+  readonly content_error_snippet?: string | null;
   readonly guessed_ticket_id?: string | null;
   readonly ticket_confidence: number;
   readonly sub_sessions: readonly LiveSessionNode[];

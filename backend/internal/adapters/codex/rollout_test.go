@@ -403,3 +403,24 @@ func TestCodexUserIterationsAttribution(t *testing.T) {
 		t.Errorf("expected child invocation UserIterations=0, got %d", childTranscript.Invocations[0].UserIterations)
 	}
 }
+
+func TestCodexSuccessfulCommandContentWarningPreservesExecution(t *testing.T) {
+	input := strings.Join([]string{
+		`{"timestamp":"2026-10-25T09:00:00Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-1"}}`,
+		`{"timestamp":"2026-10-25T09:00:03Z","type":"event_msg","payload":{"type":"item_completed","turn_id":"turn-1","item":{"id":"command-1","type":"CommandExecution","status":"completed","exit_code":0,"command":["check"],"aggregated_output":"syntax error: bad name"}}}`,
+	}, "\n")
+	transcript, err := codex.ParseRollout(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if transcript.ToolCalls != 1 || transcript.ToolErrors != 0 || len(transcript.Events) != 1 {
+		t.Fatalf("execution changed: %+v", transcript)
+	}
+	event := transcript.Events[0]
+	if event.Status != "completed" || !event.HasContentError || event.ContentErrorSnippet == nil {
+		t.Fatalf("diagnostic lost: %+v", event)
+	}
+	if len(transcript.Tools) != 1 || transcript.Tools[0].ContentErrors != 1 {
+		t.Fatalf("tool count lost: %+v", transcript.Tools)
+	}
+}

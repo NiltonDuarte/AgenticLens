@@ -65,6 +65,7 @@ export interface ToolFact {
   readonly name: string;
   readonly calls: number;
   readonly errors: number;
+  readonly content_errors?: number;
 }
 
 export type {
@@ -158,6 +159,9 @@ export interface SessionFact {
 }
 
 export type SessionEventFact = Pick<EventFact,
+  | 'has_content_error'
+  | 'content_severity'
+  | 'content_error_snippet'
   | 'event_id'
   | 'timestamp'
   | 'message_id'
@@ -210,6 +214,7 @@ export interface CodeDeliveredStats {
 export interface ToolExecutionHealth {
   readonly total_calls: number;
   readonly errors_and_corrections: number;
+  readonly content_errors?: number;
   readonly success_rate_pct: number;
 }
 

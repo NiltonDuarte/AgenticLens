@@ -38,6 +38,12 @@ describe('LiveTraceInspector Component', () => {
     sub_sessions: [],
   };
 
+  it('renders independent execution and semantic error counters', () => {
+    render(<LiveTraceInspector sessionNode={mockNode} trace={{...mockLiveTraceView,failed_tool_calls:1,content_errors:2}} loading={false} onClose={vi.fn()} />);
+    expect(screen.getByText(/Failed Tools:/)).toHaveTextContent('Failed Tools: 1');
+    expect(screen.getByText(/Content Errors:/)).toHaveTextContent('Content Errors: 2');
+  });
+
   it('renders placeholder prompt when sessionNode is null', () => {
     render(
       <LiveTraceInspector

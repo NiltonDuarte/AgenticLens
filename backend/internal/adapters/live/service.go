@@ -401,7 +401,7 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 	}
 
 	messages := make([]domain.LiveMessageFact, 0, len(rawMsgs))
-	var totalTools, failedTools int
+	var totalTools, failedTools, contentErrors int
 	var recentErrors []domain.LivePartFact
 	consecutiveErrors := 0
 
@@ -469,6 +469,9 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 
 			if partFact.Type == "tool" {
 				totalTools++
+				if partFact.HasContentError {
+					contentErrors++
+				}
 				if partFact.IsError {
 					failedTools++
 					recentErrors = append(recentErrors, partFact)
@@ -510,9 +513,9 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 	}
 
 	trace := domain.LiveTraceView{
-		SessionID:       sessionID,
-		Messages:        messages,
-		TotalToolCalls:  totalTools,
+		SessionID:      sessionID,
+		Messages:       messages,
+		TotalToolCalls: totalTools, ContentErrors: contentErrors,
 		FailedToolCalls: failedTools,
 		RecentErrors:    recentErrors,
 		Anomalies:       []domain.LiveAnomalyAlert{},
@@ -584,6 +587,7 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		status = "completed"
 	}
 
+	var content domain.ToolContentResult
 	var isError bool
 	var severity domain.FailureSeverity
 	var errorMessage *string
@@ -595,6 +599,7 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		}
 		classification := domain.ClassifyToolExecution(tName, status, outputSnippet, *consecutiveErrors)
 		isError, severity, errorMessage = classification.IsError, classification.Severity, classification.ErrorMessage
+		content = domain.ClassifyCompletedToolContent(tName, status, outputSnippet, isError)
 		if isError {
 			*consecutiveErrors++
 			status = "error"
@@ -620,11 +625,11 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		InputSnippet:  inputSnippet,
 		OutputSnippet: outputSnippet,
 		Status:        status,
-		IsError:       isError,
-		ErrorMessage:  errorMessage,
-		Severity:      severity,
-		SkillName:     skillName,
-		SubagentType:  subagentType,
+		IsError:       isError, HasContentError: content.HasContentError, ContentSeverity: string(content.Severity), ContentErrorSnippet: content.ErrorSnippet,
+		ErrorMessage: errorMessage,
+		Severity:     severity,
+		SkillName:    skillName,
+		SubagentType: subagentType,
 	}
 }
 
@@ -1124,14 +1129,14 @@ func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, events []domain.
 		eventsBySession := make(map[string][]domain.SessionEventFact)
 		for _, ev := range events {
 			eventsBySession[ev.SessionID] = append(eventsBySession[ev.SessionID], domain.SessionEventFact{
-				EventID:          ev.EventID,
-				Timestamp:        ev.Timestamp,
-				MessageID:        ev.MessageID,
-				Turn:             ev.Turn,
-				Role:             ev.Role,
-				EventType:        ev.EventType,
-				ToolName:         ev.ToolName,
-				Status:           ev.Status,
+				EventID:   ev.EventID,
+				Timestamp: ev.Timestamp,
+				MessageID: ev.MessageID,
+				Turn:      ev.Turn,
+				Role:      ev.Role,
+				EventType: ev.EventType,
+				ToolName:  ev.ToolName,
+				Status:    ev.Status, HasContentError: ev.HasContentError, ContentSeverity: ev.ContentSeverity, ContentErrorSnippet: ev.ContentErrorSnippet,
 				ErrorMessage:     ev.ErrorMessage,
 				DurationMs:       ev.DurationMs,
 				ContextTokens:    ev.ContextTokens,
@@ -1243,6 +1248,7 @@ func convertPartToEventFact(pr RawPartRecord, turn int64, role domain.AgentRole,
 		}
 		classification := domain.ClassifyToolExecution(tName, status, outputStr, *consecutiveErrors)
 		isError, errorMessage := classification.IsError, classification.ErrorMessage
+		content := domain.ClassifyCompletedToolContent(tName, status, outputStr, isError)
 		if isError {
 			*consecutiveErrors++
 			status = "error"
@@ -1260,16 +1266,16 @@ func convertPartToEventFact(pr RawPartRecord, turn int64, role domain.AgentRole,
 		}
 
 		return &domain.EventFact{
-			EventID:       "opencode:part:" + pr.ID,
-			Timestamp:     ts,
-			SessionID:     pr.SessionID,
-			MessageID:     msgIDPtr,
-			Turn:          turn,
-			Role:          role,
-			EventType:     domain.EventTypeToolCall,
-			ToolName:      toolName,
-			Status:        status,
-			ErrorMessage:  errorMessage,
+			EventID:      "opencode:part:" + pr.ID,
+			Timestamp:    ts,
+			SessionID:    pr.SessionID,
+			MessageID:    msgIDPtr,
+			Turn:         turn,
+			Role:         role,
+			EventType:    domain.EventTypeToolCall,
+			ToolName:     toolName,
+			Status:       status,
+			ErrorMessage: errorMessage, HasContentError: content.HasContentError, ContentSeverity: string(content.Severity), ContentErrorSnippet: content.ErrorSnippet,
 			DurationMs:    durMs,
 			ContextTokens: ctxTokens,
 			ToolInput:     inputPtr,

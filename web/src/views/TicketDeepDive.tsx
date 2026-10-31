@@ -167,7 +167,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 
   const handleSelectEvent = (event: EventFact, anomaly?: Anomaly) => {
     setSelection({ event, anomaly: anomaly ?? null });
-    const isFlagged = Boolean(anomaly) || event.status === 'error' || event.status === 'failed';
+    const isFlagged = Boolean(anomaly) || event.status === 'error' || event.status === 'failed' || Boolean(event.has_content_error);
     setIsDrawerOpen(isFlagged);
   };
 
@@ -349,6 +349,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 
         <div className="profile-card">
           <h4 className="card-section-title">Tool Reliability</h4>
+          <table className="tool-execution-breakdown"><thead><tr><th>Tool</th><th>Calls</th><th>Execution Errors</th><th>Content Errors</th></tr></thead><tbody>{toolUsageByName.map((tool) => <tr key={tool.name}><td>{tool.name}</td><td>{tool.calls}</td><td>{tool.errors}</td><td>{tool.content_errors ?? 0}</td></tr>)}</tbody></table>
           <div className="stat-row">
             <span className="stat-label">Total Calls:</span>
             <span className="stat-val mono">{tools.total_calls.toLocaleString()}</span>
@@ -360,6 +361,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           <div className="stat-row">
             <span className="stat-label">Success Rate:</span>
             <span className="stat-val mono positive">{formatPercentage(tools.success_rate_pct)}</span>
+          </div>
+          <div className="stat-row">
+            <span className="stat-label">Content Errors:</span>
+            <span className="stat-val mono text-content-error">{(tools.content_errors ?? 0).toLocaleString()}</span>
           </div>
           <div className="stat-row">
             <span className="stat-label">Tool Tools Count:</span>

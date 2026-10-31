@@ -165,8 +165,9 @@ type modelUsage struct {
 }
 
 type toolUsage struct {
-	calls  int64
-	errors int64
+	contentErrors int64
+	calls         int64
+	errors        int64
 }
 
 type tokenUsageInfo struct {
@@ -486,13 +487,15 @@ func (transcript *Transcript) assignTurnModel(turnID, model string) {
 
 func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage, timestamp, sourceID string) {
 	var raw struct {
-		CallID      string `json:"call_id"`
-		TurnID      string `json:"turn_id"`
-		StartedAtMS int64  `json:"started_at_ms"`
-		DurationMS  int64  `json:"duration_ms"`
-		ExitCode    *int   `json:"exit_code"`
-		Status      string `json:"status"`
-		Invocation  struct {
+		CallID           string          `json:"call_id"`
+		TurnID           string          `json:"turn_id"`
+		StartedAtMS      int64           `json:"started_at_ms"`
+		DurationMS       int64           `json:"duration_ms"`
+		ExitCode         *int            `json:"exit_code"`
+		Status           string          `json:"status"`
+		Output           json.RawMessage `json:"output"`
+		AggregatedOutput string          `json:"aggregated_output"`
+		Invocation       struct {
 			Server string `json:"server"`
 			Tool   string `json:"tool"`
 		} `json:"invocation"`
@@ -599,6 +602,16 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 			ContextTokens: transcript.currentContext,
 		})
 	}
+	output := codexToolOutput(raw.Output)
+	if output == "" {
+		output = raw.AggregatedOutput
+	}
+	for i := len(transcript.Events) - 1; i >= 0; i-- {
+		if transcript.Events[i].EventID == eventID {
+			transcript.recordToolContent(i, output)
+			break
+		}
+	}
 	if isError {
 		transcript.toolUsage[name].errors++
 		transcript.ToolErrors++
@@ -607,11 +620,12 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 
 func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestamp, sourceID string) {
 	var item struct {
-		Type   string `json:"type"`
-		Role   string `json:"role"`
-		CallID string `json:"call_id"`
-		Name   string `json:"name"`
-		Status string `json:"status"`
+		Type   string          `json:"type"`
+		Role   string          `json:"role"`
+		CallID string          `json:"call_id"`
+		Name   string          `json:"name"`
+		Status string          `json:"status"`
+		Output json.RawMessage `json:"output"`
 	}
 	if err := json.Unmarshal(payload, &item); err != nil {
 		return
@@ -651,6 +665,8 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 	case "custom_tool_call_output", "function_call_output":
 		if index, exists := transcript.pendingTools[item.CallID]; exists {
 			transcript.Events[index].Status = "completed"
+			output := codexToolOutput(item.Output)
+			transcript.recordToolContent(index, output)
 			if started, err := time.Parse(time.RFC3339Nano, transcript.Events[index].Timestamp); err == nil {
 				if ended, err := time.Parse(time.RFC3339Nano, timestamp); err == nil && !ended.Before(started) {
 					duration := ended.Sub(started).Milliseconds()
@@ -668,11 +684,13 @@ func (transcript *Transcript) readCompletedItem(payload json.RawMessage, timesta
 		StartedAtMS int64  `json:"started_at_ms"`
 		CompletedMS int64  `json:"completed_at_ms"`
 		Item        struct {
-			ID       string `json:"id"`
-			Type     string `json:"type"`
-			Status   string `json:"status"`
-			ExitCode *int   `json:"exit_code"`
-			Duration struct {
+			ID               string          `json:"id"`
+			Type             string          `json:"type"`
+			Status           string          `json:"status"`
+			ExitCode         *int            `json:"exit_code"`
+			AggregatedOutput string          `json:"aggregated_output"`
+			Output           json.RawMessage `json:"output"`
+			Duration         struct {
 				Seconds int64 `json:"secs"`
 				Nanos   int64 `json:"nanos"`
 			} `json:"duration"`
@@ -728,6 +746,39 @@ func (transcript *Transcript) readCompletedItem(payload json.RawMessage, timesta
 		Role: transcript.role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status,
 		DurationMs: durationMS, ContextTokens: transcript.currentContext,
 	})
+	output := completed.Item.AggregatedOutput
+	if output == "" {
+		output = codexToolOutput(completed.Item.Output)
+	}
+	transcript.recordToolContent(len(transcript.Events)-1, output)
+}
+
+func codexToolOutput(raw json.RawMessage) string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return ""
+	}
+	var text string
+	if json.Unmarshal(raw, &text) == nil {
+		return text
+	}
+	return string(raw)
+}
+
+func (transcript *Transcript) recordToolContent(index int, output string) {
+	event := &transcript.Events[index]
+	if output != "" {
+		event.ToolOutput = &output
+	}
+	if event.ToolName == nil {
+		return
+	}
+	content := domain.ClassifyCompletedToolContent(*event.ToolName, event.Status, output, event.Status == "error" || event.Status == "failed")
+	event.HasContentError = content.HasContentError
+	event.ContentSeverity = string(content.Severity)
+	event.ContentErrorSnippet = content.ErrorSnippet
+	if content.HasContentError {
+		transcript.toolUsage[*event.ToolName].contentErrors++
+	}
 }
 
 func (transcript *Transcript) addCompactionEvent(timestamp, eventID string) {
@@ -821,7 +872,7 @@ func (transcript *Transcript) finalizeFacts() {
 	}
 	for name, stats := range transcript.toolUsage {
 		transcript.Tools = append(transcript.Tools, domain.ToolFact{
-			SessionID: transcript.sessionIDOrThread(), Name: name, Calls: stats.calls, Errors: stats.errors,
+			SessionID: transcript.sessionIDOrThread(), Name: name, Calls: stats.calls, Errors: stats.errors, ContentErrors: stats.contentErrors,
 		})
 	}
 	sort.Slice(transcript.Tools, func(i, j int) bool {

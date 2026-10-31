@@ -85,7 +85,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
   - **Phase**: Phase 7 (v1 Feature / Observability)
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
