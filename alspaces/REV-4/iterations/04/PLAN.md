@@ -41,3 +41,7 @@ Tester: inspect the baseline/current Go AST diff, confirming exactly six removed
 Reviewer: verify scope, actual transferred contracts, generic-role coverage, accurate names and the absence of new rows/tests. Review removal rationale without claiming the real missing-input checks were entirely fake. Write verdict in iterations/04/REVIEW.md; do not modify code or publish.
 
 Parent: record each removal and transfer, update score/catalog references as historical where deleted or shifted, preserve prior numeric findings, and report current 499 Go + 698 TypeScript = 1,197 declarations. Commit reviewed work, merge origin/main, run full make, record actual results, generate final Codex telemetry last with conventional type test while preserving earlier root/children, validate sessions, commit/push, update the existing PR if still open, and link immediately. Source/test fixture references must not depend on this ticket workspace.
+
+## Completion evidence
+
+Coder, tester and reviewer completed; reviewer APPROVED. Implementation committed as a10c61c; main already up to date. Full post-integration make passed including all 749 frontend cases and four target builds. Final telemetry and PR update follow.
