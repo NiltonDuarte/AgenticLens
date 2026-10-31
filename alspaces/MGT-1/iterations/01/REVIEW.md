@@ -1,4 +1,4 @@
-# GEN-14 Open pull request integration review
+# MGT-1 Open pull request integration review
 
 Snapshot: 2026-10-31. Main: `85a2af94b5036b0918aaf9a7a89aed3a990f2650`. Initial Git status clean. Audit-only scope; no product fixes, merges, or comments on reviewed PRs.
 

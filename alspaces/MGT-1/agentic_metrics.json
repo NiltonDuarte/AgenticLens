@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "ticket_id": "GEN-14",
+  "ticket_id": "MGT-1",
   "ticket_title": "Review open PR interference and merge order",
   "ticket_type": "chore",
   "started_at": "2026-10-31T13:15:29.728Z",

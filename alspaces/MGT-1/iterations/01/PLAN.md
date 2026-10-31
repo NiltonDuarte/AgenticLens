@@ -1,4 +1,4 @@
-# GEN-14 Iteration 01
+# MGT-1 Iteration 01
 
 1. Capture all open PR heads, CI, source diffs and baseline main.
 2. Simulate all pairwise merges without modifying the checkout; inspect shared behavioral contracts and release workflows.

@@ -1,6 +1,6 @@
-# GEN-14 Work summary
+# MGT-1 Work summary
 
-Reviewed all six open PRs against main at 85a2af94b5036b0918aaf9a7a89aed3a990f2650. Allocated GEN-14 after checking local/current-main workspaces, remote branches and PR search; GEN-1 through GEN-13 were already allocated. Initial Git status clean.
+Reviewed all six open PRs against main at 85a2af94b5036b0918aaf9a7a89aed3a990f2650. Allocated MGT-1 after checking local/current-main workspaces, remote branches and PR search; GEN-1 through GEN-13 were already allocated. Initial Git status clean.
 
 All 15 pairwise merges checked: four conflicting pairs. Two semantic diagnostic defects reproduced in #78. Recommended order: #76, #79, #75, #77, #78 after fixes, #55 after regeneration/validation. No product code or reviewed PR changed.
 
@@ -8,7 +8,7 @@ Detailed findings and verification: [iterations/01/REVIEW.md](iterations/01/REVI
 
 Verification: integration export A passed typecheck/lint, 736 frontend tests and build; B passed typecheck, 361 frontend tests, build and six affected Go race suites; C passed typecheck and 191 frontend tests. Full audit-branch make passed, including 712 baseline frontend tests and four platform builds. Reviewed heads unchanged on final recheck. Main integration was already up to date.
 
-Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is grounded in source session metadata with this exact worktree path. No child agents were spawned. No pre-existing GEN-14 ledger or other-harness facts existed to preserve. Billing cost is unavailable in source; any rendered zero is not a verified charge. Final extraction validates this root and Codex source; raw transcripts stay outside Git.
+Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is grounded in source session metadata with this exact worktree path. No child agents were spawned. No pre-existing MGT-1 ledger or other-harness facts existed to preserve. Billing cost is unavailable in source; any rendered zero is not a verified charge. Final extraction validates this root and Codex source; raw transcripts stay outside Git.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 2
@@ -41,3 +41,7 @@ Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is
 | **Total** | **1** | **146,748** | **10,942** | **2,475,136** | **94.4%** | **$0.00** |
 
 Final extraction succeeded: exactly one expected Codex root, no children or source errors; no prior sessions to preserve. Session identity and source verified directly in generated JSON.
+
+## Iteration 02: management ticket workflow
+
+User request: introduce a management ticket prefix and move the current work. Registered MGT in project configuration with default type chore. Relocated the former GEN-14 workspace to MGT-1 and updated current references and ledger identity. Original audit evidence and source sessions are preserved. The original GEN-14 allocation was superseded by this reclassification; historical commits and PR head branch keep their names. No new product task or application change was introduced.
