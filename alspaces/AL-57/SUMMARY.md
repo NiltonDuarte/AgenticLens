@@ -66,18 +66,18 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 - Telemetry is generated at the final step below using the actual Codex root and five children; no unavailable-source facts or numeric cost estimates are fabricated.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 15
-- **Active Agent Duration:** 2h 48m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 299.9k tokens (150% of 200k healthy ceiling, 0 compactions) | Subagents peak 330.9k (Tester)
+- **Software Development Life Cycle Iterations:** 18
+- **Active Agent Duration:** 3h 34m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 363.6k tokens (182% of 200k healthy ceiling, 0 compactions) | Subagents peak 372.5k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 4.3 avg turns/run (peak: 6 turns) | Planner 4.0, Coder 4.0, Tester 5.0, Reviewer 5.0
-- **Test-to-Production Code Ratio:** 0.6:1 (+1,233 test lines / +2,159 prod lines)
-- **Code Delivered:** +3,392 / -395 lines across 65 code files (excluding docs)
-- **Reasoning Effort:** 113,644 reasoning tokens (26.9% of generated output)
-- **Tool Health & Self-Correction:** 667 tool calls (47 self-corrections, 93.0% success rate)
+- **Subagent Turn Velocity & Thrashing:** 4.8 avg turns/run (peak: 8 turns) | Planner 6.0, Coder 5.3, Tester 7.0, Reviewer 6.0, Explorer 1.5
+- **Test-to-Production Code Ratio:** 0.5:1 (+1,538 test lines / +2,949 prod lines)
+- **Code Delivered:** +4,487 / -1,646 lines across 76 code files (excluding docs)
+- **Reasoning Effort:** 171,365 reasoning tokens (28.3% of generated output)
+- **Tool Health & Self-Correction:** 871 tool calls (55 self-corrections, 93.7% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 21 execution anomalies detected (11 CRITICAL, 10 WARNING).
+- **Status:** 23 execution anomalies detected (12 CRITICAL, 11 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+113.9k tokens) — Context tokens surged by 113.9k to 113.9k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.3k tokens) — Context tokens reached 201.3k, breaching the 200k critical ceiling.
@@ -89,11 +89,13 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (16 cycles) — Subagent roles 'coder' and 'tester' alternated for 16 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> tester (7 cycles) — Subagent roles 'reviewer' and 'tester' alternated for 7 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (9 cycles) — Subagent roles 'coder' and 'tester' alternated for 9 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: explorer <-> planner (10 cycles) — Subagent roles 'explorer' and 'planner' alternated for 10 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.6k tokens) — Context tokens reached 164.6k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.2k tokens) — Context tokens reached 163.2k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.2k tokens) — Context tokens reached 162.2k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.8k tokens) — Context tokens reached 165.8k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.7k tokens) — Context tokens reached 163.7k, breaching the 160k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> coder (3 cycles) — Subagent roles 'reviewer' and 'coder' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> tester (4 cycles) — Subagent roles 'reviewer' and 'tester' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (3 cycles) — Subagent roles 'coder' and 'tester' alternated for 3 consecutive cycles.
@@ -107,18 +109,19 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 154,972 | 19,944 | 3,794,944 | 96.1% | 163.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 3 | 698,154 | 100,111 | 40,478,080 | 98.3% | 271.9k | BLOATED (136%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **tester** | 1 | 280,998 | 60,432 | 34,085,632 | 99.2% | 330.9k | BLOATED (165%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer** | 1 | 443,823 | 25,242 | 15,815,296 | 97.3% | 301.7k | BLOATED (151%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 249,978 | 103,711 | 55,542,656 | 99.6% | 299.9k | BLOATED (150%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **7** | **1,827,925** | **309,440** | **149,716,608** | **98.8%** | **330.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
+| **planner** | 1 | 195,253 | 29,620 | 7,984,256 | 97.6% | 199.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 3 | 1,159,583 | 140,210 | 55,306,112 | 97.9% | 324.6k | BLOATED (162%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **tester** | 1 | 317,470 | 70,626 | 40,916,736 | 99.2% | 372.5k | BLOATED (186%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer** | 1 | 781,695 | 36,480 | 21,988,736 | 96.6% | 359.7k | BLOATED (180%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **explorer** | 2 | 156,374 | 11,791 | 2,473,344 | 94.1% | 105.9k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **rootagent** | 1 | 296,339 | 146,268 | 78,735,232 | 99.6% | 363.6k | BLOATED (182%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **9** | **2,906,714** | **434,995** | **207,404,416** | **98.6%** | **372.5k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 7 | 1,827,925 | 309,440 | 149,716,608 | 98.8% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **Total** | **7** | **1,827,925** | **309,440** | **149,716,608** | **98.8%** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
+| **gpt-6.1-sol** | 9 | 2,906,714 | 434,995 | 207,404,416 | 98.6% | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
+| **Total** | **9** | **2,906,714** | **434,995** | **207,404,416** | **98.6%** | **Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations)** |
 
 ## User review correction: JSON key order
 
@@ -228,3 +231,29 @@ Scalar audit distinguishes safe local derivation from rounded cross-ledger compa
 
 
 Iteration 05 approval: user explicitly selected "Approve the full plan" after the concrete plan was presented. All six bounded corrections, justified retentions and deferred broader redesign are accepted. Implementation is now authorized; do not ask for the same permission again. The only preexisting staged changes at this checkpoint are this ticket's planning artifacts. Baseline remains 412bc08e3199af04c03009ed60ca1bd3b592dd85.
+
+
+## Iteration 05 implemented dispositions
+
+1. Fixed frontend shape inference with endpoint/schema-selected readers; dynamic role/model keys are opaque and v5 invocation/task cost evidence is required. Both demonstrated failures are regression-tested through real API client entry points.
+2. Fixed DTO ownership: shared metric projections, compact exports and persisted facts remain in responsibility-specific adapter files; HTTP-only response DTOs/converters now live in the HTTP boundary with no reverse dependency or facade aliases. Distinct privacy/wire contracts are retained with justification.
+3. Fixed fact cohesion by colocating per-kind definitions, codecs and conversions. Production AgenticFactLedgerDTO.ToDomain and its live fact/anomaly chain are retained.
+4. Fixed redundant local accumulation/caches, preserving exact legacy precision. Rounded fleet/role accumulations and independent in-memory compatibility fallbacks are retained with demonstrated caller/rounding reasons. Global representation/rounding redesign is deferred outside approved scope.
+5. Fixed unused code: removed computed metrics reverse graph, test-only alias, dead fleet/brittle/root event/tool DTO paths and unused anomaly helpers. Meaningful assertions now target real emitted JSON and live ingestion/output paths; unsupported computed-input/stdlib-only promises are intentionally retired.
+6. Fixed decoder duplication with narrow configured-decoder/EOF/presence mechanics; explicit v4/v5 policies and historical migration tolerance remain separately owned.
+
+Independent review APPROVED, no open findings. Final reviewed 230-file source fingerprint f49d9f8a69b019dbeba07fa2e5891c1da6509a40683197bc6bfffed4c02998ad; earlier a14 snapshot is kept distinct in TESTING.md. All 25 retained DTO field/tag sequences match baseline. Code committed as 3fcf1575161390a73202babf921c2e9e894f8873 and integrated current origin/main unchanged. Full make passed: Go vet/race across 12 packages, frontend typecheck/lint, all 775 tests in 35 files, canonical assets and four platform binaries.
+
+New real source sessions for the two read-only audits: DTO audit 01a19431-b6ea-70c1-ae3e-f0336e71274e and cost audit 01a19431-db4b-79a1-85dd-bbdbea811a51. Each session_meta explicitly links to root 01a192c4-c9a6-7022-97da-19f433d6c5c3; final telemetry must retain prior seven sessions and include these two, nine total. Raw source files remain outside Git.
+
+
+## Iteration 05 final delivery gate
+
+Full make passed on 3fcf1575161390a73202babf921c2e9e894f8873 after current-main integration. Standalone linux/amd64 smoke served byte-identical current HTML/JS/CSS, preserved version field order, and returned the moved HTTP fleet/workspace contracts correctly for an empty fixture. Node was unavailable on PATH; generated frontend and embed trees match and remain ignored. No browser geometry claim. Existing npm advisories/React act warnings remain recorded; no dependency changes or skipped gates.
+
+All six implementation findings are fixed, with compatibility retentions and broader deferred representation/rounding/loader policy documented in REVIEW.md. No new schema bump, source refresh policy or live historical migration was introduced. Fact ToDomain remains production-required; computed reverse/test-only aliases and the approved dead helper families are gone.
+
+Final telemetry below must preserve prior seven real Codex sessions plus the two explicitly linked audit sessions, nine total, using the actual source and literal nonce.
+
+
+Iteration 05 final telemetry verification passed: prior seven actual Codex sessions retained and both explicit audit sessions included (nine total), with correct parent/source identity, prior invocation multiplicity, established key order and nonempty usage/tool records. Fresh Codex costs remain unavailable without estimates or invented zero. No raw transcripts are committed.

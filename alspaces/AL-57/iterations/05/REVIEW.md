@@ -77,3 +77,8 @@ Reused unchanged-source coder and independent tester evidence, recorded separate
 No suite was duplicated merely to occupy the reviewer role. No browser geometry or measured performance improvement is claimed. The parent must run the final current-main integrated make gate, standalone/embedded-asset verification and final real-source telemetry, then commit and update the existing PR. Historical full gates and the tester's earlier fingerprint remain distinct from this final source snapshot.
 
 Final verdict: APPROVED.
+
+
+## Parent integrated gate
+
+Reviewed implementation 3fcf1575161390a73202babf921c2e9e894f8873 integrated current main without additional changes. Required full make passed: Go vet/race across 12 packages, frontend typecheck/lint, 775 frontend tests in 35 files, canonical assets and four platform builds. Standalone smoke verified exact current assets, ordered pass-through version JSON and moved fleet/workspace responses with Node unavailable. Asset trees match. No application edits followed this gate; remaining changes are final telemetry and delivery facts.
