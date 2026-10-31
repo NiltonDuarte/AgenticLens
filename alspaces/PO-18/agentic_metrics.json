@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
   "ticket_id": "PO-18",
-  "ticket_title": "Phase 1 post-v2.0 platform follow-up tickets",
+  "ticket_title": "Post-v2.0 platform follow-up tickets",
   "ticket_type": "docs",
   "started_at": "2026-10-31T18:33:46.665Z",
-  "completed_at": "2026-10-31T21:44:18.540Z",
-  "updated_at": "2026-10-31T21:44:19.397646+00:00",
+  "completed_at": "2026-10-31T21:45:25.498Z",
+  "updated_at": "2026-10-31T21:45:26.269736+00:00",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 14
+    "sdlc_iterations": 15
   },
   "sessions": [
     {
@@ -26,25 +26,25 @@
           "role": "RootAgent",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T18:33:47.670Z",
-          "completed_at": "2026-10-31T21:44:18.540Z",
-          "active_duration_seconds": 961,
-          "turns": 12,
+          "completed_at": "2026-10-31T21:45:25.498Z",
+          "active_duration_seconds": 1085,
+          "turns": 13,
           "tokens": {
-            "input": 105091,
-            "output": 45014,
-            "cache_read": 8083456,
-            "reasoning": 3231,
-            "peak_context": 136009
+            "input": 108387,
+            "output": 48251,
+            "cache_read": 9184256,
+            "reasoning": 3740,
+            "peak_context": 141556
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 14
+          "user_iterations": 15
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 67,
+          "calls": 72,
           "errors": 5
         }
       ],
