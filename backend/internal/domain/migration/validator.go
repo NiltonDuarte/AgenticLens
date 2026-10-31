@@ -91,6 +91,7 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 			b.Turns != a.Turns ||
 			b.Tokens != a.Tokens ||
 			b.CostUSD != a.CostUSD ||
+			!reflect.DeepEqual(domain.EffectiveCost(b.CostUSD, b.CostEvidence), domain.EffectiveCost(a.CostUSD, a.CostEvidence)) ||
 			b.Compactions != a.Compactions ||
 			(expectedTargetVersion < 4 && b.UserIterations != a.UserIterations) {
 			return fmt.Errorf("%w: invocation[%d] data modified",

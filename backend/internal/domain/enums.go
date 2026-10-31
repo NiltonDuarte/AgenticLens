@@ -54,7 +54,7 @@ func ParseLedgerSortField(val string) LedgerSortField {
 	switch val {
 	case "completed_at":
 		return SortFieldCompletedAt
-	case "cost":
+	case "cost", "cost_usd":
 		return SortFieldCost
 	case "duration":
 		return SortFieldDuration

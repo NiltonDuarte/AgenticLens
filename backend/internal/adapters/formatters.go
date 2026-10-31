@@ -86,6 +86,9 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		}
 	}
 	roleDistStr := "N/A"
+	if we.RoleEffortUnavailableReason != "" {
+		roleDistStr = "Unavailable: " + we.RoleEffortUnavailableReason
+	}
 	if len(roleDistParts) > 0 {
 		roleDistStr = strings.Join(roleDistParts, ", ")
 	}
@@ -229,7 +232,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 
 	for _, r := range ledger.Roles {
 		lines = append(lines, fmt.Sprintf(
-			"| **%s** | %d | %s | %s | %s | %.1f%% | %s | %s | $%.2f |",
+			"| **%s** | %d | %s | %s | %s | %.1f%% | %s | %s | %s |",
 			r.Role,
 			r.Invocations,
 			FormatNumber(r.InputTokens),
@@ -238,12 +241,12 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 			r.CacheHitRatePct,
 			domain.FormatTokensK(r.PeakContextTokens),
 			domain.GetHealthLabel(r.PeakContextTokens, effectiveCeiling),
-			r.CostUSD,
+			FormatCostSummary(domain.EffectiveCostSummary(r.CostSummary, r.CostUSD, r.Invocations)),
 		))
 	}
 
 	lines = append(lines, fmt.Sprintf(
-		"| **Total** | **%d** | **%s** | **%s** | **%s** | **%.1f%%** | **%s** | **%s** | **$%.2f** |",
+		"| **Total** | **%d** | **%s** | **%s** | **%s** | **%.1f%%** | **%s** | **%s** | **%s** |",
 		totals.Invocations,
 		FormatNumber(totals.InputTokens),
 		FormatNumber(totals.OutputTokens),
@@ -251,7 +254,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		totals.CacheHitRatePct,
 		domain.FormatTokensK(totals.PeakContextTokens),
 		totals.ContextHealth,
-		totals.CostUSD,
+		FormatCostSummary(domain.EffectiveCostSummary(totals.CostSummary, totals.CostUSD, totals.Invocations)),
 	))
 
 	lines = append(lines,
@@ -264,34 +267,58 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 	sortedModels := make([]domain.ModelMetric, len(ledger.Models))
 	copy(sortedModels, ledger.Models)
 	sort.Slice(sortedModels, func(i, j int) bool {
-		return sortedModels[i].CostUSD > sortedModels[j].CostUSD
+		a := domain.EffectiveCostSummary(sortedModels[i].CostSummary, sortedModels[i].CostUSD, sortedModels[i].Invocations).CompleteAmount()
+		b := domain.EffectiveCostSummary(sortedModels[j].CostSummary, sortedModels[j].CostUSD, sortedModels[j].Invocations).CompleteAmount()
+		if (a == nil) != (b == nil) {
+			return a != nil
+		}
+		if a == nil || *a == *b {
+			return sortedModels[i].Model < sortedModels[j].Model
+		}
+		return *a > *b
 	})
 
 	for _, m := range sortedModels {
 		lines = append(lines, fmt.Sprintf(
-			"| **%s** | %d | %s | %s | %s | %.1f%% | $%.2f |",
+			"| **%s** | %d | %s | %s | %s | %.1f%% | %s |",
 			m.Model,
 			m.Invocations,
 			FormatNumber(m.InputTokens),
 			FormatNumber(m.OutputTokens),
 			FormatNumber(m.CacheReadTokens),
 			m.CacheHitRatePct,
-			m.CostUSD,
+			FormatCostSummary(domain.EffectiveCostSummary(m.CostSummary, m.CostUSD, m.Invocations)),
 		))
 	}
 
 	lines = append(lines,
 		fmt.Sprintf(
-			"| **Total** | **%d** | **%s** | **%s** | **%s** | **%.1f%%** | **$%.2f** |",
+			"| **Total** | **%d** | **%s** | **%s** | **%s** | **%.1f%%** | **%s** |",
 			totals.Invocations,
 			FormatNumber(totals.InputTokens),
 			FormatNumber(totals.OutputTokens),
 			FormatNumber(totals.CacheReadTokens),
 			totals.CacheHitRatePct,
-			totals.CostUSD,
+			FormatCostSummary(domain.EffectiveCostSummary(totals.CostSummary, totals.CostUSD, totals.Invocations)),
 		),
 		"",
 	)
 
 	return strings.Join(lines, "\n")
+}
+
+// FormatCostSummary keeps reported zero distinct from missing or partial cost.
+func FormatCostSummary(summary domain.CostSummary) string {
+	summary = domain.FinalizeCostSummary(summary)
+	if summary.State == domain.CostSummaryEmpty {
+		return "No invocation data"
+	}
+	if amount := summary.CompleteAmount(); amount != nil {
+		return fmt.Sprintf("$%.2f", *amount)
+	}
+	coverage := fmt.Sprintf("%d observed, %d partial, %d unavailable / %d invocations", summary.FullyObserved, summary.Partial, summary.Unavailable, summary.Total)
+	if summary.KnownSubtotalUSD != nil {
+		return fmt.Sprintf("$%.2f known subtotal (partial; %s)", *summary.KnownSubtotalUSD, coverage)
+	}
+	return "Unavailable (" + coverage + ")"
 }

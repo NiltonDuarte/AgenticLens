@@ -195,7 +195,13 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 					acc.peak = ctx
 				}
 				if p.Cost != nil {
+					if !domain.ValidCostAmount(*p.Cost) {
+						return nil, nil, nil, fmt.Errorf("invalid cost in message %s session %s", m.id, s.id)
+					}
+					acc.costPresent++
 					acc.cost += *p.Cost
+				} else {
+					acc.costMissing++
 				}
 				if acc.firstTS == nil || ts < *acc.firstTS {
 					v := ts
@@ -324,7 +330,7 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 			if i == 0 && !s.parent.Valid {
 				iterations = userTurns
 			}
-			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: schemaV2StringPointer(formatEpochMilli(first)), CompletedAt: schemaV2StringPointer(formatEpochMilli(last)), ActiveDurationSeconds: int64(math.Round(float64(a.activeMS) / 1000)), Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, UserIterations: iterations})
+			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: schemaV2StringPointer(formatEpochMilli(first)), CompletedAt: schemaV2StringPointer(formatEpochMilli(last)), ActiveDurationSeconds: int64(math.Round(float64(a.activeMS) / 1000)), Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, CostEvidence: a.costEvidence(), UserIterations: iterations})
 		}
 		var parent *string
 		if s.parent.Valid {

@@ -42,6 +42,9 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 	if transcript.Turns != 1 || transcript.ToolCalls != 2 || transcript.ToolErrors != 1 || len(transcript.Invocations) != 1 {
 		t.Fatalf("rollout facts were not projected: turns=%d tools=%d tool_errors=%d invocations=%d", transcript.Turns, transcript.ToolCalls, transcript.ToolErrors, len(transcript.Invocations))
 	}
+	if inv := transcript.Invocations[0]; inv.CostEvidence.State != domain.CostUnavailable || inv.CostEvidence.KnownSubtotalUSD != nil {
+		t.Fatalf("Codex usage implied observed zero cost: %+v", inv)
+	}
 	if len(transcript.Tools) == 0 {
 		t.Fatal("expected session-scoped tool facts")
 	}

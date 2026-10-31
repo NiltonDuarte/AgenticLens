@@ -1,8 +1,10 @@
+import { completeCost, emptyCostSummary, invocationCostSummary, mergeCostSummaries } from './cost';
+import type { CostSummary } from './types';
 import { sessionInvocations, type AgenticMetricsLedger, type TimeBucketMetric, type TimeGranularity } from './types';
 
 interface MutableBucketAccumulator {
   invocations: number;
-  cost_usd: number;
+  cost_summary: CostSummary;
   input_tokens: number;
   output_tokens: number;
   cache_read_tokens: number;
@@ -148,7 +150,7 @@ export function aggregateMetricsOverTime(
     }
     const initial: MutableBucketAccumulator = {
       invocations: 0,
-      cost_usd: 0,
+      cost_summary: emptyCostSummary(),
       input_tokens: 0,
       output_tokens: 0,
       cache_read_tokens: 0,
@@ -184,7 +186,7 @@ export function aggregateMetricsOverTime(
       const acc = getOrCreate(bkey);
 
       acc.invocations += 1;
-      acc.cost_usd += inv.cost_usd;
+      acc.cost_summary = mergeCostSummaries([acc.cost_summary, invocationCostSummary(inv)]);
       acc.input_tokens += inv.tokens.input;
       acc.output_tokens += inv.tokens.output;
       acc.cache_read_tokens += inv.tokens.cache_read;
@@ -223,7 +225,7 @@ export function aggregateMetricsOverTime(
 
   const sortedKeys = Array.from(accumulators.keys()).sort();
 
-  let runningCumCost = 0;
+  let runningCumCost = emptyCostSummary();
   let runningCumInput = 0;
   let runningCumOutput = 0;
   let runningCumLinesAdded = 0;
@@ -234,7 +236,7 @@ export function aggregateMetricsOverTime(
 
   for (const bkey of sortedKeys) {
     const acc = accumulators.get(bkey)!;
-    runningCumCost += acc.cost_usd;
+    runningCumCost = mergeCostSummaries([runningCumCost, acc.cost_summary]);
     runningCumInput += acc.input_tokens;
     runningCumOutput += acc.output_tokens;
     runningCumLinesAdded += acc.lines_added;
@@ -251,7 +253,8 @@ export function aggregateMetricsOverTime(
       bucket_key: bkey,
       bucket_date: bkey,
       invocations: acc.invocations,
-      cost_usd: Math.round(acc.cost_usd * 10_000) / 10_000,
+      cost_usd: completeCost(acc.cost_summary),
+      cost_summary: acc.cost_summary,
       input_tokens: acc.input_tokens,
       output_tokens: acc.output_tokens,
       cache_read_tokens: acc.cache_read_tokens,
@@ -263,7 +266,8 @@ export function aggregateMetricsOverTime(
       net_lines_added: acc.lines_added - acc.lines_deleted,
       peak_context_tokens: acc.peak_context_tokens,
       active_duration_seconds: acc.active_duration_seconds,
-      cumulative_cost_usd: Math.round(runningCumCost * 10_000) / 10_000,
+      cumulative_cost_usd: completeCost(runningCumCost),
+      cumulative_cost_summary: runningCumCost,
       cumulative_input_tokens: runningCumInput,
       cumulative_output_tokens: runningCumOutput,
       cumulative_lines_added: runningCumLinesAdded,

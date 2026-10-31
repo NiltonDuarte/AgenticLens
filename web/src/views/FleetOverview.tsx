@@ -2,7 +2,6 @@ import { skillSuccessRate } from '../domain/aggregations';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
-  formatCurrencyUSD,
   formatPercentage,
   formatTokensK,
   extractTicketPrefix,
@@ -10,6 +9,7 @@ import {
 } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { KPICard } from '../components/KPICard';
+import { CostKPICard } from '../components/CostKPICard';
 import { DistributionCard } from '../components/DistributionCard';
 import { TicketTable } from '../components/TicketTable';
 import { EmptyState } from '../components/EmptyState';
@@ -211,9 +211,11 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
         <>
           {/* KPI Cards Row */}
           <section className="kpi-row" aria-label="Fleet Key Performance Indicators">
-            <KPICard
+            <CostKPICard
               title="Total Cost"
-              value={formatCurrencyUSD(summary.total_cost_usd)}
+              amount={summary.total_cost_usd}
+              summary={summary.cost_summary}
+              invocations={summary.total_invocations}
               secondary={`${summary.total_tickets} active tickets`}
               tooltip="Cumulative LLM spend across all scanned ticket workspaces"
             />
@@ -275,12 +277,14 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
             <DistributionCard
               title="Role Cost Distribution"
               items={summary.role_costs}
+              costSummaries={summary.role_cost_summaries}
               totalCostUSD={summary.total_cost_usd}
               tooltip="Breakdown of cumulative LLM inference spend categorized by agent persona role (orchestrator, coder, tester, reviewer, planner)"
             />
             <DistributionCard
               title="Model Cost Distribution"
               items={summary.model_costs}
+              costSummaries={summary.model_cost_summaries}
               totalCostUSD={summary.total_cost_usd}
               tooltip="Breakdown of cumulative LLM inference spend categorized by model family and version"
             />

@@ -9,6 +9,17 @@ describe('FleetOverview View Component', () => {
     vi.restoreAllMocks();
   });
 
+  it('keeps the fleet cost primary compact and the partial scope in secondary and tooltip', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: { ...mockFleetSummary, total_cost_usd: null, total_invocations: 3,
+      cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 1, unavailable: 1, total: 3 } } });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    render(<FleetOverview />);
+    const card = (await screen.findByText('Total Cost')).closest<HTMLElement>('.kpi-card')!;
+    expect(card.querySelector('.kpi-value')).toHaveTextContent(/^\$2\.00$/);
+    expect(card.querySelector('.kpi-secondary')).toHaveTextContent(`Known subtotal (partial) · ${mockFleetSummary.total_tickets} active tickets`);
+    expect(within(card).getByRole('tooltip')).toHaveTextContent('1 fully observed, 1 partial, 1 unavailable of 3 invocations');
+  });
+
   it('shows ranked adoption and invocation-weighted success, then refreshes safely without skill facts', async () => {
     const fetchFleet = vi.spyOn(apiClient, 'fetchFleetSummary')
       .mockResolvedValueOnce({ data: { ...mockFleetSummary, skill_adoption: [

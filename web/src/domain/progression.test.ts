@@ -103,6 +103,24 @@ describe('Domain Progression Aggregator', () => {
         });
     });
     describe('aggregateMetricsOverTime', () => {
+        it('retains partial-row contributions and never restores a cumulative total after missing cost', () => {
+            const base = Object.values(mockAgenticMetricsLedgers)[0]!;
+            const source = base.facts.sessions[0]!;
+            const invocation = source.invocations[0]!;
+            const invocations: InvocationFact[] = [
+                { ...invocation, completed_at: '2026-01-01T12:00:00Z', cost_usd: 0 },
+                { ...invocation, completed_at: '2026-01-02T12:00:00Z', cost_usd: null, cost_evidence: { state: 'partial', known_subtotal_usd: 2 } },
+                { ...invocation, completed_at: '2026-01-03T12:00:00Z', cost_usd: 1 },
+            ];
+            const ledger = { ...base, completed_at: '2026-01-03T12:00:00Z', facts: { ...base.facts, sessions: [{ ...source, invocations }] } };
+            const buckets = aggregateMetricsOverTime([ledger], 'daily');
+            expect(buckets.map((bucket) => bucket.cost_usd)).toEqual([0, null, 1]);
+            expect(buckets.map((bucket) => bucket.cumulative_cost_usd)).toEqual([0, null, null]);
+            expect(buckets[1]?.cost_summary).toMatchObject({ state: 'partial', known_subtotal_usd: 2, fully_observed: 0, partial: 1, total: 1 });
+            expect(buckets[2]?.cumulative_cost_summary).toMatchObject({ known_subtotal_usd: 3, fully_observed: 2, partial: 1, total: 3 });
+            const filtered = aggregateMetricsOverTime([ledger], 'daily', '2026-01-03', '2026-01-03');
+            expect(filtered[0]?.cumulative_cost_usd).toBe(1);
+        });
         it('returns empty array when ledgers is empty', () => {
             expect(aggregateMetricsOverTime([], 'daily')).toEqual([]);
         });
@@ -112,7 +130,7 @@ describe('Domain Progression Aggregator', () => {
             expect(buckets.length).toBeGreaterThan(0);
             for (let i = 0; i < buckets.length - 1; i++) {
                 expect(buckets[i]!.bucket_date.localeCompare(buckets[i + 1]!.bucket_date)).toBeLessThan(0);
-                expect(buckets[i]!.cumulative_cost_usd).toBeLessThanOrEqual(buckets[i + 1]!.cumulative_cost_usd);
+                expect(buckets[i]!.cumulative_cost_usd).toBeLessThanOrEqual(buckets[i + 1]!.cumulative_cost_usd!);
                 expect(buckets[i]!.cumulative_invocations).toBeLessThanOrEqual(buckets[i + 1]!.cumulative_invocations);
             }
         });
@@ -522,7 +540,8 @@ describe('Domain Progression Aggregator', () => {
             let runningLinesAdded = 0;
             let runningLinesDeleted = 0;
             for (const b of buckets) {
-                runningCost += b.cost_usd;
+                expect(b.cost_usd).not.toBeNull();
+                runningCost += b.cost_usd!;
                 runningInputs += b.input_tokens;
                 runningOutputs += b.output_tokens;
                 runningInvocations += b.invocations;
@@ -860,7 +879,7 @@ describe('Domain Progression Aggregator', () => {
                     output_tokens: inv.tokens.output,
                     cache_read_tokens: inv.tokens.cache_read,
                     cache_hit_rate_pct: inv.tokens.input === 0 ? 100 : 0,
-                    cost_usd: inv.cost_usd,
+                    cost_usd: inv.cost_usd ?? null,
                     peak_context_tokens: inv.tokens.peak_context,
                     context_health: 'HEALTHY',
                 },

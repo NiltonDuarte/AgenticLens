@@ -119,8 +119,8 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 		res.SourceVersion = sourceVer
 		hasLegacyFacts := hasLegacyFactCollections(content)
 		missingSource := hasMissingSessionSource(content)
-		needsSanitization := sourceVer == domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
-		if sourceVer == domain.CurrentSchemaVersion && !hasLegacyFacts {
+		needsSanitization := sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
+		if sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && !hasLegacyFacts {
 			if err := validateCurrentLedger(content); err != nil {
 				res.Status = "error"
 				res.Error = fmt.Errorf("validating current schema ledger: %w", err)
@@ -129,7 +129,7 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 				continue
 			}
 		}
-		if sourceVer >= targetVer && !(sourceVer == domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
+		if sourceVer >= targetVer && !(sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
 			res.Status = "up-to-date"
 			res.DiffSummary = fmt.Sprintf("Schema version %d is already up-to-date", sourceVer)
 			report.UpToDate++

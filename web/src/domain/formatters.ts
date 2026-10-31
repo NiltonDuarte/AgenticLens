@@ -1,3 +1,5 @@
+import { compareCosts, costSummaryForAmount } from './cost';
+import type { CostEvidence, CostSummary } from './types';
 import { skillNames } from './aggregations';
 import type {
   AgenticMetricsLedger,
@@ -88,17 +90,34 @@ export function formatTokensK(toks: number): string {
   return rounded.toString();
 }
 
-export function formatCurrencyUSD(cost: number): string {
-  if (!Number.isFinite(cost) || cost <= 0) {
-    return '$0.00';
-  }
+export function formatCurrencyUSD(cost: number | null | undefined): string {
+  if (cost == null || !Number.isFinite(cost)) return 'Unavailable';
+  if (cost <= 0) return '$0.00';
   if (cost < 1) {
     return `$${cost.toFixed(4)}`;
   }
   return `$${cost.toFixed(2)}`;
 }
 
-export function formatPercentage(pct: number): string {
+export function formatCostUSD(amount: number | null | undefined, summary?: CostSummary): string {
+  const cost = costSummaryForAmount(amount, summary);
+  if (cost.state === 'empty') return 'No invocation data';
+  if (cost.state === 'complete') return formatCurrencyUSD(amount);
+  const coverage = `${cost.fully_observed}/${cost.total} observed, ${cost.partial} partial, ${cost.unavailable} unavailable`;
+  return cost.known_subtotal_usd === null
+    ? `Unavailable (${coverage})`
+    : `${formatCurrencyUSD(cost.known_subtotal_usd)} known subtotal (${coverage})`;
+}
+
+/** References carry fact evidence but do not establish invocation coverage. */
+export function formatFactCostUSD(amount: number | null | undefined, evidence?: CostEvidence): string {
+  if (evidence?.state === 'partial') return `${formatCurrencyUSD(evidence.known_subtotal_usd)} known subtotal (partial)`;
+  if (evidence?.state === 'unavailable') return 'Unavailable';
+  return formatCurrencyUSD(amount);
+}
+
+export function formatPercentage(pct: number | null): string {
+  if (pct === null) return 'Unavailable';
   if (!Number.isFinite(pct) || pct <= 0) {
     return '0.0%';
   }
@@ -280,6 +299,7 @@ export function deriveTicketComparisonRows(
       active_duration_seconds: eff.active_duration_seconds,
       active_duration_formatted: eff.active_duration_formatted,
       cost_usd: tot.cost_usd,
+      ...(tot.cost_summary ? { cost_summary: tot.cost_summary } : {}),
       cache_hit_rate_pct: tot.cache_hit_rate_pct,
       test_to_code_ratio: eff.test_to_production_ratio.ratio,
       lines_added: eff.code_delivered.lines_added,
@@ -355,8 +375,7 @@ export function deriveTicketComparisonRows(
         cmp = compareTicketIds(a.ticket_id, b.ticket_id);
         break;
       case 'cost_usd':
-        cmp = a.cost_usd - b.cost_usd;
-        break;
+        return compareCosts(a.cost_usd, b.cost_usd, sortOrder === 'asc') || compareTicketIds(a.ticket_id, b.ticket_id);
       case 'active_duration_seconds':
         cmp = a.active_duration_seconds - b.active_duration_seconds;
         break;

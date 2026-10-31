@@ -78,3 +78,13 @@ This is the original session renamed from GEN-14 to REV-5, not a new task. Exist
 Final source extraction uses explicit codex source, REV-5 ticket and fix type. Snapshot covers through generate; subsequent ledger checks, commit and PR delivery are outside that snapshot.
 
 Final ledger verified: REV-5/fix, original root retained, exactly all six expected children, source codex throughout, and correct parent links. No previous other-harness sessions existed to preserve.
+
+## Upstream integration review (iteration 02 continuation)
+
+User requested merging main and reviewing the new code. Initial working tree clean at aa86f4b71abe6cbb91a43e855b91bbc11fb31515; PR92 open. Fetched main47af923 (AL-57 unavailable-cost/schema-v5 work) and started merge. Conflicts require preserving both the upstream explicit cost-evidence contracts and REV-5 subtraction/validation guarantees. This is routine integration under REV-5, not a new ticket or acceptance iteration. Prior verification remains valid for unchanged code; integrated cost/wire/migration changes require fresh checks. Incoming AL-57 artifacts are inherited main history, not independently edited task work.
+
+### Integration decisions
+
+Resolved all seven conflicted paths, including deleting the obsolete schemas.go monolith in favor of main's split DTOs. Preserved upstream unavailable/partial/observed cost evidence and v4/v5 migration behavior. Kept REV-5 removed APIs absent, removed two dead helpers reintroduced by the split and one new test-only summary wrapper, and retained meaningful assertions through active APIs. Frontend now composes general shape and cost-specific validation with one body read, accepts legitimate nullable/omitted costs, and preserves diagnostic recovery.
+
+Independent tester found no functional integration regression. Backend/domain race checks and 113 combined client/warning cases passed. Actual merged Go HTTP responses for isolated v4 observed-zero, v4 missing-cost and v5 partial-cost fixtures passed frontend decoders. See INTEGRATION_BACKEND.md, INTEGRATION_DOMAIN.md, INTEGRATION_FRONTEND.md and INTEGRATION_TESTING.md for exact decisions, assertions and limits.

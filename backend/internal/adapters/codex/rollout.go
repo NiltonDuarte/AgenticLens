@@ -855,6 +855,7 @@ func (transcript *Transcript) finalizeFacts() {
 			Turns:                 turns,
 			Tokens:                usage.usage.ToInvocationTokens(),
 			CostUSD:               0,
+			CostEvidence:          domain.UnavailableCost(),
 			Compactions:           compactions,
 			UserIterations:        userIterations,
 		})

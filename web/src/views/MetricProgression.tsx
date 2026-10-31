@@ -1,3 +1,4 @@
+import { completeCost, costSummaryForAmount, mergeCostSummaries } from '../domain/cost';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { AgenticMetricsLedger, TimeGranularity, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import { fetchWorkspaceLedgers } from '../api/client';
@@ -15,6 +16,7 @@ import {
   HEALTHY_CEILING_TOKENS,
 } from '../domain/formatters';
 import { KPICard } from '../components/KPICard';
+import { CostKPICard } from '../components/CostKPICard';
 import { TrendChart } from '../components/TrendChart';
 import { EmptyState } from '../components/EmptyState';
 import { CHART_COLORS } from '../utils/theme';
@@ -181,7 +183,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
 
   // Active window rollup KPIs
   const summary = useMemo(() => {
-    let spend = 0;
+    const costSummary = mergeCostSummaries(buckets.map((b) => costSummaryForAmount(b.cost_usd, b.cost_summary, b.invocations)));
     let invocations = 0;
     let inputTokens = 0;
     let outputTokens = 0;
@@ -190,7 +192,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
     let linesDeleted = 0;
 
     for (const b of buckets) {
-      spend += b.cost_usd;
+
       invocations += b.invocations;
       inputTokens += b.input_tokens;
       outputTokens += b.output_tokens;
@@ -205,7 +207,8 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
       cachedOrInp > 0 ? Math.round((cacheTokens / cachedOrInp) * 1000) / 10 : 0.0;
 
     return {
-      spend,
+      spend: completeCost(costSummary),
+      costSummary,
       invocations,
       totalToks,
       cacheHitPct,
@@ -386,10 +389,11 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
         <>
           {/* Active Window KPI Summary Banner */}
           <div className="kpi-grid">
-        <KPICard
+        <CostKPICard
           title="Period Spend"
-          value={formatCurrencyUSD(summary.spend)}
-          secondary={`${buckets.length} time buckets`}
+          amount={summary.spend}
+          summary={summary.costSummary}
+          invocations={summary.invocations}
           tooltip="Total USD spend across matching date range"
         />
         <KPICard

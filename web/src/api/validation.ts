@@ -1,3 +1,4 @@
+import { validateFleetCosts, validateLedgerCosts } from './costValidation';
 import type { AgenticMetricsLedger, Anomaly, BuildInfo, EventFact, FleetSummary, ProjectConfigResponse, WorkspaceDetail } from '../domain/types';
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -5,6 +6,8 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 const string = (value: unknown): value is string => typeof value === 'string';
 const number = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+const nullableNumber = (value: unknown): boolean => value === null || number(value);
+const nullableNumericMap = (value: unknown): boolean => isRecord(value) && Object.values(value).every(nullableNumber);
 const nullableString = (value: unknown): boolean => value === null || string(value);
 const optionalString = (value: unknown): boolean => value === undefined || nullableString(value);
 const optionalNumber = (value: unknown): boolean => value === undefined || number(value);
@@ -34,13 +37,13 @@ export function isAnomaly(value: unknown): value is Anomaly {
     optionalArray(value.evidence, (ref) => isRecord(ref) && fields(ref, ['session_id', 'event_id'], string));
 }
 function grouped(value: unknown): boolean {
-  return isRecord(value) && fields(value, ['invocations', 'input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_hit_rate_pct', 'cost_usd', 'peak_context_tokens'], number) && health(value.context_health);
+  return isRecord(value) && fields(value, ['invocations', 'input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_hit_rate_pct', 'peak_context_tokens'], number) && nullableNumber(value.cost_usd) && health(value.context_health);
 }
 function model(value: unknown): boolean { return isRecord(value) && string(value.model) && grouped(value); }
 function role(value: unknown): boolean { return isRecord(value) && string(value.role) && grouped(value); }
 function invocation(value: unknown): boolean {
   return isRecord(value) && fields(value, ['role', 'model'], string) && fields(value, ['started_at', 'completed_at'], nullableString) &&
-    fields(value, ['active_duration_seconds', 'turns', 'cost_usd', 'compactions'], number) && optionalNumber(value.user_iterations) &&
+    fields(value, ['active_duration_seconds', 'turns', 'compactions'], number) && (value.cost_usd === undefined || nullableNumber(value.cost_usd)) && optionalNumber(value.user_iterations) &&
     isRecord(value.tokens) && fields(value.tokens, ['input', 'output', 'cache_read', 'reasoning', 'peak_context'], number);
 }
 function session(value: unknown): boolean {
@@ -64,12 +67,12 @@ function facts(value: unknown): boolean {
     fields(value.code, ['lines_added', 'lines_deleted', 'test_lines_added', 'test_lines_deleted', 'prod_lines_added', 'prod_lines_deleted', 'files_changed', 'sdlc_iterations'], number) &&
     array(value.sessions, session) && optionalArray(value.anomalies, isAnomaly) &&
     optionalArray(value.skills, (v) => isRecord(v) && fields(v, ['name', 'caller_role', 'timestamp'], string) && fields(v, ['turn_index', 'message_index'], number) && typeof v.success === 'boolean' && (v.error === undefined || string(v.error))) &&
-    optionalArray(value.task_links, (v) => isRecord(v) && fields(v, ['subagent_type', 'description', 'timestamp'], string) && number(v.parent_turn) && (v.child_session_id === undefined || string(v.child_session_id)) && fields(v, ['duration_ms', 'cost_usd'], optionalNumber));
+    optionalArray(value.task_links, (v) => isRecord(v) && fields(v, ['subagent_type', 'description', 'timestamp'], string) && number(v.parent_turn) && (v.child_session_id === undefined || string(v.child_session_id)) && optionalNumber(v.duration_ms) && (v.cost_usd === undefined || nullableNumber(v.cost_usd)));
 }
 function workflow(value: unknown): boolean {
   if (!isRecord(value)) return false;
   const velocity = value.subagent_turn_velocity, ratio = value.test_to_production_ratio, code = value.code_delivered, tool = value.tool_execution, context = value.context_window_health;
-  return fields(value, ['sdlc_iterations', 'active_duration_seconds', 'reasoning_tokens', 'reasoning_ratio_pct'], number) && string(value.active_duration_formatted) && numericMap(value.role_effort_distribution_pct) &&
+  return fields(value, ['sdlc_iterations', 'active_duration_seconds', 'reasoning_tokens', 'reasoning_ratio_pct'], number) && string(value.active_duration_formatted) && nullableNumericMap(value.role_effort_distribution_pct) && (value.role_effort_unavailable_reason === undefined || string(value.role_effort_unavailable_reason)) &&
     isRecord(velocity) && fields(velocity, ['avg_turns_per_invocation', 'peak_turns'], number) && numericMap(velocity.by_role) &&
     isRecord(ratio) && string(ratio.ratio) && fields(ratio, ['test_lines_added', 'prod_lines_added'], number) &&
     isRecord(code) && fields(code, ['lines_added', 'lines_deleted', 'files_changed'], number) &&
@@ -118,6 +121,7 @@ export function decodeLedgers(value: unknown): AgenticMetricsLedger[] {
   if (!Array.isArray(value)) throw new Error('Invalid workspace ledgers response');
   return value.map((entry: unknown) => {
     const ledger = prepareLedger(entry);
+    validateLedgerCosts(ledger);
     if (!isLedger(ledger)) throw new Error('Invalid workspace ledgers response');
     return ledger;
   });
@@ -125,8 +129,8 @@ export function decodeLedgers(value: unknown): AgenticMetricsLedger[] {
 function isFleet(value: unknown): value is FleetSummary {
   if (!isRecord(value) || !isRecord(value.anomaly_summary)) return false;
   const anomaly = value.anomaly_summary;
-  return fields(value, ['total_tickets', 'total_cost_usd', 'total_invocations', 'total_input_tokens', 'total_output_tokens', 'total_cache_read_tokens', 'overall_cache_hit_rate_pct', 'total_duration_seconds', 'total_lines_added', 'total_lines_deleted', 'total_files_changed', 'total_reasoning_tokens', 'overall_reasoning_ratio_pct'], number) &&
-    string(value.formatted_total_duration) && numericMap(value.role_costs) && numericMap(value.model_costs) &&
+  return fields(value, ['total_tickets', 'total_invocations', 'total_input_tokens', 'total_output_tokens', 'total_cache_read_tokens', 'overall_cache_hit_rate_pct', 'total_duration_seconds', 'total_lines_added', 'total_lines_deleted', 'total_files_changed', 'total_reasoning_tokens', 'overall_reasoning_ratio_pct'], number) &&
+    nullableNumber(value.total_cost_usd) && string(value.formatted_total_duration) && nullableNumericMap(value.role_costs) && nullableNumericMap(value.model_costs) &&
     fields(anomaly, ['total_anomalies', 'warning_count', 'critical_count', 'total_tickets', 'tickets_with_anomalies', 'anomaly_rate_per_ticket'], number) && numericMap(anomaly.severity_counts) && numericMap(anomaly.rule_counts) &&
     array(anomaly.brittle_tools, (v) => isRecord(v) && string(v.tool_name) && fields(v, ['anomaly_count', 'total_calls', 'error_count', 'failure_rate_pct'], number)) &&
     optionalArray(value.skill_adoption, (v) => isRecord(v) && string(v.name) && fields(v, ['total_invocations', 'tickets_count', 'failure_count', 'failure_rate'], number));
@@ -134,6 +138,7 @@ function isFleet(value: unknown): value is FleetSummary {
 export function decodeFleet(value: unknown): FleetSummary {
   const result = collections(value, ['skill_adoption'], ['role_costs', 'model_costs']);
   if (isRecord(result)) result.anomaly_summary = collections(result.anomaly_summary, ['brittle_tools'], ['severity_counts', 'rule_counts']);
+  validateFleetCosts(result);
   if (!isFleet(result)) throw new Error('Invalid fleet summary response');
   return result;
 }
@@ -155,6 +160,7 @@ export function decodeDetail(value: unknown): WorkspaceDetail {
     }
     result.artifacts = artifacts;
   }
+  if (isRecord(result)) validateLedgerCosts(result.ledger);
   if (!isDetail(result)) throw new Error('Invalid workspace detail response');
   return result;
 }

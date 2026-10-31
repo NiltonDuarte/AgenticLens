@@ -242,3 +242,68 @@ func TestSchemaV2SessionTiedTimestampsPreserveSourceAndSameMessageOrder(t *testi
 		}
 	}
 }
+
+func TestSchemaV2CostEvidenceCoalescesReportedAndMissingRecords(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	createSchemaV2TestDB(t, db)
+	if _, err := db.Exec(`UPDATE session_message SET data=json_set(data,'$.cost',2) WHERE id='a1'; UPDATE session_message SET data=json_remove(data,'$.cost') WHERE id='a2';`); err != nil {
+		t.Fatal(err)
+	}
+	sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+	invs := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(invs) != 1 || invs[0].CostEvidence.State != domain.CostPartial || invs[0].CostEvidence.KnownSubtotalUSD == nil || *invs[0].CostEvidence.KnownSubtotalUSD != 2 {
+		t.Fatalf("coalesced cost=%+v", invs)
+	}
+	summary := domain.ComputeTotals(invs).CostSummary
+	if summary.CompleteAmount() != nil || summary.Partial != 1 || summary.Total != 1 {
+		t.Fatalf("partial invocation counted as complete: %+v", summary)
+	}
+	for _, tc := range []struct {
+		name, first, second string
+		state               domain.CostState
+		invalid             bool
+	}{
+		{"explicit zero remains observed", "0", "0", domain.CostObserved, false},
+		{"known zero plus null is partial", "0", "null", domain.CostPartial, false},
+		{"only null is unavailable", "null", "null", domain.CostUnavailable, false},
+		{"negative cost is rejected", "-1", "null", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := db.Exec(`UPDATE session_message SET data=json_set(data,'$.cost',json(?)) WHERE id=?`, tc.first, "a1"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`UPDATE session_message SET data=json_set(data,'$.cost',json(?)) WHERE id=?`, tc.second, "a2"); err != nil {
+				t.Fatal(err)
+			}
+			sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+			rows := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
+			if tc.invalid {
+				if err == nil {
+					t.Fatalf("invalid source amount was accepted: %+v", rows)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || rows[0].CostEvidence.State != tc.state {
+				t.Fatalf("source availability=%+v", rows)
+			}
+			if tc.state == domain.CostUnavailable {
+				if rows[0].CostEvidence.KnownSubtotalUSD != nil {
+					t.Fatalf("unknown source became known zero: %+v", rows[0])
+				}
+			} else if rows[0].CostEvidence.KnownSubtotalUSD == nil || *rows[0].CostEvidence.KnownSubtotalUSD != 0 {
+				t.Fatalf("known zero contribution lost: %+v", rows[0])
+			}
+		})
+	}
+
+}

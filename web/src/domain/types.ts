@@ -1,3 +1,17 @@
+export type CostEvidence =
+  | { readonly state: 'observed'; readonly known_subtotal_usd: number }
+  | { readonly state: 'partial'; readonly known_subtotal_usd: number }
+  | { readonly state: 'unavailable'; readonly known_subtotal_usd: null };
+
+export interface CostSummary {
+  readonly state: 'empty' | 'complete' | 'partial' | 'unavailable';
+  readonly known_subtotal_usd: number | null;
+  readonly fully_observed: number;
+  readonly partial: number;
+  readonly unavailable: number;
+  readonly total: number;
+}
+
 export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL';
 
 export type {
@@ -55,7 +69,9 @@ export interface InvocationFact {
   readonly active_duration_seconds: number;
   readonly turns: number;
   readonly tokens: InvocationTokens;
-  readonly cost_usd: number;
+  // Legacy wire facts may omit cost; schema v5 requires explicit cost evidence.
+  readonly cost_usd?: number | null;
+  readonly cost_evidence?: CostEvidence;
   readonly compactions: number;
   readonly user_iterations?: number;
 }
@@ -114,7 +130,8 @@ export interface TaskLinkFact {
   readonly child_session_id?: string;
   readonly timestamp: string;
   readonly duration_ms?: number;
-  readonly cost_usd?: number;
+  readonly cost_usd?: number | null;
+  readonly cost_evidence?: CostEvidence;
 }
 
 export interface AgenticFactLedger {
@@ -189,7 +206,8 @@ export interface GroupedMetric {
   readonly output_tokens: number;
   readonly cache_read_tokens: number;
   readonly cache_hit_rate_pct: number;
-  readonly cost_usd: number;
+  readonly cost_usd: number | null;
+  readonly cost_summary?: CostSummary;
   readonly peak_context_tokens: number;
   readonly context_health: ContextHealthStatus;
 }
@@ -233,7 +251,8 @@ export interface WorkflowEfficiency {
   readonly sdlc_iterations: number;
   readonly active_duration_seconds: number;
   readonly active_duration_formatted: string;
-  readonly role_effort_distribution_pct: Readonly<Record<string, number>>;
+  readonly role_effort_distribution_pct: Readonly<Record<string, number | null>>;
+  readonly role_effort_unavailable_reason?: string;
   readonly subagent_turn_velocity: SubagentTurnVelocity;
   readonly test_to_production_ratio: TestToCodeRatio;
   readonly reasoning_tokens: number;
@@ -250,7 +269,8 @@ export interface ModelMetric {
   readonly output_tokens: number;
   readonly cache_read_tokens: number;
   readonly cache_hit_rate_pct: number;
-  readonly cost_usd: number;
+  readonly cost_usd: number | null;
+  readonly cost_summary?: CostSummary;
   readonly peak_context_tokens: number;
   readonly context_health: ContextHealthStatus;
 }
@@ -262,7 +282,8 @@ export interface RoleMetric {
   readonly output_tokens: number;
   readonly cache_read_tokens: number;
   readonly cache_hit_rate_pct: number;
-  readonly cost_usd: number;
+  readonly cost_usd: number | null;
+  readonly cost_summary?: CostSummary;
   readonly peak_context_tokens: number;
   readonly context_health: ContextHealthStatus;
 }
@@ -306,7 +327,8 @@ export interface SkillAdoptionFact {
 export interface FleetSummary {
   readonly skill_adoption?: readonly SkillAdoptionFact[];
   readonly total_tickets: number;
-  readonly total_cost_usd: number;
+  readonly total_cost_usd: number | null;
+  readonly cost_summary?: CostSummary;
   readonly total_invocations: number;
   readonly total_input_tokens: number;
   readonly total_output_tokens: number;
@@ -319,8 +341,10 @@ export interface FleetSummary {
   readonly total_files_changed: number;
   readonly total_reasoning_tokens: number;
   readonly overall_reasoning_ratio_pct: number;
-  readonly role_costs: Readonly<Record<string, number>>;
-  readonly model_costs: Readonly<Record<string, number>>;
+  readonly role_costs: Readonly<Record<string, number | null>>;
+  readonly role_cost_summaries?: Readonly<Record<string, CostSummary>>;
+  readonly model_costs: Readonly<Record<string, number | null>>;
+  readonly model_cost_summaries?: Readonly<Record<string, CostSummary>>;
   readonly anomaly_summary: FleetAnomalySummary;
 }
 
@@ -332,7 +356,8 @@ export interface TicketComparisonRow {
   readonly sdlc_iterations: number;
   readonly active_duration_seconds: number;
   readonly active_duration_formatted: string;
-  readonly cost_usd: number;
+  readonly cost_usd: number | null;
+  readonly cost_summary?: CostSummary;
   readonly cache_hit_rate_pct: number;
   readonly test_to_code_ratio: string;
   readonly lines_added: number;
@@ -395,7 +420,8 @@ export interface TimeBucketMetric {
   readonly bucket_key: string;
   readonly bucket_date: string;
   readonly invocations: number;
-  readonly cost_usd: number;
+  readonly cost_usd: number | null;
+  readonly cost_summary?: CostSummary;
   readonly input_tokens: number;
   readonly output_tokens: number;
   readonly cache_read_tokens: number;
@@ -407,7 +433,8 @@ export interface TimeBucketMetric {
   readonly net_lines_added: number;
   readonly peak_context_tokens: number;
   readonly active_duration_seconds: number;
-  readonly cumulative_cost_usd: number;
+  readonly cumulative_cost_usd: number | null;
+  readonly cumulative_cost_summary?: CostSummary;
   readonly cumulative_input_tokens: number;
   readonly cumulative_output_tokens: number;
   readonly cumulative_lines_added: number;

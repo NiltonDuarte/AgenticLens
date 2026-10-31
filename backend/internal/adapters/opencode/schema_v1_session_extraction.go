@@ -323,7 +323,13 @@ func extractSchemaV1Sessions(
 			}
 
 			if rawMD.Cost != nil {
+				if !domain.ValidCostAmount(*rawMD.Cost) {
+					return nil, nil, nil, errors.Join(fmt.Errorf("invalid cost in message %s session %s", mid, s.id), msgRows.Close())
+				}
+				acc.costPresent++
 				acc.cost += *rawMD.Cost
+			} else {
+				acc.costMissing++
 			}
 		}
 		if err := msgRows.Err(); err != nil {
@@ -660,6 +666,7 @@ func extractSchemaV1Sessions(
 					PeakContext: st.peak,
 				},
 				CostUSD:        math.Round(st.cost*1e6) / 1e6,
+				CostEvidence:   st.costEvidence(),
 				Compactions:    compactions,
 				UserIterations: userIterations,
 			})

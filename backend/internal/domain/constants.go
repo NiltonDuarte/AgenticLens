@@ -6,7 +6,7 @@ import (
 )
 
 // CurrentSchemaVersion defines the active telemetry schema version.
-const CurrentSchemaVersion int = 4
+const CurrentSchemaVersion int = 5
 
 // Migration step identifiers.
 const (

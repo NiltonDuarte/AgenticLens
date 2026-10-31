@@ -1341,7 +1341,7 @@ func main() {
 				tid = *ledger.TicketID
 			}
 			dur := ledger.WorkflowEfficiency.ActiveDurationFormatted
-			cost := fmt.Sprintf("$%.2f", ledger.Totals.CostUSD)
+			cost := adapters.FormatCostSummary(domain.EffectiveCostSummary(ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations))
 			health := ledger.WorkflowEfficiency.ContextWindowHealth.Status
 			iters := fmt.Sprintf("%d", ledger.WorkflowEfficiency.SDLCIterations)
 			anomSummary := formatAnomalyListSummary(ledger.Anomalies)

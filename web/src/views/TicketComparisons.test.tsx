@@ -15,7 +15,15 @@ describe('TicketComparisons View Component', () => {
     const ids = ['AL-1', 'AL-2', 'AL-3', 'PO-1'];
     const ledgers = ids.map((id, index) => {
       const ledger = mockAgenticMetricsLedgers[id]!;
-      return { ...ledger, facts: { ...ledger.facts, skills: index === 0 ? [fact('all'), fact('all')] : index === 1 ? [fact('ALL')] : index === 3 ? [fact('all')] : [] } };
+      const amount = index === 0 ? 6 : index === 1 ? 0 : null;
+      const cost_summary = index === 2
+        ? { state: 'partial' as const, known_subtotal_usd: 4, fully_observed: 0, partial: 1, unavailable: 0, total: 1 }
+        : index === 3
+          ? { state: 'unavailable' as const, known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 }
+          : { state: 'complete' as const, known_subtotal_usd: amount, fully_observed: 1, partial: 0, unavailable: 0, total: 1 };
+      return { ...ledger, totals: { ...ledger.totals, cost_usd: amount, cost_summary },
+        workflow_efficiency: { ...ledger.workflow_efficiency, active_duration_seconds: [60, 120, 900, 300][index]!, sdlc_iterations: [2, 4, 12, 20][index]! },
+        facts: { ...ledger.facts, skills: index === 0 ? [fact('all'), fact('all')] : index === 1 ? [fact('ALL')] : index === 3 ? [fact('all')] : [] } };
     });
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: ledgers });
     const { container } = render(<TicketComparisons />);
@@ -23,33 +31,119 @@ describe('TicketComparisons View Component', () => {
     const table = screen.getByRole('table');
     const visibleIDs = () => [...container.querySelectorAll('.clickable-comparison-row .ticket-link-btn')].map((node) => node.textContent?.trim()).sort();
     const points = () => container.querySelectorAll('circle.ticket-scatter-point');
+    const expectSpend = (value: string, population: string) => {
+      const card = screen.getByText('Average Spend / Ticket').closest<HTMLElement>('.kpi-card')!;
+      expect(card.querySelector('.kpi-value')?.textContent).toBe(value);
+      expect(card.querySelector('.kpi-secondary')?.textContent).toBe(population);
+    };
+    expectSpend('$3.00', '2 of 4 tickets with cost');
     expect(within(table).getByText('No recorded skills')).toBeInTheDocument();
     expect(within(table).getAllByText('all')).toHaveLength(2);
     fireEvent.click(screen.getByRole('combobox', { name: 'Filter by Skill selector' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'all' }));
     expect(visibleIDs()).toEqual(['AL-1', 'PO-1']);
+    expectSpend('$6.00', '1 of 2 tickets with cost');
     fireEvent.click(screen.getByRole('checkbox', { name: 'ALL' }));
     expect(visibleIDs()).toEqual(['AL-1', 'AL-2', 'PO-1']);
+    expectSpend('$3.00', '2 of 3 tickets with cost');
     expect(screen.queryByText('AL-3')).not.toBeInTheDocument();
-    expect(points()).toHaveLength(3);
+    expect(points()).toHaveLength(2); // Missing cost omits its cost-axis point, not its row.
     expect(screen.getByText('Benchmarked Workspaces').closest('.kpi-card')).toHaveTextContent('3');
     fireEvent.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Feature' }));
     await waitFor(() => expect(visibleIDs()).toEqual(['AL-1', 'AL-2']));
+    expectSpend('$3.00', '2 of 2 tickets with cost');
     fireEvent.click(screen.getByRole('combobox', { name: 'Prefix selector' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'AL' }));
     await waitFor(() => expect(visibleIDs()).toEqual(['AL-1', 'AL-2']));
+    expectSpend('$3.00', '2 of 2 tickets with cost');
     const search = screen.getByPlaceholderText(/search by ticket id or title/i);
     fireEvent.change(search, { target: { value: 'AL-3' } });
     expect(screen.getByText(/No tickets match the query/)).toBeInTheDocument();
+    expectSpend('Unavailable', '0 of 0 tickets with cost');
     // Options are still derived from source ledgers while no displayed row matches.
     expect(screen.getByRole('checkbox', { name: 'all' })).toBeChecked();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select all Filter by Skill' }));
     expect(visibleIDs()).toEqual(['AL-3']);
-    expect(points()).toHaveLength(1);
+    expectSpend('Unavailable', '0 of 1 tickets with cost');
+    expect(points()).toHaveLength(0); // The partial row has no complete cost-axis value.
     fireEvent.change(search, { target: { value: '' } });
     expect(visibleIDs()).toEqual(['AL-1', 'AL-2', 'AL-3']);
+    expectSpend('$3.00', '2 of 3 tickets with cost');
+    expect(screen.getByText('Average Active Duration').closest('.kpi-card')?.querySelector('.kpi-value')?.textContent).toBe('6m 0s');
+    expect(screen.getByText('Average Iterations').closest('.kpi-card')?.querySelector('.kpi-value')?.textContent).toBe('6.0');
+    expect(screen.getByText('Benchmarked Workspaces').closest('.kpi-card')?.querySelector('.kpi-value')?.textContent).toBe('3');
     expect(screen.queryByText('PO-1')).not.toBeInTheDocument();
+  });
+
+  it('averages complete filtered ticket costs including zero and recovers after unknown and empty searches', async () => {
+    const ledgers = ['AL-1', 'AL-2', 'AL-3'].map((id, index) => {
+      const base = mockAgenticMetricsLedgers[id]!;
+      const amount = index === 0 ? 6 : index === 1 ? 0 : null;
+      return { ...base, totals: { ...base.totals, cost_usd: amount,
+        cost_summary: index === 2
+          ? { state: 'partial' as const, known_subtotal_usd: 4, fully_observed: 0, partial: 1, unavailable: 0, total: 1 }
+          : { state: 'complete' as const, known_subtotal_usd: amount, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+      } };
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: ledgers });
+    render(<TicketComparisons />);
+    const card = (await screen.findByText('Average Spend / Ticket')).closest<HTMLElement>('.kpi-card')!;
+    const value = () => card.querySelector('.kpi-value')?.textContent;
+    const population = () => card.querySelector('.kpi-secondary')?.textContent;
+    expect(value()).toBe('$3.00');
+    expect(population()).toBe('2 of 3 tickets with cost');
+    expect(screen.getByText('Benchmarked Workspaces').closest('.kpi-card')?.querySelector('.kpi-value')).toHaveTextContent('3');
+    expect(within(card).getByRole('tooltip')).toHaveTextContent('excludes unavailable and partial costs');
+    const search = screen.getByPlaceholderText(/search by ticket id or title/i);
+    fireEvent.change(search, { target: { value: 'AL-1' } });
+    expect(value()).toBe('$6.00');
+    expect(population()).toBe('1 of 1 tickets with cost');
+    fireEvent.change(search, { target: { value: 'AL-2' } });
+    expect(value()).toBe('$0.00');
+    expect(population()).toBe('1 of 1 tickets with cost');
+    fireEvent.change(search, { target: { value: 'AL-3' } });
+    expect(value()).toBe('Unavailable');
+    expect(population()).toBe('0 of 1 tickets with cost');
+    fireEvent.change(search, { target: { value: 'missing-ticket' } });
+    expect(value()).toBe('Unavailable');
+    expect(population()).toBe('0 of 0 tickets with cost');
+    fireEvent.change(search, { target: { value: '' } });
+    expect(value()).toBe('$3.00');
+    expect(population()).toBe('2 of 3 tickets with cost');
+  });
+
+  it('replaces eligible cost populations when filter refetches return changed ledgers', async () => {
+    const row = (id: string, amount: number | null) => {
+      const base = mockAgenticMetricsLedgers[id]!;
+      return { ...base, totals: { ...base.totals, cost_usd: amount } };
+    };
+    const fetchLedgers = vi.spyOn(apiClient, 'fetchWorkspaceLedgers')
+      .mockResolvedValueOnce({ data: [row('AL-1', 6), row('PO-1', null)] })
+      .mockResolvedValueOnce({ data: [row('AL-1', 0), row('AL-2', null), row('AL-3', null)] })
+      .mockResolvedValueOnce({ data: [row('AL-1', null), row('AL-2', null)] })
+      .mockResolvedValue({ data: [row('AL-1', 8), row('AL-2', 0)] });
+    const { container } = render(<TicketComparisons />);
+    const card = (await screen.findByText('Average Spend / Ticket')).closest<HTMLElement>('.kpi-card')!;
+    const value = () => card.querySelector('.kpi-value')?.textContent;
+    const population = () => card.querySelector('.kpi-secondary')?.textContent;
+    expect(value()).toBe('$6.00');
+    expect(population()).toBe('1 of 2 tickets with cost');
+    fireEvent.click(screen.getByRole('combobox', { name: 'Prefix selector' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'AL' }));
+    await waitFor(() => expect(population()).toBe('1 of 3 tickets with cost'));
+    expect(fetchLedgers).toHaveBeenLastCalledWith('all', undefined, undefined, undefined, ['AL']);
+    expect(value()).toBe('$0.00');
+    expect(container.querySelectorAll('.clickable-comparison-row')).toHaveLength(3);
+    fireEvent.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Feature' }));
+    await waitFor(() => expect(population()).toBe('0 of 2 tickets with cost'));
+    expect(value()).toBe('Unavailable');
+    expect(container.querySelectorAll('.clickable-comparison-row')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all Prefix' }));
+    await waitFor(() => expect(value()).toBe('$4.00'));
+    expect(population()).toBe('2 of 2 tickets with cost');
+    expect(fetchLedgers).toHaveBeenCalledTimes(4);
   });
 
   it('shows ticket-specific skipped-workspace diagnostics alongside valid rows', async () => {

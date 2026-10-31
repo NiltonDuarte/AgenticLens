@@ -77,18 +77,19 @@ type invocationAccumulator struct {
 	cacheReadTokens   int64
 	cacheHitRatePct   float64
 	costUSD           float64
+	costSummary       CostSummary
 	peakContextTokens int64
 }
 
 func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 	var inp, out, cache, peak int64
-	var cost float64
+	var costSummary CostSummary
 
 	for _, inv := range invs {
 		inp += inv.Tokens.Input
 		out += inv.Tokens.Output
 		cache += inv.Tokens.CacheRead
-		cost += inv.CostUSD
+		costSummary = MergeCostSummaries(costSummary, SummaryForCost(inv.CostUSD, inv.CostEvidence))
 		if inv.Tokens.PeakContext > peak {
 			peak = inv.Tokens.PeakContext
 		}
@@ -106,7 +107,8 @@ func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 		outputTokens:      out,
 		cacheReadTokens:   cache,
 		cacheHitRatePct:   hitPct,
-		costUSD:           math.Round(cost*10000.0) / 10000.0,
+		costUSD:           math.Round(costSummary.Subtotal()*10000.0) / 10000.0,
+		costSummary:       FinalizeCostSummary(costSummary),
 		peakContextTokens: peak,
 	}
 }
@@ -126,31 +128,23 @@ func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric
 			CacheReadTokens:   0,
 			CacheHitRatePct:   0.0,
 			CostUSD:           0.0,
+			CostSummary:       FinalizeCostSummary(CostSummary{}),
 			PeakContextTokens: 0,
 			ContextHealth:     ContextHealthHealthy,
 		}
-	}
-
-	byRole := make(map[AgentRole][]InvocationFact)
-	for _, inv := range invocations {
-		byRole[inv.Role] = append(byRole[inv.Role], inv)
-	}
-
-	var totalInvocations int64
-	for _, rInvs := range byRole {
-		totalInvocations += accumulateInvocations(rInvs).invocations
 	}
 
 	acc := accumulateInvocations(invocations)
 	healthStatus := GetBaseHealthStatus(acc.peakContextTokens, effCeiling)
 
 	return GroupedMetric{
-		Invocations:       totalInvocations,
+		Invocations:       acc.invocations,
 		InputTokens:       acc.inputTokens,
 		OutputTokens:      acc.outputTokens,
 		CacheReadTokens:   acc.cacheReadTokens,
 		CacheHitRatePct:   acc.cacheHitRatePct,
 		CostUSD:           acc.costUSD,
+		CostSummary:       acc.costSummary,
 		PeakContextTokens: acc.peakContextTokens,
 		ContextHealth:     healthStatus,
 	}
@@ -178,6 +172,7 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 
 	subCosts := make(map[string]float64)
 	var totSubCost float64
+	var subCostSummary CostSummary
 	subPeaks := make(map[AgentRole]int64)
 	roleTurns := make(map[AgentRole][]int64)
 
@@ -203,8 +198,10 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 				if strings.TrimSpace(string(role)) == "" {
 					role = RoleUnassignedSubAgent
 				}
-				subCosts[string(role)] += inv.CostUSD
-				totSubCost += inv.CostUSD
+				amount := SummaryForCost(inv.CostUSD, inv.CostEvidence)
+				subCosts[string(role)] += amount.Subtotal()
+				totSubCost += amount.Subtotal()
+				subCostSummary = MergeCostSummaries(subCostSummary, amount)
 				if curr, exists := subPeaks[role]; !exists || inv.Tokens.PeakContext > curr {
 					subPeaks[role] = inv.Tokens.PeakContext
 				}
@@ -226,7 +223,11 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 	}
 
 	roleEffortDistributionPct := make(map[string]float64)
-	if totSubCost > 0 && len(subCosts) > 0 {
+	roleEffortUnavailableReason := ""
+	if subCostSummary.CompleteAmount() == nil || totSubCost <= 0 {
+		roleEffortUnavailableReason = "Complete nonzero subagent cost is required"
+	}
+	if roleEffortUnavailableReason == "" && len(subCosts) > 0 {
 		for r, c := range subCosts {
 			if c > 0 {
 				roleEffortDistributionPct[r] = math.Round(c/totSubCost*1000.0) / 10.0
@@ -406,17 +407,18 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 	}
 
 	return WorkflowEfficiency{
-		SDLCIterations:            code.SDLCIterations,
-		ActiveDurationSeconds:     activeDurationSeconds,
-		ActiveDurationFormatted:   activeDurationFormatted,
-		RoleEffortDistributionPct: roleEffortDistributionPct,
-		SubagentTurnVelocity:      subagentTurnVelocity,
-		TestToProductionRatio:     testToProductionRatio,
-		ReasoningTokens:           totReasoning,
-		ReasoningRatioPct:         reasoningRatioPct,
-		CodeDelivered:             codeDelivered,
-		ToolExecution:             toolExecution,
-		ContextWindowHealth:       contextWindowHealth,
+		SDLCIterations:              code.SDLCIterations,
+		ActiveDurationSeconds:       activeDurationSeconds,
+		ActiveDurationFormatted:     activeDurationFormatted,
+		RoleEffortDistributionPct:   roleEffortDistributionPct,
+		RoleEffortUnavailableReason: roleEffortUnavailableReason,
+		SubagentTurnVelocity:        subagentTurnVelocity,
+		TestToProductionRatio:       testToProductionRatio,
+		ReasoningTokens:             totReasoning,
+		ReasoningRatioPct:           reasoningRatioPct,
+		CodeDelivered:               codeDelivered,
+		ToolExecution:               toolExecution,
+		ContextWindowHealth:         contextWindowHealth,
 	}
 }
 
@@ -464,6 +466,7 @@ func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, 
 			CacheReadTokens:   acc.cacheReadTokens,
 			CacheHitRatePct:   acc.cacheHitRatePct,
 			CostUSD:           acc.costUSD,
+			CostSummary:       acc.costSummary,
 			PeakContextTokens: acc.peakContextTokens,
 			ContextHealth:     health,
 		})
@@ -498,14 +501,22 @@ func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []Model
 			CacheReadTokens:   acc.cacheReadTokens,
 			CacheHitRatePct:   acc.cacheHitRatePct,
 			CostUSD:           acc.costUSD,
+			CostSummary:       acc.costSummary,
 			PeakContextTokens: acc.peakContextTokens,
 			ContextHealth:     health,
 		})
 	}
 
 	sort.Slice(metrics, func(i, j int) bool {
-		if metrics[i].CostUSD != metrics[j].CostUSD {
-			return metrics[i].CostUSD > metrics[j].CostUSD
+		ci, cj := metrics[i].CostSummary.CompleteAmount(), metrics[j].CostSummary.CompleteAmount()
+		if (ci == nil) != (cj == nil) {
+			return ci != nil
+		}
+		if ci == nil {
+			return metrics[i].Model < metrics[j].Model
+		}
+		if *ci != *cj {
+			return *ci > *cj
 		}
 		return metrics[i].Model < metrics[j].Model
 	})
@@ -601,43 +612,33 @@ func ComputeThreadSummariesWithCeiling(sessions []SessionFact, ceiling int64, ro
 
 			var modelMetrics []ModelMetric
 			for model, mInvs := range byModel {
-				var inp, out, cache int64
-				var cost float64
-				var peak int64
-
-				for _, inv := range mInvs {
-					inp += inv.Tokens.Input
-					out += inv.Tokens.Output
-					cache += inv.Tokens.CacheRead
-					cost += inv.CostUSD
-					if inv.Tokens.PeakContext > peak {
-						peak = inv.Tokens.PeakContext
-					}
-				}
-
-				totTok := inp + cache
-				var hitPct float64
-				if totTok > 0 {
-					hitPct = math.Round(float64(cache)/float64(totTok)*1000.0) / 10.0
-				}
-				health := GetBaseHealthStatus(peak, ceiling)
+				acc := accumulateInvocations(mInvs)
+				health := GetBaseHealthStatus(acc.peakContextTokens, ceiling)
 
 				modelMetrics = append(modelMetrics, ModelMetric{
 					Model:             model,
-					Invocations:       int64(len(mInvs)),
-					InputTokens:       inp,
-					OutputTokens:      out,
-					CacheReadTokens:   cache,
-					CacheHitRatePct:   hitPct,
-					CostUSD:           math.Round(cost*10000.0) / 10000.0,
-					PeakContextTokens: peak,
+					Invocations:       acc.invocations,
+					InputTokens:       acc.inputTokens,
+					OutputTokens:      acc.outputTokens,
+					CacheReadTokens:   acc.cacheReadTokens,
+					CacheHitRatePct:   acc.cacheHitRatePct,
+					CostUSD:           acc.costUSD,
+					CostSummary:       acc.costSummary,
+					PeakContextTokens: acc.peakContextTokens,
 					ContextHealth:     health,
 				})
 			}
 
 			sort.Slice(modelMetrics, func(i, j int) bool {
-				if modelMetrics[i].CostUSD != modelMetrics[j].CostUSD {
-					return modelMetrics[i].CostUSD > modelMetrics[j].CostUSD
+				ci, cj := modelMetrics[i].CostSummary.CompleteAmount(), modelMetrics[j].CostSummary.CompleteAmount()
+				if (ci == nil) != (cj == nil) {
+					return ci != nil
+				}
+				if ci == nil {
+					return modelMetrics[i].Model < modelMetrics[j].Model
+				}
+				if *ci != *cj {
+					return *ci > *cj
 				}
 				return modelMetrics[i].Model < modelMetrics[j].Model
 			})
@@ -808,6 +809,9 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		return FleetSummary{
 			TotalTickets:             0,
 			TotalCostUSD:             0.0,
+			CostSummary:              FinalizeCostSummary(CostSummary{}),
+			RoleCostSummaries:        make(map[AgentRole]CostSummary),
+			ModelCostSummaries:       make(map[string]CostSummary),
 			TotalInvocations:         0,
 			TotalInputTokens:         0,
 			TotalOutputTokens:        0,
@@ -827,7 +831,12 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		}
 	}
 
+	// Scalar compatibility fields sum already-rounded ledger projections;
+	// evidence summaries retain source precision for nullable wire amounts.
 	var totalCostUSD float64
+	var fleetCostSummary CostSummary
+	roleCostSummaries := make(map[AgentRole]CostSummary)
+	modelCostSummaries := make(map[string]CostSummary)
 	var totalInvocations, totalInputTokens, totalOutputTokens, totalCacheReadTokens int64
 	var totalDurationSeconds, totalLinesAdded, totalLinesDeleted, totalFilesChanged, totalReasoningTokens int64
 
@@ -839,6 +848,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	for i, ledger := range ledgers {
 		factLedgers[i] = ledger.Facts
 		totalCostUSD += ledger.Totals.CostUSD
+		fleetCostSummary = MergeCostSummaries(fleetCostSummary, EffectiveCostSummary(ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations))
 		totalInvocations += ledger.Totals.Invocations
 		totalInputTokens += ledger.Totals.InputTokens
 		totalOutputTokens += ledger.Totals.OutputTokens
@@ -850,10 +860,12 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		totalReasoningTokens += ledger.WorkflowEfficiency.ReasoningTokens
 
 		for _, r := range ledger.Roles {
-			roleCosts[r.Role] = math.Round((roleCosts[r.Role]+r.CostUSD)*10000.0) / 10000.0
+			roleCosts[r.Role] += r.CostUSD
+			roleCostSummaries[r.Role] = MergeCostSummaries(roleCostSummaries[r.Role], EffectiveCostSummary(r.CostSummary, r.CostUSD, r.Invocations))
 		}
 		for _, m := range ledger.Models {
-			modelCosts[m.Model] = math.Round((modelCosts[m.Model]+m.CostUSD)*10000.0) / 10000.0
+			modelCosts[m.Model] += m.CostUSD
+			modelCostSummaries[m.Model] = MergeCostSummaries(modelCostSummaries[m.Model], EffectiveCostSummary(m.CostSummary, m.CostUSD, m.Invocations))
 		}
 	}
 
@@ -886,6 +898,9 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	return FleetSummary{
 		TotalTickets:             totalTickets,
 		TotalCostUSD:             math.Round(totalCostUSD*10000.0) / 10000.0,
+		CostSummary:              fleetCostSummary,
+		RoleCostSummaries:        roleCostSummaries,
+		ModelCostSummaries:       modelCostSummaries,
 		TotalInvocations:         totalInvocations,
 		TotalInputTokens:         totalInputTokens,
 		TotalOutputTokens:        totalOutputTokens,
@@ -977,6 +992,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 			ActiveDurationSeconds:   eff.ActiveDurationSeconds,
 			ActiveDurationFormatted: eff.ActiveDurationFormatted,
 			CostUSD:                 tot.CostUSD,
+			CostSummary:             EffectiveCostSummary(tot.CostSummary, tot.CostUSD, tot.Invocations),
 			CacheHitRatePct:         tot.CacheHitRatePct,
 			TestToCodeRatio:         eff.TestToProductionRatio.Ratio,
 			LinesAdded:              eff.CodeDelivered.LinesAdded,
@@ -1307,6 +1323,20 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 			return a.UpdatedAt < b.UpdatedAt
 		}
 
+		if field == SortFieldCost {
+			ac := EffectiveCostSummary(a.Totals.CostSummary, a.Totals.CostUSD, a.Totals.Invocations).CompleteAmount()
+			bc := EffectiveCostSummary(b.Totals.CostSummary, b.Totals.CostUSD, b.Totals.Invocations).CompleteAmount()
+			if (ac == nil) != (bc == nil) {
+				return ac != nil
+			}
+			if ac == nil || *ac == *bc {
+				return ledgerIdentity(a) < ledgerIdentity(b)
+			}
+			if ascending {
+				return *ac < *bc
+			}
+			return *ac > *bc
+		}
 		var less bool
 		switch field {
 		case SortFieldTicketID:
@@ -1323,12 +1353,6 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 				less = a.UpdatedAt < b.UpdatedAt
 			} else {
 				less = cmp < 0
-			}
-		case SortFieldCost:
-			if a.Totals.CostUSD == b.Totals.CostUSD {
-				less = a.UpdatedAt < b.UpdatedAt
-			} else {
-				less = a.Totals.CostUSD < b.Totals.CostUSD
 			}
 		case SortFieldDuration:
 			if a.WorkflowEfficiency.ActiveDurationSeconds == b.WorkflowEfficiency.ActiveDurationSeconds {
@@ -1359,7 +1383,7 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 
 type bucketAccumulator struct {
 	invocations           int64
-	costUSD               float64
+	costSummary           CostSummary
 	inputTokens           int64
 	outputTokens          int64
 	cacheReadTokens       int64
@@ -1436,7 +1460,7 @@ func AggregateMetricsOverTime(
 				accumulators[bkey] = acc
 			}
 			acc.invocations++
-			acc.costUSD += inv.CostUSD
+			acc.costSummary = MergeCostSummaries(acc.costSummary, SummaryForCost(inv.CostUSD, inv.CostEvidence))
 			acc.inputTokens += inv.Tokens.Input
 			acc.outputTokens += inv.Tokens.Output
 			acc.cacheReadTokens += inv.Tokens.CacheRead
@@ -1494,13 +1518,13 @@ func AggregateMetricsOverTime(
 	}
 	sort.Strings(sortedKeys)
 
-	var runningCumCost float64
+	var cumulativeCostSummary CostSummary
 	var runningCumInput, runningCumOutput, runningCumLinesAdded, runningCumLinesDeleted, runningCumInvocations int64
 
 	var results []TimeBucketMetric
 	for _, bkey := range sortedKeys {
 		acc := accumulators[bkey]
-		runningCumCost += acc.costUSD
+		cumulativeCostSummary = MergeCostSummaries(cumulativeCostSummary, acc.costSummary)
 		runningCumInput += acc.inputTokens
 		runningCumOutput += acc.outputTokens
 		runningCumLinesAdded += acc.linesAdded
@@ -1517,7 +1541,8 @@ func AggregateMetricsOverTime(
 			BucketKey:               bkey,
 			BucketDate:              bkey,
 			Invocations:             acc.invocations,
-			CostUSD:                 math.Round(acc.costUSD*10000.0) / 10000.0,
+			CostUSD:                 math.Round(acc.costSummary.Subtotal()*10000.0) / 10000.0,
+			CostSummary:             FinalizeCostSummary(acc.costSummary),
 			InputTokens:             acc.inputTokens,
 			OutputTokens:            acc.outputTokens,
 			CacheReadTokens:         acc.cacheReadTokens,
@@ -1529,7 +1554,8 @@ func AggregateMetricsOverTime(
 			NetLinesAdded:           acc.linesAdded - acc.linesDeleted,
 			PeakContextTokens:       acc.peakContextTokens,
 			ActiveDurationSeconds:   acc.activeDurationSeconds,
-			CumulativeCostUSD:       math.Round(runningCumCost*10000.0) / 10000.0,
+			CumulativeCostUSD:       math.Round(cumulativeCostSummary.Subtotal()*10000.0) / 10000.0,
+			CumulativeCostSummary:   FinalizeCostSummary(cumulativeCostSummary),
 			CumulativeInputTokens:   runningCumInput,
 			CumulativeOutputTokens:  runningCumOutput,
 			CumulativeLinesAdded:    runningCumLinesAdded,
@@ -1540,4 +1566,11 @@ func AggregateMetricsOverTime(
 	}
 
 	return results
+}
+
+func ledgerIdentity(ledger AgenticMetricsLedger) string {
+	if ledger.TicketID != nil {
+		return *ledger.TicketID
+	}
+	return ledger.UpdatedAt
 }
