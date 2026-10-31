@@ -1,0 +1,55 @@
+{
+  "schema_version": 4,
+  "ticket_id": "PO-16",
+  "ticket_title": "Reconcile ticket index and to-do planning records",
+  "ticket_type": "docs",
+  "started_at": "2026-10-31T12:36:41.882Z",
+  "completed_at": "2026-10-31T12:44:02.493Z",
+  "updated_at": "2026-10-31T12:44:04.678622+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 4
+  },
+  "sessions": [
+    {
+      "id": "01a191f6-530e-75a1-9bf1-f8794b6f795f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T12:36:42.747Z",
+          "completed_at": "2026-10-31T12:44:02.493Z",
+          "active_duration_seconds": 311,
+          "turns": 3,
+          "tokens": {
+            "input": 106891,
+            "output": 14136,
+            "cache_read": 2445568,
+            "reasoning": 2498,
+            "peak_context": 89143
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 4
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 36,
+          "errors": 1
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}
