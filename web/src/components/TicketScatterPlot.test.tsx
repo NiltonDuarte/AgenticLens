@@ -30,6 +30,15 @@ describe('TicketScatterPlot', () => {
     expect(onSelectTicket).toHaveBeenCalledWith('AL-2');
   });
 
+  it('includes recorded skills and explicit missing-data copy in accessible point tooltips', () => {
+    const rows = mockTicketComparisonRows.slice(0, 2).map((row, index) => ({ ...row, skills_used: index === 0 ? ['alpha', 'beta'] : [] }));
+    render(<TicketScatterPlot rows={rows} />);
+    const recorded = screen.getByRole('button', { name: /AL-1:/ });
+    expect(recorded).toHaveAttribute('aria-label', expect.stringContaining('Skills Used: alpha, beta'));
+    expect(recorded.querySelector('title')).toHaveTextContent('Skills Used: alpha, beta');
+    expect(screen.getByRole('button', { name: /AL-2:/ })).toHaveAttribute('aria-label', expect.stringContaining('No recorded skills'));
+  });
+
   it('allows independent metric selection and switching to log scale', () => {
     render(<TicketScatterPlot rows={mockTicketComparisonRows} />);
     fireEvent.change(screen.getByRole('combobox', { name: 'X-Axis' }), { target: { value: 'active_duration_seconds' } });

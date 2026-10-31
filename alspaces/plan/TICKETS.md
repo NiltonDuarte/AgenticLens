@@ -77,7 +77,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 - **AL-54**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
   - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
