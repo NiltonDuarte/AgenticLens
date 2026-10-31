@@ -66,27 +66,29 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 - Telemetry is generated at the final step below using the actual Codex root and five children; no unavailable-source facts or numeric cost estimates are fabricated.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 12
-- **Active Agent Duration:** 2h 2m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 249.3k tokens (125% of 200k healthy ceiling, 0 compactions) | Subagents peak 293.7k (Tester)
+- **Software Development Life Cycle Iterations:** 13
+- **Active Agent Duration:** 2h 33m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 285.0k tokens (143% of 200k healthy ceiling, 0 compactions) | Subagents peak 329.4k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 3.2 avg turns/run (peak: 6 turns) | Planner 3.0, Coder 3.3, Tester 3.0, Reviewer 3.0
-- **Test-to-Production Code Ratio:** 0.5:1 (+1,063 test lines / +2,103 prod lines)
-- **Code Delivered:** +3,166 / -387 lines across 61 code files (excluding docs)
-- **Reasoning Effort:** 85,354 reasoning tokens (25.7% of generated output)
-- **Tool Health & Self-Correction:** 550 tool calls (43 self-corrections, 92.2% success rate)
+- **Subagent Turn Velocity & Thrashing:** 3.8 avg turns/run (peak: 6 turns) | Planner 4.0, Coder 3.7, Tester 4.0, Reviewer 4.0
+- **Test-to-Production Code Ratio:** 0.6:1 (+1,233 test lines / +2,159 prod lines)
+- **Code Delivered:** +3,392 / -394 lines across 65 code files (excluding docs)
+- **Reasoning Effort:** 107,962 reasoning tokens (26.6% of generated output)
+- **Tool Health & Self-Correction:** 636 tool calls (47 self-corrections, 92.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 19 execution anomalies detected (9 CRITICAL, 10 WARNING).
+- **Status:** 21 execution anomalies detected (11 CRITICAL, 10 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+113.9k tokens) — Context tokens surged by 113.9k to 113.9k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.3k tokens) — Context tokens reached 201.3k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.6k tokens) — Context tokens reached 201.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.2k tokens) — Context tokens reached 205.2k, breaching the 200k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (15 cycles) — Subagent roles 'coder' and 'tester' alternated for 15 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (16 cycles) — Subagent roles 'coder' and 'tester' alternated for 16 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> tester (7 cycles) — Subagent roles 'reviewer' and 'tester' alternated for 7 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (9 cycles) — Subagent roles 'coder' and 'tester' alternated for 9 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.6k tokens) — Context tokens reached 164.6k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.2k tokens) — Context tokens reached 163.2k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.2k tokens) — Context tokens reached 162.2k, breaching the 160k warning ceiling.
@@ -105,18 +107,18 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 142,893 | 17,600 | 3,015,936 | 95.5% | 151.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 3 | 545,851 | 90,019 | 34,502,400 | 98.4% | 271.9k | BLOATED (136%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **tester** | 1 | 252,913 | 47,395 | 25,198,080 | 99.0% | 293.7k | BLOATED (147%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer** | 1 | 421,686 | 20,088 | 11,127,424 | 96.3% | 276.7k | BLOATED (138%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 212,448 | 72,061 | 35,357,952 | 99.4% | 249.3k | BLOATED (125%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **7** | **1,575,791** | **247,163** | **109,201,792** | **98.6%** | **293.7k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
+| **planner** | 1 | 154,972 | 19,944 | 3,794,944 | 96.1% | 163.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 3 | 693,451 | 99,425 | 38,892,160 | 98.2% | 271.9k | BLOATED (136%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **tester** | 1 | 279,731 | 59,688 | 32,765,312 | 99.2% | 329.4k | BLOATED (165%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer** | 1 | 441,465 | 24,204 | 14,313,728 | 97.0% | 298.9k | BLOATED (149%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **rootagent** | 1 | 240,064 | 94,040 | 47,358,976 | 99.5% | 285.0k | BLOATED (143%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **7** | **1,809,683** | **297,301** | **137,125,120** | **98.7%** | **329.4k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 7 | 1,575,791 | 247,163 | 109,201,792 | 98.6% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **Total** | **7** | **1,575,791** | **247,163** | **109,201,792** | **98.6%** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
+| **gpt-6.1-sol** | 7 | 1,809,683 | 297,301 | 137,125,120 | 98.7% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
+| **Total** | **7** | **1,809,683** | **297,301** | **137,125,120** | **98.7%** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
 
 ## User review correction: JSON key order
 
@@ -174,3 +176,24 @@ Iteration 03 final telemetry verification passed: all six prior real Codex sessi
 Source: user rejected the cost-card presentation in ticket deep dive, metric progression and fleet overview, and explicitly required comparison average spend to exclude tickets with unavailable costs and respect filters. Initial status clean at 52234b3c099fe1a6c1b2e1dd3d62c1db08ad7242; PR #89 remains open. This authorizes the bounded UI/benchmark correction.
 
 The large card value currently contains formatCostUSD's full coverage sentence. Replace it with a short financial headline and appropriate compact state/coverage support. Comparison average spend must use only complete numeric costs from filteredRows, including observed zero; unavailable/partial tickets are excluded from this calculation and its denominator. All-unavailable/empty remains unavailable. This supersedes the former blanket-unavailable average rule only for this benchmark; other metrics retain their own filtered population. Stored evidence, aggregate completeness, nullable API contracts and schema behavior remain unchanged.
+
+
+## Iteration 04 implementation and review
+
+The three affected views now share CostKPICard: primary values contain only currency or a dash; partial/unknown/empty state and useful view context remain visible in secondary text, with full keyboard-accessible coverage in the existing tooltip. The verbose table formatter and backend/schema/chart semantics are unchanged.
+
+Comparison Average Spend independently accumulates complete finite nonnegative ticket costs from filteredRows, includes zero, excludes unavailable/partial values and shows the eligible count. Other comparison metrics and rows retain all filtered tickets. The actual comparison view has no time-window control; its existing search/type/prefix/skill and refetch paths are verified without adding new controls.
+
+Coder focused suites, independent comparison filter/refetch tests, typecheck/lint and canonical frontend build passed. Independent review approved with no findings at 220-source fingerprint 2aba254e521adf59dd0ebfc5d79b3fba6c9af117a2aefee3cc1902d94d01335f. Implementation committed as 3fb374cfd93aca6bbe26097e35214183ae78e1b8; fetched/merged current origin/main with no additional changes. Full make passed on this exact implementation commit: Go vet/race checks, frontend typecheck/lint, all 761 tests in 35 files, canonical frontend assets and four platform builds.
+
+
+## Iteration 04 final verification
+
+Full make passed on 3fb374cfd93aca6bbe26097e35214183ae78e1b8 after current-main integration, with no skips. Standalone linux/amd64 smoke served byte-identical current HTML/JS/CSS, verified the new card/eligible-count bundle and implementation version, and ran without Node on PATH. Frontend and embed asset trees match and remain ignored. DOM/accessibility/content/filter tests establish the intended behavior; no browser geometry inspection is claimed.
+
+Filtered-average checks include mixed complete/zero/partial/unavailable records, actual skill/type/prefix/search composition and recovery, all-unavailable/empty selections, and refetched dataset replacement. Other benchmark denominator/table/scatter populations remain all filtered rows. Legacy numeric-observed policy, backend schema/wire contracts and chart behavior are unchanged. No live historical ledgers were migrated for this UI correction.
+
+Final telemetry below preserves the existing seven real Codex source sessions and their identities; it refreshes session facts using the built binary rather than manufacturing a successful ledger.
+
+
+Iteration 04 telemetry verification passed: all seven existing real Codex sessions retained with the same parent/source identities and invocation multiplicity, nonempty usage/tools, schema 5 and established key order. Fresh Codex costs remain unavailable without estimates or invented zero. Raw rollouts remain outside Git.

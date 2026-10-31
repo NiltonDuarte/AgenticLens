@@ -42,3 +42,8 @@ Coder reports typecheck, lint, all 146 focused tests in five affected suites, pr
 No browser geometry, screenshot or preview verification was performed or claimed. Parent owns the required integrated make gate, current frontend/embedded asset build and standalone binary checks, final real telemetry, commits and update of the existing PR. Earlier full-suite results apply to their recorded snapshots; they do not replace that final gate.
 
 Final verdict: APPROVED.
+
+
+## Parent integrated delivery gate
+
+Implementation 3fb374cfd93aca6bbe26097e35214183ae78e1b8 integrated current origin/main without additional changes. Required full make passed: Go vet/race, frontend typecheck/lint, 761 frontend tests in 35 files, canonical assets and four platform binaries. Standalone smoke verified exact updated assets and implementation version with Node unavailable. Asset trees match. No application changes followed this gate; remaining edits are telemetry/delivery facts.
