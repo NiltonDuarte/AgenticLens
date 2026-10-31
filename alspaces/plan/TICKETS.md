@@ -50,22 +50,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
-- **AL-44**: Localized Millisecond Timestamp Formatting and Timezone Header in Live Trace Inspector
-  - **Subsystem**: Presentation / Web / Formatters / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-44 localized timestamp and timezone header in live trace inspector.md`
-
-- **AL-45**: Debug ID Token Overflow Truncation and Responsive Layout in Message Header
-  - **Subsystem**: Presentation / Web / CSS / Components / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-45 debug id token overflow truncation and containment.md`
-
 - **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
   - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
@@ -113,6 +97,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
+---
 
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
