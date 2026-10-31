@@ -25,3 +25,7 @@ Reused independent TESTING.md evidence: six affected Go package suites under the
 The TypeScript compiler-location false negative was corrected before this review, with a retained regression. No unresolved blocking review findings remain. Classification is intentionally heuristic and limited to recognized diagnostic formats and explicit inspection-tool exclusions; this review does not establish detection of every compiler or arbitrary tool-output format.
 
 Full make, generated asset-tree equivalence and standalone binary checks remain parent delivery gates. Browser geometry and external harness runtime compatibility were not exercised; DOM tests and source-format fixtures do not establish those boundaries. Telemetry completeness and PR delivery are outside this code-review verdict.
+
+## Parent integration verification
+
+At implementation commit 873343d, origin/main was already integrated. Full `make` passed: vet, race suites, typecheck, lint, 714 frontend tests, and four binary builds. Built frontend and embed trees match; standalone binary served matching index, JavaScript and CSS. Generated assets remain ignored. Browser geometry was not assessed. Dependency audit and non-failing React act warnings are recorded in SUMMARY.md.

@@ -82,14 +82,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
 
-- **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
-  - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
-  - **Phase**: Phase 7 (v1 Feature / Observability)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
-
 - **AL-57**: Represent Unavailable Telemetry Cost as Nullable
   - **Subsystem**: Domain / Adapters / CLI / Presentation / Tests
   - **Phase**: Phase 8 (Schema Evolution / Cost Accuracy)
