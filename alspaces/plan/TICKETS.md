@@ -58,14 +58,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
 
-- **AL-52**: Rich Timeline Badges and Subagent Session Linking in Trace Views
-  - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-52 rich timeline badges and subagent session linking in trace views.md`
-
 - **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
   - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)

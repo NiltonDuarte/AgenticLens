@@ -26,3 +26,7 @@ APPROVED. Changes remain in TypeScript presentation and a pure metadata projecti
 No blocking findings or unresolved implementation corrections identified.
 
 Verdict: APPROVED
+
+## Parent integrated delivery verification
+
+Implementation commit 0605350 merged origin/main (already up to date). Final make passed all static checks, 12 Go race-tested packages, 720 frontend tests without skips and four platform builds. web/dist matches backend/internal/adapters/web/dist; all three generated payloads were found byte for byte in the standalone Linux executable. Standalone version --json passed. Only workspace documentation/lifecycle/telemetry changes follow this tested application commit. No browser geometry claim.
