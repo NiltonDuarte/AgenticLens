@@ -6,7 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-
 ---
 
 ## Ready
@@ -82,14 +81,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-49 reverse event ordering and quick scroll navigation in live inspector.md`
-
-- **AL-50**: Audit and Streamline Debug Prompt Generation and Sanitization Pipeline
-  - **Subsystem**: Presentation / Web / Utils / Tests / Review
-  - **Phase**: Phase 7 (v1 Observability Refactor / Review)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-50 audit and streamline debug prompt generation and sanitization.md`
 
 - **AL-51**: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
   - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
