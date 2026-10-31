@@ -21,3 +21,33 @@ Allocated GEN-12 because the automatically named branch reused GEN-1, an existin
 ## Audit limitations
 
 All available ledgers and selected local rollout files were indexed, with targeted qualitative passage review rather than manual review of every transcript line. OpenCode-only sessions received ledger review only. Metrics are historical recorded facts, not independently validated efficiency or cost measurements. See inventory.json and iterations/01/REVIEW.md.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 2
+- **Active Agent Duration:** 0m 0s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 87.5k tokens (44% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** N/A
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 1,392 reasoning tokens (10.5% of generated output)
+- **Tool Health & Self-Correction:** 25 tool calls (2 self-corrections, 92.0% success rate)
+
+### Anomalies & Health Flags
+- **Status:** No execution anomalies detected (clean session).
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **rootagent** | 1 | 79,986 | 11,924 | 1,561,984 | 95.1% | 87.5k | HEALTHY | $0.00 |
+| **Total** | **1** | **79,986** | **11,924** | **1,561,984** | **95.1%** | **87.5k** | **HEALTHY** | **$0.00** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6-astra** | 1 | 79,986 | 11,924 | 1,561,984 | 95.1% | $0.00 |
+| **Total** | **1** | **79,986** | **11,924** | **1,561,984** | **95.1%** | **$0.00** |
