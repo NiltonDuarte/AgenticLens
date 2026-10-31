@@ -5057,3 +5057,32 @@ th.num-col .th-content {
   padding: 1px 6px;
   border-radius: 4px;
 }
+.ticket-scatter-panel {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border: 1px solid var(--border-color, #263044);
+  border-radius: 0.75rem;
+  background: var(--bg-secondary, #101522);
+}
+.ticket-scatter-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+.ticket-scatter-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; }
+.ticket-scatter-controls label { display: grid; gap: 0.35rem; font-size: 0.8rem; }
+.ticket-scatter-controls select { min-width: 12rem; padding: 0.45rem; }
+.ticket-scatter-recommendation { color: #f2a93b; font-size: 0.82rem; }
+.ticket-scatter-exclusions { margin: 0.8rem 0; }
+.ticket-scatter-exclusions fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.4rem; max-height: 10rem; overflow: auto; border: 1px solid var(--border-color, #263044); }
+.ticket-scatter-exclusions label { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; }
+.ticket-scatter-chart { position: relative; width: 100%; overflow: hidden; }
+.ticket-scatter-chart svg { display: block; width: 100%; min-height: 16rem; }
+.ticket-scatter-axis { stroke: #657085; stroke-width: 1; }
+.ticket-scatter-label { fill: #b6c0d0; font-size: 12px; }
+.ticket-scatter-tick text { fill: #9aa6ba; font-size: 10px; }
+.ticket-scatter-grid { stroke: #354052; stroke-width: 0.6; stroke-dasharray: 2 4; }
+.ticket-scatter-tick line:first-child { opacity: 0.55; }
+.ticket-scatter-point { cursor: pointer; stroke: #101522; stroke-width: 1.5; }
+.ticket-scatter-point:focus { outline: none; stroke: #fff; stroke-width: 3; }
+.ticket-scatter-empty { position: absolute; inset: 40% 0 auto; text-align: center; color: #9aa6ba; }
+.ticket-scatter-legend { display: flex; gap: 1rem; font-size: 0.8rem; }
+.ticket-scatter-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.ticket-scatter-legend i { width: 0.65rem; height: 0.65rem; border-radius: 50%; background: #4ea1ff; }
+.ticket-scatter-legend i.in-progress { background: #f2a93b; }

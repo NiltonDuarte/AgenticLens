@@ -1,0 +1,226 @@
+{
+  "schema_version": 4,
+  "ticket_id": "AL-48",
+  "ticket_title": "Interactive Multi-Metric Ticket Scatter Plot in Comparison Matrix View",
+  "ticket_type": "feat",
+  "started_at": "2026-10-30T23:26:30.236Z",
+  "completed_at": "2026-10-30T23:41:51.361Z",
+  "updated_at": "2026-10-30T23:41:52.083773+00:00",
+  "code": {
+    "lines_added": 514,
+    "lines_deleted": 86,
+    "test_lines_added": 131,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 295,
+    "prod_lines_deleted": 0,
+    "files_changed": 11,
+    "sdlc_iterations": 3
+  },
+  "sessions": [
+    {
+      "id": "01a18f22-e123-7e71-b860-2d18caf9a79f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:26:31.086Z",
+          "completed_at": "2026-10-30T23:41:51.361Z",
+          "active_duration_seconds": 0,
+          "turns": 1,
+          "tokens": {
+            "input": 101229,
+            "output": 9976,
+            "cache_read": 4221568,
+            "reasoning": 4001,
+            "peak_context": 89849
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 23,
+          "errors": 2
+        },
+        {
+          "name": "followup_task",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "list_agents",
+          "calls": 5,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "spawn_agent",
+          "calls": 4,
+          "errors": 0
+        },
+        {
+          "name": "wait_agent",
+          "calls": 20,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a18f23-4d45-78a0-a1f3-3bc8457cd1f6",
+      "parent_id": "01a18f22-e123-7e71-b860-2d18caf9a79f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:26:57.912Z",
+          "completed_at": "2026-10-30T23:27:24.752Z",
+          "active_duration_seconds": 27,
+          "turns": 1,
+          "tokens": {
+            "input": 18740,
+            "output": 2679,
+            "cache_read": 252288,
+            "reasoning": 282,
+            "peak_context": 60059
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 3,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a18f23-cc6a-78e0-b8a3-a6d088187342",
+      "parent_id": "01a18f22-e123-7e71-b860-2d18caf9a79f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:27:30.457Z",
+          "completed_at": "2026-10-30T23:37:45.338Z",
+          "active_duration_seconds": 403,
+          "turns": 2,
+          "tokens": {
+            "input": 43564,
+            "output": 14403,
+            "cache_read": 2377472,
+            "reasoning": 2888,
+            "peak_context": 95802
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 19,
+          "errors": 5
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a18f29-84db-7700-9c8d-a38562b6ccd9",
+      "parent_id": "01a18f22-e123-7e71-b860-2d18caf9a79f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:33:45.501Z",
+          "completed_at": "2026-10-30T23:37:11.508Z",
+          "active_duration_seconds": 206,
+          "turns": 1,
+          "tokens": {
+            "input": 29969,
+            "output": 3824,
+            "cache_read": 2515200,
+            "reasoning": 1153,
+            "peak_context": 91142
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 8,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a18f2d-46dc-7833-87cf-808a55e65f4d",
+      "parent_id": "01a18f22-e123-7e71-b860-2d18caf9a79f",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6-luna",
+          "started_at": "2026-10-30T23:37:51.686Z",
+          "completed_at": "2026-10-30T23:38:19.640Z",
+          "active_duration_seconds": 28,
+          "turns": 1,
+          "tokens": {
+            "input": 12419,
+            "output": 2589,
+            "cache_read": 305664,
+            "reasoning": 1621,
+            "peak_context": 83531
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 3,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}

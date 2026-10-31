@@ -160,6 +160,17 @@ describe('TicketComparisons View Component', () => {
     expect(onSelectTicket).toHaveBeenCalledTimes(2);
   });
 
+  it('integrates the scatter plot with default metrics and ticket deep dive navigation', async () => {
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: Object.values(mockAgenticMetricsLedgers) });
+    const onSelectTicket = vi.fn();
+    render(<TicketComparisons onSelectTicket={onSelectTicket} />);
+    expect(await screen.findByRole('heading', { name: 'Cross-Ticket Metric Correlation' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'X-Axis' })).toHaveValue('cost_usd');
+    expect(screen.getByRole('combobox', { name: 'Y-Axis' })).toHaveValue('net_lines_added');
+    fireEvent.click(screen.getByRole('button', { name: /AL-1:/ }));
+    expect(onSelectTicket).toHaveBeenCalledWith('AL-1');
+  });
+
   it('renders zero telemetry state when no ledgers exist', async () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: [],
