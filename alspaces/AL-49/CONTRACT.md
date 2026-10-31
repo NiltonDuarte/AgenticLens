@@ -38,7 +38,3 @@ The presentation work is centered on `web/src/components/LiveTraceInspector.tsx`
 ## Acceptance Boundaries
 
 Acceptance is demonstrated by component and helper tests for newest-first default order, oldest-first toggle, stable logical turn numbering, immutable input ordering, scroll displacement protection on new messages, pending-new-turn affordance, and both navigation controls. Run the ticket's specified frontend checks: `npm run typecheck`, `npm run lint`, and `npm test`. No backend changes or backend tests are required for this presentation-only slice.
-
-## Iteration 02: Planning record reconciliation
-
-The user explicitly requested review and updates to `alspaces/plan/TICKETS.md` and `alspaces/plan/to-do/`. Changes are documentation-only: remove confirmed completed entries, synchronize dependency/status records, and annotate partial or superseded technical assumptions. No runtime compatibility or feature behavior changes. Historical AL-49 implementation and verification remain valid. See `iterations/02/PLAN.md` for steering and acceptance boundaries.

@@ -1,4 +1,4 @@
-# AL-49 Iteration 02 Review
+# PO-16 Iteration 01 Review
 
 Baseline: `1d20117711aab96a230679d3cdb9406853fe3f04`. Documentation-only reconciliation; no application, test, schema, or runtime-script changes. Initial Git status was clean. This is a direct documentation audit, not a new application SDLC cycle.
 
@@ -38,6 +38,6 @@ Merged states checked using GitHub CLI; current source and ticket contracts chec
 
 Applied configured workspace root, preserved baseline and historical implementation evidence, distinguished partially implemented features from delivered acceptance, and kept migration shape separate from source recovery. AL-55 requires replanning; this audit neither marks it complete nor approves changing runtime ingestion.
 
-## Final telemetry verification
+## Attribution correction
 
-Generated with literal nonce and `--source codex --ticket-type docs`. Root `01a191f6-530e-75a1-9bf1-f8794b6f795f` matched the harness thread ID and the CLI discovered exactly one rollout. No children were created this iteration. All five preexisting Codex sessions are preserved with identical session facts (six total); no sessions from other harnesses existed to preserve. Root invocation facts are nonempty. Raw rollouts remain outside Git. USD cost remains subject to the existing AL-57 unavailable-cost limitation. This is a final-phase extraction snapshot; publishing/commit bookkeeping after generation is not included.
+User steering: "track it under a PO ticket". PO-16 now owns the planning maintenance. The earlier AL-49 iteration-02 assignment is superseded. AL-49 artifacts are restored exactly from the original baseline; its five historical sessions belong only to its original delivery. The current session is attributed only to PO-16. No product scope or verification result changes; artifact relocation needs no application or test edits.
