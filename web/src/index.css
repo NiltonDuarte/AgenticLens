@@ -4734,22 +4734,71 @@ th.num-col .th-content {
 .inspector-failed-tools-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--status-red) 36%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--status-red) 7%, var(--bg-surface));
+}
+
+.failed-tools-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
 }
 
 .failed-tools-heading {
-  font-size: 0.875rem;
-  font-weight: 700;
+  margin: 0;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.failed-tools-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--status-red) 55%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-red) 16%, var(--bg-surface));
   color: var(--status-red);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+}
+
+.failed-tools-toggle-btn {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.failed-tools-toggle-btn:hover {
+  border-color: var(--status-red);
+  color: var(--text-primary);
+}
+
+.failed-tools-toggle-btn:focus-visible {
+  outline: 2px solid var(--status-red);
+  outline-offset: 2px;
 }
 
 .failed-tools-cards-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.failed-tools-cards-list[hidden] {
+  display: none;
 }
 
 .inspector-messages-section {

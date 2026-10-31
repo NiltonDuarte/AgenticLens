@@ -1,8 +1,26 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { LiveTraceInspector } from './LiveTraceInspector';
 import type { LiveSessionNode, LiveTraceView, LivePartFact } from '../domain/live';
 import { mockLiveTraceView } from '../test/fixtures/mockData';
+
+const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+
+function mockClipboard(writeText: (text: string) => Promise<void>): void {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText },
+  });
+}
+
+afterEach(() => {
+  if (originalClipboardDescriptor) {
+    Object.defineProperty(navigator, 'clipboard', originalClipboardDescriptor);
+  } else {
+    Reflect.deleteProperty(navigator, 'clipboard');
+  }
+});
 
 describe('LiveTraceInspector Component', () => {
   const mockNode: LiveSessionNode = {
@@ -120,7 +138,7 @@ describe('LiveTraceInspector Component', () => {
     expect(toggleBtn).toHaveTextContent('Show Reasoning');
   });
 
-  it('prioritizes failed tool calls in prominent top-level alert cards above message turns', () => {
+  it('shows a prominent collapsed failure summary while keeping the message stream visible', () => {
     render(
       <LiveTraceInspector
         sessionNode={mockNode}
@@ -132,10 +150,55 @@ describe('LiveTraceInspector Component', () => {
 
     const failedSection = screen.getByRole('region', { name: /failed tool calls/i });
     expect(failedSection).toBeInTheDocument();
-    expect(screen.getByText('Failed Tool Calls (3)')).toBeInTheDocument();
+    expect(screen.getByText('Failed Tool Calls: 3')).toBeInTheDocument();
+    const toggle = screen.getByTestId('failed-tools-toggle-btn');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('failed-tool-alert-card')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Chronological Message Turns')).toBeInTheDocument();
+    expect(screen.getByText('Execution Message Stream (4 turns)')).toBeInTheDocument();
+  });
 
+  it('expands and collapses failed tool details with the toggle button', () => {
+    render(
+      <LiveTraceInspector
+        sessionNode={mockNode}
+        trace={mockLiveTraceView}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    const toggle = screen.getByTestId('failed-tools-toggle-btn');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const failedCards = screen.getAllByTestId('failed-tool-alert-card');
     expect(failedCards.length).toBe(3);
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('failed-tool-alert-card')).not.toBeInTheDocument();
+  });
+
+  it('supports Enter and Space keyboard activation on the failure toggle', async () => {
+    const user = userEvent.setup();
+    render(
+      <LiveTraceInspector
+        sessionNode={mockNode}
+        trace={mockLiveTraceView}
+        loading={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    const toggle = screen.getByTestId('failed-tools-toggle-btn');
+    toggle.focus();
+    await user.keyboard('{Enter}');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByTestId('failed-tool-alert-card')).toHaveLength(3);
+
+    await user.keyboard(' ');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('failed-tool-alert-card')).not.toBeInTheDocument();
   });
 
   it('invokes onClose when Close button is clicked', () => {
@@ -476,11 +539,7 @@ describe('LiveTraceInspector Component', () => {
   it('renders copy buttons for session ID, message turn ID, and part ID with temporary copied feedback', async () => {
     vi.useFakeTimers();
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: writeTextMock,
-      },
-    });
+    mockClipboard(writeTextMock);
 
     const debugTrace: LiveTraceView = {
       session_id: 'ses-debug-1',
@@ -670,6 +729,7 @@ describe('LiveTraceInspector Component', () => {
       />
     );
 
+    fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
     expect(screen.queryByText(/consecutive failures/i)).toBeNull();
   });
 
@@ -727,17 +787,14 @@ describe('LiveTraceInspector Component', () => {
       />
     );
 
+    fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
     expect(screen.getByText('4 Consecutive Failures')).toBeInTheDocument();
   });
 
   it('adversarially tests all 4 layer copy buttons and 2000ms feedback states with streak and error details', async () => {
     vi.useFakeTimers();
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: writeTextMock,
-      },
-    });
+    mockClipboard(writeTextMock);
 
     const errorPart: LivePartFact = {
       id: 'part-adv-404',
@@ -867,6 +924,7 @@ describe('LiveTraceInspector Component', () => {
     expect(partCopyBtn).toHaveTextContent('Copy Prompt');
 
     // 4. Failed Tool Alert Card Copy Button (Layer 2)
+    fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
     const failedCardCopyBtn = screen.getByRole('button', {
       name: 'Copy execution issue debug prompt for bash',
     });

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -79,85 +80,47 @@ type LiveTraceView struct {
 	Anomalies       []LiveAnomalyAlert `json:"anomalies"`
 }
 
-// ClassifyToolFailure categorizes a tool execution failure into severity tiers (high, medium, low, none)
-// based on output signatures, exit status, and consecutive error escalation.
-func ClassifyToolFailure(toolName string, status string, output string, consecutiveErrors int) (bool, FailureSeverity, *string) {
+// ToolExecutionResult is the normalized result of classifying one tool execution.
+type ToolExecutionResult struct {
+	IsError      bool
+	Severity     FailureSeverity
+	ErrorMessage *string
+}
+
+var exitStatusPattern = regexp.MustCompile(`(?i)\bexit(?:ed)?\s+(?:status|code)\s*[:=]?\s*([0-9]+)\b`)
+
+// ClassifyToolExecution identifies process-level failures without interpreting semantic output.
+func ClassifyToolExecution(toolName string, status string, output string, consecutiveErrors int) ToolExecutionResult {
 	trimmedOutput := strings.TrimSpace(output)
 	lowerOutput := strings.ToLower(trimmedOutput)
 	cleanStatus := strings.ToLower(strings.TrimSpace(status))
 	cleanTool := strings.ToLower(strings.TrimSpace(toolName))
-
-	// Content inspection tools that complete successfully should never be flagged as errors.
-	if cleanStatus == "completed" {
-		switch cleanTool {
-		case "read", "grep", "glob", "webfetch":
-			return false, SeverityNone, nil
+	exitCode := -1
+	if match := exitStatusPattern.FindStringSubmatch(trimmedOutput); len(match) == 2 {
+		exitCode = 0
+		for _, digit := range match[1] {
+			exitCode = exitCode*10 + int(digit-'0')
 		}
 	}
-
-	// High severity signatures: tracebacks, crash panics, compilation faults, memory faults
-	isTraceback := strings.Contains(output, "Traceback (most recent call last)") ||
-		strings.Contains(output, "panic:") ||
-		strings.Contains(output, "fatal error:") ||
-		strings.Contains(output, "UnhandledPromiseRejection")
-
-	isSystemFault := strings.Contains(lowerOutput, "segmentation fault") ||
-		strings.Contains(lowerOutput, "killed") ||
-		strings.Contains(lowerOutput, "out of memory") ||
-		strings.Contains(lowerOutput, "permission denied")
-
-	isCompilationError := strings.Contains(lowerOutput, "syntax error") ||
-		strings.Contains(lowerOutput, "syntaxerror") ||
-		strings.Contains(lowerOutput, "cannot find package") ||
-		strings.Contains(lowerOutput, "compilation error") ||
-		strings.Contains(lowerOutput, "build failed") ||
-		strings.Contains(lowerOutput, "go build") && strings.Contains(lowerOutput, "error")
-
-	// Low severity signatures: benign empty searches, soft user cancelations, soft warnings
-	isEmptySearch := (cleanTool == "grep" || cleanTool == "glob") &&
-		(strings.Contains(lowerOutput, "no matches") ||
-			strings.Contains(lowerOutput, "0 matches") ||
-			strings.Contains(lowerOutput, "no matching files") ||
-			strings.Contains(lowerOutput, "exit status 1"))
-
-	isSoftCancelation := strings.Contains(lowerOutput, "user canceled") ||
-		strings.Contains(lowerOutput, "user cancelled") ||
-		strings.Contains(lowerOutput, "operation canceled")
-
-	// Medium severity signatures: non-zero exit codes, missing files, network timeouts
-	isMissingResource := strings.Contains(lowerOutput, "no such file or directory") ||
-		strings.Contains(lowerOutput, "file not found") ||
-		strings.Contains(lowerOutput, "path does not exist")
-
-	isTimeout := strings.Contains(lowerOutput, "connection refused") ||
-		strings.Contains(lowerOutput, "i/o timeout") ||
-		strings.Contains(lowerOutput, "context deadline exceeded") ||
-		strings.Contains(lowerOutput, "timed out")
-
-	isCommandFailure := strings.Contains(lowerOutput, "exit status") ||
-		strings.Contains(lowerOutput, "command failed") ||
-		strings.HasPrefix(trimmedOutput, "Error:") ||
-		strings.Contains(output, "\nError:") ||
-		cleanStatus == "error" ||
-		cleanStatus == "failed"
-
-	// Determine overall error condition
-	isError := isTraceback || isSystemFault || isCompilationError || isEmptySearch ||
-		isSoftCancelation || isMissingResource || isTimeout || isCommandFailure
-
-	if !isError {
-		return false, SeverityNone, nil
+	noMatch := (cleanTool == "grep" || cleanTool == "glob") && (exitCode == 1 || strings.Contains(lowerOutput, "no matches") || strings.Contains(lowerOutput, "0 matches") || strings.Contains(lowerOutput, "no matching files"))
+	if noMatch && cleanStatus != "error" && cleanStatus != "failed" {
+		return ToolExecutionResult{Severity: SeverityNone}
 	}
-
-	// Determine severity tier
-	var severity FailureSeverity
-	switch {
-	case isTraceback || isSystemFault || isCompilationError || consecutiveErrors >= 2:
+	isCrash := strings.Contains(lowerOutput, "segmentation fault") ||
+		strings.Contains(lowerOutput, "signal: killed") ||
+		strings.Contains(lowerOutput, "killed by signal") ||
+		strings.Contains(lowerOutput, "out of memory") ||
+		strings.Contains(lowerOutput, "panic:") ||
+		strings.Contains(lowerOutput, "fatal error:") ||
+		strings.Contains(lowerOutput, "unhandledpromiserejection")
+	hardOutputFailure := (exitCode > 0 && !((cleanTool == "grep" || cleanTool == "glob") && exitCode == 1)) || isCrash || strings.Contains(lowerOutput, "permission denied") || strings.Contains(lowerOutput, "timed out") || strings.Contains(lowerOutput, "timeout")
+	isError := cleanStatus == "error" || cleanStatus == "failed" || hardOutputFailure
+	if !isError {
+		return ToolExecutionResult{Severity: SeverityNone}
+	}
+	severity := SeverityMedium
+	if isCrash || consecutiveErrors >= 2 {
 		severity = SeverityHigh
-	case isEmptySearch || isSoftCancelation:
-		severity = SeverityLow
-	default:
-		severity = SeverityMedium
 	}
 
 	// Prepare sanitized error message capped at 2048 characters
@@ -172,7 +135,13 @@ func ClassifyToolFailure(toolName string, status string, output string, consecut
 		msg = msg[:2048]
 	}
 
-	return true, severity, &msg
+	return ToolExecutionResult{IsError: true, Severity: severity, ErrorMessage: &msg}
+}
+
+// ClassifyToolFailure preserves the previous call signature for existing internal consumers.
+func ClassifyToolFailure(toolName, status, output string, consecutiveErrors int) (bool, FailureSeverity, *string) {
+	result := ClassifyToolExecution(toolName, status, output, consecutiveErrors)
+	return result.IsError, result.Severity, result.ErrorMessage
 }
 
 // InferTicketID inspects the session title exclusively, matching candidate ticket identifiers
