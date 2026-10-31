@@ -26,6 +26,30 @@ export function truncateMiddle(
   return `${str.slice(0, leading)}...${trailing === 0 ? '' : str.slice(-trailing)}`;
 }
 
+export function formatLocalTimeWithMs(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso || '';
+  return `${new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(date)}.${String(date.getMilliseconds()).padStart(3, '0')}`;
+}
+
+export function getClientTimezoneBadge(): string {
+  try {
+    return `TZ: ${Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local'}`;
+  } catch {
+    return 'TZ: Local';
+  }
+}
+
+export function formatLocalDateTimeTooltip(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso || '';
+  const dateTime = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(date);
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const offset = `${sign}${String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2, '0')}:${String(Math.abs(offsetMinutes) % 60).padStart(2, '0')}`;
+  return `${dateTime}.${String(date.getMilliseconds()).padStart(3, '0')} [UTC${offset}]`;
+}
+
 export function formatTokensK(toks: number): string {
   if (!Number.isFinite(toks) || toks < 0) {
     return '0';
