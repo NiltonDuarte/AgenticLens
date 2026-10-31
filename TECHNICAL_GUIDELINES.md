@@ -47,6 +47,13 @@ Dependencies flow strictly inward across layers:
 - Persisted facts are the baseline for reads. Optional hydration may add information but must not hide accepted baseline data on failure, delay, or partial success. Keep compact persistence transforms separate from read projections; never persist hydrated payloads as a side effect of GET.
 - Reuse canonical domain types and source-backed fields. Do not add a persisted metric with no defined producer or infer execution failure solely from error-like text returned by a successful inspection tool.
 
+### Hierarchy, Evidence, and UI Recovery
+
+- Structural parent linkage determines root/child classification; persona names are raw facts and configured presentation mappings must not rewrite source identity. Count SDLC steering from the source records defined by the telemetry contract, never from iteration directories or a forced minimum.
+- Keep source diagnostic payloads separate from generated explanatory copy. Preserve verbatim evidence except for explicit approved redaction; text cleanup must not change execution semantics.
+- Controls needed to recover from empty filters remain available in empty states. Layout fixes must preserve tooltip visibility, table containment, long-value access, keyboard behavior, and existing collapse defaults together.
+- Distinguish a fatal project setup error from a rejected individual ledger. Preserve valid sibling workspace results and surface per-ticket diagnostics; never count invalid ledgers in aggregates.
+
 ### Configuration and Live Work
 
 - Trace shared configuration through loader, validation, writer/templates, CLI, live/offline calculations, API, and UI. Test non-default values end to end. Required settings fail explicitly when absent; do not revive removed configuration aliases implicitly.

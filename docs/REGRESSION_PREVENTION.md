@@ -11,6 +11,12 @@ Use this checklist when a change touches the corresponding boundary. Put the sel
 
 When changing a shared rule, search active instructions, personas, skill references, setup templates, and user docs for the old wording. Update affected guidance or link to its owner. Preserve historical records. Distinguish an artifact-allocation default from a runtime configuration requirement: AGENTS.md's fallback workspace name does not authorize the server to guess an unconfigured path.
 
+## Interpret steering against the current accepted scope
+
+Use the [contributor delta format](../CONTRIBUTING.md#71-recording-steering-without-restarting-the-ticket) for material scope changes. Keep the current contract consistent with accepted superseding decisions; do not replay an earlier plan just because it is more detailed. Keep routine merge checks and review fixes within the current iteration when acceptance is unchanged.
+
+The [repository-wide steering review](../alspaces/REV-3/iterations/02/REVIEW.md) distinguishes intentional feature additions from regressions. Repeated iterations are not themselves failures. Missing or consolidated plans are limits on historical evidence, not a reason to fabricate a steering history.
+
 ## Before implementation
 
 - Trace the affected value from source/configuration through extraction, DTO validation, persistence, read projection, API, domain calculations, and UI. Identify the authoritative owner and where information may be lost.
@@ -44,6 +50,22 @@ After installing dependencies, use `make backend-check` for Go vet/race tests wi
 For changes to build/CI paths, verify both an absent generated asset destination and a repeated build in a disposable checkout or with only generated ignored assets moved aside. Do not delete user files. Inspect `backend/internal/adapters/web/dist/` for index, JS, and CSS assets and compare with `web/dist/`. Run the embedded-asset test and validate the standalone binary. These generated trees are currently ignored; do not force-add them.
 
 Trace every workflow that invokes Go tooling, including Release Please, through the shared asset prerequisite. A release tag does not prove downloadable binaries exist: verify platform names, uploaded assets, checksums, downloader URLs, and host execution. Reuse canonical Make targets rather than duplicating build recipes in CI docs.
+
+### UI state, layout, and diagnostic copy
+
+Keep filters and recovery controls usable when the result is empty or an optional request fails. Define no-selection semantics explicitly, including whether rows with missing tool/anomaly metadata remain visible. Test the empty-to-recovered transition as well as initial success.
+
+Check adjacent layout behavior after CSS changes: tooltip visibility and positioning, wide-table containment, nested scroll regions, narrow viewports, and long identifiers. Keep a full identifier available to copy or inspect even when its visible label is truncated. Collapse changes must preserve keyboard access, counts, defaults, and controls needed to inspect available facts.
+
+Preserve source evidence in exported diagnostic payloads. Separate generated explanatory text from verbatim input/output, reasoning, and error bodies. Apply only the approved redaction policy to source payloads; generic cleanup or identifier replacement can destroy the evidence needed for debugging. An unknown source or unavailable cost must stay explicitly unknown.
+
+### Cleanup, compatibility, and source availability
+
+Before environment cleanup, identify generated paths and preserve tracked source/tests and unrelated work. After disruption, compare against the known baseline and record which checks actually executed. Do not infer integrity solely from a green stage that skipped missing dependencies.
+
+Distinguish declared support from observed compatibility. Tie version support to adapter/schema-family fixtures and runtime evidence, not an old plan's marketing claim. Separate initialization defaults written into configuration from runtime guesses for missing settings. Local per-harness source paths must not become shared machine-specific assumptions.
+
+For migrations, distinguish structural validity, incomplete resumable workflow state, and successful finalization. Keep incomplete progress visible; do not impose a permanent migration marker on already-complete canonical data without an approved contract change. A rejected individual ledger must not erase valid sibling workspaces: test partial fleet results and per-ticket diagnostics separately from fatal directory/configuration failure.
 
 ### Polling or asynchronous updates
 

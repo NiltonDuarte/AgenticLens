@@ -165,3 +165,17 @@ Workspace deliverables must include:
 - `alspaces/<TICKET_ID>/agentic_metrics.json`: Final telemetry ledger.
 
 When a matching specification exists under `alspaces/plan/to-do/`, move it to `alspaces/plan/done/` when the ticket is completed. Remove its entry from `alspaces/plan/TICKETS.md` if present. Do not create a specification or index entry solely to perform this lifecycle step; ad hoc tickets still require their ID and workspace.
+
+
+### 7.1 Recording steering without restarting the ticket
+
+For material scope changes, write a short delta in the next iteration plan:
+
+- **Source and intent:** summarize the current user instruction or linked review finding; label inference separately.
+- **Baseline:** link the contract and applicable accepted plan/review, and name the current commit.
+- **Acceptance delta:** state the observable behavior added, removed, or replaced. Name the specific decision superseded and reconcile the current contract when its boundaries change.
+- **Preserved guarantees:** list adjacent behavior that must continue to work; identify affected paths and their owner.
+- **Verification impact:** reuse valid results for unchanged code and select affected checks for the delta. A planned command is not a passing result.
+- **Delivery status:** state proposed, approved, implemented, or verified using actual evidence. Approval persists within its accepted scope; a plan file or iteration number is not approval evidence.
+
+Keep status questions, review corrections, and routine synchronization in the current iteration unless acceptance changes. Consolidate plans when explicitly requested, preserving accepted decisions and verification in the surviving artifacts. A missing plan is not evidence of no steering, and iteration-directory counts are not SDLC telemetry. See the [REV-3 steering review](alspaces/REV-3/iterations/02/REVIEW.md) for the historical examples behind these rules.

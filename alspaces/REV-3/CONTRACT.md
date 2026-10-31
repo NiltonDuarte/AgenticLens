@@ -4,6 +4,8 @@
 
 Review all existing REV and FIX ticket workspaces: REV-1, REV-2, and FIX-1 through FIX-15. Turn documented defects and review findings into practical documentation at the points where contributors plan, implement, verify, and deliver changes.
 
+Iteration 02 extends the audit, at the user's request, to steering and scope decisions across every ticket workspace and ticket specification under alspaces/plan/. Review all available iteration plan goals, steering sections, and boundaries, with deeper examination of conflicting or repeated decisions. Missing or consolidated plans are evidence limits, not proof that steering never occurred. Preserve iteration 01 findings and verification.
+
 This is documentation-only maintenance authorized by the user request. No application, test, schema, runtime script, configuration, or skill behavior changes. No development delegation or implementation approval gate is required. Classification: docs.
 
 ## Acceptance

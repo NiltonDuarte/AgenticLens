@@ -1,5 +1,13 @@
 # REV-3 Work Summary
 
+## Iteration 02: Repository-wide steering review
+
+Extended REV-3 at the user's request to every ticket's surviving steering plans: 94 other workspaces, 148 plans across 69 workspaces, 25 workspaces without plans, and 16 additional specification-only tickets. Coverage and evidence limits are in iterations/02/INVENTORY.md; detailed findings are in iterations/02/REVIEW.md.
+
+Updated agent/contributor guidance with explicit scope deltas, superseded decisions, preserved guarantees, approval/verification status, and reuse of valid evidence. Added UI recovery/layout, structural hierarchy, verbatim diagnostic evidence, compatibility claims, cleanup, and per-ledger availability cases to the prevention guidance. Clarified that optional child lookup must preserve the AL-51 accepted trace-availability behavior.
+
+Iteration 02 verification and finalization are recorded below when complete. Iteration 01 evidence and telemetry are preserved.
+
 ## Delivered documentation
 
 Created REV-3 as an isolated documentation audit. Baseline 3481919; initial working tree clean. Reviewed REV-1, REV-2, and FIX-1 through FIX-15, with ticket evidence and prevention lessons in iterations/01/REVIEW.md.

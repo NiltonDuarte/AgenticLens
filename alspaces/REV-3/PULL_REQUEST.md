@@ -1,9 +1,11 @@
-# docs(review): prevent recurring REV and FIX regressions (REV-3)
+# docs(review): prevent recurring regressions from ticket steering (REV-3)
 
-Review REV-1, REV-2, and FIX-1 through FIX-15 and turn their lessons into boundary-specific planning and verification guidance. The new prevention checklist links to the full evidence inventory; canonical technical rules now cover source fidelity, complete/idempotent refresh, persisted-data availability, configuration propagation, and polling cost.
+Audit REV-1, REV-2, and FIX-1 through FIX-15, then extend the review to all surviving ticket steering plans. Coverage includes 94 other ticket workspaces (148 plans; 25 workspaces without plans) and 16 specification-only tickets, with explicit evidence limits.
 
-Update contributor guidance to use the existing backend-check/web-assets entry points and link the checklist from AGENTS.md. This is documentation-only; unresolved REV-2 runtime findings remain open.
+Add a linked prevention checklist and strengthen canonical agent, contributor, and technical guidance. Cover explicit scope deltas and supersession, preserved acceptance/verification, source fidelity, complete/idempotent refresh, UI recovery and layout, configuration propagation, clean builds, compatibility evidence, and partial workspace availability.
 
-Evidence: alspaces/REV-3/iterations/01/REVIEW.md. Verification and telemetry limitations are recorded in alspaces/REV-3/SUMMARY.md.
+This is documentation-only. Historical plans stay unchanged and runtime recommendations remain open. The steering review clarifies that optional child-correlation improvements must preserve AL-51's accepted trace availability.
 
-Validation: full `make` passed after origin/main integration (12 backend race-test packages, 793 frontend tests, lint/typecheck/vet, and four platform builds). Documentation links and whitespace passed. Existing npm audit findings and React test warnings are recorded in the summary.
+Evidence: alspaces/REV-3/iterations/01/REVIEW.md and iterations/02/REVIEW.md; full coverage in iterations/02/INVENTORY.md. Verification and telemetry facts are recorded in alspaces/REV-3/SUMMARY.md.
+
+Iteration 01 full make passed (12 backend race-test packages, 793 frontend tests, lint/typecheck/vet, four platform builds). Iteration 02 validation is recorded before delivery; existing dependency audit findings and React test warnings remain documented.
