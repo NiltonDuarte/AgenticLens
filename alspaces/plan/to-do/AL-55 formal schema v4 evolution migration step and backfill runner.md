@@ -2,13 +2,13 @@
 
 - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
-- **Status**: Pending
-- **Blocked by**: AL-52, AL-54
+- **Status**: Ready
+- **Blocked by**: None
 - **Blocks**: None
 
 ## Planning status (2026-10-31)
 
-Partially superseded; remains blocked by AL-52 and AL-54. AL-53 delivered the Ticket Deep Dive skills and subagents panel. AL-51 merged in [PR #62](https://github.com/NiltonDuarte/AgenticLens/pull/62), satisfying its ingestion dependency.
+Partially superseded; Ready for the remaining replanning and implementation scope. AL-53 delivery completes the final prerequisite. AL-52 implementation is complete (see its workspace summary). AL-54 implementation is complete (see its workspace summary). AL-51 merged in [PR #62](https://github.com/NiltonDuarte/AgenticLens/pull/62), satisfying its ingestion dependency.
 
 AL-56 already shipped schema v4, the Go v3-to-v4 migration, and explicit migration/source-backfill boundaries in [PR #38](https://github.com/NiltonDuarte/AgenticLens/pull/38) and [PR #43](https://github.com/NiltonDuarte/AgenticLens/pull/43). AL-51 deliberately kept skills/task links optional at that version. The existing migration does not establish the proposed required-array contract, so this ticket is not complete.
 

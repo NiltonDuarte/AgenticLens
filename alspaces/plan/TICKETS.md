@@ -6,9 +6,18 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+
 ---
 
 ## Ready
+
+- **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
+  - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
+  - **Phase**: Phase 8 (v2 Observability / Skills)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
 
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
@@ -50,29 +59,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
-- **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
-  - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
-
-- **AL-52**: Rich Timeline Badges and Subagent Session Linking in Trace Views
-  - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-52 rich timeline badges and subagent session linking in trace views.md`
-
-- **AL-54**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
-  - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
 
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
@@ -93,14 +79,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## Blocked
-
-- **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
-  - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-52, AL-54
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests

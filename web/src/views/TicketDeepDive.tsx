@@ -58,8 +58,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     readonly anomaly: Anomaly | null;
   }>({ event: null, anomaly: null });
   const { event: selectedEvent, anomaly: selectedAnomaly } = selection;
+  const [focusedThread, setFocusedThread] = useState<{ readonly id: string } | undefined>();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [threadJump, setThreadJump] = useState<{ readonly sessionId: string } | null>(null);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(selectedTicketId ?? null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,9 +84,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     setTraceAnomalies([]);
     setIsHydrated(false);
     setDataSource('committed_ledger');
+    setFocusedThread(undefined);
     setSelection({ event: null, anomaly: null });
     setIsDrawerOpen(false);
-    setThreadJump(null);
     try {
       let currentLedgers = ledgersRef.current;
 
@@ -166,6 +166,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const handleSelectTicket = (ticketId: string) => {
     setActiveTicketId(ticketId);
     onSelectTicket?.(ticketId);
+  };
+
+  const handleSelectSession = (id: string) => {
+    setFocusedThread({ id });
   };
 
   const handleSelectEvent = (event: EventFact, anomaly?: Anomaly) => {
@@ -642,6 +646,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       <TraceWaterfall
         key={`trace-${requestGenerationRef.current}`}
         events={events}
+        skills={ledgerSkills(ledger.facts)}
+        taskLinks={ledgerTaskLinks(ledger.facts)}
+        availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
+        onSelectSession={handleSelectSession}
         isHydrated={isHydrated}
         dataSource={dataSource}
         anomalies={traceAnomalies}
@@ -656,9 +664,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         skills={ledgerSkills(ledger.facts)}
         delegations={ledgerTaskLinks(ledger.facts)}
         availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
-        onJumpToSession={(sessionId) => setThreadJump({ sessionId })}
+        onJumpToSession={handleSelectSession}
       />
-      <ThreadViewer threads={ledger.threads} jumpRequest={threadJump} />
+      <ThreadViewer threads={ledger.threads} focusSession={focusedThread} />
 
       {/* Row 8: Workspace Artifacts */}
       <ArtifactViewer artifacts={artifacts} />

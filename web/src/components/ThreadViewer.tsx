@@ -4,12 +4,11 @@ import { formatCurrencyUSD, formatPercentage, formatTokensK } from '../domain/fo
 import { InfoTooltip } from './InfoTooltip';
 
 export interface ThreadViewerProps {
+  readonly focusSession?: { readonly id: string } | undefined;
   readonly threads: readonly ThreadExecutionRecord[];
-  readonly jumpRequest?: { readonly sessionId: string } | null;
 }
 
-export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, jumpRequest }) => {
-  const headers = useRef(new Map<string, HTMLButtonElement>());
+export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, focusSession }) => {
   const [expandedSessions, setExpandedSessions] = useState<ReadonlySet<string>>(() => {
     // Expand the first thread by default
     if (threads.length > 0 && threads[0]) {
@@ -18,13 +17,13 @@ export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, jumpRequest
     return new Set();
   });
 
+  const focusedHeader = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (!jumpRequest || !threads.some((thread) => thread.session_id === jumpRequest.sessionId)) return;
-    setExpandedSessions((previous) => new Set([...previous, jumpRequest.sessionId]));
-    const header = headers.current.get(jumpRequest.sessionId);
-    header?.focus();
-    header?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-  }, [jumpRequest, threads]);
+    if (!focusSession || !threads.some((thread) => thread.session_id === focusSession.id)) return;
+    setExpandedSessions((previous) => new Set([...previous, focusSession.id]));
+    focusedHeader.current?.focus();
+    focusedHeader.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [focusSession, threads]);
 
   if (!threads || threads.length === 0) {
     return (
@@ -74,10 +73,7 @@ export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, jumpRequest
           return (
             <div key={thread.session_id} className="thread-accordion-item">
               <button
-                ref={(element) => {
-                  if (element) headers.current.set(thread.session_id, element);
-                  else headers.current.delete(thread.session_id);
-                }}
+                ref={thread.session_id === focusSession?.id ? focusedHeader : undefined}
                 type="button"
                 className={`thread-header-btn ${isExpanded ? 'open' : ''}`}
                 onClick={() => toggleSession(thread.session_id)}

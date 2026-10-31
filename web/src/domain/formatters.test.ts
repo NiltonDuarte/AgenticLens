@@ -161,6 +161,12 @@ describe('Domain Pure Formatters', () => {
         });
     });
     describe('deriveTicketComparisonRows boundary sorting and empty handling', () => {
+        it('retains distinct sorted recorded skill names in browser rows', () => {
+            const base = mockAgenticMetricsLedgers['AL-1']!;
+            const skill = (name: string) => ({ name, success: true, caller_role: 'coder', timestamp: '2026-01-01T00:00:00Z', turn_index: 0, message_index: 0 });
+            const rows = deriveTicketComparisonRows([{ ...base, facts: { ...base.facts, skills: [skill('beta'), skill('alpha'), skill('beta')] } }]);
+            expect(rows[0]?.skills_used).toEqual(['alpha', 'beta']);
+        });
         it('returns empty array when input is empty', () => {
             expect(deriveTicketComparisonRows([])).toEqual([]);
         });
@@ -248,6 +254,7 @@ describe('Domain Pure Formatters', () => {
             expect(rows[0]?.ticket_id).toBe('unknown');
             expect(rows[0]?.ticket_title).toBe('N/A');
             expect(rows[0]?.lead_duration_formatted).toBe('In Progress');
+            expect(rows[0]?.skills_used).toEqual([]);
         });
         it('handles migrated and partially migrated ledger objects cleanly', () => {
             const migratedLedger = {

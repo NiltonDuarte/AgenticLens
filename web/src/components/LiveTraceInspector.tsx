@@ -7,6 +7,7 @@ import {
   formatLocalDateTimeTooltip,
   getClientTimezoneBadge,
 } from '../domain/formatters';
+import { TraceInvocationBadge, type ChildSessionNavigation } from './TraceInvocationBadge';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { findMatchingLiveAlert, extractStreakCount } from '../domain/anomalies';
@@ -18,14 +19,14 @@ import {
   translateRuleToPlainEnglish,
 } from '../utils/debugPrompt';
 
-export interface LiveTraceInspectorProps {
+export interface LiveTraceInspectorProps extends ChildSessionNavigation {
   readonly sessionNode: LiveSessionNode | null;
   readonly trace: LiveTraceView | null;
   readonly loading: boolean;
   readonly onClose: () => void;
 }
 
-interface MessageTurnProps {
+interface MessageTurnProps extends ChildSessionNavigation {
   readonly message: LiveMessageFact;
   readonly turnIndex: number;
   readonly sessionId: string;
@@ -33,7 +34,7 @@ interface MessageTurnProps {
   readonly anomalies?: readonly LiveAnomalyAlert[] | undefined;
 }
 
-interface MessagePartProps {
+interface MessagePartProps extends ChildSessionNavigation {
   readonly part: LivePartFact;
   readonly turn: number;
   readonly sessionId: string;
@@ -47,6 +48,8 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
   sessionId,
   messageId,
   consecutiveErrors,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -79,6 +82,14 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
         {part.tool_name && (
           <span className="part-tool-name">{part.tool_name}</span>
         )}
+        <TraceInvocationBadge
+          metadata={part.tool_name === 'skill' && part.skill_name
+            ? { kind: 'skill', name: part.skill_name }
+            : part.tool_name === 'task' && (part.subagent_type || part.child_session_id)
+              ? { kind: 'task', name: part.subagent_type || 'unknown', childSessionId: part.child_session_id }
+              : undefined}
+          availableSessionIds={availableSessionIds} onSelectSession={onSelectSession}
+        />
         <span className={`part-status-badge status-${part.status.toLowerCase()}`}>
           {part.status}
         </span>
@@ -99,7 +110,7 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
       {part.input_snippet && (
         <div className="part-snippet input">
           <span className="part-snippet-label">Input:</span>
-          <pre className="part-code">{part.input_snippet}</pre>
+          <pre className="part-code" data-trace-anchor={`${part.id}:input`}>{part.input_snippet}</pre>
         </div>
       )}
       {part.output_snippet && (
@@ -107,7 +118,7 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
           <span className="part-snippet-label">
             {part.is_error ? 'Error Output:' : 'Output:'}
           </span>
-          <pre className={`part-code ${part.is_error ? 'error' : ''}`}>
+          <pre className={`part-code ${part.is_error ? 'error' : ''}`} data-trace-anchor={`${part.id}:output`}>
             {part.output_snippet}
           </pre>
         </div>
@@ -122,6 +133,8 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
   sessionId,
   model,
   anomalies,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
   const reasoning = message.reasoning_content;
@@ -161,7 +174,7 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
 
   return (
     <div className={`trace-message-turn role-${message.role.toLowerCase()}`} data-testid={`message-turn-${turnIndex}`}>
-      <div className="message-turn-header">
+      <div className="message-turn-header" data-trace-anchor={`${message.id}:header`}>
         <div className="message-turn-meta">
           <span className="turn-number-badge">Turn {turnIndex + 1}</span>
           <span className={`turn-role-pill role-${message.role.toLowerCase()}`}>
@@ -225,12 +238,12 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
               {showReasoning ? 'Hide Reasoning' : 'Show Reasoning'}
             </button>
           </div>
-          <pre className="reasoning-content">{displayReasoning}</pre>
+          <pre className="reasoning-content" data-trace-anchor={`${message.id}:reasoning`}>{displayReasoning}</pre>
         </div>
       )}
 
       {message.content && message.content.trim().length > 0 && (
-        <div className="message-body-text">{message.content}</div>
+        <div className="message-body-text" data-trace-anchor={`${message.id}:body`}>{message.content}</div>
       )}
 
       {message.parts && message.parts.length > 0 && (
@@ -243,6 +256,8 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
               <LiveMessagePartItem
                 key={part.id}
                 part={part}
+                availableSessionIds={availableSessionIds}
+                onSelectSession={onSelectSession}
                 turn={turnIndex + 1}
                 sessionId={sessionId}
                 messageId={message.id}
@@ -261,6 +276,8 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   trace,
   loading,
   onClose,
+  availableSessionIds,
+  onSelectSession,
 }) => {
   const [isSessionCopied, setIsSessionCopied] = useState(false);
   const [messageOrder, setMessageOrder] = useState<LiveMessageOrder>('latest-first');
@@ -270,20 +287,32 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   const previousMessageCount = useRef(trace?.messages.length ?? 0);
   const previousScrollHeight = useRef(0);
 
+  const readingAnchor = useRef<{ element: HTMLElement; offset: number } | null>(null);
+  const captureReadingAnchor = (list: HTMLDivElement) => {
+    const top = list.getBoundingClientRect().top;
+    const element = Array.from(list.querySelectorAll<HTMLElement>('[data-trace-anchor]'))
+      .find((candidate) => candidate.getBoundingClientRect().bottom > top);
+    readingAnchor.current = element ? { element, offset: element.getBoundingClientRect().top - top } : null;
+  };
+
   useLayoutEffect(() => {
     const list = messageListRef.current;
     const currentCount = trace?.messages.length ?? 0;
-    if (list && currentCount > previousMessageCount.current && pausedAtReadingPosition.current) {
-      if (messageOrder === 'latest-first') {
+    if (list && pausedAtReadingPosition.current) {
+      const anchor = readingAnchor.current;
+      if (anchor && list.contains(anchor.element)) {
+        list.scrollTop += anchor.element.getBoundingClientRect().top - list.getBoundingClientRect().top - anchor.offset;
+      } else if (messageOrder === 'latest-first') {
         list.scrollTop += list.scrollHeight - previousScrollHeight.current;
-        setNewTurnsAvailable(true);
-      } else {
-        setNewTurnsAvailable(true);
       }
+      if (currentCount > previousMessageCount.current) setNewTurnsAvailable(true);
     }
     previousMessageCount.current = currentCount;
-    if (list) previousScrollHeight.current = list.scrollHeight;
-  }, [trace?.messages.length, messageOrder]);
+    if (list) {
+      previousScrollHeight.current = list.scrollHeight;
+      captureReadingAnchor(list);
+    }
+  }, [trace, messageOrder]);
   const [isFailedToolsExpanded, setIsFailedToolsExpanded] = useState(false);
 
   if (!sessionNode) {
@@ -509,6 +538,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
                 onScroll={(event) => {
                   const list = event.currentTarget;
                   previousScrollHeight.current = list.scrollHeight;
+                  captureReadingAnchor(list);
                   const distanceFromLatest = messageOrder === 'latest-first'
                     ? list.scrollTop
                     : list.scrollHeight - list.clientHeight - list.scrollTop;
@@ -521,6 +551,8 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
                     key={msg.id || `msg-${idx}`}
                     message={msg}
                     turnIndex={idx}
+                    availableSessionIds={availableSessionIds}
+                    onSelectSession={onSelectSession}
                     sessionId={sessionNode.id}
                     model={sessionNode.model}
                     anomalies={trace.anomalies}

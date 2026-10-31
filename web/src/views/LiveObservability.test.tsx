@@ -59,6 +59,7 @@ describe('LiveObservability View Integration', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -121,6 +122,34 @@ describe('LiveObservability View Integration', () => {
     const inspector = screen.getByTestId('live-trace-inspector');
     expect(within(inspector).getByText('Session: ses-al20-coder')).toBeInTheDocument();
     expect(screen.getByText('Execution Message Stream (4 turns)')).toBeInTheDocument();
+  });
+
+  it('opens a delegated child and hides the parent stream until the child trace arrives', async () => {
+    const parentId = 'ses-al20-root';
+    const childId = 'ses-al20-coder';
+    const baseMessage = mockLiveTraceView.messages[0]!;
+    const parentTrace = { ...mockLiveTraceView, session_id: parentId, recent_errors: [], failed_tool_calls: 0,
+      messages: [{ ...baseMessage, content: 'Parent delegation evidence', parts: [{ id: 'delegation', type: 'tool',
+        tool_name: 'task', status: 'completed', is_error: false, subagent_type: 'coder', child_session_id: childId }] }] };
+    let finishChild!: (value: Response) => void;
+    const childResponse = new Promise<Response>((resolve) => { finishChild = resolve; });
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes(childId) && url.includes('/trace')) return childResponse;
+      return { ok: true, json: async () => url.includes('/trace') ? parentTrace : mockLiveSessionTree };
+    }));
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const es = MockEventSource.instances[0]!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    fireEvent.click(screen.getByText('AL-20 TypeScript Live Observability Implementation').closest('.live-session-node-card')!);
+    const jump = await screen.findByRole('button', { name: `Inspect child session ${childId}` });
+    expect(screen.getByText('Parent delegation evidence')).toBeInTheDocument();
+    fireEvent.click(jump);
+    expect(screen.getByText(`Loading execution trace for session ${childId}...`)).toBeInTheDocument();
+    expect(screen.queryByText('Parent delegation evidence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Execution Message Stream (1 turns)')).not.toBeInTheDocument();
+    await act(async () => finishChild({ ok: true, json: async () => mockLiveTraceView } as Response));
+    expect(screen.getByText('Execution Message Stream (4 turns)')).toBeInTheDocument();
+    expect(within(screen.getByTestId('live-trace-inspector')).getByText(`Session: ${childId}`)).toBeInTheDocument();
   });
 
   it('handles pause and resume controls properly', async () => {
@@ -447,6 +476,169 @@ describe('LiveObservability View Integration', () => {
         screen.getByText('Brand new dynamically updated turn arrived via SSE stream.')
       ).toBeInTheDocument();
     });
+  });
+
+  it('recovers active trace edits through REST while SSE stays connected and stops after completion', async () => {
+    vi.useFakeTimers();
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const es = MockEventSource.instances[0]!;
+    act(() => {
+      es.onopen?.();
+      es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree));
+    });
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation').closest('.live-session-node-card')!);
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByText(/Execution Message Stream/)).toBeInTheDocument();
+    const next = { ...mockLiveTraceView, messages: mockLiveTraceView.messages.map((message, index) =>
+      index === 0 ? { ...message, content: 'Recovered same-turn update', total_tokens: 9999 } : message) };
+    const fetcher = vi.mocked(fetch);
+    fetcher.mockClear();
+    fetcher.mockResolvedValue({ ok: true, json: async () => next } as Response);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.getByText('Recovered same-turn update')).toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const coder = mockLiveSessionTree.root_sessions[0]!.sub_sessions.find((node) => node.id === 'ses-al20-coder')!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify({
+      ...mockLiveSessionTree, root_sessions: [{ ...coder, status: 'completed' }],
+    })));
+    await act(async () => { await Promise.resolve(); });
+    fetcher.mockClear();
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('keeps an accepted SSE snapshot when an older REST response finishes later', async () => {
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const es = MockEventSource.instances[0]!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    let finish: ((response: Response) => void) | undefined;
+    vi.mocked(fetch).mockImplementation(() => new Promise<Response>((resolve) => { finish = resolve; }));
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation').closest('.live-session-node-card')!);
+    const pushed = { ...mockLiveTraceView, messages: mockLiveTraceView.messages.map((message, index) =>
+      index === 0 ? { ...message, content: 'Newest pushed snapshot' } : message) };
+    act(() => es.dispatchEvent('trace_update', JSON.stringify(pushed)));
+    expect(screen.getByText('Newest pushed snapshot')).toBeInTheDocument();
+    await act(async () => { finish?.({ ok: true, json: async () => mockLiveTraceView } as Response); });
+    expect(screen.getByText('Newest pushed snapshot')).toBeInTheDocument();
+  });
+
+  it('coalesces refreshes, preserves expanded reasoning while loading, and retains trace errors across tree updates', async () => {
+    vi.useFakeTimers();
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const es = MockEventSource.instances[0]!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation').closest('.live-session-node-card')!);
+    await act(async () => { await Promise.resolve(); });
+    const bubble = screen.getAllByTestId('reasoning-bubble').find((element) => within(element).queryByRole('button', { name: /show reasoning/i }))!;
+    fireEvent.click(within(bubble).getByRole('button', { name: /show reasoning/i }));
+    const turn = bubble.closest('.trace-message-turn');
+    let rejectPending: ((error: Error) => void) | undefined;
+    const fetcher = vi.mocked(fetch);
+    fetcher.mockClear();
+    fetcher.mockImplementation(() => new Promise<Response>((_resolve, reject) => { rejectPending = reject; }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(bubble.closest('.trace-message-turn')).toBe(turn);
+    expect(within(bubble).getByRole('button', { name: /hide reasoning/i })).toBeInTheDocument();
+    // The pending triggers become exactly one follow-up after the failed request.
+    fetcher.mockRejectedValue(new Error('trace recovery unavailable'));
+    await act(async () => { rejectPending?.(new Error('trace recovery unavailable')); });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(within(screen.getByTestId('live-status-bar')).getByRole('alert')).toHaveTextContent('trace recovery unavailable');
+    act(() => es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    expect(within(screen.getByTestId('live-status-bar')).getByRole('alert')).toHaveTextContent('trace recovery unavailable');
+    expect(bubble.closest('.trace-message-turn')).toBe(turn);
+    fetcher.mockResolvedValue({ ok: true, json: async () => mockLiveTraceView } as Response);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(within(screen.getByTestId('live-status-bar')).queryByRole('alert')).not.toBeInTheDocument();
+    expect(within(bubble).getByRole('button', { name: /hide reasoning/i })).toBeInTheDocument();
+  });
+
+  it('discards obsolete selection and manual responses without hiding the new session', async () => {
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const es = MockEventSource.instances[0]!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    const pending = new Map<string, (response: Response) => void>();
+    vi.mocked(fetch).mockImplementation((input) => new Promise<Response>((resolve) => { pending.set(String(input), resolve); }));
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation').closest('.live-session-node-card')!);
+    fireEvent.click(screen.getByRole('button', { name: /manual refresh/i }));
+    fireEvent.click(screen.getByText('Contract and Architecture Plan').closest('.live-session-node-card')!);
+    const plannerTrace = { ...mockLiveTraceView, session_id: 'ses-al20-planner', messages: [] };
+    await act(async () => { pending.get('/api/live/sessions/ses-al20-planner/trace')?.({ ok: true, json: async () => plannerTrace } as Response); });
+    expect(screen.getByText('Session: ses-al20-planner')).toBeInTheDocument();
+    await act(async () => {
+      pending.get('/api/live/sessions/ses-al20-coder/trace')?.({ ok: true, json: async () => mockLiveTraceView } as Response);
+      pending.get('/api/live/sessions')?.({ ok: true, json: async () => ({ ...mockLiveSessionTree, root_sessions: [] }) } as Response);
+    });
+    expect(screen.getByText('Session: ses-al20-planner')).toBeInTheDocument();
+    expect(screen.getByText('No message turns recorded for this session yet.')).toBeInTheDocument();
+    expect(within(screen.getByTestId('live-trace-inspector')).queryByText('Session: ses-al20-coder')).not.toBeInTheDocument();
+  });
+
+  it('invalidates in-flight work on pause and close, permits paused manual refresh, and reconciles on resume', async () => {
+    vi.useFakeTimers();
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const es = MockEventSource.instances[0]!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation').closest('.live-session-node-card')!);
+    await act(async () => { await Promise.resolve(); });
+    let finishOld: ((response: Response) => void) | undefined;
+    const fetcher = vi.mocked(fetch);
+    fetcher.mockImplementation(() => new Promise<Response>((resolve) => { finishOld = resolve; }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    fireEvent.click(screen.getByRole('button', { name: /pause streaming/i }));
+    fetcher.mockClear();
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+    expect(fetcher).not.toHaveBeenCalled();
+    const stale = { ...mockLiveTraceView, messages: [] };
+    await act(async () => { finishOld?.({ ok: true, json: async () => stale } as Response); });
+    act(() => es.dispatchEvent('trace_update', JSON.stringify(stale)));
+    expect(screen.getByText('Execution Message Stream (4 turns)')).toBeInTheDocument();
+    fetcher.mockImplementation(async (input) => ({ ok: true, json: async () => String(input).includes('/trace') ? mockLiveTraceView : mockLiveSessionTree } as Response));
+    fireEvent.click(screen.getByRole('button', { name: /manual refresh/i }));
+    await act(async () => { await Promise.resolve(); });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    fetcher.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: /resume streaming/i }));
+    await act(async () => { await Promise.resolve(); });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: /close inspector/i }));
+    fetcher.mockClear();
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it.each(['stalled', 'missing'])('stops automatic trace requests when the selected node becomes %s', async (status) => {
+    vi.useFakeTimers();
+    const { unmount } = render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const es = MockEventSource.instances[0]!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation').closest('.live-session-node-card')!);
+    await act(async () => { await Promise.resolve(); });
+    const coder = mockLiveSessionTree.root_sessions[0]!.sub_sessions.find((node) => node.id === 'ses-al20-coder')!;
+    act(() => es.dispatchEvent('session_tree', JSON.stringify({ ...mockLiveSessionTree, root_sessions: status === 'missing' ? [] : [{ ...coder, status }] })));
+    await act(async () => { await Promise.resolve(); });
+    const fetcher = vi.mocked(fetch);
+    fetcher.mockClear();
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+    expect(fetcher).not.toHaveBeenCalled();
+    unmount();
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('continues active trace recovery when EventSource is unavailable', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('EventSource', undefined);
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation').closest('.live-session-node-card')!);
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByText('Fallback Polling (REST)')).toBeInTheDocument();
+    const recovered = { ...mockLiveTraceView, messages: [] };
+    vi.mocked(fetch).mockImplementation(async (input) => ({ ok: true, json: async () => String(input).includes('/trace') ? recovered : mockLiveSessionTree } as Response));
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.getByText('No message turns recorded for this session yet.')).toBeInTheDocument();
   });
 
   it('renders empty tree state gracefully when SSE sends zero active sessions', async () => {

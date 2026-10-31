@@ -5210,3 +5210,56 @@ th.num-col .th-content {
 .ticket-scatter-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
 .ticket-scatter-legend i { width: 0.65rem; height: 0.65rem; border-radius: 50%; background: #4ea1ff; }
 .ticket-scatter-legend i.in-progress { background: #f2a93b; }
+
+/* Invocation labels truncate independently so child controls remain available. */
+.trace-invocation-controls .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.trace-invocation-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+.trace-invocation-badge {
+  display: inline-block;
+  min-width: 0;
+  max-width: min(100%, 24rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  padding: 2px 7px;
+  font: 600 12px var(--font-mono);
+  background: var(--bg-surface-elevated);
+}
+.trace-invocation-badge.badge-skill { color: var(--accent-blue); }
+.trace-invocation-badge.badge-task { color: var(--status-green); }
+button.trace-invocation-badge { cursor: pointer; }
+.trace-child-unavailable {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.trace-child-id {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+.trace-child-unavailable button { flex-shrink: 0; }
+.tool-details-group, .part-header { min-width: 0; flex-wrap: wrap; }

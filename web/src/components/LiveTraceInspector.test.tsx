@@ -38,6 +38,34 @@ describe('LiveTraceInspector Component', () => {
     sub_sessions: [],
   };
 
+  it('shows rich live invocations, navigates known children, and copies unavailable identifiers', async () => {
+    const select = vi.fn();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    mockClipboard(writeText);
+    const baseMessage = mockLiveTraceView.messages[0];
+    if (!baseMessage) throw new Error('Missing trace fixture message');
+    const trace: LiveTraceView = { ...mockLiveTraceView, messages: [{ ...baseMessage, parts: [
+      { id: 'skill-part', type: 'tool', tool_name: 'skill', skill_name: 'agentic-lens-dev', status: 'completed', is_error: false },
+      { id: 'known-task', type: 'tool', tool_name: 'task', subagent_type: 'coder', child_session_id: 'known-child', status: 'completed', is_error: false },
+      { id: 'pending-task', type: 'tool', tool_name: 'task', subagent_type: 'tester', child_session_id: 'pending-child', status: 'running', is_error: false },
+    ] }] };
+    render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()}
+      availableSessionIds={['known-child']} onSelectSession={select} />);
+    expect(screen.getByText('[skill: agentic-lens-dev]')).toHaveAttribute('title', '[skill: agentic-lens-dev]');
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect child session known-child' }));
+    expect(select).toHaveBeenCalledWith('known-child');
+    expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy child session ID pending-child' })); });
+    expect(writeText).toHaveBeenCalledWith('pending-child');
+    const copyChild = screen.getByRole('button', { name: 'Copy child session ID pending-child' });
+    expect(copyChild).toHaveTextContent('Copied');
+    writeText.mockRejectedValueOnce(new Error('Clipboard denied'));
+    await act(async () => { fireEvent.click(copyChild); });
+    expect(copyChild).toHaveTextContent('Copy failed');
+    expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toHaveTextContent('pending-child');
+    expect(select).toHaveBeenCalledTimes(1);
+  });
+
   it('renders placeholder prompt when sessionNode is null', () => {
     render(
       <LiveTraceInspector
@@ -434,6 +462,31 @@ describe('LiveTraceInspector Component', () => {
 
     expect(messageList.scrollTop).toBe(180);
     expect(screen.getByRole('button', { name: /new turns available/i })).toBeInTheDocument();
+  });
+
+  it.each(['latest-first', 'oldest-first'])('anchors same-turn growth without remounting reasoning in %s order', (order) => {
+    const { rerender } = render(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+    if (order === 'oldest-first') fireEvent.click(screen.getByTestId('turn-order-toggle-btn'));
+    const list = document.querySelector('.inspector-messages-list') as HTMLDivElement;
+    Object.defineProperties(list, {
+      scrollHeight: { configurable: true, value: 1000 }, clientHeight: { configurable: true, value: 100 },
+    });
+    list.getBoundingClientRect = () => new DOMRect(0, 100, 300, 100);
+    const anchors = Array.from(list.querySelectorAll<HTMLElement>('[data-trace-anchor]'));
+    const anchor = anchors[1]!;
+    let top = 110;
+    anchors.forEach((element, index) => { element.getBoundingClientRect = () => new DOMRect(0, index === 1 ? top : 0, 100, 20); });
+    list.scrollTop = 200;
+    fireEvent.scroll(list);
+    const turn = anchor.closest('.trace-message-turn');
+    top = 170;
+    const next = { ...mockLiveTraceView, messages: mockLiveTraceView.messages.map((message) => ({ ...message, content: message.content + ' streamed growth' })) };
+    rerender(<LiveTraceInspector sessionNode={mockNode} trace={next} loading={true} onClose={vi.fn()} />);
+    expect(list.scrollTop).toBe(260);
+    expect(anchor.closest('.trace-message-turn')).toBe(turn);
+    expect(screen.queryByRole('button', { name: /new turns available/i })).not.toBeInTheDocument();
   });
 
   it('quick navigation buttons scroll to each end of the message list', () => {

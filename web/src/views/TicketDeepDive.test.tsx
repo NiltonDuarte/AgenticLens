@@ -241,6 +241,86 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
+    it('shares exact repeatable child navigation between task badges and the panel and resets it on ticket change', async () => {
+        const event: EventFact = { ...recorded[0]!, tool_name: 'task', status: 'error' };
+        const detail = makeDetail('AL-1', [event]);
+        const baseThread = detail.ledger.threads[0]!;
+        const childId = 'recorded-child-thread-with-the-complete-source-identifier-0123456789';
+        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockImplementation((id) => id === 'AL-1' ? pending.promise : Promise.resolve(emptyResponse(id)));
+        const taskDetail: WorkspaceDetail = {
+            ...detail, ledger: { ...detail.ledger,
+                threads: [{ ...baseThread, session_id: 'parent-thread' },
+                    { ...baseThread, session_id: `${childId}-sibling` }, { ...baseThread, session_id: childId }],
+                facts: { ...detail.ledger.facts, task_links: [{ subagent_type: 'tester', description: 'Verify',
+                    parent_turn: event.turn, timestamp: event.timestamp, child_session_id: childId }] },
+            },
+        };
+        const nextEvent: EventFact = { ...recorded[1]!, session_id: 'next-parent', turn: 42 };
+        const nextDetail = makeDetail('AL-2', [nextEvent]);
+        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: id === 'AL-1' ? taskDetail : {
+            ...nextDetail, ledger: { ...nextDetail.ledger,
+                threads: [{ ...baseThread, session_id: 'next-parent' }, { ...baseThread, session_id: childId }],
+                facts: { ...nextDetail.ledger.facts, task_links: [] },
+            },
+        } }));
+        const user = userEvent.setup();
+        const { rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const header = await screen.findByRole('button', { name: `${childId} User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
+        const parent = screen.getByRole('button', { name: /^parent-thread User:/ });
+        const sibling = screen.getByRole('button', { name: `${childId}-sibling User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
+        const scroll = vi.fn();
+        header.scrollIntoView = scroll;
+        expect(header).toHaveAttribute('aria-expanded', 'false');
+        expect(parent).toHaveAttribute('aria-expanded', 'true');
+        await user.click(screen.getByTestId('waterfall-expand-btn'));
+        await user.click(screen.getByRole('button', { name: 'All Events' }));
+        const badge = screen.getByRole('button', { name: `Inspect child session ${childId}` });
+        const panelJump = within(screen.getByRole('table', { name: 'Subagent delegations' }))
+            .getByRole('button', { name: `Jump to child session ${childId}` });
+        expect(panelJump).toHaveTextContent(childId);
+        const traceItem = screen.getByTestId('timeline-item-1');
+        // Both entry points must reactivate the same child after a manual close.
+        for (const [entryPoint, key] of [[badge, '{Enter}'], [panelJump, ' '], [badge, ' '], [panelJump, '{Enter}']] as const) {
+            entryPoint.focus();
+            await user.keyboard(key);
+            expect(header).toHaveAttribute('aria-expanded', 'true');
+            expect(header).toHaveFocus();
+            expect(header.closest('.thread-accordion-item')?.querySelector('.thread-body')).toBeVisible();
+            expect(parent).toHaveAttribute('aria-expanded', 'true');
+            expect(sibling).toHaveAttribute('aria-expanded', 'false');
+            expect(traceItem).not.toHaveClass('selected');
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            await user.keyboard('{Enter}');
+            expect(header).toHaveAttribute('aria-expanded', 'false');
+        }
+        expect(scroll).toHaveBeenCalledTimes(4);
+        // Leave an active child request and parent inspector to expose stale state on switching.
+        await user.click(panelJump);
+        await user.click(traceItem);
+        expect(traceItem).toHaveClass('selected');
+        expect(screen.getByRole('dialog')).toHaveTextContent('Tool Execution Failure');
+        rerender(<TicketDeepDive selectedTicketId="AL-2" />);
+        const nextHeader = await screen.findByRole('button', { name: `${childId} User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
+        expect(nextHeader).toHaveAttribute('aria-expanded', 'false');
+        expect(nextHeader).not.toHaveFocus();
+        expect(screen.getByRole('button', { name: /^next-parent User:/ })).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^parent-thread User:/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: `Jump to child session ${childId}` })).not.toBeInTheDocument();
+        await act(async () => pending.resolve({ data: {
+            ticket_id: 'AL-1', is_hydrated: true, data_source: 'local_codex', events: [event],
+        } }));
+        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+        await user.click(screen.getByRole('button', { name: 'All Events' }));
+        expect(screen.getByTestId('timeline-item-42')).toBeVisible();
+        expect(screen.queryByTestId('timeline-item-1')).not.toBeInTheDocument();
+        expect(screen.getByText('Showing 1 of 1 events')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: `Inspect child session ${childId}` })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(nextHeader).toHaveAttribute('aria-expanded', 'false');
+    });
+
     it('preserves malformed workspace timestamps as the visible time and tooltip fallback', async () => {
         const malformedTimestamp = 'not-a-valid-timestamp';
         const detail = makeDetail();

@@ -836,3 +836,36 @@ func TestEventsFromLiveTrace(t *testing.T) {
 		}
 	})
 }
+
+func TestLiveTracesEqualDetectsInPlaceChanges(t *testing.T) {
+	base := func() domain.LiveTraceView {
+		return domain.LiveTraceView{SessionID: "session", Messages: []domain.LiveMessageFact{{ID: "turn", Content: "before", Parts: []domain.LivePartFact{{ID: "part", Status: "running"}}}}}
+	}
+	cases := []struct {
+		name   string
+		change func(*domain.LiveTraceView)
+	}{
+		{"content", func(trace *domain.LiveTraceView) { trace.Messages[0].Content = "after" }},
+		{"tokens", func(trace *domain.LiveTraceView) { trace.Messages[0].ReasoningTokens = 20 }},
+		{"reasoning", func(trace *domain.LiveTraceView) { text := "thought"; trace.Messages[0].ReasoningContent = &text }},
+		{"tool output", func(trace *domain.LiveTraceView) { trace.Messages[0].Parts[0].OutputSnippet = "result" }},
+		{"tool status", func(trace *domain.LiveTraceView) { trace.Messages[0].Parts[0].Status = "completed" }},
+		{"child link", func(trace *domain.LiveTraceView) { trace.Messages[0].Parts[0].ChildSessionID = "child" }},
+		{"failure count", func(trace *domain.LiveTraceView) { trace.FailedToolCalls = 1 }},
+		{"anomaly", func(trace *domain.LiveTraceView) {
+			trace.Anomalies = []domain.LiveAnomalyAlert{{SessionID: "session", Message: "alert"}}
+		}},
+	}
+	if !domain.LiveTracesEqual(base(), base()) {
+		t.Fatal("equal values should compare equal")
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			before, after := base(), base()
+			tc.change(&after)
+			if domain.LiveTracesEqual(before, after) {
+				t.Fatal("same-count source edit was suppressed")
+			}
+		})
+	}
+}
