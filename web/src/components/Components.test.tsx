@@ -8,7 +8,6 @@ import { Navbar } from './Navbar';
 import { TrendChart } from './TrendChart';
 import { SaturationBar } from './SaturationBar';
 import { ThreadViewer } from './ThreadViewer';
-import { ArtifactViewer } from './ArtifactViewer';
 import { TicketSelector } from './TicketSelector';
 import type { ThreadExecutionRecord } from '../domain/types';
 
@@ -365,30 +364,9 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.queryByText('Mock Mode')).not.toBeInTheDocument();
     });
 
-    it('dispatches onSelectTab when tab is clicked', () => {
-      const onSelect = vi.fn();
-      render(<Navbar activeTab="overview" onSelectTab={onSelect} versionInfo={dummyVersion} projectName="" />);
-
-      const overviewBtn = screen.getByRole('button', { name: 'Fleet Overview' });
-      fireEvent.click(overviewBtn);
-      expect(onSelect).toHaveBeenCalledWith('overview');
-    });
   });
 
   describe('TrendChart Component', () => {
-    it('renders empty placeholder when data array is empty', () => {
-      render(
-        <TrendChart
-          title="Empty Trend"
-          data={[]}
-          series={[{ key: 'val', label: 'Value', color: '#10b981', type: 'line' }]}
-          emptyMessage="No data points recorded"
-        />
-      );
-
-      expect(screen.getByText('Empty Trend')).toBeInTheDocument();
-      expect(screen.getByText('No data points recorded')).toBeInTheDocument();
-    });
 
     it('renders svg and series elements when data is present', () => {
       const { container } = render(
@@ -411,21 +389,6 @@ describe('Presentation Components Boundary Tests', () => {
       expect(path).not.toBeNull();
     });
 
-    it('renders bar series rect elements', () => {
-      const { container } = render(
-        <TrendChart
-          title="Invocations Bar"
-          data={[
-            { date: '2026-10-14', count: 5 },
-            { date: '2026-10-15', count: 12 },
-          ]}
-          series={[{ key: 'count', label: 'Count', color: '#8b5cf6', type: 'bar' }]}
-        />
-      );
-
-      const rects = container.querySelectorAll('rect');
-      expect(rects.length).toBeGreaterThan(0);
-    });
 
     it('renders InfoTooltip when tooltip prop is provided in both populated and empty states', () => {
       const { rerender } = render(
@@ -963,39 +926,6 @@ describe('Presentation Components Boundary Tests', () => {
     });
   });
 
-  describe('ArtifactViewer Component', () => {
-    it('renders markdown artifact content and toggles between contract and summary', () => {
-      render(
-        <ArtifactViewer
-          artifacts={{
-            ticket_id: 'AL-1',
-            contract_content: '# Contract Spec\nScope defined here.',
-            summary_content: '# Summary Report\nAll tests pass.',
-          }}
-        />
-      );
-
-      expect(screen.getByText(/Scope defined here/)).toBeInTheDocument();
-
-      const summaryTabBtn = screen.getByRole('button', { name: /summary\.md/i });
-      fireEvent.click(summaryTabBtn);
-
-      expect(screen.getByText(/All tests pass/)).toBeInTheDocument();
-    });
-
-    it('renders empty notice when content is null', () => {
-      render(<ArtifactViewer artifacts={null} />);
-      expect(
-        screen.getByText('No CONTRACT.md document found for this workspace.')
-      ).toBeInTheDocument();
-
-      const summaryTabBtn = screen.getByRole('button', { name: /summary\.md/i });
-      fireEvent.click(summaryTabBtn);
-      expect(
-        screen.getByText('No SUMMARY.md document found for this workspace.')
-      ).toBeInTheDocument();
-    });
-  });
 
   describe('TicketSelector Component', () => {
     it('renders options for all tickets and calls onSelect on change', () => {

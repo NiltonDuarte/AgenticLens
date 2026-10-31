@@ -98,12 +98,5 @@ describe('Theme and Design Tokens', () => {
       }
     });
 
-    it('is strictly deterministic across 50 repetitions', () => {
-      const testRole = 'researcher-lead';
-      const initial = getRoleColor(testRole);
-      for (let i = 0; i < 50; i++) {
-        expect(getRoleColor(testRole)).toBe(initial);
-      }
-    });
   });
 });

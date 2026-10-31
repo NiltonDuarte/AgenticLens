@@ -1,7 +1,7 @@
-# docs(REV-4): audit test value and identify 50 removal candidates
+# test(REV-4): remove 50 low-value tests with individual review rationale
 
-The suite contains tests that assert test-local literals or copied implementations without exercising application behavior. This audit recommends 50 specific removals, explains each rationale and retained protection, and records conservative dispositions and assertion evidence for all 1,252 test declarations across 92 test/support files.
+Remove six Go and 44 TypeScript test declarations that only confirm local fixtures/copied implementations or duplicate stronger surviving cases. Delete two files made entirely of type-cast JSON round trips and clean up unused test-local setup/imports. Production behavior is unchanged.
 
-Includes separate conditional consolidation findings so unique regression cases and compiler-negative contracts survive future reductions. This PR changes documentation only; no tests have been removed, and no reduced-suite equivalence or speedup is claimed.
+REVIEW.md records the rationale and retained protection for every removal. TEST_INVENTORY.md preserves historical entries and distinguishes removed tests from retained and conditional candidates. Corrected baseline inventory: 1,253 declarations; reduced suite: 1,203. Boundary, migration, ownership, hydration, security, and negative compiler contracts remain.
 
-Validation: full `make` passed on the baseline and after integration with `origin/main`, including Go race tests and 793 frontend cases; uncached Go and Vitest JSON profiles were inspected. Inventory counts and all 50 removal entries were checked. Integration verification and telemetry provenance are recorded in SUMMARY.md.
+Scope and implementation boundaries: [CONTRACT.md](alspaces/REV-4/CONTRACT.md), [iteration 02 contract](alspaces/REV-4/iterations/02/CONTRACT.md). Verification and telemetry provenance: [SUMMARY.md](alspaces/REV-4/SUMMARY.md). No controlled speedup or mutation-equivalence claim is made.

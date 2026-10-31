@@ -1,10 +1,10 @@
 # REV-4 work summary
 
-## Request and scope
+## Iteration 01 request and scope (historical)
 
 Review repository tests for necessity and explain individual removal recommendations. Documentation-only iteration; no application or test changes. No deletion approval was assumed from the pending optional clarification.
 
-## Baseline and delivery
+## Iteration 01 baseline and delivery (historical)
 
 - Initial working tree: clean.
 - Baseline: `3481919832272d3a545f8d7a1c6c98a1f678fc58`.
@@ -13,7 +13,7 @@ Review repository tests for necessity and explain individual removal recommendat
 - TEST_INVENTORY.md: all 1,252 declarations (510 Go, 742 TypeScript) across 92 test/support files. Six files contain helpers only. Parameterized runtime cases are not conflated with static declarations.
 - No matching REV-4 planning specification or index entry existed; none was manufactured for this ad hoc review.
 
-## Verification
+## Iteration 01 verification (historical)
 
 - `make`: passed at baseline. Installed dependencies; built canonical embedded frontend; Go vet, frontend typecheck/lint, Go race suite, all 793 frontend cases in 36 files, and four platform binaries passed.
 - `cd backend && go test -count=1 -json ./...`: passed, inspected complete test/subtest events and package results.
@@ -22,7 +22,7 @@ Review repository tests for necessity and explain individual removal recommendat
 - `git diff --check`: passed before commit.
 - Build output ignored under repository policy; no generated frontend files or raw source transcripts added to Git.
 
-## Limitations
+## Iteration 01 limitations (historical)
 
 Every declaration was inventoried and screened; detailed body/production inspection focused on removal candidates and selected overlap groups. KEEP is conservative and does not certify minimality of every table row. No mutation testing or deletion implementation occurred. Future test changes require the development workflow and reduced-suite verification. No intent to inflate test counts is attributed to an author.
 
@@ -74,3 +74,29 @@ Every declaration was inventoried and screened; detailed body/production inspect
 | **Total** | **1** | **152,618** | **15,857** | **2,389,632** | **94.0%** | **$0.00** |
 
 Final telemetry validation: one Codex root session, matching `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`, nonempty invocations, no children expected or extracted, no prior cross-harness ledger to preserve. Extraction succeeded from real rollout records.
+
+## Iteration 02: approved candidate deletion
+
+- User explicitly selected "Review and delete approved candidates" after the 50-entry review. This approves R01-R50, with conditional consolidations excluded.
+- Initial iteration 02 working tree: clean at `833ceebea739a74b53c1366c6d350743d3c1959b`; PR #72 open on the existing feature branch.
+- Configuration still resolves ticket workspaces to `alspaces`; the explicit existing REV-4 identifier is retained.
+- Root CONTRACT.md remains the frozen iteration 01 contract; iterations/02/CONTRACT.md records the approved scope delta.
+- Inventory correction: original Go regex missed the multiline declaration `TestFilterLedgersByCompletionDate` at aggregations_test.go:3077. It is retained and added to the historical inventory. Corrected baseline: 511 Go + 742 TypeScript = 1,253 declarations. Original runtime profile already reported 511 Go top-level tests.
+
+### Iteration 02 implementation
+
+- Removed exactly R01-R50: six Go and 44 TypeScript declarations, with no replacement tests.
+- Eight test paths changed; two files removed completely (`web/src/domain/live.test.ts`, `web/src/domain/migration.test.ts`).
+- Test-only diff: 1 line added, 1,611 lines deleted, 1,610 net lines removed. The one added line is import cleanup, not a new test.
+- Removed unreferenced test-local fixture arrays, empty describe wrappers, and unused imports. Shared fixtures/helpers and every conditional candidate remain. Production files and dependency manifests are unchanged.
+- REVIEW.md preserves every removal reason with executed status. TEST_INVENTORY.md marks exactly 50 historical rows REMOVED and includes the previously missed retained multiline Go test.
+- Conventional type changes to `test` for this implementation iteration; previous review was classified `docs`. Existing telemetry sessions must be retained.
+
+### Iteration 02 independent verification
+
+- Exact test-diff SHA-256: `8fd88fd904afbb84e83421f7f9dec1d9363770c3c103c37460370795f3e06d5f`.
+- Tester Go AST and TypeScript compiler AST audit: removed declaration multiset equals R01-R50 exactly; zero added tests and zero changes to any surviving test body/assertion. Go helpers and TestMain also unchanged.
+- Confirmed final declarations: 505 Go + 698 TypeScript = 1,203.
+- Full frontend JSON run: 749/749 passed, zero failures/pending/todo, 34 files.
+- Coder focused checks: affected Go packages with race detector, frontend typecheck/lint, and diff whitespace check passed.
+- Details: iterations/02/TEST_RESULTS.md. No mutation-equivalence, browser-layout, or controlled speedup claim.

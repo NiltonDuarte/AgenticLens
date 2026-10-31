@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateOnly, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, filterLedgersByCompletionDate, canonicalTicketType, extractTicketPrefix, extractDistinctPrefixes, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, filterComparisonRows, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
-import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, TicketComparisonRow, AgentRole, StandardTicketType, TicketType, FailureSeverity, } from './types';
+import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, TicketComparisonRow, } from './types';
 describe('Domain Pure Formatters', () => {
     describe('truncateMiddle', () => {
         it('keeps the default leading and trailing characters around an ellipsis', () => {
@@ -1004,65 +1004,6 @@ describe('Domain Pure Formatters', () => {
         it('handles non-finite values defensively', () => {
             expect(formatLinesCompact(NaN)).toBe('0');
             expect(formatLinesCompact(Infinity)).toBe('0');
-        });
-    });
-    describe('Domain Enums and Primitive Obsession Remediation', () => {
-        describe('AgentRole Autocomplete and Custom Persona Extension', () => {
-            it('accepts arbitrary role strings under AgentRole', () => {
-                const coderRole: AgentRole = 'coder';
-                const customRole: AgentRole = 'architect';
-                const dynamicRoles: readonly AgentRole[] = [
-                    coderRole,
-                    customRole,
-                    'security-auditor',
-                    'orchestrator',
-                ];
-                expect(dynamicRoles).toHaveLength(4);
-                expect(dynamicRoles[0]).toBe('coder');
-                expect(dynamicRoles[1]).toBe('architect');
-            });
-        });
-        describe('FailureSeverity Domain Contract', () => {
-            it('accepts all 4 valid severity values', () => {
-                const validSeverities: readonly FailureSeverity[] = ['none', 'low', 'medium', 'high'];
-                expect(validSeverities).toHaveLength(4);
-                for (const sev of validSeverities) {
-                    expect(['none', 'low', 'medium', 'high']).toContain(sev);
-                }
-            });
-        });
-        describe('ContextHealthStatus Classification', () => {
-            it('accepts all 4 health status values', () => {
-                const validStatuses: readonly ContextHealthStatus[] = [
-                    'HEALTHY',
-                    'ELEVATED',
-                    'BLOATED',
-                    'CRITICAL',
-                ];
-                expect(validStatuses).toHaveLength(4);
-            });
-        });
-        describe('ConventionalTicketType and TicketType Extension', () => {
-            it('supports canonical conventional commit types and custom ticket types', () => {
-                const canonicalTypes: readonly StandardTicketType[] = [
-                    'feat',
-                    'fix',
-                    'feature',
-                    'bug',
-                    'chore',
-                    'docs',
-                    'refactor',
-                    'test',
-                    'ci',
-                    'perf',
-                    'build',
-                ];
-                expect(canonicalTypes.length).toBeGreaterThan(0);
-                const customTicketType: TicketType = 'custom-subsystem';
-                const standardType: TicketType = 'feat';
-                expect(customTicketType).toBe('custom-subsystem');
-                expect(standardType).toBe('feat');
-            });
         });
     });
 });
