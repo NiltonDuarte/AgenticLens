@@ -8,4 +8,4 @@ This is documentation-only. Historical plans stay unchanged and runtime recommen
 
 Evidence: alspaces/REV-3/iterations/01/REVIEW.md and iterations/02/REVIEW.md; full coverage in iterations/02/INVENTORY.md. Verification and telemetry facts are recorded in alspaces/REV-3/SUMMARY.md.
 
-Iteration 01 full make passed (12 backend race-test packages, 793 frontend tests, lint/typecheck/vet, four platform builds). Iteration 02 validation is recorded before delivery; existing dependency audit findings and React test warnings remain documented.
+Iteration 01 full make passed (12 backend race-test packages, 793 frontend tests, lint/typecheck/vet, four platform builds). Iteration 02 full make also passed after integration (same suite and platform coverage); Markdown links, zero-emoji and whitespace checks passed, and embedded assets match. Existing dependency audit findings and React test warnings remain documented.
