@@ -51,3 +51,27 @@ Reused tester evidence on the correction diff: affected domain/Codex Go race sui
 Parent full make remains the final correction-branch gate. Upstream integration is explicitly on hold until manager confirmation that PRs #75 and #77 merged; integration conflicts, combined UI behavior and the required post-integration gate remain outside this approval. No telemetry, commit, merge or PR action was performed by reviewer.
 
 Parent correction gate: full make PASS on 8c4e2dc plus reviewed correction diff committed as 004523114326650864f02a66dc64fd1bbd593d19: all Go race suites, typecheck/lint, 721 frontend tests, frontend and four-platform binary builds. Embedded trees and served standalone assets match. No upstream integration; F2 combined UI guarantees remain deferred under manager hold. This does not claim browser geometry or integration with unmerged #75/#77.
+
+## Actual combined upstream integration audit
+
+Verdict: APPROVED for merge commit 71f1203b284dec59de18b1c8d5637af08ba68f09, parents bf575e1afd66ba17a82c5fbc1c4f3b3a2e65fcc8 and bdef2d0ef98e37fe259921bc30ba2daefbfda717. Reviewed differences against both parents, current contract/plan and integration testing evidence. The later explicit integration authorization supersedes the earlier hold; PR merge remains manager-owned.
+
+### Conflict resolution and feature preservation
+
+No blocking findings. Inspected all four resolved paths: LiveTraceInspector.tsx, LiveTraceInspector.test.tsx, TraceWaterfall.test.tsx and index.css. Live inspector keeps upstream invocation metadata and child navigation, reading anchors and propagation alongside AL-43's independent content counter and amber CONTENT ERROR/red EXEC ERROR states. The retained invocation test now additionally exercises warning-task navigation, reasoning expansion, failed-tool collapse/expansion, diagnostic copy and unavailable-child copy success/failure. Prior meaningful assertions remain. Waterfall tests retain upstream badge/navigation cases and add semantic filter/badge assertions; no upstream assertions were removed. CSS retains invocation truncation/child-control styles together with content-warning rules and panel styling. No whole-file side selection discarded either feature.
+
+Compared upstream refresh ownership/cancellation code, live trace revision/equality, LiveObservability, ThreadViewer, SkillsSubagentsPanel, FleetOverview and TicketComparisons against the second parent: these production files are unchanged by this merge. Reviewed their connection points: the inspector remains keyed by selected session; badges and the panel share handleSelectSession and focusSession; repeated requests create fresh focus objects. Go reflect.DeepEqual and frontend typed-snapshot JSON comparison include the added diagnostic fields, so equality does not hide a content-only change. Inspector reading anchors, stable message keys and reasoning state remain intact.
+
+F3 additive reconciliation and F4 bounded decoding/raw-evidence production files are unchanged versus the first parent. Their tests remain present and passed in integration verification. The live service combines upstream snapshot caching with AL-43's independent counts and before-truncation diagnostics.
+
+### SSE and lifecycle preservation
+
+The merged #82 HTTP handler and its tests are byte-identical to the second parent. Inspected subscribe-before-header/snapshot ordering and retained concrete in-place SQLite recovery, SSE protocol and initial-subscription cleanup tests. No timeout, fixture or assertion bypass was introduced. Tester executed those concrete regressions with the race detector.
+
+AL-55 is Ready with Blocked by None in both index and specification. Completed AL-43/47/52/53/54 entries are absent from the active index and all corresponding done specifications exist. Dependency edits were retained cumulatively.
+
+### Evidence and limits
+
+Reused integration tester evidence: 259 tests across eight affected frontend suites and typecheck; domain/Codex race suites; concrete SSE race regressions. Inspected production paths and changed assertions, and ran git diff --check successfully. No redundant suite rerun by reviewer. Parent full make was still running when this review was recorded; parent must record its final result, generated-asset equivalence and standalone binary verification before handoff. This approval covers the resolved source combination and reviewed fixture/DOM contracts; it does not claim browser geometry, external harness version compatibility, telemetry completeness or PR merge. Reviewer changed only this report and performed no product edits, commits, telemetry or merge actions.
+
+Parent final integration gate: full make PASS at 71f1203 (base bdef2d0), including all Go race suites, vet, typecheck/lint, 35 frontend suites / 750 tests, canonical frontend build and four binary builds. Embedded trees match and standalone 71f1203 binary serves matching index/JS/CSS. No browser geometry/deployment claim. Later documentation/telemetry-only commit does not alter tested product tree.

@@ -4,17 +4,17 @@
   "ticket_title": "Differentiate semantic content errors in successful tool invocations",
   "ticket_type": "feat",
   "started_at": "2026-10-31T12:49:21.405Z",
-  "completed_at": "2026-10-31T13:49:52.543Z",
-  "updated_at": "2026-10-31T13:49:53.536781+00:00",
+  "completed_at": "2026-10-31T14:40:05.996Z",
+  "updated_at": "2026-10-31T14:40:07.751673+00:00",
   "code": {
-    "lines_added": 824,
-    "lines_deleted": 213,
-    "test_lines_added": 375,
-    "test_lines_deleted": 12,
-    "prod_lines_added": 449,
+    "lines_added": 846,
+    "lines_deleted": 216,
+    "test_lines_added": 396,
+    "test_lines_deleted": 15,
+    "prod_lines_added": 450,
     "prod_lines_deleted": 201,
     "files_changed": 36,
-    "sdlc_iterations": 4
+    "sdlc_iterations": 5
   },
   "sessions": [
     {
@@ -26,36 +26,36 @@
           "role": "RootAgent",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T12:49:23.096Z",
-          "completed_at": "2026-10-31T13:49:52.543Z",
-          "active_duration_seconds": 808,
-          "turns": 2,
+          "completed_at": "2026-10-31T14:40:05.996Z",
+          "active_duration_seconds": 1252,
+          "turns": 3,
           "tokens": {
-            "input": 85398,
-            "output": 12006,
-            "cache_read": 6253184,
-            "reasoning": 956,
-            "peak_context": 94602
+            "input": 102232,
+            "output": 17329,
+            "cache_read": 9797120,
+            "reasoning": 1281,
+            "peak_context": 111969
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 4
+          "user_iterations": 5
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 46,
-          "errors": 2,
+          "calls": 62,
+          "errors": 6,
           "content_errors": 2
         },
         {
           "name": "followup_task",
-          "calls": 5,
+          "calls": 9,
           "errors": 0
         },
         {
           "name": "send_message",
-          "calls": 4,
+          "calls": 5,
           "errors": 0
         },
         {
@@ -65,7 +65,7 @@
         },
         {
           "name": "wait_agent",
-          "calls": 27,
+          "calls": 36,
           "errors": 0
         }
       ],
@@ -81,15 +81,15 @@
           "role": "planner",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T12:49:43.322Z",
-          "completed_at": "2026-10-31T13:43:53.593Z",
-          "active_duration_seconds": 126,
-          "turns": 2,
+          "completed_at": "2026-10-31T14:34:36.419Z",
+          "active_duration_seconds": 148,
+          "turns": 3,
           "tokens": {
-            "input": 101784,
-            "output": 3814,
-            "cache_read": 500736,
+            "input": 105329,
+            "output": 4449,
+            "cache_read": 691328,
             "reasoning": 73,
-            "peak_context": 62332
+            "peak_context": 66018
           },
           "cost_usd": 0,
           "compactions": 0,
@@ -99,7 +99,7 @@
       "tools": [
         {
           "name": "command",
-          "calls": 9,
+          "calls": 11,
           "errors": 0,
           "content_errors": 1
         },
@@ -121,15 +121,15 @@
           "role": "coder",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T12:51:26.958Z",
-          "completed_at": "2026-10-31T13:46:12.166Z",
-          "active_duration_seconds": 470,
-          "turns": 3,
+          "completed_at": "2026-10-31T14:36:51.210Z",
+          "active_duration_seconds": 616,
+          "turns": 4,
           "tokens": {
-            "input": 83716,
-            "output": 17664,
-            "cache_read": 4425216,
-            "reasoning": 3325,
-            "peak_context": 117142
+            "input": 98808,
+            "output": 19964,
+            "cache_read": 5947136,
+            "reasoning": 3901,
+            "peak_context": 132656
           },
           "cost_usd": 0,
           "compactions": 0,
@@ -139,13 +139,13 @@
       "tools": [
         {
           "name": "command",
-          "calls": 37,
+          "calls": 44,
           "errors": 4,
           "content_errors": 3
         },
         {
           "name": "send_message",
-          "calls": 6,
+          "calls": 9,
           "errors": 0
         }
       ],
@@ -161,15 +161,15 @@
           "role": "tester",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T12:56:04.874Z",
-          "completed_at": "2026-10-31T13:47:40.330Z",
-          "active_duration_seconds": 291,
-          "turns": 2,
+          "completed_at": "2026-10-31T14:38:04.402Z",
+          "active_duration_seconds": 403,
+          "turns": 3,
           "tokens": {
-            "input": 65603,
-            "output": 10622,
-            "cache_read": 2432128,
-            "reasoning": 699,
-            "peak_context": 94969
+            "input": 83024,
+            "output": 13909,
+            "cache_read": 3691776,
+            "reasoning": 1044,
+            "peak_context": 113388
           },
           "cost_usd": 0,
           "compactions": 0,
@@ -179,12 +179,12 @@
       "tools": [
         {
           "name": "command",
-          "calls": 23,
+          "calls": 32,
           "errors": 2
         },
         {
           "name": "send_message",
-          "calls": 6,
+          "calls": 9,
           "errors": 0
         }
       ],
@@ -200,15 +200,15 @@
           "role": "reviewer",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T12:58:27.835Z",
-          "completed_at": "2026-10-31T13:48:41.828Z",
-          "active_duration_seconds": 153,
-          "turns": 2,
+          "completed_at": "2026-10-31T14:39:22.210Z",
+          "active_duration_seconds": 223,
+          "turns": 3,
           "tokens": {
-            "input": 78627,
-            "output": 3655,
-            "cache_read": 1454208,
-            "reasoning": 896,
-            "peak_context": 102882
+            "input": 106116,
+            "output": 5746,
+            "cache_read": 2517760,
+            "reasoning": 1077,
+            "peak_context": 131163
           },
           "cost_usd": 0,
           "compactions": 0,
@@ -218,13 +218,13 @@
       "tools": [
         {
           "name": "command",
-          "calls": 15,
+          "calls": 22,
           "errors": 0,
-          "content_errors": 3
+          "content_errors": 4
         },
         {
           "name": "send_message",
-          "calls": 1,
+          "calls": 2,
           "errors": 0
         }
       ],
