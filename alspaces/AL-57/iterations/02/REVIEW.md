@@ -59,3 +59,6 @@ Reused the tester's passing focused schema/repository tests and race-enabled ada
 No open correction findings remain. Parent still owns the required integrated make gate, corrected-binary final telemetry regeneration with preservation of existing sessions, commit and update of the existing open PR. Earlier integrated checks apply to their recorded historical source, not automatically to this correction.
 
 Correction final verdict: APPROVED.
+
+
+Parent correction integration: reviewed correction 522ed96 integrated current origin/main 36bea1f as 8257196. No upstream application changes were introduced. Full make passed after integration (Go vet/race, frontend typecheck/lint, 755 tests, build and four binaries). Standalone asset and ordered HTTP version smoke checks passed; generated asset trees match. Final generated ledger key order/session preservation is verified at telemetry refresh.

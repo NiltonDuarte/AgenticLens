@@ -66,27 +66,29 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 - Telemetry is generated at the final step below using the actual Codex root and five children; no unavailable-source facts or numeric cost estimates are fabricated.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 51m 17s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 152.4k tokens (76% of 200k healthy ceiling, 0 compactions) | Subagents peak 213.6k (Coder)
+- **Software Development Life Cycle Iterations:** 6
+- **Active Agent Duration:** 1h 26m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 183.8k tokens (92% of 200k healthy ceiling, 0 compactions) | Subagents peak 229.1k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.2 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 3.5, Tester 1.0, Reviewer 1.0
-- **Test-to-Production Code Ratio:** 0.4:1 (+549 test lines / +1,333 prod lines)
-- **Code Delivered:** +1,882 / -273 lines across 56 code files (excluding docs)
-- **Reasoning Effort:** 33,155 reasoning tokens (21.1% of generated output)
-- **Tool Health & Self-Correction:** 319 tool calls (26 self-corrections, 91.8% success rate)
+- **Subagent Turn Velocity & Thrashing:** 2.8 avg turns/run (peak: 5 turns) | Planner 2.0, Coder 4.0, Tester 2.0, Reviewer 2.0
+- **Test-to-Production Code Ratio:** 0.5:1 (+743 test lines / +1,533 prod lines)
+- **Code Delivered:** +2,276 / -273 lines across 58 code files (excluding docs)
+- **Reasoning Effort:** 48,178 reasoning tokens (23.5% of generated output)
+- **Tool Health & Self-Correction:** 383 tool calls (28 self-corrections, 92.7% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 14 execution anomalies detected (5 CRITICAL, 9 WARNING).
+- **Status:** 16 execution anomalies detected (6 CRITICAL, 10 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+113.9k tokens) — Context tokens surged by 113.9k to 113.9k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.3k tokens) — Context tokens reached 201.3k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (15 cycles) — Subagent roles 'coder' and 'tester' alternated for 15 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.6k tokens) — Context tokens reached 164.6k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.2k tokens) — Context tokens reached 163.2k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.2k tokens) — Context tokens reached 162.2k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.8k tokens) — Context tokens reached 165.8k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> coder (3 cycles) — Subagent roles 'reviewer' and 'coder' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> tester (4 cycles) — Subagent roles 'reviewer' and 'tester' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (3 cycles) — Subagent roles 'coder' and 'tester' alternated for 3 consecutive cycles.
@@ -101,22 +103,30 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 113,111 | 13,795 | 2,048,768 | 94.8% | 122.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 2 | 423,698 | 51,015 | 20,882,816 | 98.0% | 213.6k | BLOATED (107%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **tester** | 1 | 180,474 | 19,993 | 10,414,208 | 98.3% | 204.1k | BLOATED (102%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer** | 1 | 135,124 | 9,258 | 5,226,240 | 97.5% | 210.1k | BLOATED (105%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 144,823 | 30,099 | 13,728,384 | 99.0% | 152.4k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **6** | **997,230** | **124,160** | **52,300,416** | **98.1%** | **213.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
+| **coder** | 2 | 435,883 | 57,592 | 24,678,144 | 98.3% | 229.1k | BLOATED (115%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **tester** | 1 | 196,912 | 28,664 | 14,531,200 | 98.7% | 226.2k | BLOATED (113%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer** | 1 | 150,118 | 12,714 | 7,213,312 | 98.0% | 226.9k | BLOATED (113%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **rootagent** | 1 | 169,065 | 44,125 | 20,609,152 | 99.2% | 183.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **6** | **1,065,089** | **156,890** | **69,080,576** | **98.5%** | **229.1k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 6 | 997,230 | 124,160 | 52,300,416 | 98.1% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **Total** | **6** | **997,230** | **124,160** | **52,300,416** | **98.1%** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
-
-
-Final telemetry verification: generated schema-v5 ledger contains exactly the real Codex root and all five expected children (six sessions), with correct parent/source labels, nonempty usage/tool records and committed code facts. Fresh Codex costs are explicitly unavailable, not estimated or free. No preexisting AL-57 ledger or other-harness sessions existed to preserve. Raw source rollouts remain outside Git.
-
+| **gpt-6.1-sol** | 6 | 1,065,089 | 156,890 | 69,080,576 | 98.5% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **Total** | **6** | **1,065,089** | **156,890** | **69,080,576** | **98.5%** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
 
 ## User review correction: JSON key order
 
-User identified that the generated ledger's keys were reordered. Cause: cost projection decoded JSON objects into maps and marshaled them alphabetically. This session is correcting that boundary to retain established root/nested DTO order and keep new evidence adjacent to its cost, without changing values or cost semantics. Existing AL-57 PR #89 remains open; correction verification and final ledger refresh are in progress.
+User identified that the generated ledger's keys were reordered. Cause: cost projection decoded JSON objects into maps and marshaled them alphabetically. This session is correcting that boundary to retain established root/nested DTO order and keep new evidence adjacent to its cost, without changing values or cost semantics. Existing AL-57 PR #89 remains open. Focused tests and independent review approved the correction; integrated verification passed and final ledger refresh follows.
+
+
+## JSON key-order correction verification
+
+Correction commit 522ed96 was merged with current origin/main 36bea1f18f2256392428329136b3241e98d09854 as 8257196afaf6727c48ae3f4afebe280c1537352a. Upstream integration added planning documents only; reviewed application fingerprint remains 9f3f40c6ccfc5b5b40e3227277ccc1ff62baa504f1e096e5907692520020d9ae across 218 paths.
+
+Full make passed on that integrated commit: Go vet/race checks, frontend typecheck/lint, 755 tests in 35 files, production assets and four platform binaries. Standalone binary smoke passed current HTML/JS/CSS and an actual ordered HTTP version response with Node unavailable on PATH; asset trees match. Existing React act warnings/advisories remain recorded, with no dependency changes or skipped gates.
+
+The corrected serializer preserves established root, session, invocation, token, code and evidence field order; new evidence follows cost_usd. Cost values, availability semantics, session identity and array order are preserved. The final telemetry refresh updates this session ledger using the corrected built binary, retaining the existing six source sessions.
+
+
+Corrected ledger verification passed: established field order at root/code/session/invocation/token/evidence levels, all six prior Codex source sessions retained with matching parent/source identities and invocation multiplicity, and current unavailable cost semantics intact. Usage is refreshed from the real source sessions; this is not a manual reformat of an outdated ledger.
