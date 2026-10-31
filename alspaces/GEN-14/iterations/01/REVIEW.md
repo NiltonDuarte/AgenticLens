@@ -63,3 +63,9 @@ All 15 unordered pairs were simulated with `git merge-tree --write-tree <headA> 
 - Existing MetricProgression act warnings appeared in Export A. No test failures were observed in the completed frontend suites.
 - No combined #75/#77/#78 resolution, real browser geometry, live deployment, or release publishing was tested. Green individual CI and clean textual merges do not establish those boundaries.
 - Tier 1–3 screening found no new domain I/O, outer-layer import, any/interface{}, or Node production runtime dependency in the reviewed changes. The primary architecture concern is duplicated navigation responsibility. Test performance was not a requested scope and no performance claim is made.
+
+## Final verification facts
+
+Both built integration exports A and B have byte-identical `web/dist` and `backend/internal/adapters/web/dist` trees (`diff -qr` passed). All six reviewed heads were rechecked after testing and remained unchanged. Export B selected Go race suites all passed. Full `make` on the audit branch is tracked separately below; it validates the documentation branch and baseline application, not the unresolved feature combination.
+
+Audit-branch full `make` passed: Go vet and all Go race suites; frontend typecheck, lint, 34 files / 712 tests; canonical frontend build and four platform binaries. The invocation began on baseline 85a2af9; only audit Markdown/JSON changed during execution and origin/main integration was a no-op. Embedded asset trees match. This is not a full make pass for all five features together.
