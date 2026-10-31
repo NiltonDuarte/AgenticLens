@@ -37,13 +37,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: AL-63
   - **File**: `alspaces/plan/to-do/AL-62 fix codex skill and delegation facts with granular ownership.md`
 
-- **AL-64**: Include provisional active Codex turn duration at the snapshot cutoff
-  - **Subsystem**: Codex duration extraction / ledger / presentation
+- **AL-64**: Investigate and fix active-turn duration across Codex and OpenCode v1/v2
+  - **Subsystem**: Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation
   - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-64 fix provisional active codex turn duration.md`
+  - **File**: `alspaces/plan/to-do/AL-64 investigate and fix active turn duration across codex and opencode.md`
 
 - **AL-66**: Configure optional skills, task_links and anomalies output for generate
   - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests

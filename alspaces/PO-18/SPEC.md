@@ -20,7 +20,7 @@ Engineers inspecting historical/live agent activity, analysts comparing tickets,
 
 ## Functional Requirements
 
-- Data ingestion/extraction: AL-62 diagnoses and fixes missing supported Codex facts while delivering granular source ownership; AL-63 audits OpenCode v1/v2 and Codex capabilities; AL-64 fixes active-turn duration through a snapshot cutoff. Evidence unavailable at execution remains explicit.
+- Data ingestion/extraction: AL-62 diagnoses and fixes missing supported Codex facts while delivering granular source ownership; AL-63 audits OpenCode v1/v2 and Codex capabilities; AL-64 fixes the diagnosed Codex active-turn duration bug and investigates/fixes equivalent accounting defects in OpenCode v1 and v2 through a snapshot cutoff. Evidence unavailable at execution remains explicit.
 - Granular ownership: merged AL-62 relocates canonical skills/task_links to source-proven session or invocation ownership, with derived ticket/fleet projections, compatible migration, and explicit unresolved legacy provenance.
 - Generation output policy: AL-66 adds independent enabled-by-default config toggles for skills/task_links/anomalies, applied across emitted ownership scopes and generated summaries, including replacement of previous disabled facts in the target output.
 - Domain aggregations: duration excludes inter-turn gaps and future activity; completed refresh replaces provisional contribution. Missing facts do not establish measured zero. Stored baseline facts survive unavailable hydration/recovery.
@@ -39,7 +39,7 @@ Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: pure Go domain
 | AL-61 | Full local historical dates/times in Ticket Deep Dive | Feature | None |
 | AL-62 | Fix Codex skill/delegation facts with granular ownership | Fix | None |
 | AL-63 | OpenCode v1/v2 and Codex capability matrix | Audit | AL-62 |
-| AL-64 | Provisional unfinished Codex turn duration fix | Bug | None |
+| AL-64 | Investigate/fix active-turn duration across Codex and OpenCode v1/v2 | Bug | None |
 | AL-65 | Default backfill/Force research recommendation | Research | AL-63 |
 | AL-66 | Configurable optional metric output for generate | Feature | None |
 
@@ -65,10 +65,16 @@ Source: explicit user correction, “AL-62 must fix, not only investigate. AL-67
 
 Preserved guarantees: raw occurrence identities and multiplicity, unresolved legacy provenance, unavailable-source preservation, existing OpenCode behavior, no invented Codex evidence, original AL-55 bytes and separate PO/development sessions. Source investigation no longer ends with recommendations; actual fixes and end-to-end regression evidence are required. If source facts are truly unsupported, accurate availability behavior is required rather than fabricated populated data. This planning update does not itself implement or claim verification of a fix.
 
-## Iteration 05 steering: remove standalone live walkthrough and renumber
+## Historical iteration 05 steering: remove standalone live walkthrough and renumber
 
 Source: user instruction, “remove AL-63 and adjust the numbers.” Remove the standalone OpenCode live walkthrough definition; its prior specification remains available in Git history rather than a second live AL-63 record. Renumber former AL-64 parity audit to AL-63, former AL-65 duration fix to AL-64, former AL-66 backfill research to AL-65, and former AL-68 generate toggles to AL-66. AL-60/61/62 are unchanged in identity; seven active Phase 1 tickets now run consecutively AL-60 through AL-66.
 
 Current dependency chain is AL-62 -> AL-63 -> AL-65. The removed walkthrough no longer blocks the parity audit, and its detailed walkthrough acceptance is not transferred to another ticket. AL-63 retains the original capability matrix's live-observability coverage with explicit unexecuted/unavailable status where appropriate. AL-64's duration fix and AL-66's toggles remain independently Ready. Retired AL-67 remains merged into AL-62; historical iteration IDs and counts above use their original numbering and are superseded by this mapping.
 
 Preserve merged AL-62 implementation scope, raw provenance and migration safeguards, disabled-output semantics, research-only backfill defaults, original AL-55 bytes and prior valid code verification. This is a planning-only removal/renumbering; no application or test changes are needed.
+
+## Iteration 06 steering: duration accounting across all three sources
+
+Source: explicit user correction that AL-64 must also investigate OpenCode v1/v2 and is not limited to Codex. Expand the same Ready fix ticket to source-specific investigation and confirmed-defect remediation across Codex, OpenCode v1 and OpenCode v2. The original Codex bug evidence remains established; equivalent OpenCode defects remain to be demonstrated. Require per-source generation-during-activity, active refresh, completion replacement, cutoff/idle-boundary, persisted output and unchanged-backfill evidence, with unsupported/unexecuted checks distinguished explicitly. Do not manufacture provisional durations where the source does not prove active boundaries.
+
+Supersedes AL-64's Codex-only scope and filename. Preserve seven-ticket numbering, dependencies, known Codex timeline, existing-correct OpenCode calculations, raw fact retention and original AL-55 evidence. This expands duration verification, not the removed live-inspector walkthrough. All application work remains in a separate development session; this update changes planning artifacts only.

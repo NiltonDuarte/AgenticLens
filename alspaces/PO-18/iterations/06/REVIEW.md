@@ -1,0 +1,9 @@
+# PO-18 iteration 06 review
+
+Baseline 7843683. PASS: AL-64 explicitly includes independent Codex/OpenCode v1/OpenCode v2 investigation, known Codex remediation and fixes for confirmed OpenCode accounting bugs. All prior provisional/cutoff/idle/future/replacement/repeat-refresh/source-retention criteria retained. Source-family-specific regression and runtime-evidence limitations are explicit; no identical OpenCode cause or successful live check is assumed. Removed live-inspector walkthrough remains out of scope.
+
+PASS: unique AL-64 title/file; all roadmap links resolve; Ready/dependency state unchanged. Other active AL-60/61/62/63/65/66 definitions unchanged. No developer workspace/contract or application/config/test/runtime changes. Original AL-55 SHA256 remains 75baa0c19b4ad319eeca265f0cddfa0caa389a2565791be75976fc4896069936. git diff --check passed.
+
+Reuse iteration 01 full make PASS for unchanged code: Go race tests, frontend typecheck/lint, 741 frontend tests and canonical assets/binary builds. These results establish no new active-source diagnosis or implementation. Schema-family extraction files were inspected read-only to ground the expanded boundary.
+
+Main integration and final telemetry validation pending. Prior ledger contains one Codex root 01a1933d-3d8f-7b83-a161-18a904e5aeb3, no children/other-harness sessions. Preserve identity without duplicates and retain known active-turn accounting limitation under AL-64.
