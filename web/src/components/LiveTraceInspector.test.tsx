@@ -88,6 +88,27 @@ describe('LiveTraceInspector Component', () => {
     expect(
       screen.getByText('Implement Live Observability Dashboard components and streaming client for ticket AL-20.')
     ).toBeInTheDocument();
+
+    const timestamp = screen.getAllByText(/\d{2}:\d{2}:\d{2}\.\d{3}/)[0]!;
+    expect(timestamp).toHaveClass('turn-timestamp');
+    expect(timestamp).toHaveAttribute('title', expect.stringMatching(/\d{4}/));
+    expect(screen.getByText(`TZ: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`)).toHaveClass('inspector-timezone-badge');
+  });
+
+  it('preserves malformed message timestamps as the visible time and tooltip fallback', () => {
+    const malformedTimestamp = 'not-a-valid-timestamp';
+    const trace: LiveTraceView = {
+      ...mockLiveTraceView,
+      messages: mockLiveTraceView.messages.map((message, index) =>
+        index === 0 ? { ...message, timestamp: malformedTimestamp } : message
+      ),
+    };
+
+    render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()} />);
+
+    const timestamp = screen.getByText(malformedTimestamp);
+    expect(timestamp).toHaveClass('turn-timestamp');
+    expect(timestamp).toHaveAttribute('title', malformedTimestamp);
   });
 
   it('renders collapsible model reasoning block with expand/collapse toggle', () => {
