@@ -26,6 +26,7 @@ import {
 } from '../domain/formatters';
 import { aggregateToolUsage } from '../domain/tools';
 import { KPICard } from '../components/KPICard';
+import { CostKPICard } from '../components/CostKPICard';
 import { EmptyState } from '../components/EmptyState';
 import { TicketSelector } from '../components/TicketSelector';
 import { SaturationBar } from '../components/SaturationBar';
@@ -292,9 +293,11 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           secondary={`${eff.active_duration_seconds.toLocaleString()}s total`}
           tooltip="Cumulative active compute duration across all agent invocations (analogous to cumulative man-hours). Can exceed wall-clock lead time due to concurrent subagent execution."
         />
-        <KPICard
+        <CostKPICard
           title="Total Cost"
-          value={formatCostUSD(totals.cost_usd, totals.cost_summary)}
+          amount={totals.cost_usd}
+          summary={totals.cost_summary}
+          invocations={totals.invocations}
           secondary={`${totals.invocations} invocations`}
           tooltip="Total USD spend across all model calls"
         />

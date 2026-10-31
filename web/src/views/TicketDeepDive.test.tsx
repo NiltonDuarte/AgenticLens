@@ -60,6 +60,19 @@ describe('Skills and subagents autopsy', () => {
         vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Optional source unavailable'));
     });
 
+    it('uses compact cost presentation for the selected ticket with full evidence in the tooltip', async () => {
+        const detail = makeDetail();
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, totals: {
+            ...detail.ledger.totals, invocations: 3, cost_usd: null,
+            cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 1, unavailable: 1, total: 3 },
+        } } } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const card = (await screen.findByText('Total Cost')).closest<HTMLElement>('.kpi-card')!;
+        expect(card.querySelector('.kpi-value')).toHaveTextContent(/^\$2\.00$/);
+        expect(card.querySelector('.kpi-secondary')).toHaveTextContent('Known subtotal (partial) · 3 invocations');
+        expect(within(card).getByRole('tooltip')).toHaveTextContent('1 fully observed, 1 partial, 1 unavailable of 3 invocations');
+    });
+
     it.each(['omitted', 'empty'] as const)('renders a supported v4 ledger with %s optional collections and keyboard collapse', async (mode) => {
         const errors = vi.spyOn(console, 'error');
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({

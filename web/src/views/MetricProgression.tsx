@@ -9,13 +9,14 @@ import {
   extractTicketPrefix,
   filterLedgersByPrefixes,
   filterLedgersByTicketTypes,
-  formatCurrencyUSD, formatCostUSD,
+  formatCurrencyUSD,
   formatLinesCompact,
   formatPercentage,
   formatTokensK,
   HEALTHY_CEILING_TOKENS,
 } from '../domain/formatters';
 import { KPICard } from '../components/KPICard';
+import { CostKPICard } from '../components/CostKPICard';
 import { TrendChart } from '../components/TrendChart';
 import { EmptyState } from '../components/EmptyState';
 import { CHART_COLORS } from '../utils/theme';
@@ -388,9 +389,11 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
         <>
           {/* Active Window KPI Summary Banner */}
           <div className="kpi-grid">
-        <KPICard
+        <CostKPICard
           title="Period Spend"
-          value={formatCostUSD(summary.spend, summary.costSummary)}
+          amount={summary.spend}
+          summary={summary.costSummary}
+          invocations={summary.invocations}
           secondary={`${buckets.length} time buckets`}
           tooltip="Total USD spend across matching date range"
         />

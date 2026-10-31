@@ -2,7 +2,6 @@ import { skillSuccessRate } from '../domain/aggregations';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
-  formatCostUSD,
   formatPercentage,
   formatTokensK,
   extractTicketPrefix,
@@ -10,6 +9,7 @@ import {
 } from '../domain/formatters';
 import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
 import { KPICard } from '../components/KPICard';
+import { CostKPICard } from '../components/CostKPICard';
 import { DistributionCard } from '../components/DistributionCard';
 import { TicketTable } from '../components/TicketTable';
 import { EmptyState } from '../components/EmptyState';
@@ -211,9 +211,11 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
         <>
           {/* KPI Cards Row */}
           <section className="kpi-row" aria-label="Fleet Key Performance Indicators">
-            <KPICard
+            <CostKPICard
               title="Total Cost"
-              value={formatCostUSD(summary.total_cost_usd, summary.cost_summary)}
+              amount={summary.total_cost_usd}
+              summary={summary.cost_summary}
+              invocations={summary.total_invocations}
               secondary={`${summary.total_tickets} active tickets`}
               tooltip="Cumulative LLM spend across all scanned ticket workspaces"
             />

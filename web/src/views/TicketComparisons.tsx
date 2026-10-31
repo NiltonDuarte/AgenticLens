@@ -155,25 +155,30 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         avgDurationFormatted: '0m 0s',
         avgIterations: '0.0',
         avgCostFormatted: 'Unavailable',
+        costTickets: 0,
         fleetToolSuccessPct: '0.0%',
       };
     }
 
     let totDuration = 0;
     let totIterations = 0;
-    let totCost: number | null = 0;
+    let totCost = 0;
+    let costTickets = 0;
     let totToolSuccess = 0;
 
     for (const r of filteredRows) {
       totDuration += r.active_duration_seconds;
       totIterations += r.sdlc_iterations;
-      totCost = totCost === null || r.cost_usd === null ? null : totCost + r.cost_usd;
+      if (r.cost_usd !== null && Number.isFinite(r.cost_usd) && r.cost_usd >= 0 && (!r.cost_summary || r.cost_summary.state === 'complete')) {
+        totCost += r.cost_usd;
+        costTickets += 1;
+      }
       totToolSuccess += r.tool_success_rate_pct;
     }
 
     const avgDuration = Math.round(totDuration / total);
     const avgIter = (totIterations / total).toFixed(1);
-    const avgCost = totCost === null ? null : totCost / total;
+    const avgCost = costTickets === 0 ? null : totCost / costTickets;
     const avgToolPct = totToolSuccess / total;
 
     return {
@@ -181,6 +186,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
       avgDurationFormatted: formatDurationSeconds(avgDuration),
       avgIterations: avgIter,
       avgCostFormatted: formatCurrencyUSD(avgCost),
+      costTickets,
       fleetToolSuccessPct: formatPercentage(avgToolPct),
     };
   }, [filteredRows]);
@@ -257,8 +263,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         <KPICard
           title="Average Spend / Ticket"
           value={benchmarks.avgCostFormatted}
-          secondary="Cost efficiency"
-          tooltip="Average USD spend across analyzed tickets"
+          secondary={`${benchmarks.costTickets} of ${benchmarks.totalTickets} tickets with cost`}
+          tooltip="Average reported USD cost among tickets with complete cost in the current filtered results. Includes observed zero; excludes unavailable and partial costs. Search, ticket type, prefix, skills and the current fetched data determine this population."
         />
       </div>
 

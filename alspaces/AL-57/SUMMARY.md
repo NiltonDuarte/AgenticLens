@@ -167,3 +167,10 @@ Final extraction below must retain the six existing real Codex sessions and add 
 
 
 Iteration 03 final telemetry verification passed: all six prior real Codex sessions remain, the explicit migration child is included (seven total), parent/source identities and invocation multiplicity are preserved, and usage/tools are nonempty. The regenerated file retains established root/code/session/invocation/token/evidence key order. All fresh Codex costs remain explicitly unavailable. Raw source transcripts stay outside Git.
+
+
+## Iteration 04: usable cost cards and filtered spend average
+
+Source: user rejected the cost-card presentation in ticket deep dive, metric progression and fleet overview, and explicitly required comparison average spend to exclude tickets with unavailable costs and respect filters. Initial status clean at 52234b3c099fe1a6c1b2e1dd3d62c1db08ad7242; PR #89 remains open. This authorizes the bounded UI/benchmark correction.
+
+The large card value currently contains formatCostUSD's full coverage sentence. Replace it with a short financial headline and appropriate compact state/coverage support. Comparison average spend must use only complete numeric costs from filteredRows, including observed zero; unavailable/partial tickets are excluded from this calculation and its denominator. All-unavailable/empty remains unavailable. This supersedes the former blanket-unavailable average rule only for this benchmark; other metrics retain their own filtered population. Stored evidence, aggregate completeness, nullable API contracts and schema behavior remain unchanged.

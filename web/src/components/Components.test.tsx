@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { EmptyState } from './EmptyState';
 import { KPICard } from './KPICard';
+import { CostKPICard } from './CostKPICard';
 import { DistributionCard } from './DistributionCard';
 import { InfoTooltip } from './InfoTooltip';
 import { Navbar } from './Navbar';
@@ -76,6 +77,35 @@ describe('Presentation Components Boundary Tests', () => {
 
       rerender(<KPICard title="Empty String" value="" />);
       expect(screen.getByText('-')).toBeInTheDocument();
+    });
+  });
+
+  describe('CostKPICard presentation', () => {
+    it('separates currency and state from accessible coverage and preserves legacy counts', () => {
+      const { container, rerender } = render(<CostKPICard title="Reported Cost" amount={null} invocations={1234567}
+        summary={{ state: 'partial', known_subtotal_usd: 2, fully_observed: 1234565, partial: 1, unavailable: 1, total: 1234567 }}
+        secondary="Selected tickets" tooltip="Filtered report." />);
+      const primary = () => container.querySelector('.kpi-value');
+      const secondary = () => container.querySelector('.kpi-secondary');
+      expect(primary()).toHaveTextContent(/^\$2\.00$/);
+      expect(secondary()).toHaveTextContent('Known subtotal (partial) · Selected tickets');
+      expect(primary()).not.toHaveTextContent(/observed|invocations|subtotal/);
+      const trigger = screen.getByRole('button', { name: 'Information about Reported Cost' });
+      fireEvent.focus(trigger);
+      const tooltip = document.getElementById(trigger.getAttribute('aria-describedby')!);
+      expect(tooltip).toHaveClass('is-visible');
+      expect(tooltip).toHaveTextContent('1,234,565 fully observed, 1 partial, 1 unavailable of 1,234,567 invocations');
+      expect(tooltip).toHaveTextContent('complete cost is unavailable');
+      rerender(<CostKPICard title="Reported Cost" amount={0} invocations={4} secondary="Selected tickets" />);
+      expect(primary()).toHaveTextContent(/^\$0\.00$/);
+      expect(secondary()).toHaveTextContent(/^Selected tickets$/);
+      expect(screen.getByRole('tooltip')).toHaveTextContent('4 fully observed, 0 partial, 0 unavailable of 4 invocations');
+      rerender(<CostKPICard title="Reported Cost" amount={null} invocations={4} secondary="Selected tickets" />);
+      expect(primary()).toHaveTextContent(/^-$/);
+      expect(secondary()).toHaveTextContent('Unavailable · Selected tickets');
+      rerender(<CostKPICard title="Reported Cost" amount={null} invocations={0} secondary="Selected tickets" />);
+      expect(primary()).toHaveTextContent(/^-$/);
+      expect(secondary()).toHaveTextContent('No invocation data · Selected tickets');
     });
   });
 
