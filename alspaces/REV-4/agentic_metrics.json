@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
   "ticket_id": "REV-4",
-  "ticket_title": "Remove approved low-value tests with individual review rationale",
-  "ticket_type": "test",
+  "ticket_title": "Review test necessity with zero-to-ten importance scores",
+  "ticket_type": "docs",
   "started_at": "2026-10-31T02:17:54.850Z",
-  "completed_at": "2026-10-31T02:33:35.710Z",
-  "updated_at": "2026-10-31T02:33:36.434903+00:00",
+  "completed_at": "2026-10-31T02:48:07.269Z",
+  "updated_at": "2026-10-31T02:48:08.800770+00:00",
   "code": {
     "lines_added": 1,
     "lines_deleted": 1611,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 8,
-    "sdlc_iterations": 3
+    "sdlc_iterations": 4
   },
   "sessions": [
     {
@@ -26,25 +26,25 @@
           "role": "RootAgent",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T02:17:56.414Z",
-          "completed_at": "2026-10-31T02:33:35.710Z",
-          "active_duration_seconds": 397,
-          "turns": 2,
+          "completed_at": "2026-10-31T02:48:07.269Z",
+          "active_duration_seconds": 822,
+          "turns": 3,
           "tokens": {
-            "input": 204444,
-            "output": 29154,
-            "cache_read": 10850944,
-            "reasoning": 6700,
-            "peak_context": 193095
+            "input": 296271,
+            "output": 59456,
+            "cache_read": 17980672,
+            "reasoning": 17358,
+            "peak_context": 280010
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 3
+          "user_iterations": 4
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 60,
+          "calls": 92,
           "errors": 2
         },
         {
@@ -86,19 +86,28 @@
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
+          "severity": "CRITICAL",
           "context": {
-            "turn": 2,
-            "context_tokens": 161481,
-            "threshold": "160000"
+            "turn": 3,
+            "context_tokens": 203688,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 280010,
+            "threshold": "200000"
           }
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
-            "role": "RootAgent",
-            "context_tokens": 193095,
+            "turn": 2,
+            "context_tokens": 161481,
             "threshold": "160000"
           }
         }

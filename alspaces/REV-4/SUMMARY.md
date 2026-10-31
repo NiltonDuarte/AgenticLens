@@ -43,21 +43,22 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - Final review inventory checks passed; only REV-4 documentation and generated telemetry are task-owned changes.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 12m 0s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 193.1k tokens (97% of 200k healthy ceiling, 0 compactions) | Subagents peak 215.9k (Reviewer)
+- **Software Development Life Cycle Iterations:** 4
+- **Active Agent Duration:** 19m 5s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 280.0k tokens (140% of 200k healthy ceiling, 0 compactions) | Subagents peak 215.9k (Reviewer)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 1:0 (+1 test lines / +0 prod lines)
 - **Code Delivered:** +1 / -1,611 lines across 8 code files (excluding docs)
-- **Reasoning Effort:** 8,667 reasoning tokens (16.7% of generated output)
-- **Tool Health & Self-Correction:** 109 tool calls (2 self-corrections, 98.2% success rate)
+- **Reasoning Effort:** 19,325 reasoning tokens (20.8% of generated output)
+- **Tool Health & Self-Correction:** 141 tool calls (2 self-corrections, 98.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 9 execution anomalies detected (3 CRITICAL, 6 WARNING).
+- **Status:** 10 execution anomalies detected (4 CRITICAL, 6 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+91.9k tokens) — Context tokens surged by 91.9k to 126.8k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+184.7k tokens) — Context tokens surged by 184.7k to 184.7k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.6k tokens) — Context tokens reached 205.6k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.7k tokens) — Context tokens reached 203.7k, breaching the 200k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.3k tokens) — Context tokens reached 165.3k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (173.0k tokens) — Context tokens reached 173.0k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (176.9k tokens) — Context tokens reached 176.9k, breaching the 160k warning ceiling.
@@ -76,14 +77,14 @@ Every declaration was inventoried and screened; detailed body/production inspect
 | **coder** | 1 | 34,509 | 3,226 | 1,985,280 | 98.3% | 186.9k | ELEVATED | $0.00 |
 | **tester** | 1 | 42,448 | 4,736 | 2,024,192 | 97.9% | 195.9k | ELEVATED | $0.00 |
 | **reviewer** | 1 | 63,393 | 2,736 | 1,378,816 | 95.6% | 215.9k | BLOATED (108%) | $0.00 |
-| **rootagent** | 1 | 204,444 | 29,154 | 10,850,944 | 98.2% | 193.1k | ELEVATED | $0.00 |
-| **Total** | **5** | **506,795** | **43,081** | **17,078,400** | **97.1%** | **215.9k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 296,271 | 59,456 | 17,980,672 | 98.4% | 280.0k | BLOATED (140%) | $0.00 |
+| **Total** | **5** | **598,622** | **73,383** | **24,208,128** | **97.6%** | **280.0k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 5 | 506,795 | 43,081 | 17,078,400 | 97.1% | $0.00 |
-| **Total** | **5** | **506,795** | **43,081** | **17,078,400** | **97.1%** | **$0.00** |
+| **gpt-6.1-sol** | 5 | 598,622 | 73,383 | 24,208,128 | 97.6% | $0.00 |
+| **Total** | **5** | **598,622** | **73,383** | **24,208,128** | **97.6%** | **$0.00** |
 
 ## Iteration 02: approved candidate deletion
 
@@ -140,10 +141,19 @@ Final iteration02 telemetry validated: exactly five Codex sessions, original roo
 ## Iteration 03: numeric importance review
 
 - User requested another review using 0-10 scores instead of binary dispositions. This iteration changes documentation only; it deletes no additional tests.
-- Initial working tree clean at `2e87ab15ffee382b1685bf38f233eca3d76fe72e`; existing PR72 open.
+- Initial working tree clean at `2e87ab15ffee382b1685bf38f233eca3d76fe72e`; existing PR #72 open.
 - SCORE_REVIEW.md defines anchored meanings, manually examined low/high cases, and limitations. TEST_SCORES.md rates all 1,203 current declarations (505 Go and698 TypeScript), with a reason and observed source evidence per row.
-- 97 focused rows, 1,106 provisional source-assisted screened rows. This is not an exhaustive pairwise redundancy or mutation audit; confidence is explicit rather than presenting every rating as a proven deletion decision.
+- 102 focused rows, 1,101 provisional source-assisted screened rows. This is not an exhaustive pairwise redundancy or mutation audit; confidence is explicit rather than presenting every rating as a proven deletion decision.
 - Three zero-score residual duplicates and eleven ten-score critical contracts identified. The previous 50 deletions remain historical and are not counted again.
 - Validation: GoAST and TypeScript compilerAST inventory includes multiline signatures/parameterized declarations. All 1,203 rows unique by current file/line, scores within 0-10, every reason/evidence populated. Runtime Go top-level name multiset matches all 505 AST declarations. Exactly 3 zero and 11 ten rows.
 - Fresh ordinary Go profile (`go test -count=1 -json ./...`): 505 top-level tests passed, no failed or skipped events. Profile output remains outside Git. Earlier iteration02 full make/frontend 749 evidence remains valid for unchanged source. Required post-integration make for this documentation iteration follows.
 - Source fingerprint: `cf143e3784fdb64d306ba95b08c69e36eeb86af7c1258179539400dff9e3cf41`.
+
+### Iteration 03 integration and final validation
+
+- Scoring delivery commit: `0c1a405`; `git fetch origin main` and `git merge origin/main --no-edit` reported already up to date. Final scoring calibration adjusted documentation only, with no source/test diff.
+- Full post-integration `make`: exit 0. Dependency install, canonical frontend build, Go vet, TypeScript typecheck/lint, all-package Go race checks (reusing valid unchanged-package caches), all 749 frontend cases across 34 files, and all four binary target builds passed.
+- Final numeric catalog validated again: 1,203 unique current declaration identities, all scores 0-10, all rows have reasons/evidence; 102 focused and 1,101 provisional source-assisted ratings. No new deletions or runtime changes.
+- PR #72 remained open before update. Existing root source and four child sessions from iteration 02 remain expected in final telemetry; no new subagents were spawned for this documentation review. Classification for this iteration is `docs`.
+
+Iteration 03 final telemetry verified: refreshed original Codex root plus all four existing child sessions, with correct sources/parent IDs and nonempty invocations. No source sessions lost; no new children expected. Actual Codex billed cost remains unavailable; stored zero is not proof of free execution.

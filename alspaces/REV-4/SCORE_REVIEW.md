@@ -34,6 +34,8 @@ In particular, tooltip/badge wording must not hide zero-denominator, event-propa
 
 No mutation testing or temporary deletion experiment was performed. The zero-score evidence is a static assertion/behavior containment argument; it is not a claim that every adversarial implementation mutation was tried. Scores 2-4 identify the next review work, not an automatic mass-deletion threshold. Do not delete both a zero-scored case and the representative named in its explanation.
 
+Further calibration distinguished the small optional-collection accessor tests (5-6) from actual event reconciliation (8-9), and inspected parity fixtures: explicit externally recorded reference totals are independent oracles (8), even when their fixture text is large.
+
 ## Definite lowest-value declarations
 
 ### 0/10: `renders empty notice when items dictionary is empty`
@@ -103,7 +105,7 @@ Only the following directly examined declarations receive 10. Scores of 8 or 9 e
 
 ## Coverage and verification
 
-- Numeric catalog: 1203 unique file/line entries, all integer scores in [0,10]; 97 Focused and 1106 Screened. All current declarations occur exactly once; no deleted test, helper or TestMain is counted.
+- Numeric catalog: 1203 unique file/line entries, all integer scores in [0,10]; 102 Focused and 1101 Screened. All current declarations occur exactly once; no deleted test, helper or TestMain is counted.
 - Declaration source fingerprint: `cf143e3784fdb64d306ba95b08c69e36eeb86af7c1258179539400dff9e3cf41` (SHA-256 over sorted file/line/body-hash identities).
 - The same test diff was already validated in iteration 02 by independent AST/body comparison and full `make`, including 749 frontend cases, race tests, typecheck/lint and standalone embedded assets. No application/test changes have occurred since that gate.
 - Fresh profile: `cd backend && go test -count=1 -json ./...` passed. Inspected 505 top-level tests; 0 failed and 0 skipped events. JSON event span 3.38s; compilation before the first event is excluded, so this is not a total command wall-clock measurement.
@@ -129,3 +131,5 @@ Timing is not a deletion criterion on its own. This ordinary uncached run and th
 Start with the three zero-score duplicates if the user requests another deletion pass. For the 2-3 band, inspect exact assertion transfer first: role ordering includes arbitrary/default priorities, tool classification retains a distinct segmentation-fault case (score 5), negative type narrowing needs tsc coverage, CSS regex tests protect a historical issue despite a weak layout oracle, and the basic reference-line smoke retains an otherwise unique label check (score 6).
 
 Do not convert these ratings into a bulk deletion script. Preserve critical independent layer coverage: a domain merge test does not establish HTTP persistence safety, a mocked API test does not establish SQLite access mode, and a component test does not establish standalone assets. No new deletion approval is inferred from requesting scores.
+
+Final delivery gate: full post-integration `make` passed, including all 749 frontend runtime cases, Go race checks, frontend typecheck/lint, canonical assets and four-platform binary builds. Source/test bodies remain unchanged from the scoring baseline.
