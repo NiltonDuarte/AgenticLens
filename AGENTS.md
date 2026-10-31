@@ -75,6 +75,8 @@ Specialized roles:
   - Coordinates existing independent ticket threads, integration dependencies, review corrections and authorized non-release merges. Owns only management artifacts and guidance; each ticket owner retains application implementation and its own telemetry.
   - Managing ticket threads under one MGT ticket does not switch the manager into those tickets. Follow [the management skill](.agents/skills/agentic-lens-management/SKILL.md) for ownership discovery, exact-head merge gates and asynchronous supervision.
   - Release PRs are strictly human controlled. Agents must never merge them, enable their auto-merge, or instruct another agent to merge them.
+  - A management thread must not merge its own management PR, enable its auto-merge, or delegate that merge to a child to bypass this boundary. Prepare and publish it for a human or a separately authorized independent controller to review and merge. Broad non-release merge authorization excludes the owning thread's management PR.
+  - Keep an active management workflow's PR open (draft while still evolving); an accepted checkpoint requires external merge ownership. Continuing work after an externally merged checkpoint requires a new PR for undelivered changes.
 
 - **Product / Scope Inception (`agentic-lens-po`)**:
   - Elicits requirements and decomposes features into tracer-bullet tickets.

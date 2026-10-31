@@ -9,9 +9,11 @@ Use one configured MGT ticket for coordination. Follow [AGENTS.md](../../../AGEN
 
 ## Authority and release exclusion
 
-Record the user's actual authorization to supervise, send instructions, fix reviewed defects through ticket owners, and merge. A review-only request does not authorize messages or merges. Explicit authorization to supervise until merge permits routine owner instructions and non-release merges after the gates below; do not ask again for those steps.
+Record the user's actual authorization to supervise, send instructions, fix reviewed defects through ticket owners, and merge. A review-only request does not authorize messages or merges. Explicit authorization to supervise until merge permits routine owner instructions and eligible non-release merges after the gates below; do not ask again for those steps. The owning management thread's own management PR is excluded from that merge authority.
 
 **Release pull requests are human controlled. Never merge, enable auto-merge, approve on behalf of a human, close, or instruct another agent to merge a release PR.** Identify release candidates by branch (including release-please), title, labels, manifest/version/changelog changes and automation provenance. Keep them in the inventory as `human_only`; report their state without treating an open release as unfinished agent work. When classification is uncertain, hold the merge for a human decision. This exclusion also applies to a replacement release PR and to otherwise broad instructions to merge every PR. Only the human performs a release merge.
+
+**Do not self-merge management work.** The management thread may prepare, push and report its own MGT PR, but must leave review/merge to a human or a separately authorized independent controller. Do not enable its auto-merge or ask a child to perform the same merge as a workaround. Determine ownership from the management ticket/control record and creating/publishing thread, not a shared GitHub author account. Keep the management PR open and draft while its workflow is evolving; an accepted checkpoint still needs external merge ownership. Green CI alone does not authorize self-merge. Report it as `external_review`, not as an automatically mergeable item in the product queue.
 
 ## Discover ownership
 
@@ -46,7 +48,7 @@ Reconcile cross-PR behavior, not just textual conflicts. Use fetched immutable h
 
 Before each non-release merge, freshly verify:
 
-- It is the intended repository/base/PR and still classified non-release, open, and non-draft.
+- It is the intended repository/base/PR and still classified non-release, open, and non-draft; it is not this thread's own management PR.
 - The head is exactly the reviewed/tested head and includes the required current base. Any new head invalidates earlier readiness until its changes and checks are assessed.
 - Required checks passed for that head; there are no pending/failed required checks, unresolved blocking review findings/discussions, or changes-requested reviews. An empty required-check list is not proof that verification ran.
 - The owner completed applicable review and full integration checks, and cross-ticket dependencies are met. Explain any unavailable boundary rather than treating it as passed.
@@ -57,7 +59,7 @@ Use the repository-supported merge method with an expected-head guard (for examp
 
 Use native thread completion notifications and host PR watches instead of sleep loops, repeated status polling, or `gh --watch`. Follow a tool's returned `next` instruction; register the relevant completion/watch before yielding. When a watch requires ending the turn, finish any needed edits, push and management records first. A wake is a reason to recheck readiness, never permission to merge blindly. Preserve the control ledger across continuations and resume its next action. Remove obsolete watches when their target is merged, replaced, or no longer managed; follow the host's handoff/unwatch rules.
 
-Do not say supervision is complete while an eligible PR remains open, blocked, or merely has auto-merge requested. A true blocker needs evidence and a specific required user action; continue other unblocked tickets. Finish when every in-scope non-release PR is verified merged, or explicitly report the remaining blocked/closed-unmerged work. Report human-only releases separately. Recheck late-arriving PRs for scope and ownership before declaring completion.
+Do not say supervision is complete while an eligible PR remains open, blocked, or merely has auto-merge requested. A true blocker needs evidence and a specific required user action; continue other unblocked tickets. Finish when every in-scope non-release PR is verified merged, or explicitly report the remaining blocked/closed-unmerged work. Report human-only releases and externally owned management merges separately. Do not hold the user in an automatic merge loop for your own management PR; hand it off explicitly for external review. Recheck late-arriving PRs for scope and ownership before declaring completion.
 
 ## Telemetry and finalization
 
