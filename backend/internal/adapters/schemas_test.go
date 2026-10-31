@@ -1,6 +1,7 @@
 package adapters_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -16,7 +17,7 @@ func TestAgenticFactLedgerDTOPreservesSkillAndTaskFacts(t *testing.T) {
 	want := domain.AgenticFactLedger{
 		SchemaVersion: &version,
 		Skills:        []domain.SkillFact{{Name: "agentic-lens-dev", TurnIndex: 1, MessageIndex: 0, CallerRole: "coder", Timestamp: "2026-10-31T10:00:00Z", Success: true}},
-		TaskLinks:     []domain.TaskLinkFact{{SubagentType: "tester", Description: "Run tests", ParentTurn: 2, ChildSession: "child-1", Timestamp: "2026-10-31T10:01:00Z"}},
+		TaskLinks:     []domain.TaskLinkFact{{SubagentType: "tester", CostEvidence: domain.UnavailableCost(), Description: "Run tests", ParentTurn: 2, ChildSession: "child-1", Timestamp: "2026-10-31T10:01:00Z"}},
 	}
 	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(want))
 	if err != nil {
@@ -37,7 +38,7 @@ func strPtr(s string) *string {
 }
 
 func TestCanonicalV4NestedEventsReadCompatibilityAndMetadata(t *testing.T) {
-	eventJSON := `{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","message_id":"message-1","turn":2,"role":"tester","event_type":"tool_call","tool_name":"bash","status":"error","duration_ms":0,"context_tokens":1234}`
+	eventJSON := `{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","message_id":"message-1","turn":2,"role":"security-auditor","event_type":"tool_call","tool_name":"bash","status":"error","duration_ms":0,"context_tokens":1234}`
 	bareJSON := `{"timestamp":"2026-10-29T09:00:00Z","turn":1,"role":"coder","event_type":"turn_message","status":"completed","context_tokens":0}`
 	ledgerJSON := func(collection string) string {
 		return `{"schema_version":4,"ticket_id":"FIX-12","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]` + collection + `}]}`
@@ -66,7 +67,7 @@ func TestCanonicalV4NestedEventsReadCompatibilityAndMetadata(t *testing.T) {
 				t.Fatalf("expected %d events, got %#v", tc.count, events)
 			}
 			if tc.count > 0 {
-				want := domain.EventFact{EventID: "call-1", Timestamp: "2026-10-29T10:00:00Z", SessionID: "owner", MessageID: strPtr("message-1"), Turn: 2, Role: "tester", EventType: domain.EventTypeToolCall, ToolName: strPtr("bash"), Status: "error", DurationMs: new(int64), ContextTokens: 1234}
+				want := domain.EventFact{EventID: "call-1", Timestamp: "2026-10-29T10:00:00Z", SessionID: "owner", MessageID: strPtr("message-1"), Turn: 2, Role: "security-auditor", EventType: domain.EventTypeToolCall, ToolName: strPtr("bash"), Status: "error", DurationMs: new(int64), ContextTokens: 1234}
 				if !reflect.DeepEqual(events[1], want) || events[0].EventID != "" || events[0].SessionID != "owner" {
 					t.Fatalf("nested metadata/owner lost: %#v", events)
 				}
@@ -194,9 +195,9 @@ func TestInvocationSerializationPreservesRowsAndSessionOwnershipWithoutID(t *tes
 	rootID := "opaque-owner"
 	started, completed := "2026-10-28T10:00:00Z", "2026-10-28T10:01:00Z"
 	rows := []domain.InvocationFact{
-		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 10}, CostUSD: 0.25},
-		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 20}, CostUSD: 0.50},
-		{Role: "reviewer", Model: "model-b", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 30}, CostUSD: 0.75},
+		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 10}, CostUSD: 0.25, CostEvidence: domain.ObservedCost(0.25)},
+		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 20}, CostUSD: 0.50, CostEvidence: domain.ObservedCost(0.50)},
+		{Role: "reviewer", Model: "model-b", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 30}, CostUSD: 0.75, CostEvidence: domain.ObservedCost(0.75)},
 	}
 	facts := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{
 		{ID: rootID, Source: domain.SourceCodex, User: "alice", Invocations: rows, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}},
@@ -452,7 +453,7 @@ func TestAgenticMetricsLedgerDTO_AnomaliesSerialization(t *testing.T) {
 	turn := int64(5)
 	count := int64(5)
 
-	t.Run("anomalies present serialize to JSON and round-trip cleanly", func(t *testing.T) {
+	t.Run("anomalies present preserve emitted rule severity and context", func(t *testing.T) {
 		ledger := domain.AgenticMetricsLedger{
 			TicketID:  &tid,
 			UpdatedAt: "2026-10-18T10:00:00Z",
@@ -497,12 +498,9 @@ func TestAgenticMetricsLedgerDTO_AnomaliesSerialization(t *testing.T) {
 			t.Fatalf("expected 1 parsed anomaly, got %d", len(parsed.Anomalies))
 		}
 
-		roundDom := parsed.ToDomain()
-		if len(roundDom.Anomalies) != 1 {
-			t.Fatalf("expected 1 domain anomaly, got %d", len(roundDom.Anomalies))
-		}
-		if roundDom.Anomalies[0].RuleID != domain.RuleToolRetryStreak {
-			t.Errorf("expected RuleToolRetryStreak, got %s", roundDom.Anomalies[0].RuleID)
+		anomaly := parsed.Anomalies[0]
+		if anomaly.RuleID != string(domain.RuleToolRetryStreak) || anomaly.Severity != string(domain.SeverityCritical) || anomaly.Context.ToolName == nil || *anomaly.Context.ToolName != "bash" || anomaly.Context.Turn == nil || *anomaly.Context.Turn != 5 || anomaly.Context.Count == nil || *anomaly.Context.Count != 5 {
+			t.Fatalf("emitted anomaly lost rule, severity or context: %+v", anomaly)
 		}
 	})
 
@@ -523,172 +521,16 @@ func TestAgenticMetricsLedgerDTO_AnomaliesSerialization(t *testing.T) {
 		}
 	})
 
-	t.Run("backward compatibility: legacy JSON without anomalies decodes safely", func(t *testing.T) {
-		legacyJSON := `{
-			"ticket_id": "AL-LEGACY",
-			"updated_at": "2026-10-18T10:00:00Z",
-			"totals": {"invocations": 1, "cost_usd": 0.05}
-		}`
-
-		var dto adapters.AgenticMetricsLedgerDTO
-		if err := json.Unmarshal([]byte(legacyJSON), &dto); err != nil {
-			t.Fatalf("unmarshal error: %v", err)
-		}
-		if dto.Anomalies != nil {
-			t.Errorf("expected nil Anomalies in DTO, got: %+v", dto.Anomalies)
-		}
-
-		dom := dto.ToDomain()
-		if len(dom.Anomalies) != 0 {
-			t.Errorf("expected empty domain Anomalies slice, got len %d", len(dom.Anomalies))
-		}
-	})
-
-	t.Run("corrupted anomalies field returns descriptive unmarshal error", func(t *testing.T) {
-		badJSON := `{
-			"ticket_id": "AL-BAD",
-			"updated_at": "2026-10-18T10:00:00Z",
-			"anomalies": "not_an_array"
-		}`
-
-		var dto adapters.AgenticMetricsLedgerDTO
-		err := json.Unmarshal([]byte(badJSON), &dto)
-		if err == nil {
-			t.Fatal("expected unmarshal error for non-array anomalies, got nil")
-		}
-	})
-}
-
-func TestBrittleToolSummaryDTO_BidirectionalMapping(t *testing.T) {
-	t.Run("fully populated brittle tool maps bidirectionally", func(t *testing.T) {
-		dom := domain.BrittleToolSummary{
-			ToolName:       "bash",
-			AnomalyCount:   2,
-			TotalCalls:     25,
-			ErrorCount:     6,
-			FailureRatePct: 24.0,
-		}
-
-		dto := adapters.BrittleToolSummaryDTOFromDomain(dom)
-		if dto.ToolName != "bash" || dto.AnomalyCount != 2 || dto.TotalCalls != 25 ||
-			dto.ErrorCount != 6 || dto.FailureRatePct != 24.0 {
-			t.Fatalf("DTO mapping mismatch: %+v", dto)
-		}
-
-		roundDom := dto.ToDomain()
-		if roundDom.ToolName != dom.ToolName || roundDom.AnomalyCount != dom.AnomalyCount ||
-			roundDom.TotalCalls != dom.TotalCalls || roundDom.ErrorCount != dom.ErrorCount ||
-			roundDom.FailureRatePct != dom.FailureRatePct {
-			t.Fatalf("round-trip domain mismatch: %+v", roundDom)
-		}
-	})
-
-	t.Run("json serialization round-trip", func(t *testing.T) {
-		dto := adapters.BrittleToolSummaryDTO{
-			ToolName:       "git",
-			AnomalyCount:   1,
-			TotalCalls:     10,
-			ErrorCount:     3,
-			FailureRatePct: 30.0,
-		}
-
-		data, err := json.Marshal(dto)
-		if err != nil {
-			t.Fatalf("marshal error: %v", err)
-		}
-
-		var decoded adapters.BrittleToolSummaryDTO
-		if err := json.Unmarshal(data, &decoded); err != nil {
-			t.Fatalf("unmarshal error: %v", err)
-		}
-
-		if decoded != dto {
-			t.Fatalf("expected decoded %+v, got %+v", dto, decoded)
-		}
-	})
-}
-
-func TestFleetAnomalySummaryDTO_BidirectionalMapping(t *testing.T) {
-	t.Run("fully populated fleet anomaly summary maps bidirectionally", func(t *testing.T) {
-		dom := domain.FleetAnomalySummary{
-			TotalAnomalies:       4,
-			WarningCount:         3,
-			CriticalCount:        1,
-			SeverityCounts:       map[string]int64{"WARNING": 3, "CRITICAL": 1},
-			RuleCounts:           map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0},
-			TotalTickets:         5,
-			TicketsWithAnomalies: 2,
-			AnomalyRatePerTicket: 0.8,
-			BrittleTools: []domain.BrittleToolSummary{
-				{
-					ToolName:       "bash",
-					AnomalyCount:   2,
-					TotalCalls:     20,
-					ErrorCount:     5,
-					FailureRatePct: 25.0,
-				},
-			},
-		}
-
-		dto := adapters.FleetAnomalySummaryDTOFromDomain(dom)
-		if dto.TotalAnomalies != 4 || dto.WarningCount != 3 || dto.CriticalCount != 1 ||
-			dto.TotalTickets != 5 || dto.TicketsWithAnomalies != 2 || dto.AnomalyRatePerTicket != 0.8 {
-			t.Fatalf("DTO fields mismatch: %+v", dto)
-		}
-		if len(dto.BrittleTools) != 1 || dto.BrittleTools[0].ToolName != "bash" {
-			t.Fatalf("DTO brittle tools mismatch: %+v", dto.BrittleTools)
-		}
-
-		roundDom := dto.ToDomain()
-		if roundDom.TotalAnomalies != dom.TotalAnomalies ||
-			roundDom.WarningCount != dom.WarningCount ||
-			roundDom.CriticalCount != dom.CriticalCount ||
-			roundDom.TotalTickets != dom.TotalTickets ||
-			roundDom.TicketsWithAnomalies != dom.TicketsWithAnomalies ||
-			roundDom.AnomalyRatePerTicket != dom.AnomalyRatePerTicket {
-			t.Fatalf("round-trip domain mismatch: %+v", roundDom)
-		}
-		if len(roundDom.BrittleTools) != 1 || roundDom.BrittleTools[0].ToolName != "bash" {
-			t.Fatalf("round-trip brittle tools mismatch: %+v", roundDom.BrittleTools)
-		}
-		if roundDom.SeverityCounts["WARNING"] != 3 || roundDom.SeverityCounts["CRITICAL"] != 1 {
-			t.Fatalf("round-trip severity counts mismatch: %+v", roundDom.SeverityCounts)
-		}
-		if roundDom.RuleCounts["TOOL_RETRY_STREAK"] != 2 {
-			t.Fatalf("round-trip rule counts mismatch: %+v", roundDom.RuleCounts)
-		}
-	})
-
-	t.Run("json serialization round-trip", func(t *testing.T) {
-		dto := adapters.FleetAnomalySummaryDTO{
-			TotalAnomalies:       0,
-			WarningCount:         0,
-			CriticalCount:        0,
-			SeverityCounts:       map[string]int64{"WARNING": 0, "CRITICAL": 0},
-			RuleCounts:           map[string]int64{"TOOL_RETRY_STREAK": 0},
-			TotalTickets:         0,
-			TicketsWithAnomalies: 0,
-			AnomalyRatePerTicket: 0.0,
-			BrittleTools:         []adapters.BrittleToolSummaryDTO{},
-		}
-
-		data, err := json.Marshal(dto)
-		if err != nil {
-			t.Fatalf("marshal error: %v", err)
-		}
-
-		var decoded adapters.FleetAnomalySummaryDTO
-		if err := json.Unmarshal(data, &decoded); err != nil {
-			t.Fatalf("unmarshal error: %v", err)
-		}
-
-		if decoded.TotalAnomalies != 0 || len(decoded.BrittleTools) != 0 {
-			t.Fatalf("expected empty decoded summary, got: %+v", decoded)
-		}
-	})
 }
 
 func TestSchemaMigrationDTOBoundaries(t *testing.T) {
+	t.Run("fact ledger rejects malformed anomaly collection", func(t *testing.T) {
+		var dto adapters.AgenticFactLedgerDTO
+		if err := json.Unmarshal([]byte(`{"schema_version":4,"sessions":[],"anomalies":"not_an_array"}`), &dto); err == nil {
+			t.Fatal("fact input accepted malformed anomaly collection")
+		}
+	})
+
 	t.Run("malformed nested session records are rejected instead of defaulted", func(t *testing.T) {
 		missingParent := "missing"
 		cases := []struct {
@@ -901,10 +743,8 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 	t.Run("json unmarshaling with arbitrary roles and models", func(t *testing.T) {
 		t.Parallel()
 		jsonBlob := `{
-			"id": "ses-dyn-1",
 			"role": "security-auditor",
 			"model": "claude-3-7-sonnet-custom",
-			"user": "alice",
 			"cost_usd": 1.75,
 			"turns": 6,
 			"tokens": {
@@ -933,47 +773,6 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 		}
 		if dom.Tokens.PeakContext != 115000 {
 			t.Errorf("expected peak context 115000, got %d", dom.Tokens.PeakContext)
-		}
-	})
-}
-
-func TestEventFactDTO_DynamicRoles(t *testing.T) {
-	t.Parallel()
-
-	t.Run("custom roles preserved in event stream", func(t *testing.T) {
-		t.Parallel()
-		dto := adapters.EventFactDTO{
-			Timestamp: "2026-10-18T12:00:00Z",
-			SessionID: "s-1",
-			Turn:      1,
-			Role:      "security-auditor",
-			EventType: "tool_call",
-			Status:    "completed",
-		}
-
-		dom := dto.ToDomain()
-		if dom.Role != "security-auditor" {
-			t.Errorf("expected role 'security-auditor', got %q", dom.Role)
-		}
-	})
-
-	t.Run("empty role and status default safely", func(t *testing.T) {
-		t.Parallel()
-		dto := adapters.EventFactDTO{
-			Timestamp: "2026-10-18T12:00:00Z",
-			SessionID: "s-1",
-			Turn:      1,
-			Role:      "",
-			EventType: "turn_start",
-			Status:    "",
-		}
-
-		dom := dto.ToDomain()
-		if dom.Role != "orchestrator" {
-			t.Errorf("expected default 'orchestrator', got %q", dom.Role)
-		}
-		if dom.Status != "completed" {
-			t.Errorf("expected default 'completed', got %q", dom.Status)
 		}
 	})
 }
@@ -1007,19 +806,18 @@ func TestAgenticMetricsLedgerDTO_DynamicRolesAndModelsSerialization(t *testing.T
 		t.Fatalf("failed to unmarshal: %v", err)
 	}
 
-	roundDom := parsed.ToDomain()
-	if len(roundDom.Roles) != 4 {
-		t.Fatalf("expected 4 roles, got %d", len(roundDom.Roles))
+	if len(parsed.Roles) != 4 {
+		t.Fatalf("expected 4 roles, got %d", len(parsed.Roles))
 	}
-	if roundDom.Roles[2].Role != "advisor" || roundDom.Roles[3].Role != "po" {
-		t.Errorf("custom roles corrupted during serialization: %+v", roundDom.Roles)
+	if parsed.Roles[2].Role != "advisor" || parsed.Roles[3].Role != "po" {
+		t.Errorf("custom roles corrupted during serialization: %+v", parsed.Roles)
 	}
 
-	if len(roundDom.Models) != 2 {
-		t.Fatalf("expected 2 models, got %d", len(roundDom.Models))
+	if len(parsed.Models) != 2 {
+		t.Fatalf("expected 2 models, got %d", len(parsed.Models))
 	}
-	if roundDom.Models[0].Model != "claude-3-7-sonnet" || roundDom.Models[1].Model != "gemini-2.5-pro" {
-		t.Errorf("custom models corrupted during serialization: %+v", roundDom.Models)
+	if parsed.Models[0].Model != "claude-3-7-sonnet" || parsed.Models[1].Model != "gemini-2.5-pro" {
+		t.Errorf("custom models corrupted during serialization: %+v", parsed.Models)
 	}
 }
 
@@ -1116,9 +914,18 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 			if metricsDTO.TicketType == nil || *metricsDTO.TicketType != string(tt) {
 				t.Errorf("expected %q in MetricsDTO, got %v", tt, metricsDTO.TicketType)
 			}
-			metricsBackToDom := metricsDTO.ToDomain()
-			if metricsBackToDom.TicketType == nil || *metricsBackToDom.TicketType != tt {
-				t.Errorf("expected %q back in metrics domain, got %v", tt, metricsBackToDom.TicketType)
+			data, err := json.Marshal(metricsDTO)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var emitted struct {
+				TicketType string `json:"ticket_type"`
+			}
+			if err := json.Unmarshal(data, &emitted); err != nil {
+				t.Fatal(err)
+			}
+			if emitted.TicketType != string(tt) {
+				t.Fatalf("computed export ticket type=%q, want %q", emitted.TicketType, tt)
 			}
 		}
 	})
@@ -1401,4 +1208,235 @@ func TestSessionFactDTO_SourceRoundtripAndRequired(t *testing.T) {
 			t.Error("expected error for missing session source, got nil")
 		}
 	})
+}
+
+func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
+
+	legacyBase := `{"schema_version":4,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"model-a","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":1,"tokens":{"input":1,"output":0,"cache_read":0,"reasoning":0,"peak_context":1},COST"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
+	t.Run("typed task presence and partial facts survive concrete roundtrip", func(t *testing.T) {
+		for _, version := range []int{4, 5} {
+			for _, tc := range []struct {
+				name, fields string
+				state        domain.CostState
+				amount       float64
+			}{
+				{"observed zero", `"cost_usd":0`, domain.CostObserved, 0},
+				{"absent", ``, domain.CostUnavailable, 0},
+				{"null", `"cost_usd":null`, domain.CostUnavailable, 0},
+				{"partial", `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":2.5}`, domain.CostPartial, 2.5},
+			} {
+				t.Run(fmt.Sprintf("v%d/%s", version, tc.name), func(t *testing.T) {
+					fields := tc.fields
+					if version == 5 && tc.name == "absent" {
+						fields = `"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}`
+					} else if version == 5 && tc.state != domain.CostPartial {
+						subtotal := "null"
+						if tc.state == domain.CostObserved {
+							subtotal = "0"
+						}
+						fields += fmt.Sprintf(`,"cost_evidence":{"state":%q,"known_subtotal_usd":%s}`, tc.state, subtotal)
+					}
+					core := strings.Replace(legacyBase, `"schema_version":4`, fmt.Sprintf(`"schema_version":%d`, version), 1)
+					core = strings.Replace(core, "COST", `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":1.25},`, 1)
+					task := `{"subagent_type":"coder","description":"Keep source task","parent_turn":8,"child_session_id":"child","timestamp":"2026-11-01T10:00:00Z","duration_ms":12`
+					if fields != "" {
+						task += "," + fields
+					}
+					task += "}"
+					input := []byte(strings.TrimSuffix(core, "}") + `,"task_links":[` + task + `]}`)
+					if version == 5 && tc.name == "absent" {
+						if err := adapters.ValidateRuntimeFactLedger(input); err == nil {
+							t.Fatal("v5 runtime accepted task with omitted cost_usd")
+						}
+						var dto adapters.AgenticFactLedgerDTO
+						if err := json.Unmarshal(input, &dto); err == nil {
+							t.Fatal("v5 DTO accepted task with omitted cost_usd")
+						}
+						return
+					}
+					if err := adapters.ValidateRuntimeFactLedger(input); err != nil {
+						t.Fatal(err)
+					}
+					var dto adapters.AgenticFactLedgerDTO
+					if err := json.Unmarshal(input, &dto); err != nil {
+						t.Fatal(err)
+					}
+					facts := dto.ToDomain()
+					fact := facts.Sessions[0].Invocations[0]
+					if fact.CostUSD != 1.25 || fact.CostEvidence.State != domain.CostPartial || fact.CostEvidence.KnownSubtotalUSD == nil || *fact.CostEvidence.KnownSubtotalUSD != 1.25 {
+						t.Fatalf("partial accumulator lost: %+v", fact)
+					}
+					if len(facts.TaskLinks) != 1 || facts.TaskLinks[0].CostEvidence.State != tc.state || facts.TaskLinks[0].CostUSD != tc.amount || facts.TaskLinks[0].Description != "Keep source task" || facts.TaskLinks[0].ChildSession != "child" || facts.TaskLinks[0].ParentTurn != 8 || facts.TaskLinks[0].DurationMs != 12 {
+						t.Fatalf("task conversion lost presence/metadata: %+v", facts.TaskLinks)
+					}
+					encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
+					if err != nil {
+						t.Fatal(err)
+					}
+					var wire struct {
+						TaskLinks []struct {
+							Cost     *float64            `json:"cost_usd"`
+							Evidence domain.CostEvidence `json:"cost_evidence"`
+						} `json:"task_links"`
+						Sessions []struct {
+							Invocations []struct {
+								Cost *float64 `json:"cost_usd"`
+							} `json:"invocations"`
+						} `json:"sessions"`
+					}
+					if err := json.Unmarshal(encoded, &wire); err != nil {
+						t.Fatal(err)
+					}
+					if wire.Sessions[0].Invocations[0].Cost != nil || wire.TaskLinks[0].Evidence.State != tc.state {
+						t.Fatalf("partial complete amount leaked: %s", encoded)
+					}
+					if tc.state == domain.CostObserved {
+						if wire.TaskLinks[0].Cost == nil || *wire.TaskLinks[0].Cost != 0 {
+							t.Fatalf("explicit task zero lost: %s", encoded)
+						}
+					} else if wire.TaskLinks[0].Cost != nil {
+						t.Fatalf("incomplete task became numeric: %s", encoded)
+					}
+				})
+			}
+		}
+	})
+	t.Run("owning canonical decoders reject malformed trailing and unknown fields", func(t *testing.T) {
+		for _, version := range []int{4, 5} {
+			base := strings.Replace(legacyBase, `"schema_version":4`, fmt.Sprintf(`"schema_version":%d`, version), 1)
+			base = strings.Replace(base, "COST", `"cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0},`, 1)
+			for _, input := range []string{
+				base + `{}`, strings.TrimSuffix(base, "}"),
+				strings.TrimSuffix(base, "}") + `,"unexpected":true}`,
+				strings.Replace(base, `"id":"owner"`, `"id":"owner","unexpected":true`, 1),
+				strings.Replace(base, `"role":"coder"`, `"role":"coder","unexpected":true`, 1),
+				strings.Replace(base, `"input":1`, `"input":1,"unexpected":true`, 1),
+				strings.Replace(base, `"state":"observed"`, `"state":"observed","unexpected":true`, 1),
+				strings.TrimSuffix(base, "}") + `,"task_links":[{"subagent_type":"coder","cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0},"unexpected":true}]}`,
+			} {
+				if err := adapters.ValidateRuntimeFactLedger([]byte(input)); err == nil {
+					t.Fatalf("v%d runtime accepted invalid canonical JSON: %s", version, input)
+				}
+				var dto adapters.AgenticFactLedgerDTO
+				if err := json.Unmarshal([]byte(input), &dto); err == nil {
+					t.Fatalf("v%d DTO decoder accepted invalid canonical JSON: %s", version, input)
+				}
+			}
+		}
+	})
+	for _, tc := range []struct {
+		name, field string
+		state       domain.CostState
+		amount      float64
+	}{
+		{"historical Codex zero", `"cost_usd":0,`, domain.CostObserved, 0},
+		{"historical amount", `"cost_usd":7,`, domain.CostObserved, 7},
+		{"null", `"cost_usd":null,`, domain.CostUnavailable, 0},
+		{"omitted", "", domain.CostUnavailable, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data := []byte(strings.Replace(legacyBase, "COST", tc.field, 1))
+			if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+				t.Fatal(err)
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(data, &dto); err != nil {
+				t.Fatal(err)
+			}
+			if err := dto.Validate(); err != nil {
+				t.Fatal(err)
+			}
+			inv := dto.ToDomain().Sessions[0].Invocations[0]
+			if inv.CostEvidence.State != tc.state || inv.CostUSD != tc.amount {
+				t.Fatalf("cost=%+v", inv)
+			}
+		})
+	}
+	for _, fields := range []string{
+		`"cost_evidence":{"state":"unavailable","known_subtotal_usd":null},`,
+		`"cost_usd":null,"cost_evidence":null,`,
+		`"cost_usd":0,`,
+		`"cost_usd":null,"cost_evidence":{"state":"observed","known_subtotal_usd":0},`,
+		`"cost_usd":2,"cost_evidence":{"state":"partial","known_subtotal_usd":2},`,
+		`"cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":0},`,
+		`"cost_usd":-1,"cost_evidence":{"state":"observed","known_subtotal_usd":-1},`,
+	} {
+		t.Run("v5 rejects "+fields, func(t *testing.T) {
+			data := []byte(strings.Replace(strings.Replace(legacyBase, `"schema_version":4`, `"schema_version":5`, 1), "COST", fields, 1))
+			if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
+				t.Fatal("runtime accepted contradictory/missing evidence")
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(data, &dto); err == nil {
+				t.Fatal("decoder accepted contradictory/missing evidence")
+			}
+		})
+	}
+}
+
+// jsonFieldsInOrder retains object encounter order while exposing nested raw
+// payloads for the serializer-contract assertions below.
+func jsonFieldsInOrder(t *testing.T, data []byte, wanted ...string) map[string]json.RawMessage {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	opening, err := decoder.Token()
+	if err != nil || opening != json.Delim('{') {
+		t.Fatalf("expected JSON object: %s (%v)", data, err)
+	}
+	keys := []string{}
+	fields := make(map[string]json.RawMessage)
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			t.Fatal(err)
+		}
+		key, ok := token.(string)
+		if !ok {
+			t.Fatalf("expected object key, got %v", token)
+		}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			t.Fatal(err)
+		}
+		keys = append(keys, key)
+		fields[key] = value
+	}
+	if _, err := decoder.Token(); err != nil {
+		t.Fatal(err)
+	}
+	cursor := 0
+	for _, key := range wanted {
+		for cursor < len(keys) && keys[cursor] != key {
+			cursor++
+		}
+		if cursor == len(keys) {
+			t.Fatalf("field order %v does not retain required subsequence %v", keys, wanted)
+		}
+		cursor++
+	}
+	return fields
+}
+
+func assertFactJSONFieldOrder(t *testing.T, data []byte) {
+	t.Helper()
+	root := jsonFieldsInOrder(t, data, "schema_version", "ticket_id", "updated_at", "code", "sessions", "anomalies")
+	jsonFieldsInOrder(t, root["code"], "lines_added", "lines_deleted", "test_lines_added", "test_lines_deleted", "prod_lines_added", "prod_lines_deleted", "files_changed", "sdlc_iterations")
+	var sessions []json.RawMessage
+	if err := json.Unmarshal(root["sessions"], &sessions); err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) == 0 {
+		t.Fatal("ordering assertion requires a session")
+	}
+	session := jsonFieldsInOrder(t, sessions[0], "id", "source", "user", "invocations", "tools", "anomalies")
+	var invocations []json.RawMessage
+	if err := json.Unmarshal(session["invocations"], &invocations); err != nil {
+		t.Fatal(err)
+	}
+	if len(invocations) == 0 {
+		t.Fatal("ordering assertion requires an invocation")
+	}
+	invocation := jsonFieldsInOrder(t, invocations[0], "role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "cost_evidence", "compactions", "user_iterations")
+	jsonFieldsInOrder(t, invocation["tokens"], "input", "output", "cache_read", "reasoning", "peak_context")
+	jsonFieldsInOrder(t, invocation["cost_evidence"], "state", "known_subtotal_usd")
 }

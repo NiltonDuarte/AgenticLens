@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters"
+	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/domain"
 )
 
@@ -1136,7 +1138,7 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 	})
 }
 
-func TestEventFactDTOAndRepositoryEventHandling(t *testing.T) {
+func TestSessionEventPersistenceAndRepositoryHandling(t *testing.T) {
 	temp := t.TempDir()
 	ws := filepath.Join(temp, "AL-COMPACT")
 	if err := os.MkdirAll(ws, 0700); err != nil {
@@ -1599,6 +1601,18 @@ func TestSaveFactLedger(t *testing.T) {
 			t.Fatalf("failed reading saved file: %v", err)
 		}
 
+		assertFactJSONFieldOrder(t, data)
+		if err := adapters.SaveFactLedger(outPath, ledger); err != nil {
+			t.Fatal(err)
+		}
+		repeated, err := os.ReadFile(outPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(data, repeated) {
+			t.Fatal("repeated fact DTO persistence changed field order or values")
+		}
+
 		// Trailing newline check
 		if len(data) == 0 || data[len(data)-1] != '\n' {
 			t.Errorf("expected trailing newline in output")
@@ -1693,6 +1707,66 @@ func TestSaveFactLedger(t *testing.T) {
 }
 
 func TestSaveMetricsLedger(t *testing.T) {
+	t.Run("preserves DTO and HTTP field order with nullable partial totals", func(t *testing.T) {
+		version := domain.CurrentSchemaVersion
+		id := "TEST-ORDER"
+		facts := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &id, Sessions: []domain.SessionFact{{ID: "owner", Source: domain.SourceCodex, User: "tester", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", CostUSD: 2, CostEvidence: domain.PartialCost(2)}}, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}}}, Anomalies: []domain.Anomaly{}}
+		ledger := domain.DeriveMetricsLedger(facts, domain.ProjectConfig{})
+		path := filepath.Join(t.TempDir(), "metrics.json")
+		if err := adapters.SaveMetricsLedger(path, ledger); err != nil {
+			t.Fatal(err)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		root := jsonFieldsInOrder(t, data, "ticket_id", "ticket_title", "ticket_type", "started_at", "completed_at", "updated_at", "workflow_efficiency", "totals", "roles", "models")
+		assertTotals := func(t *testing.T, data []byte) {
+			t.Helper()
+			totals := jsonFieldsInOrder(t, data, "invocations", "input_tokens", "output_tokens", "cache_read_tokens", "cache_hit_rate_pct", "cost_usd", "cost_summary", "peak_context_tokens", "context_health")
+			if string(totals["cost_usd"]) != "null" {
+				t.Fatalf("partial total became complete: %s", data)
+			}
+			var summary domain.CostSummary
+			if err := json.Unmarshal(totals["cost_summary"], &summary); err != nil {
+				t.Fatal(err)
+			}
+			if summary.KnownSubtotalUSD == nil || *summary.KnownSubtotalUSD != 2 || summary.Partial != 1 || summary.Total != 1 {
+				t.Fatalf("partial evidence changed: %+v", summary)
+			}
+		}
+		assertTotals(t, root["totals"])
+		for _, httpOnly := range []string{"facts", "threads"} {
+			if _, exists := root[httpOnly]; exists {
+				t.Fatalf("metrics export gained HTTP-only field %s", httpOnly)
+			}
+		}
+		if err := adapters.SaveMetricsLedger(path, ledger); err != nil {
+			t.Fatal(err)
+		}
+		repeated, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(data, repeated) {
+			t.Fatal("repeated metrics DTO persistence changed field order or values")
+		}
+		response := httptest.NewRecorder()
+		adaptershttp.WriteWorkspacesResponse(response, []domain.AgenticMetricsLedger{ledger})
+		if response.Code != 200 {
+			t.Fatalf("HTTP serialization failed: %s", response.Body.String())
+		}
+		var workspaces []json.RawMessage
+		if err := json.Unmarshal(response.Body.Bytes(), &workspaces); err != nil {
+			t.Fatal(err)
+		}
+		if len(workspaces) != 1 {
+			t.Fatalf("workspaces=%s", response.Body.String())
+		}
+		httpRoot := jsonFieldsInOrder(t, workspaces[0], "ticket_id", "ticket_title", "ticket_type", "started_at", "completed_at", "updated_at", "facts", "workflow_efficiency", "threads", "totals", "roles", "models")
+		assertFactJSONFieldOrder(t, httpRoot["facts"])
+		assertTotals(t, httpRoot["totals"])
+	})
 	t.Parallel()
 
 	t.Run("creates nested directories, serializes DTO and writes formatted JSON", func(t *testing.T) {
@@ -1734,7 +1808,7 @@ func TestSaveMetricsLedger(t *testing.T) {
 		}
 
 		// DTO deserialization check
-		var parsed adapters.SerializedLedgerDTO
+		var parsed adapters.AgenticMetricsLedgerDTO
 		if err := json.Unmarshal(data, &parsed); err != nil {
 			t.Fatalf("failed unmarshaling saved metrics ledger: %v", err)
 		}
@@ -1879,7 +1953,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading file failed: %v", err)
 		}
-		var parsed adapters.SerializedLedgerDTO
+		var parsed adapters.AgenticMetricsLedgerDTO
 		if err := json.Unmarshal(data, &parsed); err != nil {
 			t.Fatalf("unmarshaling overwritten file failed: %v, content:\n%s", err, string(data))
 		}

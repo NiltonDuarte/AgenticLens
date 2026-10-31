@@ -14,7 +14,7 @@ import {
   extractTicketPrefix,
   filterLedgersByPrefixes,
   filterLedgersByTicketTypes,
-  formatCurrencyUSD,
+  formatCurrencyUSD, formatCostUSD,
   formatDurationSeconds,
   formatIsoDateTimeShort,
   formatPercentage,
@@ -154,7 +154,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         totalTickets: 0,
         avgDurationFormatted: '0m 0s',
         avgIterations: '0.0',
-        avgCostFormatted: '$0.00',
+        avgCostFormatted: 'Unavailable',
+        costTickets: 0,
         fleetToolSuccessPct: '0.0%',
       };
     }
@@ -162,18 +163,22 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
     let totDuration = 0;
     let totIterations = 0;
     let totCost = 0;
+    let costTickets = 0;
     let totToolSuccess = 0;
 
     for (const r of filteredRows) {
       totDuration += r.active_duration_seconds;
       totIterations += r.sdlc_iterations;
-      totCost += r.cost_usd;
+      if (r.cost_usd !== null && Number.isFinite(r.cost_usd) && r.cost_usd >= 0 && (!r.cost_summary || r.cost_summary.state === 'complete')) {
+        totCost += r.cost_usd;
+        costTickets += 1;
+      }
       totToolSuccess += r.tool_success_rate_pct;
     }
 
     const avgDuration = Math.round(totDuration / total);
     const avgIter = (totIterations / total).toFixed(1);
-    const avgCost = totCost / total;
+    const avgCost = costTickets === 0 ? null : totCost / costTickets;
     const avgToolPct = totToolSuccess / total;
 
     return {
@@ -181,6 +186,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
       avgDurationFormatted: formatDurationSeconds(avgDuration),
       avgIterations: avgIter,
       avgCostFormatted: formatCurrencyUSD(avgCost),
+      costTickets,
       fleetToolSuccessPct: formatPercentage(avgToolPct),
     };
   }, [filteredRows]);
@@ -257,8 +263,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         <KPICard
           title="Average Spend / Ticket"
           value={benchmarks.avgCostFormatted}
-          secondary="Cost efficiency"
-          tooltip="Average USD spend across analyzed tickets"
+          secondary={`${benchmarks.costTickets} of ${benchmarks.totalTickets} tickets with cost`}
+          tooltip="Average reported USD cost among tickets with complete cost in the current filtered results. Includes observed zero; excludes unavailable and partial costs. Search, ticket type, prefix, skills and the current fetched data determine this population."
         />
       </div>
 
@@ -560,7 +566,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                       <td className="mono">{row.lead_duration_formatted}</td>
                       <td className="num-col mono">{row.active_duration_formatted}</td>
                       <td className="num-col mono">{row.sdlc_iterations}</td>
-                      <td className="num-col mono">{formatCurrencyUSD(row.cost_usd)}</td>
+                      <td className="num-col mono">{formatCostUSD(row.cost_usd, row.cost_summary)}</td>
                       <td className="num-col mono">{formatPercentage(row.cache_hit_rate_pct)}</td>
                       <td className="num-col mono">{row.test_to_code_ratio}</td>
                       <td className="num-col mono">

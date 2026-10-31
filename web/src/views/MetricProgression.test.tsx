@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
 import { MetricProgression } from './MetricProgression';
 import * as apiClient from '../api/client';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
@@ -7,6 +7,24 @@ describe('MetricProgression View Component', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });
+    it('keeps period subtotal currency compact for the selected invocation buckets', async () => {
+        const base = mockAgenticMetricsLedgers['AL-1']!;
+        const owner = base.facts.sessions[0]!;
+        const invocation = owner.invocations[0]!;
+        const completed_at = '2026-01-01T12:00:00Z';
+        const ledger: typeof base = { ...base, completed_at, facts: { ...base.facts, sessions: [{ ...owner, invocations: [
+            { ...invocation, completed_at, cost_usd: null, cost_evidence: { state: 'partial', known_subtotal_usd: 2 } },
+            { ...invocation, completed_at, cost_usd: 0, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
+        ] }] } };
+        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: [ledger] });
+        render(<MetricProgression />);
+        const trigger = await screen.findByRole('button', { name: 'Information about Period Spend' });
+        const card = trigger.closest<HTMLElement>('.kpi-card')!;
+        expect(card.querySelector('.kpi-value')).toHaveTextContent(/^\$2\.00$/);
+        expect(card.querySelector('.kpi-secondary')).toHaveTextContent(/^Known subtotal \(partial\)$/);
+        expect(within(card).getByRole('tooltip')).toHaveTextContent('1 fully observed, 1 partial, 0 unavailable of 2 invocations');
+    });
+
     it('shows ticket-specific skipped-workspace diagnostics alongside valid metrics', async () => {
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
             data: Object.values(mockAgenticMetricsLedgers),

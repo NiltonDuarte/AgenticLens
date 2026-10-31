@@ -69,6 +69,7 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
           ))}
         </fieldset>
       </details>
+      {data.unavailableCount > 0 && <p>{data.unavailableCount} tickets omitted: a selected metric is unavailable.</p>}
       <div className="ticket-scatter-chart">
         <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${yMeta.label} by ${xMeta.label}`}>
           <line x1={PADDING.left} y1={HEIGHT - PADDING.bottom} x2={WIDTH - PADDING.right} y2={HEIGHT - PADDING.bottom} className="ticket-scatter-axis" />

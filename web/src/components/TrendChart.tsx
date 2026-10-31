@@ -20,7 +20,7 @@ export interface ChartReferenceLine {
 export interface TrendChartProps {
   readonly title: string;
   readonly series: readonly ChartSeries[];
-  readonly data: readonly Readonly<Record<string, number | string>>[];
+  readonly data: readonly Readonly<Record<string, number | string | null>>[];
   readonly height?: number;
   readonly valueFormatter?: (val: number) => string;
   readonly yAxisFormatter?: (val: number) => string;
@@ -80,7 +80,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   let minDataValue = 0;
   for (const row of data) {
     for (const s of series) {
-      const val = typeof row[s.key] === 'number' ? (row[s.key] as number) : 0;
+      const val = row[s.key];
+      if (typeof val !== 'number' || !Number.isFinite(val)) continue;
       if (val > maxDataValue) {
         maxDataValue = val;
       }
@@ -181,6 +182,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         </div>
       </div>
 
+      {series.some((s) => data.some((row) => typeof row[s.key] !== 'number')) && (
+        <p className="chart-omission-note">{series.reduce((count, s) => count + data.filter((row) => typeof row[s.key] !== 'number').length, 0)} unavailable values omitted; gaps preserve missing values.</p>
+      )}
       <div className="trend-chart-wrapper">
         <svg
           viewBox={`0 0 ${svgWidth} ${height}`}
@@ -256,12 +260,23 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             .filter((s) => s.type === 'area')
             .map((s) => {
               if (data.length === 0) return null;
-              const points = data.map((row, i) => {
-                const val = typeof row[s.key] === 'number' ? (row[s.key] as number) : 0;
-                return `${getXCoord(i)},${getYCoord(val)}`;
+              const segments: string[] = [];
+              let points: string[] = [];
+              let firstIndex = 0;
+              const closeSegment = (lastIndex: number): void => {
+                if (points.length === 0) return;
+                const yBase = padding.top + chartHeight;
+                segments.push(`M ${getXCoord(firstIndex)},${yBase} L ${points.join(' L ')} L ${getXCoord(lastIndex)},${yBase} Z`);
+                points = [];
+              };
+              data.forEach((row, i) => {
+                const value = row[s.key];
+                if (typeof value !== 'number' || !Number.isFinite(value)) { closeSegment(i - 1); return; }
+                if (points.length === 0) firstIndex = i;
+                points.push(`${getXCoord(i)},${getYCoord(value)}`);
               });
-              const yBase = padding.top + chartHeight;
-              const areaPath = `M ${getXCoord(0)},${yBase} L ${points.join(' L ')} L ${getXCoord(data.length - 1)},${yBase} Z`;
+              closeSegment(data.length - 1);
+              const areaPath = segments.join(' ');
               return (
                 <path
                   key={`area-${s.key}`}
@@ -280,7 +295,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               return (
                 <g key={`bars-${s.key}`}>
                   {data.map((row, i) => {
-                    const val = typeof row[s.key] === 'number' ? (row[s.key] as number) : 0;
+                    const val = row[s.key];
+                    if (typeof val !== 'number' || !Number.isFinite(val)) return null;
                     const xCenter =
                       data.length === 1
                         ? padding.left + chartWidth / 2
@@ -312,11 +328,14 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             .filter((s) => s.type === 'line' || s.type === undefined)
             .map((s) => {
               if (data.length === 0) return null;
-              const points = data.map((row, i) => {
-                const val = typeof row[s.key] === 'number' ? (row[s.key] as number) : 0;
-                return `${getXCoord(i)},${getYCoord(val)}`;
-              });
-              const linePath = `M ${points.join(' L ')}`;
+              let previousKnown = false;
+              const linePath = data.map((row, i) => {
+                const value = row[s.key];
+                if (typeof value !== 'number' || !Number.isFinite(value)) { previousKnown = false; return ''; }
+                const command = previousKnown ? 'L' : 'M';
+                previousKnown = true;
+                return `${command} ${getXCoord(i)},${getYCoord(value)}`;
+              }).filter(Boolean).join(' ');
               return (
                 <g key={`line-group-${s.key}`}>
                   <path
@@ -328,7 +347,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                     strokeLinejoin="round"
                   />
                   {data.map((row, i) => {
-                    const val = typeof row[s.key] === 'number' ? (row[s.key] as number) : 0;
+                    const val = row[s.key];
+                    if (typeof val !== 'number' || !Number.isFinite(val)) return null;
                     const cx = getXCoord(i);
                     const cy = getYCoord(val);
                     const isHovered = hoveredIndex === i;
@@ -429,15 +449,12 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               {String(data[hoveredIndex]['bucket_date'] ?? data[hoveredIndex]['label'] ?? '')}
             </div>
             {series.map((s) => {
-              const val =
-                typeof data[hoveredIndex]![s.key] === 'number'
-                  ? (data[hoveredIndex]![s.key] as number)
-                  : 0;
+              const val = data[hoveredIndex]![s.key];
               return (
                 <div key={s.key} className="tooltip-row">
                   <span className="tooltip-dot" style={{ backgroundColor: s.color }} />
                   <span className="tooltip-label">{s.label}:</span>
-                  <span className="tooltip-val">{valueFormatter(val)}</span>
+                  <span className="tooltip-val">{typeof val === 'number' && Number.isFinite(val) ? valueFormatter(val) : 'Unavailable'}</span>
                 </div>
               );
             })}

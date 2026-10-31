@@ -20,6 +20,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/config"
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/adapters/live"
@@ -808,6 +809,80 @@ func TestGetWorkspaceDetail(t *testing.T) {
 }
 
 func TestGetFleet(t *testing.T) {
+	t.Run("mixed v4 and v5 evidence survives HTTP reads without ledger rewrites", func(t *testing.T) {
+		root := t.TempDir()
+		inputs := map[string]string{
+			"TEST-0": sampleTestLedgerJSON("TEST-0", "Legacy zero", 1, 0, 1),
+			"TEST-1": strings.Replace(sampleTestLedgerJSON("TEST-1", "Missing amount", 1, 1, 1), `"cost_usd":1.000000,`, "", 1),
+			"TEST-2": strings.ReplaceAll(strings.Replace(sampleTestLedgerJSON("TEST-2", "Partial source", 1, 2, 1), `"cost_usd":2.000000`, `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":2}`, 1), `"schema_version":4`, `"schema_version":5`),
+		}
+		for id, input := range inputs {
+			dir := filepath.Join(root, id)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(input), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		server := httptest.NewServer(mustNewServer(t, root, nil).Handler())
+		defer server.Close()
+		response, err := http.Get(server.URL + "/api/fleet")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			t.Fatalf("fleet status=%d", response.StatusCode)
+		}
+		var fleet struct {
+			Cost          *float64                      `json:"total_cost_usd"`
+			Summary       domain.CostSummary            `json:"cost_summary"`
+			Roles         map[string]*float64           `json:"role_costs"`
+			RoleSummaries map[string]domain.CostSummary `json:"role_cost_summaries"`
+		}
+		if err := json.NewDecoder(response.Body).Decode(&fleet); err != nil {
+			t.Fatal(err)
+		}
+		if fleet.Cost != nil || fleet.Summary.KnownSubtotalUSD == nil || *fleet.Summary.KnownSubtotalUSD != 2 || fleet.Summary.Total != 3 || fleet.Summary.FullyObserved != 1 || fleet.Summary.Partial != 1 || fleet.Summary.Unavailable != 1 {
+			t.Fatalf("wire fleet lost cost evidence: %+v", fleet)
+		}
+		if amount, exists := fleet.Roles["orchestrator"]; !exists || amount != nil || fleet.RoleSummaries["orchestrator"].Total != 3 {
+			t.Fatalf("role wire cost=%+v summary=%+v", fleet.Roles, fleet.RoleSummaries)
+		}
+		for _, order := range []string{"asc", "desc"} {
+			res, err := http.Get(server.URL + "/api/workspaces?sort=cost_usd&order=" + order)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var rows []struct {
+				TicketID string `json:"ticket_id"`
+				Totals   struct {
+					Cost *float64 `json:"cost_usd"`
+				} `json:"totals"`
+			}
+			decodeErr := json.NewDecoder(res.Body).Decode(&rows)
+			if err := res.Body.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if decodeErr != nil {
+				t.Fatal(decodeErr)
+			}
+			if len(rows) != 3 || rows[0].TicketID != "TEST-0" || rows[0].Totals.Cost == nil || *rows[0].Totals.Cost != 0 || rows[1].TicketID != "TEST-1" || rows[2].TicketID != "TEST-2" || rows[1].Totals.Cost != nil || rows[2].Totals.Cost != nil {
+				t.Fatalf("%s wire ordering or null cost=%+v", order, rows)
+			}
+		}
+		for id, input := range inputs {
+			persisted, err := os.ReadFile(filepath.Join(root, id, "agentic_metrics.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(persisted) != input {
+				t.Fatalf("read rewrote %s", id)
+			}
+		}
+	})
+
 	ts, _ := setupTestServer(t)
 
 	t.Run("default fleet summary without params", func(t *testing.T) {
@@ -1290,6 +1365,107 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 }
 
 func TestResponseHelpersAndSerialization(t *testing.T) {
+	t.Run("typed cost response families retain zero partial amounts coverage and noncost fields", func(t *testing.T) {
+		observed := domain.SummarizeCost([]domain.InvocationFact{{CostUSD: 0}})
+		unavailable := domain.SummarizeCost([]domain.InvocationFact{{CostEvidence: domain.UnavailableCost()}})
+		mixed := domain.MergeCostSummaries(observed, unavailable)
+		fleet := domain.FleetSummary{TotalTickets: 3, TotalInvocations: 2, TotalInputTokens: 17, CostSummary: mixed,
+			RoleCosts: map[domain.AgentRole]float64{"coder": 0, "reviewer": 0}, RoleCostSummaries: map[domain.AgentRole]domain.CostSummary{"coder": observed, "reviewer": unavailable},
+			ModelCosts: map[string]float64{"known": 0, "missing": 0}, ModelCostSummaries: map[string]domain.CostSummary{"known": observed, "missing": unavailable}}
+		rec := httptest.NewRecorder()
+		adaptershttp.WriteFleetResponse(rec, fleet)
+		var output struct {
+			Cost    *float64            `json:"total_cost_usd"`
+			Summary domain.CostSummary  `json:"cost_summary"`
+			Roles   map[string]*float64 `json:"role_costs"`
+			Models  map[string]*float64 `json:"model_costs"`
+			Tickets int64               `json:"total_tickets"`
+			Input   int64               `json:"total_input_tokens"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &output); err != nil {
+			t.Fatal(err)
+		}
+		if rec.Code != http.StatusOK || output.Cost != nil || output.Summary.KnownSubtotalUSD == nil || *output.Summary.KnownSubtotalUSD != 0 || output.Summary.FullyObserved != 1 || output.Summary.Unavailable != 1 || output.Summary.Total != 2 || output.Tickets != 3 || output.Input != 17 {
+			t.Fatalf("typed fleet projection changed values: %s", rec.Body.String())
+		}
+		if known, exists := output.Roles["coder"]; !exists || known == nil || *known != 0 {
+			t.Fatalf("role zero lost: %s", rec.Body.String())
+		}
+		if missing, exists := output.Roles["reviewer"]; !exists || missing != nil {
+			t.Fatalf("role unavailable lost: %s", rec.Body.String())
+		}
+		if known, exists := output.Models["known"]; !exists || known == nil || *known != 0 {
+			t.Fatalf("model zero lost: %s", rec.Body.String())
+		}
+		if missing, exists := output.Models["missing"]; !exists || missing != nil {
+			t.Fatalf("model unavailable lost: %s", rec.Body.String())
+		}
+
+		ledger := domain.AgenticMetricsLedger{Totals: domain.GroupedMetric{Invocations: 2, CostSummary: mixed}, WorkflowEfficiency: domain.WorkflowEfficiency{ActiveDurationSeconds: 12, RoleEffortDistributionPct: map[string]float64{"coder": 50, "reviewer": 50}, RoleEffortUnavailableReason: "Incomplete source cost"}}
+		assertWorkflow := func(data []byte) {
+			var value struct {
+				Workflow struct {
+					Shares   map[string]*float64 `json:"role_effort_distribution_pct"`
+					Reason   string              `json:"role_effort_unavailable_reason"`
+					Duration int64               `json:"active_duration_seconds"`
+				} `json:"workflow_efficiency"`
+				Totals struct {
+					Cost    *float64           `json:"cost_usd"`
+					Summary domain.CostSummary `json:"cost_summary"`
+				} `json:"totals"`
+			}
+			if err := json.Unmarshal(data, &value); err != nil {
+				t.Fatal(err)
+			}
+			if len(value.Workflow.Shares) != 2 || value.Workflow.Shares["coder"] != nil || value.Workflow.Shares["reviewer"] != nil || value.Workflow.Reason != "Incomplete source cost" || value.Workflow.Duration != 12 || value.Totals.Cost != nil || value.Totals.Summary.Total != 2 {
+				t.Fatalf("typed workflow or cost metadata changed: %s", data)
+			}
+		}
+		exported, err := json.Marshal(adapters.SerializeLedger(ledger))
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertWorkflow(exported)
+		rec = httptest.NewRecorder()
+		adaptershttp.WriteWorkspacesResponse(rec, []domain.AgenticMetricsLedger{ledger})
+		var workspaces []json.RawMessage
+		if err := json.Unmarshal(rec.Body.Bytes(), &workspaces); err != nil {
+			t.Fatal(err)
+		}
+		if len(workspaces) != 1 {
+			t.Fatalf("workspace array changed: %s", rec.Body.String())
+		}
+		assertWorkflow(workspaces[0])
+
+		rec = httptest.NewRecorder()
+		adaptershttp.WriteComparisonResponse(rec, domain.BuildComparisonRows([]domain.AgenticMetricsLedger{ledger}))
+		var comparisons []struct {
+			Cost     *float64           `json:"cost_usd"`
+			Summary  domain.CostSummary `json:"cost_summary"`
+			Duration int64              `json:"active_duration_seconds"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &comparisons); err != nil {
+			t.Fatal(err)
+		}
+		if len(comparisons) != 1 || comparisons[0].Cost != nil || comparisons[0].Summary.Total != 2 || comparisons[0].Duration != 12 {
+			t.Fatalf("comparison projection changed: %s", rec.Body.String())
+		}
+		rec = httptest.NewRecorder()
+		adaptershttp.WriteProgressionResponse(rec, []domain.TimeBucketMetric{{BucketKey: "2026-11-01", BucketDate: "2026-11-01", Invocations: 1, CostSummary: observed, CumulativeCostSummary: mixed, CumulativeInvocations: 2, InputTokens: 7, CumulativeInputTokens: 13}})
+		var buckets []struct {
+			Cost            *float64           `json:"cost_usd"`
+			Cumulative      *float64           `json:"cumulative_cost_usd"`
+			Summary         domain.CostSummary `json:"cumulative_cost_summary"`
+			Input           int64              `json:"input_tokens"`
+			CumulativeInput int64              `json:"cumulative_input_tokens"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
+			t.Fatal(err)
+		}
+		if len(buckets) != 1 || buckets[0].Cost == nil || *buckets[0].Cost != 0 || buckets[0].Cumulative != nil || buckets[0].Summary.Total != 2 || buckets[0].Input != 7 || buckets[0].CumulativeInput != 13 {
+			t.Fatalf("bucket and cumulative projections conflated: %s", rec.Body.String())
+		}
+	})
 	t.Run("WriteWorkspacesResponse writes valid JSON", func(t *testing.T) {
 		rec := httptest.NewRecorder()
 		adaptershttp.WriteWorkspacesResponse(rec, []domain.AgenticMetricsLedger{})
@@ -1308,7 +1484,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ticketID := "T-100"
 		detail := adaptershttp.WorkspaceDetailResponse{
-			Ledger: domain.AgenticMetricsLedger{
+			Ledger: adaptershttp.MetricsLedgerResponseDTO{
 				TicketID: &ticketID,
 			},
 		}
@@ -1328,19 +1504,64 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 	t.Run("WriteFleetResponse writes valid JSON", func(t *testing.T) {
 		rec := httptest.NewRecorder()
 		summary := domain.FleetSummary{
-			TotalTickets: 5,
-			TotalCostUSD: 1.25,
+			TotalTickets: 5, TotalCostUSD: 1.25,
+			AnomalySummary: domain.FleetAnomalySummary{
+				TotalAnomalies: 4, WarningCount: 3, CriticalCount: 1,
+				SeverityCounts: map[string]int64{"WARNING": 3, "CRITICAL": 1},
+				RuleCounts:     map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0},
+				TotalTickets:   5, TicketsWithAnomalies: 2, AnomalyRatePerTicket: 0.8,
+				BrittleTools: []domain.BrittleToolSummary{
+					{ToolName: "bash", AnomalyCount: 2, TotalCalls: 20, ErrorCount: 5, FailureRatePct: 25},
+					{ToolName: "git", AnomalyCount: 1, TotalCalls: 10, ErrorCount: 3, FailureRatePct: 30},
+				},
+			},
 		}
 		adaptershttp.WriteFleetResponse(rec, summary)
 		if rec.Code != http.StatusOK {
-			t.Errorf("expected 200, got %d", rec.Code)
+			t.Fatalf("expected 200, got %d", rec.Code)
 		}
 		var parsed domain.FleetSummary
 		if err := json.NewDecoder(rec.Body).Decode(&parsed); err != nil {
-			t.Fatalf("failed decoding fleet: %v", err)
+			t.Fatal(err)
 		}
 		if parsed.TotalTickets != 5 || parsed.TotalCostUSD != 1.25 {
-			t.Errorf("unexpected fleet summary: %+v", parsed)
+			t.Fatalf("unexpected fleet summary: %+v", parsed)
+		}
+		anomaly := parsed.AnomalySummary
+		if anomaly.TotalAnomalies != 4 || anomaly.WarningCount != 3 || anomaly.CriticalCount != 1 || anomaly.TotalTickets != 5 || anomaly.TicketsWithAnomalies != 2 || anomaly.AnomalyRatePerTicket != 0.8 {
+			t.Fatalf("fleet anomaly scalar fields lost: %+v", anomaly)
+		}
+		if !reflect.DeepEqual(anomaly.SeverityCounts, map[string]int64{"WARNING": 3, "CRITICAL": 1}) || !reflect.DeepEqual(anomaly.RuleCounts, map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0}) {
+			t.Fatalf("fleet anomaly maps lost: %+v", anomaly)
+		}
+		if len(anomaly.BrittleTools) != 2 {
+			t.Fatalf("brittle tools lost: %+v", anomaly.BrittleTools)
+		}
+		if got := anomaly.BrittleTools[0]; got.ToolName != "bash" || got.AnomalyCount != 2 || got.TotalCalls != 20 || got.ErrorCount != 5 || got.FailureRatePct != 25 {
+			t.Fatalf("first brittle tool fields lost: %+v", got)
+		}
+		if got := anomaly.BrittleTools[1]; got.ToolName != "git" || got.AnomalyCount != 1 || got.TotalCalls != 10 || got.ErrorCount != 3 || got.FailureRatePct != 30 {
+			t.Fatalf("second brittle tool fields lost: %+v", got)
+		}
+	})
+	t.Run("WriteFleetResponse preserves empty anomaly maps and arrays", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		adaptershttp.WriteFleetResponse(rec, domain.FleetSummary{AnomalySummary: domain.FleetAnomalySummary{
+			SeverityCounts: map[string]int64{"WARNING": 0, "CRITICAL": 0}, RuleCounts: map[string]int64{"TOOL_RETRY_STREAK": 0}, BrittleTools: []domain.BrittleToolSummary{},
+		}})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", rec.Code)
+		}
+		var parsed domain.FleetSummary
+		if err := json.NewDecoder(rec.Body).Decode(&parsed); err != nil {
+			t.Fatal(err)
+		}
+		got := parsed.AnomalySummary
+		if got.TotalAnomalies != 0 || got.WarningCount != 0 || got.CriticalCount != 0 || got.TotalTickets != 0 || got.TicketsWithAnomalies != 0 || got.AnomalyRatePerTicket != 0 {
+			t.Fatalf("empty anomaly scalar values changed: %+v", got)
+		}
+		if !reflect.DeepEqual(got.SeverityCounts, map[string]int64{"WARNING": 0, "CRITICAL": 0}) || !reflect.DeepEqual(got.RuleCounts, map[string]int64{"TOOL_RETRY_STREAK": 0}) || got.BrittleTools == nil || len(got.BrittleTools) != 0 {
+			t.Fatalf("empty anomaly map/array shape changed: %+v", got)
 		}
 	})
 
@@ -1384,17 +1605,19 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 
 	t.Run("WriteEventsResponse writes valid JSON", func(t *testing.T) {
 		rec := httptest.NewRecorder()
+		sourceText := `{"tokens":{},"model":"source text","role":"coder","cost_usd":null,"cost_evidence":{"state":"observed"}}`
 		events := domain.WorkspaceEventsResponse{
 			TicketID:   "TKT-1",
 			IsHydrated: false,
 			Events: []domain.EventFact{
 				{
-					SessionID: "ses-1",
-					Timestamp: "2026-10-18T10:00:00Z",
-					Turn:      1,
-					Role:      "coder",
-					EventType: domain.EventTypeToolCall,
-					Status:    "success",
+					SessionID:  "ses-1",
+					Timestamp:  "2026-10-18T10:00:00Z",
+					Turn:       1,
+					Role:       "coder",
+					EventType:  domain.EventTypeToolCall,
+					Status:     "success",
+					ToolOutput: &sourceText,
 				},
 			},
 			DataSource: domain.DataSourceCommittedLedger,
@@ -1409,6 +1632,9 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		}
 		if len(parsed.Events) != 1 || parsed.Events[0].SessionID != "ses-1" {
 			t.Errorf("unexpected events parsed: %+v", parsed)
+		}
+		if parsed.Events[0].ToolOutput == nil || *parsed.Events[0].ToolOutput != sourceText {
+			t.Fatalf("noncost source payload changed: %+v", parsed.Events[0])
 		}
 	})
 }
@@ -2229,7 +2455,10 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("detail failed: %d %s", rec.Code, rec.Body.String())
 	}
-	var detail adaptershttp.WorkspaceDetailResponse
+	var detail struct {
+		Ledger    domain.AgenticMetricsLedger `json:"ledger"`
+		Anomalies []domain.Anomaly            `json:"anomalies"`
+	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
 		t.Fatal(err)
 	}

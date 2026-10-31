@@ -14,7 +14,7 @@ import {
   fetchWorkspaceLedgers,
 } from '../api/client';
 import {
-  formatCurrencyUSD,
+  formatCostUSD,
   formatDurationSeconds,
   formatIsoDateTimeShort,
   formatLeadTime,
@@ -26,6 +26,7 @@ import {
 } from '../domain/formatters';
 import { aggregateToolUsage } from '../domain/tools';
 import { KPICard } from '../components/KPICard';
+import { CostKPICard } from '../components/CostKPICard';
 import { EmptyState } from '../components/EmptyState';
 import { TicketSelector } from '../components/TicketSelector';
 import { SaturationBar } from '../components/SaturationBar';
@@ -292,9 +293,11 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           secondary={`${eff.active_duration_seconds.toLocaleString()}s total`}
           tooltip="Cumulative active compute duration across all agent invocations (analogous to cumulative man-hours). Can exceed wall-clock lead time due to concurrent subagent execution."
         />
-        <KPICard
+        <CostKPICard
           title="Total Cost"
-          value={formatCurrencyUSD(totals.cost_usd)}
+          amount={totals.cost_usd}
+          summary={totals.cost_summary}
+          invocations={totals.invocations}
           secondary={`${totals.invocations} invocations`}
           tooltip="Total USD spend across all model calls"
         />
@@ -525,7 +528,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                       <td className="num-col">{r.invocations}</td>
                       <td className="num-col">{formatTokensK(r.input_tokens + r.output_tokens)}</td>
                       <td className="num-col">{formatPercentage(r.cache_hit_rate_pct)}</td>
-                      <td className="num-col">{formatCurrencyUSD(r.cost_usd)}</td>
+                      <td className="num-col">{formatCostUSD(r.cost_usd, r.cost_summary)}</td>
                     </tr>
                   );
                 })}
@@ -624,7 +627,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                       <td className="num-col">{m.invocations}</td>
                       <td className="num-col">{formatTokensK(m.input_tokens + m.output_tokens)}</td>
                       <td className="num-col">{formatPercentage(m.cache_hit_rate_pct)}</td>
-                      <td className="num-col">{formatCurrencyUSD(m.cost_usd)}</td>
+                      <td className="num-col">{formatCostUSD(m.cost_usd, m.cost_summary)}</td>
                     </tr>
                   );
                 })}

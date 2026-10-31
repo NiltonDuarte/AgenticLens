@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -21,16 +22,18 @@ func sourceEventID(kind, sourceID string) string {
 }
 
 type sessionModelAccumulator struct {
-	input     int64
-	output    int64
-	cache     int64
-	reasoning int64
-	peak      int64
-	cost      float64
-	activeMS  int64
-	firstTS   *int64
-	lastTS    *int64
-	asstMsgs  int64
+	input       int64
+	output      int64
+	cache       int64
+	reasoning   int64
+	peak        int64
+	cost        float64
+	costPresent int64
+	costMissing int64
+	activeMS    int64
+	firstTS     *int64
+	lastTS      *int64
+	asstMsgs    int64
 }
 
 type toolAccumulator struct {
@@ -188,4 +191,15 @@ func ExtractSteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
 		return countSchemaV2SteeringTurns(db, threadIDs)
 	}
 	return countSchemaV1SteeringTurns(db, threadIDs)
+}
+
+func (acc sessionModelAccumulator) costEvidence() domain.CostEvidence {
+	amount := math.Round(acc.cost*1e6) / 1e6
+	if acc.costPresent == 0 {
+		return domain.UnavailableCost()
+	}
+	if acc.costMissing > 0 {
+		return domain.PartialCost(amount)
+	}
+	return domain.ObservedCost(amount)
 }

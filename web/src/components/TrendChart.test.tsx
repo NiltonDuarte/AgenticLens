@@ -4,6 +4,22 @@ import { TrendChart } from './TrendChart';
 import { formatLinesCompact } from '../domain/formatters';
 
 describe('TrendChart Component', () => {
+  it('omits unknown cost points and starts a new segment after a gap', () => {
+    const { container } = render(<TrendChart
+      title="Reported cost"
+      series={[{ key: 'cost', label: 'Cost', color: '#123456' }]}
+      data={[{ bucket_date: 'first', cost: 0 }, { bucket_date: 'missing', cost: null }, { bucket_date: 'last', cost: 2 }]}
+    />);
+    expect(container.querySelectorAll('circle')).toHaveLength(2);
+    const path = container.querySelector('path[stroke-width="2.5"]')?.getAttribute('d');
+    expect(path?.match(/M /g)).toHaveLength(2);
+    expect(path).not.toContain('L ');
+    expect(screen.getByText(/1 unavailable values omitted/)).toBeInTheDocument();
+    const columns = container.querySelectorAll('rect[fill="transparent"]');
+    fireEvent.mouseEnter(columns[1]!);
+    expect(screen.getByText('Unavailable')).toBeInTheDocument();
+  });
+
   it('renders empty message when data is empty', () => {
     render(
       <TrendChart

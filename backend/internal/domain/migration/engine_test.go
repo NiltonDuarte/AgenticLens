@@ -33,6 +33,20 @@ func TestCanonicalV4MigrationRejectsRemovedInvocationKey(t *testing.T) {
 	if len(ledger.Sessions) != 1 || ledger.Sessions[0].ID != "owner" || len(ledger.Sessions[0].Invocations) != 2 || ledger.Sessions[0].Invocations[0].Tokens.Input != 10 || ledger.Sessions[0].Invocations[1].Tokens.Input != 20 {
 		t.Fatalf("canonical rows changed during an idempotent migration: %+v", ledger.Sessions)
 	}
+	t.Run("canonical v5 retains the removed-id presence guard", func(t *testing.T) {
+		current := strings.Replace(base, `"schema_version":4`, `"schema_version":5`, 1)
+		current = strings.Replace(current, `"cost_usd":0.1`, `"cost_usd":0.1,"cost_evidence":{"state":"observed","known_subtotal_usd":0.1}`, 1)
+		current = strings.Replace(current, `"cost_usd":0.2`, `"cost_usd":0.2,"cost_evidence":{"state":"observed","known_subtotal_usd":0.2}`, 1)
+		if _, err := engine.Migrate([]byte(current), 5); err != nil {
+			t.Fatal(err)
+		}
+		for _, value := range []string{`"obsolete"`, `""`, `null`} {
+			input := strings.Replace(current, `"role":`, `"id":`+value+`,"role":`, 1)
+			if _, err := engine.Migrate([]byte(input), 5); err == nil || !strings.Contains(err.Error(), "must not contain id") {
+				t.Fatalf("v5 removed id guard lost for %s: %v", value, err)
+			}
+		}
+	})
 	for _, value := range []string{`"obsolete"`, `""`, `null`} {
 		data := strings.Replace(base, `"role":`, `"id":`+value+`,"role":`, 1)
 		if _, err := engine.Migrate([]byte(data), domain.CurrentSchemaVersion); err == nil || !strings.Contains(err.Error(), "must not contain id") {
@@ -146,6 +160,12 @@ func TestDetectVersion(t *testing.T) {
 		{
 			name:        "malformed json",
 			input:       "{not-valid-json",
+			expectedVer: 0,
+			wantErr:     migration.ErrMalformedJSON,
+		},
+		{
+			name:        "trailing json value",
+			input:       `{"schema_version":5} {}`,
 			expectedVer: 0,
 			wantErr:     migration.ErrMalformedJSON,
 		},
@@ -1206,8 +1226,8 @@ func TestEngineMigrate(t *testing.T) {
 	})
 
 	t.Run("missing migration step returns ErrMissingStep", func(t *testing.T) {
-		// Default engine only has 1->2, 2->3, 3->4. Asking for version 5 should fail with missing step.
-		_, err := engine.Migrate([]byte(unversionedJSON), 5)
+		// Default engine has steps through v5. Asking for v6 must fail with a missing step.
+		_, err := engine.Migrate([]byte(unversionedJSON), 6)
 		if !errors.Is(err, migration.ErrMissingStep) {
 			t.Errorf("expected ErrMissingStep when chain has gap, got %v", err)
 		}
@@ -1793,5 +1813,146 @@ func TestMigrationEngineNormalizesInterimV4AndDropsUnscopedTools(t *testing.T) {
 	}
 	if migrated.Migration == nil || !strings.Contains(migrated.Migration.Notes, "Removed 1 unscoped legacy tool aggregate") {
 		t.Fatalf("expected migration diagnostic, got %+v", migrated.Migration)
+	}
+}
+
+func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *testing.T) {
+	t.Run("older flattened inputs retain amount presence across the full chain", func(t *testing.T) {
+		for _, version := range []int{1, 2, 3} {
+			t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {
+				input := []byte(fmt.Sprintf(`{"schema_version":%d,"source":"codex","invocations":[{"id":"root","user":"alice","role":"coder","model":"m","cost_usd":0},{"id":"root","user":"alice","role":"coder","model":"m","cost_usd":null},{"id":"root","user":"alice","role":"coder","model":"m","cost_usd":7},{"id":"root","user":"alice","role":"coder","model":"m"}]}`, version))
+				migrated, err := migration.NewEngine(nil).Migrate(input, 5)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rows := migrated.InvocationFacts()
+				if len(migrated.Sessions) != 1 || migrated.Sessions[0].ID != "root" || len(rows) != 4 || rows[0].CostEvidence.State != domain.CostObserved || rows[0].CostUSD != 0 || rows[1].CostEvidence.State != domain.CostUnavailable || rows[2].CostEvidence.State != domain.CostObserved || rows[2].CostUSD != 7 || rows[3].CostEvidence.State != domain.CostUnavailable {
+					t.Fatalf("v%d cost presence or repeated ownership lost: %+v", version, migrated.Sessions)
+				}
+			})
+		}
+	})
+	t.Run("task costs retain numeric zero and absent presence in legacy schema families", func(t *testing.T) {
+		for version := 1; version <= 4; version++ {
+			for _, shape := range []string{`"sessions":[]`, `"invocations":[]`} {
+				t.Run(fmt.Sprintf("v%d/%s", version, shape), func(t *testing.T) {
+					input := fmt.Sprintf(`{"schema_version":%d,%s,"task_links":[{"subagent_type":"coder","description":"delegated","parent_turn":4,"child_session_id":"child","timestamp":"2026-10-31T09:00:00Z","duration_ms":12,"cost_usd":0},{"cost_usd":7},{"cost_usd":null},{}]}`, version, shape)
+					ledger, err := migration.NewEngine(nil).Migrate([]byte(input), 5)
+					if err != nil {
+						t.Fatal(err)
+					}
+					tasks := ledger.TaskLinks
+					if len(tasks) != 4 || tasks[0].CostEvidence.State != domain.CostObserved || tasks[0].CostUSD != 0 || tasks[1].CostEvidence.State != domain.CostObserved || tasks[1].CostUSD != 7 || tasks[2].CostEvidence.State != domain.CostUnavailable || tasks[3].CostEvidence.State != domain.CostUnavailable {
+						t.Fatalf("task amount presence changed: %+v", tasks)
+					}
+					if tasks[0].SubagentType != "coder" || tasks[0].Description != "delegated" || tasks[0].ParentTurn != 4 || tasks[0].ChildSession != "child" || tasks[0].Timestamp != "2026-10-31T09:00:00Z" || tasks[0].DurationMs != 12 {
+						t.Fatalf("task metadata changed during typed conversion: %+v", tasks[0])
+					}
+					if summary := domain.SummarizeCost(ledger.InvocationFacts()); summary.Total != 0 || summary.State != domain.CostSummaryEmpty {
+						t.Fatalf("task references entered invocation cost totals: %+v", summary)
+					}
+				})
+			}
+		}
+	})
+
+	t.Run("v5 validates only declared cost records before domain conversion", func(t *testing.T) {
+		cases := []struct {
+			name   string
+			fields string
+			state  domain.CostState
+			amount float64
+		}{
+			{"observed zero", `"cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0}`, domain.CostObserved, 0},
+			{"partial subtotal", `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":2.5}`, domain.CostPartial, 2.5},
+			{"unavailable", `"cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}`, domain.CostUnavailable, 0},
+			{"omitted cost", `"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}`, "", 0},
+			{"omitted evidence", `"cost_usd":null`, "", 0},
+			{"null evidence", `"cost_usd":null,"cost_evidence":null`, "", 0},
+			{"empty evidence state", `"cost_usd":0,"cost_evidence":{}`, "", 0},
+			{"observed null", `"cost_usd":null,"cost_evidence":{"state":"observed","known_subtotal_usd":0}`, "", 0},
+			{"observed mismatch", `"cost_usd":1,"cost_evidence":{"state":"observed","known_subtotal_usd":2}`, "", 0},
+			{"partial numeric amount", `"cost_usd":2,"cost_evidence":{"state":"partial","known_subtotal_usd":2}`, "", 0},
+			{"partial missing subtotal", `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":null}`, "", 0},
+			{"unavailable numeric amount", `"cost_usd":0,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}`, "", 0},
+			{"unavailable subtotal", `"cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":0}`, "", 0},
+			{"negative subtotal", `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":-1}`, "", 0},
+			{"negative amount", `"cost_usd":-1,"cost_evidence":{"state":"observed","known_subtotal_usd":-1}`, "", 0},
+			{"string amount", `"cost_usd":"0","cost_evidence":{"state":"observed","known_subtotal_usd":0}`, "", 0},
+			{"overflow amount", `"cost_usd":1e999,"cost_evidence":{"state":"observed","known_subtotal_usd":0}`, "", 0},
+		}
+		for _, location := range []string{"canonical invocation", "flat invocation", "task link"} {
+			for _, tc := range cases {
+				t.Run(location+"/"+tc.name, func(t *testing.T) {
+					var collections string
+					switch location {
+					case "canonical invocation":
+						collections = fmt.Sprintf(`"sessions":[{"id":"owner","invocations":[{"role":"coder","model":"m",%s}]}]`, tc.fields)
+					case "flat invocation":
+						collections = fmt.Sprintf(`"invocations":[{"id":"owner","role":"coder","model":"m",%s}]`, tc.fields)
+					case "task link":
+						collections = fmt.Sprintf(`"task_links":[{"subagent_type":"coder",%s}]`, tc.fields)
+					}
+					// Unknown retired metadata is compatible migration input, even
+					// when it happens to carry invocation-like field names.
+					input := fmt.Sprintf(`{"schema_version":5,%s,"retired_metadata":{"role":"coder","model":"payload","cost_usd":"source text"}}`, collections)
+					ledger, err := migration.NewEngine(nil).Migrate([]byte(input), 5)
+					if tc.state == "" {
+						if err == nil {
+							t.Fatal("accepted contradictory or malformed v5 cost")
+						}
+						return
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					var amount float64
+					var evidence domain.CostEvidence
+					if location == "task link" {
+						amount, evidence = ledger.TaskLinks[0].CostUSD, ledger.TaskLinks[0].CostEvidence
+					} else {
+						rows := ledger.InvocationFacts()
+						amount, evidence = rows[0].CostUSD, rows[0].CostEvidence
+					}
+					if amount != tc.amount || evidence.State != tc.state {
+						t.Fatalf("wire amount/evidence converted incorrectly: amount %v evidence %+v", amount, evidence)
+					}
+					if tc.state == domain.CostUnavailable {
+						if evidence.KnownSubtotalUSD != nil {
+							t.Fatalf("unavailable cost acquired a subtotal: %+v", evidence)
+						}
+					} else if evidence.KnownSubtotalUSD == nil || *evidence.KnownSubtotalUSD != tc.amount {
+						t.Fatalf("validated source subtotal was lost: %+v", evidence)
+					}
+				})
+			}
+		}
+	})
+
+	t.Run("mixed collections reject explicit null members", func(t *testing.T) {
+		for _, key := range []string{"invocations", "tools", "events"} {
+			input := fmt.Sprintf(`{"schema_version":4,"sessions":null,%q:null}`, key)
+			if _, err := migration.NewEngine(nil).Migrate([]byte(input), 5); err == nil || !strings.Contains(err.Error(), "mixed ledger shape") {
+				t.Fatalf("ambiguous null collections were accepted for %s: %v", key, err)
+			}
+		}
+	})
+
+	input := []byte(`{"schema_version":4,"sessions":[{"id":"root","source":"codex","user":"alice","invocations":[{"role":"coder","model":"m","cost_usd":0},{"role":"coder","model":"m","cost_usd":null},{"role":"coder","model":"m","cost_usd":7},{"role":"coder","model":"m"}],"tools":[],"anomalies":[]}]}`)
+	engine := migration.NewEngine(nil)
+	migrated, err := engine.Migrate(input, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if migrated.SchemaVersion == nil || *migrated.SchemaVersion != 5 || migrated.Migration != nil {
+		t.Fatalf("cost-only migration introduced recovery requirements: %+v", migrated)
+	}
+	rows := migrated.InvocationFacts()
+	if len(rows) != 4 || rows[0].CostEvidence.State != domain.CostObserved || rows[0].CostUSD != 0 || rows[1].CostEvidence.State != domain.CostUnavailable || rows[2].CostUSD != 7 || rows[3].CostEvidence.State != domain.CostUnavailable {
+		t.Fatalf("numeric/absent cost changed: %+v", rows)
+	}
+	summary := domain.ComputeTotals(rows).CostSummary
+	if summary.KnownSubtotalUSD == nil || *summary.KnownSubtotalUSD != 7 || summary.CompleteAmount() != nil || summary.FullyObserved != 2 || summary.Unavailable != 2 {
+		t.Fatalf("unexpected migrated coverage: %+v", summary)
 	}
 }

@@ -69,6 +69,7 @@ func ExtractSkillTaskFacts(sessions []domain.SessionFact) ([]domain.SkillFact, [
 				skills = append(skills, skill)
 			case "task":
 				link := domain.TaskLinkFact{
+					CostEvidence: domain.UnavailableCost(),
 					SubagentType: rawString(input["subagent_type"]),
 					Description:  rawString(input["description"]),
 					ParentTurn:   int(event.Turn), Timestamp: event.Timestamp,
