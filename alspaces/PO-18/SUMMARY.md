@@ -1,12 +1,12 @@
 # PO-18: Post-v2.0 platform follow-up
 
-Created eight active ticket specifications (AL-60 through AL-66 and AL-68) from the review notes and user corrections. SPEC.md is the consolidated current plan; alspaces/plan/TICKETS.md is the shared status/dependency registry. AL-62 owns implemented missing-fact fixes plus granular ownership formerly assigned to AL-67. AL-64 covers Codex and OpenCode v1/v2. AL-67 remains retired; the standalone live walkthrough and redundant phase/prefix constraints were removed.
+Created eight active ticket specifications (AL-60 through AL-67) from the review notes and user corrections. SPEC.md is the consolidated current plan; alspaces/plan/TICKETS.md is the shared status/dependency registry. AL-62 owns implemented missing-fact fixes plus granular ownership. AL-64 covers Codex and OpenCode v1/v2. the standalone live walkthrough and redundant phase/prefix constraints were removed.
 
 Per explicit user instruction, consolidate PO planning into SPEC.md and remove iterations/. The former PLAN.md/REVIEW.md files were authored by this thread; they do not establish independent review or plan approval. Preserve the concrete verification facts here rather than maintaining development-style PO iterations. Earlier planning revisions remain in Git history. Individual AL tickets and their acceptance boundaries remain separate and intact.
 
 ## Ownership and verification
 
-Original planning baseline: 45cb679, initial Git status clean. Consolidation baseline: 589c706, initial Git status clean. Task-owned paths are PO-18 artifacts, the eight active AL specifications, the historical merged AL-67 definition and the relevant roadmap additions. No application, tests, runtime scripts, real project config or unrelated ticket changes.
+Original planning baseline: 45cb679, initial Git status clean. Consolidation baseline: 589c706, initial Git status clean. Task-owned paths are PO-18 artifacts, the eight active AL specifications, the relevant roadmap additions. No application, tests, runtime scripts, real project config or unrelated ticket changes.
 
 Author checks: ticket template sections, unique filenames/IDs, roadmap file links, Ready/Blocked placement, reciprocal acyclic dependencies and preserved acceptance boundaries. Current chain is AL-62 -> AL-63 -> AL-65; AL-60/61/62/64/66/68 are Ready. Consolidation must retain all ticket content except origin references to removed PO iterations, remove dangling links and leave no iterations/ directory.
 
@@ -16,11 +16,11 @@ AL-55 evidence SHA256: 75baa0c19b4ad319eeca265f0cddfa0caa389a2565791be75976fc489
 
 ## Source evidence and limits
 
-The original notes' runtime observations are user-supplied; this PO delivery does not repeat the capability audit, repository architecture review, live walkthrough, populated analytics, backfill-preservation or duration-fix regressions. No application fix is implemented or independently approved here. AL-65's backfill defaults remain research-only; AL-68's architecture changes remain recommendations pending separate development scope.
+The original notes' runtime observations are user-supplied; this PO delivery does not repeat the capability audit, repository architecture review, live walkthrough, populated analytics, backfill-preservation or duration-fix regressions. No application fix is implemented or independently approved here. AL-65's backfill defaults remain research-only; AL-67's architecture changes remain recommendations pending separate development scope.
 
 Telemetry source: normal ~/.codex/sessions store, verified root 01a1933d-3d8f-7b83-a161-18a904e5aeb3, matching checkout metadata, zero children launched/found. Existing PO-18 ledger has one Codex session and no other-harness sessions to preserve. Refresh replaces that session snapshot without duplication. Raw transcripts remain outside Git. Generation occurs inside an active turn; the accounting defect tracked by AL-64 can understate current duration, so the ledger is a snapshot rather than evidence of completed-turn recovery.
 
-Consolidation checks PASS: exactly four PO artifacts, no iterations directory, all SPEC/registry links resolve, original ticket acceptance unchanged apart from origin references, registry/dependencies and archived AL-67 unchanged, AL-55 hash preserved. git diff --check passes. origin/main integration after a726aa4 was already up to date; no code changes. Final telemetry PASS using literal nonce d6a9f40c8e2371b5, explicit source codex and verified root: one populated matching session, zero expected children, no duplicate sessions, other-harness losses or reported source errors. AL-55 hash rechecked unchanged; active-turn duration limitation remains explicit. Subsequent work is validation and Git/PR delivery. PR: https://github.com/NiltonDuarte/AgenticLens/pull/90.
+Consolidation checks PASS: exactly four PO artifacts, no iterations directory, all SPEC/registry links resolve, original ticket acceptance unchanged apart from origin references, registry/dependencies unchanged at consolidation, AL-55 hash preserved. git diff --check passes. origin/main integration after a726aa4 was already up to date; no code changes. Final telemetry PASS using literal nonce d6a9f40c8e2371b5, explicit source codex and verified root: one populated matching session, zero expected children, no duplicate sessions, other-harness losses or reported source errors. AL-55 hash rechecked unchanged; active-turn duration limitation remains explicit. Subsequent work is validation and Git/PR delivery. PR: https://github.com/NiltonDuarte/AgenticLens/pull/90.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 17
@@ -52,3 +52,7 @@ Consolidation checks PASS: exactly four PO artifacts, no iterations directory, a
 |---|---|---|---|---|---|---|
 | **gpt-6.1-sol** | 1 | 119,561 | 55,896 | 11,807,488 | 99.0% | $0.00 |
 | **Total** | **1** | **119,561** | **55,896** | **11,807,488** | **99.0%** | **$0.00** |
+
+PO lifecycle correction (baseline 15a114e, initial Git status clean): user requires removed/merged PO drafts to be deleted with surviving scope and numbering adjusted, never discarded. Updated the owning agentic-lens-po skill, deleted this session's obsolete discarded draft, and renumbered the architecture review from AL-68 to AL-67. Eight active IDs are consecutive AL-60 through AL-67; AL-62 retains all merged ownership scope. Update all current references together. Legacy AL-10/18 discarded records and other tickets remain unchanged; no development/completed tickets are renumbered. This remains documentation-only work under PO-18.
+
+Lifecycle validation PASS: skill quick_validate, eight unique consecutive IDs/titles, current SPEC and registry links, unchanged unrelated ticket definitions and legacy discarded history, and architecture acceptance unchanged apart from its ID. AL-62 keeps all merged acceptance; only its origin note changed. Guidance search found no conflicting active discard instruction. AL-55 hash unchanged; git diff --check passes. Reuse previous full make PASS for unchanged application/tests/build. Main integration and final telemetry follow.

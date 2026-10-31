@@ -48,12 +48,12 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-66 configure optional metric output for generate.md`
 
-- **AL-68**: Review shared telemetry repository interfaces and source injection
+- **AL-67**: Review shared telemetry repository interfaces and source injection
   - **Subsystem**: Architecture / Domain Ports / Source Adapters / Composition / Backfill / Hydration / HTTP and Live Services / Tests
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-68 review telemetry repository interfaces and dependency injection.md`
+  - **File**: `alspaces/plan/to-do/AL-67 review telemetry repository interfaces and dependency injection.md`
 
 ### Existing ready work
 
@@ -162,12 +162,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## Discarded
-
-- **AL-67**: Scope skills and task_links to their source session or invocation
-  - **Subsystem**: Domain / Source Adapters / Schema Migration / CLI / API / Dashboard / Tests
-  - **Phase**: Phase 1 (post-v2.0 platform review)
-  - **Status**: Discarded (Merged into AL-62)
-  - **File**: `alspaces/plan/discarded/AL-67 scope skill and task link facts to their source owners.md`
 
 - **AL-18**: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry
   - **Subsystem**: Domain / Adapters / HTTP / Tests

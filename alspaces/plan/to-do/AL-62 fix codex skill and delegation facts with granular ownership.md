@@ -6,7 +6,7 @@ h3. Title: AL-62: Fix Codex skill and delegation facts with granular source owne
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: AL-63
-*Origin*: PO-18 consolidated specification; user explicitly requires AL-62 to fix missing facts and merges AL-67's granular data-structure scope into this ticket. AL-67 is retired as merged here.
+*Origin*: PO-18 consolidated specification; user explicitly requires missing-fact fixes and granular data-structure changes in this single ticket.
 
 *CONTEXT*
 

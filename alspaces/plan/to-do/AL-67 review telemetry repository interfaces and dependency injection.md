@@ -1,4 +1,4 @@
-h3. Title: AL-68: Review shared telemetry repository interfaces and source injection
+h3. Title: AL-67: Review shared telemetry repository interfaces and source injection
 
 *TARGET*: AgenticLens (Architecture / Domain Ports / OpenCode v1 and v2 / Codex / CLI Composition / Backfill / Hydration / HTTP and Live Services / Tests)
 
