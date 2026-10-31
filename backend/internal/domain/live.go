@@ -113,11 +113,8 @@ func ClassifyToolExecution(toolName string, status string, output string, consec
 	isCrash := strings.Contains(lowerOutput, "segmentation fault") ||
 		strings.Contains(lowerOutput, "signal: killed") ||
 		strings.Contains(lowerOutput, "killed by signal") ||
-		strings.Contains(lowerOutput, "out of memory") ||
-		strings.Contains(lowerOutput, "panic:") ||
-		strings.Contains(lowerOutput, "fatal error:") ||
-		strings.Contains(lowerOutput, "unhandledpromiserejection")
-	hardOutputFailure := (exitCode > 0 && !((cleanTool == "grep" || cleanTool == "glob") && exitCode == 1)) || isCrash || strings.Contains(lowerOutput, "permission denied") || strings.Contains(lowerOutput, "timed out") || strings.Contains(lowerOutput, "timeout")
+		strings.Contains(lowerOutput, "out of memory")
+	hardOutputFailure := (exitCode > 0 && !((cleanTool == "grep" || cleanTool == "glob") && exitCode == 1)) || (exitCode != 0 && (isCrash || lowerOutput == "permission denied" || lowerOutput == "command timed out" || lowerOutput == "operation timed out"))
 	isError := cleanStatus == "error" || cleanStatus == "failed" || hardOutputFailure
 	if !isError {
 		return ToolExecutionResult{Severity: SeverityNone}
@@ -127,7 +124,7 @@ func ClassifyToolExecution(toolName string, status string, output string, consec
 		severity = SeverityHigh
 	}
 
-	// Prepare sanitized error message capped at 2048 characters
+	// Preserve source error evidence, bounded to 2048 bytes.
 	msg := trimmedOutput
 	if msg == "" {
 		msg = cleanStatus

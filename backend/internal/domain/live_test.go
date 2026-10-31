@@ -299,7 +299,7 @@ func TestClassifyToolExecution(t *testing.T) {
 		{"glob zero matches", "glob", "completed", "0 matches", 0, false, domain.SeverityNone},
 		{"timeout", "bash", "completed", "operation timed out", 0, true, domain.SeverityMedium},
 		{"permission denied", "bash", "completed", "permission denied", 0, true, domain.SeverityMedium},
-		{"process crash", "bash", "completed", "panic: runtime failure", 0, true, domain.SeverityHigh},
+		{"process crash", "bash", "completed", "segmentation fault", 0, true, domain.SeverityHigh},
 		{"consecutive errors escalate", "bash", "failed", "exit status 1", 2, true, domain.SeverityHigh},
 	}
 	for _, tt := range tests {

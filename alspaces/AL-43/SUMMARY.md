@@ -1,5 +1,13 @@
 # AL-43 Work Summary
 
+## Iteration 03: PR #88 execution-classifier correction
+
+Current acceptance is the user's exact instruction routed through MGT-1: "retain main’s execution classifier while removing content classification, and add these regression cases." This explicitly supersedes iteration 02's mechanical pre-PR #78 execution restoration. No repeat permission is required. F1 is a review correction to preserve execution semantics, not a replacement feature or expansion of execution policy.
+
+Before writing, verified cwd and Git toplevel /home/niltonduarte/.t3/worktrees/AgenticLens/t3-3f89bda8, branch chore/AL-43-revert-content-classification, clean status and HEAD e91cf0d05348537657c210601c6acc93c01f967d. Fetched origin/main at 3857fa22f49f825c82ced39c3f81f963b7447545. This is PR #88's owner checkout; no manager or original PR #78 checkout is used.
+
+Preserve current-main ClassifyToolExecution exactly. Protect successful read output containing timeoutMs, successful grep output quoting panic, and explicitly zero-exit output quoting permission denied. Keep content-classification removal, strict decode-only retired-field compatibility, raw Codex evidence, AL-55 recovery and nil-array defaults, AL-47 subscription/refresh, and AL-53 navigation. Historical iteration 02 evidence below is superseded only on execution-restoration acceptance. Current verification and final telemetry will follow.
+
 ## Iteration 02: user-requested feature revert
 
 Source: the user instructed "revert this feature" after reviewing PR #78's stack-specific output classification. This explicitly approves removal of the feature; iteration 01 below remains historical evidence, not current acceptance.
