@@ -23,6 +23,22 @@ describe('Boundary API Client', () => {
             expect(res.data.total_tickets).toBe(10);
             expect(res.data.total_cost_usd).toBe(99.5);
         });
+        it('preserves a partial subtotal and rejects contradictory financial metadata', async () => {
+            const summary = { ...mockFleetSummary, total_cost_usd: null, cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 0, unavailable: 1, total: 2 } };
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => summary });
+            vi.stubGlobal('fetch', fetchMock);
+            const response = await fetchFleetSummary();
+            expect(response.data.total_cost_usd).toBeNull();
+            expect(response.data.cost_summary?.known_subtotal_usd).toBe(2);
+            fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ...summary, total_cost_usd: 2 }) });
+            await expect(fetchFleetSummary()).rejects.toThrow('Invalid cost payload');
+        });
+        it('rejects unavailable fleet map values without their coverage summaries', async () => {
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+                ...mockFleetSummary, role_costs: { coder: null },
+            }) }));
+            await expect(fetchFleetSummary()).rejects.toThrow('Invalid cost payload');
+        });
         it('rejects on network exception', async () => {
             vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
             await expect(fetchFleetSummary('all')).rejects.toThrow('Network error');
@@ -165,6 +181,44 @@ describe('Boundary API Client', () => {
         });
     });
     describe('fetchWorkspaceById', () => {
+        it('accepts v5 observed zero, partial evidence and unavailable facts without numeric coercion', async () => {
+            const detail = mockWorkspaceDetails['AL-1']!;
+            const session = detail.ledger.facts.sessions[0]!;
+            const invocation = session.invocations[0]!;
+            const payload = {
+                ...detail,
+                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5, sessions: [{
+                    ...session,
+                    invocations: [
+                        { ...invocation, cost_usd: 0, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
+                        { ...invocation, cost_usd: null, cost_evidence: { state: 'partial', known_subtotal_usd: 2 } },
+                        { ...invocation, cost_usd: null, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
+                    ],
+                }] } },
+            };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            const facts = (await fetchWorkspaceById('AL-1')).data.ledger.facts.sessions[0]!.invocations;
+            expect(facts.map((fact) => fact.cost_usd)).toEqual([0, null, null]);
+            expect(facts[1]!.cost_evidence).toEqual({ state: 'partial', known_subtotal_usd: 2 });
+        });
+        it.each([
+            { cost_usd: 0 },
+            { cost_usd: 0, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
+            { cost_usd: null, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
+            { cost_usd: null, cost_evidence: { state: 'partial', known_subtotal_usd: null } },
+        ])('rejects missing or contradictory v5 invocation evidence: %j', async (cost) => {
+            const detail = mockWorkspaceDetails['AL-1']!;
+            const session = detail.ledger.facts.sessions[0]!;
+            const invocation = session.invocations[0]!;
+            const payload = {
+                ...detail,
+                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5, sessions: [{
+                    ...session, invocations: [{ ...invocation, ...cost }],
+                }] } },
+            };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow('Invalid cost payload');
+        });
         it('returns live detail when backend returns 200 OK', async () => {
             const mockDetail = mockWorkspaceDetails['AL-1']!;
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({

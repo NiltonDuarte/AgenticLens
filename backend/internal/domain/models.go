@@ -26,6 +26,7 @@ type InvocationFact struct {
 	Turns                 int64            `json:"turns"`
 	Tokens                InvocationTokens `json:"tokens"`
 	CostUSD               float64          `json:"cost_usd"`
+	CostEvidence          CostEvidence     `json:"cost_evidence"`
 	Compactions           int64            `json:"compactions"`
 	UserIterations        int64            `json:"user_iterations"`
 }
@@ -71,13 +72,14 @@ type SkillFact struct {
 
 // TaskLinkFact records one OpenCode task delegation and any explicit child-session link.
 type TaskLinkFact struct {
-	SubagentType string  `json:"subagent_type"`
-	Description  string  `json:"description"`
-	ParentTurn   int     `json:"parent_turn"`
-	ChildSession string  `json:"child_session_id,omitempty"`
-	Timestamp    string  `json:"timestamp"`
-	DurationMs   int64   `json:"duration_ms,omitempty"`
-	CostUSD      float64 `json:"cost_usd,omitempty"`
+	SubagentType string       `json:"subagent_type"`
+	Description  string       `json:"description"`
+	ParentTurn   int          `json:"parent_turn"`
+	ChildSession string       `json:"child_session_id,omitempty"`
+	Timestamp    string       `json:"timestamp"`
+	DurationMs   int64        `json:"duration_ms,omitempty"`
+	CostUSD      float64      `json:"cost_usd"`
+	CostEvidence CostEvidence `json:"cost_evidence"`
 }
 
 // SessionToolFact stores tool totals owned by one session. Session identity is
@@ -345,6 +347,7 @@ type GroupedMetric struct {
 	CacheReadTokens   int64               `json:"cache_read_tokens"`
 	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
 	CostUSD           float64             `json:"cost_usd"`
+	CostSummary       CostSummary         `json:"cost_summary"`
 	PeakContextTokens int64               `json:"peak_context_tokens"`
 	ContextHealth     ContextHealthStatus `json:"context_health"`
 }
@@ -391,17 +394,18 @@ type ContextWindowHealth struct {
 
 // WorkflowEfficiency aggregates SDLC duration, code delivery, and operational health metrics.
 type WorkflowEfficiency struct {
-	SDLCIterations            int64                `json:"sdlc_iterations"`
-	ActiveDurationSeconds     int64                `json:"active_duration_seconds"`
-	ActiveDurationFormatted   string               `json:"active_duration_formatted"`
-	RoleEffortDistributionPct map[string]float64   `json:"role_effort_distribution_pct"`
-	SubagentTurnVelocity      SubagentTurnVelocity `json:"subagent_turn_velocity"`
-	TestToProductionRatio     TestToCodeRatio      `json:"test_to_production_ratio"`
-	ReasoningTokens           int64                `json:"reasoning_tokens"`
-	ReasoningRatioPct         float64              `json:"reasoning_ratio_pct"`
-	CodeDelivered             CodeDeliveredStats   `json:"code_delivered"`
-	ToolExecution             ToolExecutionHealth  `json:"tool_execution"`
-	ContextWindowHealth       ContextWindowHealth  `json:"context_window_health"`
+	SDLCIterations              int64                `json:"sdlc_iterations"`
+	ActiveDurationSeconds       int64                `json:"active_duration_seconds"`
+	ActiveDurationFormatted     string               `json:"active_duration_formatted"`
+	RoleEffortDistributionPct   map[string]float64   `json:"role_effort_distribution_pct"`
+	RoleEffortUnavailableReason string               `json:"role_effort_unavailable_reason,omitempty"`
+	SubagentTurnVelocity        SubagentTurnVelocity `json:"subagent_turn_velocity"`
+	TestToProductionRatio       TestToCodeRatio      `json:"test_to_production_ratio"`
+	ReasoningTokens             int64                `json:"reasoning_tokens"`
+	ReasoningRatioPct           float64              `json:"reasoning_ratio_pct"`
+	CodeDelivered               CodeDeliveredStats   `json:"code_delivered"`
+	ToolExecution               ToolExecutionHealth  `json:"tool_execution"`
+	ContextWindowHealth         ContextWindowHealth  `json:"context_window_health"`
 }
 
 // ModelMetric summarizes aggregated usage and performance for a single model.
@@ -413,6 +417,7 @@ type ModelMetric struct {
 	CacheReadTokens   int64               `json:"cache_read_tokens"`
 	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
 	CostUSD           float64             `json:"cost_usd"`
+	CostSummary       CostSummary         `json:"cost_summary"`
 	PeakContextTokens int64               `json:"peak_context_tokens"`
 	ContextHealth     ContextHealthStatus `json:"context_health"`
 }
@@ -426,6 +431,7 @@ type RoleMetric struct {
 	CacheReadTokens   int64               `json:"cache_read_tokens"`
 	CacheHitRatePct   float64             `json:"cache_hit_rate_pct"`
 	CostUSD           float64             `json:"cost_usd"`
+	CostSummary       CostSummary         `json:"cost_summary"`
 	PeakContextTokens int64               `json:"peak_context_tokens"`
 	ContextHealth     ContextHealthStatus `json:"context_health"`
 }
@@ -463,28 +469,30 @@ type AgenticMetricsLedger struct {
 
 // TimeBucketMetric captures telemetry aggregates for a chronological time bucket.
 type TimeBucketMetric struct {
-	BucketKey               string  `json:"bucket_key"`
-	BucketDate              string  `json:"bucket_date"`
-	Invocations             int64   `json:"invocations"`
-	CostUSD                 float64 `json:"cost_usd"`
-	InputTokens             int64   `json:"input_tokens"`
-	OutputTokens            int64   `json:"output_tokens"`
-	CacheReadTokens         int64   `json:"cache_read_tokens"`
-	ReasoningTokens         int64   `json:"reasoning_tokens"`
-	CacheHitRatePct         float64 `json:"cache_hit_rate_pct"`
-	LinesAdded              int64   `json:"lines_added"`
-	LinesDeleted            int64   `json:"lines_deleted"`
-	FilesChanged            int64   `json:"files_changed"`
-	NetLinesAdded           int64   `json:"net_lines_added"`
-	PeakContextTokens       int64   `json:"peak_context_tokens"`
-	ActiveDurationSeconds   int64   `json:"active_duration_seconds"`
-	CumulativeCostUSD       float64 `json:"cumulative_cost_usd"`
-	CumulativeInputTokens   int64   `json:"cumulative_input_tokens"`
-	CumulativeOutputTokens  int64   `json:"cumulative_output_tokens"`
-	CumulativeLinesAdded    int64   `json:"cumulative_lines_added"`
-	CumulativeLinesDeleted  int64   `json:"cumulative_lines_deleted"`
-	CumulativeNetLinesAdded int64   `json:"cumulative_net_lines_added"`
-	CumulativeInvocations   int64   `json:"cumulative_invocations"`
+	BucketKey               string      `json:"bucket_key"`
+	BucketDate              string      `json:"bucket_date"`
+	Invocations             int64       `json:"invocations"`
+	CostUSD                 float64     `json:"cost_usd"`
+	CostSummary             CostSummary `json:"cost_summary"`
+	InputTokens             int64       `json:"input_tokens"`
+	OutputTokens            int64       `json:"output_tokens"`
+	CacheReadTokens         int64       `json:"cache_read_tokens"`
+	ReasoningTokens         int64       `json:"reasoning_tokens"`
+	CacheHitRatePct         float64     `json:"cache_hit_rate_pct"`
+	LinesAdded              int64       `json:"lines_added"`
+	LinesDeleted            int64       `json:"lines_deleted"`
+	FilesChanged            int64       `json:"files_changed"`
+	NetLinesAdded           int64       `json:"net_lines_added"`
+	PeakContextTokens       int64       `json:"peak_context_tokens"`
+	ActiveDurationSeconds   int64       `json:"active_duration_seconds"`
+	CumulativeCostUSD       float64     `json:"cumulative_cost_usd"`
+	CumulativeCostSummary   CostSummary `json:"cumulative_cost_summary"`
+	CumulativeInputTokens   int64       `json:"cumulative_input_tokens"`
+	CumulativeOutputTokens  int64       `json:"cumulative_output_tokens"`
+	CumulativeLinesAdded    int64       `json:"cumulative_lines_added"`
+	CumulativeLinesDeleted  int64       `json:"cumulative_lines_deleted"`
+	CumulativeNetLinesAdded int64       `json:"cumulative_net_lines_added"`
+	CumulativeInvocations   int64       `json:"cumulative_invocations"`
 }
 
 // BrittleToolSummary represents aggregated failure and anomaly metrics for a tool across the fleet.
@@ -520,24 +528,27 @@ type SkillAdoptionFact struct {
 
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
-	SkillAdoption            []SkillAdoptionFact   `json:"skill_adoption"`
-	TotalTickets             int64                 `json:"total_tickets"`
-	TotalCostUSD             float64               `json:"total_cost_usd"`
-	TotalInvocations         int64                 `json:"total_invocations"`
-	TotalInputTokens         int64                 `json:"total_input_tokens"`
-	TotalOutputTokens        int64                 `json:"total_output_tokens"`
-	TotalCacheReadTokens     int64                 `json:"total_cache_read_tokens"`
-	OverallCacheHitRatePct   float64               `json:"overall_cache_hit_rate_pct"`
-	TotalDurationSeconds     int64                 `json:"total_duration_seconds"`
-	FormattedTotalDuration   string                `json:"formatted_total_duration"`
-	TotalLinesAdded          int64                 `json:"total_lines_added"`
-	TotalLinesDeleted        int64                 `json:"total_lines_deleted"`
-	TotalFilesChanged        int64                 `json:"total_files_changed"`
-	TotalReasoningTokens     int64                 `json:"total_reasoning_tokens"`
-	OverallReasoningRatioPct float64               `json:"overall_reasoning_ratio_pct"`
-	RoleCosts                map[AgentRole]float64 `json:"role_costs"`
-	ModelCosts               map[string]float64    `json:"model_costs"`
-	AnomalySummary           FleetAnomalySummary   `json:"anomaly_summary"`
+	SkillAdoption            []SkillAdoptionFact       `json:"skill_adoption"`
+	TotalTickets             int64                     `json:"total_tickets"`
+	TotalCostUSD             float64                   `json:"total_cost_usd"`
+	CostSummary              CostSummary               `json:"cost_summary"`
+	RoleCostSummaries        map[AgentRole]CostSummary `json:"role_cost_summaries"`
+	ModelCostSummaries       map[string]CostSummary    `json:"model_cost_summaries"`
+	TotalInvocations         int64                     `json:"total_invocations"`
+	TotalInputTokens         int64                     `json:"total_input_tokens"`
+	TotalOutputTokens        int64                     `json:"total_output_tokens"`
+	TotalCacheReadTokens     int64                     `json:"total_cache_read_tokens"`
+	OverallCacheHitRatePct   float64                   `json:"overall_cache_hit_rate_pct"`
+	TotalDurationSeconds     int64                     `json:"total_duration_seconds"`
+	FormattedTotalDuration   string                    `json:"formatted_total_duration"`
+	TotalLinesAdded          int64                     `json:"total_lines_added"`
+	TotalLinesDeleted        int64                     `json:"total_lines_deleted"`
+	TotalFilesChanged        int64                     `json:"total_files_changed"`
+	TotalReasoningTokens     int64                     `json:"total_reasoning_tokens"`
+	OverallReasoningRatioPct float64                   `json:"overall_reasoning_ratio_pct"`
+	RoleCosts                map[AgentRole]float64     `json:"role_costs"`
+	ModelCosts               map[string]float64        `json:"model_costs"`
+	AnomalySummary           FleetAnomalySummary       `json:"anomaly_summary"`
 }
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
@@ -549,6 +560,7 @@ type TicketComparisonRow struct {
 	ActiveDurationSeconds   int64                   `json:"active_duration_seconds"`
 	ActiveDurationFormatted string                  `json:"active_duration_formatted"`
 	CostUSD                 float64                 `json:"cost_usd"`
+	CostSummary             CostSummary             `json:"cost_summary"`
 	CacheHitRatePct         float64                 `json:"cache_hit_rate_pct"`
 	TestToCodeRatio         string                  `json:"test_to_code_ratio"`
 	LinesAdded              int64                   `json:"lines_added"`

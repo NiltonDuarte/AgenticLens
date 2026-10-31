@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"agenticlens/internal/adapters"
 	"agenticlens/internal/domain"
 )
 
@@ -45,6 +46,9 @@ type ResponsePayload interface {
 // WriteJSON writes a typed JSON response with status code, enforcing concrete response types.
 func WriteJSON[T ResponsePayload](w http.ResponseWriter, statusCode int, data T) {
 	payload, err := json.Marshal(data)
+	if err == nil {
+		payload, err = adapters.NormalizeCostJSON(payload)
+	}
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)

@@ -1,6 +1,7 @@
+import { compareCosts } from '../domain/cost';
 import React, { useState, useMemo } from 'react';
 import type { TicketComparisonRow } from '../domain/types';
-import { compareTicketIds, formatCurrencyUSD, formatPercentage } from '../domain/formatters';
+import { compareTicketIds, formatCostUSD, formatPercentage } from '../domain/formatters';
 import { EmptyState } from './EmptyState';
 import { InfoTooltip } from './InfoTooltip';
 
@@ -45,8 +46,7 @@ export const TicketTable: React.FC<TicketTableProps> = ({
           diff = compareTicketIds(a.ticket_id, b.ticket_id);
           break;
         case 'cost_usd':
-          diff = a.cost_usd - b.cost_usd;
-          break;
+          return compareCosts(a.cost_usd, b.cost_usd, sortAscending) || compareTicketIds(a.ticket_id, b.ticket_id);
         case 'active_duration_seconds':
           diff = a.active_duration_seconds - b.active_duration_seconds;
           break;
@@ -212,7 +212,7 @@ export const TicketTable: React.FC<TicketTableProps> = ({
                       </span>
                     </td>
                     <td className="mono-number">{r.active_duration_formatted}</td>
-                    <td className="mono-number">{formatCurrencyUSD(r.cost_usd)}</td>
+                    <td className="mono-number">{formatCostUSD(r.cost_usd, r.cost_summary)}</td>
                     <td className="mono-number">{formatPercentage(r.cache_hit_rate_pct)}</td>
                     <td className="mono-number">
                       +{r.lines_added} / -{r.lines_deleted} ({r.files_changed} files)

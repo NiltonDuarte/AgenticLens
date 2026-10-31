@@ -26,6 +26,31 @@ func TestComputeTotals(t *testing.T) {
 		}
 	})
 
+	t.Run("cost evidence preserves partial contributions and legacy observed values", func(t *testing.T) {
+		cases := []struct {
+			name                           string
+			invs                           []domain.InvocationFact
+			state                          domain.CostSummaryState
+			known, complete                *float64
+			observed, partial, unavailable int64
+		}{
+			{"legacy observed zero", []domain.InvocationFact{{CostUSD: 0}}, domain.CostSummaryComplete, domain.CostNumber(0), domain.CostNumber(0), 1, 0, 0},
+			{"mixed zero and unavailable", []domain.InvocationFact{{CostUSD: 0}, {CostEvidence: domain.UnavailableCost()}}, domain.CostSummaryPartial, domain.CostNumber(0), nil, 1, 0, 1},
+			{"partial coalesced and historical", []domain.InvocationFact{{CostEvidence: domain.PartialCost(2)}, {CostUSD: 1}}, domain.CostSummaryPartial, domain.CostNumber(3), nil, 1, 1, 0},
+			{"known total", []domain.InvocationFact{{CostUSD: 7}, {CostUSD: 2}}, domain.CostSummaryComplete, domain.CostNumber(9), domain.CostNumber(9), 2, 0, 0},
+			{"unknown", []domain.InvocationFact{{CostEvidence: domain.UnavailableCost()}}, domain.CostSummaryUnavailable, nil, nil, 0, 0, 1},
+			{"empty", nil, domain.CostSummaryEmpty, nil, nil, 0, 0, 0},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				got := domain.ComputeTotals(tc.invs).CostSummary
+				if got.State != tc.state || !reflect.DeepEqual(got.KnownSubtotalUSD, tc.known) || !reflect.DeepEqual(got.CompleteAmount(), tc.complete) || got.FullyObserved != tc.observed || got.Partial != tc.partial || got.Unavailable != tc.unavailable || got.Total != int64(len(tc.invs)) {
+					t.Fatalf("cost summary=%+v", got)
+				}
+			})
+		}
+	})
+
 	t.Run("counts every invocation row including shared roles", func(t *testing.T) {
 		invs := []domain.InvocationFact{
 			{
@@ -205,6 +230,35 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 }
 
 func TestComputeRoleAndModelMetrics(t *testing.T) {
+	t.Run("tiny complete costs rank before incomplete costs using unrounded amounts", func(t *testing.T) {
+		rows := []domain.InvocationFact{
+			{Role: "coder", Model: "a-cheap", CostUSD: 0.00001},
+			{Role: "coder", Model: "z-expensive", CostUSD: 0.00002},
+			{Role: "coder", Model: "0-unavailable", CostEvidence: domain.UnavailableCost()},
+			{Role: "coder", Model: "1-partial", CostEvidence: domain.PartialCost(9)},
+		}
+		want := []string{"z-expensive", "a-cheap", "0-unavailable", "1-partial"}
+		assertModels := func(t *testing.T, models []domain.ModelMetric) {
+			t.Helper()
+			if len(models) != len(want) {
+				t.Fatalf("models=%+v", models)
+			}
+			for i, name := range want {
+				if models[i].Model != name {
+					t.Fatalf("cost order=%+v, want %v", models, want)
+				}
+			}
+			if models[0].CostSummary.CompleteAmount() == nil || *models[0].CostSummary.CompleteAmount() != 0.00002 || models[1].CostSummary.CompleteAmount() == nil || *models[1].CostSummary.CompleteAmount() != 0.00001 {
+				t.Fatalf("tiny complete amounts lost: %+v", models)
+			}
+		}
+		assertModels(t, domain.ComputeModelMetrics(rows))
+		threads := domain.ComputeThreadSummariesFromSessions([]domain.SessionFact{{ID: "root", Invocations: rows}})
+		if len(threads) != 1 || len(threads[0].Roles) != 1 {
+			t.Fatalf("thread projections=%+v", threads)
+		}
+		assertModels(t, threads[0].Roles[0].Models)
+	})
 	t.Parallel()
 	invs := []domain.InvocationFact{
 		{
@@ -460,6 +514,21 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 }
 
 func TestSortLedgers(t *testing.T) {
+	t.Run("cost precision governs ordering rather than rounded totals", func(t *testing.T) {
+		rows := []domain.AgenticMetricsLedger{
+			{TicketID: ptr("T-A"), UpdatedAt: "2026-01-01", Totals: domain.ComputeTotals([]domain.InvocationFact{{CostUSD: 0.00002}})},
+			{TicketID: ptr("T-Z"), UpdatedAt: "2026-01-02", Totals: domain.ComputeTotals([]domain.InvocationFact{{CostUSD: 0.00001}})},
+		}
+		for _, tc := range []struct {
+			ascending     bool
+			first, second string
+		}{{true, "T-Z", "T-A"}, {false, "T-A", "T-Z"}} {
+			got := domain.SortLedgers(rows, domain.SortFieldCost, tc.ascending)
+			if *got[0].TicketID != tc.first || *got[1].TicketID != tc.second {
+				t.Fatalf("ascending=%v order=%s,%s", tc.ascending, *got[0].TicketID, *got[1].TicketID)
+			}
+		}
+	})
 	t.Parallel()
 	ledgers := []domain.AgenticMetricsLedger{
 		{
@@ -865,15 +934,15 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 			},
 		}
 
-		// On identical cost, tie-breaker should compare UpdatedAt: T-A is earlier than T-B
+		// Equal observed costs use stable identity ties in either direction.
 		asc := domain.SortLedgers(tied, domain.SortFieldCost, true)
 		if *asc[0].TicketID != "T-A" || *asc[1].TicketID != "T-B" {
 			t.Errorf("expected tie-breaker to order T-A then T-B, got %s, %s", *asc[0].TicketID, *asc[1].TicketID)
 		}
 
 		desc := domain.SortLedgers(tied, domain.SortFieldCost, false)
-		if *desc[0].TicketID != "T-B" || *desc[1].TicketID != "T-A" {
-			t.Errorf("expected tie-breaker reverse in descending, got %s, %s", *desc[0].TicketID, *desc[1].TicketID)
+		if *desc[0].TicketID != "T-A" || *desc[1].TicketID != "T-B" {
+			t.Errorf("expected stable identity tie in descending, got %s, %s", *desc[0].TicketID, *desc[1].TicketID)
 		}
 	})
 
@@ -1000,6 +1069,13 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 }
 
 func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
+	t.Run("auxiliary partial task cost is excluded from invocation totals", func(t *testing.T) {
+		facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "root", Invocations: []domain.InvocationFact{{Role: "coder", Model: "model-a", CostUSD: 1}}}}, TaskLinks: []domain.TaskLinkFact{{SubagentType: "tester", CostUSD: 2, CostEvidence: domain.PartialCost(2)}}}
+		metrics := domain.DeriveMetricsLedger(facts, domain.ProjectConfig{})
+		if metrics.Totals.Invocations != 1 || metrics.Totals.CostSummary.FullyObserved != 1 || metrics.Totals.CostSummary.Partial != 0 || metrics.Totals.CostSummary.CompleteAmount() == nil || *metrics.Totals.CostSummary.CompleteAmount() != 1 {
+			t.Fatalf("task cost leaked into invocation totals: %+v", metrics.Totals)
+		}
+	})
 	t.Parallel()
 	tid := "AL-6"
 	title := "Chronological Event Extraction"
@@ -1110,7 +1186,7 @@ func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 		}
 
 		// Invariant: totals, efficiency, roles, models must be identical
-		if metricsWithEvents.Totals != metricsWithoutEvents.Totals {
+		if !reflect.DeepEqual(metricsWithEvents.Totals, metricsWithoutEvents.Totals) {
 			t.Errorf("totals mutated by presence of events: with=%+v without=%+v",
 				metricsWithEvents.Totals, metricsWithoutEvents.Totals)
 		}

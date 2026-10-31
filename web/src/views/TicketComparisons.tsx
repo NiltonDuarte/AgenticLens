@@ -14,7 +14,7 @@ import {
   extractTicketPrefix,
   filterLedgersByPrefixes,
   filterLedgersByTicketTypes,
-  formatCurrencyUSD,
+  formatCurrencyUSD, formatCostUSD,
   formatDurationSeconds,
   formatIsoDateTimeShort,
   formatPercentage,
@@ -154,26 +154,26 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         totalTickets: 0,
         avgDurationFormatted: '0m 0s',
         avgIterations: '0.0',
-        avgCostFormatted: '$0.00',
+        avgCostFormatted: 'Unavailable',
         fleetToolSuccessPct: '0.0%',
       };
     }
 
     let totDuration = 0;
     let totIterations = 0;
-    let totCost = 0;
+    let totCost: number | null = 0;
     let totToolSuccess = 0;
 
     for (const r of filteredRows) {
       totDuration += r.active_duration_seconds;
       totIterations += r.sdlc_iterations;
-      totCost += r.cost_usd;
+      totCost = totCost === null || r.cost_usd === null ? null : totCost + r.cost_usd;
       totToolSuccess += r.tool_success_rate_pct;
     }
 
     const avgDuration = Math.round(totDuration / total);
     const avgIter = (totIterations / total).toFixed(1);
-    const avgCost = totCost / total;
+    const avgCost = totCost === null ? null : totCost / total;
     const avgToolPct = totToolSuccess / total;
 
     return {
@@ -560,7 +560,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                       <td className="mono">{row.lead_duration_formatted}</td>
                       <td className="num-col mono">{row.active_duration_formatted}</td>
                       <td className="num-col mono">{row.sdlc_iterations}</td>
-                      <td className="num-col mono">{formatCurrencyUSD(row.cost_usd)}</td>
+                      <td className="num-col mono">{formatCostUSD(row.cost_usd, row.cost_summary)}</td>
                       <td className="num-col mono">{formatPercentage(row.cache_hit_rate_pct)}</td>
                       <td className="num-col mono">{row.test_to_code_ratio}</td>
                       <td className="num-col mono">

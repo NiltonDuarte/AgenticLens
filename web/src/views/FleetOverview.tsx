@@ -2,7 +2,7 @@ import { skillSuccessRate } from '../domain/aggregations';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
-  formatCurrencyUSD,
+  formatCostUSD,
   formatPercentage,
   formatTokensK,
   extractTicketPrefix,
@@ -213,7 +213,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           <section className="kpi-row" aria-label="Fleet Key Performance Indicators">
             <KPICard
               title="Total Cost"
-              value={formatCurrencyUSD(summary.total_cost_usd)}
+              value={formatCostUSD(summary.total_cost_usd, summary.cost_summary)}
               secondary={`${summary.total_tickets} active tickets`}
               tooltip="Cumulative LLM spend across all scanned ticket workspaces"
             />
@@ -275,12 +275,14 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
             <DistributionCard
               title="Role Cost Distribution"
               items={summary.role_costs}
+              costSummaries={summary.role_cost_summaries}
               totalCostUSD={summary.total_cost_usd}
               tooltip="Breakdown of cumulative LLM inference spend categorized by agent persona role (orchestrator, coder, tester, reviewer, planner)"
             />
             <DistributionCard
               title="Model Cost Distribution"
               items={summary.model_costs}
+              costSummaries={summary.model_cost_summaries}
               totalCostUSD={summary.total_cost_usd}
               tooltip="Breakdown of cumulative LLM inference spend categorized by model family and version"
             />

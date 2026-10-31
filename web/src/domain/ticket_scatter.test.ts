@@ -44,6 +44,18 @@ describe('ticket scatter metric and scale helpers', () => {
     expect(transformScatterValue(-1, 'logarithmic')).toBeNull();
   });
 
+  it('omits unavailable cost while preserving zero and non-cost coordinates', () => {
+    const rows = [
+      { ...mockTicketComparisonRows[0]!, ticket_id: 'TEST-0', cost_usd: 0 },
+      { ...mockTicketComparisonRows[0]!, ticket_id: 'TEST-1', cost_usd: null },
+    ];
+    const financial = deriveScatterPlotData(rows, 'cost_usd', 'net_lines_added', 'linear', new Set());
+    expect(financial.points.map((point) => point.row.ticket_id)).toEqual(['TEST-0']);
+    expect(financial.unavailableCount).toBe(1);
+    const operational = deriveScatterPlotData(rows, 'active_duration_seconds', 'net_lines_added', 'linear', new Set());
+    expect(operational.points).toHaveLength(2);
+  });
+
   it('recalculates bounds from included plottable rows with ten percent padding', () => {
     const rows = [
       { ...mockTicketComparisonRows[0]!, ticket_id: 'AL-1', cost_usd: 10, lines_added: 10, lines_deleted: 0 },

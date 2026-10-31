@@ -1,7 +1,7 @@
 import React, { useId, useState } from 'react';
 import type { SkillFact, TaskLinkFact } from '../domain/types';
 import {
-  formatCurrencyUSD,
+  formatFactCostUSD,
   formatDurationSeconds,
   formatLocalDateTimeTooltip,
   formatLocalTimeWithMs,
@@ -71,7 +71,7 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
                   <td className="source-text">{task.description}</td>
                   <td>{task.parent_turn}</td>
                   <td>{task.duration_ms === undefined ? 'Unavailable' : formatDurationSeconds(task.duration_ms / 1000)}</td>
-                  <td>{task.cost_usd === undefined ? 'Unavailable' : formatCurrencyUSD(task.cost_usd)}</td>
+                  <td>{formatFactCostUSD(task.cost_usd, task.cost_evidence)}</td>
                   <td className="source-text">{task.child_session_id ? (
                     availableSessionIds.includes(task.child_session_id) ? (
                       <button type="button" className="btn-secondary child-session-jump"

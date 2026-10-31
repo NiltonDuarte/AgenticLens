@@ -15,7 +15,7 @@ func TestMigrationPreservesRepeatedRowsWithinLegacySessionOwners(t *testing.T) {
 	start, end := "2026-10-28T10:00:00Z", "2026-10-28T10:01:00Z"
 	row := domain.InvocationFact{
 		Role: "coder", Model: "model-a", StartedAt: &start, CompletedAt: &end,
-		Turns: 3, UserIterations: 2, Tokens: domain.InvocationTokens{Input: 20, Output: 5}, CostUSD: 0.125,
+		Turns: 3, UserIterations: 2, Tokens: domain.InvocationTokens{Input: 20, Output: 5}, CostUSD: 0.125, CostEvidence: domain.ObservedCost(0.125),
 	}
 	otherModel := row
 	otherModel.Model = "model-b"

@@ -285,8 +285,8 @@ describe('LandingPage View Component', () => {
     expect(workspacesCard).not.toBeNull();
     expect(workspacesCard?.textContent).toContain('2');
 
-    // Falls back to '$0.00' and '0.0%'
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    // Missing cost is unavailable; unrelated percentage fallback remains usable.
+    expect(screen.getByText('Unavailable')).toBeInTheDocument();
     expect(screen.getByText('0.0%')).toBeInTheDocument();
 
     const renderedText = container.textContent ?? '';

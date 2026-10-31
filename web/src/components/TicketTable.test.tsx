@@ -76,6 +76,23 @@ describe('TicketTable Component', () => {
     },
   ];
 
+  it('labels known partial subtotals and keeps them after complete costs in both directions', () => {
+    const rows: TicketComparisonRow[] = [
+      { ...sampleRows[0]!, ticket_id: 'TEST-3', cost_usd: null, cost_summary: { state: 'partial', known_subtotal_usd: 7, fully_observed: 1, partial: 1, unavailable: 0, total: 2 } },
+      { ...sampleRows[0]!, ticket_id: 'TEST-1', cost_usd: 0 },
+      { ...sampleRows[0]!, ticket_id: 'TEST-2', cost_usd: 2 },
+    ];
+    const { container } = render(<TicketTable rows={rows} />);
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('$7.00 known subtotal (1/2 observed, 1 partial, 0 unavailable)')).toBeInTheDocument();
+    const order = () => Array.from(container.querySelectorAll('tbody tr')).map((row) => row.querySelector('td')?.textContent);
+    const header = screen.getByText('Cost (USD)').closest('th')!;
+    fireEvent.click(header);
+    expect(order()).toEqual(['TEST-1', 'TEST-2', 'TEST-3']);
+    fireEvent.click(header);
+    expect(order()).toEqual(['TEST-2', 'TEST-1', 'TEST-3']);
+  });
+
   it('renders all rows and columns with correct health status classes', () => {
     render(<TicketTable rows={sampleRows} />);
 

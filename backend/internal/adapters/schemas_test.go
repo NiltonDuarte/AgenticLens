@@ -16,7 +16,7 @@ func TestAgenticFactLedgerDTOPreservesSkillAndTaskFacts(t *testing.T) {
 	want := domain.AgenticFactLedger{
 		SchemaVersion: &version,
 		Skills:        []domain.SkillFact{{Name: "agentic-lens-dev", TurnIndex: 1, MessageIndex: 0, CallerRole: "coder", Timestamp: "2026-10-31T10:00:00Z", Success: true}},
-		TaskLinks:     []domain.TaskLinkFact{{SubagentType: "tester", Description: "Run tests", ParentTurn: 2, ChildSession: "child-1", Timestamp: "2026-10-31T10:01:00Z"}},
+		TaskLinks:     []domain.TaskLinkFact{{SubagentType: "tester", CostEvidence: domain.UnavailableCost(), Description: "Run tests", ParentTurn: 2, ChildSession: "child-1", Timestamp: "2026-10-31T10:01:00Z"}},
 	}
 	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(want))
 	if err != nil {
@@ -194,9 +194,9 @@ func TestInvocationSerializationPreservesRowsAndSessionOwnershipWithoutID(t *tes
 	rootID := "opaque-owner"
 	started, completed := "2026-10-28T10:00:00Z", "2026-10-28T10:01:00Z"
 	rows := []domain.InvocationFact{
-		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 10}, CostUSD: 0.25},
-		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 20}, CostUSD: 0.50},
-		{Role: "reviewer", Model: "model-b", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 30}, CostUSD: 0.75},
+		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 10}, CostUSD: 0.25, CostEvidence: domain.ObservedCost(0.25)},
+		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 20}, CostUSD: 0.50, CostEvidence: domain.ObservedCost(0.50)},
+		{Role: "reviewer", Model: "model-b", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 30}, CostUSD: 0.75, CostEvidence: domain.ObservedCost(0.75)},
 	}
 	facts := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{
 		{ID: rootID, Source: domain.SourceCodex, User: "alice", Invocations: rows, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}},
@@ -901,10 +901,8 @@ func TestInvocationFactDTO_DynamicRolesAndModels(t *testing.T) {
 	t.Run("json unmarshaling with arbitrary roles and models", func(t *testing.T) {
 		t.Parallel()
 		jsonBlob := `{
-			"id": "ses-dyn-1",
 			"role": "security-auditor",
 			"model": "claude-3-7-sonnet-custom",
-			"user": "alice",
 			"cost_usd": 1.75,
 			"turns": 6,
 			"tokens": {
@@ -1401,4 +1399,54 @@ func TestSessionFactDTO_SourceRoundtripAndRequired(t *testing.T) {
 			t.Error("expected error for missing session source, got nil")
 		}
 	})
+}
+
+func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
+	legacyBase := `{"schema_version":4,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"model-a","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":1,"tokens":{"input":1,"output":0,"cache_read":0,"reasoning":0,"peak_context":1},COST"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
+	for _, tc := range []struct {
+		name, field string
+		state       domain.CostState
+		amount      float64
+	}{
+		{"historical Codex zero", `"cost_usd":0,`, domain.CostObserved, 0},
+		{"historical amount", `"cost_usd":7,`, domain.CostObserved, 7},
+		{"null", `"cost_usd":null,`, domain.CostUnavailable, 0},
+		{"omitted", "", domain.CostUnavailable, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data := []byte(strings.Replace(legacyBase, "COST", tc.field, 1))
+			if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+				t.Fatal(err)
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(data, &dto); err != nil {
+				t.Fatal(err)
+			}
+			if err := dto.Validate(); err != nil {
+				t.Fatal(err)
+			}
+			inv := dto.ToDomain().Sessions[0].Invocations[0]
+			if inv.CostEvidence.State != tc.state || inv.CostUSD != tc.amount {
+				t.Fatalf("cost=%+v", inv)
+			}
+		})
+	}
+	for _, fields := range []string{
+		`"cost_usd":0,`,
+		`"cost_usd":null,"cost_evidence":{"state":"observed","known_subtotal_usd":0},`,
+		`"cost_usd":2,"cost_evidence":{"state":"partial","known_subtotal_usd":2},`,
+		`"cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":0},`,
+		`"cost_usd":-1,"cost_evidence":{"state":"observed","known_subtotal_usd":-1},`,
+	} {
+		t.Run("v5 rejects "+fields, func(t *testing.T) {
+			data := []byte(strings.Replace(strings.Replace(legacyBase, `"schema_version":4`, `"schema_version":5`, 1), "COST", fields, 1))
+			if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
+				t.Fatal("runtime accepted contradictory/missing evidence")
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(data, &dto); err == nil {
+				t.Fatal("decoder accepted contradictory/missing evidence")
+			}
+		})
+	}
 }
