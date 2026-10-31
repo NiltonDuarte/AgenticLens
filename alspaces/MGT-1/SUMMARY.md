@@ -11,19 +11,21 @@ Verification: integration export A passed typecheck/lint, 736 frontend tests and
 Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is grounded in source session metadata with this exact worktree path. No child agents were spawned. No pre-existing MGT-1 ledger or other-harness facts existed to preserve. Billing cost is unavailable in source; any rendered zero is not a verified charge. Final extraction validates this root and Codex source; raw transcripts stay outside Git.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 66
-- **Active Agent Duration:** 1h 18m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 69
+- **Active Agent Duration:** 1h 19m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 449.9k tokens (225% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 56,339 reasoning tokens (26.9% of generated output)
-- **Tool Health & Self-Correction:** 234 tool calls (11 self-corrections, 95.3% success rate)
+- **Reasoning Effort:** 57,721 reasoning tokens (26.9% of generated output)
+- **Tool Health & Self-Correction:** 239 tool calls (13 self-corrections, 94.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- **Status:** 4 execution anomalies detected (2 CRITICAL, 2 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.6k tokens) — Context tokens reached 207.6k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.9k tokens) — Context tokens reached 449.9k, breaching the 200k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (182.1k tokens) — Context tokens reached 182.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.6k tokens) — Context tokens reached 164.6k, breaching the 160k warning ceiling.
 
 ### Agentic Execution Metrics
@@ -33,14 +35,14 @@ Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 549,589 | 152,877 | 76,451,328 | 99.3% | 449.9k | CRITICAL (225%) | $0.00 |
-| **Total** | **1** | **549,589** | **152,877** | **76,451,328** | **99.3%** | **449.9k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 2 | 736,077 | 156,613 | 77,560,576 | 99.1% | 449.9k | CRITICAL (225%) | $0.00 |
+| **Total** | **2** | **736,077** | **156,613** | **77,560,576** | **99.1%** | **449.9k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 549,589 | 152,877 | 76,451,328 | 99.3% | $0.00 |
-| **Total** | **1** | **549,589** | **152,877** | **76,451,328** | **99.3%** | **$0.00** |
+| **gpt-6.1-sol** | 2 | 736,077 | 156,613 | 77,560,576 | 99.1% | $0.00 |
+| **Total** | **2** | **736,077** | **156,613** | **77,560,576** | **99.1%** | **$0.00** |
 
 ## Iteration 02: management ticket workflow
 
@@ -107,3 +109,5 @@ Reviewed exact pushed head b84607d4483a0af54ebcea42c70643dc8e41f810 against main
 Fresh exact-head gate: OPEN/non-draft/main/MERGEABLE/CLEAN; all3 CI SUCCESS, no reviews/comments/unresolved threads, current-main ancestry. Guarded squash merge verified MERGED2026-10-31T16:08:21Z at9707d418921ca7a6f88a9e5e826a55f16323677e. Obsolete88 watch removed. Manager cleanly integrated main asbf3c4f3; post-integration make running. Own87 remains draft/external_review; only other open PR55 is human-only release. AL57 remains deferred and AL2 queued; no new approved development unblocked.
 
 Post-integration make PASSED(exit0) atbf3c4f3/current main9707d41: Go vet/race, frontend typecheck/lint,35files/741tests, canonical embedding and fourplatform builds. Frontend/embed trees identical. Log /tmp/mgt1-post-pr88-make.log. Manager application diff against main empty; no new browser/geometry/release claim. Own87 stays draft/external_review, with no auto-merge.
+
+Updated the management skill with the agreed message contract and necessary/portable/nonduplicative checks. Replaced the example with a self-contained correction brief. Scoped isolation explanations to initial assignment/transfer; historical messages remain evidence. Documentation only, initial Git status clean; no product or thread changes.
