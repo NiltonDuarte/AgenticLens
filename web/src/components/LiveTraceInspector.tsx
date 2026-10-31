@@ -254,6 +254,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   onClose,
 }) => {
   const [isSessionCopied, setIsSessionCopied] = useState(false);
+  const [isFailedToolsExpanded, setIsFailedToolsExpanded] = useState(false);
 
   if (!sessionNode) {
     return (
@@ -349,13 +350,32 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
       {hasFailedTools && trace && trace.recent_errors.length > 0 && (
         <section
           className="inspector-failed-tools-section"
-          aria-label="Failed Tool Calls"
+          aria-labelledby="failed-tools-heading"
         >
-          <h4 className="failed-tools-heading">
-            Failed Tool Calls ({trace.failed_tool_calls})
-          </h4>
-          <div className="failed-tools-cards-list">
-            {trace.recent_errors.map((errorPart, idx) => {
+          <div className="failed-tools-summary">
+            <h4 id="failed-tools-heading" className="failed-tools-heading">
+              <span className="failed-tools-badge">
+                Failed Tool Calls: {trace.failed_tool_calls}
+              </span>
+            </h4>
+            <button
+              type="button"
+              className="failed-tools-toggle-btn"
+              data-testid="failed-tools-toggle-btn"
+              aria-expanded={isFailedToolsExpanded}
+              aria-controls="failed-tools-cards"
+              aria-label={`${isFailedToolsExpanded ? 'Hide' : 'Show'} failed tool call details`}
+              onClick={() => setIsFailedToolsExpanded((expanded) => !expanded)}
+            >
+              {isFailedToolsExpanded ? 'Hide details' : 'Show details'}
+            </button>
+          </div>
+          <div
+            className="failed-tools-cards-list"
+            id="failed-tools-cards"
+            hidden={!isFailedToolsExpanded}
+          >
+            {isFailedToolsExpanded && trace.recent_errors.map((errorPart, idx) => {
               const matchedAlert = findMatchingLiveAlert(errorPart, trace.anomalies);
               const streakCount = extractStreakCount(matchedAlert);
               const parentMsg = trace.messages.find((m) =>
