@@ -31,3 +31,15 @@ Coder focused Go tests and 136 focused frontend tests passed; reused those resul
 No blocking code findings remain. Parent owns final integration, telemetry and delivery.
 
 APPROVED
+
+## Integration recheck
+
+Reviewed integrated head 4af99a8579435f9b66fb3e23ec6d8fa55c29183a, which merges origin/main containing upstream 3857fa2 into the approved implementation ac376a7. Compared git diff origin/main...HEAD and the ac376a7-to-merge delta at the overlapping schema/OpenCode boundaries. Integrated application diff against origin/main has SHA256 61eaecb49fce16593612ffab3b0308dba2d10f25a0c5c131950f60b5261be745.
+
+The clean merge preserves upstream strict source extraction, malformed-message/part rejection before backfill replacement, source iteration error handling, and nil skills/task-links normalization. The new extraction strict flag and dispatch remain independent of retired content classification. Nested retired-field decode compatibility still uses adapter-local placeholders and strict unknown-field rejection; session identity/source/parent, tool-count and duplicate validation remains upstream-equivalent except for intentionally removed content-count validation. Current runtime source paths and DTO writes do not reintroduce content warnings. Search still finds retired identifiers only in read compatibility and its regression fixture.
+
+No integration finding requires code or test changes. git diff --check passed. The parent's post-integration full make is running; its result must be recorded before delivery. This recheck did not repeat suites while that gate runs. Code audit remains APPROVED.
+
+## Parent final integration verification
+
+Full `make` passed at integrated commit 4af99a8 after merging origin/main 3857fa2. All Go race suites/vet, frontend typecheck/lint, 741 frontend tests and four platform builds executed successfully. Generated asset trees are identical and ignored. The standalone host binary served byte-identical index, JS and CSS; its temporary server was stopped. Version/help and diff checks passed. This completes the previously pending parent integration gate; browser geometry remains untested. No application changes followed the reviewed integrated diff.
