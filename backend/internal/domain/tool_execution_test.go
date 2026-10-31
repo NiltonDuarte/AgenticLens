@@ -34,3 +34,39 @@ func TestClassifyToolExecutionCapsErrorMessage(t *testing.T) {
 		t.Fatalf("expected an error message capped at 2048 characters, got %#v", result.ErrorMessage)
 	}
 }
+
+func TestClassifyToolContent(t *testing.T) {
+	for _, tc := range []struct {
+		name, tool, output string
+		want               bool
+	}{
+		{"compiler", "bash", "main.go:12:4: syntax error: unexpected token", true},
+		{"typescript", "exec_command", "error TS2322: incompatible types", true},
+		{"traceback", "bash", "Traceback (most recent call last):\n  File test.py", true},
+		{"panic", "bash", "panic: invariant violated", true},
+		{"rejection", "bash", "UnhandledPromiseRejectionWarning: missing await", true},
+		{"test assertion", "bash", "--- FAIL: TestInvariant (0.00s)", true},
+		{"inspection", "read", "panic: invariant violated", false},
+		{"search", "grep", "error: copied diagnostic", false},
+		{"ordinary prose", "bash", "No syntax errors were found", false},
+		{"clean", "bash", "all checks passed", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ClassifyToolContent(tc.tool, tc.output)
+			if got.HasContentError != tc.want {
+				t.Fatalf("got %+v, want content error %v", got, tc.want)
+			}
+			if tc.want {
+				if got.ErrorSnippet == nil || got.Category == "" || got.Severity == SeverityNone {
+					t.Fatalf("missing diagnostic evidence: %+v", got)
+				}
+				if execution := ClassifyToolExecution(tc.tool, "completed", tc.output, 0); execution.IsError {
+					t.Fatalf("content altered execution: %+v", execution)
+				}
+			}
+			if got := ClassifyCompletedToolContent(tc.tool, "error", tc.output, true); got.HasContentError {
+				t.Fatal("failed execution counted as content warning")
+			}
+		})
+	}
+}

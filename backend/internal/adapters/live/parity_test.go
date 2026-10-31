@@ -58,18 +58,25 @@ func TestOfflineAndLiveToolExecutionParity(t *testing.T) {
 	if len(tools) != 3 {
 		t.Fatalf("expected 3 offline tool facts, got %d", len(tools))
 	}
-	var offlineErrors int64
+	var offlineErrors, offlineContent int64
 	for _, tool := range tools {
 		offlineErrors += tool.Errors
+		offlineContent += tool.ContentErrors
 	}
 	if int(offlineErrors) != trace.FailedToolCalls {
 		t.Fatalf("offline errors=%d, live failed calls=%d", offlineErrors, trace.FailedToolCalls)
 	}
 
+	if offlineContent != 1 || trace.ContentErrors != 1 {
+		t.Fatalf("content totals offline=%d live=%d", offlineContent, trace.ContentErrors)
+	}
 	statuses := make(map[string]string)
 	for _, event := range offlineEvents {
 		if event.ToolName != nil {
 			statuses[event.EventID] = event.Status
+			if event.EventID == "opencode:part:p_semantic" && (!event.HasContentError || event.Status != "completed" || event.ContentErrorSnippet == nil) {
+				t.Fatalf("offline diagnostic lost: %+v", event)
+			}
 		}
 	}
 	liveStatuses := make(map[string]string)
@@ -77,6 +84,9 @@ func TestOfflineAndLiveToolExecutionParity(t *testing.T) {
 		for _, part := range message.Parts {
 			if part.Type == "tool" {
 				liveStatuses["opencode:part:"+part.ID] = part.Status
+				if part.ID == "p_semantic" && (!part.HasContentError || part.IsError || part.ContentErrorSnippet == nil) {
+					t.Fatalf("live diagnostic lost: %+v", part)
+				}
 			}
 		}
 	}

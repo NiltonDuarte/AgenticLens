@@ -60,14 +60,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
 
-- **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
-  - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
-  - **Phase**: Phase 7 (v1 Feature / Observability)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
-
 - **AL-57**: Represent Unavailable Telemetry Cost as Nullable
   - **Subsystem**: Domain / Adapters / CLI / Presentation / Tests
   - **Phase**: Phase 8 (Schema Evolution / Cost Accuracy)
