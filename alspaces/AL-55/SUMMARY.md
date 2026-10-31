@@ -1,5 +1,7 @@
 # AL-55 work summary
 
+Current status: implementation and reconciled specification lifecycle complete locally; independent review APPROVED and final integrated make passed. PR delivery follows final source telemetry. Earlier planning-only status and older-binary notes below are historical.
+
 ## Iteration 01: grounding and proposal
 
 Status: planning delivered; scope reconciliation and explicit user approval pending. AL-55 is not completed. No application implementation, test execution, historical backfill or full make gate is claimed.
@@ -17,18 +19,23 @@ Independent telemetry source: Codex root 01a19267-636b-7d61-85c6-db8d3d3eba77; e
 No PR opened at this approval gate. Manager owns subsequent reconciliation and merge ordering; no merge, auto-merge or release action performed.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 3m 16s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 72.9k tokens (37% of 200k healthy ceiling, 0 compactions) | Subagents peak 76.2k (Planner)
+- **Software Development Life Cycle Iterations:** 6
+- **Active Agent Duration:** 34m 18s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 155.2k tokens (78% of 200k healthy ceiling, 0 compactions) | Subagents peak 179.9k (Reviewer)
 - **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 2 turns) | Planner 2.0
-- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 882 reasoning tokens (6.6% of generated output)
-- **Tool Health & Self-Correction:** 35 tool calls (4 self-corrections, 88.6% success rate)
+- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 4 turns) | Planner 4.0, Coder 2.0, Tester 1.0, Reviewer 1.0
+- **Test-to-Production Code Ratio:** 1.2:1 (+640 test lines / +525 prod lines)
+- **Code Delivered:** +1,165 / -320 lines across 12 code files (excluding docs)
+- **Reasoning Effort:** 15,745 reasoning tokens (15.9% of generated output)
+- **Tool Health & Self-Correction:** 228 tool calls (21 self-corrections, 90.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 5 execution anomalies detected (2 CRITICAL, 3 WARNING).
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> coder (12 cycles) — Subagent roles 'tester' and 'coder' alternated for 12 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer (5 cycles) — Subagent roles 'tester' and 'reviewer' alternated for 5 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.5k tokens) — Context tokens reached 161.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.3k tokens) — Context tokens reached 164.3k, breaching the 160k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: planner <-> coder (3 cycles) — Subagent roles 'planner' and 'coder' alternated for 3 consecutive cycles.
 
 ### Agentic Execution Metrics
 
@@ -37,17 +44,18 @@ No PR opened at this approval gate. Manager owns subsequent reconciliation and m
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 72,132 | 6,286 | 775,808 | 91.5% | 76.2k | HEALTHY | $0.00 |
-| **rootagent** | 1 | 71,226 | 6,113 | 1,556,992 | 95.6% | 72.9k | HEALTHY | $0.00 |
-| **Total** | **2** | **143,358** | **12,399** | **2,332,800** | **94.2%** | **76.2k** | **HEALTHY** | **$0.00** |
+| **planner** | 1 | 87,978 | 11,483 | 1,568,640 | 94.7% | 95.9k | HEALTHY | $0.00 |
+| **coder** | 1 | 125,601 | 18,558 | 7,505,024 | 98.4% | 154.4k | ELEVATED | $0.00 |
+| **tester** | 1 | 146,955 | 19,989 | 7,977,344 | 98.2% | 179.1k | ELEVATED | $0.00 |
+| **reviewer** | 1 | 176,334 | 8,495 | 3,937,664 | 95.7% | 179.9k | ELEVATED | $0.00 |
+| **rootagent** | 1 | 150,775 | 24,562 | 12,913,152 | 98.8% | 155.2k | ELEVATED | $0.00 |
+| **Total** | **5** | **687,643** | **83,087** | **33,901,824** | **98.0%** | **179.9k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 2 | 143,358 | 12,399 | 2,332,800 | 94.2% | $0.00 |
-| **Total** | **2** | **143,358** | **12,399** | **2,332,800** | **94.2%** | **$0.00** |
-
-Telemetry verification: generation succeeded with exactly the independent Codex root and expected planner child, correct parent linkage and Codex source. No manager/PO sessions were included. This is a planning snapshot through generation; later handoff/commit operations are outside that snapshot. No prior AL-55 ledger existed. CLI provenance is recorded above.
+| **gpt-6.1-sol** | 5 | 687,643 | 83,087 | 33,901,824 | 98.0% | $0.00 |
+| **Total** | **5** | **687,643** | **83,087** | **33,901,824** | **98.0%** | **$0.00** |
 
 ## Approved implementation delivery
 
@@ -62,3 +70,11 @@ Tester reproduced and verified fixes for actual file-read nil defaults and malfo
 Completeness remains bounded by known stored owners and discovery. It does not prove unavailable history contains no unknown sessions. Retained skill/task collections may be older than successfully refreshed trees; command diagnostics explicitly acknowledge this accepted limitation. No historical production ledger was backfilled as part of this implementation. Shared specification lifecycle remains deferred pending PO documentation handoff; AL-55 alone is In Progress in the index.
 
 Parent verification on reviewed implementation diff over 858a7eb: full `make` passed (Go vet/race all packages, frontend typecheck/lint, 35 Vitest files / 750 tests, embedded frontend build and Linux/Darwin cross-builds). Existing React act warnings and dependency audit notices were nonfatal; no dependency files changed. Actual locally built CLI backfill/migrate/generate help checked. Main integration with merged PO specification 92a6fd2 remains the next required delivery gate.
+
+Manager handed off merged PO documentation PR #85 at main 92a6fd2e6db5d383b53f9bcde86c871e9008b8b9. Integrated at 9ec21abf5bdfcdfc9add3c83a056257fbc5a0b40; product code unchanged by this merge. Reconciled AL-55 specification moved to done and its index entry removed; PO-17 historical artifacts and AL2-9 index addition retained. Final integrated verification follows.
+
+Final integrated verification: `make` passed at 9ec21abf5bdfcdfc9add3c83a056257fbc5a0b40 plus AL-55 lifecycle/documentation diff, based on origin/main 92a6fd2e6db5d383b53f9bcde86c871e9008b8b9. Product files are byte-for-byte unchanged from reviewed implementation commit a6cbc25 through the PO documentation integration. All Go vet/race packages, frontend typecheck/lint, 35 Vitest files / 750 tests, frontend embedding and four Linux/Darwin builds passed. No check was silently skipped. `web/dist` and Go embed dist match (3 assets), and the embedded web package test passed. Fresh host binary reports commit 9ec21ab, build 2026-10-31T15:27:23Z; its backfill/migrate/generate help was executed. Release/browser/real unavailable-history recovery and hosted PR CI were not verified locally. Independent review remains APPROVED for unchanged product. Raw full-gate log stays outside Git at /tmp/al55-final-make.log.
+
+Final own source-tree expectation: Codex root 01a19267-636b-7d61-85c6-db8d3d3eba77, planner 01a19267-a66a-71b1-a7e8-cf880007ce6b, coder 01a19286-06d4-7881-acd0-580111b793e6, tester 01a19288-d362-7201-a246-3b42d554ef27 and reviewer 01a1928d-556d-7232-9753-245d9283cea7. Metadata confirms all four children link to the own root; manager/PO roots are excluded. Existing own root/planner ledger facts must refresh cumulatively, not duplicate; no other harness existed in the prior ledger. The final generation uses this worktree's freshly built host binary, explicit source/root and literal nonce. Snapshot ends at extraction; subsequent verification/commit/PR handoff operations cannot be included in that snapshot. Costs in the generated ledger are source/tool-derived session telemetry, not product cost-contract changes or manufactured evidence.
+
+Final telemetry verification passed: exactly the independent Codex root and four expected children, correct parent linkage/source, existing root/planner identities preserved without duplicates. No prior cross-harness sessions existed. No manager/PO root was ingested.

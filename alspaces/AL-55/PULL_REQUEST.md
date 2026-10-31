@@ -6,4 +6,4 @@ Existing global source-backfill obligations require all known owners across requ
 
 Keeps schema v4, optional wire fields, existing migration chain and backup interfaces. No cost or UI changes. Recovery is bounded by known owners and discovery; retained collections can be older than refreshed sessions.
 
-See [contract](CONTRACT.md), [summary](SUMMARY.md) and [iteration plan](iterations/01/PLAN.md). Shared specification lifecycle is deferred pending the manager's PO handoff. Manager owns merge sequencing; no auto-merge or release action is requested.
+See [contract](CONTRACT.md), [summary](SUMMARY.md) and [iteration plan](iterations/01/PLAN.md). The reconciled specification moves to done after PO-17 handoff and only AL-55 is removed from the active index. Manager owns merge sequencing; no auto-merge or release action is requested.
