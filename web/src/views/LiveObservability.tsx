@@ -1,18 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import type {
   LiveAnomalyAlert,
   LiveSessionNode,
   LiveSessionTree as LiveSessionTreeType,
-  LiveTraceView,
 } from '../domain/live';
 import {
   type ConnectionStatus,
   fetchLiveSessionTree,
-  fetchLiveTrace,
   subscribeToLiveStream,
 } from '../api/liveApi';
 import { LiveSessionTree } from '../components/LiveSessionTree';
 import { LiveTraceInspector } from '../components/LiveTraceInspector';
+import { useLiveTrace } from '../hooks/useLiveTrace';
 import { LiveAnomalyBanner } from '../components/LiveAnomalyBanner';
 
 export interface LiveObservabilityProps {
@@ -55,10 +54,14 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [sessionTree, setSessionTree] = useState<LiveSessionTreeType>(EMPTY_TREE);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [traceView, setTraceView] = useState<LiveTraceView | null>(null);
-  const [loadingTrace, setLoadingTrace] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+
+  const selectedNode = selectedSessionId
+    ? findSessionNode(sessionTree.root_sessions, selectedSessionId)
+    : null;
+  const { trace: traceView, loading: loadingTrace, error: traceError, onTraceUpdate, captureRefresh } =
+    useLiveTrace(selectedSessionId, isPaused, selectedNode);
 
   const handleSelectSession = useCallback((sessionId: string) => {
     setSelectedSessionId(sessionId);
@@ -74,53 +77,26 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
     setRetryCount((prev) => prev + 1);
   }, []);
 
+  const manualOwner = useRef<object | null>(null);
+  useLayoutEffect(() => {
+    manualOwner.current = {};
+    return () => { manualOwner.current = null; };
+  }, [selectedSessionId, isPaused, retryCount]);
+
   const handleManualRefresh = useCallback(async () => {
+    const owner = manualOwner.current;
+    const refreshTrace = captureRefresh();
+    refreshTrace();
     try {
       const tree = await fetchLiveSessionTree();
+      if (manualOwner.current !== owner) return;
       setSessionTree(tree);
-      if (selectedSessionId) {
-        setLoadingTrace(true);
-        const trace = await fetchLiveTrace(selectedSessionId);
-        setTraceView(trace);
-        setLoadingTrace(false);
-      }
       setErrorMessage(null);
     } catch (err: unknown) {
-      const errObj = err instanceof Error ? err : new Error(String(err));
-      setErrorMessage(errObj.message);
-      setLoadingTrace(false);
+      if (manualOwner.current !== owner) return;
+      setErrorMessage(err instanceof Error ? err.message : String(err));
     }
-  }, [selectedSessionId]);
-
-  // Load trace when selected session changes
-  useEffect(() => {
-    if (!selectedSessionId) {
-      setTraceView(null);
-      setLoadingTrace(false);
-      return;
-    }
-
-    let isSubscribed = true;
-    setLoadingTrace(true);
-    void fetchLiveTrace(selectedSessionId)
-      .then((trace) => {
-        if (isSubscribed) {
-          setTraceView(trace);
-          setLoadingTrace(false);
-        }
-      })
-      .catch((err: unknown) => {
-        if (isSubscribed) {
-          const errObj = err instanceof Error ? err : new Error(String(err));
-          setErrorMessage(errObj.message);
-          setLoadingTrace(false);
-        }
-      });
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [selectedSessionId]);
+  }, [captureRefresh]);
 
   // Reactive streaming lifecycle
   useEffect(() => {
@@ -129,12 +105,15 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
       return;
     }
 
+    let subscribed = true;
     const unsubscribe = subscribeToLiveStream({
       onSessionTree: (tree) => {
+        if (!subscribed) return;
         setSessionTree(tree);
         setErrorMessage(null);
       },
       onAnomalyAlert: (alert: LiveAnomalyAlert) => {
+        if (!subscribed) return;
         setSessionTree((prev) => {
           const alreadyExists = prev.active_anomalies.some(
             (a) => a.session_id === alert.session_id && a.rule_name === alert.rule_name
@@ -148,30 +127,22 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
           };
         });
       },
-      onTraceUpdate: (trace: LiveTraceView) => {
-        setSelectedSessionId((currentId) => {
-          if (currentId === trace.session_id) {
-            setTraceView(trace);
-          }
-          return currentId;
-        });
-      },
+      onTraceUpdate: (trace) => { if (subscribed) onTraceUpdate(trace); },
       onStatusChange: (status) => {
+        if (!subscribed) return;
         setConnectionStatus(status);
       },
       onError: (err) => {
+        if (!subscribed) return;
         setErrorMessage(err.message);
       },
     });
 
     return () => {
+      subscribed = false;
       unsubscribe();
     };
-  }, [isPaused, retryCount]);
-
-  const selectedNode = selectedSessionId
-    ? findSessionNode(sessionTree.root_sessions, selectedSessionId)
-    : null;
+  }, [isPaused, retryCount, onTraceUpdate]);
 
   return (
     <div className="live-observability-view" data-testid="live-observability-view">
@@ -200,9 +171,9 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
             </span>
           )}
 
-          {errorMessage && connectionStatus !== 'error' && (
+          {(traceError || errorMessage) && connectionStatus !== 'error' && (
             <span className="status-bar-error" role="alert">
-              Error: {errorMessage}
+              Error: {traceError || errorMessage}
             </span>
           )}
         </div>
@@ -272,6 +243,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
 
         <div className="live-split-pane right-inspector-pane">
           <LiveTraceInspector
+            key={selectedSessionId ?? 'no-selection'}
             sessionNode={selectedNode}
             trace={traceView?.session_id === selectedSessionId ? traceView : null}
             availableSessionIds={sessionIds(sessionTree.root_sessions)}

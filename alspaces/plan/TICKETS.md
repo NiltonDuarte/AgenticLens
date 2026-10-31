@@ -6,6 +6,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+
 ---
 
 ## Ready
@@ -50,13 +51,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
-- **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
-  - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
 
 - **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
   - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
@@ -65,14 +59,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-53 dedicated skills and subagents autopsy panel in ticket deep dive.md`
-
-- **AL-54**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
-  - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
 
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
@@ -98,7 +84,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-52, AL-53, AL-54
+  - **Blocked by**: AL-52, AL-53
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
 

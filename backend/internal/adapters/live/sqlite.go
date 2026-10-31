@@ -1,6 +1,7 @@
 package live
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	_ "modernc.org/sqlite"
 )
@@ -47,6 +49,9 @@ type SQLiteHook struct {
 	db            *sql.DB
 	dbPath        string
 	busyTimeoutMs int
+	revisionMu    sync.Mutex
+	revisionConn  *sql.Conn
+	revisionEpoch uint64
 }
 
 // OpenReadOnlyHook opens a read-only SQLite database connection configured with non-blocking pragmas.
@@ -128,12 +133,49 @@ func (h *SQLiteHook) DB() *sql.DB {
 	return h.db
 }
 
-// Close closes the underlying SQLite database connection pool.
-func (h *SQLiteHook) Close() error {
-	if h.db != nil {
-		return h.db.Close()
+// SourceRevision identifies changes committed through other SQLite connections.
+// data_version is comparable only on the same connection, so retain one observer.
+type SourceRevision struct {
+	Connection uint64
+	Version    int64
+}
+
+func (h *SQLiteHook) SourceRevision(ctx context.Context) (SourceRevision, error) {
+	h.revisionMu.Lock()
+	defer h.revisionMu.Unlock()
+	if h.db == nil {
+		return SourceRevision{}, errors.New("database handle is nil")
 	}
-	return nil
+	if h.revisionConn == nil {
+		conn, err := h.db.Conn(ctx)
+		if err != nil {
+			return SourceRevision{}, fmt.Errorf("opening source revision observer: %w", err)
+		}
+		h.revisionConn = conn
+		h.revisionEpoch++
+	}
+	var version int64
+	if err := h.revisionConn.QueryRowContext(ctx, "PRAGMA data_version").Scan(&version); err != nil {
+		closeErr := h.revisionConn.Close()
+		h.revisionConn = nil
+		return SourceRevision{}, fmt.Errorf("reading source revision: %w", errors.Join(err, closeErr))
+	}
+	return SourceRevision{Connection: h.revisionEpoch, Version: version}, nil
+}
+
+// Close closes the observer before its underlying SQLite connection pool.
+func (h *SQLiteHook) Close() error {
+	h.revisionMu.Lock()
+	defer h.revisionMu.Unlock()
+	var observerErr error
+	if h.revisionConn != nil {
+		observerErr = h.revisionConn.Close()
+		h.revisionConn = nil
+	}
+	if h.db != nil {
+		return errors.Join(observerErr, h.db.Close())
+	}
+	return observerErr
 }
 
 // SessionExists checks if a session with the given ID exists in the database.

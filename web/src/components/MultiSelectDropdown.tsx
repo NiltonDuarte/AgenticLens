@@ -16,6 +16,7 @@ export interface MultiSelectDropdownProps {
   readonly ariaLabel?: string;
   readonly testId?: string;
   readonly className?: string;
+  readonly collapseCompleteSelection?: boolean;
 }
 
 export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
@@ -29,6 +30,7 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
   ariaLabel,
   testId,
   className,
+  collapseCompleteSelection = true,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,14 +98,14 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
       } else {
         const next = [...selectedValues, value];
         // If all available options are now selected, default back to 'all'
-        if (options.length > 0 && next.length === options.length) {
+        if (collapseCompleteSelection && options.length > 0 && next.length === options.length) {
           onChange(['all']);
         } else {
           onChange(next);
         }
       }
     },
-    [isAllSelected, selectedValues, onChange, options.length]
+    [isAllSelected, selectedValues, onChange, options.length, collapseCompleteSelection]
   );
 
   const displaySummary = (): string => {

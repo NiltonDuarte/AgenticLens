@@ -2,7 +2,7 @@
 
 - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
-- **Status**: Ready
+- **Status**: Done
 - **Blocked by**: None
 - **Blocks**: AL-55
 
@@ -61,3 +61,7 @@ Implement pure domain aggregations for skill usage statistics across ticket ledg
 - View components tested with Vitest.
 - All Go and TypeScript tests pass (`make check`).
 - Zero emojis across all code, tests, and documentation.
+
+## Delivery status (2026-10-31)
+
+Implemented and reviewed in AL-54; see `alspaces/AL-54/SUMMARY.md` for verification and delivery evidence.
