@@ -500,10 +500,6 @@ func extractSchemaV1Sessions(
 
 			classification := domain.ClassifyToolExecution(toolName, stat, out, tAcc.consecutiveErrors)
 			isError := classification.IsError
-			content := domain.ClassifyCompletedToolContent(toolName, stat, out, isError)
-			if content.HasContentError {
-				tAcc.contentErrors++
-			}
 
 			if isError {
 				tAcc.errors++
@@ -533,16 +529,16 @@ func extractSchemaV1Sessions(
 
 			tName := toolName
 			events = append(events, domain.EventFact{
-				EventID:      partID,
-				Timestamp:    ts,
-				SessionID:    sID,
-				MessageID:    msgIDPtr,
-				Turn:         turn,
-				Role:         role,
-				EventType:    domain.EventTypeToolCall,
-				ToolName:     &tName,
-				Status:       eventStatus,
-				ErrorMessage: classification.ErrorMessage, HasContentError: content.HasContentError, ContentSeverity: string(content.Severity), ContentErrorSnippet: content.ErrorSnippet,
+				EventID:       partID,
+				Timestamp:     ts,
+				SessionID:     sID,
+				MessageID:     msgIDPtr,
+				Turn:          turn,
+				Role:          role,
+				EventType:     domain.EventTypeToolCall,
+				ToolName:      &tName,
+				Status:        eventStatus,
+				ErrorMessage:  classification.ErrorMessage,
 				DurationMs:    durMs,
 				ContextTokens: ctxTokens,
 				ToolInput:     toolInput,
@@ -561,7 +557,7 @@ func extractSchemaV1Sessions(
 		toolsBySession[key.sessionID] = append(toolsBySession[key.sessionID], domain.SessionToolFact{
 			Name:   key.toolName,
 			Calls:  tStats.calls,
-			Errors: tStats.errors, ContentErrors: tStats.contentErrors,
+			Errors: tStats.errors,
 		})
 	}
 	for sid := range toolsBySession {
@@ -577,14 +573,14 @@ func extractSchemaV1Sessions(
 	eventsBySession := make(map[string][]domain.SessionEventFact)
 	for _, ev := range events {
 		eventsBySession[ev.SessionID] = append(eventsBySession[ev.SessionID], domain.SessionEventFact{
-			EventID:   ev.EventID,
-			Timestamp: ev.Timestamp,
-			MessageID: ev.MessageID,
-			Turn:      ev.Turn,
-			Role:      ev.Role,
-			EventType: ev.EventType,
-			ToolName:  ev.ToolName,
-			Status:    ev.Status, HasContentError: ev.HasContentError, ContentSeverity: ev.ContentSeverity, ContentErrorSnippet: ev.ContentErrorSnippet,
+			EventID:          ev.EventID,
+			Timestamp:        ev.Timestamp,
+			MessageID:        ev.MessageID,
+			Turn:             ev.Turn,
+			Role:             ev.Role,
+			EventType:        ev.EventType,
+			ToolName:         ev.ToolName,
+			Status:           ev.Status,
 			ErrorMessage:     ev.ErrorMessage,
 			DurationMs:       ev.DurationMs,
 			ContextTokens:    ev.ContextTokens,

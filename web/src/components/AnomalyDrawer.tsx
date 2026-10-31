@@ -60,8 +60,8 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   };
 
   const display = anomaly ? formatAnomaly(anomaly) : undefined;
-  const title = display?.title ?? (event?.has_content_error ? 'Tool Content Warning' : event?.status === 'error' ? 'Tool Execution Failure' : 'Execution Details');
-  const errorMessage = event?.error_message ?? event?.content_error_snippet;
+  const title = display?.title ?? (event?.status === 'error' ? 'Tool Execution Failure' : 'Execution Details');
+  const errorMessage = event?.error_message;
 
   const ctx = anomaly?.context;
   const turn = ctx?.turn ?? event?.turn;
@@ -88,7 +88,7 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
 
     const description =
       display?.description ||
-      (event?.has_content_error ? `Semantic content warning: ${errorMessage ?? "diagnostic output"}` : errorMessage ? `Execution error: ${errorMessage}` : 'An execution anomaly was detected.');
+      (errorMessage ? `Execution error: ${errorMessage}` : 'An execution anomaly was detected.');
 
     const errorDetails =
       errorMessage ||
@@ -150,7 +150,6 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
         </div>
 
         <div className="drawer-body">
-          {event?.has_content_error && <section className="drawer-section text-content-error"><h4>Semantic content warning</h4><p>The tool completed successfully, but its output contains diagnostics. Execution failure metrics are unchanged.</p></section>}
           {/* Rule Diagnosis Section */}
           {anomaly && (
             <section className="drawer-section">

@@ -1290,10 +1290,10 @@ func TestSchemaV1ExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID
 		t.Errorf("expected grep errors=0, got %+v", grepTool)
 	}
 
-	// Inspection output containing panic text does not establish execution failure.
+	// A saved panic example does not establish an execution failure.
 	globTool, ok := toolMap["glob"]
 	if !ok || globTool.Errors != 0 {
-		t.Errorf("expected glob errors=0 for inspection output, got %+v", globTool)
+		t.Errorf("expected glob errors=0 for inspected panic example, got %+v", globTool)
 	}
 
 	// webfetch: 1 call completed -> 0 errors despite "Error:" in output
@@ -1337,7 +1337,7 @@ func TestSchemaV1ExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID
 				}
 			case "glob":
 				if ev.Status != "completed" {
-					t.Errorf("expected completed status for glob inspection output, got %s", ev.Status)
+					t.Errorf("expected completed status for inspected panic example, got %s", ev.Status)
 				}
 			case "grep", "webfetch":
 				if ev.Status != "completed" {

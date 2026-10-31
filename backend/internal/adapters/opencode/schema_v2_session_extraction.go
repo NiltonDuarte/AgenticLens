@@ -281,12 +281,8 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 						outputParts = append(outputParts, c.Text)
 					}
 					output := strings.Join(outputParts, "\n")
-					content := domain.ClassifyCompletedToolContent(name, stat, output, failed)
-					if content.HasContentError {
-						ta.contentErrors++
-					}
 					input := normalizeToolInput(part.State.Input)
-					events = append(events, domain.EventFact{EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, HasContentError: content.HasContentError, ContentSeverity: string(content.Severity), ContentErrorSnippet: content.ErrorSnippet, ToolInput: input, ToolOutput: schemaV2StringPointer(output)})
+					events = append(events, domain.EventFact{EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: schemaV2StringPointer(output)})
 				}
 			default:
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: unsupported message type %q for message %s in session %s", m.kind, m.id, s.id)
@@ -337,7 +333,7 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 		}
 		invocationSessions = append(invocationSessions, domain.SessionFact{ID: s.id, ParentID: parent, Source: domain.SourceOpenCode, User: user, Invocations: invocations})
 		for name, a := range toolStats {
-			tools = append(tools, domain.ToolFact{SessionID: s.id, Name: name, Calls: a.calls, Errors: a.errors, ContentErrors: a.contentErrors})
+			tools = append(tools, domain.ToolFact{SessionID: s.id, Name: name, Calls: a.calls, Errors: a.errors})
 		}
 	}
 	sort.Slice(tools, func(i, j int) bool {

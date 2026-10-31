@@ -44,21 +44,18 @@ type LiveSessionTree struct {
 
 // LivePartFact captures a granular execution part (tool invocation, reasoning block, or compaction).
 type LivePartFact struct {
-	HasContentError     bool            `json:"has_content_error"`
-	ContentSeverity     string          `json:"content_severity,omitempty"`
-	ContentErrorSnippet *string         `json:"content_error_snippet,omitempty"`
-	ID                  string          `json:"id"`
-	Type                string          `json:"type"`
-	ToolName            *string         `json:"tool_name,omitempty"`
-	InputSnippet        string          `json:"input_snippet"`
-	OutputSnippet       string          `json:"output_snippet"`
-	Status              string          `json:"status"`
-	IsError             bool            `json:"is_error"`
-	ErrorMessage        *string         `json:"error_message,omitempty"`
-	Severity            FailureSeverity `json:"severity"`
-	SkillName           string          `json:"skill_name,omitempty"`
-	ChildSessionID      string          `json:"child_session_id,omitempty"`
-	SubagentType        string          `json:"subagent_type,omitempty"`
+	ID             string          `json:"id"`
+	Type           string          `json:"type"`
+	ToolName       *string         `json:"tool_name,omitempty"`
+	InputSnippet   string          `json:"input_snippet"`
+	OutputSnippet  string          `json:"output_snippet"`
+	Status         string          `json:"status"`
+	IsError        bool            `json:"is_error"`
+	ErrorMessage   *string         `json:"error_message,omitempty"`
+	Severity       FailureSeverity `json:"severity"`
+	SkillName      string          `json:"skill_name,omitempty"`
+	ChildSessionID string          `json:"child_session_id,omitempty"`
+	SubagentType   string          `json:"subagent_type,omitempty"`
 }
 
 // LiveMessageFact captures a chat message turn with associated execution parts.
@@ -79,7 +76,6 @@ type LiveMessageFact struct {
 
 // LiveTraceView captures the full chronological execution trace and error summary for a target session.
 type LiveTraceView struct {
-	ContentErrors   int                `json:"content_errors"`
 	SessionID       string             `json:"session_id"`
 	Messages        []LiveMessageFact  `json:"messages"`
 	TotalToolCalls  int                `json:"total_tool_calls"`

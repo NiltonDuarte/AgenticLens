@@ -299,8 +299,7 @@ function isEventFact(value: unknown): value is EventFact {
     typeof value.role === 'string' && typeof value.status === 'string' &&
     (value.event_type === 'tool_call' || value.event_type === 'turn_message' || value.event_type === 'compaction') &&
     typeof value.context_tokens === 'number' && Number.isFinite(value.context_tokens) &&
-    (value.has_content_error === undefined || typeof value.has_content_error === 'boolean') &&
-    ['content_severity', 'content_error_snippet', 'event_id', 'message_id', 'tool_name', 'error_message', 'prompt_content',
+    ['event_id', 'message_id', 'tool_name', 'error_message', 'prompt_content',
       'reasoning_content', 'tool_input', 'tool_output'].every((field) => isOptionalString(value[field])) &&
     (value.duration_ms === null || isOptionalNumber(value.duration_ms));
 }

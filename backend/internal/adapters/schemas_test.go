@@ -97,6 +97,47 @@ func TestCanonicalV4NestedEventsReadCompatibilityAndMetadata(t *testing.T) {
 	}
 }
 
+func TestCanonicalRetiredContentFieldsReadCompatibility(t *testing.T) {
+	// This is a self-contained ledger in the shape emitted before content
+	// classification was removed. Reading it must not require source hydration.
+	const raw = `{"schema_version":4,"ticket_id":"TEST-101","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"anomalies":[],"tools":[{"name":"command","calls":2,"errors":1,"content_errors":1}],"events":[{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"command","status":"completed","context_tokens":1234,"has_content_error":true,"content_severity":"medium","content_error_snippet":"syntax error: bad name"}]}]}`
+	if err := adapters.ValidateRuntimeFactLedger([]byte(raw)); err != nil {
+		t.Fatal(err)
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal([]byte(raw), &dto); err != nil {
+		t.Fatal(err)
+	}
+	if err := dto.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	facts := dto.ToDomain()
+	tools, events := facts.ToolFacts(), facts.EventFacts()
+	if len(facts.Sessions) != 1 || facts.Sessions[0].Source != domain.SourceCodex || len(tools) != 1 || tools[0] != (domain.ToolFact{SessionID: "owner", Name: "command", Calls: 2, Errors: 1}) {
+		t.Fatalf("existing tool/source facts lost: %+v", facts)
+	}
+	if len(events) != 1 || events[0].EventID != "call-1" || events[0].SessionID != "owner" || events[0].Status != "completed" || events[0].ContextTokens != 1234 {
+		t.Fatalf("existing event facts lost: %+v", events)
+	}
+	for _, projection := range []adapters.AgenticFactLedgerDTO{dto, adapters.AgenticFactLedgerDTOFromDomain(facts)} {
+		encoded, err := json.Marshal(projection)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, retired := range []string{"content_errors", "has_content_error", "content_severity", "content_error_snippet"} {
+			if strings.Contains(string(encoded), `"`+retired+`"`) {
+				t.Fatalf("retired field %s re-emitted: %s", retired, encoded)
+			}
+		}
+	}
+	for _, existing := range []string{`"content_errors":1`, `"content_severity":"medium"`} {
+		invalid := strings.Replace(raw, existing, existing+`,"unknown_field":true`, 1)
+		if err := json.Unmarshal([]byte(invalid), &dto); err == nil || !strings.Contains(err.Error(), "unknown_field") {
+			t.Fatalf("unrelated unknown field must still be rejected: %v", err)
+		}
+	}
+}
+
 func TestValidateRuntimeFactLedgerRejectsLegacyVersionsBeforeFacts(t *testing.T) {
 	for _, version := range []int{1, 2, 3} {
 		t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {
@@ -1360,43 +1401,4 @@ func TestSessionFactDTO_SourceRoundtripAndRequired(t *testing.T) {
 			t.Error("expected error for missing session source, got nil")
 		}
 	})
-}
-
-func TestCanonicalContentDiagnosticsPersistWithoutHydration(t *testing.T) {
-	for _, content := range []bool{false, true} {
-		t.Run(fmt.Sprint(content), func(t *testing.T) {
-			extraTool, extraEvent := "", ""
-			if content {
-				extraTool = `,"content_errors":1`
-				extraEvent = `,"has_content_error":true,"content_severity":"medium","content_error_snippet":"syntax error: bad name"`
-			}
-			raw := `{"schema_version":4,"ticket_id":"GEN-999","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"anomalies":[],"tools":[{"name":"bash","calls":2,"errors":0` + extraTool + `}],"events":[{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"completed","context_tokens":0` + extraEvent + `}]}]}`
-			var dto adapters.AgenticFactLedgerDTO
-			if err := json.Unmarshal([]byte(raw), &dto); err != nil {
-				t.Fatal(err)
-			}
-			if err := dto.Validate(); err != nil {
-				t.Fatal(err)
-			}
-			facts := dto.ToDomain()
-			if got := facts.ToolFacts()[0]; got.Errors != 0 || got.ContentErrors != map[bool]int64{false: 0, true: 1}[content] {
-				t.Fatalf("tools=%+v", got)
-			}
-			encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
-			if err != nil {
-				t.Fatal(err)
-			}
-			var persisted adapters.AgenticFactLedgerDTO
-			if err := json.Unmarshal(encoded, &persisted); err != nil {
-				t.Fatal(err)
-			}
-			restored := persisted.ToDomain()
-			if content {
-				events := restored.EventFacts()
-				if len(events) != 1 || !events[0].HasContentError || events[0].Status != "completed" || events[0].ContentErrorSnippet == nil || *events[0].ContentErrorSnippet != "syntax error: bad name" {
-					t.Fatalf("persisted diagnostic lost: %s", encoded)
-				}
-			}
-		})
-	}
 }

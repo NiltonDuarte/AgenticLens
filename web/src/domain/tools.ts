@@ -4,7 +4,6 @@ export interface ToolUsageSummary {
   readonly name: string;
   readonly calls: number;
   readonly errors: number;
-  readonly content_errors?: number;
 }
 
 export function aggregateToolUsage(facts: readonly ToolFact[]): ToolUsageSummary[] {
@@ -15,7 +14,6 @@ export function aggregateToolUsage(facts: readonly ToolFact[]): ToolUsageSummary
       name: fact.name,
       calls: (current?.calls ?? 0) + fact.calls,
       errors: (current?.errors ?? 0) + fact.errors,
-      content_errors: (current?.content_errors ?? 0) + (fact.content_errors ?? 0),
     });
   }
   return [...byName.values()].sort((left, right) => left.name.localeCompare(right.name));

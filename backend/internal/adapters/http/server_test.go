@@ -2187,9 +2187,9 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 		t.Fatal(err)
 	}
 	ledgerJSON := `{"schema_version":4,"ticket_id":"FIX-12","sessions":[
-		{"id":"session-a","source":"opencode","user":"tester","invocations":[],"tools":[{"name":"bash","calls":6,"errors":3,"content_errors":1}],"events":[
+		{"id":"session-a","source":"opencode","user":"tester","invocations":[],"tools":[{"name":"bash","calls":6,"errors":3}],"events":[
 			{"event_id":"late","timestamp":"2026-10-29T11:00:00Z","turn":3,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","context_tokens":2400},
-			{"event_id":"early","timestamp":"2026-10-29T10:00:00Z","message_id":"message","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"completed","has_content_error":true,"content_severity":"medium","content_error_snippet":"syntax error: bad name","duration_ms":0,"context_tokens":1200},
+			{"event_id":"early","timestamp":"2026-10-29T10:00:00Z","message_id":"message","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","duration_ms":0,"context_tokens":1200},
 			{"timestamp":"2026-10-29T10:00:00Z","turn":2,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","context_tokens":1300}],"anomalies":[]},
 		{"id":"session-b","source":"codex","user":"tester","invocations":[],"tools":[],"events":[
 			{"event_id":"tie","timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"tester","event_type":"turn_message","status":"completed","context_tokens":0}],"anomalies":[]}]}`
@@ -2234,9 +2234,6 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 		t.Fatal(err)
 	}
 	baseline := detail.Ledger.Facts.EventFacts()
-	if detail.Ledger.Facts.ToolFacts()[0].ContentErrors != 1 {
-		t.Fatal("detail lost content count")
-	}
 	if len(baseline) != 4 || len(detail.Anomalies) == 0 {
 		t.Fatalf("detail lost recorded events/summaries: %#v", detail)
 	}
@@ -2277,9 +2274,6 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 			handler.ServeHTTP(rec, req)
 			if rec.Code != http.StatusOK {
 				t.Fatalf("events failed: %d %s", rec.Code, rec.Body.String())
-			}
-			if !strings.Contains(rec.Body.String(), `"has_content_error":true`) || !strings.Contains(rec.Body.String(), `"content_error_snippet":"syntax error: bad name"`) {
-				t.Fatalf("wire lost diagnostic: %s", rec.Body.String())
 			}
 			var response domain.WorkspaceEventsResponse
 			if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {

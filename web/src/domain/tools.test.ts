@@ -5,11 +5,11 @@ describe('aggregateToolUsage', () => {
   it('groups session-scoped facts by tool name and sums counts', () => {
     expect(aggregateToolUsage([
       { session_id: 'session-a', name: 'bash', calls: 4, errors: 1 },
-      { session_id: 'session-b', name: 'bash', calls: 6, errors: 2, content_errors: 2 },
+      { session_id: 'session-b', name: 'bash', calls: 6, errors: 2 },
       { session_id: 'session-a', name: 'read', calls: 3, errors: 0 },
     ])).toEqual([
-      { name: 'bash', calls: 10, errors: 3, content_errors: 2 },
-      { name: 'read', calls: 3, errors: 0, content_errors: 0 },
+      { name: 'bash', calls: 10, errors: 3 },
+      { name: 'read', calls: 3, errors: 0 },
     ]);
   });
 
