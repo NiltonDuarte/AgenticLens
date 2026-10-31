@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact, LiveAnomalyAlert } from '../domain/live';
-import { formatTokensK, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge } from '../domain/formatters';
+import {
+  formatTokensK,
+  truncateMiddle,
+  formatLocalTimeWithMs,
+  formatLocalDateTimeTooltip,
+  getClientTimezoneBadge,
+} from '../domain/formatters';
 import { FailedToolAlertCard } from './FailedToolAlertCard';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { findMatchingLiveAlert, extractStreakCount } from '../domain/anomalies';
@@ -77,7 +83,7 @@ const LiveMessagePartItem: React.FC<MessagePartProps> = ({
         </span>
         {part.id && (
           <div className="debug-id-token-group">
-            <span className="debug-id-token mono">{part.id}</span>
+            <span className="debug-id-token mono" title={part.id}>{truncateMiddle(part.id)}</span>
             <button
               type="button"
               className="btn-copy-id"
@@ -160,10 +166,12 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
           <span className={`turn-role-pill role-${message.role.toLowerCase()}`}>
             {message.role.toUpperCase()}
           </span>
-          <span className="turn-timestamp" title={formatLocalDateTimeTooltip(message.timestamp)}>{formatLocalTimeWithMs(message.timestamp)}</span>
+          <span className="turn-timestamp" title={formatLocalDateTimeTooltip(message.timestamp)}>
+            {formatLocalTimeWithMs(message.timestamp)}
+          </span>
           {message.id && (
             <div className="debug-id-token-group">
-              <span className="debug-id-token mono">{message.id}</span>
+              <span className="debug-id-token mono" title={message.id}>{truncateMiddle(message.id)}</span>
               <button
                 type="button"
                 className="btn-copy-id"
