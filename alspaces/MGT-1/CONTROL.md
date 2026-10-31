@@ -4,7 +4,7 @@ User authority: supervise existing PR/ticket threads and merge eligible non-rele
 
 ## Merge sequence
 
-#76 -> #79 -> #75 -> AL-47 startup fix follow-up PR -> #77 -> #78 after fixes. #81 documentation is assessed independently; #80 carries the management skill and final control record. Re-evaluate each step against the actual current main and head. Only the manager merges. No auto-merge or admin bypass.
+#76 -> #79 -> #75 -> #82 (AL-47 startup fix) -> #77 -> #78 after fixes. #81 documentation is assessed independently; #80 carries the management skill and final control record. Re-evaluate each step against the actual current main and head. Only the manager merges. No auto-merge or admin bypass.
 
 ## Inventory at iteration 03 start (2026-10-31)
 
@@ -15,6 +15,7 @@ User authority: supervise existing PR/ticket threads and merge eligible non-rele
 | #75 / AL-52 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/0be8de86-b6fc-472f-ad32-ff0fc1f14958> | 308e8ddecc5a80c50c9db8fcf44d8f8fc528e957 | merged: 2026-10-31T14:00:38Z, merge commit 6bc1064943ae22e1b6586a6d145543c6a9cd23f2 |
 | #77 / AL-53 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/1c5e661f-8d54-4dea-9fac-031fcbdca9ee> | dff7f7dbab8bad3991d2ce4cbde08d24e736835f | blocked: reviewed frontend delivery pushed; confirmed startup defect awaits AL-47 fix, not merge-ready |
 | #78 / AL-43 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/dac7fd2e-e9fe-4388-a3ed-aaae48b4a83c> | bf575e1afd66ba17a82c5fbc1c4f3b3a2e65fcc8 | blocked_on_integration: F3/F4 fixed/reviewed and all three checks passed; TICKETS.md conflicts with main; hold until #75/#77 merged |
+| #82 / AL-47 startup correction | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/b0b881e1-41dd-4183-ae5e-8c7539cac75a> | c7a36d003459ce43da9fa3f40783576a4fd5d572 | waiting_checks: production subscription ordering fix, deterministic old-handler-failing regression, full gate and review passed; priority before #77 |
 | #80 / MGT-1 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/182ba150-f00a-4e23-b3af-5b085ef7b50f> | 40ee4b695172b302368d7b73d530b12fa370426d | preparing: this management skill and control record |
 | #81 / GEN-14 independent telemetry audit | recorded owner <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/7b8bd224-24ce-4495-bb4c-39a605235612> | 7d7b9fca47569dbad3ee0673fbb96d4cafad8df7 | ready at base #76: three exact-head checks passed and no review blockers; queued after product integrations to avoid changing their verified base |
 | #55 / release 2.1.0 | human | 03c5d1e9a1e25a551dd20f6fcc041be144f1416a | human_only: no agent merge/auto-merge; changes requested and no check runs at capture |
@@ -86,3 +87,9 @@ Held #77 head dff7f7dbab8bad3991d2ce4cbde08d24e736835f fetched and matched GitHu
 Exact proof source /tmp/al53-sse-ordering-proof.go, proof output /tmp/al53-sse-ordering-proof.log and failed gate /tmp/al53-integration-make.log passed to AL-47 owner via clientRequestId mgt1-iter03-al47-proof-source-path. #77 owner backend investigation stopped; no Go fix/bypass. Current-head CI running but any green result is insufficient to clear the known defect. Await verified AL-47 follow-up merge, then explicit instruction to integrate and run fresh full gate.
 
 #77 check notification verified: all three checks SUCCESS on unchanged held head dff7f7dbab8bad3991d2ce4cbde08d24e736835f, mergeability CLEAN. The deterministic startup defect and original full-gate failure remain unresolved at this head; no merge attempted and no owner instruction changed. Existing AL-47 fix and subsequent integrated full-gate requirements remain mandatory.
+
+## AL-47 correction PR #82 reviewed, awaiting CI
+
+New PR #82 at c7a36d003459ce43da9fa3f40783576a4fd5d572, fix/AL-47-sse-startup-subscription. Manager fetched the actual head, verified current-main ancestry6bc1064, confirmed no backend/web changes since tested c72eb25317e8b6317448a08100364940402cd319, and inspected the complete two-file code/test diff. Subscribe/deferred unsubscribe now precedes header flush and initial snapshot; initial tree precedes queued events. Existing real SQLite/service regression gates initial snapshot while actual broadcaster publishes, asserts subscription existed and initial event ordering, then retains mutation/REST assertions. Lifecycle cases exercise cancellation during snapshot and recovery after snapshot error with concrete service. No timeout weakening or skipped guard. Owner reports old-handler deterministic FAIL, repeated race cases and package suites PASS, independent reviewer APPROVED, full make PASS (736 frontend tests/35files/all Go race/checks/four binaries), embedded/Node-free assets verified, clean tree and nine preserved/source-backed AL-47 sessions without manager root. Limits retained.
+
+GitHub head matches, OPEN/non-draft/main/MERGEABLE, backend/frontend CI IN_PROGRESS; reviews/comments/unresolved threads empty. Do not merge until all exact-head checks pass and readiness is rechecked. #76 remains only original delivery; #82 carries this correction. Next: guarded #82 merge, release #77 for actual fix integration/fresh full gate, then #78. Existing #77/#78 holds unchanged.
