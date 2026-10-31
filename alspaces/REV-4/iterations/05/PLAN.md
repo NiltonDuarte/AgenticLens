@@ -52,3 +52,11 @@ Parent updates the current score catalog to actual remaining AST identities, sor
 ## Completion
 
 All 42 selected donors removed with the seven DELETE and 35 MERGE obligations verified; five independent guards retained at unchanged scores. Tester and reviewer completed; reviewer APPROVED. Implementation committed as 3ab3ece; main already up to date. Full post-integration make passed, including all 712 frontend cases and four target builds. Catalog: 1,155 sorted entries validated. Final telemetry and PR delivery follow.
+
+## Routine main integration follow-up
+
+Source: user requested "merge main into branch". Initial tree was clean at `13d6b57bef1964a245251a9b8c03d489cd801ce4`. Fetched origin/main `575bb78`; merged with ort and no conflicts as `ca1fec8b8a681c813a23c0cc162850a96b15a5c4`. This is routine integration within iteration 05, not a new acceptance scope.
+
+Upstream changes are contributor/technical guidance, regression-prevention documentation and REV-3 historical artifacts. No backend, frontend or Makefile changes came from the merge, so the accepted test reductions, five retained guards and source/catalog identities remain unchanged. No prior approval or behavioral guarantee is superseded.
+
+Reviewed the new docs/REGRESSION_PREVENTION.md checklist and owning guidance. Applicable integration cases: real full make stages with frontend dependencies/assets present, current embed tree and standalone binary, preserving task-owned source, and final Codex root/child provenance. New boundary implementation and absent/repeated build-path experiments are not applicable: this merge changes no build/CI/runtime paths. Full post-merge verification results are recorded in SUMMARY.md.

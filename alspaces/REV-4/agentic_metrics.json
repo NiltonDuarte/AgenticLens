@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
   "ticket_id": "REV-4",
-  "ticket_title": "Consolidate verified low-score tests and retain independent guards",
-  "ticket_type": "test",
+  "ticket_title": "Integrate main into the REV-4 branch",
+  "ticket_type": "chore",
   "started_at": "2026-10-31T02:17:54.850Z",
-  "completed_at": "2026-10-31T10:05:27.078Z",
-  "updated_at": "2026-10-31T10:05:29.825792+00:00",
+  "completed_at": "2026-10-31T10:44:15.754Z",
+  "updated_at": "2026-10-31T10:44:19.770279+00:00",
   "code": {
     "lines_added": 243,
     "lines_deleted": 2673,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 21,
-    "sdlc_iterations": 7
+    "sdlc_iterations": 10
   },
   "sessions": [
     {
@@ -26,25 +26,25 @@
           "role": "RootAgent",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T02:17:56.414Z",
-          "completed_at": "2026-10-31T10:05:27.078Z",
-          "active_duration_seconds": 2212,
-          "turns": 6,
+          "completed_at": "2026-10-31T10:44:15.754Z",
+          "active_duration_seconds": 3818,
+          "turns": 9,
           "tokens": {
-            "input": 659152,
-            "output": 118546,
-            "cache_read": 49086208,
-            "reasoning": 52229,
-            "peak_context": 392385
+            "input": 776075,
+            "output": 126800,
+            "cache_read": 57459328,
+            "reasoning": 56495,
+            "peak_context": 417880
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 7
+          "user_iterations": 10
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 134,
+          "calls": 146,
           "errors": 2
         },
         {
@@ -98,7 +98,7 @@
           "severity": "CRITICAL",
           "context": {
             "role": "RootAgent",
-            "context_tokens": 392385,
+            "context_tokens": 417880,
             "threshold": "200000"
           }
         },

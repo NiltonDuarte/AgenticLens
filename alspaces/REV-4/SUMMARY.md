@@ -43,15 +43,15 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - Final review inventory checks passed; only REV-4 documentation and generated telemetry are task-owned changes.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 7
-- **Active Agent Duration:** 1h 11m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 392.4k tokens (196% of 200k healthy ceiling, 0 compactions) | Subagents peak 394.2k (Planner)
+- **Software Development Life Cycle Iterations:** 10
+- **Active Agent Duration:** 1h 38m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 417.9k tokens (209% of 200k healthy ceiling, 0 compactions) | Subagents peak 394.2k (Planner)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 243:0 (+243 test lines / +0 prod lines)
 - **Code Delivered:** +243 / -2,673 lines across 21 code files (excluding docs)
-- **Reasoning Effort:** 70,912 reasoning tokens (26.4% of generated output)
-- **Tool Health & Self-Correction:** 343 tool calls (6 self-corrections, 98.3% success rate)
+- **Reasoning Effort:** 75,178 reasoning tokens (26.7% of generated output)
+- **Tool Health & Self-Correction:** 355 tool calls (6 self-corrections, 98.3% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 19 execution anomalies detected (11 CRITICAL, 8 WARNING).
@@ -86,14 +86,14 @@ Every declaration was inventoried and screened; detailed body/production inspect
 | **coder** | 4 | 208,117 | 20,638 | 5,861,504 | 96.6% | 317.5k | BLOATED (159%) | $0.00 |
 | **tester** | 3 | 154,090 | 22,519 | 7,399,552 | 98.0% | 321.2k | BLOATED (161%) | $0.00 |
 | **reviewer** | 3 | 192,953 | 12,884 | 5,135,616 | 96.4% | 330.4k | BLOATED (165%) | $0.00 |
-| **rootagent** | 1 | 659,152 | 118,546 | 49,086,208 | 98.7% | 392.4k | BLOATED (196%) | $0.00 |
-| **Total** | **14** | **1,783,577** | **197,820** | **75,445,376** | **97.7%** | **394.2k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 776,075 | 126,800 | 57,459,328 | 98.7% | 417.9k | CRITICAL (209%) | $0.00 |
+| **Total** | **14** | **1,900,500** | **206,074** | **83,818,496** | **97.8%** | **417.9k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 14 | 1,783,577 | 197,820 | 75,445,376 | 97.7% | $0.00 |
-| **Total** | **14** | **1,783,577** | **197,820** | **75,445,376** | **97.7%** | **$0.00** |
+| **gpt-6.1-sol** | 14 | 1,900,500 | 206,074 | 83,818,496 | 97.8% | $0.00 |
+| **Total** | **14** | **1,900,500** | **206,074** | **83,818,496** | **97.8%** | **$0.00** |
 
 ## Iteration 02: approved candidate deletion
 
@@ -254,3 +254,15 @@ Reviewer APPROVED iteration 05 with no blocking findings; independently audited 
 - Iteration 05 coder source: `01a19160-536d-7353-a8e3-06d46ace1943` with parent `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`.
 
 Final iteration 05 telemetry validated: all 14 actual Codex source sessions present with correct parent IDs and nonempty invocations. All nine prior ledger sessions preserved; original root refreshed and five new children included. Ticket type test. Actual billed cost remains unavailable rather than established zero.
+
+## Routine main integration follow-up
+
+Source: user requested "merge main into branch". Initial tree was clean at `13d6b57bef1964a245251a9b8c03d489cd801ce4`. Fetched origin/main `575bb78`; merged with ort and no conflicts as `ca1fec8b8a681c813a23c0cc162850a96b15a5c4`. This is routine integration within iteration 05, not a new acceptance scope.
+
+Upstream changes are contributor/technical guidance, regression-prevention documentation and REV-3 historical artifacts. No backend, frontend or Makefile changes came from the merge, so the accepted test reductions, five retained guards and source/catalog identities remain unchanged. No prior approval or behavioral guarantee is superseded.
+
+Reviewed the new docs/REGRESSION_PREVENTION.md checklist and owning guidance. Applicable integration cases: real full make stages with frontend dependencies/assets present, current embed tree and standalone binary, preserving task-owned source, and final Codex root/child provenance. New boundary implementation and absent/repeated build-path experiments are not applicable: this merge changes no build/CI/runtime paths. Full post-merge verification results are recorded in SUMMARY.md.
+
+Main-merge verification at `ca1fec8`: full make exited 0, including dependency/assets preparation, Go vet/race checks, frontend typecheck/lint, all 712 frontend cases across 34 files, and four binary builds. Current HTML/JS/CSS bytes verified in the standalone Linux executable. No source/test/Makefile diff from the previously approved 13d6b57 state. No stages skipped. Existing reviewed behavior and confidence limits remain unchanged.
+
+Main-merge final telemetry verified: original Codex root and all 13 existing children preserved/refreshed, correct parent IDs and nonempty invocations. No new children expected. Type chore reflects integration work; unavailable billed cost remains explicitly unknown in this summary.

@@ -94,3 +94,13 @@ Independently ran `git diff --check` successfully and recomputed the implementat
 Full backend race verification and the required post-integration `make`, canonical frontend build/embedded assets and standalone binary checks remain parent-owned gates. No new reviewer test suite, controlled timing benchmark, mutation-equivalence proof, coverage percentage, browser geometry or real-network/release exercise is claimed. This verdict covers the identified implementation fingerprint, refreshed catalog and frozen candidate scope.
 
 Status: APPROVED.
+
+## Parent integration addendum
+
+Source: user requested "merge main into branch". Initial tree was clean at `13d6b57bef1964a245251a9b8c03d489cd801ce4`. Fetched origin/main `575bb78`; merged with ort and no conflicts as `ca1fec8b8a681c813a23c0cc162850a96b15a5c4`. This is routine integration within iteration 05, not a new acceptance scope.
+
+Upstream changes are contributor/technical guidance, regression-prevention documentation and REV-3 historical artifacts. No backend, frontend or Makefile changes came from the merge, so the accepted test reductions, five retained guards and source/catalog identities remain unchanged. No prior approval or behavioral guarantee is superseded.
+
+Reviewed the new docs/REGRESSION_PREVENTION.md checklist and owning guidance. Applicable integration cases: real full make stages with frontend dependencies/assets present, current embed tree and standalone binary, preserving task-owned source, and final Codex root/child provenance. New boundary implementation and absent/repeated build-path experiments are not applicable: this merge changes no build/CI/runtime paths. Full post-merge verification results are recorded in SUMMARY.md.
+
+Parent post-merge gate at ca1fec8 passed full make (712 frontend cases, Go race/vet, typecheck/lint, canonical assets, four target binaries). Embedded bytes verified in standalone Linux binary; implementation source is unchanged from 13d6b57. No new independent source review was necessary for this documentation-only upstream merge.
