@@ -601,12 +601,12 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "  --ticket-id <id>       Target single ticket identifier to filter backfill operation\n")
 		fmt.Fprintf(out, "  --recompute-git        Recompute Git code facts and SDLC iterations from repository history\n")
 		fmt.Fprintf(out, "  --code-ref <ref>        Required with --recompute-git; branch or commit to compare with configured base\n")
-		fmt.Fprintf(out, "  --recompute-db         Recompute OpenCode invocations and tool facts from local SQLite DB\n")
+		fmt.Fprintf(out, "  --recompute-db         Refresh complete selected-source snapshots without --force; retain unavailable history\n")
 		fmt.Fprintf(out, "  --migrate-schema       Upgrade telemetry ledger schema versions to latest supported version\n")
 		fmt.Fprintf(out, "  --dry-run              Preview planned migrations without writing changes to disk\n")
 		fmt.Fprintf(out, "  --update-summaries     Idempotently update SUMMARY.md markdown metrics tables\n")
 		fmt.Fprintf(out, "  --db-path <path>       Explicit path to OpenCode SQLite database file\n")
-		fmt.Fprintf(out, "  --force                Force migration and recompute even if ledger is already completed\n")
+		fmt.Fprintf(out, "  --force                Repeat completed-ledger processing; never bypass preservation or enable fallbacks\n")
 		fmt.Fprintf(out, "  --allow-fallbacks      Allow heuristic session discovery fallbacks (title match, workspace commit range) when exact session IDs are not found in DB\n")
 	}
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help" || args[0] == "-help") {
@@ -620,12 +620,12 @@ func runBackfill(args []string) {
 	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
 	recomputeGitFlag := backfillFlags.Bool("recompute-git", false, "Recompute Git code facts and SDLC iterations from repository history")
 	codeRefFlag := backfillFlags.String("code-ref", "", "Git branch or commit to compare with the configured base when recomputing code facts")
-	recomputeDBFlag := backfillFlags.Bool("recompute-db", false, "Recompute OpenCode invocations and tool facts from local SQLite DB")
+	recomputeDBFlag := backfillFlags.Bool("recompute-db", false, "Refresh complete selected-source snapshots without --force; retain unavailable history")
 	migrateSchemaFlag := backfillFlags.Bool("migrate-schema", false, "Upgrade telemetry ledger schema versions to latest supported version")
 	dryRunFlag := backfillFlags.Bool("dry-run", false, "Preview planned migrations without writing changes to disk")
 	updateSummariesFlag := backfillFlags.Bool("update-summaries", false, "Idempotently update SUMMARY.md markdown metrics tables")
 	dbPathFlag := backfillFlags.String("db-path", "", "Explicit path to OpenCode SQLite database file")
-	forceFlag := backfillFlags.Bool("force", false, "Force migration and recompute even if ledger is already completed")
+	forceFlag := backfillFlags.Bool("force", false, "Repeat completed-ledger processing; never bypass preservation or enable fallbacks")
 	allowFallbacksFlag := backfillFlags.Bool("allow-fallbacks", false, "Allow heuristic session discovery fallbacks (title match, workspace commit range) when exact session IDs are not found in DB")
 
 	if err := backfillFlags.Parse(args); err != nil {
@@ -716,7 +716,7 @@ func runBackfill(args []string) {
 	if opts.RecomputeGit {
 		fmt.Printf("Git Code Ref:                %s\n", opts.CodeRef)
 	}
-	fmt.Printf("Recompute OpenCode DB:       %t\n", opts.RecomputeDB)
+	fmt.Printf("Recompute Source Facts:       %t\n", opts.RecomputeDB)
 	fmt.Printf("Migrate Schema:              %t\n", opts.MigrateSchema)
 	fmt.Printf("Update Markdown Summaries:   %t\n", opts.UpdateSummaries)
 	fmt.Printf("Force Migration:             %t\n", opts.Force)
@@ -750,7 +750,7 @@ func runBackfill(args []string) {
 		}
 		notes := res.Notes
 		if len(res.PendingSteps) > 0 {
-			notes = fmt.Sprintf("pending: [%s]", strings.Join(res.PendingSteps, ", "))
+			notes = strings.TrimSpace(fmt.Sprintf("%s; pending: [%s]", notes, strings.Join(res.PendingSteps, ", ")))
 		}
 		if res.Error != nil {
 			notes = fmt.Sprintf("error: %v", res.Error)
@@ -770,6 +770,7 @@ func runBackfill(args []string) {
 	fmt.Println("--------------------------------------------------------------------------------")
 	fmt.Printf("Summary: Scanned: %d | Updated: %d | Skipped: %d | Completed: %d | Partial: %d\n",
 		report.Scanned, report.Updated, report.Skipped, report.Completed, report.Partial)
+	fmt.Printf("Refresh diagnostics: Incomplete: %d | Retained skill/task snapshots: %d (session trees may be newer)\n", report.RefreshIncomplete, report.CollectionsRetained)
 
 	if report.SchemaMigration != nil {
 		fmt.Println("--------------------------------------------------------------------------------")

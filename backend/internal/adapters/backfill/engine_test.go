@@ -154,37 +154,54 @@ func TestBackfillEngine_CleansCompletedMigrationMetadata(t *testing.T) {
 }
 
 func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing.T) {
-	tempDir := t.TempDir()
-	ticketID := "AL-RECOMPUTE-COMPLETED"
-	version := domain.CurrentSchemaVersion
-	ledger := domain.AgenticFactLedger{
-		SchemaVersion: &version,
-		TicketID:      &ticketID,
-		Sessions:      sessionFactsWithInvs([]testInvFact{{SessionID: "inv-existing", Role: "coder", Model: "model"}}, nil, nil),
-		Migration: &domain.MigrationInfo{
-			SchemaVersion:  domain.CurrentSchemaVersion,
-			Status:         domain.MigrationStatusCompleted,
-			StepsCompleted: []string{domain.MigrationStepSourceBackfill},
-			StepsPending:   []string{},
-		},
-	}
-	createTestWorkspace(t, tempDir, ticketID, ledger)
-
-	report, err := NewEngine().Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      ticketID,
-		RecomputeDB:   true,
-		DBPath:        filepath.Join(tempDir, "missing.db"),
-		Source:        "opencode",
-	})
-	if err != nil {
-		t.Fatalf("backfill execute failed: %v", err)
-	}
-	if report.Updated != 1 || report.Skipped != 0 || report.Partial != 1 {
-		t.Fatalf("explicit database recompute must process the selected ledger: %+v", report)
-	}
-	if len(report.Results) != 1 || report.Results[0].Skipped {
-		t.Fatalf("selected ledger was silently skipped: %+v", report.Results)
+	for _, metadata := range []bool{false, true} {
+		for _, available := range []bool{false, true} {
+			t.Run(fmt.Sprintf("metadata=%t/source=%t", metadata, available), func(t *testing.T) {
+				root := t.TempDir()
+				ticket := "CUSTOM-RECOMPUTE"
+				version := domain.CurrentSchemaVersion
+				ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, Sessions: sessionFactsWithInvs([]testInvFact{{SessionID: "inv-existing", Role: "coder", Model: "stale"}}, nil, nil)}
+				if metadata {
+					ledger.Migration = &domain.MigrationInfo{SchemaVersion: version, Status: domain.MigrationStatusCompleted, StepsCompleted: []string{domain.MigrationStepSourceBackfill}, StepsPending: []string{}}
+				}
+				workspace := createTestWorkspace(t, root, ticket, ledger)
+				dbPath := filepath.Join(root, "source.db")
+				if available {
+					setupMockOpenCodeDB(t, dbPath, "inv-existing", ticket)
+				}
+				report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(report.Results) != 1 || report.Results[0].Error != nil || report.Results[0].Skipped {
+					t.Fatalf("explicit refresh failed/skipped: %+v", report.Results)
+				}
+				updated, data := readRecoveryLedger(t, workspace)
+				if updated.Migration != nil {
+					t.Fatalf("optional refresh created migration requirement: %+v", updated.Migration)
+				}
+				if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+					t.Fatalf("canonical baseline became ineligible: %v", err)
+				}
+				if available {
+					if !report.Results[0].DBUpdated || updated.Sessions[0].Invocations[0].Tokens.Input != 1000 {
+						t.Fatalf("full cumulative snapshot not refreshed: %+v", updated.Sessions)
+					}
+				} else {
+					if !report.Results[0].RefreshIncomplete || len(report.Results[0].Diagnostics) == 0 || updated.Sessions[0].Invocations[0].Model != "stale" {
+						t.Fatalf("optional failure not preserved/reported: %+v", report.Results)
+					}
+				}
+				routine, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", DBPath: dbPath})
+				if err != nil || routine.Skipped != 1 {
+					t.Fatalf("routine completed skip lost: %+v %v", routine, err)
+				}
+				_, after := readRecoveryLedger(t, workspace)
+				if string(after) != string(data) {
+					t.Fatal("routine skip rewrote ledger")
+				}
+			})
+		}
 	}
 }
 
@@ -264,7 +281,7 @@ func TestBackfillEngine_MigrationThenSourceBackfillMakesLedgerReady(t *testing.T
 		t.Fatal(err)
 	}
 	metricPath := filepath.Join(workspace, "agentic_metrics.json")
-	legacy := `{"schema_version":3,"ticket_id":"AL-SOURCE-BACKFILL","ticket_title":"Source recovery","code":{"sdlc_iterations":0},"sessions":[]}`
+	legacy := `{"schema_version":3,"ticket_id":"AL-SOURCE-BACKFILL","ticket_title":"Source recovery","code":{"sdlc_iterations":0},"sessions":[{"id":"source-session","source":"opencode","user":"unknown","invocations":[],"tools":[]}]}`
 	if err := os.WriteFile(metricPath, []byte(legacy), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +390,7 @@ func TestBackfillEngine_SourceBackfillFailuresRemainPendingAndRuntimeIneligible(
 	}
 }
 
-func TestBackfillEngine_RecomputeDBPreservesExactZeroSteeringTurns(t *testing.T) {
+func TestBackfillEngine_RecomputeDBPreservesGitAndExactZeroInvocationSteering(t *testing.T) {
 	tempDir := t.TempDir()
 	ticketID := "AL-ZERO-TURNS"
 	ledger := domain.AgenticFactLedger{
@@ -408,8 +425,11 @@ func TestBackfillEngine_RecomputeDBPreservesExactZeroSteeringTurns(t *testing.T)
 	if err := json.Unmarshal(data, &updated); err != nil {
 		t.Fatalf("decode updated ledger: %v", err)
 	}
-	if updated.Code.SDLCIterations != 0 {
-		t.Fatalf("expected exact zero steering turns, got %d", updated.Code.SDLCIterations)
+	if updated.Code.SDLCIterations != 4 {
+		t.Fatalf("database-only recompute changed Git facts: %d", updated.Code.SDLCIterations)
+	}
+	if len(updated.Sessions) != 1 || len(updated.Sessions[0].Invocations) != 1 || updated.Sessions[0].Invocations[0].UserIterations != 0 {
+		t.Fatalf("source-confirmed zero invocation steering changed: %+v", updated.Sessions)
 	}
 }
 
@@ -508,12 +528,9 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		t.Fatalf("machine B backfill failed: %v", err)
 	}
 
-	// tidA is already completed, so it is skipped. tidB is updated from partial to completed!
-	if reportB.Skipped != 1 {
-		t.Errorf("expected 1 skipped (tidA), got %d", reportB.Skipped)
-	}
-	if reportB.Completed != 1 {
-		t.Errorf("expected 1 completed (tidB), got %d", reportB.Completed)
+	// Explicit recompute processes both; unavailable A preserves its eligible baseline while B completes.
+	if reportB.Skipped != 0 || reportB.Completed != 2 || reportB.RefreshIncomplete != 1 {
+		t.Errorf("expected B recovery and eligible A optional failure, got %+v", reportB)
 	}
 
 	// Verify tidB is now completed with fresh invocations from machine B db
@@ -988,8 +1005,8 @@ func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
 	if discoveries != 1 {
 		t.Fatalf("expected one rollout tree discovery, got %d", discoveries)
 	}
-	if len(report.Results) != 1 || !report.Results[0].DBUpdated || !report.Results[0].DBFound {
-		t.Fatalf("successful tree refresh was not reported: %+v", report.Results)
+	if len(report.Results) != 1 || !report.Results[0].DBUpdated || report.Results[0].DBFound || !report.Results[0].RefreshIncomplete {
+		t.Fatalf("independent tree update must not certify unavailable sibling recovery: %+v", report.Results)
 	}
 	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
 	if err != nil {
@@ -1295,8 +1312,8 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 		t.Fatalf("expected 1 result, got %d", len(report.Results))
 	}
 	res := report.Results[0]
-	if !res.DBFound {
-		t.Errorf("expected DBFound true with AllowFallbacks=true, got false")
+	if res.DBFound || !res.RefreshIncomplete {
+		t.Errorf("heuristic enrichment must not certify missing exact history: %+v", res)
 	}
 	if !res.DBUpdated {
 		t.Errorf("expected DBUpdated true with AllowFallbacks=true, got false")
@@ -1311,8 +1328,12 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 		t.Fatalf("unmarshaling updated ledger: %v", err)
 	}
 
-	if len(parsed.Sessions) != 1 || parsed.Sessions[0].ID != "ses-review-999" {
-		t.Fatalf("expected resolved session ses-review-999 via fallback, got %+v", parsed.Sessions)
+	ids := map[string]bool{}
+	for _, session := range parsed.Sessions {
+		ids[session.ID] = true
+	}
+	if len(parsed.Sessions) != 2 || !ids["ses-review-999"] || !ids["ses-missing-789"] {
+		t.Fatalf("fallback must enrich without erasing missing exact owner: %+v", parsed.Sessions)
 	}
 }
 
@@ -1433,5 +1454,433 @@ func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
 	}
 	if childSess.User != "dev-subagent" {
 		t.Errorf("expected child User='dev-subagent', got %q", childSess.User)
+	}
+}
+
+func readRecoveryLedger(t *testing.T, workspace string) (adapters.AgenticFactLedgerDTO, []byte) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(workspace, "agentic_metrics.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &dto); err != nil {
+		t.Fatal(err)
+	}
+	return dto, data
+}
+
+func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
+	for _, tc := range []struct {
+		name                                                                                             string
+		missingRoot, missingChild, malformed, emptyOwners, emptyObservations, dryRun, blockWrite, cyclic bool
+	}{
+		{name: "complete"}, {name: "confirmed empty", emptyObservations: true}, {name: "missing root", missingRoot: true},
+		{name: "missing child", missingChild: true}, {name: "late malformed part", malformed: true}, {name: "unknown owners", emptyOwners: true},
+		{name: "dry run incomplete", missingRoot: true, dryRun: true}, {name: "temporary write failure", blockWrite: true}, {name: "unrooted cycle", cyclic: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			ticket := "CUSTOM-SNAPSHOT"
+			v := domain.CurrentSchemaVersion
+			oldSkill := domain.SkillFact{Name: "historical", TurnIndex: 1, Success: true}
+			oldTask := domain.TaskLinkFact{SubagentType: "tester", Description: "historical"}
+			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Skills: []domain.SkillFact{oldSkill, oldSkill}, TaskLinks: []domain.TaskLinkFact{oldTask, oldTask}, Sessions: []domain.SessionFact{
+				{ID: "root-a", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stale-a"}}},
+				{ID: "root-b", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "tester", Model: "stale-b"}}},
+				{ID: "codex-untouched", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "reviewer", Model: "other-source"}}},
+			}}
+			if tc.missingChild {
+				parent := "root-b"
+				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "child-b", ParentID: &parent, Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored-child"}}})
+			}
+			if tc.emptyOwners {
+				ledger.Sessions = ledger.Sessions[2:]
+			}
+			if tc.cyclic {
+				a, b := "cycle-a", "cycle-b"
+				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: a, ParentID: &b, Source: domain.SourceOpenCode}, domain.SessionFact{ID: b, ParentID: &a, Source: domain.SourceOpenCode})
+			}
+			workspace := createTestWorkspace(t, root, ticket, ledger)
+			_, before := readRecoveryLedger(t, workspace)
+			summaryPath := filepath.Join(workspace, "SUMMARY.md")
+			summaryBefore, err := os.ReadFile(summaryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			dbPath := filepath.Join(root, "source.db")
+			roots := []string{"root-a", "root-b"}
+			if tc.missingRoot {
+				roots = roots[:1]
+			}
+			setupMockOpenCodeMultiRootDB(t, dbPath, roots, ticket)
+			db, err := sql.Open("sqlite", dbPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if !tc.emptyObservations {
+				for i, kind := range []string{"skill", "skill", "task", "task"} {
+					input := `{"name":"fresh"}`
+					if kind == "task" {
+						input = `{"subagent_type":"coder","description":"fresh"}`
+					}
+					data := fmt.Sprintf(`{"type":"tool","tool":%q,"state":{"status":"completed","input":%s,"output":"ok"}}`, kind, input)
+					if _, err := db.Exec(`INSERT INTO part VALUES(?, 'root-a','m-1',?,1700000000000,1700000000001)`, fmt.Sprintf("fresh-%d", i), data); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			if tc.malformed {
+				if _, err := db.Exec(`INSERT INTO part VALUES('bad','root-b','m-2','{',1800000000000,1800000000001)`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.blockWrite {
+				if err := os.Mkdir(filepath.Join(workspace, "agentic_metrics.json.tmp"), 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath, DryRun: tc.dryRun, UpdateSummaries: tc.dryRun}
+			report, err := NewEngine().Execute(opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(report.Results) != 1 {
+				t.Fatalf("missing ticket outcome: %+v", report)
+			}
+			res := report.Results[0]
+			updated, after := readRecoveryLedger(t, workspace)
+			if tc.blockWrite {
+				if res.Error == nil || string(before) != string(after) {
+					t.Fatalf("failed write published candidate or hid error: %+v", res)
+				}
+				return
+			}
+			if res.Error != nil {
+				t.Fatalf("unexpected per-ticket failure: %v", res.Error)
+			}
+			incomplete := tc.missingRoot || tc.missingChild || tc.malformed || tc.emptyOwners || tc.cyclic
+			if res.RefreshIncomplete != incomplete || res.CollectionsRetained != incomplete || report.CollectionsRetained != boolInt(incomplete) || report.RefreshIncomplete != boolInt(incomplete) {
+				t.Fatalf("command and ticket recovery disagree: %+v / %+v", report, res)
+			}
+			if incomplete && (!strings.Contains(res.Notes, "previous snapshot") || len(res.Diagnostics) == 0 || len(report.Warnings) == 0) {
+				t.Fatalf("retention/mixed age absent from ticket and command diagnostics: %+v", report)
+			}
+			if tc.dryRun {
+				summaryAfter, err := os.ReadFile(summaryPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(before) != string(after) || string(summaryBefore) != string(summaryAfter) {
+					t.Fatal("dry run wrote ledger/summary")
+				}
+				return
+			}
+			if updated.Migration != nil {
+				t.Fatal("optional refresh imposed mandatory migration")
+			}
+			if err := adapters.ValidateRuntimeFactLedger(after); err != nil {
+				t.Fatal(err)
+			}
+			wantSkill, wantTask := "fresh", "fresh"
+			wantRows := 2
+			if incomplete {
+				wantSkill, wantTask = "historical", "historical"
+			}
+			if tc.emptyObservations {
+				wantRows = 0
+			}
+			if len(updated.Skills) != wantRows || len(updated.TaskLinks) != wantRows {
+				t.Fatalf("collection multiplicity/replacement wrong: %+v %+v", updated.Skills, updated.TaskLinks)
+			}
+			for _, skill := range updated.Skills {
+				if skill.Name != wantSkill {
+					t.Fatalf("skill snapshot changed incorrectly: %+v", updated.Skills)
+				}
+			}
+			for _, task := range updated.TaskLinks {
+				if task.Description != wantTask {
+					t.Fatalf("task snapshot changed incorrectly: %+v", updated.TaskLinks)
+				}
+			}
+			models := map[string]string{}
+			for _, session := range updated.Sessions {
+				if len(session.Invocations) > 0 {
+					models[session.ID] = session.Invocations[0].Model
+				}
+			}
+			if models["codex-untouched"] != "other-source" {
+				t.Fatal("other source changed")
+			}
+			if !tc.emptyOwners && models["root-a"] != "gpt-4o" {
+				t.Fatalf("independent complete tree not refreshed: %v", models)
+			}
+			if tc.missingRoot || tc.missingChild || tc.malformed {
+				if models["root-b"] != "stale-b" {
+					t.Fatalf("incomplete tree partially replaced: %v", models)
+				}
+			}
+			if tc.missingChild && models["child-b"] != "stored-child" {
+				t.Fatalf("unavailable child lost: %v", models)
+			}
+			if !incomplete && !tc.emptyObservations {
+				// A cumulative snapshot grows once, then an unchanged repeat preserves all rows.
+				if _, err := db.Exec(`INSERT INTO part VALUES('growth','root-a','m-1','{"type":"tool","tool":"skill","state":{"status":"completed","input":{"name":"growth"},"output":"ok"}}',1800000000000,1800000000001)`); err != nil {
+					t.Fatal(err)
+				}
+				for i := 0; i < 2; i++ {
+					again, err := NewEngine().Execute(opts)
+					if err != nil || again.Results[0].Error != nil {
+						t.Fatalf("repeat failed: %+v %v", again, err)
+					}
+					snapshot, _ := readRecoveryLedger(t, workspace)
+					if len(snapshot.Skills) != 3 || len(snapshot.TaskLinks) != 2 {
+						t.Fatalf("cumulative refresh duplicated/dropped observations: %+v %+v", snapshot.Skills, snapshot.TaskLinks)
+					}
+				}
+			}
+		})
+	}
+}
+
+func boolInt(v bool) int {
+	if v {
+		return 1
+	}
+	return 0
+}
+
+func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
+	for _, tc := range []struct {
+		name, source                          string
+		missingChild, lateParse, groupFailure bool
+	}{
+		{name: "unavailable Codex sibling", source: "both"}, {name: "unselected OpenCode obligation", source: "codex"},
+		{name: "missing stored child", source: "both", missingChild: true}, {name: "late parse failure", source: "both", lateParse: true},
+		{name: "group failure", source: "both", groupFailure: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			ticket := "CUSTOM-GLOBAL"
+			v := domain.CurrentSchemaVersion
+			parent := "codex-a"
+			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Migration: &domain.MigrationInfo{SchemaVersion: v, Status: domain.MigrationStatusPartial, StepsCompleted: []string{domain.MigrationStepGitCodeFacts}, StepsPending: []string{domain.MigrationStepSourceBackfill, "other_requirement"}}, Skills: []domain.SkillFact{{Name: "keep"}}, Sessions: []domain.SessionFact{
+				{ID: "codex-a", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old-a"}}},
+				{ID: "codex-b", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old-b"}}},
+				{ID: "opencode-c", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "tester", Model: "old-c"}}},
+			}}
+			if tc.missingChild {
+				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "missing-child", ParentID: &parent, Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old-child"}}})
+			}
+			workspace := createTestWorkspace(t, root, ticket, ledger)
+			engine := NewEngine()
+			engine.discoverCodexRollouts = func(opts codex.DiscoveryOptions) ([]string, error) {
+				if opts.SessionID == "codex-b" {
+					return nil, errors.New("source not on this machine")
+				}
+				if tc.lateParse {
+					return []string{"good", "bad"}, nil
+				}
+				return []string{"good"}, nil
+			}
+			engine.parseCodexRollout = func(path string) (codex.Transcript, error) {
+				if path == "bad" {
+					return codex.Transcript{}, errors.New("malformed late source")
+				}
+				return codex.Transcript{ThreadID: "codex-a", Invocations: []domain.InvocationFact{{Role: "coder", Model: "fresh-a"}}}, nil
+			}
+			if tc.groupFailure {
+				engine.combineCodex = func([]codex.Transcript) (codex.Transcript, error) {
+					return codex.Transcript{}, errors.New("ambiguous grouping")
+				}
+			}
+			report, err := engine.Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: tc.source, CodexHome: root, DBPath: filepath.Join(root, "missing.db"), RecomputeDB: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(report.Results) != 1 || report.Results[0].Error != nil {
+				t.Fatalf("refresh failed: %+v", report)
+			}
+			res := report.Results[0]
+			if res.DBFound || !res.RefreshIncomplete || !containsMigrationStep(res.PendingSteps, domain.MigrationStepSourceBackfill) || !containsMigrationStep(res.PendingSteps, "other_requirement") {
+				t.Fatalf("partial source wrongly discharged global/unrelated requirement: %+v", res)
+			}
+			updated, data := readRecoveryLedger(t, workspace)
+			if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
+				t.Fatal("pending global requirement became runtime eligible")
+			}
+			models := map[string]string{}
+			for _, s := range updated.Sessions {
+				models[s.ID] = s.Invocations[0].Model
+			}
+			wantA := "fresh-a"
+			if tc.missingChild || tc.lateParse || tc.groupFailure {
+				wantA = "old-a"
+			}
+			if models["codex-a"] != wantA || models["codex-b"] != "old-b" || models["opencode-c"] != "old-c" {
+				t.Fatalf("owner tree preservation/update wrong: %v", models)
+			}
+			if tc.missingChild && models["missing-child"] != "old-child" {
+				t.Fatal("missing stored child lost")
+			}
+			if len(updated.Skills) != 1 || updated.Skills[0].Name != "keep" {
+				t.Fatal("Codex success erased ownerless OpenCode snapshot")
+			}
+			if len(res.Diagnostics) == 0 || len(report.Warnings) == 0 {
+				t.Fatal("partial failure not exposed in command and ticket diagnostics")
+			}
+		})
+	}
+}
+
+func TestBackfillEngine_SchemaV2RecoversKnownGrandchildren(t *testing.T) {
+	for _, malformed := range []bool{false, true} {
+		t.Run(fmt.Sprintf("malformed=%t", malformed), func(t *testing.T) {
+			root := t.TempDir()
+			ticket := "CUSTOM-V2"
+			v := domain.CurrentSchemaVersion
+			parent, grandparent := "v2-root", "v2-child"
+			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Skills: []domain.SkillFact{{Name: "stored"}}, Sessions: []domain.SessionFact{
+				{ID: "v2-root", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old"}}},
+				{ID: "v2-child", ParentID: &parent, Source: domain.SourceOpenCode},
+				{ID: "v2-grandchild", ParentID: &grandparent, Source: domain.SourceOpenCode},
+			}}
+			workspace := createTestWorkspace(t, root, ticket, ledger)
+			dbPath := filepath.Join(root, "v2.db")
+			db, err := sql.Open("sqlite", dbPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if _, err := db.Exec(`CREATE TABLE session_v2(id TEXT PRIMARY KEY,parent_id TEXT,agent TEXT,model TEXT,title TEXT,time_created INTEGER,time_updated INTEGER); CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq INTEGER,time_created INTEGER,time_updated INTEGER,data TEXT);
+  INSERT INTO session_v2 VALUES('v2-root',NULL,'coder','model','root',1700000000000,1700000001000),('v2-child','v2-root','coder','model','child',1700000000000,1700000001000),('v2-grandchild','v2-child','tester','model','grandchild',1700000000000,1700000001000);`); err != nil {
+				t.Fatal(err)
+			}
+			payload := `{"model":{"id":"fresh-v2"},"content":[],"tokens":{"input":17,"output":2},"time":{"created":1700000000000,"completed":1700000001000}}`
+			for _, id := range []string{"v2-root", "v2-child", "v2-grandchild"} {
+				data := payload
+				if malformed && id == "v2-grandchild" {
+					data = "{"
+				}
+				if _, err := db.Exec(`INSERT INTO session_message VALUES(?,?,'assistant',1,1700000000000,1700000001000,?)`, id+"-message", id, data); err != nil {
+					t.Fatal(err)
+				}
+			}
+			report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
+			if err != nil || report.Results[0].Error != nil {
+				t.Fatalf("refresh failed: %+v %v", report, err)
+			}
+			updated, _ := readRecoveryLedger(t, workspace)
+			if len(updated.Sessions) != 3 {
+				t.Fatalf("grandchild lost/duplicated: %+v", updated.Sessions)
+			}
+			if malformed {
+				rootPreserved := false
+				for _, session := range updated.Sessions {
+					if session.ID == "v2-root" {
+						rootPreserved = len(session.Invocations) == 1 && session.Invocations[0].Model == "old"
+					}
+				}
+				if !report.Results[0].RefreshIncomplete || !report.Results[0].CollectionsRetained || !rootPreserved || len(updated.Skills) != 1 {
+					t.Fatalf("late malformed descendant partially replaced tree: %+v %+v", report.Results, updated)
+				}
+			} else {
+				if report.Results[0].RefreshIncomplete || len(updated.Skills) != 0 {
+					t.Fatalf("complete empty recovery did not clear stale producer snapshot: %+v %+v", report.Results, updated.Skills)
+				}
+				for _, session := range updated.Sessions {
+					if len(session.Invocations) != 1 || session.Invocations[0].Tokens.Input != 17 {
+						t.Fatalf("nested cumulative source snapshot not recovered: %+v", session)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestBackfillEngine_InvalidCandidatePreservesFiles(t *testing.T) {
+	for _, dryRun := range []bool{false, true} {
+		t.Run(fmt.Sprintf("dry-run=%t", dryRun), func(t *testing.T) {
+			root := t.TempDir()
+			ticket := "CUSTOM-INVALID-CANDIDATE"
+			v := domain.CurrentSchemaVersion
+			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Sessions: []domain.SessionFact{{ID: "root", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored"}}}}}
+			workspace := createTestWorkspace(t, root, ticket, ledger)
+			_, before := readRecoveryLedger(t, workspace)
+			summary := filepath.Join(workspace, "SUMMARY.md")
+			summaryBefore, err := os.ReadFile(summary)
+			if err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine()
+			engine.discoverCodexRollouts = func(codex.DiscoveryOptions) ([]string, error) { return []string{"source"}, nil }
+			engine.parseCodexRollout = func(string) (codex.Transcript, error) {
+				return codex.Transcript{ThreadID: "root", Invocations: []domain.InvocationFact{{Role: "coder", Model: "fresh"}}, Tools: []domain.ToolFact{{SessionID: "root", Name: "read", Calls: -1}}}, nil
+			}
+			report, err := engine.Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: root, RecomputeDB: true, DryRun: dryRun, UpdateSummaries: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(report.Results) != 1 || report.Results[0].Error == nil || !strings.Contains(report.Results[0].Error.Error(), "validating updated ledger") {
+				t.Fatalf("invalid candidate did not reach final validation guard: %+v", report.Results)
+			}
+			_, after := readRecoveryLedger(t, workspace)
+			summaryAfter, err := os.ReadFile(summary)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(before) != string(after) || string(summaryBefore) != string(summaryAfter) {
+				t.Fatal("final validation failure published candidate/summary")
+			}
+			if _, err := os.Stat(filepath.Join(workspace, "agentic_metrics.json.tmp")); !os.IsNotExist(err) {
+				t.Fatalf("validation failure reached write boundary: %v", err)
+			}
+		})
+	}
+}
+
+func TestRecoverOpenCodeRetainsUnavailableOrphanSiblingTree(t *testing.T) {
+	for _, intermediary := range []bool{false, true} {
+		t.Run(fmt.Sprintf("intermediary=%t", intermediary), func(t *testing.T) {
+			root := t.TempDir()
+			path := filepath.Join(root, "source.db")
+			setupMockOpenCodeMultiRootDB(t, path, []string{"source-root", "independent"}, "CUSTOM-ORPHAN")
+			db, err := sql.Open("sqlite", path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			parent := "source-root"
+			if intermediary {
+				parent = "intermediary"
+				if _, err := db.Exec(`INSERT INTO session VALUES('intermediary','source-root','coder','fresh-parent','parent',1700000000000,1700000001000)`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := db.Exec(`INSERT INTO session VALUES('child-a',?,'coder','fresh-child','child',1700000000000,1700000001000)`, parent); err != nil {
+				t.Fatal(err)
+			}
+			stored := []domain.SessionFact{
+				{ID: "child-a", ParentID: &parent, Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored-a"}}},
+				{ID: "child-b", ParentID: &parent, Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored-b"}}},
+				{ID: "independent", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored-independent"}}},
+			}
+			// Exercise the source-recovery boundary directly: runtime file validation
+			// independently rejects absent parents, but recovery must also preserve branches.
+			recovered := recoverOpenCode(db, stored, "tester", "CUSTOM-ORPHAN", root, false)
+			if recovered.complete || !recovered.updated || len(recovered.diagnostics) == 0 {
+				t.Fatalf("missing sibling falsely certified or independent refresh lost: %+v", recovered)
+			}
+			models := map[string]string{}
+			for _, s := range recovered.sessions {
+				if len(s.Invocations) > 0 {
+					models[s.ID] = s.Invocations[0].Model
+				}
+			}
+			if len(recovered.sessions) != 3 || models["child-a"] != "stored-a" || models["child-b"] != "stored-b" || models["independent"] != "gpt-4o" {
+				t.Fatalf("partially discoverable orphan tree lost history: %+v", recovered.sessions)
+			}
+		})
 	}
 }

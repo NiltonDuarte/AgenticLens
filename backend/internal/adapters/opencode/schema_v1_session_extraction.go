@@ -57,6 +57,7 @@ func extractSchemaV1Sessions(
 	threadIDs []string,
 	defaultUser string,
 	userBySessionID map[string]string,
+	strict bool,
 ) ([]domain.SessionFact, *string, *string, error) {
 
 	quotedList, err := buildQuotedIDList(threadIDs)
@@ -188,14 +189,23 @@ func extractSchemaV1Sessions(
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: scanning message row: %w", err)
 			}
 			if !mData.Valid || strings.TrimSpace(mData.String) == "" {
+				if strict {
+					return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1: empty message %s in session %s", mid, s.id), msgRows.Close())
+				}
 				continue
 			}
 
 			var rawMD schemaV1MessageData
 			if err := json.Unmarshal([]byte(mData.String), &rawMD); err != nil {
+				if strict {
+					return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1: decoding message %s in session %s: %w", mid, s.id, err), msgRows.Close())
+				}
 				continue
 			}
 
+			if strict && (rawMD.Role == nil || (*rawMD.Role != "user" && *rawMD.Role != "assistant")) {
+				return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1: unsupported role in message %s in session %s", mid, s.id), msgRows.Close())
+			}
 			if rawMD.Role != nil && strings.EqualFold(strings.TrimSpace(*rawMD.Role), "user") {
 				sessionUserTurns++
 				continue
@@ -316,7 +326,12 @@ func extractSchemaV1Sessions(
 				acc.cost += *rawMD.Cost
 			}
 		}
-		msgRows.Close()
+		if err := msgRows.Err(); err != nil {
+			return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1: iterating messages in session %s: %w", s.id, err), msgRows.Close())
+		}
+		if err := msgRows.Close(); err != nil {
+			return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: closing messages in session %s: %w", s.id, err)
+		}
 
 		if len(byModel) == 0 {
 			fallbackModel := "default"
@@ -342,15 +357,21 @@ func extractSchemaV1Sessions(
 		sessionUserIterations[s.id] = sessionUserTurns
 	}
 
+	// Strict replacement reads every part so a malformed record cannot be
+	// hidden by the tolerant tool/compaction SQL projection.
+	partFilter := ""
+	if !strict {
+		partFilter = `AND (p.data LIKE '%"type":"tool"%' OR p.data LIKE '%"type":"compaction"%')`
+	}
 	// 4. Query parts (tool calls and compactions)
 	qParts := fmt.Sprintf(`
 		SELECT p.id, p.session_id, p.message_id, p.time_created, p.time_updated, p.data
 		FROM part p
 		JOIN session s ON p.session_id = s.id
 		WHERE (s.id IN (%s) OR s.parent_id IN (%s))
-		  AND (p.data LIKE '%%"type":"tool"%%' OR p.data LIKE '%%"type":"compaction"%%')
+		  %s
 		ORDER BY p.time_created ASC
-	`, quotedList, quotedList)
+	`, quotedList, quotedList, partFilter)
 
 	partRows, err := db.Query(qParts)
 	if err != nil {
@@ -369,15 +390,24 @@ func extractSchemaV1Sessions(
 			return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: scanning part row: %w", err)
 		}
 		if !pData.Valid || strings.TrimSpace(pData.String) == "" {
+			if strict {
+				return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: empty part %s in session %s", pid.String, sid.String)
+			}
 			continue
 		}
 
 		var rawPD schemaV1PartData
 		if err := json.Unmarshal([]byte(pData.String), &rawPD); err != nil {
+			if strict {
+				return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: decoding part %s in session %s: %w", pid.String, sid.String, err)
+			}
 			continue
 		}
 
 		if rawPD.Type == nil {
+			if strict {
+				return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: missing type in part %s in session %s", pid.String, sid.String)
+			}
 			continue
 		}
 

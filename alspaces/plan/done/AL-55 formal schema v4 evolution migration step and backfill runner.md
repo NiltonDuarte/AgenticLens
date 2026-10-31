@@ -1,5 +1,6 @@
 # AL-55: Preserve historical facts and report truthful backfill recovery
 
+- **Status**: Done
 - **Subsystem**: Domain / Adapters / Backfill / CLI / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
 - **Blocked by**: None
