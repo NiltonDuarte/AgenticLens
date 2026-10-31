@@ -52,7 +52,12 @@ type LiveService struct {
 	closeOnce       sync.Once
 	lastTreeJSON    []byte
 	lastTreeMu      sync.Mutex
-	lastTraceJSON   map[string][]byte
+	lastTraces      map[string]*domain.LiveTraceView
+	traceMu         sync.Mutex
+	traceRevision   SourceRevision
+	traceCache      map[string]*domain.LiveTraceView
+	discovered      map[string]struct{}
+	selectedLookup  string
 	lastTraceMu     sync.Mutex
 	seenAnomalies   map[string]bool
 	seenAnomaliesMu sync.Mutex
@@ -83,7 +88,9 @@ func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, cod
 		cfg:           cfg,
 		subscribers:   make(map[chan LiveEvent]struct{}),
 		stopCh:        make(chan struct{}),
-		lastTraceJSON: make(map[string][]byte),
+		lastTraces:    make(map[string]*domain.LiveTraceView),
+		traceCache:    make(map[string]*domain.LiveTraceView),
+		discovered:    make(map[string]struct{}),
 		seenAnomalies: make(map[string]bool),
 	}
 }
@@ -210,18 +217,21 @@ func (s *LiveService) broadcastTraceUpdates(ctx context.Context, tree domain.Liv
 				continue
 			}
 			current[node.ID] = struct{}{}
-			trace, err := s.GetSessionTrace(ctx, node.ID)
+			trace, err := s.sessionTraceSnapshot(ctx, node.ID)
 			if err == nil {
-				data, marshalErr := json.Marshal(trace)
-				if marshalErr == nil {
-					s.lastTraceMu.Lock()
-					previous, exists := s.lastTraceJSON[node.ID]
-					changed := !exists || !bytes.Equal(previous, data)
-					if changed {
-						s.lastTraceJSON[node.ID] = append([]byte(nil), data...)
-					}
-					s.lastTraceMu.Unlock()
-					if changed {
+				s.lastTraceMu.Lock()
+				previous := s.lastTraces[node.ID]
+				changed := previous != trace && (previous == nil || !domain.LiveTracesEqual(*previous, *trace))
+				if !changed {
+					s.lastTraces[node.ID] = trace
+				}
+				s.lastTraceMu.Unlock()
+				if changed {
+					data, marshalErr := json.Marshal(trace)
+					if marshalErr == nil {
+						s.lastTraceMu.Lock()
+						s.lastTraces[node.ID] = trace
+						s.lastTraceMu.Unlock()
 						s.broadcast(LiveEvent{Type: LiveEventTraceUpdate, Data: data})
 					}
 				}
@@ -232,9 +242,9 @@ func (s *LiveService) broadcastTraceUpdates(ctx context.Context, tree domain.Liv
 	visit(tree.RootSessions)
 
 	s.lastTraceMu.Lock()
-	for sessionID := range s.lastTraceJSON {
+	for sessionID := range s.lastTraces {
 		if _, active := current[sessionID]; !active {
-			delete(s.lastTraceJSON, sessionID)
+			delete(s.lastTraces, sessionID)
 		}
 	}
 	s.lastTraceMu.Unlock()
@@ -289,6 +299,18 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 	if err != nil {
 		return domain.LiveSessionTree{}, fmt.Errorf("fetching active sessions: %w", err)
 	}
+
+	s.traceMu.Lock()
+	s.discovered = make(map[string]struct{}, len(records))
+	for _, rec := range records {
+		s.discovered[rec.ID] = struct{}{}
+	}
+	for id := range s.traceCache {
+		if _, exists := s.discovered[id]; !exists && id != s.selectedLookup {
+			delete(s.traceCache, id)
+		}
+	}
+	s.traceMu.Unlock()
 
 	stallThresholdSec := int64(s.cfg.AnomalyThresholds.StallThresholdSeconds)
 	if stallThresholdSec <= 0 {
@@ -364,16 +386,62 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 	}, nil
 }
 
-// GetSessionTrace extracts messages, reasoning, and tool executions for a given session.
+// GetSessionTrace returns a fresh source snapshot, reusing unchanged read-only data.
 func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (domain.LiveTraceView, error) {
+	trace, err := s.sessionTraceSnapshot(ctx, sessionID)
+	if err != nil {
+		return domain.LiveTraceView{}, err
+	}
+	return *trace, nil
+}
+
+func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string) (*domain.LiveTraceView, error) {
 	if err := validateSessionID(sessionID); err != nil {
-		return domain.LiveTraceView{}, fmt.Errorf("%w: %s", ErrInvalidSessionID, err.Error())
+		return nil, fmt.Errorf("%w: %s", ErrInvalidSessionID, err.Error())
 	}
-
 	if s.hook == nil {
-		return domain.LiveTraceView{}, ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
+	s.traceMu.Lock()
+	defer s.traceMu.Unlock()
+	revision, err := s.hook.SourceRevision(ctx)
+	if err != nil {
+		s.traceRevision = SourceRevision{}
+		return nil, err
+	}
+	if revision != s.traceRevision {
+		s.traceCache = make(map[string]*domain.LiveTraceView)
+		s.traceRevision = revision
+	}
+	if _, visible := s.discovered[sessionID]; !visible {
+		if s.selectedLookup != sessionID {
+			if _, discovered := s.discovered[s.selectedLookup]; !discovered {
+				delete(s.traceCache, s.selectedLookup)
+			}
+			s.selectedLookup = sessionID
+		}
+	}
+	if cached := s.traceCache[sessionID]; cached != nil {
+		return cached, nil
+	}
+	trace, err := s.readSessionTrace(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	after, err := s.hook.SourceRevision(ctx)
+	if err != nil {
+		s.traceRevision = SourceRevision{}
+		return nil, err
+	}
+	if after == revision {
+		s.traceCache[sessionID] = &trace
+	} else {
+		s.traceRevision = SourceRevision{}
+	}
+	return &trace, nil
+}
 
+func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (domain.LiveTraceView, error) {
 	exists, err := s.hook.SessionExists(sessionID)
 	if err != nil {
 		return domain.LiveTraceView{}, fmt.Errorf("verifying session existence: %w", err)

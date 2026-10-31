@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { FleetOverview } from './FleetOverview';
 import * as apiClient from '../api/client';
 import { mockFleetSummary, mockTicketComparisonRows } from '../test/fixtures/mockData';
@@ -7,6 +7,31 @@ import { mockFleetSummary, mockTicketComparisonRows } from '../test/fixtures/moc
 describe('FleetOverview View Component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('shows ranked adoption and invocation-weighted success, then refreshes safely without skill facts', async () => {
+    const fetchFleet = vi.spyOn(apiClient, 'fetchFleetSummary')
+      .mockResolvedValueOnce({ data: { ...mockFleetSummary, skill_adoption: [
+        { name: 'alpha', total_invocations: 8, tickets_count: 2, failure_count: 2, failure_rate: 0.25 },
+        { name: 'beta', total_invocations: 1, tickets_count: 1, failure_count: 1, failure_rate: 1 },
+        { name: 'gamma', total_invocations: 1, tickets_count: 1, failure_count: 0, failure_rate: 0 },
+        { name: 'omega', total_invocations: 1, tickets_count: 1, failure_count: 0, failure_rate: 0 },
+      ] } })
+      .mockResolvedValue({ data: mockFleetSummary });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    render(<FleetOverview />);
+    const card = await screen.findByRole('region', { name: 'Skill Adoption' });
+    expect(within(card).getByText('4 unique skills')).toBeInTheDocument();
+    expect(within(card).getByText('Overall skill success rate: 72.7%')).toBeInTheDocument();
+    expect(within(card).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'alpha: 8 invocations', 'beta: 1 invocations', 'gamma: 1 invocations',
+    ]);
+    fireEvent.change(screen.getByLabelText('Date Range Preset'), { target: { value: '7d' } });
+    await waitFor(() => expect(fetchFleet).toHaveBeenLastCalledWith('7d', undefined, undefined));
+    const emptyCard = await screen.findByRole('region', { name: 'Skill Adoption' });
+    expect(within(emptyCard).getByText('0 unique skills')).toBeInTheDocument();
+    expect(within(emptyCard).getByText('No recorded skills')).toBeInTheDocument();
+    expect(within(emptyCard).getByText('Overall skill success rate: Unavailable')).toBeInTheDocument();
   });
 
   it('shows ticket-specific skipped-workspace diagnostics alongside valid workspace data', async () => {

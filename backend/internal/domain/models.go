@@ -519,8 +519,18 @@ type FleetAnomalySummary struct {
 	BrittleTools         []BrittleToolSummary `json:"brittle_tools"`
 }
 
+// SkillAdoptionFact summarizes recorded skill invocations across tickets.
+type SkillAdoptionFact struct {
+	Name             string  `json:"name"`
+	TotalInvocations int64   `json:"total_invocations"`
+	TicketsCount     int64   `json:"tickets_count"`
+	FailureCount     int64   `json:"failure_count"`
+	FailureRate      float64 `json:"failure_rate"`
+}
+
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
+	SkillAdoption            []SkillAdoptionFact   `json:"skill_adoption"`
 	TotalTickets             int64                 `json:"total_tickets"`
 	TotalCostUSD             float64               `json:"total_cost_usd"`
 	TotalInvocations         int64                 `json:"total_invocations"`
@@ -542,6 +552,7 @@ type FleetSummary struct {
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
+	SkillsUsed              []string                `json:"skills_used"`
 	TicketID                string                  `json:"ticket_id"`
 	UpdatedAt               string                  `json:"updated_at"`
 	SDLCIterations          int64                   `json:"sdlc_iterations"`

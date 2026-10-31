@@ -1,7 +1,9 @@
 package domain_test
 
 import (
+	"encoding/json"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -5803,4 +5805,71 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 				customCeiling, derived.WorkflowEfficiency.ContextWindowHealth.HealthyCeilingTokens)
 		}
 	})
+}
+
+func TestComputeSkillAdoption(t *testing.T) {
+	t.Parallel()
+	first, second := "T-1", "T-2"
+	facts := []domain.AgenticFactLedger{
+		{TicketID: &first, Skills: []domain.SkillFact{{Name: "beta", Success: true}, {Name: "alpha", Success: false}, {Name: "beta", Success: true, Error: "inspection text"}}},
+		{TicketID: &second, Skills: []domain.SkillFact{{Name: "beta", Success: false}, {Name: "alpha", Success: true}}},
+		{TicketID: &first, Skills: []domain.SkillFact{{Name: "alpha", Success: true}}},
+		{},
+	}
+	before, err := json.Marshal(facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []domain.SkillAdoptionFact{
+		{Name: "alpha", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, FailureRate: 1.0 / 3},
+		{Name: "beta", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, FailureRate: 1.0 / 3},
+	}
+	if got := domain.ComputeSkillAdoption(facts); !reflect.DeepEqual(got, want) {
+		t.Fatalf("adoption = %#v, want %#v", got, want)
+	}
+	for _, empty := range [][]domain.AgenticFactLedger{nil, {}, {{}}} {
+		if got := domain.ComputeSkillAdoption(empty); got == nil || len(got) != 0 {
+			t.Fatalf("empty adoption = %#v", got)
+		}
+	}
+	metrics := []domain.AgenticMetricsLedger{{TicketID: &first, Facts: facts[0]}, {TicketID: &second, Facts: facts[1]}, {TicketID: &first, Facts: facts[2]}}
+	if got := domain.CalculateFleetSummary(metrics).SkillAdoption; !reflect.DeepEqual(got, want) {
+		t.Fatalf("fleet adoption = %#v", got)
+	}
+	rows := domain.BuildComparisonRows(metrics[:1])
+	if !reflect.DeepEqual(rows[0].SkillsUsed, []string{"alpha", "beta"}) {
+		t.Fatalf("comparison skill names = %#v", rows[0].SkillsUsed)
+	}
+	after, err := json.Marshal(facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(before) != string(after) {
+		t.Fatal("skill aggregation mutated facts")
+	}
+	unidentified := []domain.AgenticFactLedger{{Skills: []domain.SkillFact{{Name: "x", Success: true}}}, {Skills: []domain.SkillFact{{Name: "x", Success: true}}}}
+	if got := domain.ComputeSkillAdoption(unidentified); got[0].TicketsCount != 2 {
+		t.Fatalf("unidentified tickets = %d", got[0].TicketsCount)
+	}
+}
+
+func TestSkillAdoptionOrderingAndEmptyProjections(t *testing.T) {
+	t.Parallel()
+	ledger := domain.AgenticFactLedger{Skills: []domain.SkillFact{{Name: "a"}, {Name: "b"}, {Name: "b"}, {Name: "c"}}}
+	got := domain.ComputeSkillAdoption([]domain.AgenticFactLedger{ledger})
+	if got[0].Name != "b" || got[1].Name != "a" || got[2].Name != "c" {
+		t.Fatalf("ranked skills = %#v", got)
+	}
+	if got[0].FailureRate != 1 {
+		t.Fatalf("all-failure rate = %v", got[0].FailureRate)
+	}
+	if names := domain.SkillNames(domain.AgenticFactLedger{Skills: []domain.SkillFact{{Name: "\U00010000"}, {Name: "\uE000"}}}); !reflect.DeepEqual(names, []string{"\uE000", "\U00010000"}) {
+		t.Fatalf("Unicode name order = %#v", names)
+	}
+	if adoption := domain.CalculateFleetSummary(nil).SkillAdoption; adoption == nil || len(adoption) != 0 {
+		t.Fatalf("empty fleet adoption = %#v", adoption)
+	}
+	if names := domain.BuildComparisonRows([]domain.AgenticMetricsLedger{{}})[0].SkillsUsed; names == nil || len(names) != 0 {
+		t.Fatalf("missing skills = %#v", names)
+	}
 }

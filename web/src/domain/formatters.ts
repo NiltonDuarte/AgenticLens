@@ -1,3 +1,4 @@
+import { skillNames } from './aggregations';
 import type {
   AgenticMetricsLedger,
   ComparisonSortField,
@@ -7,6 +8,21 @@ import type {
 } from './types';
 
 export const HEALTHY_CEILING_TOKENS = 200_000;
+
+export function formatSkillStatus(success: boolean): 'Success' | 'Failed' {
+  return success ? 'Success' : 'Failed';
+}
+
+export function formatSubagentRole(role: string): string {
+  switch (role) {
+    case 'orchestrator': return 'Orchestrator';
+    case 'planner': return 'Planner';
+    case 'coder': return 'Coder';
+    case 'tester': return 'Tester';
+    case 'reviewer': return 'Reviewer';
+    default: return role || 'Unknown';
+  }
+}
 
 export function truncateMiddle(
   str: string,
@@ -318,6 +334,7 @@ export function deriveTicketComparisonRows(
 
     return {
       ticket_id: tid,
+      skills_used: skillNames(ledger.facts),
       ticket_type: ledger.ticket_type,
       updated_at: ledger.updated_at,
       sdlc_iterations: eff.sdlc_iterations,

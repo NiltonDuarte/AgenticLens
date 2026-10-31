@@ -295,7 +295,16 @@ export interface AgenticMetricsLedger {
   readonly anomalies?: readonly Anomaly[];
 }
 
+export interface SkillAdoptionFact {
+  readonly name: string;
+  readonly total_invocations: number;
+  readonly tickets_count: number;
+  readonly failure_count: number;
+  readonly failure_rate: number;
+}
+
 export interface FleetSummary {
+  readonly skill_adoption?: readonly SkillAdoptionFact[];
   readonly total_tickets: number;
   readonly total_cost_usd: number;
   readonly total_invocations: number;
@@ -316,6 +325,7 @@ export interface FleetSummary {
 }
 
 export interface TicketComparisonRow {
+  readonly skills_used?: readonly string[];
   readonly ticket_id: string;
   readonly ticket_type: TicketType | null;
   readonly updated_at: string;

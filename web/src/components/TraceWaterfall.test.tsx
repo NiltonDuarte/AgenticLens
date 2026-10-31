@@ -2653,3 +2653,57 @@ describe('semantic diagnostics', () => {
     expect(screen.getByTestId('timeline-item-3')).toBeInTheDocument();
   });
 });
+
+describe('rich invocation badges', () => {
+  const event: EventFact = {
+    timestamp: '2026-10-30T10:00:00Z', session_id: 'parent', turn: 1, role: 'coder',
+    event_type: 'tool_call', tool_name: 'task', status: 'completed', context_tokens: 100,
+  };
+  const task = { timestamp: event.timestamp, parent_turn: 1, subagent_type: 'tester', description: 'Verify', child_session_id: 'child' };
+
+  it('renders committed badges and activates a child without selecting the parent event', async () => {
+    const selectChild = vi.fn();
+    const selectEvent = vi.fn();
+    render(<TraceWaterfall events={[event, { ...event, turn: 2, tool_name: 'skill' }]}
+      skills={[{ name: 'review', turn_index: 2, message_index: 0, caller_role: 'coder', timestamp: event.timestamp, success: true }]}
+      taskLinks={[task]} availableSessionIds={['child']} onSelectSession={selectChild}
+      onSelectEvent={selectEvent} defaultExpanded />);
+    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    expect(screen.getByText('[skill: review]')).toHaveAttribute('title', '[skill: review]');
+    const child = screen.getByRole('button', { name: 'Inspect child session child' });
+    child.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(selectChild).toHaveBeenCalledWith('child');
+    expect(selectEvent).not.toHaveBeenCalled();
+  });
+
+  it('does not attribute an ambiguous task link across sessions and retains input-only badges', () => {
+    render(<TraceWaterfall events={[event, { ...event, session_id: 'other', tool_input: '{"subagent_type":"planner"}' }]}
+      taskLinks={[task]} availableSessionIds={['child']} onSelectSession={vi.fn()} defaultExpanded />);
+    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    expect(screen.queryByRole('button', { name: 'Inspect child session child' })).not.toBeInTheDocument();
+    expect(screen.getByText('[task -> planner]')).toBeInTheDocument();
+    expect(screen.queryByText('[task -> tester]')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('retrospective invocation metadata safety', () => {
+  const event: EventFact = { timestamp: '2026-10-30T10:00:00Z', session_id: 'parent', turn: 4,
+    role: 'coder', event_type: 'tool_call', tool_name: 'task', status: 'completed', context_tokens: 100 };
+  const task = { timestamp: event.timestamp, parent_turn: 4, subagent_type: 'tester', description: 'Verify', child_session_id: 'child' };
+
+  it.each(['duplicate facts', 'conflicting input', 'different timestamp'])('rejects an unsafe child link for %s', (mode) => {
+    const input = mode === 'conflicting input' ? '{"subagent_type":"planner"}' : '{broken-json';
+    const tasks = mode === 'duplicate facts' ? [task, { ...task, child_session_id: 'other-child' }]
+      : mode === 'different timestamp' ? [{ ...task, timestamp: '2026-10-30T11:00:00Z' }] : [task];
+    render(<TraceWaterfall events={[{ ...event, tool_input: input }]} taskLinks={tasks}
+      availableSessionIds={['child', 'other-child']} onSelectSession={vi.fn()} defaultExpanded />);
+    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    expect(screen.queryByRole('button', { name: /Inspect child session/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Copy child session ID/ })).not.toBeInTheDocument();
+    if (mode === 'conflicting input') expect(screen.getByText('[task -> planner]')).toBeInTheDocument();
+    else expect(screen.queryByText('[task -> tester]')).not.toBeInTheDocument();
+
+  });
+});

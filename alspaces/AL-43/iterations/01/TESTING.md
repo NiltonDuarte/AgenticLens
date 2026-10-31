@@ -44,3 +44,20 @@ Verification on the correction diff:
 - `git diff --check`: PASS.
 
 No new product defects found in this correction pass. The initial frontend typecheck rejected explicit undefined optional fields in the new tester fixture; corrected it to represent absence by omitting properties, then reran successfully. Full make and final integration remain parent responsibilities subject to the documented manager hold. These checks prove supported fixture paths, not universal Codex-version compatibility.
+
+## Actual upstream integration verification
+
+Tested the resolved working combination of AL-43 head bf575e1afd66ba17a82c5fbc1c4f3b3a2e65fcc8 with fetched main bdef2d0ef98e37fe259921bc30ba2daefbfda717, before the parent merger commit. Tester changed only the existing LiveTraceInspector invocation test and this evidence log. No existing assertions were removed.
+
+The extended live test now exercises a single completed warning task that retains its rich invocation metadata and known-child navigation while showing the content-error class/badge. The same fixture also renders the separate execution-error class/badge and independent counters, expands failed execution details and long reasoning, copies the completed task's raw diagnostic in its debug prompt, and retains unavailable child identifier copy success/failure assertions. This specifically guards the merge boundary between AL-43 warnings and upstream invocation navigation rather than duplicating standalone feature tests.
+
+Existing upstream tests were reused for useLiveTrace selection ownership, late-response rejection, cancellation on pause/close, SSE versus REST ordering, same-turn reading anchors and reasoning preservation; unified repeated child navigation from badges/panel; adoption/filter analytics and recovery. The F3/F4 tests remain present and passing. No upstream test fixture, timeout, SSE implementation or assertion bypass was introduced by testing.
+
+Executed on the resolved combination:
+
+- `cd web && npm test -- --run src/components/LiveTraceInspector.test.tsx src/components/TraceWaterfall.test.tsx src/views/LiveObservability.test.tsx src/views/TicketDeepDive.test.tsx src/views/FleetOverview.test.tsx src/views/TicketComparisons.test.tsx src/domain/events.test.ts src/domain/aggregations.test.ts`: PASS, 259 tests across eight suites.
+- `cd web && npm run typecheck`: PASS.
+- `cd backend && go test -race ./internal/adapters/http -run 'TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate|TestLiveStreamHandler_SSEProtocol|TestLiveStreamHandler_InitialTreeSubscriptionCleanup' -count=1`: PASS. This executes the concrete merged #82 in-place SQLite recovery and SSE protocol/subscription cleanup regressions, without changing their timeout guards or bypassing real production subscription behavior.
+- `cd backend && go test -race ./internal/domain ./internal/adapters/codex`: PASS; includes F3 additive enrichment and F4 structured output/raw-evidence guards.
+
+Stable readiness: focused integration verification passed. Parent owns full make, canonical frontend/embedded asset comparison, standalone binary verification, merger commit, telemetry and final delivery. DOM classes prove state selection; they do not establish browser visual geometry. Existing anchor tests use deterministic geometry, and no browser run is claimed.

@@ -1109,6 +1109,74 @@ body {
 }
 
 /* Thread Viewer */
+.skills-subagents-card {
+  min-width: 0;
+}
+
+.skills-subagents-heading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.skills-subagents-heading button {
+  flex-wrap: wrap;
+  gap: 8px;
+  font: inherit;
+}
+
+.skills-subagents-table {
+  margin-top: 16px;
+}
+
+.skills-subagents-table caption {
+  padding: 0 0 10px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.skills-subagents-table th[scope="row"],
+.skills-subagents-table .source-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 160px;
+  max-width: 400px;
+  vertical-align: top;
+}
+
+.skills-subagents-table tr:focus-visible,
+.skills-subagents-card button:focus-visible,
+.thread-header-btn:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.skill-status {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.skill-status.success {
+  color: var(--status-green);
+}
+
+.skill-status.failed {
+  color: var(--status-red);
+}
+
+.child-session-jump {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.session-unavailable {
+  display: block;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
 .thread-viewer-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -5150,3 +5218,56 @@ th.num-col .th-content {
 .status-content-error { background: rgba(217, 155, 41, 0.12); border-color: #d99b29; }
 .tool-execution-breakdown { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
 .tool-execution-breakdown th, .tool-execution-breakdown td { padding: 0.35rem; text-align: left; overflow-wrap: anywhere; }
+
+/* Invocation labels truncate independently so child controls remain available. */
+.trace-invocation-controls .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.trace-invocation-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+.trace-invocation-badge {
+  display: inline-block;
+  min-width: 0;
+  max-width: min(100%, 24rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  padding: 2px 7px;
+  font: 600 12px var(--font-mono);
+  background: var(--bg-surface-elevated);
+}
+.trace-invocation-badge.badge-skill { color: var(--accent-blue); }
+.trace-invocation-badge.badge-task { color: var(--status-green); }
+button.trace-invocation-badge { cursor: pointer; }
+.trace-child-unavailable {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.trace-child-id {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+.trace-child-unavailable button { flex-shrink: 0; }
+.tool-details-group, .part-header { min-width: 0; flex-wrap: wrap; }

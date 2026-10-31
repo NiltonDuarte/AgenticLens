@@ -6,7 +6,7 @@ import type {
   EventFact,
   WorkspaceDetail,
 } from '../domain/types';
-import { sessionTools } from '../domain/types';
+import { ledgerSkills, ledgerTaskLinks, sessionTools } from '../domain/types';
 import { rebindEvent, sessionEvents, selectWorkspaceEvents } from '../domain/events';
 import {
   fetchWorkspaceById,
@@ -30,6 +30,7 @@ import { EmptyState } from '../components/EmptyState';
 import { TicketSelector } from '../components/TicketSelector';
 import { SaturationBar } from '../components/SaturationBar';
 import { ThreadViewer } from '../components/ThreadViewer';
+import { SkillsSubagentsPanel } from '../components/SkillsSubagentsPanel';
 import { ArtifactViewer } from '../components/ArtifactViewer';
 import { getRoleColor, getModelColor } from '../utils/theme';
 import { TraceWaterfall } from '../components/TraceWaterfall';
@@ -57,6 +58,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     readonly anomaly: Anomaly | null;
   }>({ event: null, anomaly: null });
   const { event: selectedEvent, anomaly: selectedAnomaly } = selection;
+  const [focusedThread, setFocusedThread] = useState<{ readonly id: string } | undefined>();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(selectedTicketId ?? null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +84,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     setTraceAnomalies([]);
     setIsHydrated(false);
     setDataSource('committed_ledger');
+    setFocusedThread(undefined);
     setSelection({ event: null, anomaly: null });
     setIsDrawerOpen(false);
     try {
@@ -163,6 +166,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const handleSelectTicket = (ticketId: string) => {
     setActiveTicketId(ticketId);
     onSelectTicket?.(ticketId);
+  };
+
+  const handleSelectSession = (id: string) => {
+    setFocusedThread({ id });
   };
 
   const handleSelectEvent = (event: EventFact, anomaly?: Anomaly) => {
@@ -644,6 +651,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       <TraceWaterfall
         key={`trace-${requestGenerationRef.current}`}
         events={events}
+        skills={ledgerSkills(ledger.facts)}
+        taskLinks={ledgerTaskLinks(ledger.facts)}
+        availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
+        onSelectSession={handleSelectSession}
         isHydrated={isHydrated}
         dataSource={dataSource}
         anomalies={traceAnomalies}
@@ -653,7 +664,14 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       />
 
       {/* Row 7: Session Thread Logs */}
-      <ThreadViewer threads={ledger.threads} />
+      <SkillsSubagentsPanel
+        key={ledger.ticket_id}
+        skills={ledgerSkills(ledger.facts)}
+        delegations={ledgerTaskLinks(ledger.facts)}
+        availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
+        onJumpToSession={handleSelectSession}
+      />
+      <ThreadViewer threads={ledger.threads} focusSession={focusedThread} />
 
       {/* Row 8: Workspace Artifacts */}
       <ArtifactViewer artifacts={artifacts} />

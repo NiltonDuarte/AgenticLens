@@ -44,6 +44,51 @@ describe('LiveTraceInspector Component', () => {
     expect(screen.getByText(/Content Errors:/)).toHaveTextContent('Content Errors: 2');
   });
 
+  it('keeps warning task navigation, diagnostic copy and execution expansion beside rich invocations', async () => {
+    const select = vi.fn();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    mockClipboard(writeText);
+    const baseMessage = mockLiveTraceView.messages[0];
+    if (!baseMessage) throw new Error('Missing trace fixture message');
+    const failedPart: LivePartFact = { id: 'failed-task', type: 'tool', tool_name: 'bash', status: 'error', is_error: true, error_message: 'exit code 1', output_snippet: 'process failed' };
+    const trace: LiveTraceView = { ...mockLiveTraceView, total_tool_calls: 4, failed_tool_calls: 1, content_errors: 1, recent_errors: [failedPart], messages: [{ ...baseMessage, reasoning_content: 'Inspect the child diagnostic. '.repeat(20), parts: [
+      { id: 'skill-part', type: 'tool', tool_name: 'skill', skill_name: 'agentic-lens-dev', status: 'completed', is_error: false },
+      { id: 'known-task', type: 'tool', tool_name: 'task', subagent_type: 'coder', child_session_id: 'known-child', status: 'completed', is_error: false, has_content_error: true, content_severity: 'medium', content_error_snippet: 'syntax error: child result', output_snippet: 'syntax error: child result' },
+      { id: 'pending-task', type: 'tool', tool_name: 'task', subagent_type: 'tester', child_session_id: 'pending-child', status: 'running', is_error: false },
+      failedPart,
+    ] }] };
+    render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()}
+      availableSessionIds={['known-child']} onSelectSession={select} />);
+    expect(screen.getByText('[skill: agentic-lens-dev]')).toHaveAttribute('title', '[skill: agentic-lens-dev]');
+    const warning = screen.getByText('CONTENT ERROR').closest('.trace-part-item');
+    expect(warning).toHaveClass('part-content-error');
+    expect(screen.getByText('EXEC ERROR').closest('.trace-part-item')).toHaveClass('part-error');
+    expect(screen.getByText(/Failed Tools:/)).toHaveTextContent('Failed Tools: 1');
+    expect(screen.getByText(/Content Errors:/)).toHaveTextContent('Content Errors: 1');
+    expect(screen.getByTestId('failed-tools-toggle-btn')).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
+    expect(screen.getAllByTestId('failed-tool-alert-card')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', {name: 'Show Reasoning'}));
+    expect(screen.getByRole('button', {name: 'Hide Reasoning'})).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole('button', {name: 'Copy tool execution debug prompt for part known-task'})); });
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('syntax error: child result'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('completed'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect child session known-child' }));
+    expect(select).toHaveBeenCalledWith('known-child');
+    expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy child session ID pending-child' })); });
+    expect(writeText).toHaveBeenCalledWith('pending-child');
+    const copyChild = screen.getByRole('button', { name: 'Copy child session ID pending-child' });
+    expect(copyChild).toHaveTextContent('Copied');
+    writeText.mockRejectedValueOnce(new Error('Clipboard denied'));
+    await act(async () => { fireEvent.click(copyChild); });
+    expect(copyChild).toHaveTextContent('Copy failed');
+    expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toHaveTextContent('pending-child');
+    expect(select).toHaveBeenCalledTimes(1);
+
+  });
+
   it('renders placeholder prompt when sessionNode is null', () => {
     render(
       <LiveTraceInspector
@@ -440,6 +485,31 @@ describe('LiveTraceInspector Component', () => {
 
     expect(messageList.scrollTop).toBe(180);
     expect(screen.getByRole('button', { name: /new turns available/i })).toBeInTheDocument();
+  });
+
+  it.each(['latest-first', 'oldest-first'])('anchors same-turn growth without remounting reasoning in %s order', (order) => {
+    const { rerender } = render(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+    if (order === 'oldest-first') fireEvent.click(screen.getByTestId('turn-order-toggle-btn'));
+    const list = document.querySelector('.inspector-messages-list') as HTMLDivElement;
+    Object.defineProperties(list, {
+      scrollHeight: { configurable: true, value: 1000 }, clientHeight: { configurable: true, value: 100 },
+    });
+    list.getBoundingClientRect = () => new DOMRect(0, 100, 300, 100);
+    const anchors = Array.from(list.querySelectorAll<HTMLElement>('[data-trace-anchor]'));
+    const anchor = anchors[1]!;
+    let top = 110;
+    anchors.forEach((element, index) => { element.getBoundingClientRect = () => new DOMRect(0, index === 1 ? top : 0, 100, 20); });
+    list.scrollTop = 200;
+    fireEvent.scroll(list);
+    const turn = anchor.closest('.trace-message-turn');
+    top = 170;
+    const next = { ...mockLiveTraceView, messages: mockLiveTraceView.messages.map((message) => ({ ...message, content: message.content + ' streamed growth' })) };
+    rerender(<LiveTraceInspector sessionNode={mockNode} trace={next} loading={true} onClose={vi.fn()} />);
+    expect(list.scrollTop).toBe(260);
+    expect(anchor.closest('.trace-message-turn')).toBe(turn);
+    expect(screen.queryByRole('button', { name: /new turns available/i })).not.toBeInTheDocument();
   });
 
   it('quick navigation buttons scroll to each end of the message list', () => {
