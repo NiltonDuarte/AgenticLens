@@ -4,4 +4,38 @@ Baseline 36bea1f18f2256392428329136b3241e98d09854; initial working tree clean. U
 
 Completed repository-wide AST/reference screening (111 Go files; 89 frontend TS/TSX files) and focused manual inspection. Seven findings recorded in iterations/01/REVIEW.md, including one executable rollback reproduction. No application/test/runtime changes and no test deletions. Scope and confidence limits are explicit. No child agents launched. No matching planning specification/index entry exists to transition.
 
-Verification and telemetry finalization pending.
+Verification: baseline make passed; after committing audit deliverables and fetching/merging origin/main (already up to date), integrated make passed at 236e1fd with only audit-text refinements pending. Go vet/race tests, TypeScript typecheck/ESLint, all 741 frontend tests across 35 files, frontend bundle and four platform builds passed. No gate stages skipped. The integrated Go run reused valid cache results from unchanged code. Embedded asset tree matched web/dist; host binary version command succeeded. git diff --check passed. No runtime performance claims.
+
+Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 3
+- **Active Agent Duration:** 0m 0s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 77.0k tokens (39% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** N/A
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 872 reasoning tokens (9.4% of generated output)
+- **Tool Health & Self-Correction:** 27 tool calls (1 self-corrections, 96.3% success rate)
+
+### Anomalies & Health Flags
+- **Status:** No execution anomalies detected (clean session).
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **rootagent** | 1 | 72,389 | 8,362 | 1,263,744 | 94.6% | 77.0k | HEALTHY | $0.00 |
+| **Total** | **1** | **72,389** | **8,362** | **1,263,744** | **94.6%** | **77.0k** | **HEALTHY** | **$0.00** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6-astra** | 1 | 72,389 | 8,362 | 1,263,744 | 94.6% | $0.00 |
+| **Total** | **1** | **72,389** | **8,362** | **1,263,744** | **94.6%** | **$0.00** |
+
+Final ledger verified: exactly the expected Codex root, no children, no previous ledger to preserve.

@@ -1,0 +1,55 @@
+{
+  "schema_version": 4,
+  "ticket_id": "GEN-14",
+  "ticket_title": "Code smell and test-only production audit",
+  "ticket_type": "chore",
+  "started_at": "2026-10-31T23:01:20.845Z",
+  "completed_at": "2026-10-31T23:05:35.586Z",
+  "updated_at": "2026-10-31T23:05:36.477372+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 3
+  },
+  "sessions": [
+    {
+      "id": "01a19432-3529-73a0-a201-d8b1dbf00473",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-astra",
+          "started_at": "2026-10-31T23:01:23.334Z",
+          "completed_at": "2026-10-31T23:05:35.586Z",
+          "active_duration_seconds": 0,
+          "turns": 1,
+          "tokens": {
+            "input": 72389,
+            "output": 8362,
+            "cache_read": 1263744,
+            "reasoning": 872,
+            "peak_context": 76979
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 27,
+          "errors": 1
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}
