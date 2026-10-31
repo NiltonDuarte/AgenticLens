@@ -30,9 +30,14 @@ Merged states checked using GitHub CLI; current source and ticket contracts chec
 
 - Passed read-only consistency check: 15 to-do specifications, 17 unique indexed tickets including 2 discarded; every referenced file exists; every to-do file is indexed exactly once; Ready/Blocked sections agree with statuses and outstanding dependencies; explicit spec headers agree with index; blocker relationships are reciprocal.
 - `git diff --check`: passed.
-- Full `make`: pending final result and upstream synchronization.
+- Full `make`: passed before integration and again on committed documentation change `2f91d73` after `git fetch origin main && git merge origin/main --no-edit` reported already up to date at `1d20117`. Go vet/race tests, TypeScript typecheck/lint, 34 frontend test files / 712 tests, production frontend assets, and four platform binaries passed. The second run reused valid Go test cache.
+- Environment observations: npm reported 21 dependency advisories; frontend tests emitted existing React act warnings. Neither failed the gate. Dependency upgrades are outside this documentation scope.
 - No new automated tests: this change edits only planning documents. No claim that remaining product acceptance cases were executed.
 
 ## Applicable regression-prevention cases
 
 Applied configured workspace root, preserved baseline and historical implementation evidence, distinguished partially implemented features from delivered acceptance, and kept migration shape separate from source recovery. AL-55 requires replanning; this audit neither marks it complete nor approves changing runtime ingestion.
+
+## Final telemetry verification
+
+Generated with literal nonce and `--source codex --ticket-type docs`. Root `01a191f6-530e-75a1-9bf1-f8794b6f795f` matched the harness thread ID and the CLI discovered exactly one rollout. No children were created this iteration. All five preexisting Codex sessions are preserved with identical session facts (six total); no sessions from other harnesses existed to preserve. Root invocation facts are nonempty. Raw rollouts remain outside Git. USD cost remains subject to the existing AL-57 unavailable-cost limitation. This is a final-phase extraction snapshot; publishing/commit bookkeeping after generation is not included.
