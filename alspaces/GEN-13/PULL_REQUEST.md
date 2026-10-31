@@ -4,4 +4,4 @@ Repeated workflow explanations and operational references made the project docs 
 
 Preserve setup alternatives, commands, configuration semantics, compatibility limitations, technical requirements, screenshots, and historical records. No application or test changes.
 
-Validation: local Markdown links/anchors and whitespace checks; integrated make result recorded in the ticket review. Telemetry availability is recorded in SUMMARY.md.
+Validation: 33 local Markdown links/anchors and whitespace checks passed. Integrated `make` passed (Go vet/race tests, TypeScript typecheck/ESLint, 712 frontend tests, asset embedding, and binary builds). Telemetry availability is recorded in SUMMARY.md.
