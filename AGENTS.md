@@ -24,10 +24,12 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
    - Once work begins on a ticket, the agent is locked to that ticket. Agents must refuse any request to switch to another ticket or work on multiple tickets simultaneously within the same session.
 3. **Prompt Steering & Iterations**:
    - Once a ticket is active, every subsequent user prompt must be interpreted as steering feedback for that specific ticket.
-   - Agents must create and advance new iterations (`iterations/<NN>/`) as needed to incorporate steering directions.
+   - Advance iterations (`iterations/<NN>/`) when scope or acceptance boundaries change. Keep clarification, status questions, and review corrections within the current iteration; do not create a new plan for each message. Preserve approval and completed verification across compaction. Honor explicit requests to consolidate plans and remove empty iteration folders.
 4. **Dedicated Workspace Allocation**:
    - Every task must have its isolated workspace under `<WORKSPACES_DIR>/<TICKET_ID>/`, including ad hoc tickets.
-   - Never mix artifacts across tickets or leave untracked changes in the working directory.
+   - Never mix artifacts across tickets or leave task-owned changes untracked at handoff. Record the initial Git status and preserve unrelated user or agent changes; stage only files owned by this task.
+   - Check the existing workspace and ticket index before allocating an ad hoc identifier. A generated branch name is not proof that its ticket number is unused.
+   - A rename or relocation of ticket artifacts must not require application or test changes. Tests must use self-contained fixtures, never the live ticket workspace.
 5. **Workspace Deliverables Checklist**:
    - `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
    - `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
@@ -42,15 +44,19 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
      ```bash
      ./bin/agentic-lens generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
      ```
+   - Select the actual harness explicitly when defaults are ambiguous. For a Codex session, add `--source codex`; use `--codex-home` only when its session store is outside the normal configured location. Confirm supported options with the built CLI.
+   - Before committing telemetry, verify the root session, source, expected child sessions, and preservation of existing sessions from other harnesses. A successful exit alone does not establish complete extraction. Record unavailable facts or source errors; never manufacture a successful or empty ledger.
+   - Commit the generated ledger and rendered summary. Keep raw transcripts outside Git. Backfill requires the machine holding the original source sessions; unavailable source data must remain explicitly incomplete.
    - `<CONVENTIONAL_TYPE>` must match standard conventional commit classifications (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
    - PO tickets (`PO-#`) must strictly use `--ticket-type docs`.
    - Generic tickets (`GEN-#`) must use `--ticket-type chore` unless explicitly a feature (`feat`).
    - Developer tickets must use the corresponding conventional commit type matching their branch prefix (`feat`, `fix`, `refactor`, etc.). Never default all tickets to `feature`.
    - Ad hoc tickets use their assigned ticket ID and isolated workspace for telemetry. They do not require a specification or index entry under `plan/`.
 7. **Pull Request Delivery & Handoff**:
-   - Commit all implementation deliverables on the feature branch first (`git add -A && git commit -m "$COMMIT_MSG"`). Git requires a clean working tree before merging.
+   - Commit all implementation deliverables on the feature branch first (stage the reviewed task-owned paths, then commit). Git requires a clean working tree before merging.
    - Merge `main` into the feature branch (`git fetch origin main && git merge origin/main --no-edit`) to resolve any upstream conflicts, and verify test suites pass (`make`).
    - Extract the PR title directly from the first line of `PULL_REQUEST.md` (e.g. `PR_TITLE=$(head -n 1 <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md | sed 's/^# *//')`).
+   - Check the existing PR state before follow-up delivery. If it has merged, compare the remaining branch changes with current `origin/main` and open a new PR for any undelivered changes; do not report a merged PR as delivering later work.
    - Commit final deliverables and telemetry facts on the feature branch, push upstream, and open a GitHub Pull Request via `gh pr create --title "$PR_TITLE" --body-file <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`.
    - Avoid directly merging or checking out `main` within agent worktrees.
    - The Pull Request URL must be prominently displayed at the top of the final handoff report.
@@ -59,7 +65,11 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
 
 ## 2. Multi-Agent SDLC & Role Boundaries
 
-Work in this repository is orchestrated through specialized agents and skills:
+Application development in this repository is orchestrated through specialized agents and skills. Documentation-only maintenance and session audits may directly update instructions and ticket artifacts without launching a full development cycle. If the work reaches application code, tests, schemas, or runtime scripts, use the development workflow below.
+
+For delegated work, name one owner for each writable path, state the role and acceptance boundaries, and pass the contract, current plan, review findings, and baseline commit. Tell agents that they share the checkout and must preserve others' changes. The parent owns integration, telemetry, commits, and PR delivery unless explicitly delegated. A tester or reviewer must not publish or continue product implementation on its own.
+
+Specialized roles:
 
 - **Product / Scope Inception (`agentic-lens-po`)**:
   - Elicits requirements and decomposes features into tracer-bullet tickets.
@@ -83,7 +93,7 @@ Work in this repository is orchestrated through specialized agents and skills:
 All code must strictly satisfy `TECHNICAL_GUIDELINES.md`:
 
 1. **Stack**:
-   - Go 1.23+ for backend, CLI, and HTTP services (`cmd/agentic-lens`, `internal/domain`, `internal/adapters`).
+   - Go 1.23+ for backend, CLI, and HTTP services under `backend/` (`backend/cmd/agentic-lens`, `backend/internal/domain`, `backend/internal/adapters`).
    - TypeScript 5.x+ strict for frontend (`web/`).
 2. **Single Binary Distribution**:
    - The compiled TypeScript frontend (`web/dist`) must be embedded into the Go executable via `embed.FS`.
@@ -96,3 +106,17 @@ All code must strictly satisfy `TECHNICAL_GUIDELINES.md`:
    - Discriminated unions for multi-state representations.
 5. **Zero Emojis**:
    - Zero emojis permitted in code, comments, docstrings, commit messages, PR drafts, UI strings, logs, or workspace artifacts.
+
+
+## 4. Session-Grounded Execution Practices
+
+- **Ground before changing**: Inspect the configuration, owning module, existing tests, and current command help. Use configured workspace roots, code classification patterns, and source locations; never infer them from this repository's ticket names or one developer's checkout.
+- **Keep evidence distinct from inference**: For telemetry work, record source and session identifiers and validate against real source records. Synthetic fixtures are for deterministic tests, not evidence of a real session. Unknown records, missing children, unavailable pricing, and partial migrations must be surfaced according to the data contract rather than silently treated as complete or zero.
+- **Preserve baseline functionality**: Optional hydration enriches stored facts. Test the persisted-data path with enrichment unavailable as well as available; enrichment failure must not hide supported ledger data.
+- **Name by responsibility and version**: Version-specific adapters and tests should identify both the schema family and responsibility (for example, `schema_v2_session_extraction.go`). Shared logic should not claim to be version-specific. Keep public comments consistent with actual dispatch behavior.
+- **Bound investigation and output**: Use targeted searches and bounded reads. After a repeated failure, inspect the cause and change the hypothesis or command before retrying. Summarize resolved findings and remaining work in the active iteration so a compacted session does not restart discovery.
+- **Coordinate verification**: Record the tested commit or diff, command, result, and environment limitation in the review. Reuse valid results for unchanged code. Re-run affected checks after fixes and the required `make` gate after integration; reviewers need not duplicate a completed suite without a concrete concern. Report skipped stages explicitly.
+- **Keep the shipped UI current**: Frontend changes require the canonical frontend build and verification of the embedded asset tree under `backend/internal/adapters/web/dist/`. Do not restore stale tracked assets merely to reduce the diff. Verify the standalone binary's assets as well as development-source behavior.
+- **Close with evidence**: State delivered behavior, verification, remaining limitations, and the correct PR URL. Do not call work complete because a plan exists, a child reports success, or an earlier PR passed checks.
+
+Rationale and session references: [GEN-12 session audit](alspaces/GEN-12/iterations/01/REVIEW.md).

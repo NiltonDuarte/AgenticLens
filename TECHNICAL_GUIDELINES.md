@@ -9,11 +9,11 @@ Mandatory technical guidelines for developing AgenticLens using **Go** (backend,
 Dependencies flow strictly inward across layers:
 
 ### Backend (Go)
-1. **CLI / Service Layer (`cmd/agentic-lens/`)**:
+1. **CLI / Service Layer (`backend/cmd/agentic-lens/`)**:
    - Application entrypoint, CLI commands (`scan`, `metrics`, `summary-append`, `server`), HTTP/gRPC server wiring.
-2. **Adapter Layer (`internal/adapters/`)**:
+2. **Adapter Layer (`backend/internal/adapters/`)**:
    - External boundary serialization (JSON encoding/decoding), filesystem repository scanner (`workspaces/` traversal), HTTP handlers, API clients.
-3. **Domain Layer / Functional Core (`internal/domain/`)**:
+3. **Domain Layer / Functional Core (`backend/internal/domain/`)**:
    - Pure domain models, value objects, aggregation algorithms, health score derivations, constants, and typed errors.
    - **Zero External Dependencies**: Must NOT import outer layers (`internal/adapters`, `cmd/`) or network/disk libraries (`net/http`, `os`, `database/sql`).
 
@@ -85,7 +85,8 @@ AgenticLens deploys as a single, self-contained executable with the TypeScript w
    - Production / Standalone: Serves embedded static assets from `embed.FS` with client-side fallback routing for SPA navigation.
    - Local Development: Vite dev server runs with HMR and proxies API requests (`/api/*`) to the Go backend.
 3. **Build Sequence**:
-   - Production binary build sequence: `cd web && npm run build` followed by `go build ./cmd/agentic-lens`.
+   - Production binary build sequence: `(cd web && npm run build)` followed by `(cd backend && go build -o ../bin/agentic-lens ./cmd/agentic-lens)`.
+   - The frontend build copies assets to `backend/internal/adapters/web/dist/`, the Go embed input. Preserve and review tracked changes there when frontend source changes.
    - CI and container builds must compile the frontend first before invoking Go build.
 
 ---
@@ -108,14 +109,16 @@ make build          # Single binary build (including frontend bundle if present)
 ### Manual Go Checks
 ```bash
 # Verify compilation and format
-go vet ./...
+(cd backend && go vet ./...)
 # Run test suite with race detector
-go test -race ./...
+(cd backend && go test -race ./...)
 # Build CLI binary
-go build -o bin/agentic-lens ./cmd/agentic-lens
+(cd backend && go build -o ../bin/agentic-lens ./cmd/agentic-lens)
 ```
 
 ### TypeScript Checks & Frontend Build
+Run these commands from `web/` after installing its dependencies.
+
 ```bash
 # Typecheck
 npm run typecheck  # or npx tsc --noEmit
@@ -126,6 +129,11 @@ npm test
 # Production frontend build
 npm run build      # Produces web/dist/ for Go embedding
 ```
+
+### Fixture and Verification Boundaries
+- Tests must construct isolated configuration, ledgers, and source fixtures; do not read live `alspaces/` history, developer databases, or depend on actual ticket IDs. A ticket rename must not break tests.
+- Exercise configurable roots and classification patterns, unavailable optional enrichment, malformed records, and partial source trees where relevant. Keep provenance explicit for sanitized real-format fixtures versus synthetic examples.
+- Run focused checks during rework, then the required full `make` gate on the integrated result. Record commands, results, and skipped stages; a conditional Makefile target that ran no frontend checks is not proof they passed.
 
 ### Invariant Checks
 - Verify zero `any` in Go and TypeScript.
