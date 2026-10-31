@@ -39,6 +39,27 @@ Dependencies flow strictly inward across layers:
 - The shell handles filesystem traversal, directory scanning, JSON deserialization, HTTP routing, and UI rendering.
 - Errors from the shell must be caught, wrapped with descriptive context (`fmt.Errorf("...: %w", err)`), and handled gracefully.
 
+### Fact Fidelity and Refresh Boundaries
+
+- Required identity and metadata are validated before persistence. Optional or unknown values remain explicit; do not invent completion dates from started/updated dates, assign feature types to unclassified tickets, or represent unavailable measurements as measured zero.
+- Resolve stored sessions by exact identity by default. Heuristic recovery must be explicitly enabled and must not silently overwrite unrelated stored facts.
+- Refresh each source-owned session/tree only after discovery, parsing, and grouping succeed. Preserve all roots, children, legitimate repeated invocation rows, unavailable sessions, and other-harness facts. Replace cumulative snapshots for refreshed owners; repeated refresh of unchanged input must be idempotent.
+- Persisted facts are the baseline for reads. Optional hydration may add information but must not hide accepted baseline data on failure, delay, or partial success. Keep compact persistence transforms separate from read projections; never persist hydrated payloads as a side effect of GET.
+- Reuse canonical domain types and source-backed fields. Do not add a persisted metric with no defined producer or infer execution failure solely from error-like text returned by a successful inspection tool.
+
+### Hierarchy, Evidence, and UI Recovery
+
+- Structural parent linkage determines root/child classification; persona names are raw facts and configured presentation mappings must not rewrite source identity. Count SDLC steering from the source records defined by the telemetry contract, never from iteration directories or a forced minimum.
+- Keep source diagnostic payloads separate from generated explanatory copy. Preserve verbatim evidence except for explicit approved redaction; text cleanup must not change execution semantics.
+- Controls needed to recover from empty filters remain available in empty states. Layout fixes must preserve tooltip visibility, table containment, long-value access, keyboard behavior, and existing collapse defaults together.
+- Distinguish a fatal project setup error from a rejected individual ledger. Preserve valid sibling workspace results and surface per-ticket diagnostics; never count invalid ledgers in aggregates.
+
+### Configuration and Live Work
+
+- Trace shared configuration through loader, validation, writer/templates, CLI, live/offline calculations, API, and UI. Test non-default values end to end. Required settings fail explicitly when absent; do not revive removed configuration aliases implicitly.
+- Polling designs must state a work bound in terms of session count, history size, subscribers, and cadence. Prefer changed-data reads; avoid rebuilding every full trace on unchanged ticks.
+- Failed optional lookups must surface error or partial-data semantics. An unsuccessful lookup is not evidence of an empty result.
+
 ---
 
 ## 3. Go Design & Idioms
@@ -97,20 +118,24 @@ Before submitting any iteration or PR, all quality gates must pass:
 
 ### Automated Verification (Makefile)
 ```bash
-# Bootstrap a clean checkout: Go vet requires the embedded frontend to exist
+# Bootstrap dependencies (Make prepares embedded assets before Go checks)
 make install
-(cd web && npm run build)
 
 # Run all quality checks, tests, and build
 make
 
 # Or run specific stages:
+make backend-check  # Backend vet and race tests, with embedded-asset prerequisite
+make web-assets     # Prepare assets before invoking Go tooling directly
 make check          # Static analysis: go vet, frontend lint/typecheck, git diff check
 make test           # Unit and race-detected test suites (backend and frontend)
 make build          # Single binary build (including frontend bundle if present)
 ```
 
 ### Manual Go Checks
+
+Run `make web-assets` first with frontend dependencies installed. For routine backend verification, prefer `make backend-check`, which carries this prerequisite.
+
 ```bash
 # Verify compilation and format
 (cd backend && go vet ./...)
@@ -135,6 +160,9 @@ npm run build      # Produces web/dist/ for Go embedding
 ```
 
 ### Fixture and Verification Boundaries
+
+Select cases from the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before implementing boundary changes.
+
 - Tests must construct isolated configuration, ledgers, and source fixtures; do not read live `alspaces/` history, developer databases, or depend on actual ticket IDs. A ticket rename must not break tests.
 - Exercise configurable roots and classification patterns, unavailable optional enrichment, malformed records, and partial source trees where relevant. Keep provenance explicit for sanitized real-format fixtures versus synthetic examples.
 - Run focused checks during rework, then the required full `make` gate on the integrated result. Record commands, results, and skipped stages; a conditional Makefile target that ran no frontend checks is not proof they passed.
