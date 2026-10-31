@@ -4,8 +4,8 @@
   "ticket_title": "Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks",
   "ticket_type": "feat",
   "started_at": "2026-10-30T23:27:55.484Z",
-  "completed_at": "2026-10-31T00:50:19.792Z",
-  "updated_at": "2026-10-31T00:50:20.822579+00:00",
+  "completed_at": "2026-10-31T00:52:16.040Z",
+  "updated_at": "2026-10-31T00:52:20.529361+00:00",
   "code": {
     "lines_added": 727,
     "lines_deleted": 21,
@@ -26,15 +26,15 @@
           "role": "RootAgent",
           "model": "gpt-6-luna",
           "started_at": "2026-10-30T23:27:56.426Z",
-          "completed_at": "2026-10-31T00:50:19.792Z",
+          "completed_at": "2026-10-31T00:52:16.040Z",
           "active_duration_seconds": 1819,
           "turns": 5,
           "tokens": {
-            "input": 115419,
-            "output": 22529,
-            "cache_read": 7605760,
-            "reasoning": 11241,
-            "peak_context": 106138
+            "input": 129752,
+            "output": 25035,
+            "cache_read": 9048960,
+            "reasoning": 12765,
+            "peak_context": 118105
           },
           "cost_usd": 0,
           "compactions": 0,
@@ -44,8 +44,8 @@
       "tools": [
         {
           "name": "command",
-          "calls": 52,
-          "errors": 9
+          "calls": 63,
+          "errors": 11
         },
         {
           "name": "list_agents",

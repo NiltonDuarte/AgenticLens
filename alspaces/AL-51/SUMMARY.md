@@ -28,13 +28,13 @@
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 8
 - **Active Agent Duration:** 52m 55s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 106.1k tokens (53% of 200k healthy ceiling, 0 compactions) | Subagents peak 147.2k (Coder)
+- **Context Window Health:** ELEVATED — Root agent peak 118.1k tokens (59% of 200k healthy ceiling, 0 compactions) | Subagents peak 147.2k (Coder)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 1.4:1 (+426 test lines / +301 prod lines)
 - **Code Delivered:** +727 / -21 lines across 17 code files (excluding docs)
-- **Reasoning Effort:** 37,131 reasoning tokens (30.3% of generated output)
-- **Tool Health & Self-Correction:** 272 tool calls (27 self-corrections, 90.1% success rate)
+- **Reasoning Effort:** 38,655 reasoning tokens (30.5% of generated output)
+- **Tool Health & Self-Correction:** 283 tool calls (29 self-corrections, 89.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -50,11 +50,11 @@
 | **coder** | 4 | 194,175 | 41,277 | 13,639,936 | 98.6% | 147.2k | ELEVATED | $0.00 |
 | **tester** | 3 | 59,810 | 5,420 | 2,547,200 | 97.7% | 82.0k | HEALTHY | $0.00 |
 | **reviewer** | 3 | 102,213 | 10,983 | 2,048,640 | 95.2% | 86.3k | HEALTHY | $0.00 |
-| **rootagent** | 1 | 115,419 | 22,529 | 7,605,760 | 98.5% | 106.1k | ELEVATED | $0.00 |
-| **Total** | **14** | **510,404** | **85,583** | **26,994,560** | **98.1%** | **147.2k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 129,752 | 25,035 | 9,048,960 | 98.6% | 118.1k | ELEVATED | $0.00 |
+| **Total** | **14** | **524,737** | **88,089** | **28,437,760** | **98.2%** | **147.2k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 14 | 510,404 | 85,583 | 26,994,560 | 98.1% | $0.00 |
-| **Total** | **14** | **510,404** | **85,583** | **26,994,560** | **98.1%** | **$0.00** |
+| **gpt-6-luna** | 14 | 524,737 | 88,089 | 28,437,760 | 98.2% | $0.00 |
+| **Total** | **14** | **524,737** | **88,089** | **28,437,760** | **98.2%** | **$0.00** |
