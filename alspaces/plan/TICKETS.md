@@ -7,17 +7,10 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ## In Progress
 
 
+
 ---
 
 ## Ready
-
-- **AL-42**: Unify Tool Execution Error Classification and Offline-Live Pipeline Parity
-  - **Subsystem**: Domain / Adapters / Live / OpenCode / Tests
-  - **Phase**: Phase 7 (v1 Defect Remediation)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-43
-  - **File**: `alspaces/plan/to-do/AL-42 unify tool execution error classification and offline live pipeline parity.md`
 
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
@@ -75,14 +68,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-45 debug id token overflow truncation and containment.md`
 
-- **AL-46**: Collapsible Failed Tool Calls Section with Default-Collapsed State in Live Inspector
-  - **Subsystem**: Presentation / Web / Components / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-46 collapsible failed tool calls section in live inspector.md`
-
 - **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
   - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
   - **Phase**: Phase 7 (v1 Observability Polish)
@@ -116,6 +101,24 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **File**: `alspaces/plan/to-do/AL-51 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
 
 ---
+, and Live Stream Ingestion for Skills and Tasks
+  - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
+  - **Phase**: Phase 8 (v2 Observability / Skills)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-52, AL-53, AL-54
+  - **File**: `alspaces/plan/to-do/AL-51 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
+
+---
+
+- **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
+  - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
+  - **Phase**: Phase 7 (v1 Feature / Observability)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
+
 
 ## Blocked
 
@@ -150,14 +153,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: AL-51, AL-52, AL-53, AL-54
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
-
-- **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
-  - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
-  - **Phase**: Phase 7 (v1 Feature / Observability)
-  - **Status**: Pending
-  - **Blocked by**: AL-42
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
 
 - **AL-57**: Represent Unavailable Telemetry Cost as Nullable
   - **Subsystem**: Domain / Adapters / CLI / Presentation / Tests

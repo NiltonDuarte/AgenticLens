@@ -468,24 +468,14 @@ func extractSchemaV1Sessions(
 				}
 			}
 
-			outPrefix := out
-			if len(outPrefix) > 50 {
-				outPrefix = outPrefix[:50]
-			}
-
-			trimmedOut := strings.TrimSpace(out)
-			cleanStat := strings.ToLower(strings.TrimSpace(stat))
-			cleanTool := strings.ToLower(toolName)
-
-			var isError bool
-			if (cleanTool == "read" || cleanTool == "grep" || cleanTool == "glob" || cleanTool == "webfetch") && cleanStat == "completed" {
-				isError = false
-			} else {
-				isError = stat == "error" || strings.Contains(out, "Traceback") || strings.HasPrefix(trimmedOut, "Error:") || strings.Contains(outPrefix, "Error:")
-			}
+			classification := domain.ClassifyToolExecution(toolName, stat, out, tAcc.consecutiveErrors)
+			isError := classification.IsError
 
 			if isError {
 				tAcc.errors++
+				tAcc.consecutiveErrors++
+			} else {
+				tAcc.consecutiveErrors = 0
 			}
 
 			eventStatus := "completed"
@@ -518,7 +508,7 @@ func extractSchemaV1Sessions(
 				EventType:     domain.EventTypeToolCall,
 				ToolName:      &tName,
 				Status:        eventStatus,
-				ErrorMessage:  nil,
+				ErrorMessage:  classification.ErrorMessage,
 				DurationMs:    durMs,
 				ContextTokens: ctxTokens,
 				ToolInput:     toolInput,
