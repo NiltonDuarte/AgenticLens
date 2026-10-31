@@ -43,19 +43,27 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - Final review inventory checks passed; only REV-4 documentation and generated telemetry are task-owned changes.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 0m 0s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 149.0k tokens (75% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 3
+- **Active Agent Duration:** 12m 0s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 193.1k tokens (97% of 200k healthy ceiling, 0 compactions) | Subagents peak 215.9k (Reviewer)
 - **Role Effort Distribution (Subagents):** N/A
-- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
-- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 2,820 reasoning tokens (15.1% of generated output)
-- **Tool Health & Self-Correction:** 32 tool calls (2 self-corrections, 93.8% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
+- **Test-to-Production Code Ratio:** 1:0 (+1 test lines / +0 prod lines)
+- **Code Delivered:** +1 / -1,611 lines across 8 code files (excluding docs)
+- **Reasoning Effort:** 8,667 reasoning tokens (16.7% of generated output)
+- **Tool Health & Self-Correction:** 109 tool calls (2 self-corrections, 98.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 1 execution anomaly detected (1 CRITICAL).
+- **Status:** 9 execution anomalies detected (3 CRITICAL, 6 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+91.9k tokens) — Context tokens surged by 91.9k to 126.8k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+184.7k tokens) — Context tokens surged by 184.7k to 184.7k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.6k tokens) — Context tokens reached 205.6k, breaching the 200k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.3k tokens) — Context tokens reached 165.3k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (173.0k tokens) — Context tokens reached 173.0k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (176.9k tokens) — Context tokens reached 176.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (184.7k tokens) — Context tokens reached 184.7k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.5k tokens) — Context tokens reached 161.5k, breaching the 160k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (3 cycles) — Subagent roles 'coder' and 'tester' alternated for 3 consecutive cycles.
 
 ### Agentic Execution Metrics
 
@@ -64,16 +72,18 @@ Every declaration was inventoried and screened; detailed body/production inspect
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 152,618 | 15,857 | 2,389,632 | 94.0% | 149.0k | ELEVATED | $0.00 |
-| **Total** | **1** | **152,618** | **15,857** | **2,389,632** | **94.0%** | **149.0k** | **ELEVATED** | **$0.00** |
+| **planner** | 1 | 162,001 | 3,229 | 839,168 | 83.8% | 171.3k | ELEVATED | $0.00 |
+| **coder** | 1 | 34,509 | 3,226 | 1,985,280 | 98.3% | 186.9k | ELEVATED | $0.00 |
+| **tester** | 1 | 42,448 | 4,736 | 2,024,192 | 97.9% | 195.9k | ELEVATED | $0.00 |
+| **reviewer** | 1 | 63,393 | 2,736 | 1,378,816 | 95.6% | 215.9k | BLOATED (108%) | $0.00 |
+| **rootagent** | 1 | 204,444 | 29,154 | 10,850,944 | 98.2% | 193.1k | ELEVATED | $0.00 |
+| **Total** | **5** | **506,795** | **43,081** | **17,078,400** | **97.1%** | **215.9k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 152,618 | 15,857 | 2,389,632 | 94.0% | $0.00 |
-| **Total** | **1** | **152,618** | **15,857** | **2,389,632** | **94.0%** | **$0.00** |
-
-Final telemetry validation: one Codex root session, matching `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`, nonempty invocations, no children expected or extracted, no prior cross-harness ledger to preserve. Extraction succeeded from real rollout records.
+| **gpt-6.1-sol** | 5 | 506,795 | 43,081 | 17,078,400 | 97.1% | $0.00 |
+| **Total** | **5** | **506,795** | **43,081** | **17,078,400** | **97.1%** | **$0.00** |
 
 ## Iteration 02: approved candidate deletion
 
@@ -100,3 +110,29 @@ Final telemetry validation: one Codex root session, matching `01a18fbf-cf90-7a21
 - Full frontend JSON run: 749/749 passed, zero failures/pending/todo, 34 files.
 - Coder focused checks: affected Go packages with race detector, frontend typecheck/lint, and diff whitespace check passed.
 - Details: iterations/02/TEST_RESULTS.md. No mutation-equivalence, browser-layout, or controlled speedup claim.
+
+### Iteration 02 review and integration
+
+- Reviewer: APPROVED, no blocking findings. Independently matched the implementation fingerprint, 50 executed statuses, all 1,253 historical inventory rows, and retained dedicated coverage for each of the five component duplicates. See iterations/02/REVIEW.md.
+- Implementation committed as `2a78bad1042820ead267caeb22614dea93cb7664`.
+- `git fetch origin main` and `git merge origin/main --no-edit`: already up to date, no conflicts or upstream code changes.
+
+### Iteration 02 final gate
+
+- Full post-integration `make` at implementation commit `2a78bad1042820ead267caeb22614dea93cb7664`: exit 0. Dependency install, canonical frontend build, Go vet, frontend typecheck/lint, all-package Go race suite, 749 frontend cases across 34 files, and four target binary builds passed. Cached Go results were reused for unchanged packages.
+- Verified `backend/internal/adapters/web/dist/index.html` and both current JS/CSS bundle byte sequences are present in the standalone Linux binary; standalone `version --short` executes successfully. Generated assets remain ignored under existing policy.
+- Recomputed integrated test-diff fingerprint after merge: unchanged from tester/reviewer evidence. `git diff --check` passed.
+- PR #72 remained open before follow-up delivery. This iteration updates that PR rather than reporting the earlier documentation-only state as delivering deletions.
+
+### Iteration 02 telemetry provenance
+
+The same Codex root session continues: `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`. Real local rollout metadata identifies four child sessions with this parent:
+
+- planner: `01a18fc8-5651-7aa1-97e2-2220b041caf3`
+- coder: `01a18fc9-87b9-7162-ac5a-d743dc053c74`
+- tester: `01a18fca-3f66-7ea3-bcdc-54d48035993d`
+- reviewer: `01a18fcb-f2ed-7cd1-b537-206be96aa032`
+
+Final extraction must refresh the existing root and include all four children; there are no other-harness sessions in the pre-existing REV-4 ledger. Actual billed cost is unavailable in Codex rollout records; stored zero does not establish free execution. Raw transcripts stay outside Git.
+
+Final iteration02 telemetry validated: exactly five Codex sessions, original root preserved/refreshed and all four expected children with correct parent IDs and nonempty invocations. Ticket type `test`; no pre-existing source sessions lost.
