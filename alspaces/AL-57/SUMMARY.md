@@ -115,3 +115,8 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 
 
 Final telemetry verification: generated schema-v5 ledger contains exactly the real Codex root and all five expected children (six sessions), with correct parent/source labels, nonempty usage/tool records and committed code facts. Fresh Codex costs are explicitly unavailable, not estimated or free. No preexisting AL-57 ledger or other-harness sessions existed to preserve. Raw source rollouts remain outside Git.
+
+
+## User review correction: JSON key order
+
+User identified that the generated ledger's keys were reordered. Cause: cost projection decoded JSON objects into maps and marshaled them alphabetically. This session is correcting that boundary to retain established root/nested DTO order and keep new evidence adjacent to its cost, without changing values or cost semantics. Existing AL-57 PR #89 remains open; correction verification and final ledger refresh are in progress.

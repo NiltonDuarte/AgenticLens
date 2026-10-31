@@ -39,3 +39,14 @@ Extend the existing schema/repository/migration tests named in iteration 01 for 
 ## Planning verification
 
 Only the contract and this delta plan are changed by the planner. Application implementation and tests are not yet run by the planner. Parent records the approved-baseline checkpoint and proceeds to coder/tester/reviewer; the iteration 01 grounding remains valid where this delta does not supersede it.
+
+
+## Review correction: preserve JSON key order
+
+Source: user asked, "can we keep the order of the json keys? the json generated in this session has a different key order". This is a serialization regression correction within iteration 02, not a new product scope or approval gate.
+
+Changed acceptance: generated persisted JSON and exported JSON retain the established relative order of existing DTO fields at every object level. New cost evidence stays adjacent to the related amount. Cost normalization preserves its input object order recursively, including nested maps; any newly inserted compatibility fields have deterministic placement. Invocation custom serialization must retain cost_usd before compactions/user_iterations rather than moving shadowed fields to the end.
+
+Preserved guarantees: all approved cost states, null/zero/partial distinctions, legacy numeric observed policy, coverage, schema versions, validation, identities and array multiplicity remain unchanged. Superseded implementation detail: accidental alphabetical reordering through map-based JSON projection. The frozen semantic contract is unchanged.
+
+Verification impact: extend actual repository/serializer boundary tests to check byte-level relative order and preserved meaning, normalization idempotency and nested objects. Run focused checks, independent correction review and required integrated make. Finally regenerate this ticket's real Codex ledger with the corrected built serializer, preserving all prior root/child sessions, and update the existing PR if still open.

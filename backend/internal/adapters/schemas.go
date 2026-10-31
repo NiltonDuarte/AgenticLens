@@ -1128,17 +1128,28 @@ func (dto *InvocationFactDTO) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (dto InvocationFactDTO) MarshalJSON() ([]byte, error) {
-	type invocationAlias InvocationFactDTO
 	evidence := dto.evidence()
 	var amount *float64
 	if evidence.State == domain.CostObserved {
 		amount = domain.CostNumber(dto.CostUSD)
 	}
 	return json.Marshal(struct {
-		invocationAlias
-		CostUSD      *float64            `json:"cost_usd"`
-		CostEvidence domain.CostEvidence `json:"cost_evidence"`
-	}{invocationAlias(dto), amount, evidence})
+		Role                  string              `json:"role"`
+		Model                 string              `json:"model"`
+		StartedAt             *string             `json:"started_at"`
+		CompletedAt           *string             `json:"completed_at"`
+		ActiveDurationSeconds int64               `json:"active_duration_seconds"`
+		Turns                 int64               `json:"turns"`
+		Tokens                InvocationTokensDTO `json:"tokens"`
+		CostUSD               *float64            `json:"cost_usd"`
+		CostEvidence          domain.CostEvidence `json:"cost_evidence"`
+		Compactions           int64               `json:"compactions"`
+		UserIterations        int64               `json:"user_iterations"`
+	}{
+		Role: dto.Role, Model: dto.Model, StartedAt: dto.StartedAt, CompletedAt: dto.CompletedAt,
+		ActiveDurationSeconds: dto.ActiveDurationSeconds, Turns: dto.Turns, Tokens: dto.Tokens,
+		CostUSD: amount, CostEvidence: evidence, Compactions: dto.Compactions, UserIterations: dto.UserIterations,
+	})
 }
 func normalizedTaskCosts(tasks []domain.TaskLinkFact) []domain.TaskLinkFact {
 	result := append([]domain.TaskLinkFact(nil), tasks...)

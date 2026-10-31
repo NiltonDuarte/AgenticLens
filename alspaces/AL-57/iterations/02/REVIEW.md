@@ -40,3 +40,22 @@ Final verdict: APPROVED.
 ## Parent integration evidence
 
 Implementation commit 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb integrated current origin/main 45cb679f21475cd14b7dd4cbc25996a39d734403 without changes. Full make passed after the final source fixes: Go vet, all 12 Go packages under race, frontend typecheck/lint, 755 frontend tests in 35 files, production assets and four binaries. Standalone linux/amd64 smoke served exact current index/JS/CSS and SPA fallback from ignored embedded assets, with empty temporary workspaces and no Node lookup PATH. Asset trees match. No application changes followed this gate; remaining edits are delivery documentation, ticket lifecycle and final telemetry.
+
+
+## User correction audit: preserve generated JSON key order
+
+Verdict: APPROVED. This focused recheck covers the user-requested serialization correction within iteration 02; the approved financial semantics remain unchanged.
+
+Correction baseline: fd90c1c288e4e9dd2cbf20bf7031e148e49660bf. Reviewed the current diff in backend/internal/adapters/cost_json.go and schemas.go plus new ordered_cost_json.go, and the associated existing schema/repository test additions. Reviewed backend/web source SHA256: 9f3f40c6ccfc5b5b40e3227277ccc1ff62baa504f1e096e5907692520020d9ae across 218 paths, independently recomputed using the path/NUL/bytes/NUL method documented above. No source edits were made by this reviewer.
+
+The ordered object decoder records key encounter order separately from RawMessage values. Recursive projection retains existing object/map order and array multiplicity. Unrelated numbers remain raw JSON literals rather than being converted through float64; scalar values are not reparsed merely to reorder keys. Decoded escaped key names are emitted safely through the standard JSON key encoder. Duplicate logical keys retain the first encounter position with the last value, preserving the previous map-based value semantics. Object decoding rejects malformed syntax and trailing JSON values. Newly inserted compatibility fields have deterministic placement; newly inserted map entries use stable ordering. Metadata replacement retains the original relative order of surviving fields.
+
+The explicit InvocationFactDTO wire struct restores cost_usd and adjacent cost_evidence before compactions/user_iterations, while retaining role/model/timestamp/token order and nullable observed/partial/unavailable handling. Nested summary maps and unavailable distribution maps no longer receive alphabetical reordering as a side effect of cost projection. The patch does not introduce a new schema version or historical classification.
+
+Inspected actual TestSaveFactLedger persistence assertions, TestSaveMetricsLedger persistence plus WriteWorkspacesResponse HTTP assertions, and the intentionally nonalphabetic nested/map/legacy normalization cases in TestCostEvidenceBoundaryCompatibility. These check the intentional output contract at production boundaries, including null partial complete amounts, known subtotal/counts, zero, original field-order subsequences, repeated byte stability, deterministic insertion and malformed/trailing rejection. The test-only ordered reader observes encoded output and uses independent expected field lists. No live ticket workspace or raw transcript is a fixture.
+
+Reused the tester's passing focused schema/repository tests and race-enabled adapters/HTTP checks recorded in TESTING.md. Backend coder also reports affected adapter/HTTP/backfill/migration/CLI tests and vet passed. git diff --check passed during this audit. No duplicate full suite was required for this focused read-only review.
+
+No open correction findings remain. Parent still owns the required integrated make gate, corrected-binary final telemetry regeneration with preservation of existing sessions, commit and update of the existing open PR. Earlier integrated checks apply to their recorded historical source, not automatically to this correction.
+
+Correction final verdict: APPROVED.

@@ -59,3 +59,23 @@ Rechecks:
 - git diff --check: passed.
 
 Latest 217-path backend/web source fingerprint after this correction: 82d6d7261258a2b33dd8350b64a5215185c2e24929a5f5301e0f25d9f6ac5c81. This supersedes earlier source fingerprints for current affected verification. The parent runs the complete integrated make gate, including the now-755 frontend tests, after integration; earlier full-suite evidence is kept distinct above.
+
+## User review correction: preserve JSON field order
+
+Source: the user reported generated JSON keys were alphabetically sorted instead of retaining the established DTO field order. This corrects serialization behavior within iteration 02; cost semantics, observed legacy numeric compatibility, and migration boundaries remain unchanged. Baseline for this follow-up: fd90c1c, with the backend coder's ordered-transform/DTO corrections and the tester's additions in the shared working tree.
+
+Extended coherent existing owners:
+
+- TestSaveFactLedger verifies persisted root, code, session, invocation, token, and evidence field order. The required subsequences retain existing fields while allowing deliberate new fields without a whole-file snapshot.
+- TestSaveMetricsLedger exercises actual persistence plus the actual WriteWorkspacesResponse HTTP serializer. Root/facts/totals field order is retained, while a partial invocation still produces null complete cost, known subtotal 2, and unchanged coverage.
+- TestCostEvidenceBoundaryCompatibility feeds intentionally nonalphabetic nested object input through NormalizeCostJSON. Original object and nested role-map/distribution key order survives nullable projection; zero and partial contributions remain semantically correct. Repeated normalization is byte-stable. Missing legacy cost/evidence insertion is deterministic across repeated fresh conversions and idempotent on already converted output. Malformed/trailing object JSON is rejected.
+
+A shared test-only object-order reader examines the actual encoded output; it is used to assert AgenticLens's intentional wire-order contract, not to test standard-library ordering in isolation. No production files or historical telemetry were written by the tester.
+
+Verification:
+
+- go test ./internal/adapters -run 'TestSaveFactLedger|TestSaveMetricsLedger|TestCostEvidenceBoundaryCompatibility' -count=1: passed after the ordered serializer correction.
+- go test -race ./internal/adapters ./internal/adapters/http -run 'TestSaveFactLedger|TestSaveMetricsLedger|TestCostEvidenceBoundaryCompatibility|TestGetFleet' -count=1: both affected packages passed, no skips.
+- git diff --check: passed.
+
+Latest backend/web source fingerprint using the earlier documented path/bytes method: 9f3f40c6ccfc5b5b40e3227277ccc1ff62baa504f1e096e5907692520020d9ae across 218 paths. Earlier verification snapshots remain historical evidence. Parent owns final integrated make, telemetry, commits and PR delivery.

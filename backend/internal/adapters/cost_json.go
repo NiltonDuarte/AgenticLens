@@ -35,12 +35,14 @@ func transformCostJSON(data []byte, legacy bool) ([]byte, error) {
 		}
 		return json.Marshal(items)
 	case '{':
-		var fields map[string]json.RawMessage
-		if err := json.Unmarshal(data, &fields); err != nil {
+		object, err := decodeOrderedCostObject(data)
+		if err != nil {
 			return nil, err
 		}
-		// Recurse first so containing objects never hide nested facts.
-		for key, value := range fields {
+		fields := object.fields
+		// Recurse in input order so nested field ordering survives projection.
+		for _, key := range object.keys {
+			value := fields[key]
 			if len(bytes.TrimSpace(value)) > 0 && (bytes.TrimSpace(value)[0] == '{' || bytes.TrimSpace(value)[0] == '[') {
 				updated, err := transformCostJSON(value, legacy)
 				if err != nil {
@@ -75,6 +77,10 @@ func transformCostJSON(data []byte, legacy bool) ([]byte, error) {
 					evidence = domain.ObservedCost(*amount)
 				}
 				encoded, err := json.Marshal(evidence)
+				if err != nil {
+					return nil, err
+				}
+				encoded, err = retainCostMetadataOrder(fields["cost_evidence"], encoded)
 				if err != nil {
 					return nil, err
 				}
@@ -127,6 +133,10 @@ func transformCostJSON(data []byte, legacy bool) ([]byte, error) {
 						if err != nil {
 							return nil, err
 						}
+						encoded, err = retainCostMetadataOrder(fields[pair[0]], encoded)
+						if err != nil {
+							return nil, err
+						}
 						fields[pair[0]] = encoded
 					}
 					encoded, err := json.Marshal(summary.CompleteAmount())
@@ -142,11 +152,7 @@ func transformCostJSON(data []byte, legacy bool) ([]byte, error) {
 					if err := json.Unmarshal(value, &summaries); err != nil {
 						return nil, err
 					}
-					amounts := make(map[string]*float64, len(summaries))
-					for key, summary := range summaries {
-						amounts[key] = summary.CompleteAmount()
-					}
-					encoded, err := json.Marshal(amounts)
+					encoded, err := projectSummaryCostMap(fields[pair[1]], summaries)
 					if err != nil {
 						return nil, err
 					}
@@ -154,21 +160,14 @@ func transformCostJSON(data []byte, legacy bool) ([]byte, error) {
 				}
 			}
 			if reason, exists := fields["role_effort_unavailable_reason"]; exists && string(reason) != "\"\"" {
-				var distribution map[string]json.RawMessage
-				if err := json.Unmarshal(fields["role_effort_distribution_pct"], &distribution); err != nil {
-					return nil, err
-				}
-				for key := range distribution {
-					distribution[key] = json.RawMessage("null")
-				}
-				encoded, err := json.Marshal(distribution)
+				encoded, err := nullCostDistribution(fields["role_effort_distribution_pct"])
 				if err != nil {
 					return nil, err
 				}
 				fields["role_effort_distribution_pct"] = encoded
 			}
 		}
-		return json.Marshal(fields)
+		return object.marshal()
 	default:
 		return data, nil
 	}
@@ -257,4 +256,48 @@ func validateWireCostFields(data []byte, required bool) error {
 		}
 	}
 	return nil
+}
+
+func projectSummaryCostMap(data []byte, summaries map[string]domain.CostSummary) ([]byte, error) {
+	object := orderedCostObject{fields: make(map[string]json.RawMessage)}
+	if len(data) > 0 && !bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		decoded, err := decodeOrderedCostObject(data)
+		if err != nil {
+			return nil, err
+		}
+		object = decoded
+	}
+	// Keep existing map order and remove only entries absent from the summary map,
+	// matching the prior authoritative-summary projection.
+	retained := make([]string, 0, len(object.keys))
+	for _, key := range object.keys {
+		if _, exists := summaries[key]; exists {
+			retained = append(retained, key)
+		} else {
+			delete(object.fields, key)
+		}
+	}
+	object.keys = retained
+	for key, summary := range summaries {
+		encoded, err := json.Marshal(summary.CompleteAmount())
+		if err != nil {
+			return nil, err
+		}
+		object.fields[key] = encoded
+	}
+	return object.marshal()
+}
+
+func nullCostDistribution(data []byte) ([]byte, error) {
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		return []byte("null"), nil
+	}
+	object, err := decodeOrderedCostObject(data)
+	if err != nil {
+		return nil, err
+	}
+	for key := range object.fields {
+		object.fields[key] = json.RawMessage("null")
+	}
+	return object.marshal()
 }

@@ -1,6 +1,7 @@
 package adapters_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -1402,6 +1403,83 @@ func TestSessionFactDTO_SourceRoundtripAndRequired(t *testing.T) {
 }
 
 func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
+	t.Run("cost normalization retains nonalphabetic order and stable legacy insertion", func(t *testing.T) {
+		input := []byte(`{"zeta":{"second":2,"first":1},"rows":[{"role":"coder","model":"m","cost_usd":2,"cost_evidence":{"state":"partial","known_subtotal_usd":2},"tail":true}],"alpha":0}`)
+		projected, err := adapters.NormalizeCostJSON(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		root := jsonFieldsInOrder(t, projected, "zeta", "rows", "alpha")
+		jsonFieldsInOrder(t, root["zeta"], "second", "first")
+		var rows []json.RawMessage
+		if err := json.Unmarshal(root["rows"], &rows); err != nil {
+			t.Fatal(err)
+		}
+		row := jsonFieldsInOrder(t, rows[0], "role", "model", "cost_usd", "cost_evidence", "tail")
+		if string(row["cost_usd"]) != "null" || string(root["zeta"]) != `{"second":2,"first":1}` || string(root["alpha"]) != "0" {
+			t.Fatalf("normalization changed semantic values: %s", projected)
+		}
+		repeated, err := adapters.NormalizeCostJSON(projected)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(projected, repeated) {
+			t.Fatalf("repeated projection reordered bytes: %s then %s", projected, repeated)
+		}
+		mapped := []byte(`{"role_costs":{"z":2,"a":0},"role_cost_summaries":{"a":{"state":"complete","known_subtotal_usd":0,"fully_observed":1,"partial":0,"unavailable":0,"total":1},"z":{"state":"unavailable","known_subtotal_usd":null,"fully_observed":0,"partial":0,"unavailable":1,"total":1}},"role_effort_distribution_pct":{"z":50,"a":50},"role_effort_unavailable_reason":"Incomplete"}`)
+		mappedOutput, err := adapters.NormalizeCostJSON(mapped)
+		if err != nil {
+			t.Fatal(err)
+		}
+		mappedRoot := jsonFieldsInOrder(t, mappedOutput, "role_costs", "role_cost_summaries", "role_effort_distribution_pct", "role_effort_unavailable_reason")
+		amounts := jsonFieldsInOrder(t, mappedRoot["role_costs"], "z", "a")
+		jsonFieldsInOrder(t, mappedRoot["role_cost_summaries"], "a", "z")
+		distribution := jsonFieldsInOrder(t, mappedRoot["role_effort_distribution_pct"], "z", "a")
+		if string(amounts["z"]) != "null" || string(amounts["a"]) != "0" || string(distribution["z"]) != "null" || string(distribution["a"]) != "null" {
+			t.Fatalf("map projections lost semantics: %s", mappedOutput)
+		}
+		legacy := []byte(`{"last":1,"rows":[{"role":"coder","model":"m","tail":true}],"first":0}`)
+		converted, err := adapters.NormalizeLegacyCostJSON(legacy)
+		if err != nil {
+			t.Fatal(err)
+		}
+		convertedRoot := jsonFieldsInOrder(t, converted, "last", "rows", "first")
+		if err := json.Unmarshal(convertedRoot["rows"], &rows); err != nil {
+			t.Fatal(err)
+		}
+		convertedRow := jsonFieldsInOrder(t, rows[0], "role", "model", "tail")
+		if string(convertedRow["cost_usd"]) != "null" {
+			t.Fatalf("missing legacy cost became numeric: %s", converted)
+		}
+		var evidence domain.CostEvidence
+		if err := json.Unmarshal(convertedRow["cost_evidence"], &evidence); err != nil {
+			t.Fatal(err)
+		}
+		if evidence.State != domain.CostUnavailable {
+			t.Fatalf("legacy evidence=%+v", evidence)
+		}
+		for i := 0; i < 5; i++ {
+			again, err := adapters.NormalizeLegacyCostJSON(legacy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(converted, again) {
+				t.Fatalf("new metadata insertion is nondeterministic: %s then %s", converted, again)
+			}
+		}
+		again, err := adapters.NormalizeLegacyCostJSON(converted)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(converted, again) {
+			t.Fatalf("legacy normalization not idempotent: %s then %s", converted, again)
+		}
+		for _, invalid := range []string{`{"role":"coder"`, `{"z":1} {"a":2}`} {
+			if _, err := adapters.NormalizeCostJSON([]byte(invalid)); err == nil {
+				t.Fatalf("accepted malformed/trailing JSON: %s", invalid)
+			}
+		}
+	})
 	legacyBase := `{"schema_version":4,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"model-a","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":1,"tokens":{"input":1,"output":0,"cache_read":0,"reasoning":0,"peak_context":1},COST"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
 	for _, tc := range []struct {
 		name, field string
@@ -1449,4 +1527,71 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 			}
 		})
 	}
+}
+
+// jsonFieldsInOrder retains object encounter order while exposing nested raw
+// payloads for the serializer-contract assertions below.
+func jsonFieldsInOrder(t *testing.T, data []byte, wanted ...string) map[string]json.RawMessage {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	opening, err := decoder.Token()
+	if err != nil || opening != json.Delim('{') {
+		t.Fatalf("expected JSON object: %s (%v)", data, err)
+	}
+	keys := []string{}
+	fields := make(map[string]json.RawMessage)
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			t.Fatal(err)
+		}
+		key, ok := token.(string)
+		if !ok {
+			t.Fatalf("expected object key, got %v", token)
+		}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			t.Fatal(err)
+		}
+		keys = append(keys, key)
+		fields[key] = value
+	}
+	if _, err := decoder.Token(); err != nil {
+		t.Fatal(err)
+	}
+	cursor := 0
+	for _, key := range wanted {
+		for cursor < len(keys) && keys[cursor] != key {
+			cursor++
+		}
+		if cursor == len(keys) {
+			t.Fatalf("field order %v does not retain required subsequence %v", keys, wanted)
+		}
+		cursor++
+	}
+	return fields
+}
+
+func assertFactJSONFieldOrder(t *testing.T, data []byte) {
+	t.Helper()
+	root := jsonFieldsInOrder(t, data, "schema_version", "ticket_id", "updated_at", "code", "sessions", "anomalies")
+	jsonFieldsInOrder(t, root["code"], "lines_added", "lines_deleted", "test_lines_added", "test_lines_deleted", "prod_lines_added", "prod_lines_deleted", "files_changed", "sdlc_iterations")
+	var sessions []json.RawMessage
+	if err := json.Unmarshal(root["sessions"], &sessions); err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) == 0 {
+		t.Fatal("ordering assertion requires a session")
+	}
+	session := jsonFieldsInOrder(t, sessions[0], "id", "source", "user", "invocations", "tools", "anomalies")
+	var invocations []json.RawMessage
+	if err := json.Unmarshal(session["invocations"], &invocations); err != nil {
+		t.Fatal(err)
+	}
+	if len(invocations) == 0 {
+		t.Fatal("ordering assertion requires an invocation")
+	}
+	invocation := jsonFieldsInOrder(t, invocations[0], "role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "cost_evidence", "compactions", "user_iterations")
+	jsonFieldsInOrder(t, invocation["tokens"], "input", "output", "cache_read", "reasoning", "peak_context")
+	jsonFieldsInOrder(t, invocation["cost_evidence"], "state", "known_subtotal_usd")
 }
