@@ -5211,6 +5211,14 @@ th.num-col .th-content {
 .ticket-scatter-legend i { width: 0.65rem; height: 0.65rem; border-radius: 50%; background: #4ea1ff; }
 .ticket-scatter-legend i.in-progress { background: #f2a93b; }
 
+/* Content diagnostics preserve execution success and use amber independently. */
+.text-content-error, .status-content-error { color: #d99b29; }
+.timeline-node.node-content-error { border: 2px solid #d99b29; background: #8a601c; }
+.timeline-item.item-content-error .timeline-content, .trace-part-item.part-content-error { border-color: #d99b29; }
+.status-content-error { background: rgba(217, 155, 41, 0.12); border-color: #d99b29; }
+.tool-execution-breakdown { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+.tool-execution-breakdown th, .tool-execution-breakdown td { padding: 0.35rem; text-align: left; overflow-wrap: anywhere; }
+
 /* Invocation labels truncate independently so child controls remain available. */
 .trace-invocation-controls .sr-only {
   position: absolute;

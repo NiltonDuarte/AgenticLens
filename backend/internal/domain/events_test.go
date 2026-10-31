@@ -771,3 +771,52 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 		})
 	}
 }
+
+func TestReconcileEventsContentEvidenceIsAdditive(t *testing.T) {
+	base := domain.EventFact{EventID: "content-call", SessionID: "owner", Timestamp: "2026-10-31T10:00:00Z", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: ptrString("bash"), Status: "completed"}
+	for _, tc := range []struct {
+		name                      string
+		recorded, local           bool
+		severity                  string
+		snippet                   *string
+		wantSeverity, wantSnippet string
+	}{
+		{"older event gains warning", false, true, "medium", ptrString("syntax error: discovered"), "medium", "syntax error: discovered"},
+		{"negative observation preserves warning", true, false, "low", ptrString("replacement ignored"), "high", "recorded diagnostic"},
+		{"missing metadata preserves warning", true, false, "", nil, "high", "recorded diagnostic"},
+		{"positive empty metadata falls back", true, true, "", ptrString(""), "high", "recorded diagnostic"},
+		{"none severity falls back", true, true, "none", nil, "high", "recorded diagnostic"},
+		{"positive metadata enriches", true, true, "medium", ptrString("local diagnostic"), "medium", "local diagnostic"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			recorded, local := base, base
+			if tc.recorded {
+				recorded.HasContentError = true
+				recorded.ContentSeverity = "high"
+				recorded.ContentErrorSnippet = ptrString("recorded diagnostic")
+			}
+			local.HasContentError, local.ContentSeverity, local.ContentErrorSnippet = tc.local, tc.severity, tc.snippet
+			local.Status = "error"
+			local.ToolOutput = ptrString("local raw output")
+			baseline, enrichment := []domain.EventFact{recorded}, []domain.EventFact{local}
+			beforeBaseline, beforeEnrichment := append([]domain.EventFact{}, baseline...), append([]domain.EventFact{}, enrichment...)
+			got := domain.ReconcileEvents(baseline, enrichment)
+			if len(got) != 1 {
+				t.Fatalf("identity multiplicity changed: %+v", got)
+			}
+			event := got[0]
+			if !event.HasContentError || event.ContentSeverity != tc.wantSeverity || event.ContentErrorSnippet == nil || *event.ContentErrorSnippet != tc.wantSnippet {
+				t.Fatalf("diagnostic lost: %+v", event)
+			}
+			if event.EventID != base.EventID || event.SessionID != base.SessionID || event.Status != base.Status || event.ToolOutput == nil || *event.ToolOutput != "local raw output" {
+				t.Fatalf("identity/status/payload changed: %+v", event)
+			}
+			if !reflect.DeepEqual(domain.ReconcileEvents(got, enrichment), got) {
+				t.Fatal("repeated enrichment changed evidence")
+			}
+			if !reflect.DeepEqual(baseline, beforeBaseline) || !reflect.DeepEqual(enrichment, beforeEnrichment) {
+				t.Fatal("input mutated")
+			}
+		})
+	}
+}

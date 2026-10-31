@@ -1,0 +1,94 @@
+{
+  "schema_version": 4,
+  "ticket_id": "MGT-1",
+  "ticket_title": "Manage independent AL tickets and verified non-release PR integration",
+  "ticket_type": "chore",
+  "started_at": "2026-10-31T13:15:29.728Z",
+  "completed_at": "2026-10-31T15:02:35.687Z",
+  "updated_at": "2026-10-31T15:02:36.678845+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 45
+  },
+  "sessions": [
+    {
+      "id": "01a19219-d82c-7463-8071-c89fe8841a03",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T13:15:30.794Z",
+          "completed_at": "2026-10-31T15:02:35.687Z",
+          "active_duration_seconds": 2998,
+          "turns": 28,
+          "tokens": {
+            "input": 332582,
+            "output": 95804,
+            "cache_read": 51829248,
+            "reasoning": 34783,
+            "peak_context": 393836
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 45
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 146,
+          "errors": 8,
+          "content_errors": 2
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 4,
+            "context_tokens": 207642,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 393836,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 3,
+            "context_tokens": 164647,
+            "threshold": "160000"
+          }
+        }
+      ]
+    }
+  ],
+  "anomalies": []
+}

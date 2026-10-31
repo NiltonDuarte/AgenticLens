@@ -2641,6 +2641,19 @@ describe('TraceWaterfall Component', () => {
   });
 });
 
+describe('semantic diagnostics', () => {
+  it('keeps completed content warnings visible in the default errors filter with independent badges', () => {
+    const base: EventFact = {timestamp:'2026-10-31T10:00:00Z',session_id:'s',turn:1,role:'coder',event_type:'tool_call',tool_name:'bash',status:'completed',context_tokens:0};
+    render(<TraceWaterfall events={[{...base,has_content_error:true,content_severity:'medium',content_error_snippet:'syntax error: unexpected token'}, {...base,turn:2,status:'error'}, {...base,turn:3}]} defaultExpanded={true} />);
+    expect(screen.getByText('CONTENT ERROR')).toBeInTheDocument();
+    expect(screen.getByText('EXEC ERROR')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-item-3')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name:'All Events'}));
+    expect(screen.getByTestId('timeline-item-3')).toBeInTheDocument();
+  });
+});
+
 describe('rich invocation badges', () => {
   const event: EventFact = {
     timestamp: '2026-10-30T10:00:00Z', session_id: 'parent', turn: 1, role: 'coder',
@@ -2691,5 +2704,6 @@ describe('retrospective invocation metadata safety', () => {
     expect(screen.queryByRole('button', { name: /Copy child session ID/ })).not.toBeInTheDocument();
     if (mode === 'conflicting input') expect(screen.getByText('[task -> planner]')).toBeInTheDocument();
     else expect(screen.queryByText('[task -> tester]')).not.toBeInTheDocument();
+
   });
 });
