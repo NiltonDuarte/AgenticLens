@@ -26,11 +26,24 @@ Record the user's actual authorization to supervise, send instructions, fix revi
 
 Use the available T3 thread read/send tools for existing independent roots. Do not replace them with native subagents or delegate_task merely to control their tickets. User-authorized sends may start idle owners or steer running ones; use a stable client request ID and record the returned run ID to avoid duplicate instructions. Preserve provider/model/modes. Do not restart, cancel or replace a running owner unless necessary and authorized.
 
-Give each owner its ticket, PR URL and observed head, current accepted contract/plan and precise findings, writable responsibility, and expected next action. Tell it that other agents share the repository and it must preserve their changes. The owner changes only its own branch/workspace and uses the development skill for application repairs. The manager owns merge sequencing; instruct owners to prepare and report, not independently merge. Existing approved scope includes ordinary review corrections; a material product-scope change requires explicit approval under the development policy.
+Start each assignment with an explicit skill invocation: `Use $agentic-lens-dev` for application work, `Use $agentic-lens-po` for product planning, or `Use $agentic-lens-review` for a dedicated audit. Keep the brief to the ticket/PR, desired outcome or changed decision, relevant acceptance/finding reference, and expected handoff. State actual approval when relevant. Link the contract or review for detailed evidence instead of pasting its history.
+
+Let the invoked skill govern roles, implementation, tests, builds, telemetry and delivery. Do not repeat its checklist, prescribe shell commands, or scatter historical SHAs and unrelated guarantees through follow-ups. Supply exact heads, concrete reproduction data or special constraints only when the next action depends on them. Establish writable ownership and isolated worktree at assignment or transfer; avoid restating them in every correction. Keep detailed evidence in the manager control ledger. The manager retains merge sequencing: owners update their PR and report, without merging. A material product-scope change still requires explicit approval.
+
+A correction brief can be as short as:
+
+```text
+Use $agentic-lens-dev for AL-43 / PR #88.
+Keep main’s execution classifier while removing content classification.
+Add the three approved regression cases in the review.
+Update the PR and report the head and verification results. Do not merge.
+```
+
+For a running owner, send only the new decision or concise clarification; preserve its completed work and avoid restarting the workflow.
 
 Allow independent defect fixes in parallel. Serialize upstream integration and merges where files or dependencies overlap. Send an upstream-update instruction only once its predecessor is actually merged; do not repeatedly restart work to chase every unrelated push. Preserve passed checks for unchanged code and require `make` after actual integration, with embedded assets checked for frontend changes.
 
-Each owner returns PR URL, exact head, tested base/diff, fixes or unresolved objections, commands/results and limitations, review state, and whether its worktree is clean. Do not equate a completed thread turn with a delivered ticket.
+Use the invoked skill’s handoff evidence to assess readiness. Ask only for a missing fact needed by the merge gate; do not resend the entire workflow. Do not equate a completed thread turn with a delivered ticket.
 
 ## Dispatch unblocked backlog work
 
@@ -38,7 +51,7 @@ When the user explicitly requests new ticket threads, inspect the current roadma
 
 Create independent top-level threads with the host launch tool and an explicit isolated worktree strategy bound before the first message; do not create checkouts in the shell or prompt the new agent to make its own worktree. Inherit provider/model/settings unless the user requested otherwise. Use a stable client request ID, retry only with that ID after an uncertain response, then read the created thread and record its exact link/run/ticket ownership. Before the owner writes files, require it to verify its actual cwd and Git toplevel against the assigned host worktree. Corroborate T3 workspace metadata with a distinct Git worktree path/gitdir, not just a different branch label. If a mismatch is observed, stop that root, preserve files and repair the host binding; do not move files or create shell worktrees to conceal the mismatch. Explicit user stop instructions take precedence over pending dispatch.
 
-Development owners use the development skill and their own ticket workspace, with explicit planning/code acceptance boundaries and existing approval evidence. Product owners use the PO skill in a separate PO ticket/root, own only planning/specification artifacts, and never implement application code or author developer contracts. Assign one owner to shared planning files; serialize updates with developer status transitions. In owner prompts, say explicitly that independent ticket threads use separate worktrees and share Git history/remotes; reserve shared-checkout wording for native roles collaborating inside one ticket worktree. A PO session ends at planning delivery; subsequent development belongs in an independent developer session.
+Invoke `$agentic-lens-dev` for development owners in their own ticket workspace, with explicit planning/code acceptance boundaries and existing approval evidence. Invoke `$agentic-lens-po` for product owners in a separate PO ticket/root; they own only planning/specification artifacts and never implement application code or author developer contracts. Assign one owner to shared planning files; serialize updates with developer status transitions. In owner prompts, say explicitly that independent ticket threads use separate worktrees and share Git history/remotes; reserve shared-checkout wording for native roles collaborating inside one ticket worktree. A PO session ends at planning delivery; subsequent development belongs in an independent developer session.
 
 Ask the user through the question tool when priorities, overlapping acceptance criteria, ticket-series scope, or schema/cost semantics need a product decision. Continue independent grounding while waiting, but do not treat elapsed time or absent answers as approval for dependent implementation. Publish the decision and its source before releasing affected developers. Recheck dependencies and ownership after each relevant merge and dispatch only newly unblocked, accepted work; do not launch every backlog item merely because its label says Ready. Preserve release exclusion throughout expanded supervision.
 

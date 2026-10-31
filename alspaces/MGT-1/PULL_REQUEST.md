@@ -11,3 +11,5 @@ Validation: full make passed again at 0c78ff1 after integrating AL-55 main 3857f
 Later user-requested PR #88 review found a reproduced execution-classification regression despite green CI. Three successful-output cases pass main and fail the reviewed head; focused race suites pass. The review recommends changes and leaves #88 unmerged. See iterations/05/PR88_REVIEW.md.
 
 The user accepted PR88 F1 correction. The manager routed it to the verified current PR88 owner in its isolated worktree; old original PR78 owner was not restarted. Preserve main’s execution classifier while keeping content removal; add the three successful-output regressions. PR88 remains held pending corrected exact-head review/testing/CI.
+
+Simplify owner briefs with explicit skill invocations and references to detailed findings. Remove duplicated procedural checklists from dispatch instructions; active PR88 work was steered concisely without restarting it.
