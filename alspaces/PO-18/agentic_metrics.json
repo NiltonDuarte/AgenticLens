@@ -1,0 +1,84 @@
+{
+  "schema_version": 4,
+  "ticket_id": "PO-18",
+  "ticket_title": "Post-v2.0 platform follow-up tickets",
+  "ticket_type": "docs",
+  "started_at": "2026-10-31T18:33:46.665Z",
+  "completed_at": "2026-10-31T21:51:50.748Z",
+  "updated_at": "2026-10-31T21:51:51.455038+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 19
+  },
+  "sessions": [
+    {
+      "id": "01a1933d-3d8f-7b83-a161-18a904e5aeb3",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T18:33:47.670Z",
+          "completed_at": "2026-10-31T21:51:50.748Z",
+          "active_duration_seconds": 1310,
+          "turns": 17,
+          "tokens": {
+            "input": 124133,
+            "output": 59654,
+            "cache_read": 13585664,
+            "reasoning": 5226,
+            "peak_context": 169814
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 19
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 91,
+          "errors": 5
+        }
+      ],
+      "anomalies": [
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 17,
+            "context_tokens": 165441,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 169814,
+            "threshold": "160000"
+          }
+        },
+        {
+          "rule_id": "TOOL_RETRY_STREAK",
+          "severity": "WARNING",
+          "context": {
+            "tool_name": "command",
+            "turn": 1,
+            "count": 4,
+            "threshold": "3"
+          }
+        }
+      ]
+    }
+  ],
+  "anomalies": []
+}
