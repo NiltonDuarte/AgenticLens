@@ -11,15 +11,15 @@ Verification: integration export A passed typecheck/lint, 736 frontend tests and
 Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is grounded in source session metadata with this exact worktree path. No child agents were spawned. No pre-existing MGT-1 ledger or other-harness facts existed to preserve. Billing cost is unavailable in source; any rendered zero is not a verified charge. Final extraction validates this root and Codex source; raw transcripts stay outside Git.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 41
-- **Active Agent Duration:** 44m 17s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 386.1k tokens (193% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 45
+- **Active Agent Duration:** 49m 58s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 393.8k tokens (197% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 32,141 reasoning tokens (26.1% of generated output)
-- **Tool Health & Self-Correction:** 144 tool calls (8 self-corrections, 94.4% success rate)
+- **Reasoning Effort:** 34,783 reasoning tokens (26.6% of generated output)
+- **Tool Health & Self-Correction:** 150 tool calls (8 self-corrections, 94.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -33,14 +33,14 @@ Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 327,562 | 90,906 | 47,925,376 | 99.3% | 386.1k | BLOATED (193%) | $0.00 |
-| **Total** | **1** | **327,562** | **90,906** | **47,925,376** | **99.3%** | **386.1k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 332,582 | 95,804 | 51,829,248 | 99.4% | 393.8k | BLOATED (197%) | $0.00 |
+| **Total** | **1** | **332,582** | **95,804** | **51,829,248** | **99.4%** | **393.8k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 327,562 | 90,906 | 47,925,376 | 99.3% | $0.00 |
-| **Total** | **1** | **327,562** | **90,906** | **47,925,376** | **99.3%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 332,582 | 95,804 | 51,829,248 | 99.4% | $0.00 |
+| **Total** | **1** | **332,582** | **95,804** | **51,829,248** | **99.4%** | **$0.00** |
 
 ## Iteration 02: management ticket workflow
 
@@ -77,3 +77,5 @@ Original product sequence complete: #76, #79, #75, corrective#82, #77 and #78 al
 Final original-sequence integration gate: make exited0 at bc288f9, actual maina77695c included; all Go vet/race packages, frontend typecheck/lint, 750 tests/35files, canonical build and four platform binaries passed. Embedded trees match. Only management config/guidance/records differ from main; no product implementation by manager. Scope approval questions remain pending, so new AL-55 code is not released. Current open PR inventory contains only management#83 and human-only release#55.
 
 Final original-sequence management telemetry verified: same sole native Codex root and source; no PO/AL owner roots imported, no invented parent links or source errors. Actual billing unavailable and known MCP tool-count limitation retained.
+
+AL-55 decision status: user accepted partial refresh with retained collections, but has not approved the remaining scope. User requested a plain-language explanation of migration/backfill impact. No new schema/migration or mandatory recovery rollout is proposed; existing backfill safety/completeness/recompute behavior is the proposed correction. Clarification does not authorize coding.
