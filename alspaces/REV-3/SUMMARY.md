@@ -13,6 +13,10 @@ Created REV-3 as an isolated documentation audit. Baseline 3481919; initial work
 
 Only documentation and REV-3 artifacts changed. No application, tests, scripts, configuration, historical ledgers, or skills changed. Direct documentation maintenance is authorized; no implementation cycle or new approval gate was needed.
 
+## Telemetry extraction
+
+The generator discovered one Codex rollout and wrote one session with nonempty invocations. Its ID and source match the verified root; no children were expected or found. No prior harness facts required preservation. The ledger is a source-backed finalization snapshot, not a complete record of subsequent delivery operations.
+
 ## Verification and delivery
 
 - Documentation links, zero-emoji checks, canonical Make target checks, and git diff --check passed.
@@ -21,3 +25,33 @@ Only documentation and REV-3 artifacts changed. No application, tests, scripts, 
 - Existing environment findings: npm reported 21 audit vulnerabilities (18 moderate, one high, two critical), and frontend tests emitted React act warnings. No dependency changes were introduced.
 - No browser review or fresh performance profiling was needed for the documentation-only scope. Review is a documented self-review; no independent agent was launched.
 - Telemetry finalization targets Codex root 01a18fab-ce5a-7943-8aff-6192c9d8ebdf in ~/.codex, verified against source metadata and this checkout. Expected child sessions: zero. No pre-existing REV-3 sessions from other harnesses exist. Extraction is a finalization snapshot; later commit/push/PR tool calls occur afterward.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 2
+- **Active Agent Duration:** 0m 0s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 104.6k tokens (52% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** N/A
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 880 reasoning tokens (7.9% of generated output)
+- **Tool Health & Self-Correction:** 27 tool calls (2 self-corrections, 92.6% success rate)
+
+### Anomalies & Health Flags
+- **Status:** No execution anomalies detected (clean session).
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **rootagent** | 1 | 99,464 | 10,205 | 1,965,952 | 95.2% | 104.6k | ELEVATED | $0.00 |
+| **Total** | **1** | **99,464** | **10,205** | **1,965,952** | **95.2%** | **104.6k** | **ELEVATED** | **$0.00** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6.1-sol** | 1 | 99,464 | 10,205 | 1,965,952 | 95.2% | $0.00 |
+| **Total** | **1** | **99,464** | **10,205** | **1,965,952** | **95.2%** | **$0.00** |
