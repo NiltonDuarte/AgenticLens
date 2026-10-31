@@ -30,6 +30,16 @@ Allow independent defect fixes in parallel. Serialize upstream integration and m
 
 Each owner returns PR URL, exact head, tested base/diff, fixes or unresolved objections, commands/results and limitations, review state, and whether its worktree is clean. Do not equate a completed thread turn with a delivered ticket.
 
+## Dispatch unblocked backlog work
+
+When the user explicitly requests new ticket threads, inspect the current roadmap/dependency graph and existing PR, thread, branch and worktree ownership before every launch. Match complete ticket IDs, not substring references in another ticket's conversation. Reuse a live or paused owning thread instead of duplicating it. A Ready label alone does not settle superseded scope or contradict an explicit planning hold.
+
+Create independent top-level threads with the host launch tool and an explicit isolated worktree strategy bound before the first message; do not create checkouts in the shell or prompt the new agent to make its own worktree. Inherit provider/model/settings unless the user requested otherwise. Use a stable client request ID, retry only with that ID after an uncertain response, then read the created thread and record its exact link/run/ticket ownership.
+
+Development owners use the development skill and their own ticket workspace, with explicit planning/code acceptance boundaries and existing approval evidence. Product owners use the PO skill in a separate PO ticket/root, own only planning/specification artifacts, and never implement application code or author developer contracts. Assign one owner to shared planning files; serialize updates with developer status transitions. A PO session ends at planning delivery; subsequent development belongs in an independent developer session.
+
+Ask the user through the question tool when priorities, overlapping acceptance criteria, ticket-series scope, or schema/cost semantics need a product decision. Continue independent grounding while waiting, but do not treat elapsed time or absent answers as approval for dependent implementation. Publish the decision and its source before releasing affected developers. Recheck dependencies and ownership after each relevant merge and dispatch only newly unblocked, accepted work; do not launch every backlog item merely because its label says Ready. Preserve release exclusion throughout expanded supervision.
+
 ## Integration and merge gate
 
 Reconcile cross-PR behavior, not just textual conflicts. Use fetched immutable heads for merge-tree simulations; keep speculative conflict trees outside product branches. Assign each shared production-file resolution to the later owner, with adjacent guarantees and tests from both features. Do not resolve by discarding one side. Reconcile planning dependencies against what is actually on main.

@@ -9,3 +9,7 @@ The user explicitly superseded the original GEN-14 classification with a new man
 ## Accepted supervision scope (iteration 03)
 
 The user now explicitly authorizes user-proxy control of existing ticket threads and supervision/merge of all eligible non-release open PRs. This supersedes the earlier audit-only prohibition on messages and merges. Create a reusable management skill first. The manager owns coordination artifacts and merge gates; ticket owners retain application code, review corrections, independent roots and telemetry. Release PRs, including autorelease/release-please, are strictly human controlled: the manager and all managed agents must never merge or enable auto-merge for them. They are excluded from the agent-merge completion condition.
+
+## Accepted backlog dispatch scope (iteration 04)
+
+The user now explicitly authorizes new independent top-level T3 threads for unblocked AL-series development tickets and PO tickets as needed for priority and requirement conflicts, while prohibiting duplicate ownership. Use the question tool for decisions requiring user steering. AL-57 needs careful product review before implementation. Scope for AL2 tickets and cost aggregation direction has been asked and remains pending; no answer is inferred. The manager may coordinate multiple owners under MGT-1 without implementing their tickets or mixing telemetry. Preserve ongoing original PR supervision and human-only release control.

@@ -6,7 +6,7 @@ User authority: supervise existing PR/ticket threads and merge eligible non-rele
 
 #76 -> #79 -> #75 -> #82 (AL-47 startup fix) -> #77 -> #78 after fixes. #81 documentation is assessed independently; #80 carries the management skill and final control record. Re-evaluate each step against the actual current main and head. Only the manager merges. No auto-merge or admin bypass.
 
-## Inventory at iteration 03 start (2026-10-31)
+## Current PR inventory (history and exact verification follow)
 
 | PR / ticket | Owner thread | Head | State / next action |
 |---|---|---|---|
@@ -14,7 +14,7 @@ User authority: supervise existing PR/ticket threads and merge eligible non-rele
 | #79 / AL-54 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/0aec6a8f-e37b-4d2b-a88b-c4a5baef59ca> | 837311aa22ef51208bb86fd6912518d7fbaae3b3 | merged: 2026-10-31T13:52:30Z, merge commit b1268234cde742705728ea33ee89d30581803c47 |
 | #75 / AL-52 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/0be8de86-b6fc-472f-ad32-ff0fc1f14958> | 308e8ddecc5a80c50c9db8fcf44d8f8fc528e957 | merged: 2026-10-31T14:00:38Z, merge commit 6bc1064943ae22e1b6586a6d145543c6a9cd23f2 |
 | #77 / AL-53 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/1c5e661f-8d54-4dea-9fac-031fcbdca9ee> | e626288a3c1d12b875742937c158f82faa3611b7 | merged: 2026-10-31T14:33:30Z, merge commit bdef2d0ef98e37fe259921bc30ba2daefbfda717 |
-| #78 / AL-43 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/dac7fd2e-e9fe-4388-a3ed-aaae48b4a83c> | bf575e1afd66ba17a82c5fbc1c4f3b3a2e65fcc8 | preparing: #75/#77 verified merged; released to integrate main bdef2d0 and resolve combined trace UI |
+| #78 / AL-43 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/dac7fd2e-e9fe-4388-a3ed-aaae48b4a83c> | 9e22466b2d31ccd91398b50b08a0faa5a82329e5 | waiting_checks: combined integration reviewed/full make PASS750 tests; exact-head CI running |
 | #82 / AL-47 startup correction | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/b0b881e1-41dd-4183-ae5e-8c7539cac75a> | c7a36d003459ce43da9fa3f40783576a4fd5d572 | merged: 2026-10-31T14:24:52Z, merge commit c3ce116611638ea1bee47dc3140d8af992814a44 |
 | #80 / MGT-1 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/182ba150-f00a-4e23-b3af-5b085ef7b50f> | 40ee4b695172b302368d7b73d530b12fa370426d | preparing: this management skill and control record |
 | #81 / GEN-14 independent telemetry audit | recorded owner <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/7b8bd224-24ce-4495-bb4c-39a605235612> | 7d7b9fca47569dbad3ee0673fbb96d4cafad8df7 | closed_unmerged: NiltonDuarte closed at 2026-10-31T14:32:37Z; no merge commit; removed from active merge queue without claiming delivery |
@@ -113,3 +113,19 @@ User/host notification: #81 closed and watch stopped. Fresh GitHub verification:
 GitHub #77 exact head e626288a3c1d12b875742937c158f82faa3611b7 passed all three checks, OPEN/non-draft/main/MERGEABLE/CLEAN, no reviews/comments/unresolved threads. Current-main ancestry verified. Expected-head squash merge succeeded; GitHub confirms MERGED at 2026-10-31T14:33:30Z, merge commit bdef2d0ef98e37fe259921bc30ba2daefbfda717. Manager integrated main cleanly and removed obsolete #77 watch. AL-55 Ready/None is now delivered on main, scope unchanged.
 
 AL-43 released with clientRequestId mgt1-iter03-pr78-release-bdef2d0 after explicit verified #75/#77 confirmation. Owner must integrate real main, combine warning states with badges/navigation/anchors/copy/expansion, preserve raw diagnostics and F3/F4 plus #82 startup correction, retain AL-55 Ready, run fresh full gate/embedding and independent review, then push exact head. Release PR remains human-only.
+
+## Iteration 04 independent dispatch
+
+User explicitly authorized new independent T3 ticket threads, no duplicate owners, PO priority/overlap reviews and question-tool steering. Discovery: complete current-project thread list (8 roots, no pagination), targeted AL-55/AL-57/PO-17 searches, remote refs and PR inventory showed AL-43 already owned and no AL-55/AL-57 developer or PO-17 owner. References to AL-55 in other tickets and PO review are not duplicate development ownership. Created two host-managed isolated worktrees with stable clientRequestIds; read each after launch. Inherited model/provider/modes, parentThreadId=null confirmed for both.
+
+- PO-17: <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/mcp:launch:68c1d788e79bcec0f8be8321aee873e3233047bd04335445c66d02ec563a9ad5>, branch docs/PO-17-cost-and-schema-priorities, request mgt1-iter04-launch-po17, run ordinal1. Owns alspaces/PO-17 proposals only initially. Product-only review of AL-57, stale AL-55 scope and AL2-6/7 overlaps; no application or developer contracts. Later shared-plan ownership must be released explicitly.
+- AL-55: <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/mcp:launch:1ab3a61a43939ad246fd6a21b2095c988c7eec15c6e37db63a15e18a54363d2b>, branch feat/AL-55-migration-backfill-scope, request mgt1-iter04-launch-al55-plan, run ordinal1. Owns developer workspace/CONTRACT/PLAN grounding only, planner role; no code/shared-plan edits before revised acceptance and explicit approval. Base bdef2d0, clean initial tree. Native root01a19267-636b-7d61-85c6-db8d3d3eba77 reported by owner, not a management child.
+- AL-57: no developer launched; careful product review and steering hold. AL2: no implementation dispatched.
+
+Question-tool answers from USER: AL- tickets only (not literal obsolete Phase1 headings, AL2 remains queued); defer cost changes pending PO review. No subtotal/nullable/cost implementation acceptance inferred. Relayed exact choices to both new owners. PO-17 initial analysis independently confirms numeric-zero problem, recommends observed availability/provenance + known subtotal/coverage with complete total unavailable when unknown inputs exist; these remain recommendations, not accepted scope. Estimates cannot establish invoice billing and zero alone cannot authorize estimation or historic rewriting.
+
+AL-55 preliminary delta: partial OpenCode skill/task snapshot replacement, shared discovery flag completeness, and canonical v4 explicit recompute/Force skipping under validation. Proposed conservative owner-complete snapshot retention and truthful all-target-source completion without cost/schema extension. No coder dispatched. Routed to PO-17; await final grounded contract and use question tool for remaining semantic approval. Preserve prior migration/backfill boundary and missing child/source facts.
+
+## AL-43 final combined integration handoff
+
+PR#78 new head9e22466b2d31ccd91398b50b08a0faa5a82329e5 fetched and matched GitHub; current-main ancestry bdef2d0 verified. Manager independently confirmed no app/test changes beyond tested71f1203b284dec59de18b1c8d5637af08ba68f09, F3/F4 corrected source unchanged, and protected useLiveTrace/refresh helpers/ThreadViewer/panel/SSE handler+regression unchanged from actual main. Owner reports independent combined review APPROVED, all conflicts combined, focused259 frontend plus concrete SSE/F3/F4 coverage, fresh full make750 frontend tests/35files and all Go checks/race/four builds, matching embedding/standalone assets, five source sessions preserved and clean checkout. AL-55 Ready/None retained. Exact-head CI backend/frontend IN_PROGRESS; no merge attempted. Existing watch active.
