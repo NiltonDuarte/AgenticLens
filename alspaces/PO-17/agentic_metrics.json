@@ -1,0 +1,55 @@
+{
+  "schema_version": 4,
+  "ticket_id": "PO-17",
+  "ticket_title": "Cost semantics review and approved AL-55 backfill scope",
+  "ticket_type": "docs",
+  "started_at": "2026-10-31T14:39:43.573Z",
+  "completed_at": "2026-10-31T15:16:58.334Z",
+  "updated_at": "2026-10-31T15:17:00.553874+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 11
+  },
+  "sessions": [
+    {
+      "id": "01a19266-f5c8-77e3-a2c0-f9f0cf9fe06a",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T14:39:44.441Z",
+          "completed_at": "2026-10-31T15:16:58.334Z",
+          "active_duration_seconds": 507,
+          "turns": 5,
+          "tokens": {
+            "input": 130893,
+            "output": 27655,
+            "cache_read": 5172224,
+            "reasoning": 2378,
+            "peak_context": 145345
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 11
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 42,
+          "errors": 4
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}

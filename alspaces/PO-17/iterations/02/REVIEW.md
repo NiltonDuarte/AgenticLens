@@ -1,0 +1,19 @@
+# PO-17 iteration 02 delivery review
+
+Current approval source: explicit user "continue with AL-55 implementationc" relayed by manager, followed by direct user confirmation of all remaining choices. Earlier partial acceptance and revision hold remain historical iteration-01 evidence; this approval supersedes the AL-55 hold without approving cost semantics.
+
+The reconciled AL-55 specification keeps persisted arrays optional while requiring internal empty-array read normalization, preserves unavailable history and prior whole skill/task collections during partial recovery, permits independently complete-tree refresh with mixed-age CLI diagnostics, requires all necessary owners before clearing existing pending recovery, preserves valid baseline eligibility on optional failure, enables explicit recompute without Force, and keeps existing backup/atomic-write interfaces. It introduces no new format or mandatory campaign. Cost and AL2 work remain deferred/queued.
+
+Review boundaries: only PO-17 docs and the specifically released AL-55 spec are writable. Index transitions, developer contracts/plans and all code remain separate owners. Historical iteration-01 findings identify source-level risks, not implemented fixes. Specification readiness is not evidence that AL-55 behavior has shipped.
+
+Verification and final telemetry evidence will be added after integration. No delegated agents or expected child sessions in this independent PO-17 session; manager/AL-55 roots must remain excluded.
+
+## Final documentation review and integrated verification
+
+Integrated origin/main aa88cb78c93daa4a2dd6d7ba9b1e512603c48a0c into feature branch; merge head 39470c899c8f383ded697523cc2d0cc8770829d6. Full make passed on this integrated application tree with final documentation edits in progress: Go vet/race tests, TypeScript typecheck/lint, 35 frontend test files / 750 tests, production frontend build and linux/darwin amd64/arm64 binaries. Built host generate help confirmed source, nonce, explicit session, docs ticket-type, JSON and append flags. Embedded asset index and JS tree exist; assets are ignored and were not committed. No application code changed after this gate; subsequent documentation/telemetry bookkeeping does not require repeating it.
+
+Self-review against the exact allowed diff passed: nine documentation files before telemetry, consisting only of PO-17 artifacts and the released AL-55 to-do spec. All have final newlines and no emojis; git diff --check passed. No index, developer contract, application, tests, scripts or config changes relative to current origin/main. No new fixture-only tests are justified for these docs. Historical iteration-01 holds remain dated evidence; current acceptance is the revised shared spec and iteration 02.
+
+Environment observations: npm reported 21 dependency advisories; frontend tests emitted React act warnings. Neither failed the gate; no dependency changes belong to this scope. Verification proves the existing integrated tree passes, not that the future AL-55 corrections are implemented. Cost limitations remain unresolved; no measured billing inference or historic rewrite is approved. No independent implementation reviewer was dispatched for this documentation-only delivery.
+
+Final telemetry verification: literal nonce generation with --source codex and --ticket-type docs resolved exactly the independent root 01a19266-f5c8-77e3-a2c0-f9f0cf9fe06a, matching local rollout metadata and this assigned worktree. Ledger has one nonempty invocation, no children and no manager/AL-55/foreign-harness sessions. No pre-existing PO-17 ledger existed. Raw transcripts remain outside Git. Extraction snapshot excludes later verification/commit/push/PR bookkeeping; numeric zero cost remains unavailable billing evidence under the deferred cost limitation.
