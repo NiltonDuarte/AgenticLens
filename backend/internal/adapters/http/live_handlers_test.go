@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -743,6 +744,45 @@ func TestLiveHandlers_NilSlicesSerializeAsEmptyArrays(t *testing.T) {
 	}
 }
 
+// blockedInitialLiveTree controls only the HTTP snapshot read. Its subscription
+// and all source reads still belong to the concrete live service.
+type blockedInitialLiveTree struct {
+	*live.LiveService
+	entered      chan struct{}
+	release      chan struct{}
+	subscribed   chan struct{}
+	unsubscribed chan struct{}
+	treeReturned chan struct{}
+	treeErr      error
+}
+
+func (s *blockedInitialLiveTree) GetSessionTree(ctx context.Context) (domain.LiveSessionTree, error) {
+	close(s.entered)
+	if s.treeReturned != nil {
+		defer close(s.treeReturned)
+	}
+	select {
+	case <-s.release:
+		if s.treeErr != nil {
+			return domain.LiveSessionTree{}, s.treeErr
+		}
+		return s.LiveService.GetSessionTree(ctx)
+	case <-ctx.Done():
+		return domain.LiveSessionTree{}, ctx.Err()
+	}
+}
+
+func (s *blockedInitialLiveTree) Subscribe() (<-chan live.LiveEvent, func()) {
+	events, cleanup := s.LiveService.Subscribe()
+	close(s.subscribed)
+	return events, func() {
+		cleanup()
+		if s.unsubscribed != nil {
+			close(s.unsubscribed)
+		}
+	}
+}
+
 func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "live.db")
 	writer, err := sql.Open("sqlite", dbPath)
@@ -765,9 +805,17 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 	}
 	cfg := domain.DefaultProjectConfig()
 	cfg.Live.PollIntervalMs = 15
-	service := live.NewLiveService(hook, cfg)
+	service := live.NewLiveServiceWithCodexHome(hook, cfg, filepath.Join(t.TempDir(), "absent-codex"))
 	defer service.Close()
-	server := adaptershttp.NewServerWithConfig(t.TempDir(), fstest.MapFS{"index.html": {Data: []byte("dashboard")}}, cfg, service)
+	observed, stopObserving := service.Subscribe()
+	defer stopObserving()
+	blocked := &blockedInitialLiveTree{
+		LiveService: service,
+		entered:     make(chan struct{}),
+		release:     make(chan struct{}),
+		subscribed:  make(chan struct{}),
+	}
+	server := adaptershttp.NewServerWithConfig(t.TempDir(), fstest.MapFS{"index.html": {Data: []byte("dashboard")}}, cfg, blocked)
 	ts := httptest.NewServer(server.Handler())
 	defer ts.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -782,6 +830,7 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 	}
 	defer response.Body.Close()
 	scanner := bufio.NewScanner(response.Body)
+	firstEvent := true
 	readTrace := func() domain.LiveTraceView {
 		t.Helper()
 		event := ""
@@ -789,6 +838,12 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 			line := scanner.Text()
 			if strings.HasPrefix(line, "event: ") {
 				event = strings.TrimPrefix(line, "event: ")
+				if firstEvent {
+					firstEvent = false
+					if event != "session_tree" {
+						t.Fatalf("initial snapshot must precede queued events, got %q", event)
+					}
+				}
 			}
 			if event == "trace_update" && strings.HasPrefix(line, "data: ") {
 				var trace domain.LiveTraceView
@@ -801,7 +856,33 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 		t.Fatalf("stream ended before trace: %v", scanner.Err())
 		return domain.LiveTraceView{}
 	}
+	select {
+	case <-blocked.entered:
+	case <-ctx.Done():
+		t.Fatalf("HTTP initial tree was not entered: %v", ctx.Err())
+	}
+	// The poller must publish while the HTTP snapshot is still blocked. This is
+	// the startup interleaving that used to lose the first unchanged trace.
 	service.Start(ctx)
+	published := false
+	for !published {
+		select {
+		case event := <-observed:
+			published = event.Type == live.LiveEventTraceUpdate
+		case <-ctx.Done():
+			t.Fatalf("concrete service did not publish initial trace: %v", ctx.Err())
+		}
+	}
+	registered := false
+	select {
+	case <-blocked.subscribed:
+		registered = true
+	default:
+	}
+	close(blocked.release)
+	if !registered {
+		t.Fatal("concrete service published initial trace before HTTP stream subscription")
+	}
 	initial := readTrace()
 	if len(initial.Messages) != 1 || initial.Messages[0].Content != "before" {
 		t.Fatalf("unexpected initial snapshot: %+v", initial)
@@ -829,5 +910,77 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 	}
 	if traceResponse.StatusCode != http.StatusOK || fetched.SessionID != updated.SessionID || len(fetched.Messages) != 1 || fetched.Messages[0].Content != "after" || fetched.Messages[0].TotalTokens != 25 || fetched.Messages[0].ReasoningContent == nil || *fetched.Messages[0].ReasoningContent != "new reasoning" {
 		t.Fatalf("REST recovery disagrees with pushed snapshot: status=%d trace=%+v", traceResponse.StatusCode, fetched)
+	}
+}
+
+func TestLiveStreamHandler_InitialTreeSubscriptionCleanup(t *testing.T) {
+	for _, treeFails := range []bool{false, true} {
+		name := "canceled_during_initial_tree"
+		if treeFails {
+			name = "initial_tree_error_then_cancel"
+		}
+		t.Run(name, func(t *testing.T) {
+			cfg := domain.DefaultProjectConfig()
+			cfg.Live.PollIntervalMs = 15
+			service := live.NewLiveServiceWithCodexHome(nil, cfg, filepath.Join(t.TempDir(), "absent-codex"))
+			defer service.Close()
+			blocked := &blockedInitialLiveTree{
+				LiveService: service,
+				entered:     make(chan struct{}), release: make(chan struct{}),
+				subscribed: make(chan struct{}), unsubscribed: make(chan struct{}),
+				treeReturned: make(chan struct{}),
+			}
+			if treeFails {
+				blocked.treeErr = errors.New("initial source lookup failed")
+			}
+			ts := httptest.NewServer(adaptershttp.LiveStreamHandler(blocked))
+			defer ts.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			response, err := ts.Client().Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				t.Fatalf("stream status: %d", response.StatusCode)
+			}
+			select {
+			case <-blocked.entered:
+			case <-ctx.Done():
+				t.Fatalf("initial tree was not entered: %v", ctx.Err())
+			}
+			select {
+			case <-blocked.subscribed:
+			default:
+				t.Fatal("HTTP stream must own a subscription during its initial tree lookup")
+			}
+			if treeFails {
+				close(blocked.release)
+				select {
+				case <-blocked.treeReturned:
+				case <-ctx.Done():
+					t.Fatalf("initial tree error did not return: %v", ctx.Err())
+				}
+				// The concrete broadcaster must still reach this stream after the
+				// optional initial snapshot failed, before cancellation cleans up.
+				service.Start(ctx)
+				reader := bufio.NewReader(response.Body)
+				line, err := reader.ReadString('\n')
+				if err != nil || line != "event: session_tree\n" {
+					t.Fatalf("stream did not recover after initial tree error: line=%q err=%v", line, err)
+				}
+			}
+			cancel()
+			select {
+			case <-blocked.unsubscribed:
+			case <-time.After(5 * time.Second):
+				t.Fatal("canceled stream retained its concrete subscription")
+			}
+		})
 	}
 }

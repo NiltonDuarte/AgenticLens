@@ -1,7 +1,9 @@
-# feat(live): refresh active session traces automatically (AL-47)
+# fix(live): subscribe before exposing the SSE connection (AL-47)
 
-Selected active sessions could show stale traces when SSE updates were missed. Keep the inspector current with a coalesced two-second REST recovery loop alongside the existing SSE stream, and stop automatic refresh when the session is no longer active or streaming is paused.
+The SSE handler flushed success headers and loaded its initial tree before registering a subscriber. A real poll during that lookup could publish the first trace before the connection subscribed; unchanged-trace deduplication then suppressed its delivery on later ticks.
 
-Protect selected traces from obsolete REST and manual-refresh responses, retain valid data on refresh errors, and preserve expanded reasoning and reading position when messages grow. Reuse unchanged backend snapshots through read-only SQLite change detection, avoiding duplicate full-trace reconstruction on idle polls without changing the API or ledger schema.
+Register the subscriber and deferred cleanup before headers and the initial lookup. Send the initial session tree before draining queued events. The existing SQLite-to-SSE-to-REST regression now controls this startup ordering using the concrete service and real SQLite while preserving its in-place-update assertions.
 
-Contract: [CONTRACT.md](CONTRACT.md). Implementation and verification: [SUMMARY.md](SUMMARY.md).
+Follow-up to merged #76; this correction has no frontend, schema, cache, or replay-protocol changes. Original feature evidence and the AL-53 failed gate remain recorded.
+
+Contract: [CONTRACT.md](CONTRACT.md). Correction scope: [iterations/01/PLAN.md](iterations/01/PLAN.md). Delivery evidence: [SUMMARY.md](SUMMARY.md).
