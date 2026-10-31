@@ -4,4 +4,4 @@ The suite contains tests that assert test-local literals or copied implementatio
 
 Includes separate conditional consolidation findings so unique regression cases and compiler-negative contracts survive future reductions. This PR changes documentation only; no tests have been removed, and no reduced-suite equivalence or speedup is claimed.
 
-Validation: full `make` passed on the baseline, including Go race tests and 793 frontend cases; uncached Go and Vitest JSON profiles were inspected. Inventory counts and all 50 removal entries were checked. Integration verification and telemetry provenance are recorded in SUMMARY.md.
+Validation: full `make` passed on the baseline and after integration with `origin/main`, including Go race tests and 793 frontend cases; uncached Go and Vitest JSON profiles were inspected. Inventory counts and all 50 removal entries were checked. Integration verification and telemetry provenance are recorded in SUMMARY.md.

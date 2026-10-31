@@ -33,3 +33,44 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - Source store: normal `~/.codex/sessions`; source metadata cwd matches this checkout.
 - Child sessions: none spawned. No pre-existing REV-4 ledger or other-harness sessions to preserve.
 - Final telemetry extraction is delayed until delivery preparation and integration verification finish.
+
+## Integration and telemetry interpretation
+
+- `git fetch origin main` and `git merge origin/main --no-edit`: already up to date with main; no conflicts, no code changes.
+- Telemetry reflects the source records available at final extraction time. Codex does not supply authoritative billed cost in these rollouts; a stored zero is not evidence that this session was free. Raw rollouts remain outside Git.
+
+- Post-integration `make` on documentation commit `62076a1`: passed all stages, including frontend typecheck/lint, cached Go race results for unchanged code, 793 frontend cases, canonical embedded bundle, and four platform binary builds.
+- Final review inventory checks passed; only REV-4 documentation and generated telemetry are task-owned changes.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 2
+- **Active Agent Duration:** 0m 0s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 149.0k tokens (75% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** N/A
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 2,820 reasoning tokens (15.1% of generated output)
+- **Tool Health & Self-Correction:** 32 tool calls (2 self-corrections, 93.8% success rate)
+
+### Anomalies & Health Flags
+- **Status:** 1 execution anomaly detected (1 CRITICAL).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+91.9k tokens) — Context tokens surged by 91.9k to 126.8k tokens.
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **rootagent** | 1 | 152,618 | 15,857 | 2,389,632 | 94.0% | 149.0k | ELEVATED | $0.00 |
+| **Total** | **1** | **152,618** | **15,857** | **2,389,632** | **94.0%** | **149.0k** | **ELEVATED** | **$0.00** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6.1-sol** | 1 | 152,618 | 15,857 | 2,389,632 | 94.0% | $0.00 |
+| **Total** | **1** | **152,618** | **15,857** | **2,389,632** | **94.0%** | **$0.00** |
+
+Final telemetry validation: one Codex root session, matching `01a18fbf-cf90-7a21-b419-6eac79cfe5b7`, nonempty invocations, no children expected or extracted, no prior cross-harness ledger to preserve. Extraction succeeded from real rollout records.
