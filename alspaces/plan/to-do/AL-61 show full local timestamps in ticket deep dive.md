@@ -33,7 +33,6 @@ As an engineer reviewing historical metrics, I want full local dates and times v
 
 *DELIVERY CONSTRAINTS*
 
-* Use AL identifiers, not AL2.
 * Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md. FCIS; Go 1.23+ and TypeScript 5.x strict; zero any/interface{} and zero emojis.
 * Tests and experiments use self-contained fixtures/disposable copies, never live ticket workspaces. Preserve alspaces/AL-55/agentic_metrics.json.
 * No new capability is inferred from missing data. Separate source evidence, recorded observations, and hypotheses.
