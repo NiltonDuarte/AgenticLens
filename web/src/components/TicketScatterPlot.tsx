@@ -94,6 +94,7 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
             const isCompleted = row.completed_at !== null;
             const rawX = getScatterMetricValue(row, xMetric) ?? 0;
             const rawY = getScatterMetricValue(row, yMetric) ?? 0;
+            const skills = row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills';
             return (
               <circle
                 key={row.ticket_id}
@@ -104,11 +105,11 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
                 className="ticket-scatter-point"
                 tabIndex={0}
                 role="button"
-                aria-label={`${row.ticket_id}: ${row.ticket_title}; ${xMeta.label} ${xMeta.format(Number(rawX))}; ${yMeta.label} ${yMeta.format(Number(rawY))}`}
+                aria-label={`${row.ticket_id}: ${row.ticket_title}; ${xMeta.label} ${xMeta.format(Number(rawX))}; ${yMeta.label} ${yMeta.format(Number(rawY))}; Skills Used: ${skills}`}
                 onClick={() => onSelectTicket?.(row.ticket_id)}
                 onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectTicket?.(row.ticket_id); } }}
               >
-                <title>{`${row.ticket_id} — ${row.ticket_title}\n${xMeta.label}: ${xMeta.format(Number(rawX))}\n${yMeta.label}: ${yMeta.format(Number(rawY))}`}</title>
+                <title>{`${row.ticket_id} — ${row.ticket_title}\n${xMeta.label}: ${xMeta.format(Number(rawX))}\n${yMeta.label}: ${yMeta.format(Number(rawY))}; Skills Used: ${skills}`}</title>
               </circle>
             );
           })}
