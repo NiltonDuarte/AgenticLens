@@ -68,6 +68,12 @@ Output tickets to `<WORKSPACES_DIR>/plan/to-do/<PREFIX>-# <slug>.md` using `temp
 - `*TARGET*: AgenticLens (<Subsystem>)`
 - `*CONTEXT*`, `*GOAL*`, `*VERTICAL SLICE SCOPE*`, `*ACCEPTANCE CRITERIA*`, and `*DEFINITION OF DONE*`.
 
+#### Revise the current PO ticket batch
+
+Tickets being shaped during a PO session are drafts. When a draft is removed or merged, delete its specification and registry entry; never create a discarded ticket file, a `Discarded` status, a tombstone, or a new `plan/discarded/` entry. For a merge or redistribution, incorporate the retained requirements into the surviving tickets and adjust their scope and acceptance criteria coherently.
+
+Close numbering gaps within the current PO batch and configured prefix. Rename files and update ticket titles, dependency edges, registry entries, specification links and PR descriptions together. Keep the current plan authoritative; Git history preserves earlier drafts. Do not renumber unrelated tickets, tickets already in development, or completed history, and do not create developer workspaces or change application/tests to accommodate draft renaming.
+
 Shared planning registry lives under `<WORKSPACES_DIR>/plan/`:
 - `TICKETS.md`: Shared roadmap index and dependency graph structured using **Execution Tiers with Adjacency Lists** (e.g. `Tier 1 (Ready)`, with explicit `Blocked by: ...` and `Blocks: ...` links for unambiguous agent parsing). Updated across PO sessions as tickets are created, and by developers as tickets advance from `Ready` to `In Progress`. On completion, remove the ticket from the index and retain its specification in `plan/done/`; do not create or maintain a Done section.
 - `to-do/<PREFIX>-# <slug>.md`: Planned ticket definitions.

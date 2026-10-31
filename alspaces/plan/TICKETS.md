@@ -13,6 +13,52 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Ready
 
+### Post-v2.0 review: Ready
+
+- **AL-60**: Add Search tickets to the comparison exclusion panel
+  - **Subsystem**: Dashboard comparisons
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-60 search tickets in comparison exclusion panel.md`
+
+- **AL-61**: Show full local historical timestamps in Ticket Deep Dive
+  - **Subsystem**: Dashboard historical timestamps
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-61 show full local timestamps in ticket deep dive.md`
+
+- **AL-62**: Fix Codex skill and delegation facts with granular source ownership
+  - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-63
+  - **File**: `alspaces/plan/to-do/AL-62 fix codex skill and delegation facts with granular ownership.md`
+
+- **AL-64**: Investigate and fix active-turn duration across Codex and OpenCode v1/v2
+  - **Subsystem**: Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-64 investigate and fix active turn duration across codex and opencode.md`
+
+- **AL-66**: Configure optional skills, task_links and anomalies output for generate
+  - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-66 configure optional metric output for generate.md`
+
+- **AL-67**: Review shared telemetry repository interfaces and source injection
+  - **Subsystem**: Architecture / Domain Ports / Source Adapters / Composition / Backfill / Hydration / HTTP and Live Services / Tests
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-67 review telemetry repository interfaces and dependency injection.md`
+
+### Existing ready work
+
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
   - **Phase**: Phase 8 (v2 Phase 2)
@@ -64,6 +110,24 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## Blocked
+
+### Post-v2.0 review: Dependencies
+
+- **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
+  - **Subsystem**: Multi-source ingestion / hydration / recovery
+  - **Status**: Blocked
+  - **Blocked by**: AL-62
+  - **Blocks**: AL-65
+  - **File**: `alspaces/plan/to-do/AL-63 audit capabilities across opencode v1 v2 and codex.md`
+
+- **AL-65**: Research default source-backed recomputation and the future of Force
+  - **Subsystem**: Backfill CLI semantics / source recovery
+  - **Status**: Blocked
+  - **Blocked by**: AL-63
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-65 research safe default source backed backfill.md`
+
+### Existing blocked work
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests
