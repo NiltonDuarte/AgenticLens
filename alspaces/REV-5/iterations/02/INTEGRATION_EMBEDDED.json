@@ -1,0 +1,9 @@
+{
+  "merge_commit": "49cf350",
+  "standalone_index_matches_build": true,
+  "standalone_assets_match_build": [
+    "/assets/index-C6E9fpfD.js",
+    "/assets/index-Xjo2aE-x.css"
+  ],
+  "fixture": "empty temporary workspace; unavailable temporary database"
+}
