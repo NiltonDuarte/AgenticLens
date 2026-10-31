@@ -12,7 +12,7 @@ User authority: supervise existing PR/ticket threads and merge eligible non-rele
 |---|---|---|---|
 | #76 / AL-47 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/b0b881e1-41dd-4183-ae5e-8c7539cac75a> | 21f00442ab7f04da9fabf0ce5736f89a0ee874bf | merged: 2026-10-31T13:44:07Z, merge commit 5da845a7c244a6b2582102c0dff0d221844d9bfc; exact-head gates passed |
 | #79 / AL-54 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/0aec6a8f-e37b-4d2b-a88b-c4a5baef59ca> | 837311aa22ef51208bb86fd6912518d7fbaae3b3 | merged: 2026-10-31T13:52:30Z, merge commit b1268234cde742705728ea33ee89d30581803c47 |
-| #75 / AL-52 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/0be8de86-b6fc-472f-ad32-ff0fc1f14958> | f57dbf87167439313de57a58f4bc0c6f64548b35 | preparing: integration instruction released after verified #79 merge |
+| #75 / AL-52 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/0be8de86-b6fc-472f-ad32-ff0fc1f14958> | 308e8ddecc5a80c50c9db8fcf44d8f8fc528e957 | waiting_checks: integrated #76/#79; full make and independent integration review passed; new-head CI running |
 | #77 / AL-53 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/1c5e661f-8d54-4dea-9fac-031fcbdca9ee> | 57058521c498b9e376bbab5ec2355adec63d7729 | ready at old base; owns later shared navigation resolution and AL-55 reconciliation after #75 |
 | #78 / AL-43 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/dac7fd2e-e9fe-4388-a3ed-aaae48b4a83c> | bf575e1afd66ba17a82c5fbc1c4f3b3a2e65fcc8 | blocked_on_integration: F3/F4 fixed/reviewed and all three checks passed; TICKETS.md conflicts with main; hold until #75/#77 merged |
 | #80 / MGT-1 | <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/182ba150-f00a-4e23-b3af-5b085ef7b50f> | 40ee4b695172b302368d7b73d530b12fa370426d | preparing: this management skill and control record |
@@ -60,3 +60,7 @@ GitHub exact head 837311aa22ef51208bb86fd6912518d7fbaae3b3: three checks SUCCESS
 ## #78 correction CI passed; current conflict inspected
 
 Head bf575e1afd66ba17a82c5fbc1c4f3b3a2e65fcc8 has three SUCCESS checks. Fresh merge-tree against main b1268234cde742705728ea33ee89d30581803c47 confirms exactly one current conflict: alspaces/plan/TICKETS.md. Shared production files merge textually at these heads, which is not behavioral verification. Keep the existing owner hold until #75/#77 verified merged; its later resolution must preserve all completed-ticket removals and AL-55 dependency readiness plus combined trace UI features. No premature integration instruction, merge, or release action was issued. Existing watch retained.
+
+## AL-52 integrated head awaiting CI
+
+Owner handed off PR #75 at 308e8ddecc5a80c50c9db8fcf44d8f8fc528e957. Manager fetched it, verified current-main ancestry (b1268234cde742705728ea33ee89d30581803c47), and confirmed no backend/web diff after tested merge bc312da81ebae5f0270ff3bb5eb3b36196587ccb. Owner reports independent integration review APPROVED, full make (736 frontend tests/35 files and all 12 Go race packages, checks/four builds), matching embedded assets and standalone payloads, and a clean worktree. AL-55 waits only on AL-53 in index/spec. Current GitHub head matches; OPEN/non-draft/main/MERGEABLE; backend/frontend CI IN_PROGRESS, so no merge attempted. Next: verify exact-head CI and current feedback, merge, then release #77 unified navigation integration.
