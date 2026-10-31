@@ -1,0 +1,55 @@
+{
+  "schema_version": 4,
+  "ticket_id": "GEN-14",
+  "ticket_title": "Independent manager and managed-ticket telemetry audit",
+  "ticket_type": "chore",
+  "started_at": "2026-10-31T13:18:48.847Z",
+  "completed_at": "2026-10-31T13:29:14.392Z",
+  "updated_at": "2026-10-31T13:29:15.311529+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 5
+  },
+  "sessions": [
+    {
+      "id": "01a1921c-e1ff-7783-87b3-edfd59fa6aae",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-10-31T13:18:49.959Z",
+          "completed_at": "2026-10-31T13:29:14.392Z",
+          "active_duration_seconds": 14,
+          "turns": 4,
+          "tokens": {
+            "input": 85279,
+            "output": 14223,
+            "cache_read": 2598016,
+            "reasoning": 3359,
+            "peak_context": 93100
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 5
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 31,
+          "errors": 2
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}
