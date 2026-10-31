@@ -413,3 +413,9 @@ The corrected baseline is 1,253 declarations (511 Go and 742 TypeScript); the re
 Affected Go packages passed the race detector, and frontend typecheck/lint passed. Independent exact-set and survivor-body verification, full frontend results, and the final integration gate are recorded in [iteration 02 test results](iterations/02/TEST_RESULTS.md), [iteration 02 review](iterations/02/REVIEW.md), and [SUMMARY.md](SUMMARY.md). These checks establish that the remaining suite passes and that removals match the approved list; they do not establish mutation-equivalent coverage or a controlled performance improvement.
 
 Final integration gate: full `make` passed at `2a78bad`, including Go race checks, all 749 frontend cases, and four binary builds. The Linux standalone binary contains the exact current embedded HTML/JS/CSS bytes. The reviewed implementation fingerprint remained unchanged after integration.
+
+## Iteration 04 follow-up scope
+
+The user accepted deleting the remaining release test file and date-preset smoke, plus consolidating the separate adversarial role-ordering wrapper into the existing enum table. The release guards did not establish successful CI build/package/publish behavior: workflow strings and help text can be present while CI fails, and missing-input diagnostics exercise narrower failure paths. The latter were genuine tests, but the user judged this file's value insufficient.
+
+The date smoke duplicates stronger exact-endpoint coverage in TestResolveDatePreset. The role wrapper moves semantic protection to the enum suite rather than deleting it: existing empty/custom-name cases plus refined canonical full/default/partial-priority rows run through both ordering entrypoints. See iterations/04/PLAN.md for the transfer map and verification reports for the executed changes.

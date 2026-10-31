@@ -311,10 +311,10 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialComprehensive(t *testing.T
 			expected:    []string{"DEVELOPER", "architect", "developer", "lead-qa"},
 		},
 		{
-			name:        "customOrder priority first followed by alphabetical remainder",
-			input:       []string{"developer", "architect", "researcher", "lead-qa", "tester", "coder"},
-			customOrder: [][]string{{"lead-qa", "developer"}},
-			expected:    []string{"lead-qa", "developer", "architect", "coder", "researcher", "tester"},
+			name:        "canonical subagent priority followed by alphabetical canonical and custom remainder",
+			input:       []string{"reviewer", "zeta", "tester", "coder", "planner", "orchestrator", "alpha"},
+			customOrder: [][]string{{"planner", "coder", "tester", "reviewer"}},
+			expected:    []string{"planner", "coder", "tester", "reviewer", "alpha", "orchestrator", "zeta"},
 		},
 		{
 			name:        "customOrder with unlisted roles not present in input are cleanly ignored",
@@ -335,10 +335,10 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialComprehensive(t *testing.T
 			expected:    []string{"architect", "developer", "researcher"},
 		},
 		{
-			name:        "customOrder matching all input roles in reverse order preserves exact customOrder",
-			input:       []string{"architect", "developer", "lead-qa", "researcher"},
-			customOrder: [][]string{{"researcher", "lead-qa", "developer", "architect"}},
-			expected:    []string{"researcher", "lead-qa", "developer", "architect"},
+			name:        "reversed canonical input follows complete canonical customOrder",
+			input:       []string{"reviewer", "tester", "coder", "planner", "orchestrator"},
+			customOrder: [][]string{{"orchestrator", "planner", "coder", "tester", "reviewer"}},
+			expected:    []string{"orchestrator", "planner", "coder", "tester", "reviewer"},
 		},
 		{
 			name:        "customOrder with whitespace trimmed around role names",
@@ -353,10 +353,10 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialComprehensive(t *testing.T
 			expected:    []string{"alpha", "beta", "gamma", "omega"},
 		},
 		{
-			name:        "reverse sorted input sorts ascending alphabetically",
-			input:       []string{"omega", "gamma", "beta", "alpha"},
+			name:        "reverse alphabetical canonical roles default to ascending alphabetical order",
+			input:       []string{"tester", "reviewer", "planner", "orchestrator", "coder"},
 			customOrder: nil,
-			expected:    []string{"alpha", "beta", "gamma", "omega"},
+			expected:    []string{"coder", "orchestrator", "planner", "reviewer", "tester"},
 		},
 		{
 			name:        "single role input returned as single element",

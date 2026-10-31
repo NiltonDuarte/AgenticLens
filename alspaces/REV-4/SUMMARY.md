@@ -157,3 +157,24 @@ Final iteration02 telemetry validated: exactly five Codex sessions, original roo
 - PR #72 remained open before update. Existing root source and four child sessions from iteration 02 remain expected in final telemetry; no new subagents were spawned for this documentation review. Classification for this iteration is `docs`.
 
 Iteration 03 final telemetry verified: refreshed original Codex root plus all four existing child sessions, with correct sources/parent IDs and nonempty invocations. No source sessions lost; no new children expected. Actual Codex billed cost remains unavailable; stored zero is not proof of free execution.
+
+## Iteration 04: targeted deletion and enum consolidation
+
+Initial working tree clean at `e4fb51060afc40726153954872f400e6b36bdca3`; existing PR #72 open. The user explicitly requested deleting release_verification_test.go, discarding TestDateFiltersAndAggregations, and merging TestOrderRoles_And_OrderSubagentRoles_AdversarialEdgeCases into the enum test. This request approves the concrete scope; no repeated gate question is needed.
+
+- Release-file deletion removes four remaining tests: workflow substring integrity, Makefile help target names, missing-checksum failure, and missing-binary failure. The last two exercise real guard branches but do not validate successful release/publishing. Removing them does not fix or improve CI release validation; it removes limited-value coverage at the user's request. Actual workflows/Makefile remain unchanged.
+- TestDateFiltersAndAggregations checks only seven-day duration; TestResolveDatePreset already asserts the exact seven-day endpoints, 24-hour endpoints, and unknown preset behavior.
+- Role wrapper consolidation preserves nil/empty/whitespace, custom-role deduplication, canonical full-priority ordering, canonical default ordering, and partial-priority ordering with an alphabetical remainder. Use existing enum rows/runner; add no tests or table rows.
+- Contract delta and ownership: iterations/04/CONTRACT.md and PLAN.md. Parent owns documentation; coder owns the three Go test paths; tester/reviewer own their iteration reports.
+
+### Iteration 04 implementation and focused verification
+
+- Deleted the complete release verification file and its local-only findRepoRoot helper; removed the redundant date smoke and role edge-case wrapper. Six fewer top-level Go declarations; no new tests.
+- Refined three existing comprehensive enum table rows. All 19 rows remain; 16 are unchanged. Both ordering entrypoints still execute every row. Multi-element remainder sorting is preserved alongside the canonical-role case.
+- Independent AST audit: only those six declarations removed; only the existing comprehensive enum test body changed among surviving tests; only findRepoRoot removed among helpers. No production/CI/Makefile/frontend changes.
+- Test diff: 11 lines added, 297 deleted, 286 net test lines removed. Combined with iteration 02, net test-line reduction is 1,896; 56 fewer top-level declarations overall, one of them consolidated rather than discarding its role behavior.
+- Coder focused enum/date checks, gofmt, and whitespace checks passed. Tester affected-package race JSON run passed 1,139 test/subtest completions with zero failed/skipped; both role entrypoints passed all 19 rows (38 children).
+- Current declaration count: 499 Go + 698 TypeScript = 1,197. Frontend source and 749 expanded cases unchanged.
+- Implementation diff SHA-256: `51b92d4642c4ee8f016b637b18f918bbaca37461ae67f5c2b53bf44f2d9132ed`.
+- Numeric catalog refreshed to current membership and source lines; original ratings persist for remaining tests. Six obsolete rows omitted, with transfer rationale on the surviving enum test. Historical scoring/report entries remain explicitly labeled.
+- Current declaration source fingerprint: `5d66f496f12d93c6244b0484a131f61af2ebb6853e4ff2d06ce512658077b08d`.

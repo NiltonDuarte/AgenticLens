@@ -1,8 +1,8 @@
 # REV-4 scored test review: iteration 03
 
-Every current test declaration has a score in [TEST_SCORES.md](TEST_SCORES.md): **1,203 declarations**, comprising **505 Go tests and 698 TypeScript declarations**. The suite still contains 749 expanded frontend runtime cases. The 50 tests deleted in iteration 02 are historical and are not counted again. No tests were changed or deleted in this scoring pass.
+Iteration 03 scored **1,203 declarations** (505 Go and 698 TypeScript). The [current catalog](TEST_SCORES.md) is refreshed after iteration 04 to **1,197 declarations** (499 Go and 698 TypeScript), omitting the four deleted release tests, date smoke and consolidated role wrapper. Other ratings are unchanged. The suite still contains 749 expanded frontend runtime cases. The 50 tests deleted in iteration 02 are historical and are not counted again. No tests were changed or deleted during iteration 03 itself. Iteration 04 changes and verification are recorded separately below.
 
-Baseline: `2e87ab15ffee382b1685bf38f233eca3d76fe72e`; initial working tree clean. The user requested numeric scores rather than binary dispositions. Iteration 01/02 documents remain intact as historical removal evidence; this is the current numeric review.
+Baseline: `2e87ab15ffee382b1685bf38f233eca3d76fe72e`; initial working tree clean. The user requested numeric scores rather than binary dispositions. Iteration 01/02 documents remain intact as historical removal evidence; this is the iteration 03 scoring rubric and findings, with a current-catalog update below.
 
 ## What the number means
 
@@ -103,7 +103,7 @@ Only the following directly examined declarations receive 10. Scores of 8 or 9 e
 | 10 | `backend/internal/domain/session_facts_test.go:89` / `TestSessionsFromFactsRequiresExplicitInvocationOwner` | Production rejects unowned invocation rows rather than fabricating attribution. Essential integrity barrier for all downstream totals. |
 | 10 | `web/src/views/TicketDeepDive.test.tsx:398` / `ignores ticket A %s enrichment after selecting ticket B and resets the drawer and disclosure` | Delays a response from the old ticket and checks the current ticket state/inspector. Prevents cross-ticket stale async data from appearing as current evidence. |
 
-## Coverage and verification
+## Iteration 03 coverage and verification (historical)
 
 - Numeric catalog: 1203 unique file/line entries, all integer scores in [0,10]; 102 Focused and 1101 Screened. All current declarations occur exactly once; no deleted test, helper or TestMain is counted.
 - Declaration source fingerprint: `cf143e3784fdb64d306ba95b08c69e36eeb86af7c1258179539400dff9e3cf41` (SHA-256 over sorted file/line/body-hash identities).
@@ -133,3 +133,13 @@ Start with the three zero-score duplicates if the user requests another deletion
 Do not convert these ratings into a bulk deletion script. Preserve critical independent layer coverage: a domain merge test does not establish HTTP persistence safety, a mocked API test does not establish SQLite access mode, and a component test does not establish standalone assets. No new deletion approval is inferred from requesting scores.
 
 Final delivery gate: full post-integration `make` passed, including all 749 frontend runtime cases, Go race checks, frontend typecheck/lint, canonical assets and four-platform binary builds. Source/test bodies remain unchanged from the scoring baseline.
+
+## Iteration 04 catalog update
+
+The user explicitly selected the complete release test file and date smoke for deletion, and requested merging the adversarial role wrapper into the enum test. The release tests covered source/help text and missing-input errors, not a successful CI release/publish run. The missing-input checks were genuine but limited; the user chose to remove that coverage. The stronger TestResolveDatePreset still checks exact boundaries.
+
+Canonical role priorities/default order now live in three refined rows of the existing 19-row comprehensive enum table. Both entrypoints exercise every row, including a multi-element alphabetical remainder with alpha/orchestrator/zeta. No new top-level tests or table rows were added.
+
+TEST_SCORES.md has 1,197 current rows: 499 Go and 698 TypeScript. Six obsolete rows are omitted; all other ratings persist, with refreshed source locations and the enum consolidation rationale. Current basis counts: 96 Focused and 1,101 Screened. The original three zero-score duplicates and eleven critical ten-score contracts remain unchanged. Earlier low-priority rows above document historical judgments, including the now-deleted cases; the current catalog is authoritative for membership.
+
+See iterations/04/TEST_RESULTS.md, iterations/04/REVIEW.md and SUMMARY.md for final verification. No additional deletion is inferred from any remaining score.
