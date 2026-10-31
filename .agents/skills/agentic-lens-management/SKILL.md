@@ -9,9 +9,11 @@ Use one configured MGT ticket for coordination. Follow [AGENTS.md](../../../AGEN
 
 ## Authority and release exclusion
 
-Record the user's actual authorization to supervise, send instructions, fix reviewed defects through ticket owners, and merge. A review-only request does not authorize messages or merges. Explicit authorization to supervise until merge permits routine owner instructions and non-release merges after the gates below; do not ask again for those steps.
+Record the user's actual authorization to supervise, send instructions, fix reviewed defects through ticket owners, and merge. A review-only request does not authorize messages or merges. Explicit authorization to supervise until merge permits routine owner instructions and eligible non-release merges after the gates below; do not ask again for those steps. The owning management thread's own management PR is excluded from that merge authority.
 
 **Release pull requests are human controlled. Never merge, enable auto-merge, approve on behalf of a human, close, or instruct another agent to merge a release PR.** Identify release candidates by branch (including release-please), title, labels, manifest/version/changelog changes and automation provenance. Keep them in the inventory as `human_only`; report their state without treating an open release as unfinished agent work. When classification is uncertain, hold the merge for a human decision. This exclusion also applies to a replacement release PR and to otherwise broad instructions to merge every PR. Only the human performs a release merge.
+
+**Do not self-merge management work.** The management thread may prepare, push and report its own MGT PR, but must leave review/merge to a human or a separately authorized independent controller. Do not enable its auto-merge or ask a child to perform the same merge as a workaround. Determine ownership from the management ticket/control record and creating/publishing thread, not a shared GitHub author account. Keep the management PR open and draft while its workflow is evolving; an accepted checkpoint still needs external merge ownership. Green CI alone does not authorize self-merge. Report it as `external_review`, not as an automatically mergeable item in the product queue.
 
 ## Discover ownership
 
@@ -24,11 +26,43 @@ Record the user's actual authorization to supervise, send instructions, fix revi
 
 Use the available T3 thread read/send tools for existing independent roots. Do not replace them with native subagents or delegate_task merely to control their tickets. User-authorized sends may start idle owners or steer running ones; use a stable client request ID and record the returned run ID to avoid duplicate instructions. Preserve provider/model/modes. Do not restart, cancel or replace a running owner unless necessary and authorized.
 
-Give each owner its ticket, PR URL and observed head, current accepted contract/plan and precise findings, writable responsibility, and expected next action. Tell it that other agents share the repository and it must preserve their changes. The owner changes only its own branch/workspace and uses the development skill for application repairs. The manager owns merge sequencing; instruct owners to prepare and report, not independently merge. Existing approved scope includes ordinary review corrections; a material product-scope change requires explicit approval under the development policy.
+### Message contract
+
+Begin with an explicit skill invocation: `$agentic-lens-dev` for application work, `$agentic-lens-po` for product planning, or `$agentic-lens-review` for a dedicated audit.
+
+Translate user steering into an actionable assignment for the recipient. Include the desired outcome, relevant approval, and new acceptance criteria. For an established thread, send only the decision or correction it needs; preserve completed work and avoid restarting its workflow.
+
+Keep routing checks, ownership verification, management ticket history, branch/worktree metadata and coordination bookkeeping in the manager’s records. Supply operational details only when resolving a concrete ambiguity or failure. Establish writable ownership and isolation at initial assignment or transfer, rather than repeating them in follow-ups.
+
+Describe findings with concrete inputs, actual behavior and expected behavior. Use plain language; include finding identifiers or priority labels only when they refer to a shared, accessible record.
+
+Make the assignment self-contained. Include relevant reproduction inputs directly. Supporting references must be accessible repository paths or durable links, such as a GitHub permalink. Never require another thread’s local worktree or temporary files, or make those paths dependencies in the recipient’s contract or plan.
+
+Let the invoked skill and repository documentation govern execution. Do not repeat their roles, commands, testing, telemetry or delivery checklists. State task-specific handoff responsibilities when needed, including who owns merging. A material product-scope change still requires explicit approval.
+
+Before sending, check:
+
+- **Necessary:** Does each detail change what the recipient should do?
+- **Portable:** Can another developer understand and review the assignment from the repository and message?
+- **Nonduplicative:** Does the invoked skill already govern this instruction?
+
+Message template (replace placeholders and omit optional lines before sending):
+
+```text
+$<skill-name>
+
+<Requested outcome for the ticket or PR.>
+<Confirmed approval or changed acceptance criteria, when applicable.>
+
+<Concrete inputs, observed behavior and expected behavior, when needed.>
+<Accessible repository reference or durable link, when needed.>
+
+<Expected handoff and merge responsibility.>
+```
 
 Allow independent defect fixes in parallel. Serialize upstream integration and merges where files or dependencies overlap. Send an upstream-update instruction only once its predecessor is actually merged; do not repeatedly restart work to chase every unrelated push. Preserve passed checks for unchanged code and require `make` after actual integration, with embedded assets checked for frontend changes.
 
-Each owner returns PR URL, exact head, tested base/diff, fixes or unresolved objections, commands/results and limitations, review state, and whether its worktree is clean. Do not equate a completed thread turn with a delivered ticket.
+Use the invoked skill’s handoff evidence to assess readiness. Ask only for a missing fact needed by the merge gate; do not resend the entire workflow. Do not equate a completed thread turn with a delivered ticket.
 
 ## Dispatch unblocked backlog work
 
@@ -36,7 +70,7 @@ When the user explicitly requests new ticket threads, inspect the current roadma
 
 Create independent top-level threads with the host launch tool and an explicit isolated worktree strategy bound before the first message; do not create checkouts in the shell or prompt the new agent to make its own worktree. Inherit provider/model/settings unless the user requested otherwise. Use a stable client request ID, retry only with that ID after an uncertain response, then read the created thread and record its exact link/run/ticket ownership. Before the owner writes files, require it to verify its actual cwd and Git toplevel against the assigned host worktree. Corroborate T3 workspace metadata with a distinct Git worktree path/gitdir, not just a different branch label. If a mismatch is observed, stop that root, preserve files and repair the host binding; do not move files or create shell worktrees to conceal the mismatch. Explicit user stop instructions take precedence over pending dispatch.
 
-Development owners use the development skill and their own ticket workspace, with explicit planning/code acceptance boundaries and existing approval evidence. Product owners use the PO skill in a separate PO ticket/root, own only planning/specification artifacts, and never implement application code or author developer contracts. Assign one owner to shared planning files; serialize updates with developer status transitions. In owner prompts, say explicitly that independent ticket threads use separate worktrees and share Git history/remotes; reserve shared-checkout wording for native roles collaborating inside one ticket worktree. A PO session ends at planning delivery; subsequent development belongs in an independent developer session.
+Invoke `$agentic-lens-dev` for development owners in their own ticket workspace, with explicit planning/code acceptance boundaries and existing approval evidence. Invoke `$agentic-lens-po` for product owners in a separate PO ticket/root; they own only planning/specification artifacts and never implement application code or author developer contracts. Assign one owner to shared planning files; serialize updates with developer status transitions. When establishing a new owner or transferring responsibility, distinguish its separate worktree and shared Git history/remotes from native roles sharing one ticket checkout. Keep routine follow-ups within the message contract above. A PO session ends at planning delivery; subsequent development belongs in an independent developer session.
 
 Ask the user through the question tool when priorities, overlapping acceptance criteria, ticket-series scope, or schema/cost semantics need a product decision. Continue independent grounding while waiting, but do not treat elapsed time or absent answers as approval for dependent implementation. Publish the decision and its source before releasing affected developers. Recheck dependencies and ownership after each relevant merge and dispatch only newly unblocked, accepted work; do not launch every backlog item merely because its label says Ready. Preserve release exclusion throughout expanded supervision.
 
@@ -46,7 +80,7 @@ Reconcile cross-PR behavior, not just textual conflicts. Use fetched immutable h
 
 Before each non-release merge, freshly verify:
 
-- It is the intended repository/base/PR and still classified non-release, open, and non-draft.
+- It is the intended repository/base/PR and still classified non-release, open, and non-draft; it is not this thread's own management PR.
 - The head is exactly the reviewed/tested head and includes the required current base. Any new head invalidates earlier readiness until its changes and checks are assessed.
 - Required checks passed for that head; there are no pending/failed required checks, unresolved blocking review findings/discussions, or changes-requested reviews. An empty required-check list is not proof that verification ran.
 - The owner completed applicable review and full integration checks, and cross-ticket dependencies are met. Explain any unavailable boundary rather than treating it as passed.
@@ -57,7 +91,7 @@ Use the repository-supported merge method with an expected-head guard (for examp
 
 Use native thread completion notifications and host PR watches instead of sleep loops, repeated status polling, or `gh --watch`. Follow a tool's returned `next` instruction; register the relevant completion/watch before yielding. When a watch requires ending the turn, finish any needed edits, push and management records first. A wake is a reason to recheck readiness, never permission to merge blindly. Preserve the control ledger across continuations and resume its next action. Remove obsolete watches when their target is merged, replaced, or no longer managed; follow the host's handoff/unwatch rules.
 
-Do not say supervision is complete while an eligible PR remains open, blocked, or merely has auto-merge requested. A true blocker needs evidence and a specific required user action; continue other unblocked tickets. Finish when every in-scope non-release PR is verified merged, or explicitly report the remaining blocked/closed-unmerged work. Report human-only releases separately. Recheck late-arriving PRs for scope and ownership before declaring completion.
+Do not say supervision is complete while an eligible PR remains open, blocked, or merely has auto-merge requested. A true blocker needs evidence and a specific required user action; continue other unblocked tickets. Finish when every in-scope non-release PR is verified merged, or explicitly report the remaining blocked/closed-unmerged work. Report human-only releases and externally owned management merges separately. Do not hold the user in an automatic merge loop for your own management PR; hand it off explicitly for external review. Recheck late-arriving PRs for scope and ownership before declaring completion.
 
 ## Telemetry and finalization
 
