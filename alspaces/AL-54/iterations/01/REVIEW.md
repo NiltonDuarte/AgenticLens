@@ -27,3 +27,7 @@ Reused tester evidence for the unchanged reviewed code: focused Vitest 5 files/1
 The parent still owns the required post-commit upstream integration, full make gate, generated-asset parity/standalone binary checks, lifecycle synchronization, source-grounded telemetry, and PR delivery. This approval covers the implementation and current test evidence, not unexecuted delivery stages. DOM tests do not establish browser geometry.
 
 APPROVED
+
+## Parent delivery verification
+
+Implementation committed as 9a2ba0c; origin/main merge already current. Full make passed (12 Go race packages, 718 frontend tests, checks and four platform builds). Exact index/JS/CSS bytes match frontend build and embedded tree and occur in the standalone host binary; version --json passed. Generated assets remain ignored. Final telemetry and PR delivery are recorded in SUMMARY.md.
