@@ -11,6 +11,49 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Ready
 
+### Phase 1 post-v2.0 review: Tier 1 (Ready)
+
+- **AL-60**: Add Search tickets to the comparison exclusion panel
+  - **Subsystem**: Dashboard comparisons
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-60 search tickets in comparison exclusion panel.md`
+
+- **AL-61**: Show full local historical timestamps in Ticket Deep Dive
+  - **Subsystem**: Dashboard historical timestamps
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-61 show full local timestamps in ticket deep dive.md`
+
+- **AL-62**: Investigate missing Codex skill and delegation facts
+  - **Subsystem**: Codex ingestion / persistence / analytics
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-64
+  - **File**: `alspaces/plan/to-do/AL-62 investigate codex skill and delegation evidence.md`
+
+- **AL-63**: Verify live observability with an active OpenCode session
+  - **Subsystem**: OpenCode live tracing / dashboard
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-64
+  - **File**: `alspaces/plan/to-do/AL-63 verify live observability with active opencode.md`
+
+- **AL-65**: Include provisional active Codex turn duration at the snapshot cutoff
+  - **Subsystem**: Codex duration extraction / ledger / presentation
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-65 fix provisional active codex turn duration.md`
+
+
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
   - **Phase**: Phase 8 (v2 Phase 2)
@@ -70,6 +113,25 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## Blocked
+
+### Phase 1 post-v2.0 review: Tier 2-3 (Dependencies)
+
+- **AL-64**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
+  - **Subsystem**: Multi-source ingestion / hydration / recovery
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Blocked
+  - **Blocked by**: AL-62, AL-63
+  - **Blocks**: AL-66
+  - **File**: `alspaces/plan/to-do/AL-64 audit capabilities across opencode v1 v2 and codex.md`
+
+- **AL-66**: Research default source-backed recomputation and the future of Force
+  - **Subsystem**: Backfill CLI semantics / source recovery
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Blocked
+  - **Blocked by**: AL-64
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-66 research safe default source backed backfill.md`
+
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests
