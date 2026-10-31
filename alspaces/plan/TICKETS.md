@@ -29,13 +29,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-61 show full local timestamps in ticket deep dive.md`
 
-- **AL-62**: Investigate missing Codex skill and delegation facts
-  - **Subsystem**: Codex ingestion / persistence / analytics
+- **AL-62**: Fix Codex skill and delegation facts with granular source ownership
+  - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
   - **Phase**: Phase 1 (post-v2.0 platform review)
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: AL-64
-  - **File**: `alspaces/plan/to-do/AL-62 investigate codex skill and delegation evidence.md`
+  - **File**: `alspaces/plan/to-do/AL-62 fix codex skill and delegation facts with granular ownership.md`
 
 - **AL-63**: Verify live observability with an active OpenCode session
   - **Subsystem**: OpenCode live tracing / dashboard
@@ -52,14 +52,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-65 fix provisional active codex turn duration.md`
-
-- **AL-67**: Scope skills and task_links to their source session or invocation
-  - **Subsystem**: Domain / Source Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
-  - **Phase**: Phase 1 (post-v2.0 platform review)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-67 scope skill and task link facts to their source owners.md`
 
 - **AL-68**: Configure optional skills, task_links and anomalies output for generate
   - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests
@@ -178,6 +170,12 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## Discarded
+
+- **AL-67**: Scope skills and task_links to their source session or invocation
+  - **Subsystem**: Domain / Source Adapters / Schema Migration / CLI / API / Dashboard / Tests
+  - **Phase**: Phase 1 (post-v2.0 platform review)
+  - **Status**: Discarded (Merged into AL-62)
+  - **File**: `alspaces/plan/discarded/AL-67 scope skill and task link facts to their source owners.md`
 
 - **AL-18**: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry
   - **Subsystem**: Domain / Adapters / HTTP / Tests

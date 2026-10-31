@@ -23,8 +23,8 @@ Engineers inspecting historical/live agent activity, analysts comparing tickets,
 
 ## Functional Requirements
 
-- Data ingestion/extraction: AL-62 investigates Codex facts; AL-64 audits OpenCode v1/v2 and Codex capabilities; AL-65 fixes active-turn duration through a snapshot cutoff. Evidence unavailable at execution remains explicit.
-- Granular ownership: AL-67 relocates canonical skills/task_links to source-proven session or invocation ownership, with derived ticket/fleet projections, compatible migration, and explicit unresolved legacy provenance.
+- Data ingestion/extraction: AL-62 diagnoses and fixes missing supported Codex facts while delivering granular source ownership; AL-64 audits OpenCode v1/v2 and Codex capabilities; AL-65 fixes active-turn duration through a snapshot cutoff. Evidence unavailable at execution remains explicit.
+- Granular ownership: merged AL-62 relocates canonical skills/task_links to source-proven session or invocation ownership, with derived ticket/fleet projections, compatible migration, and explicit unresolved legacy provenance.
 - Generation output policy: AL-68 adds independent enabled-by-default config toggles for skills/task_links/anomalies, applied across emitted ownership scopes and generated summaries, including replacement of previous disabled facts in the target output.
 - Domain aggregations: duration excludes inter-turn gaps and future activity; completed refresh replaces provisional contribution. Missing facts do not establish measured zero. Stored baseline facts survive unavailable hydration/recovery.
 - Presentation: AL-60 searches existing ticket IDs/titles inside Exclude tickets only; AL-61 renders full local dates/times without milliseconds. AL-65 exposes provisional duration consistently. AL-63 verifies live inspector behavior.
@@ -40,15 +40,14 @@ Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: pure Go domain
 | --- | --- | --- | --- |
 | AL-60 | Search tickets within comparison exclusion panel | Feature | None |
 | AL-61 | Full local historical dates/times in Ticket Deep Dive | Feature | None |
-| AL-62 | Codex skill/delegation evidence investigation | Investigation | None |
+| AL-62 | Fix Codex skill/delegation facts with granular ownership | Fix | None |
 | AL-63 | Active OpenCode live walkthrough | Verification | None |
 | AL-64 | OpenCode v1/v2 and Codex capability matrix | Audit | AL-62, AL-63 |
 | AL-65 | Provisional unfinished Codex turn duration fix | Bug | None |
 | AL-66 | Default backfill/Force research recommendation | Research | AL-64 |
-| AL-67 | Source-owned skills/task_links and compatible projections | Refactor | None |
 | AL-68 | Configurable optional metric output for generate | Feature | None |
 
-Execution tiers: Tier 1 = AL-60/61/62/63/65/67/68; Tier 2 = AL-64; Tier 3 = AL-66. AL-65 is the diagnosed must-fix and can proceed independently. AL-64 consumes AL-62/63 reports; AL-66 consumes the parity report. Blocked tickets may gather independent evidence while their final acceptance awaits dependencies. Do not delay the duration fix behind investigations. Existing AL-57 and AL2 scope is unchanged.
+Execution tiers: Tier 1 = AL-60/61/62/63/65/68; Tier 2 = AL-64; Tier 3 = AL-66. AL-65 is the diagnosed must-fix and can proceed independently. AL-64 consumes AL-62 diagnosis and fix-verification evidence plus AL-63 results; AL-66 consumes the parity report. Blocked tickets may gather independent evidence while their final acceptance awaits dependencies. Do not delay the duration fix behind investigations. Existing AL-57 and AL2 scope is unchanged.
 
 ## Evidence and Review Boundaries
 
@@ -56,10 +55,16 @@ The notes are supplied evidence, not new checks run in this PO session. AL-62 pr
 
 The original review worktree was not intended for merge. These planning artifacts alone are eligible for delivery; the original AL-55 ledger must remain byte-identical. No application fix, experimental ledger replacement, original review changes, default backfill change, or forced parity promise is included. No developer AL workspace or CONTRACT.md is created by the PO.
 
-## Iteration 02 steering: granular fact ownership
+## Historical iteration 02 steering: granular fact ownership
 
 Source: user follow-up requesting skills/task_links at session or invocation scope, as close to raw data as possible. AL-67 adds one independently Ready Phase 1 ticket; it does not revise the seven existing ticket boundaries. Canonical facts use their narrowest proven owner; raw occurrence identity must not be confused with role/model metric rows. Ambiguous historical ownership is retained explicitly, never guessed. This supersedes the original seven-ticket count with eight planned tickets and introduces no application changes or new harness capability promise. Original evidence preservation, research-only defaults, existing verification and separate implementation-session requirements remain in force.
 
-## Iteration 03 steering: configurable generate output
+## Historical iteration 03 steering: configurable generate output
 
 Source: user follow-up requesting configuration toggles for task_links, skills and anomalies; disabled metrics must not be written. Add AL-68 independently Ready, increasing delivery to nine tickets. Missing settings retain enabled behavior; explicit false omits that category from generated JSON at every owner and managed summary metrics. On regeneration, omission applies to previously saved disabled facts in that target output too. Preserve unrelated facts, safe writes and source records. No global redaction/backfill-default change is implied. This policy deliberately suppresses configured output; it does not supersede missing-source safeguards for enabled facts. AL-67 remains responsible for granular ownership, and implementation stays in a separate development session.
+
+## Iteration 04 steering: merge AL-67 into an implementation-owning AL-62
+
+Source: explicit user correction, “AL-62 must fix, not only investigate. AL-67 changes the data structure. Merge them.” AL-62 now owns diagnosis and implemented missing-fact corrections plus AL-67's granular source ownership, migration, adapters, projections and regression coverage. AL-67 is retired under plan/discarded as merged into AL-62; no separate execution or AL-62-to-AL-67 dependency exists. Eight active Phase 1 tickets remain: AL-60 through AL-66 and AL-68. AL-64 still depends on AL-62/AL-63, with no dependency cycle; AL-68 references merged AL-62 for ownership coordination. Historical iteration 02/03 counts and ownership assignments above are superseded by this decision.
+
+Preserved guarantees: raw occurrence identities and multiplicity, unresolved legacy provenance, unavailable-source preservation, existing OpenCode behavior, no invented Codex evidence, original AL-55 bytes and separate PO/development sessions. Source investigation no longer ends with recommendations; actual fixes and end-to-end regression evidence are required. If source facts are truly unsupported, accurate availability behavior is required rather than fabricated populated data. This planning update does not itself implement or claim verification of a fix.

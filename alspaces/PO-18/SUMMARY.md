@@ -48,3 +48,7 @@ User requested skills/task_links closer to raw session or invocation data. Added
 ## Iteration 03: configurable generate output planning
 
 User requested toggles for task_links, skills and anomalies, with no metric writes when disabled. Added AL-68 (Phase 1, Ready, feature), updating specification/roadmap/PR to nine tickets. Explicit defaults preserve current enabled behavior. Ticket covers nested ownership, retained facts on regeneration, managed Markdown output, disabled-vs-unavailable semantics and independent category behavior; backfill/global redaction remain separate scope. No application/config/test changes, developer workspace or contract. Baseline ce43f8d and initial Git status clean; PR #90 remains open.
+
+## Iteration 04: merge missing-fact fix and granular ownership
+
+User explicitly requires AL-62 to fix, not only investigate, and merges AL-67's data-structure work into it. AL-62 now owns diagnosis, missing Codex fact corrections, granular persistence, migration, all consumers and regression tests. AL-67 is archived under plan/discarded as merged into AL-62. Eight active Phase 1 tickets remain. Roadmap and AL-64/AL-68 references updated; all prior granular preservation criteria retained. This supersedes investigation-only AL-62 and independently Ready AL-67; prior logs remain historical. Baseline 3b941ff; initial Git status clean, PR #90 open. This remains a PO documentation update, with no application implementation or new runtime claims.
