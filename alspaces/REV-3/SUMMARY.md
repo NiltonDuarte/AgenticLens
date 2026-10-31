@@ -8,6 +8,8 @@ Updated agent/contributor guidance with explicit scope deltas, superseded decisi
 
 Iteration 02 full make passed after integration at d794b85: Go vet, frontend typecheck/lint, 12 cached backend race-test package results, 793 frontend tests/36 files, asset build, and four platform binaries. Documentation links and zero-emoji checks passed across 12 documents; generated asset trees match. origin/main was already current. Subsequent edits record evidence only; iteration 01 verification is preserved.
 
+Final extraction discovered one Codex rollout. Verified the existing root/session-source pair is preserved exactly with nonempty invocations and zero children; no other harness sessions existed. The snapshot includes this iteration up to finalization.
+
 Delivery continues on https://github.com/NiltonDuarte/AgenticLens/pull/71. Telemetry refresh uses the existing verified Codex root, with no children expected; no application behavior or other-ticket facts changed.
 
 ## Delivered documentation
@@ -37,15 +39,15 @@ The generator discovered one Codex rollout and wrote one session with nonempty i
 - Telemetry finalization targets Codex root 01a18fab-ce5a-7943-8aff-6192c9d8ebdf in ~/.codex, verified against source metadata and this checkout. Expected child sessions: zero. No pre-existing REV-3 sessions from other harnesses exist. Extraction is a finalization snapshot; later commit/push/PR tool calls occur afterward.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 0m 0s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 104.6k tokens (52% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 3
+- **Active Agent Duration:** 5m 23s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 156.3k tokens (78% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 880 reasoning tokens (7.9% of generated output)
-- **Tool Health & Self-Correction:** 27 tool calls (2 self-corrections, 92.6% success rate)
+- **Reasoning Effort:** 3,800 reasoning tokens (14.5% of generated output)
+- **Tool Health & Self-Correction:** 47 tool calls (2 self-corrections, 95.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -57,11 +59,11 @@ The generator discovered one Codex rollout and wrote one session with nonempty i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 99,464 | 10,205 | 1,965,952 | 95.2% | 104.6k | ELEVATED | $0.00 |
-| **Total** | **1** | **99,464** | **10,205** | **1,965,952** | **95.2%** | **104.6k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 142,222 | 22,441 | 4,921,472 | 97.2% | 156.3k | ELEVATED | $0.00 |
+| **Total** | **1** | **142,222** | **22,441** | **4,921,472** | **97.2%** | **156.3k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 99,464 | 10,205 | 1,965,952 | 95.2% | $0.00 |
-| **Total** | **1** | **99,464** | **10,205** | **1,965,952** | **95.2%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 142,222 | 22,441 | 4,921,472 | 97.2% | $0.00 |
+| **Total** | **1** | **142,222** | **22,441** | **4,921,472** | **97.2%** | **$0.00** |
