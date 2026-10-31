@@ -6,6 +6,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+- **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
+  - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
+  - **Phase**: Phase 7 (v1 Observability Polish)
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
+
 ---
 
 ## Ready
@@ -50,13 +58,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
-- **AL-47**: Real-Time Live Trace Dynamic Refresh and Active Session Polling
-  - **Subsystem**: Backend / Live / HTTP / Presentation / Web / Tests
-  - **Phase**: Phase 7 (v1 Observability Polish)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
 
 - **AL-49**: Reverse Event Chronology and Quick-Scroll Navigation in Live Trace Inspector
   - **Subsystem**: Presentation / Web / Components / Views / Tests
