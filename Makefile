@@ -16,7 +16,7 @@ LDFLAGS := -X 'agenticlens/internal/domain.Version=$(VERSION)' \
            -X 'agenticlens/internal/domain.GitCommit=$(GIT_COMMIT)' \
            -X 'agenticlens/internal/domain.BuildDate=$(BUILD_DATE)'
 
-.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet build clean help server serve release-build release-package release-verify release-clean opencode-compat-v1 opencode-compat-v2 opencode-compat
+.PHONY: all install install-backend install-frontend check test test-backend test-frontend lint vet web-assets build clean help server serve release-build release-package release-verify release-clean opencode-compat-v1 opencode-compat-v2 opencode-compat
 
 all: install check test build
 
@@ -59,7 +59,15 @@ install-frontend:
 check: vet lint
 	@git diff --check
 
-vet:
+web-assets:
+	@if [ ! -d "$(WEB_DIR)/node_modules" ]; then \
+		echo "Frontend dependencies are required to prepare Go embedded assets. Run 'make install-frontend' first." >&2; \
+		exit 1; \
+	fi
+	@echo "Building frontend assets required by Go embed..."
+	(cd $(WEB_DIR) && npm run build)
+
+vet: web-assets
 	(cd $(BACKEND_DIR) && go vet ./...)
 
 lint: vet
