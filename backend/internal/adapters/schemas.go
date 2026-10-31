@@ -87,11 +87,10 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 
 // ToolFactDTO represents a single tool execution fact in JSON.
 type ToolFactDTO struct {
-	SessionID     string `json:"session_id"`
-	Name          string `json:"name"`
-	Calls         int64  `json:"calls"`
-	Errors        int64  `json:"errors"`
-	ContentErrors int64  `json:"content_errors,omitempty"`
+	SessionID string `json:"session_id"`
+	Name      string `json:"name"`
+	Calls     int64  `json:"calls"`
+	Errors    int64  `json:"errors"`
 }
 
 func (dto ToolFactDTO) ToDomain() domain.ToolFact {
@@ -99,49 +98,78 @@ func (dto ToolFactDTO) ToDomain() domain.ToolFact {
 		SessionID: dto.SessionID,
 		Name:      dto.Name,
 		Calls:     dto.Calls,
-		Errors:    dto.Errors, ContentErrors: dto.ContentErrors,
+		Errors:    dto.Errors,
 	}
 }
 
 // EventFactDTO represents a single chronological event fact in JSON boundary serialization.
 type EventFactDTO struct {
-	HasContentError     bool    `json:"has_content_error,omitempty"`
-	ContentSeverity     string  `json:"content_severity,omitempty"`
-	ContentErrorSnippet *string `json:"content_error_snippet,omitempty"`
-	EventID             string  `json:"event_id"`
-	Timestamp           string  `json:"timestamp"`
-	SessionID           string  `json:"session_id"`
-	Turn                int64   `json:"turn"`
-	Role                string  `json:"role"`
-	EventType           string  `json:"event_type"`
-	ToolName            *string `json:"tool_name,omitempty"`
-	Status              string  `json:"status"`
-	ErrorMessage        *string `json:"error_message,omitempty"`
-	DurationMs          *int64  `json:"duration_ms,omitempty"`
-	ContextTokens       int64   `json:"context_tokens"`
+	EventID       string  `json:"event_id"`
+	Timestamp     string  `json:"timestamp"`
+	SessionID     string  `json:"session_id"`
+	Turn          int64   `json:"turn"`
+	Role          string  `json:"role"`
+	EventType     string  `json:"event_type"`
+	ToolName      *string `json:"tool_name,omitempty"`
+	Status        string  `json:"status"`
+	ErrorMessage  *string `json:"error_message,omitempty"`
+	DurationMs    *int64  `json:"duration_ms,omitempty"`
+	ContextTokens int64   `json:"context_tokens"`
 }
 
 type SessionToolFactDTO struct {
-	Name          string `json:"name"`
-	Calls         int64  `json:"calls"`
-	Errors        int64  `json:"errors"`
-	ContentErrors int64  `json:"content_errors,omitempty"`
+	Name   string `json:"name"`
+	Calls  int64  `json:"calls"`
+	Errors int64  `json:"errors"`
+}
+
+// UnmarshalJSON accepts the retired content count only on reads. It is discarded
+// so older supported ledgers remain readable without producing the removed metric.
+func (dto *SessionToolFactDTO) UnmarshalJSON(data []byte) error {
+	type toolAlias SessionToolFactDTO
+	var decoded struct {
+		toolAlias
+		ContentErrors json.RawMessage `json:"content_errors"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&decoded); err != nil {
+		return fmt.Errorf("decoding session tool fact: %w", err)
+	}
+	*dto = SessionToolFactDTO(decoded.toolAlias)
+	return nil
 }
 
 type SessionEventFactDTO struct {
-	HasContentError     bool    `json:"has_content_error,omitempty"`
-	ContentSeverity     string  `json:"content_severity,omitempty"`
-	ContentErrorSnippet *string `json:"content_error_snippet,omitempty"`
-	EventID             string  `json:"event_id"`
-	Timestamp           string  `json:"timestamp"`
-	MessageID           *string `json:"message_id,omitempty"`
-	Turn                int64   `json:"turn"`
-	Role                string  `json:"role"`
-	EventType           string  `json:"event_type"`
-	ToolName            *string `json:"tool_name,omitempty"`
-	Status              string  `json:"status"`
-	DurationMs          *int64  `json:"duration_ms,omitempty"`
-	ContextTokens       int64   `json:"context_tokens"`
+	EventID       string  `json:"event_id"`
+	Timestamp     string  `json:"timestamp"`
+	MessageID     *string `json:"message_id,omitempty"`
+	Turn          int64   `json:"turn"`
+	Role          string  `json:"role"`
+	EventType     string  `json:"event_type"`
+	ToolName      *string `json:"tool_name,omitempty"`
+	Status        string  `json:"status"`
+	DurationMs    *int64  `json:"duration_ms,omitempty"`
+	ContextTokens int64   `json:"context_tokens"`
+}
+
+// UnmarshalJSON discards retired content diagnostics while retaining strict
+// validation of the supported persisted event shape.
+func (dto *SessionEventFactDTO) UnmarshalJSON(data []byte) error {
+	type eventAlias SessionEventFactDTO
+	var decoded struct {
+		eventAlias
+		HasContentError     json.RawMessage `json:"has_content_error"`
+		ContentSeverity     json.RawMessage `json:"content_severity"`
+		ContentErrorSnippet json.RawMessage `json:"content_error_snippet"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&decoded); err != nil {
+		return fmt.Errorf("decoding session event fact: %w", err)
+	}
+	*dto = SessionEventFactDTO(decoded.eventAlias)
+	return nil
 }
 
 type SessionFactDTO struct {
@@ -165,14 +193,14 @@ func (dto EventFactDTO) ToDomain() domain.EventFact {
 		status = "completed"
 	}
 	return domain.EventFact{
-		EventID:   dto.EventID,
-		Timestamp: dto.Timestamp,
-		SessionID: dto.SessionID,
-		Turn:      dto.Turn,
-		Role:      domain.AgentRole(role),
-		EventType: domain.EventType(dto.EventType),
-		ToolName:  dto.ToolName,
-		Status:    status, HasContentError: dto.HasContentError, ContentSeverity: dto.ContentSeverity, ContentErrorSnippet: dto.ContentErrorSnippet,
+		EventID:       dto.EventID,
+		Timestamp:     dto.Timestamp,
+		SessionID:     dto.SessionID,
+		Turn:          dto.Turn,
+		Role:          domain.AgentRole(role),
+		EventType:     domain.EventType(dto.EventType),
+		ToolName:      dto.ToolName,
+		Status:        status,
 		ErrorMessage:  dto.ErrorMessage,
 		DurationMs:    dto.DurationMs,
 		ContextTokens: dto.ContextTokens,
@@ -182,14 +210,14 @@ func (dto EventFactDTO) ToDomain() domain.EventFact {
 // EventFactDTOFromDomain converts domain.EventFact to EventFactDTO.
 func EventFactDTOFromDomain(fact domain.EventFact) EventFactDTO {
 	return EventFactDTO{
-		EventID:   fact.EventID,
-		Timestamp: fact.Timestamp,
-		SessionID: fact.SessionID,
-		Turn:      fact.Turn,
-		Role:      string(fact.Role),
-		EventType: string(fact.EventType),
-		ToolName:  fact.ToolName,
-		Status:    fact.Status, HasContentError: fact.HasContentError, ContentSeverity: fact.ContentSeverity, ContentErrorSnippet: fact.ContentErrorSnippet,
+		EventID:       fact.EventID,
+		Timestamp:     fact.Timestamp,
+		SessionID:     fact.SessionID,
+		Turn:          fact.Turn,
+		Role:          string(fact.Role),
+		EventType:     string(fact.EventType),
+		ToolName:      fact.ToolName,
+		Status:        fact.Status,
 		ErrorMessage:  fact.ErrorMessage,
 		DurationMs:    fact.DurationMs,
 		ContextTokens: fact.ContextTokens,
@@ -498,13 +526,13 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 			if name == "" {
 				name = "unknown"
 			}
-			sessions[i].Tools = append(sessions[i].Tools, domain.SessionToolFact{Name: name, Calls: tool.Calls, Errors: tool.Errors, ContentErrors: tool.ContentErrors})
+			sessions[i].Tools = append(sessions[i].Tools, domain.SessionToolFact{Name: name, Calls: tool.Calls, Errors: tool.Errors})
 		}
 		for _, event := range session.Events {
 			sessions[i].Events = append(sessions[i].Events, domain.SessionEventFact{
 				EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
 				Role: domain.AgentRole(event.Role), EventType: domain.EventType(event.EventType), ToolName: event.ToolName,
-				Status: event.Status, HasContentError: event.HasContentError, ContentSeverity: event.ContentSeverity, ContentErrorSnippet: event.ContentErrorSnippet, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
+				Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 			})
 		}
 		for _, anomaly := range session.Anomalies {
@@ -589,7 +617,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 			if strings.TrimSpace(tool.Name) == "" {
 				return fmt.Errorf("sessions[%d].tools[%d].name is required", i, j)
 			}
-			if tool.Calls < 0 || tool.Errors < 0 || tool.Errors > tool.Calls || tool.ContentErrors < 0 || tool.ContentErrors > tool.Calls-tool.Errors {
+			if tool.Calls < 0 || tool.Errors < 0 || tool.Errors > tool.Calls {
 				return fmt.Errorf("sessions[%d].tools[%d] has invalid calls/errors counts", i, j)
 			}
 		}
@@ -695,15 +723,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 			sessions[i].Invocations = append(sessions[i].Invocations, InvocationFactDTOFromDomain(inv))
 		}
 		for _, tool := range session.Tools {
-			sessions[i].Tools = append(sessions[i].Tools, SessionToolFactDTO{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors, ContentErrors: tool.ContentErrors})
-		}
-		// Retain compact diagnostic evidence while preserving the existing omission
-		// of ordinary transient trace rows and full source payloads.
-		for _, event := range session.Events {
-			if !event.HasContentError {
-				continue
-			}
-			sessions[i].Events = append(sessions[i].Events, SessionEventFactDTO{EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: string(event.Role), EventType: string(event.EventType), ToolName: event.ToolName, Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens, HasContentError: event.HasContentError, ContentSeverity: event.ContentSeverity, ContentErrorSnippet: event.ContentErrorSnippet})
+			sessions[i].Tools = append(sessions[i].Tools, SessionToolFactDTO{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
 		}
 		for _, anomaly := range session.Anomalies {
 			anomaly.Context.SessionID = nil

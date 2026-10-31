@@ -38,33 +38,24 @@ describe('LiveTraceInspector Component', () => {
     sub_sessions: [],
   };
 
-  it('renders independent execution and semantic error counters', () => {
-    render(<LiveTraceInspector sessionNode={mockNode} trace={{...mockLiveTraceView,failed_tool_calls:1,content_errors:2}} loading={false} onClose={vi.fn()} />);
-    expect(screen.getByText(/Failed Tools:/)).toHaveTextContent('Failed Tools: 1');
-    expect(screen.getByText(/Content Errors:/)).toHaveTextContent('Content Errors: 2');
-  });
-
-  it('keeps warning task navigation, diagnostic copy and execution expansion beside rich invocations', async () => {
+  it('keeps completed task navigation, output copy and execution expansion beside rich invocations', async () => {
     const select = vi.fn();
     const writeText = vi.fn().mockResolvedValue(undefined);
     mockClipboard(writeText);
     const baseMessage = mockLiveTraceView.messages[0];
     if (!baseMessage) throw new Error('Missing trace fixture message');
     const failedPart: LivePartFact = { id: 'failed-task', type: 'tool', tool_name: 'bash', status: 'error', is_error: true, error_message: 'exit code 1', output_snippet: 'process failed' };
-    const trace: LiveTraceView = { ...mockLiveTraceView, total_tool_calls: 4, failed_tool_calls: 1, content_errors: 1, recent_errors: [failedPart], messages: [{ ...baseMessage, reasoning_content: 'Inspect the child diagnostic. '.repeat(20), parts: [
+    const trace: LiveTraceView = { ...mockLiveTraceView, total_tool_calls: 4, failed_tool_calls: 1, recent_errors: [failedPart], messages: [{ ...baseMessage, reasoning_content: 'Inspect the child diagnostic. '.repeat(20), parts: [
       { id: 'skill-part', type: 'tool', tool_name: 'skill', skill_name: 'agentic-lens-dev', status: 'completed', is_error: false },
-      { id: 'known-task', type: 'tool', tool_name: 'task', subagent_type: 'coder', child_session_id: 'known-child', status: 'completed', is_error: false, has_content_error: true, content_severity: 'medium', content_error_snippet: 'syntax error: child result', output_snippet: 'syntax error: child result' },
+      { id: 'known-task', type: 'tool', tool_name: 'task', subagent_type: 'coder', child_session_id: 'known-child', status: 'completed', is_error: false, output_snippet: 'syntax error: child result' },
       { id: 'pending-task', type: 'tool', tool_name: 'task', subagent_type: 'tester', child_session_id: 'pending-child', status: 'running', is_error: false },
       failedPart,
     ] }] };
     render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()}
       availableSessionIds={['known-child']} onSelectSession={select} />);
     expect(screen.getByText('[skill: agentic-lens-dev]')).toHaveAttribute('title', '[skill: agentic-lens-dev]');
-    const warning = screen.getByText('CONTENT ERROR').closest('.trace-part-item');
-    expect(warning).toHaveClass('part-content-error');
-    expect(screen.getByText('EXEC ERROR').closest('.trace-part-item')).toHaveClass('part-error');
+    expect(screen.getByText('error').closest('.trace-part-item')).toHaveClass('part-error');
     expect(screen.getByText(/Failed Tools:/)).toHaveTextContent('Failed Tools: 1');
-    expect(screen.getByText(/Content Errors:/)).toHaveTextContent('Content Errors: 1');
     expect(screen.getByTestId('failed-tools-toggle-btn')).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(screen.getByTestId('failed-tools-toggle-btn'));
     expect(screen.getAllByTestId('failed-tool-alert-card')).toHaveLength(1);

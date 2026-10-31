@@ -404,7 +404,7 @@ func TestCodexUserIterationsAttribution(t *testing.T) {
 	}
 }
 
-func TestCodexSuccessfulCommandContentWarningPreservesExecution(t *testing.T) {
+func TestCodexSuccessfulCommandOutputPreservesExecution(t *testing.T) {
 	input := strings.Join([]string{
 		`{"timestamp":"2026-10-25T09:00:00Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-1"}}`,
 		`{"timestamp":"2026-10-25T09:00:03Z","type":"event_msg","payload":{"type":"item_completed","turn_id":"turn-1","item":{"id":"command-1","type":"CommandExecution","status":"completed","exit_code":0,"command":["check"],"aggregated_output":"syntax error: bad name"}}}`,
@@ -417,15 +417,15 @@ func TestCodexSuccessfulCommandContentWarningPreservesExecution(t *testing.T) {
 		t.Fatalf("execution changed: %+v", transcript)
 	}
 	event := transcript.Events[0]
-	if event.Status != "completed" || !event.HasContentError || event.ContentErrorSnippet == nil {
+	if event.Status != "completed" || event.ToolOutput == nil || *event.ToolOutput != "syntax error: bad name" {
 		t.Fatalf("diagnostic lost: %+v", event)
 	}
-	if len(transcript.Tools) != 1 || transcript.Tools[0].ContentErrors != 1 {
+	if len(transcript.Tools) != 1 || transcript.Tools[0].Calls != 1 || transcript.Tools[0].Errors != 0 {
 		t.Fatalf("tool count lost: %+v", transcript.Tools)
 	}
 }
 
-func TestCodexContentEnvelopesPreserveRawEvidence(t *testing.T) {
+func TestCodexOutputEnvelopesPreserveRawEvidence(t *testing.T) {
 	// Synthetic examples of supported result shapes; local runtime evidence is
 	// recorded separately by the coder and is not used as a fixture here.
 	const diagnostic = "syntax error: unexpected token"
@@ -440,19 +440,18 @@ func TestCodexContentEnvelopesPreserveRawEvidence(t *testing.T) {
 	nested := `{"output":` + encode("Process exited with code 0\nFinal output:\n"+diagnostic) + `}`
 	for _, tc := range []struct {
 		name, raw, wantOutput string
-		warning               bool
 	}{
-		{"plain", encode(diagnostic), diagnostic, true},
-		{"MCP object", `{ "content": [{"type":"text","text":"syntax error: unexpected token"}] }`, `{ "content": [{"type":"text","text":"syntax error: unexpected token"}] }`, true},
-		{"ordered text blocks", `{"content":[{"type":"text","text":"build starting"},{"type":"text","text":"syntax error: unexpected token"}]}`, `{"content":[{"type":"text","text":"build starting"},{"type":"text","text":"syntax error: unexpected token"}]}`, true},
-		{"input text array", `[{"type":"input_text","text":"syntax error: unexpected token"}]`, `[{"type":"input_text","text":"syntax error: unexpected token"}]`, true},
-		{"nested command wrapper", nested, nested, true},
-		{"serialized command wrapper in text", `{"content":[{"type":"text","text":` + encode(nested) + `}]}`, `{"content":[{"type":"text","text":` + encode(nested) + `}]}`, true},
-		{"clean text", `{"content":[{"type":"text","text":"all checks passed"}]}`, `{"content":[{"type":"text","text":"all checks passed"}]}`, false},
-		{"mixed clean and nontext", `{"content":[{"type":"text","text":"all checks passed"},{"type":"image","text":"syntax error: unexpected token"}]}`, `{"content":[{"type":"text","text":"all checks passed"},{"type":"image","text":"syntax error: unexpected token"}]}`, false},
-		{"nontext", `{"content":[{"type":"image","text":"syntax error: unexpected token"}]}`, `{"content":[{"type":"image","text":"syntax error: unexpected token"}]}`, false},
-		{"unknown envelope", `{"diagnostics":"syntax error: unexpected token"}`, `{"diagnostics":"syntax error: unexpected token"}`, false},
-		{"unknown block", `{"content":[{"type":"unknown","text":"syntax error: unexpected token"}]}`, `{"content":[{"type":"unknown","text":"syntax error: unexpected token"}]}`, false},
+		{"plain", encode(diagnostic), diagnostic},
+		{"MCP object", `{ "content": [{"type":"text","text":"syntax error: unexpected token"}] }`, `{ "content": [{"type":"text","text":"syntax error: unexpected token"}] }`},
+		{"ordered text blocks", `{"content":[{"type":"text","text":"build starting"},{"type":"text","text":"syntax error: unexpected token"}]}`, `{"content":[{"type":"text","text":"build starting"},{"type":"text","text":"syntax error: unexpected token"}]}`},
+		{"input text array", `[{"type":"input_text","text":"syntax error: unexpected token"}]`, `[{"type":"input_text","text":"syntax error: unexpected token"}]`},
+		{"nested command wrapper", nested, nested},
+		{"serialized command wrapper in text", `{"content":[{"type":"text","text":` + encode(nested) + `}]}`, `{"content":[{"type":"text","text":` + encode(nested) + `}]}`},
+		{"clean text", `{"content":[{"type":"text","text":"all checks passed"}]}`, `{"content":[{"type":"text","text":"all checks passed"}]}`},
+		{"mixed clean and nontext", `{"content":[{"type":"text","text":"all checks passed"},{"type":"image","text":"syntax error: unexpected token"}]}`, `{"content":[{"type":"text","text":"all checks passed"},{"type":"image","text":"syntax error: unexpected token"}]}`},
+		{"nontext", `{"content":[{"type":"image","text":"syntax error: unexpected token"}]}`, `{"content":[{"type":"image","text":"syntax error: unexpected token"}]}`},
+		{"unknown envelope", `{"diagnostics":"syntax error: unexpected token"}`, `{"diagnostics":"syntax error: unexpected token"}`},
+		{"unknown block", `{"content":[{"type":"unknown","text":"syntax error: unexpected token"}]}`, `{"content":[{"type":"unknown","text":"syntax error: unexpected token"}]}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			input := `{"timestamp":"2026-10-31T10:00:00Z","type":"response_item","payload":{"type":"function_call","call_id":"content-call","name":"run_check","arguments":"{}"}}` + "\n" + `{"timestamp":"2026-10-31T10:00:01Z","type":"response_item","payload":{"type":"function_call_output","call_id":"content-call","output":` + tc.raw + `}}`
@@ -465,27 +464,18 @@ func TestCodexContentEnvelopesPreserveRawEvidence(t *testing.T) {
 			}
 			event := transcript.Events[0]
 			tool := transcript.Tools[0]
-			wantCount := int64(0)
-			if tc.warning {
-				wantCount = 1
-			}
-			if event.EventID != "codex-call:content-call" || event.Status != "completed" || event.HasContentError != tc.warning || tool.ContentErrors != wantCount || tool.Errors != 0 || tool.Calls != 1 {
-				t.Fatalf("classification/counts changed: event=%+v tool=%+v", event, tool)
+			if event.EventID != "codex-call:content-call" || event.Status != "completed" || tool.Errors != 0 || tool.Calls != 1 {
+				t.Fatalf("execution/counts changed: event=%+v tool=%+v", event, tool)
 			}
 			if event.ToolOutput == nil || *event.ToolOutput != tc.wantOutput {
 				t.Fatalf("raw evidence changed: got=%v want=%q", event.ToolOutput, tc.wantOutput)
 			}
-			if tc.warning && (event.ContentErrorSnippet == nil || *event.ContentErrorSnippet != diagnostic || event.ContentSeverity != "medium") {
-				t.Fatalf("diagnostic not equivalent: %+v", event)
-			}
-			if !tc.warning && event.ContentErrorSnippet != nil {
-				t.Fatalf("clean output gained snippet: %+v", event)
-			}
+
 		})
 	}
 }
 
-func TestCodexMCPContentEnvelopeRespectsExecutionStatus(t *testing.T) {
+func TestCodexMCPOutputEnvelopeRespectsExecutionStatus(t *testing.T) {
 	const output = `{"content":[{"type":"text","text":"syntax error: unexpected token"}]}`
 	for _, status := range []string{"completed", "failed"} {
 		t.Run(status, func(t *testing.T) {
@@ -498,14 +488,14 @@ func TestCodexMCPContentEnvelopeRespectsExecutionStatus(t *testing.T) {
 				t.Fatalf("MCP identity changed: %+v", transcript)
 			}
 			event, tool := transcript.Events[0], transcript.Tools[0]
-			wantErrors, wantContent := int64(0), int64(1)
+			wantErrors := int64(0)
 			wantStatus := "completed"
 			if status == "failed" {
-				wantErrors, wantContent = 1, 0
+				wantErrors = 1
 				wantStatus = "error"
 			}
-			if event.EventID != "codex-call:mcp-content" || event.Status != wantStatus || event.HasContentError != (wantContent == 1) || transcript.ToolErrors != wantErrors || tool.Errors != wantErrors || tool.ContentErrors != wantContent {
-				t.Fatalf("MCP execution/content separation lost: event=%+v tool=%+v", event, tool)
+			if event.EventID != "codex-call:mcp-content" || event.Status != wantStatus || transcript.ToolErrors != wantErrors || tool.Errors != wantErrors {
+				t.Fatalf("MCP execution status changed: event=%+v tool=%+v", event, tool)
 			}
 			if event.ToolOutput == nil || *event.ToolOutput != output {
 				t.Fatal("MCP raw envelope changed")

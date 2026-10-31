@@ -32,34 +32,30 @@ type InvocationFact struct {
 
 // ToolFact stores tool usage execution counts and errors.
 type ToolFact struct {
-	SessionID     string `json:"session_id"`
-	Name          string `json:"name"`
-	Calls         int64  `json:"calls"`
-	Errors        int64  `json:"errors"`
-	ContentErrors int64  `json:"content_errors,omitempty"`
+	SessionID string `json:"session_id"`
+	Name      string `json:"name"`
+	Calls     int64  `json:"calls"`
+	Errors    int64  `json:"errors"`
 }
 
 // EventFact captures a single discrete, ordered lifecycle occurrence in an agent session.
 type EventFact struct {
-	HasContentError     bool      `json:"has_content_error,omitempty"`
-	ContentSeverity     string    `json:"content_severity,omitempty"`
-	ContentErrorSnippet *string   `json:"content_error_snippet,omitempty"`
-	EventID             string    `json:"event_id"`
-	Timestamp           string    `json:"timestamp"`
-	SessionID           string    `json:"session_id"`
-	MessageID           *string   `json:"message_id,omitempty"`
-	Turn                int64     `json:"turn"`
-	Role                AgentRole `json:"role"`
-	EventType           EventType `json:"event_type"`
-	ToolName            *string   `json:"tool_name,omitempty"`
-	Status              string    `json:"status"`
-	ErrorMessage        *string   `json:"error_message,omitempty"`
-	DurationMs          *int64    `json:"duration_ms,omitempty"`
-	ContextTokens       int64     `json:"context_tokens"`
-	PromptContent       *string   `json:"prompt_content,omitempty"`
-	ReasoningContent    *string   `json:"reasoning_content,omitempty"`
-	ToolInput           *string   `json:"tool_input,omitempty"`
-	ToolOutput          *string   `json:"tool_output,omitempty"`
+	EventID          string    `json:"event_id"`
+	Timestamp        string    `json:"timestamp"`
+	SessionID        string    `json:"session_id"`
+	MessageID        *string   `json:"message_id,omitempty"`
+	Turn             int64     `json:"turn"`
+	Role             AgentRole `json:"role"`
+	EventType        EventType `json:"event_type"`
+	ToolName         *string   `json:"tool_name,omitempty"`
+	Status           string    `json:"status"`
+	ErrorMessage     *string   `json:"error_message,omitempty"`
+	DurationMs       *int64    `json:"duration_ms,omitempty"`
+	ContextTokens    int64     `json:"context_tokens"`
+	PromptContent    *string   `json:"prompt_content,omitempty"`
+	ReasoningContent *string   `json:"reasoning_content,omitempty"`
+	ToolInput        *string   `json:"tool_input,omitempty"`
+	ToolOutput       *string   `json:"tool_output,omitempty"`
 }
 
 // SkillFact records one OpenCode skill invocation.
@@ -87,32 +83,28 @@ type TaskLinkFact struct {
 // SessionToolFact stores tool totals owned by one session. Session identity is
 // inherited from the containing SessionFact.
 type SessionToolFact struct {
-	Name          string `json:"name"`
-	Calls         int64  `json:"calls"`
-	Errors        int64  `json:"errors"`
-	ContentErrors int64  `json:"content_errors,omitempty"`
+	Name   string `json:"name"`
+	Calls  int64  `json:"calls"`
+	Errors int64  `json:"errors"`
 }
 
 // SessionEventFact is a persisted event whose identity is inherited from its session.
 type SessionEventFact struct {
-	HasContentError     bool      `json:"has_content_error,omitempty"`
-	ContentSeverity     string    `json:"content_severity,omitempty"`
-	ContentErrorSnippet *string   `json:"content_error_snippet,omitempty"`
-	EventID             string    `json:"event_id"`
-	Timestamp           string    `json:"timestamp"`
-	MessageID           *string   `json:"message_id,omitempty"`
-	Turn                int64     `json:"turn"`
-	Role                AgentRole `json:"role"`
-	EventType           EventType `json:"event_type"`
-	ToolName            *string   `json:"tool_name,omitempty"`
-	Status              string    `json:"status"`
-	ErrorMessage        *string   `json:"error_message,omitempty"`
-	DurationMs          *int64    `json:"duration_ms,omitempty"`
-	ContextTokens       int64     `json:"context_tokens"`
-	PromptContent       *string   `json:"prompt_content,omitempty"`
-	ReasoningContent    *string   `json:"reasoning_content,omitempty"`
-	ToolInput           *string   `json:"tool_input,omitempty"`
-	ToolOutput          *string   `json:"tool_output,omitempty"`
+	EventID          string    `json:"event_id"`
+	Timestamp        string    `json:"timestamp"`
+	MessageID        *string   `json:"message_id,omitempty"`
+	Turn             int64     `json:"turn"`
+	Role             AgentRole `json:"role"`
+	EventType        EventType `json:"event_type"`
+	ToolName         *string   `json:"tool_name,omitempty"`
+	Status           string    `json:"status"`
+	ErrorMessage     *string   `json:"error_message,omitempty"`
+	DurationMs       *int64    `json:"duration_ms,omitempty"`
+	ContextTokens    int64     `json:"context_tokens"`
+	PromptContent    *string   `json:"prompt_content,omitempty"`
+	ReasoningContent *string   `json:"reasoning_content,omitempty"`
+	ToolInput        *string   `json:"tool_input,omitempty"`
+	ToolOutput       *string   `json:"tool_output,omitempty"`
 }
 
 // SessionFact owns all raw telemetry attributed to a single agent session.
@@ -208,7 +200,7 @@ func (ledger AgenticFactLedger) ToolFacts() []ToolFact {
 	var result []ToolFact
 	for _, session := range ledger.Sessions {
 		for _, tool := range session.Tools {
-			result = append(result, ToolFact{SessionID: session.ID, Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors, ContentErrors: tool.ContentErrors})
+			result = append(result, ToolFact{SessionID: session.ID, Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
 		}
 	}
 	return result
@@ -225,7 +217,7 @@ func (ledger AgenticFactLedger) EventFacts() []EventFact {
 		for _, event := range session.Events {
 			result = append(result, EventFact{
 				EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
-				Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status, HasContentError: event.HasContentError, ContentSeverity: event.ContentSeverity, ContentErrorSnippet: event.ContentErrorSnippet,
+				Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
 				ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 				PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
 				ToolInput: event.ToolInput, ToolOutput: event.ToolOutput,
@@ -295,13 +287,12 @@ func SessionsFromFacts(invocationSessions []SessionFact, tools []ToolFact, event
 			if session.Tools[i].Name == tool.Name {
 				session.Tools[i].Calls += tool.Calls
 				session.Tools[i].Errors += tool.Errors
-				session.Tools[i].ContentErrors += tool.ContentErrors
 				found = true
 				break
 			}
 		}
 		if !found {
-			session.Tools = append(session.Tools, SessionToolFact{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors, ContentErrors: tool.ContentErrors})
+			session.Tools = append(session.Tools, SessionToolFact{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
 		}
 	}
 	for _, event := range events {
@@ -311,7 +302,7 @@ func SessionsFromFacts(invocationSessions []SessionFact, tools []ToolFact, event
 		}
 		session.Events = append(session.Events, SessionEventFact{
 			EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
-			EventType: event.EventType, ToolName: event.ToolName, Status: event.Status, HasContentError: event.HasContentError, ContentSeverity: event.ContentSeverity, ContentErrorSnippet: event.ContentErrorSnippet,
+			EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
 			ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 			PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
 			ToolInput: event.ToolInput, ToolOutput: event.ToolOutput,
@@ -381,7 +372,6 @@ type CodeDeliveredStats struct {
 
 // ToolExecutionHealth summarizes tool call volume, corrections, and success rate.
 type ToolExecutionHealth struct {
-	ContentErrors        int64   `json:"content_errors"`
 	TotalCalls           int64   `json:"total_calls"`
 	ErrorsAndCorrections int64   `json:"errors_and_corrections"`
 	SuccessRatePct       float64 `json:"success_rate_pct"`
