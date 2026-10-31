@@ -52,14 +52,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
 
-- **AL-52**: Rich Timeline Badges and Subagent Session Linking in Trace Views
-  - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-52 rich timeline badges and subagent session linking in trace views.md`
-
 - **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
   - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
@@ -92,7 +84,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-52, AL-53
+  - **Blocked by**: AL-53
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
 
