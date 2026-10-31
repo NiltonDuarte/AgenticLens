@@ -7,3 +7,9 @@ Acceptance: update canonical AGENTS.md and management skill to prohibit own mana
 Preserve: original product PR merge evidence, approved AL-55 implementation and owner isolation, exact-head gates for its product PR, cost deferral/AL2 queue, release human-only boundary, independent telemetry roots.
 
 Verification: skill validator, cross-document policy search and allowed-path diff; required integrated make for follow-up delivery. Parent stays MGT-1; AL-55 implementation remains separate. Review/watch PR#86 behind normal product gates, not as management self-approval. Manager's own follow-up stays external_review.
+
+## Approved PR88 review correction
+
+User explicitly instructed: “retain main’s execution classifier while removing content classification, and add these regression cases.” This accepts F1 correction and supersedes mechanical pre-PR78 execution restoration, without reviving content metrics or expanding execution policy. Keep main3857fa2 ClassifyToolExecution behavior and add successful read-timeout identifier, grep-quoted-panic and explicit-zero-exit diagnostic cases. Require affected execution/parity coverage, dev role verification and exact-head CI before manager merge. Existing compatibility/source-preservation/AL55/SSE/navigation guarantees remain.
+
+This is a correction within the reviewed removal boundary, not another management iteration or permission gate. Delegate implementation to the actual existing PR88 owning root, not the completed original PR78 root. Manager remains product read-only.
