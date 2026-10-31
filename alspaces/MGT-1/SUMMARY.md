@@ -11,18 +11,19 @@ Verification: integration export A passed typecheck/lint, 736 frontend tests and
 Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is grounded in source session metadata with this exact worktree path. No child agents were spawned. No pre-existing MGT-1 ledger or other-harness facts existed to preserve. Billing cost is unavailable in source; any rendered zero is not a verified charge. Final extraction validates this root and Codex source; raw transcripts stay outside Git.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 4
-- **Active Agent Duration:** 6m 16s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 172.7k tokens (86% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 7
+- **Active Agent Duration:** 9m 28s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 231.9k tokens (116% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 3,258 reasoning tokens (16.6% of generated output)
-- **Tool Health & Self-Correction:** 49 tool calls (7 self-corrections, 85.7% success rate)
+- **Reasoning Effort:** 7,232 reasoning tokens (18.9% of generated output)
+- **Tool Health & Self-Correction:** 71 tool calls (8 self-corrections, 88.7% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 1 execution anomaly detected (1 WARNING).
+- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.6k tokens) — Context tokens reached 207.6k, breaching the 200k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.6k tokens) — Context tokens reached 164.6k, breaching the 160k warning ceiling.
 
 ### Agentic Execution Metrics
@@ -32,14 +33,14 @@ Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 163,701 | 16,343 | 5,897,856 | 97.3% | 172.7k | ELEVATED | $0.00 |
-| **Total** | **1** | **163,701** | **16,343** | **5,897,856** | **97.3%** | **172.7k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 212,318 | 30,963 | 11,487,360 | 98.2% | 231.9k | BLOATED (116%) | $0.00 |
+| **Total** | **1** | **212,318** | **30,963** | **11,487,360** | **98.2%** | **231.9k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 163,701 | 16,343 | 5,897,856 | 97.3% | $0.00 |
-| **Total** | **1** | **163,701** | **16,343** | **5,897,856** | **97.3%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 212,318 | 30,963 | 11,487,360 | 98.2% | $0.00 |
+| **Total** | **1** | **212,318** | **30,963** | **11,487,360** | **98.2%** | **$0.00** |
 
 ## Iteration 02: management ticket workflow
 
@@ -50,3 +51,13 @@ Iteration 02 verification: existing prefix/ticket-focused config and domain test
 Iteration 02 full make passed at implementation commit 2141347: Go vet/race suites; frontend typecheck/lint and 712 tests in 34 files; frontend build and four platform binaries. Embedded assets match web/dist. Subsequent changes are verification records and telemetry only.
 
 Iteration 02 telemetry refreshed successfully for MGT-1/chore; the sole original Codex root and source are retained. No child agents or other-harness sessions were present. No source error reported.
+
+## Iteration 03: management supervision (in progress)
+
+User authorized control of existing ticket threads through non-release merge and explicitly excluded release PRs. Created and validated agentic-lens-management; canonical AGENTS.md links the management role and human-only release rule. Mapped five product owners, self-owned #80 and unavailable original #81 owner. Sent independent user-proxy instructions to AL-47/AL-54 and diagnostic corrections to AL-43, preserving all independent roots and telemetry.
+
+#76 was verified MERGED at 5da845a7c244a6b2582102c0dff0d221844d9bfc after exact-head CI/review/discussion gates. #79 upstream integration and #78 corrections are active. #81 documentation reviewed and its branch updated with an expected-head guard; new-head CI pending. #55 remains human-only. CONTROL.md is authoritative for progress and next actions; all eligible PRs are not yet merged.
+
+Supervision checkpoint verification: full make exited 0 at integrated head 7b8833d (main #76 included), with Go vet/race suites, frontend typecheck/lint, all 722 frontend tests and four platform builds. Embedded assets match. Skill quick_validate and diff whitespace checks pass. Only management records changed while verification ran. Completion remains pending for #79/#75/#77/#78/#81/#80. Telemetry at this checkpoint includes only the management native root; managed independent roots are excluded.
+
+Checkpoint telemetry verified: exactly the original management Codex root; no independent ticket roots or invented child links; no source error. Tool-count omissions remain the documented decoder limitation.

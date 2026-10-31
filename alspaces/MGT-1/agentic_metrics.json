@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
   "ticket_id": "MGT-1",
-  "ticket_title": "Management: open PR interference and merge order",
+  "ticket_title": "Manage independent ticket threads and non-release PR integration",
   "ticket_type": "chore",
   "started_at": "2026-10-31T13:15:29.728Z",
-  "completed_at": "2026-10-31T13:34:41.915Z",
-  "updated_at": "2026-10-31T13:34:43.003898+00:00",
+  "completed_at": "2026-10-31T13:47:07.569Z",
+  "updated_at": "2026-10-31T13:47:09.012417+00:00",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 4
+    "sdlc_iterations": 7
   },
   "sessions": [
     {
@@ -26,44 +26,58 @@
           "role": "RootAgent",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T13:15:30.794Z",
-          "completed_at": "2026-10-31T13:34:41.915Z",
-          "active_duration_seconds": 376,
-          "turns": 3,
+          "completed_at": "2026-10-31T13:47:07.569Z",
+          "active_duration_seconds": 568,
+          "turns": 4,
           "tokens": {
-            "input": 163701,
-            "output": 16343,
-            "cache_read": 5897856,
-            "reasoning": 3258,
-            "peak_context": 172689
+            "input": 212318,
+            "output": 30963,
+            "cache_read": 11487360,
+            "reasoning": 7232,
+            "peak_context": 231941
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 4
+          "user_iterations": 7
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 49,
-          "errors": 7
+          "calls": 70,
+          "errors": 8
+        },
+        {
+          "name": "wait",
+          "calls": 1,
+          "errors": 0
         }
       ],
       "anomalies": [
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
+          "severity": "CRITICAL",
           "context": {
-            "turn": 3,
-            "context_tokens": 164647,
-            "threshold": "160000"
+            "turn": 4,
+            "context_tokens": 207642,
+            "threshold": "200000"
+          }
+        },
+        {
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "role": "RootAgent",
+            "context_tokens": 231941,
+            "threshold": "200000"
           }
         },
         {
           "rule_id": "CONTEXT_SATURATION_SPIKE",
           "severity": "WARNING",
           "context": {
-            "role": "RootAgent",
-            "context_tokens": 172689,
+            "turn": 3,
+            "context_tokens": 164647,
             "threshold": "160000"
           }
         }
