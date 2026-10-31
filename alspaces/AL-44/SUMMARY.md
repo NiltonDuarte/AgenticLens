@@ -12,3 +12,4 @@
 - `npm test`: passed, 33 files and 822 tests before review-driven additions.
 - Focused component tests after review additions: 3 suites / 155 tests passed, then 2 suites / 78 tests passed.
 - Reviewer verdict: APPROVED.
+- Post-merge `make`: passed (Go checks/tests, frontend tests, and builds).
