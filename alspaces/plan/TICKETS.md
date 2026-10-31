@@ -11,6 +11,14 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Ready
 
+- **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
+  - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
+  - **Phase**: Phase 8 (v2 Observability / Skills)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
+
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
   - **Phase**: Phase 8 (v2 Phase 2)
@@ -52,14 +60,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **File**: `alspaces/plan/to-do/AL2-8 reasoning effort telemetry integration across fleet kpis comparison tables and progression.md`
 
 
-- **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
-  - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-53 dedicated skills and subagents autopsy panel in ticket deep dive.md`
-
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
   - **Phase**: Phase 7 (v1 Feature / Observability)
@@ -79,14 +79,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ---
 
 ## Blocked
-
-- **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
-  - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-53
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests
