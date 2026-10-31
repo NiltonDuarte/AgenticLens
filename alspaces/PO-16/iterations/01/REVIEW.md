@@ -41,3 +41,11 @@ Applied configured workspace root, preserved baseline and historical implementat
 ## Attribution correction
 
 User steering: "track it under a PO ticket". PO-16 now owns the planning maintenance. The earlier AL-49 iteration-02 assignment is superseded. AL-49 artifacts are restored exactly from the original baseline; its five historical sessions belong only to its original delivery. The current session is attributed only to PO-16. No product scope or verification result changes; artifact relocation needs no application or test edits.
+
+## Attribution verification
+
+At `b478f41`, diff against the initial baseline confirms AL-49 has no net changes, all 15 to-do specifications remain indexed, and application/tests/runtime/config have no net changes. Upstream merge was already up to date. Reused the completed post-integration full-make result on identical application code; no additional suite run was warranted for artifact relocation. `git diff --check` passed.
+
+## Final telemetry verification
+
+Generated PO-16 with a literal nonce, `--source codex`, and `--ticket-type docs`. The ledger contains exactly the current nonempty root `01a191f6-530e-75a1-9bf1-f8794b6f795f` and no children; none were created in this session. AL-49 remains identical to its original five-session ledger, with this audit root absent. No other-harness sessions existed in PO-16 to preserve. Raw rollouts remain outside Git; the extraction snapshot excludes subsequent commit/push bookkeeping. PR title/body updated via REST after gh pr edit failed on deprecated Projects classic GraphQL fields.
