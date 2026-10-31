@@ -119,15 +119,6 @@ func enrichEvent(recorded, local EventFact) EventFact {
 	if recorded.EventID == "" {
 		recorded.EventID = local.EventID
 	}
-	// Enrichment may discover a warning on an older event, but an absent or
-	// negative local observation cannot erase recorded diagnostic evidence.
-	if local.HasContentError {
-		recorded.HasContentError = true
-		if local.ContentSeverity != "" && local.ContentSeverity != string(SeverityNone) {
-			recorded.ContentSeverity = local.ContentSeverity
-		}
-		recorded.ContentErrorSnippet = enrichedString(recorded.ContentErrorSnippet, local.ContentErrorSnippet)
-	}
 	recorded.MessageID = enrichedString(recorded.MessageID, local.MessageID)
 	recorded.ErrorMessage = enrichedString(recorded.ErrorMessage, local.ErrorMessage)
 	recorded.PromptContent = enrichedString(recorded.PromptContent, local.PromptContent)

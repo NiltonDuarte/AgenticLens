@@ -1,8 +1,8 @@
-# feat(telemetry): distinguish semantic tool content errors (AL-43)
+# chore(telemetry): revert automatic content-error classification (AL-43)
 
-Completed tool calls can emit compiler errors, tracebacks or assertion failures while their process succeeds. Track these as independent content warnings so execution reliability remains accurate and diagnostic evidence stays visible.
+Reverts the automatic content-error classification introduced in PR #78 at the user's request. Stack-specific output heuristics do not provide a consistent platform metric across adopting projects.
 
-Adds pure content classification, canonical session persistence and counts, supported OpenCode/Codex and live extraction, and API projections. The dashboard shows amber content warnings alongside red execution failures, separate live counters, and Deep Dive content-error totals. Legacy ledgers retain zero defaults. Matching stored events gain hydrated content diagnostics without losing recorded warnings when enrichment lacks them. Structured Codex text envelopes are classified separately from preserved raw output evidence.
+Removes the classifier, content-warning metrics and API fields, extraction wiring, and dashboard indicators. Restores execution classification to its pre-PR #78 behavior. Previously written ledgers remain readable through decode-only support for retired fields. Historical AL-43 records remain available.
 
 Contract: [CONTRACT.md](CONTRACT.md)
 Implementation and verification: [SUMMARY.md](SUMMARY.md)

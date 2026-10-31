@@ -1,5 +1,17 @@
 # AL-43 Work Summary
 
+## Iteration 02: user-requested feature revert
+
+Source: the user instructed "revert this feature" after reviewing PR #78's stack-specific output classification. This explicitly approves removal of the feature; iteration 01 below remains historical evidence, not current acceptance.
+
+Initial Git status was clean at 9a3796ebadad7f5eb002b764b43c28e0526efb86 on GEN-13/content-classification-pr78. Work continues under the existing AL-43 ticket on chore/AL-43-revert-content-classification. Configured workspace root remains alspaces. PR #78 is merged, so this iteration requires a new PR.
+
+Remove automatic content classification and its domain, aggregation, extraction, API, and dashboard surfaces. Restore execution-error behavior from before PR #78 and preserve unrelated merged work. Accept retired fields only when decoding existing ledgers so previously written sessions remain readable. Do not migrate or rewrite historical ledgers as part of the revert.
+
+Implementation, verification, and final telemetry evidence are recorded below when completed. Historical iteration 01 records follow.
+
+## Historical iteration 01
+
 User pre-approved the plan and contract and authorized full delivery. Initial Git status was clean at 85a2af94b5036b0918aaf9a7a89aed3a990f2650 on AL-43/surface-semantic-content-errors. Configured workspace: alspaces.
 
 ## Domain

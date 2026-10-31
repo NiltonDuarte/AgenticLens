@@ -171,7 +171,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
   const handleItemSelect = (ev: EventFact, matchingAnomaly?: Anomaly) => {
     setLocalSelection({ event: ev, events });
-    const isFlagged = ev.status === 'error' || ev.status === 'failed' || Boolean(ev.has_content_error) || Boolean(matchingAnomaly);
+    const isFlagged = ev.status === 'error' || ev.status === 'failed' || Boolean(matchingAnomaly);
     onSelectEvent?.(ev, isFlagged ? matchingAnomaly : undefined);
   };
 
@@ -247,7 +247,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         return false;
       }
       if (filterMode === 'errors_anomalies') {
-        const hasErr = ev.status === 'error' || ev.status === 'failed' || Boolean(ev.has_content_error);
+        const hasErr = ev.status === 'error' || ev.status === 'failed';
         const hasAnomaly = Boolean(findMatchingAnomaly(ev, anomalies));
         if (!hasErr && !hasAnomaly) {
           return false;
@@ -318,12 +318,11 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
   // Summary statistics for collapsed bar and header
   const totalEventsCount = events.length;
-  const totalContentErrors = events.filter((ev) => ev.has_content_error).length;
   const totalErrorsCount = events.filter((ev) => ev.status === 'error' || ev.status === 'failed').length;
   const totalAnomaliesCount = anomalies ? anomalies.length : 0;
 
   const issuesSummaryText =
-    totalErrorsCount === 0 && totalAnomaliesCount === 0 && totalContentErrors === 0
+    totalErrorsCount === 0 && totalAnomaliesCount === 0
       ? 'Clean Execution'
       : `${totalErrorsCount === 0 ? 'Zero' : totalErrorsCount} ${
           totalErrorsCount === 1 ? 'Error' : 'Errors'
@@ -354,11 +353,11 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             </span>
             <span
               className={`waterfall-summary-issues ${
-                totalErrorsCount > 0 || totalAnomaliesCount > 0 || totalContentErrors > 0 ? 'issues-flagged' : 'issues-clean'
+                totalErrorsCount > 0 || totalAnomaliesCount > 0 ? 'issues-flagged' : 'issues-clean'
               }`}
               data-testid="waterfall-issues-summary"
             >
-              {issuesSummaryText}{totalContentErrors > 0 && `, ${totalContentErrors} Content Errors`}
+              {issuesSummaryText}
             </span>
           </div>
         )}
@@ -518,12 +517,11 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             const matchingAnomaly = findMatchingAnomaly(ev, anomalies);
             const isSelected = isSameEvent(activeSelectedEvent, ev);
             const hasError = ev.status === 'error' || ev.status === 'failed';
-            const hasContentError = !hasError && Boolean(ev.has_content_error);
-            const isIssue = hasError || hasContentError || Boolean(matchingAnomaly);
+            const isIssue = hasError || Boolean(matchingAnomaly);
             const roleClass = `role-pill ${ev.role.toLowerCase()}`;
             const itemKey = `${ev.timestamp}-${ev.turn}-${ev.session_id}-${idx}`;
             const isExpanded = Boolean(expandedKeys[itemKey]) || isSelected;
-            const itemClasses = `timeline-item ${isSelected ? 'selected' : ''} ${hasError ? 'item-error' : hasContentError ? 'item-content-error' : ''} ${matchingAnomaly ? 'item-anomaly' : ''} ${isIssue ? 'item-interactive' : ''}`
+            const itemClasses = `timeline-item ${isSelected ? 'selected' : ''} ${hasError ? 'item-error' : ''} ${matchingAnomaly ? 'item-anomaly' : ''} ${isIssue ? 'item-interactive' : ''}`
               .replace(/\s+/g, ' ')
               .trim();
 
@@ -547,7 +545,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                 aria-label={`Event Turn ${ev.turn} ${ev.role} ${ev.event_type}`}
               >
                 <div className="timeline-rail">
-                  <div className={`timeline-node ${hasError ? 'node-error' : hasContentError ? 'node-content-error' : ''}`} />
+                  <div className={`timeline-node ${hasError ? 'node-error' : ''}`} />
                   {idx < filteredEvents.length - 1 && <div className="timeline-connector" />}
                 </div>
 
@@ -597,14 +595,14 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                         <span className="tool-name mono">{ev.tool_name ?? 'unknown'}</span>
                         <TraceInvocationBadge metadata={badges.get(ev)} availableSessionIds={availableSessionIds} onSelectSession={onSelectSession} />
                         <span
-                          className={`status-pill ${hasError ? 'status-error' : hasContentError ? 'status-content-error' : 'status-success'}`}
+                          className={`status-pill ${hasError ? 'status-error' : 'status-success'}`}
                         >
-                          {hasError ? 'EXEC ERROR' : hasContentError ? 'CONTENT ERROR' : 'Success'}
+                          {hasError ? 'Error' : 'Success'}
                         </span>
                         {ev.duration_ms !== undefined && ev.duration_ms !== null && (
                           <span className="tool-duration mono">{formatDurationMs(ev.duration_ms)}</span>
                         )}
-                        {(hasError || hasContentError) && (
+                        {hasError && (
                           <button
                             type="button"
                             className="btn-inspect-failure"
@@ -615,7 +613,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                               handleItemSelect(ev, matchingAnomaly);
                             }}
                           >
-                            {hasContentError ? 'Inspect Content Error' : 'Inspect Failure →'}
+                            Inspect Failure →
                           </button>
                         )}
                       </div>
@@ -632,7 +630,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                           handleItemSelect(ev, matchingAnomaly);
                         }}
                       >
-                        {hasContentError ? 'Inspect Content Error' : 'Inspect Failure →'}
+                        Inspect Failure →
                       </button>
                     )}
 
@@ -658,12 +656,12 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                     </button>
                   </div>
 
-                  {(ev.error_message || ev.content_error_snippet) && (
+                  {ev.error_message && (
                     <div
                       className="timeline-error-preview mono"
                       title="Click to open Tool Execution Failure window"
                     >
-                      {ev.error_message || ev.content_error_snippet}
+                      {ev.error_message}
                     </div>
                   )}
 

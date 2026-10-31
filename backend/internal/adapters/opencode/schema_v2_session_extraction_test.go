@@ -232,34 +232,3 @@ func TestSchemaV2SessionTiedTimestampsPreserveSourceAndSameMessageOrder(t *testi
 		}
 	}
 }
-
-func TestSchemaV2CompletedContentWarning(t *testing.T) {
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	createSchemaV2TestDB(t, db)
-	if _, err := db.Exec(`UPDATE session_message SET data=replace(replace(data,'"name":"read"','"name":"bash"'),'found marker','syntax error: bad name') WHERE id='a1'`); err != nil {
-		t.Fatal(err)
-	}
-	_, tools, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_root"}, "tester", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(tools) != 1 || tools[0].Errors != 0 || tools[0].ContentErrors != 1 {
-		t.Fatalf("independent counts lost: %+v", tools)
-	}
-	found := false
-	for _, event := range events {
-		if event.EventType == domain.EventTypeToolCall {
-			found = true
-			if event.Status != "completed" || !event.HasContentError || event.ContentErrorSnippet == nil {
-				t.Fatalf("diagnostic lost: %+v", event)
-			}
-		}
-	}
-	if !found {
-		t.Fatal("missing tool event")
-	}
-}

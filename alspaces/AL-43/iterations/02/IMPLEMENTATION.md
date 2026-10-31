@@ -1,0 +1,32 @@
+# AL-43 Iteration 02 implementation
+
+Baseline: 9a3796ebadad7f5eb002b764b43c28e0526efb86. Application implementation began from the inverse backend/web delta of squash a77695c; historical workspaces, the completed specification and ticket index were not reverted. The parent owns integration and delivery.
+
+## Result
+
+Removed the automatic content classifier and its content-error fields, counts, extraction calls, enrichment, compact diagnostic persistence, aggregate metrics, API projections, frontend types, warning badges, warning filters and styling, and dashboard totals. Execution classification is restored to its pre-PR #78 behavior; anomaly rules are preserved. In particular, ClassifyToolExecution again recognizes its original process-level signatures such as panic, fatal error, timeout and nonzero exit text. PR #78 had changed these heuristics in domain/live.go; this revert restores them rather than introducing a new execution policy. Review corrected the earlier assumption that this function had been unchanged by PR #78.
+
+Retained Codex raw-output extraction on completed command, response-item and tool-event paths. Renamed the retained helper to recordToolOutput; it only records evidence. Removed codexToolContent and all content-only envelope interpretation. Existing output evidence remains verbatim, including JSON and non-text blocks.
+
+The strict ledger decoder required a compatibility adjustment: SessionToolFactDTO and SessionEventFactDTO accept retired content fields only in their custom UnmarshalJSON implementations. Those fields are local RawMessage placeholders, discarded after decoding, and never domain or serialized fields. Unrelated unknown fields remain rejected. No schema bump, migration or historical-ledger rewrite was introduced.
+
+## Test retirement and retained oracles
+
+- Deleted tool_content_test.go and TestClassifyToolContent from tool_execution_test.go: their classifier/category/severity/diagnostic expectations implement the deliberately withdrawn contract. Retained TestClassifyToolExecution and its cap test; extended its existing table with completed Java, Python and TypeScript diagnostic-looking output to preserve ordinary successful execution for these cases. Existing explicit failure, nonzero exit, crash and timeout cases remain.
+- Replaced TestCanonicalContentDiagnosticsPersistWithoutHydration with TestCanonicalRetiredContentFieldsReadCompatibility. It exercises actual runtime metadata validation, strict nested decoding, DTO validation, domain conversion and DTO serialization for a self-contained ledger previously produced by the feature. It verifies source/owner/tool execution facts and completed event status survive, retired fields are omitted by both direct DTO marshaling and canonical output, and adjacent unknown fields still fail. TestCanonicalV4NestedEventsReadCompatibilityAndMetadata and TestAgenticFactLedgerDTO_OmitsEventsAndAnomalyEvidence retain ordinary metadata/compact-writing guards.
+- Adapted all three Codex content tests as output/evidence tests. TestCodexSuccessfulCommandOutputPreservesExecution retains successful command counts and output; TestCodexOutputEnvelopesPreserveRawEvidence retains plain/string/JSON/array/mixed-block evidence and call identity/count/status; TestCodexMCPOutputEnvelopeRespectsExecutionStatus retains explicit completed/failed MCP outcomes and raw envelope evidence. Only removed content-specific flags, category/severity/snippet and counts.
+- Removed TestSchemaV2CompletedContentWarning: its content count/snippet contract is withdrawn. TestSchemaV2SessionRuntimeEvidenceExtractsNormalizedFacts retains the actual schema-family extraction path, successful call/error counts, event presence/status/identity and input/output evidence. Live TestOfflineAndLiveToolExecutionParity retains diagnostic-looking source output, execution totals and complete status parity; only independent content assertions were removed. OpenCode v1 and domain live expectations were restored to the pre-PR #78 execution classifier behavior for crash signatures.
+- Removed Go TestReconcileEventsContentEvidenceIsAdditive and the TypeScript additive content evidence table: preserving retired warning fields is no longer a contract. Go TestReconcileEventsEnrichesPartialTraceWithoutLoss and TestReconcileEventsIdentityAndAmbiguity retain payload enrichment, identity, multiplicity, repeated reconciliation and immutability coverage. Existing TypeScript Recorded event projection and optional enrichment cases retain the same ordinary fact/hydration/selection contracts.
+- Removed the TraceWaterfall semantic diagnostic badge/filter test: its content badge/default-filter membership is intentionally withdrawn. Existing TraceWaterfall filtering, execution inspection, empty recovery, payload, invocation and navigation tests remain. Removed the standalone LiveTraceInspector semantic counter test; its execution count oracle remains in the adapted mixed-invocation test. That mixed test retains failed-part style/counts, failure expansion, reasoning expansion, completed-output debug copy, skill identity, child navigation, pending-child display, copy success/failure and callback count assertions. Only content-specific fields, badge/style and counter expectations were removed.
+- Restored HTTP persisted-facts/hydration and tool-summary tests to ordinary execution contracts; no HTTP identity, baseline-fact, hydration or execution oracle was dropped. The new schema compatibility guard explicitly covers reading former content fields.
+
+## Focused verification
+
+The parent prepared dependencies and baseline embedded assets before these direct Go checks. On the uncommitted iteration-02 implementation diff:
+
+- `go test ./internal/adapters ./internal/adapters/codex ./internal/domain` from backend passed.
+- `npm test -- --run src/components/LiveTraceInspector.test.tsx src/components/TraceWaterfall.test.tsx src/domain/events.test.ts src/domain/tools.test.ts` from web passed: 4 files, 136 tests.
+- `git diff --check` passed.
+- Searching backend and web/src for classifier/content-error identifiers finds only the decode-only compatibility placeholders and their schema regression fixture/assertions.
+
+The tester owns independent verification and any additional focused coverage; the parent owns the integrated full make gate, refreshed frontend embedding and standalone verification. No browser geometry claim is made.

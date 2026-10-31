@@ -199,27 +199,3 @@ describe('Recorded event projection and optional enrichment', () => {
         }
     });
 });
-
-describe('additive content evidence reconciliation', () => {
-    const base: EventFact = Object.freeze({event_id:'content-call',session_id:'owner',timestamp:'2026-10-31T10:00:00Z',turn:2,role:'coder',event_type:'tool_call',tool_name:'bash',status:'completed',context_tokens:0});
-    it.each([
-        {name:'older absent flag gains warning',recorded:undefined,local:true,severity:'medium',snippet:'discovered',wantSeverity:'medium',wantSnippet:'discovered'},
-        {name:'older false flag gains warning',recorded:false,local:true,severity:'medium',snippet:'discovered',wantSeverity:'medium',wantSnippet:'discovered'},
-        {name:'false cannot erase recorded evidence',recorded:true,local:false,severity:'low',snippet:'ignored',wantSeverity:'high',wantSnippet:'recorded diagnostic'},
-        {name:'absent cannot erase recorded evidence',recorded:true,local:undefined,severity:undefined,snippet:undefined,wantSeverity:'high',wantSnippet:'recorded diagnostic'},
-        {name:'true empty metadata falls back',recorded:true,local:true,severity:'',snippet:'',wantSeverity:'high',wantSnippet:'recorded diagnostic'},
-        {name:'true none severity falls back',recorded:true,local:true,severity:'none',snippet:undefined,wantSeverity:'high',wantSnippet:'recorded diagnostic'},
-        {name:'true metadata enriches',recorded:true,local:true,severity:'medium',snippet:'local diagnostic',wantSeverity:'medium',wantSnippet:'local diagnostic'},
-    ])('$name through reconciliation and response selection', (tc) => {
-        const recorded=Object.freeze({...base,...(tc.recorded === undefined ? {} : {has_content_error:tc.recorded}),...(tc.recorded ? {content_severity:'high',content_error_snippet:'recorded diagnostic'} : {})});
-        const local=Object.freeze({...base,status:'error',...(tc.local === undefined ? {} : {has_content_error:tc.local}),...(tc.severity === undefined ? {} : {content_severity:tc.severity}),...(tc.snippet === undefined ? {} : {content_error_snippet:tc.snippet}),tool_output:'local raw output'});
-        const baseline=Object.freeze([recorded]); const enrichment=Object.freeze([local]);
-        const before=JSON.stringify({baseline,enrichment});
-        const merged=reconcileEvents(baseline,enrichment);
-        expect(merged).toHaveLength(1);
-        expect(merged[0]).toMatchObject({event_id:base.event_id,session_id:base.session_id,status:'completed',has_content_error:true,content_severity:tc.wantSeverity,content_error_snippet:tc.wantSnippet,tool_output:'local raw output'});
-        expect(reconcileEvents(merged,enrichment)).toEqual(merged);
-        expect(selectWorkspaceEvents(baseline,{ticket_id:'GEN-999',is_hydrated:true,data_source:'local_codex',events:enrichment}).events).toEqual(merged);
-        expect(JSON.stringify({baseline,enrichment})).toBe(before);
-    });
-});
