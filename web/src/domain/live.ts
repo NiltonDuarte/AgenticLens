@@ -30,6 +30,9 @@ export interface LivePartFact {
   readonly is_error: boolean;
   readonly error_message?: string | null;
   readonly severity?: FailureSeverity;
+  readonly skill_name?: string;
+  readonly child_session_id?: string;
+  readonly subagent_type?: string;
 }
 
 export interface LiveMessageFact {

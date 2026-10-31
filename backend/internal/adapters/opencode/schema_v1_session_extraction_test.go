@@ -199,6 +199,94 @@ func TestSchemaV1ExtractFacts(t *testing.T) {
 	}
 }
 
+func TestSchemaV1ExtractsSkillFailureAndTaskFact(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	if _, err := db.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES
+		('facts_root',NULL,'coder','default_model','root',1760000000000,1760000001000),
+		('facts_child','facts_root','tester','default_model','child',1760000000500,1760000000900);
+		INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES
+		('facts_msg','facts_root',1760000000100,1760000000800,'{"role":"assistant","modelID":"mock","time":{"created":1760000000100,"completed":1760000000800}}');
+		INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES
+		('skill-fail','facts_root','facts_msg',1760000000200,1760000000300,'{"type":"tool","tool":"skill","state":{"status":"error","input":{"name":"agentic-lens-dev"},"output":"load failed"}}'),
+		('task-ok','facts_root','facts_msg',1760000000400,1760000000500,'{"type":"tool","tool":"task","state":{"status":"completed","input":{"subagent_type":"tester","description":"Verify AL-51"},"output":"{\"session_id\":\"facts_child\"}"}}');`); err != nil {
+		t.Fatal(err)
+	}
+	sessions, _, _, err := opencode.ExtractSessions(db, []string{"facts_root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skills, tasks := opencode.ExtractSkillTaskFacts(sessions)
+	if len(skills) != 1 || skills[0].Name != "agentic-lens-dev" || skills[0].CallerRole != "coder" || skills[0].Success || skills[0].Error != "load failed" {
+		t.Fatalf("unexpected skill facts: %+v", skills)
+	}
+	if len(tasks) != 1 || tasks[0].SubagentType != "tester" || tasks[0].Description != "Verify AL-51" || tasks[0].ChildSession != "facts_child" {
+		t.Fatalf("unexpected task facts: %+v sessions=%+v", tasks, sessions)
+	}
+}
+
+func TestSchemaV1SkillFailureStatusesAreCaseInsensitive(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	if _, err := db.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES
+		('status_root',NULL,'coder','default_model','root',1760000000000,1760000001000);
+		INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES
+		('status_msg','status_root',1760000000100,1760000000800,'{"role":"assistant","modelID":"mock","time":{"created":1760000000100,"completed":1760000000800}}');
+		INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES
+		('skill-failed','status_root','status_msg',1760000000200,1760000000300,'{"type":"tool","tool":"skill","state":{"status":"failed","input":{"name":"failed-skill"},"output":"failure detail"}}'),
+		('skill-upper-error','status_root','status_msg',1760000000400,1760000000500,'{"type":"tool","tool":"skill","state":{"status":"ERROR","input":{"name":"error-skill"},"output":"uppercase failure detail"}}');`); err != nil {
+		t.Fatal(err)
+	}
+	sessions, _, _, err := opencode.ExtractSessions(db, []string{"status_root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skills, _ := opencode.ExtractSkillTaskFacts(sessions)
+	if len(skills) != 2 {
+		t.Fatalf("expected two skill facts, got %+v", skills)
+	}
+	for i, want := range []struct{ name, detail string }{{"failed-skill", "failure detail"}, {"error-skill", "uppercase failure detail"}} {
+		if skills[i].Name != want.name || skills[i].Success || skills[i].Error != want.detail {
+			t.Errorf("skill[%d]=%+v, want unsuccessful %q with detail %q", i, skills[i], want.name, want.detail)
+		}
+	}
+}
+
+func TestSchemaV1MalformedOrIncompleteSkillTaskInputsPreserveOtherFacts(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	if _, err := db.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES
+		('optional_root',NULL,'coder','default_model','root',1760000000000,1760000001000);
+		INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES
+		('optional_msg','optional_root',1760000000100,1760000000800,'{"role":"assistant","modelID":"mock","time":{"created":1760000000100,"completed":1760000000800}}');`); err != nil {
+		t.Fatal(err)
+	}
+	rows := []struct{ id, data string }{
+		{"bad-json", `{"type":"tool","tool":"skill","state":{"status":"completed","input":"{bad"}}`},
+		{"missing-name", `{"type":"tool","tool":"skill","state":{"status":"completed","input":{}}}`},
+		{"partial-task", `{"type":"tool","tool":"task","state":{"status":"completed","input":{"subagent_type":"coder"}}}`},
+	}
+	for i, row := range rows {
+		if _, err := db.Exec(`INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES (?, 'optional_root','optional_msg',?,?,?)`, row.id, 1760000000200+i*100, 1760000000250+i*100, row.data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sessions, _, _, err := opencode.ExtractSessions(db, []string{"optional_root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) != 1 || len(sessions[0].Invocations) == 0 || len(sessions[0].Events) != 4 {
+		t.Fatalf("optional input handling lost session, invocation, or event facts: %+v", sessions)
+	}
+	skills, tasks := opencode.ExtractSkillTaskFacts(sessions)
+	if len(skills) != 0 {
+		t.Errorf("malformed or unnamed skill input should be skipped, got %+v", skills)
+	}
+	if len(tasks) != 1 || tasks[0].SubagentType != "coder" || tasks[0].Description != "" {
+		t.Errorf("expected task fact to preserve only available fields, got %+v", tasks)
+	}
+}
+
 func TestSchemaV1ExtractFacts_AdversarialEdgeCases(t *testing.T) {
 	t.Run("empty db returns empty facts without panic", func(t *testing.T) {
 		db := setupTestDB(t)

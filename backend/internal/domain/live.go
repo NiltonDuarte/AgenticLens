@@ -43,15 +43,18 @@ type LiveSessionTree struct {
 
 // LivePartFact captures a granular execution part (tool invocation, reasoning block, or compaction).
 type LivePartFact struct {
-	ID            string          `json:"id"`
-	Type          string          `json:"type"`
-	ToolName      *string         `json:"tool_name,omitempty"`
-	InputSnippet  string          `json:"input_snippet"`
-	OutputSnippet string          `json:"output_snippet"`
-	Status        string          `json:"status"`
-	IsError       bool            `json:"is_error"`
-	ErrorMessage  *string         `json:"error_message,omitempty"`
-	Severity      FailureSeverity `json:"severity"`
+	ID             string          `json:"id"`
+	Type           string          `json:"type"`
+	ToolName       *string         `json:"tool_name,omitempty"`
+	InputSnippet   string          `json:"input_snippet"`
+	OutputSnippet  string          `json:"output_snippet"`
+	Status         string          `json:"status"`
+	IsError        bool            `json:"is_error"`
+	ErrorMessage   *string         `json:"error_message,omitempty"`
+	Severity       FailureSeverity `json:"severity"`
+	SkillName      string          `json:"skill_name,omitempty"`
+	ChildSessionID string          `json:"child_session_id,omitempty"`
+	SubagentType   string          `json:"subagent_type,omitempty"`
 }
 
 // LiveMessageFact captures a chat message turn with associated execution parts.

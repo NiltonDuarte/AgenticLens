@@ -58,14 +58,45 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-47 live trace dynamic refresh and active session polling.md`
 
-- **AL-51**: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks
-  - **Subsystem**: Domain / Adapters / OpenCode / Live / HTTP / Tests
+- **AL-49**: Reverse Event Chronology and Quick-Scroll Navigation in Live Trace Inspector
+  - **Subsystem**: Presentation / Web / Components / Views / Tests
+  - **Phase**: Phase 7 (v1 Observability Polish)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-49 reverse event ordering and quick scroll navigation in live inspector.md`
+
+- **AL-50**: Audit and Streamline Debug Prompt Generation and Sanitization Pipeline
+  - **Subsystem**: Presentation / Web / Utils / Tests / Review
+  - **Phase**: Phase 7 (v1 Observability Refactor / Review)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-50 audit and streamline debug prompt generation and sanitization.md`
+
+- **AL-52**: Rich Timeline Badges and Subagent Session Linking in Trace Views
+  - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Ready
   - **Blocked by**: None
-  - **Blocks**: AL-52, AL-53, AL-54
-  - **File**: `alspaces/plan/to-do/AL-51 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md`
+  - **Blocks**: AL-55
+  - **File**: `alspaces/plan/to-do/AL-52 rich timeline badges and subagent session linking in trace views.md`
 
+- **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
+  - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
+  - **Phase**: Phase 8 (v2 Observability / Skills)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-55
+  - **File**: `alspaces/plan/to-do/AL-53 dedicated skills and subagents autopsy panel in ticket deep dive.md`
+
+- **AL-54**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
+  - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
+  - **Phase**: Phase 8 (v2 Observability / Skills)
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-55
+  - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
 ---
 
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
@@ -77,31 +108,9 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **File**: `alspaces/plan/to-do/AL-43 differentiate and surface semantic content errors in successful tool invocations.md`
 
 
+---
+
 ## Blocked
-
-- **AL-52**: Rich Timeline Badges and Subagent Session Linking in Trace Views
-  - **Subsystem**: Presentation / Web / Components / Waterfall / Inspector / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-51
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-52 rich timeline badges and subagent session linking in trace views.md`
-
-- **AL-53**: Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive
-  - **Subsystem**: Presentation / Web / Views / Deep Dive / Components / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-51
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-53 dedicated skills and subagents autopsy panel in ticket deep dive.md`
-
-- **AL-54**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
-  - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Pending
-  - **Blocked by**: AL-51
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
 
 - **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
   - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests

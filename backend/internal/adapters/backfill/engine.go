@@ -431,6 +431,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 					}
 					shouldUpdateInvocations := !hasExistingOpenCodeFacts || opts.Force || (factLedger.Migration != nil && factLedger.Migration.Status == domain.MigrationStatusPartial)
 					if shouldUpdateInvocations {
+						factLedger.Skills, factLedger.TaskLinks = opencode.ExtractSkillTaskFacts(freshSessions)
 						if len(candidateRootIDs) > 0 && len(resolvedRootIDs) < len(candidateRootIDs) {
 							// Partial resolution across machines: preserve unresolved session facts
 							resolvedSet := make(map[string]bool)

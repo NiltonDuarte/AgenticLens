@@ -52,6 +52,8 @@ type LiveService struct {
 	closeOnce       sync.Once
 	lastTreeJSON    []byte
 	lastTreeMu      sync.Mutex
+	lastTraceJSON   map[string][]byte
+	lastTraceMu     sync.Mutex
 	seenAnomalies   map[string]bool
 	seenAnomaliesMu sync.Mutex
 }
@@ -81,6 +83,7 @@ func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, cod
 		cfg:           cfg,
 		subscribers:   make(map[chan LiveEvent]struct{}),
 		stopCh:        make(chan struct{}),
+		lastTraceJSON: make(map[string][]byte),
 		seenAnomalies: make(map[string]bool),
 	}
 }
@@ -195,6 +198,46 @@ func (s *LiveService) pollAndBroadcast(ctx context.Context) {
 			Data: data,
 		})
 	}
+	s.broadcastTraceUpdates(ctx, tree)
+}
+
+func (s *LiveService) broadcastTraceUpdates(ctx context.Context, tree domain.LiveSessionTree) {
+	current := make(map[string]struct{})
+	var visit func([]*domain.LiveSessionNode)
+	visit = func(nodes []*domain.LiveSessionNode) {
+		for _, node := range nodes {
+			if node == nil || strings.TrimSpace(node.ID) == "" {
+				continue
+			}
+			current[node.ID] = struct{}{}
+			trace, err := s.GetSessionTrace(ctx, node.ID)
+			if err == nil {
+				data, marshalErr := json.Marshal(trace)
+				if marshalErr == nil {
+					s.lastTraceMu.Lock()
+					previous, exists := s.lastTraceJSON[node.ID]
+					changed := !exists || !bytes.Equal(previous, data)
+					if changed {
+						s.lastTraceJSON[node.ID] = append([]byte(nil), data...)
+					}
+					s.lastTraceMu.Unlock()
+					if changed {
+						s.broadcast(LiveEvent{Type: LiveEventTraceUpdate, Data: data})
+					}
+				}
+			}
+			visit(node.SubSessions)
+		}
+	}
+	visit(tree.RootSessions)
+
+	s.lastTraceMu.Lock()
+	for sessionID := range s.lastTraceJSON {
+		if _, active := current[sessionID]; !active {
+			delete(s.lastTraceJSON, sessionID)
+		}
+	}
+	s.lastTraceMu.Unlock()
 }
 
 func (s *LiveService) checkAndBroadcastAnomalies(anomalies []domain.LiveAnomalyAlert) {
@@ -343,6 +386,13 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 	if err != nil {
 		return domain.LiveTraceView{}, fmt.Errorf("fetching session trace for %s: %w", sessionID, err)
 	}
+	childIDs, childErr := s.hook.ResolveChildSessionIDs([]string{sessionID})
+	knownChildren := make(map[string]struct{}, len(childIDs))
+	if childErr == nil {
+		for _, childID := range childIDs {
+			knownChildren[childID] = struct{}{}
+		}
+	}
 
 	// Group parts by message ID
 	partsByMsg := make(map[string][]RawPartRecord)
@@ -408,6 +458,13 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 
 		for _, rp := range partRecords {
 			partFact := parsePartRecord(rp, &consecutiveErrors)
+			if partFact.SubagentType != "" {
+				if childID := explicitOutputSessionID(partFact.OutputSnippet); childID != "" {
+					if _, exists := knownChildren[childID]; exists {
+						partFact.ChildSessionID = childID
+					}
+				}
+			}
 			parts = append(parts, partFact)
 
 			if partFact.Type == "tool" {
@@ -475,6 +532,7 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 	partType := "tool"
 	var toolName *string
 	var inputSnippet, outputSnippet, status string
+	var skillName, subagentType string
 
 	if strings.TrimSpace(rp.Data) != "" {
 		var pData struct {
@@ -500,6 +558,21 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 				}
 				inputSnippet = rawMessageToString(pData.State.Input)
 				outputSnippet = rawMessageToString(pData.State.Output)
+				var input map[string]json.RawMessage
+				if json.Unmarshal(pData.State.Input, &input) == nil {
+					if toolName != nil && strings.TrimSpace(*toolName) == "skill" {
+						var name string
+						if json.Unmarshal(input["name"], &name) == nil {
+							skillName = strings.TrimSpace(name)
+						}
+					}
+					if toolName != nil && strings.TrimSpace(*toolName) == "task" {
+						var parsedSubagentType string
+						if json.Unmarshal(input["subagent_type"], &parsedSubagentType) == nil {
+							subagentType = strings.TrimSpace(parsedSubagentType)
+						}
+					}
+				}
 			}
 			if outputSnippet == "" && pData.Text != nil {
 				outputSnippet = strings.TrimSpace(*pData.Text)
@@ -550,7 +623,23 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		IsError:       isError,
 		ErrorMessage:  errorMessage,
 		Severity:      severity,
+		SkillName:     skillName,
+		SubagentType:  subagentType,
 	}
+}
+
+func explicitOutputSessionID(output string) string {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal([]byte(output), &fields) != nil {
+		return ""
+	}
+	for _, key := range []string{"child_session_id", "session_id", "sessionID"} {
+		var value string
+		if json.Unmarshal(fields[key], &value) == nil && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func validateSessionID(id string) error {

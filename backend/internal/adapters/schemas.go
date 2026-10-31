@@ -266,18 +266,20 @@ func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
 
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
-	SchemaVersion *int              `json:"schema_version,omitempty"`
-	Source        string            `json:"source,omitempty"`
-	Migration     *MigrationInfoDTO `json:"migration,omitempty"`
-	TicketID      *string           `json:"ticket_id"`
-	TicketTitle   *string           `json:"ticket_title"`
-	TicketType    *string           `json:"ticket_type"`
-	StartedAt     *string           `json:"started_at"`
-	CompletedAt   *string           `json:"completed_at"`
-	UpdatedAt     string            `json:"updated_at"`
-	Code          CodeFactsDTO      `json:"code"`
-	Sessions      []SessionFactDTO  `json:"sessions"`
-	Anomalies     []AnomalyDTO      `json:"anomalies"`
+	SchemaVersion *int                  `json:"schema_version,omitempty"`
+	Source        string                `json:"source,omitempty"`
+	Migration     *MigrationInfoDTO     `json:"migration,omitempty"`
+	TicketID      *string               `json:"ticket_id"`
+	TicketTitle   *string               `json:"ticket_title"`
+	TicketType    *string               `json:"ticket_type"`
+	StartedAt     *string               `json:"started_at"`
+	CompletedAt   *string               `json:"completed_at"`
+	UpdatedAt     string                `json:"updated_at"`
+	Code          CodeFactsDTO          `json:"code"`
+	Sessions      []SessionFactDTO      `json:"sessions"`
+	Anomalies     []AnomalyDTO          `json:"anomalies"`
+	Skills        []domain.SkillFact    `json:"skills,omitempty"`
+	TaskLinks     []domain.TaskLinkFact `json:"task_links,omitempty"`
 }
 
 // ValidateRuntimeFactLedger rejects legacy or explicitly incomplete ledgers before
@@ -522,6 +524,8 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		Code:          dto.Code.ToDomain(),
 		Sessions:      sessions,
 		Anomalies:     anomaliesToDomain(dto.Anomalies),
+		Skills:        dto.Skills,
+		TaskLinks:     dto.TaskLinks,
 	}
 }
 
@@ -704,6 +708,8 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		},
 		Sessions:  sessions,
 		Anomalies: anomaliesFromDomain(ledger.Anomalies),
+		Skills:    ledger.Skills,
+		TaskLinks: ledger.TaskLinks,
 	}
 }
 

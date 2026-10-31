@@ -58,6 +58,28 @@ type EventFact struct {
 	ToolOutput       *string   `json:"tool_output,omitempty"`
 }
 
+// SkillFact records one OpenCode skill invocation.
+type SkillFact struct {
+	Name         string `json:"name"`
+	TurnIndex    int    `json:"turn_index"`
+	MessageIndex int    `json:"message_index"`
+	CallerRole   string `json:"caller_role"`
+	Timestamp    string `json:"timestamp"`
+	Success      bool   `json:"success"`
+	Error        string `json:"error,omitempty"`
+}
+
+// TaskLinkFact records one OpenCode task delegation and any explicit child-session link.
+type TaskLinkFact struct {
+	SubagentType string  `json:"subagent_type"`
+	Description  string  `json:"description"`
+	ParentTurn   int     `json:"parent_turn"`
+	ChildSession string  `json:"child_session_id,omitempty"`
+	Timestamp    string  `json:"timestamp"`
+	DurationMs   int64   `json:"duration_ms,omitempty"`
+	CostUSD      float64 `json:"cost_usd,omitempty"`
+}
+
 // SessionToolFact stores tool totals owned by one session. Session identity is
 // inherited from the containing SessionFact.
 type SessionToolFact struct {
@@ -144,6 +166,8 @@ type AgenticFactLedger struct {
 	Code          CodeFacts               `json:"code"`
 	Sessions      []SessionFact           `json:"sessions"`
 	Anomalies     []Anomaly               `json:"anomalies"`
+	Skills        []SkillFact             `json:"skills,omitempty"`
+	TaskLinks     []TaskLinkFact          `json:"task_links,omitempty"`
 }
 
 // AnomalyFacts returns persisted anomaly summaries with their owning session restored.
