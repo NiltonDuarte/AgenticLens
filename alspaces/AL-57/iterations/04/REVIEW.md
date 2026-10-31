@@ -58,3 +58,6 @@ The sole production change removes MetricProgression's secondary prop from CostK
 The existing progression test retains its compact $2.00 primary and full tooltip-count assertions; only the obsolete subtitle expectation changes to the remaining exact Known subtotal (partial) state. No regression assertion was deleted and no new test was needed for this bounded copy correction. Coder reports typecheck, lint and all 16 existing progression tests passed. git diff --check passed during this focused review; no duplicate suite or browser geometry check was performed.
 
 Independently recomputed backend/web source SHA256: 460adc0af5b0db02ef39eb57cfeb48367f061ed276d2af9feb7a46ca7a4e7440 across 220 existing files, using the same path/NUL/bytes/NUL method above. No open findings. Parent retains the integrated make/build/embedded-binary/telemetry/PR delivery gates.
+
+
+Parent copy-correction gate: implementation 9736d8b integrated current main unchanged; full make passed (Go vet/race, frontend typecheck/lint, 761 tests, assets/four binaries). Standalone assets match and no longer contain the redundant label. No further application changes.

@@ -66,15 +66,15 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 - Telemetry is generated at the final step below using the actual Codex root and five children; no unavailable-source facts or numeric cost estimates are fabricated.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 13
-- **Active Agent Duration:** 2h 33m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 285.0k tokens (143% of 200k healthy ceiling, 0 compactions) | Subagents peak 329.4k (Tester)
+- **Software Development Life Cycle Iterations:** 15
+- **Active Agent Duration:** 2h 48m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 299.9k tokens (150% of 200k healthy ceiling, 0 compactions) | Subagents peak 330.9k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 3.8 avg turns/run (peak: 6 turns) | Planner 4.0, Coder 3.7, Tester 4.0, Reviewer 4.0
+- **Subagent Turn Velocity & Thrashing:** 4.3 avg turns/run (peak: 6 turns) | Planner 4.0, Coder 4.0, Tester 5.0, Reviewer 5.0
 - **Test-to-Production Code Ratio:** 0.6:1 (+1,233 test lines / +2,159 prod lines)
-- **Code Delivered:** +3,392 / -394 lines across 65 code files (excluding docs)
-- **Reasoning Effort:** 107,962 reasoning tokens (26.6% of generated output)
-- **Tool Health & Self-Correction:** 636 tool calls (47 self-corrections, 92.6% success rate)
+- **Code Delivered:** +3,392 / -395 lines across 65 code files (excluding docs)
+- **Reasoning Effort:** 113,644 reasoning tokens (26.9% of generated output)
+- **Tool Health & Self-Correction:** 667 tool calls (47 self-corrections, 93.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 21 execution anomalies detected (11 CRITICAL, 10 WARNING).
@@ -108,17 +108,17 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 154,972 | 19,944 | 3,794,944 | 96.1% | 163.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 3 | 693,451 | 99,425 | 38,892,160 | 98.2% | 271.9k | BLOATED (136%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **tester** | 1 | 279,731 | 59,688 | 32,765,312 | 99.2% | 329.4k | BLOATED (165%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer** | 1 | 441,465 | 24,204 | 14,313,728 | 97.0% | 298.9k | BLOATED (149%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 240,064 | 94,040 | 47,358,976 | 99.5% | 285.0k | BLOATED (143%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **7** | **1,809,683** | **297,301** | **137,125,120** | **98.7%** | **329.4k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
+| **coder** | 3 | 698,154 | 100,111 | 40,478,080 | 98.3% | 271.9k | BLOATED (136%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **tester** | 1 | 280,998 | 60,432 | 34,085,632 | 99.2% | 330.9k | BLOATED (165%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer** | 1 | 443,823 | 25,242 | 15,815,296 | 97.3% | 301.7k | BLOATED (151%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **rootagent** | 1 | 249,978 | 103,711 | 55,542,656 | 99.6% | 299.9k | BLOATED (150%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **7** | **1,827,925** | **309,440** | **149,716,608** | **98.8%** | **330.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 7 | 1,809,683 | 297,301 | 137,125,120 | 98.7% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **Total** | **7** | **1,809,683** | **297,301** | **137,125,120** | **98.7%** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
+| **gpt-6.1-sol** | 7 | 1,827,925 | 309,440 | 149,716,608 | 98.8% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
+| **Total** | **7** | **1,827,925** | **309,440** | **149,716,608** | **98.8%** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
 
 ## User review correction: JSON key order
 
@@ -202,3 +202,12 @@ Iteration 04 telemetry verification passed: all seven existing real Codex sessio
 ## Iteration 04 review correction: remove bucket subtitle
 
 User asked to remove "time buckets" from the progression cost card. The count describes aggregated intervals, not necessarily visible bars. Remove only that redundant subtitle and update its existing UI expectation; cost states/coverage and time grouping/charts remain unchanged. Baseline c7c87587e9366c44b79f9ec5295a22c70bbfce6c was clean, PR #89 open. No new tests planned for the reversible copy correction; existing owner checks and required delivery gates are reused/run as appropriate.
+
+
+Bucket-subtitle correction: focused testing/review approved with no findings at 220-source fingerprint 460adc0af5b0db02ef39eb57cfeb48367f061ed276d2af9feb7a46ca7a4e7440. The only production edit removes the redundant secondary prop; the existing partial-state expectation retains currency and accessible coverage assertions. Typecheck/lint and all 16 progression tests passed. Implementation committed as 9736d8b057b5bb08ced88f07bb04deb70c00311f; current main integrated without changes. Required full make passed: Go vet/race, frontend typecheck/lint, 761 frontend tests, canonical assets and four platform builds.
+
+
+Final bucket-copy gate passed on 9736d8b: full make, matching frontend/embed trees and standalone binary serving exact current assets with the redundant label absent from its JS bundle. No Node runtime was available. No bucket/chart math changed, no new tests were added, and no browser geometry claim is made. Final telemetry refresh retains the existing seven actual Codex sessions.
+
+
+Copy-correction telemetry verification passed: all seven existing actual Codex sessions, parent/source identity, invocation multiplicity and unavailable cost evidence retained; usage is nonempty. Raw source rollouts remain outside Git.
