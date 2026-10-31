@@ -1,7 +1,9 @@
-# docs(AL-55): ground remaining historical backfill scope
+# feat(backfill): preserve incomplete historical snapshots (AL-55)
 
-Planning draft only; no PR opened and implementation approval remains pending.
+Explicit source recompute now refreshes complete stored session trees without requiring Force. Missing owners, children or malformed source records retain their previous trees; incomplete OpenCode recovery also retains whole skill/task snapshots and reports mixed-age data per ticket and in the command summary.
 
-Records the remaining source-backfill risks after existing schema v4 and optional skill/task delivery. Proposes conservative snapshot preservation, exact-owner recovery and truthful completeness without a schema or cost change. Five scope decisions require PO-17 reconciliation and explicit user approval before implementation.
+Existing global source-backfill obligations require all known owners across required sources. Failed optional refresh keeps valid canonical ledgers usable. File reads provide empty internal skill/task arrays when optional v4 fields are absent or null, while preserving malformed-value validation and populated rows.
 
-See [contract](CONTRACT.md), [plan](iterations/01/PLAN.md) and [summary](SUMMARY.md). No application behavior has changed; AL-55 remains incomplete.
+Keeps schema v4, optional wire fields, existing migration chain and backup interfaces. No cost or UI changes. Recovery is bounded by known owners and discovery; retained collections can be older than refreshed sessions.
+
+See [contract](CONTRACT.md), [summary](SUMMARY.md) and [iteration plan](iterations/01/PLAN.md). Shared specification lifecycle is deferred pending the manager's PO handoff. Manager owns merge sequencing; no auto-merge or release action is requested.

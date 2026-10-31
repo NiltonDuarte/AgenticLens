@@ -1,13 +1,38 @@
-# AL-55 iteration 01 planning review
+# AL-55 iteration 01 implementation review
 
-Verdict: planning ready for reconciliation; implementation NOT APPROVED. This is the orchestrator's planning audit, not an independent implementation reviewer verdict.
+Verdict: APPROVED. No outstanding blocking finding in the reviewed implementation. Parent must complete the integrated full make gate and delivery checks before claiming ticket delivery.
 
-Reviewed baseline bdef2d0ef98e37fe259921bc30ba2daefbfda717 and AL-55 planning artifacts. Existing source confirms array replacement precedes unresolved-session preservation, completed fast-path omits RecomputeDB, and one successful tree can clear shared recovery pending state. Named coverage and exact acceptance choices are recorded in CONTRACT.md and PLAN.md.
+This independent read-only audit supersedes the initial planning-only review, which correctly withheld implementation approval. Explicit user approval and the later internal-array clarification are recorded in CONTRACT.md and PLAN.md. No scope approval is inferred from this review.
 
-Preserved boundaries: existing v4 migration, optional wire contracts, exact source identity, persisted baseline, other harnesses, AL-43 eventual fields. Costs, schemas, runtime scripts, config, application files and shared planning artifacts are outside current write authority.
+## Reviewed boundary and evidence
 
-Actual command help checked with the older existing host binary documented in SUMMARY.md. It exposes explicit source selection, recompute, Force and fallback controls; standalone migrate exposes backup, backfill does not. Help is interface evidence only, not proof of correct refresh behavior. Existing recompute test has completed migration metadata and does not cover canonical metadata absence.
+Reviewed the uncommitted implementation and test diff against integrated baseline `858a7eb2885d674b11c672abf7c1621e687bde9b` (origin/main `aa88cb78c93daa4a2dd6d7ba9b1e512603c48a0c`). Read production paths, affected test bodies and existing validation/migration recipients. Backend fingerprint at final review: `1e35ecb00c6d62cc751a5af314d7851a6eac43336a931b294a52f6e427bb3c9d`, SHA-256 of each sorted changed backend path, NUL, file bytes, NUL, including untracked recovery.go (12 files). Later implementation changes require affected verification.
 
-No tests or full make gate ran because this iteration changes planning documents only. No historical recovery executed. Before implementation the manager must resolve all five choices and convey explicit user approval. A Ready label and these planning artifacts provide no such authorization.
+Source-reviewed: backfill engine, recursive recovery discovery/replacement, report aggregation, CLI help/results, strict OpenCode dispatch and v1 parsing, DTO normalization and existing-file reader. Test-reviewed: canonical recompute/routine skip, SQLite recovery/multiplicity matrix, mixed-source pending requirements, malformed nested v2 source, final validation failure, actual omitted/null/malformed/populated file reads, strict-v1 compatibility, CLI retention summary and orphan-helper preservation including missing intermediaries.
 
-Telemetry verification at finalization must require the independent root and planner child listed in SUMMARY.md, with Codex source and parent linkage, and no manager/PO roots. No existing AL-55 cross-harness ledger was present to preserve. Record extraction errors rather than create an empty success.
+Tester execution reports, reused for unchanged code: `cd backend && go test -race ./internal/adapters ./internal/adapters/backfill ./internal/adapters/opencode ./cmd/agentic-lens -count=1` passed after the CLI/final-validation additions (adapters 1.686s; backfill 6.039s; opencode 2.180s; cmd 4.962s). After final removal-closure strengthening and the intermediary helper case, affected backfill race rerun passed in 5.605s. These are attributed execution reports, not a reviewer-run full gate. Exact commands and previous observed failures are in TESTING.md. Reviewer ran `git diff --check`, which passed. Parent records actual final integrated full gate separately.
+
+## Findings and disposition
+
+1. Fixed defensive recovery invariant: an earlier recoverOpenCode draft checked only source-resolvable stored branches before replacement. For helper input with orphan siblings A and B attached to source root R, with only A available, replacement could remove B before the later completeness check. The final guard uses `replacementSessionIDs` to verify every stored row in the exact removal closure before replacement, including deeper orphan branches attached to newly discovered ancestors. `TestRecoverOpenCodeRetainsUnavailableOrphanSiblingTree` exercises real SQLite discovery and the production helper, preserves the unavailable branch and permits an independent complete tree to refresh.
+
+   Reachability limit: migration.Engine and DTO validation already reject a file whose parent session is absent. This was a source-recovery helper invariant gap, not reproduced loss through an accepted canonical file. Mixed-harness ancestor identity also encounters final duplicate-ID validation. The helper test passed after the fix; no pre-fix execution is claimed for this case.
+
+2. Fixed during tester feedback: strict-v1 parsing initially kept the tolerant SQL part filter, hiding malformed JSON from strict validation. Strict backfill extraction now reads all selected-tree parts and reports malformed source. Ordinary tolerant extraction retains its established projection. Tests demonstrate malformed source is not confirmed empty recovery.
+
+3. Fixed during tester feedback: LoadExistingFactLedger bypassed DTO collection normalization. Both actual readers now provide nonnil internal empty collections for omitted/null optional fields. Real file-read tests preserve populated multiplicity, reject malformed shapes and confirm that normalization does not rewrite files.
+
+## Contract alignment
+
+- Schema v4, optional wire skill/task fields and the existing migration chain remain unchanged. Internal defaults provide no recovery evidence. No costs, UI, persisted provenance model or new backup interface were introduced.
+- Explicit recompute reaches canonical migration=nil ledgers and refreshes complete cumulative snapshots without Force. Routine skips remain. Force cannot bypass preservation or enable fallback; heuristic discovery remains separately opt-in and cannot certify missing exact history.
+- Known roots, descendants, returned connectivity and stored parent links are checked before replacement. Independent complete trees can refresh. Unavailable source/children and late parsing/grouping failures retain affected trees and whole ownerless OpenCode collections. Ticket and command output explain retention and mixed age. Empty owner sets cannot clear collections; complete source-backed zero observations can.
+- Command incompleteness is separate from runtime eligibility. Optional failure leaves valid canonical baseline usable. Existing global source_backfill remains until all known required owners across sources recover; narrow source selection cannot discharge other sources. Other pending steps remain.
+- Fully prepared candidates are validated before dry-run return or atomic publication. Tests exercise final validation and temporary-write failure without changing original ledger/summary. Atomic publication is not backup. Existing standalone migration backup tests remain in migration_runner_test.go.
+- Production stays in adapters/CLI; no domain I/O, new any/interface{} or emoji content was introduced. AL-43 warning/content fields and tolerant default extraction are preserved. AL-47 SSE code is untouched and belongs in the parent integrated gate. Git facts remain unchanged unless explicitly recomputed; revised assertions retain source-confirmed zero invocation steering separately.
+
+## Remaining limitations and final gate
+
+Completeness is bounded by known stored owners and discovery results. Synthetic SQLite/rollout fixtures do not prove real unavailable history recovery or exhaustive external history. No live ticket workspace or developer database is used as a regression fixture. This reviewer did not execute standalone binary, browser, release or full make checks. Parent owns final integrated make, built CLI checks, telemetry, commits and PR delivery. No merge or auto-merge is authorized here.
+
+Parent verification on reviewed implementation diff over 858a7eb: full `make` passed (Go vet/race all packages, frontend typecheck/lint, 35 Vitest files / 750 tests, embedded frontend build and Linux/Darwin cross-builds). Existing React act warnings and dependency audit notices were nonfatal; no dependency files changed. Actual locally built CLI backfill/migrate/generate help checked. Main integration with merged PO specification 92a6fd2 remains the next required delivery gate.

@@ -2143,6 +2143,47 @@ func TestCLIBackfillCommand(t *testing.T) {
 		}
 	})
 
+	t.Run("optional failed refresh reports retention in ticket and command summary", func(t *testing.T) {
+		root := t.TempDir()
+		workspace := filepath.Join(root, "CUSTOM-RETENTION")
+		if err := os.Mkdir(workspace, 0755); err != nil {
+			t.Fatal(err)
+		}
+		version := domain.CurrentSchemaVersion
+		ticket := "CUSTOM-RETENTION"
+		path := filepath.Join(workspace, "agentic_metrics.json")
+		ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &ticket, Skills: []domain.SkillFact{{Name: "historical"}}, Sessions: []domain.SessionFact{{ID: "missing-owner", Source: domain.SourceOpenCode, User: "unknown", Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored"}}}}}
+		if err := adapters.SaveFactLedger(path, ledger); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", root, "--recompute-db", "--db-path", filepath.Join(root, "missing.db"))
+		cmd.Dir = root
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("optional refresh failed command: %v %s", err, out)
+		}
+		var row string
+		for _, line := range strings.Split(string(out), "\n") {
+			if strings.HasPrefix(line, ticket) {
+				row = line
+				break
+			}
+		}
+		if !strings.Contains(row, "previous snapshot") || !strings.Contains(row, "may be newer") {
+			t.Fatalf("ticket row lost retention/mixed-age diagnostic: %s", out)
+		}
+		if !strings.Contains(string(out), "Refresh diagnostics: Incomplete: 1 | Retained skill/task snapshots: 1") {
+			t.Fatalf("command summary concealed incomplete retained snapshot: %s", out)
+		}
+		after, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := adapters.ValidateRuntimeFactLedger(after); err != nil {
+			t.Fatalf("optional failure made canonical baseline ineligible: %v", err)
+		}
+	})
+
 	t.Run("dry-run backfill outputs preview without error", func(t *testing.T) {
 		cmd := exec.Command(
 			cliBinaryPath,

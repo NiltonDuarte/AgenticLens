@@ -6,18 +6,20 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+- **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
+  - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
+  - **Phase**: Phase 8 (v2 Observability / Skills)
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
+
+
 
 ---
 
 ## Ready
 
-- **AL-55**: Formal Schema v4 Evolution, Migration Step, and Backfill Runner
-  - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
 
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests

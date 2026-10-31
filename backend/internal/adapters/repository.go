@@ -453,11 +453,12 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		mig = &domMig
 	}
 
-	dto := AgenticFactLedgerDTO{Sessions: raw.Sessions}
+	dto := AgenticFactLedgerDTO{Sessions: raw.Sessions, Skills: raw.Skills, TaskLinks: raw.TaskLinks}
 	if err := dto.Validate(); err != nil {
 		return nil, fmt.Errorf("loading existing ledger at %s: %w", path, err)
 	}
-	sessions := dto.ToDomain().Sessions
+	normalized := dto.ToDomain()
+	sessions := normalized.Sessions
 
 	result := &ExistingLedgerFacts{
 		SchemaVersion: raw.SchemaVersion,
@@ -468,8 +469,8 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 		StartedAt:     raw.StartedAt,
 		CompletedAt:   raw.CompletedAt,
 		Sessions:      sessions,
-		Skills:        raw.Skills,
-		TaskLinks:     raw.TaskLinks,
+		Skills:        normalized.Skills,
+		TaskLinks:     normalized.TaskLinks,
 	}
 
 	// Schema 1: Direct atomic fact schema
