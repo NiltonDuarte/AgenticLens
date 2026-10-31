@@ -53,6 +53,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-65 fix provisional active codex turn duration.md`
 
+### Existing ready work
 
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
   - **Subsystem**: Domain / Adapters / HTTP / CLI / Presentation / Web / Tests
@@ -132,6 +133,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-66 research safe default source backed backfill.md`
 
+### Existing blocked work
 
 - **AL2-4**: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
   - **Subsystem**: Adapters / Git / HTTP / Server / Tests

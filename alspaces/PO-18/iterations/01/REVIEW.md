@@ -10,6 +10,12 @@ Reviewed scope: planning-only diff against baseline 45cb679. Initial Git status 
 - UI-only slices reuse existing domain/API facts. Investigation/audit slices trace all layers without authorizing fixes. No unnecessary application changes are prescribed solely to satisfy a layer checklist.
 - Applicable regression boundaries recorded in PLAN.md and ticket criteria: selection state; timezone/day boundaries; source-vs-unknown distinctions; persisted baseline with hydration absent; live reading/expanded state and Copy Prompt evidence; incomplete-tree/mixed-age retention; unchanged-repeat stability.
 - AL-55 ledger SHA256 before/after document edits: 75baa0c19b4ad319eeca265f0cddfa0caa389a2565791be75976fc4896069936. PASS. All previous plans are preserved; no original review changes are included.
-- git diff --check: PASS. Integrated make gate and telemetry inspection pending finalization.
+- git diff --check: PASS. Integrated make gate: PASS (exit 0) against documentation commit 5628d96 plus documentation-only review/index edits. Go vet/race tests, TypeScript typecheck/lint, 35 frontend test files / 741 tests, canonical frontend/embedded assets build, and all four binary builds completed. Telemetry inspection follows final generation. origin/main integration after documentation commit 5628d96: already up to date at 45cb679; no application diff introduced.
 
 No application behavior, live OpenCode test, populated skill analytics, backfill preservation or duration-fix regression is claimed by this documentation review. Those are acceptance work for separate dedicated ticket sessions. No subagents used for documentation-only maintenance.
+
+## Telemetry source baseline
+
+Expected root: 01a1933d-3d8f-7b83-a161-18a904e5aeb3. Source: Codex rollout under the normal ~/.codex/sessions store, metadata cwd matches this checkout (client label vscode). Metadata scan found zero children, consistent with no delegation in this PO session. PO-18 had no prior ledger or other-harness sessions to preserve. Raw transcripts remain outside Git. The diagnosed active-turn accounting defect may understate this session duration; final ingestion cannot establish completion of its still-active turn. Record that limitation rather than manufacturing a recovered duration.
+
+Document validation covered the final ticket/index diff; subsequent changes are review facts only. npm install reported dependency audit findings; dependency upgrades are outside this planning-only scope. No tracked dependency or generated asset changes occurred.
