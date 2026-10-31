@@ -1,5 +1,7 @@
 # GEN-14 iteration 01: T3 thread control and AgenticLens CLI
 
+Historical audit interpretation. Superseded by iteration 02 and the user's explicit independent-manager clarification; do not treat the hierarchy/steering recommendations below as approved requirements.
+
 ## Scope and evidence
 
 Documentation-only audit of baseline 85a2af9. No application, test, schema, or runtime script changes. Source: Codex 0.166.0 rollouts on this machine and T3 thread APIs, inspected 2026-10-31. No raw transcripts are stored here. Session start filenames use local clock formatting; source timestamps and T3 run timestamps were inspected separately.
