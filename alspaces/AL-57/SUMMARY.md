@@ -66,24 +66,27 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 - Telemetry is generated at the final step below using the actual Codex root and five children; no unavailable-source facts or numeric cost estimates are fabricated.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 6
-- **Active Agent Duration:** 1h 26m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 183.8k tokens (92% of 200k healthy ceiling, 0 compactions) | Subagents peak 229.1k (Coder)
+- **Software Development Life Cycle Iterations:** 12
+- **Active Agent Duration:** 2h 2m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 249.3k tokens (125% of 200k healthy ceiling, 0 compactions) | Subagents peak 293.7k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.8 avg turns/run (peak: 5 turns) | Planner 2.0, Coder 4.0, Tester 2.0, Reviewer 2.0
-- **Test-to-Production Code Ratio:** 0.5:1 (+743 test lines / +1,533 prod lines)
-- **Code Delivered:** +2,276 / -273 lines across 58 code files (excluding docs)
-- **Reasoning Effort:** 48,178 reasoning tokens (23.5% of generated output)
-- **Tool Health & Self-Correction:** 383 tool calls (28 self-corrections, 92.7% success rate)
+- **Subagent Turn Velocity & Thrashing:** 3.2 avg turns/run (peak: 6 turns) | Planner 3.0, Coder 3.3, Tester 3.0, Reviewer 3.0
+- **Test-to-Production Code Ratio:** 0.5:1 (+1,063 test lines / +2,103 prod lines)
+- **Code Delivered:** +3,166 / -387 lines across 61 code files (excluding docs)
+- **Reasoning Effort:** 85,354 reasoning tokens (25.7% of generated output)
+- **Tool Health & Self-Correction:** 550 tool calls (43 self-corrections, 92.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 16 execution anomalies detected (6 CRITICAL, 10 WARNING).
+- **Status:** 19 execution anomalies detected (9 CRITICAL, 10 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+113.9k tokens) — Context tokens surged by 113.9k to 113.9k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.3k tokens) — Context tokens reached 201.3k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.2k tokens) — Context tokens reached 205.2k, breaching the 200k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (15 cycles) — Subagent roles 'coder' and 'tester' alternated for 15 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (16 cycles) — Subagent roles 'coder' and 'tester' alternated for 16 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> tester (7 cycles) — Subagent roles 'reviewer' and 'tester' alternated for 7 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.6k tokens) — Context tokens reached 164.6k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.2k tokens) — Context tokens reached 163.2k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.2k tokens) — Context tokens reached 162.2k, breaching the 160k warning ceiling.
@@ -102,18 +105,18 @@ Reviewed implementation committed as 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb. g
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 113,111 | 13,795 | 2,048,768 | 94.8% | 122.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 2 | 435,883 | 57,592 | 24,678,144 | 98.3% | 229.1k | BLOATED (115%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **tester** | 1 | 196,912 | 28,664 | 14,531,200 | 98.7% | 226.2k | BLOATED (113%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer** | 1 | 150,118 | 12,714 | 7,213,312 | 98.0% | 226.9k | BLOATED (113%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 169,065 | 44,125 | 20,609,152 | 99.2% | 183.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **6** | **1,065,089** | **156,890** | **69,080,576** | **98.5%** | **229.1k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
+| **planner** | 1 | 142,893 | 17,600 | 3,015,936 | 95.5% | 151.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 3 | 545,851 | 90,019 | 34,502,400 | 98.4% | 271.9k | BLOATED (136%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **tester** | 1 | 252,913 | 47,395 | 25,198,080 | 99.0% | 293.7k | BLOATED (147%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer** | 1 | 421,686 | 20,088 | 11,127,424 | 96.3% | 276.7k | BLOATED (138%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **rootagent** | 1 | 212,448 | 72,061 | 35,357,952 | 99.4% | 249.3k | BLOATED (125%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **7** | **1,575,791** | **247,163** | **109,201,792** | **98.6%** | **293.7k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 6 | 1,065,089 | 156,890 | 69,080,576 | 98.5% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **Total** | **6** | **1,065,089** | **156,890** | **69,080,576** | **98.5%** | **Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations)** |
+| **gpt-6.1-sol** | 7 | 1,575,791 | 247,163 | 109,201,792 | 98.6% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
+| **Total** | **7** | **1,575,791** | **247,163** | **109,201,792** | **98.6%** | **Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations)** |
 
 ## User review correction: JSON key order
 
@@ -145,3 +148,22 @@ Iteration 03 plan is approved by the user's explicit request to implement the ty
 Iteration 03 implementation replaces generic JSON rewriting with concrete nullable fact/task, aggregate, export and HTTP DTOs and typed version-selected migration readers. The adapter walker and custom ordered-object serializer are deleted. Shared amount/evidence validation remains pure in domain/cost.go. Actual output order now follows declared fields directly, and unrelated response families bypass cost projection.
 
 Telemetry source addition: migration coder 01a19405-8d62-7f70-b9f9-31f06c174e3d explicitly identifies root 01a192c4-c9a6-7022-97da-19f433d6c5c3 as parent in session_meta. Final extraction must preserve the existing six sessions and include this seventh real session. Raw rollouts remain outside Git.
+
+
+## Iteration 03 review and integration
+
+Independent testing and review approved the typed refactor with no open findings. Reviewed source fingerprint 3edc1375f8dd66983375d8b73d3b9cb3f73b2cf7d67abe08878d932f3cd591f1 covers 219 existing backend/web source files, with deleted walker files excluded. Every meaningful removed generic-transform assertion has a concrete schema/persistence/HTTP/migration/CLI recipient. Focused owner tests passed with and without race detection.
+
+Implementation committed as 3c8f09331c925cf0c2ecc8c4d78ada64414ef099; fetched/merged origin/main 36bea1f18f2256392428329136b3241e98d09854 with no new changes. Full make passed on that exact implementation commit: Go vet/race checks across all 12 packages, frontend typecheck/lint, 755 frontend tests in 35 files, current embedded assets and four platform binaries. Source semantics/schema/API shapes are unchanged by this structural correction; no new migration rollout or frontend changes are required.
+
+
+## Iteration 03 final verification
+
+The reviewed application source is committed as 3c8f09331c925cf0c2ecc8c4d78ada64414ef099 and integrated with origin/main 36bea1f18f2256392428329136b3241e98d09854. Full make passed without skips. Standalone linux/amd64 binary served byte-identical current HTML/JS/CSS, preserved actual version response field order, and returned empty fleet cost null with an empty cost summary; no Node executable was available on its PATH. The two generated asset trees match and remain ignored.
+
+The semantic contract and schema/API shapes are unchanged. Both generic adapter serializer files are removed; migration cost decoding now reads concrete known-schema records, preserving legacy presence, invalid-v5 rejection, source ownership and multiplicity. Existing arbitrary-transform-only tests were removed with their unsupported API; meaningful assertions remain in named real boundary owners documented in TESTING.md and REVIEW.md. No additional live historical ledger migration was performed.
+
+Final extraction below must retain the six existing real Codex sessions and add the explicit migration coder session, for seven sessions total. Old cost states and source ownership remain intact; current usage is refreshed from the actual source files rather than fabricated.
+
+
+Iteration 03 final telemetry verification passed: all six prior real Codex sessions remain, the explicit migration child is included (seven total), parent/source identities and invocation multiplicity are preserved, and usage/tools are nonempty. The regenerated file retains established root/code/session/invocation/token/evidence key order. All fresh Codex costs remain explicitly unavailable. Raw source transcripts stay outside Git.

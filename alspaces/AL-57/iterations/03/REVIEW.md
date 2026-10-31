@@ -62,3 +62,8 @@ The tester reports both non-race and race-enabled focused adapters/HTTP/migratio
 These valid checks were reused rather than duplicating them without a concrete concern. Parent still owns current-main integration, the required full make gate, standalone/embedded-asset verification, refreshed real session telemetry, commits and updating the existing PR. Previous iteration full gates are historical evidence, not proof of this refactor's final integrated result.
 
 Final verdict: APPROVED.
+
+
+## Parent integration and binary gate
+
+Reviewed implementation commit 3c8f09331c925cf0c2ecc8c4d78ada64414ef099 integrated current origin/main 36bea1f with no new changes. Required full make passed: Go vet and all 12 packages under race, frontend typecheck/lint, 755 tests in 35 files, canonical assets and four platform builds. Standalone linux/amd64 smoke passed exact current HTML/JS/CSS, ordered pass-through version JSON and empty fleet null cost/empty summary with Node unavailable. Asset trees match. Remaining edits are final telemetry and delivery records; no application changes followed this gate.
