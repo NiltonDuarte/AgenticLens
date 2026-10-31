@@ -35,3 +35,8 @@ Reused the tester's recorded make test evidence: all 12 Go packages under the ra
 No browser rendering or geometry validation is claimed. Current frontend source changes require rebuilding ignored web/dist and backend/internal/adapters/web/dist after their final fix, which the parent integrated gate owns. Parent still owns current-main integration, required full make, standalone binary/embedded asset smoke checks, final source-grounded telemetry, clean-tree commits and PR delivery. No findings remain open; the earlier complete suite and later affected checks are recorded distinctly.
 
 Final verdict: APPROVED.
+
+
+## Parent integration evidence
+
+Implementation commit 71b3dcf92c8f1ef2428ef374b40cce18f8e63dfb integrated current origin/main 45cb679f21475cd14b7dd4cbc25996a39d734403 without changes. Full make passed after the final source fixes: Go vet, all 12 Go packages under race, frontend typecheck/lint, 755 frontend tests in 35 files, production assets and four binaries. Standalone linux/amd64 smoke served exact current index/JS/CSS and SPA fallback from ignored embedded assets, with empty temporary workspaces and no Node lookup PATH. Asset trees match. No application changes followed this gate; remaining edits are delivery documentation, ticket lifecycle and final telemetry.
