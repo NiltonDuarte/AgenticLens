@@ -206,20 +206,6 @@ describe('Navbar Component', () => {
     expect(screen.queryByText('workspaces')).not.toBeInTheDocument();
   });
 
-  it('renders version badge with provided versionInfo prop and displays tooltip', () => {
-    const versionInfo: BuildInfo = {
-      version: 'v1.4.2',
-      commit: 'fedcba9',
-      build_date: '2026-10-18T14:00:00Z',
-    };
-    render(<Navbar activeTab="overview" versionInfo={versionInfo} projectConfig={mockProjectConfig} />);
-
-    const badge = screen.getByText('v1.4.2');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('version-badge');
-    expect(badge).toHaveAttribute('title', 'Commit: fedcba9 | Built: 2026-10-18T14:00:00Z');
-  });
-
   it('renders fallback version badge and resolves via fetch when versionInfo is omitted', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
@@ -252,39 +238,27 @@ describe('Navbar Component', () => {
     vi.unstubAllGlobals();
   });
 
-  it('dynamically updates version badge when versionInfo prop changes on rerender', () => {
-    const initialInfo: BuildInfo = {
-      version: 'v1.0.0',
-      commit: '1111111',
-      build_date: '2026-10-18T01:00:00Z',
-    };
-    const updatedInfo: BuildInfo = {
-      version: 'v2.0.0',
-      commit: '2222222',
-      build_date: '2026-10-18T02:00:00Z',
-    };
-
-    const { rerender } = render(<Navbar activeTab="overview" versionInfo={initialInfo} projectConfig={mockProjectConfig} />);
-    expect(screen.getByText('v1.0.0')).toBeInTheDocument();
-    expect(screen.getByText('v1.0.0')).toHaveAttribute('title', 'Commit: 1111111 | Built: 2026-10-18T01:00:00Z');
-
-    rerender(<Navbar activeTab="overview" versionInfo={updatedInfo} projectConfig={mockProjectConfig} />);
-    expect(screen.getByText('v2.0.0')).toBeInTheDocument();
-    expect(screen.getByText('v2.0.0')).toHaveAttribute('title', 'Commit: 2222222 | Built: 2026-10-18T02:00:00Z');
-    expect(screen.queryByText('v1.0.0')).not.toBeInTheDocument();
-  });
-
   it('renders complex semver tags with prerelease and build metadata in badge', () => {
     const complexInfo: BuildInfo = {
       version: 'v2.1.0-rc.3+20261018.commit.abcdef0-dirty',
       commit: 'abcdef0',
       build_date: '2026-10-18T19:45:00.123Z',
     };
-    render(<Navbar activeTab="overview" versionInfo={complexInfo} projectConfig={mockProjectConfig} />);
+    const { rerender } = render(<Navbar activeTab="overview" versionInfo={complexInfo} projectConfig={mockProjectConfig} />);
 
     const badge = screen.getByText('v2.1.0-rc.3+20261018.commit.abcdef0-dirty');
     expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('version-badge');
     expect(badge).toHaveAttribute('title', 'Commit: abcdef0 | Built: 2026-10-18T19:45:00.123Z');
+    const updatedInfo: BuildInfo = {
+      version: 'v2.2.0',
+      commit: '2222222',
+      build_date: '2026-10-19T02:00:00Z',
+    };
+    rerender(<Navbar activeTab="overview" versionInfo={updatedInfo} projectConfig={mockProjectConfig} />);
+    expect(screen.getByText('v2.2.0')).toBeInTheDocument();
+    expect(screen.getByText('v2.2.0')).toHaveAttribute('title', 'Commit: 2222222 | Built: 2026-10-19T02:00:00Z');
+    expect(screen.queryByText(complexInfo.version)).not.toBeInTheDocument();
   });
 
   it('displays fallback v0.0.0-dev immediately prior to async resolution and updates upon resolve', async () => {
@@ -319,46 +293,9 @@ describe('Navbar Component', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders project badge when projectName prop is provided', () => {
-    render(
-      <Navbar
-        activeTab="overview"
-        versionInfo={mockBuildInfo} projectConfig={mockProjectConfig}
-        projectName="CustomObservedProject"
-      />
-    );
-
-    const badge = screen.getByText('CustomObservedProject');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('project-badge');
-    expect(badge).toHaveAttribute('title', 'Observed Project: CustomObservedProject');
-    expect(screen.getByText('AgenticLens')).toBeInTheDocument();
-    expect(screen.getByText('Telemetry')).toBeInTheDocument();
-  });
-
-  it('renders project badge when projectConfig prop is provided', () => {
-    render(
-      <Navbar
-        activeTab="overview"
-        versionInfo={mockBuildInfo}
-        projectConfig={{
-          ...mockProjectConfig,
-          project_name: 'ConfiguredRepo',
-        }}
-      />
-    );
-
-    const badge = screen.getByText('ConfiguredRepo');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('project-badge');
-    expect(badge).toHaveAttribute('title', 'Observed Project: ConfiguredRepo');
-    expect(screen.getByText('AgenticLens')).toBeInTheDocument();
-    expect(screen.getByText('Telemetry')).toBeInTheDocument();
-  });
-
   it('invokes onSelectTab with landing when project badge is clicked', () => {
     const onSelectTab = vi.fn();
-    render(
+    const { container, rerender } = render(
       <Navbar
         activeTab="overview"
         onSelectTab={onSelectTab}
@@ -368,23 +305,26 @@ describe('Navbar Component', () => {
     );
 
     const badge = screen.getByText('ClickableProject');
-    fireEvent.click(badge);
-    expect(onSelectTab).toHaveBeenCalledWith('landing');
-  });
-
-  it('preserves permanent AgenticLens and Telemetry branding when project is empty', () => {
-    const { container } = render(
-      <Navbar
-        activeTab="overview"
-        versionInfo={mockBuildInfo}
-        projectConfig={mockProjectConfig}
-        projectName=""
-      />
-    );
-
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('project-badge');
+    expect(badge).toHaveAttribute('title', 'Observed Project: ClickableProject');
     expect(screen.getByText('AgenticLens')).toBeInTheDocument();
     expect(screen.getByText('Telemetry')).toBeInTheDocument();
+    fireEvent.click(badge);
+    expect(onSelectTab).toHaveBeenCalledWith('landing');
+    const projectConfig = { ...mockProjectConfig, project_name: 'ConfiguredRepo' };
+    rerender(<Navbar activeTab="overview" onSelectTab={onSelectTab} versionInfo={mockBuildInfo} projectConfig={projectConfig} />);
+    const configuredBadge = screen.getByText('ConfiguredRepo');
+    expect(configuredBadge).toBeInTheDocument();
+    expect(configuredBadge).toHaveClass('project-badge');
+    expect(configuredBadge).toHaveAttribute('title', 'Observed Project: ConfiguredRepo');
+    expect(screen.getByText('AgenticLens')).toBeInTheDocument();
+    expect(screen.getByText('Telemetry')).toBeInTheDocument();
+
+    rerender(<Navbar activeTab="overview" onSelectTab={onSelectTab} versionInfo={mockBuildInfo} projectConfig={projectConfig} projectName="" />);
     expect(container.querySelector('.project-badge')).toBeNull();
+    expect(screen.getByText('AgenticLens')).toBeInTheDocument();
+    expect(screen.getByText('Telemetry')).toBeInTheDocument();
   });
 
   it('renders fallback project badge and resolves via fetch when projectConfig and projectName are omitted', async () => {

@@ -4,21 +4,29 @@ import { AnomalyBadge } from './AnomalyBadge';
 
 describe('AnomalyBadge Component', () => {
   it('renders WARNING severity with amber styling classes and accessible role status', () => {
-    render(<AnomalyBadge severity="WARNING" />);
+    const { rerender } = render(<AnomalyBadge severity="WARNING" size="sm" />);
     const badge = screen.getByRole('status');
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveClass('anomaly-badge');
     expect(badge).toHaveClass('warning');
     expect(badge).toHaveTextContent('WARNING');
+    expect(badge).toHaveClass('sm');
+    expect(badge).not.toHaveAttribute('title');
+
+    rerender(<AnomalyBadge severity="WARNING" size="md" title="Static Informational Title" />);
+    expect(screen.getByRole('status')).toHaveClass('warning', 'md');
+    expect(screen.getByRole('status')).toHaveTextContent('WARNING');
+    expect(screen.getByRole('status')).toHaveAttribute('title', 'Static Informational Title');
   });
 
   it('renders CRITICAL severity with red styling classes and accessible role status', () => {
-    render(<AnomalyBadge severity="CRITICAL" />);
+    render(<AnomalyBadge severity="CRITICAL" size="lg" />);
     const badge = screen.getByRole('status');
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveClass('anomaly-badge');
     expect(badge).toHaveClass('critical');
     expect(badge).toHaveTextContent('CRITICAL');
+    expect(badge).toHaveClass('lg');
   });
 
   it('renders count accurately when count prop is provided', () => {
@@ -28,58 +36,21 @@ describe('AnomalyBadge Component', () => {
     expect(countSpan).toHaveClass('anomaly-badge-count');
   });
 
-  it('renders custom label string when label prop is provided', () => {
-    render(<AnomalyBadge severity="CRITICAL" label="High Failure Rate" />);
-    expect(screen.getByText('High Failure Rate')).toBeInTheDocument();
-  });
-
   it('invokes onClick callback when clicked and changes role to button', () => {
     const handleClick = vi.fn();
-    render(<AnomalyBadge severity="WARNING" label="Clickable Warning" onClick={handleClick} />);
+    const { rerender } = render(<AnomalyBadge severity="WARNING" label="Clickable Warning" onClick={handleClick} />);
     const button = screen.getByRole('button', { name: 'Clickable Warning' });
     expect(button).toBeInTheDocument();
+    expect(screen.getByText('Clickable Warning')).toBeInTheDocument();
+    expect(button).toHaveAttribute('title', 'Click to open Anomaly Inspector');
     fireEvent.click(button);
     expect(handleClick).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders small, medium, and large sizes according to size prop', () => {
-    const { rerender } = render(<AnomalyBadge severity="WARNING" size="sm" />);
-    expect(screen.getByRole('status')).toHaveClass('sm');
-
-    rerender(<AnomalyBadge severity="WARNING" size="md" />);
-    expect(screen.getByRole('status')).toHaveClass('md');
-
-    rerender(<AnomalyBadge severity="CRITICAL" size="lg" />);
-    expect(screen.getByRole('status')).toHaveClass('lg');
-  });
-
-  it('renders default title attribute on clickable badge when title prop is omitted', () => {
-    render(<AnomalyBadge severity="WARNING" onClick={() => {}} />);
-    const button = screen.getByRole('button');
-    expect(button).toHaveAttribute('title', 'Click to open Anomaly Inspector');
-  });
-
-  it('renders custom title attribute on clickable badge when title prop is provided', () => {
-    render(
-      <AnomalyBadge
-        severity="CRITICAL"
-        title="Custom Inspection Tooltip"
-        onClick={() => {}}
-      />
+    rerender(
+      <AnomalyBadge severity="WARNING" label="Clickable Warning" title="Custom Inspection Tooltip" onClick={handleClick} />
     );
-    const button = screen.getByRole('button');
-    expect(button).toHaveAttribute('title', 'Custom Inspection Tooltip');
-  });
-
-  it('renders custom title attribute on non-clickable badge when title prop is provided', () => {
-    render(<AnomalyBadge severity="WARNING" title="Static Informational Title" />);
-    const badge = screen.getByRole('status');
-    expect(badge).toHaveAttribute('title', 'Static Informational Title');
-  });
-
-  it('does not set title attribute on non-clickable badge when title prop is omitted', () => {
-    render(<AnomalyBadge severity="WARNING" />);
-    const badge = screen.getByRole('status');
-    expect(badge).not.toHaveAttribute('title');
+    const updatedButton = screen.getByRole('button', { name: 'Clickable Warning' });
+    expect(updatedButton).toHaveAttribute('title', 'Custom Inspection Tooltip');
+    fireEvent.click(updatedButton);
+    expect(handleClick).toHaveBeenCalledTimes(2);
   });
 });

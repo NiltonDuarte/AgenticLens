@@ -115,6 +115,12 @@ Every contribution must strictly satisfy the architectural invariants defined in
 5. **Clean Working Tree**:
    - Run `git diff --check` to ensure no whitespace errors or merge marker conflicts.
 
+### 5.1 Before Adding or Removing Tests
+
+Identify the regression and inspect existing tests before writing another case. Follow [test purpose and proportionality](TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality) and the [test review checklist](docs/REGRESSION_PREVENTION.md#adding-reviewing-or-reducing-tests): extend coherent existing coverage, preserve unique assertions when consolidating, and record a specific rationale for deletions. Keep a separate test when it provides independent coverage or clearer failure diagnosis.
+
+Scores and test-to-code ratios are review signals, not quality targets. Include classification/counting assumptions in metric reports and describe what verification actually exercised. A test of workflow text does not prove a release works. Record transferred assertions, actual execution results, and confidence limits in the active iteration review.
+
 ---
 
 ## 6. Releases and Distribution

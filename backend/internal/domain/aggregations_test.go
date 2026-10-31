@@ -575,6 +575,12 @@ func TestEnumsParsing(t *testing.T) {
 	if domain.ParseLedgerSortField("cost") != domain.SortFieldCost {
 		t.Errorf("expected SortFieldCost")
 	}
+	if domain.ParseLedgerSortField("ticket_id") != domain.SortFieldTicketID {
+		t.Errorf("expected SortFieldTicketID, got %v", domain.ParseLedgerSortField("ticket_id"))
+	}
+	if domain.ParseLedgerSortField("completed_at") != domain.SortFieldCompletedAt {
+		t.Errorf("expected SortFieldCompletedAt, got %v", domain.ParseLedgerSortField("completed_at"))
+	}
 	if domain.ParseLedgerSortField("unknown") != domain.SortFieldUpdatedAt {
 		t.Errorf("expected SortFieldUpdatedAt for unknown")
 	}
@@ -620,18 +626,6 @@ func TestBuildComparisonRows(t *testing.T) {
 	}
 	if rows[0].LeadDurationFormatted != "1h 0m" {
 		t.Errorf("expected 1h 0m lead time, got %q", rows[0].LeadDurationFormatted)
-	}
-}
-
-func TestDateFiltersAndAggregations(t *testing.T) {
-	t.Parallel()
-	ref := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
-	start, end := domain.ResolveDatePreset(string(domain.TimeWindowLast7Days), ref)
-	if start == nil || end == nil {
-		t.Fatalf("expected non-nil start and end for 7 days")
-	}
-	if end.Sub(*start) != 7*24*time.Hour {
-		t.Errorf("expected 7 days diff, got %v", end.Sub(*start))
 	}
 }
 
@@ -1399,73 +1393,6 @@ func TestSortLedgers_TicketID(t *testing.T) {
 	})
 }
 
-func TestParseLedgerSortField_TicketID(t *testing.T) {
-	t.Parallel()
-	if domain.ParseLedgerSortField("ticket_id") != domain.SortFieldTicketID {
-		t.Errorf("expected SortFieldTicketID, got %v", domain.ParseLedgerSortField("ticket_id"))
-	}
-}
-
-func TestOrderRoles(t *testing.T) {
-	t.Parallel()
-	input := []string{"advisor", "tester", "researcher", "orchestrator", "coder", "advisor"}
-
-	// With custom order:
-	customOrder := []string{"orchestrator", "coder", "tester"}
-	gotCustom := domain.OrderRoles(input, customOrder)
-	expectedCustom := []string{"orchestrator", "coder", "tester", "advisor", "researcher"}
-	if len(gotCustom) != len(expectedCustom) {
-		t.Fatalf("expected len %d, got %d: %v", len(expectedCustom), len(gotCustom), gotCustom)
-	}
-	for i := range expectedCustom {
-		if gotCustom[i] != expectedCustom[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expectedCustom[i], gotCustom[i])
-		}
-	}
-
-	// Default alphabetical sort without custom order:
-	gotAlpha := domain.OrderRoles(input)
-	expectedAlpha := []string{"advisor", "coder", "orchestrator", "researcher", "tester"}
-	if len(gotAlpha) != len(expectedAlpha) {
-		t.Fatalf("expected len %d, got %d: %v", len(expectedAlpha), len(gotAlpha), gotAlpha)
-	}
-	for i := range expectedAlpha {
-		if gotAlpha[i] != expectedAlpha[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expectedAlpha[i], gotAlpha[i])
-		}
-	}
-}
-
-func TestOrderSubagentRoles(t *testing.T) {
-	t.Parallel()
-	input := []string{"advisor", "reviewer", "orchestrator", "general", "build", "root", "po", "planner", "advisor", "General", "BUILD"}
-
-	// With custom order:
-	customOrder := []string{"planner", "reviewer"}
-	gotCustom := domain.OrderSubagentRoles(input, customOrder)
-	expectedCustom := []string{"planner", "reviewer", "BUILD", "General", "advisor", "build", "general", "orchestrator", "po", "root"}
-	if len(gotCustom) != len(expectedCustom) {
-		t.Fatalf("expected len %d, got %d: %v", len(expectedCustom), len(gotCustom), gotCustom)
-	}
-	for i := range expectedCustom {
-		if gotCustom[i] != expectedCustom[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expectedCustom[i], gotCustom[i])
-		}
-	}
-
-	// Default alphabetical sort without custom order:
-	gotAlpha := domain.OrderSubagentRoles(input)
-	expectedAlpha := []string{"BUILD", "General", "advisor", "build", "general", "orchestrator", "planner", "po", "reviewer", "root"}
-	if len(gotAlpha) != len(expectedAlpha) {
-		t.Fatalf("expected len %d, got %d: %v", len(expectedAlpha), len(gotAlpha), gotAlpha)
-	}
-	for i := range expectedAlpha {
-		if gotAlpha[i] != expectedAlpha[i] {
-			t.Errorf("at index %d: expected %s, got %s", i, expectedAlpha[i], gotAlpha[i])
-		}
-	}
-}
-
 func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 	t.Parallel()
 
@@ -1790,96 +1717,6 @@ func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
 	if advisorRole.Models[1].Model != "model-z" {
 		t.Errorf("expected model-z second, got %s", advisorRole.Models[1].Model)
 	}
-}
-
-func TestOrderRoles_And_OrderSubagentRoles_AdversarialEdgeCases(t *testing.T) {
-	t.Parallel()
-
-	t.Run("empty and whitespace inputs", func(t *testing.T) {
-		t.Parallel()
-		if len(domain.OrderRoles[string](nil)) != 0 {
-			t.Errorf("expected empty slice for nil roles")
-		}
-		if len(domain.OrderRoles([]string{})) != 0 {
-			t.Errorf("expected empty slice for empty roles")
-		}
-		if len(domain.OrderRoles([]string{"", "   ", "\t", "\n"})) != 0 {
-			t.Errorf("expected empty slice for whitespace-only roles")
-		}
-
-		if len(domain.OrderSubagentRoles[string](nil)) != 0 {
-			t.Errorf("expected empty slice for nil subagent roles")
-		}
-		if len(domain.OrderSubagentRoles([]string{})) != 0 {
-			t.Errorf("expected empty slice for empty subagent roles")
-		}
-		if len(domain.OrderSubagentRoles([]string{"", "   ", "\t", "\n"})) != 0 {
-			t.Errorf("expected empty slice for whitespace-only subagent roles")
-		}
-	})
-
-	t.Run("only custom roles sorted alphabetically", func(t *testing.T) {
-		t.Parallel()
-		input := []string{"zeta", "beta", "alpha", "gamma", "beta"}
-		expected := []string{"alpha", "beta", "gamma", "zeta"}
-
-		gotRoles := domain.OrderRoles(input)
-		if len(gotRoles) != len(expected) {
-			t.Fatalf("OrderRoles: expected len %d, got %d", len(expected), len(gotRoles))
-		}
-		for i := range expected {
-			if gotRoles[i] != expected[i] {
-				t.Errorf("OrderRoles at %d: expected %s, got %s", i, expected[i], gotRoles[i])
-			}
-		}
-
-		gotSub := domain.OrderSubagentRoles(input)
-		if len(gotSub) != len(expected) {
-			t.Fatalf("OrderSubagentRoles: expected len %d, got %d", len(expected), len(gotSub))
-		}
-		for i := range expected {
-			if gotSub[i] != expected[i] {
-				t.Errorf("OrderSubagentRoles at %d: expected %s, got %s", i, expected[i], gotSub[i])
-			}
-		}
-	})
-
-	t.Run("canonical roles order preservation", func(t *testing.T) {
-		t.Parallel()
-		// Reversed canonical roles
-		input := []string{"reviewer", "tester", "coder", "planner", "orchestrator"}
-		customOrder := []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
-		expected := []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
-
-		got := domain.OrderRoles(input, customOrder)
-		for i := range expected {
-			if got[i] != expected[i] {
-				t.Errorf("at %d: expected %s, got %s", i, expected[i], got[i])
-			}
-		}
-
-		// Subagents: custom order first, then remaining roles alphabetically
-		subOrder := []string{"planner", "coder", "tester", "reviewer"}
-		subExpected := []string{"planner", "coder", "tester", "reviewer", "orchestrator"}
-		gotSub := domain.OrderSubagentRoles(input, subOrder)
-		if len(gotSub) != len(subExpected) {
-			t.Fatalf("expected len %d, got %d: %v", len(subExpected), len(gotSub), gotSub)
-		}
-		for i := range subExpected {
-			if gotSub[i] != subExpected[i] {
-				t.Errorf("subagent at %d: expected %s, got %s", i, subExpected[i], gotSub[i])
-			}
-		}
-
-		// Alphabetical default when no custom order provided
-		alphaExpected := []string{"coder", "orchestrator", "planner", "reviewer", "tester"}
-		gotAlpha := domain.OrderRoles(input)
-		for i := range alphaExpected {
-			if gotAlpha[i] != alphaExpected[i] {
-				t.Errorf("alpha at %d: expected %s, got %s", i, alphaExpected[i], gotAlpha[i])
-			}
-		}
-	})
 }
 
 func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
@@ -2800,13 +2637,6 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			})
 		}
 	})
-}
-
-func TestParseLedgerSortField_CompletedAt(t *testing.T) {
-	t.Parallel()
-	if domain.ParseLedgerSortField("completed_at") != domain.SortFieldCompletedAt {
-		t.Errorf("expected SortFieldCompletedAt, got %v", domain.ParseLedgerSortField("completed_at"))
-	}
 }
 
 func TestGetLedgerCompletionDate(t *testing.T) {

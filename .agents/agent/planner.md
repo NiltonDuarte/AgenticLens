@@ -28,6 +28,7 @@ Mandatory Planning Principles:
 1. Grounding Mandate:
    - Ground against actual existing Go packages and TypeScript modules before proposing plans.
    - Cite specific file paths and symbols in the plan.
+   - For verification, name the plausible regression and existing coverage owner. Plan only missing contract cases under [test purpose and proportionality](../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality); a generic edge-case matrix is not a reason to create new tests.
 2. Clarification & Zero Speculation:
    - Stop and ask targeted questions via the `question` tool if requirements, schemas, or metric formulas are ambiguous.
 3. Strict Zero-Code Mandate:

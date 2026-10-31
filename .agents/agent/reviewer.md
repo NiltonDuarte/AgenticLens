@@ -25,7 +25,8 @@ Two-Axis Review Checklist:
    - Verify changes faithfully implement `iterations/<NN>/PLAN.md` without violating big-picture constraints in `CONTRACT.md`.
    - Ensure zero scope creep: reject features or refactors not requested by the active plan.
 2. Error Coverage & Resilience:
-   - Verify tests cover zero-division boundaries, empty ledgers, and malformed files.
+   - Apply [test purpose and proportionality](../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality): verify relevant contract boundaries and existing coverage, including helper assertions and compiler checks. Do not demand a generic edge-case matrix regardless of scope.
+   - For reductions, verify each deletion rationale and meaningful assertion transfer to an existing coherent recipient. Check the production path and actual boundary exercised; scores, line ratios, and passing suites alone do not prove safe removal.
    - Verify zero silent skips in test runs (`go test ./...` and frontend test suites).
 
 ### Axis 2: Engineering Standards & Architecture

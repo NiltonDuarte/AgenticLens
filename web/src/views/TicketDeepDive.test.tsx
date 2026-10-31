@@ -817,7 +817,20 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('Telemetry breakdown of model invocations, token volume, cache hit rate, and spend by agent persona role.')).toBeInTheDocument();
         const roleTooltipId = roleHeaderBtn.getAttribute('aria-describedby');
         expect(roleTooltipId).toBeTruthy();
-        expect(document.getElementById(roleTooltipId!)).toHaveClass('placement-left');
+        const roleBubble = document.getElementById(roleTooltipId!);
+        expect(roleBubble).toHaveClass('placement-left');
+        expect(roleBubble).not.toHaveClass('is-visible');
+        // Mouse hover reveals
+        fireEvent.mouseEnter(roleHeaderBtn);
+        expect(roleBubble).toHaveClass('is-visible');
+        fireEvent.mouseLeave(roleHeaderBtn);
+        expect(roleBubble).not.toHaveClass('is-visible');
+        // Keyboard focus reveals
+        fireEvent.focus(roleHeaderBtn);
+        expect(roleBubble).toHaveClass('is-visible');
+        // Escape dismisses
+        fireEvent.keyDown(roleHeaderBtn, { key: 'Escape' });
+        expect(roleBubble).not.toHaveClass('is-visible');
         // Model table header tooltip
         const modelHeaderBtn = screen.getByRole('button', {
             name: 'Information about Model Resource Consumption',
@@ -826,7 +839,13 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('Telemetry breakdown of invocations, token volume, cache hit rate, and spend by model family and version.')).toBeInTheDocument();
         const modelTooltipId = modelHeaderBtn.getAttribute('aria-describedby');
         expect(modelTooltipId).toBeTruthy();
-        expect(document.getElementById(modelTooltipId!)).toHaveClass('placement-left');
+        const modelBubble = document.getElementById(modelTooltipId!);
+        expect(modelBubble).toHaveClass('placement-left');
+        expect(modelBubble).not.toHaveClass('is-visible');
+        fireEvent.focus(modelHeaderBtn);
+        expect(modelBubble).toHaveClass('is-visible');
+        fireEvent.blur(modelHeaderBtn);
+        expect(modelBubble).not.toHaveClass('is-visible');
         // Column headers across tables
         const roleColButtons = screen.getAllByRole('button', { name: 'Information about Role' });
         const modelColButtons = screen.getAllByRole('button', { name: 'Information about Model' });
@@ -955,78 +974,6 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('No session execution threads recorded for this workspace.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Information about Session Execution Threads' })).toBeInTheDocument();
     });
-    it('handles hover and focus on Role and Model Resource Consumption header tooltips with placement-left', async () => {
-        const ledgers = Object.values(mockAgenticMetricsLedgers);
-        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
-            data: ledgers,
-        });
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mockWorkspaceDetails['AL-1']!,
-        });
-        render(<TicketDeepDive selectedTicketId="AL-1"/>);
-        await waitFor(() => {
-            expect(screen.getByText('SDLC Iterations')).toBeInTheDocument();
-        });
-        const roleHeaderBtn = screen.getByRole('button', {
-            name: 'Information about Role Resource Consumption',
-        });
-        const roleBubble = document.getElementById(roleHeaderBtn.getAttribute('aria-describedby')!);
-        expect(roleBubble).toHaveClass('placement-left');
-        expect(roleBubble).not.toHaveClass('is-visible');
-        // Mouse hover reveals
-        fireEvent.mouseEnter(roleHeaderBtn);
-        expect(roleBubble).toHaveClass('is-visible');
-        fireEvent.mouseLeave(roleHeaderBtn);
-        expect(roleBubble).not.toHaveClass('is-visible');
-        // Keyboard focus reveals
-        fireEvent.focus(roleHeaderBtn);
-        expect(roleBubble).toHaveClass('is-visible');
-        // Escape dismisses
-        fireEvent.keyDown(roleHeaderBtn, { key: 'Escape' });
-        expect(roleBubble).not.toHaveClass('is-visible');
-        // Model Resource Consumption tooltip focus
-        const modelHeaderBtn = screen.getByRole('button', {
-            name: 'Information about Model Resource Consumption',
-        });
-        const modelBubble = document.getElementById(modelHeaderBtn.getAttribute('aria-describedby')!);
-        expect(modelBubble).toHaveClass('placement-left');
-        expect(modelBubble).not.toHaveClass('is-visible');
-        fireEvent.focus(modelHeaderBtn);
-        expect(modelBubble).toHaveClass('is-visible');
-        fireEvent.blur(modelHeaderBtn);
-        expect(modelBubble).not.toHaveClass('is-visible');
-    });
-    it('ensures .table-card and .thread-accordion-item in web/src/index.css have overflow: visible to prevent tooltip clipping', () => {
-        const cssPath = path.resolve(__dirname, '../index.css');
-        const cssContent = fs.readFileSync(cssPath, 'utf-8');
-        // Verify .table-card rule explicitly defines overflow: visible and not overflow: hidden
-        const tableCardBlock = cssContent.match(/\.table-card\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(tableCardBlock).toMatch(/overflow:\s*visible;/);
-        expect(tableCardBlock).not.toMatch(/overflow:\s*hidden;/);
-        // Verify .thread-accordion-item rule explicitly defines overflow: visible and not overflow: hidden
-        const threadAccordionBlock = cssContent.match(/\.thread-accordion-item\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(threadAccordionBlock).toMatch(/overflow:\s*visible;/);
-        expect(threadAccordionBlock).not.toMatch(/overflow:\s*hidden;/);
-    });
-    it('ensures .table-responsive, .data-table, and .thread-models-table rules in web/src/index.css satisfy responsive constraints', () => {
-        const cssPath = path.resolve(__dirname, '../index.css');
-        const cssContent = fs.readFileSync(cssPath, 'utf-8');
-        // Verify .table-responsive utility definition
-        const tableResponsiveBlock = cssContent.match(/\.table-responsive\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(tableResponsiveBlock).toMatch(/width:\s*100%;/);
-        expect(tableResponsiveBlock).toMatch(/overflow-x:\s*auto;/);
-        expect(tableResponsiveBlock).toMatch(/-webkit-overflow-scrolling:\s*touch;/);
-        // Verify .data-table min-width and nowrap td
-        const dataTableBlock = cssContent.match(/\.data-table\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(dataTableBlock).toMatch(/min-width:\s*480px;/);
-        const dataTableTdBlock = cssContent.match(/\.data-table\s+td\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(dataTableTdBlock).toMatch(/white-space:\s*nowrap;/);
-        // Verify .thread-models-table min-width and nowrap td
-        const threadModelsTableBlock = cssContent.match(/\.thread-models-table\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(threadModelsTableBlock).toMatch(/min-width:\s*850px;/);
-        const threadModelsTableTdBlock = cssContent.match(/\.thread-models-table\s+td\s*\{[^}]+\}/)?.[0] ?? '';
-        expect(threadModelsTableTdBlock).toMatch(/white-space:\s*nowrap;/);
-    });
     it('wraps Role and Model Resource Consumption tables in .table-responsive containers and keeps headers outside', async () => {
         const ledgers = Object.values(mockAgenticMetricsLedgers);
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
@@ -1066,6 +1013,31 @@ describe('TicketDeepDive View Component', () => {
         });
         const modelBubble = document.getElementById(modelHeaderBtn.getAttribute('aria-describedby')!);
         expect(modelBubble).toHaveClass('placement-left');
+        const cssPath = path.resolve(__dirname, '../index.css');
+        const cssContent = fs.readFileSync(cssPath, 'utf-8');
+        // Verify .table-card rule explicitly defines overflow: visible and not overflow: hidden
+        const tableCardBlock = cssContent.match(/\.table-card\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(tableCardBlock).toMatch(/overflow:\s*visible;/);
+        expect(tableCardBlock).not.toMatch(/overflow:\s*hidden;/);
+        // Verify .thread-accordion-item rule explicitly defines overflow: visible and not overflow: hidden
+        const threadAccordionBlock = cssContent.match(/\.thread-accordion-item\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(threadAccordionBlock).toMatch(/overflow:\s*visible;/);
+        expect(threadAccordionBlock).not.toMatch(/overflow:\s*hidden;/);
+        // Verify .table-responsive utility definition
+        const tableResponsiveBlock = cssContent.match(/\.table-responsive\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(tableResponsiveBlock).toMatch(/width:\s*100%;/);
+        expect(tableResponsiveBlock).toMatch(/overflow-x:\s*auto;/);
+        expect(tableResponsiveBlock).toMatch(/-webkit-overflow-scrolling:\s*touch;/);
+        // Verify .data-table min-width and nowrap td
+        const dataTableBlock = cssContent.match(/\.data-table\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(dataTableBlock).toMatch(/min-width:\s*480px;/);
+        const dataTableTdBlock = cssContent.match(/\.data-table\s+td\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(dataTableTdBlock).toMatch(/white-space:\s*nowrap;/);
+        // Verify .thread-models-table min-width and nowrap td
+        const threadModelsTableBlock = cssContent.match(/\.thread-models-table\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(threadModelsTableBlock).toMatch(/min-width:\s*850px;/);
+        const threadModelsTableTdBlock = cssContent.match(/\.thread-models-table\s+td\s*\{[^}]+\}/)?.[0] ?? '';
+        expect(threadModelsTableTdBlock).toMatch(/white-space:\s*nowrap;/);
     });
     it('renders custom agent roles and arbitrary models in autopsy tables and velocity', async () => {
         const customRoleLedger: AgenticMetricsLedger = {

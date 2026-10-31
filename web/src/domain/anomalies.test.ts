@@ -33,10 +33,22 @@ describe('Domain Anomalies Logic', () => {
   });
   describe('isToolFailureAnomalyRule', () => {
     it('returns true for all four tool failure anomaly rule IDs', () => {
-      expect(isToolFailureAnomalyRule('TOOL_RETRY_STREAK')).toBe(true);
-      expect(isToolFailureAnomalyRule('TOOL_HIGH_FAILURE_RATE')).toBe(true);
-      expect(isToolFailureAnomalyRule('ConsecutiveToolErrors')).toBe(true);
-      expect(isToolFailureAnomalyRule('ToolThrashing')).toBe(true);
+      const canonicalFailures: readonly string[] = [
+        'TOOL_RETRY_STREAK',
+        'TOOL_HIGH_FAILURE_RATE',
+        'ConsecutiveToolErrors',
+        'ToolThrashing',
+      ];
+
+      for (const rule of canonicalFailures) {
+        const candidate: AnomalyRule | string = rule;
+        if (isToolFailureAnomalyRule(candidate)) {
+          const narrowed: ToolFailureAnomalyRule = candidate;
+          expect(narrowed).toBe(rule);
+        } else {
+          throw new Error(`Expected candidate ${rule} to be narrowed to ToolFailureAnomalyRule`);
+        }
+      }
     });
 
     it('returns false for non-tool anomaly rule IDs', () => {
@@ -92,32 +104,6 @@ describe('Domain Anomalies Logic', () => {
       expect(isToolFailureAnomalyRule('ToolThrashing2')).toBe(false);
       expect(isToolFailureAnomalyRule(' TOOL_RETRY_STREAK ')).toBe(false);
       expect(isToolFailureAnomalyRule('ConsecutiveToolErrors\n')).toBe(false);
-    });
-
-    it('narrows candidate to ToolFailureAnomalyRule via type guard across all valid members', () => {
-      const canonicalFailures: readonly string[] = [
-        'TOOL_RETRY_STREAK',
-        'TOOL_HIGH_FAILURE_RATE',
-        'ConsecutiveToolErrors',
-        'ToolThrashing',
-      ];
-
-      for (const rule of canonicalFailures) {
-        const candidate: AnomalyRule | string = rule;
-        if (isToolFailureAnomalyRule(candidate)) {
-          const narrowed: ToolFailureAnomalyRule = candidate;
-          expect(narrowed).toBe(rule);
-        } else {
-          throw new Error(`Expected candidate ${rule} to be narrowed to ToolFailureAnomalyRule`);
-        }
-      }
-
-      const nonToolCandidate: AnomalyRule | string = 'CONTEXT_SATURATION_SPIKE';
-      if (isToolFailureAnomalyRule(nonToolCandidate)) {
-        throw new Error('Non-tool candidate should not pass type guard');
-      } else {
-        expect(nonToolCandidate).toBe('CONTEXT_SATURATION_SPIKE');
-      }
     });
 
     it('strictly enforces LiveAnomalyAlert.rule_name type safety', () => {

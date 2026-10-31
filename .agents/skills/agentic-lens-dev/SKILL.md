@@ -19,6 +19,8 @@ Throughout this workflow:
 - `<WORKSPACES_DIR>` refers to the configured `workspaces.dir` (e.g. `workspaces`).
 - `<TICKET_ID>` uses a configured ticket prefix (e.g. `AL-42`, `GEN-42`, or `PO-2`).
 
+Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality) and [test review checklist](../../../docs/REGRESSION_PREVENTION.md#adding-reviewing-or-reducing-tests) when planning additions, consolidation, or removal.
+
 ## Core Invariants
 - **Single-Ticket Exclusivity**: Never work on more than one ticket at a time. Refuse any switch to another ticket. Treat all subsequent prompts as steering for the active ticket, creating new iterations as needed.
 - **Orchestrator Coordinates Only**: Never write application code, edit manifests/schemas/views, or execute manual fixes directly.
@@ -76,7 +78,7 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
    task(
        subagent_type="tester",
        description="Test iteration <NN>",
-        prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Execute pure Go domain tests (zero mocks) with make test (or go test -race ./...), boundary schema tests, and TypeScript test suites. Assert edge cases (zero tokens, division by zero, empty ledgers). Zero silent skips allowed.",
+        prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Execute pure Go domain tests (zero mocks) with make test (or go test -race ./...), boundary schema tests, and TypeScript test suites. Inspect existing coverage and verify only relevant missing contract cases under the canonical testing policy; extend coherent existing tests before adding declarations. For reductions, verify deletion rationales and assertion-to-recipient transfers. Zero silent skips allowed.",
    )
    ```
 3. **Audit (`reviewer`)**:
