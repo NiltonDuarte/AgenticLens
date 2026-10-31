@@ -13,3 +13,5 @@ Questions submitted via async question tool: AL-only versus AL2 scope; known sub
 Verification: thread list plus targeted search and branch/PR checks before each allocation; stable launch request IDs, host worktree binding, read launched threads and record links/run IDs. Launch only after declared prerequisites and accepted scope are true; no application writes by manager or PO. Reuse existing management/PR verification; selected skill frontmatter validation after dispatch instructions change.
 
 User answered the questions: AL-series only; defer cost changes pending PO review. Both new owners received these exact choices. No cost design selected and no AL-55 code gate cleared.
+
+Approval gate cleared by explicit user request to continue AL-55 implementation after clarification. Release existing developer, preserve accepted bounded scope and separate PO spec ownership. This is the planned acceptance transition, not a new speculative iteration. PO docs merge must precede developer spec-lifecycle move/final integration.
