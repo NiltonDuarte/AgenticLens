@@ -1,12 +1,55 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { TicketComparisons } from './TicketComparisons';
+import type { SkillFact } from '../domain/types';
 import * as apiClient from '../api/client';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 
 describe('TicketComparisons View Component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('matches literal skill names with OR semantics, composes filters, and recovers from empty results', async () => {
+    const fact = (name: string): SkillFact => ({ name, success: true, caller_role: 'coder', turn_index: 0, message_index: 0, timestamp: '2026-01-01T00:00:00Z' });
+    const ids = ['AL-1', 'AL-2', 'AL-3', 'PO-1'];
+    const ledgers = ids.map((id, index) => {
+      const ledger = mockAgenticMetricsLedgers[id]!;
+      return { ...ledger, facts: { ...ledger.facts, skills: index === 0 ? [fact('all'), fact('all')] : index === 1 ? [fact('ALL')] : index === 3 ? [fact('all')] : [] } };
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: ledgers });
+    const { container } = render(<TicketComparisons />);
+    await screen.findByText('AL-1');
+    const table = screen.getByRole('table');
+    const visibleIDs = () => [...container.querySelectorAll('.clickable-comparison-row .ticket-link-btn')].map((node) => node.textContent?.trim()).sort();
+    const points = () => container.querySelectorAll('circle.ticket-scatter-point');
+    expect(within(table).getByText('No recorded skills')).toBeInTheDocument();
+    expect(within(table).getAllByText('all')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('combobox', { name: 'Filter by Skill selector' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'all' }));
+    expect(visibleIDs()).toEqual(['AL-1', 'PO-1']);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'ALL' }));
+    expect(visibleIDs()).toEqual(['AL-1', 'AL-2', 'PO-1']);
+    expect(screen.queryByText('AL-3')).not.toBeInTheDocument();
+    expect(points()).toHaveLength(3);
+    expect(screen.getByText('Benchmarked Workspaces').closest('.kpi-card')).toHaveTextContent('3');
+    fireEvent.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Feature' }));
+    await waitFor(() => expect(visibleIDs()).toEqual(['AL-1', 'AL-2']));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Prefix selector' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'AL' }));
+    await waitFor(() => expect(visibleIDs()).toEqual(['AL-1', 'AL-2']));
+    const search = screen.getByPlaceholderText(/search by ticket id or title/i);
+    fireEvent.change(search, { target: { value: 'AL-3' } });
+    expect(screen.getByText(/No tickets match the query/)).toBeInTheDocument();
+    // Options are still derived from source ledgers while no displayed row matches.
+    expect(screen.getByRole('checkbox', { name: 'all' })).toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all Filter by Skill' }));
+    expect(visibleIDs()).toEqual(['AL-3']);
+    expect(points()).toHaveLength(1);
+    fireEvent.change(search, { target: { value: '' } });
+    expect(visibleIDs()).toEqual(['AL-1', 'AL-2', 'AL-3']);
+    expect(screen.queryByText('PO-1')).not.toBeInTheDocument();
   });
 
   it('shows ticket-specific skipped-workspace diagnostics alongside valid rows', async () => {
@@ -206,7 +249,7 @@ describe('TicketComparisons View Component', () => {
     });
   });
 
-  it('renders all 15 expected table columns and benchmarking KPI summary values', async () => {
+  it('renders all 16 expected table columns and benchmarking KPI summary values', async () => {
     const ledgers = Object.values(mockAgenticMetricsLedgers);
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
       data: ledgers,
@@ -225,10 +268,11 @@ describe('TicketComparisons View Component', () => {
     expect(screen.getByText('Fleet Tool Success Rate')).toBeInTheDocument();
     expect(screen.getByText('Average Spend / Ticket')).toBeInTheDocument();
 
-    // Check all 15 column headers
+    // Check all 16 column headers
     const expectedHeaders = [
       /ticket id/i,
       /title/i,
+      /skills used/i,
       /status/i,
       /completed/i,
       /started/i,

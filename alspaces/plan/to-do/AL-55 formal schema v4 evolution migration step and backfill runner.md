@@ -3,12 +3,12 @@
 - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
 - **Phase**: Phase 8 (v2 Observability / Skills)
 - **Status**: Pending
-- **Blocked by**: AL-52, AL-53, AL-54
+- **Blocked by**: AL-52, AL-53
 - **Blocks**: None
 
 ## Planning status (2026-10-31)
 
-Partially superseded; remains blocked by AL-52, AL-53, and AL-54. AL-51 merged in [PR #62](https://github.com/NiltonDuarte/AgenticLens/pull/62), satisfying its ingestion dependency.
+Partially superseded; remains blocked by AL-52 and AL-53. AL-54 implementation is complete (see its workspace summary). AL-51 merged in [PR #62](https://github.com/NiltonDuarte/AgenticLens/pull/62), satisfying its ingestion dependency.
 
 AL-56 already shipped schema v4, the Go v3-to-v4 migration, and explicit migration/source-backfill boundaries in [PR #38](https://github.com/NiltonDuarte/AgenticLens/pull/38) and [PR #43](https://github.com/NiltonDuarte/AgenticLens/pull/43). AL-51 deliberately kept skills/task links optional at that version. The existing migration does not establish the proposed required-array contract, so this ticket is not complete.
 

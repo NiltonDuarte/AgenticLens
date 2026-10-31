@@ -68,14 +68,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: AL-55
   - **File**: `alspaces/plan/to-do/AL-53 dedicated skills and subagents autopsy panel in ticket deep dive.md`
 
-- **AL-54**: Fleet-Wide Skill Adoption Analytics and Comparison Matrix Filter
-  - **Subsystem**: Presentation / Web / Fleet / Comparisons / Domain / Tests
-  - **Phase**: Phase 8 (v2 Observability / Skills)
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-55
-  - **File**: `alspaces/plan/to-do/AL-54 fleet wide skill adoption analytics and comparison matrix filter.md`
-
 - **AL-43**: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations
   - **Subsystem**: Domain / Adapters / Presentation / Web / Tests
   - **Phase**: Phase 7 (v1 Feature / Observability)
@@ -100,7 +92,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Subsystem**: Domain / Migration / Adapters / Backfill / CLI / Tests
   - **Phase**: Phase 8 (v2 Observability / Skills)
   - **Status**: Pending
-  - **Blocked by**: AL-52, AL-53, AL-54
+  - **Blocked by**: AL-52, AL-53
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-55 formal schema v4 evolution migration step and backfill runner.md`
 

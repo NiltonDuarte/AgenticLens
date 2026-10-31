@@ -1,3 +1,4 @@
+import { skillNames } from './aggregations';
 import type {
   AgenticMetricsLedger,
   ComparisonSortField,
@@ -318,6 +319,7 @@ export function deriveTicketComparisonRows(
 
     return {
       ticket_id: tid,
+      skills_used: skillNames(ledger.facts),
       ticket_type: ledger.ticket_type,
       updated_at: ledger.updated_at,
       sdlc_iterations: eff.sdlc_iterations,

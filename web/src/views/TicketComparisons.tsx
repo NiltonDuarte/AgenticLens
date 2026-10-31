@@ -5,6 +5,7 @@ import type {
   ComparisonSortOrder,
   WorkspaceDiagnostic,
 } from '../domain/types';
+import { compareSkillNames, skillNames } from '../domain/aggregations';
 import { fetchWorkspaceLedgers } from '../api/client';
 import { WorkspaceLoadWarning } from '../components/WorkspaceLoadWarning';
 import {
@@ -50,6 +51,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
   const [selectedTicketTypes, setSelectedTicketTypes] = useState<readonly string[]>(['all']);
   const [selectedPrefixes, setSelectedPrefixes] = useState<readonly string[]>(['all']);
+  const [selectedSkills, setSelectedSkills] = useState<readonly string[]>(['all']);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<ComparisonSortField | undefined>(undefined);
   const [sortOrder, setSortOrder] = useState<ComparisonSortOrder>('desc');
@@ -113,12 +115,20 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
     return combined.map((p) => ({ value: p, label: p }));
   }, [knownPrefixes, configuredPrefixes]);
 
+  const skillOptions: readonly MultiSelectOption[] = useMemo(() => {
+    const names = new Set(ledgers.flatMap((ledger) => skillNames(ledger.facts)));
+    return [...names].sort(compareSkillNames).map((name) => ({ value: `skill:${name}`, label: name }));
+  }, [ledgers]);
+
   const filteredLedgers = useMemo(() => {
     let list = ledgers;
     list = filterLedgersByTicketTypes(list, selectedTicketTypes);
     list = filterLedgersByPrefixes(list, selectedPrefixes);
+    if (selectedSkills.length > 0 && !selectedSkills.includes('all')) {
+      list = list.filter((ledger) => skillNames(ledger.facts).some((name) => selectedSkills.includes(`skill:${name}`)));
+    }
     return list;
-  }, [ledgers, selectedTicketTypes, selectedPrefixes]);
+  }, [ledgers, selectedTicketTypes, selectedPrefixes, selectedSkills]);
 
   const allRows = useMemo(() => {
     return deriveTicketComparisonRows(filteredLedgers, sortField, sortOrder);
@@ -138,7 +148,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
 
   // Fleet benchmarking stats
   const benchmarks = useMemo(() => {
-    const total = allRows.length;
+    const total = filteredRows.length;
     if (total === 0) {
       return {
         totalTickets: 0,
@@ -154,7 +164,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
     let totCost = 0;
     let totToolSuccess = 0;
 
-    for (const r of allRows) {
+    for (const r of filteredRows) {
       totDuration += r.active_duration_seconds;
       totIterations += r.sdlc_iterations;
       totCost += r.cost_usd;
@@ -173,7 +183,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
       avgCostFormatted: formatCurrencyUSD(avgCost),
       fleetToolSuccessPct: formatPercentage(avgToolPct),
     };
-  }, [allRows]);
+  }, [filteredRows]);
 
   const handleHeaderSort = (field: ComparisonSortField) => {
     if (sortField === field) {
@@ -284,6 +294,15 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           onChange={setSelectedPrefixes}
         />
 
+        <MultiSelectDropdown
+          id="comp-skill"
+          label="Filter by Skill"
+          options={skillOptions}
+          selectedValues={selectedSkills}
+          onChange={setSelectedSkills}
+          collapseCompleteSelection={false}
+        />
+
         <div className="table-row-count">
           Showing {filteredRows.length} of {allRows.length} tickets
         </div>
@@ -327,6 +346,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                     />
                   </span>
                 </th>
+                <th aria-label="Skills Used">Skills Used</th>
                 <th aria-label="Status">
                   <span className="th-content">
                     <span>Status</span>
@@ -498,7 +518,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
             <tbody>
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={15} className="empty-table-cell">
+                  <td colSpan={16} className="empty-table-cell">
                     {searchQuery
                       ? `No tickets match the query "${searchQuery}".`
                       : 'No tickets match the selected filters.'}
@@ -529,6 +549,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                       <td className="ticket-title-cell" title={row.ticket_title}>
                         {row.ticket_title}
                       </td>
+                      <td title={row.skills_used?.join(', ')}>{row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills'}</td>
                       <td>
                         <span className={`status-pill ${isCompleted ? 'live' : 'mock'}`}>
                           {isCompleted ? 'Completed' : 'In Progress'}

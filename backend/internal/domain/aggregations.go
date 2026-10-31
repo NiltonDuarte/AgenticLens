@@ -762,6 +762,65 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	}
 }
 
+// ComputeSkillAdoption aggregates recorded invocations without mutating the ledgers.
+// Ticket identities are distinct; unidentified ledgers each count as one ticket.
+func ComputeSkillAdoption(ledgers []AgenticFactLedger) []SkillAdoptionFact {
+	type ticketIdentity struct {
+		id                string
+		unidentifiedIndex int
+	}
+	totals := make(map[string]SkillAdoptionFact)
+	tickets := make(map[string]map[ticketIdentity]bool)
+	for i, ledger := range ledgers {
+		identity := ticketIdentity{unidentifiedIndex: i}
+		if ledger.TicketID != nil && *ledger.TicketID != "" {
+			identity = ticketIdentity{id: *ledger.TicketID, unidentifiedIndex: -1}
+		}
+		for _, skill := range ledger.Skills {
+			fact := totals[skill.Name]
+			fact.Name = skill.Name
+			fact.TotalInvocations++
+			if !skill.Success {
+				fact.FailureCount++
+			}
+			if tickets[skill.Name] == nil {
+				tickets[skill.Name] = make(map[ticketIdentity]bool)
+			}
+			if !tickets[skill.Name][identity] {
+				fact.TicketsCount++
+				tickets[skill.Name][identity] = true
+			}
+			totals[skill.Name] = fact
+		}
+	}
+	result := make([]SkillAdoptionFact, 0, len(totals))
+	for _, fact := range totals {
+		fact.FailureRate = float64(fact.FailureCount) / float64(fact.TotalInvocations)
+		result = append(result, fact)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].TotalInvocations != result[j].TotalInvocations {
+			return result[i].TotalInvocations > result[j].TotalInvocations
+		}
+		return result[i].Name < result[j].Name
+	})
+	return result
+}
+
+// SkillNames returns distinct recorded skill names in exact lexical order.
+func SkillNames(ledger AgenticFactLedger) []string {
+	names := make(map[string]bool)
+	for _, skill := range ledger.Skills {
+		names[skill.Name] = true
+	}
+	result := make([]string, 0, len(names))
+	for name := range names {
+		result = append(result, name)
+	}
+	sort.Strings(result)
+	return result
+}
+
 // CalculateFleetSummary aggregates high-level metrics across multiple ledgers.
 func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	totalTickets := int64(len(ledgers))
@@ -784,6 +843,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 			RoleCosts:                make(map[AgentRole]float64),
 			ModelCosts:               make(map[string]float64),
 			AnomalySummary:           ComputeFleetAnomalies(nil),
+			SkillAdoption:            ComputeSkillAdoption(nil),
 		}
 	}
 
@@ -861,6 +921,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		RoleCosts:                roleCosts,
 		ModelCosts:               modelCosts,
 		AnomalySummary:           anomalySummary,
+		SkillAdoption:            ComputeSkillAdoption(factLedgers),
 	}
 }
 
@@ -930,6 +991,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 
 		rows = append(rows, TicketComparisonRow{
 			TicketID:                tid,
+			SkillsUsed:              SkillNames(ledger.Facts),
 			UpdatedAt:               ledger.UpdatedAt,
 			SDLCIterations:          eff.SDLCIterations,
 			ActiveDurationSeconds:   eff.ActiveDurationSeconds,
