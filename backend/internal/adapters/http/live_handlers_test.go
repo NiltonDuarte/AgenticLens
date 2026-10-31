@@ -3,9 +3,11 @@ package http_test
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -738,5 +740,94 @@ func TestLiveHandlers_NilSlicesSerializeAsEmptyArrays(t *testing.T) {
 	}
 	if string(rawTrace["anomalies"]) != "[]" {
 		t.Errorf("expected anomalies to serialize as [], got %s", string(rawTrace["anomalies"]))
+	}
+}
+
+func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "live.db")
+	writer, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+	now := time.Now().UnixMilli()
+	if _, err := writer.Exec(`PRAGMA journal_mode=WAL;
+ CREATE TABLE session (id TEXT PRIMARY KEY, parent_id TEXT, agent TEXT, model TEXT, title TEXT, time_created INTEGER, time_updated INTEGER);
+ CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, data TEXT);
+ CREATE TABLE part (id TEXT PRIMARY KEY, session_id TEXT, message_id TEXT, time_created INTEGER, data TEXT);
+ INSERT INTO session VALUES ('growing', NULL, 'coder', 'test', 'growing', ?, ?);
+ INSERT INTO message VALUES ('turn', 'growing', ?, '{"role":"assistant","content":"before","tokens":{"input":10}}');`, now, now, now); err != nil {
+		t.Fatal(err)
+	}
+	hook, err := live.OpenReadOnlyHook(dbPath, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := domain.DefaultProjectConfig()
+	cfg.Live.PollIntervalMs = 15
+	service := live.NewLiveService(hook, cfg)
+	defer service.Close()
+	server := adaptershttp.NewServerWithConfig(t.TempDir(), fstest.MapFS{"index.html": {Data: []byte("dashboard")}}, cfg, service)
+	ts := httptest.NewServer(server.Handler())
+	defer ts.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/api/live/stream", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	scanner := bufio.NewScanner(response.Body)
+	readTrace := func() domain.LiveTraceView {
+		t.Helper()
+		event := ""
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "event: ") {
+				event = strings.TrimPrefix(line, "event: ")
+			}
+			if event == "trace_update" && strings.HasPrefix(line, "data: ") {
+				var trace domain.LiveTraceView
+				if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &trace); err != nil {
+					t.Fatal(err)
+				}
+				return trace
+			}
+		}
+		t.Fatalf("stream ended before trace: %v", scanner.Err())
+		return domain.LiveTraceView{}
+	}
+	service.Start(ctx)
+	initial := readTrace()
+	if len(initial.Messages) != 1 || initial.Messages[0].Content != "before" {
+		t.Fatalf("unexpected initial snapshot: %+v", initial)
+	}
+	// Keep all timestamps and row counts unchanged, as with streaming edits.
+	if _, err := writer.Exec(`UPDATE message SET data = '{"role":"assistant","content":"after","reasoning":"new reasoning","tokens":{"input":20,"output":5,"reasoning":3}}' WHERE id = 'turn'`); err != nil {
+		t.Fatal(err)
+	}
+	updated := readTrace()
+	if updated.SessionID != "growing" || len(updated.Messages) != 1 || updated.Messages[0].Content != "after" || updated.Messages[0].TotalTokens != 25 || updated.Messages[0].ReasoningTokens != 3 {
+		t.Fatalf("SQLite mutation did not reach flushed SSE payload: %+v", updated)
+	}
+	traceReq, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/api/live/sessions/growing/trace", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	traceResponse, err := ts.Client().Do(traceReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer traceResponse.Body.Close()
+	var fetched domain.LiveTraceView
+	if err := json.NewDecoder(traceResponse.Body).Decode(&fetched); err != nil {
+		t.Fatal(err)
+	}
+	if traceResponse.StatusCode != http.StatusOK || fetched.SessionID != updated.SessionID || len(fetched.Messages) != 1 || fetched.Messages[0].Content != "after" || fetched.Messages[0].TotalTokens != 25 || fetched.Messages[0].ReasoningContent == nil || *fetched.Messages[0].ReasoningContent != "new reasoning" {
+		t.Fatalf("REST recovery disagrees with pushed snapshot: status=%d trace=%+v", traceResponse.StatusCode, fetched)
 	}
 }

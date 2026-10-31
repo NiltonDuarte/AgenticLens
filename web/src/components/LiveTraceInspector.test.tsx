@@ -436,6 +436,31 @@ describe('LiveTraceInspector Component', () => {
     expect(screen.getByRole('button', { name: /new turns available/i })).toBeInTheDocument();
   });
 
+  it.each(['latest-first', 'oldest-first'])('anchors same-turn growth without remounting reasoning in %s order', (order) => {
+    const { rerender } = render(
+      <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
+    );
+    if (order === 'oldest-first') fireEvent.click(screen.getByTestId('turn-order-toggle-btn'));
+    const list = document.querySelector('.inspector-messages-list') as HTMLDivElement;
+    Object.defineProperties(list, {
+      scrollHeight: { configurable: true, value: 1000 }, clientHeight: { configurable: true, value: 100 },
+    });
+    list.getBoundingClientRect = () => new DOMRect(0, 100, 300, 100);
+    const anchors = Array.from(list.querySelectorAll<HTMLElement>('[data-trace-anchor]'));
+    const anchor = anchors[1]!;
+    let top = 110;
+    anchors.forEach((element, index) => { element.getBoundingClientRect = () => new DOMRect(0, index === 1 ? top : 0, 100, 20); });
+    list.scrollTop = 200;
+    fireEvent.scroll(list);
+    const turn = anchor.closest('.trace-message-turn');
+    top = 170;
+    const next = { ...mockLiveTraceView, messages: mockLiveTraceView.messages.map((message) => ({ ...message, content: message.content + ' streamed growth' })) };
+    rerender(<LiveTraceInspector sessionNode={mockNode} trace={next} loading={true} onClose={vi.fn()} />);
+    expect(list.scrollTop).toBe(260);
+    expect(anchor.closest('.trace-message-turn')).toBe(turn);
+    expect(screen.queryByRole('button', { name: /new turns available/i })).not.toBeInTheDocument();
+  });
+
   it('quick navigation buttons scroll to each end of the message list', () => {
     render(
       <LiveTraceInspector sessionNode={mockNode} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />
