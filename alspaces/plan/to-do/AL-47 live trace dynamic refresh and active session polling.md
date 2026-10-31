@@ -41,3 +41,7 @@ Enable seamless, real-time live updates in the right inspector pane for actively
 * Quality gates passing (`make check`, `make test`, or `make`).
 * Go and TypeScript type checking clean with zero any.
 * Telemetry tested with `agentic-lens` CLI.
+
+*PLANNING STATUS (2026-10-31)*
+
+Still open. The current backend emits `trace_update` and `LiveObservability.tsx` already handles `onTraceUpdate`, so the context above describes the original report rather than the entire current implementation. AL-49 supplies inspector scroll preservation. Before implementation, verify the remaining active-session refresh, completed-session cessation, SSE fallback, and reading-state acceptance cases; existing streaming alone does not establish completion.
