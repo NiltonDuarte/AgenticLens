@@ -1,0 +1,10 @@
+# REV-4 iteration 06 plan
+
+User approval: the direct request authorizes documentation updates based on the session; no application/test work is proposed. The delta contract defines the new acceptance boundary. Parent owns all writable documentation, self-review, integration, telemetry, commits, and PR delivery; no subagents are launched for documentation-only maintenance.
+
+1. Read REV-3's completed evidence-to-guidance approach, current shared guidance, agent personas, skill instructions, configuration, and REV-4 decisions. Preserve historical ticket records and unrelated work. Baseline status is clean at 790e14c.
+2. Put test-selection, consolidation, boundary-proof, and metric interpretation rules in root TECHNICAL_GUIDELINES.md. Add actionable review steps to the regression checklist and contributor guide. Link AGENTS.md and README.md to the canonical rules.
+3. Align planner/coder/tester/reviewer/orchestrator test instructions and development/review skills. Replace the stale skill-local full guidelines copy with a canonical pointer. Preserve skill frontmatter, permissions, unrelated workflow and architecture checks. Search setup and specification templates for conflicting test-policy generation; change only affected text.
+4. Record the observed session evidence, inference limits, and documentation-only disposition in REVIEW.md and SUMMARY.md. Keep shared guidance generic and PR scope current.
+5. Validate changed Markdown links/anchors, zero emojis, frontmatter, skill structure, expected paths and whitespace; self-review for overgeneralized quotas or mandatory new test matrices. Commit the reviewed docs, fetch/merge origin/main, and run make on the integrated result. Reuse unchanged-code evidence only where justified.
+6. Refresh telemetry as final preparation using the actual Codex root and literal nonce. Verify all existing root/child sources and invocation records survive, record extraction limits, commit task-owned final artifacts, push and link the open PR. No runtime fixes or stronger defect-detection guarantees are claimed.

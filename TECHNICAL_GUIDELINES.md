@@ -159,6 +159,25 @@ npm test
 npm run build      # Produces web/dist/ for Go embedding
 ```
 
+### Test Purpose and Proportionality
+
+Each test must exercise application behavior or an intentional wire/compiler contract and identify a plausible regression its assertions would detect. Before adding a test, inspect existing cases and helpers. Extend a coherent existing test or table when it can express the missing behavior clearly; add a separate test when it needs distinct setup, ownership, or failure diagnosis. Select boundary cases relevant to the changed contract rather than repeating a generic edge-case checklist for every function.
+
+- Avoid assertions that only confirm fixture literals, direct struct assignments, TypeScript casts, standard-library behavior, or an implementation copied into the test. Exercise the production path and use an independent expected result. A local JSON roundtrip plus a TypeScript cast does not validate an API; actual JSON tags, custom codecs, runtime validators, and negative compiler checks can protect real contracts.
+- Read helper assertions and compiler directives before calling a test assertion-free. Keep important absence/default/override behavior, failure handling, source provenance, ownership, multiplicity, numerical boundaries, accessible interactions, and asynchronous state transitions where the feature depends on them. Coverage of the same feature at different layers is not automatically redundant.
+- Delete a test only with an explicit redundancy or invalid-contract rationale. Before consolidating it, map every meaningful assertion to a named existing recipient exercising the same behavior. Preserve the oracle and setup needed to reach it; retain a separate guard when no coherent recipient exists. Avoid unrelated large test bodies or helper suites created merely to reduce declaration counts.
+- Scores, test counts, coverage percentages, runtime, and test-to-production line ratios guide investigation; none is a creation or deletion quota. If a 0-10 score is requested, state the rubric: 0 identifies a candidate with no useful guard; 10 identifies a critical contract guard. A low score requires inspection, and retained tests keep their honest scores. Report whether a review screened source or examined bodies and peers directly; passing the suite alone does not establish equivalent defect detection.
+
+### Match Verification to the Claimed Boundary
+
+Tests of workflow text, help strings, or copied release logic do not establish successful CI execution. Missing-file/checksum guards prove their rejection path; build, packaging, publishing, download, and host execution need evidence at those boundaries when they are in scope. Describe that limit rather than claiming full release coverage. Likewise, source/CSS assertions do not establish browser geometry, and DOM text alone may not establish accessible behavior.
+
+Domain tests remain pure and deterministic with zero mocks. Real filesystem, SQLite, and Git fixtures are appropriate when testing adapter behavior that depends on them. Preserve those boundaries when optimizing; an in-memory substitute must not erase the behavior under test. Parallelize only independent tests; environment, process-global, and linker-metadata mutation require isolation or serial execution. Replace arbitrary sleeps with deterministic synchronization or controlled timers where practical. Measure performance with comparable cache, race-detector, and concurrency settings; rounded test-runner timings do not establish a microsecond SLA.
+
+### Interpreting Test Metrics
+
+When reporting a line ratio, state source roots, classification patterns, exclusions, and treatment of helpers, fixtures, generated files, comments, and blank lines. Distinguish whole-tree physical source counts from executable lines and per-diff added lines. Configured telemetry classification and an adjusted source estimate may differ; label both rather than silently substituting one for the other. There is no universal good ratio: assess risk coverage, maintenance cost, and actual regressions caught.
+
 ### Fixture and Verification Boundaries
 
 Select cases from the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before implementing boundary changes.

@@ -266,3 +266,13 @@ Reviewed the new docs/REGRESSION_PREVENTION.md checklist and owning guidance. Ap
 Main-merge verification at `ca1fec8`: full make exited 0, including dependency/assets preparation, Go vet/race checks, frontend typecheck/lint, all 712 frontend cases across 34 files, and four binary builds. Current HTML/JS/CSS bytes verified in the standalone Linux executable. No source/test/Makefile diff from the previously approved 13d6b57 state. No stages skipped. Existing reviewed behavior and confidence limits remain unchanged.
 
 Main-merge final telemetry verified: original Codex root and all 13 existing children preserved/refreshed, correct parent IDs and nonempty invocations. No new children expected. Type chore reflects integration work; unavailable billed cost remains explicitly unknown in this summary.
+
+## Iteration 06: carry session findings into contributor guidance
+
+Source: user requested documentation updates inspired by REV-3 and based on this session. Initial status clean at `790e14c555d29e819dae51bb26a6849824d7bc2a`; existing PR #72 open. New acceptance is documentation-only under iterations/06/CONTRACT.md and PLAN.md; prior test decisions and verification remain accepted.
+
+TECHNICAL_GUIDELINES.md now owns test-value and proportionality rules, assertion-preserving consolidation, verification at the claimed boundary, and honest metric interpretation. The prevention checklist and contributor guide provide practical review steps; AGENTS.md and README.md link the policy and remove misleading ratio/coverage claims. Five development personas and the dev/review skills now select relevant missing contracts, preserve real adapter fixtures and independent coverage, and avoid universal test-volume or timing quotas. The stale skill-local full technical guide becomes a canonical reference.
+
+Evidence-to-rule mapping and limits are in iterations/06/REVIEW.md. Shared docs use generic rules without ticket-specific history. No application/tests/configuration/schemas/scripts/dependencies changed, no additional deletions or score changes, and no runtime enforcement or improved CI coverage is claimed. Documentation-only self-review is permitted by AGENTS.md; no new subagents were launched. Skill-creator guidance was used to preserve metadata and keep focused references.
+
+Documentation validation passed: 18 Markdown paths, 13 shared guides, 53 local links/anchors; unchanged skill/persona frontmatter and permissions, no shared ticket references or emojis, both modified skills valid, and clean whitespace. Source/config/Makefile diff against the iteration baseline is empty. Self-review accepted; integration and final telemetry follow.

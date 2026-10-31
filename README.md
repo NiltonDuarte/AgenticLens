@@ -53,7 +53,7 @@ An embedded pure-functional configurable rule engine flags dangerous execution p
 
 ### 4. Automated Session Ledgers
 - Automatically compile audit-ready markdown telemetry blocks into session summaries (e.g. `SUMMARY.md`).
-- Ensure every work session includes verifiable proof of agent reasoning, context health, anomaly status, and test coverage.
+- Review recorded session facts, context health, anomaly status, and verification evidence; telemetry and line ratios alone do not establish test coverage.
 
 ### 5. Universal Backfill and Schema Migrations
 - Recompute historical workspace facts from git commit history and SQLite event traces.
@@ -132,7 +132,7 @@ AgenticLens brings rigor to the Autonomous Software Development Life Cycle:
 
 1. **Pre-flight & Inception**: Track architectural planning and contract formulation without runaway prompt spending.
 2. **Implementation Guardrails**: Catch tool failure spirals and context saturation spikes before code corruption happens.
-3. **Adversarial Verification**: Monitor testing velocity and ensure test-to-production ratios satisfy engineering standards.
+3. **Test Review**: Use test-to-production trends to prompt review of regression coverage and maintenance cost; a ratio alone does not establish quality.
 4. **Handoff & Merge**: Stamp every work session with deterministic execution telemetry, anomaly verdicts, and cost ledgers.
 
 ---
@@ -210,3 +210,5 @@ Code classification is configured under `code_metrics` in `.agenticlens-config.y
 `test_patterns` identifies tests and fixtures; `prod_patterns` and `include` identify production files. There are no implicit test directory, test filename, or production extension rules. Empty patterns leave files unclassified (`Other`), which can contribute to total lines without contributing to test/production subtotals.
 
 Patterns containing `/` are relative to the repository root; a `**` path component matches zero or more directories. Patterns without `/` match basenames. Workspace exclusions and `exclude` win, followed by test patterns, then production/include patterns. The existing lockfile/dotfile exclusions apply to otherwise unmatched files. Both Git discovery modes monitor the required `code_metrics.source_roots` plus configured test, production, and include patterns, allowing fixtures outside source roots.
+
+Interpret ratios using the configured classification and counting basis. Test helpers can be counted as production if no test pattern matches them; generated files, fixtures, comments, and blank lines also affect comparisons. Whole-repository source counts and session diff-added counts answer different questions. There is no universal target ratio; use the [test metrics guidance](TECHNICAL_GUIDELINES.md#interpreting-test-metrics) and [contributor test review steps](CONTRIBUTING.md#51-before-adding-or-removing-tests) to assess coverage and maintenance cost.

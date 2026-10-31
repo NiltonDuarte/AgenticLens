@@ -71,6 +71,16 @@ For migrations, distinguish structural validity, incomplete resumable workflow s
 
 State how work grows with sessions, history size, poll frequency, and subscribers. Avoid unconditional full-history reconstruction on every unchanged tick. Verify idle and changed sessions, reconnects, cancellation, and child lookup errors. A failed child lookup must produce an error or explicit partial result, rather than a successful empty set.
 
+## Adding, reviewing, or reducing tests
+
+Apply the [canonical testing policy](../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality). For each candidate, record the application contract, plausible failure, actual production path, and assertions (including helpers and compiler checks). Inspect existing peers before adding or deleting coverage. Keep genuine adapter fixtures and distinct ownership/layer boundaries when they provide independent proof.
+
+For reduction, record the source test and either its specific deletion rationale or the existing recipient for each meaningful assertion. Preserve defaults, overrides, absent values, accessibility, callbacks, counts, keyboard interactions, and failure paths when present. If a recipient would obscure the contract or cannot preserve its oracle, retain the independent test. A low score, short body, or passing run is insufficient evidence for removal.
+
+When producing a suite inventory, use syntax-aware discovery that handles multiline signatures and parameterized declarations. Identify duplicate titles by path and line. Separate declarations, expanded runtime cases, helpers, and fixtures. Verify the actual removed set and permitted recipient changes against the baseline; report intentionally discarded assertions as well as transferred ones. Define fingerprint inputs if using hashes as evidence.
+
+Run affected checks and the required integrated gate; report actual passed, failed, and skipped cases. Preserve compiler validation where type checks are the oracle. State review confidence and untested boundaries; do not claim mutation equivalence without evidence. For performance or line-ratio comparisons, record the measurement basis from the [metrics guidance](../TECHNICAL_GUIDELINES.md#interpreting-test-metrics).
+
 ## Before handoff
 
 Record the tested commit/diff, command, result, skipped stages, and environment limits. Reference valid prior results for unchanged code. For each review finding, state fixed, still open, or out of scope with an evidence link; approval does not erase an untested branch. Keep final PR text aligned with delivered scope, and check whether a previous PR has already merged before attaching later work to it.

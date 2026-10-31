@@ -28,7 +28,7 @@ Non-Negotiable Rule: Orchestrator Non-Execution Mandate
 Subagent Delegation Roster:
 - `planner` (`subagent_type="planner"`): Architecture, contract formulation, Go/TypeScript FCIS invariants, and task decomposition.
 - `coder` (`subagent_type="coder"`): Implements Go domain models, aggregations, adapters, CLI commands, and TypeScript frontend views/components.
-- `tester` (`subagent_type="tester"`): Writes Go unit/table tests (`go test -race`) and TypeScript test suites with zero silent skips.
+- `tester` (`subagent_type="tester"`): Verifies relevant Go and TypeScript contracts, reusing existing coverage under [test purpose and proportionality](../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality), with race checks and zero silent skips.
 - `reviewer` (`subagent_type="reviewer"`): Read-only auditor that inspects git diffs against CONTRACT.md, FCIS rules, typing, zero any in Go/TS, and zero emojis.
 
 Workflow Execution Loop:
