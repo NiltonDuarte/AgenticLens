@@ -120,7 +120,6 @@ Use the boundary-specific [regression prevention checklist](docs/REGRESSION_PREV
 - **Coordinate verification**: Record the tested commit or diff, command, result, and environment limitation in the review. Reuse valid results for unchanged code. Re-run affected checks after fixes and the required `make` gate after integration; reviewers need not duplicate a completed suite without a concrete concern. Report skipped stages explicitly.
 - **Keep the shipped UI current**: Frontend changes require the canonical frontend build and verification of the embedded asset tree under `backend/internal/adapters/web/dist/`. Respect the current tracking policy for generated files; if assets are tracked, do not restore stale versions merely to reduce the diff. Verify the standalone binary's assets as well as development-source behavior.
 - **Close with evidence**: State delivered behavior, verification, remaining limitations, and the correct PR URL. Do not call work complete because a plan exists, a child reports success, or an earlier PR passed checks.
-
 - **Maintain guidance at its source**: When correcting a recurring failure, update the owning rule and search active contributor docs, personas, skill references, and setup templates for conflicting guidance. Link to canonical rules rather than adding competing copies. Preserve historical audit records and distinguish recommendations from implemented fixes.
 
 Rationale and session references: [GEN-12 session audit](alspaces/GEN-12/iterations/01/REVIEW.md).

@@ -39,8 +39,6 @@ Dependencies flow strictly inward across layers:
 - The shell handles filesystem traversal, directory scanning, JSON deserialization, HTTP routing, and UI rendering.
 - Errors from the shell must be caught, wrapped with descriptive context (`fmt.Errorf("...: %w", err)`), and handled gracefully.
 
----
-
 ### Fact Fidelity and Refresh Boundaries
 
 - Required identity and metadata are validated before persistence. Optional or unknown values remain explicit; do not invent completion dates from started/updated dates, assign feature types to unclassified tickets, or represent unavailable measurements as measured zero.
@@ -130,6 +128,7 @@ make build          # Single binary build (including frontend bundle if present)
 ### Manual Go Checks
 
 Run `make web-assets` first with frontend dependencies installed. For routine backend verification, prefer `make backend-check`, which carries this prerequisite.
+
 ```bash
 # Verify compilation and format
 (cd backend && go vet ./...)
@@ -156,6 +155,7 @@ npm run build      # Produces web/dist/ for Go embedding
 ### Fixture and Verification Boundaries
 
 Select cases from the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before implementing boundary changes.
+
 - Tests must construct isolated configuration, ledgers, and source fixtures; do not read live `alspaces/` history, developer databases, or depend on actual ticket IDs. A ticket rename must not break tests.
 - Exercise configurable roots and classification patterns, unavailable optional enrichment, malformed records, and partial source trees where relevant. Keep provenance explicit for sanitized real-format fixtures versus synthetic examples.
 - Run focused checks during rework, then the required full `make` gate on the integrated result. Record commands, results, and skipped stages; a conditional Makefile target that ran no frontend checks is not proof they passed.

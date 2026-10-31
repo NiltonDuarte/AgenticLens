@@ -46,4 +46,11 @@ Historical ticket links and facts remain unchanged. No matching REV-3 plan speci
 
 ## REV-3 verification
 
-Pending final documentation checks and integration gate; results will be recorded before delivery.
+Self-review: accepted for documentation scope. No independent reviewer was launched; no runtime fix is claimed.
+
+- Tested implementation commit: 577a0b2; subsequent changes only refine documentation formatting/checklist wording and final evidence. origin/main integration was already up to date.
+- Local Markdown target checks and zero-emoji check passed for all nine changed documents; documented Make targets exist; git diff --check passed.
+- Full make passed after integration: Go vet, TypeScript typecheck/lint, all 12 backend race-test packages, all 793 frontend tests in 36 files, frontend production assets, and four platform binary builds. This run began with no generated embed tree or binary in the checkout.
+- Generated web/dist and backend/internal/adapters/web/dist matched byte-for-byte. The embedded web package passed in the race suite. No browser verification or new test profiling was performed for this documentation change.
+- Environment observations: npm install reported 21 dependency audit findings (18 moderate, one high, two critical); frontend tests emitted React act warnings. Neither failed the gate; dependencies and test behavior were not changed.
+- Final telemetry uses the current Codex root 01a18fab-ce5a-7943-8aff-6192c9d8ebdf in the normal ~/.codex store; its session metadata matches this checkout. No child agents were launched and no prior REV-3 ledger exists to preserve. Extraction results are recorded in SUMMARY.md.

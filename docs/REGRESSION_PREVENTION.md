@@ -21,7 +21,7 @@ When changing a shared rule, search active instructions, personas, skill referen
 
 ### Telemetry extraction, refresh, or migration
 
-Use a root with children, a second root, repeated legitimate invocation rows, an unavailable stored session, and an unrelated harness. Check session IDs, parent links, source labels, row multiplicity, and other-source facts before and after refresh. Check a growing source and then an unchanged repeat: cumulative snapshots must not be added twice. Failed discovery/parsing/grouping must preserve stored facts and report incomplete extraction. Exact stored identity is the default; heuristic recovery requires explicit opt-in.
+Use a root with children, a second root, repeated legitimate invocation rows, an unavailable stored session, and an unrelated harness. Check session IDs, parent links, source labels, row multiplicity, and other-source facts before and after refresh. Ensure malformed or missing-source fixtures pass earlier validation and actually reach the failure branch being asserted. Keep session/message IDs intact when changing invocation fields. Check a growing source and then an unchanged repeat: cumulative snapshots must not be added twice. Failed discovery/parsing/grouping must preserve stored facts and report incomplete extraction. Exact stored identity is the default; heuristic recovery requires explicit opt-in.
 
 Use the actual harness and a literal nonce in the final telemetry invocation. Supply ticket ID, title, and conventional type on new ledgers; verify command help before using options. Do not use an empty ledger to conceal extraction failure. See AGENTS.md for finalization timing and delivery requirements.
 
