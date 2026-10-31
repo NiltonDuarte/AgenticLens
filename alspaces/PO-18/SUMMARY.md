@@ -40,3 +40,7 @@ Telemetry limitation: generation occurs within this still-active Codex turn; the
 |---|---|---|---|---|---|---|
 | **gpt-6.1-sol** | 1 | 52,123 | 11,334 | 938,112 | 94.7% | $0.00 |
 | **Total** | **1** | **52,123** | **11,334** | **938,112** | **94.7%** | **$0.00** |
+
+## Iteration 02: granular ownership planning
+
+User requested skills/task_links closer to raw session or invocation data. Added AL-67 (Ready, refactor), updated SPEC and roadmap to eight tickets, and retained existing acceptance/dependency boundaries. No application/test/schema changes or developer workspace created. Ownership must be proven, invocation metrics rows are not assumed to be raw calls, and ambiguous legacy facts remain preserved. Initial iteration status clean at 80396eb; existing PR #90 was open. Original AL-55 evidence remains protected.
