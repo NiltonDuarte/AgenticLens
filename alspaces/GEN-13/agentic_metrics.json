@@ -1,0 +1,67 @@
+{
+  "schema_version": 4,
+  "ticket_id": "GEN-13",
+  "ticket_title": "Concise project documentation",
+  "ticket_type": "chore",
+  "started_at": "2026-10-31T12:09:46.317Z",
+  "completed_at": "2026-10-31T12:14:15.852Z",
+  "updated_at": "2026-10-31T12:14:18.249828+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 2
+  },
+  "sessions": [
+    {
+      "id": "01a191dd-ac31-7c20-8c67-9448774a8767",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6-astra",
+          "started_at": "2026-10-31T12:09:47.596Z",
+          "completed_at": "2026-10-31T12:14:15.852Z",
+          "active_duration_seconds": 0,
+          "turns": 1,
+          "tokens": {
+            "input": 69725,
+            "output": 6732,
+            "cache_read": 1241984,
+            "reasoning": 549,
+            "peak_context": 72809
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 2
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 24,
+          "errors": 6
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": [
+    {
+      "rule_id": "TOOL_HIGH_FAILURE_RATE",
+      "severity": "WARNING",
+      "context": {
+        "tool_name": "command",
+        "count": 6,
+        "total_calls": 24,
+        "threshold": "\u003e20%",
+        "failure_rate_pct": 25
+      }
+    }
+  ]
+}

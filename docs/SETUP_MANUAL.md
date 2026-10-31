@@ -7,7 +7,7 @@ OpenCode traces are extracted read-only from its local SQLite database (`~/.loca
 Compatibility workflows are `make opencode-compat-v1`, `make opencode-compat-v2`, and `make opencode-compat`. They require the corresponding runtime (`OPENCODE_V1_BIN` / `OPENCODE_V2_BIN` can select explicit binaries) and a local deterministic provider already running. The workflows create isolated temporary HOME, XDG data/config/state roots, project roots, and absolute `OPENCODE_DB` paths, then remove them at exit. Ordinary adapter tests use deterministic SQLite fixtures and need no OpenCode installation. Evidence fixtures are sanitized runtime-produced records, not synthesized runtime integration runs. Nonzero native-provider pricing, imported-history extraction after migration, partial migration states, duplicate handling, and releases outside v1.19.5/v2.2.0 are not verified.
 Codex traces are read from rollout files beneath a Codex home directory (`~/.codex`). OpenCode and Codex are independent sources; selecting one never falls back to the other.
 
-This manual serves as the comprehensive, authoritative guide for engineering teams, platform architects, and autonomous coding agents adopting AgenticLens in OpenCode projects.
+Use this guide to install, configure, and operate AgenticLens in an adopting repository.
 
 ---
 
@@ -16,8 +16,6 @@ This manual serves as the comprehensive, authoritative guide for engineering tea
 AgenticLens offers two primary setup pathways: an autonomous agentic setup via a shared skill manifest, and a direct manual developer installation using official precompiled release archives. Target repositories never need to compile code from source or install Go, Node.js, npm, or C compiler toolchains.
 
 ### 1.1 Pathway A: Agentic Distribution and Setup via SKILL.md
-
-In modern agentic workflows, autonomous agents consume skills natively through Markdown instruction manifests (`SKILL.md`) accessed directly via shared repository links or raw URLs. No archive packaging, zip files, or custom unpacking scripts are required.
 
 #### Step 1: Share Skill Reference with Your Agent
 Provide your autonomous coding agent in OpenCode with the reference to the AgenticLens setup skill. You can either:
@@ -30,65 +28,15 @@ Prompt your agent:
 Read the instructions at https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md and set up AgenticLens in this repository.
 ```
 
-#### Step 2: Autonomous Host Detection and Binary Retrieval
-The agent inspects the host platform and architecture using standard system utilities:
+#### Step 2: Install the Wrapper and Native Binary
+
+Follow [manual installation](#12-pathway-b-manual-developer-installation-via-github-releases), using `.agents/skills/agentic-lens-setup/bin` as the destination. The POSIX wrapper detects Linux, macOS, or Windows shell environments and amd64/arm64, selects `agentic-lens-${OS}-${ARCH}` (`.exe` on Windows), and downloads missing platform binaries. See [container/host operation](#66-container-sandbox-vs-host-machine-execution-multi-platform-wrapper).
+
+If the setup downloader is available:
+
 ```bash
-OS_RAW=$(uname -s)
-ARCH_RAW=$(uname -m)
-
-case "$OS_RAW" in
-  Linux) OS="linux" ;;
-  Darwin) OS="darwin" ;;
-  MINGW*|MSYS*|CYGWIN*|Windows_NT) OS="windows" ;;
-  *) echo "Unsupported OS: $OS_RAW" >&2; exit 1 ;;
-esac
-
-case "$ARCH_RAW" in
-  x86_64|amd64) ARCH="amd64" ;;
-  arm64|aarch64) ARCH="arm64" ;;
-  *) echo "Unsupported Architecture: $ARCH_RAW" >&2; exit 1 ;;
-esac
-```
-
-The agent resolves the release artifact from GitHub Releases:
-- Linux x86_64: `agentic-lens-linux-amd64`
-- Linux ARM64: `agentic-lens-linux-arm64`
-- macOS Apple Silicon: `agentic-lens-darwin-arm64`
-- macOS Intel: `agentic-lens-darwin-amd64`
-- Windows x86_64: `agentic-lens-windows-amd64.exe`
-
-##### Multi-Platform Container vs Host Support
-Autonomous coding agents frequently execute inside sandboxed Linux containers (e.g. devcontainers, Docker) while developers work on host machines (macOS, Windows). To ensure `./bin/agentic-lens` functions seamlessly across both environments without architecture conflicts, AgenticLens uses a portable POSIX wrapper script installed at `bin/agentic-lens` that dynamically delegates to native platform executables (`bin/agentic-lens-${OS}-${ARCH}`). If a developer runs `agentic-lens server` on their macOS host after setup ran inside a Linux container, the wrapper automatically detects Darwin, downloads the missing `agentic-lens-darwin-arm64` binary on demand from GitHub Releases, and executes it.
-
-The agent creates the binary destination directory, installs the wrapper script, downloads the native binary, and sets executable permissions:
-```bash
-DEST_DIR=".agents/skills/agentic-lens-setup/bin"
-mkdir -p "$DEST_DIR"
-
-# Write protective .gitignore to prevent committing binaries and cache files to version control
-cat <<'EOF' > "$DEST_DIR/.gitignore"
-*
-!.gitignore
-EOF
-
-# Install multi-platform wrapper script
-WRAPPER_URL="https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/agentic-lens-wrapper.sh"
-curl -fsSL -o "$DEST_DIR/agentic-lens" "$WRAPPER_URL"
-chmod +x "$DEST_DIR/agentic-lens"
-
-# Download native precompiled binary for current platform
-BIN_NAME="agentic-lens-${OS}-${ARCH}"
-RELEASE_URL="https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/${BIN_NAME}"
-curl -fsSL -o "$DEST_DIR/${BIN_NAME}" "$RELEASE_URL"
-chmod +x "$DEST_DIR/${BIN_NAME}"
-```
-
-Alternatively, if `.agents/skills/agentic-lens-setup/scripts/download.sh` is present:
-```bash
-# Basic setup
 ./.agents/skills/agentic-lens-setup/scripts/download.sh
-
-# Optional: Pre-download host workstation binary (e.g. macOS Apple Silicon)
+# Optional: pre-download the host binary from a Linux container.
 ./.agents/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
 ```
 
@@ -197,24 +145,15 @@ Open `http://localhost:8085` in your browser to view the Fleet Overview and Live
 
 ## 2. Agnostic Adoption for OpenCode Projects
 
-Live SSE streaming reads OpenCode's local SQLite database and supports the evidence-backed v1 and v2 schema families described above, rejecting layouts it cannot identify. Offline generation also supports Codex rollout files. Choose a source explicitly or configure the machine-local default; the selected source is never silently changed after a read or discovery failure.
-
-While tightly coupled to OpenCode at the platform layer, AgenticLens imposes zero engineering methodology constraints on adopting teams. Within OpenCode, it is completely agnostic to how teams structure their development workflows.
+Live SSE uses OpenCode; offline generation supports OpenCode and Codex. Sources are independent and never silently substituted after a failure.
 
 ### 2.1 Complete Methodology Neutrality within OpenCode
-Every engineering team operating in OpenCode has distinct development lifecycles, branching strategies, and agent configurations. AgenticLens accommodates any way of working:
-- **Workflow Topology Agnostic**: Operates equally well with single-agent prompt loops, human-in-the-loop interactions, hierarchical multi-agent delegations, or automated CI/CD maintenance pipelines running inside OpenCode.
-- **Decoupled from Maintainer Personas**: Adopters do not inherit this repository's internal maintainer personas (`agentic-lens-dev`, `agentic-lens-po`, `agentic-lens-review`). Teams configure their own agents or subagents freely.
-- **Review and QA Independence**: Adopters define their own testing standards, linting gates, and code review criteria. AgenticLens records what occurred during execution without prescribing how development must be managed.
+
+Adopters choose their own single-agent, human-assisted, hierarchical, or CI workflows, review gates, and personas. They do not inherit this repository's maintainer skills (`agentic-lens-dev`, `agentic-lens-po`, `agentic-lens-review`).
 
 ### 2.2 Custom Conventions and Taxonomy
-Adopting repositories configure AgenticLens to align with their existing organizational standards:
-- **Custom Ticket Prefixes**: Support for any ticketing taxonomy (e.g. `JIRA-`, `ISSUE-`, `FEAT-`, `BUG-`, `CORE-`, `PAY-`, `DEVOPS-`). Multiple prefixes are treated as equal peers.
-- **Custom Workspace Hierarchies**: Telemetry can be housed in `workspaces/`, `alspaces/`, `.tasks/`, `specs/`, or any custom repository path.
-- **Custom Git Branching**: Operates seamlessly with trunk-based development, GitFlow, GitHub flow, or short-lived feature branches.
-- **Custom Persona Role Mapping**: Arbitrary agent persona strings configured in OpenCode can be mapped into canonical reporting roles via `role_mappings` in `.agenticlens-config.yaml` or tracked as standalone custom roles.
 
----
+Configure ticket prefixes as equal peers, any workspace root, and custom persona mappings. Trunk-based, GitFlow, GitHub flow, and short-lived branches are supported; unmapped personas can remain custom roles.
 
 ## 3. Configuration Reference
 
@@ -230,7 +169,22 @@ telemetry:
       home: ~/.codex
 ```
 
-`generate --source` takes precedence over `telemetry.default_source`; if omitted, the configured default is selected and OpenCode is the built-in default. Path precedence is CLI override, local harness path, legacy shared `database.path` for OpenCode, then adapter default. OpenCode `database_path` is SQLite; Codex `home` is a rollout directory. A selected source that is unavailable fails with an actionable error and does not switch harnesses.
+### Telemetry Source and Session Selection
+
+`agentic-lens init` creates shared `.agenticlens-config.yaml` and machine-local `.agenticlens-config.local.yaml`. The local file is ignored by Git; check `.gitignore` before committing and keep credentials out of both files. Configure `telemetry.default_source`, `telemetry.sources.opencode.database_path` (OpenCode SQLite), and `telemetry.sources.codex.home` (Codex rollout directory). The tracked `.agenticlens-config.local.example.yaml` provides sanitized portable defaults. `generate --source` overrides the local default; otherwise `telemetry.default_source` is used, then OpenCode. Source locations resolve from CLI path override, local harness path, legacy shared OpenCode `database.path`, then adapter defaults. A missing selected source is an error and never triggers a switch to the other harness.
+
+Use `--nonce <literal>` to select the exact Codex rollout containing a unique run nonce, or `--session-id <thread-id>` to select a known thread. `--codex-home <path>` overrides local Codex home, `$CODEX_HOME`, and `~/.codex`.
+
+Code metrics always compare an explicit Git ref with the configured `code_metrics.base_branch`; `generate` defaults to `HEAD`, and `backfill --recompute-git` requires `--code-ref`. Empty or invalid refs fail instead of trying to infer a branch or commits from the ticket ID. Comparisons include committed changes and exclude the uncommitted working tree. Codex session discovery requires `--nonce` or `--session-id`; ticket text and working-directory heuristics are not reliable session identifiers. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts. Schema-v4 sessions own invocation records, per-session tool summaries, and retained events; cross-session totals are derived for display. Migration reports and removes legacy aggregate tool rows without reliable session attribution. Re-extract from source logs to recover those counts when available.
+
+### Code Classification and Interpretation
+
+Code classification is configured under `code_metrics` in `.agenticlens-config.yaml`:
+`test_patterns` identifies tests and fixtures; `prod_patterns` and `include` identify production files. There are no implicit test directory, test filename, or production extension rules. Empty patterns leave files unclassified (`Other`), which can contribute to total lines without contributing to test/production subtotals.
+
+Patterns containing `/` are relative to the repository root; a `**` path component matches zero or more directories. Patterns without `/` match basenames. Workspace exclusions and `exclude` win, followed by test patterns, then production/include patterns. The existing lockfile/dotfile exclusions apply to otherwise unmatched files. Both Git discovery modes monitor the required `code_metrics.source_roots` plus configured test, production, and include patterns, allowing fixtures outside source roots.
+
+Interpret ratios using the configured classification and counting basis. Test helpers can be counted as production if no test pattern matches them; generated files, fixtures, comments, and blank lines also affect comparisons. Whole-repository source counts and session diff-added counts answer different questions. There is no universal target ratio; use the [test metrics guidance](../TECHNICAL_GUIDELINES.md#interpreting-test-metrics) and [contributor test review steps](../CONTRIBUTING.md#51-before-adding-or-removing-tests) to assess coverage and maintenance cost.
 
 ### 3.1 Complete Configuration Schema Example
 
@@ -372,13 +326,7 @@ Integrating AgenticLens into your repository requires zero changes to agent reas
 
 ### 4.1 The Delayed Telemetry Ingestion Mandate
 
-The most critical operational principle for accurate telemetry is the **Delayed Telemetry Ingestion Mandate**:
-- Telemetry generation must always be executed as the very final turn of an agent session, immediately before committing work to git.
-- Running telemetry generation early (for example, mid-session or during code generation) causes all subsequent turns, tool calls, compactions, and subagent handoffs to be permanently omitted from the session ledger.
-- The command sequence must follow this exact order:
-  1. Complete implementation, testing, and reviews.
-  2. Execute `./bin/agentic-lens generate ...` to record final telemetry facts into `agentic_metrics.json` and append the markdown table to `SUMMARY.md`.
-  3. Execute `git add -A && git commit -m "..."` to commit code and metrics atomically.
+Complete implementation, testing, and review before generating telemetry. Generate immediately before the final commit, then stage the task-owned deliverables and metrics together. Earlier extraction omits later turns, tool calls, compactions, and subagent handoffs.
 
 ### 4.2 Nonce Generation and Ingestion Command (`generate`)
 
@@ -394,18 +342,7 @@ To guarantee deterministic session resolution across concurrent agents or subage
 ```
 
 #### Literal Nonce Mandate (FIX-5)
-The executing agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and supply the concrete literal token in the command.
-
-**Important**: Shell variable expansions (`$NONCE`) or command substitutions (`$(...)`) must never be used. OpenCode records tool input arguments verbatim into its SQLite database before shell variable expansion or subshell execution occurs. If an agent executes a command containing `$NONCE` or `$(...)`, OpenCode records the literal string `"$NONCE"` in the database part record. Subsequent database lookups matching the runtime expanded token against the database will fail to find a match. Always supply the literal nonce value directly.
-
-#### Command Flags Breakdown:
-- `--ticket-id <ID>` (Required): The active ticket or issue identifier (e.g. `PAY-42`, `SEC-101`).
-- `--nonce <STRING>` (Recommended): A unique execution nonce used to correlate concurrent subagent sessions and resolve the precise execution window. Must be passed as a literal string without shell variable expansion.
-- `--ticket-type <TYPE>` (Required): Conventional commit classification (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
-- `--json-output <PATH>`: Destination path for the immutable JSON telemetry ledger.
-- `--append <PATH>`: Destination path for appending an idempotent Markdown verification table.
-- `--db-path <PATH>` (Optional): Explicit path to OpenCode SQLite database (overrides configuration).
-- `--anomalies` (Optional): Evaluate and record anomaly alerts directly into the output ledger.
+Generate a unique 8–16 character alphanumeric or hex nonce and pass it literally. Never use `$NONCE` or `$(...)`: OpenCode stores tool inputs before shell expansion, so searching for the expanded value cannot find that input. See [CLI flags](#agentic-lens-generate) for output and source options.
 
 ### 4.3 Conventional Commit Type Classification
 
@@ -422,18 +359,7 @@ AgenticLens requires explicit commit type classification to generate accurate en
 
 ### 4.4 Custom Persona Role Mapping
 
-Adopting repositories often utilize specialized agent personas. Map them in `.agenticlens-config.yaml` to unify cross-team reporting:
-
-```yaml
-role_mappings:
-  security-scanner: security
-  perf-analyzer: tester
-  integration-tester: tester
-  frontend-specialist: developer
-  backend-specialist: developer
-```
-
-When AgenticLens processes execution traces, it automatically aggregates tokens, costs, and durations under the designated canonical role while preserving the granular persona identifier in the raw telemetry ledger.
+Configure `role_mappings` as shown in the [configuration example](#31-complete-configuration-schema-example). Tokens, costs, and durations aggregate under mapped roles while raw ledgers preserve persona identifiers.
 
 ### 4.5 Standard Repository Agent Guidelines Policy Block
 
@@ -493,7 +419,8 @@ Ingests session telemetry from OpenCode's SQLite database and git commit history
   - `--ticket-id <ID>` (Required): Active ticket identifier.
   - `--ticket-type <TYPE>` (Required): Conventional commit classification.
   - `--nonce <STRING>` (Optional): Unique execution nonce for OpenCode session resolution. Must be passed as a directly generated literal token; shell variables (`$NONCE`) must not be used.
-  - `--session-id <ID>` (Optional): Explicit OpenCode session ID override.
+  - `--session-id <ID>` (Optional): Explicit source session ID override.
+  - `--db-path <PATH>` (Optional): OpenCode SQLite path override; see [source selection](#telemetry-source-and-session-selection) for Codex and harness options.
   - `--ticket-title <TITLE>` (Optional): Title of the ticket.
   - `--strict-type` (Optional): Fail with error if ticket type does not match conventional taxonomy.
   - `--json-output <FILE>` (Optional): Destination path for `agentic_metrics.json`.
@@ -655,21 +582,13 @@ A very common configuration in OpenCode development is running the autonomous ag
 
 ## Appendix: Platform Architecture and Core Concepts
 
-AgenticLens is constructed around the Functional Core, Imperative Shell (FCIS) pattern and packaged as a single, self-contained binary executable with zero external runtime dependencies.
-
 ### A.1 Functional Core, Imperative Shell (FCIS) Architecture
 
-The architecture strictly separates pure domain computations from side-effecting operations:
-- **Functional Core (`backend/internal/domain/`)**: Contains pure value objects, cost models, statistical anomaly calculation formulas, and context window health algorithms. The functional core contains zero file I/O, zero network dependencies, and zero system clocks. All calculations are completely deterministic and easily verified via unit tests.
-- **Imperative Shell (`backend/internal/adapters/` and `backend/cmd/agentic-lens/`)**: Manages external interactions including OpenCode SQLite database querying, git repository diff extraction, configuration file parsing, HTTP server lifecycle management, and CLI argument binding.
+See [architecture and subsystem responsibilities](../ARCHITECTURE.md) and the mandatory [technical boundaries](../TECHNICAL_GUIDELINES.md#2-functional-core-imperative-shell-fcis).
 
 ### A.2 Single Binary Zero-Dependency Model
 
-Traditional developer tools often require complex runtime dependencies such as Node.js, Python runtimes, or external database servers. AgenticLens eliminates this operational overhead:
-- The backend is written in Go 1.23+ and compiles to a native static executable with CGO disabled (`CGO_ENABLED=0`).
-- SQLite database connectivity is powered by a pure Go driver (`modernc.org/sqlite`), eliminating the requirement for a host C compiler or shared C libraries.
-- The web dashboard is built with TypeScript and Vite. During the build process, compiled static frontend assets (`web/dist/`) are embedded directly into the Go executable via `embed.FS`.
-- Adopting repositories run a single executable file that serves both the command-line interface and the full-featured interactive web dashboard.
+Go 1.23+ builds with `CGO_ENABLED=0`; `modernc.org/sqlite` needs no C compiler or shared C libraries. Vite compiles the TypeScript dashboard into `web/dist`, embedded via `embed.FS`. The resulting executable provides both CLI and web UI without external runtimes.
 
 ### A.3 Local Immutable Telemetry Fact Ledgers (`agentic_metrics.json`)
 
