@@ -1403,84 +1403,119 @@ func TestSessionFactDTO_SourceRoundtripAndRequired(t *testing.T) {
 }
 
 func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
-	t.Run("cost normalization retains nonalphabetic order and stable legacy insertion", func(t *testing.T) {
-		input := []byte(`{"zeta":{"second":2,"first":1},"rows":[{"role":"coder","model":"m","cost_usd":2,"cost_evidence":{"state":"partial","known_subtotal_usd":2},"tail":true}],"alpha":0}`)
-		projected, err := adapters.NormalizeCostJSON(input)
-		if err != nil {
-			t.Fatal(err)
-		}
-		root := jsonFieldsInOrder(t, projected, "zeta", "rows", "alpha")
-		jsonFieldsInOrder(t, root["zeta"], "second", "first")
-		var rows []json.RawMessage
-		if err := json.Unmarshal(root["rows"], &rows); err != nil {
-			t.Fatal(err)
-		}
-		row := jsonFieldsInOrder(t, rows[0], "role", "model", "cost_usd", "cost_evidence", "tail")
-		if string(row["cost_usd"]) != "null" || string(root["zeta"]) != `{"second":2,"first":1}` || string(root["alpha"]) != "0" {
-			t.Fatalf("normalization changed semantic values: %s", projected)
-		}
-		repeated, err := adapters.NormalizeCostJSON(projected)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(projected, repeated) {
-			t.Fatalf("repeated projection reordered bytes: %s then %s", projected, repeated)
-		}
-		mapped := []byte(`{"role_costs":{"z":2,"a":0},"role_cost_summaries":{"a":{"state":"complete","known_subtotal_usd":0,"fully_observed":1,"partial":0,"unavailable":0,"total":1},"z":{"state":"unavailable","known_subtotal_usd":null,"fully_observed":0,"partial":0,"unavailable":1,"total":1}},"role_effort_distribution_pct":{"z":50,"a":50},"role_effort_unavailable_reason":"Incomplete"}`)
-		mappedOutput, err := adapters.NormalizeCostJSON(mapped)
-		if err != nil {
-			t.Fatal(err)
-		}
-		mappedRoot := jsonFieldsInOrder(t, mappedOutput, "role_costs", "role_cost_summaries", "role_effort_distribution_pct", "role_effort_unavailable_reason")
-		amounts := jsonFieldsInOrder(t, mappedRoot["role_costs"], "z", "a")
-		jsonFieldsInOrder(t, mappedRoot["role_cost_summaries"], "a", "z")
-		distribution := jsonFieldsInOrder(t, mappedRoot["role_effort_distribution_pct"], "z", "a")
-		if string(amounts["z"]) != "null" || string(amounts["a"]) != "0" || string(distribution["z"]) != "null" || string(distribution["a"]) != "null" {
-			t.Fatalf("map projections lost semantics: %s", mappedOutput)
-		}
-		legacy := []byte(`{"last":1,"rows":[{"role":"coder","model":"m","tail":true}],"first":0}`)
-		converted, err := adapters.NormalizeLegacyCostJSON(legacy)
-		if err != nil {
-			t.Fatal(err)
-		}
-		convertedRoot := jsonFieldsInOrder(t, converted, "last", "rows", "first")
-		if err := json.Unmarshal(convertedRoot["rows"], &rows); err != nil {
-			t.Fatal(err)
-		}
-		convertedRow := jsonFieldsInOrder(t, rows[0], "role", "model", "tail")
-		if string(convertedRow["cost_usd"]) != "null" {
-			t.Fatalf("missing legacy cost became numeric: %s", converted)
-		}
-		var evidence domain.CostEvidence
-		if err := json.Unmarshal(convertedRow["cost_evidence"], &evidence); err != nil {
-			t.Fatal(err)
-		}
-		if evidence.State != domain.CostUnavailable {
-			t.Fatalf("legacy evidence=%+v", evidence)
-		}
-		for i := 0; i < 5; i++ {
-			again, err := adapters.NormalizeLegacyCostJSON(legacy)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(converted, again) {
-				t.Fatalf("new metadata insertion is nondeterministic: %s then %s", converted, again)
-			}
-		}
-		again, err := adapters.NormalizeLegacyCostJSON(converted)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(converted, again) {
-			t.Fatalf("legacy normalization not idempotent: %s then %s", converted, again)
-		}
-		for _, invalid := range []string{`{"role":"coder"`, `{"z":1} {"a":2}`} {
-			if _, err := adapters.NormalizeCostJSON([]byte(invalid)); err == nil {
-				t.Fatalf("accepted malformed/trailing JSON: %s", invalid)
+
+	legacyBase := `{"schema_version":4,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"model-a","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":1,"tokens":{"input":1,"output":0,"cache_read":0,"reasoning":0,"peak_context":1},COST"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
+	t.Run("typed task presence and partial facts survive concrete roundtrip", func(t *testing.T) {
+		for _, version := range []int{4, 5} {
+			for _, tc := range []struct {
+				name, fields string
+				state        domain.CostState
+				amount       float64
+			}{
+				{"observed zero", `"cost_usd":0`, domain.CostObserved, 0},
+				{"absent", ``, domain.CostUnavailable, 0},
+				{"null", `"cost_usd":null`, domain.CostUnavailable, 0},
+				{"partial", `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":2.5}`, domain.CostPartial, 2.5},
+			} {
+				t.Run(fmt.Sprintf("v%d/%s", version, tc.name), func(t *testing.T) {
+					fields := tc.fields
+					if version == 5 && tc.name == "absent" {
+						fields = `"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}`
+					} else if version == 5 && tc.state != domain.CostPartial {
+						subtotal := "null"
+						if tc.state == domain.CostObserved {
+							subtotal = "0"
+						}
+						fields += fmt.Sprintf(`,"cost_evidence":{"state":%q,"known_subtotal_usd":%s}`, tc.state, subtotal)
+					}
+					core := strings.Replace(legacyBase, `"schema_version":4`, fmt.Sprintf(`"schema_version":%d`, version), 1)
+					core = strings.Replace(core, "COST", `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":1.25},`, 1)
+					task := `{"subagent_type":"coder","description":"Keep source task","parent_turn":8,"child_session_id":"child","timestamp":"2026-11-01T10:00:00Z","duration_ms":12`
+					if fields != "" {
+						task += "," + fields
+					}
+					task += "}"
+					input := []byte(strings.TrimSuffix(core, "}") + `,"task_links":[` + task + `]}`)
+					if version == 5 && tc.name == "absent" {
+						if err := adapters.ValidateRuntimeFactLedger(input); err == nil {
+							t.Fatal("v5 runtime accepted task with omitted cost_usd")
+						}
+						var dto adapters.AgenticFactLedgerDTO
+						if err := json.Unmarshal(input, &dto); err == nil {
+							t.Fatal("v5 DTO accepted task with omitted cost_usd")
+						}
+						return
+					}
+					if err := adapters.ValidateRuntimeFactLedger(input); err != nil {
+						t.Fatal(err)
+					}
+					var dto adapters.AgenticFactLedgerDTO
+					if err := json.Unmarshal(input, &dto); err != nil {
+						t.Fatal(err)
+					}
+					facts := dto.ToDomain()
+					fact := facts.Sessions[0].Invocations[0]
+					if fact.CostUSD != 1.25 || fact.CostEvidence.State != domain.CostPartial || fact.CostEvidence.KnownSubtotalUSD == nil || *fact.CostEvidence.KnownSubtotalUSD != 1.25 {
+						t.Fatalf("partial accumulator lost: %+v", fact)
+					}
+					if len(facts.TaskLinks) != 1 || facts.TaskLinks[0].CostEvidence.State != tc.state || facts.TaskLinks[0].CostUSD != tc.amount || facts.TaskLinks[0].Description != "Keep source task" || facts.TaskLinks[0].ChildSession != "child" || facts.TaskLinks[0].ParentTurn != 8 || facts.TaskLinks[0].DurationMs != 12 {
+						t.Fatalf("task conversion lost presence/metadata: %+v", facts.TaskLinks)
+					}
+					encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
+					if err != nil {
+						t.Fatal(err)
+					}
+					var wire struct {
+						TaskLinks []struct {
+							Cost     *float64            `json:"cost_usd"`
+							Evidence domain.CostEvidence `json:"cost_evidence"`
+						} `json:"task_links"`
+						Sessions []struct {
+							Invocations []struct {
+								Cost *float64 `json:"cost_usd"`
+							} `json:"invocations"`
+						} `json:"sessions"`
+					}
+					if err := json.Unmarshal(encoded, &wire); err != nil {
+						t.Fatal(err)
+					}
+					if wire.Sessions[0].Invocations[0].Cost != nil || wire.TaskLinks[0].Evidence.State != tc.state {
+						t.Fatalf("partial complete amount leaked: %s", encoded)
+					}
+					if tc.state == domain.CostObserved {
+						if wire.TaskLinks[0].Cost == nil || *wire.TaskLinks[0].Cost != 0 {
+							t.Fatalf("explicit task zero lost: %s", encoded)
+						}
+					} else if wire.TaskLinks[0].Cost != nil {
+						t.Fatalf("incomplete task became numeric: %s", encoded)
+					}
+				})
 			}
 		}
 	})
-	legacyBase := `{"schema_version":4,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"model-a","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":1,"tokens":{"input":1,"output":0,"cache_read":0,"reasoning":0,"peak_context":1},COST"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
+	t.Run("owning canonical decoders reject malformed trailing and unknown fields", func(t *testing.T) {
+		for _, version := range []int{4, 5} {
+			base := strings.Replace(legacyBase, `"schema_version":4`, fmt.Sprintf(`"schema_version":%d`, version), 1)
+			base = strings.Replace(base, "COST", `"cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0},`, 1)
+			for _, input := range []string{
+				base + `{}`, strings.TrimSuffix(base, "}"),
+				strings.TrimSuffix(base, "}") + `,"unexpected":true}`,
+				strings.Replace(base, `"id":"owner"`, `"id":"owner","unexpected":true`, 1),
+				strings.Replace(base, `"role":"coder"`, `"role":"coder","unexpected":true`, 1),
+				strings.Replace(base, `"input":1`, `"input":1,"unexpected":true`, 1),
+				strings.Replace(base, `"state":"observed"`, `"state":"observed","unexpected":true`, 1),
+				strings.TrimSuffix(base, "}") + `,"task_links":[{"subagent_type":"coder","cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0},"unexpected":true}]}`,
+			} {
+				if err := adapters.ValidateRuntimeFactLedger([]byte(input)); err == nil {
+					t.Fatalf("v%d runtime accepted invalid canonical JSON: %s", version, input)
+				}
+				var dto adapters.AgenticFactLedgerDTO
+				if err := json.Unmarshal([]byte(input), &dto); err == nil {
+					t.Fatalf("v%d DTO decoder accepted invalid canonical JSON: %s", version, input)
+				}
+			}
+		}
+	})
 	for _, tc := range []struct {
 		name, field string
 		state       domain.CostState
@@ -1510,6 +1545,8 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 		})
 	}
 	for _, fields := range []string{
+		`"cost_evidence":{"state":"unavailable","known_subtotal_usd":null},`,
+		`"cost_usd":null,"cost_evidence":null,`,
 		`"cost_usd":0,`,
 		`"cost_usd":null,"cost_evidence":{"state":"observed","known_subtotal_usd":0},`,
 		`"cost_usd":2,"cost_evidence":{"state":"partial","known_subtotal_usd":2},`,

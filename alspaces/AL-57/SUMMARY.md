@@ -130,3 +130,18 @@ The corrected serializer preserves established root, session, invocation, token,
 
 
 Corrected ledger verification passed: established field order at root/code/session/invocation/token/evidence levels, all six prior Codex source sessions retained with matching parent/source identities and invocation multiplicity, and current unavailable cost semantics intact. Usage is refreshed from the real source sessions; this is not a manual reformat of an outdated ledger.
+
+
+## Iteration 03: typed cost boundaries
+
+Source: user rejected the nesting/structural byte dispatch in cost_json.go, accepted the proposed typed DTO replacement with "$agentic-lens-dev fix it", and explicitly included domain/migration/cost_decode.go. This pre-approves the structural refactor while preserving the frozen cost and compatibility contract. No repeat permission request is needed for this scope.
+
+Initial status is clean at ee7558749c7101ddc4134cbdd22961bcba0a5a09 on fix/AL-57-cost-semantics. PR #89 remains open. Planner owns iterations/03/PLAN.md; application implementation remains delegated through coder/tester/reviewer roles. Remove generic rewriting and custom ordered-object machinery, rather than moving their nesting into smaller helpers. Typed fields and conversions own nullable values and field order; version-specific decoders preserve cost presence.
+
+
+Iteration 03 plan is approved by the user's explicit request to implement the typed alternative. Adapter coder owns adapter/HTTP/export DTOs and shared pure cost validation; migration coder owns only domain/migration. Existing files and source facts are preserved across the shared checkout. Tests and review will verify actual wire payloads and version decoding, including transfer of meaningful assertions from the removed arbitrary-JSON transformer tests.
+
+
+Iteration 03 implementation replaces generic JSON rewriting with concrete nullable fact/task, aggregate, export and HTTP DTOs and typed version-selected migration readers. The adapter walker and custom ordered-object serializer are deleted. Shared amount/evidence validation remains pure in domain/cost.go. Actual output order now follows declared fields directly, and unrelated response families bypass cost projection.
+
+Telemetry source addition: migration coder 01a19405-8d62-7f70-b9f9-31f06c174e3d explicitly identifies root 01a192c4-c9a6-7022-97da-19f433d6c5c3 as parent in session_meta. Final extraction must preserve the existing six sessions and include this seventh real session. Raw rollouts remain outside Git.

@@ -14,4 +14,4 @@ Canonical v4 ledgers remain readable without rewriting or source logs. v1-v3 inp
 
 Old binaries reject v5 files. Preserve migration backups when rollback is needed. JSON consumers must update numeric-only cost assumptions to handle null and the evidence/summary metadata. The bundled frontend updates with the backend; missing costs are not emitted as numeric-zero compatibility values for old clients. Ordinary GET requests do not migrate or rewrite ledgers.
 
-JSON serialization retains the established relative order of DTO fields, including nested objects. Cost projection replaces values in place and places new evidence beside the related amount instead of alphabetizing all keys.
+Typed boundary DTOs declare nullable amounts, evidence and summaries explicitly. Standard JSON encoding retains the established relative order of their fields, including nested objects, with cost evidence beside the related amount. Version-specific decoders handle legacy presence and validation without rewriting an arbitrary JSON tree.

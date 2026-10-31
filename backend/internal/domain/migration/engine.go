@@ -43,63 +43,14 @@ type versionProbe struct {
 	SchemaVersion *int `json:"schema_version"`
 }
 
-type legacyFactCollections struct {
-	Source      domain.SourceHarness      `json:"source"`
-	Invocations []legacySessionInvocation `json:"invocations"`
-	Tools       []domain.ToolFact         `json:"tools"`
-	Events      []domain.EventFact        `json:"events"`
-}
-
-// Legacy flat ledgers stored session metadata alongside each invocation row.
-// Move that metadata to its owner without interpreting synthetic ID suffixes.
-type legacySessionInvocation struct {
-	domain.InvocationFact
-	SessionID string  `json:"id"`
-	ParentID  *string `json:"parent_id"`
-	User      string  `json:"user"`
-}
-
 func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 	version, err := (&Engine{}).DetectVersion(input)
 	if err != nil {
 		return domain.AgenticFactLedger{}, 0, err
 	}
-	input, err = decodeCostPresence(input, version < 5)
+	ledger, legacy, hasSessions, err := decodeVersionedLedger(input, version)
 	if err != nil {
 		return domain.AgenticFactLedger{}, 0, err
-	}
-	var ledger domain.AgenticFactLedger
-	var rootFields map[string]json.RawMessage
-	if err := json.Unmarshal(input, &rootFields); err != nil {
-		return domain.AgenticFactLedger{}, 0, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
-	}
-	_, hasSessions := rootFields["sessions"]
-	for _, key := range []string{"invocations", "tools", "events"} {
-		if _, hasLegacy := rootFields[key]; hasSessions && hasLegacy {
-			return domain.AgenticFactLedger{}, 0, fmt.Errorf("mixed ledger shape: canonical sessions cannot coexist with root-level legacy %s; remove ambiguity before migration", key)
-		}
-	}
-	if hasSessions && version >= 4 {
-		var canonical []struct {
-			Invocations []map[string]json.RawMessage `json:"invocations"`
-		}
-		if err := json.Unmarshal(rootFields["sessions"], &canonical); err != nil {
-			return domain.AgenticFactLedger{}, 0, fmt.Errorf("decoding canonical sessions: %w", err)
-		}
-		for si, session := range canonical {
-			for ii, row := range session.Invocations {
-				if _, exists := row["id"]; exists {
-					return domain.AgenticFactLedger{}, 0, fmt.Errorf("canonical schema v4 invocation %d in session %d must not contain id", ii, si)
-				}
-			}
-		}
-	}
-	if err := json.Unmarshal(input, &ledger); err != nil {
-		return domain.AgenticFactLedger{}, 0, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
-	}
-	var legacy legacyFactCollections
-	if err := json.Unmarshal(input, &legacy); err != nil {
-		return domain.AgenticFactLedger{}, 0, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
 	}
 	if ledger.Sessions == nil && (len(legacy.Invocations) > 0 || len(legacy.Events) > 0 || len(legacy.Tools) > 0) {
 		attributed := make([]domain.ToolFact, 0, len(legacy.Tools))

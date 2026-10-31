@@ -236,7 +236,7 @@ func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.Wo
 		}
 
 		resp := WorkspaceDetailResponse{
-			Ledger:    *targetLedger,
+			Ledger:    adapters.MetricsLedgerResponseDTOFromDomain(*targetLedger),
 			Artifacts: artifacts,
 			Anomalies: anomalies,
 		}

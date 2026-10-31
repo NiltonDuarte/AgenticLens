@@ -475,6 +475,20 @@ func TestCLIJsonOutput(t *testing.T) {
 	if parsed.Totals.Invocations == 0 {
 		t.Errorf("expected non-zero totals in JSON output")
 	}
+	var shape map[string]json.RawMessage
+	if err := json.Unmarshal(data, &shape); err != nil {
+		t.Fatal(err)
+	}
+	for _, httpOnly := range []string{"facts", "threads"} {
+		if _, exists := shape[httpOnly]; exists {
+			t.Fatalf("CLI export unexpectedly contains %s", httpOnly)
+		}
+	}
+	for _, required := range []string{"ticket_id", "workflow_efficiency", "totals", "roles", "models"} {
+		if _, exists := shape[required]; !exists {
+			t.Fatalf("CLI export lost %s", required)
+		}
+	}
 }
 
 func TestCLIAppendIdempotency(t *testing.T) {

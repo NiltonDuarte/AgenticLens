@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"agenticlens/internal/domain"
@@ -43,9 +42,11 @@ type InvocationFactDTO struct {
 	ActiveDurationSeconds int64                `json:"active_duration_seconds"`
 	Turns                 int64                `json:"turns"`
 	Tokens                InvocationTokensDTO  `json:"tokens"`
-	CostUSD               float64              `json:"cost_usd"`
+	CostUSD               *float64             `json:"cost_usd"`
 	CostEvidence          *domain.CostEvidence `json:"cost_evidence"`
-	costAbsent            bool
+	decodedCost           bool
+	costPresent           bool
+	evidencePresent       bool
 	Compactions           int64 `json:"compactions"`
 	UserIterations        int64 `json:"user_iterations"`
 }
@@ -82,9 +83,8 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 			Reasoning:   inv.Tokens.Reasoning,
 			PeakContext: inv.Tokens.PeakContext,
 		},
-		CostUSD:        inv.CostUSD,
+		CostUSD:        factCostAmount(inv.CostUSD, domain.EffectiveCost(inv.CostUSD, inv.CostEvidence)),
 		CostEvidence:   costEvidencePointer(domain.EffectiveCost(inv.CostUSD, inv.CostEvidence)),
-		costAbsent:     domain.EffectiveCost(inv.CostUSD, inv.CostEvidence).State != domain.CostObserved,
 		Compactions:    inv.Compactions,
 		UserIterations: inv.UserIterations,
 	}
@@ -307,20 +307,20 @@ func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
 
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
-	SchemaVersion *int                  `json:"schema_version,omitempty"`
-	Source        string                `json:"source,omitempty"`
-	Migration     *MigrationInfoDTO     `json:"migration,omitempty"`
-	TicketID      *string               `json:"ticket_id"`
-	TicketTitle   *string               `json:"ticket_title"`
-	TicketType    *string               `json:"ticket_type"`
-	StartedAt     *string               `json:"started_at"`
-	CompletedAt   *string               `json:"completed_at"`
-	UpdatedAt     string                `json:"updated_at"`
-	Code          CodeFactsDTO          `json:"code"`
-	Sessions      []SessionFactDTO      `json:"sessions"`
-	Anomalies     []AnomalyDTO          `json:"anomalies"`
-	Skills        []domain.SkillFact    `json:"skills,omitempty"`
-	TaskLinks     []domain.TaskLinkFact `json:"task_links,omitempty"`
+	SchemaVersion *int               `json:"schema_version,omitempty"`
+	Source        string             `json:"source,omitempty"`
+	Migration     *MigrationInfoDTO  `json:"migration,omitempty"`
+	TicketID      *string            `json:"ticket_id"`
+	TicketTitle   *string            `json:"ticket_title"`
+	TicketType    *string            `json:"ticket_type"`
+	StartedAt     *string            `json:"started_at"`
+	CompletedAt   *string            `json:"completed_at"`
+	UpdatedAt     string             `json:"updated_at"`
+	Code          CodeFactsDTO       `json:"code"`
+	Sessions      []SessionFactDTO   `json:"sessions"`
+	Anomalies     []AnomalyDTO       `json:"anomalies"`
+	Skills        []domain.SkillFact `json:"skills,omitempty"`
+	TaskLinks     []TaskLinkFactDTO  `json:"task_links,omitempty"`
 }
 
 // ValidateRuntimeFactLedger rejects legacy or explicitly incomplete ledgers before
@@ -428,7 +428,11 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			}
 		}
 	}
-	return validateWireCostFields(data, *metadata.SchemaVersion >= 5)
+	var decoded AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	return decoded.validateCostFields(*metadata.SchemaVersion >= 5)
 }
 
 func containsString(values []string, wanted string) bool {
@@ -449,18 +453,9 @@ func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &version); err != nil {
 		return err
 	}
-	current := version.SchemaVersion != nil && *version.SchemaVersion >= 5
-	if err := validateWireCostFields(data, current); err != nil {
-		return fmt.Errorf("invalid cost fields: %w", err)
+	if version.SchemaVersion != nil && (*version.SchemaVersion < 1 || *version.SchemaVersion > 5) {
+		return fmt.Errorf("unsupported canonical fact schema version %d", *version.SchemaVersion)
 	}
-	if !current {
-		normalized, err := NormalizeLegacyCostJSON(data)
-		if err != nil {
-			return err
-		}
-		data = normalized
-	}
-	type currentDTO AgenticFactLedgerDTO
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return err
@@ -470,20 +465,19 @@ func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("legacy root-level %s is not valid in session-owned schema v4; run `agentic-lens migrate`", legacy)
 		}
 	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	var decoded currentDTO
-	if err := decoder.Decode(&decoded); err != nil {
+	var decoded AgenticFactLedgerDTO
+	var err error
+	if version.SchemaVersion != nil && *version.SchemaVersion == 5 {
+		decoded, err = decodeSchemaV5FactLedger(data)
+	} else {
+		// Older canonical shapes can be decoded by explicit migration tooling. The
+		// ordinary runtime gate accepts only canonical v4 and v5.
+		decoded, err = decodeSchemaV4FactLedger(data)
+	}
+	if err != nil {
 		return err
 	}
-	var trailing struct{}
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		if err == nil {
-			return errors.New("multiple JSON values in fact ledger")
-		}
-		return err
-	}
-	*dto = AgenticFactLedgerDTO(decoded)
+	*dto = decoded
 	return nil
 }
 
@@ -574,7 +568,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	if skills == nil {
 		skills = []domain.SkillFact{}
 	}
-	taskLinks := dto.TaskLinks
+	taskLinks := TaskLinkFactDTOsToDomain(dto.TaskLinks)
 	if taskLinks == nil {
 		taskLinks = []domain.TaskLinkFact{}
 	}
@@ -635,15 +629,6 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 				return fmt.Errorf("sessions[%d].parent_id %q does not identify a session", i, *session.ParentID)
 			}
 		}
-		for j, inv := range session.Invocations {
-			var amount *float64
-			if !inv.costAbsent {
-				amount = domain.CostNumber(inv.CostUSD)
-			}
-			if err := validateCost(amount, inv.CostEvidence, dto.SchemaVersion != nil && *dto.SchemaVersion >= 5); err != nil {
-				return fmt.Errorf("sessions[%d].invocations[%d]: %w", i, j, err)
-			}
-		}
 		for j, tool := range session.Tools {
 			if strings.TrimSpace(tool.Name) == "" {
 				return fmt.Errorf("sessions[%d].tools[%d].name is required", i, j)
@@ -665,25 +650,12 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 			}
 		}
 	}
-	for i, task := range dto.TaskLinks {
-		var amount *float64
-		if task.CostEvidence.State == domain.CostObserved || task.CostEvidence.State == "" {
-			amount = domain.CostNumber(task.CostUSD)
-		}
-		var evidence *domain.CostEvidence
-		if task.CostEvidence.State != "" {
-			evidence = &task.CostEvidence
-		}
-		if err := validateCost(amount, evidence, dto.SchemaVersion != nil && *dto.SchemaVersion >= 5); err != nil {
-			return fmt.Errorf("task_links[%d]: %w", i, err)
-		}
-	}
 	for i, anomaly := range dto.Anomalies {
 		if anomaly.Context.SessionID != nil {
 			return fmt.Errorf("anomalies[%d].context.session_id is not allowed for ticket-level summaries", i)
 		}
 	}
-	return nil
+	return dto.validateCostFields(dto.SchemaVersion != nil && *dto.SchemaVersion >= 5)
 }
 
 func validateAnomalyEvidence(anomaly AnomalyDTO, ownerSession string, nested bool, knownEvents map[string]EventFactDTO, canonical bool) error {
@@ -797,7 +769,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		Sessions:  sessions,
 		Anomalies: anomaliesFromDomain(ledger.Anomalies),
 		Skills:    ledger.Skills,
-		TaskLinks: normalizedTaskCosts(ledger.TaskLinks),
+		TaskLinks: TaskLinkFactDTOsFromDomain(ledger.TaskLinks),
 	}
 }
 
@@ -1036,17 +1008,17 @@ func FleetAnomalySummaryDTOFromDomain(summary domain.FleetAnomalySummary) FleetA
 
 // AgenticMetricsLedgerDTO represents the computed metrics ledger format in JSON.
 type AgenticMetricsLedgerDTO struct {
-	TicketID           *string                   `json:"ticket_id"`
-	TicketTitle        *string                   `json:"ticket_title"`
-	TicketType         *string                   `json:"ticket_type"`
-	StartedAt          *string                   `json:"started_at"`
-	CompletedAt        *string                   `json:"completed_at"`
-	UpdatedAt          string                    `json:"updated_at"`
-	WorkflowEfficiency domain.WorkflowEfficiency `json:"workflow_efficiency"`
-	Totals             domain.GroupedMetric      `json:"totals"`
-	Roles              []domain.RoleMetric       `json:"roles"`
-	Models             []domain.ModelMetric      `json:"models"`
-	Anomalies          []AnomalyDTO              `json:"anomalies,omitempty"`
+	TicketID           *string               `json:"ticket_id"`
+	TicketTitle        *string               `json:"ticket_title"`
+	TicketType         *string               `json:"ticket_type"`
+	StartedAt          *string               `json:"started_at"`
+	CompletedAt        *string               `json:"completed_at"`
+	UpdatedAt          string                `json:"updated_at"`
+	WorkflowEfficiency WorkflowEfficiencyDTO `json:"workflow_efficiency"`
+	Totals             GroupedMetricDTO      `json:"totals"`
+	Roles              []RoleMetricDTO       `json:"roles"`
+	Models             []ModelMetricDTO      `json:"models"`
+	Anomalies          []AnomalyDTO          `json:"anomalies,omitempty"`
 }
 
 // SerializedLedgerDTO is an alias to AgenticMetricsLedgerDTO for backward compatibility.
@@ -1067,10 +1039,10 @@ func (dto AgenticMetricsLedgerDTO) ToDomain() domain.AgenticMetricsLedger {
 		StartedAt:          dto.StartedAt,
 		CompletedAt:        dto.CompletedAt,
 		UpdatedAt:          dto.UpdatedAt,
-		WorkflowEfficiency: dto.WorkflowEfficiency,
-		Totals:             dto.Totals,
-		Roles:              dto.Roles,
-		Models:             dto.Models,
+		WorkflowEfficiency: dto.WorkflowEfficiency.ToDomain(),
+		Totals:             dto.Totals.ToDomain(),
+		Roles:              RoleMetricDTOsToDomain(dto.Roles),
+		Models:             ModelMetricDTOsToDomain(dto.Models),
 		Anomalies:          anomalies,
 	}
 }
@@ -1091,101 +1063,12 @@ func SerializeLedger(ledger domain.AgenticMetricsLedger) AgenticMetricsLedgerDTO
 		StartedAt:          ledger.StartedAt,
 		CompletedAt:        ledger.CompletedAt,
 		UpdatedAt:          ledger.UpdatedAt,
-		WorkflowEfficiency: ledger.WorkflowEfficiency,
-		Totals:             ledger.Totals,
-		Roles:              ledger.Roles,
-		Models:             ledger.Models,
+		WorkflowEfficiency: WorkflowEfficiencyDTOFromDomain(ledger.WorkflowEfficiency),
+		Totals:             GroupedMetricDTOFromDomain(ledger.Totals),
+		Roles:              RoleMetricDTOsFromDomain(ledger.Roles),
+		Models:             ModelMetricDTOsFromDomain(ledger.Models),
 		Anomalies:          anomalies,
 	}
 }
 
 func costEvidencePointer(evidence domain.CostEvidence) *domain.CostEvidence { return &evidence }
-func (dto InvocationFactDTO) evidence() domain.CostEvidence {
-	if dto.CostEvidence != nil {
-		return *dto.CostEvidence
-	}
-	if dto.costAbsent {
-		return domain.UnavailableCost()
-	}
-	return domain.ObservedCost(dto.CostUSD)
-}
-func (dto *InvocationFactDTO) UnmarshalJSON(data []byte) error {
-	type invocationAlias InvocationFactDTO
-	var decoded struct {
-		invocationAlias
-		CostUSD *float64 `json:"cost_usd"`
-	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&decoded); err != nil {
-		return err
-	}
-	*dto = InvocationFactDTO(decoded.invocationAlias)
-	dto.costAbsent = decoded.CostUSD == nil
-	if decoded.CostUSD != nil {
-		dto.CostUSD = *decoded.CostUSD
-	}
-	return nil
-}
-func (dto InvocationFactDTO) MarshalJSON() ([]byte, error) {
-	evidence := dto.evidence()
-	var amount *float64
-	if evidence.State == domain.CostObserved {
-		amount = domain.CostNumber(dto.CostUSD)
-	}
-	return json.Marshal(struct {
-		Role                  string              `json:"role"`
-		Model                 string              `json:"model"`
-		StartedAt             *string             `json:"started_at"`
-		CompletedAt           *string             `json:"completed_at"`
-		ActiveDurationSeconds int64               `json:"active_duration_seconds"`
-		Turns                 int64               `json:"turns"`
-		Tokens                InvocationTokensDTO `json:"tokens"`
-		CostUSD               *float64            `json:"cost_usd"`
-		CostEvidence          domain.CostEvidence `json:"cost_evidence"`
-		Compactions           int64               `json:"compactions"`
-		UserIterations        int64               `json:"user_iterations"`
-	}{
-		Role: dto.Role, Model: dto.Model, StartedAt: dto.StartedAt, CompletedAt: dto.CompletedAt,
-		ActiveDurationSeconds: dto.ActiveDurationSeconds, Turns: dto.Turns, Tokens: dto.Tokens,
-		CostUSD: amount, CostEvidence: evidence, Compactions: dto.Compactions, UserIterations: dto.UserIterations,
-	})
-}
-func normalizedTaskCosts(tasks []domain.TaskLinkFact) []domain.TaskLinkFact {
-	result := append([]domain.TaskLinkFact(nil), tasks...)
-	for i := range result {
-		if result[i].CostEvidence.State == "" {
-			if result[i].CostUSD == 0 {
-				result[i].CostEvidence = domain.UnavailableCost()
-			} else {
-				result[i].CostEvidence = domain.ObservedCost(result[i].CostUSD)
-			}
-		}
-	}
-	return result
-}
-func (dto AgenticFactLedgerDTO) MarshalJSON() ([]byte, error) {
-	type ledgerAlias AgenticFactLedgerDTO
-	data, err := json.Marshal(ledgerAlias(dto))
-	if err != nil {
-		return nil, err
-	}
-	return NormalizeCostJSON(data)
-}
-
-// MarshalJSON applies cost availability to metrics exported outside HTTP too.
-func (dto AgenticMetricsLedgerDTO) MarshalJSON() ([]byte, error) {
-	type metricsAlias AgenticMetricsLedgerDTO
-	data, err := json.Marshal(metricsAlias(dto))
-	if err != nil {
-		return nil, err
-	}
-	return NormalizeCostJSON(data)
-}
-
-func (dto InvocationFactDTO) internalCost() float64 {
-	if dto.CostEvidence != nil && dto.CostEvidence.State == domain.CostPartial && dto.CostEvidence.KnownSubtotalUSD != nil {
-		return *dto.CostEvidence.KnownSubtotalUSD
-	}
-	return dto.CostUSD
-}

@@ -1,7 +1,6 @@
 package adapters
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -404,7 +403,7 @@ type rawExistingLedger struct {
 	Code               *CodeFactsDTO             `json:"code"`
 	Sessions           []SessionFactDTO          `json:"sessions"`
 	Skills             []domain.SkillFact        `json:"skills,omitempty"`
-	TaskLinks          []domain.TaskLinkFact     `json:"task_links,omitempty"`
+	TaskLinks          []TaskLinkFactDTO         `json:"task_links,omitempty"`
 	Invocations        []InvocationFactDTO       `json:"invocations"`
 	Tools              []ToolFactDTO             `json:"tools"`
 	Events             []EventFactDTO            `json:"events,omitempty"`
@@ -432,19 +431,6 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 	}
 
 	var raw rawExistingLedger
-	var version struct {
-		SchemaVersion *int `json:"schema_version"`
-	}
-	if err := json.Unmarshal(data, &version); err != nil {
-		return nil, fmt.Errorf("decoding schema version: %w", err)
-	}
-	if version.SchemaVersion == nil || *version.SchemaVersion < 5 {
-		normalized, err := NormalizeLegacyCostJSON(data)
-		if err != nil {
-			return nil, fmt.Errorf("decoding legacy costs: %w", err)
-		}
-		data = normalized
-	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("decoding existing ledger at %s: %w", path, err)
 	}
@@ -578,14 +564,7 @@ func SaveMetricsLedger(path string, ledger domain.AgenticMetricsLedger) error {
 
 	serialized := SerializeLedger(ledger)
 	data, err := json.MarshalIndent(serialized, "", "  ")
-	if err == nil {
-		data, err = NormalizeCostJSON(data)
-		if err == nil {
-			var formatted bytes.Buffer
-			err = json.Indent(&formatted, data, "", "  ")
-			data = formatted.Bytes()
-		}
-	}
+
 	if err != nil {
 		return fmt.Errorf("failed to marshal metrics ledger: %w", err)
 	}

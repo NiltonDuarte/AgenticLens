@@ -1602,6 +1602,16 @@ func TestSaveFactLedger(t *testing.T) {
 		}
 
 		assertFactJSONFieldOrder(t, data)
+		if err := adapters.SaveFactLedger(outPath, ledger); err != nil {
+			t.Fatal(err)
+		}
+		repeated, err := os.ReadFile(outPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(data, repeated) {
+			t.Fatal("repeated fact DTO persistence changed field order or values")
+		}
 
 		// Trailing newline check
 		if len(data) == 0 || data[len(data)-1] != '\n' {
@@ -1726,6 +1736,21 @@ func TestSaveMetricsLedger(t *testing.T) {
 			}
 		}
 		assertTotals(t, root["totals"])
+		for _, httpOnly := range []string{"facts", "threads"} {
+			if _, exists := root[httpOnly]; exists {
+				t.Fatalf("metrics export gained HTTP-only field %s", httpOnly)
+			}
+		}
+		if err := adapters.SaveMetricsLedger(path, ledger); err != nil {
+			t.Fatal(err)
+		}
+		repeated, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(data, repeated) {
+			t.Fatal("repeated metrics DTO persistence changed field order or values")
+		}
 		response := httptest.NewRecorder()
 		adaptershttp.WriteWorkspacesResponse(response, []domain.AgenticMetricsLedger{ledger})
 		if response.Code != 200 {

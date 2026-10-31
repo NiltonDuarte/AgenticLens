@@ -1,6 +1,9 @@
 package domain
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // CostState identifies whether a fact reports a complete or partial USD amount.
 type CostState string
@@ -139,4 +142,37 @@ func EffectiveCostSummary(summary CostSummary, amount float64, count int64) Cost
 		count = 1
 	}
 	return FinalizeCostSummary(CostSummary{FullyObserved: count, Total: count, KnownSubtotalUSD: CostNumber(amount)})
+}
+
+// ValidateCostEvidence validates nullable amounts and evidence without I/O.
+func ValidateCostEvidence(amount *float64, evidence *CostEvidence, required bool) error {
+	if amount != nil && !ValidCostAmount(*amount) {
+		return fmt.Errorf("cost_usd must be a finite non-negative number")
+	}
+	if evidence == nil {
+		if required {
+			return fmt.Errorf("cost_evidence is required in schema v5")
+		}
+		return nil
+	}
+	if evidence.KnownSubtotalUSD != nil && !ValidCostAmount(*evidence.KnownSubtotalUSD) {
+		return fmt.Errorf("known_subtotal_usd must be finite and non-negative")
+	}
+	switch evidence.State {
+	case CostObserved:
+		if amount == nil || evidence.KnownSubtotalUSD == nil || *amount != *evidence.KnownSubtotalUSD {
+			return fmt.Errorf("observed cost requires matching numeric cost_usd and known_subtotal_usd")
+		}
+	case CostPartial:
+		if amount != nil || evidence.KnownSubtotalUSD == nil {
+			return fmt.Errorf("partial cost requires null cost_usd and numeric known_subtotal_usd")
+		}
+	case CostUnavailable:
+		if amount != nil || evidence.KnownSubtotalUSD != nil {
+			return fmt.Errorf("unavailable cost requires null amounts")
+		}
+	default:
+		return fmt.Errorf("invalid cost_evidence state %q", evidence.State)
+	}
+	return nil
 }
