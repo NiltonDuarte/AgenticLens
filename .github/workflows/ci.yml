@@ -40,17 +40,9 @@ jobs:
         working-directory: web
         run: npm ci
 
-      - name: Build frontend assets
-        working-directory: web
-        run: mkdir -p ../backend/internal/adapters/web/dist && npm run build
-
-      - name: Go Vet
-        working-directory: backend
-        run: go vet ./...
-
-      - name: Go Test with Race Detector
-        working-directory: backend
-        run: go test -v -race ./...
+      - name: Backend Go Checks
+        # Shares the local Makefile asset prerequisite before vet and tests.
+        run: make backend-check
 
   frontend-check:
     name: Frontend Check
