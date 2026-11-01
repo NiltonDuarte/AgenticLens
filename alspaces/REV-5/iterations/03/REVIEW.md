@@ -22,7 +22,7 @@ Full semantic reading does not execute every possible path or prove absence of d
 | Priority | Finding | Evidence and owner report |
 | --- | --- | --- |
 | P1 | Warning-bearing Codex recovery can replace known stored facts with incomplete zero-valued facts while claiming complete recovery. | Disposable probe: stored input1000 became0, parser warned, recovery returned complete/updated without diagnostics. [ADP-01](ADAPTERS_REPORT.md). |
-| P1 | Default listener exposes raw local telemetry on all network interfaces without authentication. | Static listener/routes/CORS evidence; exposure depends on network reachability. No browser exploit claimed. [ADP-05](ADAPTERS_REPORT.md). |
+| P2 | Default listener binds network interfaces despite the local-only product scope. | User clarified intentional remote exposure is operator-owned; authentication is not required for supported local use. Residual concern is implicit LAN binding; recommend a loopback default. [ADP-05](ADAPTERS_REPORT.md). |
 | P1 | Release force_tag can attach binaries built from the dispatch revision to an older release tag. | Workflow control-flow evidence; no remote publishing performed. [D3](DELIVERY_REPORT.md). |
 | P2 | Partial generation preserves remote sessions but deletes their historical auxiliary skill/task facts. | Isolated CLI/SQLite reproduction. [CC-02](CORE_CLI_REPORT.md). |
 | P2 | Configuration values lose meaning across writer, loader, command and aggregation boundaries. | YAML roundtrip/name/BaseBranch loss; nested-root scan failure; init DB override; configured anomaly thresholds omitted or unused. [ADP-02/03/04](ADAPTERS_REPORT.md), [CC-03/04/05](CORE_CLI_REPORT.md). |
@@ -55,7 +55,7 @@ The weak point is consistency across boundaries, not merely naming or formatting
 5. **Subtraction opportunities remain beyond function-name reachability.** The core allocates values that are never consumed, thread model aggregation duplicates existing logic, a SQLite handle accessor exists only for a test, frontend contracts/props/dependency have no consumers, and installer copies require parallel fixes. Earlier zero-name-reference screening could not detect writes-only data flow, unused types/props, or same-named methods with different receiver types.
 6. **Some tests validate implementation scaffolding instead of the behavior named by the test.** Strong migration/cost/hydration tests should remain. Repair ineffective oracles before using green suites as evidence; consolidate only with explicit assertion recipients, not count targets.
 
-Prefer targeted corrections and deletion before a broad rewrite. Fix fact preservation and exposure/release identity first, then configuration/identity propagation and async boundaries, then repair oracles and remove unused surfaces. The reports specify plausible regressions and recipients; implementation requires a separate approved remediation iteration.
+Prefer targeted corrections and deletion before a broad rewrite. Fix fact preservation and release identity first, then configuration/identity propagation and async boundaries, then repair oracles and remove unused surfaces. The reports specify plausible regressions and recipients; implementation requires a separate approved remediation iteration.
 
 ## Reproductions and validation
 
@@ -70,3 +70,7 @@ Root delivery checks and final telemetry are recorded in SUMMARY.md. New finding
 At audit commit 8721e36, origin/main (47af923) was already merged. Required `make` exited 0: Go vet/race suites, TypeScript typecheck/ESLint, 781 frontend tests across 35 files, canonical embedded asset build and four Linux/Darwin binaries passed. All 308 audited file hashes remained unchanged afterward. Existing passing tests do not close the documented defects or ineffective-oracle findings. No application code changed in iteration 03. Earlier standalone asset-serving evidence remains applicable to the unchanged frontend sources.
 
 Build warnings remain: npm install reported 21 dependency advisories (18 moderate, one high, two critical), and Vite reported a bundle over 500 kB. These are tool-reported signals, not independently triaged vulnerability or performance findings; production reachability was not assessed. No automated dependency upgrades were applied.
+
+## ADP-05 severity correction
+
+User clarified that the product is local-only and deliberate remote exposure is the operator's responsibility. ADP-05 is reduced from P1 to P2 and narrowed to the default bind address, which is broader than the advertised localhost use. Lack of authentication is not a defect within the supported scope. Loopback binding is the minimal recommendation; authentication and remote-deployment features are not required. This supersedes the original priority, preserves the source evidence and all other findings, and makes no runtime change. Existing source hashes and verification remain valid.

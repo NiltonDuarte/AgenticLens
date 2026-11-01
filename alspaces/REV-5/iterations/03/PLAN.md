@@ -9,3 +9,7 @@ Use reviewer roles from the repository development workflow with disjoint read s
 Review FCIS and state ownership, shallow/test-only code, model consistency, error/recovery behavior, test purpose/fidelity and flakiness, supply/build/config boundaries. Report severity, exact code evidence, plausible trigger, subtraction/refactor proposal and verification needed; distinguish defects from debt and intentional compatibility. No performance claims without measurement and no test deletion quotas.
 
 Scope completion: include executable scripts under .agents and the AL-58 evidence Python provider plus its two live-consumed JSON configs. Ordinary historical prose/ledgers remain excluded, but code is not excluded merely because its path is historical. These additional files belong to root delivery audit.
+
+## Review correction: local-only listener scope
+
+Source: user clarified local-only use and operator responsibility for deliberate remote exposure. ADP-05 changes from P1 to P2, limited to implicit network-interface binding rather than missing authentication. Acceptance excludes mandatory authentication or new remote-deployment features; loopback is the minimal suggested default. This supersedes the original exposure priority and broader remedy, preserves all other audit findings, and remains in iteration 03 as a review correction. No application/tests/configuration changed; prior source hashes and make evidence remain applicable.

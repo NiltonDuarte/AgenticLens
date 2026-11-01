@@ -46,15 +46,15 @@ Static evidence: both SQL patterns contain the literal directory; resolution tes
 
 Safe change: supply the resolved workspace policy from the calling shell and construct escaped path-search patterns there or in a narrowly owned resolver. Required proof: both schema families with a custom root, title fallback, exact-ID/nonce precedence, path separators, and SQL LIKE wildcard characters treated according to a documented policy.
 
-## ADP-05 — P1: the default HTTP listener exposes raw local telemetry on every interface
+## ADP-05 — P2: default bind address is broader than the local-only product scope
 
-Locations: `backend/internal/adapters/http/server.go:90-93`; global middleware at 65-66; `backend/internal/adapters/http/middleware.go:7-13`; live routes at server.go:57-59.
+Locations: `backend/internal/adapters/http/server.go:90-93`; global middleware at 65-66; `backend/internal/adapters/http/middleware.go:7-13`; live routes at server.go:57-59. The CLI advertises localhost at `backend/cmd/agentic-lens/main.go:562`.
 
-Trigger and threat assumption: another caller can reach the dashboard port on one of the machine's interfaces. The listener address is `:<port>`, routes have no authentication, and live trace endpoints expose source-database contents. This is a confidentiality boundary for a dashboard reading local raw telemetry. Firewall/network isolation may prevent access; this review did not demonstrate a browser exploit or make assumptions about browser private-network protections. The wildcard CORS policy additionally permits arbitrary origins wherever browser/network policy allows the request.
+Product boundary clarified by the user: AgenticLens is local-only; deliberate remote exposure and its access controls are the operator's responsibility. Absence of application authentication is not a defect under that supported scope. The original P1 classification over-weighted an externally reachable deployment assumption and is superseded by P2, normal-priority default hardening.
 
-Static evidence: the bind address is not loopback, authentication is absent from route construction, and CORS is applied to every API. Existing httptest coverage verifies handler behavior and explicitly accepts wildcard CORS; it does not test listener exposure. This is a default exposure concern, not a claim that all installations are externally reachable.
+The remaining issue is default behavior: the listener address is `:<port>`, which binds available network interfaces rather than loopback. Starting the local dashboard can therefore accept LAN connections without an explicit remote-exposure option. Actual access depends on network reachability and firewall policy; internet exposure is not established. Live trace routes return local telemetry. No browser exploit was demonstrated, and no assumption is made about browser private-network protections. Wildcard CORS is contextual evidence, not an independent requirement to add authentication.
 
-Safe change: bind loopback by default and make remote exposure an explicit configuration decision with an appropriate access-control policy. Restrict development CORS to configured origins if it is needed. Required proof: listener-address tests, remote opt-in behavior, permitted/denied origin coverage, and continued standalone embedded-UI access.
+Minimal recommendation: bind loopback by default to match the supported local-only use and advertised URL. Do not add authentication, remote-host configuration or a new remote deployment mode solely to resolve this finding. Any deliberate tunneling/proxy exposure remains operator-owned. Required proof for a future implementation: loopback listener address and continued standalone embedded-UI/API access. No runtime change was made during this severity correction.
 
 ## ADP-06 — P2: optional child-lookup failure is indistinguishable from an absent child
 

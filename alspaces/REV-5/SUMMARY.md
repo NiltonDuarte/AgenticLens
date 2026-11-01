@@ -9,15 +9,15 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 8
-- **Active Agent Duration:** 1h 33m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 9
+- **Active Agent Duration:** 1h 50m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 5 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.1 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 1.9:1 (+532 test lines / +275 prod lines)
 - **Code Delivered:** +807 / -2,545 lines across 51 code files (excluding docs)
-- **Reasoning Effort:** 55,111 reasoning tokens (19.9% of generated output)
-- **Tool Health & Self-Correction:** 658 tool calls (34 self-corrections, 94.8% success rate)
+- **Reasoning Effort:** 55,235 reasoning tokens (19.7% of generated output)
+- **Tool Health & Self-Correction:** 666 tool calls (35 self-corrections, 94.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 23 execution anomalies detected (13 CRITICAL, 10 WARNING).
@@ -56,14 +56,14 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 | **coder** | 6 | 659,473 | 52,011 | 20,631,552 | 96.9% | 184.5k | ELEVATED | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
 | **tester** | 2 | 150,345 | 8,641 | 5,075,712 | 97.1% | 174.6k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer** | 5 | 1,527,589 | 78,158 | 33,604,352 | 95.7% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **rootagent** | 1 | 466,221 | 76,990 | 30,917,888 | 98.5% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **16** | **3,047,149** | **221,327** | **91,374,336** | **96.8%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations)** |
+| **rootagent** | 1 | 474,845 | 80,286 | 31,266,688 | 98.5% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **16** | **3,055,773** | **224,623** | **91,723,136** | **96.8%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 16 | 3,047,149 | 221,327 | 91,374,336 | 96.8% | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
-| **Total** | **16** | **3,047,149** | **221,327** | **91,374,336** | **96.8%** | **Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations)** |
+| **gpt-6-astra** | 16 | 3,055,773 | 224,623 | 91,723,136 | 96.8% | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
+| **Total** | **16** | **3,055,773** | **224,623** | **91,723,136** | **96.8%** | **Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -160,3 +160,11 @@ Source metadata identifies 16 Codex sessions: the original root and 15 children,
 ## Audit telemetry verification
 
 Final ledger verified as schema v5, REV-5/fix, with exactly the 16 source-metadata session identities: original Codex root and 15 correctly linked children. All 13 prior sessions are preserved. No other-harness sessions existed in the prior ledger. The verifier uses the actual schema parent_id field.
+
+## Review correction: local-only listener scope
+
+Source: user clarified local-only use and operator responsibility for deliberate remote exposure. ADP-05 changes from P1 to P2, limited to implicit network-interface binding rather than missing authentication. Acceptance excludes mandatory authentication or new remote-deployment features; loopback is the minimal suggested default. This supersedes the original exposure priority and broader remedy, preserves all other audit findings, and remains in iteration 03 as a review correction. No application/tests/configuration changed; prior source hashes and make evidence remain applicable.
+
+Verification for this correction: all 308 audited file hashes unchanged; diff whitespace check passed; origin/main already integrated. Prior full make results reused because only review prose changed.
+
+Listener-review telemetry refresh verified: schema v5, REV-5/fix, all 16 existing Codex identities and parent links preserved; no new children. Snapshot ends at generation.
