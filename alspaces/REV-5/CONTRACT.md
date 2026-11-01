@@ -41,3 +41,7 @@ User requires every selected reviewer on both Sol 6.1 high and Luna 6 medium, co
 ## Iteration 08 approved follow-up ticket
 
 User requested a ticket for lifecycle hooks in installation. Create AL-68 in the shared backlog and index under continued REV-5 ownership. Scope is specification only: additive Codex/OpenCode hooks, session registration/capture/reconciliation, explicit ticket/parent identity, CLI diagnostics and verification. Preserve third-party skills/personas, local-only operation and no T3 source. Implementation belongs to a separate development session; current telemetry behavior and historical coverage limitations remain unchanged.
+
+## Iteration 09 approved backlog and ledger repair
+
+User requested tickets for all open findings and inclusion of the two missing reviewer sessions. Create a reconciled finding-to-ticket map, reuse existing scope where appropriate and author follow-ups only. Recover both sessions through the supported Codex CLI using real source IDs; preserve existing sessions, metadata, unavailable costs and truthful parent identity. This supersedes the known omission for the current ledger once verified; historical snapshots remain intact. No application fixes or PR merge are authorized by this request.

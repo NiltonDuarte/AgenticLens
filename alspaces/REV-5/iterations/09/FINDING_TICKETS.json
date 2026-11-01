@@ -1,0 +1,405 @@
+{
+  "audit_baseline": "d5227812b09a17ff15d7e6ffe058e96ecf1616eb",
+  "planning_baseline": "cd3a880d44fe2268260835de8a3cfb1b1b62745f",
+  "catalog_entries": 51,
+  "fixed_entries": 2,
+  "open_entries": 49,
+  "new_tickets": [
+    "AL-69",
+    "AL-70",
+    "AL-71",
+    "AL-72",
+    "AL-73",
+    "AL-74",
+    "AL-75",
+    "AL-76",
+    "AL-77",
+    "AL-78",
+    "AL-79",
+    "AL-80",
+    "AL-81",
+    "AL-82",
+    "AL-83",
+    "AL-84",
+    "AL-85",
+    "AL-86",
+    "AL-87",
+    "AL-88",
+    "AL-89",
+    "AL-90",
+    "AL-91",
+    "AL-92",
+    "AL-93"
+  ],
+  "notes": [
+    "CC-06 and FE-01 describe one cross-layer defect, not independent counts.",
+    "FE-D2 and FE-D3 are cross-cutting analyses; primary and related ticket ownership preserve every recommendation.",
+    "AL-92 tracks bounded unnumbered observations; these are not confirmed vulnerabilities or measured performance defects.",
+    "Original F1-F7 were closed in iteration 02; no duplicate follow-ups allocated."
+  ],
+  "findings": [
+    {
+      "finding": "CC-01",
+      "status": "open_ticketed",
+      "ticket": "AL-69",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-02",
+      "status": "open_ticketed",
+      "ticket": "AL-62",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-03",
+      "status": "open_ticketed",
+      "ticket": "AL-72",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-04",
+      "status": "open_ticketed",
+      "ticket": "AL-72",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-05",
+      "status": "open_ticketed",
+      "ticket": "AL-71",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-06",
+      "status": "open_ticketed",
+      "ticket": "AL-73",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-07",
+      "status": "open_ticketed",
+      "ticket": "AL-73",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-08",
+      "status": "open_ticketed",
+      "ticket": "AL-74",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-09",
+      "status": "open_ticketed",
+      "ticket": "AL-75",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-10",
+      "status": "open_ticketed",
+      "ticket": "AL-75",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-11",
+      "status": "open_ticketed",
+      "ticket": "AL-75",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "CC-12",
+      "status": "open_ticketed",
+      "ticket": "AL-76",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/CORE_CLI_REPORT.md"
+    },
+    {
+      "finding": "ADP-01",
+      "status": "fixed",
+      "ticket": "REV-5",
+      "evidence": "alspaces/REV-5/iterations/04/REVIEW.md",
+      "commit": "302b3d0"
+    },
+    {
+      "finding": "ADP-02",
+      "status": "open_ticketed",
+      "ticket": "AL-70",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-03",
+      "status": "open_ticketed",
+      "ticket": "AL-71",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-04",
+      "status": "open_ticketed",
+      "ticket": "AL-71",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-05",
+      "status": "open_ticketed",
+      "ticket": "AL-93",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-06",
+      "status": "open_ticketed",
+      "ticket": "AL-74",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-07",
+      "status": "open_ticketed",
+      "ticket": "AL-77",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-08",
+      "status": "open_ticketed",
+      "ticket": "AL-76",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-09",
+      "status": "open_ticketed",
+      "ticket": "AL-77",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-10",
+      "status": "open_ticketed",
+      "ticket": "AL-78",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-11",
+      "status": "open_ticketed",
+      "ticket": "AL-79",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-12",
+      "status": "open_ticketed",
+      "ticket": "AL-80",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "ADP-13",
+      "status": "open_ticketed",
+      "ticket": "AL-77",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/ADAPTERS_REPORT.md"
+    },
+    {
+      "finding": "FE-01",
+      "status": "open_ticketed",
+      "ticket": "AL-73",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-02",
+      "status": "open_ticketed",
+      "ticket": "AL-81",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-03",
+      "status": "open_ticketed",
+      "ticket": "AL-81",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-04",
+      "status": "open_ticketed",
+      "ticket": "AL-82",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-05",
+      "status": "open_ticketed",
+      "ticket": "AL-82",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-06",
+      "status": "open_ticketed",
+      "ticket": "AL-83",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-07",
+      "status": "open_ticketed",
+      "ticket": "AL-83",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-08",
+      "status": "open_ticketed",
+      "ticket": "AL-84",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-09",
+      "status": "open_ticketed",
+      "ticket": "AL-85",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-10",
+      "status": "open_ticketed",
+      "ticket": "AL-86",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-11",
+      "status": "open_ticketed",
+      "ticket": "AL-86",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-12",
+      "status": "open_ticketed",
+      "ticket": "AL-85",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-13",
+      "status": "open_ticketed",
+      "ticket": "AL-87",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-14",
+      "status": "open_ticketed",
+      "ticket": "AL-87",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-15",
+      "status": "open_ticketed",
+      "ticket": "AL-87",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-16",
+      "status": "open_ticketed",
+      "ticket": "AL-83",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-D1",
+      "status": "open_ticketed",
+      "ticket": "AL-88",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-D2",
+      "status": "open_ticketed",
+      "ticket": "AL-81",
+      "related_tickets": [
+        "AL-73",
+        "AL-86"
+      ],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "FE-D3",
+      "status": "open_ticketed",
+      "ticket": "AL-83",
+      "related_tickets": [
+        "AL-84",
+        "AL-87"
+      ],
+      "evidence": "alspaces/REV-5/iterations/03/FRONTEND_REPORT.md"
+    },
+    {
+      "finding": "D1",
+      "status": "open_ticketed",
+      "ticket": "AL-89",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/DELIVERY_REPORT.md"
+    },
+    {
+      "finding": "D2",
+      "status": "open_ticketed",
+      "ticket": "AL-89",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/DELIVERY_REPORT.md"
+    },
+    {
+      "finding": "D3",
+      "status": "fixed",
+      "ticket": "REV-5",
+      "evidence": "alspaces/REV-5/iterations/04/REVIEW.md",
+      "commit": "302b3d0"
+    },
+    {
+      "finding": "D4",
+      "status": "open_ticketed",
+      "ticket": "AL-90",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/DELIVERY_REPORT.md"
+    },
+    {
+      "finding": "D5",
+      "status": "open_ticketed",
+      "ticket": "AL-91",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/DELIVERY_REPORT.md"
+    },
+    {
+      "finding": "D6",
+      "status": "open_ticketed",
+      "ticket": "AL-89",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/DELIVERY_REPORT.md"
+    },
+    {
+      "finding": "D7",
+      "status": "open_ticketed",
+      "ticket": "AL-79",
+      "related_tickets": [],
+      "evidence": "alspaces/REV-5/iterations/03/DELIVERY_REPORT.md"
+    }
+  ]
+}

@@ -240,3 +240,7 @@ Validated ticket structure, unique allocation, index consistency, owning paths a
 ## Iteration 08 delivery and telemetry
 
 Planning commit 67b313c already includes current origin/main. Ticket/index checks and whitespace passed; unchanged application sources reuse prior full make evidence. Final REV-5/fix ledger preserves the root and all 25 prior session identities, sources and parent fields. No new reviewers were launched. The two historical iteration 07 reviewer sessions remain omitted; completeness is still explicitly limited in iterations/08/TELEMETRY_STATUS.json. Snapshot ends at generation and excludes subsequent verification/publication calls.
+
+## Iteration 09: open-finding allocation and reviewer recovery
+
+Baseline cd3a880; initial tree clean. Reconciled all 51 iteration 03 catalog entries: two fixed in iteration 04, 49 open and assigned. Created AL-69 through AL-93 and added CC-02 regression acceptance to existing AL-62. Cross-layer duplicates and cross-cutting architecture/test analyses have explicit primary/related owners; AL-92 covers unnumbered dependency/toolchain observations without asserting an exploit or measured performance problem. Original F1-F7 remain resolved. No application/test/runtime files changed. Real-source recovery and final verification follow in iterations/09.

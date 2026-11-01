@@ -15,3 +15,5 @@ This REV-5 session supersedes historical GEN-14 audit PR #91. Scope, evidence an
 Iteration 07 adds configurable paired Sol 6.1/high and Luna 6/medium runs for every selected reviewer, with durable per-model run/finding attribution. Both models completed the scoped policy review with no findings; source metadata verifies requested settings. Telemetry linkage limitations are recorded.
 
 Iteration 08 creates Ready follow-up AL-68 for installing Codex/OpenCode lifecycle hooks with session capture, reconciliation and health diagnostics. It preserves client-owned skills and explicit source/parent identity. This is a backlog specification; hooks are not implemented in this PR. Ticket/index/whitespace checks passed; application verification remains unchanged.
+
+Iteration 09 assigns every remaining audit finding to a follow-up: AL-69 through AL-93, with CC-02 covered by existing AL-62. The mapping distinguishes fixed findings, overlaps and bounded observations. It also recovers the two previously omitted reviewer sessions from their actual Codex records; current verification and native-parent limitations are recorded in iterations/09.
