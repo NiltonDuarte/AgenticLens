@@ -9,15 +9,15 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 36
-- **Active Agent Duration:** 2h 49m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 38
+- **Active Agent Duration:** 2h 58m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 6 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0, Parallel_protocol_exercise 1.0, Review_eval_original 2.0, Review_eval_revised 2.0
 - **Test-to-Production Code Ratio:** 2.3:1 (+650 test lines / +280 prod lines)
 - **Code Delivered:** +930 / -2,550 lines across 53 code files (excluding docs)
-- **Reasoning Effort:** 70,114 reasoning tokens (17.2% of generated output)
-- **Tool Health & Self-Correction:** 918 tool calls (45 self-corrections, 95.1% success rate)
+- **Reasoning Effort:** 71,629 reasoning tokens (17.2% of generated output)
+- **Tool Health & Self-Correction:** 929 tool calls (45 self-corrections, 95.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 24 execution anomalies detected (13 CRITICAL, 11 WARNING).
@@ -60,16 +60,16 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 | **parallel_protocol_exercise** | 1 | 34,071 | 3,638 | 176,128 | 83.8% | 36.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_original** | 1 | 38,836 | 2,525 | 126,848 | 76.6% | 40.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_revised** | 1 | 15,805 | 3,212 | 168,192 | 91.4% | 37.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 3 | 903,557 | 163,714 | 55,641,216 | 98.4% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Total** | **27** | **3,855,275** | **336,636** | **120,257,024** | **96.9%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
+| **rootagent** | 3 | 920,431 | 173,108 | 57,502,720 | 98.4% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Total** | **27** | **3,872,149** | **346,030** | **122,118,528** | **96.9%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 25 | 3,771,928 | 330,461 | 119,822,848 | 96.9% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
+| **gpt-6-astra** | 25 | 3,788,802 | 339,855 | 121,684,352 | 97.0% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
 | **gpt-6-luna** | 1 | 36,163 | 1,977 | 141,312 | 79.6% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **gpt-6.1-sol** | 1 | 47,184 | 4,198 | 292,864 | 86.1% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **27** | **3,855,275** | **336,636** | **120,257,024** | **96.9%** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
+| **Total** | **27** | **3,872,149** | **346,030** | **122,118,528** | **96.9%** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -258,3 +258,7 @@ Snapshot ends at generation and excludes later verification/commit/publication c
 ## Iteration 09: consolidated remediation backlog
 
 User requested fewer tickets. At d59d2f7 the working tree was clean and all 25 drafts were Ready with no developer workspaces. Consolidated them into seven tickets, AL-69 through AL-75, retaining all acceptance cases and the complete 51-entry disposition map. Existing AL-62 still owns CC-02 and AL-68 remains the separate hooks feature. Removed obsolete draft files/index entries; updated active references and PR description. Earlier allocation counts are historical. No application/runtime/test changes; recovered reviewer sessions and source limitations are preserved.
+
+## Consolidation delivery verification
+
+At planning commit 7963150, current origin/main was already integrated. Seven Ready tickets retain all 76 original acceptance bullets and every one of the 51 finding dispositions; obsolete drafts and active references were removed. No application/runtime/test changes; prior make evidence remains applicable. Final telemetry refresh preserved all 27 session identities, sources and parent fields; all 26 non-root session objects, including both recovered reviewers, are unchanged. Only the active root was refreshed. Native linkage and unavailable-cost limits remain explicit. Snapshot excludes later verification/commit/publication calls.

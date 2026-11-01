@@ -13,7 +13,7 @@
   "complete_for_known_session_roster": true,
   "native_hierarchy_complete": false,
   "cost_complete": false,
-  "snapshot_updated_at": "2026-11-01T15:26:58.909686+00:00",
+  "snapshot_updated_at": "2026-11-01T15:43:12.821900+00:00",
   "limitations": [
     "Recovered reviewers remain independent Codex roots because source records contain no native parent links.",
     "Source model/effort and reviewer attribution are recorded in iteration 07 REVIEW_RUNS.json and iteration 09 SESSION_RECOVERY.json; role fields were not manually rewritten.",
@@ -23,5 +23,11 @@
   "supersedes_current_omission_status_from": [
     "iterations/07/TELEMETRY_STATUS.json",
     "iterations/08/TELEMETRY_STATUS.json"
-  ]
+  ],
+  "consolidation_verification": {
+    "prior_sessions_preserved": 27,
+    "unchanged_nonroot_sessions": 26,
+    "root_refreshed": true,
+    "reviewer_imports_retained": true
+  }
 }
