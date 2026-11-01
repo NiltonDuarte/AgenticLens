@@ -184,3 +184,11 @@ At implementation commit 302b3d0, origin/main was already integrated. Full make 
 ## Iteration 04 telemetry verification
 
 Verified schema v5, REV-5/fix, all 20 source-metadata Codex sessions and correct parent links: the prior 16 identities plus planner, coder, tester and reviewer. No other-harness sessions existed to preserve. Snapshot ends at generation; subsequent validation/commit/push calls are outside the snapshot.
+
+## Iteration 05: reviewer effectiveness
+
+User approved the recommendation after online research. Baseline d659d43; initial tree clean. Updated canonical review procedure to lead with independent correctness investigation and verified counterexamples; added INCOMPLETE outcome, clarified evidence permissions and aligned active workflow references. Two fresh-context evaluation agents compare original/revised instructions on the same blinded source cases; results follow in iterations/05. No application/runtime changes.
+
+## Iteration 05 validation
+
+Both skills passed the skill-creator validator; YAML frontmatter, Codex TOML and local links validated; obsolete two-axis dispatch wording was removed from active guidance. Independent consistency reviewer APPROVED. Both fresh-context evaluators detected the seeded defects and accepted the controls; identical clarification resolved an ambiguous sorting requirement. This does not demonstrate improved production detection. Details/provenance and evidence limits are in iterations/05/EVALUATION.md and EVALUATION.json. Application/runtime code remains unchanged; prior full make evidence is reused.

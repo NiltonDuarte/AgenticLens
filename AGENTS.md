@@ -91,7 +91,7 @@ Specialized roles:
   - `planner`: Contracts, architecture, and zero-code plans.
   - `coder`: Go backend and TypeScript frontend implementation.
   - `tester`: Adversarial unit and boundary tests. Zero mocks in domain, zero silent skips.
-  - `reviewer`: Read-only diff audit along Spec Alignment and Engineering Standards.
+  - `reviewer`: Independent correctness investigation following [the review skill](.agents/skills/agentic-lens-review/SKILL.md), including relevant unchanged dependencies. Product code is read-only; reports need explicitly assigned output permission. `INCOMPLETE` review evidence does not pass the delivery gate.
 
 ---
 

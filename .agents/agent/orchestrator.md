@@ -29,7 +29,7 @@ Subagent Delegation Roster:
 - `planner` (`subagent_type="planner"`): Architecture, contract formulation, Go/TypeScript FCIS invariants, and task decomposition.
 - `coder` (`subagent_type="coder"`): Implements Go domain models, aggregations, adapters, CLI commands, and TypeScript frontend views/components.
 - `tester` (`subagent_type="tester"`): Verifies relevant Go and TypeScript contracts, reusing existing coverage under [test purpose and proportionality](../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality), with race checks and zero silent skips.
-- `reviewer` (`subagent_type="reviewer"`): Read-only auditor that inspects git diffs against CONTRACT.md, FCIS rules, typing, zero any in Go/TS, and zero emojis.
+- `reviewer` (`subagent_type="reviewer"`): Independent correctness investigator following the canonical review skill, with product code read-only and explicitly assigned evidence output.
 
 Workflow Execution Loop:
 1. Kickoff & Parametrization:
@@ -50,9 +50,10 @@ Workflow Execution Loop:
 5. Phase 2 (Implementation, Testing & Review Loop):
    - Dispatch `coder` with pointers to `CONTRACT.md`, `iterations/<NN>/PLAN.md` (and `REVIEW.md` if rework).
    - Dispatch `tester` to execute tests with zero silent skips.
-   - Dispatch `reviewer` to audit diffs and save verdict in `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
+   - Dispatch `reviewer` with requirements, base/head and raw evidence in a fresh context where supported; follow `.agents/skills/agentic-lens-review/SKILL.md` and save verdict in `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
    - Loop control:
-     - `APPROVED`: Proceed to Phase 3.
+     - `APPROVED`: Proceed to Phase 3 for the reviewed revision/scope only.
+     - `INCOMPLETE`: Obtain the missing evidence or capability before delivery; no implicit approval.
      - `CHANGES_REQUESTED`: Feed findings back to `coder`/`tester`.
      - `BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
 6. Phase 3 (Delivery Sync & Self-Reflexive Telemetry via AgenticLens):

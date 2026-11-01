@@ -1,11 +1,33 @@
 ---
 name: agentic-lens-review
-description: Use when auditing, reviewing, or finding refactoring, performance, and architectural improvement opportunities in the AgenticLens Go and TypeScript codebase, with deep test suite profiling for slow tests.
+description: Use when auditing, reviewing, or finding refactoring, performance, and architectural improvement opportunities in the AgenticLens Go and TypeScript codebase, with independent correctness investigation and risk-directed verification.
 ---
 
 # AgenticLens Architecture, Code & Test Suite Review
 
-Audits the **AgenticLens** codebase (Go backend/CLI/engine and TypeScript frontend) for architectural drift, code smells, shallow abstractions, and test suite execution bottlenecks. Synthesizes deep module design with strict Functional Core, Imperative Shell (FCIS) invariants to deliver prioritized, actionable refactoring and performance optimization proposals.
+Find concrete correctness defects in AgenticLens Go, TypeScript and delivery code. Plans, implementation reports and passing suites are evidence to evaluate, not conclusions to endorse. Use this procedure for development reviews as well as standalone audits; architecture and test profiling are additional lenses, not substitutes for investigating behavior.
+
+## Independent correctness review
+
+1. Establish the requested boundary, base/head revision (or diff hash), supported deployment assumptions, and requirements. For a fix review distinguish verifying the supplied fix from discovering additional defects. Whole-repository claims require a reconciled file inventory; a diff review makes no such claim.
+2. Read source and the diff, then identify plausible failure hypotheses before relying on the author's explanation or prior approval. Prefer a fresh reviewer context containing requirements and raw evidence over the implementation conversation. Do not withhold requirements or useful test evidence; reconcile reports after forming the initial assessment. Independence of context is not proof of independence of reasoning.
+3. Follow the consequential execution paths through callers, producers, transformations, persistence and consumers as applicable. Inspect unchanged dependencies when needed. Implementation scope limits do not prohibit relevant read-only investigation. Challenge whether the plan itself preserves required behavior; report conflicts rather than silently changing scope.
+4. Investigate the highest-impact plausible failures. For data replacement/migrations, release identity and concurrency, seek an isolated probe, existing behavioral test or precise source-level counterexample. Exercise actual boundaries where feasible; explain when evidence is only static. Do not require a generic test matrix, minimum finding count or repetitive full-suite execution. For low-risk changes a clear source trace may suffice.
+5. Verify candidate findings before reporting: identify the trigger, reachable call path, incorrect observable result and supported expectation; check callers/guards for evidence that refutes the hypothesis. Distinguish introduced regressions, pre-existing defects and optional maintenance suggestions. Severity depends on actual supported use and impact, not an imagined deployment. A credible finding from one reviewer does not require majority agreement.
+6. Assess the test oracle: would the relevant test fail for the plausible regression, and does its fixture reach the claimed branch? For consequential fixes, seek before/after failure evidence or a targeted disposable mutation when practical. Reuse valid results for unchanged code, but do not treat a green suite as an independent correctness argument. Do not mutate shared production files to demonstrate a bug.
+7. Reconcile the investigation with requirements, implementation/test reports and engineering standards. Report findings first and bound the conclusion to the inspected revision and paths. Stop when the scoped risks have sufficient evidence; name material gaps instead of repeating reviews until someone approves.
+
+### Evidence and outcomes
+
+Use a compact report: reviewed revision/scope; findings with locations, triggers, consequences and evidence; consequential hypotheses investigated and their disposition; reused/executed verification; remaining limits. This is a record of investigation, not a mandatory essay for trivial edits. Separate unresolved introduced defects from existing debt and suggestions; do not silently omit an existing defect because it is outside the diff.
+
+- `CHANGES_REQUESTED`: substantiated blocking correctness or required-contract defects. Explain what must change and why.
+- `INCOMPLETE`: material access, context or verification gaps prevent a defensible conclusion. State the missing evidence and next action. This does not pass the delivery gate.
+- `APPROVED`: no blocking finding in the scoped investigation, with material hypotheses assessed and no unresolved evidence gap. This is not proof of bug absence, whole-repository quality or authorization to merge.
+
+### Reviewer effectiveness
+
+When substantially changing review behavior, use bounded independent forward tests on defect and corrected/control cases without supplying expected findings. Keep a holdout outside the examples used to write the instructions. Record prompt versions, source revisions, model/context settings, observed misses, false positives and limits; record cost/time only when measured. Compare equivalent runs before claiming improvement. Small fixtures establish usability, not production recall. Turn recurring deterministic failures into targeted tests or checks; keep this skill as a short route to canonical rules rather than accumulating incident-specific prohibitions.
 
 ---
 
@@ -37,13 +59,13 @@ Determine the audit boundary before reading files:
 
 ### 2. Multi-Tier Inspection
 
-Execute four inspection tiers against the target scope:
+Select relevant lenses after the correctness investigation; use all four for a broad architecture/test audit:
 
 #### Tier 1: Layering & Boundary Discipline (Go + TypeScript FCIS)
 - **FCIS Isolation Breach**: Does `internal/domain` import any outer layer (`internal/adapters`, `cmd/`) or I/O library (`os`, `net/http`, `database/sql`, `path/filepath`)? Reject immediately.
 - **Impure Domain Functions**: Do functions in `internal/domain` call `time.Now()`, generate random numbers, or access global mutable variables instead of receiving values as immutable arguments?
 - **Boundary Model Leakage**: Are raw JSON dictionaries (`map[string]any`) leaking into domain functions? External JSON must be unmarshaled and validated in `internal/adapters` into immutable value structs before passing to domain logic.
-- **Stateless Handlers & Scanner**: Do adapter structs or HTTP handlers accumulate mutable runtime state between calls instead of remaining strictly stateless?
+- **State Ownership**: Trace mutable adapter state, caches and subscriptions to their owners, invalidation and synchronization. Necessary shell state is not itself a defect; identify a concrete leak, stale read or race.
 
 #### Tier 2: Module Depth & Structural Friction
 - **Shallow Passthroughs & One-Caller Wrappers**: Are there Go functions or TypeScript helpers that merely forward arguments to another standard library or third-party function without adding validation, domain conversion, or caching? Flag for inlining or deletion.

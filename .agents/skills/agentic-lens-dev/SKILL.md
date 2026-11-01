@@ -63,6 +63,8 @@ Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-pur
 Present planning artifacts. Wait for explicit user confirmation via `question` tool before touching code. If changes requested, re-dispatch `planner`.
 
 ### Phase 2: Implementation, Testing & Audit Loop
+Give the reviewer a fresh context where supported: requirements, baseline/head, raw diff, canonical review procedure and evidence locations; avoid inheriting the author's conclusions. Scale parallel reviewers to independent risks rather than a fixed agent count. For a disputed finding, verify its concrete counterexample rather than vote on approval.
+
 Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/`:
 
 1. **Code (`coder`)**:
@@ -86,12 +88,13 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
    task(
        subagent_type="reviewer",
        description="Audit iteration <NN>",
-       prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Audit along Axis 1 (Spec & Contract Alignment) and Axis 2 (Engineering Standards in TECHNICAL_GUIDELINES.md: Go FCIS isolation, TypeScript strictness, zero any, zero emojis). Save verdict to <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/REVIEW.md.",
+       prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Follow .agents/skills/agentic-lens-review/SKILL.md for independent correctness investigation, including relevant unchanged callers and risk-directed evidence. Form failure hypotheses from requirements/source before reconciling implementation reports. Save verdict to <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/REVIEW.md.",
    )
    ```
 
 **Loop Control**:
-- `APPROVED`: Proceed to Phase 3.
+- `APPROVED`: Proceed to Phase 3 for the reviewed revision and scope; this does not certify unrelated code or authorize merging.
+- `INCOMPLETE`: Resolve the named material evidence/access gap before delivery; do not treat missing findings as approval.
 - `CHANGES_REQUESTED`: Feed findings back to `coder`/`tester`.
 - `STATUS: BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
 

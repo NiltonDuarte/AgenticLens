@@ -81,6 +81,10 @@ When producing a suite inventory, use syntax-aware discovery that handles multil
 
 Run affected checks and the required integrated gate; report actual passed, failed, and skipped cases. Preserve compiler validation where type checks are the oracle. State review confidence and untested boundaries; do not claim mutation equivalence without evidence. For performance or line-ratio comparisons, record the measurement basis from the [metrics guidance](../TECHNICAL_GUIDELINES.md#interpreting-test-metrics).
 
+## Independent code review
+
+Use the [canonical review procedure](../.agents/skills/agentic-lens-review/SKILL.md) for correctness investigation and evidence outcomes. Reusing test runs does not replace inspecting the affected behavior. For consequential fixes, seek evidence that the regression is detected (before/after or a narrowly targeted disposable mutation); explain unavailable proof. Keep durable regressions in self-contained tests, never live ticket artifacts.
+
 ## Before handoff
 
 Record the tested commit/diff, command, result, skipped stages, and environment limits. Reference valid prior results for unchanged code. For each review finding, state fixed, still open, or out of scope with an evidence link; approval does not erase an untested branch. Keep final PR text aligned with delivered scope, and check whether a previous PR has already merged before attaching later work to it.

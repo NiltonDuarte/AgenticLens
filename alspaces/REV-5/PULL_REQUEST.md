@@ -15,3 +15,5 @@ Iteration 03 adds a full tracked-code audit with per-file coverage and unchanged
 ADP-05 is now P2 default-bind hardening under the clarified local-only product scope. Authentication is not required; intentional remote exposure remains operator-owned. No listener behavior was changed.
 
 Iteration 04 fixes the two remaining P1 findings. Warning-bearing Codex recovery retains the stored owner tree with incomplete diagnostics while healthy trees refresh. Release Please selects the exact requested tag before checks/build, verifies metadata identity, and prevents forced rebuilds from creating unrelated releases, moving latest or deleting candidates. Other audit findings remain open. See iterations/04/REVIEW.md.
+
+Iteration 05 makes independent correctness investigation the canonical review procedure, aligns agent/workflow guidance and adds a non-passing INCOMPLETE outcome. A bounded old/new forward test found the same seeded defects in both variants; no detection improvement is claimed. See iterations/05/EVALUATION.md.
