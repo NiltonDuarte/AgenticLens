@@ -128,3 +128,13 @@ Preserve the seven previously recorded sessions. Local source metadata establish
 Snapshot covers through the final generate command; subsequent verification, commit and PR push are outside that snapshot.
 
 Final integration ledger verified: schema v5; all 13 expected Codex sessions with correct parent links, including all seven previous identities; explicit invocation cost evidence. No other-harness sessions existed to preserve.
+
+## Iteration 03: complete code-file audit
+
+User expanded scope to every repository file, then clarified every repository code file. Audit-only acceptance covers all tracked program sources, tests, delivery/build/runtime configuration and supporting fixtures, independent of whether they changed recently. Baseline d522781; initial tree clean. No application/test changes. Three reviewer roles performed full assigned code/test-body reviews; root reviewed delivery/configuration code and validated supporting data.
+
+All 308 scoped files reconciled exactly once against hashes; every tracked program-source/executable path is represented, including setup-skill scripts and a live-consumed Python fixture under AL-58 history. Ordinary historical prose/ledgers and ignored dependencies/build outputs are excluded. Structural data/lockfile checks are explicitly distinguished from semantic code review. See iterations/03/SCOPE.json and COVERAGE.json.
+
+Verdict CHANGES_REQUESTED: new open issues include incomplete-source snapshot replacement, default network exposure, release-tag/checkout mismatch, partial auxiliary-fact loss, configuration/threshold drift, erroneous tool-failure classification, prefix/sort defects, stale UI responses, unchecked live payloads, invalid metric/anomaly presentation, ineffective tests and delivery failure handling. Full reports and proposed proof are in iterations/03/REVIEW.md and the four owner reports. These findings were NOT fixed by this audit, and prior remediation approval is not a whole-repository cleanliness guarantee.
+
+Targeted disposable/in-memory probes reproduced concrete defects and a test mutation blind spot without editing source. Required final delivery verification and telemetry follow below. All audit source hashes remain unchanged.

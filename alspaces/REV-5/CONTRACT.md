@@ -17,3 +17,7 @@ All inventory entries must receive a recorded disposition: removed with test rat
 ## Upstream integration clarification
 
 The user's subsequent request to merge main and review incoming code authorizes integrating main47af923's already shipped cost semantics and schema v5. Preserve these upstream contracts together with REV-5 fixes; the earlier prohibition on inventing a schema bump does not exclude integrating an upstream version. This remains iteration 02 routine integration. See INTEGRATION_PLAN.md for exact parents, ownership, preserved guarantees and renewed verification boundaries.
+
+## Iteration 03 full code audit
+
+User clarified scope to every repository code file. This expands audit coverage beyond changed code to the tracked live source/tests and delivery/configuration code, with supporting fixtures explicitly labeled. It does not authorize rewriting every discovered concern during this audit. Preserve current behavior and record evidence-based findings and per-file coverage in iterations/03; historical ticket artifacts and ignored build/dependency files are excluded.

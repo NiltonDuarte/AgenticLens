@@ -1,0 +1,769 @@
+[
+  {
+    "path": "web/.eslintrc.cjs",
+    "method": "Full configuration/entry read and consumer/script relationship review.",
+    "assessment": "Strict TypeScript/React rules, hooks checks, and warning policy reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/index.html",
+    "method": "Full configuration/entry read and consumer/script relationship review.",
+    "assessment": "Mount element, viewport, language, and module entry reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/package-lock.json",
+    "method": "Structural JSON traversal of all package entries and manifest consistency checks; third-party code not semantically audited.",
+    "assessment": "All 677 package entries parsed; manifest/root versions and direct maps agree, direct entries exist, resolved URLs are HTTPS. 287 non-root entries omit resolved/integrity. No package-content or vulnerability audit.",
+    "finding_ids": [
+      "FE-D1"
+    ]
+  },
+  {
+    "path": "web/package.json",
+    "method": "Full configuration/entry read and consumer/script relationship review.",
+    "assessment": "Scripts and dependency declarations reviewed; canonical build copies Vite output into Go embed destination. lucide-react has no source consumer.",
+    "finding_ids": [
+      "FE-D1"
+    ]
+  },
+  {
+    "path": "web/src/App.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "View routing, selected-ticket ownership, configuration fetch, and prop flow reviewed. Configuration fetch ownership overlaps Navbar; no application error boundary protects unchecked live payloads.",
+    "finding_ids": [
+      "FE-04",
+      "FE-D2"
+    ]
+  },
+  {
+    "path": "web/src/api/client.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full endpoint, request encoding, canonical validation, partial-cost, diagnostics, and malformed-response cases reviewed; retained meaningful API boundary coverage.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/api/client.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "HTTP error propagation, query composition, typed validation dispatch, workspace diagnostics, and optional enrichment normalization reviewed; historical boundary is stronger than live ingress.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/api/costValidation.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Cost evidence/summary scalar and count consistency, unknown-state preservation, nested role/model/invocation checks reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/api/liveApi.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full parser, fetch, EventSource, reconnect, callback, polling, cleanup, and failure cases reviewed; nested malformed payload, error-state recovery, and pending-poll overlap gaps.",
+    "finding_ids": [
+      "FE-04",
+      "FE-05"
+    ]
+  },
+  {
+    "path": "web/src/api/liveApi.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Entire live decoder/REST/SSE/polling lifecycle reviewed and targeted production functions reproduced; unchecked nesting, recovery status, and concurrent polling issues.",
+    "finding_ids": [
+      "FE-04",
+      "FE-05"
+    ]
+  },
+  {
+    "path": "web/src/api/types.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All declarations and repository source references reviewed; exported asynchronous/API/style contracts have no consumers.",
+    "finding_ids": [
+      "FE-D1"
+    ]
+  },
+  {
+    "path": "web/src/api/validation.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Unknown-to-typed canonical ledger/fleet/workspace/config/event guards and optional-array normalization reviewed against client tests; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/AnomalyBadge.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All severity, count, static/clickable semantics, tooltip, and callback cases reviewed; enclosing-row keyboard interception belongs to consumer tests.",
+    "finding_ids": [
+      "FE-06"
+    ]
+  },
+  {
+    "path": "web/src/components/AnomalyBadge.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Static status versus native clickable badge branches and propagation reviewed; native action participates in parent waterfall keydown interception.",
+    "finding_ids": [
+      "FE-06"
+    ]
+  },
+  {
+    "path": "web/src/components/AnomalyDrawer.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full close, metadata, rule, payload, identifier, copy, and plain-failure cases reviewed; copy failure and modal focus lifecycle are not asserted.",
+    "finding_ids": [
+      "FE-08",
+      "FE-14"
+    ]
+  },
+  {
+    "path": "web/src/components/AnomalyDrawer.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Full conditional dialog lifecycle, identity metadata, anomaly presentation, payloads, and copy behavior reviewed; false copy success and missing modal focus ownership.",
+    "finding_ids": [
+      "FE-08",
+      "FE-14"
+    ]
+  },
+  {
+    "path": "web/src/components/ArtifactViewer.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full markdown rendering/security, tab/view, large-content, clipboard rejection/fallback, and timer cases reviewed; fallback false result is absent.",
+    "finding_ids": [
+      "FE-08"
+    ]
+  },
+  {
+    "path": "web/src/components/ArtifactViewer.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Dynamic/legacy artifact selection, markdown renderers, copy implementation, cleanup and empty-state branches reviewed; duplicate fallback ignores copy result.",
+    "finding_ids": [
+      "FE-08"
+    ]
+  },
+  {
+    "path": "web/src/components/Components.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Every component suite body reviewed, including cost coverage, distribution unknowns, tooltips, chart axes, saturation, threads, and selector ordering. Tooltip oracle checks class rather than styled visibility.",
+    "finding_ids": [
+      "FE-15",
+      "FE-D3"
+    ]
+  },
+  {
+    "path": "web/src/components/CostKPICard.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Cost value/state/coverage decomposition and tooltip composition reviewed with Components tests; unknown cost remains distinct from zero.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/DistributionCard.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Sorting, missing/partial totals, share eligibility, colors, and zero denominator rendering reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/EmptyState.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Title/message/optional action branches reviewed with existing callback tests; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/FailedToolAlertCard.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full severity, truncation boundary, payload escaping/fallback, inspection, and prompt copy cases reviewed; failure result and non-streak-count semantics need coverage.",
+    "finding_ids": [
+      "FE-08",
+      "FE-12"
+    ]
+  },
+  {
+    "path": "web/src/components/FailedToolAlertCard.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Failure display, output expansion, severity, optional inspection, prompt generation and props reviewed; ignores clipboard result and messageId prop.",
+    "finding_ids": [
+      "FE-08",
+      "FE-12",
+      "FE-D1"
+    ]
+  },
+  {
+    "path": "web/src/components/FleetAnomalyCard.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full counts, rates, denominator guards, missing summary, clean state, and brittle-tool cases reviewed; no independent new finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/FleetAnomalyCard.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Reliability/empty display, rates, rule list, and public props reviewed; onViewTicket is unused.",
+    "finding_ids": [
+      "FE-D1"
+    ]
+  },
+  {
+    "path": "web/src/components/InfoTooltip.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Visibility state, focus/blur/mouse handlers, Escape and CSS interaction reviewed; competing hover rule defeats dismissal and Escape blurs focus.",
+    "finding_ids": [
+      "FE-15"
+    ]
+  },
+  {
+    "path": "web/src/components/KPICard.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Presentation, zero/empty value, secondary text, and optional tooltip reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/LiveAnomalyBanner.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All severity ordering, count/plural, expansion, session callback and keyboard cases reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/LiveAnomalyBanner.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Alert severity selection, bounded list disclosure, item key and keyboard navigation reviewed; relies on validated transport model.",
+    "finding_ids": [
+      "FE-04"
+    ]
+  },
+  {
+    "path": "web/src/components/LiveSessionTree.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full hierarchy/collapse, confidence, timestamp, selection, ticket propagation and keydown cases reviewed; collapse button keyboard activation is not covered.",
+    "finding_ids": [
+      "FE-06"
+    ]
+  },
+  {
+    "path": "web/src/components/LiveSessionTree.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Recursive rendering, collapse ownership, duration formatting, candidate navigation, and nested control events reviewed; parent intercepts collapse keydown.",
+    "finding_ids": [
+      "FE-04",
+      "FE-06"
+    ]
+  },
+  {
+    "path": "web/src/components/LiveTraceInspector.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full turn identity/order, scroll anchoring, failures, reasoning, copy, token and invocation cases reviewed. Short reasoning checks label only; general copy failures and non-streak counts absent.",
+    "finding_ids": [
+      "FE-08",
+      "FE-12",
+      "FE-16",
+      "FE-D3"
+    ]
+  },
+  {
+    "path": "web/src/components/LiveTraceInspector.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Full keyed message/part rendering, scroll preservation, stream order, failure summaries, copy prompts, reasoning and child navigation reviewed; transport assumptions, ignored copy failures, count semantics and short disclosure issues.",
+    "finding_ids": [
+      "FE-04",
+      "FE-08",
+      "FE-12",
+      "FE-16"
+    ]
+  },
+  {
+    "path": "web/src/components/MultiSelectDropdown.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All selection/sentinel/unknown-value, outside-click, Escape, semantics, label and summary cases reviewed; independent generic-control contracts retained.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/MultiSelectDropdown.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Selection normalization, all sentinel, summary, event listeners and native checkboxes reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/Navbar.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All tabs, brand keyboard/click, version fetch/fallback, project/workspace configuration, and rerender cases reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/Navbar.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Tab and brand actions, config/version fetching, fallback badge behavior and prop precedence reviewed; overlaps App configuration acquisition.",
+    "finding_ids": [
+      "FE-D2"
+    ]
+  },
+  {
+    "path": "web/src/components/SaturationBar.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Ceiling fallback, bar/marker math, health color, role breakdown and tooltip reviewed. Current 200k assumption and separate ceiling prop noted; no independently confirmed configurable-runtime defect raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/SkillsSubagentsPanel.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Fact-derived skill/task rows, missing child information, disclosure, focusable child actions and semantic tables reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/ThreadViewer.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Disclosure state, child selection expansion/focus, id mapping, model/cost tables and unknown handling reviewed alongside DeepDive integration tests; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/TicketScatterPlot.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All axes, point identities, exclusions, skill tooltips, selection and log controls reviewed; meaningful component boundary retained.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/TicketScatterPlot.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Pure-domain projection consumption, axis controls, exclusions, point keyboard actions, labels and SVG rendering reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/TicketSelector.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Natural ID/completion sorting, empty options, labels and onChange reviewed; inherits digit-prefix sort bug.",
+    "finding_ids": [
+      "FE-01"
+    ]
+  },
+  {
+    "path": "web/src/components/TicketTable.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All search, cost state/order, natural sorting, metric toggles, row callbacks and tooltip isolation cases reviewed; keyboard action gap.",
+    "finding_ids": [
+      "FE-01",
+      "FE-13"
+    ]
+  },
+  {
+    "path": "web/src/components/TicketTable.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Search/sort/value rendering and action semantics reviewed; non-focusable headers/rows have click-only actions.",
+    "finding_ids": [
+      "FE-01",
+      "FE-13"
+    ]
+  },
+  {
+    "path": "web/src/components/TraceInvocationBadge.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Skill/task display, available/pending child action, propagation and result-aware clipboard behavior reviewed; correctly handles false helper result except underlying execCommand bug.",
+    "finding_ids": [
+      "FE-08"
+    ]
+  },
+  {
+    "path": "web/src/components/TraceWaterfall.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All 2695 lines and test bodies reviewed: recorded/hydrated facts, selection rebinding, summary disclosure, multidimensional filtering, prompts, identifiers, and child controls. Missing selected-payload hide, general child keyboard, wrong-tool same-turn, non-streak counts and copy failures.",
+    "finding_ids": [
+      "FE-06",
+      "FE-07",
+      "FE-08",
+      "FE-09",
+      "FE-12",
+      "FE-D3"
+    ]
+  },
+  {
+    "path": "web/src/components/TraceWaterfall.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Full disclosure/filter/selection/identity/copy/payload/anomaly and invocation paths reviewed; nested keyboard, forced selected expansion, copy result and count semantics issues.",
+    "finding_ids": [
+      "FE-06",
+      "FE-07",
+      "FE-08",
+      "FE-09",
+      "FE-12"
+    ]
+  },
+  {
+    "path": "web/src/components/TrendChart.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Every null-gap, empty, positive, diverging-coordinate and tooltip test reviewed; multi-positive-bar geometry case missing.",
+    "finding_ids": [
+      "FE-10"
+    ]
+  },
+  {
+    "path": "web/src/components/TrendChart.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Entire scale/tick/reference/line/area/bar/tooltip renderer reviewed; actual SSR reproduction proves identical bar rectangles for multiple positive series.",
+    "finding_ids": [
+      "FE-10"
+    ]
+  },
+  {
+    "path": "web/src/components/WorkspaceLoadWarning.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All per-ticket/response diagnostics, deduplication and recovery cases reviewed; retained meaningful partial-result coverage.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/components/WorkspaceLoadWarning.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Diagnostic merge identity, response versus ticket wording, and empty recovery reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/aggregations.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All skill ordering/aggregation assertions reviewed against production facts projection; no mocks or ticket workspace dependency.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/aggregations.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Fact-derived skill aggregation and deterministic naming/order responsibilities reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/anomalies.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Full format/rule narrowing/compiler, attribution, status/session, count and live matching cases reviewed; contradictory tool identity and non-streak semantics missing.",
+    "finding_ids": [
+      "FE-09",
+      "FE-12"
+    ]
+  },
+  {
+    "path": "web/src/domain/anomalies.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All retrospective/live labels, type guards, exact evidence, fallback matching, rebinding and count extraction reviewed; wrong-tool fallback reproduced and generic count semantics identified.",
+    "finding_ids": [
+      "FE-09",
+      "FE-12"
+    ]
+  },
+  {
+    "path": "web/src/domain/cost.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Complete/partial/unavailable normalization, summary derivation and comparison ordering reviewed with consuming formatter/component tests; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/events.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All recorded event projection/enrichment/rebinding and ambiguity cases reviewed, including fixture/compiler assertions; preserves baseline-versus-enrichment contract.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/events.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Recorded session event flattening, identity matching, payload enrichment and selected event reconciliation reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/formatters.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All 843 lines reviewed: quantities, unknown cost, ID/row sorting, time formatting, prefix/type filtering and naming cases; no configured AL2 prefix example.",
+    "finding_ids": [
+      "FE-01"
+    ]
+  },
+  {
+    "path": "web/src/domain/formatters.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All formatting, row derivation/sorting, identifiers, date formatting and filters reviewed. Production repro proves digit-prefix parsing/sort bug; responsibility breadth is architectural debt.",
+    "finding_ids": [
+      "FE-01",
+      "FE-D2"
+    ]
+  },
+  {
+    "path": "web/src/domain/invocation_rows.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All skill/task metadata ambiguity, duplicate occurrences, input conflicts and trace badge assertions reviewed; retained independent pure boundary coverage.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/live.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All readonly live node/message/part/alert/trace contracts reviewed and traced to ingress and consumers; runtime enforcement missing at adapter boundary.",
+    "finding_ids": [
+      "FE-04"
+    ]
+  },
+  {
+    "path": "web/src/domain/liveMessageOrdering.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All stable message ordering, logical turn identity and immutable-input cases reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/liveMessageOrdering.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Pure latest/oldest ordering and original index preservation reviewed with tests; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/liveTraceRefresh.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Refresh eligibility predicate reviewed with useLiveTrace and live view integration tests; no independent finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/progression.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All 1514 lines reviewed: bucket/date normalization, hourly/daily/weekly/monthly boundaries, invalid input, accumulation, unknown cost and filters. Server-versus-view anchor issue lies outside mocked/local projection coverage.",
+    "finding_ids": [
+      "FE-03"
+    ]
+  },
+  {
+    "path": "web/src/domain/progression.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Full timestamp parsing, bucket boundaries, filters, aggregation and cumulative state reviewed with domain tests; no new independent finding beyond date ownership at caller.",
+    "finding_ids": [
+      "FE-03"
+    ]
+  },
+  {
+    "path": "web/src/domain/ticket_scatter.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All projection, exclusion, missing cost, logarithmic and degenerate-axis cases reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/ticket_scatter.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Metric descriptors, filtering, log eligibility, domain extents, axis ticks and point mapping reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/tools.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All per-session tool aggregation assertions reviewed against the pure function; meaningful multi-session boundary retained.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/tools.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Pure session-owned tool rollup reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/traceBadges.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Skill/task association constraints, parsed tool input, duplicates and ambiguity rejection reviewed with invocation and component tests; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/domain/types.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Full domain/read model declarations, cost unions, nullable fields, aliases, project config, API response and comparison types reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/hooks/useLiveTrace.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Whole hook reviewed: selection/unmount ownership, pending request coalescing, push version, refresh eligibility, pause and stale-result handling. Existing integration tests provide meaningful protection.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/index.css",
+    "method": "Full stylesheet read with declaration/cascade and TSX consumer review; static only.",
+    "assessment": "All 5265 lines reviewed for selectors, declaration cascade, focus, responsive grids, overflow/scroll regions and tooltip styling. Hover CSS competes with tooltip dismissal. No browser visual validation.",
+    "finding_ids": [
+      "FE-15"
+    ]
+  },
+  {
+    "path": "web/src/main.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Root mount, StrictMode and stylesheet initialization reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/test/fixtures/mockData.ts",
+    "method": "Full synthetic fixture read and reference/shape review; no real-session evidence inference.",
+    "assessment": "All 2144 fixture lines read, including synthetic ledgers, derived aggregates, artifacts, live trees/messages and exported references. Test-owned fixture data, not evidence of real source telemetry and not dead runtime code.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/test/setup.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Full test setup import reviewed; matcher initialization is a live test dependency, not unused code.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/types/telemetry.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Full event/anomaly/evidence/skill/task readonly types and optional context fields reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/utils/clipboard.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Entire clipboard path reviewed and actual production helper invoked with execCommand false; incorrectly reports success and lacks finally cleanup.",
+    "finding_ids": [
+      "FE-08"
+    ]
+  },
+  {
+    "path": "web/src/utils/debugPrompt.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All verbatim payload, defensive fencing, metadata fallback, provenance, status and session cases reviewed; retained meaningful exported-evidence checks.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/utils/debugPrompt.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All prompt generators and fence/metadata separation reviewed; callers supply semantically incorrect consecutive counts, while source evidence preservation is covered.",
+    "finding_ids": [
+      "FE-12"
+    ]
+  },
+  {
+    "path": "web/src/utils/theme.test.ts",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All token syntax, status lookup and deterministic custom-role/model color cases reviewed in node environment; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/utils/theme.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Palette constants, status normalization and deterministic role/model hashing reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/src/views/FleetOverview.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "Every loading/error/empty/diagnostic/filter/skill case reviewed; refetch success covered, reversed pending-response ownership missing.",
+    "finding_ids": [
+      "FE-02"
+    ]
+  },
+  {
+    "path": "web/src/views/FleetOverview.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Complete data fetching, filters, metrics, diagnostics and retry flow reviewed; obsolete async ownership and duplicated parameter/state logic.",
+    "finding_ids": [
+      "FE-02",
+      "FE-D1",
+      "FE-D2"
+    ]
+  },
+  {
+    "path": "web/src/views/LandingPage.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All 747 lines reviewed: loading/retry, partial data, pulse calculations, navigation, sorting, tooltips and project context. Sort tests use mouse clicks only.",
+    "finding_ids": [
+      "FE-13"
+    ]
+  },
+  {
+    "path": "web/src/views/LandingPage.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All summary/workspace load, pulse fallbacks, navigation, table sorting and config presentation reviewed; header sorting lacks keyboard actions.",
+    "finding_ids": [
+      "FE-13"
+    ]
+  },
+  {
+    "path": "web/src/views/LiveObservability.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All 701 lines reviewed: live callbacks, pause/retry, trace selection, deferred REST/SSE ordering, unchanged-count refresh, coalescing and teardown. Meaningful request ownership coverage retained.",
+    "finding_ids": [
+      "FE-04",
+      "FE-05"
+    ]
+  },
+  {
+    "path": "web/src/views/LiveObservability.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Entire subscription/selection/pause/retry/live-alert/trace integration reviewed; unchecked nested tree consumption and stale error status surfaced from live adapter.",
+    "finding_ids": [
+      "FE-04",
+      "FE-05"
+    ]
+  },
+  {
+    "path": "web/src/views/MetricProgression.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All 447 lines reviewed: chart/filter/custom range, diagnostics, empty and error paths. API mocks miss server date semantics and response inversion.",
+    "finding_ids": [
+      "FE-01",
+      "FE-02",
+      "FE-03",
+      "FE-10"
+    ]
+  },
+  {
+    "path": "web/src/views/MetricProgression.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All filter/query/date-boundary/chart data/KPI/chart series branches reviewed; configurable prefix, request ownership, mixed temporal semantics, and same-positive-bar chart defects.",
+    "finding_ids": [
+      "FE-01",
+      "FE-02",
+      "FE-03",
+      "FE-10",
+      "FE-D2"
+    ]
+  },
+  {
+    "path": "web/src/views/TicketComparisons.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All 580 lines reviewed: filtering, skill/sentinel, sorts, callback, cost denominator, empty/error and diagnostics. Missing deferred ownership and weighted tool-success counterexample.",
+    "finding_ids": [
+      "FE-01",
+      "FE-02",
+      "FE-11",
+      "FE-13"
+    ]
+  },
+  {
+    "path": "web/src/views/TicketComparisons.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All query, type/prefix/skill/search filtering, row mapping, benchmarks, sorting and table rendering reviewed; request ownership, prefix, weighting and keyboard issues.",
+    "finding_ids": [
+      "FE-01",
+      "FE-02",
+      "FE-11",
+      "FE-13",
+      "FE-D2"
+    ]
+  },
+  {
+    "path": "web/src/views/TicketDeepDive.test.tsx",
+    "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+    "assessment": "All 1887 lines reviewed: pending/failed/empty/partial enrichment, source identity, repeated rows, selection rebinding, child focus/navigation, payloads, summary inspector, tables and cost. Meaningful integration contracts retained; related shared-component gaps recorded.",
+    "finding_ids": [
+      "FE-06",
+      "FE-07",
+      "FE-08",
+      "FE-14",
+      "FE-15"
+    ]
+  },
+  {
+    "path": "web/src/views/TicketDeepDive.tsx",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "Full catalog/detail/enrichment lifecycle, generations, event/anomaly reconciliation, child navigation, fallback source facts, KPIs and tables reviewed; strong optional hydration baseline preservation. Shared drawer/waterfall issues apply.",
+    "finding_ids": [
+      "FE-06",
+      "FE-07",
+      "FE-08",
+      "FE-14"
+    ]
+  },
+  {
+    "path": "web/tsconfig.json",
+    "method": "Full configuration/entry read and consumer/script relationship review.",
+    "assessment": "Complete strict/noUncheckedIndexedAccess/exact optional typing and compile scope reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/tsconfig.node.json",
+    "method": "Full configuration/entry read and consumer/script relationship review.",
+    "assessment": "Node/config project references and compiler options reviewed; no additional finding raised.",
+    "finding_ids": []
+  },
+  {
+    "path": "web/vite.config.ts",
+    "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+    "assessment": "All dev proxy/port options, React plugin and test environment/include/exclude settings reviewed; no additional finding raised.",
+    "finding_ids": []
+  }
+]

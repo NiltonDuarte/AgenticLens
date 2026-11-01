@@ -1,0 +1,493 @@
+[
+  {
+    "path": ".agenticlens-config.local.example.yaml",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": []
+  },
+  {
+    "path": ".agenticlens-config.yaml",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": [
+      "D7"
+    ]
+  },
+  {
+    "path": ".codex/agents/coder.toml",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": []
+  },
+  {
+    "path": ".codex/agents/planner.toml",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": []
+  },
+  {
+    "path": ".codex/agents/reviewer.toml",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": []
+  },
+  {
+    "path": ".codex/agents/tester.toml",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": []
+  },
+  {
+    "path": ".github/workflows/ci.yml",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": []
+  },
+  {
+    "path": ".github/workflows/release-candidate.yml",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": []
+  },
+  {
+    "path": ".github/workflows/release-please.yml",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": [
+      "D3"
+    ]
+  },
+  {
+    "path": ".github/workflows/release-stable.yml",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": []
+  },
+  {
+    "path": ".gitignore",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": []
+  },
+  {
+    "path": ".release-please-config.json",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": []
+  },
+  {
+    "path": ".release-please-manifest.json",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": []
+  },
+  {
+    "path": "Dockerfile",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": []
+  },
+  {
+    "path": "Makefile",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": [
+      "D4",
+      "D5"
+    ]
+  },
+  {
+    "path": "scripts/agentic-lens-wrapper.sh",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": [
+      "D1",
+      "D2",
+      "D6"
+    ]
+  },
+  {
+    "path": "scripts/download-agentic-lens.sh",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": [
+      "D2",
+      "D6"
+    ]
+  },
+  {
+    "path": "scripts/opencode-compat.sh",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": [
+      "D4"
+    ]
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-1/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-1/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-1/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-10/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-10/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-10/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-11/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-11/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-11/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-12/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-12/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-12/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-2/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-2/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-2/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-3/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-3/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-3/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-4/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-4/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/AL-4/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/GEN-1/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/GEN-1/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/GEN-1/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/GEN-2/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/GEN-2/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/GEN-2/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-1/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-1/SPEC.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-1/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-1/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-2/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-2/SPEC.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-2/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-2/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-3/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-3/SPEC.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-3/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/parity_workspaces/PO-3/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-1/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-1/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-1/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-2/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-2/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-2/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-3/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-3/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/AL-3/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/GEN-1/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/GEN-1/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/GEN-1/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/PO-1/CONTRACT.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/PO-1/SUMMARY.md",
+    "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": "testdata/workspaces/PO-1/agentic_metrics.json",
+    "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+    "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+    "finding_ids": []
+  },
+  {
+    "path": ".agents/skills/agentic-lens-setup/scripts/agentic-lens-wrapper.sh",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": [
+      "D1",
+      "D2",
+      "D6"
+    ]
+  },
+  {
+    "path": ".agents/skills/agentic-lens-setup/scripts/download.sh",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": [
+      "D2",
+      "D6"
+    ]
+  },
+  {
+    "path": "alspaces/AL-58/evidence/mock_openai_server.py",
+    "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+    "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+    "finding_ids": [
+      "D4"
+    ]
+  },
+  {
+    "path": "alspaces/AL-58/evidence/provider-v1.json",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": [
+      "D4"
+    ]
+  },
+  {
+    "path": "alspaces/AL-58/evidence/provider-v2.json",
+    "method": "Complete configuration content review and syntax parse",
+    "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+    "finding_ids": [
+      "D4"
+    ]
+  }
+]

@@ -1,0 +1,3127 @@
+{
+  "baseline": "d5227812b09a17ff15d7e6ffe058e96ecf1616eb",
+  "total_files": 308,
+  "coverage_complete": true,
+  "source_hashes_unchanged": true,
+  "files": [
+    {
+      "path": ".agenticlens-config.local.example.yaml",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "c37e0ecdf7498a56aa9749cc0459cb6e06e7ae22e4a7b05ba58694170f37ad7e"
+    },
+    {
+      "path": ".agenticlens-config.yaml",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [
+        "D7"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "198b7932b23648e3b79b7d3dd3892829c4ae8b4db223d6af191df7b7bc432492"
+    },
+    {
+      "path": ".agents/skills/agentic-lens-setup/scripts/agentic-lens-wrapper.sh",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [
+        "D1",
+        "D2",
+        "D6"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "fcd79b145d86ea22185a28158e87617ee84d66841298645597f476c3bc5333e2"
+    },
+    {
+      "path": ".agents/skills/agentic-lens-setup/scripts/download.sh",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [
+        "D2",
+        "D6"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "5952612f091333dc26237dc8c99f696c86c3f3aa87a78e7b85435b32d41b1089"
+    },
+    {
+      "path": ".codex/agents/coder.toml",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "a1e69f75b88187cf5de9031bf050a75c4f28d6ac244f50c12293cdcf3ddca740"
+    },
+    {
+      "path": ".codex/agents/planner.toml",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "ababdcda7462057625aca1ea7c6505e105d8c1291c5d83df8cf45cb4b6085094"
+    },
+    {
+      "path": ".codex/agents/reviewer.toml",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "a2d65b189ae0c970cf747179f3d524bfb33cabb15eeb34efda8504e7c9db3044"
+    },
+    {
+      "path": ".codex/agents/tester.toml",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "98316163f098da3c548ed14f7aafab0d57e2cdd318ebe1ac30b54cdbba928900"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "7a78e8b3ecd47fe7cca762f64510cb8608e2bc0a362f506ca153a6fce0d4c96e"
+    },
+    {
+      "path": ".github/workflows/release-candidate.yml",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "caac22bb73dd73d2873921c8d53a846411368958ed9913221e80a9aca31418f9"
+    },
+    {
+      "path": ".github/workflows/release-please.yml",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [
+        "D3"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "d81ac44810d54864b240b0f6ae6fbebb79140c377d61b8387877706d98bef38f"
+    },
+    {
+      "path": ".github/workflows/release-stable.yml",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "92581760f796d22d4c6ca1bc98aad8c092f30c52de2fee599ab6f31291e3899b"
+    },
+    {
+      "path": ".gitignore",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "20cba77890724ffb11a18429c81c1866774acbe1c86f5ce1112f23e3f408d01a"
+    },
+    {
+      "path": ".release-please-config.json",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "25c3abad2323bb5a129869ef68dc076843663b2bca4505880f4d17c3239b1dce"
+    },
+    {
+      "path": ".release-please-manifest.json",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "9e38a481f52b5af8537babca8f5d13d5a0ab72473e1deba2e1aeb71e05dcd5b9"
+    },
+    {
+      "path": "Dockerfile",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "3fc6e818ec82eef8fd2e0b03131880c2e6a05c8e6fdc1ab20245b2af1b6df961"
+    },
+    {
+      "path": "Makefile",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [
+        "D4",
+        "D5"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "62e9c3bdef0e8839599bf108d6ba6ea1cd8624cb54445e95d52498e32cfdf956"
+    },
+    {
+      "path": "alspaces/AL-58/evidence/mock_openai_server.py",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [
+        "D4"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "e03bbe1763dd3c548b6ee2fd5911fedb0749ce645517434850880dab9a843b41"
+    },
+    {
+      "path": "alspaces/AL-58/evidence/provider-v1.json",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [
+        "D4"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "8bd4450cf6da4e2995a83dd9152fe3d4dc55ab2a58f5928ca9657c1931dcb855"
+    },
+    {
+      "path": "alspaces/AL-58/evidence/provider-v2.json",
+      "method": "Complete configuration content review and syntax parse",
+      "assessment": "Reviewed configured behavior, consumer contract and portability; see finding IDs where present.",
+      "finding_ids": [
+        "D4"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "d351dcb732a7c334c7b2a2f1ca5e69ac5904fd8d36a5ce56d9dad2282a8a14a9"
+    },
+    {
+      "path": "backend/cmd/agentic-lens/config_internal_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read staging/rollback tests for paired configuration writes; scoped failure fixtures protect original content without touching live settings.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "8c1be09bff8c423835f1426d8dda8228b4b8250ff22a764e85c0883eb412ebb1"
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read every command, configuration resolution, extraction/merge, rendering, pair-write rollback and helper branch. Confirmed partial-refresh loss, threshold omission, init precedence and discarded scan diagnostics. CLI orchestration contains policy that differs from backfill.",
+      "finding_ids": [
+        "CC-02",
+        "CC-03",
+        "CC-05",
+        "CC-08"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "579b0991b2689b7a558e9a5aaa209350a2042519a5320562120d252d9cfdaf5c"
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main_codex_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read rollout fixture and command cases for source selection, mixed-source preservation, source failure and output behavior; no separate defect established.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "34b7944fa4dd28b03f55bd4308dfbbcdc9ea8c789a19191ddfc53d4dae48dba9"
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main_codex_user_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read user-attribution preservation/fallback tests against session ownership; assertions target behavior rather than role-name inference.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "69367792c259a9c5d33555be0c4fa2c7ea8553dc6b1ca638bd40380acd595a29"
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main_refresh_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read refresh integration setup and preservation assertions; session/cost preservation does not establish historical skill/task snapshot preservation in partial OpenCode refresh.",
+      "finding_ids": [
+        "CC-02"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "b81fed0946fa48fd06c090375c04ec18cac86089cd9e02bb5031c21a53912851"
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all 6772 lines, including fixture/build helpers and every subtest: scan, server, generate, backfill, migrate, help/version, type/config metadata and multi-device behavior. Identified gaps at effective DB precedence, configured anomaly persistence, partial auxiliary refresh and mixed rejected scans; smoke readiness is not isolated/bounded.",
+      "finding_ids": [
+        "CC-02",
+        "CC-03",
+        "CC-05",
+        "CC-08",
+        "CC-12"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "3255a65f8f83d696f8d02113f1b7a6be8ad084f10191c9798c5c4b8a22e65f85"
+    },
+    {
+      "path": "backend/cmd/agentic-lens/merge_internal_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read source-aware merge identity, preservation and replacement cases; protects session-owned facts but does not cover top-level auxiliary collections.",
+      "finding_ids": [
+        "CC-02"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "70d1f65b091585bdef4556b81af06f8113df85d340ee67dffa1f40959edeb79d"
+    },
+    {
+      "path": "backend/cmd/agentic-lens/session_test_helper_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read synthetic session/invocation fixture grouping and options; helper is test-only and does not read live ticket workspaces.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "50dcecf365db367800b05aaa5d30696149577a0722217d0bd0a6e535245137d3"
+    },
+    {
+      "path": "backend/go.mod",
+      "method": "full structural manifest inspection",
+      "assessment": "Read module/toolchain declarations and direct/indirect dependencies; no vulnerability or upstream currency assessment performed.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "52103148694a58e8cd14305ce27b71b490ca8251611756fec5d4c6b11ea5a6f4"
+    },
+    {
+      "path": "backend/go.sum",
+      "method": "full structural manifest inspection",
+      "assessment": "Read complete checksum manifest and dependency correspondence; checksums structurally reviewed, not an upstream provenance/vulnerability audit.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "e2a25888dc6d49c26ee5f9f3098b34af0bbf7c3c333d25c1288019b7625701e4"
+    },
+    {
+      "path": "backend/internal/adapters/anomaly_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed typed anomaly field conversion and optional-value preservation.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "64df02c66dabd07418ba8572a6a4ae215beeb0213ad77592122696e554265fcb"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/codex_user_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed source user resolution, fallback provenance and preservation assertions.",
+      "finding_ids": [
+        "ADP-01"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "7bc53e6d9ed348d2bd725acce406dd6c487087a1e34e3f1c4fdc1a152339ef6a"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/engine.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed migration orchestration, source partitioning, report/error paths and publication ownership.",
+      "finding_ids": [
+        "ADP-01"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "45e3c4c21c025185a8195c0c3a54d31554a7aacb30e899798cfdda04ad6e6eee"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/engine_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all migration fixtures/assertions including partial-source preservation; warning-bearing successful parsing is missing.",
+      "finding_ids": [
+        "ADP-01"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "36e26325d36120a95eee8cc443000bd988a08998407d4f9be1d70e3d3f8d5885"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/migration_runner.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed file traversal, migration decisions, write/rename/error handling and dry-run boundaries.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "25c97fb0e32cba68810c86a73495277dfe4ff095c633c55abf4953203f134791"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/migration_runner_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed filesystem migration fixtures, backup/failure/dry-run assertions and isolation.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "eca3f6e7048b0e09062ee011d30c9aed7591d01ead1411587c41a9f4253d127d"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/options.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed option normalization and configuration boundary.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "27ae8b8282d4a003b4d772e959a63ee528de441bf3aafa54603039c28ed83f61"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/recovery.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun. Disposable-copy behavioral defect probes executed.",
+      "assessment": "Traced tree identity/completeness and replacement; disposable-copy probe confirms warning-bearing parse erases stored facts.",
+      "finding_ids": [
+        "ADP-01"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "98a901f8c460b7a12992f1d0af773b21e04c34b1f007f92315107da334ebf8bb"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/report.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed report counters, diagnostics and output shape against engine consumers.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "718dc95448ccadb49815e6267bc30d5cc151b05226a39a56b8fd98957f0ecc8f"
+    },
+    {
+      "path": "backend/internal/adapters/backfill/session_test_helper_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed fixture assembly and canonical session ownership defaults.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "dc42823f29f8721e3496b2154f62c2cc9046235b21c5e3a9c7c7aecdd8a4a47e"
+    },
+    {
+      "path": "backend/internal/adapters/codex/discovery.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed source roots, rollout traversal, metadata/session matching and descendant discovery.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "d8c31ececef63dca48d86bc6a73b648947421ad0e585d686f3ad1e19caf08de9"
+    },
+    {
+      "path": "backend/internal/adapters/codex/discovery_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed isolated discovery layouts, missing/duplicate sources and descendant assertions.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "fb0b4a0ea4dfeb1f34cc249ae53d8776ebad1f158fe468a916b3789e9083f033"
+    },
+    {
+      "path": "backend/internal/adapters/codex/invocation_ownership_regression_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed invocation/session ownership and segmentation assertions against extraction contract.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "c0610224fc170f86f0975e1e43a3e6861ebae2a8b156aa6a51110a59eca19f4c"
+    },
+    {
+      "path": "backend/internal/adapters/codex/retention_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed raw-payload non-retention and compact fact serialization assertions; privacy projection is intentional.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "9dcdad9dfb77484f75c93db3bc9fa6005459dcb1956deab5bd1ad9570a5d91ab"
+    },
+    {
+      "path": "backend/internal/adapters/codex/rollout.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all record decoding, usage/turn ownership, warnings, combine and fact projection; recovery consumer drops warnings.",
+      "finding_ids": [
+        "ADP-01"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "8f8f22d8ca284aefdafdd942ec0184b29a12b67c6ca8564cb7442d3595904abc"
+    },
+    {
+      "path": "backend/internal/adapters/codex/rollout_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed complete parser tests, source records, usage attribution and malformed-record expectations.",
+      "finding_ids": [
+        "ADP-01"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "f7d489f1e43367b99630284bd8d9696ae15bdf703e385d94e6258b4520798a90"
+    },
+    {
+      "path": "backend/internal/adapters/codex/testdata/rollout.jsonl",
+      "method": "Full fixture record read plus structural and parser/retention-consumer review.",
+      "assessment": "Read all JSONL records and traced their parser/retention test consumers; synthetic fixture is not real-session evidence.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "73308572796a1e059f985d415d2c77aa7947abaea0c203b15c14e83b7419021c"
+    },
+    {
+      "path": "backend/internal/adapters/config/loader.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed configuration discovery, merge/default/validation paths and source path policy; origin needed for workspace anchoring.",
+      "finding_ids": [
+        "ADP-03"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "54823c2ef10d262be5fc7f719657b595e1e03476eacc566512f87fcf78471d66"
+    },
+    {
+      "path": "backend/internal/adapters/config/loader_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all loader fixtures, threshold/merge/path/error cases; live repository configuration assertions introduce coupling.",
+      "finding_ids": [
+        "ADP-08"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "7586abe593bbd2bc33bc8144f9767bf7d8e9d6c8bb7f1c0e23e10b166631e486"
+    },
+    {
+      "path": "backend/internal/adapters/config/source.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed source choice and path precedence with caller configuration.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "c0d2036af72219cda3a4427880f9937625efff106d316441e014568304ec3a45"
+    },
+    {
+      "path": "backend/internal/adapters/config/source_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed explicit/default source and unavailable-path test matrix.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "92874fa4ba2e02a5aeb44212e137782c4aa7edecfb78474675894b94f0f38b8b"
+    },
+    {
+      "path": "backend/internal/adapters/config/writer.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun. Disposable-copy behavioral defect probes executed.",
+      "assessment": "Reviewed generated sections and input validation; disposable-copy YAML round trip proves scalar corruption and BaseBranch omission.",
+      "finding_ids": [
+        "ADP-02"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "d8ff12fe0d0ba9b0499a163a2f1e6e1793afac4d113e32c0b180164c0642bb8f"
+    },
+    {
+      "path": "backend/internal/adapters/config/writer_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed complete writer tests; metacharacter values and BaseBranch round trips are absent.",
+      "finding_ids": [
+        "ADP-02"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "d4f4731667b3cd11d8fd4c1a7037ca41619684a3a6559ce78fe6622c54d71dde"
+    },
+    {
+      "path": "backend/internal/adapters/fact_cost.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed cost DTO projection, status handling and nil amount semantics.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "036608b01b368101ded15c15a14a7622a767cc43065186af523e6d8e0558d268"
+    },
+    {
+      "path": "backend/internal/adapters/fact_decode_helpers.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed typed field decoding, missing/null distinctions and error context.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "65f85941c5a4fa72450c1dd518d66fa5e2cfb731bd4af32bcdf2d78d06220da8"
+    },
+    {
+      "path": "backend/internal/adapters/fact_ledger_decode.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed canonical decode stages, required shape and compatibility errors against schema tests.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "595fb1b417297af7c5a24ab4349b6cd304a6f351a30e2e6d84b53f7381258fab"
+    },
+    {
+      "path": "backend/internal/adapters/fact_ledger_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed full fact ledger conversion/validation and runtime JSON boundary; shared validation concerns coordinated with core owner.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "58822ab179fc7525cbd34e7d37dba059509a5326541c616d0b77932f767c9d29"
+    },
+    {
+      "path": "backend/internal/adapters/formatters.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed Markdown rendering, optional values, metric projections and table composition.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "3484f0a69cdec35289853fad4b624a870683c24b392d71852400a1ff1791ce3b"
+    },
+    {
+      "path": "backend/internal/adapters/formatters_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed formatting assertions and canonical fixture construction against renderer outputs.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "9fae664ebb31dc6cc075bb636ff9251b937f5dc3a11bb6036e51077fe6a8c559"
+    },
+    {
+      "path": "backend/internal/adapters/git/analyzer.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed Git invocation, numstat parsing, classification and aggregation; filename identity changes during parsing.",
+      "finding_ids": [
+        "ADP-11"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "cbc06b1c0ed85a6e4c519d8d2a9aae40ca9d5bc8a3046ef389af7447cf992d95"
+    },
+    {
+      "path": "backend/internal/adapters/git/analyzer_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed temporary Git and parser assertions; unusual path bytes/rename protocol lack boundary coverage.",
+      "finding_ids": [
+        "ADP-11"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "b01b9088b284f54235ffeb8f2d4d3477b54210e11a7239d4154ee3cbd2b5579c"
+    },
+    {
+      "path": "backend/internal/adapters/git/classifier.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed pattern order, source root handling and production/test classification behavior.",
+      "finding_ids": [
+        "ADP-11"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "4c839ab2502b0101248734e7498b9b13dadd704546d788c221c4bd0f5871af8a"
+    },
+    {
+      "path": "backend/internal/adapters/git/classifier_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed classification tables and explicit include/exclude precedence; upstream path normalization gap is outside current fixtures.",
+      "finding_ids": [
+        "ADP-11"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "6cb341358e6c8083ff67cbd7793e264030f4b23147319575b0a7c8e1cb6bde73"
+    },
+    {
+      "path": "backend/internal/adapters/git/inference.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed branch parsing, configured prefix precedence and actual Git dependency.",
+      "finding_ids": [
+        "ADP-08"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "0703632b1e2dadd30948c6e157ecb13cf3856bce819c505fbfdfe919f8f9fc06"
+    },
+    {
+      "path": "backend/internal/adapters/git/inference_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all inference tests; presumed absent branches rely on checkout branch inventory.",
+      "finding_ids": [
+        "ADP-08"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "4e9feaf085c22cb149b3ef170d7490d86b9e3797f2b65f2c9f82c2226b6d14e2"
+    },
+    {
+      "path": "backend/internal/adapters/git/user.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed Git identity lookup and explicit error/fallback behavior.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "4d2463ea9189decf2df4ca5714541b8b3f657cb2b038b3249b440dc04cf151aa"
+    },
+    {
+      "path": "backend/internal/adapters/git/user_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed user identity boundary fixtures and environment handling.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "b89857a36c28b871bab4b39868b6e13bf2f9ff6961d016f77e82b6d40e598354"
+    },
+    {
+      "path": "backend/internal/adapters/http/comparison_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed comparison payload mapping and zero/nil semantics.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "15413bc2541ce7841a10f1a8c8fdddb6d54aa952088614ae95981589919be77e"
+    },
+    {
+      "path": "backend/internal/adapters/http/config_handler.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed config response projection and exposure through global route policy.",
+      "finding_ids": [
+        "ADP-05"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "1308984a39fa271375a137da079229bbb9f8d15d5c934e60e0a1cfac9c7acc01"
+    },
+    {
+      "path": "backend/internal/adapters/http/dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed envelope and shared HTTP type contracts with handlers.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "cfa9607557830442bccc5e27b6e9e19d85ee16821d9fcddded6ccd3629538291"
+    },
+    {
+      "path": "backend/internal/adapters/http/fleet_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed fleet metric conversion and collection shape.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "96ad85691472e236ed5aa9c02cecd48c7a0ab44ae35b39a8e5955a36ef7c3c0a"
+    },
+    {
+      "path": "backend/internal/adapters/http/handlers.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all workspace/metric routes, filters, bounds, error responses and temporal cutoff semantics; frontend owns window discrepancy.",
+      "finding_ids": [
+        "ADP-03",
+        "ADP-05"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "3e4b2b46f2852194625e936539586de662d6635588b6f747d78d63720a91cc49"
+    },
+    {
+      "path": "backend/internal/adapters/http/live_handlers.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed raw trace/session/SSE routes, deadlines, event delivery and failure behavior; stream clears write deadline.",
+      "finding_ids": [
+        "ADP-05",
+        "ADP-06"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "852e1d0a7bb46c5b3f4c32a87905c4bb423ffde568bfac40bbd8d7c4c2b6d46f"
+    },
+    {
+      "path": "backend/internal/adapters/http/live_handlers_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed route, SSE and live data assertions including cleanup/error cases.",
+      "finding_ids": [
+        "ADP-06"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "d0f4dbfc5c762bd06ce0dfa6ab831de163efda0e35c8a1c41685419a95907602"
+    },
+    {
+      "path": "backend/internal/adapters/http/middleware.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed global CORS behavior; arbitrary origin policy accompanies unauthenticated all-interface listener.",
+      "finding_ids": [
+        "ADP-05"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "07535e354415a56bed8f192716251cb831fb21a9c224957e84c58adb86db561c"
+    },
+    {
+      "path": "backend/internal/adapters/http/progression_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed progression payload transformation and data shape.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "eda34a99c93382d5565daa9efc38abeb57fb64ca656e8a57e80fc44f13491083"
+    },
+    {
+      "path": "backend/internal/adapters/http/server.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed route construction, live service lifecycle, listener and timeouts; default bind is all interfaces.",
+      "finding_ids": [
+        "ADP-05"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "81d49b1f9bbd5524b187e21b9b782a8499520a749221d4c1e9cb53a643415ebd"
+    },
+    {
+      "path": "backend/internal/adapters/http/server_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed entire large HTTP suite, configured-root/baseline preservation and CORS tests; httptest does not establish listener exposure policy.",
+      "finding_ids": [
+        "ADP-03",
+        "ADP-05"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "e2c7b0eb1a6ea152027f303a5d6f01298037214e6435963c287e99286bd7a61a"
+    },
+    {
+      "path": "backend/internal/adapters/http/spa.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed embedded file serving, fallback/path cleanup and content behavior.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "5f9ca491fbea28401cffd5d530d2ea73b089e7c2cd69091e5053e7c4c2981070"
+    },
+    {
+      "path": "backend/internal/adapters/http/workspace_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed workspace view mapping and optional hydration payload representation.",
+      "finding_ids": [
+        "ADP-06"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "82249287ea485f77af23832844475baa80670306ca3ba7ee69e8f8f6fb0fe745"
+    },
+    {
+      "path": "backend/internal/adapters/invocation_fact_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed invocation facts, metric conversion and value preservation across persistence boundary.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "dacb4bfe43dc1100656b6b7b02af7a67776ed4b5e4a3abc564b3925a5378481f"
+    },
+    {
+      "path": "backend/internal/adapters/live/parity_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed live/offline parity fixtures; raw whitespace and decoder error-state drift are not exercised.",
+      "finding_ids": [
+        "ADP-12"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "93e217d980d2f88dc93a52cb12728de12e8d5e5a161987a542ac2fb94f00835f"
+    },
+    {
+      "path": "backend/internal/adapters/live/service.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed full cache/lifecycle, session-tree, raw trace, OpenCode/Codex hydration and baseline merge paths; silent child failure and duplicate decoder drift remain.",
+      "finding_ids": [
+        "ADP-06",
+        "ADP-12"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "e73357f5cf8533ac38992a984967fff013ba4ca7f34fa65210cf5d828dfa3ea8"
+    },
+    {
+      "path": "backend/internal/adapters/live/session_test_helper_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed canonical fixture helpers and service test defaults.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "2841348af3891ac3587f85e4ece4b33f2488772c7e2c14e259f4464129dc19fa"
+    },
+    {
+      "path": "backend/internal/adapters/live/sqlite.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed read-only connection, source revisions, query/fallback behavior and lifecycle; exported DB getter is test-only API.",
+      "finding_ids": [
+        "ADP-13"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "2071641a65ff2dceab5d81ca1246ac07cedb976ebd72585b281737c0b2ffb1af"
+    },
+    {
+      "path": "backend/internal/adapters/live/sqlite_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed entire suite including concurrent reads, hydration preservation, lookup failure and snapshots; weak older zero-write assertions coexist with stronger later tests.",
+      "finding_ids": [
+        "ADP-06",
+        "ADP-09",
+        "ADP-13"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "83458ef9d46048fdeb414c8f74f8f0906099f37c58b257040f8388b1680ed0e4"
+    },
+    {
+      "path": "backend/internal/adapters/metric_projection_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed derived metric mapping and source fact separation.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "e7086e5c77694708e83919c321403b96ad7acc300eee7901e376f751c39ab621"
+    },
+    {
+      "path": "backend/internal/adapters/metrics_export_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed export envelope/collection conversion and canonical serialization boundary.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "6a69b28932b4fb6f6b3c7f3596841a96bbe4d756d28bd43761287132ed660e2d"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/client.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed database path selection, connection ownership and error propagation.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "342d1b38c770289477d41154bb68fd4d1b688e457d3d6fe265a67e990cbae344"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/extractor.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed schema dispatch, extraction ownership and family-neutral responsibilities.",
+      "finding_ids": [
+        "ADP-12"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "eeaafdb90c40747a7a149c04aed6e02e739ff14c48e0abc968bf13bf7279478b"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/extractor_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed extraction dispatch fixtures and shared extraction assertions.",
+      "finding_ids": [
+        "ADP-12"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "b1c30f3c82505ef9b17b10d70b567c22fe2e7ad0aac614f9cdae04f80f76988f"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/resolver.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed resolver dispatch, precedence and missing workspace-root policy input.",
+      "finding_ids": [
+        "ADP-04"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "a5037ddb7dfaf8b39e74fbfe2693f1c1bea173aaff1310afe99b1ee397da47db"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_family_detection.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed complete table/column inventory validation and mixed-family rejection; mutation demonstrates a test gap, not an existing missing-column validation defect.",
+      "finding_ids": [
+        "ADP-07"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "b7320b75088622bc3c1bb1dd878199fbe813c2b08e9baf2ab219bb2f99332a52"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_family_detection_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun. Disposable-copy mutation probe executed.",
+      "assessment": "Reviewed all schema fixtures; disabled column validation in disposable copy and omission test still passed.",
+      "finding_ids": [
+        "ADP-07"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "14a5ca520d482280647b9ba61dc444857fbe63aa064f09a5cefd933c2599020b"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v1_session_extraction.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed full message/part extraction, compact input projection and raw output decoding; transient decoder ownership differs from live.",
+      "finding_ids": [
+        "ADP-12"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "ddaf4358030f2c314d49254c207937c321a8ecccf484baeb954a6f5999cfedc5"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v1_session_extraction_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all family-v1 extraction fixtures, event/usage/cost/error expectations and retention boundaries.",
+      "finding_ids": [
+        "ADP-12"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "7f41d0ec6749e48df49f7c516f011c27906e345e931850ca864284a1b78226d9"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v1_session_resolution.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all v1 resolution strategies and SQL matching; workspace fallback root is hardcoded.",
+      "finding_ids": [
+        "ADP-04"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "fac4f7b3e152963d79d5798dd4c4f834a8a06d077dc33808a8453a07154e8eab"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v1_session_resolution_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed resolution/precedence fixtures; fallback fixtures use only conventional workspace root.",
+      "finding_ids": [
+        "ADP-04"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "e24252a5b3d694c1c305295f625c82e33ed6867ab424c4fde857ed808a16565a"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v2_session_extraction.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed full v2 decoding, enums/required fields, event ordering and canonical extraction contract.",
+      "finding_ids": [
+        "ADP-12"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "b84c40c475a7ca2a1db2295855e8ce5f109c33d8f53def6b33e51c3c845c474a"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v2_session_extraction_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all v2 valid/malformed/source-shape fixtures and extraction assertions.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "2c10b31f21d2bfe8b328c6a44aa2ec43476a40a591e0024987ea186338a73d99"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v2_session_resolution.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed v2 resolver SQL and precedence; workspace fallback repeats literal root.",
+      "finding_ids": [
+        "ADP-04"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "787b4337c00d1215a4eed89c563887232cc368d7068b454f8165a35897434460"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v2_session_resolution_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed v2 resolution fixtures and missing/custom-path coverage gap.",
+      "finding_ids": [
+        "ADP-04"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "49fbc5bfc8fe8e32efdbbc8bc80c94f82767c40e1f9ab20d0b7b8b582350034b"
+    },
+    {
+      "path": "backend/internal/adapters/opencode/skills_tasks.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed task/skill normalization, matching and child-link input ownership.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "26485bd56dd1665605f10f8b213553c16e317f8197891f204c4315501e6c02ee"
+    },
+    {
+      "path": "backend/internal/adapters/parity_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed persisted projection parity across adapter consumers and fixture provenance.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "a9c5a2ce8b835ec70233089a51ece9c0cdfaee5f57405293c97e46ee4786bc24"
+    },
+    {
+      "path": "backend/internal/adapters/repository.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun. Disposable-copy behavioral defect probes executed.",
+      "assessment": "Reviewed full scan/load/write/summary lifecycle; disposable probes confirm nested-root failure and peer-section deletion.",
+      "finding_ids": [
+        "ADP-03",
+        "ADP-10"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "accf317602cda0fe88979699f43938c338145a25d3b3d72b6c44aca4b5c87d58"
+    },
+    {
+      "path": "backend/internal/adapters/repository_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed all filesystem/persistence/summary tests; nested resolver assertion does not scan and summary preservation lacks peer heading.",
+      "finding_ids": [
+        "ADP-03",
+        "ADP-10"
+      ],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "eb8073266c159b4b3e6620a9a8de6dda01c155e6299ce3daa327ec4c7e94d655"
+    },
+    {
+      "path": "backend/internal/adapters/schemas_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed runtime schema/DTO boundary, required shape and deliberate raw-payload non-retention tests.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "f39d7b723344256ef840b741464afdcd1d9355c0516938138bbdddf37934c994"
+    },
+    {
+      "path": "backend/internal/adapters/session_fact_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed session facts, parent pointers, source/user identity and invocation conversion.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "1f2f5e5319c19d8e0da1588195fe350b14adc895dd5a6790471f901fe7a23fbb"
+    },
+    {
+      "path": "backend/internal/adapters/session_test_helper_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed shared canonical session fixture creation and ownership defaults.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "b3c010bf29bc93a6974c063f7f4720eeccf68813ced0144c32752eeedeba2b8c"
+    },
+    {
+      "path": "backend/internal/adapters/task_link_fact_dto.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed task-link value mapping, optional child references and serialization.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "38d022223cc80998feae2c83b3a439e212d7f342558e016095b644a35b6b7610"
+    },
+    {
+      "path": "backend/internal/adapters/web/embed.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed embedded asset ownership and single-binary resource boundary.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "6ce320abadbdb635519183d1f2ed052f28ce96bef0207dd679d3aa3f455e211f"
+    },
+    {
+      "path": "backend/internal/adapters/web/embed_test.go",
+      "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+      "assessment": "Reviewed embedded distribution assertions and filesystem exposure.",
+      "finding_ids": [],
+      "owner": "backend",
+      "report": "ADAPTERS_REPORT.md",
+      "sha256": "5887bc609c1666083c95c2a7b83fa3d3ee8be7ed21571cdb600a6c12485459c0"
+    },
+    {
+      "path": "backend/internal/domain/aggregations.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read every aggregation, thread grouping, precision/health projection, time filter/bucket, comparison and skill-adoption path. Reproduced alphanumeric-prefix and descending-equality bugs, configured fleet mismatch; identified discarded event projection and duplicate model calculation.",
+      "finding_ids": [
+        "CC-03",
+        "CC-06",
+        "CC-07",
+        "CC-10"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "c70244d35383975c0068312d467256a28ef2a21e9f5a9509127aebd8963bc24c"
+    },
+    {
+      "path": "backend/internal/domain/aggregations_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all 5958 lines and all bodies. Meaningful precision, hierarchy, role mapping, time-boundary and skill-adoption checks coexist with duplicated completion-date matrices; equal sort tests focus on separate cost/completed branches and miss generic descending equality; no AL2 prefix case.",
+      "finding_ids": [
+        "CC-03",
+        "CC-06",
+        "CC-07",
+        "CC-10",
+        "CC-11"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "dae24111b65421bd45d5e8b4d09a2a9f7ddaa5f3902070c13a45be128b259778"
+    },
+    {
+      "path": "backend/internal/domain/anomalies.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all rules, threshold normalization, sorting, display text and fleet aggregation. Configured error-rate value never participates in the fixed-rate detector.",
+      "finding_ids": [
+        "CC-04"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "26eedc1e11e68ff491503a57d93180e42faa0f2110d4e1da8dbb6716c9fd336e"
+    },
+    {
+      "path": "backend/internal/domain/anomalies_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all 2369 lines and all subtest bodies. Strong default-threshold/session isolation/fallback and fleet coverage; nil-turn tie case is constructed but never executed, and parity setup loops are overwritten. Custom rate/persistence boundary missing.",
+      "finding_ids": [
+        "CC-03",
+        "CC-04",
+        "CC-11"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "3f81f6ba2ebc32b38d1c416f39e155a370822884571197de595db595241457c0"
+    },
+    {
+      "path": "backend/internal/domain/config.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read defaults, normalization, configured prefix mapping, metadata resolution, validation and threshold models; error-rate config is advertised but unused by its detector.",
+      "finding_ids": [
+        "CC-04",
+        "CC-06"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "6dfeb082b110bf1cc1fca4b86d6266f7d0eb6a34d5ee5d3a6b2aaeccb5500579"
+    },
+    {
+      "path": "backend/internal/domain/config_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read every default, prefix/type/title normalization and threshold-validation case. Tests check error-rate value serialization/defaults but not its runtime effect.",
+      "finding_ids": [
+        "CC-04"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "6f762d52537a26ab6a64fdfc6fa9e6fbff77e36f2ff4388bfdae6a017f37c5be"
+    },
+    {
+      "path": "backend/internal/domain/constants.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read complete numerical/schema constants and comments against direct consumers; no independent issue established.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "edbfe1ad638acadeddd815d69320c4220e03893638ec79d7ab4e33f4d675d7bb"
+    },
+    {
+      "path": "backend/internal/domain/constants_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read threshold/schema constant assertions; protects declared compatibility values, not configured propagation across persistence.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "ac93347294c4d26f3242f213ecc61a3140465ddbe6a0f12c99f52e3d7a258dba"
+    },
+    {
+      "path": "backend/internal/domain/cost.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read explicit cost states, evidence normalization/merge, summary completeness and formatting inputs; source-precision and unavailable distinctions retained in the inspected logic.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "fb7167a6d168ace38158e7ad0d111be70489e5dea9d89117ec860ba6c64e7dd5"
+    },
+    {
+      "path": "backend/internal/domain/enums.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read enum/parsing, role normalization/order, time/sort and conventional-type helpers; no independently actionable correctness issue established.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "d3379c724d28ce05ed2e1cc3cbe8ac7a1f7108debadbd35d577f8d903299a29b"
+    },
+    {
+      "path": "backend/internal/domain/enums_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read complete parsing/default/role-order/type alias matrices; no new defect beyond shared ticket-prefix grammar elsewhere.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "d115229138f87f5dcda00126b19216a252c38bc86a4bb6b7d361792dc0b008a1"
+    },
+    {
+      "path": "backend/internal/domain/events.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read sorting, anomaly refresh/persistence, evidence selection and compaction paths. Persistence intentionally strips events, which magnifies CLI threshold omission; evidence selection writes an unused map.",
+      "finding_ids": [
+        "CC-03",
+        "CC-10"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "676c43e9ee06ddc35ac02ff4f2a38e9b15093d5e7bd0efa0e4eee9cd36ed2e86"
+    },
+    {
+      "path": "backend/internal/domain/events_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all sorting, metadata preservation, pruning/summary/evidence and ownership bodies, including bounded reread of earlier output gap. Default persistence checks do not protect configured CLI propagation.",
+      "finding_ids": [
+        "CC-03",
+        "CC-10"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "3f6519486fff715a6e5d73d3de7410c53411ea71e5665847e3344789fa749225"
+    },
+    {
+      "path": "backend/internal/domain/live.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read live transport-facing value types, execution classifier, configured title inference and tree construction; reproduced successful-content false failures in classifier.",
+      "finding_ids": [
+        "CC-01"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "a9d5fc9939e8d68c5a2f0c6997bffb9b7b498baa195b0f8fa3c5c850118dbc9d"
+    },
+    {
+      "path": "backend/internal/domain/live_anomaly.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all four live rules, options normalization, severity ordering, recursive collection and deduplication; no additional independently established defect.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "58ef950538317e5a454f4a72f2c7f0dd7a191d381cc50077d7882ad7939a0d66"
+    },
+    {
+      "path": "backend/internal/domain/live_anomaly_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all 1481 lines including threshold boundaries, recovery, role isolation, hierarchy/dedup and custom options. These direct rule tests do not validate offline persistence/fleet configuration forwarding.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "c92e337e9cb5fef48c3f63a922db54304236d033faa6d72191e5b2ebac5adbef"
+    },
+    {
+      "path": "backend/internal/domain/live_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read complete classifier, title inference and tree/value tests. Existing successful error-like text cases miss embedded exit/crash phrases.",
+      "finding_ids": [
+        "CC-01"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "e8b6cde05e5763b6517d40913ac9ce3418a9812101d4b396c5d0b15577cc71ed"
+    },
+    {
+      "path": "backend/internal/domain/migration.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read migration status/step declarations and legacy-fact transformation helpers; pure value transformation intent checked against step implementations.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "9523aeebc0adff3852dc7fc9cc01a9fbd26c9d3244e04e849c86b152f2e8c752"
+    },
+    {
+      "path": "backend/internal/domain/migration/cost_decode.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read declared-record JSON decoding, explicit cost presence, legacy/canonical shape conversion and invalid-state rejection; no independent defect established.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "e0e4b5c629483c607b04b00ee531b34835b45f02111dbbe3fbbba8d690ac69c0"
+    },
+    {
+      "path": "backend/internal/domain/migration/engine.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read version detection, decode/normalize, chain dispatch and invariants; shallow before/current references depend on steps respecting input ownership, violated by v1 step.",
+      "finding_ids": [
+        "CC-09"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "15d30072593c3c35105cf315670cf25e5517164f9e645daa1bfbc6d416d20419"
+    },
+    {
+      "path": "backend/internal/domain/migration/engine_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all 1967 lines including registry synthetic steps, full invariant matrix, chained migrations, removed invocation ID guard, dropped-tool diagnostics and cost-presence cases. v1 step output tests omit input nonmutation snapshot.",
+      "finding_ids": [
+        "CC-09"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "748d718312c1eccf3a467d97d3ce69f346c93524ecfcdb2c03c888be4134cac9"
+    },
+    {
+      "path": "backend/internal/domain/migration/invocation_ownership_regression_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read repeated invocation-row ownership and migration regression fixtures/assertions; focused protection of canonical session ownership.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "a0e9ad6a6c217e32f3de94b294b90c775054dec0cba19e1e9ce6253c371a4f48"
+    },
+    {
+      "path": "backend/internal/domain/migration/registry.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read registration validation, duplicate/source-target dispatch and chain enumeration; no I/O or additional defect established.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "548c00f9932e26a5151d71473d4ec52284b974c5acb8c6a67b6e3a219c5c28d8"
+    },
+    {
+      "path": "backend/internal/domain/migration/session_test_helper_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read synthetic ledger fixture conversion/setters and copying behavior used by migration tests; no live workspace dependency.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "b126ea80609cad85580e432d7f51943fc4d5e4fee72a95305e7be9ba3adf2d67"
+    },
+    {
+      "path": "backend/internal/domain/migration/step_v1_v2.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read complete step; confirmed assigning Events through shared session backing array mutates caller input.",
+      "finding_ids": [
+        "CC-09"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "c6934212ab1114dc1a846df9a88d256820ef9dca9a500837fafbc20944d81087"
+    },
+    {
+      "path": "backend/internal/domain/migration/step_v2_v3.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read complete event-sanitization migration and metadata updates; no independent output defect established; metadata slice alias ownership merits verification with CC-09 fix.",
+      "finding_ids": [
+        "CC-09"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "3c863074c07044e8f9ff9e4d06d5b2d3fdfd148e02373e4c7eeba7d6bce2e6dc"
+    },
+    {
+      "path": "backend/internal/domain/migration/step_v3_v4.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read root iteration attribution, copying, compact anomaly persistence and metadata updates; no separate confirmed defect; migration metadata append aliasing noted under ownership review.",
+      "finding_ids": [
+        "CC-09"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "990967883c7e10f86af7542928565ff9577f9315852d056d5a7c18d5507c21c1"
+    },
+    {
+      "path": "backend/internal/domain/migration/step_v4_v5.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read cost-evidence-only schema transition and preservation decisions; no I/O or additional defect established.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "d9552e67f6a36f603349282b1ea812f5fe153d9928b7cf18932fb01e8214d1e1"
+    },
+    {
+      "path": "backend/internal/domain/migration/types.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read complete typed migration step contract and errors; interface is behavior-specific with no generic any boundary.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "9397465bf70e967923eb398b08a1f5c8d82d30839ee2f7e3c1dc1a74e8f887f7"
+    },
+    {
+      "path": "backend/internal/domain/migration/validator.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read metadata/session/invocation/tool/event invariants and schema exceptions; relies on independent before/after values, so input aliasing weakens checks.",
+      "finding_ids": [
+        "CC-09"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "401ebf246581e4651635e2678adfbd194dd8239ec2945a90e7a9ccb440363990"
+    },
+    {
+      "path": "backend/internal/domain/migration_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read domain migration helper/status/normalization cases and preservation assertions; no separate confirmed defect.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "31d4463e1833ef164761160ef00dde6a4b8c58e3a25058626e60b0f1ceea0449"
+    },
+    {
+      "path": "backend/internal/domain/models.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all fact/projection structures and flattening helpers. Session ownership is explicit for main facts; top-level skill/task collections lack enough ownership for safe precise partial refresh.",
+      "finding_ids": [
+        "CC-02"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "8d1d8d23448a414284071f3a6d2f3973c13ad6167428139a9e8bee2a86e49e3a"
+    },
+    {
+      "path": "backend/internal/domain/session_facts_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read session grouping/flattening identity and cost/ownership assertions; main fact ownership is protected independently of top-level auxiliary collections.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "cc1252aee120d5f8ee3dde9d25c280d9a0e658eedfec15cdf3050a733f36533f"
+    },
+    {
+      "path": "backend/internal/domain/session_test_helper_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read all fixture conversion/options/setters; synthetic helper grouping explains test ownership and preserves source independence.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "0fe49bd43d4165eff6ee0afb5b566e6717e9613995bebcc6f66f7c1814112848"
+    },
+    {
+      "path": "backend/internal/domain/skills_tasks_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read skill/task fact tests; top-level value coverage does not exercise partial CLI source refresh preservation.",
+      "finding_ids": [
+        "CC-02"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "ddcdbe36d3ba2911806558c83c84800ea8e8bc2c4b4b325c5a16347cf9de3e74"
+    },
+    {
+      "path": "backend/internal/domain/tool_execution_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read complete classifier regression table. Explicit statuses and ordinary semantic error text covered; successful exit/crash content not covered.",
+      "finding_ids": [
+        "CC-01"
+      ],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "3ae58056c88b9855611b1b4d146eabc2bd527eba6e7f9edb097456025f6ab8cb"
+    },
+    {
+      "path": "backend/internal/domain/version.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read linker-populated build metadata, formatting and response value construction; no independent defect established; build metadata globals are controlled distribution inputs.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "74430cd8e91d61fd77852cac02fd7d1a309c4cb4e013b84008d3b0b3c21e8d64"
+    },
+    {
+      "path": "backend/internal/domain/version_test.go",
+      "method": "full semantic inspection: all declarations and bodies, including all test cases",
+      "assessment": "Read every metadata default, formatting/JSON and malformed-value case; no extra correctness issue established.",
+      "finding_ids": [],
+      "owner": "core_cli",
+      "report": "CORE_CLI_REPORT.md",
+      "sha256": "dde235d1471cd6f96216e1cac50b679513dd04d0cca1e1c47adb6a8787829b64"
+    },
+    {
+      "path": "scripts/agentic-lens-wrapper.sh",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [
+        "D1",
+        "D2",
+        "D6"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "fcd79b145d86ea22185a28158e87617ee84d66841298645597f476c3bc5333e2"
+    },
+    {
+      "path": "scripts/download-agentic-lens.sh",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [
+        "D2",
+        "D6"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "766eed3aac356f15c3c893bfdffa9f2a761b4cf07043dddbde1a195d70b7bd63"
+    },
+    {
+      "path": "scripts/opencode-compat.sh",
+      "method": "Complete source/control-flow review; syntax checks and targeted reproduction where documented",
+      "assessment": "Reviewed all source for responsibility, errors, portability and delivery boundaries; see report findings and execution limits.",
+      "finding_ids": [
+        "D4"
+      ],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "39625e654c01d515ac9f41a5d6090714141b7c3c81d5ffbf6f48edbdc601f06d"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-1/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "85952c20c5dc80eeea24b4f48b7e54a8dbcc04aabbf8305bee6a55cadec2a5f1"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-1/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "a46eeec9f058a6e53d4d1dd46cb77f9afcfae9d87fb63869bfcda918d752d13e"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-1/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "308a5662a217e1fedb8f4c3432b53648c529488cba1fca856aca254fea533c33"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-10/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "d0bd9a5e850d6f8063e334e4549958a6154dd96fade2fcb8746d01d6b224d7e9"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-10/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "35fa9104e63dec66a4270a88c33dd333402ad5290276688e1d3310847b51146a"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-10/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "dbe49204cc0a492e3d133851bb67eef84bf17dcf0ea3c34481fc53bea3db5536"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-11/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "741c3a92f1871c345f5b5690bb3b2cd4271ea7070f9a705a3958c0307337e851"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-11/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "13064cf5b12ad1187655f4d7624fb4010fb607941a7645ff94d6338536130086"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-11/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "cf9c1ad3f69927f666e83f16b59786c5aff705068ea942e8751ccd6fefab9954"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-12/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "afe90f438b23a6b8f61bce7d3a655cb9a9101b0b7c4ff01616ec3df7f5234313"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-12/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "ec3ffef813bb5e0fa89f01d13437abaf6729ac05d859f4b6a27c4dcc307f38b5"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-12/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "2e035363dc01fb577286ccf0ce0f99ff9e493373137c8ebeeb318e7bc774dc28"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-2/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "becc349033268a227fc84b0c4750b72283c18d7d9694b892061ad44ef38860ad"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-2/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "de288ff1c9cf1f16fcb9cda26dda8a1c97a8c8bccb0dd2a17ad3998338310313"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-2/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "0b27d511ebcbbf9fdc00c8a432ff7c85d97b07ca806be65eaffa06670592ab17"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-3/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "dcdc559ffa8561a9d0db6b1f80b97137de72d607c832734ec93e2f41608b0846"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-3/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "9f45c109e6f568f0c763d5a3ab621cced1ebfa1bc4566367ea729b9e623e76a8"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-3/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "b809808684093f51605d503f8969296957640017be1c160770b009337adf613c"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-4/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "b40d141bd3eee31149f524f99f8466bec840ed8af88b8f731a609850e14cb832"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-4/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "23309551c46eb7d441a5d1bbb6dd61e479414411484b60c951090d2b7e42cfa2"
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-4/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "e1645e8cbaba2c7052cb3cd6cf656380874c539b1c1b2732025d3aa8bbc3b352"
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-1/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "4c62dd2a6e5cbf02cd80d18d6d663e560b466fee618ae13caf679483bec7a4d3"
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-1/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "2a99fc35775b4ee1b2a986f9d51a247b627a210a1d855afbbf226b249abf8cc7"
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-1/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "13ea7016cc822755a4e6930c8af515d4ed300d850374d13c4ae0ecee99c1e6f5"
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-2/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "b19f6bd2b3c523f705a80a2535370f3d827d5c14812a7f3ae78c0ccb497f749b"
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-2/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "b5fedb39965c3b638574a0ec04194027d7045158ac42f1b5dbdbf6116b69d457"
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-2/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "630bbb822320a9cf225d67e53f03ae37adbf5d25d152d3a20b08217ea966793b"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-1/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "81be5769566bba2d442ecaeff79d9de0a9439ab7afd80d299c214f8e5db9f21f"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-1/SPEC.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "2ad4f40b715ff999675dcba498e02e418a8cf64272f8c375aabf04fcbc1ecb15"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-1/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "121d534c92c7da1ecfab2228998a673063abb05edd0d0c3422fe2d7ba09a79c3"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-1/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "f69eb95f484a385421c807682740dc45b837292fb50a6b1e185f4f355228cf23"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-2/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "8390dafab78d97a828896719ef88b639b05081d0ff5fc281d1633ae2ac6a07e0"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-2/SPEC.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "45f0b052df437f2e85e31d81ac267a5f969daf75f5c66c75c60dc325519c2de5"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-2/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "99a641f9c181ab0b16e9457e01bc1824ab6664ae86a922767fe7218ad4fda128"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-2/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "ed7a83c50e09acec8bcb16a145bbbbab963bee61f3ea9bcc68f45cc161c2cce7"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-3/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "16eac99354d148c38eb3998c6485f840df5ceafeb1aa3ed379af1f9a889c2527"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-3/SPEC.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "c4450046147b0c202db0de1ef710df4e0dae22f63be421adf4ced757c2ef8032"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-3/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "e74e9560d01228530afd8134caa636db0582968c08acc10e03b907fe6edd01dc"
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-3/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "b13c9b6186cd08d43ca356312b837810780d6f172257f96b26c2ef0293954204"
+    },
+    {
+      "path": "testdata/workspaces/AL-1/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "fdcb7b063b8e5a8bce853578b2b9035a137e0b4b9f73d2a65e0f6c6b1f027209"
+    },
+    {
+      "path": "testdata/workspaces/AL-1/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "ed33abae527e57bbafb27d4fd5885d9a2ae015f6a3943f89aa92f1b2c406a1dc"
+    },
+    {
+      "path": "testdata/workspaces/AL-1/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "13f6d4b58905dca5657f417ea284202e90711ae83a9455410724938be1bcddbc"
+    },
+    {
+      "path": "testdata/workspaces/AL-2/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "43971c181ec3f3bf59370b3f282d3276d85d3510c13e80c73905a730b22b1298"
+    },
+    {
+      "path": "testdata/workspaces/AL-2/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "725746aa385ed0b3fd758e94246565316158d5c5eb1e805d3069a3a97ea83a1b"
+    },
+    {
+      "path": "testdata/workspaces/AL-2/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "5cd59d4ed2bda4776e15636797bec4afdadd003e9c2c61f6301b95372239aba8"
+    },
+    {
+      "path": "testdata/workspaces/AL-3/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "0e6b64acf7ff8f4a712677bdd9b296795b7dd67e8d1e3eb48f616da07449d1db"
+    },
+    {
+      "path": "testdata/workspaces/AL-3/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "c81f5d85ac998918cee31fc11eae7dd208fdbdb73e80ceeb06bb8c9824487346"
+    },
+    {
+      "path": "testdata/workspaces/AL-3/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "39f82bfc1c20e852d34faa334c47442d5425ff385aa7297e857d198ea3e9738f"
+    },
+    {
+      "path": "testdata/workspaces/GEN-1/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "4c62dd2a6e5cbf02cd80d18d6d663e560b466fee618ae13caf679483bec7a4d3"
+    },
+    {
+      "path": "testdata/workspaces/GEN-1/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "3f531248872c9c3d4c0e0ebf4eecd384215b411f2cac74e2ada27c20447e3d9f"
+    },
+    {
+      "path": "testdata/workspaces/GEN-1/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "e93332ff36e35120e271d7965a88ca84f7596ec76483bc2a528a37d288011aaf"
+    },
+    {
+      "path": "testdata/workspaces/PO-1/CONTRACT.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "81be5769566bba2d442ecaeff79d9de0a9439ab7afd80d299c214f8e5db9f21f"
+    },
+    {
+      "path": "testdata/workspaces/PO-1/SUMMARY.md",
+      "method": "UTF-8 fixture content/heading structural check and consumer tracing; historical prose not a code review",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "fb72ff7516346e77f21dda27ec1bcf3f89e9c795c5c1bc08cdce582b9758ff4c"
+    },
+    {
+      "path": "testdata/workspaces/PO-1/agentic_metrics.json",
+      "method": "Structured JSON parse and schema/identity inventory plus consumer tracing",
+      "assessment": "Supporting schema-v4 or artifact-content fixture; historical claims are not active instructions. No separate actionable fixture defect found.",
+      "finding_ids": [],
+      "owner": "delivery",
+      "report": "DELIVERY_REPORT.md",
+      "sha256": "3fed02307554c4d759b4b8a1417a6845a6ff50753f5f86db3f2573bb5eaf8e74"
+    },
+    {
+      "path": "web/.eslintrc.cjs",
+      "method": "Full configuration/entry read and consumer/script relationship review.",
+      "assessment": "Strict TypeScript/React rules, hooks checks, and warning policy reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "42db4fed5f4433b7c179ba490550a51eb96c8388472d87c66213328e15034812"
+    },
+    {
+      "path": "web/index.html",
+      "method": "Full configuration/entry read and consumer/script relationship review.",
+      "assessment": "Mount element, viewport, language, and module entry reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "1f3e195798051250a5bf7d4d1224c3a5011e89965c899793070b68cd9b755c02"
+    },
+    {
+      "path": "web/package-lock.json",
+      "method": "Structural JSON traversal of all package entries and manifest consistency checks; third-party code not semantically audited.",
+      "assessment": "All 677 package entries parsed; manifest/root versions and direct maps agree, direct entries exist, resolved URLs are HTTPS. 287 non-root entries omit resolved/integrity. No package-content or vulnerability audit.",
+      "finding_ids": [
+        "FE-D1"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "24b1cc7d062bdfba2b2f95897db28d642f7a84ecd23af9c2be5682495d9bd537"
+    },
+    {
+      "path": "web/package.json",
+      "method": "Full configuration/entry read and consumer/script relationship review.",
+      "assessment": "Scripts and dependency declarations reviewed; canonical build copies Vite output into Go embed destination. lucide-react has no source consumer.",
+      "finding_ids": [
+        "FE-D1"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "8d36a11eaccc612aa9a1d05edde2d5b510d956aa3b52bae67153525d02fa10ff"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "View routing, selected-ticket ownership, configuration fetch, and prop flow reviewed. Configuration fetch ownership overlaps Navbar; no application error boundary protects unchecked live payloads.",
+      "finding_ids": [
+        "FE-04",
+        "FE-D2"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "2889bb7dbefd13c8786baec786108d91b7a6e868cf418814287c95a3e59d1937"
+    },
+    {
+      "path": "web/src/api/client.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full endpoint, request encoding, canonical validation, partial-cost, diagnostics, and malformed-response cases reviewed; retained meaningful API boundary coverage.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "59a52bfb6d02b5772407bea0552043ecb85dfe53f855b4a777c7ffa687cd61c6"
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "HTTP error propagation, query composition, typed validation dispatch, workspace diagnostics, and optional enrichment normalization reviewed; historical boundary is stronger than live ingress.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "c8a94f67cba1c385e2ad14abd2a630e5e31506d87ab27ea932526d594e28114f"
+    },
+    {
+      "path": "web/src/api/costValidation.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Cost evidence/summary scalar and count consistency, unknown-state preservation, nested role/model/invocation checks reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "0ec7d163d905f8c9d2c6160868f9bf845c6f2a03c8c10012aa0ad862bc2c41f7"
+    },
+    {
+      "path": "web/src/api/liveApi.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full parser, fetch, EventSource, reconnect, callback, polling, cleanup, and failure cases reviewed; nested malformed payload, error-state recovery, and pending-poll overlap gaps.",
+      "finding_ids": [
+        "FE-04",
+        "FE-05"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "3b417bd3bef8dc7ac7aa1c4ce2e89e593aa9ad51cdb24d9fcd61297ea79ef561"
+    },
+    {
+      "path": "web/src/api/liveApi.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Entire live decoder/REST/SSE/polling lifecycle reviewed and targeted production functions reproduced; unchecked nesting, recovery status, and concurrent polling issues.",
+      "finding_ids": [
+        "FE-04",
+        "FE-05"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "13bee9ab418b431c0ef1c9f7dbdd30a05ea50b112f9c64a87e96c26528af2613"
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All declarations and repository source references reviewed; exported asynchronous/API/style contracts have no consumers.",
+      "finding_ids": [
+        "FE-D1"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "334d497cc6454c7f3736c436260c763d8cfa67a5c1efcd097f898e40565e2b61"
+    },
+    {
+      "path": "web/src/api/validation.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Unknown-to-typed canonical ledger/fleet/workspace/config/event guards and optional-array normalization reviewed against client tests; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "6a4a805fb474793e2a8231fededbeb035f2db3b5ac262703c7f70014da182380"
+    },
+    {
+      "path": "web/src/components/AnomalyBadge.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All severity, count, static/clickable semantics, tooltip, and callback cases reviewed; enclosing-row keyboard interception belongs to consumer tests.",
+      "finding_ids": [
+        "FE-06"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "7f1a42bd74e375e27c041e0b11e9e893907a81dbe978b5fc37ab777af25c07b6"
+    },
+    {
+      "path": "web/src/components/AnomalyBadge.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Static status versus native clickable badge branches and propagation reviewed; native action participates in parent waterfall keydown interception.",
+      "finding_ids": [
+        "FE-06"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "a65208db593fae10d25ab3fdc9cb61c47f2a8a59af62012231f3a66983b4925c"
+    },
+    {
+      "path": "web/src/components/AnomalyDrawer.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full close, metadata, rule, payload, identifier, copy, and plain-failure cases reviewed; copy failure and modal focus lifecycle are not asserted.",
+      "finding_ids": [
+        "FE-08",
+        "FE-14"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "fa1ac63d25a749f7b43277b237036b71bc01662996b54d28ec760e8eb43eedce"
+    },
+    {
+      "path": "web/src/components/AnomalyDrawer.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Full conditional dialog lifecycle, identity metadata, anomaly presentation, payloads, and copy behavior reviewed; false copy success and missing modal focus ownership.",
+      "finding_ids": [
+        "FE-08",
+        "FE-14"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "ce1c87528a59261d11b4c3fa4f77c7cae8705e607061357e82c5d08744c4bf88"
+    },
+    {
+      "path": "web/src/components/ArtifactViewer.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full markdown rendering/security, tab/view, large-content, clipboard rejection/fallback, and timer cases reviewed; fallback false result is absent.",
+      "finding_ids": [
+        "FE-08"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "e4a6750b35c65a4a3317160e719af87486dc0ae7a4e83c137bdbd2502af2e2f3"
+    },
+    {
+      "path": "web/src/components/ArtifactViewer.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Dynamic/legacy artifact selection, markdown renderers, copy implementation, cleanup and empty-state branches reviewed; duplicate fallback ignores copy result.",
+      "finding_ids": [
+        "FE-08"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "cfec275e9435372a932e31b7614ecd06103b49fb9ea1b94d52b270e57b60b52f"
+    },
+    {
+      "path": "web/src/components/Components.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Every component suite body reviewed, including cost coverage, distribution unknowns, tooltips, chart axes, saturation, threads, and selector ordering. Tooltip oracle checks class rather than styled visibility.",
+      "finding_ids": [
+        "FE-15",
+        "FE-D3"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "f16c0b4df63abce658d58ba48438d954026b44bfc4c61eb11e01fd72ba30fc13"
+    },
+    {
+      "path": "web/src/components/CostKPICard.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Cost value/state/coverage decomposition and tooltip composition reviewed with Components tests; unknown cost remains distinct from zero.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "9d538f3d03a1eec4801e4d8fceac1e52688be0abf03e15702b633bb6308e3d1f"
+    },
+    {
+      "path": "web/src/components/DistributionCard.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Sorting, missing/partial totals, share eligibility, colors, and zero denominator rendering reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "babb7bd5ff85609fdac4ad96b25c8992fa3735203d4ae095c6e8502826237f26"
+    },
+    {
+      "path": "web/src/components/EmptyState.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Title/message/optional action branches reviewed with existing callback tests; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "1ae9960f6ccb0cb1c29f039e6795214c7c43ed6c5735d89bf1c56a9e3bfe2bd3"
+    },
+    {
+      "path": "web/src/components/FailedToolAlertCard.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full severity, truncation boundary, payload escaping/fallback, inspection, and prompt copy cases reviewed; failure result and non-streak-count semantics need coverage.",
+      "finding_ids": [
+        "FE-08",
+        "FE-12"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "8b0b19e590970387efafe2fb27f621de5d5f5d1abe85fdf20e3c45c953af99a7"
+    },
+    {
+      "path": "web/src/components/FailedToolAlertCard.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Failure display, output expansion, severity, optional inspection, prompt generation and props reviewed; ignores clipboard result and messageId prop.",
+      "finding_ids": [
+        "FE-08",
+        "FE-12",
+        "FE-D1"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "963dbdabcb402983cd5ebeb3cd83b669e987f00dc4e79e5a6842e05a9219ae74"
+    },
+    {
+      "path": "web/src/components/FleetAnomalyCard.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full counts, rates, denominator guards, missing summary, clean state, and brittle-tool cases reviewed; no independent new finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "e4557914aaea25956d9440a88e74abf72a775a7ad6c60fe17a42afe3f5ddfe5e"
+    },
+    {
+      "path": "web/src/components/FleetAnomalyCard.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Reliability/empty display, rates, rule list, and public props reviewed; onViewTicket is unused.",
+      "finding_ids": [
+        "FE-D1"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "6b27344076368dcda61fdf65db4e270c453f169ec48441c9f20c5eb3a4a1fbcf"
+    },
+    {
+      "path": "web/src/components/InfoTooltip.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Visibility state, focus/blur/mouse handlers, Escape and CSS interaction reviewed; competing hover rule defeats dismissal and Escape blurs focus.",
+      "finding_ids": [
+        "FE-15"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "70ccf044343ad5f689952a29add226dfaaf0597a540600af0856503ed5471752"
+    },
+    {
+      "path": "web/src/components/KPICard.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Presentation, zero/empty value, secondary text, and optional tooltip reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "298d3e4c4efa2ac639299a8d8c434a6d68602aaef7fd2de8f0b355edb7dbf4a8"
+    },
+    {
+      "path": "web/src/components/LiveAnomalyBanner.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All severity ordering, count/plural, expansion, session callback and keyboard cases reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "01240042b4d19fe8ec8c1bd0576888f042a5a2f24059e6ff0bf9e4efa5b197fd"
+    },
+    {
+      "path": "web/src/components/LiveAnomalyBanner.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Alert severity selection, bounded list disclosure, item key and keyboard navigation reviewed; relies on validated transport model.",
+      "finding_ids": [
+        "FE-04"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "786eec777b60bc9c7e715c2d51fc91237021be39a1a2a387ec5c663999f6c970"
+    },
+    {
+      "path": "web/src/components/LiveSessionTree.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full hierarchy/collapse, confidence, timestamp, selection, ticket propagation and keydown cases reviewed; collapse button keyboard activation is not covered.",
+      "finding_ids": [
+        "FE-06"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "7046bcfda11bb00dbe143f520d7e7f6e8f10aeaf882dd1915b251cc64ea62ace"
+    },
+    {
+      "path": "web/src/components/LiveSessionTree.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Recursive rendering, collapse ownership, duration formatting, candidate navigation, and nested control events reviewed; parent intercepts collapse keydown.",
+      "finding_ids": [
+        "FE-04",
+        "FE-06"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "3a410b09f3ac369dff9a466d37ade56c145bb9730628455b4f61d7d7a5669100"
+    },
+    {
+      "path": "web/src/components/LiveTraceInspector.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full turn identity/order, scroll anchoring, failures, reasoning, copy, token and invocation cases reviewed. Short reasoning checks label only; general copy failures and non-streak counts absent.",
+      "finding_ids": [
+        "FE-08",
+        "FE-12",
+        "FE-16",
+        "FE-D3"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "dc0ac5c71b6d48272e428b6d3176a7b39c229deac4ad1e8bb92103bc57eb4c6e"
+    },
+    {
+      "path": "web/src/components/LiveTraceInspector.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Full keyed message/part rendering, scroll preservation, stream order, failure summaries, copy prompts, reasoning and child navigation reviewed; transport assumptions, ignored copy failures, count semantics and short disclosure issues.",
+      "finding_ids": [
+        "FE-04",
+        "FE-08",
+        "FE-12",
+        "FE-16"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "6c8499fa0b0b07236fd9aee5629ab369448954d7fcea65036858a02e266c65e1"
+    },
+    {
+      "path": "web/src/components/MultiSelectDropdown.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All selection/sentinel/unknown-value, outside-click, Escape, semantics, label and summary cases reviewed; independent generic-control contracts retained.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "82cd85fdce76b898cb316b6c07ff664f781c3313a3afcb25ade25dd601baa1d6"
+    },
+    {
+      "path": "web/src/components/MultiSelectDropdown.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Selection normalization, all sentinel, summary, event listeners and native checkboxes reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "e27c845e13b2c348eb5230e29e57b2c37eda1d421690a841f50d332a8821b1b2"
+    },
+    {
+      "path": "web/src/components/Navbar.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All tabs, brand keyboard/click, version fetch/fallback, project/workspace configuration, and rerender cases reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "e8f6b82b156dfeae107326e99aa1a1e74fb962696eae2bb1d61d5b9baaf5f121"
+    },
+    {
+      "path": "web/src/components/Navbar.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Tab and brand actions, config/version fetching, fallback badge behavior and prop precedence reviewed; overlaps App configuration acquisition.",
+      "finding_ids": [
+        "FE-D2"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "66ce9c1dabaff5b18a0443a25dca4e358058a695de4b60f8978ced96acdb0cdd"
+    },
+    {
+      "path": "web/src/components/SaturationBar.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Ceiling fallback, bar/marker math, health color, role breakdown and tooltip reviewed. Current 200k assumption and separate ceiling prop noted; no independently confirmed configurable-runtime defect raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "afc3616c04d1dec674aeb705bcdc8979bdcf86a529c604856d2ba93afb6acebe"
+    },
+    {
+      "path": "web/src/components/SkillsSubagentsPanel.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Fact-derived skill/task rows, missing child information, disclosure, focusable child actions and semantic tables reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "8d3ee46a7a8b083439d78edda4068742a7256302aa8d4223ed296f6295c5fe9e"
+    },
+    {
+      "path": "web/src/components/ThreadViewer.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Disclosure state, child selection expansion/focus, id mapping, model/cost tables and unknown handling reviewed alongside DeepDive integration tests; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "54b393ebb2d45d48d03be0d009843954ee3201248bd569564075c48c83d853f2"
+    },
+    {
+      "path": "web/src/components/TicketScatterPlot.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All axes, point identities, exclusions, skill tooltips, selection and log controls reviewed; meaningful component boundary retained.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "699a4dd42a3aa549601aff3d4d5e91212def6b7f35f60bd931f6abdc8f8c2162"
+    },
+    {
+      "path": "web/src/components/TicketScatterPlot.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Pure-domain projection consumption, axis controls, exclusions, point keyboard actions, labels and SVG rendering reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "e05d10763c1897f75de5accfd9d649bc6744605e396f36790767f31c4d4777fe"
+    },
+    {
+      "path": "web/src/components/TicketSelector.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Natural ID/completion sorting, empty options, labels and onChange reviewed; inherits digit-prefix sort bug.",
+      "finding_ids": [
+        "FE-01"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "5cb9dbdc4f77d6039712a67a8a532c50d1d2b2063f25e6986b0613f02b429cef"
+    },
+    {
+      "path": "web/src/components/TicketTable.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All search, cost state/order, natural sorting, metric toggles, row callbacks and tooltip isolation cases reviewed; keyboard action gap.",
+      "finding_ids": [
+        "FE-01",
+        "FE-13"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "ee21ff99129f4306b943e7a6cb29ded91ae1a51fd68e7ab5ac09cb7030266f08"
+    },
+    {
+      "path": "web/src/components/TicketTable.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Search/sort/value rendering and action semantics reviewed; non-focusable headers/rows have click-only actions.",
+      "finding_ids": [
+        "FE-01",
+        "FE-13"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "fa203689645d4e8f67d65852e20aa7ba51df3f99a5ccded336d248115e3ed053"
+    },
+    {
+      "path": "web/src/components/TraceInvocationBadge.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Skill/task display, available/pending child action, propagation and result-aware clipboard behavior reviewed; correctly handles false helper result except underlying execCommand bug.",
+      "finding_ids": [
+        "FE-08"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "3b57b74d68f783cf5c1f206b481707974b587d38a420e3bd27ccd3296374bc07"
+    },
+    {
+      "path": "web/src/components/TraceWaterfall.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All 2695 lines and test bodies reviewed: recorded/hydrated facts, selection rebinding, summary disclosure, multidimensional filtering, prompts, identifiers, and child controls. Missing selected-payload hide, general child keyboard, wrong-tool same-turn, non-streak counts and copy failures.",
+      "finding_ids": [
+        "FE-06",
+        "FE-07",
+        "FE-08",
+        "FE-09",
+        "FE-12",
+        "FE-D3"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "3af71fd9bd4cb765cce4f161771d5a7156ea6c3ef3e5047f678bfe60a397f025"
+    },
+    {
+      "path": "web/src/components/TraceWaterfall.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Full disclosure/filter/selection/identity/copy/payload/anomaly and invocation paths reviewed; nested keyboard, forced selected expansion, copy result and count semantics issues.",
+      "finding_ids": [
+        "FE-06",
+        "FE-07",
+        "FE-08",
+        "FE-09",
+        "FE-12"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "70da30ceb736dc6462e4790623ab157b2f3be17774365363f2d6eab0111b58e9"
+    },
+    {
+      "path": "web/src/components/TrendChart.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Every null-gap, empty, positive, diverging-coordinate and tooltip test reviewed; multi-positive-bar geometry case missing.",
+      "finding_ids": [
+        "FE-10"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "ae4bbe1a98ec53ace46f1fd2a203b63a53aa0b211007e0290c89e6b174dd0dc4"
+    },
+    {
+      "path": "web/src/components/TrendChart.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Entire scale/tick/reference/line/area/bar/tooltip renderer reviewed; actual SSR reproduction proves identical bar rectangles for multiple positive series.",
+      "finding_ids": [
+        "FE-10"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "f9c72a6d9ff39dc4c5d71630c8c8379cff5f627c9bc41868d1bd2ae76a61b422"
+    },
+    {
+      "path": "web/src/components/WorkspaceLoadWarning.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All per-ticket/response diagnostics, deduplication and recovery cases reviewed; retained meaningful partial-result coverage.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "cf4d3acd7d51dd74a2b38f31e8b2c67190aad74eff776676220c91b30b8d78c1"
+    },
+    {
+      "path": "web/src/components/WorkspaceLoadWarning.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Diagnostic merge identity, response versus ticket wording, and empty recovery reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "bdca4d8c7162e4f7b8fd0d8acfa63162e3c107279b7e894fba33c99b8db61c50"
+    },
+    {
+      "path": "web/src/domain/aggregations.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All skill ordering/aggregation assertions reviewed against production facts projection; no mocks or ticket workspace dependency.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "1dd08f36c78be076b4f75a47a56ece717973246a6c32d1766aaac0e5a8904c0a"
+    },
+    {
+      "path": "web/src/domain/aggregations.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Fact-derived skill aggregation and deterministic naming/order responsibilities reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "a4835a86d2971cd253801c73539d724c62c5e8c5ad96c07867c3ee35fc92f39f"
+    },
+    {
+      "path": "web/src/domain/anomalies.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Full format/rule narrowing/compiler, attribution, status/session, count and live matching cases reviewed; contradictory tool identity and non-streak semantics missing.",
+      "finding_ids": [
+        "FE-09",
+        "FE-12"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "b44bd72d882af4030f64f466257118002cdedfda3175a8dd1069e8297fbbc6d6"
+    },
+    {
+      "path": "web/src/domain/anomalies.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All retrospective/live labels, type guards, exact evidence, fallback matching, rebinding and count extraction reviewed; wrong-tool fallback reproduced and generic count semantics identified.",
+      "finding_ids": [
+        "FE-09",
+        "FE-12"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "dc66dc0aad10bebfafade5740093d76506de7b404d358fe2eef642ad91b4c810"
+    },
+    {
+      "path": "web/src/domain/cost.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Complete/partial/unavailable normalization, summary derivation and comparison ordering reviewed with consuming formatter/component tests; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "17b01f7f6f80b4d2b6c5056a1a9f71a3a9ddad01ad2fd61a7ae4358e5c5e0225"
+    },
+    {
+      "path": "web/src/domain/events.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All recorded event projection/enrichment/rebinding and ambiguity cases reviewed, including fixture/compiler assertions; preserves baseline-versus-enrichment contract.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "2b12e8f2f0f0a6bace027f2bee8ce77f0adea691774d7ce2dd2f9f4a3fd3c315"
+    },
+    {
+      "path": "web/src/domain/events.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Recorded session event flattening, identity matching, payload enrichment and selected event reconciliation reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "1698b7ecb2105b06caacc82e0527e642e224f1f896c911214db4da9ea58257e5"
+    },
+    {
+      "path": "web/src/domain/formatters.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All 843 lines reviewed: quantities, unknown cost, ID/row sorting, time formatting, prefix/type filtering and naming cases; no configured AL2 prefix example.",
+      "finding_ids": [
+        "FE-01"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "f664839c7f6c9ef4d055377b7bc043db713b1a979933d12e23c0c52271ef39fc"
+    },
+    {
+      "path": "web/src/domain/formatters.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All formatting, row derivation/sorting, identifiers, date formatting and filters reviewed. Production repro proves digit-prefix parsing/sort bug; responsibility breadth is architectural debt.",
+      "finding_ids": [
+        "FE-01",
+        "FE-D2"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "d9b3d13e7c7241d193215665ad82c3bd13859c6275d8be7dc56bf7d7444bb590"
+    },
+    {
+      "path": "web/src/domain/invocation_rows.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All skill/task metadata ambiguity, duplicate occurrences, input conflicts and trace badge assertions reviewed; retained independent pure boundary coverage.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "5d8be6e76bb9f215c3a25f3a62409798f36eb1d0e0f01cb112d88abe042b31a8"
+    },
+    {
+      "path": "web/src/domain/live.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All readonly live node/message/part/alert/trace contracts reviewed and traced to ingress and consumers; runtime enforcement missing at adapter boundary.",
+      "finding_ids": [
+        "FE-04"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "ff5a0b3f547177602f1da2650dfe4b2ed8d282a194ce9059267063e20274951e"
+    },
+    {
+      "path": "web/src/domain/liveMessageOrdering.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All stable message ordering, logical turn identity and immutable-input cases reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "6507f50fe62c9d3829f3f11380a3d1c4ceff79ce77b4d655f881d06528f48c58"
+    },
+    {
+      "path": "web/src/domain/liveMessageOrdering.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Pure latest/oldest ordering and original index preservation reviewed with tests; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "d21fb47828265567fb2b509feb0e66121ef8211bee8a88dbfcb3ccd0728a926e"
+    },
+    {
+      "path": "web/src/domain/liveTraceRefresh.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Refresh eligibility predicate reviewed with useLiveTrace and live view integration tests; no independent finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "ef72b7213e78eb4c4fc26802dd5fa6df2af9b40b7438a42866ba258a275bdf88"
+    },
+    {
+      "path": "web/src/domain/progression.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All 1514 lines reviewed: bucket/date normalization, hourly/daily/weekly/monthly boundaries, invalid input, accumulation, unknown cost and filters. Server-versus-view anchor issue lies outside mocked/local projection coverage.",
+      "finding_ids": [
+        "FE-03"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "5277e74b84ce36230057bc11911f27ccdf1812423270e12bb9f970cba1f6026d"
+    },
+    {
+      "path": "web/src/domain/progression.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Full timestamp parsing, bucket boundaries, filters, aggregation and cumulative state reviewed with domain tests; no new independent finding beyond date ownership at caller.",
+      "finding_ids": [
+        "FE-03"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "9d1564f307ea48f7a5cbf350430bf4074ce1c2ca382b2f7cdd3c8b80ef6dc66d"
+    },
+    {
+      "path": "web/src/domain/ticket_scatter.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All projection, exclusion, missing cost, logarithmic and degenerate-axis cases reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "61689374b6581297e4138f3c10736554d4c333ceaa7f975c7a9fd97228f71fce"
+    },
+    {
+      "path": "web/src/domain/ticket_scatter.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Metric descriptors, filtering, log eligibility, domain extents, axis ticks and point mapping reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "a7d0e999ab0e7ccd94692288a6daaef31a1abdcc19e3dd8792667fc8e105b6b8"
+    },
+    {
+      "path": "web/src/domain/tools.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All per-session tool aggregation assertions reviewed against the pure function; meaningful multi-session boundary retained.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "04829f1cbcc436b5d9f0812c4393af66bd12d1b7b2454adcfb657905a25f2cf9"
+    },
+    {
+      "path": "web/src/domain/tools.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Pure session-owned tool rollup reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "7f2c3a9946dac8efcd17b59a8881e7ba5d895087987dff89a358beeb6076b0f3"
+    },
+    {
+      "path": "web/src/domain/traceBadges.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Skill/task association constraints, parsed tool input, duplicates and ambiguity rejection reviewed with invocation and component tests; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "f6083ea165a458d33c255cca47551f705b8054f563eee66426855e9b29b5ba4d"
+    },
+    {
+      "path": "web/src/domain/types.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Full domain/read model declarations, cost unions, nullable fields, aliases, project config, API response and comparison types reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "68bb54968027240d5c818f4bca966a495b8b2e7edbdd177774ccce21146654a1"
+    },
+    {
+      "path": "web/src/hooks/useLiveTrace.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Whole hook reviewed: selection/unmount ownership, pending request coalescing, push version, refresh eligibility, pause and stale-result handling. Existing integration tests provide meaningful protection.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "77d535f93d81eaf53e0a91bdb2cd0dc3878808e3af4d51c47d0cf5dcb94c069b"
+    },
+    {
+      "path": "web/src/index.css",
+      "method": "Full stylesheet read with declaration/cascade and TSX consumer review; static only.",
+      "assessment": "All 5265 lines reviewed for selectors, declaration cascade, focus, responsive grids, overflow/scroll regions and tooltip styling. Hover CSS competes with tooltip dismissal. No browser visual validation.",
+      "finding_ids": [
+        "FE-15"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "e658406c386f4c10e6f60ca74219051b2c3264886f0edf95bffeaddddd5f68a2"
+    },
+    {
+      "path": "web/src/main.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Root mount, StrictMode and stylesheet initialization reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "0d12d4784f41ce33449cd94c406b2dfa5ad50a3ffe697ea5df75da874a3cfbb6"
+    },
+    {
+      "path": "web/src/test/fixtures/mockData.ts",
+      "method": "Full synthetic fixture read and reference/shape review; no real-session evidence inference.",
+      "assessment": "All 2144 fixture lines read, including synthetic ledgers, derived aggregates, artifacts, live trees/messages and exported references. Test-owned fixture data, not evidence of real source telemetry and not dead runtime code.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "4e90489f8f54a26889b5c4d072083091fa0efcb74e535064e5cf55d3bfa96e6b"
+    },
+    {
+      "path": "web/src/test/setup.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Full test setup import reviewed; matcher initialization is a live test dependency, not unused code.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "a46d66851af2c056e805fdd574bf5ec3adb1181c43c5e41f0a1c592e338afe64"
+    },
+    {
+      "path": "web/src/types/telemetry.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Full event/anomaly/evidence/skill/task readonly types and optional context fields reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "e68486bb2e55d03c3f6141c7caeeebb69b387ab4a031e32cf893adb5ea045e20"
+    },
+    {
+      "path": "web/src/utils/clipboard.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Entire clipboard path reviewed and actual production helper invoked with execCommand false; incorrectly reports success and lacks finally cleanup.",
+      "finding_ids": [
+        "FE-08"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "7ff8fe10e7b41455689b5d7e26184b79a19b2fe5ed068ad75e5161ac8c0178e0"
+    },
+    {
+      "path": "web/src/utils/debugPrompt.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All verbatim payload, defensive fencing, metadata fallback, provenance, status and session cases reviewed; retained meaningful exported-evidence checks.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "096ea69c699d98163d3009a3aa0ef47a13d1ce5e02bd6006ba480d23e3d09f99"
+    },
+    {
+      "path": "web/src/utils/debugPrompt.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All prompt generators and fence/metadata separation reviewed; callers supply semantically incorrect consecutive counts, while source evidence preservation is covered.",
+      "finding_ids": [
+        "FE-12"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "7a1933d8a5b73a073f55fbc99be7f8ba307d4dd576e33bd1485e142853825b88"
+    },
+    {
+      "path": "web/src/utils/theme.test.ts",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All token syntax, status lookup and deterministic custom-role/model color cases reviewed in node environment; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "814bbfb31700ae09095d5c41bb7777ed08a8938c25080d0410f89925782940d6"
+    },
+    {
+      "path": "web/src/utils/theme.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Palette constants, status normalization and deterministic role/model hashing reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "eb91ac88d9734d0d27078240e1b119f2fc4eedacb21172e336d6ce15b9d21a5d"
+    },
+    {
+      "path": "web/src/views/FleetOverview.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "Every loading/error/empty/diagnostic/filter/skill case reviewed; refetch success covered, reversed pending-response ownership missing.",
+      "finding_ids": [
+        "FE-02"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "09a5a621b7f08d56109c794875661ca7d4a57ddb86acb6f15c950d408b594d70"
+    },
+    {
+      "path": "web/src/views/FleetOverview.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Complete data fetching, filters, metrics, diagnostics and retry flow reviewed; obsolete async ownership and duplicated parameter/state logic.",
+      "finding_ids": [
+        "FE-02",
+        "FE-D1",
+        "FE-D2"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "81e8a30318602dfcf6ecc0d3305cded7fdf0178a8a0f1a7d8ef36a02a08ab9cf"
+    },
+    {
+      "path": "web/src/views/LandingPage.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All 747 lines reviewed: loading/retry, partial data, pulse calculations, navigation, sorting, tooltips and project context. Sort tests use mouse clicks only.",
+      "finding_ids": [
+        "FE-13"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "a77f4a4a537bc2b174f71a680a4b4a0d33b6f38c4f0321f63a085f2d7dd6cc1f"
+    },
+    {
+      "path": "web/src/views/LandingPage.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All summary/workspace load, pulse fallbacks, navigation, table sorting and config presentation reviewed; header sorting lacks keyboard actions.",
+      "finding_ids": [
+        "FE-13"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "8a48d00a8285f80289832a32fe88e60abc01c95d1c55d85a394732aafcfbc153"
+    },
+    {
+      "path": "web/src/views/LiveObservability.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All 701 lines reviewed: live callbacks, pause/retry, trace selection, deferred REST/SSE ordering, unchanged-count refresh, coalescing and teardown. Meaningful request ownership coverage retained.",
+      "finding_ids": [
+        "FE-04",
+        "FE-05"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "6434017f662b3c75ef6ce2c2a90b96c95419c4844d885740ce72cc33800fbc73"
+    },
+    {
+      "path": "web/src/views/LiveObservability.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Entire subscription/selection/pause/retry/live-alert/trace integration reviewed; unchecked nested tree consumption and stale error status surfaced from live adapter.",
+      "finding_ids": [
+        "FE-04",
+        "FE-05"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "77788e52ad916159af51f2f0e1bc23c360a50cbfc22127d03a331001a755a731"
+    },
+    {
+      "path": "web/src/views/MetricProgression.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All 447 lines reviewed: chart/filter/custom range, diagnostics, empty and error paths. API mocks miss server date semantics and response inversion.",
+      "finding_ids": [
+        "FE-01",
+        "FE-02",
+        "FE-03",
+        "FE-10"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "b68828cd1ef887d29a5122ccfbc3737f25764f2e663f5bbdee5091771eb469d0"
+    },
+    {
+      "path": "web/src/views/MetricProgression.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All filter/query/date-boundary/chart data/KPI/chart series branches reviewed; configurable prefix, request ownership, mixed temporal semantics, and same-positive-bar chart defects.",
+      "finding_ids": [
+        "FE-01",
+        "FE-02",
+        "FE-03",
+        "FE-10",
+        "FE-D2"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "d51ac85c0c5ad31d96829d8c55c3bd08bd32164685a847a0ef0936b1a2de280b"
+    },
+    {
+      "path": "web/src/views/TicketComparisons.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All 580 lines reviewed: filtering, skill/sentinel, sorts, callback, cost denominator, empty/error and diagnostics. Missing deferred ownership and weighted tool-success counterexample.",
+      "finding_ids": [
+        "FE-01",
+        "FE-02",
+        "FE-11",
+        "FE-13"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "ac69dcd2ff56dd0e6c7f255d4278d5b25768b4a130d29ca04a5d3f12f43b4790"
+    },
+    {
+      "path": "web/src/views/TicketComparisons.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All query, type/prefix/skill/search filtering, row mapping, benchmarks, sorting and table rendering reviewed; request ownership, prefix, weighting and keyboard issues.",
+      "finding_ids": [
+        "FE-01",
+        "FE-02",
+        "FE-11",
+        "FE-13",
+        "FE-D2"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "5900148fa3129ed842e9f70c6540aea5c097ff2f0529c7648feb4efc2604625c"
+    },
+    {
+      "path": "web/src/views/TicketDeepDive.test.tsx",
+      "method": "Full test body and fixture/helper read, compared with production behavior and neighboring coverage; existing suite result reused.",
+      "assessment": "All 1887 lines reviewed: pending/failed/empty/partial enrichment, source identity, repeated rows, selection rebinding, child focus/navigation, payloads, summary inspector, tables and cost. Meaningful integration contracts retained; related shared-component gaps recorded.",
+      "finding_ids": [
+        "FE-06",
+        "FE-07",
+        "FE-08",
+        "FE-14",
+        "FE-15"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "f1a046561942a6d3dea4c5cdcd25c4894366a4d786b395ab61cd285c7e60ee86"
+    },
+    {
+      "path": "web/src/views/TicketDeepDive.tsx",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "Full catalog/detail/enrichment lifecycle, generations, event/anomaly reconciliation, child navigation, fallback source facts, KPIs and tables reviewed; strong optional hydration baseline preservation. Shared drawer/waterfall issues apply.",
+      "finding_ids": [
+        "FE-06",
+        "FE-07",
+        "FE-08",
+        "FE-14"
+      ],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "a0a5952b144009f50ac81041fbbb600ed3c2ed70a71ea0f8c5d2aa87de8e50aa"
+    },
+    {
+      "path": "web/tsconfig.json",
+      "method": "Full configuration/entry read and consumer/script relationship review.",
+      "assessment": "Complete strict/noUncheckedIndexedAccess/exact optional typing and compile scope reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "890d98c8502ce5385663dba4e4293bce48af03dfe4a7c327b8d22b6d5ed7f254"
+    },
+    {
+      "path": "web/tsconfig.node.json",
+      "method": "Full configuration/entry read and consumer/script relationship review.",
+      "assessment": "Node/config project references and compiler options reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "9e2abb169ea87b7190613a1d4da57ca608463a453bd4231fa3aeee5e308370dd"
+    },
+    {
+      "path": "web/vite.config.ts",
+      "method": "Full source semantic read, including branches and callers/related tests; targeted read-only repros where report states.",
+      "assessment": "All dev proxy/port options, React plugin and test environment/include/exclude settings reviewed; no additional finding raised.",
+      "finding_ids": [],
+      "owner": "frontend",
+      "report": "FRONTEND_REPORT.md",
+      "sha256": "94735748af46f323469dd19eea5f278bf0e8c8f1c6fd113c3322faaec6f78ecc"
+    }
+  ]
+}

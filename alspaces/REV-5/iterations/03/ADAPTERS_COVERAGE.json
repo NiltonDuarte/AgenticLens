@@ -1,0 +1,586 @@
+[
+  {
+    "path": "backend/internal/adapters/anomaly_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed typed anomaly field conversion and optional-value preservation.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/backfill/codex_user_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed source user resolution, fallback provenance and preservation assertions.",
+    "finding_ids": [
+      "ADP-01"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/backfill/engine.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed migration orchestration, source partitioning, report/error paths and publication ownership.",
+    "finding_ids": [
+      "ADP-01"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/backfill/engine_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all migration fixtures/assertions including partial-source preservation; warning-bearing successful parsing is missing.",
+    "finding_ids": [
+      "ADP-01"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/backfill/migration_runner.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed file traversal, migration decisions, write/rename/error handling and dry-run boundaries.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/backfill/migration_runner_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed filesystem migration fixtures, backup/failure/dry-run assertions and isolation.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/backfill/options.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed option normalization and configuration boundary.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/backfill/recovery.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun. Disposable-copy behavioral defect probes executed.",
+    "assessment": "Traced tree identity/completeness and replacement; disposable-copy probe confirms warning-bearing parse erases stored facts.",
+    "finding_ids": [
+      "ADP-01"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/backfill/report.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed report counters, diagnostics and output shape against engine consumers.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/backfill/session_test_helper_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed fixture assembly and canonical session ownership defaults.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/codex/discovery.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed source roots, rollout traversal, metadata/session matching and descendant discovery.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/codex/discovery_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed isolated discovery layouts, missing/duplicate sources and descendant assertions.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/codex/invocation_ownership_regression_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed invocation/session ownership and segmentation assertions against extraction contract.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/codex/retention_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed raw-payload non-retention and compact fact serialization assertions; privacy projection is intentional.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/codex/rollout.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all record decoding, usage/turn ownership, warnings, combine and fact projection; recovery consumer drops warnings.",
+    "finding_ids": [
+      "ADP-01"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/codex/rollout_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed complete parser tests, source records, usage attribution and malformed-record expectations.",
+    "finding_ids": [
+      "ADP-01"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/codex/testdata/rollout.jsonl",
+    "method": "Full fixture record read plus structural and parser/retention-consumer review.",
+    "assessment": "Read all JSONL records and traced their parser/retention test consumers; synthetic fixture is not real-session evidence.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/config/loader.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed configuration discovery, merge/default/validation paths and source path policy; origin needed for workspace anchoring.",
+    "finding_ids": [
+      "ADP-03"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/config/loader_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all loader fixtures, threshold/merge/path/error cases; live repository configuration assertions introduce coupling.",
+    "finding_ids": [
+      "ADP-08"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/config/source.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed source choice and path precedence with caller configuration.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/config/source_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed explicit/default source and unavailable-path test matrix.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/config/writer.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun. Disposable-copy behavioral defect probes executed.",
+    "assessment": "Reviewed generated sections and input validation; disposable-copy YAML round trip proves scalar corruption and BaseBranch omission.",
+    "finding_ids": [
+      "ADP-02"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/config/writer_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed complete writer tests; metacharacter values and BaseBranch round trips are absent.",
+    "finding_ids": [
+      "ADP-02"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/fact_cost.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed cost DTO projection, status handling and nil amount semantics.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/fact_decode_helpers.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed typed field decoding, missing/null distinctions and error context.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/fact_ledger_decode.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed canonical decode stages, required shape and compatibility errors against schema tests.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/fact_ledger_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed full fact ledger conversion/validation and runtime JSON boundary; shared validation concerns coordinated with core owner.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/formatters.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed Markdown rendering, optional values, metric projections and table composition.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/formatters_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed formatting assertions and canonical fixture construction against renderer outputs.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/git/analyzer.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed Git invocation, numstat parsing, classification and aggregation; filename identity changes during parsing.",
+    "finding_ids": [
+      "ADP-11"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/git/analyzer_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed temporary Git and parser assertions; unusual path bytes/rename protocol lack boundary coverage.",
+    "finding_ids": [
+      "ADP-11"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/git/classifier.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed pattern order, source root handling and production/test classification behavior.",
+    "finding_ids": [
+      "ADP-11"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/git/classifier_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed classification tables and explicit include/exclude precedence; upstream path normalization gap is outside current fixtures.",
+    "finding_ids": [
+      "ADP-11"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/git/inference.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed branch parsing, configured prefix precedence and actual Git dependency.",
+    "finding_ids": [
+      "ADP-08"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/git/inference_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all inference tests; presumed absent branches rely on checkout branch inventory.",
+    "finding_ids": [
+      "ADP-08"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/git/user.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed Git identity lookup and explicit error/fallback behavior.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/git/user_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed user identity boundary fixtures and environment handling.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/http/comparison_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed comparison payload mapping and zero/nil semantics.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/http/config_handler.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed config response projection and exposure through global route policy.",
+    "finding_ids": [
+      "ADP-05"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/http/dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed envelope and shared HTTP type contracts with handlers.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/http/fleet_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed fleet metric conversion and collection shape.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/http/handlers.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all workspace/metric routes, filters, bounds, error responses and temporal cutoff semantics; frontend owns window discrepancy.",
+    "finding_ids": [
+      "ADP-03",
+      "ADP-05"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/http/live_handlers.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed raw trace/session/SSE routes, deadlines, event delivery and failure behavior; stream clears write deadline.",
+    "finding_ids": [
+      "ADP-05",
+      "ADP-06"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/http/live_handlers_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed route, SSE and live data assertions including cleanup/error cases.",
+    "finding_ids": [
+      "ADP-06"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/http/middleware.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed global CORS behavior; arbitrary origin policy accompanies unauthenticated all-interface listener.",
+    "finding_ids": [
+      "ADP-05"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/http/progression_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed progression payload transformation and data shape.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/http/server.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed route construction, live service lifecycle, listener and timeouts; default bind is all interfaces.",
+    "finding_ids": [
+      "ADP-05"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/http/server_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed entire large HTTP suite, configured-root/baseline preservation and CORS tests; httptest does not establish listener exposure policy.",
+    "finding_ids": [
+      "ADP-03",
+      "ADP-05"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/http/spa.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed embedded file serving, fallback/path cleanup and content behavior.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/http/workspace_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed workspace view mapping and optional hydration payload representation.",
+    "finding_ids": [
+      "ADP-06"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/invocation_fact_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed invocation facts, metric conversion and value preservation across persistence boundary.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/live/parity_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed live/offline parity fixtures; raw whitespace and decoder error-state drift are not exercised.",
+    "finding_ids": [
+      "ADP-12"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/live/service.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed full cache/lifecycle, session-tree, raw trace, OpenCode/Codex hydration and baseline merge paths; silent child failure and duplicate decoder drift remain.",
+    "finding_ids": [
+      "ADP-06",
+      "ADP-12"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/live/session_test_helper_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed canonical fixture helpers and service test defaults.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/live/sqlite.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed read-only connection, source revisions, query/fallback behavior and lifecycle; exported DB getter is test-only API.",
+    "finding_ids": [
+      "ADP-13"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/live/sqlite_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed entire suite including concurrent reads, hydration preservation, lookup failure and snapshots; weak older zero-write assertions coexist with stronger later tests.",
+    "finding_ids": [
+      "ADP-06",
+      "ADP-09",
+      "ADP-13"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/metric_projection_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed derived metric mapping and source fact separation.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/metrics_export_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed export envelope/collection conversion and canonical serialization boundary.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/opencode/client.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed database path selection, connection ownership and error propagation.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/opencode/extractor.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed schema dispatch, extraction ownership and family-neutral responsibilities.",
+    "finding_ids": [
+      "ADP-12"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/extractor_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed extraction dispatch fixtures and shared extraction assertions.",
+    "finding_ids": [
+      "ADP-12"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/resolver.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed resolver dispatch, precedence and missing workspace-root policy input.",
+    "finding_ids": [
+      "ADP-04"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_family_detection.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed complete table/column inventory validation and mixed-family rejection; mutation demonstrates a test gap, not an existing missing-column validation defect.",
+    "finding_ids": [
+      "ADP-07"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_family_detection_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun. Disposable-copy mutation probe executed.",
+    "assessment": "Reviewed all schema fixtures; disabled column validation in disposable copy and omission test still passed.",
+    "finding_ids": [
+      "ADP-07"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_v1_session_extraction.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed full message/part extraction, compact input projection and raw output decoding; transient decoder ownership differs from live.",
+    "finding_ids": [
+      "ADP-12"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_v1_session_extraction_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all family-v1 extraction fixtures, event/usage/cost/error expectations and retention boundaries.",
+    "finding_ids": [
+      "ADP-12"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_v1_session_resolution.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all v1 resolution strategies and SQL matching; workspace fallback root is hardcoded.",
+    "finding_ids": [
+      "ADP-04"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_v1_session_resolution_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed resolution/precedence fixtures; fallback fixtures use only conventional workspace root.",
+    "finding_ids": [
+      "ADP-04"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_v2_session_extraction.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed full v2 decoding, enums/required fields, event ordering and canonical extraction contract.",
+    "finding_ids": [
+      "ADP-12"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_v2_session_extraction_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all v2 valid/malformed/source-shape fixtures and extraction assertions.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_v2_session_resolution.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed v2 resolver SQL and precedence; workspace fallback repeats literal root.",
+    "finding_ids": [
+      "ADP-04"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/schema_v2_session_resolution_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed v2 resolution fixtures and missing/custom-path coverage gap.",
+    "finding_ids": [
+      "ADP-04"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/opencode/skills_tasks.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed task/skill normalization, matching and child-link input ownership.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/parity_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed persisted projection parity across adapter consumers and fixture provenance.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/repository.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun. Disposable-copy behavioral defect probes executed.",
+    "assessment": "Reviewed full scan/load/write/summary lifecycle; disposable probes confirm nested-root failure and peer-section deletion.",
+    "finding_ids": [
+      "ADP-03",
+      "ADP-10"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/repository_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed all filesystem/persistence/summary tests; nested resolver assertion does not scan and summary preservation lacks peer heading.",
+    "finding_ids": [
+      "ADP-03",
+      "ADP-10"
+    ]
+  },
+  {
+    "path": "backend/internal/adapters/schemas_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed runtime schema/DTO boundary, required shape and deliberate raw-payload non-retention tests.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/session_fact_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed session facts, parent pointers, source/user identity and invocation conversion.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/session_test_helper_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed shared canonical session fixture creation and ownership defaults.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/task_link_fact_dto.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed task-link value mapping, optional child references and serialization.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/web/embed.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed embedded asset ownership and single-binary resource boundary.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/adapters/web/embed_test.go",
+    "method": "Full-file semantic read; traced relevant callers, peer implementations and tests. No full-suite rerun.",
+    "assessment": "Reviewed embedded distribution assertions and filesystem exposure.",
+    "finding_ids": []
+  }
+]

@@ -1,0 +1,5 @@
+{
+  "method": "unchanged copied Go classifier with isolated copy of project config",
+  "exit": 0,
+  "output": "web/src/test/fixtures/mockData.ts: prod\nweb/src/test/setup.ts: prod\nweb/src/api/client.test.ts: test\n"
+}

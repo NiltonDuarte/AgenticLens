@@ -1,0 +1,2161 @@
+{
+  "baseline": "d5227812b09a17ff15d7e6ffe058e96ecf1616eb",
+  "files": [
+    {
+      "path": ".agenticlens-config.local.example.yaml",
+      "owner": "delivery",
+      "sha256": "c37e0ecdf7498a56aa9749cc0459cb6e06e7ae22e4a7b05ba58694170f37ad7e",
+      "bytes": 281,
+      "lines": 9
+    },
+    {
+      "path": ".agenticlens-config.yaml",
+      "owner": "delivery",
+      "sha256": "198b7932b23648e3b79b7d3dd3892829c4ae8b4db223d6af191df7b7bc432492",
+      "bytes": 5525,
+      "lines": 138
+    },
+    {
+      "path": ".codex/agents/coder.toml",
+      "owner": "delivery",
+      "sha256": "a1e69f75b88187cf5de9031bf050a75c4f28d6ac244f50c12293cdcf3ddca740",
+      "bytes": 509,
+      "lines": 7
+    },
+    {
+      "path": ".codex/agents/planner.toml",
+      "owner": "delivery",
+      "sha256": "ababdcda7462057625aca1ea7c6505e105d8c1291c5d83df8cf45cb4b6085094",
+      "bytes": 485,
+      "lines": 7
+    },
+    {
+      "path": ".codex/agents/reviewer.toml",
+      "owner": "delivery",
+      "sha256": "a2d65b189ae0c970cf747179f3d524bfb33cabb15eeb34efda8504e7c9db3044",
+      "bytes": 502,
+      "lines": 7
+    },
+    {
+      "path": ".codex/agents/tester.toml",
+      "owner": "delivery",
+      "sha256": "98316163f098da3c548ed14f7aafab0d57e2cdd318ebe1ac30b54cdbba928900",
+      "bytes": 496,
+      "lines": 7
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "owner": "delivery",
+      "sha256": "7a78e8b3ecd47fe7cca762f64510cb8608e2bc0a362f506ca153a6fce0d4c96e",
+      "bytes": 2723,
+      "lines": 114
+    },
+    {
+      "path": ".github/workflows/release-candidate.yml",
+      "owner": "delivery",
+      "sha256": "caac22bb73dd73d2873921c8d53a846411368958ed9913221e80a9aca31418f9",
+      "bytes": 4975,
+      "lines": 153
+    },
+    {
+      "path": ".github/workflows/release-please.yml",
+      "owner": "delivery",
+      "sha256": "d81ac44810d54864b240b0f6ae6fbebb79140c377d61b8387877706d98bef38f",
+      "bytes": 5462,
+      "lines": 125
+    },
+    {
+      "path": ".github/workflows/release-stable.yml",
+      "owner": "delivery",
+      "sha256": "92581760f796d22d4c6ca1bc98aad8c092f30c52de2fee599ab6f31291e3899b",
+      "bytes": 3148,
+      "lines": 100
+    },
+    {
+      "path": ".gitignore",
+      "owner": "delivery",
+      "sha256": "20cba77890724ffb11a18429c81c1866774acbe1c86f5ce1112f23e3f408d01a",
+      "bytes": 679,
+      "lines": 56
+    },
+    {
+      "path": ".release-please-config.json",
+      "owner": "delivery",
+      "sha256": "25c3abad2323bb5a129869ef68dc076843663b2bca4505880f4d17c3239b1dce",
+      "bytes": 245,
+      "lines": 12
+    },
+    {
+      "path": ".release-please-manifest.json",
+      "owner": "delivery",
+      "sha256": "9e38a481f52b5af8537babca8f5d13d5a0ab72473e1deba2e1aeb71e05dcd5b9",
+      "bytes": 19,
+      "lines": 3
+    },
+    {
+      "path": "Dockerfile",
+      "owner": "delivery",
+      "sha256": "3fc6e818ec82eef8fd2e0b03131880c2e6a05c8e6fdc1ab20245b2af1b6df961",
+      "bytes": 971,
+      "lines": 29
+    },
+    {
+      "path": "Makefile",
+      "owner": "delivery",
+      "sha256": "62e9c3bdef0e8839599bf108d6ba6ea1cd8624cb54445e95d52498e32cfdf956",
+      "bytes": 7565,
+      "lines": 189
+    },
+    {
+      "path": "backend/cmd/agentic-lens/config_internal_test.go",
+      "owner": "core_cli",
+      "sha256": "8c1be09bff8c423835f1426d8dda8228b4b8250ff22a764e85c0883eb412ebb1",
+      "bytes": 2452,
+      "lines": 69
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main.go",
+      "owner": "core_cli",
+      "sha256": "579b0991b2689b7a558e9a5aaa209350a2042519a5320562120d252d9cfdaf5c",
+      "bytes": 54149,
+      "lines": 1438
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main_codex_test.go",
+      "owner": "core_cli",
+      "sha256": "34b7944fa4dd28b03f55bd4308dfbbcdc9ea8c789a19191ddfc53d4dae48dba9",
+      "bytes": 13024,
+      "lines": 253
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main_codex_user_test.go",
+      "owner": "core_cli",
+      "sha256": "69367792c259a9c5d33555be0c4fa2c7ea8553dc6b1ca638bd40380acd595a29",
+      "bytes": 1171,
+      "lines": 34
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main_refresh_test.go",
+      "owner": "core_cli",
+      "sha256": "b81fed0946fa48fd06c090375c04ec18cac86089cd9e02bb5031c21a53912851",
+      "bytes": 7170,
+      "lines": 161
+    },
+    {
+      "path": "backend/cmd/agentic-lens/main_test.go",
+      "owner": "core_cli",
+      "sha256": "3255a65f8f83d696f8d02113f1b7a6be8ad084f10191c9798c5c4b8a22e65f85",
+      "bytes": 227162,
+      "lines": 6772
+    },
+    {
+      "path": "backend/cmd/agentic-lens/merge_internal_test.go",
+      "owner": "core_cli",
+      "sha256": "70d1f65b091585bdef4556b81af06f8113df85d340ee67dffa1f40959edeb79d",
+      "bytes": 4093,
+      "lines": 97
+    },
+    {
+      "path": "backend/cmd/agentic-lens/session_test_helper_test.go",
+      "owner": "core_cli",
+      "sha256": "50dcecf365db367800b05aaa5d30696149577a0722217d0bd0a6e535245137d3",
+      "bytes": 4237,
+      "lines": 159
+    },
+    {
+      "path": "backend/go.mod",
+      "owner": "core_cli",
+      "sha256": "52103148694a58e8cd14305ce27b71b490ca8251611756fec5d4c6b11ea5a6f4",
+      "bytes": 539,
+      "lines": 20
+    },
+    {
+      "path": "backend/go.sum",
+      "owner": "core_cli",
+      "sha256": "e2a25888dc6d49c26ee5f9f3098b34af0bbf7c3c333d25c1288019b7625701e4",
+      "bytes": 4495,
+      "lines": 54
+    },
+    {
+      "path": "backend/internal/adapters/anomaly_dto.go",
+      "owner": "backend",
+      "sha256": "64df02c66dabd07418ba8572a6a4ae215beeb0213ad77592122696e554265fcb",
+      "bytes": 4139,
+      "lines": 138
+    },
+    {
+      "path": "backend/internal/adapters/backfill/codex_user_test.go",
+      "owner": "backend",
+      "sha256": "7bc53e6d9ed348d2bd725acce406dd6c487087a1e34e3f1c4fdc1a152339ef6a",
+      "bytes": 1180,
+      "lines": 34
+    },
+    {
+      "path": "backend/internal/adapters/backfill/engine.go",
+      "owner": "backend",
+      "sha256": "45e3c4c21c025185a8195c0c3a54d31554a7aacb30e899798cfdda04ad6e6eee",
+      "bytes": 20434,
+      "lines": 589
+    },
+    {
+      "path": "backend/internal/adapters/backfill/engine_test.go",
+      "owner": "backend",
+      "sha256": "36e26325d36120a95eee8cc443000bd988a08998407d4f9be1d70e3d3f8d5885",
+      "bytes": 70196,
+      "lines": 1886
+    },
+    {
+      "path": "backend/internal/adapters/backfill/migration_runner.go",
+      "owner": "backend",
+      "sha256": "25c97fb0e32cba68810c86a73495277dfe4ff095c633c55abf4953203f134791",
+      "bytes": 9990,
+      "lines": 326
+    },
+    {
+      "path": "backend/internal/adapters/backfill/migration_runner_test.go",
+      "owner": "backend",
+      "sha256": "eca3f6e7048b0e09062ee011d30c9aed7591d01ead1411587c41a9f4253d127d",
+      "bytes": 33693,
+      "lines": 1029
+    },
+    {
+      "path": "backend/internal/adapters/backfill/options.go",
+      "owner": "backend",
+      "sha256": "27ae8b8282d4a003b4d772e959a63ee528de441bf3aafa54603039c28ed83f61",
+      "bytes": 686,
+      "lines": 28
+    },
+    {
+      "path": "backend/internal/adapters/backfill/recovery.go",
+      "owner": "backend",
+      "sha256": "98a901f8c460b7a12992f1d0af773b21e04c34b1f007f92315107da334ebf8bb",
+      "bytes": 10546,
+      "lines": 335
+    },
+    {
+      "path": "backend/internal/adapters/backfill/report.go",
+      "owner": "backend",
+      "sha256": "718dc95448ccadb49815e6267bc30d5cc151b05226a39a56b8fd98957f0ecc8f",
+      "bytes": 2647,
+      "lines": 55
+    },
+    {
+      "path": "backend/internal/adapters/backfill/session_test_helper_test.go",
+      "owner": "backend",
+      "sha256": "dc42823f29f8721e3496b2154f62c2cc9046235b21c5e3a9c7c7aecdd8a4a47e",
+      "bytes": 4236,
+      "lines": 159
+    },
+    {
+      "path": "backend/internal/adapters/codex/discovery.go",
+      "owner": "backend",
+      "sha256": "d8c31ececef63dca48d86bc6a73b648947421ad0e585d686f3ad1e19caf08de9",
+      "bytes": 8741,
+      "lines": 308
+    },
+    {
+      "path": "backend/internal/adapters/codex/discovery_test.go",
+      "owner": "backend",
+      "sha256": "fb0b4a0ea4dfeb1f34cc249ae53d8776ebad1f158fe468a916b3789e9083f033",
+      "bytes": 5713,
+      "lines": 140
+    },
+    {
+      "path": "backend/internal/adapters/codex/invocation_ownership_regression_test.go",
+      "owner": "backend",
+      "sha256": "c0610224fc170f86f0975e1e43a3e6861ebae2a8b156aa6a51110a59eca19f4c",
+      "bytes": 2814,
+      "lines": 72
+    },
+    {
+      "path": "backend/internal/adapters/codex/retention_test.go",
+      "owner": "backend",
+      "sha256": "9dcdad9dfb77484f75c93db3bc9fa6005459dcb1956deab5bd1ad9570a5d91ab",
+      "bytes": 9708,
+      "lines": 204
+    },
+    {
+      "path": "backend/internal/adapters/codex/rollout.go",
+      "owner": "backend",
+      "sha256": "8f8f22d8ca284aefdafdd942ec0184b29a12b67c6ca8564cb7442d3595904abc",
+      "bytes": 35030,
+      "lines": 968
+    },
+    {
+      "path": "backend/internal/adapters/codex/rollout_test.go",
+      "owner": "backend",
+      "sha256": "f7d489f1e43367b99630284bd8d9696ae15bdf703e385d94e6258b4520798a90",
+      "bytes": 28592,
+      "lines": 524
+    },
+    {
+      "path": "backend/internal/adapters/codex/testdata/rollout.jsonl",
+      "owner": "backend",
+      "sha256": "73308572796a1e059f985d415d2c77aa7947abaea0c203b15c14e83b7419021c",
+      "bytes": 2712,
+      "lines": 12
+    },
+    {
+      "path": "backend/internal/adapters/config/loader.go",
+      "owner": "backend",
+      "sha256": "54823c2ef10d262be5fc7f719657b595e1e03476eacc566512f87fcf78471d66",
+      "bytes": 20922,
+      "lines": 560
+    },
+    {
+      "path": "backend/internal/adapters/config/loader_test.go",
+      "owner": "backend",
+      "sha256": "7586abe593bbd2bc33bc8144f9767bf7d8e9d6c8bb7f1c0e23e10b166631e486",
+      "bytes": 79514,
+      "lines": 2463
+    },
+    {
+      "path": "backend/internal/adapters/config/source.go",
+      "owner": "backend",
+      "sha256": "c0d2036af72219cda3a4427880f9937625efff106d316441e014568304ec3a45",
+      "bytes": 1518,
+      "lines": 53
+    },
+    {
+      "path": "backend/internal/adapters/config/source_test.go",
+      "owner": "backend",
+      "sha256": "92874fa4ba2e02a5aeb44212e137782c4aa7edecfb78474675894b94f0f38b8b",
+      "bytes": 1466,
+      "lines": 42
+    },
+    {
+      "path": "backend/internal/adapters/config/writer.go",
+      "owner": "backend",
+      "sha256": "d8ff12fe0d0ba9b0499a163a2f1e6e1793afac4d113e32c0b180164c0642bb8f",
+      "bytes": 15474,
+      "lines": 437
+    },
+    {
+      "path": "backend/internal/adapters/config/writer_test.go",
+      "owner": "backend",
+      "sha256": "d4f4731667b3cd11d8fd4c1a7037ca41619684a3a6559ce78fe6622c54d71dde",
+      "bytes": 15711,
+      "lines": 466
+    },
+    {
+      "path": "backend/internal/adapters/fact_cost.go",
+      "owner": "backend",
+      "sha256": "036608b01b368101ded15c15a14a7622a767cc43065186af523e6d8e0558d268",
+      "bytes": 818,
+      "lines": 34
+    },
+    {
+      "path": "backend/internal/adapters/fact_decode_helpers.go",
+      "owner": "backend",
+      "sha256": "65f85941c5a4fa72450c1dd518d66fa5e2cfb731bd4af32bcdf2d78d06220da8",
+      "bytes": 1055,
+      "lines": 38
+    },
+    {
+      "path": "backend/internal/adapters/fact_ledger_decode.go",
+      "owner": "backend",
+      "sha256": "595fb1b417297af7c5a24ab4349b6cd304a6f351a30e2e6d84b53f7381258fab",
+      "bytes": 1009,
+      "lines": 27
+    },
+    {
+      "path": "backend/internal/adapters/fact_ledger_dto.go",
+      "owner": "backend",
+      "sha256": "58822ab179fc7525cbd34e7d37dba059509a5326541c616d0b77932f767c9d29",
+      "bytes": 17837,
+      "lines": 446
+    },
+    {
+      "path": "backend/internal/adapters/formatters.go",
+      "owner": "backend",
+      "sha256": "3484f0a69cdec35289853fad4b624a870683c24b392d71852400a1ff1791ce3b",
+      "bytes": 9922,
+      "lines": 324
+    },
+    {
+      "path": "backend/internal/adapters/formatters_test.go",
+      "owner": "backend",
+      "sha256": "9fae664ebb31dc6cc075bb636ff9251b937f5dc3a11bb6036e51077fe6a8c559",
+      "bytes": 15017,
+      "lines": 474
+    },
+    {
+      "path": "backend/internal/adapters/git/analyzer.go",
+      "owner": "backend",
+      "sha256": "cbc06b1c0ed85a6e4c519d8d2a9aae40ca9d5bc8a3046ef389af7447cf992d95",
+      "bytes": 7951,
+      "lines": 282
+    },
+    {
+      "path": "backend/internal/adapters/git/analyzer_test.go",
+      "owner": "backend",
+      "sha256": "b01b9088b284f54235ffeb8f2d4d3477b54210e11a7239d4154ee3cbd2b5579c",
+      "bytes": 24494,
+      "lines": 717
+    },
+    {
+      "path": "backend/internal/adapters/git/classifier.go",
+      "owner": "backend",
+      "sha256": "4c839ab2502b0101248734e7498b9b13dadd704546d788c221c4bd0f5871af8a",
+      "bytes": 4845,
+      "lines": 157
+    },
+    {
+      "path": "backend/internal/adapters/git/classifier_test.go",
+      "owner": "backend",
+      "sha256": "6cb341358e6c8083ff67cbd7793e264030f4b23147319575b0a7c8e1cb6bde73",
+      "bytes": 14632,
+      "lines": 381
+    },
+    {
+      "path": "backend/internal/adapters/git/inference.go",
+      "owner": "backend",
+      "sha256": "0703632b1e2dadd30948c6e157ecb13cf3856bce819c505fbfdfe919f8f9fc06",
+      "bytes": 2337,
+      "lines": 84
+    },
+    {
+      "path": "backend/internal/adapters/git/inference_test.go",
+      "owner": "backend",
+      "sha256": "4e9feaf085c22cb149b3ef170d7490d86b9e3797f2b65f2c9f82c2226b6d14e2",
+      "bytes": 18456,
+      "lines": 634
+    },
+    {
+      "path": "backend/internal/adapters/git/user.go",
+      "owner": "backend",
+      "sha256": "4d2463ea9189decf2df4ca5714541b8b3f657cb2b038b3249b440dc04cf151aa",
+      "bytes": 727,
+      "lines": 25
+    },
+    {
+      "path": "backend/internal/adapters/git/user_test.go",
+      "owner": "backend",
+      "sha256": "b89857a36c28b871bab4b39868b6e13bf2f9ff6961d016f77e82b6d40e598354",
+      "bytes": 1476,
+      "lines": 62
+    },
+    {
+      "path": "backend/internal/adapters/http/comparison_dto.go",
+      "owner": "backend",
+      "sha256": "15413bc2541ce7841a10f1a8c8fdddb6d54aa952088614ae95981589919be77e",
+      "bytes": 3715,
+      "lines": 72
+    },
+    {
+      "path": "backend/internal/adapters/http/config_handler.go",
+      "owner": "backend",
+      "sha256": "1308984a39fa271375a137da079229bbb9f8d15d5c934e60e0a1cfac9c7acc01",
+      "bytes": 1269,
+      "lines": 48
+    },
+    {
+      "path": "backend/internal/adapters/http/dto.go",
+      "owner": "backend",
+      "sha256": "cfa9607557830442bccc5e27b6e9e19d85ee16821d9fcddded6ccd3629538291",
+      "bytes": 5493,
+      "lines": 158
+    },
+    {
+      "path": "backend/internal/adapters/http/fleet_dto.go",
+      "owner": "backend",
+      "sha256": "96ad85691472e236ed5aa9c02cecd48c7a0ab44ae35b39a8e5955a36ef7c3c0a",
+      "bytes": 4968,
+      "lines": 101
+    },
+    {
+      "path": "backend/internal/adapters/http/handlers.go",
+      "owner": "backend",
+      "sha256": "3e4b2b46f2852194625e936539586de662d6635588b6f747d78d63720a91cc49",
+      "bytes": 13535,
+      "lines": 460
+    },
+    {
+      "path": "backend/internal/adapters/http/live_handlers.go",
+      "owner": "backend",
+      "sha256": "852e1d0a7bb46c5b3f4c32a87905c4bb423ffde568bfac40bbd8d7c4c2b6d46f",
+      "bytes": 4116,
+      "lines": 138
+    },
+    {
+      "path": "backend/internal/adapters/http/live_handlers_test.go",
+      "owner": "backend",
+      "sha256": "d0f4dbfc5c762bd06ce0dfa6ab831de163efda0e35c8a1c41685419a95907602",
+      "bytes": 29272,
+      "lines": 983
+    },
+    {
+      "path": "backend/internal/adapters/http/middleware.go",
+      "owner": "backend",
+      "sha256": "07535e354415a56bed8f192716251cb831fb21a9c224957e84c58adb86db561c",
+      "bytes": 659,
+      "lines": 22
+    },
+    {
+      "path": "backend/internal/adapters/http/progression_dto.go",
+      "owner": "backend",
+      "sha256": "eda34a99c93382d5565daa9efc38abeb57fb64ca656e8a57e80fc44f13491083",
+      "bytes": 3703,
+      "lines": 75
+    },
+    {
+      "path": "backend/internal/adapters/http/server.go",
+      "owner": "backend",
+      "sha256": "81d49b1f9bbd5524b187e21b9b782a8499520a749221d4c1e9cb53a643415ebd",
+      "bytes": 2932,
+      "lines": 99
+    },
+    {
+      "path": "backend/internal/adapters/http/server_test.go",
+      "owner": "backend",
+      "sha256": "e2c7b0eb1a6ea152027f303a5d6f01298037214e6435963c287e99286bd7a61a",
+      "bytes": 164246,
+      "lines": 4780
+    },
+    {
+      "path": "backend/internal/adapters/http/spa.go",
+      "owner": "backend",
+      "sha256": "5f9ca491fbea28401cffd5d530d2ea73b089e7c2cd69091e5053e7c4c2981070",
+      "bytes": 2021,
+      "lines": 76
+    },
+    {
+      "path": "backend/internal/adapters/http/workspace_dto.go",
+      "owner": "backend",
+      "sha256": "82249287ea485f77af23832844475baa80670306ca3ba7ee69e8f8f6fb0fe745",
+      "bytes": 6977,
+      "lines": 175
+    },
+    {
+      "path": "backend/internal/adapters/invocation_fact_dto.go",
+      "owner": "backend",
+      "sha256": "dacb4bfe43dc1100656b6b7b02af7a67776ed4b5e4a3abc564b3925a5378481f",
+      "bytes": 3976,
+      "lines": 115
+    },
+    {
+      "path": "backend/internal/adapters/live/parity_test.go",
+      "owner": "backend",
+      "sha256": "93e217d980d2f88dc93a52cb12728de12e8d5e5a161987a542ac2fb94f00835f",
+      "bytes": 6347,
+      "lines": 141
+    },
+    {
+      "path": "backend/internal/adapters/live/service.go",
+      "owner": "backend",
+      "sha256": "e73357f5cf8533ac38992a984967fff013ba4ca7f34fa65210cf5d828dfa3ea8",
+      "bytes": 38043,
+      "lines": 1330
+    },
+    {
+      "path": "backend/internal/adapters/live/session_test_helper_test.go",
+      "owner": "backend",
+      "sha256": "2841348af3891ac3587f85e4ece4b33f2488772c7e2c14e259f4464129dc19fa",
+      "bytes": 3173,
+      "lines": 118
+    },
+    {
+      "path": "backend/internal/adapters/live/sqlite.go",
+      "owner": "backend",
+      "sha256": "2071641a65ff2dceab5d81ca1246ac07cedb976ebd72585b281737c0b2ffb1af",
+      "bytes": 12944,
+      "lines": 471
+    },
+    {
+      "path": "backend/internal/adapters/live/sqlite_test.go",
+      "owner": "backend",
+      "sha256": "83458ef9d46048fdeb414c8f74f8f0906099f37c58b257040f8388b1680ed0e4",
+      "bytes": 91555,
+      "lines": 2641
+    },
+    {
+      "path": "backend/internal/adapters/metric_projection_dto.go",
+      "owner": "backend",
+      "sha256": "e7086e5c77694708e83919c321403b96ad7acc300eee7901e376f751c39ab621",
+      "bytes": 7087,
+      "lines": 163
+    },
+    {
+      "path": "backend/internal/adapters/metrics_export_dto.go",
+      "owner": "backend",
+      "sha256": "6a69b28932b4fb6f6b3c7f3596841a96bbe4d756d28bd43761287132ed660e2d",
+      "bytes": 1863,
+      "lines": 44
+    },
+    {
+      "path": "backend/internal/adapters/opencode/client.go",
+      "owner": "backend",
+      "sha256": "342d1b38c770289477d41154bb68fd4d1b688e457d3d6fe265a67e990cbae344",
+      "bytes": 1478,
+      "lines": 65
+    },
+    {
+      "path": "backend/internal/adapters/opencode/extractor.go",
+      "owner": "backend",
+      "sha256": "eeaafdb90c40747a7a149c04aed6e02e739ff14c48e0abc968bf13bf7279478b",
+      "bytes": 4497,
+      "lines": 169
+    },
+    {
+      "path": "backend/internal/adapters/opencode/extractor_test.go",
+      "owner": "backend",
+      "sha256": "b1c30f3c82505ef9b17b10d70b567c22fe2e7ad0aac614f9cdae04f80f76988f",
+      "bytes": 5489,
+      "lines": 168
+    },
+    {
+      "path": "backend/internal/adapters/opencode/resolver.go",
+      "owner": "backend",
+      "sha256": "a5037ddb7dfaf8b39e74fbfe2693f1c1bea173aaff1310afe99b1ee397da47db",
+      "bytes": 1929,
+      "lines": 44
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_family_detection.go",
+      "owner": "backend",
+      "sha256": "b7320b75088622bc3c1bb1dd878199fbe813c2b08e9baf2ab219bb2f99332a52",
+      "bytes": 4312,
+      "lines": 122
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_family_detection_test.go",
+      "owner": "backend",
+      "sha256": "14a5ca520d482280647b9ba61dc444857fbe63aa064f09a5cefd933c2599020b",
+      "bytes": 3232,
+      "lines": 84
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v1_session_extraction.go",
+      "owner": "backend",
+      "sha256": "ddaf4358030f2c314d49254c207937c321a8ecccf484baeb954a6f5999cfedc5",
+      "bytes": 21011,
+      "lines": 759
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v1_session_extraction_test.go",
+      "owner": "backend",
+      "sha256": "7f41d0ec6749e48df49f7c516f011c27906e345e931850ca864284a1b78226d9",
+      "bytes": 62885,
+      "lines": 1601
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v1_session_resolution.go",
+      "owner": "backend",
+      "sha256": "fac4f7b3e152963d79d5798dd4c4f834a8a06d077dc33808a8453a07154e8eab",
+      "bytes": 3128,
+      "lines": 102
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v1_session_resolution_test.go",
+      "owner": "backend",
+      "sha256": "e24252a5b3d694c1c305295f625c82e33ed6867ab424c4fde857ed808a16565a",
+      "bytes": 9521,
+      "lines": 259
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v2_session_extraction.go",
+      "owner": "backend",
+      "sha256": "b84c40c475a7ca2a1db2295855e8ce5f109c33d8f53def6b33e51c3c845c474a",
+      "bytes": 13052,
+      "lines": 380
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v2_session_extraction_test.go",
+      "owner": "backend",
+      "sha256": "2c10b31f21d2bfe8b328c6a44aa2ec43476a40a591e0024987ea186338a73d99",
+      "bytes": 14436,
+      "lines": 309
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v2_session_resolution.go",
+      "owner": "backend",
+      "sha256": "787b4337c00d1215a4eed89c563887232cc368d7068b454f8165a35897434460",
+      "bytes": 2390,
+      "lines": 68
+    },
+    {
+      "path": "backend/internal/adapters/opencode/schema_v2_session_resolution_test.go",
+      "owner": "backend",
+      "sha256": "49fbc5bfc8fe8e32efdbbc8bc80c94f82767c40e1f9ab20d0b7b8b582350034b",
+      "bytes": 661,
+      "lines": 25
+    },
+    {
+      "path": "backend/internal/adapters/opencode/skills_tasks.go",
+      "owner": "backend",
+      "sha256": "26485bd56dd1665605f10f8b213553c16e317f8197891f204c4315501e6c02ee",
+      "bytes": 3369,
+      "lines": 112
+    },
+    {
+      "path": "backend/internal/adapters/parity_test.go",
+      "owner": "backend",
+      "sha256": "a9c5a2ce8b835ec70233089a51ece9c0cdfaee5f57405293c97e46ee4786bc24",
+      "bytes": 36119,
+      "lines": 1136
+    },
+    {
+      "path": "backend/internal/adapters/repository.go",
+      "owner": "backend",
+      "sha256": "accf317602cda0fe88979699f43938c338145a25d3b3d72b6c44aca4b5c87d58",
+      "bytes": 19190,
+      "lines": 574
+    },
+    {
+      "path": "backend/internal/adapters/repository_test.go",
+      "owner": "backend",
+      "sha256": "eb8073266c159b4b3e6620a9a8de6dda01c155e6299ce3daa327ec4c7e94d655",
+      "bytes": 81665,
+      "lines": 2503
+    },
+    {
+      "path": "backend/internal/adapters/schemas_test.go",
+      "owner": "backend",
+      "sha256": "f39d7b723344256ef840b741464afdcd1d9355c0516938138bbdddf37934c994",
+      "bytes": 56578,
+      "lines": 1442
+    },
+    {
+      "path": "backend/internal/adapters/session_fact_dto.go",
+      "owner": "backend",
+      "sha256": "1f2f5e5319c19d8e0da1588195fe350b14adc895dd5a6790471f901fe7a23fbb",
+      "bytes": 5041,
+      "lines": 145
+    },
+    {
+      "path": "backend/internal/adapters/session_test_helper_test.go",
+      "owner": "backend",
+      "sha256": "b3c010bf29bc93a6974c063f7f4720eeccf68813ced0144c32752eeedeba2b8c",
+      "bytes": 4241,
+      "lines": 159
+    },
+    {
+      "path": "backend/internal/adapters/task_link_fact_dto.go",
+      "owner": "backend",
+      "sha256": "38d022223cc80998feae2c83b3a439e212d7f342558e016095b644a35b6b7610",
+      "bytes": 2901,
+      "lines": 80
+    },
+    {
+      "path": "backend/internal/adapters/web/embed.go",
+      "owner": "backend",
+      "sha256": "6ce320abadbdb635519183d1f2ed052f28ce96bef0207dd679d3aa3f455e211f",
+      "bytes": 310,
+      "lines": 19
+    },
+    {
+      "path": "backend/internal/adapters/web/embed_test.go",
+      "owner": "backend",
+      "sha256": "5887bc609c1666083c95c2a7b83fa3d3ee8be7ed21571cdb600a6c12485459c0",
+      "bytes": 2010,
+      "lines": 71
+    },
+    {
+      "path": "backend/internal/domain/aggregations.go",
+      "owner": "core_cli",
+      "sha256": "c70244d35383975c0068312d467256a28ef2a21e9f5a9509127aebd8963bc24c",
+      "bytes": 47088,
+      "lines": 1576
+    },
+    {
+      "path": "backend/internal/domain/aggregations_test.go",
+      "owner": "core_cli",
+      "sha256": "dae24111b65421bd45d5e8b4d09a2a9f7ddaa5f3902070c13a45be128b259778",
+      "bytes": 221470,
+      "lines": 5958
+    },
+    {
+      "path": "backend/internal/domain/anomalies.go",
+      "owner": "core_cli",
+      "sha256": "26eedc1e11e68ff491503a57d93180e42faa0f2110d4e1da8dbb6716c9fd336e",
+      "bytes": 23624,
+      "lines": 769
+    },
+    {
+      "path": "backend/internal/domain/anomalies_test.go",
+      "owner": "core_cli",
+      "sha256": "3f81f6ba2ebc32b38d1c416f39e155a370822884571197de595db595241457c0",
+      "bytes": 101389,
+      "lines": 2369
+    },
+    {
+      "path": "backend/internal/domain/config.go",
+      "owner": "core_cli",
+      "sha256": "6dfeb082b110bf1cc1fca4b86d6266f7d0eb6a34d5ee5d3a6b2aaeccb5500579",
+      "bytes": 12589,
+      "lines": 326
+    },
+    {
+      "path": "backend/internal/domain/config_test.go",
+      "owner": "core_cli",
+      "sha256": "6f762d52537a26ab6a64fdfc6fa9e6fbff77e36f2ff4388bfdae6a017f37c5be",
+      "bytes": 44805,
+      "lines": 1267
+    },
+    {
+      "path": "backend/internal/domain/constants.go",
+      "owner": "core_cli",
+      "sha256": "edbfe1ad638acadeddd815d69320c4220e03893638ec79d7ab4e33f4d675d7bb",
+      "bytes": 2120,
+      "lines": 76
+    },
+    {
+      "path": "backend/internal/domain/constants_test.go",
+      "owner": "core_cli",
+      "sha256": "ac93347294c4d26f3242f213ecc61a3140465ddbe6a0f12c99f52e3d7a258dba",
+      "bytes": 5324,
+      "lines": 111
+    },
+    {
+      "path": "backend/internal/domain/cost.go",
+      "owner": "core_cli",
+      "sha256": "fb7167a6d168ace38158e7ad0d111be70489e5dea9d89117ec860ba6c64e7dd5",
+      "bytes": 5691,
+      "lines": 174
+    },
+    {
+      "path": "backend/internal/domain/enums.go",
+      "owner": "core_cli",
+      "sha256": "d3379c724d28ce05ed2e1cc3cbe8ac7a1f7108debadbd35d577f8d903299a29b",
+      "bytes": 8777,
+      "lines": 306
+    },
+    {
+      "path": "backend/internal/domain/enums_test.go",
+      "owner": "core_cli",
+      "sha256": "d115229138f87f5dcda00126b19216a252c38bc86a4bb6b7d361792dc0b008a1",
+      "bytes": 19165,
+      "lines": 493
+    },
+    {
+      "path": "backend/internal/domain/events.go",
+      "owner": "core_cli",
+      "sha256": "676c43e9ee06ddc35ac02ff4f2a38e9b15093d5e7bd0efa0e4eee9cd36ed2e86",
+      "bytes": 17971,
+      "lines": 541
+    },
+    {
+      "path": "backend/internal/domain/events_test.go",
+      "owner": "core_cli",
+      "sha256": "3f6519486fff715a6e5d73d3de7410c53411ea71e5665847e3344789fa749225",
+      "bytes": 29516,
+      "lines": 773
+    },
+    {
+      "path": "backend/internal/domain/live.go",
+      "owner": "core_cli",
+      "sha256": "a9d5fc9939e8d68c5a2f0c6997bffb9b7b498baa195b0f8fa3c5c850118dbc9d",
+      "bytes": 9186,
+      "lines": 255
+    },
+    {
+      "path": "backend/internal/domain/live_anomaly.go",
+      "owner": "core_cli",
+      "sha256": "58ef950538317e5a454f4a72f2c7f0dd7a191d381cc50077d7882ad7939a0d66",
+      "bytes": 18224,
+      "lines": 604
+    },
+    {
+      "path": "backend/internal/domain/live_anomaly_test.go",
+      "owner": "core_cli",
+      "sha256": "c92e337e9cb5fef48c3f63a922db54304236d033faa6d72191e5b2ebac5adbef",
+      "bytes": 50423,
+      "lines": 1481
+    },
+    {
+      "path": "backend/internal/domain/live_test.go",
+      "owner": "core_cli",
+      "sha256": "e8b6cde05e5763b6517d40913ac9ce3418a9812101d4b396c5d0b15577cc71ed",
+      "bytes": 20455,
+      "lines": 659
+    },
+    {
+      "path": "backend/internal/domain/migration.go",
+      "owner": "core_cli",
+      "sha256": "9523aeebc0adff3852dc7fc9cc01a9fbd26c9d3244e04e849c86b152f2e8c752",
+      "bytes": 4061,
+      "lines": 137
+    },
+    {
+      "path": "backend/internal/domain/migration/cost_decode.go",
+      "owner": "core_cli",
+      "sha256": "e0e4b5c629483c607b04b00ee531b34835b45f02111dbbe3fbbba8d690ac69c0",
+      "bytes": 11263,
+      "lines": 278
+    },
+    {
+      "path": "backend/internal/domain/migration/engine.go",
+      "owner": "core_cli",
+      "sha256": "15d30072593c3c35105cf315670cf25e5517164f9e645daa1bfbc6d416d20419",
+      "bytes": 7721,
+      "lines": 234
+    },
+    {
+      "path": "backend/internal/domain/migration/engine_test.go",
+      "owner": "core_cli",
+      "sha256": "748d718312c1eccf3a467d97d3ce69f346c93524ecfcdb2c03c888be4134cac9",
+      "bytes": 69389,
+      "lines": 1967
+    },
+    {
+      "path": "backend/internal/domain/migration/invocation_ownership_regression_test.go",
+      "owner": "core_cli",
+      "sha256": "a0e9ad6a6c217e32f3de94b294b90c775054dec0cba19e1e9ce6253c371a4f48",
+      "bytes": 3527,
+      "lines": 94
+    },
+    {
+      "path": "backend/internal/domain/migration/registry.go",
+      "owner": "core_cli",
+      "sha256": "548c00f9932e26a5151d71473d4ec52284b974c5acb8c6a67b6e3a219c5c28d8",
+      "bytes": 2016,
+      "lines": 69
+    },
+    {
+      "path": "backend/internal/domain/migration/session_test_helper_test.go",
+      "owner": "core_cli",
+      "sha256": "b126ea80609cad85580e432d7f51943fc4d5e4fee72a95305e7be9ba3adf2d67",
+      "bytes": 3484,
+      "lines": 131
+    },
+    {
+      "path": "backend/internal/domain/migration/step_v1_v2.go",
+      "owner": "core_cli",
+      "sha256": "c6934212ab1114dc1a846df9a88d256820ef9dca9a500837fafbc20944d81087",
+      "bytes": 2218,
+      "lines": 80
+    },
+    {
+      "path": "backend/internal/domain/migration/step_v2_v3.go",
+      "owner": "core_cli",
+      "sha256": "3c863074c07044e8f9ff9e4d06d5b2d3fdfd148e02373e4c7eeba7d6bce2e6dc",
+      "bytes": 3553,
+      "lines": 115
+    },
+    {
+      "path": "backend/internal/domain/migration/step_v3_v4.go",
+      "owner": "core_cli",
+      "sha256": "990967883c7e10f86af7542928565ff9577f9315852d056d5a7c18d5507c21c1",
+      "bytes": 3646,
+      "lines": 115
+    },
+    {
+      "path": "backend/internal/domain/migration/step_v4_v5.go",
+      "owner": "core_cli",
+      "sha256": "d9552e67f6a36f603349282b1ea812f5fe153d9928b7cf18932fb01e8214d1e1",
+      "bytes": 1718,
+      "lines": 47
+    },
+    {
+      "path": "backend/internal/domain/migration/types.go",
+      "owner": "core_cli",
+      "sha256": "9397465bf70e967923eb398b08a1f5c8d82d30839ee2f7e3c1dc1a74e8f887f7",
+      "bytes": 848,
+      "lines": 25
+    },
+    {
+      "path": "backend/internal/domain/migration/validator.go",
+      "owner": "core_cli",
+      "sha256": "401ebf246581e4651635e2678adfbd194dd8239ec2945a90e7a9ccb440363990",
+      "bytes": 7592,
+      "lines": 211
+    },
+    {
+      "path": "backend/internal/domain/migration_test.go",
+      "owner": "core_cli",
+      "sha256": "31d4463e1833ef164761160ef00dde6a4b8c58e3a25058626e60b0f1ceea0449",
+      "bytes": 7417,
+      "lines": 220
+    },
+    {
+      "path": "backend/internal/domain/models.go",
+      "owner": "core_cli",
+      "sha256": "8d1d8d23448a414284071f3a6d2f3973c13ad6167428139a9e8bee2a86e49e3a",
+      "bytes": 28059,
+      "lines": 615
+    },
+    {
+      "path": "backend/internal/domain/session_facts_test.go",
+      "owner": "core_cli",
+      "sha256": "cc1252aee120d5f8ee3dde9d25c280d9a0e658eedfec15cdf3050a733f36533f",
+      "bytes": 4084,
+      "lines": 93
+    },
+    {
+      "path": "backend/internal/domain/session_test_helper_test.go",
+      "owner": "core_cli",
+      "sha256": "0fe49bd43d4165eff6ee0afb5b566e6717e9613995bebcc6f66f7c1814112848",
+      "bytes": 6517,
+      "lines": 240
+    },
+    {
+      "path": "backend/internal/domain/skills_tasks_test.go",
+      "owner": "core_cli",
+      "sha256": "ddcdbe36d3ba2911806558c83c84800ea8e8bc2c4b4b325c5a16347cf9de3e74",
+      "bytes": 1526,
+      "lines": 42
+    },
+    {
+      "path": "backend/internal/domain/tool_execution_test.go",
+      "owner": "core_cli",
+      "sha256": "3ae58056c88b9855611b1b4d146eabc2bd527eba6e7f9edb097456025f6ab8cb",
+      "bytes": 2572,
+      "lines": 45
+    },
+    {
+      "path": "backend/internal/domain/version.go",
+      "owner": "core_cli",
+      "sha256": "74430cd8e91d61fd77852cac02fd7d1a309c4cb4e013b84008d3b0b3c21e8d64",
+      "bytes": 1748,
+      "lines": 74
+    },
+    {
+      "path": "backend/internal/domain/version_test.go",
+      "owner": "core_cli",
+      "sha256": "dde235d1471cd6f96216e1cac50b679513dd04d0cca1e1c47adb6a8787829b64",
+      "bytes": 8689,
+      "lines": 320
+    },
+    {
+      "path": "scripts/agentic-lens-wrapper.sh",
+      "owner": "delivery",
+      "sha256": "fcd79b145d86ea22185a28158e87617ee84d66841298645597f476c3bc5333e2",
+      "bytes": 6537,
+      "lines": 251
+    },
+    {
+      "path": "scripts/download-agentic-lens.sh",
+      "owner": "delivery",
+      "sha256": "766eed3aac356f15c3c893bfdffa9f2a761b4cf07043dddbde1a195d70b7bd63",
+      "bytes": 8874,
+      "lines": 316
+    },
+    {
+      "path": "scripts/opencode-compat.sh",
+      "owner": "delivery",
+      "sha256": "39625e654c01d515ac9f41a5d6090714141b7c3c81d5ffbf6f48edbdc601f06d",
+      "bytes": 1898,
+      "lines": 42
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-1/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "85952c20c5dc80eeea24b4f48b7e54a8dbcc04aabbf8305bee6a55cadec2a5f1",
+      "bytes": 10037,
+      "lines": 92
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-1/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "a46eeec9f058a6e53d4d1dd46cb77f9afcfae9d87fb63869bfcda918d752d13e",
+      "bytes": 5106,
+      "lines": 71
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-1/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "308a5662a217e1fedb8f4c3432b53648c529488cba1fca856aca254fea533c33",
+      "bytes": 8613,
+      "lines": 327
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-10/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "d0bd9a5e850d6f8063e334e4549958a6154dd96fade2fcb8746d01d6b224d7e9",
+      "bytes": 305,
+      "lines": 8
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-10/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "35fa9104e63dec66a4270a88c33dd333402ad5290276688e1d3310847b51146a",
+      "bytes": 3803,
+      "lines": 52
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-10/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "dbe49204cc0a492e3d133851bb67eef84bf17dcf0ea3c34481fc53bea3db5536",
+      "bytes": 8540,
+      "lines": 325
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-11/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "741c3a92f1871c345f5b5690bb3b2cd4271ea7070f9a705a3958c0307337e851",
+      "bytes": 10735,
+      "lines": 110
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-11/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "13064cf5b12ad1187655f4d7624fb4010fb607941a7645ff94d6338536130086",
+      "bytes": 5533,
+      "lines": 68
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-11/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "cf9c1ad3f69927f666e83f16b59786c5aff705068ea942e8751ccd6fefab9954",
+      "bytes": 10015,
+      "lines": 377
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-12/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "afe90f438b23a6b8f61bce7d3a655cb9a9101b0b7c4ff01616ec3df7f5234313",
+      "bytes": 13445,
+      "lines": 142
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-12/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "ec3ffef813bb5e0fa89f01d13437abaf6729ac05d859f4b6a27c4dcc307f38b5",
+      "bytes": 6772,
+      "lines": 78
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-12/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "2e035363dc01fb577286ccf0ce0f99ff9e493373137c8ebeeb318e7bc774dc28",
+      "bytes": 8844,
+      "lines": 331
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-2/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "becc349033268a227fc84b0c4750b72283c18d7d9694b892061ad44ef38860ad",
+      "bytes": 8082,
+      "lines": 84
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-2/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "de288ff1c9cf1f16fcb9cda26dda8a1c97a8c8bccb0dd2a17ad3998338310313",
+      "bytes": 5032,
+      "lines": 67
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-2/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "0b27d511ebcbbf9fdc00c8a432ff7c85d97b07ca806be65eaffa06670592ab17",
+      "bytes": 10265,
+      "lines": 386
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-3/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "dcdc559ffa8561a9d0db6b1f80b97137de72d607c832734ec93e2f41608b0846",
+      "bytes": 12990,
+      "lines": 110
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-3/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "9f45c109e6f568f0c763d5a3ab621cced1ebfa1bc4566367ea729b9e623e76a8",
+      "bytes": 6739,
+      "lines": 84
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-3/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "b809808684093f51605d503f8969296957640017be1c160770b009337adf613c",
+      "bytes": 12107,
+      "lines": 449
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-4/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "b40d141bd3eee31149f524f99f8466bec840ed8af88b8f731a609850e14cb832",
+      "bytes": 10026,
+      "lines": 115
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-4/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "23309551c46eb7d441a5d1bbb6dd61e479414411484b60c951090d2b7e42cfa2",
+      "bytes": 9995,
+      "lines": 97
+    },
+    {
+      "path": "testdata/parity_workspaces/AL-4/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "e1645e8cbaba2c7052cb3cd6cf656380874c539b1c1b2732025d3aa8bbc3b352",
+      "bytes": 20817,
+      "lines": 750
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-1/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "4c62dd2a6e5cbf02cd80d18d6d663e560b466fee618ae13caf679483bec7a4d3",
+      "bytes": 362,
+      "lines": 8
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-1/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "2a99fc35775b4ee1b2a986f9d51a247b627a210a1d855afbbf226b249abf8cc7",
+      "bytes": 3379,
+      "lines": 57
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-1/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "13ea7016cc822755a4e6930c8af515d4ed300d850374d13c4ae0ecee99c1e6f5",
+      "bytes": 2122,
+      "lines": 86
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-2/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "b19f6bd2b3c523f705a80a2535370f3d827d5c14812a7f3ae78c0ccb497f749b",
+      "bytes": 295,
+      "lines": 8
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-2/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "b5fedb39965c3b638574a0ec04194027d7045158ac42f1b5dbdbf6116b69d457",
+      "bytes": 2358,
+      "lines": 42
+    },
+    {
+      "path": "testdata/parity_workspaces/GEN-2/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "630bbb822320a9cf225d67e53f03ae37adbf5d25d152d3a20b08217ea966793b",
+      "bytes": 2297,
+      "lines": 96
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-1/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "81be5769566bba2d442ecaeff79d9de0a9439ab7afd80d299c214f8e5db9f21f",
+      "bytes": 325,
+      "lines": 8
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-1/SPEC.md",
+      "owner": "delivery",
+      "sha256": "2ad4f40b715ff999675dcba498e02e418a8cf64272f8c375aabf04fcbc1ecb15",
+      "bytes": 4075,
+      "lines": 38
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-1/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "121d534c92c7da1ecfab2228998a673063abb05edd0d0c3422fe2d7ba09a79c3",
+      "bytes": 3534,
+      "lines": 58
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-1/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "f69eb95f484a385421c807682740dc45b837292fb50a6b1e185f4f355228cf23",
+      "bytes": 2593,
+      "lines": 107
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-2/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "8390dafab78d97a828896719ef88b639b05081d0ff5fc281d1633ae2ac6a07e0",
+      "bytes": 309,
+      "lines": 8
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-2/SPEC.md",
+      "owner": "delivery",
+      "sha256": "45f0b052df437f2e85e31d81ac267a5f969daf75f5c66c75c60dc325519c2de5",
+      "bytes": 5102,
+      "lines": 52
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-2/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "99a641f9c181ab0b16e9457e01bc1824ab6664ae86a922767fe7218ad4fda128",
+      "bytes": 4350,
+      "lines": 60
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-2/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "ed7a83c50e09acec8bcb16a145bbbbab963bee61f3ea9bcc68f45cc161c2cce7",
+      "bytes": 2704,
+      "lines": 112
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-3/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "16eac99354d148c38eb3998c6485f840df5ceafeb1aa3ed379af1f9a889c2527",
+      "bytes": 349,
+      "lines": 8
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-3/SPEC.md",
+      "owner": "delivery",
+      "sha256": "c4450046147b0c202db0de1ef710df4e0dae22f63be421adf4ced757c2ef8032",
+      "bytes": 8449,
+      "lines": 96
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-3/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "e74e9560d01228530afd8134caa636db0582968c08acc10e03b907fe6edd01dc",
+      "bytes": 4421,
+      "lines": 63
+    },
+    {
+      "path": "testdata/parity_workspaces/PO-3/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "b13c9b6186cd08d43ca356312b837810780d6f172257f96b26c2ef0293954204",
+      "bytes": 2324,
+      "lines": 96
+    },
+    {
+      "path": "testdata/workspaces/AL-1/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "fdcb7b063b8e5a8bce853578b2b9035a137e0b4b9f73d2a65e0f6c6b1f027209",
+      "bytes": 476,
+      "lines": 9
+    },
+    {
+      "path": "testdata/workspaces/AL-1/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "ed33abae527e57bbafb27d4fd5885d9a2ae015f6a3943f89aa92f1b2c406a1dc",
+      "bytes": 266,
+      "lines": 5
+    },
+    {
+      "path": "testdata/workspaces/AL-1/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "13f6d4b58905dca5657f417ea284202e90711ae83a9455410724938be1bcddbc",
+      "bytes": 5026,
+      "lines": 202
+    },
+    {
+      "path": "testdata/workspaces/AL-2/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "43971c181ec3f3bf59370b3f282d3276d85d3510c13e80c73905a730b22b1298",
+      "bytes": 424,
+      "lines": 9
+    },
+    {
+      "path": "testdata/workspaces/AL-2/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "725746aa385ed0b3fd758e94246565316158d5c5eb1e805d3069a3a97ea83a1b",
+      "bytes": 206,
+      "lines": 5
+    },
+    {
+      "path": "testdata/workspaces/AL-2/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "5cd59d4ed2bda4776e15636797bec4afdadd003e9c2c61f6301b95372239aba8",
+      "bytes": 4935,
+      "lines": 197
+    },
+    {
+      "path": "testdata/workspaces/AL-3/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "0e6b64acf7ff8f4a712677bdd9b296795b7dd67e8d1e3eb48f616da07449d1db",
+      "bytes": 376,
+      "lines": 9
+    },
+    {
+      "path": "testdata/workspaces/AL-3/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "c81f5d85ac998918cee31fc11eae7dd208fdbdb73e80ceeb06bb8c9824487346",
+      "bytes": 247,
+      "lines": 5
+    },
+    {
+      "path": "testdata/workspaces/AL-3/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "39f82bfc1c20e852d34faa334c47442d5425ff385aa7297e857d198ea3e9738f",
+      "bytes": 3449,
+      "lines": 139
+    },
+    {
+      "path": "testdata/workspaces/GEN-1/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "4c62dd2a6e5cbf02cd80d18d6d663e560b466fee618ae13caf679483bec7a4d3",
+      "bytes": 362,
+      "lines": 8
+    },
+    {
+      "path": "testdata/workspaces/GEN-1/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "3f531248872c9c3d4c0e0ebf4eecd384215b411f2cac74e2ada27c20447e3d9f",
+      "bytes": 173,
+      "lines": 4
+    },
+    {
+      "path": "testdata/workspaces/GEN-1/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "e93332ff36e35120e271d7965a88ca84f7596ec76483bc2a528a37d288011aaf",
+      "bytes": 3136,
+      "lines": 129
+    },
+    {
+      "path": "testdata/workspaces/PO-1/CONTRACT.md",
+      "owner": "delivery",
+      "sha256": "81be5769566bba2d442ecaeff79d9de0a9439ab7afd80d299c214f8e5db9f21f",
+      "bytes": 325,
+      "lines": 8
+    },
+    {
+      "path": "testdata/workspaces/PO-1/SUMMARY.md",
+      "owner": "delivery",
+      "sha256": "fb72ff7516346e77f21dda27ec1bcf3f89e9c795c5c1bc08cdce582b9758ff4c",
+      "bytes": 162,
+      "lines": 4
+    },
+    {
+      "path": "testdata/workspaces/PO-1/agentic_metrics.json",
+      "owner": "delivery",
+      "sha256": "3fed02307554c4d759b4b8a1417a6845a6ff50753f5f86db3f2573bb5eaf8e74",
+      "bytes": 1762,
+      "lines": 71
+    },
+    {
+      "path": "web/.eslintrc.cjs",
+      "owner": "frontend",
+      "sha256": "42db4fed5f4433b7c179ba490550a51eb96c8388472d87c66213328e15034812",
+      "bytes": 538,
+      "lines": 17
+    },
+    {
+      "path": "web/index.html",
+      "owner": "frontend",
+      "sha256": "1f3e195798051250a5bf7d4d1224c3a5011e89965c899793070b68cd9b755c02",
+      "bytes": 545,
+      "lines": 13
+    },
+    {
+      "path": "web/package-lock.json",
+      "owner": "frontend",
+      "sha256": "24b1cc7d062bdfba2b2f95897db28d642f7a84ecd23af9c2be5682495d9bd537",
+      "bytes": 303942,
+      "lines": 9388
+    },
+    {
+      "path": "web/package.json",
+      "owner": "frontend",
+      "sha256": "8d36a11eaccc612aa9a1d05edde2d5b510d956aa3b52bae67153525d02fa10ff",
+      "bytes": 1210,
+      "lines": 38
+    },
+    {
+      "path": "web/src/App.tsx",
+      "owner": "frontend",
+      "sha256": "2889bb7dbefd13c8786baec786108d91b7a6e868cf418814287c95a3e59d1937",
+      "bytes": 2945,
+      "lines": 89
+    },
+    {
+      "path": "web/src/api/client.test.ts",
+      "owner": "frontend",
+      "sha256": "59a52bfb6d02b5772407bea0552043ecb85dfe53f855b4a777c7ffa687cd61c6",
+      "bytes": 44297,
+      "lines": 746
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "owner": "frontend",
+      "sha256": "c8a94f67cba1c385e2ad14abd2a630e5e31506d87ab27ea932526d594e28114f",
+      "bytes": 9264,
+      "lines": 272
+    },
+    {
+      "path": "web/src/api/costValidation.ts",
+      "owner": "frontend",
+      "sha256": "0ec7d163d905f8c9d2c6160868f9bf845c6f2a03c8c10012aa0ad862bc2c41f7",
+      "bytes": 7539,
+      "lines": 160
+    },
+    {
+      "path": "web/src/api/liveApi.test.ts",
+      "owner": "frontend",
+      "sha256": "3b417bd3bef8dc7ac7aa1c4ce2e89e593aa9ad51cdb24d9fcd61297ea79ef561",
+      "bytes": 22178,
+      "lines": 642
+    },
+    {
+      "path": "web/src/api/liveApi.ts",
+      "owner": "frontend",
+      "sha256": "13bee9ab418b431c0ef1c9f7dbdd30a05ea50b112f9c64a87e96c26528af2613",
+      "bytes": 8519,
+      "lines": 283
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "owner": "frontend",
+      "sha256": "334d497cc6454c7f3736c436260c763d8cfa67a5c1efcd097f898e40565e2b61",
+      "bytes": 606,
+      "lines": 23
+    },
+    {
+      "path": "web/src/api/validation.ts",
+      "owner": "frontend",
+      "sha256": "6a4a805fb474793e2a8231fededbeb035f2db3b5ac262703c7f70014da182380",
+      "bytes": 13996,
+      "lines": 173
+    },
+    {
+      "path": "web/src/components/AnomalyBadge.test.tsx",
+      "owner": "frontend",
+      "sha256": "7f1a42bd74e375e27c041e0b11e9e893907a81dbe978b5fc37ab777af25c07b6",
+      "bytes": 2721,
+      "lines": 56
+    },
+    {
+      "path": "web/src/components/AnomalyBadge.tsx",
+      "owner": "frontend",
+      "sha256": "a65208db593fae10d25ab3fdc9cb61c47f2a8a59af62012231f3a66983b4925c",
+      "bytes": 1649,
+      "lines": 65
+    },
+    {
+      "path": "web/src/components/AnomalyDrawer.test.tsx",
+      "owner": "frontend",
+      "sha256": "fa1ac63d25a749f7b43277b237036b71bc01662996b54d28ec760e8eb43eedce",
+      "bytes": 19371,
+      "lines": 576
+    },
+    {
+      "path": "web/src/components/AnomalyDrawer.tsx",
+      "owner": "frontend",
+      "sha256": "ce1c87528a59261d11b4c3fa4f77c7cae8705e607061357e82c5d08744c4bf88",
+      "bytes": 12950,
+      "lines": 347
+    },
+    {
+      "path": "web/src/components/ArtifactViewer.test.tsx",
+      "owner": "frontend",
+      "sha256": "e4a6750b35c65a4a3317160e719af87486dc0ae7a4e83c137bdbd2502af2e2f3",
+      "bytes": 30606,
+      "lines": 863
+    },
+    {
+      "path": "web/src/components/ArtifactViewer.tsx",
+      "owner": "frontend",
+      "sha256": "cfec275e9435372a932e31b7614ecd06103b49fb9ea1b94d52b270e57b60b52f",
+      "bytes": 8278,
+      "lines": 236
+    },
+    {
+      "path": "web/src/components/Components.test.tsx",
+      "owner": "frontend",
+      "sha256": "f16c0b4df63abce658d58ba48438d954026b44bfc4c61eb11e01fd72ba30fc13",
+      "bytes": 35347,
+      "lines": 890
+    },
+    {
+      "path": "web/src/components/CostKPICard.tsx",
+      "owner": "frontend",
+      "sha256": "9d538f3d03a1eec4801e4d8fceac1e52688be0abf03e15702b633bb6308e3d1f",
+      "bytes": 1906,
+      "lines": 39
+    },
+    {
+      "path": "web/src/components/DistributionCard.tsx",
+      "owner": "frontend",
+      "sha256": "babb7bd5ff85609fdac4ad96b25c8992fa3735203d4ae095c6e8502826237f26",
+      "bytes": 4180,
+      "lines": 117
+    },
+    {
+      "path": "web/src/components/EmptyState.tsx",
+      "owner": "frontend",
+      "sha256": "1ae9960f6ccb0cb1c29f039e6795214c7c43ed6c5735d89bf1c56a9e3bfe2bd3",
+      "bytes": 637,
+      "lines": 27
+    },
+    {
+      "path": "web/src/components/FailedToolAlertCard.test.tsx",
+      "owner": "frontend",
+      "sha256": "8b0b19e590970387efafe2fb27f621de5d5f5d1abe85fdf20e3c45c953af99a7",
+      "bytes": 11586,
+      "lines": 313
+    },
+    {
+      "path": "web/src/components/FailedToolAlertCard.tsx",
+      "owner": "frontend",
+      "sha256": "963dbdabcb402983cd5ebeb3cd83b669e987f00dc4e79e5a6842e05a9219ae74",
+      "bytes": 4451,
+      "lines": 124
+    },
+    {
+      "path": "web/src/components/FleetAnomalyCard.test.tsx",
+      "owner": "frontend",
+      "sha256": "e4557914aaea25956d9440a88e74abf72a775a7ad6c60fe17a42afe3f5ddfe5e",
+      "bytes": 5277,
+      "lines": 152
+    },
+    {
+      "path": "web/src/components/FleetAnomalyCard.tsx",
+      "owner": "frontend",
+      "sha256": "6b27344076368dcda61fdf65db4e270c453f169ec48441c9f20c5eb3a4a1fbcf",
+      "bytes": 5847,
+      "lines": 163
+    },
+    {
+      "path": "web/src/components/InfoTooltip.tsx",
+      "owner": "frontend",
+      "sha256": "70ccf044343ad5f689952a29add226dfaaf0597a540600af0856503ed5471752",
+      "bytes": 2089,
+      "lines": 80
+    },
+    {
+      "path": "web/src/components/KPICard.tsx",
+      "owner": "frontend",
+      "sha256": "298d3e4c4efa2ac639299a8d8c434a6d68602aaef7fd2de8f0b355edb7dbf4a8",
+      "bytes": 773,
+      "lines": 29
+    },
+    {
+      "path": "web/src/components/LiveAnomalyBanner.test.tsx",
+      "owner": "frontend",
+      "sha256": "01240042b4d19fe8ec8c1bd0576888f042a5a2f24059e6ff0bf9e4efa5b197fd",
+      "bytes": 6691,
+      "lines": 163
+    },
+    {
+      "path": "web/src/components/LiveAnomalyBanner.tsx",
+      "owner": "frontend",
+      "sha256": "786eec777b60bc9c7e715c2d51fc91237021be39a1a2a387ec5c663999f6c970",
+      "bytes": 3059,
+      "lines": 94
+    },
+    {
+      "path": "web/src/components/LiveSessionTree.test.tsx",
+      "owner": "frontend",
+      "sha256": "7046bcfda11bb00dbe143f520d7e7f6e8f10aeaf882dd1915b251cc64ea62ace",
+      "bytes": 15329,
+      "lines": 454
+    },
+    {
+      "path": "web/src/components/LiveSessionTree.tsx",
+      "owner": "frontend",
+      "sha256": "3a410b09f3ac369dff9a466d37ade56c145bb9730628455b4f61d7d7a5669100",
+      "bytes": 6759,
+      "lines": 203
+    },
+    {
+      "path": "web/src/components/LiveTraceInspector.test.tsx",
+      "owner": "frontend",
+      "sha256": "dc0ac5c71b6d48272e428b6d3176a7b39c229deac4ad1e8bb92103bc57eb4c6e",
+      "bytes": 41592,
+      "lines": 1153
+    },
+    {
+      "path": "web/src/components/LiveTraceInspector.tsx",
+      "owner": "frontend",
+      "sha256": "6c8499fa0b0b07236fd9aee5629ab369448954d7fcea65036858a02e266c65e1",
+      "bytes": 22236,
+      "lines": 568
+    },
+    {
+      "path": "web/src/components/MultiSelectDropdown.test.tsx",
+      "owner": "frontend",
+      "sha256": "82cd85fdce76b898cb316b6c07ff664f781c3313a3afcb25ade25dd601baa1d6",
+      "bytes": 18830,
+      "lines": 578
+    },
+    {
+      "path": "web/src/components/MultiSelectDropdown.tsx",
+      "owner": "frontend",
+      "sha256": "e27c845e13b2c348eb5230e29e57b2c37eda1d421690a841f50d332a8821b1b2",
+      "bytes": 5759,
+      "lines": 192
+    },
+    {
+      "path": "web/src/components/Navbar.test.tsx",
+      "owner": "frontend",
+      "sha256": "e8f6b82b156dfeae107326e99aa1a1e74fb962696eae2bb1d61d5b9baaf5f121",
+      "bytes": 15685,
+      "lines": 355
+    },
+    {
+      "path": "web/src/components/Navbar.tsx",
+      "owner": "frontend",
+      "sha256": "66ce9c1dabaff5b18a0443a25dca4e358058a695de4b60f8978ced96acdb0cdd",
+      "bytes": 5415,
+      "lines": 189
+    },
+    {
+      "path": "web/src/components/SaturationBar.tsx",
+      "owner": "frontend",
+      "sha256": "afc3616c04d1dec674aeb705bcdc8979bdcf86a529c604856d2ba93afb6acebe",
+      "bytes": 5467,
+      "lines": 135
+    },
+    {
+      "path": "web/src/components/SkillsSubagentsPanel.tsx",
+      "owner": "frontend",
+      "sha256": "8d3ee46a7a8b083439d78edda4068742a7256302aa8d4223ed296f6295c5fe9e",
+      "bytes": 4711,
+      "lines": 92
+    },
+    {
+      "path": "web/src/components/ThreadViewer.tsx",
+      "owner": "frontend",
+      "sha256": "54b393ebb2d45d48d03be0d009843954ee3201248bd569564075c48c83d853f2",
+      "bytes": 10763,
+      "lines": 232
+    },
+    {
+      "path": "web/src/components/TicketScatterPlot.test.tsx",
+      "owner": "frontend",
+      "sha256": "699a4dd42a3aa549601aff3d4d5e91212def6b7f35f60bd931f6abdc8f8c2162",
+      "bytes": 3345,
+      "lines": 50
+    },
+    {
+      "path": "web/src/components/TicketScatterPlot.tsx",
+      "owner": "frontend",
+      "sha256": "e05d10763c1897f75de5accfd9d649bc6744605e396f36790767f31c4d4777fe",
+      "bytes": 7592,
+      "lines": 128
+    },
+    {
+      "path": "web/src/components/TicketSelector.tsx",
+      "owner": "frontend",
+      "sha256": "5cb9dbdc4f77d6039712a67a8a532c50d1d2b2063f25e6986b0613f02b429cef",
+      "bytes": 2642,
+      "lines": 76
+    },
+    {
+      "path": "web/src/components/TicketTable.test.tsx",
+      "owner": "frontend",
+      "sha256": "ee21ff99129f4306b943e7a6cb29ded91ae1a51fd68e7ab5ac09cb7030266f08",
+      "bytes": 14541,
+      "lines": 371
+    },
+    {
+      "path": "web/src/components/TicketTable.tsx",
+      "owner": "frontend",
+      "sha256": "fa203689645d4e8f67d65852e20aa7ba51df3f99a5ccded336d248115e3ed053",
+      "bytes": 8887,
+      "lines": 230
+    },
+    {
+      "path": "web/src/components/TraceInvocationBadge.tsx",
+      "owner": "frontend",
+      "sha256": "3b57b74d68f783cf5c1f206b481707974b587d38a420e3bd27ccd3296374bc07",
+      "bytes": 2159,
+      "lines": 44
+    },
+    {
+      "path": "web/src/components/TraceWaterfall.test.tsx",
+      "owner": "frontend",
+      "sha256": "3af71fd9bd4cb765cce4f161771d5a7156ea6c3ef3e5047f678bfe60a397f025",
+      "bytes": 120200,
+      "lines": 2695
+    },
+    {
+      "path": "web/src/components/TraceWaterfall.tsx",
+      "owner": "frontend",
+      "sha256": "70da30ceb736dc6462e4790623ab157b2f3be17774365363f2d6eab0111b58e9",
+      "bytes": 28447,
+      "lines": 725
+    },
+    {
+      "path": "web/src/components/TrendChart.test.tsx",
+      "owner": "frontend",
+      "sha256": "ae4bbe1a98ec53ace46f1fd2a203b63a53aa0b211007e0290c89e6b174dd0dc4",
+      "bytes": 6791,
+      "lines": 167
+    },
+    {
+      "path": "web/src/components/TrendChart.tsx",
+      "owner": "frontend",
+      "sha256": "f9c72a6d9ff39dc4c5d71630c8c8379cff5f627c9bc41868d1bd2ae76a61b422",
+      "bytes": 15985,
+      "lines": 466
+    },
+    {
+      "path": "web/src/components/WorkspaceLoadWarning.test.tsx",
+      "owner": "frontend",
+      "sha256": "cf4d3acd7d51dd74a2b38f31e8b2c67190aad74eff776676220c91b30b8d78c1",
+      "bytes": 1917,
+      "lines": 34
+    },
+    {
+      "path": "web/src/components/WorkspaceLoadWarning.tsx",
+      "owner": "frontend",
+      "sha256": "bdca4d8c7162e4f7b8fd0d8acfa63162e3c107279b7e894fba33c99b8db61c50",
+      "bytes": 1284,
+      "lines": 33
+    },
+    {
+      "path": "web/src/domain/aggregations.test.ts",
+      "owner": "frontend",
+      "sha256": "1dd08f36c78be076b4f75a47a56ece717973246a6c32d1766aaac0e5a8904c0a",
+      "bytes": 1371,
+      "lines": 25
+    },
+    {
+      "path": "web/src/domain/aggregations.ts",
+      "owner": "frontend",
+      "sha256": "a4835a86d2971cd253801c73539d724c62c5e8c5ad96c07867c3ee35fc92f39f",
+      "bytes": 1090,
+      "lines": 21
+    },
+    {
+      "path": "web/src/domain/anomalies.test.ts",
+      "owner": "frontend",
+      "sha256": "b44bd72d882af4030f64f466257118002cdedfda3175a8dd1069e8297fbbc6d6",
+      "bytes": 17589,
+      "lines": 444
+    },
+    {
+      "path": "web/src/domain/anomalies.ts",
+      "owner": "frontend",
+      "sha256": "dc66dc0aad10bebfafade5740093d76506de7b404d358fe2eef642ad91b4c810",
+      "bytes": 8430,
+      "lines": 227
+    },
+    {
+      "path": "web/src/domain/cost.ts",
+      "owner": "frontend",
+      "sha256": "17b01f7f6f80b4d2b6c5056a1a9f71a3a9ddad01ad2fd61a7ae4358e5c5e0225",
+      "bytes": 2622,
+      "lines": 54
+    },
+    {
+      "path": "web/src/domain/events.test.ts",
+      "owner": "frontend",
+      "sha256": "2b12e8f2f0f0a6bace027f2bee8ce77f0adea691774d7ce2dd2f9f4a3fd3c315",
+      "bytes": 11707,
+      "lines": 201
+    },
+    {
+      "path": "web/src/domain/events.ts",
+      "owner": "frontend",
+      "sha256": "1698b7ecb2105b06caacc82e0527e642e224f1f896c911214db4da9ea58257e5",
+      "bytes": 5742,
+      "lines": 143
+    },
+    {
+      "path": "web/src/domain/formatters.test.ts",
+      "owner": "frontend",
+      "sha256": "f664839c7f6c9ef4d055377b7bc043db713b1a979933d12e23c0c52271ef39fc",
+      "bytes": 47114,
+      "lines": 843
+    },
+    {
+      "path": "web/src/domain/formatters.ts",
+      "owner": "frontend",
+      "sha256": "d9b3d13e7c7241d193215665ad82c3bd13859c6275d8be7dc56bf7d7444bb590",
+      "bytes": 18078,
+      "lines": 606
+    },
+    {
+      "path": "web/src/domain/invocation_rows.test.ts",
+      "owner": "frontend",
+      "sha256": "5d8be6e76bb9f215c3a25f3a62409798f36eb1d0e0f01cb112d88abe042b31a8",
+      "bytes": 2092,
+      "lines": 54
+    },
+    {
+      "path": "web/src/domain/live.ts",
+      "owner": "frontend",
+      "sha256": "ff5a0b3f547177602f1da2650dfe4b2ed8d282a194ce9059267063e20274951e",
+      "bytes": 2491,
+      "lines": 83
+    },
+    {
+      "path": "web/src/domain/liveMessageOrdering.test.ts",
+      "owner": "frontend",
+      "sha256": "6507f50fe62c9d3829f3f11380a3d1c4ceff79ce77b4d655f881d06528f48c58",
+      "bytes": 1114,
+      "lines": 28
+    },
+    {
+      "path": "web/src/domain/liveMessageOrdering.ts",
+      "owner": "frontend",
+      "sha256": "d21fb47828265567fb2b509feb0e66121ef8211bee8a88dbfcb3ccd0728a926e",
+      "bytes": 535,
+      "lines": 16
+    },
+    {
+      "path": "web/src/domain/liveTraceRefresh.ts",
+      "owner": "frontend",
+      "sha256": "ef72b7213e78eb4c4fc26802dd5fa6df2af9b40b7438a42866ba258a275bdf88",
+      "bytes": 410,
+      "lines": 10
+    },
+    {
+      "path": "web/src/domain/progression.test.ts",
+      "owner": "frontend",
+      "sha256": "5277e74b84ce36230057bc11911f27ccdf1812423270e12bb9f970cba1f6026d",
+      "bytes": 71429,
+      "lines": 1514
+    },
+    {
+      "path": "web/src/domain/progression.ts",
+      "owner": "frontend",
+      "sha256": "9d1564f307ea48f7a5cbf350430bf4074ce1c2ca382b2f7cdd3c8b80ef6dc66d",
+      "bytes": 8740,
+      "lines": 281
+    },
+    {
+      "path": "web/src/domain/ticket_scatter.test.ts",
+      "owner": "frontend",
+      "sha256": "61689374b6581297e4138f3c10736554d4c333ceaa7f975c7a9fd97228f71fce",
+      "bytes": 4892,
+      "lines": 91
+    },
+    {
+      "path": "web/src/domain/ticket_scatter.ts",
+      "owner": "frontend",
+      "sha256": "a7d0e999ab0e7ccd94692288a6daaef31a1abdcc19e3dd8792667fc8e105b6b8",
+      "bytes": 5500,
+      "lines": 140
+    },
+    {
+      "path": "web/src/domain/tools.test.ts",
+      "owner": "frontend",
+      "sha256": "04829f1cbcc436b5d9f0812c4393af66bd12d1b7b2454adcfb657905a25f2cf9",
+      "bytes": 684,
+      "lines": 19
+    },
+    {
+      "path": "web/src/domain/tools.ts",
+      "owner": "frontend",
+      "sha256": "7f2c3a9946dac8efcd17b59a8881e7ba5d895087987dff89a358beeb6076b0f3",
+      "bytes": 627,
+      "lines": 20
+    },
+    {
+      "path": "web/src/domain/traceBadges.ts",
+      "owner": "frontend",
+      "sha256": "f6083ea165a458d33c255cca47551f705b8054f563eee66426855e9b29b5ba4d",
+      "bytes": 3147,
+      "lines": 66
+    },
+    {
+      "path": "web/src/domain/types.ts",
+      "owner": "frontend",
+      "sha256": "68bb54968027240d5c818f4bca966a495b8b2e7edbdd177774ccce21146654a1",
+      "bytes": 14196,
+      "lines": 481
+    },
+    {
+      "path": "web/src/hooks/useLiveTrace.ts",
+      "owner": "frontend",
+      "sha256": "77d535f93d81eaf53e0a91bdb2cd0dc3878808e3af4d51c47d0cf5dcb94c069b",
+      "bytes": 4173,
+      "lines": 92
+    },
+    {
+      "path": "web/src/index.css",
+      "owner": "frontend",
+      "sha256": "e658406c386f4c10e6f60ca74219051b2c3264886f0edf95bffeaddddd5f68a2",
+      "bytes": 102395,
+      "lines": 5265
+    },
+    {
+      "path": "web/src/main.tsx",
+      "owner": "frontend",
+      "sha256": "0d12d4784f41ce33449cd94c406b2dfa5ad50a3ffe697ea5df75da874a3cfbb6",
+      "bytes": 352,
+      "lines": 15
+    },
+    {
+      "path": "web/src/test/fixtures/mockData.ts",
+      "owner": "frontend",
+      "sha256": "4e90489f8f54a26889b5c4d072083091fa0efcb74e535064e5cf55d3bfa96e6b",
+      "bytes": 77168,
+      "lines": 2144
+    },
+    {
+      "path": "web/src/test/setup.ts",
+      "owner": "frontend",
+      "sha256": "a46d66851af2c056e805fdd574bf5ec3adb1181c43c5e41f0a1c592e338afe64",
+      "bytes": 36,
+      "lines": 1
+    },
+    {
+      "path": "web/src/types/telemetry.ts",
+      "owner": "frontend",
+      "sha256": "e68486bb2e55d03c3f6141c7caeeebb69b387ab4a031e32cf893adb5ea045e20",
+      "bytes": 3149,
+      "lines": 101
+    },
+    {
+      "path": "web/src/utils/clipboard.ts",
+      "owner": "frontend",
+      "sha256": "7ff8fe10e7b41455689b5d7e26184b79a19b2fe5ed068ad75e5161ac8c0178e0",
+      "bytes": 916,
+      "lines": 33
+    },
+    {
+      "path": "web/src/utils/debugPrompt.test.ts",
+      "owner": "frontend",
+      "sha256": "096ea69c699d98163d3009a3aa0ef47a13d1ce5e02bd6006ba480d23e3d09f99",
+      "bytes": 6159,
+      "lines": 130
+    },
+    {
+      "path": "web/src/utils/debugPrompt.ts",
+      "owner": "frontend",
+      "sha256": "7a1933d8a5b73a073f55fbc99be7f8ba307d4dd576e33bd1485e142853825b88",
+      "bytes": 8394,
+      "lines": 186
+    },
+    {
+      "path": "web/src/utils/theme.test.ts",
+      "owner": "frontend",
+      "sha256": "814bbfb31700ae09095d5c41bb7777ed08a8938c25080d0410f89925782940d6",
+      "bytes": 3478,
+      "lines": 96
+    },
+    {
+      "path": "web/src/utils/theme.ts",
+      "owner": "frontend",
+      "sha256": "eb91ac88d9734d0d27078240e1b119f2fc4eedacb21172e336d6ce15b9d21a5d",
+      "bytes": 2195,
+      "lines": 91
+    },
+    {
+      "path": "web/src/views/FleetOverview.test.tsx",
+      "owner": "frontend",
+      "sha256": "09a5a621b7f08d56109c794875661ca7d4a57ddb86acb6f15c950d408b594d70",
+      "bytes": 12799,
+      "lines": 299
+    },
+    {
+      "path": "web/src/views/FleetOverview.tsx",
+      "owner": "frontend",
+      "sha256": "81e8a30318602dfcf6ecc0d3305cded7fdf0178a8a0f1a7d8ef36a02a08ab9cf",
+      "bytes": 12165,
+      "lines": 304
+    },
+    {
+      "path": "web/src/views/LandingPage.test.tsx",
+      "owner": "frontend",
+      "sha256": "a77f4a4a537bc2b174f71a680a4b4a0d33b6f38c4f0321f63a085f2d7dd6cc1f",
+      "bytes": 25054,
+      "lines": 747
+    },
+    {
+      "path": "web/src/views/LandingPage.tsx",
+      "owner": "frontend",
+      "sha256": "8a48d00a8285f80289832a32fe88e60abc01c95d1c55d85a394732aafcfbc153",
+      "bytes": 19335,
+      "lines": 454
+    },
+    {
+      "path": "web/src/views/LiveObservability.test.tsx",
+      "owner": "frontend",
+      "sha256": "6434017f662b3c75ef6ce2c2a90b96c95419c4844d885740ce72cc33800fbc73",
+      "bytes": 30595,
+      "lines": 701
+    },
+    {
+      "path": "web/src/views/LiveObservability.tsx",
+      "owner": "frontend",
+      "sha256": "77788e52ad916159af51f2f0e1bc23c360a50cbfc22127d03a331001a755a731",
+      "bytes": 8553,
+      "lines": 258
+    },
+    {
+      "path": "web/src/views/MetricProgression.test.tsx",
+      "owner": "frontend",
+      "sha256": "b68828cd1ef887d29a5122ccfbc3737f25764f2e663f5bbdee5091771eb469d0",
+      "bytes": 24322,
+      "lines": 447
+    },
+    {
+      "path": "web/src/views/MetricProgression.tsx",
+      "owner": "frontend",
+      "sha256": "d51ac85c0c5ad31d96829d8c55c3bd08bd32164685a847a0ef0936b1a2de280b",
+      "bytes": 20490,
+      "lines": 583
+    },
+    {
+      "path": "web/src/views/TicketComparisons.test.tsx",
+      "owner": "frontend",
+      "sha256": "ac69dcd2ff56dd0e6c7f255d4278d5b25768b4a130d29ca04a5d3f12f43b4790",
+      "bytes": 26639,
+      "lines": 580
+    },
+    {
+      "path": "web/src/views/TicketComparisons.tsx",
+      "owner": "frontend",
+      "sha256": "5900148fa3129ed842e9f70c6540aea5c097ff2f0529c7648feb4efc2604625c",
+      "bytes": 23800,
+      "lines": 597
+    },
+    {
+      "path": "web/src/views/TicketDeepDive.test.tsx",
+      "owner": "frontend",
+      "sha256": "f1a046561942a6d3dea4c5cdcd25c4894366a4d786b395ab61cd285c7e60ee86",
+      "bytes": 110290,
+      "lines": 1887
+    },
+    {
+      "path": "web/src/views/TicketDeepDive.tsx",
+      "owner": "frontend",
+      "sha256": "a0a5952b144009f50ac81041fbbb600ed3c2ed70a71ea0f8c5d2aa87de8e50aa",
+      "bytes": 28596,
+      "lines": 687
+    },
+    {
+      "path": "web/tsconfig.json",
+      "owner": "frontend",
+      "sha256": "890d98c8502ce5385663dba4e4293bce48af03dfe4a7c327b8d22b6d5ed7f254",
+      "bytes": 614,
+      "lines": 23
+    },
+    {
+      "path": "web/tsconfig.node.json",
+      "owner": "frontend",
+      "sha256": "9e2abb169ea87b7190613a1d4da57ca608463a453bd4231fa3aeee5e308370dd",
+      "bytes": 213,
+      "lines": 10
+    },
+    {
+      "path": "web/vite.config.ts",
+      "owner": "frontend",
+      "sha256": "94735748af46f323469dd19eea5f278bf0e8c8f1c6fd113c3322faaec6f78ecc",
+      "bytes": 1243,
+      "lines": 44
+    },
+    {
+      "path": ".agents/skills/agentic-lens-setup/scripts/agentic-lens-wrapper.sh",
+      "owner": "delivery",
+      "sha256": "fcd79b145d86ea22185a28158e87617ee84d66841298645597f476c3bc5333e2",
+      "bytes": 6537,
+      "lines": 251
+    },
+    {
+      "path": ".agents/skills/agentic-lens-setup/scripts/download.sh",
+      "owner": "delivery",
+      "sha256": "5952612f091333dc26237dc8c99f696c86c3f3aa87a78e7b85435b32d41b1089",
+      "bytes": 8724,
+      "lines": 314
+    },
+    {
+      "path": "alspaces/AL-58/evidence/mock_openai_server.py",
+      "owner": "delivery",
+      "sha256": "e03bbe1763dd3c548b6ee2fd5911fedb0749ce645517434850880dab9a843b41",
+      "bytes": 3897,
+      "lines": 109
+    },
+    {
+      "path": "alspaces/AL-58/evidence/provider-v1.json",
+      "owner": "delivery",
+      "sha256": "8bd4450cf6da4e2995a83dd9152fe3d4dc55ab2a58f5928ca9657c1931dcb855",
+      "bytes": 519,
+      "lines": 21
+    },
+    {
+      "path": "alspaces/AL-58/evidence/provider-v2.json",
+      "owner": "delivery",
+      "sha256": "d351dcb732a7c334c7b2a2f1ca5e69ac5904fd8d36a5ce56d9dad2282a8a14a9",
+      "bytes": 630,
+      "lines": 22
+    }
+  ]
+}
