@@ -1,4 +1,4 @@
-# fix(REV-5): remove unused production paths and harden boundary handling
+# fix(REV-5): preserve telemetry recovery and harden audited boundaries
 
 Failed forced initialization could move an existing configuration out of its path without restoring it. Validate both targets first and protect staging/install failures with cleanup and rollback that report errors.
 
@@ -13,3 +13,5 @@ Integrate main47af923 while preserving schema-v5 cost evidence, nullable amounts
 Iteration 03 adds a full tracked-code audit with per-file coverage and unchanged-source hashes. It identifies additional open correctness, architecture, testing and delivery issues beyond the original fixes. These audit findings are documented, not implemented; see iterations/03/REVIEW.md and COVERAGE.json.
 
 ADP-05 is now P2 default-bind hardening under the clarified local-only product scope. Authentication is not required; intentional remote exposure remains operator-owned. No listener behavior was changed.
+
+Iteration 04 fixes the two remaining P1 findings. Warning-bearing Codex recovery retains the stored owner tree with incomplete diagnostics while healthy trees refresh. Release Please selects the exact requested tag before checks/build, verifies metadata identity, and prevents forced rebuilds from creating unrelated releases, moving latest or deleting candidates. Other audit findings remain open. See iterations/04/REVIEW.md.

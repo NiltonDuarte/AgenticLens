@@ -49,3 +49,7 @@ Confirmed using unchanged copied production ClassifyFile/LoadConfig with an isol
 CI/release workflows install Go1.23 while go.mod requires Go1.26; automatic toolchain selection can make them pass, but labels/cache setup obscure the compiler actually used. Align workflow setup with the module toolchain rather than claim a tested Go1.23 minimum. Docker uses Go1.26 and has no production Node runtime. Its npm-ci-or-install fallback can conceal lockfile drift; prefer failing reproducibly on lockfile mismatch. These are delivery hygiene concerns, not observed build failures.
 
 Workflow source review does not prove release publication/download/host execution. No remote workflow, release, or compatibility-provider session was executed. Existing full make at49cf350 passed781frontend tests with identical application source. Shell syntax, Python AST, JSON/YAML/TOML parsing and the targeted local reproductions passed. No dependency vulnerability database or performance profile was consulted; no unsupported current-version/security-advisory claims are made.
+
+## Subsequent remediation status
+
+Iteration 04 implements ADP-01 and D3 in commit 302b3d0. Independent review approved the scoped changes; see ../04/REVIEW.md and TESTING.md for evidence and limits. This historical audit describes its original frozen baseline. All other findings remain open, including ADP-05 at P2 under the clarified local-only scope.

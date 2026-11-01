@@ -153,3 +153,7 @@ Command: `go test ./internal/adapters ./internal/adapters/backfill -run '^TestRE
 Separate mutation command: `go test ./internal/adapters/opencode -run '^TestSchemaFamilyRejectsEveryRequiredTableColumnOmission$' -count=1` after disabling missing-column detection only in the copy. Result: pass, confirming ADP-07's test blind spot. No mutant was copied into the checkout.
 
 Coverage manifest: ADAPTERS_COVERAGE.json has one entry for each of the 82 assigned paths. All reviewed source hashes were checked against SCOPE.json before handoff.
+
+## Subsequent remediation status
+
+Iteration 04 implements ADP-01 and D3 in commit 302b3d0. Independent review approved the scoped changes; see ../04/REVIEW.md and TESTING.md for evidence and limits. This historical audit describes its original frozen baseline. All other findings remain open, including ADP-05 at P2 under the clarified local-only scope.

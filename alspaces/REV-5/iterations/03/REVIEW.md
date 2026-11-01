@@ -74,3 +74,7 @@ Build warnings remain: npm install reported 21 dependency advisories (18 moderat
 ## ADP-05 severity correction
 
 User clarified that the product is local-only and deliberate remote exposure is the operator's responsibility. ADP-05 is reduced from P1 to P2 and narrowed to the default bind address, which is broader than the advertised localhost use. Lack of authentication is not a defect within the supported scope. Loopback binding is the minimal recommendation; authentication and remote-deployment features are not required. This supersedes the original priority, preserves the source evidence and all other findings, and makes no runtime change. Existing source hashes and verification remain valid.
+
+## Subsequent remediation status
+
+Iteration 04 implements ADP-01 and D3 in commit 302b3d0. Independent review approved the scoped changes; see ../04/REVIEW.md and TESTING.md for evidence and limits. This historical audit describes its original frozen baseline. All other findings remain open, including ADP-05 at P2 under the clarified local-only scope.

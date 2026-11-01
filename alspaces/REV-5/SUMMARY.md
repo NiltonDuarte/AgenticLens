@@ -9,15 +9,15 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 9
-- **Active Agent Duration:** 1h 50m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 10
+- **Active Agent Duration:** 1h 57m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 5 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.1 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0
-- **Test-to-Production Code Ratio:** 1.9:1 (+532 test lines / +275 prod lines)
-- **Code Delivered:** +807 / -2,545 lines across 51 code files (excluding docs)
-- **Reasoning Effort:** 55,235 reasoning tokens (19.7% of generated output)
-- **Tool Health & Self-Correction:** 666 tool calls (35 self-corrections, 94.7% success rate)
+- **Test-to-Production Code Ratio:** 2.3:1 (+650 test lines / +280 prod lines)
+- **Code Delivered:** +930 / -2,550 lines across 53 code files (excluding docs)
+- **Reasoning Effort:** 56,980 reasoning tokens (19.0% of generated output)
+- **Tool Health & Self-Correction:** 731 tool calls (37 self-corrections, 94.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 23 execution anomalies detected (13 CRITICAL, 10 WARNING).
@@ -52,18 +52,18 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 2 | 243,521 | 5,527 | 1,144,832 | 82.5% | 148.2k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **coder** | 6 | 659,473 | 52,011 | 20,631,552 | 96.9% | 184.5k | ELEVATED | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **tester** | 2 | 150,345 | 8,641 | 5,075,712 | 97.1% | 174.6k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **reviewer** | 5 | 1,527,589 | 78,158 | 33,604,352 | 95.7% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **rootagent** | 1 | 474,845 | 80,286 | 31,266,688 | 98.5% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **16** | **3,055,773** | **224,623** | **91,723,136** | **96.8%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations)** |
+| **planner** | 3 | 268,346 | 7,695 | 1,442,432 | 84.3% | 148.2k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **coder** | 7 | 693,476 | 58,843 | 21,748,480 | 96.9% | 184.5k | ELEVATED | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
+| **tester** | 3 | 185,217 | 11,530 | 5,664,000 | 96.8% | 174.6k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer** | 6 | 1,567,901 | 79,619 | 33,958,784 | 95.6% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **rootagent** | 1 | 537,725 | 85,962 | 33,773,696 | 98.4% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **20** | **3,252,665** | **243,649** | **96,587,392** | **96.7%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 20 unavailable / 20 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 16 | 3,055,773 | 224,623 | 91,723,136 | 96.8% | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
-| **Total** | **16** | **3,055,773** | **224,623** | **91,723,136** | **96.8%** | **Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations)** |
+| **gpt-6-astra** | 20 | 3,252,665 | 243,649 | 96,587,392 | 96.7% | Unavailable (0 observed, 0 partial, 20 unavailable / 20 invocations) |
+| **Total** | **20** | **3,252,665** | **243,649** | **96,587,392** | **96.7%** | **Unavailable (0 observed, 0 partial, 20 unavailable / 20 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -172,3 +172,15 @@ Listener-review telemetry refresh verified: schema v5, REV-5/fix, all 16 existin
 ## Iteration 04: highest-priority remediation
 
 User requested fixing the highest-priority issues. This authorizes remediation of the remaining P1 findings, ADP-01 (incomplete Codex recovery replacing stored facts) and D3 (release tag/build revision mismatch). Baseline 88a4a1b; initial working tree clean. Local-only scope and ADP-05 P2 remain unchanged. Other audit findings remain open. This is an implementation scope expansion from iteration 03, with new targeted regression proof and final integrated make required. No hosted release will be executed.
+
+## Iteration 04 implementation and review
+
+Commit 302b3d0 fixes ADP-01 by rejecting warning-bearing source trees before replacement, retaining facts and reporting incomplete recovery while healthy roots refresh. D3 now checks out the exact release tag before checks/build and validates metadata identity; forced rebuilds bypass release creation, latest promotion and candidate cleanup. Targeted race tests, six executable workflow-shell tests and the independent mutation probe passed; reviewer APPROVED. Origin/main was already integrated. No remote release was executed. Other findings remain open.
+
+## Final integration verification
+
+At implementation commit 302b3d0, origin/main was already integrated. Full make exited 0: Go vet/race suites, TypeScript typecheck/ESLint, six executable release-workflow tests, all 781 frontend tests across 35 files, canonical asset build and four Linux/Darwin binaries. Generated frontend/embed asset hashes match. No stage was skipped; valid Go cache results were reused. Only workspace documentation/telemetry changed after this gate. Hosted release execution remains untested; no remote release operation performed. Existing npm advisory and bundle-size warnings remain outside this scope.
+
+## Iteration 04 telemetry verification
+
+Verified schema v5, REV-5/fix, all 20 source-metadata Codex sessions and correct parent links: the prior 16 identities plus planner, coder, tester and reviewer. No other-harness sessions existed to preserve. Snapshot ends at generation; subsequent validation/commit/push calls are outside the snapshot.
