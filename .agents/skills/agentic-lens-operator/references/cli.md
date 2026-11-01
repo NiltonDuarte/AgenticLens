@@ -11,6 +11,7 @@ Examples below use `agentic-lens` as shorthand for the executable path you resol
 | `agentic-lens` or root flags | Scan ledgers, show a ticket's metrics, or inspect anomalies. |
 | `init` | Create shared and machine-local configuration files. |
 | `generate` | Extract session telemetry and Git facts into a metrics ledger. |
+| `capture` | Install owned lifecycle adapters, bind exact sessions, inspect local state and reconcile source snapshots. |
 | `backfill` | Recompute historical facts, recover source-backed migration steps, or migrate schema. |
 | `migrate` | Apply stepwise schema changes to existing workspace ledgers. |
 | `server` | Run the embedded dashboard and live observability service. |
@@ -78,6 +79,7 @@ agentic-lens generate --ticket-id ID --ticket-title TITLE --ticket-type TYPE [op
 - `--append FILE`: idempotently update the Markdown metrics table.
 - `--db-path PATH`: explicit OpenCode SQLite source path.
 - `--codex-home PATH`: explicit Codex home/rollout directory; defaults to `$CODEX_HOME` or `~/.codex`.
+- `--capture-dir DIR` (default `.agenticlens-capture`): local lifecycle registry to reconcile before final generation. Use the installation's exact state directory. Registered sessions bound to the ticket are refreshed from their actual source, including independent roots and both harnesses; no ownership is inferred from the directory. When a registry exists, generation writes `capture_report.json` beside the ledger, with snapshot cutoff, outcomes and ledger digest.
 - `--anomalies`: print and record anomaly results for the target ticket.
 - `--allow-empty`: permits empty generation with no root session/invocations; intended as an exceptional/testing escape hatch, not normal recovery.
 
@@ -88,6 +90,45 @@ agentic-lens generate --source opencode --nonce A7F39B2C --ticket-id PAY-42 --ti
 ```
 
 Generation writes the requested ledger and/or summary. Confirm those destinations before execution. Use a literal nonce. For Codex, select a known session ID or literal nonce as required by that installed version's help; do not guess a session based only on ticket text.
+
+## `capture` (native release handler)
+
+Resolve the native executable beside the wrapper, for example `agentic-lens-linux-amd64`, `agentic-lens-darwin-arm64` or `agentic-lens-windows-amd64.exe`. Installed callbacks call it directly. A manual `capture` invocation through the wrapper also bypasses missing-binary downloads and all update checks; absent native handlers fail visibly. Never put the updating wrapper in hook configuration.
+
+```bash
+agentic-lens capture install --source codex --store "/absolute/Codex home" --repo "/absolute/repo" --state-dir "/absolute/repo/.agenticlens-capture" --dry-run
+agentic-lens capture status --state-dir "/absolute/repo/.agenticlens-capture"
+agentic-lens capture reconcile --ticket-id PAY-42 --state-dir "/absolute/repo/.agenticlens-capture" --timeout 30s
+```
+
+Capture commands return JSON by default; `capture protocol` prints the handler protocol number. `capture <command> --help` lists supported flags. `install` creates additive owned Codex hooks or an OpenCode plugin, an ownership manifest and an ignored local registry destination. Source is required. `--store` is the exact Codex home or OpenCode database; supply it explicitly after checking harness configuration. Direct install may resolve the selected harness's configured local path when omitted; review the resolved value before applying. `--binary PATH` selects a compatible native handler; the default is the running executable. `--repo` defaults to the current directory and `--state-dir` to `.agenticlens-capture`. Dry run previews owned file changes without writing; repeat without it only after setup changes are authorized.
+
+Agent interaction and binding:
+
+- Codex lifecycle feedback supplies a binding request with exact source, session, state directory and a per-session challenge. The agent responds with the supplied native `capture bind` command, adding the ticket explicitly supplied by the user. It must not guess the session or ticket. Start/prompt callbacks can deliver context; shutdown callbacks alone cannot request missing information.
+- OpenCode's per-session system transform supplies the request. The `agenticlens_bind` tool accepts `ticket` and `request`; its execution context supplies the authoritative session identity. The agent cannot replace the runtime identity through tool arguments.
+- When ticket context is missing, ask the user and retain an unassigned registration. A proven parent may supply inherited binding. Independent roots need their own explicit response. Model, effort, usage and cost still come from authoritative harness records; an agent assertion cannot manufacture them.
+
+For an explicitly authorized operator repair, inspect the local request with `capture status`, verify the exact source/session identity, then bind it:
+
+```bash
+agentic-lens capture bind --source codex --store "/absolute/Codex home" --state-dir "/absolute/repo/.agenticlens-capture" --session-id "<EXACT_SOURCE_SESSION_ID>" --ticket-id PAY-42 --request "<EXACT_SESSION_REQUEST_TOKEN>"
+```
+
+Do not publish request tokens or local status dumps. Wrong/missing request tokens and conflicting ticket assignments fail. `capture request` is the native session-specific feedback primitive used by the OpenCode plugin, not a heuristic discovery command. `capture receive` accepts bounded hook JSON on stdin; event handlers hand off durable local work and do not perform a full extraction or publish ticket artifacts.
+
+Reconciliation is explicit and bounded. `--max-sessions` defaults to 256 and `--max-source-bytes` to 64 MiB per pass; `--timeout` defaults to 2s and can be increased up to 5m for an operator pass. Pending work/source flush is distinct from failed, unsupported, unassigned and unresolved parent evidence. Preserve previous accepted facts on source failure; repeated cumulative snapshots must not be added twice. Use `generate --capture-dir` for final publication; `capture reconcile` only refreshes local snapshots and prints outcomes.
+
+After a crash, restore the native handler/source access if needed and rerun reconciliation against the same local state. Do not delete accepted registrations to conceal a gap. After `update`, inspect native protocol/status, preview `capture install` with the original source/store/destinations, resolve conflicting local edits and apply the reviewed upgrade. Installation alone does not trust hooks or prove actual callbacks; review harness trust/plugin loading and verify real session IDs, the agent response and source facts. See [support and local state limits](configuration.md#lifecycle-capture-state-and-support).
+
+Disable or remove only the owned activation entries/files:
+
+```bash
+agentic-lens capture disable --source codex --store "/absolute/Codex home" --repo "/absolute/repo" --state-dir "/absolute/repo/.agenticlens-capture" --dry-run
+agentic-lens capture uninstall --source codex --store "/absolute/Codex home" --repo "/absolute/repo" --state-dir "/absolute/repo/.agenticlens-capture" --dry-run
+```
+
+Repeat the selected command without `--dry-run` when authorized. Both commands deactivate owned callbacks while retaining local registrations/manifests for recovery; they do not purge source data or final ledgers. Unrelated configuration and conflicting local edits are preserved. A handler/configuration failure leaves coding available but capture degraded. Never auto-approve or bypass harness trust to repair capture.
 
 ## `backfill`
 
@@ -170,4 +211,6 @@ agentic-lens update [--version TAG]
 - no argument: resolve and install the latest public release.
 - `--version TAG`: install that release tag, such as `v1.2.3`.
 
-The wrapper downloads and replaces installed platform binaries in its binary directory; it does not migrate ledgers or modify project YAML. Updating is an external network and filesystem mutation. Require direct user authorization unless already specifically requested, then verify with `agentic-lens version --json`. For source inspection, use the tag matching the installed version, not the latest tag by default.
+The wrapper stages release candidates before replacement. If the installed host handler exposes a capture protocol, the candidate must return that same protocol or the update fails with the old binary and active hooks preserved. Existing foreign-platform binaries remain unchanged in that case until upgraded/verified on their native host. Successful replacements retain backups until the transaction completes; failed replacement restores owned binary changes. It does not migrate ledgers or modify project YAML. For existing lifecycle installations, inspect native `capture protocol`/`capture status` and review `capture install --dry-run` with the original source/store/destinations before applying any needed owned-hook upgrade; binary update alone does not verify capture compatibility. Updating is an external network and filesystem mutation. Require direct user authorization unless already specifically requested, then verify with `agentic-lens version --json`. For source inspection, use the tag matching the installed version, not the latest tag by default.
+
+The downloader's `--force --version TAG` and `--local-bin` upgrade paths apply the same host-handler preflight. When opt-in capture setup is requested, it additionally requires the supported capture protocol before first activation and restores the previous native binary/wrapper if subsequent native setup fails. The native installer separately rolls back owned configuration writes; it must not overwrite conflicting user changes. These checks preserve protocol compatibility, not a claim that an untested harness/version or foreign-platform executable ran successfully.

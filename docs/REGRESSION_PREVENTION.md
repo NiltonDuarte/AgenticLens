@@ -87,6 +87,8 @@ Use the [canonical review procedure](../.agents/skills/agentic-lens-review/SKILL
 
 ## Before handoff
 
+For workspace consolidation, follow the [compact archive policy](../.agents/skills/agentic-lens-review/references/model-attribution.md#compact-committed-archive). Compare every archived report/evidence body directly with its original bytes, resolve archived references, and compare finding/run IDs, all reviewer/model/effort/phase attribution, shared credit, verdicts and correction evidence. Preserve no-findings/cancelled/failed rows. Do not replace original evidence with a final approval or rely only on Git history.
+
 Record the tested commit/diff, command, result, skipped stages, and environment limits. Reference valid prior results for unchanged code. For each review finding, state fixed, still open, or out of scope with an evidence link; approval does not erase an untested branch. Keep final PR text aligned with delivered scope, and check whether a previous PR has already merged before attaching later work to it.
 
 A documentation rule reduces ambiguity; it does not prove a defect is fixed. Runtime enforcement and regression tests belong to separately approved implementation work.

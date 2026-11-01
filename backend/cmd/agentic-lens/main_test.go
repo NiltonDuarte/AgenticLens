@@ -6549,7 +6549,7 @@ anomaly_thresholds:
 
 	// First pass: 1 user message, 1 assistant message
 	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m1', 'ses_dev', ?, ?, '{"role": "user"}')`, now, now)
-	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m2', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 100, "output": 50}}')`, now+50, now+50)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m2', 'ses_dev', ?, ?, ?)`, now+50, now+50, fmt.Sprintf(`{"role":"assistant","modelID":"gpt-4o","time":{"created":%d,"completed":%d},"tokens":{"input":100,"output":50}}`, now+50, now+50))
 
 	cmd1 := exec.Command(
 		cliBinaryPath, "generate",
@@ -6579,9 +6579,9 @@ anomaly_thresholds:
 
 	// Second pass: 2 more user messages, 2 more assistant messages with more tokens, and a compaction
 	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m3', 'ses_dev', ?, ?, '{"role": "user"}')`, now+100, now+100)
-	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m4', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 200, "output": 80}}')`, now+150, now+150)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m4', 'ses_dev', ?, ?, ?)`, now+150, now+150, fmt.Sprintf(`{"role":"assistant","modelID":"gpt-4o","time":{"created":%d,"completed":%d},"tokens":{"input":200,"output":80}}`, now+150, now+150))
 	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m5', 'ses_dev', ?, ?, '{"role": "user"}')`, now+200, now+200)
-	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m6', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 300, "output": 120}}')`, now+250, now+250)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m6', 'ses_dev', ?, ?, ?)`, now+250, now+250, fmt.Sprintf(`{"role":"assistant","modelID":"gpt-4o","time":{"created":%d,"completed":%d},"tokens":{"input":300,"output":120}}`, now+250, now+250))
 	// Add a compaction part
 	compactionJSON := `{"type":"compaction"}`
 	_, _ = db.Exec(`INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES ('p_comp', 'ses_dev', 'm4', ?, ?, ?)`, now+160, now+160, compactionJSON)

@@ -55,6 +55,14 @@ fi
 
 BIN_NAME="agentic-lens-${OS}-${ARCH}${BIN_EXT}"
 TARGET_BIN="${DIR}/${BIN_NAME}"
+# A wrapper mistakenly installed as a native artifact would dispatch to itself.
+# Fail before updates or delegation instead of recursively starting the wrapper.
+case "$(basename "$0")" in
+  "$BIN_NAME"|"$BIN_NAME".candidate.*|"$BIN_NAME".previous.*)
+    echo "Error: Wrapper installed at native binary path ${TARGET_BIN}; install the native release executable." >&2
+    exit 1
+    ;;
+esac
 CHECK_FILE="${DIR}/.last_update_check"
 LATEST_FILE="${DIR}/.latest_version"
 
@@ -111,18 +119,47 @@ resolve_latest_tag() {
   esac
 }
 
+capture_protocol() {
+  if [ ! -x "$1" ]; then return 1; fi
+  protocol_value="$("$1" capture protocol 2>/dev/null)" || return 1
+  case "$protocol_value" in ""|*[!0-9]*) return 1 ;; esac
+  printf '%s' "$protocol_value"
+}
+
+finish_update_transaction() {
+  update_result="$1"
+  trap - EXIT HUP INT TERM
+  if [ "$update_result" -ne 0 ] && [ -f "$BINARY_UPDATE_DIR/replaced" ]; then
+    while IFS= read -r update_name; do
+      if [ -f "$BINARY_UPDATE_DIR/previous/$update_name" ]; then
+        if ! mv -f "$BINARY_UPDATE_DIR/previous/$update_name" "$DIR/$update_name"; then
+          echo "Error: Restore the prior binary from $BINARY_UPDATE_DIR/previous/$update_name" >&2
+          # Keep recoverable backups if a restoration itself fails.
+          exit "$update_result"
+        fi
+      else
+        rm -f "$DIR/$update_name"
+      fi
+    done < "$BINARY_UPDATE_DIR/replaced"
+  fi
+  rm -rf "$BINARY_UPDATE_DIR"
+  exit "$update_result"
+}
+
 handle_update() {
   shift
   target_ver="latest"
   while [ $# -gt 0 ]; do
     case "$1" in
       --version)
+        if [ $# -lt 2 ] || [ -z "$2" ]; then
+          echo "Error: --version requires a release tag" >&2
+          exit 1
+        fi
         target_ver="$2"
         shift 2
         ;;
-      *)
-        shift
-        ;;
+      *) echo "Error: Unknown update argument $1" >&2; exit 1 ;;
     esac
   done
 
@@ -136,42 +173,58 @@ handle_update() {
   else
     latest_tag="$target_ver"
   fi
-
   current_ver="unknown"
   if [ -x "$TARGET_BIN" ]; then
     current_ver="$("$TARGET_BIN" version --short 2>/dev/null || echo "unknown")"
   fi
-
   echo "Target release: ${latest_tag} (current: ${current_ver})"
+  required_protocol="$(capture_protocol "$TARGET_BIN" || true)"
+  BINARY_UPDATE_DIR="$(mktemp -d "$DIR/.agenticlens-update.XXXXXX")"
+  mkdir "$BINARY_UPDATE_DIR/previous"
+  : > "$BINARY_UPDATE_DIR/ready"
+  : > "$BINARY_UPDATE_DIR/replaced"
+  trap 'finish_update_transaction "$?"' EXIT
+  trap 'exit 1' HUP INT TERM
 
-  updated_count=0
-  for bin_path in "${DIR}"/agentic-lens-*; do
-    if [ -f "$bin_path" ] && [ -x "$bin_path" ]; then
-      fname="$(basename "$bin_path")"
-      case "$fname" in
-        *.tmp.*|*.bak)
-          continue
-          ;;
-      esac
-      echo "Updating ${fname} to ${latest_tag}..."
-      if download_artifact "$bin_path" "$fname" "$latest_tag"; then
-        updated_count=$((updated_count + 1))
-      else
-        echo "Warning: Failed to update ${fname}" >&2
+  # Stage every candidate before replacing any working executable. A running
+  # capture-aware handler's protocol is a compatibility requirement, regardless
+  # of where the repository keeps its installation manifests.
+  for fname in agentic-lens-linux-amd64 agentic-lens-linux-arm64 agentic-lens-darwin-amd64 agentic-lens-darwin-arm64 agentic-lens-windows-amd64.exe; do
+    if [ "$fname" != "$BIN_NAME" ] && [ ! -f "$DIR/$fname" ]; then continue; fi
+    if [ "$fname" != "$BIN_NAME" ] && [ -n "$required_protocol" ]; then
+      echo "Preserving ${fname}: verify capture compatibility and upgrade on its native host."
+      continue
+    fi
+    candidate="$BINARY_UPDATE_DIR/$fname"
+    echo "Staging ${fname} (${latest_tag})..."
+    if ! download_artifact "$candidate" "$fname" "$latest_tag"; then
+      echo "Error: Failed to stage ${fname}; existing binaries and hooks preserved." >&2
+      exit 1
+    fi
+    if [ "$fname" = "$BIN_NAME" ] && [ -n "$required_protocol" ]; then
+      observed_protocol="$(capture_protocol "$candidate" || true)"
+      if [ "$observed_protocol" != "$required_protocol" ]; then
+        echo "Error: Candidate capture protocol incompatible (required ${required_protocol}); existing binaries and hooks preserved." >&2
+        exit 1
       fi
     fi
+    printf '%s\n' "$fname" >> "$BINARY_UPDATE_DIR/ready"
   done
 
-  if [ ! -f "$TARGET_BIN" ]; then
-    echo "Downloading ${BIN_NAME} (${latest_tag})..."
-    if download_artifact "$TARGET_BIN" "$BIN_NAME" "$latest_tag"; then
-      updated_count=$((updated_count + 1))
+  updated_count=0
+  while IFS= read -r fname; do
+    if [ -f "$DIR/$fname" ]; then
+      cp -p "$DIR/$fname" "$BINARY_UPDATE_DIR/previous/$fname"
     fi
-  fi
-
+    # Record before the atomic move so even an interrupted replacement recovers.
+    printf '%s\n' "$fname" >> "$BINARY_UPDATE_DIR/replaced"
+    mv -f "$BINARY_UPDATE_DIR/$fname" "$DIR/$fname"
+    updated_count=$((updated_count + 1))
+  done < "$BINARY_UPDATE_DIR/ready"
   echo "$latest_tag" > "$LATEST_FILE" 2>/dev/null || true
   date +%s > "$CHECK_FILE" 2>/dev/null || true
   echo "Successfully updated ${updated_count} binary(ies) to ${latest_tag}."
+  echo "For lifecycle capture, inspect native capture status and preview capture install with the original source/store paths before applying owned template changes."
   exit 0
 }
 
@@ -220,6 +273,16 @@ notify_if_update_available() {
     fi
   fi
 }
+
+# Lifecycle handlers are local and bounded. Even a manual capture invocation must
+# never trigger an updater, missing-binary download, or background network check.
+if [ "${1:-}" = "capture" ]; then
+  if [ ! -x "$TARGET_BIN" ]; then
+    echo "Error: Native capture handler missing or not executable at ${TARGET_BIN}; reinstall the release binary explicitly." >&2
+    exit 1
+  fi
+  exec "$TARGET_BIN" "$@"
+fi
 
 if [ "${1:-}" = "update" ]; then
   handle_update "$@"

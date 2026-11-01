@@ -18,6 +18,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/backfill"
+	"agenticlens/internal/adapters/capture"
 	"agenticlens/internal/adapters/codex"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
@@ -50,11 +51,28 @@ func runGenerate(args []string) {
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
 	codexHomeFlag := genFlags.String("codex-home", "", "Path to CODEX_HOME (defaults to $CODEX_HOME or ~/.codex)")
 	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
+	captureDirFlag := genFlags.String("capture-dir", capture.DefaultDirectory, "Local lifecycle registry to reconcile before final publication")
 	allowEmptyFlag := genFlags.Bool("allow-empty", false, "Allow empty metrics generation even if no root session or invocations are resolved (test escape hatch)")
 
 	if err := genFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing generate flags: %v\n", err)
 		os.Exit(1)
+	}
+	// All writers take ownership before loading the canonical baseline or reading sources.
+	// This prevents an earlier source view from publishing after a later generation.
+	if *jsonOutputFlag != "" {
+		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		publicationLock, lockErr := capture.AcquirePublication(lockCtx, *jsonOutputFlag)
+		lockCancel()
+		if lockErr != nil {
+			fmt.Fprintln(os.Stderr, "Error acquiring ledger publication ownership:", lockErr)
+			os.Exit(1)
+		}
+		defer func() {
+			if closeErr := publicationLock.Close(); closeErr != nil {
+				fmt.Fprintln(os.Stderr, "Publication unlock:", closeErr)
+			}
+		}()
 	}
 	activeSource := strings.ToLower(strings.TrimSpace(*sourceFlag))
 
@@ -190,9 +208,22 @@ func runGenerate(args []string) {
 		}
 	}
 
+	baselineSkills := append([]domain.SkillFact{}, skills...)
+	baselineTaskLinks := append([]domain.TaskLinkFact{}, taskLinks...)
 	var freshSessions []domain.SessionFact
-
-	if activeSource == "codex" {
+	captureResult, captureErr := reconcileCaptureGeneration(*captureDirFlag, activeTicketID)
+	if captureErr != nil {
+		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; no coverage report published: %v\n", captureErr)
+		os.Exit(1)
+	}
+	if precedenceErr := filterCapturePrecedence(sessions, captureResult); precedenceErr != nil {
+		fmt.Fprintln(os.Stderr, "Capture checkpoint comparison:", precedenceErr)
+		os.Exit(1)
+	}
+	registeredOnly := hasBoundRegistrations(captureResult) && strings.TrimSpace(*nonceFlag) == "" && strings.TrimSpace(*sessionIDFlag) == ""
+	if registeredOnly {
+		freshSessions = captureResult.RefreshedSessions
+	} else if activeSource == "codex" {
 		builtinCodexHome := ""
 		if home, homeErr := os.UserHomeDir(); homeErr == nil {
 			builtinCodexHome = filepath.Join(home, ".codex")
@@ -230,6 +261,10 @@ func runGenerate(args []string) {
 		freshCodex, factErr := combined.SessionFacts()
 		if factErr != nil {
 			fmt.Fprintf(os.Stderr, "Error grouping Codex session facts: %v\n", factErr)
+			os.Exit(1)
+		}
+		if ownerErr := validateCaptureSelection(*captureDirFlag, activeTicketID, domain.SourceCodex, codexHome, freshCodex); ownerErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
 			os.Exit(1)
 		}
 		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
@@ -279,6 +314,10 @@ func runGenerate(args []string) {
 					os.Exit(1)
 				}
 				if len(extractedSessions) > 0 {
+					if ownerErr := validateCaptureSelection(*captureDirFlag, activeTicketID, domain.SourceOpenCode, dbPath, extractedSessions); ownerErr != nil {
+						fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
+						os.Exit(1)
+					}
 					freshSessions = extractedSessions
 					skills, taskLinks = opencode.ExtractSkillTaskFacts(extractedSessions)
 					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
@@ -295,7 +334,61 @@ func runGenerate(args []string) {
 		}
 	}
 
+	if captureResult != nil {
+		if err := capture.ValidateSessionMerge(sessions, captureResult.Sessions); err != nil {
+			fmt.Fprintln(os.Stderr, "Capture identity collision:", err)
+			os.Exit(1)
+		}
+		// Retained local snapshots are fallback only; they never replace canonical or explicit facts.
+		sessions = fillMissingCaptureSessions(sessions, captureResult.Sessions)
+		// Explicit extraction runs after capture and has precedence for a duplicate refreshed owner.
+		freshSessions = mergeSessions(captureResult.RefreshedSessions, freshSessions)
+		for _, session := range captureResult.Sessions {
+			knownThreadIDs = append(knownThreadIDs, session.ID)
+		}
+		var mergeErr error
+		skills, mergeErr = mergeCaptureRows(skills, captureResult.RefreshedSkills)
+		if mergeErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture skill merge:", mergeErr)
+			os.Exit(1)
+		}
+		taskLinks, mergeErr = mergeCaptureRows(taskLinks, captureResult.RefreshedTaskLinks)
+		if mergeErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture task merge:", mergeErr)
+			os.Exit(1)
+		}
+	}
 	if len(freshSessions) > 0 {
+		if err := capture.ValidateSessionMerge(sessions, freshSessions); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		var checkpointErr error
+		sourceRefreshes := freshSessions
+		freshSessions, checkpointErr = rejectOlderExplicitOwners(sessions, freshSessions)
+		if checkpointErr != nil {
+			fmt.Fprintln(os.Stderr, "Source checkpoint comparison:", checkpointErr)
+			os.Exit(1)
+		}
+		if len(freshSessions) < len(sourceRefreshes) {
+			// v5 auxiliary rows have no owner ID; retain baseline on partial unordered
+			// refresh rather than publish rows from a rejected source snapshot.
+			skills = baselineSkills
+			taskLinks = baselineTaskLinks
+			acceptedIDs := map[string]bool{}
+			for _, owner := range freshSessions {
+				acceptedIDs[owner.ID] = true
+			}
+			if captureResult != nil {
+				for i := range captureResult.Registrations {
+					if !acceptedIDs[captureResult.Registrations[i].Identity.SessionID] {
+						captureResult.Registrations[i].State = domain.CapturePending
+						captureResult.Registrations[i].Detail = "Selected source checkpoint could not establish newer canonical facts; accepted baseline preserved"
+					}
+				}
+				captureResult.Limits = append(captureResult.Limits, "Explicit source refresh had unordered/older checkpoints; retained canonical source facts and ownerless auxiliary rows.")
+			}
+		}
 		sessions = mergeSessions(sessions, freshSessions)
 	}
 	invocations := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
@@ -406,6 +499,9 @@ func runGenerate(args []string) {
 
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
+	if captureResult != nil {
+		tableMD += capture.CoverageSummary(*captureResult)
+	}
 
 	if *jsonOutputFlag != "" {
 		persistedFactLedger, pruneErr := domain.PersistAnomalySummaries(factLedger)
@@ -413,9 +509,15 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error preparing session-owned telemetry: %v\n", pruneErr)
 			os.Exit(1)
 		}
-		if err := adapters.SaveFactLedger(*jsonOutputFlag, persistedFactLedger); err != nil {
+		if err := saveGenerationLedger(*jsonOutputFlag, persistedFactLedger); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
+		}
+		if captureResult != nil {
+			if err := publishCaptureReport(*jsonOutputFlag, *captureResult); err != nil {
+				fmt.Fprintf(os.Stderr, "Ledger written but capture report publication failed; regenerate to recover: %v\n", err)
+				os.Exit(1)
+			}
 		}
 		fmt.Printf("Structured metrics ledger written to %s\n", *jsonOutputFlag)
 	}
@@ -955,6 +1057,7 @@ func printRootUsage() {
 	fmt.Fprintln(out, "  init      Scaffold and generate a new .agenticlens-config.yaml configuration")
 	fmt.Fprintln(out, "  server    Start the HTTP dashboard server and API service")
 	fmt.Fprintln(out, "  generate  Ingest and compute facts from OpenCode or Codex and Git history")
+	fmt.Fprintln(out, "  capture   Install hooks, bind exact sessions, reconcile local snapshots and diagnose coverage")
 	fmt.Fprintln(out, "  backfill  Batch telemetry backfill, Git code facts recomputation, and schema upgrades")
 	fmt.Fprintln(out, "  migrate   Universal stepwise schema migration engine for telemetry ledgers")
 	fmt.Fprintln(out, "  version   Print version and build information")
@@ -1218,6 +1321,9 @@ func main() {
 		if arg == "help" || arg == "-h" || arg == "--help" || arg == "-help" {
 			if len(os.Args) > 2 {
 				switch os.Args[2] {
+				case "capture":
+					runCapture([]string{"status", "--help"})
+					return
 				case "init":
 					runInit([]string{"--help"})
 					return
@@ -1244,6 +1350,9 @@ func main() {
 		}
 
 		switch arg {
+		case "capture":
+			runCapture(os.Args[2:])
+			return
 		case "init":
 			runInit(os.Args[2:])
 			return

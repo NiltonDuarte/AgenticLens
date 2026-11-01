@@ -18,7 +18,7 @@ AgenticLens offers two primary setup pathways: an autonomous agentic setup via a
 ### 1.1 Pathway A: Agentic Distribution and Setup via SKILL.md
 
 #### Step 1: Share Skill Reference with Your Agent
-Provide your autonomous coding agent in OpenCode with the reference to the AgenticLens setup skill. You can either:
+Provide your autonomous coding agent in Codex or OpenCode with the reference to the AgenticLens setup skill. You can either:
 - Point the agent directly to the canonical remote URL:
   `https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md`
 - Or copy `.agents/skills/agentic-lens-setup/SKILL.md` into your repository.
@@ -70,20 +70,23 @@ The agent runs `init` to write shared `.agenticlens-config.yaml` and machine-loc
   --workspaces "workspaces"
 ```
 
-#### Step 5: Mandatory User Confirmation Gate
-Before updating or creating any OpenCode agent policy files (`AGENTS.md` or `.agents/agent/*.md`), the agent must present the exact policy text to the user and receive explicit approval.
+#### Step 5: Reviewed Lifecycle Setup and Agent Binding
+
+Binary retrieval and configuration are binary-only readiness; they do not install lifecycle capture. Follow the [lifecycle installation step](#step-3-install-lifecycle-capture-and-verify-agent-binding) below using the selected harness's exact source store and native executable. Present the additive hook/plugin changes and the small binding/publication block before writing them; explicit approval already covering those exact changes satisfies the gate. Do not modify third-party skills/personas or require reviewers to read instructions to register. Harness trust remains user-controlled.
 
 ---
 
 ### 1.2 Pathway B: Manual Developer Installation via GitHub Releases
 
-Developers who prefer direct manual installation without an agent setup skill can install AgenticLens in three quick steps.
+Developers who prefer direct manual installation can install the binary, configure the project, then separately enable and verify lifecycle capture.
 
 #### Step 1: Install Wrapper and Platform Binary
 Navigate to official GitHub Releases:
 `https://github.com/NiltonDuarte/AgenticLens/releases`
 
 Standalone precompiled binaries are distributed directly with embedded frontend assets and runtime dependencies. No archive extraction tools (`tar`, `unzip`) or compilation toolchains are required.
+
+The direct retrieval examples below are for a fresh installation. For upgrades of an existing capture-aware handler, use the guarded downloader or wrapper update described in [upgrade and recovery](#lifecycle-upgrade-and-recovery); do not overwrite the working native binary with an unchecked download.
 
 Download via `curl`:
 ```bash
@@ -140,6 +143,38 @@ Start the embedded dashboard:
 ./bin/agentic-lens server --port 8085
 ```
 Open `http://localhost:8085` in your browser to view the Fleet Overview and Live Observability feeds.
+
+#### Step 3: Install Lifecycle Capture and Verify Agent Binding
+
+A running dashboard or a successful binary/version command does not establish automatic capture. Select Codex or OpenCode explicitly, verify that harness's source path from its actual configuration, and choose a local ignored state directory. `--store` is an absolute Codex home or OpenCode SQLite database path; the placeholders below must be replaced with verified values. Never infer session ownership or ticket context from a checkout, branch, role or nearby timestamps.
+
+Use the host-native release executable, not the updating wrapper. For Linux amd64:
+
+```bash
+./bin/agentic-lens-linux-amd64 capture install --source "<codex-or-opencode>" \
+  --store "<ABSOLUTE_SOURCE_PATH>" --repo "<ABSOLUTE_REPOSITORY_PATH>" \
+  --state-dir "<ABSOLUTE_LOCAL_CAPTURE_STATE_PATH>" --dry-run
+# Review the exact additive changes; after approval repeat without --dry-run.
+./bin/agentic-lens-linux-amd64 capture status --state-dir "<ABSOLUTE_LOCAL_CAPTURE_STATE_PATH>"
+```
+
+On macOS use the downloaded `agentic-lens-darwin-arm64` or `agentic-lens-darwin-amd64` native executable. On Windows PowerShell, use the same native implementation:
+
+```powershell
+& ".\bin\agentic-lens-windows-amd64.exe" capture install --source "<codex-or-opencode>" --store "<ABSOLUTE_SOURCE_PATH>" --repo "<ABSOLUTE_REPOSITORY_PATH>" --state-dir "<ABSOLUTE_LOCAL_CAPTURE_STATE_PATH>" --dry-run
+# Review the exact additive changes; after approval repeat without --dry-run.
+& ".\bin\agentic-lens-windows-amd64.exe" capture status --state-dir "<ABSOLUTE_LOCAL_CAPTURE_STATE_PATH>"
+```
+
+The installer preserves unrelated hooks and records ownership for reinstall/removal. It does not grant harness trust. Review Codex hooks using its own trust controls and verify OpenCode plugin loading without bypassing trust or overwriting user settings. The agent must receive a session-specific request and answer with the ticket explicitly provided by the user: Codex supplies an exact native binding command and challenge; OpenCode exposes a binding tool whose session identity comes from the runtime. Missing ticket context remains unassigned and requires a question to the user, not a guess. A callback exit code or installed configuration alone is insufficient verification.
+
+Use the canonical [capture CLI and binding instructions](../.agents/skills/agentic-lens-operator/references/cli.md#capture-native-release-handler), [local state/support limits](../.agents/skills/agentic-lens-operator/references/configuration.md#lifecycle-capture-state-and-support) and [setup approval flow](../.agents/skills/agentic-lens-setup/SKILL.md#step-25-additive-lifecycle-setup-and-agent-binding). These cover the actual agent round trip, parent/independent roots, degraded states, bounded reconciliation, crash recovery and owned disable/uninstall. No additional Go/Node runtime is installed in the adopting repository; OpenCode glue uses the existing harness runtime. Keep state and raw transcripts out of Git. Final generation deliberately publishes the ledger/summary and digest-bound coverage report with cutoff/limits; callbacks do not rewrite committed artifacts.
+
+##### Lifecycle upgrade and recovery
+
+The shipped downloader (`--force --version TAG`, including `--local-bin`) stages the native candidate and retains the working handler's capture protocol before replacement. Opt-in first capture setup requires the matching handler protocol too. If later native setup fails, the downloader restores its prior native binary/wrapper while native setup rolls back owned configuration. Wrapper `update --version TAG` stages candidates and rejects an incompatible native handler before modifying working binaries. Neither path changes harness trust. In capture-aware installations, existing foreign-platform binaries are preserved with a diagnostic; verify and upgrade each on its native host instead of claiming compatibility from this machine.
+
+For direct PowerShell upgrades without the POSIX wrapper, keep the existing native executable, download the candidate under a different path, compare successful `capture protocol` output with the existing handler and only then replace it. Preserve a backup until any reviewed `capture install` upgrade succeeds; restore that backup if setup fails. Do not use the initial-install `Invoke-WebRequest -OutFile` example to overwrite an active handler. After every upgrade inspect native `capture status`, preview owned installation changes with the original source/state paths and verify an actual callback/agent binding exchange. Unsupported or unavailable runtime evidence remains degraded, not complete capture.
 
 ---
 

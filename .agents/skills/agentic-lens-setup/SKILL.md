@@ -1,11 +1,11 @@
 ---
 name: agentic-lens-setup
-description: Autonomous setup skill to bootstrap AgenticLens in OpenCode repositories, downloading precompiled release binaries, configuring project parameters, explaining telemetry features, and reviewing agent guidelines with mandatory user confirmation.
+description: Autonomous setup skill to bootstrap AgenticLens in Codex and OpenCode repositories, downloading precompiled release binaries, configuring project parameters, explaining telemetry features, and reviewing agent guidelines with mandatory user confirmation.
 ---
 
 # AgenticLens Cross-Project Autonomous Setup Skill
 
-Guides autonomous bootstrapping and adoption of AgenticLens in OpenCode software repositories using precompiled release artifacts from GitHub Releases (https://github.com/NiltonDuarte/AgenticLens/releases).
+Guides autonomous bootstrapping and adoption of AgenticLens in Codex and OpenCode software repositories using precompiled release artifacts from GitHub Releases (https://github.com/NiltonDuarte/AgenticLens/releases).
 
 AgenticLens is an observability and developer telemetry platform for OpenCode and Codex workflows. OpenCode traces come from its local SQLite database; Codex traces come from rollout files under the Codex home directory.
 
@@ -14,7 +14,9 @@ This skill follows the autonomous agentic distribution model: it is completely s
 ## Operational Mandates
 - Strict Release-Only Mandate: Never compile binaries from Go/TypeScript source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
 - Operator Skill and Binary Placement: Install the AgenticLens operator skill under `.agents/skills/agentic-lens-operator/` and place the multi-platform wrapper and precompiled platform binaries in its `bin/` subdirectory. Keep a protective `.gitignore` in that binary directory containing `*` and `!/.gitignore`.
-- Mandatory User Confirmation Gate: Inspect existing OpenCode agent instructions (`AGENTS.md` or `.agents/agent/*.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
+- Mandatory User Confirmation Gate: Inspect existing agent instructions and hook/plugin configuration. Present the exact additive setup changes before modifying target repository files; affirmative approval already covering those changes satisfies the gate. Never modify third-party skills or personas to obtain telemetry.
+- Lifecycle Capture: Use the native release binary to install AgenticLens-owned callbacks, request explicit session-specific ticket binding from the agent and reconcile authoritative source records. Never infer ownership, parents, model, effort or usage from checkout proximity or an agent assertion. Preserve unrelated hooks, trust settings and conflicting local edits. Installation alone does not prove runtime capture.
+- Local State: Keep capture registry, pending snapshots, source paths and request tokens local and ignored. Only final generation publishes the ticket ledger, summary and digest-bound coverage report.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
 
 ---
@@ -125,6 +127,10 @@ Invoke-WebRequest -Uri $downloadUrl -OutFile "$BIN_DIR\$binName"
 Copy-Item "$BIN_DIR\$binName" "$BIN_DIR\agentic-lens.exe"
 ```
 
+The downloader stages replacement native handlers and checks compatibility with the installed host handler's capture protocol before swapping files. Opt-in capture setup requires protocol compatibility even on a fresh installation; if later native setup fails, prior binary/wrapper changes are rolled back while the native installer restores owned configuration. Existing foreign-platform executables in a capture-aware installation are preserved for upgrade and verification on their native host. Wrapper `update` stages and preflights native replacements too; it does not update harness trust.
+
+Downloading a binary configures no lifecycle hooks by default. After configuration and the additive setup review below, the downloader can also delegate setup to that host's native binary with `--capture-source codex|opencode --capture-store <ABSOLUTE_SOURCE_PATH>`. Optional `--capture-repo` and `--capture-state-dir` select destinations; source store is never guessed. `--dry-run` previews downloads and invokes native `capture install --dry-run` only when a compatible local binary is already available. Without one, it reports that the hook file preview is unavailable rather than claiming installation.
+
 #### 1.4 Verification
 Validate that the downloaded binary executes properly and outputs valid build metadata:
 
@@ -185,17 +191,50 @@ Alternatively, review generated YAML with `--dry-run` before writing:
 
 ---
 
+### Step 2.5: Additive Lifecycle Setup and Agent Binding
+
+Use the exact source selected during the interview: Codex home containing its rollout records, or the OpenCode SQLite database belonging to this harness. Verify the path with local configuration and the installed harness; do not select it from ticket text, directory names, branches or another developer's source store. Use absolute paths, including an explicit local capture destination when the repository uses a custom layout. No new Go/Node installation is required; OpenCode glue uses the existing harness runtime.
+
+Resolve the native release executable, not the updating wrapper. On Linux/macOS it is `$BIN_DIR/agentic-lens-${OS}-${ARCH}`; Windows uses `$BIN_DIR/agentic-lens-windows-amd64.exe`. Confirm `capture protocol` and inspect installed `capture install --help`. An older release without the matching handler must be upgraded explicitly before installing callbacks.
+
+Before applying, run the native dry run with the selected values:
+
+```bash
+"$BIN_DIR/agentic-lens-${OS}-${ARCH}" capture install \
+  --source "<codex-or-opencode>" --store "<ABSOLUTE_SOURCE_PATH>" \
+  --repo "<ABSOLUTE_REPOSITORY_PATH>" --state-dir "<ABSOLUTE_LOCAL_STATE_PATH>" --dry-run
+```
+
+Review every proposed file change: Codex `.codex/hooks.json` or OpenCode `.opencode/plugins/agenticlens-capture.ts`, ownership manifest/local state and any `.gitignore` addition. Present the exact diff and obtain setup approval if existing approval does not cover it. Keep existing inline hooks and unrelated plugin/config entries. A conflicting owned file must be resolved explicitly, not overwritten. After approval repeat the same command without `--dry-run`. The downloader opt-in performs the same native install; it does not grant harness trust or establish a capture success claim.
+
+For a direct PowerShell installation, use that same native implementation:
+
+```powershell
+& "$BIN_DIR/agentic-lens-windows-amd64.exe" capture install --source "<codex-or-opencode>" --store "<ABSOLUTE_SOURCE_PATH>" --repo "<ABSOLUTE_REPOSITORY_PATH>" --state-dir "<ABSOLUTE_LOCAL_STATE_PATH>" --dry-run
+# Review the exact changes; after approval repeat without --dry-run.
+```
+
+Codex start/prompt callbacks return a session-specific binding request as model context. The agent answers using the exact session ID, source-store identity and request token in the supplied native `capture bind` command, plus the ticket explicitly supplied by the user. OpenCode supplies the request through its per-session system transform and exposes `agenticlens_bind`; that tool obtains the session ID from the runtime and accepts only the ticket and request token from the agent. If the ticket is unknown, the agent asks the user and the session stays unassigned. Neither path guesses ownership or asks the agent to invent source-derived usage/model facts. Proven native parents may supply inherited binding; independent reviewers still need their own explicit binding.
+
+Inspect `capture status --state-dir "<ABSOLUTE_LOCAL_STATE_PATH>"` after a real session and agent response. Review Codex hook trust using the harness's own controls; never auto-approve, bypass trust or enable disabled hooks. OpenCode must actually load the plugin. Compare registered session IDs and source facts against real harness records before claiming support. Version/protocol inspection alone, a fixture and a successful callback exit do not establish a working agent interaction. Unsupported versions, unavailable source records, unanswered binding, unresolved parents and hook failures must remain visible as degraded/pending/unassigned outcomes. Coding remains available when collection fails.
+
+Use the operator [CLI](../agentic-lens-operator/references/cli.md) and [configuration](../agentic-lens-operator/references/configuration.md) references for bounded reconciliation, support limits, repair and owned removal. Retain final ledger/summary publication at workflow completion, with a documented snapshot cutoff and coverage report; callbacks must never rewrite committed artifacts.
+
+---
+
 ### Step 3: Platform Capability Walkthrough
 
 Present an overview of AgenticLens features to the user:
 
 #### CLI Subcommands
+- `capture`: Install or remove owned lifecycle adapters, inspect registration/binding, and reconcile registered sessions from their actual source. Use the native binary; capture commands never self-download or check for updates.
 - `init`: Scaffold shared `.agenticlens-config.yaml` and ignored machine-local `.agenticlens-config.local.yaml` configuration files.
 - `generate`: Ingest session telemetry from the selected harness and git history into `agentic_metrics.json`, and idempotently update markdown summary tables. `--source` wins over local `telemetry.default_source`; otherwise the local default is used, then OpenCode. Missing sources fail without switching harness. The executing agent generates a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and passes the literal token to `--nonce <GENERATED_NONCE>`.
   ```bash
   "$BIN_DIR/agentic-lens" generate \
     --nonce <GENERATED_NONCE> \
     --ticket-id <TICKET_ID> \
+    --ticket-title "<TICKET_TITLE>" \
     --ticket-type <CONVENTIONAL_TYPE> \
     --json-output workspaces/<TICKET_ID>/agentic_metrics.json \
     --append workspaces/<TICKET_ID>/SUMMARY.md
@@ -231,9 +270,7 @@ Present an overview of AgenticLens features to the user:
 
 ### Step 4: Agent Guidelines Review and Mandatory Confirmation Gate
 
-Inspect the repository for existing OpenCode agent instructions:
-- `AGENTS.md`
-- `.agents/agent/*.md`
+Inspect the repository's existing `AGENTS.md` and hook/plugin configuration. Read third-party skill/persona instructions only for context; do not edit them or require reviewers to read a final telemetry policy to register their sessions.
 
 #### Mandatory User Confirmation Gate (HARD STOP)
 Before making any modifications or creating new files, formulate the exact proposed markdown section and present it to the user. Ask for explicit approval using the `question` tool or user prompt.
@@ -241,36 +278,14 @@ Before making any modifications or creating new files, formulate the exact propo
 If the user declines or requests adjustments, honor the user's decision without modifying files.
 
 #### Proposed Agent Policy Block
-When approved by the user, append the following standardized operational policies to the repository's agent instructions:
+
+Keep the approved block small. Replace `<WORKSPACES_DIR>` with the configured workspace root and `<CAPTURE_STATE_DIR>` with the approved ignored local state path; do not impose this repository's ticket workflow on an adopter.
 
 ```markdown
-## AgenticLens Operational Policies
+## AgenticLens session binding and publication
 
-### 1. Ticket Tracking Mandate (Zero Untracked Work)
-- Every task, feature, bugfix, or refactoring must be tracked by an explicit ticket identifier matching configured prefixes (e.g. `<PREFIX>-<ID>`, `MISC-<ID>`, `APP-<ID>`).
-- Single-ticket exclusivity: Agents must never work on more than one ticket simultaneously.
-- Every subsequent prompt must be treated as steering feedback for the active ticket.
-
-### 2. Dedicated Workspace Allocation
-- Every ticket must have an isolated workspace under `workspaces/<TICKET_ID>/`.
-- Standard artifacts:
-  - `workspaces/<TICKET_ID>/CONTRACT.md`: Frozen technical contract and scope invariants.
-  - `workspaces/<TICKET_ID>/SUMMARY.md`: Summary of completed work and verification metrics table.
-  - `workspaces/<TICKET_ID>/PULL_REQUEST.md`: Pull request description.
-  - `workspaces/<TICKET_ID>/agentic_metrics.json`: Telemetry fact ledger.
-
-### 3. Delayed Telemetry Ingestion Mandate
-- Telemetry generation must be executed as the very final turn before git commit.
-- Generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token directly to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs:
-  ```bash
-  .agents/skills/agentic-lens-operator/bin/agentic-lens generate \
-    --nonce <GENERATED_NONCE> \
-    --ticket-id <TICKET_ID> \
-    --ticket-type <CONVENTIONAL_TYPE> \
-    --json-output workspaces/<TICKET_ID>/agentic_metrics.json \
-    --append workspaces/<TICKET_ID>/SUMMARY.md
-  ```
-- Premature ingestion omits subsequent tool calls, turn counts, compactions, and subagent sessions.
+- Respond to the AgenticLens hook's session-specific binding request with the ticket explicitly supplied by the user. Use the supplied native command or runtime binding tool and exact request token. If the ticket is unknown, ask; never infer ownership from checkout, branch, role or timing.
+- At workflow completion, deliberately generate the final ledger and summary under `<WORKSPACES_DIR>/<TICKET_ID>/` using the correct source and `<CAPTURE_STATE_DIR>`. Review `capture_report.json`, its ledger digest/cutoff and unresolved coverage before publishing. Keep raw transcripts and intermediate capture state out of Git.
 ```
 
 ---
@@ -281,5 +296,8 @@ When approved by the user, append the following standardized operational policie
 - Protective `.gitignore` exists at binary destination directory.
 - Root `.agenticlens-config.yaml` is present, valid YAML, and non-empty.
 - Verification command reports valid JSON metadata.
-- Agent guidelines updated only after explicit user confirmation.
+- Agent guidelines updated only after explicit user confirmation and limited to binding/final publication.
+- Selected harness configuration installed additively by the native release handler; conflicting files and unrelated hooks preserved.
+- Capture state ignored; current harness trust/plugin loading, exact session binding and source reconciliation verified by actual runtime evidence, or explicitly reported degraded/unverified.
+- Disable/uninstall and recovery instructions identify only owned changes; final report cutoff and ledger digest remain inspectable.
 - Zero emojis in all artifacts and outputs.

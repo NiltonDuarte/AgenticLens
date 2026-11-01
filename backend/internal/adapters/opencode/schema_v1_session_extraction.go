@@ -58,6 +58,7 @@ func extractSchemaV1Sessions(
 	defaultUser string,
 	userBySessionID map[string]string,
 	strict bool,
+	exact ...bool,
 ) ([]domain.SessionFact, *string, *string, error) {
 
 	quotedList, err := buildQuotedIDList(threadIDs)
@@ -65,12 +66,17 @@ func extractSchemaV1Sessions(
 		return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: validating thread ids: %w", err)
 	}
 
+	parentList := quotedList
+	if len(exact) > 0 && exact[0] {
+		parentList = "NULL"
+	}
+
 	// 1. Earliest start time and latest completed time across sessions
 	qTimes := fmt.Sprintf(`
 		SELECT MIN(time_created), MAX(time_updated)
 		FROM session
 		WHERE id IN (%s) OR parent_id IN (%s)
-	`, quotedList, quotedList)
+	`, quotedList, parentList)
 
 	var minCreated, maxUpdated sql.NullInt64
 	err = db.QueryRow(qTimes).Scan(&minCreated, &maxUpdated)
@@ -94,7 +100,7 @@ func extractSchemaV1Sessions(
 		FROM session s
 		WHERE s.id IN (%s) OR s.parent_id IN (%s)
 		ORDER BY s.time_created ASC
-	`, quotedList, quotedList)
+	`, quotedList, parentList)
 
 	sessRows, err := db.Query(qSess)
 	if err != nil {
@@ -377,7 +383,7 @@ func extractSchemaV1Sessions(
 		WHERE (s.id IN (%s) OR s.parent_id IN (%s))
 		  %s
 		ORDER BY p.time_created ASC
-	`, quotedList, quotedList, partFilter)
+	`, quotedList, parentList, partFilter)
 
 	partRows, err := db.Query(qParts)
 	if err != nil {

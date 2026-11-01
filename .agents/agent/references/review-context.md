@@ -12,7 +12,7 @@ When a focus persona is assigned, load that persona, this shared context and its
 
 Tracked application, tests, schemas and runtime files are read-only for this role. Do not implement fixes, publish, commit or approve merges. Parent owns integration and delivery. Safe verification may use disposable fixtures, overlays or copies outside the shared source tree; never run destructive or external release actions as a probe. Tool permission is not authorization to modify product code. Use existing verification or ask the tester/parent for a narrowly specified probe if needed capabilities are unavailable.
 
-Permission syntax is harness-specific: OpenCode frontmatter does not enforce Codex access. For a report, the parent must explicitly assign its output path and enable that write in the actual harness, or receive the report in the response and save it. Do not claim to have written a report when edits are denied. Do not broaden repository write permissions simply to permit reporting.
+Permission syntax is harness-specific: OpenCode frontmatter does not enforce Codex access. For a report, the parent must explicitly assign its private temporary output path and enable that write in the actual harness, or receive the report in the response and save it. Do not claim to have written a report when edits are denied. Do not broaden repository write permissions simply to permit reporting. The parent archives the complete report by run ID in REVIEW_RUNS.json; do not write that shared archive or require a separate committed Markdown file. First-pass independence applies to archived partner reports as well as loose files.
 
 ## Run identity
 
