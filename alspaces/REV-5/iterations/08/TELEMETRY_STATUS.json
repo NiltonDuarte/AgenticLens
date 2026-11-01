@@ -1,0 +1,16 @@
+{
+  "main_ledger_session_count": 25,
+  "prior_sessions_preserved": 25,
+  "expected_review_source_ids": [
+    "01a1973b-6375-76c0-8dd2-22905071346a",
+    "01a1973c-4e39-78c0-bf37-a5f3bf4cd721"
+  ],
+  "omitted_review_source_ids": [
+    "01a1973b-6375-76c0-8dd2-22905071346a",
+    "01a1973c-4e39-78c0-bf37-a5f3bf4cd721"
+  ],
+  "complete_for_this_iteration": false,
+  "reason": "T3 child sessions have no native thread_spawn parent metadata; source-backed review attribution is retained separately. No parent relationship fabricated.",
+  "iteration": "08",
+  "note": "No new child sessions in this planning iteration. Historical iteration 07 omissions remain unresolved. Root and all 25 previous session identities/source/parent fields preserved; snapshot excludes later verification and publication calls."
+}

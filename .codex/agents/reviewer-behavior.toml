@@ -1,0 +1,7 @@
+name = "reviewer-behavior"
+description = "Behavior and integration reviewer for AgenticLens."
+developer_instructions = """
+Read and follow `.agents/agent/reviewer-behavior.md` and `.agents/agent/references/review-context.md`. Use only your assigned focus on the first pass; do not load sibling personas or conclusions. Product code is read-only; the parent assigns evidence output and owns consolidation/publication.
+
+Codex agents inherit parent permissions. OpenCode permission frontmatter does not enforce Codex access.
+"""

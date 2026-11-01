@@ -1,0 +1,33 @@
+{
+  "root_session_id": "01a19432-3529-73a0-a201-d8b1dbf00473",
+  "main_ledger_session_count": 27,
+  "prior_session_count": 25,
+  "all_prior_session_ids_sources_and_parent_fields_preserved": true,
+  "unchanged_nonroot_prior_session_count": 24,
+  "root_refreshed_from_source": true,
+  "recovered_review_source_ids": [
+    "01a1973b-6375-76c0-8dd2-22905071346a",
+    "01a1973c-4e39-78c0-bf37-a5f3bf4cd721"
+  ],
+  "omitted_review_source_ids": [],
+  "complete_for_known_session_roster": true,
+  "native_hierarchy_complete": false,
+  "cost_complete": false,
+  "snapshot_updated_at": "2026-11-01T15:43:12.821900+00:00",
+  "limitations": [
+    "Recovered reviewers remain independent Codex roots because source records contain no native parent links.",
+    "Source model/effort and reviewer attribution are recorded in iteration 07 REVIEW_RUNS.json and iteration 09 SESSION_RECOVERY.json; role fields were not manually rewritten.",
+    "Costs remain unavailable where the source lacks pricing.",
+    "Snapshot excludes subsequent verification, commit and publication calls."
+  ],
+  "supersedes_current_omission_status_from": [
+    "iterations/07/TELEMETRY_STATUS.json",
+    "iterations/08/TELEMETRY_STATUS.json"
+  ],
+  "consolidation_verification": {
+    "prior_sessions_preserved": 27,
+    "unchanged_nonroot_sessions": 26,
+    "root_refreshed": true,
+    "reviewer_imports_retained": true
+  }
+}

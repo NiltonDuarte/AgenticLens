@@ -879,7 +879,7 @@ describe('Domain Progression Aggregator', () => {
                     output_tokens: inv.tokens.output,
                     cache_read_tokens: inv.tokens.cache_read,
                     cache_hit_rate_pct: inv.tokens.input === 0 ? 100 : 0,
-                    cost_usd: inv.cost_usd,
+                    cost_usd: inv.cost_usd ?? null,
                     peak_context_tokens: inv.tokens.peak_context,
                     context_health: 'HEALTHY',
                 },

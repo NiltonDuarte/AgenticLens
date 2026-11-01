@@ -81,7 +81,15 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 			t.Fatalf("transient event association mismatch: opencode=%#v codex=%#v", opencodeLiveAnomalies[i], codexLiveAnomalies[i])
 		}
 	}
-	codexLedger, err := transcript.ToMetricsLedger("", "", "", domain.DefaultProjectConfig())
+	sessions, err := transcript.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	version := domain.CurrentSchemaVersion
+	ticketID := "TEST-101"
+	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
+	codexLedger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	codexLedger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +143,15 @@ func TestRoutineCodexEventsUseRequestContextInsteadOfCumulativeUsage(t *testing.
 					t.Fatalf("event context is not the last request's input: %d", event.ContextTokens)
 				}
 			}
-			ledger, err := transcript.ToMetricsLedger("TEST-101", "Retention regression", domain.TicketTypeChore, domain.DefaultProjectConfig())
+			sessions, err := transcript.SessionFacts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			version := domain.CurrentSchemaVersion
+			ticketID := "TEST-101"
+			factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
+			ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+			ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -164,7 +180,15 @@ func TestCodexLedgerOmitsEventsButRetainsAnomalySummaries(t *testing.T) {
 			{EventID: "codex-event-5", Timestamp: "2026-10-25T09:04:00Z", SessionID: "thread", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "completed", ContextTokens: 100000},
 		},
 	}
-	ledger, err := transcript.ToMetricsLedger("TEST-101", "Retention regression", domain.TicketTypeChore, domain.DefaultProjectConfig())
+	sessions, err := transcript.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	version := domain.CurrentSchemaVersion
+	ticketID := "TEST-101"
+	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
+	ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)
 	}

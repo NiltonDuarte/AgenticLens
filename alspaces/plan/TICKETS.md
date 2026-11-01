@@ -57,6 +57,71 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-67 review telemetry repository interfaces and dependency injection.md`
 
+- **AL-68**: Install harness lifecycle hooks for automatic session capture
+  - **Subsystem**: Installation / Setup / Domain / Codex and OpenCode Adapters / CLI / Persistence / Tests
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-68 install harness lifecycle hooks for automatic session capture.md`
+
+### REV-5 audit remediation: Ready
+
+- **AL-69**: Correct telemetry accuracy and preserve evidence
+  - **Subsystem**: Domain / Source Adapters / CLI / Persistence / Anomaly Presentation
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-69 telemetry accuracy and preservation.md`
+
+- **AL-70**: Preserve configuration, paths and ticket identity
+  - **Subsystem**: Configuration / CLI / Git and OpenCode Adapters / HTTP Listener / Frontend Identity
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-70 configuration paths and ticket identity.md`
+
+- **AL-71**: Make frontend requests and live data handling reliable
+  - **Subsystem**: Frontend Fleet Comparisons Progression / Live REST SSE Polling
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-71 frontend requests and live data handling.md`
+
+- **AL-72**: Correct UI interactions, calculations and accessibility
+  - **Subsystem**: Frontend Trace Controls / Clipboard / Charts / Tables / Dialog and Tooltip
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-72 ui correctness and accessibility.md`
+
+- **AL-73**: Make installation and release verification reliable
+  - **Subsystem**: Installer / Downloader / Packaged Setup / Release Packaging
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-73 installation and release reliability.md`
+
+- **AL-74**: Strengthen test reliability and remove unused code
+  - **Subsystem**: Domain Migration and Aggregation / Adapter and CLI Tests / Frontend Cleanup / Compatibility Fixtures
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-74 test reliability and unused code cleanup.md`
+
+- **AL-75**: Verify dependency integrity and reproducible builds
+  - **Subsystem**: Dependency Maintenance / Lockfile / Docker / CI Toolchain
+  - **Priority**: P3
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-75 dependency and build reproducibility.md`
+
 ### Existing ready work
 
 - **AL2-1**: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer

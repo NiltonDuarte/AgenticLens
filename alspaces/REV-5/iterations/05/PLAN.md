@@ -1,0 +1,7 @@
+# REV-5 iteration 05: reviewer effectiveness
+
+User approval: "apply the recommendation" following the research-backed proposal. Baseline d659d43; initial tree clean. Scope changes from application fixes to review instructions and bounded evaluation. No application changes, new remote integrations or automated release actions. Preserve local-only product assumptions, prior P1 fixes, existing architectural rules and task ownership.
+
+The review skill owns one correctness-first procedure: independently form hypotheses, trace affected callers/consumers, validate candidate findings, assess test oracles and bound conclusions. Persona delegates procedure and clarifies product-read-only versus evidence write permission. Align development/orchestrator/AGENTS/Codex references and regression checklist. Add INCOMPLETE as non-passing outcome. No finding quotas or mandatory agent count.
+
+Validate both skills, references and TOML/frontmatter. Evaluate old/new instructions in fresh native agent contexts with identical five raw candidates and requirements, without expected findings. Two known defect/corrected pairs use original source; a sorting case is held out from the examples used to design the revised instructions. Report observations without extrapolating production recall; no numerical cost claim absent measured data. Independent guidance consistency review. Parent owns documentation, evaluation scoring, telemetry and delivery. Existing full make evidence can be reused for unchanged application/runtime sources.

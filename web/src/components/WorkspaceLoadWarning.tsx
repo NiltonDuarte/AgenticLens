@@ -10,7 +10,7 @@ export function mergeWorkspaceDiagnostics(
 ): readonly WorkspaceDiagnostic[] {
   const byTicket = new Map<string, WorkspaceDiagnostic>();
   for (const item of groups.flat()) {
-    byTicket.set(item.ticket_id, item);
+    byTicket.set(item.scope === 'response' ? `response:${item.message}` : `workspace:${item.ticket_id}`, item);
   }
   return [...byTicket.values()];
 }
@@ -20,11 +20,11 @@ export const WorkspaceLoadWarning: React.FC<WorkspaceLoadWarningProps> = ({ diag
 
   return (
     <section className="workspace-load-warning" role="status" aria-live="polite">
-      <strong>Some ticket workspaces were skipped.</strong>
+      <strong>{diagnostics.some((item) => item.scope === 'response') ? 'Workspace response warnings.' : 'Some ticket workspaces were skipped.'}</strong>
       <ul>
         {diagnostics.map((item) => (
-          <li key={`${item.ticket_id}:${item.message}`}>
-            <strong>{item.ticket_id}:</strong> {item.message}
+          <li key={item.scope === 'response' ? `response:${item.message}` : `workspace:${item.ticket_id}:${item.message}`}>
+            {item.scope !== 'response' && <strong>{item.ticket_id}: </strong>}{item.message}
           </li>
         ))}
       </ul>

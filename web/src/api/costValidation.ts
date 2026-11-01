@@ -1,5 +1,3 @@
-import type { AgenticMetricsLedger, FleetSummary, TicketComparisonRow, TimeBucketMetric, WorkspaceDetail } from '../domain/types';
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -124,7 +122,8 @@ function validateWorkflow(value: unknown, path: string): void {
   }
 }
 
-function validateMetricsLedger(value: unknown, path: string): void {
+export function validateLedgerCosts(value: unknown): void {
+  const path = 'response.ledger';
   const ledger = requireRecord(value, path);
   validateFactLedger(ledger.facts, `${path}.facts`);
   validateMetric(ledger.totals, `${path}.totals`);
@@ -153,44 +152,9 @@ function validateMetricsLedger(value: unknown, path: string): void {
   }
 }
 
-export async function readFleetSummaryResponse(response: Response): Promise<FleetSummary> {
-  const value: unknown = await response.json();
+export function validateFleetCosts(value: unknown): void {
   const fleet = requireRecord(value, 'response');
   validateAmountSummary(fleet.total_cost_usd, fleet.cost_summary, 'response.total_cost_usd');
   validateCostMap(fleet.role_costs, fleet.role_cost_summaries, 'response.role_costs');
   validateCostMap(fleet.model_costs, fleet.model_cost_summaries, 'response.model_costs');
-  return value as FleetSummary;
-}
-
-export async function readMetricsLedgerArrayResponse(response: Response): Promise<readonly AgenticMetricsLedger[]> {
-  const value: unknown = await response.json();
-  if (!Array.isArray(value)) invalid('response');
-  value.forEach((ledger: unknown, index) => validateMetricsLedger(ledger, `response[${index}]`));
-  return value as readonly AgenticMetricsLedger[];
-}
-
-export async function readWorkspaceDetailResponse(response: Response): Promise<WorkspaceDetail> {
-  const value: unknown = await response.json();
-  const detail = requireRecord(value, 'response');
-  validateMetricsLedger(detail.ledger, 'response.ledger');
-  return value as WorkspaceDetail;
-}
-
-export async function readComparisonRowsResponse(response: Response): Promise<readonly TicketComparisonRow[]> {
-  const value: unknown = await response.json();
-  if (!Array.isArray(value)) invalid('response');
-  value.forEach((row: unknown, index) => validateMetric(row, `response[${index}]`));
-  return value as readonly TicketComparisonRow[];
-}
-
-export async function readTimeBucketsResponse(response: Response): Promise<readonly TimeBucketMetric[]> {
-  const value: unknown = await response.json();
-  if (!Array.isArray(value)) invalid('response');
-  value.forEach((entry: unknown, index) => {
-    const path = `response[${index}]`;
-    const bucket = requireRecord(entry, path);
-    validateMetric(bucket, path);
-    validateAmountSummary(bucket.cumulative_cost_usd, bucket.cumulative_cost_summary, `${path}.cumulative_cost_usd`);
-  });
-  return value as readonly TimeBucketMetric[];
 }

@@ -78,5 +78,3 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     </span>
   );
 };
-
-export const InfoIcon = InfoTooltip;

@@ -45,6 +45,12 @@ As an engineer, I want source-recorded Codex skill and delegation facts to survi
 * Schema ownership changes follow expand-contract with compatibility and rollback/preservation considerations recorded before removal of old writes. Coordinate with concurrent schema owners such as AL-57 rather than preselecting a version. Use this ticket's source investigation to implement evidence-backed fixes; AL-63 consumes the delivered verification and is not an upstream dependency. Do not invent missing Codex facts or equal harness capabilities.
 * Pass the required make gate and meaningful regression checks for ownership, multiplicity, ambiguous migration and preservation. Frontend changes require canonical asset build and embedded standalone verification. Tests never use the live AL-55 ledger/workspace as a fixture.
 
+*REV-5 FOLLOW-UP: CC-02*
+
+* Explicitly reproduce partial generate against a local source while a cached remote session owns historical skill/task facts. Preserve both remote sessions and their auxiliary facts; a successful partial extraction is not authoritative coverage of unavailable owners.
+* Cover missing roots, cross-device and mixed-source refresh, complete refresh and legitimate deletion after complete authoritative coverage. Verify generate as well as backfill through save/reload; use the ownership/completeness contract already required above.
+* Evidence: [REV-5 core/CLI audit](../../REV-5/iterations/03/CORE_CLI_REPORT.md). This is a concrete regression case within AL-62, not a separate schema or analytics initiative.
+
 *DEFINITION OF DONE*
 
 * Implement in a separate agentic-lens-dev session under the normal reviewed contract and approval gate. The user explicitly requested a fix plus granular structure; preserve that scope rather than reverting to an investigation-only plan. This PO session modifies planning artifacts only.

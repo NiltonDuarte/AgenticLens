@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestSchemaV1ExtractFacts(t *testing.T) {
+func TestSchemaV1ExtractSessions(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -58,14 +58,22 @@ func TestSchemaV1ExtractFacts(t *testing.T) {
 		t.Fatalf("failed inserting tools: %v", err)
 	}
 
-	invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(
+	extractedSessions, startedAt, completedAt, err := opencode.ExtractSessions(
 		db,
 		[]string{"ses_root"},
 		"test-user",
 		map[string]string{"ses_child": "test-user"},
 	)
+
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+	invocations := extractedFacts.InvocationFacts()
+
+	tools := extractedFacts.ToolFacts()
+
+	events := extractedFacts.EventFacts()
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	sessions, _, _, sErr := opencode.ExtractSessions(
@@ -287,17 +295,25 @@ func TestSchemaV1MalformedOrIncompleteSkillTaskInputsPreserveOtherFacts(t *testi
 	}
 }
 
-func TestSchemaV1ExtractFacts_AdversarialEdgeCases(t *testing.T) {
+func TestSchemaV1ExtractSessions_AdversarialEdgeCases(t *testing.T) {
 	t.Run("empty db returns empty facts without panic", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer db.Close()
 
-		invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(
+		extractedSessions, startedAt, completedAt, err := opencode.ExtractSessions(
 			db,
 			[]string{"non_existent_thread"},
 			"default_user",
 			nil,
 		)
+
+		extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+		invocations := extractedFacts.InvocationFacts()
+
+		tools := extractedFacts.ToolFacts()
+
+		events := extractedFacts.EventFacts()
 		if err != nil {
 			t.Fatalf("unexpected error on non-existent thread: %v", err)
 		}
@@ -316,7 +332,7 @@ func TestSchemaV1ExtractFacts_AdversarialEdgeCases(t *testing.T) {
 	})
 
 	t.Run("nil database returns explicit error", func(t *testing.T) {
-		_, _, _, _, _, err := opencode.ExtractFacts(nil, []string{"thread_1"}, "user", nil)
+		_, _, _, err := opencode.ExtractSessions(nil, []string{"thread_1"}, "user", nil)
 		if err == nil {
 			t.Fatal("expected error for nil db, got nil")
 		}
@@ -372,14 +388,22 @@ func TestSchemaV1ExtractFacts_AdversarialEdgeCases(t *testing.T) {
 			t.Fatalf("failed inserting parts: %v", err)
 		}
 
-		invocations, tools, events, startedAt, completedAt, err := opencode.ExtractFacts(
+		extractedSessions, startedAt, completedAt, err := opencode.ExtractSessions(
 			db,
 			[]string{"ses_corrupt"},
 			"test-user",
 			nil,
 		)
+
+		extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+		invocations := extractedFacts.InvocationFacts()
+
+		tools := extractedFacts.ToolFacts()
+
+		events := extractedFacts.EventFacts()
 		if err != nil {
-			t.Fatalf("ExtractFacts failed on corrupted rows: %v", err)
+			t.Fatalf("ExtractSessions failed on corrupted rows: %v", err)
 		}
 
 		if startedAt == nil || completedAt == nil {
@@ -428,7 +452,7 @@ func TestSchemaV1ExtractFacts_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		for _, payload := range injectionPayloads {
-			_, _, _, _, _, err := opencode.ExtractFacts(db, []string{payload}, "user", nil)
+			_, _, _, err := opencode.ExtractSessions(db, []string{payload}, "user", nil)
 			if err == nil {
 				t.Errorf("expected error for malicious thread ID %q, got nil", payload)
 			}
@@ -455,7 +479,7 @@ func TestSchemaV1ExtractFacts_AdversarialEdgeCases(t *testing.T) {
 	})
 }
 
-func TestSchemaV1ExtractFacts_ChronologicalOrderingAndTieBreaking(t *testing.T) {
+func TestSchemaV1ExtractSessions_ChronologicalOrderingAndTieBreaking(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -497,9 +521,13 @@ func TestSchemaV1ExtractFacts_ChronologicalOrderingAndTieBreaking(t *testing.T) 
 		t.Fatalf("failed inserting parts: %v", err)
 	}
 
-	_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_ord"}, "user", nil)
+	extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_ord"}, "user", nil)
+
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+	events := extractedFacts.EventFacts()
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	if len(events) != 8 {
@@ -525,7 +553,7 @@ func TestSchemaV1ExtractFacts_ChronologicalOrderingAndTieBreaking(t *testing.T) 
 	}
 }
 
-func TestSchemaV1ExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
+func TestSchemaV1ExtractSessions_ToolCallErrorParsingAndDuration(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -567,9 +595,15 @@ func TestSchemaV1ExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 		t.Fatalf("failed inserting parts: %v", err)
 	}
 
-	_, tools, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_tools"}, "user", nil)
+	extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_tools"}, "user", nil)
+
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+	tools := extractedFacts.ToolFacts()
+
+	events := extractedFacts.EventFacts()
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	// Verify ToolFact aggregations
@@ -656,7 +690,7 @@ func TestSchemaV1ExtractFacts_ToolCallErrorParsingAndDuration(t *testing.T) {
 	}
 }
 
-func TestSchemaV1ExtractFacts_Sub4096ErrorPreservation(t *testing.T) {
+func TestSchemaV1ExtractSessions_Sub4096ErrorPreservation(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -679,9 +713,13 @@ func TestSchemaV1ExtractFacts_Sub4096ErrorPreservation(t *testing.T) {
 		t.Fatalf("failed inserting part: %v", err)
 	}
 
-	_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_sub"}, "user", nil)
+	extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_sub"}, "user", nil)
+
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+	events := extractedFacts.EventFacts()
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	if len(events) != 2 {
@@ -699,7 +737,7 @@ func TestSchemaV1ExtractFacts_Sub4096ErrorPreservation(t *testing.T) {
 	}
 }
 
-func TestSchemaV1ExtractFacts_ErrorPayloadAdversarialBoundaries(t *testing.T) {
+func TestSchemaV1ExtractSessions_ErrorPayloadAdversarialBoundaries(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -778,9 +816,13 @@ func TestSchemaV1ExtractFacts_ErrorPayloadAdversarialBoundaries(t *testing.T) {
 		}
 	}
 
-	_, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_adv_err"}, "user", nil)
+	extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_adv_err"}, "user", nil)
+
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+	events := extractedFacts.EventFacts()
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	var toolEvents []domain.EventFact
@@ -810,7 +852,7 @@ func TestSchemaV1ExtractFacts_ErrorPayloadAdversarialBoundaries(t *testing.T) {
 	}
 }
 
-func TestSchemaV1ExtractFacts_CompactionEvents(t *testing.T) {
+func TestSchemaV1ExtractSessions_CompactionEvents(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -842,9 +884,15 @@ func TestSchemaV1ExtractFacts_CompactionEvents(t *testing.T) {
 		t.Fatalf("failed inserting compaction parts: %v", err)
 	}
 
-	invocations, _, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_comp"}, "user", nil)
+	extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_comp"}, "user", nil)
+
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+	invocations := extractedFacts.InvocationFacts()
+
+	events := extractedFacts.EventFacts()
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	// Compactions counted in invocation
@@ -888,7 +936,7 @@ func TestSchemaV1ExtractFacts_CompactionEvents(t *testing.T) {
 	}
 }
 
-func TestSchemaV1ExtractFacts_RawPersonaPreservation(t *testing.T) {
+func TestSchemaV1ExtractSessions_RawPersonaPreservation(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -930,7 +978,7 @@ func TestSchemaV1ExtractFacts_RawPersonaPreservation(t *testing.T) {
 			nil,
 		)
 		if err != nil {
-			t.Fatalf("ExtractFacts failed: %v", err)
+			t.Fatalf("ExtractSessions failed: %v", err)
 		}
 
 		ledger := domain.AgenticFactLedger{Sessions: sessions}
@@ -996,7 +1044,7 @@ func TestSchemaV1ExtractFacts_RawPersonaPreservation(t *testing.T) {
 			nil,
 		)
 		if err != nil {
-			t.Fatalf("ExtractFacts failed: %v", err)
+			t.Fatalf("ExtractSessions failed: %v", err)
 		}
 
 		ledger := domain.AgenticFactLedger{Sessions: sessions}
@@ -1037,7 +1085,7 @@ func TestSchemaV1ExtractFacts_RawPersonaPreservation(t *testing.T) {
 	})
 }
 
-func TestSchemaV1ExtractFacts_AdversarialPersonaPreservationAndWhitespace(t *testing.T) {
+func TestSchemaV1ExtractSessions_AdversarialPersonaPreservationAndWhitespace(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -1079,7 +1127,7 @@ func TestSchemaV1ExtractFacts_AdversarialPersonaPreservationAndWhitespace(t *tes
 		nil,
 	)
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	ledger := domain.AgenticFactLedger{Sessions: sessions}
@@ -1236,7 +1284,7 @@ func TestSchemaV1ExtractSteeringTurns(t *testing.T) {
 	})
 }
 
-func TestSchemaV1ExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID(t *testing.T) {
+func TestSchemaV1ExtractSessions_ContentInspectionTools_CompletedStatusAndMessageID(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -1259,9 +1307,15 @@ func TestSchemaV1ExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID
 		t.Fatalf("failed inserting inspection test data: %v", err)
 	}
 
-	_, tools, events, _, _, err := opencode.ExtractFacts(db, []string{"ses_insp"}, "user", nil)
+	extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_insp"}, "user", nil)
+
+	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
+
+	tools := extractedFacts.ToolFacts()
+
+	events := extractedFacts.EventFacts()
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	toolMap := make(map[string]domain.ToolFact)
@@ -1351,7 +1405,7 @@ func TestSchemaV1ExtractFacts_ContentInspectionTools_CompletedStatusAndMessageID
 	}
 }
 
-func TestSchemaV1ExtractFacts_UserIterationsRootAndChild(t *testing.T) {
+func TestSchemaV1ExtractSessions_UserIterationsRootAndChild(t *testing.T) {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed opening in-memory db: %v", err)
@@ -1415,7 +1469,7 @@ func TestSchemaV1ExtractFacts_UserIterationsRootAndChild(t *testing.T) {
 
 	sessions, _, _, err := opencode.ExtractSessions(db, []string{"root_sess"}, "testuser", nil)
 	if err != nil {
-		t.Fatalf("ExtractFacts failed: %v", err)
+		t.Fatalf("ExtractSessions failed: %v", err)
 	}
 
 	invs := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
@@ -1491,7 +1545,8 @@ func TestSchemaV1CostEvidenceCoalescesReportedAndMissingRecords(t *testing.T) {
  ('cost-b','cost-root',2000,3000,'{"role":"assistant","modelID":"model-a"}');`); err != nil {
 		t.Fatal(err)
 	}
-	invs, _, _, _, _, err := opencode.ExtractFacts(db, []string{"cost-root"}, "tester", nil)
+	sessions, _, _, err := opencode.ExtractSessions(db, []string{"cost-root"}, "tester", nil)
+	invs := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1519,7 +1574,8 @@ func TestSchemaV1CostEvidenceCoalescesReportedAndMissingRecords(t *testing.T) {
 			if _, err := db.Exec(`UPDATE message SET data=json_set(data,'$.cost',json(?)) WHERE id=?`, tc.second, "cost-b"); err != nil {
 				t.Fatal(err)
 			}
-			rows, _, _, _, _, err := opencode.ExtractFacts(db, []string{"cost-root"}, "tester", nil)
+			sessions, _, _, err := opencode.ExtractSessions(db, []string{"cost-root"}, "tester", nil)
+			rows := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 			if tc.invalid {
 				if err == nil {
 					t.Fatalf("invalid source amount was accepted: %+v", rows)

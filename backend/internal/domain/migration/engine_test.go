@@ -1,6 +1,7 @@
 package migration_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -311,8 +312,8 @@ func TestRegistry(t *testing.T) {
 			t.Fatalf("expected successful registration, got %v", err)
 		}
 
-		retrieved, ok := reg.GetStep(1)
-		if !ok || retrieved != step {
+		chain, err := reg.PlanChain(1, 2)
+		if err != nil || len(chain) != 1 || chain[0] != step {
 			t.Errorf("expected to retrieve registered step")
 		}
 	})
@@ -381,7 +382,6 @@ func TestRegistry(t *testing.T) {
 				} else {
 					// Query chain
 					_, _ = reg.PlanChain(1, 4)
-					_, _ = reg.GetStep(2)
 				}
 			}()
 		}
@@ -1430,9 +1430,9 @@ func TestEngineMigrate(t *testing.T) {
 		}
 	})
 
-	t.Run("MigrateLedger works on struct directly", func(t *testing.T) {
+	t.Run("Migrate serialized ledger", func(t *testing.T) {
 		ledger := sampleFactLedger()
-		upgraded, err := engine.MigrateLedger(ledger, 2)
+		upgraded, err := engine.Migrate(marshalTestLedger(t, ledger), 2)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1441,11 +1441,11 @@ func TestEngineMigrate(t *testing.T) {
 		}
 	})
 
-	t.Run("MigrateLedger edge cases", func(t *testing.T) {
+	t.Run("Migrate serialized ledger edge cases", func(t *testing.T) {
 		ledger := sampleFactLedger()
 
 		// targetVersion < 1
-		_, err0 := engine.MigrateLedger(ledger, 0)
+		_, err0 := engine.Migrate(marshalTestLedger(t, ledger), 0)
 		if !errors.Is(err0, migration.ErrUnsupportedVersion) {
 			t.Errorf("expected ErrUnsupportedVersion for target 0, got %v", err0)
 		}
@@ -1454,7 +1454,7 @@ func TestEngineMigrate(t *testing.T) {
 		v2 := 2
 		ledgerV2 := ledger
 		ledgerV2.SchemaVersion = &v2
-		same, errSame := engine.MigrateLedger(ledgerV2, 2)
+		same, errSame := engine.Migrate(marshalTestLedger(t, ledgerV2), 2)
 		if errSame != nil {
 			t.Fatalf("unexpected error: %v", errSame)
 		}
@@ -1463,7 +1463,7 @@ func TestEngineMigrate(t *testing.T) {
 		}
 
 		// downgrade attempt
-		_, errDown := engine.MigrateLedger(ledgerV2, 1)
+		_, errDown := engine.Migrate(marshalTestLedger(t, ledgerV2), 1)
 		if !errors.Is(errDown, migration.ErrDowngradeNotAllowed) {
 			t.Errorf("expected ErrDowngradeNotAllowed, got %v", errDown)
 		}
@@ -1816,6 +1816,15 @@ func TestMigrationEngineNormalizesInterimV4AndDropsUnscopedTools(t *testing.T) {
 	}
 }
 
+func marshalTestLedger(t *testing.T, ledger domain.AgenticFactLedger) []byte {
+	t.Helper()
+	data, err := json.Marshal(ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
 func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *testing.T) {
 	t.Run("older flattened inputs retain amount presence across the full chain", func(t *testing.T) {
 		for _, version := range []int{1, 2, 3} {
@@ -1848,7 +1857,7 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 					if tasks[0].SubagentType != "coder" || tasks[0].Description != "delegated" || tasks[0].ParentTurn != 4 || tasks[0].ChildSession != "child" || tasks[0].Timestamp != "2026-10-31T09:00:00Z" || tasks[0].DurationMs != 12 {
 						t.Fatalf("task metadata changed during typed conversion: %+v", tasks[0])
 					}
-					if summary := domain.SummarizeCost(ledger.InvocationFacts()); summary.Total != 0 || summary.State != domain.CostSummaryEmpty {
+					if summary := domain.ComputeTotals(ledger.InvocationFacts()).CostSummary; summary.Total != 0 || summary.State != domain.CostSummaryEmpty {
 						t.Fatalf("task references entered invocation cost totals: %+v", summary)
 					}
 				})

@@ -1,0 +1,69 @@
+{
+  "operation": "explicit Codex session-ID ingestion with existing CLI; no fabricated parent links",
+  "source_snapshot_verified": true,
+  "before_session_count": 25,
+  "after_import_session_count": 27,
+  "prior_sessions_unchanged_before_root_refresh": true,
+  "timestamp_envelope_preserved": true,
+  "sessions": [
+    {
+      "session_id": "01a1973b-6375-76c0-8dd2-22905071346a",
+      "source": "codex",
+      "metadata_source": "vscode",
+      "source_file": "rollout-2026-11-01T14-10-14-01a1973b-6375-76c0-8dd2-22905071346a.jsonl",
+      "source_sha256": "3d0fb83bc3e14190f5bd0718bbb050f48819bc468ff58982992025208fca5733",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "high",
+      "source_cumulative_usage": {
+        "input_tokens": 340048,
+        "cached_input_tokens": 292864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4198,
+        "reasoning_output_tokens": 422,
+        "total_tokens": 344246
+      },
+      "ledger_token_totals": {
+        "input": 47184,
+        "cache_read": 292864,
+        "output": 4198,
+        "reasoning": 422
+      },
+      "native_parent_id": null,
+      "cost_available": false,
+      "prior_sessions_preserved": 25,
+      "replay_idempotent": true
+    },
+    {
+      "session_id": "01a1973c-4e39-78c0-bf37-a5f3bf4cd721",
+      "source": "codex",
+      "metadata_source": "vscode",
+      "source_file": "rollout-2026-11-01T14-11-14-01a1973c-4e39-78c0-bf37-a5f3bf4cd721.jsonl",
+      "source_sha256": "93739a5626bb90643f1caa3139e28cef4069f8ec81e1af8e3cc96ba4d4cb2fd6",
+      "model": "gpt-6-luna",
+      "reasoning_effort": "medium",
+      "source_cumulative_usage": {
+        "input_tokens": 177475,
+        "cached_input_tokens": 141312,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1977,
+        "reasoning_output_tokens": 238,
+        "total_tokens": 179452
+      },
+      "ledger_token_totals": {
+        "input": 36163,
+        "cache_read": 141312,
+        "output": 1977,
+        "reasoning": 238
+      },
+      "native_parent_id": null,
+      "cost_available": false,
+      "prior_sessions_preserved": 25,
+      "replay_idempotent": true
+    }
+  ],
+  "limitations": [
+    "The source records provide no native parent edge; these sessions remain separate roots in the ledger.",
+    "Reviewer role and reasoning effort attribution remain in iteration 07 REVIEW_RUNS.json; root-based ledger role/iteration semantics are not manually rewritten.",
+    "Cost remains unavailable. No claim of native hierarchy repair or automatic future discovery."
+  ]
+}

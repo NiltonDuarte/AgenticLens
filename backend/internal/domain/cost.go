@@ -63,14 +63,6 @@ func ValidCostAmount(amount float64) bool {
 	return !math.IsNaN(amount) && !math.IsInf(amount, 0) && amount >= 0
 }
 
-func SummarizeCost(invocations []InvocationFact) CostSummary {
-	result := CostSummary{}
-	for _, inv := range invocations {
-		result = MergeCostSummaries(result, SummaryForCost(inv.CostUSD, inv.CostEvidence))
-	}
-	return FinalizeCostSummary(result)
-}
-
 func SummaryForCost(amount float64, evidence CostEvidence) CostSummary {
 	evidence = EffectiveCost(amount, evidence)
 	result := CostSummary{Total: 1}

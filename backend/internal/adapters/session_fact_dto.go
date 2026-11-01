@@ -82,16 +82,6 @@ type SessionFactDTO struct {
 // without the session identity required by schema v4.
 var ErrToolSessionIDRequired = errors.New("tool fact requires session_id")
 
-// ValidateToolFacts enforces session identity for facts before writing a ledger.
-func ValidateToolFacts(tools []domain.ToolFact) error {
-	for i, tool := range tools {
-		if strings.TrimSpace(tool.SessionID) == "" {
-			return fmt.Errorf("%w: tools[%d] is missing; regenerate or re-extract this ledger from source logs", ErrToolSessionIDRequired, i)
-		}
-	}
-	return nil
-}
-
 func (session SessionFactDTO) ToDomain() domain.SessionFact {
 	sessionSource := domain.SourceHarness(strings.TrimSpace(session.Source))
 	user := strings.TrimSpace(session.User)

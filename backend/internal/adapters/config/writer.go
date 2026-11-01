@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -202,6 +201,7 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("  # SQLite polling interval in milliseconds for live session updates.\n")
 	b.WriteString(fmt.Sprintf("  poll_interval_ms: %d\n", pollMs))
 	b.WriteString("  # Maximum number of recent trace messages retained in memory buffer per session.\n")
+	b.WriteString("  # Legacy compatibility setting; full live traces are not truncated.\n")
 	b.WriteString(fmt.Sprintf("  max_trace_buffer_messages: %d\n\n", maxTrace))
 
 	// Anomaly Thresholds Settings
@@ -407,78 +407,6 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 	}
 
 	return GenerateConfigYAML(cfg)
-}
-
-// GenerateDefaultConfigYAML creates configuration YAML bytes initialized from default settings with overrides.
-func GenerateDefaultConfigYAML(projectName string, workspacesDir string, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix, customArtifacts ...[]domain.WorkspaceArtifactConfig) ([]byte, error) {
-	return GenerateDefaultYAML(projectName, workspacesDir, dbPath, srcFolders, prefixes, customArtifacts...)
-}
-
-// WriteConfigFile writes configuration bytes to targetPath atomically with collision detection.
-// If the target file already exists and force is false, it returns a *FileExistsError.
-func WriteConfigFile(targetPath string, data []byte, force bool) error {
-	cleanPath := filepath.Clean(targetPath)
-
-	dir := filepath.Dir(cleanPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("creating parent directory %s: %w", dir, err)
-	}
-
-	if !force {
-		if _, err := os.Stat(cleanPath); err == nil {
-			return &FileExistsError{Path: cleanPath}
-		} else if !os.IsNotExist(err) {
-			return fmt.Errorf("checking file existence %s: %w", cleanPath, err)
-		}
-	}
-
-	tempFile, err := os.CreateTemp(dir, ".agenticlens-config-*.tmp")
-	if err != nil {
-		return fmt.Errorf("creating temporary config file: %w", err)
-	}
-	tmpName := tempFile.Name()
-	cleaned := false
-	defer func() {
-		if !cleaned {
-			if removeErr := os.Remove(tmpName); removeErr != nil && !os.IsNotExist(removeErr) {
-				// Non-fatal cleanup
-			}
-		}
-	}()
-
-	if _, err := tempFile.Write(data); err != nil {
-		if closeErr := tempFile.Close(); closeErr != nil {
-			return fmt.Errorf("closing temp file after write error: %w", closeErr)
-		}
-		return fmt.Errorf("writing temporary config file %s: %w", tmpName, err)
-	}
-
-	if err := tempFile.Sync(); err != nil {
-		if closeErr := tempFile.Close(); closeErr != nil {
-			return fmt.Errorf("closing temp file after sync error: %w", closeErr)
-		}
-		return fmt.Errorf("syncing temporary config file %s: %w", tmpName, err)
-	}
-
-	if err := tempFile.Close(); err != nil {
-		return fmt.Errorf("closing temporary config file %s: %w", tmpName, err)
-	}
-
-	if err := os.Rename(tmpName, cleanPath); err != nil {
-		return fmt.Errorf("renaming %s to %s: %w", tmpName, cleanPath, err)
-	}
-
-	cleaned = true
-	return nil
-}
-
-// WriteConfig converts cfg to YAML and writes it atomically to targetPath.
-func WriteConfig(targetPath string, cfg domain.ProjectConfig, force bool) error {
-	data, err := GenerateConfigYAML(cfg)
-	if err != nil {
-		return fmt.Errorf("generating config yaml: %w", err)
-	}
-	return WriteConfigFile(targetPath, data, force)
 }
 
 func formatStringList(b *strings.Builder, items []string, indent string) {

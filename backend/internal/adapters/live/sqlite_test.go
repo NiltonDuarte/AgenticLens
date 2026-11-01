@@ -207,42 +207,6 @@ func TestNonLockingConcurrencyUnderWriteLoad(t *testing.T) {
 	}
 }
 
-func TestTransientMemoryBufferBoundary(t *testing.T) {
-	buf := live.NewTraceBuffer(500)
-
-	sessionID := "test_session_buffer"
-	totalMessages := 600
-
-	messages := make([]domain.LiveMessageFact, totalMessages)
-	for i := 0; i < totalMessages; i++ {
-		messages[i] = domain.LiveMessageFact{
-			ID:        fmt.Sprintf("msg_%d", i),
-			Role:      "assistant",
-			Content:   fmt.Sprintf("content_%d", i),
-			Timestamp: fmt.Sprintf("2026-10-19T10:00:%02dZ", i%60),
-		}
-	}
-
-	buf.SetMessages(sessionID, messages)
-
-	if buf.Len(sessionID) != 500 {
-		t.Fatalf("expected buffer length 500, got %d", buf.Len(sessionID))
-	}
-
-	stored := buf.GetMessages(sessionID)
-	if len(stored) != 500 {
-		t.Fatalf("expected 500 stored messages, got %d", len(stored))
-	}
-
-	// Oldest 100 dropped, so first message should be msg_100
-	if stored[0].ID != "msg_100" {
-		t.Errorf("expected oldest retained message to be msg_100, got %s", stored[0].ID)
-	}
-	if stored[499].ID != "msg_599" {
-		t.Errorf("expected newest retained message to be msg_599, got %s", stored[499].ID)
-	}
-}
-
 func TestZeroDiskPersistenceVerification(t *testing.T) {
 	dbPath := createTestDBFile(t)
 	rwDB, err := sql.Open("sqlite", dbPath)
@@ -325,9 +289,6 @@ func TestZeroDiskPersistenceVerification(t *testing.T) {
 	}
 
 	// Verify buffer contains message transiently
-	if service.Buffer().Len("s_live") != 1 {
-		t.Fatalf("expected buffer to hold 1 message, got %d", service.Buffer().Len("s_live"))
-	}
 
 	// Verify zero persistence to workspaces/
 	if fi, statErr := os.Stat(workspacesDir); statErr == nil && fi.IsDir() {
@@ -530,66 +491,6 @@ func TestFetchSessionTrace_MalformedJSONPartsFallback(t *testing.T) {
 	part := msg.Parts[0]
 	if part.ID != "p_bad_json" {
 		t.Errorf("expected part ID p_bad_json, got %s", part.ID)
-	}
-}
-
-func TestTraceBuffer_NegativeCapacityDefaultsSafely(t *testing.T) {
-	bufNeg := live.NewTraceBuffer(-10)
-	bufZero := live.NewTraceBuffer(0)
-
-	if bufNeg == nil || bufZero == nil {
-		t.Fatal("expected non-nil buffer")
-	}
-
-	msg := domain.LiveMessageFact{ID: "m1", Role: "assistant"}
-	bufNeg.AppendMessages("s1", msg)
-	if bufNeg.Len("s1") != 1 {
-		t.Errorf("expected len 1, got %d", bufNeg.Len("s1"))
-	}
-}
-
-func TestTraceBuffer_AdversarialConcurrentReadWrite(t *testing.T) {
-	buf := live.NewTraceBuffer(50)
-	sessionID := "s_conc_ring"
-
-	var wg sync.WaitGroup
-	const writers = 10
-	const readers = 10
-	const msgsPerWriter = 20
-
-	wg.Add(writers + readers)
-
-	// Concurrent writers
-	for w := 0; w < writers; w++ {
-		go func(writerIdx int) {
-			defer wg.Done()
-			for i := 0; i < msgsPerWriter; i++ {
-				msg := domain.LiveMessageFact{
-					ID:        fmt.Sprintf("w%d_m%d", writerIdx, i),
-					Role:      "assistant",
-					Timestamp: "2026-10-19T10:00:00Z",
-				}
-				buf.AppendMessages(sessionID, msg)
-			}
-		}(w)
-	}
-
-	// Concurrent readers
-	for r := 0; r < readers; r++ {
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 50; i++ {
-				msgs := buf.GetMessages(sessionID)
-				_ = msgs
-				_ = buf.Len(sessionID)
-			}
-		}()
-	}
-
-	wg.Wait()
-
-	if buf.Len(sessionID) > 50 {
-		t.Errorf("expected buffer len <= 50, got %d", buf.Len(sessionID))
 	}
 }
 
@@ -997,6 +898,15 @@ func TestHydrateWorkspaceEvents_SuccessAndZeroDiskWrites(t *testing.T) {
 	// Find turn_message
 	var foundTurnMsg, foundToolCall, foundCompaction bool
 	for _, ev := range resp.Events {
+		if ev.SessionID != "s_al33" || ev.Turn != 1 {
+			t.Errorf("hydrated event lost session/turn provenance: %+v", ev)
+		}
+		if ev.EventType == domain.EventTypeTurnMessage && ev.EventID != "opencode:message:m_asst" {
+			t.Errorf("hydrated turn lost source message identity: %+v", ev)
+		}
+		if ev.EventType == domain.EventTypeToolCall && (ev.MessageID == nil || *ev.MessageID != "m_asst") {
+			t.Errorf("hydrated tool lost source message identity: %+v", ev)
+		}
 		if ev.EventType == domain.EventTypeTurnMessage {
 			foundTurnMsg = true
 			if ev.PromptContent == nil || *ev.PromptContent != "Implement dual-plane waterfall" {

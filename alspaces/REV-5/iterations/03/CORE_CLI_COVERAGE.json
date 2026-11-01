@@ -1,0 +1,355 @@
+[
+  {
+    "path": "backend/cmd/agentic-lens/config_internal_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read staging/rollback tests for paired configuration writes; scoped failure fixtures protect original content without touching live settings.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/cmd/agentic-lens/main.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read every command, configuration resolution, extraction/merge, rendering, pair-write rollback and helper branch. Confirmed partial-refresh loss, threshold omission, init precedence and discarded scan diagnostics. CLI orchestration contains policy that differs from backfill.",
+    "finding_ids": [
+      "CC-02",
+      "CC-03",
+      "CC-05",
+      "CC-08"
+    ]
+  },
+  {
+    "path": "backend/cmd/agentic-lens/main_codex_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read rollout fixture and command cases for source selection, mixed-source preservation, source failure and output behavior; no separate defect established.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/cmd/agentic-lens/main_codex_user_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read user-attribution preservation/fallback tests against session ownership; assertions target behavior rather than role-name inference.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/cmd/agentic-lens/main_refresh_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read refresh integration setup and preservation assertions; session/cost preservation does not establish historical skill/task snapshot preservation in partial OpenCode refresh.",
+    "finding_ids": [
+      "CC-02"
+    ]
+  },
+  {
+    "path": "backend/cmd/agentic-lens/main_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all 6772 lines, including fixture/build helpers and every subtest: scan, server, generate, backfill, migrate, help/version, type/config metadata and multi-device behavior. Identified gaps at effective DB precedence, configured anomaly persistence, partial auxiliary refresh and mixed rejected scans; smoke readiness is not isolated/bounded.",
+    "finding_ids": [
+      "CC-02",
+      "CC-03",
+      "CC-05",
+      "CC-08",
+      "CC-12"
+    ]
+  },
+  {
+    "path": "backend/cmd/agentic-lens/merge_internal_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read source-aware merge identity, preservation and replacement cases; protects session-owned facts but does not cover top-level auxiliary collections.",
+    "finding_ids": [
+      "CC-02"
+    ]
+  },
+  {
+    "path": "backend/cmd/agentic-lens/session_test_helper_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read synthetic session/invocation fixture grouping and options; helper is test-only and does not read live ticket workspaces.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/go.mod",
+    "method": "full structural manifest inspection",
+    "assessment": "Read module/toolchain declarations and direct/indirect dependencies; no vulnerability or upstream currency assessment performed.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/go.sum",
+    "method": "full structural manifest inspection",
+    "assessment": "Read complete checksum manifest and dependency correspondence; checksums structurally reviewed, not an upstream provenance/vulnerability audit.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/aggregations.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read every aggregation, thread grouping, precision/health projection, time filter/bucket, comparison and skill-adoption path. Reproduced alphanumeric-prefix and descending-equality bugs, configured fleet mismatch; identified discarded event projection and duplicate model calculation.",
+    "finding_ids": [
+      "CC-03",
+      "CC-06",
+      "CC-07",
+      "CC-10"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/aggregations_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all 5958 lines and all bodies. Meaningful precision, hierarchy, role mapping, time-boundary and skill-adoption checks coexist with duplicated completion-date matrices; equal sort tests focus on separate cost/completed branches and miss generic descending equality; no AL2 prefix case.",
+    "finding_ids": [
+      "CC-03",
+      "CC-06",
+      "CC-07",
+      "CC-10",
+      "CC-11"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/anomalies.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all rules, threshold normalization, sorting, display text and fleet aggregation. Configured error-rate value never participates in the fixed-rate detector.",
+    "finding_ids": [
+      "CC-04"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/anomalies_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all 2369 lines and all subtest bodies. Strong default-threshold/session isolation/fallback and fleet coverage; nil-turn tie case is constructed but never executed, and parity setup loops are overwritten. Custom rate/persistence boundary missing.",
+    "finding_ids": [
+      "CC-03",
+      "CC-04",
+      "CC-11"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/config.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read defaults, normalization, configured prefix mapping, metadata resolution, validation and threshold models; error-rate config is advertised but unused by its detector.",
+    "finding_ids": [
+      "CC-04",
+      "CC-06"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/config_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read every default, prefix/type/title normalization and threshold-validation case. Tests check error-rate value serialization/defaults but not its runtime effect.",
+    "finding_ids": [
+      "CC-04"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/constants.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read complete numerical/schema constants and comments against direct consumers; no independent issue established.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/constants_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read threshold/schema constant assertions; protects declared compatibility values, not configured propagation across persistence.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/cost.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read explicit cost states, evidence normalization/merge, summary completeness and formatting inputs; source-precision and unavailable distinctions retained in the inspected logic.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/enums.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read enum/parsing, role normalization/order, time/sort and conventional-type helpers; no independently actionable correctness issue established.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/enums_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read complete parsing/default/role-order/type alias matrices; no new defect beyond shared ticket-prefix grammar elsewhere.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/events.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read sorting, anomaly refresh/persistence, evidence selection and compaction paths. Persistence intentionally strips events, which magnifies CLI threshold omission; evidence selection writes an unused map.",
+    "finding_ids": [
+      "CC-03",
+      "CC-10"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/events_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all sorting, metadata preservation, pruning/summary/evidence and ownership bodies, including bounded reread of earlier output gap. Default persistence checks do not protect configured CLI propagation.",
+    "finding_ids": [
+      "CC-03",
+      "CC-10"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/live.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read live transport-facing value types, execution classifier, configured title inference and tree construction; reproduced successful-content false failures in classifier.",
+    "finding_ids": [
+      "CC-01"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/live_anomaly.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all four live rules, options normalization, severity ordering, recursive collection and deduplication; no additional independently established defect.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/live_anomaly_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all 1481 lines including threshold boundaries, recovery, role isolation, hierarchy/dedup and custom options. These direct rule tests do not validate offline persistence/fleet configuration forwarding.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/live_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read complete classifier, title inference and tree/value tests. Existing successful error-like text cases miss embedded exit/crash phrases.",
+    "finding_ids": [
+      "CC-01"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/migration.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read migration status/step declarations and legacy-fact transformation helpers; pure value transformation intent checked against step implementations.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/migration/cost_decode.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read declared-record JSON decoding, explicit cost presence, legacy/canonical shape conversion and invalid-state rejection; no independent defect established.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/migration/engine.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read version detection, decode/normalize, chain dispatch and invariants; shallow before/current references depend on steps respecting input ownership, violated by v1 step.",
+    "finding_ids": [
+      "CC-09"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/migration/engine_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all 1967 lines including registry synthetic steps, full invariant matrix, chained migrations, removed invocation ID guard, dropped-tool diagnostics and cost-presence cases. v1 step output tests omit input nonmutation snapshot.",
+    "finding_ids": [
+      "CC-09"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/migration/invocation_ownership_regression_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read repeated invocation-row ownership and migration regression fixtures/assertions; focused protection of canonical session ownership.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/migration/registry.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read registration validation, duplicate/source-target dispatch and chain enumeration; no I/O or additional defect established.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/migration/session_test_helper_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read synthetic ledger fixture conversion/setters and copying behavior used by migration tests; no live workspace dependency.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/migration/step_v1_v2.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read complete step; confirmed assigning Events through shared session backing array mutates caller input.",
+    "finding_ids": [
+      "CC-09"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/migration/step_v2_v3.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read complete event-sanitization migration and metadata updates; no independent output defect established; metadata slice alias ownership merits verification with CC-09 fix.",
+    "finding_ids": [
+      "CC-09"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/migration/step_v3_v4.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read root iteration attribution, copying, compact anomaly persistence and metadata updates; no separate confirmed defect; migration metadata append aliasing noted under ownership review.",
+    "finding_ids": [
+      "CC-09"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/migration/step_v4_v5.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read cost-evidence-only schema transition and preservation decisions; no I/O or additional defect established.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/migration/types.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read complete typed migration step contract and errors; interface is behavior-specific with no generic any boundary.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/migration/validator.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read metadata/session/invocation/tool/event invariants and schema exceptions; relies on independent before/after values, so input aliasing weakens checks.",
+    "finding_ids": [
+      "CC-09"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/migration_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read domain migration helper/status/normalization cases and preservation assertions; no separate confirmed defect.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/models.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all fact/projection structures and flattening helpers. Session ownership is explicit for main facts; top-level skill/task collections lack enough ownership for safe precise partial refresh.",
+    "finding_ids": [
+      "CC-02"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/session_facts_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read session grouping/flattening identity and cost/ownership assertions; main fact ownership is protected independently of top-level auxiliary collections.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/session_test_helper_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read all fixture conversion/options/setters; synthetic helper grouping explains test ownership and preserves source independence.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/skills_tasks_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read skill/task fact tests; top-level value coverage does not exercise partial CLI source refresh preservation.",
+    "finding_ids": [
+      "CC-02"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/tool_execution_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read complete classifier regression table. Explicit statuses and ordinary semantic error text covered; successful exit/crash content not covered.",
+    "finding_ids": [
+      "CC-01"
+    ]
+  },
+  {
+    "path": "backend/internal/domain/version.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read linker-populated build metadata, formatting and response value construction; no independent defect established; build metadata globals are controlled distribution inputs.",
+    "finding_ids": []
+  },
+  {
+    "path": "backend/internal/domain/version_test.go",
+    "method": "full semantic inspection: all declarations and bodies, including all test cases",
+    "assessment": "Read every metadata default, formatting/JSON and malformed-value case; no extra correctness issue established.",
+    "finding_ids": []
+  }
+]

@@ -426,15 +426,6 @@ func ValidateRuntimeFactLedger(data []byte) error {
 	return decoded.validateCostFields(*metadata.SchemaVersion >= 5)
 }
 
-func containsString(values []string, wanted string) bool {
-	for _, value := range values {
-		if value == wanted {
-			return true
-		}
-	}
-	return false
-}
-
 func toDomainTicketType(raw *string) *domain.ConventionalTicketType {
 	if raw == nil {
 		return nil

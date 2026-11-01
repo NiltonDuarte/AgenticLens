@@ -43,7 +43,6 @@ type LiveEvent struct {
 // LiveService coordinates SQLite polling, tree reconstruction, and real-time streaming.
 type LiveService struct {
 	hook            *SQLiteHook
-	buffer          *TraceBuffer
 	cfg             domain.ProjectConfig
 	codexHome       string
 	subscribers     map[chan LiveEvent]struct{}
@@ -76,15 +75,10 @@ func NewLiveService(hook *SQLiteHook, cfg domain.ProjectConfig) *LiveService {
 
 // NewLiveServiceWithCodexHome constructs a hydrator with an explicit local Codex data root.
 func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, codexHome string) *LiveService {
-	maxBuffer := cfg.Live.MaxTraceBufferMessages
-	if maxBuffer <= 0 {
-		maxBuffer = 500
-	}
 
 	return &LiveService{
 		hook:          hook,
 		codexHome:     codexHome,
-		buffer:        NewTraceBuffer(maxBuffer),
 		cfg:           cfg,
 		subscribers:   make(map[chan LiveEvent]struct{}),
 		stopCh:        make(chan struct{}),
@@ -93,16 +87,6 @@ func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, cod
 		discovered:    make(map[string]struct{}),
 		seenAnomalies: make(map[string]bool),
 	}
-}
-
-// Buffer returns the underlying transient in-memory trace buffer.
-func (s *LiveService) Buffer() *TraceBuffer {
-	return s.buffer
-}
-
-// Hook returns the underlying read-only SQLite hook.
-func (s *LiveService) Hook() *SQLiteHook {
-	return s.hook
 }
 
 // Close gracefully stops the background polling loop and closes the SQLite hook.
@@ -568,9 +552,6 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (d
 			Parts:            parts,
 		})
 	}
-
-	// Update transient in-memory ring buffer
-	s.buffer.SetMessages(sessionID, messages)
 
 	// Order recent errors most recent first
 	for i, j := 0, len(recentErrors)-1; i < j; i, j = i+1, j-1 {

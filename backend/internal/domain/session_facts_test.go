@@ -75,7 +75,7 @@ func TestSessionsFromFactsPreservesOwnersAndEveryMetricRow(t *testing.T) {
 			t.Errorf("role %s: expected %d rows, got %d", role.Role, want, role.Invocations)
 		}
 	}
-	threads := domain.ComputeThreadSummaries(sessions)
+	threads := domain.ComputeThreadSummariesWithCeiling(sessions, domain.ContextCeilingCriticalTokens)
 	if len(threads) != 1 || threads[0].SessionID != rootID || threads[0].User != "alice" {
 		t.Fatalf("thread summary lost enclosing session hierarchy: %+v", threads)
 	}

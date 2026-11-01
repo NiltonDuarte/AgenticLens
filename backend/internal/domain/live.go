@@ -139,12 +139,6 @@ func ClassifyToolExecution(toolName string, status string, output string, consec
 	return ToolExecutionResult{IsError: true, Severity: severity, ErrorMessage: &msg}
 }
 
-// ClassifyToolFailure preserves the previous call signature for existing internal consumers.
-func ClassifyToolFailure(toolName, status, output string, consecutiveErrors int) (bool, FailureSeverity, *string) {
-	result := ClassifyToolExecution(toolName, status, output, consecutiveErrors)
-	return result.IsError, result.Severity, result.ErrorMessage
-}
-
 // InferTicketID inspects the session title exclusively, matching candidate ticket identifiers
 // case-insensitively against configured prefixes, returning canonical uppercase format on match
 // or nil with 0.0 confidence when absent.
@@ -253,101 +247,6 @@ func BuildSessionTree(nodes []*LiveSessionNode) []*LiveSessionNode {
 	}
 
 	return roots
-}
-
-// EventsFromLiveTrace is a pure function that converts a LiveTraceView into a slice of EventFact domain events.
-// It maps messages to turn_message events, tool parts to tool_call events, and compaction parts to compaction events.
-func EventsFromLiveTrace(trace *LiveTraceView) []EventFact {
-	if trace == nil || len(trace.Messages) == 0 {
-		return []EventFact{}
-	}
-
-	events := make([]EventFact, 0)
-	consecutiveErrors := 0
-
-	for idx, msg := range trace.Messages {
-		turnNum := int64(idx + 1)
-		var msgIDPtr *string
-		if strings.TrimSpace(msg.ID) != "" {
-			trimmedID := strings.TrimSpace(msg.ID)
-			msgIDPtr = &trimmedID
-		}
-
-		var promptContentPtr *string
-		if strings.TrimSpace(msg.Content) != "" {
-			trimmedContent := strings.TrimSpace(msg.Content)
-			promptContentPtr = &trimmedContent
-		}
-
-		// Map turn_message event
-		events = append(events, EventFact{
-			Timestamp:        msg.Timestamp,
-			SessionID:        trace.SessionID,
-			MessageID:        msgIDPtr,
-			Turn:             turnNum,
-			Role:             msg.Role,
-			EventType:        EventTypeTurnMessage,
-			Status:           "completed",
-			ContextTokens:    msg.ContextTokens,
-			PromptContent:    promptContentPtr,
-			ReasoningContent: msg.ReasoningContent,
-		})
-
-		// Map parts
-		for _, part := range msg.Parts {
-			switch part.Type {
-			case "tool":
-				status := "completed"
-				if part.IsError {
-					status = "error"
-					consecutiveErrors++
-				} else {
-					consecutiveErrors = 0
-				}
-
-				var toolInputPtr *string
-				if strings.TrimSpace(part.InputSnippet) != "" {
-					trimmedIn := strings.TrimSpace(part.InputSnippet)
-					toolInputPtr = &trimmedIn
-				}
-
-				var toolOutputPtr *string
-				if strings.TrimSpace(part.OutputSnippet) != "" {
-					trimmedOut := strings.TrimSpace(part.OutputSnippet)
-					toolOutputPtr = &trimmedOut
-				}
-
-				events = append(events, EventFact{
-					Timestamp:     msg.Timestamp,
-					SessionID:     trace.SessionID,
-					MessageID:     msgIDPtr,
-					Turn:          turnNum,
-					Role:          msg.Role,
-					EventType:     EventTypeToolCall,
-					ToolName:      part.ToolName,
-					Status:        status,
-					ErrorMessage:  part.ErrorMessage,
-					ContextTokens: msg.ContextTokens,
-					ToolInput:     toolInputPtr,
-					ToolOutput:    toolOutputPtr,
-				})
-
-			case "compaction":
-				events = append(events, EventFact{
-					Timestamp:     msg.Timestamp,
-					SessionID:     trace.SessionID,
-					MessageID:     msgIDPtr,
-					Turn:          turnNum,
-					Role:          msg.Role,
-					EventType:     EventTypeCompaction,
-					Status:        "completed",
-					ContextTokens: msg.ContextTokens,
-				})
-			}
-		}
-	}
-
-	return events
 }
 
 // LiveTracesEqual compares the complete source-derived snapshot, including in-place edits.

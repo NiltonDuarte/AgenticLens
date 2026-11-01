@@ -29,7 +29,7 @@ Subagent Delegation Roster:
 - `planner` (`subagent_type="planner"`): Architecture, contract formulation, Go/TypeScript FCIS invariants, and task decomposition.
 - `coder` (`subagent_type="coder"`): Implements Go domain models, aggregations, adapters, CLI commands, and TypeScript frontend views/components.
 - `tester` (`subagent_type="tester"`): Verifies relevant Go and TypeScript contracts, reusing existing coverage under [test purpose and proportionality](../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality), with race checks and zero silent skips.
-- `reviewer` (`subagent_type="reviewer"`): Read-only auditor that inspects git diffs against CONTRACT.md, FCIS rules, typing, zero any in Go/TS, and zero emojis.
+- `reviewer` (`subagent_type="reviewer"`): Independent correctness investigator following the canonical review skill, with product code read-only and explicitly assigned evidence output.
 
 Workflow Execution Loop:
 1. Kickoff & Parametrization:
@@ -50,9 +50,11 @@ Workflow Execution Loop:
 5. Phase 2 (Implementation, Testing & Review Loop):
    - Dispatch `coder` with pointers to `CONTRACT.md`, `iterations/<NN>/PLAN.md` (and `REVIEW.md` if rework).
    - Dispatch `tester` to execute tests with zero silent skips.
-   - Dispatch `reviewer` to audit diffs and save verdict in `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/REVIEW.md`.
+   - Dispatch focused `reviewer` assignments using [the parallel protocol](../skills/agentic-lens-review/references/parallel-review.md), with a frozen revision, independent contexts and separate report owners. Load its model policy and dispatch every selected persona on each configured profile with explicit model/effort. Preserve run/finding attribution and report which reviewer/model found confirmed issues. Use capacity-limited waves if necessary. Verify/deduplicate findings and write the consolidated `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/REVIEW.md`; children never share that writable path.
+   - Once focus investigations have no unresolved blockers/material review gaps, perform Phase 3 commit/integration/checks. Final consolidated approval gates publication, not running those checks; integration changes require affected re-review.
    - Loop control:
-     - `APPROVED`: Proceed to Phase 3.
+     - Consolidated `APPROVED`: Complete remaining publication steps under the parallel protocol gate after integrated checks pass; individual child approvals cannot pass delivery.
+     - `INCOMPLETE`: Obtain the missing evidence or capability before delivery; no implicit approval.
      - `CHANGES_REQUESTED`: Feed findings back to `coder`/`tester`.
      - `BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
 6. Phase 3 (Delivery Sync & Self-Reflexive Telemetry via AgenticLens):

@@ -1,0 +1,15 @@
+# REV-5 iteration 03: Every-code-file audit
+
+User steering: "audit every repository file", clarified immediately to "audit every repository *code* file". Supersedes iteration 02 changed-code review boundary with complete tracked live code coverage. Baseline d5227812b09a17ff15d7e6ffe058e96ecf1616eb; initial tree clean. Audit-only iteration: no application/test/runtime corrections or deletions. Existing remediation and verification remain historical evidence, not proof of this audit.
+
+Review every tracked Go, frontend, script, workflow and build/runtime configuration file. Include tests and supporting fixtures/manifests, explicitly distinguishing semantic review from structural data validation. Exclude historical alspaces artifacts, ordinary prose documentation, ignored dependency/build trees and Git internals. SCOPE.json freezes exact file paths and hashes. Prior inventory tools are evidence helpers, not exhaustive reachability proof.
+
+Use reviewer roles from the repository development workflow with disjoint read scopes. core_cli owns backend/cmd, backend/internal/domain and Go module files; backend owns backend/internal/adapters including source fixtures; frontend owns web; root owns delivery/config/scripts/testdata. Each reviewer writes only its named REPORT and COVERAGE JSON under this iteration, one disposition per assigned path with actual review method, findings and limits. Never claim a grep match or successful suite is a semantic review. Preserve unrelated changes; no commits or publication by children. Root combines findings, verifies coverage completeness, validates high-confidence findings through targeted safe reproductions, reuses unchanged valid test evidence, then completes required delivery gate and final telemetry.
+
+Review FCIS and state ownership, shallow/test-only code, model consistency, error/recovery behavior, test purpose/fidelity and flakiness, supply/build/config boundaries. Report severity, exact code evidence, plausible trigger, subtraction/refactor proposal and verification needed; distinguish defects from debt and intentional compatibility. No performance claims without measurement and no test deletion quotas.
+
+Scope completion: include executable scripts under .agents and the AL-58 evidence Python provider plus its two live-consumed JSON configs. Ordinary historical prose/ledgers remain excluded, but code is not excluded merely because its path is historical. These additional files belong to root delivery audit.
+
+## Review correction: local-only listener scope
+
+Source: user clarified local-only use and operator responsibility for deliberate remote exposure. ADP-05 changes from P1 to P2, limited to implicit network-interface binding rather than missing authentication. Acceptance excludes mandatory authentication or new remote-deployment features; loopback is the minimal suggested default. This supersedes the original exposure priority and broader remedy, preserves all other audit findings, and remains in iteration 03 as a review correction. No application/tests/configuration changed; prior source hashes and make evidence remain applicable.

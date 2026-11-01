@@ -1,0 +1,14 @@
+{
+  "failed_update": {
+    "exit": 0,
+    "stdout": "Checking for AgenticLens updates...\nTarget release: v99.0.0 (current: v1.0.0)\nUpdating agentic-lens-linux-amd64 to v99.0.0...\nSuccessfully updated 0 binary(ies) to v99.0.0.\n",
+    "stderr": "Warning: Failed to update agentic-lens-linux-amd64\n",
+    "cached_target": "v99.0.0\n",
+    "original_binary_preserved": true
+  },
+  "unverified_payload": {
+    "exit": 0,
+    "stdout": "AUDIT_UNVERIFIED_EXECUTED\n",
+    "stderr": "Notice: AgenticLens binary for linux/amd64 not found locally at /tmp/rev5-wrapper-audit-6pabxz1c/agentic-lens-linux-amd64.\nAttempting automatic download from GitHub Releases...\nSuccessfully downloaded and verified agentic-lens-linux-amd64.\n"
+  }
+}

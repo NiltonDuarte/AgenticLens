@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateOnly, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, filterLedgersByCompletionDate, canonicalTicketType, extractTicketPrefix, extractDistinctPrefixes, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, filterComparisonRows, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, } from './formatters';
+import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
-import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, TicketComparisonRow, } from './types';
+import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, } from './types';
 describe('Domain Pure Formatters', () => {
     describe('truncateMiddle', () => {
         it('keeps the default leading and trailing characters around an ellipsis', () => {
@@ -415,14 +415,7 @@ describe('Domain Pure Formatters', () => {
             expect(rowsCostAsc.map((r) => r.ticket_id)).toEqual(['AL-1', 'AL-2', 'AL-10']);
         });
     });
-    describe('formatIsoDateOnly and formatIsoDateTimeShort', () => {
-        it('formats date only correctly', () => {
-            expect(formatIsoDateOnly('2026-10-15T14:30:00Z')).toBe('2026-10-15');
-            expect(formatIsoDateOnly('2026-10-15')).toBe('2026-10-15');
-            expect(formatIsoDateOnly(null)).toBe('N/A');
-            expect(formatIsoDateOnly(undefined)).toBe('N/A');
-            expect(formatIsoDateOnly('short')).toBe('N/A');
-        });
+    describe('formatIsoDateTimeShort', () => {
         it('formats short datetime correctly', () => {
             expect(formatIsoDateTimeShort('2026-10-15T14:30:00Z')).toBe('2026-10-15 14:30');
             expect(formatIsoDateTimeShort('2026-10-15')).toBe('2026-10-15');
@@ -592,28 +585,7 @@ describe('Domain Pure Formatters', () => {
             const sorted = [...items].sort(compareTicketCompletionDate);
             expect(sorted.map((t) => t.ticket_id)).toEqual(['AL-2', 'AL-3', 'AL-1', 'AL-4', 'AL-5']);
         });
-        it('filters ledgers by completion date with inclusive boundaries', () => {
-            const ledgers = [
-                { ticket_id: 'AL-1', completed_at: '2026-03-01T00:00:00Z' },
-                { ticket_id: 'AL-2', completed_at: '2026-03-10T12:00:00Z' },
-                { ticket_id: 'AL-3', completed_at: '2026-03-20T23:59:59Z' },
-                { ticket_id: 'AL-4', completed_at: null },
-            ];
-            // No boundaries: returns all ledgers
-            expect(filterLedgersByCompletionDate(ledgers)).toHaveLength(4);
-            // Since boundary
-            const since = new Date('2026-03-10T00:00:00Z').getTime();
-            const afterSince = filterLedgersByCompletionDate(ledgers, since);
-            expect(afterSince.map((l) => l.ticket_id)).toEqual(['AL-2', 'AL-3']);
-            // Until boundary
-            const until = new Date('2026-03-10T23:59:59Z').getTime();
-            const beforeUntil = filterLedgersByCompletionDate(ledgers, undefined, until);
-            expect(beforeUntil.map((l) => l.ticket_id)).toEqual(['AL-1', 'AL-2']);
-            // Both boundaries inclusive
-            const windowed = filterLedgersByCompletionDate(ledgers, since, until);
-            expect(windowed.map((l) => l.ticket_id)).toEqual(['AL-2']);
-        });
-        it('handles timezone offsets, leap years, inverted ranges, and natural ticket ID tie breaking', () => {
+        it('handles timezone offsets, leap years, and natural ticket ID tie breaking', () => {
             // Timezone offsets resolution
             const jstMs = getEffectiveCompletionDateMs({ completed_at: '2026-03-01T15:00:00+09:00' });
             const edtMs = getEffectiveCompletionDateMs({ completed_at: '2026-03-01T02:00:00-04:00' });
@@ -626,15 +598,6 @@ describe('Domain Pure Formatters', () => {
             expect(new Date(leapMs!).getUTCFullYear()).toBe(2024);
             expect(new Date(leapMs!).getUTCMonth()).toBe(1); // February is 1
             expect(new Date(leapMs!).getUTCDate()).toBe(29);
-            // Inverted date ranges in filterLedgersByCompletionDate
-            const sample = [
-                { ticket_id: 'AL-1', completed_at: '2026-03-10T12:00:00Z' },
-            ];
-            const invertedSince = new Date('2026-03-20T00:00:00Z').getTime();
-            const invertedUntil = new Date('2026-03-05T00:00:00Z').getTime();
-            expect(filterLedgersByCompletionDate(sample, invertedSince, invertedUntil)).toEqual([]);
-            // Empty input array
-            expect(filterLedgersByCompletionDate([], invertedSince, invertedUntil)).toEqual([]);
             // Tie-breaking identical dates with natural ticket ID (AL-2 before AL-10)
             const cand10 = { ticket_id: 'AL-10', completed_at: '2026-03-10T00:00:00Z' };
             const cand2 = { ticket_id: 'AL-2', completed_at: '2026-03-10T00:00:00Z' };
@@ -683,20 +646,6 @@ describe('Domain Pure Formatters', () => {
             expect(extractTicketPrefix('UNKNOWN')).toBe('');
             expect(extractTicketPrefix('AL.1')).toBe('');
             expect(extractTicketPrefix('')).toBe('');
-        });
-    });
-    describe('extractDistinctPrefixes', () => {
-        it('extracts, deduplicates, and sorts prefixes ascending', () => {
-            const base = Object.values(mockAgenticMetricsLedgers)[0]!;
-            const ledgers: readonly AgenticMetricsLedger[] = [
-                { ...base, ticket_id: 'PO-2' },
-                { ...base, ticket_id: 'AL-10' },
-                { ...base, ticket_id: 'GEN-1' },
-                { ...base, ticket_id: 'AL-1' },
-                { ...base, ticket_id: null },
-                { ...base, ticket_id: '123' },
-            ];
-            expect(extractDistinctPrefixes(ledgers)).toEqual(['AL', 'GEN', 'PO']);
         });
     });
     describe('combineDistinctPrefixes', () => {
@@ -774,140 +723,6 @@ describe('Domain Pure Formatters', () => {
             expect(res.map((l) => l.ticket_id)).toEqual(['AL-1', 'al-2']);
             const resMulti = filterLedgersByPrefixes(all, ['AL', 'PO']);
             expect(resMulti.map((l) => l.ticket_id)).toEqual(['AL-1', 'al-2', 'PO-1']);
-        });
-    });
-    describe('filterComparisonRows', () => {
-        const rows: readonly TicketComparisonRow[] = [
-            {
-                ticket_id: 'AL-1',
-                ticket_type: 'feat',
-                updated_at: '2026-10-15T11:00:00Z',
-                sdlc_iterations: 1,
-                active_duration_seconds: 60,
-                active_duration_formatted: '1m 0s',
-                cost_usd: 1,
-                cache_hit_rate_pct: 0,
-                test_to_code_ratio: '1.0:1',
-                lines_added: 10,
-                lines_deleted: 0,
-                files_changed: 1,
-                tool_success_rate_pct: 100,
-                context_health_status: 'HEALTHY',
-                root_saturation_pct: 10,
-                peak_context_tokens: 1000,
-                ticket_title: 'Title 1',
-                started_at: '2026-10-15T10:00:00Z',
-                completed_at: '2026-10-15T11:00:00Z',
-                lead_duration_seconds: 3600,
-                lead_duration_formatted: '1h 0m',
-            },
-            {
-                ticket_id: 'AL-2',
-                ticket_type: 'fix',
-                updated_at: '2026-10-16T11:00:00Z',
-                sdlc_iterations: 1,
-                active_duration_seconds: 60,
-                active_duration_formatted: '1m 0s',
-                cost_usd: 2,
-                cache_hit_rate_pct: 0,
-                test_to_code_ratio: '1.0:1',
-                lines_added: 10,
-                lines_deleted: 0,
-                files_changed: 1,
-                tool_success_rate_pct: 100,
-                context_health_status: 'HEALTHY',
-                root_saturation_pct: 10,
-                peak_context_tokens: 1000,
-                ticket_title: 'Title 2',
-                started_at: '2026-10-16T10:00:00Z',
-                completed_at: '2026-10-16T11:00:00Z',
-                lead_duration_seconds: 3600,
-                lead_duration_formatted: '1h 0m',
-            },
-            {
-                ticket_id: 'PO-1',
-                ticket_type: 'docs',
-                updated_at: '2026-10-17T11:00:00Z',
-                sdlc_iterations: 1,
-                active_duration_seconds: 60,
-                active_duration_formatted: '1m 0s',
-                cost_usd: 3,
-                cache_hit_rate_pct: 0,
-                test_to_code_ratio: '1.0:1',
-                lines_added: 10,
-                lines_deleted: 0,
-                files_changed: 1,
-                tool_success_rate_pct: 100,
-                context_health_status: 'HEALTHY',
-                root_saturation_pct: 10,
-                peak_context_tokens: 1000,
-                ticket_title: 'Title 3',
-                started_at: '2026-10-17T10:00:00Z',
-                completed_at: '2026-10-17T11:00:00Z',
-                lead_duration_seconds: 3600,
-                lead_duration_formatted: '1h 0m',
-            },
-            {
-                ticket_id: 'GEN-1',
-                ticket_type: 'chore',
-                updated_at: '2026-10-18T11:00:00Z',
-                sdlc_iterations: 1,
-                active_duration_seconds: 60,
-                active_duration_formatted: '1m 0s',
-                cost_usd: 4,
-                cache_hit_rate_pct: 0,
-                test_to_code_ratio: '1.0:1',
-                lines_added: 10,
-                lines_deleted: 0,
-                files_changed: 1,
-                tool_success_rate_pct: 100,
-                context_health_status: 'HEALTHY',
-                root_saturation_pct: 10,
-                peak_context_tokens: 1000,
-                ticket_title: 'Title 4',
-                started_at: '2026-10-18T10:00:00Z',
-                completed_at: '2026-10-18T11:00:00Z',
-                lead_duration_seconds: 3600,
-                lead_duration_formatted: '1h 0m',
-            },
-        ];
-        it('filters rows by both ticket type and prefix', () => {
-            expect(filterComparisonRows(rows, ['all'], ['all'])).toEqual(rows);
-            expect(filterComparisonRows(rows, ['bug'], ['all'])).toEqual([rows[1]]);
-            expect(filterComparisonRows(rows, ['all'], ['AL'])).toEqual([rows[0], rows[1]]);
-            expect(filterComparisonRows(rows, ['feature', 'bug'], ['AL'])).toEqual([rows[0], rows[1]]);
-            expect(filterComparisonRows(rows, ['docs'], ['AL'])).toEqual([]);
-        });
-        it('handles pathological comparison rows with null or omitted types and prefixes', () => {
-            // Row 1: omitted ticket_type; Row 2: explicit null ticket_type
-            const rowWithoutType: Record<string, unknown> = { ...rows[0]! };
-            delete rowWithoutType.ticket_type;
-            const pathologicalRows: readonly TicketComparisonRow[] = [
-                {
-                    ...(rowWithoutType as unknown as TicketComparisonRow),
-                    ticket_id: 'unknown',
-                },
-                {
-                    ...rows[0]!,
-                    ticket_id: '12345',
-                    ticket_type: null,
-                },
-                {
-                    ...rows[0]!,
-                    ticket_id: 'AL-1',
-                    ticket_type: 'feat',
-                },
-            ];
-            // Concrete query should exclude rows with null/undefined ticket_type
-            const matchedType = filterComparisonRows(pathologicalRows, ['feature'], ['all']);
-            expect(matchedType).toHaveLength(1);
-            expect(matchedType[0]?.ticket_id).toBe('AL-1');
-            // Concrete prefix query should exclude rows with unresolvable prefix
-            const matchedPrefix = filterComparisonRows(pathologicalRows, ['all'], ['AL']);
-            expect(matchedPrefix).toHaveLength(1);
-            expect(matchedPrefix[0]?.ticket_id).toBe('AL-1');
-            // 'all' passes through all rows
-            expect(filterComparisonRows(pathologicalRows, ['all'], ['all'])).toEqual(pathologicalRows);
         });
     });
     describe('Adversarial Multi-Dimensional Filtering Edge Cases', () => {

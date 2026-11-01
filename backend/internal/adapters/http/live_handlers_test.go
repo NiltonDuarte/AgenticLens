@@ -78,10 +78,7 @@ func setupLiveTestServer(mock *mockLiveService) *httptest.Server {
 	if mock != nil {
 		svc = mock
 	}
-	server, err := adaptershttp.NewServer("workspaces", mockFS, svc)
-	if err != nil {
-		server = adaptershttp.NewServerWithConfig("workspaces", mockFS, domain.DefaultProjectConfig(), svc)
-	}
+	server := adaptershttp.NewServerWithConfig("workspaces", mockFS, domain.DefaultProjectConfig(), svc)
 	return httptest.NewServer(server.Handler())
 }
 

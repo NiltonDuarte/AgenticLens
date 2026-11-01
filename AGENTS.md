@@ -84,14 +84,14 @@ Specialized roles:
   - **PO Non-Execution Invariant**: Project Owners are strictly prohibited from writing or modifying application code, test files, runtime scripts, or adapters. Project Owners only plan tasks, author product specifications (`SPEC.md`), and decompose roadmaps into Jira tickets. All implementation must be performed through `agentic-lens-dev`.
   - **PO Session Separation**: The PO session strictly ends once specifications and planning tickets are authored. Development must never take place in the same session and must always run in a separate, dedicated session.
 - **Development Orchestrator (`orchestrator` / `agentic-lens-dev`)**:
-  - Coordinates iterations across subagents (`planner` -> `coder` -> `tester` -> `reviewer`).
+  - Coordinates iterations across subagents (`planner` -> `coder` -> `tester` -> focused reviewers -> consolidated review), using the [parallel review protocol](.agents/skills/agentic-lens-review/references/parallel-review.md) for substantive changes.
   - **Orchestrator Non-Execution Invariant**: Orchestrators never write application code directly.
   - **Mandatory User Confirmation Gate**: Obtain explicit user approval for the proposed scope before writing code, using the available question mechanism when approval is missing. An explicit pre-approval for that scope satisfies the gate; record it and do not ask again. Seek renewed approval when the proposed implementation materially changes the approved boundaries.
 - **Subagents**:
   - `planner`: Contracts, architecture, and zero-code plans.
   - `coder`: Go backend and TypeScript frontend implementation.
   - `tester`: Adversarial unit and boundary tests. Zero mocks in domain, zero silent skips.
-  - `reviewer`: Read-only diff audit along Spec Alignment and Engineering Standards.
+  - `reviewer`: Independent correctness investigation following [the review skill](.agents/skills/agentic-lens-review/SKILL.md), including relevant unchanged dependencies. Product code is read-only; reports need explicitly assigned output permission. `INCOMPLETE` review evidence does not pass the delivery gate.
 
 ---
 

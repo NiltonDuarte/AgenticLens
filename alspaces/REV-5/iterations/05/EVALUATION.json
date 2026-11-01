@@ -1,0 +1,41 @@
+{
+  "baseline": "d659d430780b1934a5cdd57dff08e539fcbfd0f7",
+  "method": "Two native agents, fork_turns=none, same inherited model/settings and equivalent request; one run per instruction set, plus identical contract clarification. No tool or filesystem isolation was imposed beyond the supplied read boundary.",
+  "inputs": {
+    "case-c.txt": "b1e02cd7731ac13f76adec0d8e3ef77174e6791ffa32e975d292a03e699eb749",
+    "case-d.txt": "dbc9075586be61882c37d3d56f3fc16c142de8d7e35536252dcc02f5cd350bbe",
+    "case-b.txt": "4fb4b06a9697dd7d499f874b62e4856d9417263d77d2fb02b68fb78d96341152",
+    "old-persona.md": "c5ab1ec76632dea2ac000acd894fa93f2355a72c895ebe48b53c00203049902c",
+    "old-skill.md": "dd85d34077e0e74733f43c3933f6de52b7495ddbccf5b78e8a71e9497e02a2fd",
+    "new-skill.md": "f943260c89c2e724c6943cdfa948789d85a56ae712fe004cfd3aacf13116516a",
+    "new-persona.md": "1e0dfa8a7298859996eb1721180619068f31463e2bca5c3f5d969618768fbc01",
+    "case-a.txt": "ab80b0af1e3d3718a8bde326c366f8690da681cdc70d7d01611a8b8f3f2614d5",
+    "requirements.md": "f1e1180c9b5a11cabfb08ec72f9a5b3b13fff33ca112386d46fd7435dbd95380",
+    "case-e.txt": "d81ac44810d54864b240b0f6ae6fbebb79140c377d61b8387877706d98bef38f"
+  },
+  "cases": {
+    "A": {
+      "source": "88a4a1b:backend/internal/adapters/backfill/recovery.go through readCodexTree",
+      "expected": "reject incomplete source tree"
+    },
+    "B": {
+      "source": "302b3d0:.github/workflows/release-please.yml",
+      "expected": "no blocking finding under release identity/forced-rebuild contract"
+    },
+    "C": {
+      "source": "d659d43:backend/internal/domain/aggregations.go SortLedgers function",
+      "expected": "descending equality violates strict comparator; secondary tie-breakers permitted",
+      "holdout": "Not used as an example when writing revised instructions; known historical audit defect, not previously unseen repository behavior"
+    },
+    "D": {
+      "source": "302b3d0:backend/internal/adapters/backfill/recovery.go through readCodexTree",
+      "expected": "no blocking finding under recovery contract"
+    },
+    "E": {
+      "source": "88a4a1b:.github/workflows/release-please.yml",
+      "expected": "wrong checkout revision and forced rebuild side effects"
+    }
+  },
+  "cost": "not measured",
+  "runtime": "not controlled or used for comparison"
+}

@@ -52,7 +52,7 @@ OpenCode path resolution generally prefers CLI override, machine-local `telemetr
 | `database.read_only` | OpenCode DB access mode; preserve read-only behavior unless the user asks for an explicitly supported change. |
 | `live.active_threshold_seconds` | Window used to classify sessions as active. |
 | `live.poll_interval_ms` | Live server polling interval. |
-| `live.max_trace_buffer_messages` | Maximum in-memory live trace events. |
+| `live.max_trace_buffer_messages` | Accepted legacy setting; does not truncate live trace responses. |
 | `live.anomaly_thresholds.*` | Stall seconds, tool error ratio, context exhaustion ratio, and other supported anomaly limits. |
 | `code_metrics.base_branch` | Git comparison base; when omitted, the CLI probes common upstream/main/master refs. |
 | `code_metrics.source_roots` | Directories included as source roots. |

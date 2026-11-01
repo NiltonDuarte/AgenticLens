@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sort"
 	"strings"
 	"time"
 
@@ -138,41 +137,6 @@ func extractSessions(db *sql.DB, threadIDs []string, defaultUser string, userByS
 		return extractSchemaV2Sessions(db, threadIDs, defaultUser, userBySessionID)
 	}
 	return extractSchemaV1Sessions(db, threadIDs, defaultUser, userBySessionID, strict)
-}
-
-// ExtractFacts queries invocation, tool, and chronological event facts from OpenCode SQLite database for given root threads.
-func ExtractFacts(
-	db *sql.DB,
-	threadIDs []string,
-	defaultUser string,
-	userBySessionID map[string]string,
-) ([]domain.InvocationFact, []domain.ToolFact, []domain.EventFact, *string, *string, error) {
-	sessions, startedAtISO, completedAtISO, err := ExtractSessions(db, threadIDs, defaultUser, userBySessionID)
-	if err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
-	ledger := domain.AgenticFactLedger{Sessions: sessions}
-	tools := ledger.ToolFacts()
-	sort.Slice(tools, func(i, j int) bool {
-		if tools[i].SessionID != tools[j].SessionID {
-			return tools[i].SessionID < tools[j].SessionID
-		}
-		if tools[i].Calls == tools[j].Calls {
-			return tools[i].Name < tools[j].Name
-		}
-		return tools[i].Calls > tools[j].Calls
-	})
-	events := ledger.EventFacts()
-	sort.SliceStable(events, func(i, j int) bool {
-		if events[i].Timestamp != events[j].Timestamp {
-			return events[i].Timestamp < events[j].Timestamp
-		}
-		if events[i].Turn != events[j].Turn {
-			return events[i].Turn < events[j].Turn
-		}
-		return events[i].SessionID < events[j].SessionID
-	})
-	return ledger.InvocationFacts(), tools, events, startedAtISO, completedAtISO, nil
 }
 
 // ExtractSteeringTurns calculates human steering turns from message records for given root threads.

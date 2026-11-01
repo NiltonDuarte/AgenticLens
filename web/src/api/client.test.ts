@@ -1,12 +1,78 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchFleetSummary, fetchWorkspaces, fetchWorkspaceById, fetchWorkspaceLedgers, fetchWorkspaceEvents, fetchWorkspaceAnomalies, fetchVersion, fetchProjectConfig, fetchComparisonRows, fetchProgressionLedgers, fetchProgressionMetrics, } from './client';
-import { mockFleetSummary, mockTicketComparisonRows, mockWorkspaceDetails, mockAgenticMetricsLedgers, } from '../test/fixtures/mockData';
+import { fetchFleetSummary, fetchWorkspaces, fetchWorkspaceById, fetchWorkspaceLedgers, fetchWorkspaceEvents, fetchVersion, fetchProjectConfig, } from './client';
+import { mockFleetSummary, mockWorkspaceDetails, mockAgenticMetricsLedgers, } from '../test/fixtures/mockData';
 describe('Boundary API Client', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });
     afterEach(() => {
         vi.unstubAllGlobals();
+    });
+    describe('successful HTTP payload validation', () => {
+        const ledger = mockAgenticMetricsLedgers['AL-1']!;
+        const detail = mockWorkspaceDetails['AL-1']!;
+        const cases: readonly [string, () => Promise<unknown>, unknown][] = [
+            ['fleet null', () => fetchFleetSummary(), null],
+            ['fleet nonfinite totals', () => fetchFleetSummary(), { ...mockFleetSummary, total_cost_usd: Infinity }],
+            ['fleet nested costs', () => fetchFleetSummary(), { ...mockFleetSummary, role_costs: { coder: '5' } }],
+            ['fleet malformed tools', () => fetchFleetSummary(), { ...mockFleetSummary, anomaly_summary: { ...mockFleetSummary.anomaly_summary, brittle_tools: [{}] } }],
+            ['ledger missing wrapper', () => fetchWorkspaceLedgers(), ledger],
+            ['ledger invalid health', () => fetchWorkspaceLedgers(), [{ ...ledger, totals: { ...ledger.totals, context_health: 'UNKNOWN' } }]],
+            ['ledger malformed session', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 's', tools: [], invocations: [{ role: 'coder' }] }] } }]],
+            ['ledger nonfinite token', () => fetchWorkspaceLedgers(), [{ ...ledger, totals: { ...ledger.totals, input_tokens: NaN } }]],
+            ['ledger malformed task link', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, task_links: [{ parent_turn: '1' }] } }]],
+            ['comparison malformed workflow', () => fetchWorkspaces(), [{ ...ledger, workflow_efficiency: { ...ledger.workflow_efficiency, context_window_health: null } }]],
+            ['detail missing ledger', () => fetchWorkspaceById('AL-1'), { ...detail, ledger: null }],
+            ['detail malformed artifact', () => fetchWorkspaceById('AL-1'), { ...detail, artifacts: { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', content: 42 }] } }],
+            ['detail malformed artifact description', () => fetchWorkspaceById('AL-1'), { ...detail, artifacts: { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', description: null, content: null }] } }],
+            ['detail malformed anomaly', () => fetchWorkspaceById('AL-1'), { ...detail, anomalies: [{ rule_id: 'UNKNOWN', severity: 'WARNING', context: {} }] }],
+            ['version malformed commit', () => fetchVersion(), { version: 'v1', commit: 123, build_date: '' }],
+            ['config malformed prefix', () => fetchProjectConfig(), { project_name: 'P', workspaces_dir: 'tickets', version: 'v1', role_order: [], prefixes: [null] }],
+            ['config malformed role order', () => fetchProjectConfig(), { project_name: 'P', workspaces_dir: 'tickets', version: 'v1', role_order: [1], prefixes: [] }],
+            ['events malformed envelope', () => fetchWorkspaceEvents('AL-1'), { ticket_id: 'AL-1', events: [] }],
+            ['events null', () => fetchWorkspaceEvents('AL-1'), null],
+        ];
+        it.each(cases)('rejects %s before returning domain data', async (_name, request, payload) => {
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            await expect(request()).rejects.toThrow(/Invalid .* response/);
+        });
+        it('accepts additive fields and Go nil collections without mutating the response', async () => {
+            const payload = { ...ledger, extra_future_field: true, roles: null, models: null, threads: null,
+                anomalies: null, facts: { ...ledger.facts, sessions: [{ id: 's', invocations: null, tools: null, anomalies: null }], skills: null, task_links: null, anomalies: null },
+                workflow_efficiency: { ...ledger.workflow_efficiency, role_effort_distribution_pct: null,
+                    subagent_turn_velocity: { ...ledger.workflow_efficiency.subagent_turn_velocity, by_role: null },
+                    context_window_health: { ...ledger.workflow_efficiency.context_window_health, peak_by_role: null } },
+            };
+            const before = JSON.stringify(payload);
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [payload] }));
+            const result = (await fetchWorkspaceLedgers()).data[0]!;
+            expect(result.facts.sessions[0]).toEqual({ id: 's', invocations: [], tools: [], anomalies: [] });
+            expect(result.facts.skills).toEqual([]);
+            expect(result.threads).toEqual([]);
+            expect(result.workflow_efficiency.role_effort_distribution_pct).toEqual({});
+            expect(JSON.stringify(payload)).toBe(before);
+        });
+        it.each(['not json', '{}', '[null]', '[{"ticket_id":4,"message":"bad"}]'])('keeps valid data and reports an unreadable diagnostic header: %s', async (header) => {
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers({ 'X-AgenticLens-Workspace-Diagnostics': header }), json: async () => [ledger] }));
+            const response = await fetchWorkspaceLedgers();
+            expect(response.data[0]?.ticket_id).toBe('AL-1');
+            expect(response.diagnostics).toEqual([{ scope: 'response', message: expect.stringContaining('Valid workspace data is still shown') }]);
+        });
+        it('retains valid sibling diagnostics alongside a malformed-entry warning', async () => {
+            const warning = { ticket_id: 'OLD-1', message: 'Migration required' };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers({ 'X-AgenticLens-Workspace-Diagnostics': JSON.stringify([warning, null]) }), json: async () => [ledger] }));
+            expect((await fetchWorkspaceLedgers()).diagnostics).toEqual([warning, { scope: 'response', message: expect.any(String) }]);
+        });
+        it.each([
+            [{ ticket_id: 'AL-1' }, { ticket_id: 'AL-1' }],
+            [{ ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', content: null }] }, { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', description: '', content: null }] }],
+        ])('accepts omitted optional ledger facts and artifact fields: %j', async (artifacts, expectedArtifacts) => {
+            const { skills, task_links, anomalies, migration, ...facts } = ledger.facts;
+            void skills; void task_links; void anomalies; void migration;
+            const payload = { ...detail, ledger: { ...ledger, facts }, artifacts, anomalies: null };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            expect((await fetchWorkspaceById('AL-1')).data.artifacts).toEqual(expectedArtifacts);
+        });
     });
     describe('fetchFleetSummary', () => {
         it('returns live backend payload when HTTP call succeeds', async () => {
@@ -287,11 +353,11 @@ describe('Boundary API Client', () => {
             const source = { cost_usd: 'verbatim source text', cost_evidence: 'source metadata', cost_summary: 'not a summary', schema_version: 5 };
             const payload = { ...detail, artifacts: { ...detail.artifacts, source }, ledger: { ...detail.ledger,
                 workflow_efficiency: { ...detail.ledger.workflow_efficiency, role_effort_distribution_pct: { cost_summary: 25, schema_version: 75 } },
-                facts: { ...detail.ledger.facts, sessions: [{ ...detail.ledger.facts.sessions[0]!, events: [{ source }] }] },
+                facts: { ...detail.ledger.facts, sessions: [{ ...detail.ledger.facts.sessions[0]!, events: [{ timestamp: '2026-01-01T00:00:00Z', role: 'coder', turn: 1, context_tokens: 0, status: 'completed', event_type: 'turn_message', source }] }] },
             } };
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
             const response = await fetchWorkspaceById('AL-1');
-            expect(response.data.ledger.facts.sessions[0]!.events).toEqual([{ source }]);
+            expect(response.data.ledger.facts.sessions[0]!.events?.[0]).toMatchObject({ source });
             expect(response.data.artifacts).toEqual(payload.artifacts);
             expect(response.data.ledger.workflow_efficiency.role_effort_distribution_pct).toEqual({ cost_summary: 25, schema_version: 75 });
         });
@@ -327,9 +393,30 @@ describe('Boundary API Client', () => {
     });
     describe('fetchWorkspaceLedgers', () => {
         it.each([
+            { state: 'empty', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 0, total: 0 },
+            { state: 'complete', known_subtotal_usd: 0, fully_observed: 1, partial: 0, unavailable: 0, total: 1 },
+            { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 1, unavailable: 0, total: 2 },
+            { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 },
+        ])('validates and projects $state cost while retaining non-cost guards', async (summary) => {
+            const base = mockAgenticMetricsLedgers['AL-1']!;
+            const ledger = { ...base, totals: { ...base.totals, cost_usd: summary.state === 'complete' ? 0 : null, cost_summary: summary },
+                workflow_efficiency: { ...base.workflow_efficiency, role_effort_distribution_pct: { coder: null }, role_effort_unavailable_reason: 'Cost coverage is incomplete' },
+                source: { cost_usd: 'opaque source text', cost_summary: 'opaque metadata' },
+            };
+            const json = vi.fn().mockResolvedValue([ledger]);
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json }));
+            const rows = (await fetchWorkspaces()).data;
+            expect(json).toHaveBeenCalledTimes(1);
+            expect(rows[0]?.cost_usd).toBe(summary.state === 'complete' ? 0 : null);
+            expect(rows[0]?.cost_summary).toEqual(summary);
+            json.mockResolvedValue([{ ...ledger, totals: { ...ledger.totals, cost_summary: { ...summary, total: summary.total + 1 } } }]);
+            await expect(fetchWorkspaces()).rejects.toThrow('Invalid cost payload');
+            json.mockResolvedValue([{ ...ledger, totals: { ...ledger.totals, input_tokens: 'wrong' } }]);
+            await expect(fetchWorkspaces()).rejects.toThrow('Invalid workspace ledgers response');
+        });
+        it.each([
             ['workspace ledgers', fetchWorkspaceLedgers],
             ['workspace rows', fetchWorkspaces],
-            ['progression ledgers', fetchProgressionLedgers],
         ] as const)('selects ledger financial locations for %s', async (_name, request) => {
             const base = mockAgenticMetricsLedgers['AL-1']!;
             const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [base] });
@@ -535,60 +622,6 @@ describe('Boundary API Client', () => {
             expect(res.data.is_hydrated).toBe(false);
         });
     });
-    describe('fetchWorkspaceAnomalies', () => {
-        it('returns anomalies from workspace detail response when fetch succeeds', async () => {
-            const liveDetail = {
-                ...mockWorkspaceDetails['AL-2'],
-                anomalies: [
-                    {
-                        rule_id: 'TOOL_RETRY_STREAK',
-                        severity: 'WARNING',
-                        title: 'Repeated Tool Failures',
-                        description: 'Tool failed 3 times',
-                        context: { tool_name: 'bash', count: 3 },
-                    },
-                ],
-            };
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: true,
-                json: async () => liveDetail,
-            }));
-            const res = await fetchWorkspaceAnomalies('AL-2');
-            expect(res.data).toHaveLength(1);
-            expect(res.data[0]?.rule_id).toBe('TOOL_RETRY_STREAK');
-        });
-        it('returns empty array when workspace detail has no anomalies', async () => {
-            const cleanDetail = {
-                ...mockWorkspaceDetails['AL-1']!,
-                anomalies: [],
-            };
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: true,
-                json: async () => cleanDetail,
-            }));
-            const res = await fetchWorkspaceAnomalies('AL-1');
-            expect(res.data).toEqual([]);
-        });
-        it('rejects when workspace detail fetch fails', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
-            await expect(fetchWorkspaceAnomalies('AL-2')).rejects.toThrow('Network error');
-        });
-        it('throws structured error when workspace does not exist on 404', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 404,
-            }));
-            await expect(fetchWorkspaceAnomalies('UNKNOWN-NONEXISTENT')).rejects.toThrow('Workspace UNKNOWN-NONEXISTENT not found');
-        });
-        it('rejects on HTTP 500 server error', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 500,
-                statusText: 'Internal Server Error',
-            }));
-            await expect(fetchWorkspaceAnomalies('AL-2')).rejects.toThrow(/HTTP error 500/);
-        });
-    });
     describe('fetchVersion', () => {
         it('returns live build info on successful HTTP 200 response', async () => {
             const liveInfo = {
@@ -694,210 +727,6 @@ describe('Boundary API Client', () => {
                 },
             }));
             await expect(fetchProjectConfig()).rejects.toThrow(SyntaxError);
-        });
-    });
-    describe('fetchComparisonRows and fetchProgressionLedgers', () => {
-        it('validates comparison-row coverage without inspecting unrelated metadata', async () => {
-            const row = { ...mockTicketComparisonRows[0]!, cost_usd: null,
-                cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 1, unavailable: 0, total: 2 },
-                source: { cost_usd: 'source text', cost_summary: 'source metadata' },
-            };
-            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [row] });
-            vi.stubGlobal('fetch', fetchMock);
-            const response = await fetchComparisonRows();
-            expect(response.data[0]).toMatchObject({ cost_usd: null, cost_summary: { known_subtotal_usd: 2 }, source: row.source });
-            fetchMock.mockResolvedValue({ ok: true, json: async () => [{ ...row, cost_summary: { ...row.cost_summary, total: 3 } }] });
-            await expect(fetchComparisonRows()).rejects.toThrow('Invalid cost payload');
-            fetchMock.mockResolvedValue({ ok: true, json: async () => row });
-            await expect(fetchComparisonRows()).rejects.toThrow('Invalid cost payload');
-        });
-        it('appends ticket_type and prefix multi-parameters to /api/comparison', async () => {
-            const fetchSpy = vi.fn().mockResolvedValue({
-                ok: true,
-                json: async () => mockTicketComparisonRows,
-            });
-            vi.stubGlobal('fetch', fetchSpy);
-            const res = await fetchComparisonRows('30d', undefined, undefined, ['feature', 'bug'], ['AL', 'PO']);
-            expect(res.data).toHaveLength(mockTicketComparisonRows.length);
-            expect(fetchSpy).toHaveBeenCalled();
-            const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-            expect(calledUrl).toContain('/api/comparison?');
-            expect(calledUrl).toContain('window=30d');
-            expect(calledUrl).toContain('ticket_type=feature');
-            expect(calledUrl).toContain('ticket_type=bug');
-            expect(calledUrl).toContain('prefix=AL');
-            expect(calledUrl).toContain('prefix=PO');
-        });
-        it('rejects on /api/comparison failure', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
-            await expect(fetchComparisonRows('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow('Network error');
-        });
-        it('rejects on /api/comparison HTTP 500 status', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 500,
-                statusText: 'Internal Server Error',
-            }));
-            await expect(fetchComparisonRows('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow(/HTTP error 500/);
-        });
-        it('rejects on /api/comparison HTTP 404 status', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 404,
-                statusText: 'Not Found',
-            }));
-            await expect(fetchComparisonRows('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow(/HTTP error 404/);
-        });
-        it('appends ticket_type and prefix multi-parameters to /api/progression', async () => {
-            const fetchSpy = vi.fn().mockResolvedValue({
-                ok: true,
-                json: async () => Object.values(mockAgenticMetricsLedgers),
-            });
-            vi.stubGlobal('fetch', fetchSpy);
-            const res = await fetchProgressionLedgers('all', undefined, undefined, ['chore'], ['GEN']);
-            expect(res.data).toHaveLength(Object.values(mockAgenticMetricsLedgers).length);
-            expect(fetchSpy).toHaveBeenCalled();
-            const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-            expect(calledUrl).toContain('/api/progression?');
-            expect(calledUrl).toContain('ticket_type=chore');
-            expect(calledUrl).toContain('prefix=GEN');
-        });
-        it('rejects on /api/progression failure', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 500,
-                statusText: 'Internal Server Error',
-            }));
-            await expect(fetchProgressionLedgers('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow(/HTTP error 500/);
-        });
-        it('rejects on /api/progression network error', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection reset')));
-            await expect(fetchProgressionLedgers('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow('Connection reset');
-        });
-        it('rejects on /api/progression HTTP 404 status', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 404,
-                statusText: 'Not Found',
-            }));
-            await expect(fetchProgressionLedgers('all', undefined, undefined, ['feature'], ['AL'])).rejects.toThrow(/HTTP error 404/);
-        });
-        it('appends multi-parameters to fetchFleetSummary and omits all', async () => {
-            const fetchSpy = vi.fn().mockResolvedValue({
-                ok: true,
-                json: async () => mockFleetSummary,
-            });
-            vi.stubGlobal('fetch', fetchSpy);
-            // With concrete types
-            await fetchFleetSummary('all', undefined, undefined, ['feature', 'bug'], ['AL']);
-            const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-            expect(calledUrl).toContain('/api/fleet?');
-            expect(calledUrl).toContain('ticket_type=feature');
-            expect(calledUrl).toContain('ticket_type=bug');
-            expect(calledUrl).toContain('prefix=AL');
-            // With 'all' filter, params are omitted
-            fetchSpy.mockClear();
-            await fetchFleetSummary('all', undefined, undefined, ['all'], ['all']);
-            const calledUrlAll = fetchSpy.mock.calls[0]![0] as string;
-            expect(calledUrlAll).toBe('/api/fleet');
-        });
-        it('appends multi-parameters to fetchWorkspaces and omits all', async () => {
-            const fetchSpy = vi.fn().mockResolvedValue({
-                ok: true,
-                json: async () => Object.values(mockAgenticMetricsLedgers),
-            });
-            vi.stubGlobal('fetch', fetchSpy);
-            await fetchWorkspaces('30d', 'cost_usd', 'desc', undefined, undefined, ['chore'], ['GEN']);
-            const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-            expect(calledUrl).toContain('ticket_type=chore');
-            expect(calledUrl).toContain('prefix=GEN');
-            expect(calledUrl).toContain('sort=cost_usd');
-            expect(calledUrl).toContain('order=desc');
-        });
-    });
-    describe('fetchProgressionMetrics', () => {
-        it('returns live backend payload and passes query parameters accurately', async () => {
-            const mockBuckets = [
-                {
-                    bucket_key: '2026-10-19T14:00:00Z',
-                    bucket_date: '2026-10-19T14:00:00Z',
-                    invocations: 5,
-                    cost_usd: 0.25,
-                    input_tokens: 1000,
-                    output_tokens: 200,
-                    cache_read_tokens: 500,
-                    reasoning_tokens: 0,
-                    cache_hit_rate_pct: 33.3,
-                    lines_added: 50,
-                    lines_deleted: 10,
-                    files_changed: 2,
-                    net_lines_added: 40,
-                    peak_context_tokens: 5000,
-                    active_duration_seconds: 60,
-                    cumulative_cost_usd: 0.25,
-                    cumulative_input_tokens: 1000,
-                    cumulative_output_tokens: 200,
-                    cumulative_lines_added: 50,
-                    cumulative_lines_deleted: 10,
-                    cumulative_invocations: 5,
-                },
-            ];
-            const fetchSpy = vi.fn().mockResolvedValue({
-                ok: true,
-                json: async () => mockBuckets,
-            });
-            vi.stubGlobal('fetch', fetchSpy);
-            const res = await fetchProgressionMetrics({
-                window: '1d',
-                granularity: 'hourly',
-                startDate: '2026-10-19T00:00',
-                endDate: '2026-10-19T23:59',
-            });
-            expect(res.data).toHaveLength(1);
-            expect(res.data[0]?.bucket_key).toBe('2026-10-19T14:00:00Z');
-            expect(fetchSpy).toHaveBeenCalledWith('/api/progression?window=1d&granularity=hourly&startDate=2026-10-19T00%3A00&endDate=2026-10-19T23%3A59');
-            const partial = { ...mockBuckets[0]!, cost_usd: null,
-                cost_summary: { state: 'unavailable', known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 5, total: 5 },
-                cumulative_cost_usd: null,
-                cumulative_cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 2, partial: 0, unavailable: 3, total: 5 },
-            };
-            fetchSpy.mockResolvedValue({ ok: true, json: async () => [partial] });
-            const incomplete = await fetchProgressionMetrics();
-            expect(incomplete.data[0]?.cost_usd).toBeNull();
-            expect(incomplete.data[0]?.cumulative_cost_summary?.known_subtotal_usd).toBe(2);
-            fetchSpy.mockResolvedValue({ ok: true, json: async () => [{ ...partial, cumulative_cost_summary: { ...partial.cumulative_cost_summary, total: 6 } }] });
-            await expect(fetchProgressionMetrics()).rejects.toThrow('Invalid cost payload');
-            fetchSpy.mockResolvedValue({ ok: true, json: async () => partial });
-            await expect(fetchProgressionMetrics()).rejects.toThrow('Invalid cost payload');
-        });
-        it('rejects on network failure', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')));
-            await expect(fetchProgressionMetrics({
-                window: 'all',
-                granularity: 'daily',
-            })).rejects.toThrow('Connection refused');
-        });
-        it('rejects on non-200 HTTP status', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 500,
-                statusText: 'Internal Server Error',
-            }));
-            await expect(fetchProgressionMetrics({
-                window: '7d',
-                granularity: 'weekly',
-            })).rejects.toThrow(/HTTP error 500/);
-        });
-        it('rejects on HTTP 404 status', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-                ok: false,
-                status: 404,
-                statusText: 'Not Found',
-            }));
-            await expect(fetchProgressionMetrics({
-                window: 'all',
-                granularity: 'daily',
-            })).rejects.toThrow(/HTTP error 404/);
         });
     });
     describe('adversarial error shapes handled by rethrowError', () => {

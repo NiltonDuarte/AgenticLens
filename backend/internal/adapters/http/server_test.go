@@ -31,11 +31,14 @@ import (
 
 func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveService ...adaptershttp.LiveServiceInterface) *adaptershttp.Server {
 	t.Helper()
-	server, err := adaptershttp.NewServer(workspacesDir, staticFS, liveService...)
-	if err != nil {
+	cfg, err := config.Load(workspacesDir)
+	if errors.Is(err, config.ErrConfigNotFound) {
+		cfg = domain.DefaultProjectConfig()
+		cfg.Workspaces.Artifacts = []domain.WorkspaceArtifactConfig{{Path: "CONTRACT.md", Title: "Contract"}, {Path: "SUMMARY.md", Title: "Summary"}}
+	} else if err != nil {
 		t.Fatalf("mustNewServer failed: %v", err)
 	}
-	return server
+	return adaptershttp.NewServerWithConfig(workspacesDir, staticFS, cfg, liveService...)
 }
 
 func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, invocations int64) string {
@@ -1366,8 +1369,8 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 
 func TestResponseHelpersAndSerialization(t *testing.T) {
 	t.Run("typed cost response families retain zero partial amounts coverage and noncost fields", func(t *testing.T) {
-		observed := domain.SummarizeCost([]domain.InvocationFact{{CostUSD: 0}})
-		unavailable := domain.SummarizeCost([]domain.InvocationFact{{CostEvidence: domain.UnavailableCost()}})
+		observed := domain.ComputeTotals([]domain.InvocationFact{{CostUSD: 0}}).CostSummary
+		unavailable := domain.ComputeTotals([]domain.InvocationFact{{CostEvidence: domain.UnavailableCost()}}).CostSummary
 		mixed := domain.MergeCostSummaries(observed, unavailable)
 		fleet := domain.FleetSummary{TotalTickets: 3, TotalInvocations: 2, TotalInputTokens: 17, CostSummary: mixed,
 			RoleCosts: map[domain.AgentRole]float64{"coder": 0, "reviewer": 0}, RoleCostSummaries: map[domain.AgentRole]domain.CostSummary{"coder": observed, "reviewer": unavailable},
@@ -4077,7 +4080,11 @@ func TestConfigHandler_DefaultConfig(t *testing.T) {
 	staticFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
 	}
-	server := mustNewServer(t, wsDir, staticFS)
+	cfg := domain.DefaultProjectConfig()
+	cfg.ProjectName = "AgenticLens"
+	cfg.Ticket.Prefixes = []domain.TicketPrefix{{Prefix: "AL"}, {Prefix: "AL2"}, {Prefix: "GEN", TicketType: "chore"}, {Prefix: "PO", TicketType: "docs"}, {Prefix: "FIX", TicketType: "fix"}}
+	cfg.RoleOrder = []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
+	server := adaptershttp.NewServerWithConfig(wsDir, staticFS, cfg)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
 	rec := httptest.NewRecorder()
@@ -4749,7 +4756,7 @@ func TestServerWorkspaceDirConfigSynchronization(t *testing.T) {
 		}
 	})
 
-	t.Run("NewServer constructor synchronizes explicit workspacesDir to config", func(t *testing.T) {
+	t.Run("NewServerWithConfig constructor synchronizes explicit workspacesDir to config", func(t *testing.T) {
 		server := mustNewServer(t, overrideSpaceDir, fstest.MapFS{})
 		handler := server.Handler()
 
@@ -4770,21 +4777,4 @@ func TestServerWorkspaceDirConfigSynchronization(t *testing.T) {
 			t.Errorf("expected workspaces_dir %q, got %q", overrideSpaceDir, dto.WorkspacesDir)
 		}
 	})
-}
-
-func TestNewServer_MissingConfigFailsFast(t *testing.T) {
-	tempDir := t.TempDir()
-	t.Chdir(tempDir)
-
-	wsDir := filepath.Join(tempDir, "workspaces")
-	srv, err := adaptershttp.NewServer(wsDir, fstest.MapFS{})
-	if srv != nil {
-		t.Fatalf("expected nil server when config is missing, got: %+v", srv)
-	}
-	if err == nil {
-		t.Fatal("expected non-nil error when config is missing, got nil")
-	}
-	if !errors.Is(err, config.ErrConfigNotFound) {
-		t.Fatalf("expected error wrapping ErrConfigNotFound, got: %v", err)
-	}
 }

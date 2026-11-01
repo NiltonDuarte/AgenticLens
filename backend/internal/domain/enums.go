@@ -304,9 +304,3 @@ func NormalizeTicketType(raw string) (ConventionalTicketType, bool) {
 		return "", false
 	}
 }
-
-// IsValidTicketType reports whether the raw ticket type resolves to a valid conventional type.
-func IsValidTicketType(raw string) bool {
-	_, ok := NormalizeTicketType(raw)
-	return ok
-}

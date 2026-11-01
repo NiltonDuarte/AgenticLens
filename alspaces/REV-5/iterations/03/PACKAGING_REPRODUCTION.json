@@ -1,0 +1,12 @@
+{
+  "package": {
+    "exit": 0,
+    "stderr": "simulated checksum read failure after first archive\n",
+    "manifest": "3b5e72f1f5f5eacbc43de5e5d1941b18d9f82beebbb05f628938e2834b3b35d6  agentic-lens-v0.0.0-audit-linux-amd64.tar.gz\n"
+  },
+  "verify": {
+    "exit": 0,
+    "stdout": "Verifying SHA256SUMS in release...\nagentic-lens-v0.0.0-audit-linux-amd64.tar.gz: OK\nVerifying host binary: release/bin/agentic-lens-linux-amd64\nfixture-version\nfixture-version\nfixture-version\n",
+    "stderr": ""
+  }
+}

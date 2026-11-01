@@ -266,7 +266,7 @@ func TestComputeRoleAndModelMetrics(t *testing.T) {
 			}
 		}
 		assertModels(t, domain.ComputeModelMetrics(rows))
-		threads := domain.ComputeThreadSummariesFromSessions([]domain.SessionFact{{ID: "root", Invocations: rows}})
+		threads := domain.ComputeThreadSummariesWithCeiling([]domain.SessionFact{{ID: "root", Invocations: rows}}, domain.ContextCeilingCriticalTokens)
 		if len(threads) != 1 || len(threads[0].Roles) != 1 {
 			t.Fatalf("thread projections=%+v", threads)
 		}
@@ -298,7 +298,7 @@ func TestComputeRoleAndModelMetrics(t *testing.T) {
 		},
 	}
 
-	roles := domain.ComputeRoleMetrics(invs)
+	roles := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens)
 	if len(roles) != 2 {
 		t.Fatalf("expected 2 roles, got %d", len(roles))
 	}
@@ -350,7 +350,7 @@ func TestComputeThreadSummaries(t *testing.T) {
 		},
 	}
 
-	records := domain.ComputeThreadSummariesFromSessions(sessions)
+	records := domain.ComputeThreadSummariesWithCeiling(sessions, domain.ContextCeilingCriticalTokens)
 	if len(records) != 1 {
 		t.Fatalf("expected 1 thread record, got %d", len(records))
 	}
@@ -383,14 +383,21 @@ func TestCalculateFleetSummary(t *testing.T) {
 		if fleet.TotalCostUSD != 0 || fleet.RoleCosts["coder"] != 0 || fleet.ModelCosts["model-a"] != 0 {
 			t.Fatalf("rounded ledger projections were recomputed from raw amounts: %+v", fleet)
 		}
-		rollup := domain.CalculateRoleEffortRollup(ledgers, 100000)
-		role, exists := rollup["coder"]
-		if len(rollup) != 1 || !exists || role.CostUSD != 0 || role.Invocations != 2 || role.InputTokens != 200 || role.OutputTokens != 20 || role.CacheReadTokens != 200 || role.CacheHitRatePct != 50 || role.PeakContextTokens != 75000 || role.ContextHealth != domain.ContextHealthElevated {
-			t.Fatalf("nonempty role rollup changed counts, precision or health: %+v", rollup)
+		var invocations []domain.InvocationFact
+		for _, ledger := range ledgers {
+			invocations = append(invocations, ledger.Facts.InvocationFacts()...)
+		}
+		roles := domain.ComputeRoleMetricsWithCeiling(invocations, 100000)
+		if len(roles) != 1 {
+			t.Fatalf("expected one active role projection, got %+v", roles)
+		}
+		role := roles[0]
+		if role.CostUSD != 0.0001 || role.Invocations != 2 || role.InputTokens != 200 || role.OutputTokens != 20 || role.CacheReadTokens != 200 || role.CacheHitRatePct != 50 || role.PeakContextTokens != 75000 || role.ContextHealth != domain.ContextHealthElevated {
+			t.Fatalf("active role metrics changed counts, precision or health: %+v", roles)
 		}
 		for name, summary := range map[string]domain.CostSummary{
 			"fleet": fleet.CostSummary, "fleet role": fleet.RoleCostSummaries["coder"],
-			"fleet model": fleet.ModelCostSummaries["model-a"], "role rollup": role.CostSummary,
+			"fleet model": fleet.ModelCostSummaries["model-a"], "active role metrics": role.CostSummary,
 		} {
 			amount := summary.CompleteAmount()
 			if summary.State != domain.CostSummaryComplete || summary.Total != 2 || summary.FullyObserved != 2 || amount == nil || *amount != 0.00008 {
@@ -398,15 +405,15 @@ func TestCalculateFleetSummary(t *testing.T) {
 			}
 		}
 	})
-	t.Run("role rollup preserves legacy zero rows and empty projections", func(t *testing.T) {
-		rollup := domain.CalculateRoleEffortRollup([]domain.AgenticMetricsLedger{{Roles: []domain.RoleMetric{
+	t.Run("fleet role summaries preserve legacy zero rows and empty projections", func(t *testing.T) {
+		fleet := domain.CalculateFleetSummary([]domain.AgenticMetricsLedger{{Roles: []domain.RoleMetric{
 			{Role: "coder", Invocations: 1}, {Role: "reviewer"},
 		}}})
-		observed, empty := rollup["coder"], rollup["reviewer"]
-		if amount := observed.CostSummary.CompleteAmount(); amount == nil || *amount != 0 || observed.CostSummary.FullyObserved != 1 || observed.CostSummary.Total != 1 {
+		observed, empty := fleet.RoleCostSummaries["coder"], fleet.RoleCostSummaries["reviewer"]
+		if amount := observed.CompleteAmount(); amount == nil || *amount != 0 || observed.FullyObserved != 1 || observed.Total != 1 {
 			t.Fatalf("legacy numeric zero with a row became unavailable: %+v", observed)
 		}
-		if empty.CostSummary.State != domain.CostSummaryEmpty || empty.CostSummary.CompleteAmount() != nil || empty.CostSummary.KnownSubtotalUSD != nil || empty.CostSummary.Total != 0 {
+		if empty.State != domain.CostSummaryEmpty || empty.CompleteAmount() != nil || empty.KnownSubtotalUSD != nil || empty.Total != 0 {
 			t.Fatalf("empty legacy projection acquired observed cost: %+v", empty)
 		}
 	})
@@ -456,7 +463,7 @@ func ptr[T comparable](v T) *T {
 	return &v
 }
 
-func TestFilterLedgersByTimeWindow(t *testing.T) {
+func TestFilterLedgersByCompletionDate_Ranges(t *testing.T) {
 	t.Parallel()
 	ref := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
 
@@ -489,14 +496,14 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 	}
 
 	t.Run("all window returns all ledgers", func(t *testing.T) {
-		res := domain.FilterLedgersByTimeWindow(ledgers, domain.TimeWindowAll, ref)
+		res := domain.FilterLedgersByCompletionDate(ledgers, nil, nil)
 		if len(res) != 4 {
 			t.Errorf("expected 4 ledgers, got %d", len(res))
 		}
 	})
 
 	t.Run("7d window returns within 7 days", func(t *testing.T) {
-		res := domain.FilterLedgersByTimeWindow(ledgers, domain.TimeWindow7D, ref)
+		res := domain.FilterLedgersByCompletionDate(ledgers, ptr(time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)), ptr(time.Date(2026, 10, 17, 23, 59, 59, 999999999, time.UTC)))
 		if len(res) != 1 {
 			t.Fatalf("expected 1 ledger, got %d", len(res))
 		}
@@ -506,14 +513,14 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 	})
 
 	t.Run("30d window returns within 30 days", func(t *testing.T) {
-		res := domain.FilterLedgersByTimeWindow(ledgers, domain.TimeWindow30D, ref)
+		res := domain.FilterLedgersByCompletionDate(ledgers, ptr(time.Date(2026, 9, 17, 0, 0, 0, 0, time.UTC)), &ref)
 		if len(res) != 2 {
 			t.Fatalf("expected 2 ledgers, got %d", len(res))
 		}
 	})
 
 	t.Run("90d window returns within 90 days", func(t *testing.T) {
-		res := domain.FilterLedgersByTimeWindow(ledgers, domain.TimeWindow90D, ref)
+		res := domain.FilterLedgersByCompletionDate(ledgers, ptr(time.Date(2026, 7, 19, 0, 0, 0, 0, time.UTC)), &ref)
 		if len(res) != 3 {
 			t.Fatalf("expected 3 ledgers, got %d", len(res))
 		}
@@ -526,7 +533,7 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 			{TicketID: ptr("T-RECENT"), CompletedAt: &dateWithin24h, UpdatedAt: dateWithin24h},
 			{TicketID: ptr("T-OLD-24H"), CompletedAt: &dateOlderThan24h, UpdatedAt: dateOlderThan24h},
 		}
-		res := domain.FilterLedgersByTimeWindow(oneDayLedgers, domain.TimeWindow1D, ref)
+		res := domain.FilterLedgersByCompletionDate(oneDayLedgers, ptr(ref.Add(-24*time.Hour)), &ref)
 		if len(res) != 1 {
 			t.Fatalf("expected 1 ledger, got %d", len(res))
 		}
@@ -536,7 +543,7 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 	})
 
 	t.Run("empty input returns empty slice", func(t *testing.T) {
-		res := domain.FilterLedgersByTimeWindow(nil, domain.TimeWindow7D, ref)
+		res := domain.FilterLedgersByCompletionDate(nil, ptr(time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)), ptr(time.Date(2026, 10, 17, 23, 59, 59, 999999999, time.UTC)))
 		if len(res) != 0 {
 			t.Errorf("expected 0 ledgers, got %d", len(res))
 		}
@@ -557,13 +564,13 @@ func TestFilterLedgersByTimeWindow(t *testing.T) {
 			{TicketID: ptr("T-VALID"), CompletedAt: &dateWithin24h, UpdatedAt: dateWithin24h, StartedAt: &dateWithin24h},
 		}
 
-		for _, window := range []domain.TimeWindow{domain.TimeWindow1D, domain.TimeWindow7D, domain.TimeWindow30D, domain.TimeWindow90D} {
-			filtered := domain.FilterLedgersByTimeWindow(testLedgers, window, ref)
+		for _, days := range []int{1, 7, 30, 90} {
+			filtered := domain.FilterLedgersByCompletionDate(testLedgers, ptr(ref.AddDate(0, 0, -days)), &ref)
 			if len(filtered) != 1 {
-				t.Fatalf("expected exactly 1 valid ledger for window %s, got %d", window, len(filtered))
+				t.Fatalf("expected exactly 1 valid ledger for range %d days, got %d", days, len(filtered))
 			}
 			if *filtered[0].TicketID != "T-VALID" {
-				t.Errorf("expected T-VALID for window %s, got %s", window, *filtered[0].TicketID)
+				t.Errorf("expected T-VALID for range %d days, got %s", days, *filtered[0].TicketID)
 			}
 		}
 	})
@@ -785,16 +792,9 @@ func TestFleetSummaryAndComparisonEdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty thread summaries", func(t *testing.T) {
-		threads := domain.ComputeThreadSummaries(nil)
+		threads := domain.ComputeThreadSummariesWithCeiling(nil, domain.ContextCeilingCriticalTokens)
 		if len(threads) != 0 {
 			t.Errorf("expected 0 threads, got %d", len(threads))
-		}
-	})
-
-	t.Run("role effort rollup empty and zero values", func(t *testing.T) {
-		rollup := domain.CalculateRoleEffortRollup(nil)
-		if len(rollup) != 0 {
-			t.Errorf("expected empty rollup, got %d entries", len(rollup))
 		}
 	})
 
@@ -926,10 +926,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 	})
 
 	t.Run("time window exact boundary inclusion and exclusion", func(t *testing.T) {
-		// Reference date is 2026-10-17 12:00:00 UTC.
-		// Ref window end is 2026-10-17 23:59:59.999999999 UTC.
-		// For 7D window, start is 2026-10-10 23:59:59.999999999 UTC.
-		ref := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
+		// Inclusive range: October 10 at midnight through the end of October 17.
 
 		tsStartExact := "2026-10-10T00:00:00Z"
 		tsStartBefore := "2026-10-09T23:59:59Z"
@@ -945,7 +942,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 			{TicketID: ptr("T-INVALID"), CompletedAt: &tsInvalid, UpdatedAt: tsInvalid},
 		}
 
-		filtered := domain.FilterLedgersByTimeWindow(boundaryLedgers, domain.TimeWindow7D, ref)
+		filtered := domain.FilterLedgersByCompletionDate(boundaryLedgers, ptr(time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)), ptr(time.Date(2026, 10, 17, 23, 59, 59, 999999999, time.UTC)))
 		matchedIDs := make(map[string]bool)
 		for _, l := range filtered {
 			if l.TicketID != nil {
@@ -1753,7 +1750,7 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 	}
 
 	// Default alphabetical ordering when no custom order provided
-	metricsAlpha := domain.ComputeRoleMetrics(invs)
+	metricsAlpha := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens)
 	if len(metricsAlpha) != 5 {
 		t.Fatalf("expected 5 roles, got %d", len(metricsAlpha))
 	}
@@ -1766,7 +1763,7 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 
 	// Custom order priority followed by alphabetical remainder
 	customOrder := []string{"orchestrator", "planner", "reviewer"}
-	metricsCustom := domain.ComputeRoleMetrics(invs, customOrder)
+	metricsCustom := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens, customOrder)
 	if len(metricsCustom) != 5 {
 		t.Fatalf("expected 5 roles, got %d", len(metricsCustom))
 	}
@@ -1825,7 +1822,7 @@ func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
 
 	// With custom order prioritizing orchestrator, coder
 	customOrder := []string{"orchestrator", "coder"}
-	records := domain.ComputeThreadSummariesFromSessions(sessions, customOrder)
+	records := domain.ComputeThreadSummariesWithCeiling(sessions, domain.ContextCeilingCriticalTokens, customOrder)
 	if len(records) != 1 {
 		t.Fatalf("expected 1 thread record, got %d", len(records))
 	}
@@ -2063,7 +2060,7 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("empty invocations returns empty slice", func(t *testing.T) {
 		t.Parallel()
-		metrics := domain.ComputeRoleMetrics(nil)
+		metrics := domain.ComputeRoleMetricsWithCeiling(nil, domain.ContextCeilingCriticalTokens)
 		if len(metrics) != 0 {
 			t.Errorf("expected 0 metrics, got %d", len(metrics))
 		}
@@ -2079,7 +2076,7 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		// Default alphabetical ordering:
-		metrics := domain.ComputeRoleMetrics(invs)
+		metrics := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens)
 		expected := []domain.AgentRole{"advisor", "coder", "reviewer", "security-auditor"}
 		if len(metrics) != len(expected) {
 			t.Fatalf("expected %d metrics, got %d", len(expected), len(metrics))
@@ -2092,7 +2089,7 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 
 		// With custom order prioritizing coder and reviewer:
 		customOrder := []string{"coder", "reviewer"}
-		metricsCustom := domain.ComputeRoleMetrics(invs, customOrder)
+		metricsCustom := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens, customOrder)
 		expectedCustom := []domain.AgentRole{"coder", "reviewer", "advisor", "security-auditor"}
 		if len(metricsCustom) != len(expectedCustom) {
 			t.Fatalf("expected %d custom metrics, got %d", len(expectedCustom), len(metricsCustom))
@@ -2901,7 +2898,7 @@ func TestGetLedgerCompletionDate(t *testing.T) {
 	})
 }
 
-func TestGetTicketEffectiveDate(t *testing.T) {
+func TestGetLedgerCompletionDate_NoFallback(t *testing.T) {
 	t.Parallel()
 
 	t.Run("parses valid completed_at", func(t *testing.T) {
@@ -2910,11 +2907,11 @@ func TestGetTicketEffectiveDate(t *testing.T) {
 		started := "2026-03-08T08:00:00Z"
 		updated := "2026-03-09T10:00:00Z"
 
-		got, ok := domain.GetTicketEffectiveDate(&completed, &started, updated)
+		got, ok := domain.GetLedgerCompletionDate(domain.AgenticMetricsLedger{CompletedAt: &completed, StartedAt: &started, UpdatedAt: updated})
 		if !ok {
 			t.Fatalf("expected ok = true")
 		}
-		expected, _ := time.Parse("2006-01-02", "2026-03-10")
+		expected, _ := time.Parse(time.RFC3339, "2026-03-10T15:30:00Z")
 		if !got.Equal(expected) {
 			t.Errorf("expected %v, got %v", expected, got)
 		}
@@ -2925,7 +2922,7 @@ func TestGetTicketEffectiveDate(t *testing.T) {
 		started := "2026-03-08T08:00:00Z"
 		updated := "2026-03-09T10:00:00Z"
 
-		got, ok := domain.GetTicketEffectiveDate(nil, &started, updated)
+		got, ok := domain.GetLedgerCompletionDate(domain.AgenticMetricsLedger{CompletedAt: nil, StartedAt: &started, UpdatedAt: updated})
 		if ok {
 			t.Errorf("expected ok = false, got true with %v", got)
 		}
@@ -2941,12 +2938,12 @@ func TestGetTicketEffectiveDate(t *testing.T) {
 		started := "2026-03-08T08:00:00Z"
 		updated := "2026-03-09T10:00:00Z"
 
-		got1, ok1 := domain.GetTicketEffectiveDate(&emptyStr, &started, updated)
+		got1, ok1 := domain.GetLedgerCompletionDate(domain.AgenticMetricsLedger{CompletedAt: &emptyStr, StartedAt: &started, UpdatedAt: updated})
 		if ok1 || !got1.IsZero() {
 			t.Errorf("expected ok=false and zero time for empty completed_at, got %v, %v", ok1, got1)
 		}
 
-		got2, ok2 := domain.GetTicketEffectiveDate(&badStr, &started, updated)
+		got2, ok2 := domain.GetLedgerCompletionDate(domain.AgenticMetricsLedger{CompletedAt: &badStr, StartedAt: &started, UpdatedAt: updated})
 		if ok2 || !got2.IsZero() {
 			t.Errorf("expected ok=false and zero time for bad completed_at, got %v, %v", ok2, got2)
 		}
@@ -2973,7 +2970,7 @@ func TestGetTicketEffectiveDate(t *testing.T) {
 			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
-				got, ok := domain.GetTicketEffectiveDate(tc.completedAt, &validStarted, validUpdated)
+				got, ok := domain.GetLedgerCompletionDate(domain.AgenticMetricsLedger{CompletedAt: tc.completedAt, StartedAt: &validStarted, UpdatedAt: validUpdated})
 				if ok {
 					t.Errorf("[%s] expected ok = false, got true with %v", tc.name, got)
 				}
@@ -2985,7 +2982,7 @@ func TestGetTicketEffectiveDate(t *testing.T) {
 	})
 }
 
-func TestFilterLedgersByDateRange(t *testing.T) {
+func TestFilterLedgersByCompletionDate_MissingCompletion(t *testing.T) {
 	t.Parallel()
 
 	d1 := "2026-03-01T10:00:00Z"
@@ -2999,10 +2996,10 @@ func TestFilterLedgersByDateRange(t *testing.T) {
 		{TicketID: ptr("T-NIL"), CompletedAt: nil, StartedAt: &d1, UpdatedAt: d1},
 	}
 
-	start, _ := time.Parse("2006-01-02", "2026-03-10")
+	start, _ := time.Parse(time.RFC3339, "2026-03-10T15:30:00Z")
 	end, _ := time.Parse("2006-01-02", "2026-03-20")
 
-	filtered := domain.FilterLedgersByDateRange(ledgers, &start, &end)
+	filtered := domain.FilterLedgersByCompletionDate(ledgers, &start, &end)
 	if len(filtered) != 1 {
 		t.Fatalf("expected 1 ledger, got %d", len(filtered))
 	}
@@ -3025,10 +3022,10 @@ func TestFilterLedgersByDateRange(t *testing.T) {
 			{TicketID: ptr("T-VALID"), CompletedAt: &midRange, StartedAt: &midRange, UpdatedAt: midRange},
 		}
 
-		startDate, _ := time.Parse("2006-01-02", "2026-03-10")
+		startDate, _ := time.Parse(time.RFC3339, "2026-03-10T15:30:00Z")
 		endDate, _ := time.Parse("2006-01-02", "2026-03-20")
 
-		res := domain.FilterLedgersByDateRange(testLedgers, &startDate, &endDate)
+		res := domain.FilterLedgersByCompletionDate(testLedgers, &startDate, &endDate)
 		if len(res) != 1 {
 			t.Fatalf("expected exactly 1 valid ledger, got %d", len(res))
 		}
@@ -3525,47 +3522,6 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 	})
 }
 
-func TestResolveDatePreset(t *testing.T) {
-	t.Parallel()
-	ref := time.Date(2026, 10, 19, 15, 30, 0, 0, time.UTC)
-
-	t.Run("Last 24 Hours preset", func(t *testing.T) {
-		start, end := domain.ResolveDatePreset(string(domain.TimeWindowLast24Hours), ref)
-		if start == nil || end == nil {
-			t.Fatalf("expected non-nil start and end")
-		}
-		expectedStart := ref.Add(-24 * time.Hour)
-		if !start.Equal(expectedStart) {
-			t.Errorf("expected start %v, got %v", expectedStart, *start)
-		}
-		if !end.Equal(ref) {
-			t.Errorf("expected end %v, got %v", ref, *end)
-		}
-	})
-
-	t.Run("Last 7 Days preset", func(t *testing.T) {
-		start, end := domain.ResolveDatePreset(string(domain.TimeWindowLast7Days), ref)
-		if start == nil || end == nil {
-			t.Fatalf("expected non-nil start and end")
-		}
-		refMidnight := time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC)
-		expectedStart := refMidnight.AddDate(0, 0, -7)
-		if !start.Equal(expectedStart) {
-			t.Errorf("expected start %v, got %v", expectedStart, *start)
-		}
-		if !end.Equal(refMidnight) {
-			t.Errorf("expected end %v, got %v", refMidnight, *end)
-		}
-	})
-
-	t.Run("unknown preset returns nil", func(t *testing.T) {
-		start, end := domain.ResolveDatePreset("Unknown", ref)
-		if start != nil || end != nil {
-			t.Errorf("expected nil for unknown preset")
-		}
-	})
-}
-
 func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 	t.Parallel()
 	t.Run("precision and coverage survive cumulative and code-only buckets", func(t *testing.T) {
@@ -3797,7 +3753,7 @@ func TestParseTimeWindow_AL27(t *testing.T) {
 	}
 }
 
-func TestFilterLedgersByTimeWindow_1D_ExactBoundaries(t *testing.T) {
+func TestFilterLedgersByCompletionDate_ExactBoundaries(t *testing.T) {
 	t.Parallel()
 	ref := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
 	start := ref.Add(-24 * time.Hour) // 2026-10-18T12:00:00Z
@@ -3817,7 +3773,7 @@ func TestFilterLedgersByTimeWindow_1D_ExactBoundaries(t *testing.T) {
 		{TicketID: ptr("T-NO-DATES")},
 	}
 
-	filtered := domain.FilterLedgersByTimeWindow(ledgers, domain.TimeWindow1D, ref)
+	filtered := domain.FilterLedgersByCompletionDate(ledgers, ptr(ref.Add(-24*time.Hour)), &ref)
 	if len(filtered) != 3 {
 		t.Fatalf("expected 3 ledgers within 24h window, got %d", len(filtered))
 	}
@@ -3834,12 +3790,12 @@ func TestFilterLedgersByTimeWindow_1D_ExactBoundaries(t *testing.T) {
 	}
 
 	t.Run("nil and empty inputs", func(t *testing.T) {
-		resNil := domain.FilterLedgersByTimeWindow(nil, domain.TimeWindow1D, ref)
+		resNil := domain.FilterLedgersByCompletionDate(nil, ptr(ref.Add(-24*time.Hour)), &ref)
 		if resNil == nil || len(resNil) != 0 {
 			t.Errorf("expected empty non-nil slice for nil input")
 		}
 
-		resEmpty := domain.FilterLedgersByTimeWindow([]domain.AgenticMetricsLedger{}, domain.TimeWindow1D, ref)
+		resEmpty := domain.FilterLedgersByCompletionDate([]domain.AgenticMetricsLedger{}, ptr(ref.Add(-24*time.Hour)), &ref)
 		if resEmpty == nil || len(resEmpty) != 0 {
 			t.Errorf("expected empty non-nil slice for empty input")
 		}
@@ -4211,15 +4167,15 @@ func TestFilterLedgersByTicketTypes(t *testing.T) {
 	})
 }
 
-func TestFilterLedgersByTicketType_Wrapper(t *testing.T) {
+func TestFilterLedgersByTicketTypes_AllAndAliases(t *testing.T) {
 	t.Parallel()
 	featLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-1"), TicketType: ptr(domain.ConventionalTicketType("feature"))}
 	bugLedger := domain.AgenticMetricsLedger{TicketID: ptr("AL-2"), TicketType: ptr(domain.ConventionalTicketType("bug"))}
 	allLedgers := []domain.AgenticMetricsLedger{featLedger, bugLedger}
 
-	t.Run("comma-separated types", func(t *testing.T) {
+	t.Run("multiple type aliases", func(t *testing.T) {
 		t.Parallel()
-		res := domain.FilterLedgersByTicketType(allLedgers, "feature,bug")
+		res := domain.FilterLedgersByTicketTypes(allLedgers, []string{"feature", "bug"})
 		if len(res) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res))
 		}
@@ -4227,11 +4183,11 @@ func TestFilterLedgersByTicketType_Wrapper(t *testing.T) {
 
 	t.Run("empty string and all pass through", func(t *testing.T) {
 		t.Parallel()
-		res1 := domain.FilterLedgersByTicketType(allLedgers, "")
+		res1 := domain.FilterLedgersByTicketTypes(allLedgers, []string{""})
 		if len(res1) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res1))
 		}
-		res2 := domain.FilterLedgersByTicketType(allLedgers, "all")
+		res2 := domain.FilterLedgersByTicketTypes(allLedgers, []string{"all"})
 		if len(res2) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res2))
 		}
@@ -4348,15 +4304,15 @@ func TestFilterLedgersByPrefixes(t *testing.T) {
 	})
 }
 
-func TestFilterLedgersByPrefix_Wrapper(t *testing.T) {
+func TestFilterLedgersByPrefixes_AllAndMultiple(t *testing.T) {
 	t.Parallel()
 	al1 := domain.AgenticMetricsLedger{TicketID: ptr("AL-1")}
 	gen1 := domain.AgenticMetricsLedger{TicketID: ptr("GEN-1")}
 	allLedgers := []domain.AgenticMetricsLedger{al1, gen1}
 
-	t.Run("comma-separated prefixes", func(t *testing.T) {
+	t.Run("multiple prefixes", func(t *testing.T) {
 		t.Parallel()
-		res := domain.FilterLedgersByPrefix(allLedgers, "AL,GEN")
+		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"AL", "GEN"})
 		if len(res) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res))
 		}
@@ -4364,50 +4320,13 @@ func TestFilterLedgersByPrefix_Wrapper(t *testing.T) {
 
 	t.Run("empty string and all pass through", func(t *testing.T) {
 		t.Parallel()
-		res1 := domain.FilterLedgersByPrefix(allLedgers, "")
+		res1 := domain.FilterLedgersByPrefixes(allLedgers, []string{""})
 		if len(res1) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res1))
 		}
-		res2 := domain.FilterLedgersByPrefix(allLedgers, "all")
+		res2 := domain.FilterLedgersByPrefixes(allLedgers, []string{"all"})
 		if len(res2) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res2))
-		}
-	})
-}
-
-func TestExtractDistinctPrefixes(t *testing.T) {
-	t.Parallel()
-
-	t.Run("empty ledgers returns empty slice", func(t *testing.T) {
-		t.Parallel()
-		res := domain.ExtractDistinctPrefixes(nil)
-		if len(res) != 0 {
-			t.Errorf("expected 0 prefixes, got %d", len(res))
-		}
-	})
-
-	t.Run("deduplicates and sorts in ascending alphabetical order", func(t *testing.T) {
-		t.Parallel()
-		ledgers := []domain.AgenticMetricsLedger{
-			{TicketID: ptr("PO-2")},
-			{TicketID: ptr("AL-10")},
-			{TicketID: ptr("GEN-1")},
-			{TicketID: ptr("AL-1")},
-			{TicketID: ptr("PO-1")},
-			{TicketID: nil},
-			{TicketID: ptr("")},
-			{TicketID: ptr("123")},
-		}
-
-		res := domain.ExtractDistinctPrefixes(ledgers)
-		expected := []string{"AL", "GEN", "PO"}
-		if len(res) != len(expected) {
-			t.Fatalf("expected %d prefixes, got %d: %+v", len(expected), len(res), res)
-		}
-		for i, exp := range expected {
-			if res[i] != exp {
-				t.Errorf("at index %d: expected %s, got %s", i, exp, res[i])
-			}
 		}
 	})
 }
@@ -4465,16 +4384,6 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected all ledgers retained for whitespace prefixes, got %d", len(resWhitespacePrefixes))
 		}
 
-		// ExtractDistinctPrefixes with nil and empty slices
-		resNilDistinct := domain.ExtractDistinctPrefixes(nil)
-		if resNilDistinct == nil || len(resNilDistinct) != 0 {
-			t.Errorf("expected non-nil empty slice for nil ledgers, got %+v", resNilDistinct)
-		}
-
-		resEmptyDistinct := domain.ExtractDistinctPrefixes([]domain.AgenticMetricsLedger{})
-		if resEmptyDistinct == nil || len(resEmptyDistinct) != 0 {
-			t.Errorf("expected non-nil empty slice for empty ledgers, got %+v", resEmptyDistinct)
-		}
 	})
 
 	t.Run("nil and pathological ticket types and ticket IDs", func(t *testing.T) {
@@ -4513,11 +4422,6 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 			t.Errorf("expected all 6 ledgers retained for 'all' prefix query, got %d", len(resAllPrefix))
 		}
 
-		// ExtractDistinctPrefixes ignores all nil/empty/non-conforming IDs
-		distinct := domain.ExtractDistinctPrefixes(pathologicalLedgers)
-		if len(distinct) != 1 || distinct[0] != "AL" {
-			t.Errorf("expected only ['AL'], got %+v", distinct)
-		}
 	})
 
 	t.Run("symmetrical alias expansion matrix", func(t *testing.T) {
@@ -5961,11 +5865,11 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 		}
 	})
 
-	t.Run("ComputeWorkflowEfficiencyWithConfig respects cfg.AnomalyThresholds.ContextCeilingCriticalTokens", func(t *testing.T) {
+	t.Run("ComputeWorkflowEfficiencyWithCeiling respects cfg.AnomalyThresholds.ContextCeilingCriticalTokens", func(t *testing.T) {
 		cfg := domain.DefaultProjectConfig()
 		cfg.AnomalyThresholds.ContextCeilingCriticalTokens = customCeiling
 
-		eff := domain.ComputeWorkflowEfficiencyWithConfig(ledger, cfg)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, cfg.EffectiveHealthyCeiling(), cfg.RoleOrder)
 		if eff.ContextWindowHealth.HealthyCeilingTokens != customCeiling {
 			t.Errorf("expected HealthyCeilingTokens %d, got %d", customCeiling, eff.ContextWindowHealth.HealthyCeilingTokens)
 		}

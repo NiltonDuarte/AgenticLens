@@ -1,7 +1,6 @@
 package http
 
 import (
-	"log"
 	"net/http"
 )
 
@@ -18,14 +17,6 @@ func CORSMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		next.ServeHTTP(w, r)
-	})
-}
-
-// LoggingMiddleware logs incoming requests with method, path, and remote address.
-func LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.Method, r.URL.Path, r.RemoteAddr)
 		next.ServeHTTP(w, r)
 	})
 }
