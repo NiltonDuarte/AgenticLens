@@ -9,15 +9,15 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 18
-- **Active Agent Duration:** 2h 21m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 21
+- **Active Agent Duration:** 2h 35m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 5 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0, Parallel_protocol_exercise 1.0, Review_eval_original 2.0, Review_eval_revised 2.0
 - **Test-to-Production Code Ratio:** 2.3:1 (+650 test lines / +280 prod lines)
 - **Code Delivered:** +930 / -2,550 lines across 53 code files (excluding docs)
-- **Reasoning Effort:** 62,300 reasoning tokens (17.9% of generated output)
-- **Tool Health & Self-Correction:** 838 tool calls (44 self-corrections, 94.7% success rate)
+- **Reasoning Effort:** 65,171 reasoning tokens (17.9% of generated output)
+- **Tool Health & Self-Correction:** 855 tool calls (44 self-corrections, 94.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 24 execution anomalies detected (13 CRITICAL, 11 WARNING).
@@ -60,14 +60,14 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 | **parallel_protocol_exercise** | 1 | 34,071 | 3,638 | 176,128 | 83.8% | 36.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_original** | 1 | 38,836 | 2,525 | 126,848 | 76.6% | 40.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_revised** | 1 | 15,805 | 3,212 | 168,192 | 91.4% | 37.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 623,800 | 112,992 | 42,645,888 | 98.6% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **25** | **3,575,518** | **285,914** | **107,261,696** | **96.8%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
+| **rootagent** | 1 | 652,705 | 125,785 | 47,891,712 | 98.7% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **25** | **3,604,423** | **298,707** | **112,507,520** | **96.9%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 25 | 3,575,518 | 285,914 | 107,261,696 | 96.8% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
-| **Total** | **25** | **3,575,518** | **285,914** | **107,261,696** | **96.8%** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
+| **gpt-6-astra** | 25 | 3,604,423 | 298,707 | 112,507,520 | 96.9% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
+| **Total** | **25** | **3,604,423** | **298,707** | **112,507,520** | **96.9%** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -222,3 +222,11 @@ User requested configurable paired models for each reviewer and per-reviewer/mod
 ## Iteration 07 paired review and verification
 
 Both architecture-review cells completed independently with no findings: gpt-6.1-sol/high and gpt-6-luna/medium. Dispatch acknowledgments and matched source turn_context records verify model/effort. REVIEW_RUNS.json retains both zero-finding runs, source identities, timestamps, cumulative token observations and unavailable cost; FINDINGS.json is empty. No comparative model efficacy conclusion follows from a no-finding documentation review. Policy parsing/profile expansion, local links, source hashes and attribution integrity passed; both skills validated. No application/runtime changes. T3 delegation lacks native Codex parent linkage for these two sessions; final telemetry must disclose any omissions separately from complete review attribution.
+
+## Iteration 07 delivery and telemetry limits
+
+Commit de4ff8a already includes origin/main. Documentation/configuration checks passed; unchanged application/runtime sources reuse prior full make evidence. Final ledger is schema v5, REV-5/fix, preserving all 25 prior source identities and parent links. It contains 25 sessions. Review attribution separately verifies both delegated model sessions.
+
+Main session telemetry is INCOMPLETE for this iteration: omitted delegated Codex sessions 01a1973b-6375-76c0-8dd2-22905071346a, 01a1973c-4e39-78c0-bf37-a5f3bf4cd721. Their source data exists, but T3 delegation did not write native parent linkage discoverable by the CLI. REVIEW_RUNS.json preserves verified model/effort, session IDs, cumulative token records and T3 relationship evidence. No source linkage or complete extraction was manufactured. See iterations/07/TELEMETRY_STATUS.json.
+
+Snapshot ends at generation; subsequent verification/commit/push calls are outside it.
