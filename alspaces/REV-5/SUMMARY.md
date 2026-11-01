@@ -9,15 +9,15 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 30
-- **Active Agent Duration:** 2h 44m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 36
+- **Active Agent Duration:** 2h 49m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 6 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0, Parallel_protocol_exercise 1.0, Review_eval_original 2.0, Review_eval_revised 2.0
 - **Test-to-Production Code Ratio:** 2.3:1 (+650 test lines / +280 prod lines)
 - **Code Delivered:** +930 / -2,550 lines across 53 code files (excluding docs)
-- **Reasoning Effort:** 67,007 reasoning tokens (17.6% of generated output)
-- **Tool Health & Self-Correction:** 879 tool calls (44 self-corrections, 95.0% success rate)
+- **Reasoning Effort:** 70,114 reasoning tokens (17.2% of generated output)
+- **Tool Health & Self-Correction:** 918 tool calls (45 self-corrections, 95.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 24 execution anomalies detected (13 CRITICAL, 11 WARNING).
@@ -60,14 +60,16 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 | **parallel_protocol_exercise** | 1 | 34,071 | 3,638 | 176,128 | 83.8% | 36.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_original** | 1 | 38,836 | 2,525 | 126,848 | 76.6% | 40.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_revised** | 1 | 15,805 | 3,212 | 168,192 | 91.4% | 37.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 772,584 | 140,551 | 52,983,168 | 98.6% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **25** | **3,724,302** | **313,473** | **117,598,976** | **96.9%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
+| **rootagent** | 3 | 903,557 | 163,714 | 55,641,216 | 98.4% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Total** | **27** | **3,855,275** | **336,636** | **120,257,024** | **96.9%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 25 | 3,724,302 | 313,473 | 117,598,976 | 96.9% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
-| **Total** | **25** | **3,724,302** | **313,473** | **117,598,976** | **96.9%** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
+| **gpt-6-astra** | 25 | 3,771,928 | 330,461 | 119,822,848 | 96.9% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
+| **gpt-6-luna** | 1 | 36,163 | 1,977 | 141,312 | 79.6% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **gpt-6.1-sol** | 1 | 47,184 | 4,198 | 292,864 | 86.1% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **27** | **3,855,275** | **336,636** | **120,257,024** | **96.9%** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -244,3 +246,11 @@ Planning commit 67b313c already includes current origin/main. Ticket/index check
 ## Iteration 09: open-finding allocation and reviewer recovery
 
 Baseline cd3a880; initial tree clean. Reconciled all 51 iteration 03 catalog entries: two fixed in iteration 04, 49 open and assigned. Created AL-69 through AL-93 and added CC-02 regression acceptance to existing AL-62. Cross-layer duplicates and cross-cutting architecture/test analyses have explicit primary/related owners; AL-92 covers unnumbered dependency/toolchain observations without asserting an exploit or measured performance problem. Original F1-F7 remain resolved. No application/test/runtime files changed. Real-source recovery and final verification follow in iterations/09.
+
+## Iteration 09 delivery and corrected telemetry
+
+Planning commit 418020e already includes current origin/main. All 51 catalog entries are mapped: 49 open entries have explicit owners, two findings remain fixed. AL-69 through AL-93 are Ready; AL-62 explicitly covers CC-02. Ticket structure, unique numbering, local links, scope and whitespace checks passed. Application sources remain unchanged; prior make and CI evidence is reused.
+
+Recovered both reviewer sessions using explicit Codex session IDs and actual source records. Each import was replayed without duplicates; before root refresh all 25 prior session objects were unchanged. Final nonce refresh retained exactly 27 sessions, preserved all prior IDs/sources/parent fields and left all 24 prior non-root sessions plus both imports unchanged. The current known-session roster has no omissions; historical iteration 07/08 incomplete snapshots are superseded for current coverage, not rewritten. Native parent linkage remains unavailable for the two reviewers, so they remain independent roots and root-based iteration/role semantics are unchanged. Cost remains unknown. SESSION_RECOVERY.json records verified model/effort, raw cumulative totals and normalized ledger token totals without transcripts.
+
+Snapshot ends at generation and excludes later verification/commit/publication calls. No application fixes or PR merge were performed in this iteration.
