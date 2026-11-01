@@ -168,3 +168,7 @@ Source: user clarified local-only use and operator responsibility for deliberate
 Verification for this correction: all 308 audited file hashes unchanged; diff whitespace check passed; origin/main already integrated. Prior full make results reused because only review prose changed.
 
 Listener-review telemetry refresh verified: schema v5, REV-5/fix, all 16 existing Codex identities and parent links preserved; no new children. Snapshot ends at generation.
+
+## Iteration 04: highest-priority remediation
+
+User requested fixing the highest-priority issues. This authorizes remediation of the remaining P1 findings, ADP-01 (incomplete Codex recovery replacing stored facts) and D3 (release tag/build revision mismatch). Baseline 88a4a1b; initial working tree clean. Local-only scope and ADP-05 P2 remain unchanged. Other audit findings remain open. This is an implementation scope expansion from iteration 03, with new targeted regression proof and final integrated make required. No hosted release will be executed.

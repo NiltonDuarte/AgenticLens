@@ -190,8 +190,8 @@ type turnContext struct {
 
 // ParseRollout reads Codex rollout JSONL without retaining transcript content.
 // Unknown record types are counted for forward-compatibility diagnostics.
-// A malformed final unterminated line is treated as a possibly partial write;
-// malformed complete lines are recorded as warnings and parsing continues.
+// Malformed records, including a possibly partial final write, produce warnings
+// while parsing continues. Consumers replacing stored facts must check warnings.
 func ParseRollout(reader io.Reader) (Transcript, error) {
 	if reader == nil {
 		return Transcript{}, errors.New("rollout reader is nil")

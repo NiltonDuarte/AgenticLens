@@ -149,6 +149,9 @@ func (e *BackfillEngine) readCodexTree(root, home string) ([]domain.SessionFact,
 		if err != nil {
 			return nil, fmt.Errorf("parsing source: %w", err)
 		}
+		if len(t.Warnings) > 0 {
+			return nil, fmt.Errorf("source %s is incomplete; retry recovery after source repair or completion: %s", p, strings.Join(t.Warnings, "; "))
+		}
 		transcripts = append(transcripts, t)
 	}
 	combined, err := e.combineCodex(transcripts)

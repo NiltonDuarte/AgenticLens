@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -1653,12 +1654,13 @@ func boolInt(v bool) int {
 
 func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 	for _, tc := range []struct {
-		name, source                          string
-		missingChild, lateParse, groupFailure bool
+		name, source                                        string
+		missingChild, lateParse, groupFailure, parseWarning bool
 	}{
 		{name: "unavailable Codex sibling", source: "both"}, {name: "unselected OpenCode obligation", source: "codex"},
 		{name: "missing stored child", source: "both", missingChild: true}, {name: "late parse failure", source: "both", lateParse: true},
 		{name: "group failure", source: "both", groupFailure: true},
+		{name: "successful parse with warnings", source: "both", parseWarning: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -1688,6 +1690,9 @@ func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 				if path == "bad" {
 					return codex.Transcript{}, errors.New("malformed late source")
 				}
+				if tc.parseWarning {
+					return codex.Transcript{ThreadID: "codex-a", Warnings: []string{"line 3: malformed JSON record"}}, nil
+				}
 				return codex.Transcript{ThreadID: "codex-a", Invocations: []domain.InvocationFact{{Role: "coder", Model: "fresh-a"}}}, nil
 			}
 			if tc.groupFailure {
@@ -1715,7 +1720,7 @@ func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 				models[s.ID] = s.Invocations[0].Model
 			}
 			wantA := "fresh-a"
-			if tc.missingChild || tc.lateParse || tc.groupFailure {
+			if tc.missingChild || tc.lateParse || tc.groupFailure || tc.parseWarning {
 				wantA = "old-a"
 			}
 			if models["codex-a"] != wantA || models["codex-b"] != "old-b" || models["opencode-c"] != "old-c" {
@@ -1880,6 +1885,116 @@ func TestRecoverOpenCodeRetainsUnavailableOrphanSiblingTree(t *testing.T) {
 			}
 			if len(recovered.sessions) != 3 || models["child-a"] != "stored-a" || models["child-b"] != "stored-b" || models["independent"] != "gpt-4o" {
 				t.Fatalf("partially discoverable orphan tree lost history: %+v", recovered.sessions)
+			}
+		})
+	}
+}
+
+func TestBackfillEngine_WarningBearingRolloutsPreserveTree(t *testing.T) {
+	for _, tc := range []struct{ name, damaged string }{
+		{"malformed middle", "{broken}\n{\"type\":\"turn_context\"}\n"},
+		{"malformed final record", "{broken}\n"},
+		{"partial final write", "{\"type\":"},
+		{"invalid usage", "{\"type\":\"token_usage_record\",\"payload\":{\"usage\":\"invalid\"}}\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			v, ticket, parent := domain.CurrentSchemaVersion, "CUSTOM-WARNINGS", "damaged"
+			old := func(id string, parentID *string, source domain.SourceHarness) domain.SessionFact {
+				return domain.SessionFact{ID: id, ParentID: parentID, Source: source, User: "stored-user", Invocations: []domain.InvocationFact{
+					{Role: "coder", Model: "stored", Tokens: domain.InvocationTokens{Input: 1000}},
+					{Role: "coder", Model: "stored", Tokens: domain.InvocationTokens{Input: 1000}},
+				}}
+			}
+			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Sessions: []domain.SessionFact{
+				old("damaged", nil, domain.SourceCodex), old("child", &parent, domain.SourceCodex),
+				old("healthy", nil, domain.SourceCodex), old("other-harness", nil, domain.SourceOpenCode),
+			}}
+			workspace := createTestWorkspace(t, root, ticket, ledger)
+			baseline, _ := readRecoveryLedger(t, workspace)
+			baselineSessions := make(map[string]adapters.SessionFactDTO)
+			for _, session := range baseline.Sessions {
+				baselineSessions[session.ID] = session
+			}
+			writeSource := func(id, extra, suffix string) string {
+				t.Helper()
+				path := filepath.Join(root, id+".jsonl")
+				content := fmt.Sprintf("{\"timestamp\":\"2026-01-01T00:00:00Z\",\"type\":\"session_meta\",\"payload\":{\"id\":%q%s}}\n{\"timestamp\":\"2026-01-01T00:00:01Z\",\"type\":\"token_usage_record\",\"payload\":{\"model\":\"fresh\",\"usage\":{\"input_tokens\":25}}}\n%s", id, extra, suffix)
+				if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+					t.Fatal(err)
+				}
+				return path
+			}
+			rootPath := writeSource("damaged", "", "")
+			childPath := writeSource("child", `,"source":{"subagent":{"thread_spawn":{"parent_thread_id":"damaged"}}}`, tc.damaged)
+			healthyPath := writeSource("healthy", "", "")
+			engine := NewEngine()
+			engine.discoverCodexRollouts = func(opts codex.DiscoveryOptions) ([]string, error) {
+				if opts.SessionID == "damaged" {
+					return []string{rootPath, childPath}, nil
+				}
+				return []string{healthyPath}, nil
+			}
+			opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: root, RecomputeDB: true}
+			report, err := engine.Execute(opts)
+			if err != nil || len(report.Results) != 1 || report.Results[0].Error != nil {
+				t.Fatalf("refresh: %+v %v", report, err)
+			}
+			if !report.Results[0].RefreshIncomplete || len(report.Results[0].Diagnostics) == 0 || len(report.Warnings) == 0 {
+				t.Fatalf("missing partial diagnostics: %+v", report)
+			}
+			updated, _ := readRecoveryLedger(t, workspace)
+			seen := make(map[string]bool)
+			for _, s := range updated.Sessions {
+				prior, exists := baselineSessions[s.ID]
+				if !exists || seen[s.ID] {
+					t.Fatalf("unexpected or duplicate session: %s", s.ID)
+				}
+				seen[s.ID] = true
+				if s.ID != "healthy" && !reflect.DeepEqual(s, prior) {
+					t.Fatalf("retained session changed: got %+v, want %+v", s, prior)
+				}
+				if s.ID == "healthy" {
+					if len(s.Invocations) != 1 || s.Invocations[0].Tokens.Input != 25 {
+						t.Fatalf("healthy sibling not refreshed: %+v", s)
+					}
+					continue
+				}
+				if s.User != "stored-user" || len(s.Invocations) != 2 || s.Invocations[0].Tokens.Input != 1000 || s.Invocations[1].Tokens.Input != 1000 || s.Invocations[0].Model != "stored" {
+					t.Fatalf("stored facts changed: %+v", s)
+				}
+				if s.ID == "child" && (s.ParentID == nil || *s.ParentID != parent) {
+					t.Fatalf("parent lost: %+v", s)
+				}
+				if s.ID == "other-harness" && s.Source != string(domain.SourceOpenCode) {
+					t.Fatal("source changed")
+				}
+			}
+			if len(updated.Sessions) != 4 {
+				t.Fatalf("sessions lost: %+v", updated.Sessions)
+			}
+			// Completing/repairing the source allows a later retry; a valid final
+			// record does not need a newline to be recoverable.
+			writeSource("child", `,"source":{"subagent":{"thread_spawn":{"parent_thread_id":"damaged"}}}`, `{"type":"turn_context"}`)
+			var recovered []adapters.SessionFactDTO
+			for attempt := 0; attempt < 2; attempt++ {
+				report, err = engine.Execute(opts)
+				if err != nil || report.Results[0].Error != nil || report.Results[0].RefreshIncomplete {
+					t.Fatalf("retry failed: %+v %v", report, err)
+				}
+				updated, _ = readRecoveryLedger(t, workspace)
+				if len(updated.Sessions) != len(baselineSessions) {
+					t.Fatalf("retry lost sessions: %+v", updated.Sessions)
+				}
+				if attempt == 1 && !reflect.DeepEqual(updated.Sessions, recovered) {
+					t.Fatal("unchanged retry changed recovered facts")
+				}
+				recovered = updated.Sessions
+				for _, s := range updated.Sessions {
+					if s.Source == string(domain.SourceCodex) && (len(s.Invocations) != 1 || s.Invocations[0].Tokens.Input != 25) {
+						t.Fatalf("retry/idempotence failure: %+v", s)
+					}
+				}
 			}
 		})
 	}
