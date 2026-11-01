@@ -1,10 +1,10 @@
 # AL-68 iteration 01 consolidated review
 
-Scoped code verdict: APPROVED. Overall delivery verdict: INCOMPLETE.
+Scoped code verdict: APPROVED. Consolidated delivery verdict: APPROVED for the documented observed paths, with explicit degraded/unverified coverage limits.
 
 All twelve current focus/profile cells approve corrected code candidate04 c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec, baseline7bc670a7f5c9e93a220f3596f3d0e05cb6007332. No confirmed code finding remains open. The required real Codex trust/callback/agent-binding/native-child/source evidence remains the unresolved gate. Final main integration and make passed at implementation commit 9db4672a971709a7433eeee4e11a5d7d0817cbbe. Code approval does not authorize publication or merge.
 
-| Focus | Model / effort | Scoped code | Overall | Report |
+| Focus | Model / effort | Scoped code | Report-time overall | Report |
 | --- | --- | --- | --- | --- |
 | behavior | gpt-6.1-sol / high | APPROVED | INCOMPLETE | [REVIEW-behavior-sol-04.md](REVIEW-behavior-sol-04.md) |
 | behavior | gpt-6-luna / medium | APPROVED | INCOMPLETE | [REVIEW-behavior-luna-04.md](REVIEW-behavior-luna-04.md) |
@@ -34,3 +34,15 @@ Codex0.166.0 actual hook trust/agent interaction remains unavailable pending a h
 ## Final local evidence checkpoint
 
 Required integrated make passed at implementation commit9db4672a971709a7433eeee4e11a5d7d0817cbbe with unchanged reviewed source. Final source telemetry verified all35known Codex sessions and4preserved OpenCode sessions, including actual parent/model evidence and final report digest/privacy. Ticket completion remains unknown, with an explicit metadata correction for the legacy generator's date inference; source facts unchanged. Overall verdict remains INCOMPLETE only for the required human-controlled real Codex runtime evidence. PR publication remains blocked by the development workflow's INCOMPLETE gate.
+
+## Live Codex acceptance closure
+
+The user explicitly confirmed normal project/hook trust review. Actual Codex0.166.0 Linux exec roots completed hook-context/request/agent-bind exchanges; two independent roots and a completed native child reconciled against exact source records. Native parent metadata, own agent-response versus inherited history, available model/effort/usage and unavailable cost were independently checked. Normal resume preserved source identity/binding and growing cumulative facts; unchanged reconciliation preserved snapshots. Original unassigned work remained excluded. SMOKE.md and CODEX_SMOKE.json hold the source-grounded evidence. No trust bypass, global trust edit, third-party persona edit or synthetic provider was used.
+
+SubagentStart was not observed on this native exec path; its reason remains unknown. Running/interrupted child capture before Stop remains degraded/unverified. This is the original contract's anticipated unverified-capability branch, not a claim that every callback or interface passed. Canonical operator guidance now documents the gap and the exact-parent source-selector recovery path. Non-Linux and other version/interface claims remain unverified. The real parent/child and independent-root acceptance evidence gate is resolved for the stated paths; complete universal capture is not claimed.
+
+The child evidence normalization initially copied exec/null-parent into its summary row. Parent corrected only that artifact from the exact owning session_meta, whose ID and parent match the actual registry; original validity of capture/proven inheritance was unaffected. This preserves unknown fields rather than assigning parent history to a child.
+
+No runtime code/tests changed after final focused review. DELIVERY_REVISION.json proves the sole source-tree delta is the factual operator support matrix; prior code approvals and integrated verification carry forward. Documentation-only evidence maintenance does not require repeating the application SDLC. Final integration/make and publication checkpoint will be recorded below.
+
+Per-run INCOMPLETE outcomes above record the earlier absent runtime evidence; they remain historical. Parent verified the newly trusted runtime evidence and closed that gap for the declared observed paths under the original degraded-capability contract. No code finding or missing model/focus investigation was waived.

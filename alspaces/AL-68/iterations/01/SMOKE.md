@@ -41,3 +41,38 @@ Source-backed compact facts: model gpt-5.6-luna; input 8558, output 53, cache-re
 The corrected installation rendering and native input path therefore preserve the real agent-feedback/tool-binding/source-refresh exchange on this observed interface. This does not remove the outstanding human-trust/Codex runtime evidence gap or extend runtime claims to untested platforms/families.
 
 The final focused corrections change source-checkpoint precedence, actual source-store alias comparison and bounded child-recovery scheduling. They do not change the installed hook/agent-feedback protocol, OpenCode system-context/custom binding tool or native receive payload contract. The recorded actual OpenCode exchanges carry forward for that interaction boundary; deterministic real-filesystem/SQLite fixtures separately verify the corrected algorithms. No new live-model exchange is claimed for pagination or stale-source scenarios, and none of these corrections closes the pending human-trust/Codex runtime gate. Unknown/equal differing source checkpoints now preserve canonical facts with unresolved diagnostics rather than guessing a newer snapshot.
+
+## Trusted Codex runtime evidence after human review
+
+This section supersedes the earlier pending-trust status for the observed path only. The user confirmed normal project trust and `/hooks` review of the six installed definitions in /tmp/al68-codex-smoke-jykimf10, then sent a message. No agent trust edit, bypass flag, third-party skill/persona edit or application/test change was used. Installed Codex is 0.166.0 on Linux amd64; hooks and multi_agent both report stable/enabled. Product remained frozen at c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec.
+
+The original user-created source session 01a198fd-22ba-77b2-99bb-bbfb546eef11 has source classification vscode. It received actual hook developer context and asked for a ticket; because no explicit ticket had been supplied, its local registration remains unassigned with event Stop. Its directory was never used to infer AL-68 ownership.
+
+Normal `codex exec` with the workspace-write sandbox in the same trusted directory created root 01a19901-011a-7402-bb1e-c4febe37e7e1. An explicit AL-68 smoke instruction and the real hook developer-context request caused the agent to execute the supplied native binding command successfully. Its JSON acknowledgment reported event UserPromptSubmit and binding explicit_agent_response. It later received actual SessionEnd. A separately launched reviewer-context root 01a19901-c38e-7f22-b224-a334910e4d8b completed the same actual request/bind exchange. Both classify as RootAgent in normalized source facts; reviewer context describes the smoke task and is not invented source persona metadata.
+
+The second root used the native spawn_agent tool and awaited native child 01a19901-dda1-7460-a51f-24423a5d19e8. The actual SubagentStop callback durably queued the child transcript. Authoritative session_meta.id and parent_thread_id, including the native thread_spawn metadata, identify that exact child and parent. Reconciliation bound the child through source_parent and captured all three AL-68 sessions as current. No assumption that a generic interface agent identifier equals a harness source ID was needed. The child's rollout includes inherited parent history; the parent's earlier binding call is not attributed as a child action. No independent child binding command is claimed. The child's normalized role is capture_child; native source agent_role is null.
+
+| Lifecycle event | Observation on the tested path |
+| --- | --- |
+| SessionStart | Root startup delivered AgenticLens model-visible context; two startup/before-prompt requests are present before the first root tool. |
+| UserPromptSubmit | Both root binding acknowledgments explicitly carry UserPromptSubmit. |
+| SubagentStart | Not observed on the native exec spawn path. No pending-start record existed before reconciliation and no emitted child-start context or SubagentStart failure marker appeared in root/child source. |
+| SubagentStop | Actual queued child path, source identity and proven parent were observed. |
+| Stop | Observed on the original trusted user session; completed exec registrations retain their later SessionEnd event rather than historical callbacks. |
+| SessionEnd | Observed for both independently completed exec roots and the resumed root. |
+
+A bounded feature/source/stderr check found no established SubagentStart handler failure; enabled features alone do not prove delivery of that event. The local TUI log was unavailable. The reason for absent SubagentStart delivery is not established. Running or interrupted native-child capture before its Stop remains degraded/unverified on this observed interface. This smoke therefore establishes root agent interaction and completed native-child source capture, not execution of all six callbacks or complete interrupted-child coverage.
+
+The first root was resumed normally with `codex exec resume` using its exact ID. It preserved its binding, made no second binding command and advanced cumulative source usage. Reconciliation replaced that growing snapshot, preserved the reviewer/child snapshots, and an unchanged repeat preserved the exact compact snapshot digest. The original user-created unassigned session remained local and excluded from ticket outcomes throughout.
+
+| Source session | Model | Effort evidence | Compact input excluding cache | Cache read | Output | Reasoning tokens | Cost |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 01a19901-011a-7402-bb1e-c4febe37e7e1, after resume | gpt-6.1-sol | Unknown; source settings null | 7266 | 39552 | 188 | 0 | Unavailable |
+| 01a19901-c38e-7f22-b224-a334910e4d8b | gpt-6.1-sol | Unknown; source settings null | 8145 | 56448 | 269 | 0 | Unavailable |
+| 01a19901-dda1-7460-a51f-24423a5d19e8 | gpt-6.1-sol | Source explicitly reports low in its own context | 908 | 16128 | 27 | 18 | Unavailable |
+
+Raw source input counts include cached input: resumed root 46818, reviewer root 64593 and child 17036. They equal compact uncached input plus cache-read; output/reasoning values match source records. Before resume, the first root had cumulative source input 30175 and output 177; after resume these became 46818 and 188. No model, effort, price or zero cost was fabricated. CODEX_SMOKE.json stores normalized evidence only; raw logs, source transcripts and binding challenges remain outside Git under the source store/disposable smoke directory. Native non-Linux, other Codex versions/interfaces and actual interrupted-before-Stop child behavior remain unverified.
+
+### Parent source-metadata verification
+
+Parent independently read the exact owning session_meta for all three runtime sessions and matched its id to the selected source ID. The child source is a native subagent.thread_spawn with parent_thread_id01a19901-c38e-7f22-b224-a334910e4d8b, matching the registry's proven source_parent binding. CODEX_SMOKE.json originally carried the parent's exec/null-parent normalization in the child row; parent corrected that evidence from the child's own metadata and retained a normalization-correction record. Inherited parent history is not child metadata or a child binding call. The actual source/registration linkage was correct; no product code changed.

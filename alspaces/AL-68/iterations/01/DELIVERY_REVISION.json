@@ -1,0 +1,13 @@
+{
+  "reviewed_source_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+  "delivery_source_fingerprint": "13bbbfa897b417717f0322450f38afd20674f8b4d6f340b9d839ffa47f920ab0",
+  "runtime_program_and_tests_unchanged": true,
+  "documentation_only_delta": [
+    {
+      "path": ".agents/skills/agentic-lens-operator/references/configuration.md",
+      "previous_sha256": "ac4cc93fb1ee150e8e94df58a89f0e709140fc590f56f387503ecff6cbddf209",
+      "current_sha256": "b93929d18313a727cb6e0aab63889ea8ca1c141d020600c827ffe0087cf1c325"
+    }
+  ],
+  "rationale": "Canonical operator support matrix records newly source-verified runtime evidence and anticipated degraded/unverified events. No implementation, tests, schema, hook definitions or runtime settings changed; all twelve code approvals carry forward."
+}

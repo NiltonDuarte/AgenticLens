@@ -2,7 +2,7 @@
 
 ## Baseline and planning
 
-- Active ticket: AL-68; specification: `alspaces/plan/to-do/AL-68 install harness lifecycle hooks for automatic session capture.md`.
+- Active ticket: AL-68; specification: `alspaces/plan/done/AL-68 install harness lifecycle hooks for automatic session capture.md`.
 - Initial Git status: clean. Baseline commit: `7bc670a7f5c9e93a220f3596f3d0e05cb6007332`.
 - Existing ticket branch renamed to `feat/AL-68-automatic-session-capture-hooks` to match the feature classification.
 - Workspace root from `.agenticlens-config.yaml`: `alspaces`.
@@ -35,17 +35,17 @@ Full make passed on candidates01/02/03 (all Go race/vet, frontend typecheck/lint
 
 Real OpenCode1.19.5 Linux smoke verified two independent roots and a native child, actual agent binding responses, exact source identities/parent, available usage and unknown effort, plus unchanged-repeat preservation. A fresh corrected interaction/reconciliation also passed. Details: iterations/01/SMOKE.md.
 
-Codex0.166.0 capability/configuration is observed, but actual trusted callbacks, agent binding and native-child capture remain unverified. The parent requested human trust review of the concrete isolated hooks at /tmp/al68-codex-smoke-jykimf10/.codex/hooks.json; no answer has been received. No trust edits or bypasses were used. Other platforms, versions/interfaces and OpenCode v2 native runtime are explicitly unverified.
+Before the user-trusted smoke, Codex0.166.0 had capability/configuration evidence only. The user subsequently completed that trust review; the live closure below supersedes the earlier pending state. No trust edits or bypasses were used. Other platforms, versions/interfaces and OpenCode v2 native runtime are explicitly unverified.
 
 ## Current delivery state
 
-Frozen source candidate04: c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec. All twelve final focus/profile reviews approve their corrected code scopes. Overall delivery remains incomplete only for required live Codex trust/interaction evidence. The ticket index remains In Progress and the specification stays under plan/to-do; no PR has been published. Final telemetry and source completeness/privacy checks passed; local evidence is recorded in iterations/01/TELEMETRY_VERIFICATION.json.
+Frozen source candidate04: c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec. All twelve final focus/profile reviews approve their corrected code scopes. Required live Codex evidence is now recorded below; consolidated acceptance is approved for the stated observed paths with explicit degraded coverage. The completed specification is under plan/done and its existing index entry is removed; PR publication follows final evidence checks. Final telemetry and source completeness/privacy checks passed; local evidence is recorded in iterations/01/TELEMETRY_VERIFICATION.json.
 
 ## Local handoff checkpoint
 
 Reviewed implementation committed as `9db4672a971709a7433eeee4e11a5d7d0817cbbe`; main integration needed no changes and required make passed. The final ledger will explicitly include independent reviewer source IDs, preserve other-harness facts and keep ticket completion unset while runtime acceptance is pending. Root/native source records contain no shutdown/thread-ended event at this cutoff; independent reviewer session endings are not ticket completion. Manual telemetry extraction does not prove Codex automatic hook execution.
 
-Publication remains blocked by the invoked development workflow's consolidated evidence gate and the approved contract's rule: Trust is never auto-approved. Review the concrete isolated Codex hooks through normal project trust and /hooks; no unanswered prompt is treated as approval. No PR URL exists and the ticket remains In Progress.
+The approved contract's Trust is never auto-approved rule was respected; the user completed review before real callbacks. Consolidated review now approves the observed paths with stated limits. PR publication follows final evidence checks.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 42
@@ -112,4 +112,12 @@ Known source inventory verified:35Codex sessions (root,22native children,12indep
 
 Rendered telemetry reports7h5m aggregate active agent time across concurrent sessions,96.6%cache hits and context above the configured200k ceiling. Cost is unavailable for35Codex invocations;4OpenCode invocations expose observed zero. No total billing cost is inferred.
 
-All implementation and local evidence are committed on the feature branch. No PR is published. Only the required live Codex trust/callback/agent-binding/source acceptance gate remains open.
+All implementation and local evidence are committed on the feature branch. No PR is published. The required live Codex gate is resolved for the documented observed paths; unobserved Start/interrupted-child coverage remains explicitly degraded.
+
+## User-trusted Codex runtime closure
+
+The user completed normal hook/project trust. Actual Codex0.166.0 Linux root and reviewer-context sessions bound through their own agent responses; a native child was captured through source-proven parent inheritance. Model/usage, known child low effort, unknown root effort/cost, source identities, normal resume and unchanged reconciliation were checked against actual records. Original unrelated unassigned work was preserved and excluded. Details and parent metadata correction are in SMOKE.md/CODEX_SMOKE.json.
+
+SubagentStart was not observed on this exec path; running/interrupted children before Stop stay degraded/unverified. No universal capture, other interface/platform or untested-version claim is made. Canonical support guidance records that limitation and exact-parent-selector recovery. This follows the approved contract's unsupported/unverified branch; no scope waiver, trust bypass or product change occurred.
+
+Consolidated delivery review is APPROVED for the documented scope. Existing specification moved to plan/done and its existing index entry removed. No downstream dependency is blocked by AL68. PR publication and final source telemetry will follow the clean documentation/integration checkpoint.

@@ -1,9 +1,9 @@
 # feat(capture): install harness lifecycle hooks for automatic session capture (AL-68)
 
-Add binary-owned Codex/OpenCode lifecycle adapters, durable local session registration, explicit agent binding and exact-source reconciliation. Independent roots stay separate; unavailable facts and unresolved links remain visible.
+Add binary-owned Codex/OpenCode lifecycle adapters, durable local registration, explicit agent binding and exact-source reconciliation. Independent sessions remain separate; native parents are accepted only from proven source records. Missing or ambiguous facts stay visible.
 
-Install and upgrade hooks additively while preserving user configuration and compatible native handlers. Add CLI diagnostics, safe removal/recovery, and a redacted digest-bound capture report without changing canonical ledger schema v5.
+Install and upgrade additively with native-handler compatibility checks and rollback, preserve user hooks, and provide diagnostics, recovery/removal and a digest-bound coverage report without changing canonical ledger v5.
 
-Scope and architecture: [CONTRACT.md](CONTRACT.md). Delivery status, verification and runtime compatibility limits: [SUMMARY.md](SUMMARY.md).
+Codex0.166.0 and OpenCode1.19.5 Linux runtime paths are documented with bounded coverage. Codex SubagentStart was not observed on the native exec path; running/interrupted child coverage before Stop remains degraded/unverified. Additional platforms/versions/interfaces are not claimed verified.
 
-Publication is pending completion of the recorded review/runtime gates.
+Scope: [CONTRACT.md](CONTRACT.md). Implementation, evidence and limitations: [SUMMARY.md](SUMMARY.md).
