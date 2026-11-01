@@ -7,3 +7,5 @@ Install and upgrade additively with native-handler compatibility checks and roll
 Codex0.166.0 and OpenCode1.19.5 Linux runtime paths are documented with bounded coverage. Codex SubagentStart was not observed on the native exec path; running/interrupted child coverage before Stop remains degraded/unverified. Additional platforms/versions/interfaces are not claimed verified.
 
 Scope: [CONTRACT.md](https://github.com/NiltonDuarte/AgenticLens/blob/feat/AL-68-automatic-session-capture-hooks/alspaces/AL-68/CONTRACT.md). Implementation, evidence and limitations: [SUMMARY.md](https://github.com/NiltonDuarte/AgenticLens/blob/feat/AL-68-automatic-session-capture-hooks/alspaces/AL-68/SUMMARY.md).
+
+Keep AL-68 evidence in nine workspace files: complete original reports and supporting records are embedded in REVIEW_RUNS.json with verified hashes, while FINDINGS.json retains reviewer/model discovery and verification credit. Development/review skill instructions require this compact layout and lossless verification before removing loose artifacts.

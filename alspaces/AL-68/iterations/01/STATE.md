@@ -1,9 +1,0 @@
-# AL-68 completed implementation and delivery checkpoint
-
-User-trusted real Codex0.166.0 exec/resume smoke passed: two independent roots, own root agent binding, completed native child source-parent capture, identity-preserving resume/growing usage and unchanged snapshot idempotence. Actual source values and unknowns preserved; original unassigned work excluded. Source metadata normalization correction preserved provenance. OpenCode1.19.5 observed-path evidence also valid.
-
-Consolidated review APPROVED for documented scope, all12focused code cells approved, allfindings fixed, no program/test changes after reviewed c34cc949...e6ec. Only factual operator docs differ (DELIVERY_REVISION). SubagentStart unobserved on native exec; before-Stop running/interrupted child coverage remains degraded/unverified, explicitly documented under accepted capability branch. No universal/platform/version/interface claims or trust bypass.
-
-Implementation9db4672; prior evidencee0d198b; trusted runtime/docs/lifecycle ba0b50a. Final clean integration needed no changes and required make passed at ba0b50a. Specification in plan/done, AL68index entry removed, no dependencies to promote. Latest final telemetry42sessions (38Codex,4OpenCode), no source warnings, proven parents/models/smoke usage, unrelated unassigned excluded, privacy/digest/native persisted validation pass. Root is still active so ticket completed_at remainsunknown after correcting legacy generate inference only; source facts unchanged.
-
-Next final evidence commit then push feature branch feat/AL-68-automatic-session-capture-hooks and create PR using PULL_REQUEST firstline/bodyfile. No PR exists yet. mcp__t3_code__link_pull_request fullURL MUST be immediate next tool call after creating PR (or pushing to existing PR). No remote merge authorized, no monitoring requested. Raw logs/transcripts/challenges outsideGit. Do not restart completed implementation/tests/reviews or infer unobserved events.

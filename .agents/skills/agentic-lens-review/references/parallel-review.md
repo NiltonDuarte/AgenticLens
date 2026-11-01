@@ -23,7 +23,7 @@ Before dispatch, load [model-policy.yaml](model-policy.yaml) and follow [model e
 
 ## Freeze evidence and dispatch independently
 
-- Put the coverage roster in the current iteration PLAN.md: focus, risk question, scope/call paths, evidence owner and unique report path. The parent alone owns the consolidated REVIEW.md. Children write only their assigned reports if the harness permits it; otherwise return content for the parent to save.
+- Put the coverage roster in the current iteration PLAN.md: focus, risk question, scope/call paths, evidence owner and unique temporary report path. Use private scratch outputs, then the parent archives full reports by run ID under the [compact committed archive](model-attribution.md#compact-committed-archive); separate owners must not become separate committed files. The parent alone owns the consolidated REVIEW.md. Children write only their assigned reports if the harness permits it; otherwise return content for the parent to save.
 - Give every reviewer the same base/head commit and requirements. For uncommitted code, record a diff/content fingerprint covering changed and relevant untracked files. Include active product/deployment constraints and useful raw test evidence; do not seed an approval or suspected answer. Fresh context is preferred where available. Do not distribute other reviewers' conclusions before their first pass.
 - Freeze product/test edits during this pass. Shared-checkout reviewers may overlap in reading, but cannot change production/test code. Probes must use disposable paths and separate resource names/ports. A reviewer that observes source changes reports stale evidence instead of approving a mixed revision.
 - Dispatch independent focuses concurrently up to actual harness capacity. Reserve capacity for the parent as needed. If all persona/model runs cannot run at once, queue remaining focuses in waves against the same frozen revision; do not drop coverage or pretend sequential work was parallel. Use supported native/delegated tools and report unavailable capabilities. Do not create top-level threads or change models/providers merely to obtain parallelism.
@@ -40,7 +40,7 @@ Fill in this brief rather than copying four general review requests:
                contract/plan, canonical review skill, relevant source paths,
                test results and supported deployment assumptions>
     Inspect: <entry points, consumers and important unchanged dependencies>
-    Own: <unique report path only; no product/test edits>
+    Own: <unique private scratch report path or full response; no product/test/archive edits>
     Shared checkout: preserve others' changes; isolated probes only.
     First pass: investigate independently; do not read sibling conclusions.
     Return: reviewed revision, hypotheses/disposition, findings, verification,
@@ -66,6 +66,8 @@ Map each fix to affected focus owners and dependencies. Re-review the corrected 
 ## Consolidated delivery gate
 
 When focused investigations have no unresolved blockers or material review gaps, the parent may commit the candidate, integrate main and run the required verification phase. The final consolidated approval is issued only after those checks pass. Integration changes invalidate affected review evidence and require the same impact assessment/re-review; this ordering avoids requiring final approval before its verification can run.
+
+Before committing, the parent losslessly archives completed report bodies and candidate/supporting evidence in REVIEW_RUNS.json, rewrites references and verifies content hashes/provenance before deleting scratch files.
 
 The parent records a compact roster (focus, model/effort, run ID/phase, reviewed revision, report, outcome, any valid carry-forward rationale), deduplicated findings/dispositions, remaining debt, verification and limits in iterations/<NN>/REVIEW.md. A child approval never independently opens the gate.
 

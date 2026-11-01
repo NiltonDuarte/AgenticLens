@@ -8,7 +8,7 @@ Version 1 defines named profiles with provider_instance_id, exact model identifi
 
 Current user policy is every selected reviewer on BOTH gpt-6.1-sol/high and gpt-6-luna/medium. Thus four core focuses expand to eight independent discovery runs; specialists add two runs each. A low-risk scope exception can reduce applicable focuses, not remove one model from a selected focus. A verifier is a distinct phase; it does not satisfy a missing discovery run. When a separate reviewer is dispatched to verify findings, its configured model profiles also apply unless the user explicitly changes the policy. The parent can validate an already conclusive probe without spawning a verifier.
 
-Expand the roster before launch as (persona, profile, phase, candidate revision). Snapshot the resolved policy and its content hash in REVIEW_RUNS.json. Allocate a unique run ID and report path per cell, including retries. Give paired discovery runs equivalent requirements/source evidence and separate fresh contexts; do not reveal their partner's findings before both first passes finish. Preserve all selected cells through capacity-limited waves; a queued/unavailable run is not a completed review.
+Expand the roster before launch as (persona, profile, phase, candidate revision). Snapshot the resolved policy and its content hash in REVIEW_RUNS.json. Allocate a unique run ID and private scratch report path per cell, including retries. Archive the report by run ID before committing; separate writable outputs do not require separate committed files. Give paired discovery runs equivalent requirements/source evidence and separate fresh contexts; do not reveal their partner's findings before both first passes finish. Preserve all selected cells through capacity-limited waves; a queued/unavailable run is not a completed review.
 
 Resolve model/effort availability from the active harness catalog. The provider_instance_id identifies an installed provider instance, not an interchangeable model family. Explicit user-selected settings must be passed to the actual dispatch tool, not merely written into the prompt. For T3 delegate_task, map profile provider_instance_id/model into target and reasoning_effort to the supported target.options.reasoningEffort key after orchestrator_capabilities; obey the host's delegation/lifecycle rules. Native dispatch, when allowed by the active host policy, uses its model/reasoning_effort fields and fresh context. Do not change providers/models, omit effort or switch dispatch mechanisms to bypass an unavailable requested configuration. Report the missing cell as INCOMPLETE and identify the unavailable setting.
 
@@ -16,13 +16,13 @@ Record requested settings separately from settings acknowledged by the dispatch 
 
 ## Durable records owned by the coordinator
 
-Store structured review records in the active iterations/<NN>/ directory. Children own only their individual reports; the parent owns these two JSON files and consolidated REVIEW.md. Keep raw transcripts outside Git. Never place secrets in the policy or reports.
+Store structured review records in the active iterations/<NN>/ directory. Children own only their assigned temporary reports or return full report text; the parent owns FINDINGS.json, REVIEW_RUNS.json and consolidated REVIEW.md. The compact archive below is the committed source of individual reports. Keep raw transcripts, secrets and active scratch outputs outside Git.
 
 REVIEW_RUNS.json contains schema_version: 1, policy_path, policy_sha256, resolved_policy, base/head or source fingerprint, and a runs array. Every roster cell appears, even if it yields no findings or never starts. Each run records:
 
 - run_id, persona, focus, profile_id and phase (discovery, verification or re_review).
 - requested {provider_instance_id, model, reasoning_effort}; acknowledged settings and dispatch evidence; observed settings/source evidence or null with reason.
-- task/session identifiers and report path where available; no fabricated identifiers.
+- task/session identifiers and, after archival, report_path pointing to REVIEW_RUNS.json, report_pointer selecting that run's exact archived content, report_sha256 and original_report_path; no fabricated identifiers. A cancelled/unavailable run with no report keeps explicit missing-report evidence instead of an invented archive entry.
 - candidate revision/fingerprint plus persona/shared-procedure/prompt hashes, enough to distinguish differing instructions and code.
 - execution_status (queued, running, completed, failed, cancelled or unavailable), verdict (APPROVED, CHANGES_REQUESTED, INCOMPLETE or null while pending), and completeness/gaps.
 - candidate_ids, including an empty array for no findings; started/ended times, token/cost information only if source-backed, otherwise null with reason. Keep retries as new runs with retry_of; preserve earlier failures.
@@ -30,6 +30,23 @@ REVIEW_RUNS.json contains schema_version: 1, policy_path, policy_sha256, resolve
 FINDINGS.json contains schema_version: 1 and a findings array. A canonical finding records finding_id, location, trigger, violated expectation, consequence, introduced/pre_existing/suggestion classification, severity, evidence, disposition (confirmed, refuted or unresolved), disposition_reason and discovery_run_ids. Keep each contributing report's local candidate ID, raw claim/severity and evidence under observations. Verification/re-review runs are separate references with their conclusions; they do not automatically gain discovery credit. Keep lifecycle status (open, fixed, accepted_debt) separate from whether the original finding was valid. Never remove a refuted report merely to improve a model's statistics.
 
 Deduplicate by root cause and observable failure across all reviewer/model runs. Retain independent credit for every run that found the same valid issue; do not credit only the first finisher. A confirmed duplicate is not a false positive. A verifier confirming a supplied finding is not independent discovery. If a verifier discovers an additional distinct defect, record its actual phase and evidence separately; do not mix it into blind-discovery comparisons. Record later escaped bugs only when confirmed and tied to the reviewed scope/revision; absent detection does not establish that a model saw the necessary evidence.
+
+## Compact committed archive
+
+For development tickets, keep the configured root contract/summary, PR description and final metrics ledger, plus capture_report.json when generated. Each iteration normally commits only PLAN.md, REVIEW.md, FINDINGS.json and REVIEW_RUNS.json. Extra required configured artifacts remain allowed; do not create placeholders to fill a layout.
+
+Independent writers use unique private scratch paths outside the tracked ticket workspace or return full reports. Keep current paired first-pass reports private until both investigations finish; do not expose a partner's conclusions through an archive prematurely. The parent is the sole archive writer. Re-review history is appended, never replaced by only the final approvals.
+
+Use additive fields in REVIEW_RUNS.json for the archive:
+
+- archive.reports[run_id]: original_path, encoding, sha256 and complete original UTF-8 content. Preserve each original local candidate ID, raw claim/severity, command/evidence, dissent and no-findings result; a summary or finding title is not a substitute.
+- archive.documents[original_relative_path]: the same content/hash record for candidate manifests and supporting test, implementation, smoke, source-inventory and validation evidence. Preserve candidate fingerprints/definitions and ownership/source evidence. Consolidate these records rather than committing separate CANDIDATE, STATE, TEST_REPORT or SMOKE files.
+- archive.retained_versions: original content/hash when replacing a consolidated summary or review would otherwise lose history. Raw transcripts and secrets still do not belong in this archive.
+- archive.reference_index: original paths to resolvable archive file/JSON-pointer locations. Escape pointer keys using RFC6901. Use report_path plus report_pointer in runs/finding evidence; retain original_report_path for provenance. Read an archived report by resolving its pointer, not by treating the JSON file itself as the report.
+
+Before deleting any file, verify the stored UTF-8 bytes against its original SHA-256, verify every current reference resolves, and compare preserved finding IDs, local observations, persona/focus, requested/acknowledged/observed model and effort, phase, candidate revision, verdict/disposition and verification links. Retain shared discovery credit and all failed/cancelled/no-findings runs. Do not rely on Git history alone or silently discard an unarchived body. Existing loose reports may be removed only after these checks pass; archive migration changes file layout, not the evidence or its historical verdict.
+
+Keep REVIEW.md concise: current consolidated verdict/limitations, findings and reviewer/model credit, verification results and links to the structured archive. Put durable progress and handoff in SUMMARY.md and scope/steering in PLAN.md. Machine evidence stays in the archive; capture_report.json and agentic_metrics.json remain distinct runtime artifacts and their matching digest must be preserved. File-count consolidation does not authorize changing model coverage, approval gates, runtime schemas, raw facts or unavailable values.
 
 ## Coordinator report and later efficacy analysis
 

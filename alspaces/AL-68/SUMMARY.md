@@ -1,51 +1,32 @@
 # AL-68: Automatic session capture hooks
 
-## Baseline and planning
+PR: https://github.com/NiltonDuarte/AgenticLens/pull/93
 
-- Active ticket: AL-68; specification: `alspaces/plan/done/AL-68 install harness lifecycle hooks for automatic session capture.md`.
-- Initial Git status: clean. Baseline commit: `7bc670a7f5c9e93a220f3596f3d0e05cb6007332`.
-- Existing ticket branch renamed to `feat/AL-68-automatic-session-capture-hooks` to match the feature classification.
-- Workspace root from `.agenticlens-config.yaml`: `alspaces`.
-- Planner completed `CONTRACT.md` and `iterations/01/PLAN.md`; application implementation awaits explicit approval.
-- Proposed coverage publication uses a versioned `capture_report.json` bound to the canonical v5 ledger digest, avoiding a canonical ledger migration.
-- Installed harness versions observed during planning: Codex 0.166.0 and OpenCode 1.19.5. Callback execution, identity mapping and real capture remain unverified.
-- Parent reviewed the planning artifacts against the specification and repository workflow. Required implementation reviews cover behavior, data, architecture, tests, security and release integrity under both configured model profiles.
-- No application changes or implementation checks performed. Telemetry deferred until workflow finalization.
+## Scope and delivered behavior
 
-## Scope approval
+Baseline `7bc670a7f5c9e93a220f3596f3d0e05cb6007332`; initial Git status clean. Configured workspace root: alspaces. The user approved iteration 01 on 2026-11-01 and required real hook-to-agent interaction for correct binding information without guessing. CONTRACT.md and iterations/01/PLAN.md preserve the accepted boundaries.
 
-The user approved implementation on 2026-11-01 and required hooks to interact with the agent for correct information without guessing. The approved plan records that constraint. Missing ticket context is requested through supported harness channels; exact source/session identity and a per-session challenge validate the reply. Model, usage, cost and native parents come from source records, not an agent's guess.
+Binary-owned Codex/OpenCode hooks register sessions durably, request explicit agent binding, reconcile exact source identities and expose capture diagnostics. Installation/upgrade is additive with rollback and compatibility checks. Canonical ledger schema v5 is preserved; capture_report.json records bounded coverage and the matching ledger digest. Source usage/model/parent facts remain distinct from agent-supplied binding.
 
-## Implemented behavior
+## Findings, verification and limitations
 
-- Domain: exact source/store/session identity, explicit conflict-safe ticket association, checkpoint precedence and explicit pending/unknown states. Canonical schema v5 is preserved.
-- Adapters: embedded Codex callback/OpenCode plugin handlers; bounded durable local registration; runtime-supplied OpenCode binding tool; source-proven parent recovery; ignored local state; fair bounded reconciliation; source warning/failure preservation; additive owned installation/rollback/disable/removal.
-- CLI/publication: capture diagnostics/request/bind/reconcile commands; registered independent roots and exact legacy selectors; owner/source conflict checks; recoverable kernel publication locking and staged ledger/report writes; digest-bound redacted coverage report with truthful completion/per-owner checkpoint semantics.
-- Setup/distribution: staged compatible native upgrades and rollback in both downloaders/wrappers; network-free callback dispatch; direct Unix/PowerShell and operator guidance.
+All twelve confirmed finding classes are fixed. FINDINGS.json preserves original validity, shared reviewer/model discovery credit, correction status and separate verification links. REVIEW_RUNS.json contains all 48 run records, including 30 completed reports and 18 cancelled cells; exact requested, acknowledged and observed model/effort metadata remains separate. The consolidated review lists each finding's discovering reviewer/model and the full run roster. Historical INCOMPLETE verdicts remain archived.
 
-## Correctness corrections
+Integrated make passed at `9db4672a971709a7433eeee4e11a5d7d0817cbbe` and final integration `ba0b50a0d7f64561b21a1d11cd5bf3d909dfe5d7`: Go vet/race, frontend typecheck/lint/build, 781 frontend tests, 14 distribution tests and native builds. Final affected races passed; unchanged-code evidence carries forward.
 
-Individual reports and FINDINGS.json retain twelve confirmed finding classes and model-specific evidence. Corrections cover stale/failed/ambiguous snapshot replacement, overlapping publication, exact binding conflicts and source aliases, child recovery, failed-read accounting, safe templates, stdin deadlines, compatible replacement, setup guidance, truthful cutoffs and ticket-scoped diagnostics. Persistent rotation across four work classes prevents both session and byte starvation while retaining unresolved evidence.
+The user completed normal project/hook trust review. Real Codex 0.166.0 Linux exec/resume and OpenCode 1.19.5 Linux smoke verified actual agent binding, independent roots/native child, source identity/model/usage/parent comparison and repeat preservation. Unassigned work stayed excluded. No trust bypass was used. Codex SubagentStart was not observed on this exec path; running/interrupted child coverage before Stop remains degraded/unverified. Other interfaces, versions, OpenCode v2 and native non-Linux execution remain unverified.
 
-Existing facts remain visible when ordering is unknown. Differing snapshots with equal/unavailable source invocation completion checkpoints cannot be assumed newer, for explicit or registered selection. One existing update-in-place fixture now supplies the actual message JSON timestamps for its already intended chronology; all numerical, steering, compaction and multiplicity assertions were retained, with separate missing-checkpoint guards.
+Consolidated delivery acceptance is approved for those observed paths with the stated limits. The specification moved to plan/done and its existing index entry was removed; no downstream dependency requires promotion. Ticket completed_at remains unknown while this orchestration is active. Only that ticket metadata inference is corrected after generation; source invocation facts remain intact and the coverage digest is updated.
 
-## Verification and runtime evidence
+## Workspace consolidation: 2026-11-02
 
-Full make passed on candidates01/02/03 (all Go race/vet, frontend typecheck/lint/build, 35 frontend files/781 tests, release tests and capture distribution tests). Final candidate04 affected domain/capture/CLI race tests pass; unchanged source-package results carry forward. Distribution correction suite passes fourteen tests, including actual native rollback probes. Corrected Windows/Darwin cross-builds pass; native non-Linux execution remains unverified. The final integrated make passed at implementation commit 9db4672a971709a7433eeee4e11a5d7d0817cbbe.
+User steering: reduce committed workspace files while preserving every finding and reviewer/model attribution, then update the skill instructions. The workspace now keeps nine files. REVIEW_RUNS.json embeds all 30 original reports and 17 supporting documents, plus original versions of rewritten records, with SHA-256 checks. All 47 removed file bodies were verified byte-for-byte before deletion. Original filenames resolve through archive.reference_index. Raw transcripts remain outside Git. The archive preserves evidence size while reducing file count.
 
-Real OpenCode1.19.5 Linux smoke verified two independent roots and a native child, actual agent binding responses, exact source identities/parent, available usage and unknown effort, plus unchanged-repeat preservation. A fresh corrected interaction/reconciliation also passed. Details: iterations/01/SMOKE.md.
+The development/review skills and owning contributor guidance now require private temporary reviewer outputs, a parent-owned lossless archive, and hash/reference/provenance checks before removal. Review coverage, model policy, approval gates and runtime schemas are unchanged. Archive integrity, complete finding/run provenance, all pointers and edited skill metadata are verified. This documentation-only change reuses the unchanged application's integrated test evidence.
 
-Before the user-trusted smoke, Codex0.166.0 had capability/configuration evidence only. The user subsequently completed that trust review; the live closure below supersedes the earlier pending state. No trust edits or bypasses were used. Other platforms, versions/interfaces and OpenCode v2 native runtime are explicitly unverified.
+## Final session telemetry
 
-## Current delivery state
-
-Frozen source candidate04: c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec. All twelve final focus/profile reviews approve their corrected code scopes. Required live Codex evidence is now recorded below; consolidated acceptance is approved for the stated observed paths with explicit degraded coverage. The completed specification is under plan/done and its existing index entry is removed; PR publication follows final evidence checks. Final telemetry and source completeness/privacy checks passed; local evidence is recorded in iterations/01/TELEMETRY_VERIFICATION.json.
-
-## Local handoff checkpoint
-
-Reviewed implementation committed as `9db4672a971709a7433eeee4e11a5d7d0817cbbe`; main integration needed no changes and required make passed. The final ledger will explicitly include independent reviewer source IDs, preserve other-harness facts and keep ticket completion unset while runtime acceptance is pending. Root/native source records contain no shutdown/thread-ended event at this cutoff; independent reviewer session endings are not ticket completion. Manual telemetry extraction does not prove Codex automatic hook execution.
-
-The approved contract's Trust is never auto-approved rule was respected; the user completed review before real callbacks. Consolidated review now approves the observed paths with stated limits. PR publication follows final evidence checks.
+The final snapshot must retain the 38 known Codex sessions and four OpenCode sessions, their source parent/model evidence and the excluded unassigned session boundary. REVIEW_RUNS.json holds the archived source inventory and latest verification; capture_report.json is a separate coverage artifact bound to the ledger digest. Costs unavailable from source remain unavailable.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 49
@@ -103,25 +84,3 @@ The approved contract's Trust is never auto-approved rule was respected; the use
 | **gpt-6-luna** | 12 | 973,658 | 61,706 | 6,380,800 | 86.8% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
 | **gpt-6.1-sol** | 26 | 4,683,034 | 541,584 | 160,585,344 | 97.2% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
 | **Total** | **42** | **5,692,344** | **603,560** | **166,983,424** | **96.7%** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
-
-## Final evidence status
-
-Known source inventory verified:35Codex sessions (root,22native children,12independent reviewers) and4preserved OpenCode sessions. Actual parent/model identities match source metadata; no source warnings, missing known sessions or invented independent parent links. Privacy and report digest checks pass. This is a bounded manual-publication snapshot, not evidence that Codex hooks ran.
-
-Rendered telemetry reports7h5m aggregate active agent time across concurrent sessions,96.6%cache hits and context above the configured200k ceiling. Cost is unavailable for35Codex invocations;4OpenCode invocations expose observed zero. No total billing cost is inferred.
-
-All implementation and local evidence are committed on the feature branch. No PR is published. The required live Codex gate is resolved for the documented observed paths; unobserved Start/interrupted-child coverage remains explicitly degraded.
-
-## User-trusted Codex runtime closure
-
-The user completed normal hook/project trust. Actual Codex0.166.0 Linux root and reviewer-context sessions bound through their own agent responses; a native child was captured through source-proven parent inheritance. Model/usage, known child low effort, unknown root effort/cost, source identities, normal resume and unchanged reconciliation were checked against actual records. Original unrelated unassigned work was preserved and excluded. Details and parent metadata correction are in SMOKE.md/CODEX_SMOKE.json.
-
-SubagentStart was not observed on this exec path; running/interrupted children before Stop stay degraded/unverified. No universal capture, other interface/platform or untested-version claim is made. Canonical support guidance records that limitation and exact-parent-selector recovery. This follows the approved contract's unsupported/unverified branch; no scope waiver, trust bypass or product change occurred.
-
-Consolidated delivery review is APPROVED for the documented scope. Existing specification moved to plan/done and its existing index entry removed. No downstream dependency is blocked by AL68. PR publication and final source telemetry will follow the clean documentation/integration checkpoint.
-
-## Final delivery verification
-
-After trusted Codex runtime checks and source-evidence normalization, clean feature-branch integration with main needed no changes. Required make passed at `ba0b50a0d7f64561b21a1d11cd5bf3d909dfe5d7`: all Go race/vet, frontend typecheck/lint/build,781frontend tests,14distribution tests and native builds. All12final code-review scopes remain valid; no program/test changes occurred. The completed specification is in plan/done and no blocked dependency requires promotion. Final telemetry refresh and PR publication follow.
-
-Final source snapshot: 38Codex and4preserved OpenCode sessions verified; native parents and model/usage match source, unrelated unassigned work excluded. Ledger/report digest and persisted CLI validation pass. Ticket completion timestamp remains unknown while source orchestration is active; source invocation facts are unchanged. Codex SubagentStart and interrupted-before-Stop child coverage remain degraded/unverified.
