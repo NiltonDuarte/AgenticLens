@@ -48,30 +48,31 @@ Reviewed implementation committed as `9db4672a971709a7433eeee4e11a5d7d0817cbbe`;
 The approved contract's Trust is never auto-approved rule was respected; the user completed review before real callbacks. Consolidated review now approves the observed paths with stated limits. PR publication follows final evidence checks.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 42
-- **Active Agent Duration:** 7h 5m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 292.0k tokens (146% of 200k healthy ceiling, 0 compactions) | Subagents peak 305.0k (Coder)
+- **Software Development Life Cycle Iterations:** 49
+- **Active Agent Duration:** 7h 43m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 378.3k tokens (189% of 200k healthy ceiling, 0 compactions) | Subagents peak 336.6k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 6 turns) | Planner 1.0, Coder 3.0, Tester 6.0, Reviewer 1.0, General 3.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 6 turns) | Planner 1.0, Coder 3.5, Tester 6.0, Reviewer 1.0, Capture_child 1.0, General 3.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 0.8:1 (+2,035 test lines / +2,640 prod lines)
 - **Code Delivered:** +4,725 / -11 lines across 23 code files (excluding docs)
-- **Reasoning Effort:** 175,298 reasoning tokens (25.1% of generated output)
-- **Tool Health & Self-Correction:** 1,128 tool calls (40 self-corrections, 96.5% success rate)
+- **Reasoning Effort:** 230,837 reasoning tokens (27.7% of generated output)
+- **Tool Health & Self-Correction:** 1,183 tool calls (46 self-corrections, 96.1% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 13 execution anomalies detected (7 CRITICAL, 6 WARNING).
+- **Status:** 14 execution anomalies detected (7 CRITICAL, 7 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.2k tokens) — Context tokens reached 207.2k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.6k tokens) — Context tokens reached 203.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (292.0k tokens) — Context tokens reached 292.0k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (305.0k tokens) — Context tokens reached 305.0k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (378.3k tokens) — Context tokens reached 378.3k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (336.6k tokens) — Context tokens reached 336.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (303.6k tokens) — Context tokens reached 303.6k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (292.0k tokens) — Context tokens reached 292.0k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (378.3k tokens) — Context tokens reached 378.3k, breaching the 200k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.3k tokens) — Context tokens reached 160.3k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.1k tokens) — Context tokens reached 161.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.4k tokens) — Context tokens reached 163.4k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (174.3k tokens) — Context tokens reached 174.3k, breaching the 160k warning ceiling.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
@@ -83,28 +84,25 @@ The approved contract's Trust is never auto-approved rule was respected; the use
 |---|---|---|---|---|---|---|---|---|
 | **orchestrator** | 3 | 26,019 | 222 | 17,280 | 39.9% | 6.4k | HEALTHY | $0.00 |
 | **planner** | 1 | 162,762 | 7,541 | 786,048 | 82.8% | 91.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 2 | 920,120 | 123,440 | 39,850,752 | 97.7% | 305.0k | BLOATED (153%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **coder** | 2 | 964,669 | 144,844 | 46,872,704 | 98.0% | 336.6k | BLOATED (168%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **tester** | 1 | 692,408 | 81,990 | 35,824,384 | 98.1% | 303.6k | BLOATED (152%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer** | 4 | 373,365 | 27,895 | 3,905,280 | 91.3% | 105.5k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **capture_child** | 1 | 908 | 27 | 16,128 | 94.7% | 17.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **general** | 1 | 9,633 | 48 | 0 | 0.0% | 4.9k | HEALTHY | $0.00 |
 | **reviewer-architecture** | 4 | 524,799 | 31,831 | 4,718,080 | 90.0% | 106.1k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-behavior** | 4 | 476,895 | 27,453 | 4,110,976 | 89.6% | 98.6k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-data** | 4 | 383,552 | 32,720 | 4,905,856 | 92.7% | 99.3k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-tests** | 2 | 236,275 | 13,714 | 2,179,328 | 90.2% | 103.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **rootagent** | 13 | 1,411,703 | 177,239 | 52,311,936 | 97.4% | 292.0k | BLOATED (146%) | Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations) |
-| **Total** | **39** | **5,217,531** | **524,093** | **148,609,920** | **96.6%** | **305.0k** | **BLOATED** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 35 unavailable / 39 invocations)** |
+| **rootagent** | 15 | 1,841,059 | 235,275 | 63,647,360 | 97.2% | 378.3k | BLOATED (189%) | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **Total** | **42** | **5,692,344** | **603,560** | **166,983,424** | **96.7%** | **378.3k** | **BLOATED** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-5.6-luna** | 4 | 35,652 | 270 | 17,280 | 32.6% | $0.00 |
 | **gpt-6-luna** | 12 | 973,658 | 61,706 | 6,380,800 | 86.8% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
-| **gpt-6.1-sol** | 23 | 4,208,221 | 462,117 | 142,211,840 | 97.1% | Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations) |
-| **Total** | **39** | **5,217,531** | **524,093** | **148,609,920** | **96.6%** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 35 unavailable / 39 invocations)** |
-
-Capture reconciliation completed: 2026-11-01T20:20:19.196762544Z (per-owner refreshed_at checkpoints; no common as-of snapshot). Current: 3; pending: 0; failed: 0; unassigned: 0. See [capture_report.json](capture_report.json) for explicit coverage limits. Hook installation alone does not prove complete capture.
-
-Ticket acceptance remains pending; completed_at is null. Existing CLI publication-time inference was removed from ticket metadata, with every source invocation fact preserved and the capture-report digest updated. See iterations/01/VERIFICATION.md.
+| **gpt-6.1-sol** | 26 | 4,683,034 | 541,584 | 160,585,344 | 97.2% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
+| **Total** | **42** | **5,692,344** | **603,560** | **166,983,424** | **96.7%** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
 
 ## Final evidence status
 
@@ -121,3 +119,9 @@ The user completed normal hook/project trust. Actual Codex0.166.0 Linux root and
 SubagentStart was not observed on this exec path; running/interrupted children before Stop stay degraded/unverified. No universal capture, other interface/platform or untested-version claim is made. Canonical support guidance records that limitation and exact-parent-selector recovery. This follows the approved contract's unsupported/unverified branch; no scope waiver, trust bypass or product change occurred.
 
 Consolidated delivery review is APPROVED for the documented scope. Existing specification moved to plan/done and its existing index entry removed. No downstream dependency is blocked by AL68. PR publication and final source telemetry will follow the clean documentation/integration checkpoint.
+
+## Final delivery verification
+
+After trusted Codex runtime checks and source-evidence normalization, clean feature-branch integration with main needed no changes. Required make passed at `ba0b50a0d7f64561b21a1d11cd5bf3d909dfe5d7`: all Go race/vet, frontend typecheck/lint/build,781frontend tests,14distribution tests and native builds. All12final code-review scopes remain valid; no program/test changes occurred. The completed specification is in plan/done and no blocked dependency requires promotion. Final telemetry refresh and PR publication follow.
+
+Final source snapshot: 38Codex and4preserved OpenCode sessions verified; native parents and model/usage match source, unrelated unassigned work excluded. Ledger/report digest and persisted CLI validation pass. Ticket completion timestamp remains unknown while source orchestration is active; source invocation facts are unchanged. Codex SubagentStart and interrupted-before-Stop child coverage remain degraded/unverified.
