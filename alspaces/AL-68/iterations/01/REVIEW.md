@@ -2,7 +2,7 @@
 
 Scoped code verdict: APPROVED. Overall delivery verdict: INCOMPLETE.
 
-All twelve current focus/profile cells approve corrected code candidate04 c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec, baseline7bc670a7f5c9e93a220f3596f3d0e05cb6007332. No confirmed code finding remains open. Final integration/make and the required real Codex trust/callback/agent-binding/native-child/source evidence remain separate gates. Code approval does not authorize publication or merge.
+All twelve current focus/profile cells approve corrected code candidate04 c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec, baseline7bc670a7f5c9e93a220f3596f3d0e05cb6007332. No confirmed code finding remains open. The required real Codex trust/callback/agent-binding/native-child/source evidence remains the unresolved gate. Final main integration and make passed at implementation commit 9db4672a971709a7433eeee4e11a5d7d0817cbbe. Code approval does not authorize publication or merge.
 
 | Focus | Model / effort | Scoped code | Overall | Report |
 | --- | --- | --- | --- | --- |
@@ -27,6 +27,10 @@ FINDINGS.json preserves CAP01 through CAP12 with distinct triggers, original val
 
 Actual reviewer model/effort is source-verified through Codex session_meta/turn_context in REVIEW_RUNS.json, separate from dispatch acknowledgement. T3 delegate thread IDs are never equated with harness source IDs. Architecture Luna04 initially labelled the manifest-file digest as the source digest; parent independently verified the canonical content fingerprint and appended an explicit evidence correction, preserving the original report. Report formatting corrections remove trailing whitespace without changing findings.
 
-Full make passed candidates01/02/03; final candidate04 affected domain/capture/CLI races passed and unchanged component coverage carries forward with recorded scope. Parent final integrated make remains to be recorded. Real OpenCode1.19.5 Linux actual binding, two independent roots/native child/source facts and unchanged repeats passed. The corrected interaction smoke remains valid because later scheduler/checkpoint changes did not alter the proven agent channel; source fixtures and native scheduler probes separately cover those changed boundaries.
+Full make passed candidates01/02/03; final candidate04 affected domain/capture/CLI races passed and unchanged component coverage carries forward with recorded scope. Parent final integrated make passed at 9db4672a971709a7433eeee4e11a5d7d0817cbbe; VERIFICATION.md records the exact commands and unchanged fingerprint. Real OpenCode1.19.5 Linux actual binding, two independent roots/native child/source facts and unchanged repeats passed. The corrected interaction smoke remains valid because later scheduler/checkpoint changes did not alter the proven agent channel; source fixtures and native scheduler probes separately cover those changed boundaries.
 
 Codex0.166.0 actual hook trust/agent interaction remains unavailable pending a human trust action. No automatic trust or bypass was used. Windows/macOS native runtime, additional harness versions/interfaces and other unexercised runtime paths remain unverified. A configuration, zero hook exit, fixture or code approval cannot close those gaps. The ticket stays In Progress and PR publication is blocked until required runtime acceptance is resolved or the user explicitly approves a changed acceptance boundary.
+
+## Final local evidence checkpoint
+
+Required integrated make passed at implementation commit9db4672a971709a7433eeee4e11a5d7d0817cbbe with unchanged reviewed source. Final source telemetry verified all35known Codex sessions and4preserved OpenCode sessions, including actual parent/model evidence and final report digest/privacy. Ticket completion remains unknown, with an explicit metadata correction for the legacy generator's date inference; source facts unchanged. Overall verdict remains INCOMPLETE only for the required human-controlled real Codex runtime evidence. PR publication remains blocked by the development workflow's INCOMPLETE gate.

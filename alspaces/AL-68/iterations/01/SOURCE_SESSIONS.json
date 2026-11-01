@@ -402,5 +402,20 @@
       ]
     }
   ],
-  "hook_runtime_limit": "This source inventory is manual publication evidence and does not establish trusted Codex callback execution."
+  "hook_runtime_limit": "This source inventory is manual publication evidence and does not establish trusted Codex callback execution.",
+  "registered_opencode_smoke_sessions": [
+    "ses_e67855b34ffej7NeJ33rgNspY0",
+    "ses_e67ab72cdffev5PqFh1lPm8lp1",
+    "ses_e67ab860dffe3Hvybx8GEcvcIp",
+    "ses_e67b05d6affe2pB3HDJUcmJvxg"
+  ],
+  "ticket_completion": "Unknown/pending human Codex runtime acceptance; reviewer shutdown events are session facts, not ticket completion.",
+  "metadata_correction": {
+    "field": "ticket completed_at",
+    "generated_value": "2026-11-01T20:20:19.222Z",
+    "corrected_value": null,
+    "reason": "Required Codex runtime acceptance remains incomplete. Root/native source records have no shutdown/thread-ended event; independent reviewer session/turn completions are not ticket completion.",
+    "source_facts_modified": false,
+    "canonical_schema_changed": false
+  }
 }

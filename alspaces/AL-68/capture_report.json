@@ -1,0 +1,69 @@
+{
+  "started_at": "2026-11-01T20:20:19.153476813Z",
+  "cutoff_semantics": "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion",
+  "source_bytes_reserved": 30972,
+  "source_attempts": 4,
+  "child_discovery_pending": false,
+  "pending_children": 0,
+  "unresolved_parent_links": 0,
+  "protocol": 1,
+  "cutoff": "2026-11-01T20:20:19.196762544Z",
+  "ticket_id": "AL-68",
+  "registrations": [
+    {
+      "identity": {
+        "source": "opencode",
+        "store": "[local source store]",
+        "session_id": "ses_e67ab860dffe3Hvybx8GEcvcIp"
+      },
+      "ticket_id": "AL-68",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "session.status",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-01T20:20:19.185743289Z",
+      "updated_at": "2026-11-01T18:17:25.673000+00:00",
+      "revision": 14506
+    },
+    {
+      "identity": {
+        "source": "opencode",
+        "store": "[local source store]",
+        "session_id": "ses_e67b05d6affe2pB3HDJUcmJvxg"
+      },
+      "ticket_id": "AL-68",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "session.idle",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-01T20:20:19.192000266Z",
+      "updated_at": "2026-11-01T18:12:09.925000+00:00",
+      "revision": 10286
+    },
+    {
+      "identity": {
+        "source": "opencode",
+        "store": "[local source store]",
+        "session_id": "ses_e67ab72cdffev5PqFh1lPm8lp1"
+      },
+      "ticket_id": "AL-68",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "ses_e67ab860dffe3Hvybx8GEcvcIp",
+      "event": "session.status",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-01T20:20:19.177739071Z",
+      "updated_at": "2026-11-01T18:17:24.128000+00:00",
+      "revision": 5924
+    }
+  ],
+  "limits": [
+    "Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.",
+    "Hook installation is not proof of harness trust, agent response or complete source availability.",
+    "Ticket acceptance is pending live Codex validation. Ticket completed_at is intentionally unknown; invocation completion timestamps remain source facts. The CLI legacy publication/completed timestamp was removed from ticket metadata for this incomplete handoff."
+  ],
+  "ledger_sha256": "68c4cdc69e7497ecda6138880d7b62759f851a7ae20732a389ede7b52cdebb32"
+}

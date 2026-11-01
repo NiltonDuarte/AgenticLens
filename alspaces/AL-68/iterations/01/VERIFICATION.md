@@ -21,3 +21,13 @@ This is pre-integration evidence, reused by corrected-focus reviewers. Required 
 Parent `make` PASS (exit 0); unchanged source fingerprint `26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d`. All Go vet/race packages, 35 frontend files/781 tests, frontend typecheck/lint/build, 6 release-revision tests, 14 capture-distribution tests and native Linux/Darwin builds passed. Raw command log remains outside Git at /tmp/al68-candidate03-make.log. Earlier source model/runtime limits remain in SMOKE.md.
 
 Fetched origin/main after this check; it has no commits beyond original baseline HEAD. No integration or source mutation performed by that fetch; feature-branch merge/check phase remains recorded separately when performed. Codex live human-trust smoke is still pending, so this build result is not final delivery approval.
+
+## Integrated final code checkpoint
+
+Implementation commit `9db4672a971709a7433eeee4e11a5d7d0817cbbe` on feat/AL-68-automatic-session-capture-hooks. Working tree was clean before `git fetch origin main && git merge origin/main --no-edit`; integration reported Already up to date, with no source changes. Required post-integration `make` PASS (exit 0). All Go vet/race packages, frontend typecheck/lint/build, 35 frontend files/781 tests, 6 release revision tests and14capture distribution tests passed; Linux/Darwin artifacts built. Source fingerprint remains `c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec`. Every web asset matches the embedded tree and exact bytes in the standalone Linux binary. Native handler help/protocol were checked. Raw log remains outsideGit at /tmp/al68-integrated-make.log.
+
+All twelve final focused profile cells approve their corrected code scopes; no code finding remains open. Final overall acceptance remains INCOMPLETE solely for required live Codex trust/callback/agent-binding/native-child/source evidence. No PR publication or remote merge was performed.
+
+## Final telemetry metadata fidelity
+
+Final native source generation captured all35expected Codex sessions and preserved4registered OpenCode smoke sessions. The existing generate command populated ticket completed_at from an invocation/publication timestamp even though acceptance remains pending. Parent corrected only the ticket-owned metadata to null, preserved all source session/invocation facts byte-semantically, updated the report digest/limits, and rerendered the persisted ledger using the native inspection command. No application code or canonical schema changed. This existing default remains a limitation; it is not claimed fixed by AL-68. Independent reviewer session endings do not establish ticket completion.
