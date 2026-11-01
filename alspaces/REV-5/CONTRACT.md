@@ -45,3 +45,7 @@ User requested a ticket for lifecycle hooks in installation. Create AL-68 in the
 ## Iteration 09 approved backlog and ledger repair
 
 User requested tickets for all open findings and inclusion of the two missing reviewer sessions. Create a reconciled finding-to-ticket map, reuse existing scope where appropriate and author follow-ups only. Recover both sessions through the supported Codex CLI using real source IDs; preserve existing sessions, metadata, unavailable costs and truthful parent identity. This supersedes the known omission for the current ledger once verified; historical snapshots remain intact. No application fixes or PR merge are authorized by this request.
+
+## Iteration 09 consolidation correction
+
+User requested fewer tickets after the proposed seven work packages. Consolidate the draft remediation batch to AL-69 through AL-75, remove superseded draft files/index entries and remap every finding and active reference. Preserve all acceptance cases, fixed dispositions, existing AL-62/AL-68 scopes and the recovered 27-session ledger. This changes planning granularity only; no product implementation or merge is authorized.

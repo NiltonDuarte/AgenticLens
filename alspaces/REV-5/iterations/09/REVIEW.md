@@ -4,7 +4,7 @@ Scope: backlog documentation and ledger repair against cd3a880. Parent verificat
 
 ## Finding coverage
 
-All 51 numbered iteration 03 catalog entries have exactly one disposition: ADP-01 and D3 remain verified fixed at 302b3d0; the other 49 map to explicit follow-ups. AL-69 through AL-93 are new Ready tickets; existing AL-62 now explicitly covers CC-02 partial-generation auxiliary-fact loss. AL-92 captures unnumbered dependency/toolchain/reproducibility signals for investigation. CC-06/FE-01 are one cross-layer defect, while FE-D2/FE-D3 are cross-cutting analyses with primary and related owners. Counts are catalog entries, not unique bugs. Original F1-F7 were already closed in iteration 02.
+All 51 numbered iteration 03 catalog entries have exactly one disposition: ADP-01 and D3 remain verified fixed at 302b3d0; the other 49 map to explicit follow-ups. The consolidated batch has seven Ready tickets, AL-69 through AL-75; existing AL-62 explicitly covers CC-02 partial-generation auxiliary-fact loss. AL-75 captures unnumbered dependency/toolchain/reproducibility signals for investigation. CC-06/FE-01 are one cross-layer defect, while FE-D2/FE-D3 are cross-cutting analyses with primary and related owners. Counts are catalog entries, not unique bugs. Original F1-F7 were already closed in iteration 02.
 
 Validated numbering against existing workspace/index and fetched origin/main, required ticket sections, index status/path consistency, every local evidence link and complete map coverage. No premature developer workspace exists. Each ticket identifies observable acceptance, regression proof and preservation boundaries. ADP-05 retains the user's P2 local-only default-bind scope without authentication or remote-mode expansion. AL-62/63/67/68 are reused or coordinated without duplicating their broad initiatives.
 
@@ -19,3 +19,9 @@ Root-based role/iteration semantics remain those of the supported extractor beca
 ## Integration and limits
 
 Application/runtime/test/build sources are unchanged since the successful make at 302b3d0; preceding head cd3a880 also passed all three CI jobs. Reuse those results for unchanged code. Current checks validate documentation and real-source CLI behavior only; no future remediation, browser behavior, release publication or new hook functionality was tested. Whitespace and current-source diff checks passed. Final root refresh, exact session preservation check and publication are recorded in TELEMETRY_STATUS.json and SUMMARY.md.
+
+## Consolidation verification
+
+At d59d2f7 the user requested fewer tickets. Consolidated the current draft batch from 25 to seven coherent work packages without changing finding status or acceptance. All original acceptance bullets survive (only ticket references/internal section references changed), along with every context and source evidence link. Current FINDING_TICKETS.json/Markdown and TICKETS.md agree on all 51 dispositions: two fixed, 49 open, including overlaps. AL-62 and AL-68 remain unchanged. Removed draft files are not retained as discarded tickets or tombstones; Git preserves earlier drafts.
+
+Verified seven consecutive IDs, unique Ready entries, no premature developer workspaces, no retired IDs or stale paths in active backlog/map/PR text, local link resolution, and explicit local-only/privacy/regression guarantees. Application, runtime, tests and review policy are unchanged. No fresh product review or implementation pass is claimed. Parent owns final ledger preservation verification and publication.

@@ -66,205 +66,61 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ### REV-5 audit remediation: Ready
 
-- **AL-69**: Classify tool failures from execution evidence
-  - **Subsystem**: Domain / OpenCode / Live / Tests
+- **AL-69**: Correct telemetry accuracy and preserve evidence
+  - **Subsystem**: Domain / Source Adapters / CLI / Persistence / Anomaly Presentation
   - **Priority**: P2
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-69 classify tool failures from execution evidence.md`
+  - **File**: `alspaces/plan/to-do/AL-69 telemetry accuracy and preservation.md`
 
-- **AL-70**: Preserve configuration values through YAML generation
-  - **Subsystem**: Configuration / CLI / Tests
+- **AL-70**: Preserve configuration, paths and ticket identity
+  - **Subsystem**: Configuration / CLI / Git and OpenCode Adapters / HTTP Listener / Frontend Identity
   - **Priority**: P2
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-70 preserve configuration values through yaml generation.md`
+  - **File**: `alspaces/plan/to-do/AL-70 configuration paths and ticket identity.md`
 
-- **AL-71**: Preserve configuration path origin and CLI precedence
-  - **Subsystem**: Configuration / CLI / Workspace Repository / OpenCode / Tests
+- **AL-71**: Make frontend requests and live data handling reliable
+  - **Subsystem**: Frontend Fleet Comparisons Progression / Live REST SSE Polling
   - **Priority**: P2
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-71 preserve configuration path origin and cli precedence.md`
+  - **File**: `alspaces/plan/to-do/AL-71 frontend requests and live data handling.md`
 
-- **AL-72**: Apply anomaly thresholds consistently through persistence and views
-  - **Subsystem**: Domain / CLI / Persistence / Fleet and Live Projections / Tests
+- **AL-72**: Correct UI interactions, calculations and accessibility
+  - **Subsystem**: Frontend Trace Controls / Clipboard / Charts / Tables / Dialog and Tooltip
   - **Priority**: P2
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-72 apply anomaly thresholds consistently through persistence and views.md`
+  - **File**: `alspaces/plan/to-do/AL-72 ui correctness and accessibility.md`
 
-- **AL-73**: Align ticket identity parsing and stable sorting across layers
-  - **Subsystem**: Domain / CLI and API / Frontend Formatters and Filters / Tests
+- **AL-73**: Make installation and release verification reliable
+  - **Subsystem**: Installer / Downloader / Packaged Setup / Release Packaging
   - **Priority**: P2
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-73 align ticket identity parsing and stable sorting across layers.md`
+  - **File**: `alspaces/plan/to-do/AL-73 installation and release reliability.md`
 
-- **AL-74**: Surface partial scan and child-linkage diagnostics
-  - **Subsystem**: CLI / Live Adapter / HTTP DTO / Diagnostics / Tests
+- **AL-74**: Strengthen test reliability and remove unused code
+  - **Subsystem**: Domain Migration and Aggregation / Adapter and CLI Tests / Frontend Cleanup / Compatibility Fixtures
   - **Priority**: P2
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-74 surface partial scan and child linkage diagnostics.md`
+  - **File**: `alspaces/plan/to-do/AL-74 test reliability and unused code cleanup.md`
 
-- **AL-75**: Remove discarded core work and preserve migration input values
-  - **Subsystem**: Domain Migration / Aggregation / Tests
-  - **Priority**: P3
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-75 remove discarded core work and preserve migration input values.md`
-
-- **AL-76**: Isolate backend tests from checkout and unrelated listeners
-  - **Subsystem**: CLI HTTP Smoke Tests / Configuration Tests / Git Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-76 isolate backend tests from checkout and unrelated listeners.md`
-
-- **AL-77**: Repair adapter test oracles and remove test-only database accessor
-  - **Subsystem**: OpenCode Schema Detection Tests / Live SQLite / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-77 repair adapter test oracles and remove test only database accessor.md`
-
-- **AL-78**: Preserve summary evidence when replacing generated metrics
-  - **Subsystem**: Repository Markdown Writer / CLI / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-78 preserve summary evidence when replacing generated metrics.md`
-
-- **AL-79**: Preserve Git path identity and classify test support correctly
-  - **Subsystem**: Git Adapter / Project Classification Configuration / CLI Metrics / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-79 preserve git path identity and classify test support correctly.md`
-
-- **AL-80**: Align live and offline source decoding fidelity
-  - **Subsystem**: OpenCode V1 Decoding / Live Adapter / Persistence / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-80 align live and offline source decoding fidelity.md`
-
-- **AL-81**: Own filter requests and progression date boundaries consistently
-  - **Subsystem**: Frontend Fleet Comparisons Progression / API Boundary / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-81 own filter requests and progression date boundaries consistently.md`
-
-- **AL-82**: Validate live payloads and recover polling state
-  - **Subsystem**: Frontend Live API REST SSE Polling / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-82 validate live payloads and recover polling state.md`
-
-- **AL-83**: Fix trace keyboard activation and disclosure state
-  - **Subsystem**: Trace Waterfall / Live Session Tree / Trace Inspector / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-83 fix trace keyboard activation and disclosure state.md`
-
-- **AL-84**: Report clipboard outcomes accurately across consumers
-  - **Subsystem**: Clipboard Utility / Artifact and Trace UI / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-84 report clipboard outcomes accurately across consumers.md`
-
-- **AL-85**: Preserve anomaly identity and count semantics
-  - **Subsystem**: Frontend Anomaly Domain / Trace Badges Inspector and Exports / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-85 preserve anomaly identity and count semantics.md`
-
-- **AL-86**: Correct multi-series chart geometry and fleet success aggregation
-  - **Subsystem**: Frontend Pure Aggregation / Comparisons / Trend Chart / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-86 correct multi series chart geometry and fleet success aggregation.md`
-
-- **AL-87**: Make table, drawer and tooltip interactions keyboard accessible
-  - **Subsystem**: Frontend Tables / Anomaly Drawer / Tooltip CSS / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-87 make table drawer and tooltip interactions keyboard accessible.md`
-
-- **AL-88**: Remove unused frontend contracts, dependencies and props
-  - **Subsystem**: Frontend Contracts / Components / Dependencies / Tests
-  - **Priority**: P3
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-88 remove unused frontend contracts dependencies and props.md`
-
-- **AL-89**: Verify installer artifacts and preserve failed update outcomes
-  - **Subsystem**: Installer Wrapper / Downloader / Packaged Setup / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-89 verify installer artifacts and preserve failed update outcomes.md`
-
-- **AL-90**: Decouple compatibility checks from ticket artifacts and fixed ports
-  - **Subsystem**: OpenCode Compatibility Script / Stable Test Fixtures / Make / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-90 decouple compatibility checks from ticket artifacts and fixed ports.md`
-
-- **AL-91**: Reject incomplete release checksum manifests
-  - **Subsystem**: Make Release Packaging and Verification / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-91 reject incomplete release checksum manifests.md`
-
-- **AL-92**: Investigate dependency integrity and align reproducible build inputs
+- **AL-75**: Verify dependency integrity and reproducible builds
   - **Subsystem**: Dependency Maintenance / Lockfile / Docker / CI Toolchain
   - **Priority**: P3
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-92 investigate dependency integrity and align reproducible build inputs.md`
-
-- **AL-93**: Bind the local dashboard to loopback by default
-  - **Subsystem**: HTTP Listener / CLI / Embedded Dashboard / Tests
-  - **Priority**: P2
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-93 bind the local dashboard to loopback by default.md`
+  - **File**: `alspaces/plan/to-do/AL-75 dependency and build reproducibility.md`
 
 ### Existing ready work
 
