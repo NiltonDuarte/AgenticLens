@@ -9,15 +9,15 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 10
-- **Active Agent Duration:** 1h 57m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 12
+- **Active Agent Duration:** 2h 10m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 5 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.1 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0
+- **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0, Review_eval_original 2.0, Review_eval_revised 2.0
 - **Test-to-Production Code Ratio:** 2.3:1 (+650 test lines / +280 prod lines)
 - **Code Delivered:** +930 / -2,550 lines across 53 code files (excluding docs)
-- **Reasoning Effort:** 56,980 reasoning tokens (19.0% of generated output)
-- **Tool Health & Self-Correction:** 731 tool calls (37 self-corrections, 94.9% success rate)
+- **Reasoning Effort:** 60,362 reasoning tokens (18.5% of generated output)
+- **Tool Health & Self-Correction:** 787 tool calls (40 self-corrections, 94.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 23 execution anomalies detected (13 CRITICAL, 10 WARNING).
@@ -55,15 +55,17 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 | **planner** | 3 | 268,346 | 7,695 | 1,442,432 | 84.3% | 148.2k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **coder** | 7 | 693,476 | 58,843 | 21,748,480 | 96.9% | 184.5k | ELEVATED | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
 | **tester** | 3 | 185,217 | 11,530 | 5,664,000 | 96.8% | 174.6k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer** | 6 | 1,567,901 | 79,619 | 33,958,784 | 95.6% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **rootagent** | 1 | 537,725 | 85,962 | 33,773,696 | 98.4% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **20** | **3,252,665** | **243,649** | **96,587,392** | **96.7%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 20 unavailable / 20 invocations)** |
+| **reviewer** | 7 | 1,675,060 | 82,011 | 34,901,760 | 95.4% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
+| **review_eval_original** | 1 | 38,836 | 2,525 | 126,848 | 76.6% | 40.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **review_eval_revised** | 1 | 15,805 | 3,212 | 168,192 | 91.4% | 37.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **rootagent** | 1 | 597,962 | 99,672 | 37,936,128 | 98.4% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **23** | **3,474,702** | **265,488** | **101,987,840** | **96.7%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 20 | 3,252,665 | 243,649 | 96,587,392 | 96.7% | Unavailable (0 observed, 0 partial, 20 unavailable / 20 invocations) |
-| **Total** | **20** | **3,252,665** | **243,649** | **96,587,392** | **96.7%** | **Unavailable (0 observed, 0 partial, 20 unavailable / 20 invocations)** |
+| **gpt-6-astra** | 23 | 3,474,702 | 265,488 | 101,987,840 | 96.7% | Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations) |
+| **Total** | **23** | **3,474,702** | **265,488** | **101,987,840** | **96.7%** | **Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -192,3 +194,7 @@ User approved the recommendation after online research. Baseline d659d43; initia
 ## Iteration 05 validation
 
 Both skills passed the skill-creator validator; YAML frontmatter, Codex TOML and local links validated; obsolete two-axis dispatch wording was removed from active guidance. Independent consistency reviewer APPROVED. Both fresh-context evaluators detected the seeded defects and accepted the controls; identical clarification resolved an ambiguous sorting requirement. This does not demonstrate improved production detection. Details/provenance and evidence limits are in iterations/05/EVALUATION.md and EVALUATION.json. Application/runtime code remains unchanged; prior full make evidence is reused.
+
+## Iteration 05 delivery and telemetry
+
+At guidance commit 039eab4, origin/main was already integrated. No application/runtime source changed, so prior full make verification remains applicable; instruction-specific validation passed. Final schema-v5 REV-5/fix ledger contains all 23 expected Codex session identities and correct parent links, preserving the previous 20 plus both evaluators and the consistency reviewer. Snapshot ends at generation; verification/commit/push calls are outside it. No other-harness sessions existed to preserve.
