@@ -83,7 +83,7 @@ Run affected checks and the required integrated gate; report actual passed, fail
 
 ## Independent code review
 
-Use the [canonical review procedure](../.agents/skills/agentic-lens-review/SKILL.md) for correctness investigation and evidence outcomes. Reusing test runs does not replace inspecting the affected behavior. For consequential fixes, seek evidence that the regression is detected (before/after or a narrowly targeted disposable mutation); explain unavailable proof. Keep durable regressions in self-contained tests, never live ticket artifacts.
+Use the [canonical review procedure](../.agents/skills/agentic-lens-review/SKILL.md) for correctness investigation and evidence outcomes, and its [parallel protocol](../.agents/skills/agentic-lens-review/references/parallel-review.md) for focus coverage, findings consolidation and revision-aware re-review. Reusing test runs does not replace inspecting the affected behavior. For consequential fixes, seek evidence that the regression is detected (before/after or a narrowly targeted disposable mutation); explain unavailable proof. Keep durable regressions in self-contained tests, never live ticket artifacts.
 
 ## Before handoff
 

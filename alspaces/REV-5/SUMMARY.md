@@ -198,3 +198,13 @@ Both skills passed the skill-creator validator; YAML frontmatter, Codex TOML and
 ## Iteration 05 delivery and telemetry
 
 At guidance commit 039eab4, origin/main was already integrated. No application/runtime source changed, so prior full make verification remains applicable; instruction-specific validation passed. Final schema-v5 REV-5/fix ledger contains all 23 expected Codex session identities and correct parent links, preserving the previous 20 plus both evaluators and the consistency reviewer. Snapshot ends at generation; verification/commit/push calls are outside it. No other-harness sessions existed to preserve.
+
+## Iteration 06: specialized parallel review
+
+Baseline a44000d; initial tree clean. User authorized designing the multi-reviewer process in the skill kit. Added a canonical reference and aligned review/development/persona/orchestrator guidance. Four core focuses apply by default to substantive changes; low-risk exceptions need rationale. Capacity limits use waves without dropping coverage. Forward exercise and independent consistency review follow.
+
+## Iteration 06 validation and user clarifications
+
+User specified separate persona files and a dedicated shared context. Added reviewer-behavior, reviewer-data, reviewer-architecture and reviewer-tests Markdown personas with thin Codex registrations; all load .agents/agent/references/review-context.md directly. Generic reviewer remains a narrow/specialist entry point. Coordinator protocol owns selection/consolidation; first-pass children do not load sibling personas/conclusions.
+
+Both skills validated; YAML/TOML, persona pointers and local links passed. Independent consistency reviewer approved. Parent aligned phase-order shorthand with the canonical verification-before-final-approval rule. Forward exercise preserved all core/specialist coverage across limited-capacity waves, narrowed low-risk documentation review, and retained confirmed blockers plus missing evidence. This was an instruction exercise, not actual specialized product reviews or a detection-quality benchmark. Native role discovery requires harness support/reload; documented explicit-persona fallback preserves role scope. Application/runtime code unchanged; prior make evidence reused.

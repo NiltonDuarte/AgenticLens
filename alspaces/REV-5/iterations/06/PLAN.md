@@ -1,0 +1,11 @@
+# REV-5 iteration 06: specialized parallel review design
+
+Source: user asks to design specialized parallel reviewing in the skill kit after accepting correctness-first review. Baseline a44000d; initial tree clean. Documentation-only implementation is authorized. Add one canonical parallel-review reference with four default focus assignments for substantive changes, risk-selected specialists, low-risk exceptions, capacity-limited waves, independent evidence, unique report ownership, verified consolidation, revision-aware corrections and a non-passing incomplete gate. Preserve prior correctness procedure, user approval requirements, product-read-only reviewer role, local-only assumptions and publication ownership. This supersedes the prior unspecified parallelism policy, not its evidence/independence guarantees.
+
+Parent owns guidance/artifacts/telemetry/delivery. Use one independent forward exercise of the actual protocol on realistic scheduling/gate scenarios and one independent instruction-consistency review. Their evidence outputs are separate; no product changes or spawned evaluator children. Validate skills/frontmatter/links and search active dispatch guidance for drift. Existing runtime test evidence remains applicable to unchanged application code. No guarantee of bug-free code or measured detection improvement is claimed.
+
+## Steering clarification: separate personas
+
+User asked whether separate persona files would reduce role leakage. Adopt four dedicated focus Markdown files and thin Codex registrations sharing evidence/permission rules. Coordinator alone reads the role matrix; children load only their own focus and common rules. This supersedes the initial parameter-only persona design within iteration 06. Independence is instructional, not a filesystem or model-isolation guarantee. Validate persona registration and forward dispatch behavior.
+
+User further specified a dedicated shared context file. Shared mission/evidence/permissions now live in .agents/agent/references/review-context.md, loaded directly by every persona and Codex registration. Generic reviewer is a thin entry point rather than the base persona. Frontmatter permissions remain in each persona because harness metadata is not inherited by Markdown links.

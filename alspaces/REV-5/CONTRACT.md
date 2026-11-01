@@ -29,3 +29,7 @@ User explicitly requested fixing the highest-priority issues after the listener 
 ## Iteration 05 approved prevention guidance
 
 User approved applying the research recommendations: correctness-first review skill/persona, aligned workflow references, bounded independent old/new reviewer evaluation and explicit incomplete evidence outcome. Documentation/session-audit work may proceed directly under AGENTS.md. Preserve implementation approval, product-read-only reviewer role, local-only scope and prior P1 fixes. No claim that wording alone prevents bugs; evaluation limits must be reported.
+
+## Iteration 06 approved parallel-review design
+
+User requested designing specialized parallel review in the skill kit. Scope is canonical documentation and aligned dispatch guidance: separate core focuses by default for substantive changes, optional risk specialists, honest capacity-limited waves, independent investigation, verified findings, revision-aware re-review and consolidated delivery gates. No new CI service, runtime scheduler, model switch or application change. Preserve previous approvals and role boundaries.

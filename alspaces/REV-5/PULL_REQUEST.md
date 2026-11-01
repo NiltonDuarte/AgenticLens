@@ -1,19 +1,13 @@
 # fix(REV-5): preserve telemetry recovery and harden audited boundaries
 
-Failed forced initialization could move an existing configuration out of its path without restoring it. Validate both targets first and protect staging/install failures with cleanup and rollback that report errors.
+Failed forced initialization could displace configuration without restoration. Validate targets and protect staging/install failures with rollback and cleanup. Remove confirmed unused/test-only production APIs and the unread live buffer while preserving meaningful assertions through active APIs. Validate frontend HTTP payloads without discarding valid data for malformed optional diagnostics.
 
-Remove production APIs whose only callers were tests, the live trace buffer with no runtime readers, obsolete merge algorithms, and an incorrectly typed unused progression client. Retarget meaningful assertions to the active extraction, migration, filtering and merge paths; preserve codecs, public routes, session ownership and actual revision caching.
+Integrate main47af923 schema-v5 cost evidence and split DTOs, preserving unknown/partial/observed costs and supported legacy reads. Compose general and cost-specific validation without restoring obsolete helpers.
 
-Validate active frontend HTTP payloads while preserving supported Go null/omitted fields. Malformed optional diagnostic headers now show a warning without discarding valid workspace data. Keep the legacy trace-buffer configuration accepted and document its behavior consistently.
+Iteration 03 records a complete tracked-code audit with per-file coverage. Additional findings remain open; ADP-05 is P2 default-bind hardening under local-only product scope, with deliberate remote exposure operator-owned. No listener/authentication change.
 
-Reclassify the same audit/session from GEN-14 to REV-5, preserving historical evidence. This remediation supersedes audit PR #91. Contract, candidate dispositions, verification and limitations are recorded in alspaces/REV-5/CONTRACT.md, SUMMARY.md and iterations/02/.
+Iteration 04 fixes ADP-01 and D3: warning-bearing Codex recovery retains stored owner trees with incomplete diagnostics while healthy trees refresh; release builds select and verify the requested tag before checks/build, and forced rebuilds do not create unrelated releases, move latest or purge candidates.
 
-Integrate main47af923 while preserving schema-v5 cost evidence, nullable amounts, observed zero and legacy reads. Compose cost-specific and general frontend response validation without restoring removed clients; preserve the upstream DTO split and remove its confirmed unused helper reintroductions. Incoming-code review and integration evidence are in iterations/02/INTEGRATION_*.md.
+Iterations 05-06 make correctness investigation the canonical review process. Four dedicated reviewer personas (behavior, data/failure, architecture, test effectiveness) load one shared review-context file. Substantive changes use independent parallel reviews, risk-selected specialists and capacity-limited waves. The coordinator verifies findings, preserves evidence-backed dissent, tracks revision-aware re-review and owns a consolidated gate including INCOMPLETE. This is a skill-kit protocol, not a newly installed CI scheduler. Bounded evaluations do not establish improved detection rates.
 
-Iteration 03 adds a full tracked-code audit with per-file coverage and unchanged-source hashes. It identifies additional open correctness, architecture, testing and delivery issues beyond the original fixes. These audit findings are documented, not implemented; see iterations/03/REVIEW.md and COVERAGE.json.
-
-ADP-05 is now P2 default-bind hardening under the clarified local-only product scope. Authentication is not required; intentional remote exposure remains operator-owned. No listener behavior was changed.
-
-Iteration 04 fixes the two remaining P1 findings. Warning-bearing Codex recovery retains the stored owner tree with incomplete diagnostics while healthy trees refresh. Release Please selects the exact requested tag before checks/build, verifies metadata identity, and prevents forced rebuilds from creating unrelated releases, moving latest or deleting candidates. Other audit findings remain open. See iterations/04/REVIEW.md.
-
-Iteration 05 makes independent correctness investigation the canonical review procedure, aligns agent/workflow guidance and adds a non-passing INCOMPLETE outcome. A bounded old/new forward test found the same seeded defects in both variants; no detection improvement is claimed. See iterations/05/EVALUATION.md.
+This REV-5 session supersedes historical GEN-14 audit PR #91. Scope, evidence and limitations: alspaces/REV-5/CONTRACT.md, SUMMARY.md and iterations/02 through 06.

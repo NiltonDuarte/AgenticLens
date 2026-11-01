@@ -63,9 +63,9 @@ Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-pur
 Present planning artifacts. Wait for explicit user confirmation via `question` tool before touching code. If changes requested, re-dispatch `planner`.
 
 ### Phase 2: Implementation, Testing & Audit Loop
-Give the reviewer a fresh context where supported: requirements, baseline/head, raw diff, canonical review procedure and evidence locations; avoid inheriting the author's conclusions. Scale parallel reviewers to independent risks rather than a fixed agent count. For a disputed finding, verify its concrete counterexample rather than vote on approval.
+Use the [specialized parallel review protocol](../agentic-lens-review/references/parallel-review.md). Record dedicated persona names, focus owners and unique report paths in the plan. The coordinator alone loads the role matrix; each child gets its own persona and shared rules. Substantive changes default to separate behavior, data/failure, architecture and test-effectiveness reviewers, with risk-selected specialists; capacity limits require waves, not omitted coverage. Narrow low-risk exceptions need a rationale. Give each reviewer the same frozen revision/requirements and a fresh context where supported. The parent owns the consolidated verdict.
 
-Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/`:
+Run `coder` -> `tester` -> independent focused reviewers -> verified findings/consolidation on `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/`:
 
 1. **Code (`coder`)**:
    ```python
@@ -83,17 +83,13 @@ Run `coder` -> `tester` -> `reviewer` on `<WORKSPACES_DIR>/<TICKET_ID>/iteration
         prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Execute pure Go domain tests (zero mocks) with make test (or go test -race ./...), boundary schema tests, and TypeScript test suites. Inspect existing coverage and verify only relevant missing contract cases under the canonical testing policy; extend coherent existing tests before adding declarations. For reductions, verify deletion rationales and assertion-to-recipient transfers. Zero silent skips allowed.",
    )
    ```
-3. **Audit (`reviewer`)**:
-   ```python
-   task(
-       subagent_type="reviewer",
-       description="Audit iteration <NN>",
-       prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Follow .agents/skills/agentic-lens-review/SKILL.md for independent correctness investigation, including relevant unchanged callers and risk-directed evidence. Form failure hypotheses from requirements/source before reconciling implementation reports. Save verdict to <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/REVIEW.md.",
-   )
-   ```
+3. **Focused audit (`reviewer`)**:
+   Dispatch the applicable focus assignments using the brief in the parallel review protocol, concurrently within harness capacity. Each reviewer follows the canonical review skill, inspects relevant unchanged dependencies and owns a separate report. Do not have children overwrite a shared REVIEW.md. Parent verifies/deduplicates candidates, preserves dissent supported by evidence and writes the consolidated REVIEW.md. Corrections return to coder/tester, followed by revision-aware re-review of affected focuses.
 
 **Loop Control**:
-- `APPROVED`: Proceed to Phase 3 for the reviewed revision and scope; this does not certify unrelated code or authorize merging.
+After focused review is ready (no unresolved blockers/material review gaps), perform Phase 3 commit/integration/checks. Final consolidated approval gates publication, not the ability to run those checks; integration changes require affected re-review.
+
+- Consolidated `APPROVED`: Complete the remaining publication steps under the parallel protocol gate; child approvals alone do not suffice. Required integrated checks must have passed and this does not authorize merging.
 - `INCOMPLETE`: Resolve the named material evidence/access gap before delivery; do not treat missing findings as approval.
 - `CHANGES_REQUESTED`: Feed findings back to `coder`/`tester`.
 - `STATUS: BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.

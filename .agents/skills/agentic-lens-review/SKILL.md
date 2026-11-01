@@ -7,6 +7,10 @@ description: Use when auditing, reviewing, or finding refactoring, performance, 
 
 Find concrete correctness defects in AgenticLens Go, TypeScript and delivery code. Plans, implementation reports and passing suites are evidence to evaluate, not conclusions to endorse. Use this procedure for development reviews as well as standalone audits; architecture and test profiling are additional lenses, not substitutes for investigating behavior.
 
+## Review coverage
+
+When coordinating substantive application changes or broad audits, use [specialized parallel review](references/parallel-review.md): four core focuses, risk-selected specialists, independent first passes and evidence-based consolidation. The reference owns dispatch, capacity-limited waves and revision-aware delivery gates. Narrow low-risk documentation/mechanical edits may use fewer focuses with a recorded rationale. A focused reviewer reads only its own persona, shared reviewer rules and the investigation procedure below; the coordinator loads the role-selection reference. Do not load sibling personas or reports on the first pass.
+
 ## Independent correctness review
 
 1. Establish the requested boundary, base/head revision (or diff hash), supported deployment assumptions, and requirements. For a fix review distinguish verifying the supplied fix from discovering additional defects. Whole-repository claims require a reconciled file inventory; a diff review makes no such claim.
