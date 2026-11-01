@@ -64,3 +64,9 @@ Core review built the unchanged CLI and used isolated domain/CLI/SQLite fixtures
 The expected-failing probes are findings, not failed repository modifications. All audited code hashes remain unchanged. Shell syntax and Python AST checks passed; JSON/YAML/TOML structural parsing passed. No browser geometry, real release publication, OpenCode compatibility session, dependency vulnerability scan, or runtime performance profile was performed. Full runtime/provider compatibility is not inferred from source inspection.
 
 Root delivery checks and final telemetry are recorded in SUMMARY.md. New findings remain open regardless of the unchanged suite result.
+
+## Audit final verification
+
+At audit commit 8721e36, origin/main (47af923) was already merged. Required `make` exited 0: Go vet/race suites, TypeScript typecheck/ESLint, 781 frontend tests across 35 files, canonical embedded asset build and four Linux/Darwin binaries passed. All 308 audited file hashes remained unchanged afterward. Existing passing tests do not close the documented defects or ineffective-oracle findings. No application code changed in iteration 03. Earlier standalone asset-serving evidence remains applicable to the unchanged frontend sources.
+
+Build warnings remain: npm install reported 21 dependency advisories (18 moderate, one high, two critical), and Vite reported a bundle over 500 kB. These are tool-reported signals, not independently triaged vulnerability or performance findings; production reachability was not assessed. No automated dependency upgrades were applied.

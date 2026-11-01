@@ -9,18 +9,18 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 53m 19s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 155.6k tokens (78% of 200k healthy ceiling, 0 compactions) | Subagents peak 188.0k (Reviewer)
+- **Software Development Life Cycle Iterations:** 8
+- **Active Agent Duration:** 1h 33m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 5 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0
+- **Subagent Turn Velocity & Thrashing:** 1.1 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 1.9:1 (+532 test lines / +275 prod lines)
 - **Code Delivered:** +807 / -2,545 lines across 51 code files (excluding docs)
-- **Reasoning Effort:** 29,302 reasoning tokens (20.6% of generated output)
-- **Tool Health & Self-Correction:** 356 tool calls (27 self-corrections, 92.4% success rate)
+- **Reasoning Effort:** 55,111 reasoning tokens (19.9% of generated output)
+- **Tool Health & Self-Correction:** 658 tool calls (34 self-corrections, 94.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 15 execution anomalies detected (9 CRITICAL, 6 WARNING).
+- **Status:** 23 execution anomalies detected (13 CRITICAL, 10 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+116.0k tokens) — Context tokens surged by 116.0k to 116.0k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+138.3k tokens) — Context tokens surged by 138.3k to 138.3k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+140.9k tokens) — Context tokens surged by 140.9k to 140.9k tokens.
@@ -28,6 +28,10 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+151.1k tokens) — Context tokens surged by 151.1k to 151.1k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+145.9k tokens) — Context tokens surged by 145.9k to 145.9k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+149.6k tokens) — Context tokens surged by 149.6k to 149.6k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.4k tokens) — Context tokens reached 207.4k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.9k tokens) — Context tokens reached 203.9k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.8k tokens) — Context tokens reached 205.8k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (204.4k tokens) — Context tokens reached 204.4k, breaching the 200k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (11 cycles) — Subagent roles 'coder' and 'tester' alternated for 11 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.0k tokens) — Context tokens reached 160.0k, breaching the 160k warning ceiling.
@@ -35,6 +39,10 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.5k tokens) — Context tokens reached 163.5k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.2k tokens) — Context tokens reached 163.2k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (172.4k tokens) — Context tokens reached 172.4k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.4k tokens) — Context tokens reached 162.4k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.7k tokens) — Context tokens reached 166.7k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.9k tokens) — Context tokens reached 161.9k, breaching the 160k warning ceiling.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
@@ -47,15 +55,15 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 | **planner** | 2 | 243,521 | 5,527 | 1,144,832 | 82.5% | 148.2k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **coder** | 6 | 659,473 | 52,011 | 20,631,552 | 96.9% | 184.5k | ELEVATED | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
 | **tester** | 2 | 150,345 | 8,641 | 5,075,712 | 97.1% | 174.6k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **reviewer** | 2 | 131,800 | 5,729 | 3,437,952 | 96.3% | 188.0k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **rootagent** | 1 | 138,362 | 40,891 | 19,113,344 | 99.3% | 155.6k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **13** | **1,323,501** | **112,799** | **49,403,392** | **97.4%** | **188.0k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations)** |
+| **reviewer** | 5 | 1,527,589 | 78,158 | 33,604,352 | 95.7% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **rootagent** | 1 | 466,221 | 76,990 | 30,917,888 | 98.5% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **16** | **3,047,149** | **221,327** | **91,374,336** | **96.8%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 13 | 1,323,501 | 112,799 | 49,403,392 | 97.4% | Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations) |
-| **Total** | **13** | **1,323,501** | **112,799** | **49,403,392** | **97.4%** | **Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations)** |
+| **gpt-6-astra** | 16 | 3,047,149 | 221,327 | 91,374,336 | 96.8% | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
+| **Total** | **16** | **3,047,149** | **221,327** | **91,374,336** | **96.8%** | **Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -138,3 +146,17 @@ All 308 scoped files reconciled exactly once against hashes; every tracked progr
 Verdict CHANGES_REQUESTED: new open issues include incomplete-source snapshot replacement, default network exposure, release-tag/checkout mismatch, partial auxiliary-fact loss, configuration/threshold drift, erroneous tool-failure classification, prefix/sort defects, stale UI responses, unchecked live payloads, invalid metric/anomaly presentation, ineffective tests and delivery failure handling. Full reports and proposed proof are in iterations/03/REVIEW.md and the four owner reports. These findings were NOT fixed by this audit, and prior remediation approval is not a whole-repository cleanliness guarantee.
 
 Targeted disposable/in-memory probes reproduced concrete defects and a test mutation blind spot without editing source. Required final delivery verification and telemetry follow below. All audit source hashes remain unchanged.
+
+## Audit final verification
+
+At audit commit 8721e36, origin/main (47af923) was already merged. Required `make` exited 0: Go vet/race suites, TypeScript typecheck/ESLint, 781 frontend tests across 35 files, canonical embedded asset build and four Linux/Darwin binaries passed. All 308 audited file hashes remained unchanged afterward. Existing passing tests do not close the documented defects or ineffective-oracle findings. No application code changed in iteration 03. Earlier standalone asset-serving evidence remains applicable to the unchanged frontend sources.
+
+Build warnings remain: npm install reported 21 dependency advisories (18 moderate, one high, two critical), and Vite reported a bundle over 500 kB. These are tool-reported signals, not independently triaged vulnerability or performance findings; production reachability was not assessed. No automated dependency upgrades were applied.
+
+## Audit telemetry expectation
+
+Source metadata identifies 16 Codex sessions: the original root and 15 children, including the three new audit reviewers. Preserve all 13 previously recorded identities. The final snapshot covers through generation; later validation, commit and PR delivery calls fall outside that snapshot.
+
+## Audit telemetry verification
+
+Final ledger verified as schema v5, REV-5/fix, with exactly the 16 source-metadata session identities: original Codex root and 15 correctly linked children. All 13 prior sessions are preserved. No other-harness sessions existed in the prior ledger. The verifier uses the actual schema parent_id field.
