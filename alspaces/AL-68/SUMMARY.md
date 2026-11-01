@@ -33,15 +33,15 @@ User steering: remove unnecessary review hashes while retaining the runtime ledg
 The final snapshot must retain the 38 known Codex sessions and four OpenCode sessions, their source parent/model evidence and the excluded unassigned session boundary. REVIEW_RUNS.json holds the archived source inventory and latest verification; capture_report.json is a separate coverage artifact bound to the ledger digest. Costs unavailable from source remain unavailable.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 53
-- **Active Agent Duration:** 8h 38m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 56
+- **Active Agent Duration:** 9h 2m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 454.1k tokens (227% of 200k healthy ceiling, 1 compactions) | Subagents peak 336.6k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 6 turns) | Planner 1.0, Coder 3.5, Tester 6.0, Reviewer 1.0, Capture_child 1.0, General 3.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 0.8:1 (+2,035 test lines / +2,640 prod lines)
 - **Code Delivered:** +4,725 / -11 lines across 23 code files (excluding docs)
-- **Reasoning Effort:** 267,630 reasoning tokens (28.8% of generated output)
-- **Tool Health & Self-Correction:** 1,219 tool calls (50 self-corrections, 95.9% success rate)
+- **Reasoning Effort:** 271,943 reasoning tokens (28.7% of generated output)
+- **Tool Health & Self-Correction:** 1,244 tool calls (51 self-corrections, 95.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 14 execution anomalies detected (7 CRITICAL, 7 WARNING).
@@ -78,13 +78,13 @@ The final snapshot must retain the 38 known Codex sessions and four OpenCode ses
 | **reviewer-behavior** | 4 | 476,895 | 27,453 | 4,110,976 | 89.6% | 98.6k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-data** | 4 | 383,552 | 32,720 | 4,905,856 | 92.7% | 99.3k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-tests** | 2 | 236,275 | 13,714 | 2,179,328 | 90.2% | 103.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **rootagent** | 15 | 2,053,903 | 292,634 | 72,048,000 | 97.2% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
-| **Total** | **42** | **5,905,188** | **660,919** | **175,384,064** | **96.7%** | **454.1k** | **CRITICAL** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
+| **rootagent** | 15 | 2,172,212 | 306,888 | 73,899,392 | 97.1% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **Total** | **42** | **6,023,497** | **675,173** | **177,235,456** | **96.7%** | **454.1k** | **CRITICAL** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-5.6-luna** | 4 | 35,652 | 270 | 17,280 | 32.6% | $0.00 |
 | **gpt-6-luna** | 12 | 973,658 | 61,706 | 6,380,800 | 86.8% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
-| **gpt-6.1-sol** | 26 | 4,895,878 | 598,943 | 168,985,984 | 97.2% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
-| **Total** | **42** | **5,905,188** | **660,919** | **175,384,064** | **96.7%** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
+| **gpt-6.1-sol** | 26 | 5,014,187 | 613,197 | 170,837,376 | 97.1% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
+| **Total** | **42** | **6,023,497** | **675,173** | **177,235,456** | **96.7%** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |

@@ -2916,8 +2916,10 @@
     "opencode_facts_preserved": true,
     "unassigned_work_excluded": true,
     "source_facts_unchanged_by_metadata_correction": true,
-    "generated_completion_inference_removed": "2026-11-01T23:09:56.867Z",
+    "generated_completion_inference_removed": "2026-11-01T23:26:54.088Z",
     "ticket_completed_at": null,
+    "ledger_path": "alspaces/AL-68/agentic_metrics.json",
+    "coverage_report_path": "alspaces/AL-68/capture_report.json",
     "report_digest_matches": true,
     "schema_version": 5,
     "root_session_active_at_snapshot": true,
@@ -2926,15 +2928,14 @@
       "Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.",
       "Hook installation is not proof of harness trust, agent response or complete source availability.",
       "Explicit source refresh had unordered/older checkpoints; retained canonical source facts and ownerless auxiliary rows.",
-      "Ticket completed_at remains unknown while the source orchestration is active; legacy generator invocation/publication-time inference was removed from ticket metadata only."
+      "Ticket completed_at remains unknown while the source orchestration is active; legacy generator invocation/publication-time inference was removed from ticket metadata only.",
+      "Codex0.166 exec: SubagentStart was not observed; running/interrupted child coverage before Stop remains degraded/unverified."
     ],
-    "code_ref": "148207a",
+    "code_ref": "7fb277827268d7372206ed1c41a771b89d1b6a90",
     "privacy_checks": "No raw payload fields or active local binding challenges in committed workspace artifacts; original review bodies preserved verbatim.",
     "challenge_values_checked": 8,
-    "persisted_cli_render": "passed: ./bin/agentic-lens-linux-amd64 --workspaces alspaces --ticket-id AL-68 --append alspaces/AL-68/SUMMARY.md",
-    "final_archive_validation": "passed after telemetry: all 47 removed bodies and hashes, 48 original provenance records, 12 finding credits/verification links, all archived references, exactly nine files; git diff --check passed",
-    "ledger_path": "alspaces/AL-68/agentic_metrics.json",
-    "coverage_report_path": "alspaces/AL-68/capture_report.json"
+    "persisted_cli_render": "PASS: native persisted-ledger summary render; ledger/report pairing verified without a duplicate review digest.",
+    "final_archive_validation": "PASS: direct original-body equality, 48 preserved run records, 12 finding credits/verification links, four candidate associations, all archived references; nine files; no structured review hash fields."
   },
   "candidates": {
     "candidate-01": {
