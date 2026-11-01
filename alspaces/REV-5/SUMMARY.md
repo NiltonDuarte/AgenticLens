@@ -9,15 +9,15 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 21
-- **Active Agent Duration:** 2h 35m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 5 compactions) | Subagents peak 248.6k (Reviewer)
+- **Software Development Life Cycle Iterations:** 30
+- **Active Agent Duration:** 2h 44m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 6 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0, Parallel_protocol_exercise 1.0, Review_eval_original 2.0, Review_eval_revised 2.0
 - **Test-to-Production Code Ratio:** 2.3:1 (+650 test lines / +280 prod lines)
 - **Code Delivered:** +930 / -2,550 lines across 53 code files (excluding docs)
-- **Reasoning Effort:** 65,171 reasoning tokens (17.9% of generated output)
-- **Tool Health & Self-Correction:** 855 tool calls (44 self-corrections, 94.9% success rate)
+- **Reasoning Effort:** 67,007 reasoning tokens (17.6% of generated output)
+- **Tool Health & Self-Correction:** 879 tool calls (44 self-corrections, 95.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 24 execution anomalies detected (13 CRITICAL, 11 WARNING).
@@ -60,14 +60,14 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 | **parallel_protocol_exercise** | 1 | 34,071 | 3,638 | 176,128 | 83.8% | 36.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_original** | 1 | 38,836 | 2,525 | 126,848 | 76.6% | 40.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_revised** | 1 | 15,805 | 3,212 | 168,192 | 91.4% | 37.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 652,705 | 125,785 | 47,891,712 | 98.7% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **25** | **3,604,423** | **298,707** | **112,507,520** | **96.9%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
+| **rootagent** | 1 | 772,584 | 140,551 | 52,983,168 | 98.6% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **25** | **3,724,302** | **313,473** | **117,598,976** | **96.9%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 25 | 3,604,423 | 298,707 | 112,507,520 | 96.9% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
-| **Total** | **25** | **3,604,423** | **298,707** | **112,507,520** | **96.9%** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
+| **gpt-6-astra** | 25 | 3,724,302 | 313,473 | 117,598,976 | 96.9% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
+| **Total** | **25** | **3,724,302** | **313,473** | **117,598,976** | **96.9%** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -236,3 +236,7 @@ Snapshot ends at generation; subsequent verification/commit/push calls are outsi
 User requested a follow-up ticket after the lifecycle-hook design discussion. Baseline b1dca7f; initial tree clean. Created AL-68 in plan/to-do and indexed it as Ready. It covers additive Codex/OpenCode hook installation, working session capture/reconciliation, explicit ticket/parent binding, CLI health diagnostics and real harness verification. No third-party skills/personas or installation/runtime code changed. Continue REV-5 session ownership; AL-68 development must start separately.
 
 Validated ticket structure, unique allocation, index consistency, owning paths and whitespace. Existing application make evidence is reused for this documentation-only change. Historical iteration 07 missing-reviewer telemetry remains explicit; no hook capture success is claimed by this specification.
+
+## Iteration 08 delivery and telemetry
+
+Planning commit 67b313c already includes current origin/main. Ticket/index checks and whitespace passed; unchanged application sources reuse prior full make evidence. Final REV-5/fix ledger preserves the root and all 25 prior session identities, sources and parent fields. No new reviewers were launched. The two historical iteration 07 reviewer sessions remain omitted; completeness is still explicitly limited in iterations/08/TELEMETRY_STATUS.json. Snapshot ends at generation and excludes subsequent verification/publication calls.

@@ -4,8 +4,8 @@
   "ticket_title": "Code smell audit and remediation",
   "ticket_type": "fix",
   "started_at": "2026-10-31T23:01:20.845Z",
-  "completed_at": "2026-11-01T13:14:35.146Z",
-  "updated_at": "2026-11-01T13:14:39.270202+00:00",
+  "completed_at": "2026-11-01T14:39:29.987Z",
+  "updated_at": "2026-11-01T14:39:34.553374+00:00",
   "code": {
     "lines_added": 930,
     "lines_deleted": 2550,
@@ -14,7 +14,7 @@
     "prod_lines_added": 280,
     "prod_lines_deleted": 1291,
     "files_changed": 53,
-    "sdlc_iterations": 21
+    "sdlc_iterations": 30
   },
   "sessions": [
     {
@@ -26,14 +26,14 @@
           "role": "RootAgent",
           "model": "gpt-6-astra",
           "started_at": "2026-10-31T23:01:23.334Z",
-          "completed_at": "2026-11-01T13:14:35.146Z",
-          "active_duration_seconds": 4649,
-          "turns": 16,
+          "completed_at": "2026-11-01T14:39:29.987Z",
+          "active_duration_seconds": 5188,
+          "turns": 24,
           "tokens": {
-            "input": 652705,
-            "output": 125785,
-            "cache_read": 47891712,
-            "reasoning": 38585,
+            "input": 772584,
+            "output": 140551,
+            "cache_read": 52983168,
+            "reasoning": 40421,
             "peak_context": 245725
           },
           "cost_usd": null,
@@ -41,14 +41,14 @@
             "state": "unavailable",
             "known_subtotal_usd": null
           },
-          "compactions": 1,
-          "user_iterations": 21
+          "compactions": 2,
+          "user_iterations": 30
         }
       ],
       "tools": [
         {
           "name": "command",
-          "calls": 196,
+          "calls": 220,
           "errors": 10
         },
         {
