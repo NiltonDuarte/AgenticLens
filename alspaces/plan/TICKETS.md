@@ -59,7 +59,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 - **AL-68**: Install harness lifecycle hooks for automatic session capture
   - **Subsystem**: Installation / Setup / Domain / Codex and OpenCode Adapters / CLI / Persistence / Tests
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-68 install harness lifecycle hooks for automatic session capture.md`

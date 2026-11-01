@@ -1,0 +1,478 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "CAP-01",
+      "severity": "P1",
+      "title": "Stale registry snapshots override newer canonical or freshly extracted facts",
+      "location": "backend/cmd/agentic-lens/main.go:312",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "behavior-sol-01",
+        "data-sol-01",
+        "architecture-sol-01",
+        "tests-sol-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "behavior-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md"
+        },
+        {
+          "run_id": "data-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md"
+        },
+        {
+          "run_id": "architecture-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md"
+        },
+        {
+          "run_id": "tests-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-sol.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "remaining_trigger": "See REVIEW-data-sol-02.md for successful older-source reread and actual-store symlink alias counterexamples.",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "behavior-sol-04",
+        "behavior-luna-04",
+        "data-sol-04",
+        "data-luna-04",
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-02",
+      "severity": "P1",
+      "title": "Concurrent generation publishes older snapshots after newer ones",
+      "location": "backend/cmd/agentic-lens/main.go",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "data-sol-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "data-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "data-sol-04",
+        "data-luna-04",
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-03",
+      "severity": "P1",
+      "title": "Explicit generation bypasses known conflicting ticket binding",
+      "location": "backend/cmd/agentic-lens/main.go:201",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "data-sol-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "data-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "remaining_trigger": "See REVIEW-data-sol-02.md for successful older-source reread and actual-store symlink alias counterexamples.",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "behavior-sol-04",
+        "behavior-luna-04",
+        "data-sol-04",
+        "data-luna-04",
+        "tests-sol-04",
+        "tests-luna-04",
+        "security-sol-04",
+        "security-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-04",
+      "severity": "P2",
+      "title": "Codex child start evidence is discarded until stop callback",
+      "location": "backend/internal/adapters/capture/hooks.go:75",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "behavior-sol-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "behavior-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "behavior-sol-04",
+        "behavior-luna-04",
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-05",
+      "severity": "P2",
+      "title": "Failed source reads evade per-pass byte budget",
+      "location": "backend/internal/adapters/capture/reconcile.go:133",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "architecture-sol-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "architecture-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "data-sol-04",
+        "data-luna-04",
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-06",
+      "severity": "P2",
+      "title": "Repeated placeholder substitution corrupts valid escaped plugin paths",
+      "location": "backend/internal/adapters/capture/install.go:284",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "security-sol-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "security-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04",
+        "security-sol-04",
+        "security-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-07",
+      "severity": "P2",
+      "title": "Native receive timeout does not bound blocked stdin",
+      "location": "backend/internal/adapters/capture/hooks.go:31",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "security-sol-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "security-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04",
+        "security-sol-04",
+        "security-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-08",
+      "severity": "P1",
+      "title": "Incompatible binary replacement strands active lifecycle hooks",
+      "location": "scripts/download-agentic-lens.sh",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "release-sol-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "release-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "tests-sol-04",
+        "tests-luna-04",
+        "release-sol-04",
+        "release-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-09",
+      "severity": "P2",
+      "title": "Public manual direct and PowerShell setup lacks lifecycle integration",
+      "location": "docs/SETUP_MANUAL.md:81",
+      "classification": "required_scope_gap",
+      "disposition": "confirmed",
+      "disposition_reason": "Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent with coder/tester correction and affected review",
+      "discovery_run_ids": [
+        "release-sol-01",
+        "release-luna-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "release-sol-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md"
+        },
+        {
+          "run_id": "release-luna-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-luna.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "release-sol-04",
+        "release-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-10",
+      "severity": "P2",
+      "title": "Reported snapshot cutoff precedes source reads and can misstate captured boundary",
+      "location": "backend/internal/adapters/capture/reconcile.go:90",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Source-level trace establishes cutoff assigned before later independent source reads; no common as-of snapshot is enforced. Define truthful completion/per-owner checkpoint semantics.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent/coder/tester",
+      "discovery_run_ids": [
+        "data-luna-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "data-luna-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-luna.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "data-sol-04",
+        "data-luna-04",
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-11",
+      "severity": "P2",
+      "title": "Unrelated unassigned sessions consume ticket refresh budget and leak into ticket report",
+      "location": "backend/internal/adapters/capture/reconcile.go:109",
+      "classification": "introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Selection/extraction and final report include every empty-ticket registration; keep local discovery but scope ticket work and publication to proven owners.",
+      "lifecycle_status": "fixed",
+      "verification_owner": "parent/coder/tester",
+      "discovery_run_ids": [
+        "behavior-luna-01"
+      ],
+      "evidence": [
+        {
+          "run_id": "behavior-luna-01",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-luna.md"
+        }
+      ],
+      "correction_evidence": [
+        "IMPLEMENTATION.md",
+        "TEST_REPORT.md",
+        "SETUP_IMPLEMENTATION.md"
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "behavior-sol-04",
+        "behavior-luna-04",
+        "data-sol-04",
+        "data-luna-04",
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04"
+      ]
+    },
+    {
+      "finding_id": "CAP-12",
+      "severity": "P2",
+      "title": "Child recovery lacks fair bounded continuation for known OpenCode pages and failed Codex metadata queues",
+      "location": "backend/internal/adapters/capture/children.go",
+      "classification": "correction_introduced",
+      "disposition": "confirmed",
+      "disposition_reason": "Three independent reviewer probes reproduce permanent first-page starvation; report-specific native/overlay evidence retained.",
+      "lifecycle_status": "fixed",
+      "discovery_run_ids": [
+        "behavior-sol-02",
+        "data-sol-02",
+        "architecture-sol-02",
+        "data-sol-03",
+        "architecture-sol-03"
+      ],
+      "evidence": [
+        {
+          "run_id": "behavior-sol-02",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol-02.md"
+        },
+        {
+          "run_id": "data-sol-02",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol-02.md"
+        },
+        {
+          "run_id": "architecture-sol-02",
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol-02.md"
+        }
+      ],
+      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "remaining_trigger": "Candidate03 fixed prefix rotation but failed-stop queue starves start-only discovery and recovery bytes starve valid owner refresh; source-proven native counterexamples in data/architecture Sol03 reports.",
+      "observations": [
+        {
+          "run_id": "data-sol-03",
+          "trigger": "Malformed stop queue consumes sole reserved discovery attempt for20 passes; start-only valid child found by control without queue."
+        },
+        {
+          "run_id": "architecture-sol-03",
+          "trigger": "1024-byte malformed recovery entry consumes all bytes before valid509-byte owner refresh for8 passes; refresh-only control advances."
+        }
+      ],
+      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
+      "verification_run_ids": [
+        "behavior-sol-04",
+        "behavior-luna-04",
+        "data-sol-04",
+        "data-luna-04",
+        "architecture-sol-04",
+        "architecture-luna-04",
+        "tests-sol-04",
+        "tests-luna-04"
+      ]
+    }
+  ]
+}

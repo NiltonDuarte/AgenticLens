@@ -1,0 +1,2061 @@
+{
+  "schema_version": 1,
+  "policy_path": ".agents/skills/agentic-lens-review/references/model-policy.yaml",
+  "policy_sha256": "dea95689c3dcbc650c79b148e97ebf54957d54c707c888870774df7a6a078e51",
+  "resolved_policy": {
+    "version": 1,
+    "profiles": {
+      "sol_6_1_high": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "luna_6_medium": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      }
+    },
+    "default_profiles": [
+      "sol_6_1_high",
+      "luna_6_medium"
+    ],
+    "reviewer_overrides": {}
+  },
+  "base": "7bc670a7f5c9e93a220f3596f3d0e05cb6007332",
+  "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+  "runs": [
+    {
+      "run_id": "behavior-sol-01",
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "acknowledged": null,
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-20-05-01a19857-1005-7980-8c08-3d69e249e33c.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-01",
+        "CAP-04"
+      ],
+      "task_id": "/root/al68_behavior_sol",
+      "dispatch_evidence": "Native spawn_agent accepted explicit gpt-6.1-sol/high settings, response names task only; runtime/source observation pending.",
+      "source_session_id": "01a19857-1005-7980-8c08-3d69e249e33c",
+      "completeness": "Scoped report complete; Codex runtime evidence remains a separate acceptance gap.",
+      "persona_sha256": "24f0d3ed193c46f734cc7b7bb6d8cd656ccebc9c99f248c5cca86bd65b9f7310",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0"
+    },
+    {
+      "run_id": "behavior-luna-01",
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-36-31-01a19866-1ebf-7be3-aa0d-47262ddfccc5.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-luna.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-11"
+      ],
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ace211859-59d5-49d4-aa14-c4c6d9ff592d",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ace211859-59d5-49d4-aa14-c4c6d9ff592d",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ace211859-59d5-49d4-aa14-c4c6d9ff592d>",
+      "prompt_sha256": "c281a3226613401c7817ca6802899b38e83c4b0e7adcbb3e0947f02c5f813019",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ace211859-59d5-49d4-aa14-c4c6d9ff592d",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ace211859-59d5-49d4-aa14-c4c6d9ff592d",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ace211859-59d5-49d4-aa14-c4c6d9ff592d>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253Ace211859-59d5-49d4-aa14-c4c6d9ff592d:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ace211859-59d5-49d4-aa14-c4c6d9ff592d",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "source_session_id": "01a19866-1ebf-7be3-aa0d-47262ddfccc5",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "persona_sha256": "24f0d3ed193c46f734cc7b7bb6d8cd656ccebc9c99f248c5cca86bd65b9f7310",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "run_id": "data-sol-01",
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "acknowledged": null,
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-20-14-01a19857-366e-7951-b105-4dd4444c6073.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-01",
+        "CAP-02",
+        "CAP-03"
+      ],
+      "task_id": "/root/al68_data_sol",
+      "dispatch_evidence": "Native spawn_agent accepted explicit gpt-6.1-sol/high settings, response names task only; runtime/source observation pending.",
+      "source_session_id": "01a19857-366e-7951-b105-4dd4444c6073",
+      "completeness": "Scoped report complete; Codex runtime evidence remains a separate acceptance gap.",
+      "persona_sha256": "01f231e4db91502399ef6de24afd632a7c111bdca8a2a189312c3326136637c2",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0"
+    },
+    {
+      "run_id": "data-luna-01",
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-36-32-01a19866-20dd-7520-be15-5c9e88f77c9f.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-luna.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-10"
+      ],
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2e921417-9569-4355-9782-92c87a3c9e44",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2e921417-9569-4355-9782-92c87a3c9e44",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2e921417-9569-4355-9782-92c87a3c9e44>",
+      "prompt_sha256": "846306c0aabbbdd1e102995bcca0f818561cd7cf1b95e32bf4359223e54173d4",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2e921417-9569-4355-9782-92c87a3c9e44",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2e921417-9569-4355-9782-92c87a3c9e44",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2e921417-9569-4355-9782-92c87a3c9e44>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253A2e921417-9569-4355-9782-92c87a3c9e44:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2e921417-9569-4355-9782-92c87a3c9e44",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "source_session_id": "01a19866-20dd-7520-be15-5c9e88f77c9f",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "persona_sha256": "01f231e4db91502399ef6de24afd632a7c111bdca8a2a189312c3326136637c2",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "run_id": "architecture-sol-01",
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "acknowledged": null,
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-21-52-01a19858-b2dc-7f71-9244-02c7471ae4d7.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-01",
+        "CAP-05"
+      ],
+      "task_id": "/root/al68_architecture_sol",
+      "source_session_id": "01a19858-b2dc-7f71-9244-02c7471ae4d7",
+      "completeness": "Scoped report complete; Codex runtime evidence remains a separate acceptance gap.",
+      "persona_sha256": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0"
+    },
+    {
+      "run_id": "architecture-luna-01",
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-36-32-01a19866-2289-7612-8920-6e4a269e8aea.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-luna.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "candidate_ids": [],
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2651edd6-88fc-4979-bc2a-48ee92cf3ad2",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2651edd6-88fc-4979-bc2a-48ee92cf3ad2",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2651edd6-88fc-4979-bc2a-48ee92cf3ad2>",
+      "prompt_sha256": "d9a1bc661e5c3080c3aef253348f8991c983a32aa67c0feacf7f4fbf669838a1",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2651edd6-88fc-4979-bc2a-48ee92cf3ad2",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2651edd6-88fc-4979-bc2a-48ee92cf3ad2",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2651edd6-88fc-4979-bc2a-48ee92cf3ad2>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253A2651edd6-88fc-4979-bc2a-48ee92cf3ad2:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2651edd6-88fc-4979-bc2a-48ee92cf3ad2",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "source_session_id": "01a19866-2289-7612-8920-6e4a269e8aea",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "persona_sha256": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "run_id": "tests-sol-01",
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "acknowledged": null,
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-27-21-01a1985d-ba8e-7e93-8f29-a3cc14b0566d.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-sol.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-01"
+      ],
+      "task_id": "/root/al68_tests_sol",
+      "source_session_id": "01a1985d-ba8e-7e93-8f29-a3cc14b0566d",
+      "completeness": "Scoped report complete; Codex runtime evidence remains a separate acceptance gap.",
+      "persona_sha256": "0baad8d61171a62acbe673e75fe4b0deb4a19231f60b37649d3edb975fb643d5",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0"
+    },
+    {
+      "run_id": "tests-luna-01",
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-39-05-01a19868-7528-7b03-b4dd-2c3c7e123e46.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-luna.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "candidate_ids": [],
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A125038b8-5781-4645-90ba-ec96bd63c981",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A125038b8-5781-4645-90ba-ec96bd63c981",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A125038b8-5781-4645-90ba-ec96bd63c981>",
+      "prompt_sha256": "d85c46bac1b1a86a49aae4ca91803aaff42d9e3ba66d4cca9b9a737f756d1b86",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A125038b8-5781-4645-90ba-ec96bd63c981",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A125038b8-5781-4645-90ba-ec96bd63c981",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A125038b8-5781-4645-90ba-ec96bd63c981>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253A125038b8-5781-4645-90ba-ec96bd63c981:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A125038b8-5781-4645-90ba-ec96bd63c981",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "source_session_id": "01a19868-7528-7b03-b4dd-2c3c7e123e46",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "persona_sha256": "0baad8d61171a62acbe673e75fe4b0deb4a19231f60b37649d3edb975fb643d5",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "run_id": "security-sol-01",
+      "persona": "reviewer",
+      "focus": "security",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "acknowledged": null,
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-27-46-01a1985e-1b0e-7e52-99d4-d6de3e368b1d.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-06",
+        "CAP-07"
+      ],
+      "task_id": "/root/al68_security_sol",
+      "source_session_id": "01a1985e-1b0e-7e52-99d4-d6de3e368b1d",
+      "completeness": "Scoped report complete; Codex runtime evidence remains a separate acceptance gap.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0"
+    },
+    {
+      "run_id": "security-luna-01",
+      "persona": "reviewer",
+      "focus": "security",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-40-31-01a19869-c529-77e1-8712-042ac9e8c578.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-luna.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "candidate_ids": [],
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A7d768b69-06de-481e-b8c5-1774fb08d536",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A7d768b69-06de-481e-b8c5-1774fb08d536",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A7d768b69-06de-481e-b8c5-1774fb08d536>",
+      "prompt_sha256": "e080e104434100d5b39c8588a50fdac756eb96807ddc054c28e2109b3f562d41",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A7d768b69-06de-481e-b8c5-1774fb08d536",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A7d768b69-06de-481e-b8c5-1774fb08d536",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A7d768b69-06de-481e-b8c5-1774fb08d536>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253A7d768b69-06de-481e-b8c5-1774fb08d536:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A7d768b69-06de-481e-b8c5-1774fb08d536",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "completeness": "Scoped security investigation completed without new finding; Codex trust/runtime acceptance remains incomplete.",
+      "source_session_id": "01a19869-c529-77e1-8712-042ac9e8c578",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "run_id": "release-sol-01",
+      "persona": "reviewer",
+      "focus": "release",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "acknowledged": null,
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-28-36-01a1985e-dd3a-7260-9a74-4fd0e88db4df.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-08",
+        "CAP-09"
+      ],
+      "task_id": "/root/al68_release_sol",
+      "source_session_id": "01a1985e-dd3a-7260-9a74-4fd0e88db4df",
+      "completeness": "Scoped report complete; Codex runtime evidence remains a separate acceptance gap.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0"
+    },
+    {
+      "run_id": "release-luna-01",
+      "persona": "reviewer",
+      "focus": "release",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T19-40-30-01a19869-c33d-70e1-8337-a34812486051.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "observation_gap": null,
+      "candidate_fingerprint": "c7dade3313a1d65a4269d595c782750655be8a044c020dc1f3ac502464cf325a",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-luna.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "candidate_ids": [
+        "CAP-09"
+      ],
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Aac8f7dfc-4aca-4d22-a11c-82e39dee6fec",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Aac8f7dfc-4aca-4d22-a11c-82e39dee6fec",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Aac8f7dfc-4aca-4d22-a11c-82e39dee6fec>",
+      "prompt_sha256": "2cd5d68919d5cb33d49027a8af478312d2338f5aea2ba4e56690880f743192cf",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Aac8f7dfc-4aca-4d22-a11c-82e39dee6fec",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Aac8f7dfc-4aca-4d22-a11c-82e39dee6fec",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Aac8f7dfc-4aca-4d22-a11c-82e39dee6fec>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253Aac8f7dfc-4aca-4d22-a11c-82e39dee6fec:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Aac8f7dfc-4aca-4d22-a11c-82e39dee6fec",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "source_session_id": "01a19869-c33d-70e1-8337-a34812486051",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "behavior-sol-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol-02.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-02-24-01a1987d-d0c9-7782-8e45-66206bf75e0c.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [
+        "CAP-12"
+      ],
+      "prior_run_id": "behavior-sol-01",
+      "task_id": "/root/al68_behavior_sol_02",
+      "source_session_id": "01a1987d-d0c9-7782-8e45-66206bf75e0c",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "24f0d3ed193c46f734cc7b7bb6d8cd656ccebc9c99f248c5cca86bd65b9f7310",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "behavior-luna-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-luna-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "behavior-luna-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "24f0d3ed193c46f734cc7b7bb6d8cd656ccebc9c99f248c5cca86bd65b9f7310",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "data-sol-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol-02.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-02-42-01a1987e-1807-76b0-8627-d5a9b44e8a7e.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [
+        "CAP-12"
+      ],
+      "prior_run_id": "data-sol-01",
+      "task_id": "/root/al68_data_sol_02",
+      "source_session_id": "01a1987e-1807-76b0-8627-d5a9b44e8a7e",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "01f231e4db91502399ef6de24afd632a7c111bdca8a2a189312c3326136637c2",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "data-luna-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-luna-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "data-luna-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "01f231e4db91502399ef6de24afd632a7c111bdca8a2a189312c3326136637c2",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "architecture-sol-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol-02.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-03-33-01a1987e-de1a-7513-80bb-6ee144988d7f.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [
+        "CAP-12"
+      ],
+      "prior_run_id": "architecture-sol-01",
+      "task_id": "/root/al68_architecture_sol_02",
+      "source_session_id": "01a1987e-de1a-7513-80bb-6ee144988d7f",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "architecture-luna-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-luna-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "architecture-luna-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "tests-sol-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-sol-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "tests-sol-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "0baad8d61171a62acbe673e75fe4b0deb4a19231f60b37649d3edb975fb643d5",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "tests-luna-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-luna-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "tests-luna-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "0baad8d61171a62acbe673e75fe4b0deb4a19231f60b37649d3edb975fb643d5",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "security",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "security-sol-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "security-sol-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "security",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "security-luna-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-luna-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "security-luna-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "release",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "release-sol-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "release-sol-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "release",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "release-luna-02",
+      "phase": "re_review",
+      "candidate_fingerprint": "17fdae376119de798b382af56952351564389a69a174e5b0049259d387151cbc",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-luna-02.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "release-luna-01",
+      "completeness": "Not dispatched: candidate superseded after three independently reproduced blockers. All affected cells will be reviewed on the next frozen revision.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "behavior-sol-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol-03.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-33-16-01a1989a-13c4-7103-aa2f-9d4638bdf064.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "behavior-sol-01",
+      "scoped_code_verdict": "APPROVED",
+      "task_id": "/root/al68_behavior_sol_03",
+      "source_session_id": "01a1989a-13c4-7103-aa2f-9d4638bdf064",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "24f0d3ed193c46f734cc7b7bb6d8cd656ccebc9c99f248c5cca86bd65b9f7310",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "behavior-luna-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-luna-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "behavior-luna-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "24f0d3ed193c46f734cc7b7bb6d8cd656ccebc9c99f248c5cca86bd65b9f7310",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "data-sol-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol-03.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-33-29-01a1989a-4489-7ce2-8337-97d2590d0593.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [
+        "CAP-12"
+      ],
+      "prior_run_id": "data-sol-01",
+      "scoped_code_verdict": "CHANGES_REQUESTED",
+      "task_id": "/root/al68_data_sol_03",
+      "source_session_id": "01a1989a-4489-7ce2-8337-97d2590d0593",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "01f231e4db91502399ef6de24afd632a7c111bdca8a2a189312c3326136637c2",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "data-luna-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-luna-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "data-luna-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "01f231e4db91502399ef6de24afd632a7c111bdca8a2a189312c3326136637c2",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "architecture-sol-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol-03.md",
+      "execution_status": "completed",
+      "verdict": "CHANGES_REQUESTED",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-33-46-01a1989a-866e-7a10-8345-14e09454b715.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [
+        "CAP-12"
+      ],
+      "prior_run_id": "architecture-sol-01",
+      "scoped_code_verdict": "CHANGES_REQUESTED",
+      "task_id": "/root/al68_architecture_sol_03",
+      "source_session_id": "01a1989a-866e-7a10-8345-14e09454b715",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "architecture-luna-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-luna-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "architecture-luna-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "tests-sol-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-sol-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "tests-sol-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "0baad8d61171a62acbe673e75fe4b0deb4a19231f60b37649d3edb975fb643d5",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "tests-luna-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-luna-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "tests-luna-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "0baad8d61171a62acbe673e75fe4b0deb4a19231f60b37649d3edb975fb643d5",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "security",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "security-sol-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "security-sol-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "security",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "security-luna-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-luna-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "security-luna-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "release",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "release-sol-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "release-sol-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "release",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "release-luna-03",
+      "phase": "re_review",
+      "candidate_fingerprint": "26898644f86547fb9013c161120b291c1c6ed7f130307f214351b25c1741534d",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-luna-03.md",
+      "execution_status": "cancelled",
+      "verdict": "INCOMPLETE",
+      "observed": null,
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "release-luna-01",
+      "completeness": "Not dispatched: candidate superseded by source-proven cross-queue/byte starvation blockers. Final review will use next frozen candidate.",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "behavior-sol-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-50-35-01a198a9-ee93-79f1-881c-0c4114c303d2.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "behavior-sol-01",
+      "task_id": "/root/al68_behavior_sol_04",
+      "source_session_id": "01a198a9-ee93-79f1-881c-0c4114c303d2",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "scoped_code_verdict": "APPROVED",
+      "completeness": "Code correction scope approved; Codex runtime trust/interaction acceptance and final integrated make remain separate gates.",
+      "persona_sha256": "24f0d3ed193c46f734cc7b7bb6d8cd656ccebc9c99f248c5cca86bd65b9f7310",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "behavior-luna-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-luna-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T21-01-13-01a198b3-aac9-7fb1-b18d-b88d97da881a.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "candidate_ids": [],
+      "prior_run_id": "behavior-luna-01",
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac4b51ac4-2c57-4d70-9c33-6b2a100c7efa",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac4b51ac4-2c57-4d70-9c33-6b2a100c7efa",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac4b51ac4-2c57-4d70-9c33-6b2a100c7efa>",
+      "prompt_sha256": "a9bfbd9f3da85e05571d2dc1740dffd0b78a375e8d084b9a1f83e88808540568",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac4b51ac4-2c57-4d70-9c33-6b2a100c7efa",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac4b51ac4-2c57-4d70-9c33-6b2a100c7efa",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac4b51ac4-2c57-4d70-9c33-6b2a100c7efa>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253Ac4b51ac4-2c57-4d70-9c33-6b2a100c7efa:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac4b51ac4-2c57-4d70-9c33-6b2a100c7efa",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "scoped_code_verdict": "APPROVED",
+      "source_session_id": "01a198b3-aac9-7fb1-b18d-b88d97da881a",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "24f0d3ed193c46f734cc7b7bb6d8cd656ccebc9c99f248c5cca86bd65b9f7310",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "data-sol-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-49-28-01a198a8-e6ca-72d3-a504-6c3e8cc2a6f2.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "data-sol-01",
+      "task_id": "/root/al68_data_sol_04",
+      "source_session_id": "01a198a8-e6ca-72d3-a504-6c3e8cc2a6f2",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "scoped_code_verdict": "APPROVED",
+      "completeness": "Code correction scope approved; Codex runtime trust/interaction acceptance and final integrated make remain separate gates.",
+      "persona_sha256": "01f231e4db91502399ef6de24afd632a7c111bdca8a2a189312c3326136637c2",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "data-luna-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-data-luna-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T21-01-13-01a198b3-a8e7-7411-a8a6-46df93652e58.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "candidate_ids": [],
+      "prior_run_id": "data-luna-01",
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A654a6d7a-7f7f-4d33-96eb-7f574722965b",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A654a6d7a-7f7f-4d33-96eb-7f574722965b",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A654a6d7a-7f7f-4d33-96eb-7f574722965b>",
+      "prompt_sha256": "059edb8d8f87eef08f9e4502138e042373abeb25fb9c996a8d114ab13a109380",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A654a6d7a-7f7f-4d33-96eb-7f574722965b",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A654a6d7a-7f7f-4d33-96eb-7f574722965b",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A654a6d7a-7f7f-4d33-96eb-7f574722965b>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253A654a6d7a-7f7f-4d33-96eb-7f574722965b:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A654a6d7a-7f7f-4d33-96eb-7f574722965b",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "source_session_id": "01a198b3-a8e7-7411-a8a6-46df93652e58",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "scoped_code_verdict": "APPROVED",
+      "persona_sha256": "01f231e4db91502399ef6de24afd632a7c111bdca8a2a189312c3326136637c2",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "architecture-sol-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-49-40-01a198a9-1789-76d2-a37f-165e8d0c3be5.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "architecture-sol-01",
+      "task_id": "/root/al68_architecture_sol_04",
+      "source_session_id": "01a198a9-1789-76d2-a37f-165e8d0c3be5",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "scoped_code_verdict": "APPROVED",
+      "completeness": "Code correction scope approved; Codex runtime trust/interaction acceptance and final integrated make remain separate gates.",
+      "persona_sha256": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "architecture-luna-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-luna-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T21-01-14-01a198b3-ac96-7b52-8b37-49d16e55586b.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "candidate_ids": [],
+      "prior_run_id": "architecture-luna-01",
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2b2d55aa-cf18-44e8-bda1-854478b7d255",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2b2d55aa-cf18-44e8-bda1-854478b7d255",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2b2d55aa-cf18-44e8-bda1-854478b7d255>",
+      "prompt_sha256": "0c80e4ea5648747c0efe534b2e940702c5e2f9f53f26a44b43860123506bc528",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2b2d55aa-cf18-44e8-bda1-854478b7d255",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2b2d55aa-cf18-44e8-bda1-854478b7d255",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2b2d55aa-cf18-44e8-bda1-854478b7d255>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253A2b2d55aa-cf18-44e8-bda1-854478b7d255:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A2b2d55aa-cf18-44e8-bda1-854478b7d255",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "scoped_code_verdict": "APPROVED",
+      "completeness": "Corrected code scope approved; Codex live acceptance and integrated verification remain separate gates.",
+      "fingerprint_correction": {
+        "reported_digest": "f2362ccd35d970fb2a5c3e2fbba2746a1beadaa57cf91f33bea5af8538fc550c",
+        "meaning": "SHA256 of CANDIDATE-04.json manifest bytes, not source content fingerprint",
+        "parent_recomputed_content_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+        "requested_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+        "status": "Parent independently verified current frozen source fingerprint matches requested; reviewer manifest/source hash label was incorrect."
+      },
+      "source_session_id": "01a198b3-ac96-7b52-8b37-49d16e55586b",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "tests-sol-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-sol-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-53-30-01a198ac-997c-7083-b238-be54e298893b.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "tests-sol-01",
+      "scoped_code_verdict": "APPROVED",
+      "completeness": "Code correction scope approved; Codex runtime trust/interaction acceptance and final integrated make remain separate gates.",
+      "source_session_id": "01a198ac-997c-7083-b238-be54e298893b",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "0baad8d61171a62acbe673e75fe4b0deb4a19231f60b37649d3edb975fb643d5",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "tests-luna-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-luna-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T21-02-54-01a198b5-320a-70a2-a0e4-af1ce78adfbf.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "candidate_ids": [],
+      "prior_run_id": "tests-luna-01",
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A9f69b2b4-bb99-4e21-bf74-55178f372cac",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A9f69b2b4-bb99-4e21-bf74-55178f372cac",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A9f69b2b4-bb99-4e21-bf74-55178f372cac>",
+      "prompt_sha256": "2498d6dd7bdc3ec7a20beec4de3bc826eb5c65c60d1ca6e62b6c457cc5461dd8",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A9f69b2b4-bb99-4e21-bf74-55178f372cac",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A9f69b2b4-bb99-4e21-bf74-55178f372cac",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A9f69b2b4-bb99-4e21-bf74-55178f372cac>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253A9f69b2b4-bb99-4e21-bf74-55178f372cac:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A9f69b2b4-bb99-4e21-bf74-55178f372cac",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "scoped_code_verdict": "APPROVED",
+      "source_session_id": "01a198b5-320a-70a2-a0e4-af1ce78adfbf",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "0baad8d61171a62acbe673e75fe4b0deb4a19231f60b37649d3edb975fb643d5",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "security",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "security-sol-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-54-24-01a198ad-6aac-7ab2-8248-f7ed86c19eb0.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "security-sol-01",
+      "scoped_code_verdict": "APPROVED",
+      "completeness": "Code correction scope approved; Codex runtime trust/interaction acceptance and final integrated make remain separate gates.",
+      "source_session_id": "01a198ad-6aac-7ab2-8248-f7ed86c19eb0",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "security",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "security-luna-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-security-luna-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T21-05-33-01a198b7-9f3d-7653-b12d-4c98aff72591.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "candidate_ids": [],
+      "prior_run_id": "security-luna-01",
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac2c75911-95d8-4421-9ba8-9b0364a2a445",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac2c75911-95d8-4421-9ba8-9b0364a2a445",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac2c75911-95d8-4421-9ba8-9b0364a2a445>",
+      "prompt_sha256": "6fe84d57091e61d15aa7c747538362e2b23be569e4c2444f3493dcd1f236fc44",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac2c75911-95d8-4421-9ba8-9b0364a2a445",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac2c75911-95d8-4421-9ba8-9b0364a2a445",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac2c75911-95d8-4421-9ba8-9b0364a2a445>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253Ac2c75911-95d8-4421-9ba8-9b0364a2a445:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3Ac2c75911-95d8-4421-9ba8-9b0364a2a445",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "source_session_id": "01a198b7-9f3d-7653-b12d-4c98aff72591",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "scoped_code_verdict": "APPROVED",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "release",
+      "profile_id": "sol_6_1_high",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "run_id": "release-sol-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T20-55-14-01a198ae-2e70-71a3-ac73-5d54fe90c186.jsonl",
+        "parent_thread_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+        "settings": [
+          {
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          }
+        ]
+      },
+      "acknowledged": null,
+      "candidate_ids": [],
+      "prior_run_id": "release-sol-01",
+      "scoped_code_verdict": "APPROVED",
+      "completeness": "Code correction scope approved; Codex runtime trust/interaction acceptance and final integrated make remain separate gates.",
+      "source_session_id": "01a198ae-2e70-71a3-ac73-5d54fe90c186",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    },
+    {
+      "persona": "reviewer",
+      "focus": "release",
+      "profile_id": "luna_6_medium",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "run_id": "release-luna-04",
+      "phase": "re_review",
+      "candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "report_path": "alspaces/AL-68/iterations/01/REVIEW-release-luna-04.md",
+      "execution_status": "completed",
+      "verdict": "INCOMPLETE",
+      "observed": {
+        "source": "Codex session_meta and turn_context; native agent_path or exact task run ID association",
+        "source_file": "rollout-2026-11-01T21-05-33-01a198b7-a1ba-78d2-bbd3-7adc5e79a0c7.jsonl",
+        "parent_thread_id": null,
+        "settings": [
+          {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          }
+        ]
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ]
+      },
+      "candidate_ids": [],
+      "prior_run_id": "release-luna-01",
+      "task_id": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A05dcb4d1-9b2f-47bb-a188-8df06b8252b7",
+      "child_thread_id": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A05dcb4d1-9b2f-47bb-a188-8df06b8252b7",
+      "child_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A05dcb4d1-9b2f-47bb-a188-8df06b8252b7>",
+      "prompt_sha256": "3e7b448b753dbf84b2ddf73c8ef9d4f5cc1ffd977d063c8cf65fdbf4ce04d5d3",
+      "dispatch_evidence": {
+        "taskId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A05dcb4d1-9b2f-47bb-a188-8df06b8252b7",
+        "childThreadId": "thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A05dcb4d1-9b2f-47bb-a188-8df06b8252b7",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A05dcb4d1-9b2f-47bb-a188-8df06b8252b7>",
+        "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A25be3e0a-3852-4d09-88e3-bcb6dfba279f%253Adelegate-task%253A05dcb4d1-9b2f-47bb-a188-8df06b8252b7:ordinal:1",
+        "childNodeId": "node:delegated-task:command%3Amcp%3A25be3e0a-3852-4d09-88e3-bcb6dfba279f%3Adelegate-task%3A05dcb4d1-9b2f-47bb-a188-8df06b8252b7",
+        "status": "running",
+        "workState": "working",
+        "hasPendingChildRuns": false,
+        "latestTerminalRunId": null,
+        "latestTerminalStatus": null,
+        "latestTerminalSummary": null,
+        "latestTerminalResultContextTransferId": null,
+        "providerInstanceId": "codex",
+        "model": "gpt-6-luna",
+        "options": [
+          {
+            "id": "reasoningEffort",
+            "value": "medium"
+          }
+        ],
+        "summary": null,
+        "resultContextTransferId": null,
+        "hasPendingQuestion": false,
+        "pendingApproval": null,
+        "waitTimedOut": false,
+        "next": "Completion wakes this thread, so end your turn. Do not wait on it or poll it."
+      },
+      "source_session_id": "01a198b7-a1ba-78d2-bbd3-7adc5e79a0c7",
+      "source_prompt_sha256": "29e0f7a5ed9e7ee9ae96f57de64a9c610ecf0ed99c485a3938fdbe9ee3fb97d0",
+      "observation_gap": null,
+      "scoped_code_verdict": "APPROVED",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_procedure_sha256": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9"
+    }
+  ],
+  "corrected_candidate_fingerprint": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec"
+}

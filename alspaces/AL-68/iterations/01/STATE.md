@@ -1,0 +1,11 @@
+# AL-68 current execution checkpoint
+
+Active AL-68 only. User approved contract/iteration01 with actual hook-agent exchange/zero guesses. Frozen source candidate04 c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec. All12 final focus/profile code reviews approved. Findings CAP01..12 verified fixed. Overall acceptance INCOMPLETE solely for final integration/make and required Codex live trust/callback/agent/source smoke.
+
+Root owns all integration, commits, telemetry and handoff. No active children remain. Task-owned source/artifacts staged; no commits or PR yet as of this checkpoint. Finish implementation commit, merge origin/main on feature branch (fetched main has no new commits), run full make. Then final telemetry phase ONLY AFTER all remaining nontelemetry work, exact-source completeness checks, final local commit. Publication remains blocked by live Codex gap; keep index InProgress/spec to-do. Do not invent completion or a successful empty ledger.
+
+Codex human action was requested via async question: open Codex at /tmp/al68-codex-smoke-jykimf10 and review/trust exact .codex/hooks.json via normal /hooks. No reply received. Never auto-trust/bypass. All implementation/testing possible without that trust is complete. Real OpenCode1.19.5 Linux2roots/nativechild and fresh corrected binding/source reconciliation passed (SMOKE).
+
+SOURCE_SESSIONS.json has actual root ID,22nativechildren,12independent T3-delegated Codex review sessions verified by source metadata/task run IDs. Final raw metrics must include independent source IDs explicitly (root discovery alone misses them), never manufacture native parents or add a T3 telemetry source. Expected Codex count35. Native command bin/agentic-lens-linux-amd64; bin/agentic-lens is wrapper. generate needs explicit ticket title/type feat/source codex and literal random nonce in final command. Keep raw transcripts/tokens outsideGit. Final telemetry ledger/summary must record snapshot/pending acceptance truthfully.
+
+No PR exists on branch feat/AL-68-automatic-session-capture-hooks. If PR later created/pushed, link_pull_request next call. No merges authorized. CODEXroot source01a19830-6b3f-7f63-964f-a7521381d0fb. Final source inventory and review records are authoritative pointers, do not restart investigations or rerun unchanged suites without new failures.
