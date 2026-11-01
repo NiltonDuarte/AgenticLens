@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "policy_path": ".agents/skills/agentic-lens-review/references/model-policy.yaml",
+  "policy_sha256": "dea95689c3dcbc650c79b148e97ebf54957d54c707c888870774df7a6a078e51",
+  "resolved_policy": {
+    "version": 1,
+    "profiles": {
+      "sol_6_1_high": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "luna_6_medium": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      }
+    },
+    "default_profiles": [
+      "sol_6_1_high",
+      "luna_6_medium"
+    ],
+    "reviewer_overrides": {}
+  },
+  "base": "f9bd054",
+  "candidate_fingerprint": "0040edf70316ed3313669b173c2c51054d10aa1cc2e7c658b50d5bfbf1f4db79",
+  "source_hashes": {
+    ".agents/agent/reviewer-architecture.md": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+    ".agents/agent/references/review-context.md": "9a9344361d6fb64a69fdac55017424624f4676f73c306d28f7b4b5d151367e90",
+    ".agents/skills/agentic-lens-review/SKILL.md": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+    ".agents/skills/agentic-lens-review/references/parallel-review.md": "d27ecabb4e255a10a878c6eca7b005be0a08bc92c761df045cdb7bbafcbfe1e7",
+    ".agents/skills/agentic-lens-review/references/model-attribution.md": "08536e6facd696de59915721c8dd27926d3fc811521efcda4e577ff6cf6e5f48",
+    ".agents/skills/agentic-lens-review/references/model-policy.yaml": "dea95689c3dcbc650c79b148e97ebf54957d54c707c888870774df7a6a078e51",
+    ".agents/skills/agentic-lens-dev/SKILL.md": "e9a84fecf0c81abcce9035e5625bff159eefb348e31ff567f8467ec909314f15",
+    ".agents/agent/orchestrator.md": "3a177202c7c93b34bb3f7ec48f31645abbaecd8ea12cd3881e51a3e633d4011e"
+  },
+  "runs": [
+    {
+      "run_id": "ARCH-sol_6_1_high-01",
+      "persona": "reviewer-architecture",
+      "focus": "architecture and maintainability of coordinator model policy and attribution",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "observed": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "source_session_id": "01a1973b-6375-76c0-8dd2-22905071346a",
+        "source": "codex",
+        "session_metadata_source": "vscode"
+      },
+      "observation_reason": "Matched assigned run ID in source transcript; turn_context confirms model and effort. No native parent linkage; T3 supplies delegation relationship.",
+      "dispatch_evidence": {
+        "tool": "delegate_task",
+        "task_id": "node:delegated-task:command%3Amcp%3A61164ae1-c583-4622-ab5f-9b2ea27652ff%3Adelegate-task%3A0c418138-f9d4-4330-8f9d-77b92bea8f6a",
+        "thread_id": "thread:delegated-task:command%3Amcp%3A61164ae1-c583-4622-ab5f-9b2ea27652ff%3Adelegate-task%3A0c418138-f9d4-4330-8f9d-77b92bea8f6a",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A61164ae1-c583-4622-ab5f-9b2ea27652ff%3Adelegate-task%3A0c418138-f9d4-4330-8f9d-77b92bea8f6a>",
+        "provider_run_id": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A61164ae1-c583-4622-ab5f-9b2ea27652ff%253Adelegate-task%253A0c418138-f9d4-4330-8f9d-77b92bea8f6a:ordinal:1",
+        "initial_status": "running",
+        "initial_wait_timed_out": true,
+        "completion_evidence": "t3_thread_read recentRuns completed"
+      },
+      "candidate_fingerprint": "0040edf70316ed3313669b173c2c51054d10aa1cc2e7c658b50d5bfbf1f4db79",
+      "report_path": "alspaces/REV-5/iterations/07/SOL_6_1_HIGH.md",
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "complete": true,
+      "gaps": [],
+      "candidate_ids": [],
+      "started_at": "2026-11-01T13:10:14.247Z",
+      "ended_at": "2026-11-01T13:11:59.498Z",
+      "tokens": {
+        "input_tokens": 340048,
+        "cached_input_tokens": 292864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4198,
+        "reasoning_output_tokens": 422,
+        "total_tokens": 344246
+      },
+      "cost": null,
+      "usage_reason": "Last event_msg token_count info.total_token_usage from source session; cumulative snapshot, not summed. Cost unavailable.",
+      "prompt_sha256": "36ce55673b29c84a080775dc7a454f98ba4dd267e9c868b0fc157e616e18625f",
+      "instruction_hashes": {
+        ".agents/agent/reviewer-architecture.md": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+        ".agents/agent/references/review-context.md": "9a9344361d6fb64a69fdac55017424624f4676f73c306d28f7b4b5d151367e90",
+        ".agents/skills/agentic-lens-review/SKILL.md": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+        ".agents/skills/agentic-lens-review/references/parallel-review.md": "d27ecabb4e255a10a878c6eca7b005be0a08bc92c761df045cdb7bbafcbfe1e7",
+        ".agents/skills/agentic-lens-review/references/model-attribution.md": "08536e6facd696de59915721c8dd27926d3fc811521efcda4e577ff6cf6e5f48",
+        ".agents/skills/agentic-lens-review/references/model-policy.yaml": "dea95689c3dcbc650c79b148e97ebf54957d54c707c888870774df7a6a078e51",
+        ".agents/skills/agentic-lens-dev/SKILL.md": "e9a84fecf0c81abcce9035e5625bff159eefb348e31ff567f8467ec909314f15",
+        ".agents/agent/orchestrator.md": "3a177202c7c93b34bb3f7ec48f31645abbaecd8ea12cd3881e51a3e633d4011e"
+      },
+      "report_sha256": "78bb872b66d9900f58cf830a693dc3700f5a733f082156c2ce06508e56e32ed3"
+    },
+    {
+      "run_id": "ARCH-luna_6_medium-01",
+      "persona": "reviewer-architecture",
+      "focus": "architecture and maintainability of coordinator model policy and attribution",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "observed": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "source_session_id": "01a1973c-4e39-78c0-bf37-a5f3bf4cd721",
+        "source": "codex",
+        "session_metadata_source": "vscode"
+      },
+      "observation_reason": "Matched assigned run ID in source transcript; turn_context confirms model and effort. No native parent linkage; T3 supplies delegation relationship.",
+      "dispatch_evidence": {
+        "tool": "delegate_task",
+        "task_id": "node:delegated-task:command%3Amcp%3A61164ae1-c583-4622-ab5f-9b2ea27652ff%3Adelegate-task%3Aec33249d-49e9-4fad-867a-7cfec027608f",
+        "thread_id": "thread:delegated-task:command%3Amcp%3A61164ae1-c583-4622-ab5f-9b2ea27652ff%3Adelegate-task%3Aec33249d-49e9-4fad-867a-7cfec027608f",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/thread:delegated-task:command%3Amcp%3A61164ae1-c583-4622-ab5f-9b2ea27652ff%3Adelegate-task%3Aec33249d-49e9-4fad-867a-7cfec027608f>",
+        "provider_run_id": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A61164ae1-c583-4622-ab5f-9b2ea27652ff%253Adelegate-task%253Aec33249d-49e9-4fad-867a-7cfec027608f:ordinal:1",
+        "initial_status": "completed",
+        "initial_wait_timed_out": false,
+        "completion_evidence": "t3_thread_read recentRuns completed"
+      },
+      "candidate_fingerprint": "0040edf70316ed3313669b173c2c51054d10aa1cc2e7c658b50d5bfbf1f4db79",
+      "report_path": "alspaces/REV-5/iterations/07/LUNA_6_MEDIUM.md",
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "complete": true,
+      "gaps": [],
+      "candidate_ids": [],
+      "started_at": "2026-11-01T13:11:14.277Z",
+      "ended_at": "2026-11-01T13:11:39.776Z",
+      "tokens": {
+        "input_tokens": 177475,
+        "cached_input_tokens": 141312,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1977,
+        "reasoning_output_tokens": 238,
+        "total_tokens": 179452
+      },
+      "cost": null,
+      "usage_reason": "Last event_msg token_count info.total_token_usage from source session; cumulative snapshot, not summed. Cost unavailable.",
+      "prompt_sha256": "f684bc2af5e31608faf223f09d926521807b2292dc8aa5c0d84b923b84af951e",
+      "instruction_hashes": {
+        ".agents/agent/reviewer-architecture.md": "9879b503fe421d63d818051e0fe8a54cc98988960dae100727f126c313c03d28",
+        ".agents/agent/references/review-context.md": "9a9344361d6fb64a69fdac55017424624f4676f73c306d28f7b4b5d151367e90",
+        ".agents/skills/agentic-lens-review/SKILL.md": "82d450fb1a22245205b658e4f10daab319c03dcd20de00e29b73662bce35a4c9",
+        ".agents/skills/agentic-lens-review/references/parallel-review.md": "d27ecabb4e255a10a878c6eca7b005be0a08bc92c761df045cdb7bbafcbfe1e7",
+        ".agents/skills/agentic-lens-review/references/model-attribution.md": "08536e6facd696de59915721c8dd27926d3fc811521efcda4e577ff6cf6e5f48",
+        ".agents/skills/agentic-lens-review/references/model-policy.yaml": "dea95689c3dcbc650c79b148e97ebf54957d54c707c888870774df7a6a078e51",
+        ".agents/skills/agentic-lens-dev/SKILL.md": "e9a84fecf0c81abcce9035e5625bff159eefb348e31ff567f8467ec909314f15",
+        ".agents/agent/orchestrator.md": "3a177202c7c93b34bb3f7ec48f31645abbaecd8ea12cd3881e51a3e633d4011e"
+      },
+      "report_sha256": "3766abe002727234338f20d874172f6f2c77779ff85268fcc04b0da8fd276c5c"
+    }
+  ]
+}

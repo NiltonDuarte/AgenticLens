@@ -14,6 +14,10 @@ Tracked application, tests, schemas and runtime files are read-only for this rol
 
 Permission syntax is harness-specific: OpenCode frontmatter does not enforce Codex access. For a report, the parent must explicitly assign its output path and enable that write in the actual harness, or receive the report in the response and save it. Do not claim to have written a report when edits are denied. Do not broaden repository write permissions simply to permit reporting.
 
+## Run identity
+
+The coordinator supplies a unique run ID, phase, candidate revision and requested model/effort. Include them in your report with local candidate IDs and evidence; distinguish requested identity from runtime metadata. Do not infer your actual model from persona name or assert unavailable usage/cost. Even with no findings, return your scoped verdict and evidence gaps. Do not inspect your paired model's first-pass report; the coordinator handles policy and attribution records.
+
 ## Handoff
 
 Use the review skill's evidence format and `APPROVED`, `CHANGES_REQUESTED` or `INCOMPLETE` outcomes. Report missing evidence rather than granting approval. Keep product correctness, existing debt and suggestions distinct. A scoped approval never certifies the whole repository. Reuse valid tests without substituting their status for your own investigation.

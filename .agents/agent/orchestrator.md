@@ -50,7 +50,7 @@ Workflow Execution Loop:
 5. Phase 2 (Implementation, Testing & Review Loop):
    - Dispatch `coder` with pointers to `CONTRACT.md`, `iterations/<NN>/PLAN.md` (and `REVIEW.md` if rework).
    - Dispatch `tester` to execute tests with zero silent skips.
-   - Dispatch focused `reviewer` assignments using [the parallel protocol](../skills/agentic-lens-review/references/parallel-review.md), with a frozen revision, independent contexts and separate report owners. Use capacity-limited waves if necessary. Verify/deduplicate findings and write the consolidated `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/REVIEW.md`; children never share that writable path.
+   - Dispatch focused `reviewer` assignments using [the parallel protocol](../skills/agentic-lens-review/references/parallel-review.md), with a frozen revision, independent contexts and separate report owners. Load its model policy and dispatch every selected persona on each configured profile with explicit model/effort. Preserve run/finding attribution and report which reviewer/model found confirmed issues. Use capacity-limited waves if necessary. Verify/deduplicate findings and write the consolidated `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/REVIEW.md`; children never share that writable path.
    - Once focus investigations have no unresolved blockers/material review gaps, perform Phase 3 commit/integration/checks. Final consolidated approval gates publication, not running those checks; integration changes require affected re-review.
    - Loop control:
      - Consolidated `APPROVED`: Complete remaining publication steps under the parallel protocol gate after integrated checks pass; individual child approvals cannot pass delivery.

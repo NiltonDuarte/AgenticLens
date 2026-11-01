@@ -11,3 +11,5 @@ Iteration 04 fixes ADP-01 and D3: warning-bearing Codex recovery retains stored 
 Iterations 05-06 make correctness investigation the canonical review process. Four dedicated reviewer personas (behavior, data/failure, architecture, test effectiveness) load one shared review-context file. Substantive changes use independent parallel reviews, risk-selected specialists and capacity-limited waves. The coordinator verifies findings, preserves evidence-backed dissent, tracks revision-aware re-review and owns a consolidated gate including INCOMPLETE. This is a skill-kit protocol, not a newly installed CI scheduler. Bounded evaluations do not establish improved detection rates.
 
 This REV-5 session supersedes historical GEN-14 audit PR #91. Scope, evidence and limitations: alspaces/REV-5/CONTRACT.md, SUMMARY.md and iterations/02 through 06.
+
+Iteration 07 adds configurable paired Sol 6.1/high and Luna 6/medium runs for every selected reviewer, with durable per-model run/finding attribution. Both models completed the scoped policy review with no findings; source metadata verifies requested settings. Telemetry linkage limitations are recorded.

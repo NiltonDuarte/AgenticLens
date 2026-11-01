@@ -33,3 +33,7 @@ User approved applying the research recommendations: correctness-first review sk
 ## Iteration 06 approved parallel-review design
 
 User requested designing specialized parallel review in the skill kit. Scope is canonical documentation and aligned dispatch guidance: separate core focuses by default for substantive changes, optional risk specialists, honest capacity-limited waves, independent investigation, verified findings, revision-aware re-review and consolidated delivery gates. No new CI service, runtime scheduler, model switch or application change. Preserve previous approvals and role boundaries.
+
+## Iteration 07 approved model policy and attribution
+
+User requires every selected reviewer on both Sol 6.1 high and Luna 6 medium, configurable and attributable. Add coordinator-read model policy and durable run/finding reporting contract; explicitly dispatch exact settings, preserve independent discovery credit, retain no-findings/failed/refuted records and never silently substitute models. This supersedes iteration 06 no-model-switch boundary for these explicitly requested profiles only. No application telemetry schema or dashboard changes.

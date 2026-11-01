@@ -17,12 +17,16 @@ Each persona owns its investigation details. Shared mission/evidence/permission 
 
 Specialists are selected by concrete risk: frontend async/accessibility for interactive behavior; build/release integrity for artifact provenance and workflow side effects; security for an actual trust boundary; performance for a stated workload/budget. Record the specialist's question and affected boundary, not just a title. Any reviewer should report a concrete serious defect outside its focus rather than discard it; the parent assigns its verification owner.
 
+## Model policy and attribution
+
+Before dispatch, load [model-policy.yaml](model-policy.yaml) and follow [model execution and attribution](model-attribution.md). Every selected focus expands into the configured model profiles, currently Sol 6.1/high AND Luna 6/medium. The coordinator owns run/finding records and reports discovery credit by reviewer/model. Role selection does not remove model coverage.
+
 ## Freeze evidence and dispatch independently
 
 - Put the coverage roster in the current iteration PLAN.md: focus, risk question, scope/call paths, evidence owner and unique report path. The parent alone owns the consolidated REVIEW.md. Children write only their assigned reports if the harness permits it; otherwise return content for the parent to save.
 - Give every reviewer the same base/head commit and requirements. For uncommitted code, record a diff/content fingerprint covering changed and relevant untracked files. Include active product/deployment constraints and useful raw test evidence; do not seed an approval or suspected answer. Fresh context is preferred where available. Do not distribute other reviewers' conclusions before their first pass.
 - Freeze product/test edits during this pass. Shared-checkout reviewers may overlap in reading, but cannot change production/test code. Probes must use disposable paths and separate resource names/ports. A reviewer that observes source changes reports stale evidence instead of approving a mixed revision.
-- Dispatch independent focuses concurrently up to actual harness capacity. Reserve capacity for the parent as needed. If four reviews cannot run at once, queue remaining focuses in waves against the same frozen revision; do not drop coverage or pretend sequential work was parallel. Use supported native/delegated tools and report unavailable capabilities. Do not create top-level threads or change models/providers merely to obtain parallelism.
+- Dispatch independent focuses concurrently up to actual harness capacity. Reserve capacity for the parent as needed. If all persona/model runs cannot run at once, queue remaining focuses in waves against the same frozen revision; do not drop coverage or pretend sequential work was parallel. Use supported native/delegated tools and report unavailable capabilities. Do not create top-level threads or change models/providers merely to obtain parallelism.
 - Each reviewer follows SKILL.md: independently form failure hypotheses, trace relevant unchanged dependencies, seek refuting evidence and report findings with bounded confidence. Coordinate expensive identical tests through the parent rather than running four whole suites. Shared valid test results are reusable; independent reasoning is still required.
 
 ### Dispatch brief
@@ -31,6 +35,7 @@ Fill in this brief rather than copying four general review requests:
 
     Ticket/iteration: <active ticket and iteration>
     Role: <registered focus reviewer or explicit persona pointer>; question: <concrete risk>
+    Run: <run ID, phase, profile and acknowledged model/effort, report path>
     Evidence: <base/head or immutable fingerprint, raw diff, requirements,
                contract/plan, canonical review skill, relevant source paths,
                test results and supported deployment assumptions>
@@ -62,10 +67,10 @@ Map each fix to affected focus owners and dependencies. Re-review the corrected 
 
 When focused investigations have no unresolved blockers or material review gaps, the parent may commit the candidate, integrate main and run the required verification phase. The final consolidated approval is issued only after those checks pass. Integration changes invalidate affected review evidence and require the same impact assessment/re-review; this ordering avoids requiring final approval before its verification can run.
 
-The parent records a compact roster (focus, reviewed revision, report, outcome, any valid carry-forward rationale), deduplicated findings/dispositions, remaining debt, verification and limits in iterations/<NN>/REVIEW.md. A child approval never independently opens the gate.
+The parent records a compact roster (focus, model/effort, run ID/phase, reviewed revision, report, outcome, any valid carry-forward rationale), deduplicated findings/dispositions, remaining debt, verification and limits in iterations/<NN>/REVIEW.md. A child approval never independently opens the gate.
 
 - CHANGES_REQUESTED when a substantiated blocker remains. Also list any incomplete required reviews so fixing the blocker cannot hide the gaps.
 - INCOMPLETE when no confirmed blocker remains but a required focus, material hypothesis, revision match or necessary verification is unresolved. A cancelled/timed-out/unavailable reviewer is incomplete, not an approval. Recover the missing coverage or report the limitation; do not waive it silently.
-- APPROVED only when all applicable focuses have current or justified carried-forward evidence, no blocking finding/material gap remains, and required integrated checks pass. Local approval is scoped and does not authorize a remote merge. Hosting/CI or runtime stages not exercised must be stated explicitly.
+- APPROVED only when all applicable focus/model cells have current or justified carried-forward evidence, no blocking finding/material gap remains, and required integrated checks pass. Local approval is scoped and does not authorize a remote merge. Hosting/CI or runtime stages not exercised must be stated explicitly.
 
 Stop when this gate is satisfied for the requested scope. Do not add endless speculative passes, demand unanimous style preferences, or claim bug-free software. Measure usefulness through confirmed defects, escaped regressions and false positives with honest sampling limits, not number of agents or approval rate.

@@ -214,3 +214,11 @@ Both skills validated; YAML/TOML, persona pointers and local links passed. Indep
 ## Iteration 06 delivery and telemetry
 
 Guidance commit 65fe5e0 already includes origin/main. Final skill validators, frontmatter/TOML checks and local references passed; no application/runtime source changed, so prior full make evidence is reused. Schema-v5 REV-5/fix ledger verified against all 25 expected Codex source identities and parent links, preserving previous 23 plus the forward exercise and consistency review. No other-harness sessions existed to preserve. Snapshot ends at generation; later verification/commit/push calls are outside it.
+
+## Iteration 07: model policy and attribution
+
+User requested configurable paired models for each reviewer and per-reviewer/model issue attribution. Baseline f9bd054; initial tree clean. Coordinator policy now defaults every selected persona to Sol 6.1/high plus Luna 6/medium; shared persona context remains model-neutral. Run and finding records distinguish independent discovery from verification and preserve incomplete/zero-finding/refuted outcomes. Actual paired documentation review and validation follow.
+
+## Iteration 07 paired review and verification
+
+Both architecture-review cells completed independently with no findings: gpt-6.1-sol/high and gpt-6-luna/medium. Dispatch acknowledgments and matched source turn_context records verify model/effort. REVIEW_RUNS.json retains both zero-finding runs, source identities, timestamps, cumulative token observations and unavailable cost; FINDINGS.json is empty. No comparative model efficacy conclusion follows from a no-finding documentation review. Policy parsing/profile expansion, local links, source hashes and attribution integrity passed; both skills validated. No application/runtime changes. T3 delegation lacks native Codex parent linkage for these two sessions; final telemetry must disclose any omissions separately from complete review attribution.
