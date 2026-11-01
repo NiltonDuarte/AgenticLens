@@ -13,3 +13,5 @@ Iterations 05-06 make correctness investigation the canonical review process. Fo
 This REV-5 session supersedes historical GEN-14 audit PR #91. Scope, evidence and limitations: alspaces/REV-5/CONTRACT.md, SUMMARY.md and iterations/02 through 06.
 
 Iteration 07 adds configurable paired Sol 6.1/high and Luna 6/medium runs for every selected reviewer, with durable per-model run/finding attribution. Both models completed the scoped policy review with no findings; source metadata verifies requested settings. Telemetry linkage limitations are recorded.
+
+Iteration 08 creates Ready follow-up AL-68 for installing Codex/OpenCode lifecycle hooks with session capture, reconciliation and health diagnostics. It preserves client-owned skills and explicit source/parent identity. This is a backlog specification; hooks are not implemented in this PR. Ticket/index/whitespace checks passed; application verification remains unchanged.

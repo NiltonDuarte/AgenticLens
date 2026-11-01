@@ -230,3 +230,9 @@ Commit de4ff8a already includes origin/main. Documentation/configuration checks 
 Main session telemetry is INCOMPLETE for this iteration: omitted delegated Codex sessions 01a1973b-6375-76c0-8dd2-22905071346a, 01a1973c-4e39-78c0-bf37-a5f3bf4cd721. Their source data exists, but T3 delegation did not write native parent linkage discoverable by the CLI. REVIEW_RUNS.json preserves verified model/effort, session IDs, cumulative token records and T3 relationship evidence. No source linkage or complete extraction was manufactured. See iterations/07/TELEMETRY_STATUS.json.
 
 Snapshot ends at generation; subsequent verification/commit/push calls are outside it.
+
+## Iteration 08: lifecycle-hook installation ticket
+
+User requested a follow-up ticket after the lifecycle-hook design discussion. Baseline b1dca7f; initial tree clean. Created AL-68 in plan/to-do and indexed it as Ready. It covers additive Codex/OpenCode hook installation, working session capture/reconciliation, explicit ticket/parent binding, CLI health diagnostics and real harness verification. No third-party skills/personas or installation/runtime code changed. Continue REV-5 session ownership; AL-68 development must start separately.
+
+Validated ticket structure, unique allocation, index consistency, owning paths and whitespace. Existing application make evidence is reused for this documentation-only change. Historical iteration 07 missing-reviewer telemetry remains explicit; no hook capture success is claimed by this specification.

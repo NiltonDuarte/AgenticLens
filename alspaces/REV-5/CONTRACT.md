@@ -37,3 +37,7 @@ User requested designing specialized parallel review in the skill kit. Scope is 
 ## Iteration 07 approved model policy and attribution
 
 User requires every selected reviewer on both Sol 6.1 high and Luna 6 medium, configurable and attributable. Add coordinator-read model policy and durable run/finding reporting contract; explicitly dispatch exact settings, preserve independent discovery credit, retain no-findings/failed/refuted records and never silently substitute models. This supersedes iteration 06 no-model-switch boundary for these explicitly requested profiles only. No application telemetry schema or dashboard changes.
+
+## Iteration 08 approved follow-up ticket
+
+User requested a ticket for lifecycle hooks in installation. Create AL-68 in the shared backlog and index under continued REV-5 ownership. Scope is specification only: additive Codex/OpenCode hooks, session registration/capture/reconciliation, explicit ticket/parent identity, CLI diagnostics and verification. Preserve third-party skills/personas, local-only operation and no T3 source. Implementation belongs to a separate development session; current telemetry behavior and historical coverage limitations remain unchanged.
